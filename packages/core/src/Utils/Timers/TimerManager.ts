@@ -19,10 +19,10 @@ export class TimerManager extends GlobalManager {
 
     /**
      * 调度一个一次性或重复的计时器，该计时器将调用已传递的动作
-     * @param timeInSeconds
-     * @param repeats
-     * @param context
-     * @param onTime
+     * @param timeInSeconds - 计时器的持续时间（秒）
+     * @param repeats - 是否重复执行
+     * @param context - 上下文对象
+     * @param onTime - 定时器触发时调用的回调
      */
     public schedule<TContext = unknown>(timeInSeconds: number, repeats: boolean, context: TContext, onTime: (timer: ITimer<TContext>)=>void): Timer<TContext> {
         let timer = new Timer<TContext>();
