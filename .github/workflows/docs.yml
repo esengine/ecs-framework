@@ -1,12 +1,12 @@
 # 文档自动构建和部署工作流
 #
 # 此工作流程负责：
-# 1. 在推送到 master 分支时自动构建文档
+# 1. 在推送到 master 或 doc 分支时自动构建文档
 # 2. 将构建结果部署到 GitHub Pages
 # 3. 确保文档站点始终保持最新状态
 #
 # 工作流触发条件：
-# - 推送到 master 分支
+# - 推送到 master 或 doc 分支
 # - docs/ 目录下文件发生变更
 # - 手动触发
 
@@ -14,9 +14,9 @@ name: 构建和部署文档
 
 # 触发条件
 on:
-  # 推送到 master 分支时触发
+  # 推送到 master 或 doc 分支时触发
   push:
-    branches: [master]
+    branches: [master, doc]
     paths:
       - 'docs/**'
       - 'package.json'
