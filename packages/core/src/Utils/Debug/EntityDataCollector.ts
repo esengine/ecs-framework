@@ -1,16 +1,15 @@
 import { IEntityDebugData } from '../../Types';
-import { Core } from '../../Core';
 import { Entity } from '../../ECS/Entity';
 import { Component } from '../../ECS/Component';
 import { ComponentTypeManager } from '../../ECS/Utils/ComponentTypeManager';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from '../../ECS/Decorators';
+import { IScene } from '../../ECS/IScene';
 
 /**
  * 实体数据收集器
  */
 export class EntityDataCollector {
-    public collectEntityData(): IEntityDebugData {
-        const scene = Core.scene;
+    public collectEntityData(scene?: IScene | null): IEntityDebugData {
         if (!scene) {
             return this.getEmptyEntityDebugData();
         }
@@ -51,7 +50,7 @@ export class EntityDataCollector {
     }
 
 
-    public getRawEntityList(): Array<{
+    public getRawEntityList(scene?: IScene | null): Array<{
         id: number;
         name: string;
         active: boolean;
@@ -65,7 +64,6 @@ export class EntityDataCollector {
         tag: number;
         updateOrder: number;
     }> {
-        const scene = Core.scene;
         if (!scene) return [];
 
         const entityList = (scene as any).entities;
@@ -88,9 +86,8 @@ export class EntityDataCollector {
     }
 
 
-    public getEntityDetails(entityId: number): any {
+    public getEntityDetails(entityId: number, scene?: IScene | null): any {
         try {
-            const scene = Core.scene;
             if (!scene) return null;
 
             const entityList = (scene as any).entities;
@@ -101,7 +98,7 @@ export class EntityDataCollector {
 
             const baseDebugInfo = entity.getDebugInfo ?
                 entity.getDebugInfo() :
-                this.buildFallbackEntityInfo(entity);
+                this.buildFallbackEntityInfo(entity, scene);
 
             const componentDetails = this.extractComponentDetails(entity.components);
 
@@ -155,8 +152,7 @@ export class EntityDataCollector {
     }
 
 
-    public collectEntityDataWithMemory(): IEntityDebugData {
-        const scene = Core.scene;
+    public collectEntityDataWithMemory(scene?: IScene | null): IEntityDebugData {
         if (!scene) {
             return this.getEmptyEntityDebugData();
         }
@@ -648,7 +644,7 @@ export class EntityDataCollector {
             batch.forEach((entity: Entity) => {
                 const baseDebugInfo = entity.getDebugInfo ? 
                     entity.getDebugInfo() : 
-                    this.buildFallbackEntityInfo(entity);
+                    this.buildFallbackEntityInfo(entity, null);
 
                 const componentCacheStats = (entity as any).getComponentCacheStats ? 
                     (entity as any).getComponentCacheStats() : null;
@@ -676,8 +672,7 @@ export class EntityDataCollector {
     /**
      * 构建实体基础信息
      */
-    private buildFallbackEntityInfo(entity: Entity): any {
-        const scene = Core.scene;
+    private buildFallbackEntityInfo(entity: Entity, scene?: any): any {
         const sceneInfo = this.getSceneInfo(scene);
         
         return {
@@ -757,9 +752,8 @@ export class EntityDataCollector {
     /**
      * 获取组件的完整属性信息（仅在需要时调用）
      */
-    public getComponentProperties(entityId: number, componentIndex: number): Record<string, any> {
+    public getComponentProperties(entityId: number, componentIndex: number, scene?: IScene | null): Record<string, any> {
         try {
-            const scene = Core.scene;
             if (!scene) return {};
 
             const entityList = (scene as any).entities;
@@ -886,7 +880,7 @@ export class EntityDataCollector {
                 _isLazyObject: true,
                 _typeName: 'Unknown',
                 _summary: `无法分析的对象: ${error instanceof Error ? error.message : String(error)}`,
-                _objectId: Math.random().toString(36).substr(2, 9)
+                _objectId: Math.random().toString(36).substring(2, 11)
             };
         }
     }
@@ -941,18 +935,17 @@ export class EntityDataCollector {
             if (obj.uuid !== undefined) return `obj_${obj.uuid}`;
             if (obj._uuid !== undefined) return `obj_${obj._uuid}`;
 
-            return `obj_${Math.random().toString(36).substr(2, 9)}`;
+            return `obj_${Math.random().toString(36).substring(2, 11)}`;
         } catch {
-            return `obj_${Math.random().toString(36).substr(2, 9)}`;
+            return `obj_${Math.random().toString(36).substring(2, 11)}`;
         }
     }
 
     /**
      * 展开懒加载对象（供调试面板调用）
      */
-    public expandLazyObject(entityId: number, componentIndex: number, propertyPath: string): any {
+    public expandLazyObject(entityId: number, componentIndex: number, propertyPath: string, scene?: IScene | null): any {
         try {
-            const scene = Core.scene;
             if (!scene) return null;
 
             const entityList = (scene as any).entities;

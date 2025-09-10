@@ -43,63 +43,6 @@ export interface PerformanceStats {
 }
 
 /**
- * 性能警告类型
- */
-export enum PerformanceWarningType {
-    HIGH_EXECUTION_TIME = 'high_execution_time',
-    HIGH_MEMORY_USAGE = 'high_memory_usage',
-    HIGH_CPU_USAGE = 'high_cpu_usage',
-    FREQUENT_GC = 'frequent_gc',
-    LOW_FPS = 'low_fps',
-    HIGH_ENTITY_COUNT = 'high_entity_count'
-}
-
-/**
- * 性能警告
- */
-export interface PerformanceWarning {
-    type: PerformanceWarningType;
-    systemName: string;
-    message: string;
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    timestamp: number;
-    value: number;
-    threshold: number;
-    suggestion?: string;
-}
-
-/**
- * 性能阈值配置
- */
-export interface PerformanceThresholds {
-    /** 执行时间阈值（毫秒） */
-    executionTime: {
-        warning: number;
-        critical: number;
-    };
-    /** 内存使用阈值（MB） */
-    memoryUsage: {
-        warning: number;
-        critical: number;
-    };
-    /** CPU使用率阈值（百分比） */
-    cpuUsage: {
-        warning: number;
-        critical: number;
-    };
-    /** FPS阈值 */
-    fps: {
-        warning: number;
-        critical: number;
-    };
-    /** 实体数量阈值 */
-    entityCount: {
-        warning: number;
-        critical: number;
-    };
-}
-
-/**
  * 高性能监控器
  * 用于监控ECS系统的性能表现，提供详细的分析和优化建议
  */
@@ -108,37 +51,8 @@ export class PerformanceMonitor {
     
     private _systemData = new Map<string, PerformanceData>();
     private _systemStats = new Map<string, PerformanceStats>();
-    private _warnings: PerformanceWarning[] = [];
     private _isEnabled = false;
     private _maxRecentSamples = 60; // 保留最近60帧的数据
-    private _maxWarnings = 100; // 最大警告数量
-    
-    // 性能阈值配置
-    private _thresholds: PerformanceThresholds = {
-        executionTime: { warning: 16.67, critical: 33.33 }, // 60fps和30fps对应的帧时间
-        memoryUsage: { warning: 100, critical: 200 }, // MB
-        cpuUsage: { warning: 70, critical: 90 }, // 百分比
-        fps: { warning: 45, critical: 30 },
-        entityCount: { warning: 1000, critical: 5000 }
-    };
-
-    // FPS监控
-    private _fpsHistory: number[] = [];
-    private _lastFrameTime = 0;
-    private _frameCount = 0;
-    private _fpsUpdateInterval = 1000; // 1秒更新一次FPS
-    private _lastFpsUpdate = 0;
-    private _currentFps = 60;
-
-    // 内存监控
-    private _memoryCheckInterval = 5000; // 5秒检查一次内存
-    private _lastMemoryCheck = 0;
-    private _memoryHistory: number[] = [];
-
-    // GC监控
-    private _gcCount = 0;
-    private _lastGcCheck = 0;
-    private _gcCheckInterval = 1000;
     
     /**
      * 获取单例实例

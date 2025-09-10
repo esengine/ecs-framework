@@ -1,6 +1,6 @@
 import { ISystemDebugData } from '../../Types';
-import { Core } from '../../Core';
 import { getSystemInstanceTypeName } from '../../ECS/Decorators';
+import { IScene } from '../../ECS/IScene';
 
 /**
  * 系统数据收集器
@@ -9,8 +9,7 @@ export class SystemDataCollector {
     /**
      * 收集系统数据
      */
-    public collectSystemData(performanceMonitor: any): ISystemDebugData {
-        const scene = Core.scene;
+    public collectSystemData(performanceMonitor: any, scene?: IScene | null): ISystemDebugData {
         if (!scene) {
             return {
                 totalSystems: 0,

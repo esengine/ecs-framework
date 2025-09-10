@@ -8,7 +8,8 @@ import { PoolManager } from './Utils/Pool/PoolManager';
 import { ECSFluentAPI, createECSAPI } from './ECS/Core/FluentAPI';
 import { IScene } from './ECS/IScene';
 import { WorldManager } from './ECS/WorldManager';
-import { DebugManager } from './Utils/Debug';
+import { DebugManager } from './Utils/Debug/DebugManager';
+import { ICoreProvider } from './Utils/Debug/ICoreProvider';
 import { ICoreConfig, IECSDebugConfig } from './Types';
 import { createLogger } from './Utils/Logger';
 
@@ -38,7 +39,7 @@ import { createLogger } from './Utils/Logger';
  * });
  * ```
  */
-export class Core {
+export class Core implements ICoreProvider {
     /**
      * 游戏暂停状态
      * 
@@ -580,5 +581,19 @@ export class Core {
 
         // 结束性能监控
         this._performanceMonitor.endMonitoring('Core.update', frameStartTime);
+    }
+
+    /**
+     * 获取当前Scene
+     */
+    public getCurrentScene(): IScene | null {
+        return Core.getScene();
+    }
+
+    /**
+     * 获取性能监控器
+     */
+    public getPerformanceMonitor(): any {
+        return this._performanceMonitor;
     }
 }
