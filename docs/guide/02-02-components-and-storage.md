@@ -132,6 +132,12 @@ class PositionComponent extends Component {
     x: number = 0;
     y: number = 0;
 }
+
+@ECSComponent('Health')
+class HealthComponent extends Component {
+    @HighPrecision health: number = 100;
+    @Int32 maxHealth: number = 100;
+}
 ```
 
 装饰器系统使用 Symbol 键存储类型名称以避免命名冲突，并为未装饰的组件提供回退机制。
@@ -162,3 +168,63 @@ class PositionComponent extends Component {
 **API 参考:**
 - [getComponentTypeName](../api/core/ecs-framework-monorepo.getcomponenttypename.md) - 获取组件类型名称
 - [getComponentInstanceTypeName](../api/core/ecs-framework-monorepo.getcomponentinstancetypename.md) - 获取组件实例类型名称
+
+## 位掩码组件标识
+
+系统使用 64 位掩码来高效跟踪每个实体拥有的组件，实现快速的组件查询和系统匹配。
+
+### 位掩码操作
+
+[BitMask64Utils](../api/core/ecs-framework-monorepo.bitmask64utils.md) 类为组件掩码提供优化的 64 位操作：
+
+| 操作 | 用途 | 性能 |
+|------|------|------|
+| [create(bitIndex)](../api/core/ecs-framework-monorepo.bitmask64utils.create.md) | 创建单位掩码 | O(1) |
+| [hasAll(entityMask, queryMask)](../api/core/ecs-framework-monorepo.bitmask64utils.hasall.md) | 检查所有组件是否存在 | O(1) |
+| [hasAny(entityMask, queryMask)](../api/core/ecs-framework-monorepo.bitmask64utils.hasany.md) | 检查任意组件是否存在 | O(1) |
+| [orInPlace(target, source)](../api/core/ecs-framework-monorepo.bitmask64utils.orinplace.md) | 原地组合掩码 | O(1) |
+| [popCount(mask)](../api/core/ecs-framework-monorepo.bitmask64utils.popcount.md) | 计算设置的位数 | O(1) |
+
+### 实体组件缓存
+
+实体维护多层缓存以优化组件访问。
+
+**API参考**:
+- [BitMask64Utils](../api/core/ecs-framework-monorepo.bitmask64utils.md)
+- [Entity.componentMask](../api/core/ecs-framework-monorepo.entity.componentmask.md)
+
+## 内存优化特性
+
+组件系统包含多种针对高性能场景的内存优化策略。
+
+### 稀疏集合集成
+
+[ComponentSparseSet](../api/core/ecs-framework-monorepo.componentsparseset.md) 提供了将组件存储与实体索引相结合的替代存储方法：
+
+| 特性 | ComponentStorage | ComponentSparseSet |
+|------|------------------|-------------------|
+| 实体查找 | 基于Map的O(1) | 稀疏集合O(1) |
+| 组件迭代 | 紧密数组 | 紧密数组+掩码 |
+| 内存布局 | 分离式 | 集成式 |
+| 多组件查询 | 外部实现 | 内置支持 |
+
+### 对象池化
+
+系统使用对象池来减少内存分配开销：
+
+#### 内存统计信息
+
+两种存储实现都提供详细的内存使用统计：
+
+| 指标 | 描述 | 用途 |
+|------|------|------|
+| totalSlots | 总分配存储 | 容量规划 |
+| usedSlots | 当前占用槽位 | 利用率跟踪 |
+| freeSlots | 可用槽位 | 碎片检测 |
+| fragmentation | 内存碎片率 | 性能监控 |
+
+**API参考**:
+- [ComponentSparseSet](../api/core/ecs-framework-monorepo.componentsparseset.md)
+- [ComponentPool](../api/core/ecs-framework-monorepo.componentpool.md)
+- [ComponentPoolManager](../api/core/ecs-framework-monorepo.componentpoolmanager.md)
+- [ComponentStorage.getStats()](../api/core/ecs-framework-monorepo.componentstorage.getstats.md)

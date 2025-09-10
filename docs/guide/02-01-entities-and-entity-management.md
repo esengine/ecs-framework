@@ -64,6 +64,49 @@
 - [Entity.destroy()](../api/core/ecs-framework-monorepo.entity.destroy.md) - 销毁实体
 - [Entity.isDestroyed](../api/core/ecs-framework-monorepo.entity.isdestroyed.md) - 检查销毁状态
 
+
+
+## 实体发现与查询
+
+ECS 框架提供多种实体发现方法，包括场景级查找和基于层级的发现。
+
+### 场景级实体发现（推荐）
+
+通过场景直接查找实体：
+
+```typescript
+// 按名称查找
+const player = scene.findEntity("Player");
+
+// 按ID查找  
+const entity = scene.findEntityById(123);
+
+// 按标签查找
+const enemies = scene.findEntitiesByTag(EntityTags.ENEMY);
+```
+
+### 基于层级的发现（不推荐）
+
+在实体层级结构中进行查找：
+
+```typescript
+// 按名称查找子实体
+const weapon = player.findChild("Weapon");
+
+// 按标签查找子实体 (递归)
+const allLights = sceneRoot.findChildrenByTag(EntityTags.LIGHT, true);
+
+// 获取层级信息
+const depth = entity.getDepth();
+const root = entity.getRoot();
+```
+
+**API参考**:
+- [Entity.findChild()](../api/core/ecs-framework-monorepo.entity.findchild.md)
+- [Entity.findChildrenByTag()](../api/core/ecs-framework-monorepo.entity.findchildrenbytag.md)
+- [Entity.getDepth()](../api/core/ecs-framework-monorepo.entity.getdepth.md)
+- [Entity.getRoot()](../api/core/ecs-framework-monorepo.entity.getroot.md)
+
 ## 组件管理
 
 ### 组件存储架构

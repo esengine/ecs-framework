@@ -76,7 +76,7 @@ export default defineConfig({
       },
       { 
         text: '示例', 
-        link: 'https://github.com/esengine/lawn-mower-demo/tree/master'
+        link: 'https://github.com/esengine/lawn-mower-demo'
       }
     ],
     
@@ -112,10 +112,19 @@ export default defineConfig({
               text: '高级特性', 
               link: '/guide/03-advanced-features',
               items: [
-                { text: '查询系统与性能', link: '/guide/03-01-query-system-and-performance' }
+                { text: '查询系统与性能', link: '/guide/03-01-query-system-and-performance' },
+                { text: '事件系统', link: '/guide/03-02-event-system' }
               ]
             },
-            { text: '平台集成', link: '/guide/04-platform-integrations' },
+            { 
+              text: '平台集成', 
+              link: '/guide/04-platform-integrations',
+              items: [
+                { text: 'Cocos Creator 集成', link: '/guide/04-01-cocos-creator-integration' },
+                { text: 'AI 与行为系统', link: '/guide/04-02-ai-behavior-systems' },
+                { text: 'MVVM UI 框架', link: '/guide/04-03-mvvm-ui-framework' }
+              ]
+            },
             { text: '开发与部署', link: '/guide/05-development-and-deployment' }
           ]
         }

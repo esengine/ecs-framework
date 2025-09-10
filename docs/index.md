@@ -15,7 +15,7 @@ hero:
       link: /guide/
     - theme: alt
       text: 查看示例
-      link: /examples/
+      link: https://github.com/esengine/lawn-mower-demo
     - theme: alt
       text: GitHub
       link: https://github.com/esengine/ecs-framework
