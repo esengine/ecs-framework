@@ -1,5 +1,5 @@
 import { ISceneDebugData } from '../../Types';
-import { Core } from '../../Core';
+import { IScene } from '../../ECS/IScene';
 
 /**
  * 场景数据收集器
@@ -10,8 +10,7 @@ export class SceneDataCollector {
     /**
      * 收集场景数据
      */
-    public collectSceneData(): ISceneDebugData {
-        const scene = Core.scene;
+    public collectSceneData(scene?: IScene | null): ISceneDebugData {
         if (!scene) {
             return {
                 currentSceneName: 'No Scene',
