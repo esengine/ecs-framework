@@ -3,7 +3,7 @@
  * 负责房间的创建、销毁和管理
  */
 import { createLogger, ITimer, Core } from '@esengine/ecs-framework';
-import { Room, RoomConfig, PlayerInfo, RoomEvents } from './Room';
+import { Room, RoomConfig, RoomPlayerInfo, RoomEvents } from './Room';
 import { ClientSession } from '../core/ConnectionManager';
 import { RoomState, IRoomInfo, EventEmitter } from '@esengine/network-shared';
 
@@ -52,8 +52,8 @@ export interface CreateRoomOptions {
 export interface RoomManagerEvents {
     roomCreated: (room: Room) => void;
     roomDestroyed: (room: Room, reason: string) => void;
-    playerJoinedRoom: (room: Room, player: PlayerInfo) => void;
-    playerLeftRoom: (room: Room, player: PlayerInfo, reason?: string) => void;
+    playerJoinedRoom: (room: Room, player: RoomPlayerInfo) => void;
+    playerLeftRoom: (room: Room, player: RoomPlayerInfo, reason?: string) => void;
 }
 
 /**

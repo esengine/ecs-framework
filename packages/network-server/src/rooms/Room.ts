@@ -21,9 +21,9 @@ export interface RoomConfig {
 }
 
 /**
- * 玩家信息
+ * 房间内玩家信息
  */
-export interface PlayerInfo {
+export interface RoomPlayerInfo {
     sessionId: string;
     name: string;
     isHost: boolean;
@@ -35,11 +35,11 @@ export interface PlayerInfo {
  * 房间事件接口
  */
 export interface RoomEvents {
-    playerJoined: (player: PlayerInfo) => void;
-    playerLeft: (player: PlayerInfo, reason?: string) => void;
-    hostChanged: (oldHost: PlayerInfo, newHost: PlayerInfo) => void;
+    playerJoined: (player: RoomPlayerInfo) => void;
+    playerLeft: (player: RoomPlayerInfo, reason?: string) => void;
+    hostChanged: (oldHost: RoomPlayerInfo, newHost: RoomPlayerInfo) => void;
     stateChanged: (oldState: RoomState, newState: RoomState) => void;
-    messageReceived: (message: INetworkMessage, fromPlayer: PlayerInfo) => void;
+    messageReceived: (message: INetworkMessage, fromPlayer: RoomPlayerInfo) => void;
     roomDestroyed: (reason: string) => void;
 }
 
@@ -64,7 +64,7 @@ export class Room extends EventEmitter {
     private logger = createLogger('Room');
     private config: RoomConfig;
     private state: RoomState = RoomState.Waiting;
-    private players: Map<string, PlayerInfo> = new Map();
+    private players: Map<string, RoomPlayerInfo> = new Map();
     private hostId?: string;
     private createTime: number = Date.now();
     private stats: RoomStats;
@@ -122,7 +122,7 @@ export class Room extends EventEmitter {
         }
 
         // 创建玩家信息
-        const player: PlayerInfo = {
+        const player: RoomPlayerInfo = {
             sessionId: session.id,
             name: playerName || `Player_${session.id.substr(-6)}`,
             isHost: this.players.size === 0, // 第一个加入的玩家成为房主
@@ -184,21 +184,21 @@ export class Room extends EventEmitter {
     /**
      * 获取玩家信息
      */
-    getPlayer(sessionId: string): PlayerInfo | undefined {
+    getPlayer(sessionId: string): RoomPlayerInfo | undefined {
         return this.players.get(sessionId);
     }
 
     /**
      * 获取所有玩家
      */
-    getAllPlayers(): PlayerInfo[] {
+    getAllPlayers(): RoomPlayerInfo[] {
         return Array.from(this.players.values());
     }
 
     /**
      * 获取房主
      */
-    getHost(): PlayerInfo | undefined {
+    getHost(): RoomPlayerInfo | undefined {
         return this.hostId ? this.players.get(this.hostId) : undefined;
     }
 
@@ -211,7 +211,7 @@ export class Room extends EventEmitter {
         }
 
         const oldHost = this.getHost();
-        let newHost: PlayerInfo | undefined;
+        let newHost: RoomPlayerInfo | undefined;
 
         if (newHostId) {
             newHost = this.players.get(newHostId);
