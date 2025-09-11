@@ -197,7 +197,25 @@ export default defineConfig({
           ]
         }
       ],
-      '/api/': [],
+      '/api/': [
+        {
+          text: 'API 参考',
+          items: [
+            {
+              text: 'Core',
+              link: '/api/core/'
+            },
+            {
+              text: 'Math',
+              link: '/api/math/'
+            },
+            {
+              text: 'Network Shared',
+              link: '/api/network-shared/'
+            }
+          ]
+        }
+      ],
       '/examples/': []
     },
     
