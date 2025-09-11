@@ -11,6 +11,15 @@ import { IScene, ISceneConfig } from './IScene';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from './Decorators';
 
 /**
+ * 场景统计信息
+ */
+export interface SceneStats {
+    entityCount: number;
+    processorCount: number;
+    componentStorageStats: Map<string, any>;
+}
+
+/**
  * 游戏场景默认实现类
  * 
  * 实现IScene接口，提供场景的基础功能。
@@ -351,12 +360,9 @@ export class Scene implements IScene {
 
     /**
      * 获取场景统计信息
+     * @returns 场景统计信息，包含实体数量、处理器数量和组件存储统计
      */
-    public getStats(): {
-        entityCount: number;
-        processorCount: number;
-        componentStorageStats: Map<string, any>;
-    } {
+    public getStats(): SceneStats {
         return {
             entityCount: this.entities.count,
             processorCount: this.entityProcessors.count,

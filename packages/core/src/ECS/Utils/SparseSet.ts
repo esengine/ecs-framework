@@ -1,4 +1,13 @@
 /**
+ * SparseSet内存统计信息
+ */
+export interface SparseSetMemoryStats {
+    denseArraySize: number;
+    sparseMapSize: number;
+    totalMemory: number;
+}
+
+/**
  * 稀疏集合实现
  * 
  * 提供O(1)的插入、删除、查找操作，同时保持数据的紧凑存储。
@@ -262,12 +271,9 @@ export class SparseSet<T> {
     
     /**
      * 获取内存使用统计信息
+     * @returns SparseSet内存统计信息，包含密集数组大小、稀疏映射大小和总内存使用量
      */
-    public getMemoryStats(): {
-        denseArraySize: number;
-        sparseMapSize: number;
-        totalMemory: number;
-    } {
+    public getMemoryStats(): SparseSetMemoryStats {
         const denseArraySize = this._dense.length * 8; // 估计每个引用8字节
         const sparseMapSize = this._sparse.size * 16;  // 估计每个Map条目16字节
         

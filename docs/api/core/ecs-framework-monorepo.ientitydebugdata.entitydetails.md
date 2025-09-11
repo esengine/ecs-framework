@@ -9,12 +9,5 @@
 **Signature:**
 
 ```typescript
-entityDetails?: Array<{
-        id: string | number;
-        name?: string;
-        tag?: string;
-        enabled: boolean;
-        componentCount: number;
-        components: string[];
-    }>;
+entityDetails?: EntityDetailInfo[];
 ```

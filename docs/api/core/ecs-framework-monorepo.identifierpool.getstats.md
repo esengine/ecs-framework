@@ -9,23 +9,11 @@
 **Signature:**
 
 ```typescript
-getStats(): {
-        totalAllocated: number;
-        totalRecycled: number;
-        currentActive: number;
-        currentlyFree: number;
-        pendingRecycle: number;
-        maxPossibleEntities: number;
-        maxUsedIndex: number;
-        memoryUsage: number;
-        memoryExpansions: number;
-        averageGeneration: number;
-        generationStorageSize: number;
-    };
+getStats(): IdentifierPoolStats;
 ```
 **Returns:**
 
-{ totalAllocated: number; totalRecycled: number; currentActive: number; currentlyFree: number; pendingRecycle: number; maxPossibleEntities: number; maxUsedIndex: number; memoryUsage: number; memoryExpansions: number; averageGeneration: number; generationStorageSize: number; }
+[IdentifierPoolStats](./ecs-framework-monorepo.identifierpoolstats.md)
 
 池的当前状态统计
 

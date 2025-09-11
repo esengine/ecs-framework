@@ -1003,6 +1003,17 @@ Description
 </td></tr>
 <tr><td>
 
+[ArchetypeInfo](./ecs-framework-monorepo.archetypeinfo.md)
+
+
+</td><td>
+
+Archetype分组信息
+
+
+</td></tr>
+<tr><td>
+
 [ArchetypeQueryResult](./ecs-framework-monorepo.archetypequeryresult.md)
 
 
@@ -1014,12 +1025,67 @@ Description
 </td></tr>
 <tr><td>
 
+[ArchetypeSystemInfo](./ecs-framework-monorepo.archetypesysteminfo.md)
+
+
+</td><td>
+
+Archetype系统信息
+
+
+</td></tr>
+<tr><td>
+
 [BitMask64Data](./ecs-framework-monorepo.bitmask64data.md)
 
 
 </td><td>
 
 64位掩码数据结构，使用两个32位整数表示
+
+
+</td></tr>
+<tr><td>
+
+[CacheStats](./ecs-framework-monorepo.cachestats.md)
+
+
+</td><td>
+
+缓存统计信息
+
+
+</td></tr>
+<tr><td>
+
+[ComponentPropertyInfo](./ecs-framework-monorepo.componentpropertyinfo.md)
+
+
+</td><td>
+
+组件属性信息
+
+
+</td></tr>
+<tr><td>
+
+[ComponentStatsInfo](./ecs-framework-monorepo.componentstatsinfo.md)
+
+
+</td><td>
+
+组件统计信息
+
+
+</td></tr>
+<tr><td>
+
+[DebugChannels](./ecs-framework-monorepo.debugchannels.md)
+
+
+</td><td>
+
+调试数据通道配置
 
 
 </td></tr>
@@ -1042,6 +1108,50 @@ Description
 </td><td>
 
 脏标记监听器
+
+
+</td></tr>
+<tr><td>
+
+[ECSStats](./ecs-framework-monorepo.ecsstats.md)
+
+
+</td><td>
+
+ECS统计信息接口
+
+
+</td></tr>
+<tr><td>
+
+[EntityComponentInfo](./ecs-framework-monorepo.entitycomponentinfo.md)
+
+
+</td><td>
+
+实体组件信息
+
+
+</td></tr>
+<tr><td>
+
+[EntityDetailInfo](./ecs-framework-monorepo.entitydetailinfo.md)
+
+
+</td><td>
+
+实体详情信息
+
+
+</td></tr>
+<tr><td>
+
+[EntityListStats](./ecs-framework-monorepo.entityliststats.md)
+
+
+</td><td>
+
+实体列表统计信息
 
 
 </td></tr>
@@ -1121,6 +1231,17 @@ Description
 </td><td>
 
 Core配置接口
+
+
+</td></tr>
+<tr><td>
+
+[IdentifierPoolStats](./ecs-framework-monorepo.identifierpoolstats.md)
+
+
+</td><td>
+
+ID池统计信息接口
 
 
 </td></tr>
@@ -1425,12 +1546,34 @@ WorldManager配置接口
 </td></tr>
 <tr><td>
 
+[MemoryDetails](./ecs-framework-monorepo.memorydetails.md)
+
+
+</td><td>
+
+内存详情信息
+
+
+</td></tr>
+<tr><td>
+
 [MemoryStats](./ecs-framework-monorepo.memorystats.md)
 
 
 </td><td>
 
 内存统计信息
+
+
+</td></tr>
+<tr><td>
+
+[OptimizationStats](./ecs-framework-monorepo.optimizationstats.md)
+
+
+</td><td>
+
+优化统计信息
 
 
 </td></tr>
@@ -1469,12 +1612,89 @@ WorldManager配置接口
 </td></tr>
 <tr><td>
 
+[QueryIndexStats](./ecs-framework-monorepo.queryindexstats.md)
+
+
+</td><td>
+
+查询索引统计信息
+
+
+</td></tr>
+<tr><td>
+
+[QueryStats](./ecs-framework-monorepo.querystats.md)
+
+
+</td><td>
+
+查询统计信息
+
+
+</td></tr>
+<tr><td>
+
+[QuerySystemStats](./ecs-framework-monorepo.querysystemstats.md)
+
+
+</td><td>
+
+查询系统统计信息
+
+
+</td></tr>
+<tr><td>
+
+[SparseSetMemoryStats](./ecs-framework-monorepo.sparsesetmemorystats.md)
+
+
+</td><td>
+
+SparseSet内存统计信息
+
+
+</td></tr>
+<tr><td>
+
 [StorageStats](./ecs-framework-monorepo.storagestats.md)
 
 
 </td><td>
 
 组件存储统计信息
+
+
+</td></tr>
+<tr><td>
+
+[SystemBreakdownInfo](./ecs-framework-monorepo.systembreakdowninfo.md)
+
+
+</td><td>
+
+系统性能占比信息
+
+
+</td></tr>
+<tr><td>
+
+[SystemInfo](./ecs-framework-monorepo.systeminfo.md)
+
+
+</td><td>
+
+系统信息
+
+
+</td></tr>
+<tr><td>
+
+[SystemPerformanceInfo](./ecs-framework-monorepo.systemperformanceinfo.md)
+
+
+</td><td>
+
+系统性能信息
 
 
 </td></tr>

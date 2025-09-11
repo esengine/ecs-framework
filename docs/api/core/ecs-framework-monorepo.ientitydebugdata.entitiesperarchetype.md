@@ -9,9 +9,5 @@
 **Signature:**
 
 ```typescript
-entitiesPerArchetype: Array<{
-        signature: string;
-        count: number;
-        memory: number;
-    }>;
+entitiesPerArchetype: ArchetypeInfo[];
 ```

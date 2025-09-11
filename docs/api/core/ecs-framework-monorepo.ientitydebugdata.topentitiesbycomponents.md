@@ -9,10 +9,5 @@
 **Signature:**
 
 ```typescript
-topEntitiesByComponents: Array<{
-        id: string;
-        name: string;
-        componentCount: number;
-        memory: number;
-    }>;
+topEntitiesByComponents: EntityComponentInfo[];
 ```

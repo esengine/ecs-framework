@@ -64,7 +64,7 @@ number
 
 </td><td>
 
-Array&lt;{ typeName: string; instanceCount: number; memoryPerInstance: number; totalMemory: number; poolSize: number; poolUtilization: number; averagePerEntity?: number; }&gt;
+[ComponentStatsInfo](./ecs-framework-monorepo.componentstatsinfo.md)<!-- -->\[\]
 
 
 </td><td>

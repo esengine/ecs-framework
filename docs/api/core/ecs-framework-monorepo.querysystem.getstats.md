@@ -11,37 +11,11 @@
 **Signature:**
 
 ```typescript
-getStats(): {
-        entityCount: number;
-        indexStats: {
-            maskIndexSize: number;
-            componentIndexSize: number;
-            tagIndexSize: number;
-            nameIndexSize: number;
-        };
-        queryStats: {
-            totalQueries: number;
-            cacheHits: number;
-            indexHits: number;
-            linearScans: number;
-            archetypeHits: number;
-            dirtyChecks: number;
-            cacheHitRate: string;
-        };
-        optimizationStats: {
-            componentIndex: any;
-            archetypeSystem: any;
-            dirtyTracking: any;
-        };
-        cacheStats: {
-            size: number;
-            hitRate: string;
-        };
-    };
+getStats(): QuerySystemStats;
 ```
 **Returns:**
 
-{ entityCount: number; indexStats: { maskIndexSize: number; componentIndexSize: number; tagIndexSize: number; nameIndexSize: number; }; queryStats: { totalQueries: number; cacheHits: number; indexHits: number; linearScans: number; archetypeHits: number; dirtyChecks: number; cacheHitRate: string; }; optimizationStats: { componentIndex: any; archetypeSystem: any; dirtyTracking: any; }; cacheStats: { size: number; hitRate: string; }; }
+[QuerySystemStats](./ecs-framework-monorepo.querysystemstats.md)
 
-系统统计信息对象
+查询系统统计信息，包含实体数量、索引状态、查询性能等详细信息
 

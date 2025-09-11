@@ -9,17 +9,11 @@
 **Signature:**
 
 ```typescript
-getStats(): {
-        totalEntities: number;
-        activeEntities: number;
-        pendingAdd: number;
-        pendingRemove: number;
-        nameIndexSize: number;
-    };
+getStats(): EntityListStats;
 ```
 **Returns:**
 
-{ totalEntities: number; activeEntities: number; pendingAdd: number; pendingRemove: number; nameIndexSize: number; }
+[EntityListStats](./ecs-framework-monorepo.entityliststats.md)
 
-统计信息
+实体列表统计信息，包含总实体数、活跃实体数、待添加和待移除数量等
 

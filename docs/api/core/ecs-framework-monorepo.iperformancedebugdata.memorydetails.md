@@ -9,14 +9,5 @@
 **Signature:**
 
 ```typescript
-memoryDetails?: {
-        entities: number;
-        components: number;
-        systems: number;
-        pooled: number;
-        totalMemory: number;
-        usedMemory: number;
-        freeMemory: number;
-        gcCollections: number;
-    };
+memoryDetails?: MemoryDetails;
 ```

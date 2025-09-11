@@ -45,7 +45,7 @@ Description
 
 </td><td>
 
-Array&lt;{ name: string; type: string; entityCount: number; executionTime?: number; averageExecutionTime?: number; minExecutionTime?: number; maxExecutionTime?: number; executionTimeHistory?: number\[\]; memoryUsage?: number; updateOrder: number; enabled: boolean; lastUpdateTime?: number; }&gt;
+[SystemInfo](./ecs-framework-monorepo.systeminfo.md)<!-- -->\[\]
 
 
 </td><td>

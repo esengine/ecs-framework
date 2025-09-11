@@ -178,7 +178,7 @@ number
 
 </td><td>
 
-{ entities: number; components: number; systems: number; pooled: number; totalMemory: number; usedMemory: number; freeMemory: number; gcCollections: number; }
+[MemoryDetails](./ecs-framework-monorepo.memorydetails.md)
 
 
 </td><td>
@@ -235,7 +235,7 @@ number
 
 </td><td>
 
-Array&lt;{ systemName: string; executionTime: number; percentage: number; }&gt;
+[SystemBreakdownInfo](./ecs-framework-monorepo.systembreakdowninfo.md)<!-- -->\[\]
 
 
 </td><td>
@@ -254,7 +254,7 @@ _(Optional)_ 系统占比分析数据
 
 </td><td>
 
-Array&lt;{ systemName: string; averageTime: number; maxTime: number; minTime: number; samples: number; percentage?: number; }&gt;
+[SystemPerformanceInfo](./ecs-framework-monorepo.systemperformanceinfo.md)<!-- -->\[\]
 
 
 </td><td>

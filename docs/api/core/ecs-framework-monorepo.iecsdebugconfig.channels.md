@@ -9,11 +9,5 @@
 **Signature:**
 
 ```typescript
-channels: {
-        entities: boolean;
-        systems: boolean;
-        performance: boolean;
-        components: boolean;
-        scenes: boolean;
-    };
+channels: DebugChannels;
 ```

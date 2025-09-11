@@ -9,13 +9,11 @@
 **Signature:**
 
 ```typescript
-getStats(): {
-        entityCount: number;
-        processorCount: number;
-        componentStorageStats: Map<string, any>;
-    };
+getStats(): SceneStats;
 ```
 **Returns:**
 
-{ entityCount: number; processorCount: number; componentStorageStats: Map&lt;string, any&gt;; }
+SceneStats
+
+场景统计信息，包含实体数量、处理器数量和组件存储统计
 

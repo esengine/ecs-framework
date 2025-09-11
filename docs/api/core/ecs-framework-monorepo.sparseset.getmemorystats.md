@@ -9,13 +9,11 @@
 **Signature:**
 
 ```typescript
-getMemoryStats(): {
-        denseArraySize: number;
-        sparseMapSize: number;
-        totalMemory: number;
-    };
+getMemoryStats(): SparseSetMemoryStats;
 ```
 **Returns:**
 
-{ denseArraySize: number; sparseMapSize: number; totalMemory: number; }
+[SparseSetMemoryStats](./ecs-framework-monorepo.sparsesetmemorystats.md)
+
+SparseSet内存统计信息，包含密集数组大小、稀疏映射大小和总内存使用量
 

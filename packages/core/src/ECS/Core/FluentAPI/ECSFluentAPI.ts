@@ -8,6 +8,7 @@ import { EntityBuilder } from './EntityBuilder';
 import { SceneBuilder } from './SceneBuilder';
 import { ComponentBuilder } from './ComponentBuilder';
 import { EntityBatchOperator } from './EntityBatchOperator';
+import { ECSStats } from '../../../Types';
 
 /**
  * ECS流式API主入口
@@ -158,13 +159,7 @@ export class ECSFluentAPI {
      * 获取场景统计信息
      * @returns 统计信息
      */
-    public getStats(): {
-        entityCount: number;
-        systemCount: number;
-        componentStats: Map<string, unknown>;
-        queryStats: unknown;
-        eventStats: Map<string, unknown>;
-    } {
+    public getStats(): ECSStats {
         return {
             entityCount: this.scene.entities.count,
             systemCount: this.scene.systems.length,

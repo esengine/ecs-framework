@@ -9,12 +9,5 @@
 **Signature:**
 
 ```typescript
-systemPerformance: Array<{
-        systemName: string;
-        averageTime: number;
-        maxTime: number;
-        minTime: number;
-        samples: number;
-        percentage?: number;
-    }>;
+systemPerformance: SystemPerformanceInfo[];
 ```

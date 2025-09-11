@@ -11,6 +11,66 @@ import { ArchetypeSystem, Archetype, ArchetypeQueryResult } from './ArchetypeSys
 import { DirtyTrackingSystem, DirtyFlag } from './DirtyTrackingSystem';
 
 /**
+ * 查询索引统计信息
+ */
+export interface QueryIndexStats {
+    maskIndexSize: number;
+    componentIndexSize: number;
+    tagIndexSize: number;
+    nameIndexSize: number;
+}
+
+/**
+ * 查询统计信息
+ */
+export interface QueryStats {
+    totalQueries: number;
+    cacheHits: number;
+    indexHits: number;
+    linearScans: number;
+    archetypeHits: number;
+    dirtyChecks: number;
+    cacheHitRate: string;
+}
+
+/**
+ * Archetype系统信息
+ */
+export interface ArchetypeSystemInfo {
+    id: string;
+    componentTypes: string[];
+    entityCount: number;
+}
+
+/**
+ * 优化统计信息
+ */
+export interface OptimizationStats {
+    componentIndex: any;
+    archetypeSystem: ArchetypeSystemInfo[];
+    dirtyTracking: any;
+}
+
+/**
+ * 缓存统计信息
+ */
+export interface CacheStats {
+    size: number;
+    hitRate: string;
+}
+
+/**
+ * 查询系统统计信息
+ */
+export interface QuerySystemStats {
+    entityCount: number;
+    indexStats: QueryIndexStats;
+    queryStats: QueryStats;
+    optimizationStats: OptimizationStats;
+    cacheStats: CacheStats;
+}
+
+/**
  * 查询条件类型
  */
 export enum QueryConditionType {
@@ -914,35 +974,9 @@ export class QuerySystem {
      * 返回查询系统的详细统计信息，包括实体数量、索引状态、
      * 查询性能统计等，用于性能监控和调试。
      * 
-     * @returns 系统统计信息对象
+     * @returns 查询系统统计信息，包含实体数量、索引状态、查询性能等详细信息
      */
-    public getStats(): {
-        entityCount: number;
-        indexStats: {
-            maskIndexSize: number;
-            componentIndexSize: number;
-            tagIndexSize: number;
-            nameIndexSize: number;
-        };
-        queryStats: {
-            totalQueries: number;
-            cacheHits: number;
-            indexHits: number;
-            linearScans: number;
-            archetypeHits: number;
-            dirtyChecks: number;
-            cacheHitRate: string;
-        };
-        optimizationStats: {
-            componentIndex: any;
-            archetypeSystem: any;
-            dirtyTracking: any;
-        };
-        cacheStats: {
-            size: number;
-            hitRate: string;
-        };
-    } {
+    public getStats(): QuerySystemStats {
         return {
             entityCount: this.entities.length,
             indexStats: {

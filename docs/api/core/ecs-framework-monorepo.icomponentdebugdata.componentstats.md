@@ -9,13 +9,5 @@
 **Signature:**
 
 ```typescript
-componentStats: Array<{
-        typeName: string;
-        instanceCount: number;
-        memoryPerInstance: number;
-        totalMemory: number;
-        poolSize: number;
-        poolUtilization: number;
-        averagePerEntity?: number;
-    }>;
+componentStats: ComponentStatsInfo[];
 ```

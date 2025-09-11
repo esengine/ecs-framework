@@ -9,9 +9,5 @@
 **Signature:**
 
 ```typescript
-systemBreakdown?: Array<{
-        systemName: string;
-        executionTime: number;
-        percentage: number;
-    }>;
+systemBreakdown?: SystemBreakdownInfo[];
 ```

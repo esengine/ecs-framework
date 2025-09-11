@@ -9,18 +9,5 @@
 **Signature:**
 
 ```typescript
-systemsInfo: Array<{
-        name: string;
-        type: string;
-        entityCount: number;
-        executionTime?: number;
-        averageExecutionTime?: number;
-        minExecutionTime?: number;
-        maxExecutionTime?: number;
-        executionTimeHistory?: number[];
-        memoryUsage?: number;
-        updateOrder: number;
-        enabled: boolean;
-        lastUpdateTime?: number;
-    }>;
+systemsInfo: SystemInfo[];
 ```

@@ -1,3 +1,5 @@
+import { IdentifierPoolStats } from '../../Types';
+
 /**
  * 世代式ID池管理器
  * 
@@ -194,30 +196,7 @@ export class IdentifierPool {
      * 
      * @returns 池的当前状态统计
      */
-    public getStats(): {
-        /** 已分配的总索引数 */
-        totalAllocated: number;
-        /** 总计回收次数 */
-        totalRecycled: number;
-        /** 当前活跃实体数 */
-        currentActive: number;
-        /** 当前空闲的索引数 */
-        currentlyFree: number;
-        /** 等待回收的ID数 */
-        pendingRecycle: number;
-        /** 理论最大实体数（设计限制） */
-        maxPossibleEntities: number;
-        /** 当前使用的最大索引 */
-        maxUsedIndex: number;
-        /** 内存使用（字节） */
-        memoryUsage: number;
-        /** 内存扩展次数 */
-        memoryExpansions: number;
-        /** 平均世代版本 */
-        averageGeneration: number;
-        /** 世代存储大小 */
-        generationStorageSize: number;
-    } {
+    public getStats(): IdentifierPoolStats {
         // 计算平均世代版本
         let totalGeneration = 0;
         let generationCount = 0;

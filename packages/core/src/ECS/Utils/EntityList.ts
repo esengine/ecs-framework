@@ -2,6 +2,17 @@ import { Entity } from '../Entity';
 import { Component } from '../Component';
 
 /**
+ * 实体列表统计信息
+ */
+export interface EntityListStats {
+    totalEntities: number;
+    activeEntities: number;
+    pendingAdd: number;
+    pendingRemove: number;
+    nameIndexSize: number;
+}
+
+/**
  * 高性能实体列表管理器
  * 管理场景中的所有实体，支持快速查找和批量操作
  */
@@ -277,15 +288,9 @@ export class EntityList {
 
     /**
      * 获取实体列表的统计信息
-     * @returns 统计信息
+     * @returns 实体列表统计信息，包含总实体数、活跃实体数、待添加和待移除数量等
      */
-    public getStats(): {
-        totalEntities: number;
-        activeEntities: number;
-        pendingAdd: number;
-        pendingRemove: number;
-        nameIndexSize: number;
-    } {
+    public getStats(): EntityListStats {
         let activeCount = 0;
         for (const entity of this.buffer) {
             if (entity.enabled && !entity.isDestroyed) {

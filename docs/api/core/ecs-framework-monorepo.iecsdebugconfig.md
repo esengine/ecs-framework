@@ -64,7 +64,7 @@ _(Optional)_ 是否自动重连
 
 </td><td>
 
-{ entities: boolean; systems: boolean; performance: boolean; components: boolean; scenes: boolean; }
+[DebugChannels](./ecs-framework-monorepo.debugchannels.md)
 
 
 </td><td>

@@ -236,6 +236,122 @@ export interface IPerformanceEventData extends IEventData {
 }
 
 /**
+ * 调试数据通道配置
+ */
+export interface DebugChannels {
+    entities: boolean;
+    systems: boolean;
+    performance: boolean;
+    components: boolean;
+    scenes: boolean;
+}
+
+/**
+ * Archetype分组信息
+ */
+export interface ArchetypeInfo {
+    signature: string;
+    count: number;
+    memory: number;
+}
+
+/**
+ * 实体组件信息
+ */
+export interface EntityComponentInfo {
+    id: string;
+    name: string;
+    componentCount: number;
+    memory: number;
+}
+
+/**
+ * 实体详情信息
+ */
+export interface EntityDetailInfo {
+    id: string | number;
+    name?: string;
+    tag?: string;
+    enabled: boolean;
+    componentCount: number;
+    components: string[];
+}
+
+/**
+ * 组件属性信息
+ */
+export interface ComponentPropertyInfo {
+    typeName: string;
+    properties: Record<string, unknown>;
+}
+
+/**
+ * 系统信息
+ */
+export interface SystemInfo {
+    name: string;
+    type: string;
+    entityCount: number;
+    executionTime?: number;
+    averageExecutionTime?: number;
+    minExecutionTime?: number;
+    maxExecutionTime?: number;
+    executionTimeHistory?: number[];
+    memoryUsage?: number;
+    updateOrder: number;
+    enabled: boolean;
+    lastUpdateTime?: number;
+}
+
+/**
+ * 系统性能信息
+ */
+export interface SystemPerformanceInfo {
+    systemName: string;
+    averageTime: number;
+    maxTime: number;
+    minTime: number;
+    samples: number;
+    percentage?: number;
+}
+
+/**
+ * 系统性能占比信息
+ */
+export interface SystemBreakdownInfo {
+    systemName: string;
+    executionTime: number;
+    percentage: number;
+}
+
+/**
+ * 组件统计信息
+ */
+export interface ComponentStatsInfo {
+    typeName: string;
+    instanceCount: number;
+    memoryPerInstance: number;
+    totalMemory: number;
+    poolSize: number;
+    poolUtilization: number;
+    averagePerEntity?: number;
+}
+
+/**
+ * 内存详情信息
+ */
+export interface MemoryDetails {
+    entities: number;
+    components: number;
+    systems: number;
+    pooled: number;
+    totalMemory: number;
+    usedMemory: number;
+    freeMemory: number;
+    gcCollections: number;
+}
+
+/**
  * ECS调试配置接口
  */
 export interface IECSDebugConfig {
@@ -250,13 +366,7 @@ export interface IECSDebugConfig {
     /** 调试数据发送帧率 (60fps, 30fps, 15fps) */
     debugFrameRate?: 60 | 30 | 15;
     /** 数据通道配置 */
-    channels: {
-        entities: boolean;
-        systems: boolean;
-        performance: boolean;
-        components: boolean;
-        scenes: boolean;
-    };
+    channels: DebugChannels;
 }
 
 /**
@@ -328,27 +438,11 @@ export interface IEntityDebugData {
     /** 待移除实体数 */
     pendingRemove: number;
     /** 按Archetype分组的实体分布 */
-    entitiesPerArchetype: Array<{
-        signature: string;
-        count: number;
-        memory: number;
-    }>;
+    entitiesPerArchetype: ArchetypeInfo[];
     /** 组件数量最多的前几个实体 */
-    topEntitiesByComponents: Array<{
-        id: string;
-        name: string;
-        componentCount: number;
-        memory: number;
-    }>;
+    topEntitiesByComponents: EntityComponentInfo[];
     /** 实体详情列表 */
-    entityDetails?: Array<{
-        id: string | number;
-        name?: string;
-        tag?: string;
-        enabled: boolean;
-        componentCount: number;
-        components: string[];
-    }>;
+    entityDetails?: EntityDetailInfo[];
     /** 实体层次结构（根实体） */
     entityHierarchy?: Array<{
         id: number;
@@ -396,20 +490,7 @@ export interface ISystemDebugData {
     /** 总系统数 */
     totalSystems: number;
     /** 系统信息列表 */
-    systemsInfo: Array<{
-        name: string;
-        type: string;
-        entityCount: number;
-        executionTime?: number;
-        averageExecutionTime?: number;
-        minExecutionTime?: number;
-        maxExecutionTime?: number;
-        executionTimeHistory?: number[];
-        memoryUsage?: number;
-        updateOrder: number;
-        enabled: boolean;
-        lastUpdateTime?: number;
-    }>;
+    systemsInfo: SystemInfo[];
 }
 
 /**
@@ -435,31 +516,11 @@ export interface IPerformanceDebugData {
     /** ECS执行时间历史记录 */
     frameTimeHistory: number[];
     /** 系统性能详情 */
-    systemPerformance: Array<{
-        systemName: string;
-        averageTime: number;
-        maxTime: number;
-        minTime: number;
-        samples: number;
-        percentage?: number; // 系统占ECS总时间的百分比
-    }>;
+    systemPerformance: SystemPerformanceInfo[];
     /** 系统占比分析数据 */
-    systemBreakdown?: Array<{
-        systemName: string;
-        executionTime: number;
-        percentage: number;
-    }>;
+    systemBreakdown?: SystemBreakdownInfo[];
     /** 内存分配详情 */
-    memoryDetails?: {
-        entities: number;
-        components: number;
-        systems: number;
-        pooled: number;
-        totalMemory: number;
-        usedMemory: number;
-        freeMemory: number;
-        gcCollections: number;
-    };
+    memoryDetails?: MemoryDetails;
 }
 
 /**
@@ -471,15 +532,7 @@ export interface IComponentDebugData {
     /** 组件实例总数 */
     componentInstances: number;
     /** 组件分布统计 */
-    componentStats: Array<{
-        typeName: string;
-        instanceCount: number;
-        memoryPerInstance: number;
-        totalMemory: number;
-        poolSize: number;
-        poolUtilization: number;
-        averagePerEntity?: number;
-    }>;
+    componentStats: ComponentStatsInfo[];
 }
 
 /**
@@ -500,4 +553,43 @@ export interface ISceneDebugData {
     sceneMemory: number;
     /** 场景启动时间 */
     sceneUptime: number;
+}
+
+/**
+ * ID池统计信息接口
+ */
+export interface IdentifierPoolStats {
+    /** 已分配的总索引数 */
+    totalAllocated: number;
+    /** 总计回收次数 */
+    totalRecycled: number;
+    /** 当前活跃实体数 */
+    currentActive: number;
+    /** 当前空闲的索引数 */
+    currentlyFree: number;
+    /** 等待回收的ID数 */
+    pendingRecycle: number;
+    /** 理论最大实体数（设计限制） */
+    maxPossibleEntities: number;
+    /** 当前使用的最大索引 */
+    maxUsedIndex: number;
+    /** 内存使用（字节） */
+    memoryUsage: number;
+    /** 内存扩展次数 */
+    memoryExpansions: number;
+    /** 平均世代版本 */
+    averageGeneration: number;
+    /** 世代存储大小 */
+    generationStorageSize: number;
+}
+
+/**
+ * ECS统计信息接口
+ */
+export interface ECSStats {
+    entityCount: number;
+    systemCount: number;
+    componentStats: Map<string, unknown>;
+    queryStats: unknown;
+    eventStats: Map<string, unknown>;
 } 

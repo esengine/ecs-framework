@@ -9,17 +9,11 @@
 **Signature:**
 
 ```typescript
-getStats(): {
-        entityCount: number;
-        systemCount: number;
-        componentStats: Map<string, unknown>;
-        queryStats: unknown;
-        eventStats: Map<string, unknown>;
-    };
+getStats(): ECSStats;
 ```
 **Returns:**
 
-{ entityCount: number; systemCount: number; componentStats: Map&lt;string, unknown&gt;; queryStats: unknown; eventStats: Map&lt;string, unknown&gt;; }
+[ECSStats](./ecs-framework-monorepo.ecsstats.md)
 
 统计信息
 

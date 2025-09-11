@@ -64,7 +64,7 @@ number
 
 </td><td>
 
-Array&lt;{ signature: string; count: number; memory: number; }&gt;
+[ArchetypeInfo](./ecs-framework-monorepo.archetypeinfo.md)<!-- -->\[\]
 
 
 </td><td>
@@ -83,7 +83,7 @@ Array&lt;{ signature: string; count: number; memory: number; }&gt;
 
 </td><td>
 
-Array&lt;{ id: string \| number; name?: string; tag?: string; enabled: boolean; componentCount: number; components: string\[\]; }&gt;
+[EntityDetailInfo](./ecs-framework-monorepo.entitydetailinfo.md)<!-- -->\[\]
 
 
 </td><td>
@@ -178,7 +178,7 @@ number
 
 </td><td>
 
-Array&lt;{ id: string; name: string; componentCount: number; memory: number; }&gt;
+[EntityComponentInfo](./ecs-framework-monorepo.entitycomponentinfo.md)<!-- -->\[\]
 
 
 </td><td>
