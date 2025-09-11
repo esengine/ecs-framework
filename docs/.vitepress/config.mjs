@@ -36,6 +36,11 @@ export default defineConfig({
   /** 最后更新时间显示 */
   lastUpdated: true,
   
+  /** 排除有问题的API文档文件 */
+  srcExclude: [
+    '**/api/**/*.md'
+  ],
+  
   // === Head 配置 ===
   head: [
     // 网站图标
