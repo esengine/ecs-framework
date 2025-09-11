@@ -5,7 +5,7 @@
 export class NumberExtension {
     /**
      * 将值转换为数字
-     * @param value 要转换的值
+     * @param value - 要转换的值
      * @returns 转换后的数字，如果值为undefined则返回0
      */
     public static toNumber(value: unknown): number {

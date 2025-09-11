@@ -192,7 +192,7 @@ export class Scene implements IScene {
 
     /**
      * 将实体添加到此场景，并返回它
-     * @param name 实体名称
+     * @param name - 实体名称
      */
     public createEntity(name: string) {
         let entity = new Entity(name, this.identifierPool.checkOut());
@@ -204,8 +204,8 @@ export class Scene implements IScene {
 
     /**
      * 在场景的实体列表中添加一个实体
-     * @param entity 要添加的实体
-     * @param deferCacheClear 是否延迟缓存清理（用于批量操作）
+     * @param entity - 要添加的实体
+     * @param deferCacheClear - 是否延迟缓存清理（用于批量操作）
      */
     public addEntity(entity: Entity, deferCacheClear: boolean = false) {
         this.entities.add(entity);
@@ -222,8 +222,8 @@ export class Scene implements IScene {
 
     /**
      * 批量创建实体（高性能版本）
-     * @param count 要创建的实体数量
-     * @param namePrefix 实体名称前缀
+     * @param count - 要创建的实体数量
+     * @param namePrefix - 实体名称前缀
      * @returns 创建的实体列表
      */
     public createEntities(count: number, namePrefix: string = "Entity"): Entity[] {
@@ -263,7 +263,7 @@ export class Scene implements IScene {
 
     /**
      * 搜索并返回第一个具有名称的实体
-     * @param name 实体名称
+     * @param name - 实体名称
      */
     public findEntity(name: string): Entity | null {
         return this.entities.findEntity(name);
@@ -271,7 +271,7 @@ export class Scene implements IScene {
 
     /**
      * 根据ID查找实体
-     * @param id 实体ID
+     * @param id - 实体ID
      */
     public findEntityById(id: number): Entity | null {
         return this.entities.findEntityById(id);
@@ -279,7 +279,7 @@ export class Scene implements IScene {
 
     /**
      * 根据标签查找实体
-     * @param tag 实体标签
+     * @param tag - 实体标签
      */
     public findEntitiesByTag(tag: number): Entity[] {
         const result: Entity[] = [];
@@ -293,7 +293,7 @@ export class Scene implements IScene {
 
     /**
      * 根据名称查找实体（别名方法）
-     * @param name 实体名称
+     * @param name - 实体名称
      */
     public getEntityByName(name: string): Entity | null {
         return this.findEntity(name);
@@ -301,7 +301,7 @@ export class Scene implements IScene {
 
     /**
      * 根据标签查找实体（别名方法）
-     * @param tag 实体标签
+     * @param tag - 实体标签
      */
     public getEntitiesByTag(tag: number): Entity[] {
         return this.findEntitiesByTag(tag);
@@ -309,7 +309,7 @@ export class Scene implements IScene {
 
     /**
      * 在场景中添加一个EntitySystem处理器
-     * @param processor 处理器
+     * @param processor - 处理器
      */
     public addEntityProcessor(processor: EntitySystem) {
         if (this.entityProcessors.processors.includes(processor)) {
@@ -325,7 +325,7 @@ export class Scene implements IScene {
 
     /**
      * 添加系统到场景（addEntityProcessor的别名）
-     * @param system 系统
+     * @param system - 系统
      */
     public addSystem(system: EntitySystem) {
         return this.addEntityProcessor(system);
@@ -333,7 +333,7 @@ export class Scene implements IScene {
 
     /**
      * 从场景中删除EntitySystem处理器
-     * @param processor 要删除的处理器
+     * @param processor - 要删除的处理器
      */
     public removeEntityProcessor(processor: EntitySystem) {
         this.entityProcessors.remove(processor);
@@ -343,7 +343,7 @@ export class Scene implements IScene {
 
     /**
      * 获取指定类型的EntitySystem处理器
-     * @param type 处理器类型
+     * @param type - 处理器类型
      */
     public getEntityProcessor<T extends EntitySystem>(type: new (...args: unknown[]) => T): T | null {
         return this.entityProcessors.getProcessor(type);

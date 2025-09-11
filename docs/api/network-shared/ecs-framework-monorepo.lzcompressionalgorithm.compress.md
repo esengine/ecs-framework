@@ -7,7 +7,7 @@
 **Signature:**
 
 ```typescript
-compress(data: ArrayBuffer): ArrayBuffer;
+compress(data: Uint8Array): Uint8Array;
 ```
 
 ## Parameters
@@ -35,7 +35,7 @@ data
 
 </td><td>
 
-ArrayBuffer
+Uint8Array
 
 
 </td><td>
@@ -46,5 +46,5 @@ ArrayBuffer
 
 **Returns:**
 
-ArrayBuffer
+Uint8Array
 

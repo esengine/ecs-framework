@@ -80,9 +80,9 @@ export class TypeSafeEventSystem {
 
     /**
      * 添加事件监听器
-     * @param eventType 事件类型
-     * @param handler 事件处理器
-     * @param config 监听器配置
+     * @param eventType - 事件类型
+     * @param handler - 事件处理器
+     * @param config - 监听器配置
      * @returns 监听器ID（用于移除）
      */
     public on<T>(
@@ -95,9 +95,9 @@ export class TypeSafeEventSystem {
 
     /**
      * 添加一次性事件监听器
-     * @param eventType 事件类型
-     * @param handler 事件处理器
-     * @param config 监听器配置
+     * @param eventType - 事件类型
+     * @param handler - 事件处理器
+     * @param config - 监听器配置
      * @returns 监听器ID
      */
     public once<T>(
@@ -110,9 +110,9 @@ export class TypeSafeEventSystem {
 
     /**
      * 添加异步事件监听器
-     * @param eventType 事件类型
-     * @param handler 异步事件处理器
-     * @param config 监听器配置
+     * @param eventType - 事件类型
+     * @param handler - 异步事件处理器
+     * @param config - 监听器配置
      * @returns 监听器ID
      */
     public onAsync<T>(
@@ -125,8 +125,8 @@ export class TypeSafeEventSystem {
 
     /**
      * 移除事件监听器
-     * @param eventType 事件类型
-     * @param listenerId 监听器ID
+     * @param eventType - 事件类型
+     * @param listenerId - 监听器ID
      * @returns 是否成功移除
      */
     public off(eventType: string, listenerId: string): boolean {
@@ -149,7 +149,7 @@ export class TypeSafeEventSystem {
 
     /**
      * 移除指定事件类型的所有监听器
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      */
     public offAll(eventType: string): void {
         this.listeners.delete(eventType);
@@ -159,8 +159,8 @@ export class TypeSafeEventSystem {
 
     /**
      * 触发事件
-     * @param eventType 事件类型
-     * @param event 事件数据
+     * @param eventType - 事件类型
+     * @param event - 事件数据
      * @returns Promise（如果有异步监听器）
      */
     public async emit<T>(eventType: string, event: T): Promise<void> {
@@ -178,8 +178,8 @@ export class TypeSafeEventSystem {
 
     /**
      * 同步触发事件（忽略异步监听器）
-     * @param eventType 事件类型
-     * @param event 事件数据
+     * @param eventType - 事件类型
+     * @param event - 事件数据
      */
     public emitSync<T>(eventType: string, event: T): void {
         if (!this.isEnabled) return;
@@ -220,8 +220,8 @@ export class TypeSafeEventSystem {
 
     /**
      * 设置事件批处理配置
-     * @param eventType 事件类型
-     * @param config 批处理配置
+     * @param eventType - 事件类型
+     * @param config - 批处理配置
      */
     public setBatchConfig(eventType: string, config: EventBatchConfig): void {
         this.batchConfigs.set(eventType, config);
@@ -229,7 +229,7 @@ export class TypeSafeEventSystem {
 
     /**
      * 立即处理指定事件类型的批处理队列
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      */
     public flushBatch(eventType: string): void {
         const batch = this.batchQueue.get(eventType);
@@ -251,7 +251,7 @@ export class TypeSafeEventSystem {
 
     /**
      * 获取事件统计信息
-     * @param eventType 事件类型（可选）
+     * @param eventType - 事件类型（可选）
      * @returns 统计信息
      */
     public getStats(eventType?: string): EventStats | Map<string, EventStats> {
@@ -263,7 +263,7 @@ export class TypeSafeEventSystem {
 
     /**
      * 重置统计信息
-     * @param eventType 事件类型（可选，不指定则重置所有）
+     * @param eventType - 事件类型（可选，不指定则重置所有）
      */
     public resetStats(eventType?: string): void {
         if (eventType) {
@@ -275,7 +275,7 @@ export class TypeSafeEventSystem {
 
     /**
      * 启用/禁用事件系统
-     * @param enabled 是否启用
+     * @param enabled - 是否启用
      */
     public setEnabled(enabled: boolean): void {
         this.isEnabled = enabled;
@@ -283,7 +283,7 @@ export class TypeSafeEventSystem {
 
     /**
      * 检查是否有指定事件类型的监听器
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      * @returns 是否有监听器
      */
     public hasListeners(eventType: string): boolean {
@@ -293,7 +293,7 @@ export class TypeSafeEventSystem {
 
     /**
      * 获取指定事件类型的监听器数量
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      * @returns 监听器数量
      */
     public getListenerCount(eventType: string): number {
@@ -312,7 +312,7 @@ export class TypeSafeEventSystem {
 
     /**
      * 设置每个事件类型的最大监听器数量
-     * @param max 最大数量
+     * @param max - 最大数量
      */
     public setMaxListeners(max: number): void {
         this.maxListeners = max;
@@ -320,9 +320,9 @@ export class TypeSafeEventSystem {
 
     /**
      * 添加监听器的内部实现
-     * @param eventType 事件类型
-     * @param handler 事件处理器
-     * @param config 配置
+     * @param eventType - 事件类型
+     * @param handler - 事件处理器
+     * @param config - 配置
      * @returns 监听器ID
      */
     private addListener<T>(
@@ -365,8 +365,8 @@ export class TypeSafeEventSystem {
 
     /**
      * 执行事件的内部实现
-     * @param eventType 事件类型
-     * @param event 事件数据
+     * @param eventType - 事件类型
+     * @param event - 事件数据
      */
     private async executeEvent<T>(eventType: string, event: T): Promise<void> {
         const listeners = this.listeners.get(eventType);
@@ -428,7 +428,7 @@ export class TypeSafeEventSystem {
 
     /**
      * 按优先级排序监听器
-     * @param listeners 监听器数组
+     * @param listeners - 监听器数组
      * @returns 排序后的监听器数组
      */
     private sortListenersByPriority<T>(listeners: InternalEventListener<T>[]): InternalEventListener<T>[] {
@@ -437,8 +437,8 @@ export class TypeSafeEventSystem {
 
     /**
      * 移除指定的监听器
-     * @param eventType 事件类型
-     * @param listenerIds 要移除的监听器ID数组
+     * @param eventType - 事件类型
+     * @param listenerIds - 要移除的监听器ID数组
      */
     private removeListeners(eventType: string, listenerIds: string[]): void {
         if (listenerIds.length === 0) return;
@@ -462,8 +462,8 @@ export class TypeSafeEventSystem {
 
     /**
      * 添加事件到批处理队列
-     * @param eventType 事件类型
-     * @param event 事件数据
+     * @param eventType - 事件类型
+     * @param event - 事件数据
      */
     private addToBatch<T>(eventType: string, event: T): void {
         let batch = this.batchQueue.get(eventType);
@@ -494,8 +494,8 @@ export class TypeSafeEventSystem {
 
     /**
      * 处理批处理事件
-     * @param eventType 事件类型
-     * @param batch 批处理事件数组
+     * @param eventType - 事件类型
+     * @param batch - 批处理事件数组
      */
     private async processBatch<T>(eventType: string, batch: T[]): Promise<void> {
         // 创建批处理事件对象
@@ -512,7 +512,7 @@ export class TypeSafeEventSystem {
 
     /**
      * 清除指定事件类型的批处理
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      */
     private clearBatch(eventType: string): void {
         this.batchQueue.delete(eventType);
@@ -539,8 +539,8 @@ export class TypeSafeEventSystem {
 
     /**
      * 更新事件统计信息
-     * @param eventType 事件类型
-     * @param executionTime 执行时间
+     * @param eventType - 事件类型
+     * @param executionTime - 执行时间
      */
     private updateStats(eventType: string, executionTime: number): void {
         let stats = this.stats.get(eventType);
@@ -558,7 +558,7 @@ export class TypeSafeEventSystem {
 
     /**
      * 创建空的统计信息
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      * @returns 空的统计信息
      */
     private createEmptyStats(eventType: string): EventStats {
@@ -580,8 +580,8 @@ export const GlobalEventSystem = new TypeSafeEventSystem();
 
 /**
  * 事件装饰器 - 用于自动注册事件监听器
- * @param eventType 事件类型
- * @param config 监听器配置
+ * @param eventType - 事件类型
+ * @param config - 监听器配置
  */
 export function EventListener(eventType: string, config: EventListenerConfig = {}) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
@@ -598,8 +598,8 @@ export function EventListener(eventType: string, config: EventListenerConfig = {
 
 /**
  * 异步事件装饰器
- * @param eventType 事件类型
- * @param config 监听器配置
+ * @param eventType - 事件类型
+ * @param config - 监听器配置
  */
 export function AsyncEventListener(eventType: string, config: EventListenerConfig = {}) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {

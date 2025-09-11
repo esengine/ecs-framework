@@ -44,7 +44,7 @@ Description
 </td></tr>
 <tr><td>
 
-[collectEntityData()](./ecs-framework-monorepo.entitydatacollector.collectentitydata.md)
+[collectEntityData(scene)](./ecs-framework-monorepo.entitydatacollector.collectentitydata.md)
 
 
 </td><td>
@@ -56,7 +56,7 @@ Description
 </td></tr>
 <tr><td>
 
-[collectEntityDataWithMemory()](./ecs-framework-monorepo.entitydatacollector.collectentitydatawithmemory.md)
+[collectEntityDataWithMemory(scene)](./ecs-framework-monorepo.entitydatacollector.collectentitydatawithmemory.md)
 
 
 </td><td>
@@ -80,7 +80,7 @@ Description
 </td></tr>
 <tr><td>
 
-[expandLazyObject(entityId, componentIndex, propertyPath)](./ecs-framework-monorepo.entitydatacollector.expandlazyobject.md)
+[expandLazyObject(entityId, componentIndex, propertyPath, scene)](./ecs-framework-monorepo.entitydatacollector.expandlazyobject.md)
 
 
 </td><td>
@@ -108,7 +108,7 @@ Description
 </td></tr>
 <tr><td>
 
-[getComponentProperties(entityId, componentIndex)](./ecs-framework-monorepo.entitydatacollector.getcomponentproperties.md)
+[getComponentProperties(entityId, componentIndex, scene)](./ecs-framework-monorepo.entitydatacollector.getcomponentproperties.md)
 
 
 </td><td>
@@ -122,7 +122,7 @@ Description
 </td></tr>
 <tr><td>
 
-[getEntityDetails(entityId)](./ecs-framework-monorepo.entitydatacollector.getentitydetails.md)
+[getEntityDetails(entityId, scene)](./ecs-framework-monorepo.entitydatacollector.getentitydetails.md)
 
 
 </td><td>
@@ -134,7 +134,7 @@ Description
 </td></tr>
 <tr><td>
 
-[getRawEntityList()](./ecs-framework-monorepo.entitydatacollector.getrawentitylist.md)
+[getRawEntityList(scene)](./ecs-framework-monorepo.entitydatacollector.getrawentitylist.md)
 
 
 </td><td>

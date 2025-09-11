@@ -7,7 +7,7 @@
 **Signature:**
 
 ```typescript
-getRawEntityList(): Array<{
+getRawEntityList(scene?: IScene | null): Array<{
         id: number;
         name: string;
         active: boolean;
@@ -22,6 +22,43 @@ getRawEntityList(): Array<{
         updateOrder: number;
     }>;
 ```
+
+## Parameters
+
+<table><thead><tr><th>
+
+Parameter
+
+
+</th><th>
+
+Type
+
+
+</th><th>
+
+Description
+
+
+</th></tr></thead>
+<tbody><tr><td>
+
+scene
+
+
+</td><td>
+
+[IScene](./ecs-framework-monorepo.iscene.md) \| null
+
+
+</td><td>
+
+_(Optional)_
+
+
+</td></tr>
+</tbody></table>
+
 **Returns:**
 
 Array&lt;{ id: number; name: string; active: boolean; enabled: boolean; activeInHierarchy: boolean; componentCount: number; componentTypes: string\[\]; parentId: number \| null; childIds: number\[\]; depth: number; tag: number; updateOrder: number; }&gt;

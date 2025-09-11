@@ -372,7 +372,7 @@ export class Core implements ICoreProvider {
     /**
      * 启用调试功能
      * 
-     * @param config 调试配置
+     * @param config - 调试配置
      */
     public static enableDebug(config: IECSDebugConfig): void {
         if (!this._instance) {

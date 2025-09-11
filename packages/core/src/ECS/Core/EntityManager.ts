@@ -43,7 +43,7 @@ export class EntityQueryBuilder {
     
     /**
      * 创建查询构建器实例
-     * @param entityManager 实体管理器实例
+     * @param entityManager - 实体管理器实例
      */
     constructor(private entityManager: EntityManager) {}
     
@@ -52,7 +52,7 @@ export class EntityQueryBuilder {
      * 
      * 返回的实体必须包含所有指定的组件类型。
      * 
-     * @param componentTypes 组件类型列表
+     * @param componentTypes - 组件类型列表
      * @returns 查询构建器实例，支持链式调用
      */
     public withAll(...componentTypes: ComponentType[]): EntityQueryBuilder {
@@ -65,7 +65,7 @@ export class EntityQueryBuilder {
      * 
      * 返回的实体必须至少包含其中一个指定的组件类型。
      * 
-     * @param componentTypes 组件类型列表
+     * @param componentTypes - 组件类型列表
      * @returns 查询构建器实例，支持链式调用
      */
     public withAny(...componentTypes: ComponentType[]): EntityQueryBuilder {
@@ -78,7 +78,7 @@ export class EntityQueryBuilder {
      * 
      * 返回的实体不能包含任何指定的组件类型。
      * 
-     * @param componentTypes 组件类型列表
+     * @param componentTypes - 组件类型列表
      * @returns 查询构建器实例，支持链式调用
      */
     public without(...componentTypes: ComponentType[]): EntityQueryBuilder {
@@ -91,7 +91,7 @@ export class EntityQueryBuilder {
      * 
      * 返回的实体必须具有指定的标签。
      * 
-     * @param tag 标签值
+     * @param tag - 标签值
      * @returns 查询构建器实例，支持链式调用
      */
     public withTag(tag: number): EntityQueryBuilder {
@@ -104,7 +104,7 @@ export class EntityQueryBuilder {
      * 
      * 返回的实体不能具有指定的标签。
      * 
-     * @param tag 标签值
+     * @param tag - 标签值
      * @returns 查询构建器实例，支持链式调用
      */
     public withoutTag(tag: number): EntityQueryBuilder {
@@ -141,7 +141,7 @@ export class EntityQueryBuilder {
      * 
      * 允许用户定义复杂的过滤逻辑。
      * 
-     * @param predicate 自定义过滤函数，接收实体作为参数，返回布尔值
+     * @param predicate - 自定义过滤函数，接收实体作为参数，返回布尔值
      * @returns 查询构建器实例，支持链式调用
      * 
      * @example
@@ -199,7 +199,7 @@ export class EntityQueryBuilder {
     /**
      * 对所有匹配的实体执行指定操作
      * 
-     * @param action 要执行的操作函数，接收匹配的实体作为参数
+     * @param action - 要执行的操作函数，接收匹配的实体作为参数
      */
     public forEach(action: (entity: Entity) => void): void {
         const entities = this.entityManager.getAllEntities();
@@ -215,7 +215,7 @@ export class EntityQueryBuilder {
      * 
      * 按优先级顺序检查各种过滤条件，一旦发现不匹配立即返回false。
      * 
-     * @param entity 要检查的实体
+     * @param entity - 要检查的实体
      * @returns 实体是否匹配所有查询条件
      */
     private matchesEntity(entity: Entity): boolean {
@@ -396,7 +396,7 @@ export class EntityManager {
      * 
      * 分配唯一ID并将实体添加到管理系统中，同时更新相关索引。
      * 
-     * @param name 实体名称，如果未指定则使用时间戳生成默认名称
+     * @param name - 实体名称，如果未指定则使用时间戳生成默认名称
      * @returns 创建的实体实例
      * 
      * @example
@@ -440,9 +440,9 @@ export class EntityManager {
      * 为了优化大量实体创建的性能，批量处理索引更新和事件发射。
      * 适用于需要创建大量实体的场景，如子弹、粒子等。
      * 
-     * @param count 要创建的实体数量
-     * @param namePrefix 实体名称前缀，默认为 Entity
-     * @param skipEvents 是否跳过事件发射以提升性能，默认为 false
+     * @param count - 要创建的实体数量
+     * @param namePrefix - 实体名称前缀，默认为 Entity
+     * @param skipEvents - 是否跳过事件发射以提升性能，默认为 false
      * @returns 创建的实体数组
      * 
      * @example
@@ -504,7 +504,7 @@ export class EntityManager {
      * 支持通过实体对象、名称或ID来销毁实体。
      * 会清理所有相关索引并回收ID。
      * 
-     * @param entityOrId 要销毁的实体，可以是实体对象、名称字符串或ID数字
+     * @param entityOrId - 要销毁的实体，可以是实体对象、名称字符串或ID数字
      * @returns 是否成功销毁实体
      * 
      * @example
@@ -574,7 +574,7 @@ export class EntityManager {
      * 
      * 支持字符串和数字类型的ID。
      * 
-     * @param id 实体ID，可以是字符串或数字
+     * @param id - 实体ID，可以是字符串或数字
      * @returns 对应的实体，如果不存在则返回null
      */
     public getEntity(id: string | number): Entity | null {
@@ -587,7 +587,7 @@ export class EntityManager {
      * 
      * 如果存在多个同名实体，返回第一个找到的实体。
      * 
-     * @param name 实体名称
+     * @param name - 实体名称
      * @returns 匹配的实体，如果不存在则返回null
      */
     public getEntityByName(name: string): Entity | null {
@@ -600,7 +600,7 @@ export class EntityManager {
      * 
      * 返回所有具有指定标签的实体。
      * 
-     * @param tag 标签值
+     * @param tag - 标签值
      * @returns 具有指定标签的实体数组
      */
     public getEntitiesByTag(tag: number): Entity[] {
@@ -613,7 +613,7 @@ export class EntityManager {
      * 
      * 遍历所有实体，查找包含指定组件类型的实体。
      * 
-     * @param componentType 组件类型
+     * @param componentType - 组件类型
      * @returns 包含指定组件的实体数组
      * 
      * @example
@@ -649,8 +649,8 @@ export class EntityManager {
     /**
      * 使用组件索引进行多组件查询
      * 
-     * @param componentTypes 组件类型数组
-     * @param operation 查询操作：'AND' 或 'OR'
+     * @param componentTypes - 组件类型数组
+     * @param operation - 查询操作：'AND' 或 'OR'
      * @returns 匹配的实体集合
      */
     public queryWithComponentIndex(componentTypes: ComponentType[], operation: 'AND' | 'OR'): Set<Entity> {
@@ -660,8 +660,8 @@ export class EntityManager {
     /**
      * 标记实体组件已修改
      * 
-     * @param entity 修改的实体
-     * @param componentTypes 修改的组件类型
+     * @param entity - 修改的实体
+     * @param componentTypes - 修改的组件类型
      */
     public markEntityDirty(entity: Entity, componentTypes: ComponentType[]): void {
         this._dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_MODIFIED, componentTypes);
@@ -698,8 +698,8 @@ export class EntityManager {
      * 
      * 维护按名称查找实体的索引结构。支持添加和移除操作。
      * 
-     * @param entity 要更新索引的实体
-     * @param isAdd true表示添加到索引，false表示从索引中移除
+     * @param entity - 要更新索引的实体
+     * @param isAdd - true表示添加到索引，false表示从索引中移除
      */
     private updateNameIndex(entity: Entity, isAdd: boolean): void {
         if (!entity.name) {
@@ -732,8 +732,8 @@ export class EntityManager {
      * 
      * 维护按标签查找实体的索引结构。支持添加和移除操作。
      * 
-     * @param entity 要更新索引的实体
-     * @param isAdd true表示添加到索引，false表示从索引中移除
+     * @param entity - 要更新索引的实体
+     * @param isAdd - true表示添加到索引，false表示从索引中移除
      */
     private updateTagIndex(entity: Entity, isAdd: boolean): void {
         if (isAdd) {

@@ -20,7 +20,7 @@ export class EntityProcessorList {
 
     /**
      * 添加实体处理器
-     * @param processor 要添加的处理器
+     * @param processor - 要添加的处理器
      */
     public add(processor: EntitySystem): void {
         this._processors.push(processor);
@@ -29,7 +29,7 @@ export class EntityProcessorList {
 
     /**
      * 移除实体处理器
-     * @param processor 要移除的处理器
+     * @param processor - 要移除的处理器
      */
     public remove(processor: EntitySystem): void {
         const index = this._processors.indexOf(processor);
@@ -40,7 +40,7 @@ export class EntityProcessorList {
 
     /**
      * 获取指定类型的处理器
-     * @param type 处理器类型
+     * @param type - 处理器类型
      */
     public getProcessor<T extends EntitySystem>(type: new (...args: unknown[]) => T): T | null {
         for (const processor of this._processors) {

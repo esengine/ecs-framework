@@ -9,7 +9,7 @@
 **Signature:**
 
 ```typescript
-expandLazyObject(entityId: number, componentIndex: number, propertyPath: string): any;
+expandLazyObject(entityId: number, componentIndex: number, propertyPath: string, scene?: IScene | null): any;
 ```
 
 ## Parameters
@@ -69,6 +69,22 @@ string
 
 
 </td><td>
+
+
+</td></tr>
+<tr><td>
+
+scene
+
+
+</td><td>
+
+[IScene](./ecs-framework-monorepo.iscene.md) \| null
+
+
+</td><td>
+
+_(Optional)_
 
 
 </td></tr>

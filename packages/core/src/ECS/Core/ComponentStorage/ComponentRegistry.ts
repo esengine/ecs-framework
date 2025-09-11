@@ -23,7 +23,7 @@ export class ComponentRegistry {
 
     /**
      * 注册组件类型并分配位掩码
-     * @param componentType 组件类型
+     * @param componentType - 组件类型
      * @returns 分配的位索引
      */
     public static register<T extends Component>(componentType: ComponentType<T>): number {
@@ -48,7 +48,7 @@ export class ComponentRegistry {
 
     /**
      * 获取组件类型的位掩码
-     * @param componentType 组件类型
+     * @param componentType - 组件类型
      * @returns 位掩码
      */
     public static getBitMask<T extends Component>(componentType: ComponentType<T>): BitMask64Data {
@@ -62,7 +62,7 @@ export class ComponentRegistry {
 
     /**
      * 获取组件类型的位索引
-     * @param componentType 组件类型
+     * @param componentType - 组件类型
      * @returns 位索引
      */
     public static getBitIndex<T extends Component>(componentType: ComponentType<T>): number {
@@ -76,7 +76,7 @@ export class ComponentRegistry {
 
     /**
      * 检查组件类型是否已注册
-     * @param componentType 组件类型
+     * @param componentType - 组件类型
      * @returns 是否已注册
      */
     public static isRegistered<T extends Component>(componentType: ComponentType<T>): boolean {
@@ -85,7 +85,7 @@ export class ComponentRegistry {
 
     /**
      * 通过名称获取组件类型
-     * @param componentName 组件名称
+     * @param componentName - 组件名称
      * @returns 组件类型构造函数
      */
     public static getComponentType(componentName: string): Function | null {
@@ -110,7 +110,7 @@ export class ComponentRegistry {
 
     /**
      * 通过名称获取组件类型ID
-     * @param componentName 组件名称
+     * @param componentName - 组件名称
      * @returns 组件类型ID
      */
     public static getComponentId(componentName: string): number | undefined {
@@ -119,7 +119,7 @@ export class ComponentRegistry {
 
     /**
      * 注册组件类型（通过名称）
-     * @param componentName 组件名称
+     * @param componentName - 组件名称
      * @returns 分配的组件ID
      */
     public static registerComponentByName(componentName: string): number {
@@ -138,7 +138,7 @@ export class ComponentRegistry {
 
     /**
      * 创建单个组件的掩码
-     * @param componentName 组件名称
+     * @param componentName - 组件名称
      * @returns 组件掩码
      */
     public static createSingleComponentMask(componentName: string): BitMask64Data {
@@ -160,7 +160,7 @@ export class ComponentRegistry {
 
     /**
      * 创建多个组件的掩码
-     * @param componentNames 组件名称数组
+     * @param componentNames - 组件名称数组
      * @returns 组合掩码
      */
     public static createComponentMask(componentNames: string[]): BitMask64Data {

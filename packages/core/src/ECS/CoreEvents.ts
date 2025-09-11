@@ -150,7 +150,7 @@ export class EventTypeValidator {
     
     /**
      * 验证事件类型是否有效
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      * @returns 是否有效
      */
     public static isValid(eventType: string): boolean {
@@ -167,7 +167,7 @@ export class EventTypeValidator {
     
     /**
      * 添加自定义事件类型
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      */
     public static addCustomType(eventType: string): void {
         this.validTypes.add(eventType);
@@ -175,7 +175,7 @@ export class EventTypeValidator {
     
     /**
      * 移除自定义事件类型
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      */
     public static removeCustomType(eventType: string): void {
         this.validTypes.delete(eventType);

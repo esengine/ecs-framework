@@ -32,7 +32,7 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-[collectSceneData()](./ecs-framework-monorepo.scenedatacollector.collectscenedata.md)
+[collectSceneData(scene)](./ecs-framework-monorepo.scenedatacollector.collectscenedata.md)
 
 
 </td><td>

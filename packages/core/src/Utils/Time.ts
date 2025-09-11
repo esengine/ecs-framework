@@ -35,7 +35,7 @@ export class Time {
 
     /**
      * 使用外部引擎提供的deltaTime更新时间信息
-     * @param deltaTime 外部引擎提供的帧时间间隔（秒）
+     * @param deltaTime - 外部引擎提供的帧时间间隔（秒）
      */
     public static update(deltaTime: number): void {
         // 设置未缩放的帧时间
@@ -63,8 +63,8 @@ export class Time {
 
     /**
      * 检查指定的时间间隔是否已经过去
-     * @param interval 时间间隔（秒）
-     * @param lastTime 上次检查的时间
+     * @param interval - 时间间隔（秒）
+     * @param lastTime - 上次检查的时间
      * @returns 是否已经过去指定时间
      */
     public static checkEvery(interval: number, lastTime: number): boolean {

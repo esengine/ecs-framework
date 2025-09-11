@@ -15,9 +15,9 @@ export class Pool<T extends IPoolable> {
 
     /**
      * 构造函数
-     * @param createFn 创建对象的函数
-     * @param maxSize 池的最大大小，默认100
-     * @param estimatedObjectSize 估算的单个对象大小（字节），默认1024
+     * @param createFn - 创建对象的函数
+     * @param maxSize - 池的最大大小，默认100
+     * @param estimatedObjectSize - 估算的单个对象大小（字节），默认1024
      */
     constructor(createFn: () => T, maxSize: number = 100, estimatedObjectSize: number = 1024) {
         this._createFn = createFn;
@@ -36,9 +36,9 @@ export class Pool<T extends IPoolable> {
 
     /**
      * 获取指定类型的对象池
-     * @param type 对象类型
-     * @param maxSize 池的最大大小
-     * @param estimatedObjectSize 估算的单个对象大小
+     * @param type - 对象类型
+     * @param maxSize - 池的最大大小
+     * @param estimatedObjectSize - 估算的单个对象大小
      * @returns 对象池实例
      */
     public static getPool<T extends IPoolable>(
@@ -79,7 +79,7 @@ export class Pool<T extends IPoolable> {
 
     /**
      * 释放对象回池中
-     * @param obj 要释放的对象
+     * @param obj - 要释放的对象
      */
     public release(obj: T): void {
         if (!obj) return;
@@ -121,7 +121,7 @@ export class Pool<T extends IPoolable> {
 
     /**
      * 压缩池（移除多余的对象）
-     * @param targetSize 目标大小，默认为当前大小的一半
+     * @param targetSize - 目标大小，默认为当前大小的一半
      */
     public compact(targetSize?: number): void {
         const target = targetSize ?? Math.floor(this._objects.length / 2);
@@ -139,7 +139,7 @@ export class Pool<T extends IPoolable> {
 
     /**
      * 预填充池
-     * @param count 预填充的对象数量
+     * @param count - 预填充的对象数量
      */
     public prewarm(count: number): void {
         const actualCount = Math.min(count, this._maxSize - this._objects.length);
@@ -157,7 +157,7 @@ export class Pool<T extends IPoolable> {
 
     /**
      * 设置最大池大小
-     * @param maxSize 新的最大大小
+     * @param maxSize - 新的最大大小
      */
     public setMaxSize(maxSize: number): void {
         this._maxSize = maxSize;

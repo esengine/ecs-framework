@@ -32,7 +32,7 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-[collectSystemData(performanceMonitor)](./ecs-framework-monorepo.systemdatacollector.collectsystemdata.md)
+[collectSystemData(performanceMonitor, scene)](./ecs-framework-monorepo.systemdatacollector.collectsystemdata.md)
 
 
 </td><td>

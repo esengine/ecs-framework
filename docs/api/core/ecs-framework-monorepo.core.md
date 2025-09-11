@@ -11,8 +11,9 @@
 **Signature:**
 
 ```typescript
-export declare class Core 
+export declare class Core implements ICoreProvider 
 ```
+**Implements:** ICoreProvider
 
 ## Example
 
@@ -457,6 +458,20 @@ Description
 </td></tr>
 <tr><td>
 
+[getCurrentScene()](./ecs-framework-monorepo.core.getcurrentscene.md)
+
+
+</td><td>
+
+
+</td><td>
+
+获取当前Scene
+
+
+</td></tr>
+<tr><td>
+
 [getDebugData()](./ecs-framework-monorepo.core.getdebugdata.md)
 
 
@@ -484,6 +499,20 @@ Description
 </td><td>
 
 获取指定类型的全局管理器
+
+
+</td></tr>
+<tr><td>
+
+[getPerformanceMonitor()](./ecs-framework-monorepo.core.getperformancemonitor.md)
+
+
+</td><td>
+
+
+</td><td>
+
+获取性能监控器
 
 
 </td></tr>

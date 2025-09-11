@@ -28,7 +28,7 @@ export class EntityList {
 
     /**
      * 添加实体（立即添加或延迟添加）
-     * @param entity 要添加的实体
+     * @param entity - 要添加的实体
      */
     public add(entity: Entity): void {
         if (this._isUpdating) {
@@ -41,7 +41,7 @@ export class EntityList {
 
     /**
      * 立即添加实体
-     * @param entity 要添加的实体
+     * @param entity - 要添加的实体
      */
     private addImmediate(entity: Entity): void {
         // 检查是否已存在
@@ -58,7 +58,7 @@ export class EntityList {
 
     /**
      * 移除实体（立即移除或延迟移除）
-     * @param entity 要移除的实体
+     * @param entity - 要移除的实体
      */
     public remove(entity: Entity): void {
         if (this._isUpdating) {
@@ -71,7 +71,7 @@ export class EntityList {
 
     /**
      * 立即移除实体
-     * @param entity 要移除的实体
+     * @param entity - 要移除的实体
      */
     private removeImmediate(entity: Entity): void {
         const index = this.buffer.indexOf(entity);
@@ -159,7 +159,7 @@ export class EntityList {
 
     /**
      * 根据名称查找实体（使用索引，O(1)复杂度）
-     * @param name 实体名称
+     * @param name - 实体名称
      * @returns 找到的第一个实体或null
      */
     public findEntity(name: string): Entity | null {
@@ -169,7 +169,7 @@ export class EntityList {
 
     /**
      * 根据名称查找所有实体
-     * @param name 实体名称
+     * @param name - 实体名称
      * @returns 找到的所有实体数组
      */
     public findEntitiesByName(name: string): Entity[] {
@@ -178,7 +178,7 @@ export class EntityList {
 
     /**
      * 根据ID查找实体（使用索引，O(1)复杂度）
-     * @param id 实体ID
+     * @param id - 实体ID
      * @returns 找到的实体或null
      */
     public findEntityById(id: number): Entity | null {
@@ -187,7 +187,7 @@ export class EntityList {
 
     /**
      * 根据标签查找实体
-     * @param tag 标签
+     * @param tag - 标签
      * @returns 找到的所有实体数组
      */
     public findEntitiesByTag(tag: number): Entity[] {
@@ -204,7 +204,7 @@ export class EntityList {
 
     /**
      * 根据组件类型查找实体
-     * @param componentType 组件类型
+     * @param componentType - 组件类型
      * @returns 找到的所有实体数组
      */
     public findEntitiesWithComponent<T extends Component>(componentType: new (...args: unknown[]) => T): Entity[] {
@@ -221,7 +221,7 @@ export class EntityList {
 
     /**
      * 批量操作：对所有实体执行指定操作
-     * @param action 要执行的操作
+     * @param action - 要执行的操作
      */
     public forEach(action: (entity: Entity) => void): void {
         for (const entity of this.buffer) {
@@ -231,8 +231,8 @@ export class EntityList {
 
     /**
      * 批量操作：对符合条件的实体执行指定操作
-     * @param predicate 筛选条件
-     * @param action 要执行的操作
+     * @param predicate - 筛选条件
+     * @param action - 要执行的操作
      */
     public forEachWhere(predicate: (entity: Entity) => boolean, action: (entity: Entity) => void): void {
         for (const entity of this.buffer) {
@@ -244,8 +244,8 @@ export class EntityList {
 
     /**
      * 更新名称索引
-     * @param entity 实体
-     * @param isAdd 是否为添加操作
+     * @param entity - 实体
+     * @param isAdd - 是否为添加操作
      */
     private updateNameIndex(entity: Entity, isAdd: boolean): void {
         if (!entity.name) {

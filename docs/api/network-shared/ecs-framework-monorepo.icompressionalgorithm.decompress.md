@@ -9,7 +9,7 @@
 **Signature:**
 
 ```typescript
-decompress(data: ArrayBuffer): ArrayBuffer;
+decompress(data: Uint8Array): Uint8Array;
 ```
 
 ## Parameters
@@ -37,10 +37,12 @@ data
 
 </td><td>
 
-ArrayBuffer
+Uint8Array
 
 
 </td><td>
+
+待解压的字节数据
 
 
 </td></tr>
@@ -48,5 +50,7 @@ ArrayBuffer
 
 **Returns:**
 
-ArrayBuffer
+Uint8Array
+
+解压后的字节数据
 

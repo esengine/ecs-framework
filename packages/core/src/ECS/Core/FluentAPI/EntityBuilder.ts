@@ -19,7 +19,7 @@ export class EntityBuilder {
 
     /**
      * 设置实体名称
-     * @param name 实体名称
+     * @param name - 实体名称
      * @returns 实体构建器
      */
     public named(name: string): EntityBuilder {
@@ -29,7 +29,7 @@ export class EntityBuilder {
 
     /**
      * 设置实体标签
-     * @param tag 标签
+     * @param tag - 标签
      * @returns 实体构建器
      */
     public tagged(tag: number): EntityBuilder {
@@ -39,7 +39,7 @@ export class EntityBuilder {
 
     /**
      * 添加组件
-     * @param component 组件实例
+     * @param component - 组件实例
      * @returns 实体构建器
      */
     public with<T extends Component>(component: T): EntityBuilder {
@@ -49,7 +49,7 @@ export class EntityBuilder {
 
     /**
      * 添加多个组件
-     * @param components 组件数组
+     * @param components - 组件数组
      * @returns 实体构建器
      */
     public withComponents(...components: Component[]): EntityBuilder {
@@ -61,8 +61,8 @@ export class EntityBuilder {
 
     /**
      * 条件性添加组件
-     * @param condition 条件
-     * @param component 组件实例
+     * @param condition - 条件
+     * @param component - 组件实例
      * @returns 实体构建器
      */
     public withIf<T extends Component>(condition: boolean, component: T): EntityBuilder {
@@ -74,7 +74,7 @@ export class EntityBuilder {
 
     /**
      * 使用工厂函数创建并添加组件
-     * @param factory 组件工厂函数
+     * @param factory - 组件工厂函数
      * @returns 实体构建器
      */
     public withFactory<T extends Component>(factory: () => T): EntityBuilder {
@@ -85,8 +85,8 @@ export class EntityBuilder {
 
     /**
      * 配置组件属性
-     * @param componentType 组件类型
-     * @param configurator 配置函数
+     * @param componentType - 组件类型
+     * @param configurator - 配置函数
      * @returns 实体构建器
      */
     public configure<T extends Component>(
@@ -102,7 +102,7 @@ export class EntityBuilder {
 
     /**
      * 设置实体为启用状态
-     * @param enabled 是否启用
+     * @param enabled - 是否启用
      * @returns 实体构建器
      */
     public enabled(enabled: boolean = true): EntityBuilder {
@@ -112,7 +112,7 @@ export class EntityBuilder {
 
     /**
      * 设置实体为活跃状态
-     * @param active 是否活跃
+     * @param active - 是否活跃
      * @returns 实体构建器
      */
     public active(active: boolean = true): EntityBuilder {
@@ -122,7 +122,7 @@ export class EntityBuilder {
 
     /**
      * 添加子实体
-     * @param childBuilder 子实体构建器
+     * @param childBuilder - 子实体构建器
      * @returns 实体构建器
      */
     public withChild(childBuilder: EntityBuilder): EntityBuilder {
@@ -133,7 +133,7 @@ export class EntityBuilder {
 
     /**
      * 批量添加子实体
-     * @param childBuilders 子实体构建器数组
+     * @param childBuilders - 子实体构建器数组
      * @returns 实体构建器
      */
     public withChildren(...childBuilders: EntityBuilder[]): EntityBuilder {
@@ -146,7 +146,7 @@ export class EntityBuilder {
 
     /**
      * 使用工厂函数创建子实体
-     * @param childFactory 子实体工厂函数
+     * @param childFactory - 子实体工厂函数
      * @returns 实体构建器
      */
     public withChildFactory(childFactory: (parent: Entity) => EntityBuilder): EntityBuilder {
@@ -158,8 +158,8 @@ export class EntityBuilder {
 
     /**
      * 条件性添加子实体
-     * @param condition 条件
-     * @param childBuilder 子实体构建器
+     * @param condition - 条件
+     * @param childBuilder - 子实体构建器
      * @returns 实体构建器
      */
     public withChildIf(condition: boolean, childBuilder: EntityBuilder): EntityBuilder {

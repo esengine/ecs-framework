@@ -31,8 +31,8 @@ export class ComponentStorage<T extends Component> {
 
     /**
      * 添加组件
-     * @param entityId 实体ID
-     * @param component 组件实例
+     * @param entityId - 实体ID
+     * @param component - 组件实例
      */
     public addComponent(entityId: number, component: T): void {
         // 检查实体是否已有此组件
@@ -49,7 +49,7 @@ export class ComponentStorage<T extends Component> {
 
     /**
      * 获取组件
-     * @param entityId 实体ID
+     * @param entityId - 实体ID
      * @returns 组件实例或null
      */
     public getComponent(entityId: number): T | null {
@@ -59,7 +59,7 @@ export class ComponentStorage<T extends Component> {
 
     /**
      * 检查实体是否有此组件
-     * @param entityId 实体ID
+     * @param entityId - 实体ID
      * @returns 是否有组件
      */
     public hasComponent(entityId: number): boolean {
@@ -68,7 +68,7 @@ export class ComponentStorage<T extends Component> {
 
     /**
      * 移除组件
-     * @param entityId 实体ID
+     * @param entityId - 实体ID
      * @returns 被移除的组件或null
      */
     public removeComponent(entityId: number): T | null {
@@ -102,7 +102,7 @@ export class ComponentStorage<T extends Component> {
 
     /**
      * 高效遍历所有组件
-     * @param callback 回调函数
+     * @param callback - 回调函数
      */
     public forEach(callback: (component: T, entityId: number, index: number) => void): void {
         for (let i = 0; i < this.dense.length; i++) {
@@ -178,7 +178,7 @@ export class ComponentStorageManager {
 
     /**
      * 检查组件类型是否启用SoA存储
-     * @param componentType 组件类型
+     * @param componentType - 组件类型
      * @returns 是否为SoA存储
      */
     public isSoAStorage<T extends Component>(componentType: ComponentType<T>): boolean {
@@ -188,7 +188,7 @@ export class ComponentStorageManager {
 
     /**
      * 获取SoA存储器（类型安全）
-     * @param componentType 组件类型
+     * @param componentType - 组件类型
      * @returns SoA存储器或null
      */
     public getSoAStorage<T extends Component>(componentType: ComponentType<T>): SoAStorage<T> | null {
@@ -198,8 +198,8 @@ export class ComponentStorageManager {
 
     /**
      * 直接获取SoA字段数组（类型安全）
-     * @param componentType 组件类型
-     * @param fieldName 字段名
+     * @param componentType - 组件类型
+     * @param fieldName - 字段名
      * @returns TypedArray或null
      */
     public getFieldArray<T extends Component>(
@@ -212,8 +212,8 @@ export class ComponentStorageManager {
 
     /**
      * 直接获取SoA字段数组（类型安全，带字段名检查）
-     * @param componentType 组件类型
-     * @param fieldName 字段名（类型检查）
+     * @param componentType - 组件类型
+     * @param fieldName - 字段名（类型检查）
      * @returns TypedArray或null
      */
     public getTypedFieldArray<T extends Component, K extends keyof T>(
@@ -226,7 +226,7 @@ export class ComponentStorageManager {
 
     /**
      * 获取SoA存储的活跃索引
-     * @param componentType 组件类型
+     * @param componentType - 组件类型
      * @returns 活跃索引数组或空数组
      */
     public getActiveIndices<T extends Component>(componentType: ComponentType<T>): number[] {
@@ -236,8 +236,8 @@ export class ComponentStorageManager {
 
     /**
      * 获取实体在SoA存储中的索引
-     * @param componentType 组件类型
-     * @param entityId 实体ID
+     * @param componentType - 组件类型
+     * @param entityId - 实体ID
      * @returns 存储索引或undefined
      */
     public getEntityIndex<T extends Component>(componentType: ComponentType<T>, entityId: number): number | undefined {
@@ -247,8 +247,8 @@ export class ComponentStorageManager {
 
     /**
      * 根据索引获取实体ID
-     * @param componentType 组件类型
-     * @param index 存储索引
+     * @param componentType - 组件类型
+     * @param index - 存储索引
      * @returns 实体ID或undefined
      */
     public getEntityIdByIndex<T extends Component>(componentType: ComponentType<T>, index: number): number | undefined {
@@ -258,7 +258,7 @@ export class ComponentStorageManager {
 
     /**
      * 获取或创建组件存储器（默认原始存储）
-     * @param componentType 组件类型
+     * @param componentType - 组件类型
      * @returns 组件存储器
      */
     public getStorage<T extends Component>(componentType: ComponentType<T>): ComponentStorage<T> | SoAStorage<T> {
@@ -285,8 +285,8 @@ export class ComponentStorageManager {
 
     /**
      * 添加组件
-     * @param entityId 实体ID
-     * @param component 组件实例
+     * @param entityId - 实体ID
+     * @param component - 组件实例
      */
     public addComponent<T extends Component>(entityId: number, component: T): void {
         const componentType = component.constructor as ComponentType<T>;
@@ -296,8 +296,8 @@ export class ComponentStorageManager {
 
     /**
      * 获取组件
-     * @param entityId 实体ID
-     * @param componentType 组件类型
+     * @param entityId - 实体ID
+     * @param componentType - 组件类型
      * @returns 组件实例或null
      */
     public getComponent<T extends Component>(entityId: number, componentType: ComponentType<T>): T | null {
@@ -307,8 +307,8 @@ export class ComponentStorageManager {
 
     /**
      * 检查实体是否有组件
-     * @param entityId 实体ID
-     * @param componentType 组件类型
+     * @param entityId - 实体ID
+     * @param componentType - 组件类型
      * @returns 是否有组件
      */
     public hasComponent<T extends Component>(entityId: number, componentType: ComponentType<T>): boolean {
@@ -318,8 +318,8 @@ export class ComponentStorageManager {
 
     /**
      * 移除组件
-     * @param entityId 实体ID
-     * @param componentType 组件类型
+     * @param entityId - 实体ID
+     * @param componentType - 组件类型
      * @returns 被移除的组件或null
      */
     public removeComponent<T extends Component>(entityId: number, componentType: ComponentType<T>): T | null {
@@ -329,7 +329,7 @@ export class ComponentStorageManager {
 
     /**
      * 移除实体的所有组件
-     * @param entityId 实体ID
+     * @param entityId - 实体ID
      */
     public removeAllComponents(entityId: number): void {
         for (const storage of this.storages.values()) {
@@ -339,7 +339,7 @@ export class ComponentStorageManager {
 
     /**
      * 获取实体的组件位掩码
-     * @param entityId 实体ID
+     * @param entityId - 实体ID
      * @returns 组件位掩码
      */
     public getComponentMask(entityId: number): BitMask64Data {

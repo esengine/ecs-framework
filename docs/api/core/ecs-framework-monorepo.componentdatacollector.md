@@ -32,7 +32,7 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-[calculateDetailedComponentMemory(typeName)](./ecs-framework-monorepo.componentdatacollector.calculatedetailedcomponentmemory.md)
+[calculateDetailedComponentMemory(typeName, scene)](./ecs-framework-monorepo.componentdatacollector.calculatedetailedcomponentmemory.md)
 
 
 </td><td>
@@ -60,7 +60,7 @@ Description
 </td></tr>
 <tr><td>
 
-[collectComponentData()](./ecs-framework-monorepo.componentdatacollector.collectcomponentdata.md)
+[collectComponentData(scene)](./ecs-framework-monorepo.componentdatacollector.collectcomponentdata.md)
 
 
 </td><td>

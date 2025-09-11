@@ -9,7 +9,7 @@ Constructs a new instance of the `DebugManager` class
 **Signature:**
 
 ```typescript
-constructor(core: Core, config: IECSDebugConfig);
+constructor(coreProvider: ICoreProvider, config: IECSDebugConfig);
 ```
 
 ## Parameters
@@ -32,12 +32,12 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-core
+coreProvider
 
 
 </td><td>
 
-[Core](./ecs-framework-monorepo.core.md)
+ICoreProvider
 
 
 </td><td>

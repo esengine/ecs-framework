@@ -55,7 +55,7 @@ export class SceneComponent {
 
     /**
      * 比较组件的更新顺序
-     * @param other 其他组件
+     * @param other - 其他组件
      * @returns 比较结果
      */
     public compare(other: SceneComponent): number {

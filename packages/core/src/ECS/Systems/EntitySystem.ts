@@ -104,7 +104,7 @@ export abstract class EntitySystem implements ISystemBase {
 
     /**
      * 设置更新时序
-     * @param order 更新时序
+     * @param order - 更新时序
      */
     public setUpdateOrder(order: number): void {
         this._updateOrder = order;
@@ -423,7 +423,7 @@ export abstract class EntitySystem implements ISystemBase {
      * 
      * 系统的核心逻辑，子类必须实现此方法来定义具体的处理逻辑。
      * 
-     * @param entities 要处理的实体列表
+     * @param entities - 要处理的实体列表
      */
     protected process(_entities: Entity[]): void {
         // 子类必须实现此方法
@@ -434,7 +434,7 @@ export abstract class EntitySystem implements ISystemBase {
      * 
      * 在主要处理逻辑之后执行，子类可以重写此方法。
      * 
-     * @param entities 要处理的实体列表
+     * @param entities - 要处理的实体列表
      */
     protected lateProcess(_entities: Entity[]): void {
         // 子类可以重写此方法
@@ -527,7 +527,7 @@ export abstract class EntitySystem implements ISystemBase {
      * 
      * 子类可以重写此方法来处理实体添加事件。
      * 
-     * @param entity 被添加的实体
+     * @param entity - 被添加的实体
      */
     protected onAdded(_entity: Entity): void {
         // 子类可以重写此方法
@@ -538,7 +538,7 @@ export abstract class EntitySystem implements ISystemBase {
      * 
      * 子类可以重写此方法来处理实体移除事件。
      * 
-     * @param entity 被移除的实体
+     * @param entity - 被移除的实体
      */
     protected onRemoved(_entity: Entity): void {
         // 子类可以重写此方法

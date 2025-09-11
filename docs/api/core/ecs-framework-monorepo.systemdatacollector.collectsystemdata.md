@@ -9,7 +9,7 @@
 **Signature:**
 
 ```typescript
-collectSystemData(performanceMonitor: any): ISystemDebugData;
+collectSystemData(performanceMonitor: any, scene?: IScene | null): ISystemDebugData;
 ```
 
 ## Parameters
@@ -41,6 +41,22 @@ any
 
 
 </td><td>
+
+
+</td></tr>
+<tr><td>
+
+scene
+
+
+</td><td>
+
+[IScene](./ecs-framework-monorepo.iscene.md) \| null
+
+
+</td><td>
+
+_(Optional)_
 
 
 </td></tr>

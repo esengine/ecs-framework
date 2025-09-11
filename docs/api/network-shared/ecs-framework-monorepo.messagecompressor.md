@@ -80,7 +80,7 @@ Description
 </td></tr>
 <tr><td>
 
-[decompress(data, algorithmName)](./ecs-framework-monorepo.messagecompressor.decompress.md)
+[decompress(data)](./ecs-framework-monorepo.messagecompressor.decompress.md)
 
 
 </td><td>
@@ -89,20 +89,6 @@ Description
 </td><td>
 
 解压缩数据
-
-
-</td></tr>
-<tr><td>
-
-[estimateCompressedSize(data, algorithmName)](./ecs-framework-monorepo.messagecompressor.estimatecompressedsize.md)
-
-
-</td><td>
-
-
-</td><td>
-
-估算压缩后大小
 
 
 </td></tr>

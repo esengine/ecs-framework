@@ -127,9 +127,9 @@ export class DirtyTrackingSystem {
     /**
      * 标记实体为脏状态
      * 
-     * @param entity 要标记的实体
-     * @param flags 脏标记位
-     * @param modifiedComponents 修改的组件类型列表
+     * @param entity - 要标记的实体
+     * @param flags - 脏标记位
+     * @param modifiedComponents - 修改的组件类型列表
      */
     public markDirty(entity: Entity, flags: DirtyFlag, modifiedComponents: ComponentType[] = []): void {
         this._stats.totalMarkings++;
@@ -160,8 +160,8 @@ export class DirtyTrackingSystem {
     /**
      * 检查实体是否有指定的脏标记
      * 
-     * @param entity 要检查的实体
-     * @param flags 要检查的标记位
+     * @param entity - 要检查的实体
+     * @param flags - 要检查的标记位
      * @returns 是否有指定的脏标记
      */
     public isDirty(entity: Entity, flags: DirtyFlag = DirtyFlag.ALL): boolean {
@@ -172,8 +172,8 @@ export class DirtyTrackingSystem {
     /**
      * 清除实体的脏标记
      * 
-     * @param entity 要清除的实体
-     * @param flags 要清除的标记位，默认清除所有
+     * @param entity - 要清除的实体
+     * @param flags - 要清除的标记位，默认清除所有
      */
     public clearDirty(entity: Entity, flags: DirtyFlag = DirtyFlag.ALL): void {
         const dirtyData = this._dirtyEntities.get(entity);
@@ -194,7 +194,7 @@ export class DirtyTrackingSystem {
     /**
      * 获取所有脏实体
      * 
-     * @param flags 过滤标记位，只返回包含指定标记的实体
+     * @param flags - 过滤标记位，只返回包含指定标记的实体
      * @returns 脏实体数据数组
      */
     public getDirtyEntities(flags: DirtyFlag = DirtyFlag.ALL): DirtyData[] {
@@ -245,7 +245,7 @@ export class DirtyTrackingSystem {
     /**
      * 添加脏标记监听器
      * 
-     * @param listener 监听器配置
+     * @param listener - 监听器配置
      */
     public addListener(listener: DirtyListener): void {
         this._listeners.push(listener);
@@ -256,7 +256,7 @@ export class DirtyTrackingSystem {
     /**
      * 移除脏标记监听器
      * 
-     * @param callback 要移除的回调函数
+     * @param callback - 要移除的回调函数
      */
     public removeListener(callback: (dirtyData: DirtyData) => void): void {
         const index = this._listeners.findIndex(l => l.callback === callback);
@@ -314,8 +314,8 @@ export class DirtyTrackingSystem {
     /**
      * 配置批量处理参数
      * 
-     * @param batchSize 每次处理的最大实体数量
-     * @param maxProcessingTime 每帧最大处理时间（毫秒）
+     * @param batchSize - 每次处理的最大实体数量
+     * @param maxProcessingTime - 每帧最大处理时间（毫秒）
      */
     public configureBatchProcessing(batchSize: number, maxProcessingTime: number): void {
         this._batchSize = batchSize;

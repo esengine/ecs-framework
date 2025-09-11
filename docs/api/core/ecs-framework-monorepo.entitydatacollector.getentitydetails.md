@@ -7,7 +7,7 @@
 **Signature:**
 
 ```typescript
-getEntityDetails(entityId: number): any;
+getEntityDetails(entityId: number, scene?: IScene | null): any;
 ```
 
 ## Parameters
@@ -39,6 +39,22 @@ number
 
 
 </td><td>
+
+
+</td></tr>
+<tr><td>
+
+scene
+
+
+</td><td>
+
+[IScene](./ecs-framework-monorepo.iscene.md) \| null
+
+
+</td><td>
+
+_(Optional)_
 
 
 </td></tr>

@@ -10,7 +10,7 @@ export class Bits {
 
     /**
      * 构造函数，创建位集合
-     * @param initialValue 初始值，可以是BitMask64Data对象、数字或字符串
+     * @param initialValue - 初始值，可以是BitMask64Data对象、数字或字符串
      */
     constructor(initialValue?: BitMask64Data | number | string) {
         if (initialValue && typeof initialValue === 'object') {
@@ -27,7 +27,7 @@ export class Bits {
 
     /**
      * 设置指定位为1
-     * @param index 位索引，范围 [0, 63]
+     * @param index - 位索引，范围 [0, 63]
      * @throws 当位索引为负数或超过64位限制时抛出错误
      */
     public set(index: number): void {
@@ -44,7 +44,7 @@ export class Bits {
 
     /**
      * 清除指定位为0
-     * @param index 位索引，范围 [0, 63]
+     * @param index - 位索引，范围 [0, 63]
      * @throws 当位索引为负数时抛出错误
      */
     public clear(index: number): void {
@@ -61,7 +61,7 @@ export class Bits {
 
     /**
      * 获取指定位的值
-     * @param index 位索引
+     * @param index - 位索引
      * @returns 如果位被设置为1则返回true，否则返回false
      */
     public get(index: number): boolean {
@@ -75,7 +75,7 @@ export class Bits {
 
     /**
      * 检查是否包含另一个位集合的所有位
-     * @param other 另一个位集合
+     * @param other - 另一个位集合
      * @returns 如果包含other的所有设置位则返回true
      */
     public containsAll(other: Bits): boolean {
@@ -84,7 +84,7 @@ export class Bits {
 
     /**
      * 检查是否与另一个位集合有交集
-     * @param other 另一个位集合
+     * @param other - 另一个位集合
      * @returns 如果有共同的设置位则返回true
      */
     public intersects(other: Bits): boolean {
@@ -93,7 +93,7 @@ export class Bits {
 
     /**
      * 检查是否与另一个位集合没有交集
-     * @param other 另一个位集合
+     * @param other - 另一个位集合
      * @returns 如果没有共同的设置位则返回true
      */
     public excludes(other: Bits): boolean {
@@ -125,7 +125,7 @@ export class Bits {
 
     /**
      * 与另一个位集合执行按位与操作
-     * @param other 另一个位集合
+     * @param other - 另一个位集合
      * @returns 新的位集合，包含按位与的结果
      */
     public and(other: Bits): Bits {
@@ -137,7 +137,7 @@ export class Bits {
 
     /**
      * 与另一个位集合执行按位或操作
-     * @param other 另一个位集合
+     * @param other - 另一个位集合
      * @returns 新的位集合，包含按位或的结果
      */
     public or(other: Bits): Bits {
@@ -149,7 +149,7 @@ export class Bits {
 
     /**
      * 与另一个位集合执行按位异或操作
-     * @param other 另一个位集合
+     * @param other - 另一个位集合
      * @returns 新的位集合，包含按位异或的结果
      */
     public xor(other: Bits): Bits {
@@ -161,7 +161,7 @@ export class Bits {
 
     /**
      * 执行按位取反操作
-     * @param maxBits 最大位数，默认为64
+     * @param maxBits - 最大位数，默认为64
      * @returns 新的位集合，包含按位取反的结果
      */
     public not(maxBits: number = 64): Bits {
@@ -192,7 +192,7 @@ export class Bits {
 
     /**
      * 从另一个位集合复制值
-     * @param other 源位集合
+     * @param other - 源位集合
      */
     public copyFrom(other: Bits): void {
         BitMask64Utils.copy(other._value, this._value);
@@ -216,7 +216,7 @@ export class Bits {
 
     /**
      * 设置位集合的值
-     * @param value 新值，可以是BitMask64Data对象、数字或字符串
+     * @param value - 新值，可以是BitMask64Data对象、数字或字符串
      */
     public setValue(value: BitMask64Data | number | string): void {
         if (typeof value === 'object') {
@@ -245,7 +245,7 @@ export class Bits {
 
     /**
      * 将位集合转换为二进制字符串
-     * @param maxBits 最大位数，默认为64
+     * @param maxBits - 最大位数，默认为64
      * @returns 二进制字符串表示，每8位用空格分隔
      */
     public toBinaryString(maxBits: number = 64): string {
@@ -271,7 +271,7 @@ export class Bits {
 
     /**
      * 从二进制字符串创建位集合
-     * @param binaryString 二进制字符串，可以包含空格
+     * @param binaryString - 二进制字符串，可以包含空格
      * @returns 新的位集合对象
      */
     public static fromBinaryString(binaryString: string): Bits {
@@ -292,7 +292,7 @@ export class Bits {
 
     /**
      * 从十六进制字符串创建位集合
-     * @param hexString 十六进制字符串，可以带或不带0x前缀
+     * @param hexString - 十六进制字符串，可以带或不带0x前缀
      * @returns 新的位集合对象
      */
     public static fromHexString(hexString: string): Bits {
@@ -313,7 +313,7 @@ export class Bits {
 
     /**
      * 检查是否与另一个位集合相等
-     * @param other 另一个位集合
+     * @param other - 另一个位集合
      * @returns 如果两个位集合完全相同则返回true
      */
     public equals(other: Bits): boolean {

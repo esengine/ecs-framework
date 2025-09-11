@@ -15,7 +15,7 @@ export const SYSTEM_TYPE_NAME = Symbol('SystemTypeName');
  * 组件类型装饰器
  * 用于为组件类指定固定的类型名称，避免在代码混淆后失效
  * 
- * @param typeName 组件类型名称
+ * @param typeName - 组件类型名称
  * @example
  * ```typescript
  * @ECSComponent('Position')
@@ -42,7 +42,7 @@ export function ECSComponent(typeName: string) {
  * 系统类型装饰器
  * 用于为系统类指定固定的类型名称，避免在代码混淆后失效
  * 
- * @param typeName 系统类型名称
+ * @param typeName - 系统类型名称
  * @example
  * ```typescript
  * @ECSSystem('Movement')
@@ -69,7 +69,7 @@ export function ECSSystem(typeName: string) {
 /**
  * 获取组件类型的名称，优先使用装饰器指定的名称
  * 
- * @param componentType 组件构造函数
+ * @param componentType - 组件构造函数
  * @returns 组件类型名称
  */
 export function getComponentTypeName<T extends Component>(
@@ -88,7 +88,7 @@ export function getComponentTypeName<T extends Component>(
 /**
  * 获取系统类型的名称，优先使用装饰器指定的名称
  * 
- * @param systemType 系统构造函数
+ * @param systemType - 系统构造函数
  * @returns 系统类型名称
  */
 export function getSystemTypeName<T extends EntitySystem>(
@@ -107,7 +107,7 @@ export function getSystemTypeName<T extends EntitySystem>(
 /**
  * 从组件实例获取类型名称
  * 
- * @param component 组件实例
+ * @param component - 组件实例
  * @returns 组件类型名称
  */
 export function getComponentInstanceTypeName(component: Component): string {
@@ -117,7 +117,7 @@ export function getComponentInstanceTypeName(component: Component): string {
 /**
  * 从系统实例获取类型名称
  * 
- * @param system 系统实例
+ * @param system - 系统实例
  * @returns 系统类型名称
  */
 export function getSystemInstanceTypeName(system: EntitySystem): string {

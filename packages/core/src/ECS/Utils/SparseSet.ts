@@ -40,7 +40,7 @@ export class SparseSet<T> {
     /**
      * 添加元素到集合
      * 
-     * @param item 要添加的元素
+     * @param item - 要添加的元素
      * @returns 是否成功添加（false表示元素已存在）
      */
     public add(item: T): boolean {
@@ -62,7 +62,7 @@ export class SparseSet<T> {
      * 2. 删除最后一个元素
      * 3. 更新映射表
      * 
-     * @param item 要移除的元素
+     * @param item - 要移除的元素
      * @returns 是否成功移除（false表示元素不存在）
      */
     public remove(item: T): boolean {
@@ -89,7 +89,7 @@ export class SparseSet<T> {
     /**
      * 检查元素是否存在于集合中
      * 
-     * @param item 要检查的元素
+     * @param item - 要检查的元素
      * @returns 元素是否存在
      */
     public has(item: T): boolean {
@@ -99,7 +99,7 @@ export class SparseSet<T> {
     /**
      * 获取元素在密集数组中的索引
      * 
-     * @param item 要查询的元素
+     * @param item - 要查询的元素
      * @returns 索引，如果元素不存在则返回undefined
      */
     public getIndex(item: T): number | undefined {
@@ -109,7 +109,7 @@ export class SparseSet<T> {
     /**
      * 根据索引获取元素
      * 
-     * @param index 索引
+     * @param index - 索引
      * @returns 元素，如果索引无效则返回undefined
      */
     public getByIndex(index: number): T | undefined {
@@ -136,7 +136,7 @@ export class SparseSet<T> {
      * 保证遍历顺序与添加顺序一致（除非中间有删除操作）。
      * 遍历性能优秀，因为数据在内存中连续存储。
      * 
-     * @param callback 遍历回调函数
+     * @param callback - 遍历回调函数
      */
     public forEach(callback: (item: T, index: number) => void): void {
         for (let i = 0; i < this._dense.length; i++) {
@@ -147,7 +147,7 @@ export class SparseSet<T> {
     /**
      * 映射集合中的所有元素
      * 
-     * @param callback 映射回调函数
+     * @param callback - 映射回调函数
      * @returns 映射后的新数组
      */
     public map<U>(callback: (item: T, index: number) => U): U[] {
@@ -161,7 +161,7 @@ export class SparseSet<T> {
     /**
      * 过滤集合中的元素
      * 
-     * @param predicate 过滤条件
+     * @param predicate - 过滤条件
      * @returns 满足条件的元素数组
      */
     public filter(predicate: (item: T, index: number) => boolean): T[] {
@@ -177,7 +177,7 @@ export class SparseSet<T> {
     /**
      * 查找第一个满足条件的元素
      * 
-     * @param predicate 查找条件
+     * @param predicate - 查找条件
      * @returns 找到的元素，如果没有则返回undefined
      */
     public find(predicate: (item: T, index: number) => boolean): T | undefined {
@@ -192,7 +192,7 @@ export class SparseSet<T> {
     /**
      * 检查是否存在满足条件的元素
      * 
-     * @param predicate 检查条件
+     * @param predicate - 检查条件
      * @returns 是否存在满足条件的元素
      */
     public some(predicate: (item: T, index: number) => boolean): boolean {
@@ -207,7 +207,7 @@ export class SparseSet<T> {
     /**
      * 检查是否所有元素都满足条件
      * 
-     * @param predicate 检查条件
+     * @param predicate - 检查条件
      * @returns 是否所有元素都满足条件
      */
     public every(predicate: (item: T, index: number) => boolean): boolean {

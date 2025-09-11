@@ -15,7 +15,7 @@ export class SceneBuilder {
 
     /**
      * 设置场景名称
-     * @param name 场景名称
+     * @param name - 场景名称
      * @returns 场景构建器
      */
     public named(name: string): SceneBuilder {
@@ -25,7 +25,7 @@ export class SceneBuilder {
 
     /**
      * 添加实体
-     * @param entity 实体
+     * @param entity - 实体
      * @returns 场景构建器
      */
     public withEntity(entity: Entity): SceneBuilder {
@@ -35,7 +35,7 @@ export class SceneBuilder {
 
     /**
      * 使用实体构建器添加实体
-     * @param builderFn 实体构建器函数
+     * @param builderFn - 实体构建器函数
      * @returns 场景构建器
      */
     public withEntityBuilder(builderFn: (builder: EntityBuilder) => EntityBuilder): SceneBuilder {
@@ -48,7 +48,7 @@ export class SceneBuilder {
 
     /**
      * 批量添加实体
-     * @param entities 实体数组
+     * @param entities - 实体数组
      * @returns 场景构建器
      */
     public withEntities(...entities: Entity[]): SceneBuilder {
@@ -60,7 +60,7 @@ export class SceneBuilder {
 
     /**
      * 添加系统
-     * @param system 系统实例
+     * @param system - 系统实例
      * @returns 场景构建器
      */
     public withSystem(system: EntitySystem): SceneBuilder {
@@ -70,7 +70,7 @@ export class SceneBuilder {
 
     /**
      * 批量添加系统
-     * @param systems 系统数组
+     * @param systems - 系统数组
      * @returns 场景构建器
      */
     public withSystems(...systems: EntitySystem[]): SceneBuilder {

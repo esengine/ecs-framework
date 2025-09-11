@@ -25,9 +25,9 @@ export class Emitter<T, TContext = unknown> {
 
     /**
      * 开始监听项
-     * @param eventType 监听类型
-     * @param handler 监听函数
-     * @param context 监听上下文
+     * @param eventType - 监听类型
+     * @param handler - 监听函数
+     * @param context - 监听上下文
      */
     public addObserver(eventType: T, handler: Function, context: TContext) {
         let list = this._messageTable.get(eventType);
@@ -43,8 +43,8 @@ export class Emitter<T, TContext = unknown> {
 
     /**
      * 移除监听项
-     * @param eventType 事件类型
-     * @param handler 事件函数
+     * @param eventType - 事件类型
+     * @param handler - 事件函数
      */
     public removeObserver(eventType: T, handler: Function) {
         let messageData = this._messageTable.get(eventType);
@@ -57,8 +57,8 @@ export class Emitter<T, TContext = unknown> {
 
     /**
      * 触发该事件
-     * @param eventType 事件类型
-     * @param data 事件数据
+     * @param eventType - 事件类型
+     * @param data - 事件数据
      */
     public emit<TData = unknown>(eventType: T, ...data: TData[]) {
         let list = this._messageTable.get(eventType);
@@ -71,8 +71,8 @@ export class Emitter<T, TContext = unknown> {
 
     /**
      * 判断是否存在该类型的观察者
-     * @param eventType 事件类型
-     * @param handler 事件函数
+     * @param eventType - 事件类型
+     * @param handler - 事件函数
      */
     public hasObserver(eventType: T, handler: Function): boolean {
         let list = this._messageTable.get(eventType);
@@ -81,7 +81,7 @@ export class Emitter<T, TContext = unknown> {
 
     /**
      * 移除指定事件类型的所有监听器
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      */
     public removeAllObservers(eventType?: T): void {
         if (eventType !== undefined) {
@@ -107,7 +107,7 @@ export class Emitter<T, TContext = unknown> {
 
     /**
      * 获取指定事件类型的监听器数量
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      */
     public getObserverCount(eventType: T): number {
         const list = this._messageTable.get(eventType);

@@ -66,9 +66,10 @@ export abstract class Component implements IComponent {
     }
 
     /**
-     * 获取组件启用状态
+     * 获取或设置组件启用状态
      * 
      * 组件的实际启用状态取决于自身状态和所属实体的状态。
+     * 当设置状态改变时会触发相应的生命周期回调。
      * 
      * @returns 如果组件和所属实体都启用则返回true
      */
@@ -76,13 +77,6 @@ export abstract class Component implements IComponent {
         return this.entity ? this.entity.enabled && this._enabled : this._enabled;
     }
 
-    /**
-     * 设置组件启用状态
-     * 
-     * 当状态改变时会触发相应的生命周期回调。
-     * 
-     * @param value - 新的启用状态
-     */
     public set enabled(value: boolean) {
         if (this._enabled !== value) {
             this._enabled = value;
@@ -95,7 +89,7 @@ export abstract class Component implements IComponent {
     }
 
     /**
-     * 获取更新顺序
+     * 获取或设置更新顺序
      * 
      * @returns 组件的更新顺序值
      */
@@ -103,11 +97,6 @@ export abstract class Component implements IComponent {
         return this._updateOrder;
     }
 
-    /**
-     * 设置更新顺序
-     * 
-     * @param value - 新的更新顺序值
-     */
     public set updateOrder(value: number) {
         this._updateOrder = value;
     }

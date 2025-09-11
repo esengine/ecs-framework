@@ -751,17 +751,6 @@ ECS事件类型枚举 定义实体组件系统中的所有事件类型
 
 
 </td></tr>
-<tr><td>
-
-[PerformanceWarningType](./ecs-framework-monorepo.performancewarningtype.md)
-
-
-</td><td>
-
-性能警告类型
-
-
-</td></tr>
 </tbody></table>
 
 ## Functions
@@ -1453,28 +1442,6 @@ WorldManager配置接口
 </td><td>
 
 性能统计信息
-
-
-</td></tr>
-<tr><td>
-
-[PerformanceThresholds](./ecs-framework-monorepo.performancethresholds.md)
-
-
-</td><td>
-
-性能阈值配置
-
-
-</td></tr>
-<tr><td>
-
-[PerformanceWarning](./ecs-framework-monorepo.performancewarning.md)
-
-
-</td><td>
-
-性能警告
 
 
 </td></tr>

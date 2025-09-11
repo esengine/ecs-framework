@@ -8,8 +8,8 @@
 export interface ITransport {
   /**
    * 启动传输层
-   * @param port 端口号
-   * @param host 主机地址
+   * @param port - 端口号
+   * @param host - 主机地址
    */
   start(port: number, host?: string): Promise<void>;
 
@@ -20,39 +20,39 @@ export interface ITransport {
 
   /**
    * 发送数据到指定客户端
-   * @param clientId 客户端ID
-   * @param data 数据
+   * @param clientId - 客户端ID
+   * @param data - 数据
    */
   send(clientId: string, data: ArrayBuffer | string): void;
 
   /**
    * 广播数据到所有客户端
-   * @param data 数据
-   * @param exclude 排除的客户端ID列表
+   * @param data - 数据
+   * @param exclude - 排除的客户端ID列表
    */
   broadcast(data: ArrayBuffer | string, exclude?: string[]): void;
 
   /**
    * 监听客户端连接事件
-   * @param handler 处理函数
+   * @param handler - 处理函数
    */
   onConnect(handler: (clientInfo: ITransportClientInfo) => void): void;
 
   /**
    * 监听客户端断开事件
-   * @param handler 处理函数
+   * @param handler - 处理函数
    */
   onDisconnect(handler: (clientId: string, reason?: string) => void): void;
 
   /**
    * 监听消息接收事件
-   * @param handler 处理函数
+   * @param handler - 处理函数
    */
   onMessage(handler: (clientId: string, data: ArrayBuffer | string) => void): void;
 
   /**
    * 监听错误事件
-   * @param handler 处理函数
+   * @param handler - 处理函数
    */
   onError(handler: (error: Error) => void): void;
 
@@ -63,14 +63,14 @@ export interface ITransport {
 
   /**
    * 检查客户端是否连接
-   * @param clientId 客户端ID
+   * @param clientId - 客户端ID
    */
   isClientConnected(clientId: string): boolean;
 
   /**
    * 断开指定客户端
-   * @param clientId 客户端ID
-   * @param reason 断开原因
+   * @param clientId - 客户端ID
+   * @param reason - 断开原因
    */
   disconnectClient(clientId: string, reason?: string): void;
 }
@@ -81,38 +81,38 @@ export interface ITransport {
 export interface IClientTransport {
   /**
    * 连接到服务器
-   * @param url 服务器URL
-   * @param options 连接选项
+   * @param url - 服务器URL
+   * @param options - 连接选项
    */
   connect(url: string, options?: IConnectionOptions): Promise<void>;
 
   /**
    * 断开连接
-   * @param reason 断开原因
+   * @param reason - 断开原因
    */
   disconnect(reason?: string): Promise<void>;
 
   /**
    * 发送数据到服务器
-   * @param data 数据
+   * @param data - 数据
    */
   send(data: ArrayBuffer | string): void;
 
   /**
    * 监听服务器消息
-   * @param handler 处理函数
+   * @param handler - 处理函数
    */
   onMessage(handler: (data: ArrayBuffer | string) => void): void;
 
   /**
    * 监听连接状态变化
-   * @param handler 处理函数
+   * @param handler - 处理函数
    */
   onConnectionStateChange(handler: (state: ConnectionState) => void): void;
 
   /**
    * 监听错误事件
-   * @param handler 处理函数
+   * @param handler - 处理函数
    */
   onError(handler: (error: Error) => void): void;
 

@@ -20,7 +20,7 @@ export class GlobalManager {
 
     /**
      * 设置管理器是否启用
-     * @param isEnabled 如果为true，则启用管理器；否则禁用管理器
+     * @param isEnabled - 如果为true，则启用管理器；否则禁用管理器
      */
     public setEnabled(isEnabled: boolean) {
         if (this._enabled != isEnabled) {

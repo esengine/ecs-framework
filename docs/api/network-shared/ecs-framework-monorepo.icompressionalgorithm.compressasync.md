@@ -9,7 +9,7 @@
 **Signature:**
 
 ```typescript
-compressAsync?(data: ArrayBuffer): Promise<ArrayBuffer>;
+compressAsync?(data: Uint8Array): Promise<Uint8Array>;
 ```
 
 ## Parameters
@@ -37,7 +37,7 @@ data
 
 </td><td>
 
-ArrayBuffer
+Uint8Array
 
 
 </td><td>
@@ -48,5 +48,5 @@ ArrayBuffer
 
 **Returns:**
 
-Promise&lt;ArrayBuffer&gt;
+Promise&lt;Uint8Array&gt;
 

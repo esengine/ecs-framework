@@ -20,8 +20,8 @@ export class PoolManager {
 
     /**
      * 注册池
-     * @param name 池名称
-     * @param pool 池实例
+     * @param name - 池名称
+     * @param pool - 池实例
      */
     public registerPool<T extends IPoolable>(name: string, pool: Pool<T>): void {
         this.pools.set(name, pool);
@@ -29,7 +29,7 @@ export class PoolManager {
 
     /**
      * 获取池
-     * @param name 池名称
+     * @param name - 池名称
      * @returns 池实例
      */
     public getPool<T extends IPoolable>(name: string): Pool<T> | null {
@@ -50,10 +50,10 @@ export class PoolManager {
 
     /**
      * 创建或获取标准池
-     * @param name 池名称
-     * @param createFn 创建函数
-     * @param maxSize 最大大小
-     * @param estimatedObjectSize 估算对象大小
+     * @param name - 池名称
+     * @param createFn - 创建函数
+     * @param maxSize - 最大大小
+     * @param estimatedObjectSize - 估算对象大小
      * @returns 池实例
      */
     public createPool<T extends IPoolable>(
@@ -75,7 +75,7 @@ export class PoolManager {
 
     /**
      * 移除池
-     * @param name 池名称
+     * @param name - 池名称
      * @returns 是否成功移除
      */
     public removePool(name: string): boolean {
@@ -203,7 +203,7 @@ export class PoolManager {
 
     /**
      * 设置自动压缩间隔
-     * @param intervalMs 间隔毫秒数
+     * @param intervalMs - 间隔毫秒数
      */
     public setAutoCompactInterval(intervalMs: number): void {
         this.autoCompactInterval = intervalMs;

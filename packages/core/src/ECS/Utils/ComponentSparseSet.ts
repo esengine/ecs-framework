@@ -69,7 +69,7 @@ export class ComponentSparseSet {
      * 
      * 分析实体的组件组成，生成位掩码，并更新所有相关索引。
      * 
-     * @param entity 要添加的实体
+     * @param entity - 要添加的实体
      */
     public addEntity(entity: Entity): void {
         // 如果实体已存在，先移除旧数据
@@ -114,7 +114,7 @@ export class ComponentSparseSet {
      * 
      * 清理实体相关的所有索引数据，保持数据结构的紧凑性。
      * 
-     * @param entity 要移除的实体
+     * @param entity - 要移除的实体
      */
     public removeEntity(entity: Entity): void {
         const entityIndex = this._entities.getIndex(entity);
@@ -143,7 +143,7 @@ export class ComponentSparseSet {
     /**
      * 查询包含指定组件的所有实体
      * 
-     * @param componentType 组件类型
+     * @param componentType - 组件类型
      * @returns 包含该组件的实体集合
      */
     public queryByComponent(componentType: ComponentType): Set<Entity> {
@@ -156,7 +156,7 @@ export class ComponentSparseSet {
      * 
      * 查找同时包含所有指定组件的实体。
      * 
-     * @param componentTypes 组件类型数组
+     * @param componentTypes - 组件类型数组
      * @returns 满足条件的实体集合
      */
     public queryMultipleAnd(componentTypes: ComponentType[]): Set<Entity> {
@@ -196,7 +196,7 @@ export class ComponentSparseSet {
      * 
      * 查找包含任意一个指定组件的实体。
      * 
-     * @param componentTypes 组件类型数组
+     * @param componentTypes - 组件类型数组
      * @returns 满足条件的实体集合
      */
     public queryMultipleOr(componentTypes: ComponentType[]): Set<Entity> {
@@ -237,8 +237,8 @@ export class ComponentSparseSet {
     /**
      * 检查实体是否包含指定组件
      * 
-     * @param entity 实体
-     * @param componentType 组件类型
+     * @param entity - 实体
+     * @param componentType - 组件类型
      * @returns 是否包含该组件
      */
     public hasComponent(entity: Entity, componentType: ComponentType): boolean {
@@ -260,7 +260,7 @@ export class ComponentSparseSet {
     /**
      * 获取实体的组件位掩码
      * 
-     * @param entity 实体
+     * @param entity - 实体
      * @returns 组件位掩码，如果实体不存在则返回undefined
      */
     public getEntityMask(entity: Entity): BitMask64Data | undefined {
@@ -297,7 +297,7 @@ export class ComponentSparseSet {
     /**
      * 遍历所有实体
      * 
-     * @param callback 遍历回调函数
+     * @param callback - 遍历回调函数
      */
     public forEach(callback: (entity: Entity, mask: BitMask64Data, index: number) => void): void {
         this._entities.forEach((entity, index) => {

@@ -17,8 +17,8 @@ export abstract class IntervalSystem extends EntitySystem {
 
     /**
      * 构造函数，初始化时间间隔
-     * @param interval 时间间隔
-     * @param matcher 实体匹配器
+     * @param interval - 时间间隔
+     * @param matcher - 实体匹配器
      */
     constructor(interval: number, matcher?: Matcher) {
         super(matcher);

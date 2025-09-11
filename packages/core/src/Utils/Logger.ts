@@ -98,8 +98,8 @@ export class ConsoleLogger implements ILogger {
 
     /**
      * 输出调试级别日志
-     * @param message 日志消息
-     * @param args 附加参数
+     * @param message - 日志消息
+     * @param args - 附加参数
      */
     public debug(message: string, ...args: unknown[]): void {
         this.log(LogLevel.Debug, message, ...args);
@@ -107,8 +107,8 @@ export class ConsoleLogger implements ILogger {
 
     /**
      * 输出信息级别日志
-     * @param message 日志消息
-     * @param args 附加参数
+     * @param message - 日志消息
+     * @param args - 附加参数
      */
     public info(message: string, ...args: unknown[]): void {
         this.log(LogLevel.Info, message, ...args);
@@ -116,8 +116,8 @@ export class ConsoleLogger implements ILogger {
 
     /**
      * 输出警告级别日志
-     * @param message 日志消息
-     * @param args 附加参数
+     * @param message - 日志消息
+     * @param args - 附加参数
      */
     public warn(message: string, ...args: unknown[]): void {
         this.log(LogLevel.Warn, message, ...args);
@@ -125,8 +125,8 @@ export class ConsoleLogger implements ILogger {
 
     /**
      * 输出错误级别日志
-     * @param message 日志消息
-     * @param args 附加参数
+     * @param message - 日志消息
+     * @param args - 附加参数
      */
     public error(message: string, ...args: unknown[]): void {
         this.log(LogLevel.Error, message, ...args);
@@ -134,8 +134,8 @@ export class ConsoleLogger implements ILogger {
 
     /**
      * 输出致命错误级别日志
-     * @param message 日志消息
-     * @param args 附加参数
+     * @param message - 日志消息
+     * @param args - 附加参数
      */
     public fatal(message: string, ...args: unknown[]): void {
         this.log(LogLevel.Fatal, message, ...args);
@@ -143,7 +143,7 @@ export class ConsoleLogger implements ILogger {
 
     /**
      * 设置日志级别
-     * @param level 日志级别
+     * @param level - 日志级别
      */
     public setLevel(level: LogLevel): void {
         this._config.level = level;
@@ -151,7 +151,7 @@ export class ConsoleLogger implements ILogger {
 
     /**
      * 设置颜色配置
-     * @param colors 颜色配置
+     * @param colors - 颜色配置
      */
     public setColors(colors: LoggerColorConfig): void {
         if (Object.keys(colors).length === 0) {
@@ -167,7 +167,7 @@ export class ConsoleLogger implements ILogger {
 
     /**
      * 设置日志前缀
-     * @param prefix 前缀字符串
+     * @param prefix - 前缀字符串
      */
     public setPrefix(prefix: string): void {
         this._config.prefix = prefix;
@@ -175,9 +175,9 @@ export class ConsoleLogger implements ILogger {
 
     /**
      * 内部日志输出方法
-     * @param level 日志级别
-     * @param message 日志消息
-     * @param args 附加参数
+     * @param level - 日志级别
+     * @param message - 日志消息
+     * @param args - 附加参数
      */
     private log(level: LogLevel, message: string, ...args: unknown[]): void {
         if (level < this._config.level) {
@@ -211,9 +211,9 @@ export class ConsoleLogger implements ILogger {
 
     /**
      * 输出到控制台
-     * @param level 日志级别
-     * @param message 格式化后的消息
-     * @param args 附加参数
+     * @param level - 日志级别
+     * @param message - 格式化后的消息
+     * @param args - 附加参数
      */
     private outputToConsole(level: LogLevel, message: string, ...args: unknown[]): void {
         const colors = this._config.enableColors ? this.getColors() : null;
@@ -305,7 +305,7 @@ export class LoggerManager {
 
     /**
      * 获取或创建日志器
-     * @param name 日志器名称
+     * @param name - 日志器名称
      * @returns 日志器实例
      */
     public getLogger(name?: string): ILogger {
@@ -326,8 +326,8 @@ export class LoggerManager {
 
     /**
      * 设置日志器
-     * @param name 日志器名称
-     * @param logger 日志器实例
+     * @param name - 日志器名称
+     * @param logger - 日志器实例
      */
     public setLogger(name: string, logger: ILogger): void {
         this._loggers.set(name, logger);
@@ -335,7 +335,7 @@ export class LoggerManager {
 
     /**
      * 设置全局日志级别
-     * @param level 日志级别
+     * @param level - 日志级别
      */
     public setGlobalLevel(level: LogLevel): void {
         if (this._defaultLogger instanceof ConsoleLogger) {
@@ -351,8 +351,8 @@ export class LoggerManager {
 
     /**
      * 创建子日志器
-     * @param parentName 父日志器名称
-     * @param childName 子日志器名称
+     * @param parentName - 父日志器名称
+     * @param childName - 子日志器名称
      * @returns 子日志器实例
      */
     public createChildLogger(parentName: string, childName: string): ILogger {
@@ -362,7 +362,7 @@ export class LoggerManager {
 
     /**
      * 设置全局颜色配置
-     * @param colors 颜色配置
+     * @param colors - 颜色配置
      */
     public setGlobalColors(colors: LoggerColorConfig): void {
         if (this._defaultLogger instanceof ConsoleLogger) {
@@ -399,7 +399,7 @@ export const Logger = LoggerManager.getInstance().getLogger();
 
 /**
  * 创建命名日志器
- * @param name 日志器名称
+ * @param name - 日志器名称
  * @returns 日志器实例
  */
 export function createLogger(name: string): ILogger {
@@ -408,7 +408,7 @@ export function createLogger(name: string): ILogger {
 
 /**
  * 设置全局日志颜色配置
- * @param colors 颜色配置
+ * @param colors - 颜色配置
  */
 export function setLoggerColors(colors: LoggerColorConfig): void {
     LoggerManager.getInstance().setGlobalColors(colors);
@@ -423,7 +423,7 @@ export function resetLoggerColors(): void {
 
 /**
  * 设置全局日志级别
- * @param level 日志级别
+ * @param level - 日志级别
  */
 export function setGlobalLogLevel(level: LogLevel): void {
     LoggerManager.getInstance().setGlobalLevel(level);

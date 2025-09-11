@@ -157,16 +157,5 @@ _(Optional)_ 异步解压缩（可选）
 
 
 </td></tr>
-<tr><td>
-
-[estimateCompressedSize(data)?](./ecs-framework-monorepo.icompressionalgorithm.estimatecompressedsize.md)
-
-
-</td><td>
-
-_(Optional)_ 估算压缩后大小（可选）
-
-
-</td></tr>
 </tbody></table>
 

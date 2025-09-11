@@ -139,7 +139,7 @@ export class QuerySystem {
      * 当实体集合发生大规模变化时调用此方法。
      * 系统将重新构建所有索引以确保查询性能。
      * 
-     * @param entities 新的实体列表
+     * @param entities - 新的实体列表
      */
     public setEntities(entities: Entity[]): void {
         this.entities = entities;
@@ -153,8 +153,8 @@ export class QuerySystem {
      * 将新实体添加到查询系统中，并自动更新相关索引。
      * 为了提高批量添加性能，可以延迟缓存清理。
      * 
-     * @param entity 要添加的实体
-     * @param deferCacheClear 是否延迟缓存清理（用于批量操作）
+     * @param entity - 要添加的实体
+     * @param deferCacheClear - 是否延迟缓存清理（用于批量操作）
      */
     public addEntity(entity: Entity, deferCacheClear: boolean = false): void {
         if (!this.entities.includes(entity)) {
@@ -182,7 +182,7 @@ export class QuerySystem {
      * 高效地批量添加多个实体，减少缓存清理次数。
      * 使用Set来避免O(n)的重复检查。
      * 
-     * @param entities 要添加的实体列表
+     * @param entities - 要添加的实体列表
      */
     public addEntities(entities: Entity[]): void {
         if (entities.length === 0) return;
@@ -212,7 +212,7 @@ export class QuerySystem {
      * 假设所有实体都是新的，跳过重复检查以获得最大性能。
      * 仅在确保没有重复实体时使用。
      * 
-     * @param entities 要添加的实体列表
+     * @param entities - 要添加的实体列表
      */
     public addEntitiesUnchecked(entities: Entity[]): void {
         if (entities.length === 0) return;
@@ -236,7 +236,7 @@ export class QuerySystem {
      * 
      * 从查询系统中移除指定实体，并清理相关索引。
      * 
-     * @param entity 要移除的实体
+     * @param entity - 要移除的实体
      */
     public removeEntity(entity: Entity): void {
         const index = this.entities.indexOf(entity);
@@ -387,7 +387,7 @@ export class QuerySystem {
      * 返回同时包含所有指定组件类型的实体列表。
      * 系统会自动选择最高效的查询策略，包括索引查找和缓存机制。
      * 
-     * @param componentTypes 要查询的组件类型列表
+     * @param componentTypes - 要查询的组件类型列表
      * @returns 查询结果，包含匹配的实体和性能信息
      * 
      * @example
@@ -455,7 +455,7 @@ export class QuerySystem {
      * 针对多组件查询场景的高效算法实现。
      * 通过选择最小的组件集合作为起点，减少需要检查的实体数量。
      * 
-     * @param componentTypes 组件类型列表
+     * @param componentTypes - 组件类型列表
      * @returns 匹配的实体列表
      */
     private queryMultipleComponents(componentTypes: ComponentType[]): Entity[] {
@@ -499,7 +499,7 @@ export class QuerySystem {
      * 返回包含任意一个指定组件类型的实体列表。
      * 使用集合合并算法确保高效的查询性能。
      * 
-     * @param componentTypes 要查询的组件类型列表
+     * @param componentTypes - 要查询的组件类型列表
      * @returns 查询结果，包含匹配的实体和性能信息
      * 
      * @example
@@ -557,7 +557,7 @@ export class QuerySystem {
      * 返回不包含任何指定组件类型的实体列表。
      * 适用于排除特定类型实体的查询场景。
      * 
-     * @param componentTypes 要排除的组件类型列表
+     * @param componentTypes - 要排除的组件类型列表
      * @returns 查询结果，包含匹配的实体和性能信息
      * 
      * @example
@@ -606,7 +606,7 @@ export class QuerySystem {
      * 返回具有指定标签的所有实体。
      * 标签查询使用专用索引，具有很高的查询性能。
      * 
-     * @param tag 要查询的标签值
+     * @param tag - 要查询的标签值
      * @returns 查询结果，包含匹配的实体和性能信息
      * 
      * @example
@@ -654,7 +654,7 @@ export class QuerySystem {
      * 返回具有指定名称的所有实体。
      * 名称查询使用专用索引，适用于查找特定的命名实体。
      * 
-     * @param name 要查询的实体名称
+     * @param name - 要查询的实体名称
      * @returns 查询结果，包含匹配的实体和性能信息
      * 
      * @example
@@ -702,7 +702,7 @@ export class QuerySystem {
      * 返回包含指定组件类型的所有实体。
      * 这是最基础的查询方法，具有最高的查询性能。
      * 
-     * @param componentType 要查询的组件类型
+     * @param componentType - 要查询的组件类型
      * @returns 查询结果，包含匹配的实体和性能信息
      * 
      * @example
@@ -822,7 +822,7 @@ export class QuerySystem {
      * 
      * 对大量实体进行批量组件更新操作。
      * 
-     * @param updates 更新操作列表，包含实体ID和新的组件掩码
+     * @param updates - 更新操作列表，包含实体ID和新的组件掩码
      * 
      * @example
      * ```typescript
@@ -869,7 +869,7 @@ export class QuerySystem {
      * 根据组件类型列表生成对应的位掩码。
      * 使用位掩码优化器进行缓存和预计算。
      * 
-     * @param componentTypes 组件类型列表
+     * @param componentTypes - 组件类型列表
      * @returns 生成的位掩码
      */
     private createComponentMask(componentTypes: ComponentType[]): BitMask64Data {
@@ -977,8 +977,8 @@ export class QuerySystem {
     /**
      * 配置脏标记系统
      * 
-     * @param batchSize 批处理大小
-     * @param maxProcessingTime 最大处理时间
+     * @param batchSize - 批处理大小
+     * @param maxProcessingTime - 最大处理时间
      */
     public configureDirtyTracking(batchSize: number, maxProcessingTime: number): void {
         this.dirtyTrackingSystem.configureBatchProcessing(batchSize, maxProcessingTime);
@@ -1012,8 +1012,8 @@ export class QuerySystem {
     /**
      * 标记实体组件已修改（用于脏标记追踪）
      * 
-     * @param entity 修改的实体
-     * @param componentTypes 修改的组件类型
+     * @param entity - 修改的实体
+     * @param componentTypes - 修改的组件类型
      */
     public markEntityDirty(entity: Entity, componentTypes: ComponentType[]): void {
         this.queryStats.dirtyChecks++;
@@ -1024,7 +1024,7 @@ export class QuerySystem {
     /**
      * 获取实体所属的原型信息
      * 
-     * @param entity 要查询的实体
+     * @param entity - 要查询的实体
      */
     public getEntityArchetype(entity: Entity): Archetype | undefined {
         return this.archetypeSystem.getEntityArchetype(entity);
@@ -1057,7 +1057,7 @@ export class QueryBuilder {
     /**
      * 添加"必须包含所有组件"条件
      * 
-     * @param componentTypes 必须包含的组件类型
+     * @param componentTypes - 必须包含的组件类型
      * @returns 查询构建器实例，支持链式调用
      */
     public withAll(...componentTypes: ComponentType[]): QueryBuilder {
@@ -1072,7 +1072,7 @@ export class QueryBuilder {
     /**
      * 添加"必须包含任意组件"条件
      * 
-     * @param componentTypes 必须包含其中任意一个的组件类型
+     * @param componentTypes - 必须包含其中任意一个的组件类型
      * @returns 查询构建器实例，支持链式调用
      */
     public withAny(...componentTypes: ComponentType[]): QueryBuilder {
@@ -1087,7 +1087,7 @@ export class QueryBuilder {
     /**
      * 添加"不能包含任何组件"条件
      * 
-     * @param componentTypes 不能包含的组件类型
+     * @param componentTypes - 不能包含的组件类型
      * @returns 查询构建器实例，支持链式调用
      */
     public without(...componentTypes: ComponentType[]): QueryBuilder {

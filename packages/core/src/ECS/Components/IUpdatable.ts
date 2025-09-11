@@ -19,7 +19,7 @@ export class IUpdatableComparer {
 
 /**
  * 检查对象是否实现了IUpdatable接口
- * @param props 要检查的对象
+ * @param props - 要检查的对象
  * @returns 如果实现了IUpdatable接口返回true，否则返回false
  */
 export function isIUpdatable(props: any): props is IUpdatable {

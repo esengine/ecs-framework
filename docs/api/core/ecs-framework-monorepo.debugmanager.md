@@ -34,7 +34,7 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-[(constructor)(core, config)](./ecs-framework-monorepo.debugmanager._constructor_.md)
+[(constructor)(coreProvider, config)](./ecs-framework-monorepo.debugmanager._constructor_.md)
 
 
 </td><td>

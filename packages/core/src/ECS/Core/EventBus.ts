@@ -39,8 +39,8 @@ export class EventBus implements IEventBus {
     
     /**
      * 发射事件
-     * @param eventType 事件类型
-     * @param data 事件数据
+     * @param eventType - 事件类型
+     * @param data - 事件数据
      */
     public emit<T>(eventType: string, data: T): void {
         this.validateEventType(eventType);
@@ -57,8 +57,8 @@ export class EventBus implements IEventBus {
     
     /**
      * 异步发射事件
-     * @param eventType 事件类型
-     * @param data 事件数据
+     * @param eventType - 事件类型
+     * @param data - 事件数据
      */
     public async emitAsync<T>(eventType: string, data: T): Promise<void> {
         this.validateEventType(eventType);
@@ -75,9 +75,9 @@ export class EventBus implements IEventBus {
     
     /**
      * 监听事件
-     * @param eventType 事件类型
-     * @param handler 事件处理器
-     * @param config 监听器配置
+     * @param eventType - 事件类型
+     * @param handler - 事件处理器
+     * @param config - 监听器配置
      * @returns 监听器ID
      */
     public on<T>(
@@ -103,9 +103,9 @@ export class EventBus implements IEventBus {
     
     /**
      * 监听事件（一次性）
-     * @param eventType 事件类型
-     * @param handler 事件处理器
-     * @param config 监听器配置
+     * @param eventType - 事件类型
+     * @param handler - 事件处理器
+     * @param config - 监听器配置
      * @returns 监听器ID
      */
     public once<T>(
@@ -118,9 +118,9 @@ export class EventBus implements IEventBus {
     
     /**
      * 异步监听事件
-     * @param eventType 事件类型
-     * @param handler 异步事件处理器
-     * @param config 监听器配置
+     * @param eventType - 事件类型
+     * @param handler - 异步事件处理器
+     * @param config - 监听器配置
      * @returns 监听器ID
      */
     public onAsync<T>(
@@ -133,8 +133,8 @@ export class EventBus implements IEventBus {
     
     /**
      * 移除事件监听器
-     * @param eventType 事件类型
-     * @param listenerId 监听器ID
+     * @param eventType - 事件类型
+     * @param listenerId - 监听器ID
      */
     public off(eventType: string, listenerId: string): boolean {
         if (this.isDebugMode) {
@@ -146,7 +146,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 移除指定事件类型的所有监听器
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      */
     public offAll(eventType: string): void {
         if (this.isDebugMode) {
@@ -158,7 +158,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 检查是否有指定事件的监听器
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      */
     public hasListeners(eventType: string): boolean {
         return this.eventSystem.hasListeners(eventType);
@@ -166,7 +166,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 获取事件统计信息
-     * @param eventType 事件类型（可选）
+     * @param eventType - 事件类型（可选）
      */
     public getStats(eventType?: string): IEventStats | Map<string, IEventStats> {
         const stats = this.eventSystem.getStats(eventType);
@@ -196,7 +196,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 启用或禁用事件系统
-     * @param enabled 是否启用
+     * @param enabled - 是否启用
      */
     public setEnabled(enabled: boolean): void {
         this.eventSystem.setEnabled(enabled);
@@ -204,7 +204,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 设置调试模式
-     * @param debug 是否启用调试
+     * @param debug - 是否启用调试
      */
     public setDebugMode(debug: boolean): void {
         this.isDebugMode = debug;
@@ -212,7 +212,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 设置最大监听器数量
-     * @param max 最大数量
+     * @param max - 最大数量
      */
     public setMaxListeners(max: number): void {
         this.eventSystem.setMaxListeners(max);
@@ -220,7 +220,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 获取监听器数量
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      */
     public getListenerCount(eventType: string): number {
         return this.eventSystem.getListenerCount(eventType);
@@ -228,9 +228,9 @@ export class EventBus implements IEventBus {
     
     /**
      * 设置事件批处理配置
-     * @param eventType 事件类型
-     * @param batchSize 批处理大小
-     * @param delay 延迟时间（毫秒）
+     * @param eventType - 事件类型
+     * @param batchSize - 批处理大小
+     * @param delay - 延迟时间（毫秒）
      */
     public setBatchConfig(eventType: string, batchSize: number, delay: number): void {
         this.eventSystem.setBatchConfig(eventType, {
@@ -242,7 +242,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 刷新指定事件的批处理队列
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      */
     public flushBatch(eventType: string): void {
         this.eventSystem.flushBatch(eventType);
@@ -250,7 +250,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 重置事件统计
-     * @param eventType 事件类型（可选）
+     * @param eventType - 事件类型（可选）
      */
     public resetStats(eventType?: string): void {
         this.eventSystem.resetStats(eventType);
@@ -260,7 +260,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 发射实体创建事件
-     * @param entityData 实体事件数据
+     * @param entityData - 实体事件数据
      */
     public emitEntityCreated(entityData: IEntityEventData): void {
         this.emit(ECSEventType.ENTITY_CREATED, entityData);
@@ -268,7 +268,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 发射实体销毁事件
-     * @param entityData 实体事件数据
+     * @param entityData - 实体事件数据
      */
     public emitEntityDestroyed(entityData: IEntityEventData): void {
         this.emit(ECSEventType.ENTITY_DESTROYED, entityData);
@@ -276,7 +276,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 发射组件添加事件
-     * @param componentData 组件事件数据
+     * @param componentData - 组件事件数据
      */
     public emitComponentAdded(componentData: IComponentEventData): void {
         this.emit(ECSEventType.COMPONENT_ADDED, componentData);
@@ -284,7 +284,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 发射组件移除事件
-     * @param componentData 组件事件数据
+     * @param componentData - 组件事件数据
      */
     public emitComponentRemoved(componentData: IComponentEventData): void {
         this.emit(ECSEventType.COMPONENT_REMOVED, componentData);
@@ -292,7 +292,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 发射系统添加事件
-     * @param systemData 系统事件数据
+     * @param systemData - 系统事件数据
      */
     public emitSystemAdded(systemData: ISystemEventData): void {
         this.emit(ECSEventType.SYSTEM_ADDED, systemData);
@@ -300,7 +300,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 发射系统移除事件
-     * @param systemData 系统事件数据
+     * @param systemData - 系统事件数据
      */
     public emitSystemRemoved(systemData: ISystemEventData): void {
         this.emit(ECSEventType.SYSTEM_REMOVED, systemData);
@@ -308,7 +308,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 发射场景变化事件
-     * @param sceneData 场景事件数据
+     * @param sceneData - 场景事件数据
      */
     public emitSceneChanged(sceneData: ISceneEventData): void {
         this.emit(ECSEventType.SCENE_ACTIVATED, sceneData);
@@ -316,7 +316,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 发射性能警告事件
-     * @param performanceData 性能事件数据
+     * @param performanceData - 性能事件数据
      */
     public emitPerformanceWarning(performanceData: IPerformanceEventData): void {
         this.emit(ECSEventType.PERFORMANCE_WARNING, performanceData);
@@ -326,8 +326,8 @@ export class EventBus implements IEventBus {
     
     /**
      * 监听实体创建事件
-     * @param handler 事件处理器
-     * @param config 监听器配置
+     * @param handler - 事件处理器
+     * @param config - 监听器配置
      */
     public onEntityCreated(
         handler: (data: IEntityEventData) => void, 
@@ -338,8 +338,8 @@ export class EventBus implements IEventBus {
     
     /**
      * 监听组件添加事件
-     * @param handler 事件处理器
-     * @param config 监听器配置
+     * @param handler - 事件处理器
+     * @param config - 监听器配置
      */
     public onComponentAdded(
         handler: (data: IComponentEventData) => void, 
@@ -350,8 +350,8 @@ export class EventBus implements IEventBus {
     
     /**
      * 监听系统错误事件
-     * @param handler 事件处理器
-     * @param config 监听器配置
+     * @param handler - 事件处理器
+     * @param config - 监听器配置
      */
     public onSystemError(
         handler: (data: ISystemEventData) => void, 
@@ -362,8 +362,8 @@ export class EventBus implements IEventBus {
     
     /**
      * 监听性能警告事件
-     * @param handler 事件处理器
-     * @param config 监听器配置
+     * @param handler - 事件处理器
+     * @param config - 监听器配置
      */
     public onPerformanceWarning(
         handler: (data: IPerformanceEventData) => void, 
@@ -376,7 +376,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 验证事件类型
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      */
     private validateEventType(eventType: string): void {
         if (!EventTypeValidator.isValid(eventType)) {
@@ -392,8 +392,8 @@ export class EventBus implements IEventBus {
     
     /**
      * 增强事件数据
-     * @param eventType 事件类型
-     * @param data 原始数据
+     * @param eventType - 事件类型
+     * @param data - 原始数据
      */
     private enhanceEventData<T>(eventType: string, data: T): T & IEventData {
         // 处理null或undefined数据
@@ -423,7 +423,7 @@ export class EventBus implements IEventBus {
     
     /**
      * 转换EventStats为IEventStats
-     * @param stats EventStats实例
+     * @param stats - EventStats实例
      */
     private convertEventStats(stats: EventStats): IEventStats {
         return {
@@ -446,7 +446,7 @@ export class GlobalEventBus {
     
     /**
      * 获取全局事件总线实例
-     * @param debugMode 是否启用调试模式
+     * @param debugMode - 是否启用调试模式
      */
     public static getInstance(debugMode: boolean = false): EventBus {
         if (!this.instance) {
@@ -457,7 +457,7 @@ export class GlobalEventBus {
     
     /**
      * 重置全局事件总线实例
-     * @param debugMode 是否启用调试模式
+     * @param debugMode - 是否启用调试模式
      */
     public static reset(debugMode: boolean = false): EventBus {
         if (this.instance) {

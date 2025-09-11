@@ -89,7 +89,7 @@ export class PerformanceMonitor {
 
     /**
      * 开始监控系统性能
-     * @param systemName 系统名称
+     * @param systemName - 系统名称
      * @returns 开始时间戳
      */
     public startMonitoring(systemName: string): number {
@@ -101,9 +101,9 @@ export class PerformanceMonitor {
 
     /**
      * 结束监控并记录性能数据
-     * @param systemName 系统名称
-     * @param startTime 开始时间戳
-     * @param entityCount 处理的实体数量
+     * @param systemName - 系统名称
+     * @param startTime - 开始时间戳
+     * @param entityCount - 处理的实体数量
      */
     public endMonitoring(systemName: string, startTime: number, entityCount: number = 0): void {
         if (!this._isEnabled || startTime === 0) {
@@ -131,8 +131,8 @@ export class PerformanceMonitor {
 
     /**
      * 更新系统统计信息
-     * @param systemName 系统名称
-     * @param executionTime 执行时间
+     * @param systemName - 系统名称
+     * @param executionTime - 执行时间
      */
     private updateStats(systemName: string, executionTime: number): void {
         let stats = this._systemStats.get(systemName);
@@ -171,7 +171,7 @@ export class PerformanceMonitor {
 
     /**
      * 计算高级统计信息
-     * @param stats 统计信息对象
+     * @param stats - 统计信息对象
      */
     private calculateAdvancedStats(stats: PerformanceStats): void {
         if (stats.recentTimes.length === 0) return;
@@ -191,7 +191,7 @@ export class PerformanceMonitor {
 
     /**
      * 获取系统的当前性能数据
-     * @param systemName 系统名称
+     * @param systemName - 系统名称
      * @returns 性能数据或undefined
      */
     public getSystemData(systemName: string): PerformanceData | undefined {
@@ -200,7 +200,7 @@ export class PerformanceMonitor {
 
     /**
      * 获取系统的统计信息
-     * @param systemName 系统名称
+     * @param systemName - 系统名称
      * @returns 统计信息或undefined
      */
     public getSystemStats(systemName: string): PerformanceStats | undefined {
@@ -276,7 +276,7 @@ export class PerformanceMonitor {
 
     /**
      * 重置指定系统的性能数据
-     * @param systemName 系统名称
+     * @param systemName - 系统名称
      */
     public resetSystem(systemName: string): void {
         this._systemData.delete(systemName);
@@ -285,7 +285,7 @@ export class PerformanceMonitor {
 
     /**
      * 获取性能警告
-     * @param thresholdMs 警告阈值（毫秒）
+     * @param thresholdMs - 警告阈值（毫秒）
      * @returns 超过阈值的系统列表
      */
     public getPerformanceWarnings(thresholdMs: number = 16.67): string[] {
@@ -302,7 +302,7 @@ export class PerformanceMonitor {
 
     /**
      * 设置最大保留样本数
-     * @param maxSamples 最大样本数
+     * @param maxSamples - 最大样本数
      */
     public setMaxRecentSamples(maxSamples: number): void {
         this._maxRecentSamples = maxSamples;

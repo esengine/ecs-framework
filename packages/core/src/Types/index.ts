@@ -65,67 +65,67 @@ export type ComponentType<T extends IComponent = IComponent> = new (...args: any
 export interface IEventBus {
     /**
      * 发射事件
-     * @param eventType 事件类型
-     * @param data 事件数据
+     * @param eventType - 事件类型
+     * @param data - 事件数据
      */
     emit<T>(eventType: string, data: T): void;
     
     /**
      * 异步发射事件
-     * @param eventType 事件类型
-     * @param data 事件数据
+     * @param eventType - 事件类型
+     * @param data - 事件数据
      */
     emitAsync<T>(eventType: string, data: T): Promise<void>;
     
     /**
      * 监听事件
-     * @param eventType 事件类型
-     * @param handler 事件处理器
-     * @param config 监听器配置
+     * @param eventType - 事件类型
+     * @param handler - 事件处理器
+     * @param config - 监听器配置
      * @returns 监听器ID
      */
     on<T>(eventType: string, handler: (data: T) => void, config?: IEventListenerConfig): string;
     
     /**
      * 监听事件（一次性）
-     * @param eventType 事件类型
-     * @param handler 事件处理器
-     * @param config 监听器配置
+     * @param eventType - 事件类型
+     * @param handler - 事件处理器
+     * @param config - 监听器配置
      * @returns 监听器ID
      */
     once<T>(eventType: string, handler: (data: T) => void, config?: IEventListenerConfig): string;
     
     /**
      * 异步监听事件
-     * @param eventType 事件类型
-     * @param handler 异步事件处理器
-     * @param config 监听器配置
+     * @param eventType - 事件类型
+     * @param handler - 异步事件处理器
+     * @param config - 监听器配置
      * @returns 监听器ID
      */
     onAsync<T>(eventType: string, handler: (data: T) => Promise<void>, config?: IEventListenerConfig): string;
     
     /**
      * 移除事件监听器
-     * @param eventType 事件类型
-     * @param listenerId 监听器ID
+     * @param eventType - 事件类型
+     * @param listenerId - 监听器ID
      */
     off(eventType: string, listenerId: string): boolean;
     
     /**
      * 移除指定事件类型的所有监听器
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      */
     offAll(eventType: string): void;
     
     /**
      * 检查是否有指定事件的监听器
-     * @param eventType 事件类型
+     * @param eventType - 事件类型
      */
     hasListeners(eventType: string): boolean;
     
     /**
      * 获取事件统计信息
-     * @param eventType 事件类型（可选）
+     * @param eventType - 事件类型（可选）
      */
     getStats(eventType?: string): IEventStats | Map<string, IEventStats>;
     

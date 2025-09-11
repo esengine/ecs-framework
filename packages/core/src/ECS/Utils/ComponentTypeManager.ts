@@ -26,7 +26,7 @@ export class ComponentTypeManager {
 
     /**
      * 获取组件类型的ID
-     * @param componentType 组件类型构造函数
+     * @param componentType - 组件类型构造函数
      * @returns 组件类型ID
      */
     public getTypeId<T extends Component>(componentType: new (...args: unknown[]) => T): number {
@@ -43,7 +43,7 @@ export class ComponentTypeManager {
 
     /**
      * 获取组件类型名称
-     * @param typeId 组件类型ID
+     * @param typeId - 组件类型ID
      * @returns 组件类型名称
      */
     public getTypeName(typeId: number): string {
@@ -52,7 +52,7 @@ export class ComponentTypeManager {
 
     /**
      * 创建包含指定组件类型的Bits对象
-     * @param componentTypes 组件类型构造函数数组
+     * @param componentTypes - 组件类型构造函数数组
      * @returns Bits对象
      */
     public createBits(...componentTypes: (new (...args: unknown[]) => Component)[]): Bits {
@@ -68,7 +68,7 @@ export class ComponentTypeManager {
 
     /**
      * 获取实体的组件位掩码
-     * @param components 组件数组
+     * @param components - 组件数组
      * @returns Bits对象
      */
     public getEntityBits(components: Component[]): Bits {

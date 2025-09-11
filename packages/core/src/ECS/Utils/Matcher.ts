@@ -41,7 +41,7 @@ export class Matcher {
 
     /**
      * 创建匹配器，要求所有指定的组件
-     * @param types 组件类型
+     * @param types - 组件类型
      */
     public static all(...types: ComponentType[]): Matcher {
         const matcher = new Matcher();
@@ -50,7 +50,7 @@ export class Matcher {
 
     /**
      * 创建匹配器，要求至少一个指定的组件
-     * @param types 组件类型
+     * @param types - 组件类型
      */
     public static any(...types: ComponentType[]): Matcher {
         const matcher = new Matcher();
@@ -59,7 +59,7 @@ export class Matcher {
 
     /**
      * 创建匹配器，排除指定的组件
-     * @param types 组件类型
+     * @param types - 组件类型
      */
     public static none(...types: ComponentType[]): Matcher {
         const matcher = new Matcher();
@@ -68,7 +68,7 @@ export class Matcher {
 
     /**
      * 创建按标签查询的匙配器
-     * @param tag 标签值
+     * @param tag - 标签值
      */
     public static byTag(tag: number): Matcher {
         const matcher = new Matcher();
@@ -77,7 +77,7 @@ export class Matcher {
 
     /**
      * 创建按名称查询的匙配器
-     * @param name 实体名称
+     * @param name - 实体名称
      */
     public static byName(name: string): Matcher {
         const matcher = new Matcher();
@@ -86,7 +86,7 @@ export class Matcher {
 
     /**
      * 创建单组件查询的匙配器
-     * @param componentType 组件类型
+     * @param componentType - 组件类型
      */
     public static byComponent(componentType: ComponentType): Matcher {
         const matcher = new Matcher();
@@ -110,7 +110,7 @@ export class Matcher {
 
     /**
      * 必须包含所有指定组件
-     * @param types 组件类型
+     * @param types - 组件类型
      */
     public all(...types: ComponentType[]): Matcher {
         this.condition.all.push(...types);
@@ -119,7 +119,7 @@ export class Matcher {
 
     /**
      * 必须包含至少一个指定组件
-     * @param types 组件类型
+     * @param types - 组件类型
      */
     public any(...types: ComponentType[]): Matcher {
         this.condition.any.push(...types);
@@ -128,7 +128,7 @@ export class Matcher {
 
     /**
      * 不能包含任何指定组件
-     * @param types 组件类型
+     * @param types - 组件类型
      */
     public none(...types: ComponentType[]): Matcher {
         this.condition.none.push(...types);
@@ -137,7 +137,7 @@ export class Matcher {
 
     /**
      * 排除指定组件（别名方法）
-     * @param types 组件类型
+     * @param types - 组件类型
      */
     public exclude(...types: ComponentType[]): Matcher {
         return this.none(...types);
@@ -145,7 +145,7 @@ export class Matcher {
 
     /**
      * 至少包含其中之一（别名方法）
-     * @param types 组件类型
+     * @param types - 组件类型
      */
     public one(...types: ComponentType[]): Matcher {
         return this.any(...types);
@@ -153,7 +153,7 @@ export class Matcher {
 
     /**
      * 按标签查询
-     * @param tag 标签值
+     * @param tag - 标签值
      */
     public withTag(tag: number): Matcher {
         this.condition.tag = tag;
@@ -162,7 +162,7 @@ export class Matcher {
 
     /**
      * 按名称查询
-     * @param name 实体名称
+     * @param name - 实体名称
      */
     public withName(name: string): Matcher {
         this.condition.name = name;
@@ -171,7 +171,7 @@ export class Matcher {
 
     /**
      * 单组件查询
-     * @param componentType 组件类型
+     * @param componentType - 组件类型
      */
     public withComponent(componentType: ComponentType): Matcher {
         this.condition.component = componentType;

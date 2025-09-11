@@ -137,17 +137,5 @@ Description
 
 
 </td></tr>
-<tr><td>
-
-[estimateCompressedSize(data)](./ecs-framework-monorepo.nocompressionalgorithm.estimatecompressedsize.md)
-
-
-</td><td>
-
-
-</td><td>
-
-
-</td></tr>
 </tbody></table>
 

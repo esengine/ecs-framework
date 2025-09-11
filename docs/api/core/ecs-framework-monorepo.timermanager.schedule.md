@@ -42,6 +42,8 @@ number
 
 </td><td>
 
+计时器的持续时间（秒）
+
 
 </td></tr>
 <tr><td>
@@ -55,6 +57,8 @@ boolean
 
 
 </td><td>
+
+是否重复执行
 
 
 </td></tr>
@@ -70,6 +74,8 @@ TContext
 
 </td><td>
 
+上下文对象
+
 
 </td></tr>
 <tr><td>
@@ -83,6 +89,8 @@ onTime
 
 
 </td><td>
+
+定时器触发时调用的回调
 
 
 </td></tr>

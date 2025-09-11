@@ -9,8 +9,45 @@
 **Signature:**
 
 ```typescript
-collectComponentData(): IComponentDebugData;
+collectComponentData(scene?: IScene | null): IComponentDebugData;
 ```
+
+## Parameters
+
+<table><thead><tr><th>
+
+Parameter
+
+
+</th><th>
+
+Type
+
+
+</th><th>
+
+Description
+
+
+</th></tr></thead>
+<tbody><tr><td>
+
+scene
+
+
+</td><td>
+
+[IScene](./ecs-framework-monorepo.iscene.md) \| null
+
+
+</td><td>
+
+_(Optional)_
+
+
+</td></tr>
+</tbody></table>
+
 **Returns:**
 
 [IComponentDebugData](./ecs-framework-monorepo.icomponentdebugdata.md)

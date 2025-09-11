@@ -9,7 +9,7 @@
 **Signature:**
 
 ```typescript
-getComponentProperties(entityId: number, componentIndex: number): Record<string, any>;
+getComponentProperties(entityId: number, componentIndex: number, scene?: IScene | null): Record<string, any>;
 ```
 
 ## Parameters
@@ -55,6 +55,22 @@ number
 
 
 </td><td>
+
+
+</td></tr>
+<tr><td>
+
+scene
+
+
+</td><td>
+
+[IScene](./ecs-framework-monorepo.iscene.md) \| null
+
+
+</td><td>
+
+_(Optional)_
 
 
 </td></tr>

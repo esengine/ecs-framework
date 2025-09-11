@@ -84,8 +84,8 @@ export class IdentifierPool {
     /**
      * 构造函数
      * 
-     * @param recycleDelay 延迟回收时间（毫秒），默认为100ms
-     * @param expansionBlockSize 内存扩展块大小，默认为1024
+     * @param recycleDelay - 延迟回收时间（毫秒），默认为100ms
+     * @param expansionBlockSize - 内存扩展块大小，默认为1024
      */
     constructor(recycleDelay: number = 100, expansionBlockSize: number = 1024) {
         this._recycleDelay = recycleDelay;
@@ -141,7 +141,7 @@ export class IdentifierPool {
      * 验证ID的有效性后，将其加入延迟回收队列。
      * ID不会立即可重用，而是在延迟时间后才真正回收。
      * 
-     * @param id 要回收的实体ID
+     * @param id - 要回收的实体ID
      * @returns 是否成功回收（ID是否有效且未被重复回收）
      */
     public checkIn(id: number): boolean {
@@ -180,7 +180,7 @@ export class IdentifierPool {
      * 
      * 检查ID的索引和世代版本是否匹配当前状态。
      * 
-     * @param id 要验证的实体ID
+     * @param id - 要验证的实体ID
      * @returns ID是否有效
      */
     public isValid(id: number): boolean {
@@ -263,7 +263,7 @@ export class IdentifierPool {
      * 
      * 将超过延迟时间的回收项真正回收到空闲列表中。
      * 
-     * @param forceAll 是否强制处理所有延迟回收项
+     * @param forceAll - 是否强制处理所有延迟回收项
      * @private
      */
     private _processDelayedRecycle(forceAll: boolean = false): void {
@@ -308,8 +308,8 @@ export class IdentifierPool {
     /**
      * 预分配世代信息
      * 
-     * @param startIndex 起始索引
-     * @param count 分配数量
+     * @param startIndex - 起始索引
+     * @param count - 分配数量
      * @private
      */
     private _preAllocateGenerations(startIndex: number, count: number): void {
@@ -325,7 +325,7 @@ export class IdentifierPool {
     /**
      * 确保指定索引的世代信息存在
      * 
-     * @param index 索引
+     * @param index - 索引
      * @private
      */
     private _ensureGenerationCapacity(index: number): void {
@@ -355,8 +355,8 @@ export class IdentifierPool {
     /**
      * 打包索引和世代为32位ID
      * 
-     * @param index 索引（16位）
-     * @param generation 世代版本（16位）
+     * @param index - 索引（16位）
+     * @param generation - 世代版本（16位）
      * @returns 打包后的32位ID
      * @private
      */
@@ -367,7 +367,7 @@ export class IdentifierPool {
     /**
      * 从ID中解包索引
      * 
-     * @param id 32位ID
+     * @param id - 32位ID
      * @returns 索引部分（16位）
      * @private
      */
@@ -378,7 +378,7 @@ export class IdentifierPool {
     /**
      * 从ID中解包世代版本
      * 
-     * @param id 32位ID
+     * @param id - 32位ID
      * @returns 世代版本部分（16位）
      * @private
      */
@@ -389,8 +389,8 @@ export class IdentifierPool {
     /**
      * 内部ID有效性检查
      * 
-     * @param index 索引
-     * @param generation 世代版本
+     * @param index - 索引
+     * @param generation - 世代版本
      * @returns 是否有效
      * @private
      */

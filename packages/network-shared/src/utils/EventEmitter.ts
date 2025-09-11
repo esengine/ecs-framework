@@ -15,8 +15,8 @@ export class EventEmitter extends Emitter<string | symbol, void> {
 
     /**
      * 添加事件监听器
-     * @param event 事件名称
-     * @param listener 监听函数
+     * @param event - 事件名称
+     * @param listener - 监听函数
      */
     public on(event: string | symbol, listener: Function): this {
         this.addObserver(event, listener, undefined as void);
@@ -25,8 +25,8 @@ export class EventEmitter extends Emitter<string | symbol, void> {
 
     /**
      * 添加一次性事件监听器
-     * @param event 事件名称  
-     * @param listener 监听函数
+     * @param event - 事件名称  
+     * @param listener - 监听函数
      */
     public once(event: string | symbol, listener: Function): this {
         const onceWrapper = (...args: any[]) => {
@@ -39,8 +39,8 @@ export class EventEmitter extends Emitter<string | symbol, void> {
 
     /**
      * 移除事件监听器
-     * @param event 事件名称
-     * @param listener 监听函数，不传则移除所有
+     * @param event - 事件名称
+     * @param listener - 监听函数，不传则移除所有
      */
     public off(event: string | symbol, listener?: Function): this {
         if (listener) {
@@ -75,8 +75,8 @@ export class EventEmitter extends Emitter<string | symbol, void> {
 
     /**
      * 发射事件（兼容Node.js EventEmitter）
-     * @param event 事件名称
-     * @param args 事件参数
+     * @param event - 事件名称
+     * @param args - 事件参数
      */
     public override emit(event: string | symbol, ...args: any[]): boolean {
         super.emit(event, ...args);

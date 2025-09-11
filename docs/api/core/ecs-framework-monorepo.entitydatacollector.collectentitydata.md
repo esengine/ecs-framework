@@ -7,8 +7,45 @@
 **Signature:**
 
 ```typescript
-collectEntityData(): IEntityDebugData;
+collectEntityData(scene?: IScene | null): IEntityDebugData;
 ```
+
+## Parameters
+
+<table><thead><tr><th>
+
+Parameter
+
+
+</th><th>
+
+Type
+
+
+</th><th>
+
+Description
+
+
+</th></tr></thead>
+<tbody><tr><td>
+
+scene
+
+
+</td><td>
+
+[IScene](./ecs-framework-monorepo.iscene.md) \| null
+
+
+</td><td>
+
+_(Optional)_
+
+
+</td></tr>
+</tbody></table>
+
 **Returns:**
 
 [IEntityDebugData](./ecs-framework-monorepo.ientitydebugdata.md)

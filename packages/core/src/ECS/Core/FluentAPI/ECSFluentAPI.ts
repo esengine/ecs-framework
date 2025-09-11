@@ -42,8 +42,8 @@ export class ECSFluentAPI {
 
     /**
      * 创建组件构建器
-     * @param componentClass 组件类
-     * @param args 构造参数
+     * @param componentClass - 组件类
+     * @param args - 构造参数
      * @returns 组件构建器
      */
     public createComponent<T extends Component>(
@@ -63,7 +63,7 @@ export class ECSFluentAPI {
 
     /**
      * 查找实体（简化版）
-     * @param componentTypes 组件类型
+     * @param componentTypes - 组件类型
      * @returns 实体数组
      */
     public find(...componentTypes: ComponentType[]): Entity[] {
@@ -72,7 +72,7 @@ export class ECSFluentAPI {
 
     /**
      * 查找第一个匹配的实体
-     * @param componentTypes 组件类型
+     * @param componentTypes - 组件类型
      * @returns 实体或null
      */
     public findFirst(...componentTypes: ComponentType[]): Entity | null {
@@ -82,7 +82,7 @@ export class ECSFluentAPI {
 
     /**
      * 按名称查找实体
-     * @param name 实体名称
+     * @param name - 实体名称
      * @returns 实体或null
      */
     public findByName(name: string): Entity | null {
@@ -91,7 +91,7 @@ export class ECSFluentAPI {
 
     /**
      * 按标签查找实体
-     * @param tag 标签
+     * @param tag - 标签
      * @returns 实体数组
      */
     public findByTag(tag: number): Entity[] {
@@ -100,8 +100,8 @@ export class ECSFluentAPI {
 
     /**
      * 触发事件
-     * @param eventType 事件类型
-     * @param event 事件数据
+     * @param eventType - 事件类型
+     * @param event - 事件数据
      */
     public emit<T>(eventType: string, event: T): void {
         this.eventSystem.emitSync(eventType, event);
@@ -109,8 +109,8 @@ export class ECSFluentAPI {
 
     /**
      * 异步触发事件
-     * @param eventType 事件类型
-     * @param event 事件数据
+     * @param eventType - 事件类型
+     * @param event - 事件数据
      */
     public async emitAsync<T>(eventType: string, event: T): Promise<void> {
         await this.eventSystem.emit(eventType, event);
@@ -118,8 +118,8 @@ export class ECSFluentAPI {
 
     /**
      * 监听事件
-     * @param eventType 事件类型
-     * @param handler 事件处理器
+     * @param eventType - 事件类型
+     * @param handler - 事件处理器
      * @returns 监听器ID
      */
     public on<T>(eventType: string, handler: (event: T) => void): string {
@@ -128,8 +128,8 @@ export class ECSFluentAPI {
 
     /**
      * 一次性监听事件
-     * @param eventType 事件类型
-     * @param handler 事件处理器
+     * @param eventType - 事件类型
+     * @param handler - 事件处理器
      * @returns 监听器ID
      */
     public once<T>(eventType: string, handler: (event: T) => void): string {
@@ -138,8 +138,8 @@ export class ECSFluentAPI {
 
     /**
      * 移除事件监听器
-     * @param eventType 事件类型
-     * @param listenerId 监听器ID
+     * @param eventType - 事件类型
+     * @param listenerId - 监听器ID
      */
     public off(eventType: string, listenerId: string): void {
         this.eventSystem.off(eventType, listenerId);
@@ -147,7 +147,7 @@ export class ECSFluentAPI {
 
     /**
      * 批量操作实体
-     * @param entities 实体数组
+     * @param entities - 实体数组
      * @returns 批量操作器
      */
     public batch(entities: Entity[]): EntityBatchOperator {
@@ -177,9 +177,9 @@ export class ECSFluentAPI {
 
 /**
  * 创建ECS流式API实例
- * @param scene 场景
- * @param querySystem 查询系统
- * @param eventSystem 事件系统
+ * @param scene - 场景
+ * @param querySystem - 查询系统
+ * @param eventSystem - 事件系统
  * @returns ECS流式API实例
  */
 export function createECSAPI(
@@ -197,9 +197,9 @@ export let ECS: ECSFluentAPI;
 
 /**
  * 初始化全局ECS API
- * @param scene 场景
- * @param querySystem 查询系统
- * @param eventSystem 事件系统
+ * @param scene - 场景
+ * @param querySystem - 查询系统
+ * @param eventSystem - 事件系统
  */
 export function initializeECS(
     scene: IScene, 

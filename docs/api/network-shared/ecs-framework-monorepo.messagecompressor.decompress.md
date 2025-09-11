@@ -9,7 +9,7 @@
 **Signature:**
 
 ```typescript
-decompress(data: ArrayBuffer, algorithmName: string): Promise<DecompressionResult>;
+decompress(data: ArrayBuffer): Promise<DecompressionResult>;
 ```
 
 ## Parameters
@@ -38,20 +38,6 @@ data
 </td><td>
 
 ArrayBuffer
-
-
-</td><td>
-
-
-</td></tr>
-<tr><td>
-
-algorithmName
-
-
-</td><td>
-
-string
 
 
 </td><td>

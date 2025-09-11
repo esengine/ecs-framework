@@ -9,7 +9,7 @@
 **Signature:**
 
 ```typescript
-calculateDetailedComponentMemory(typeName: string): number;
+calculateDetailedComponentMemory(typeName: string, scene?: IScene | null): number;
 ```
 
 ## Parameters
@@ -41,6 +41,22 @@ string
 
 
 </td><td>
+
+
+</td></tr>
+<tr><td>
+
+scene
+
+
+</td><td>
+
+[IScene](./ecs-framework-monorepo.iscene.md) \| null
+
+
+</td><td>
+
+_(Optional)_
 
 
 </td></tr>

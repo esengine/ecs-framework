@@ -750,6 +750,17 @@ Description
 </td></tr>
 <tr><td>
 
+[ContainerHeader](./ecs-framework-monorepo.containerheader.md)
+
+
+</td><td>
+
+容器头结构
+
+
+</td></tr>
+<tr><td>
+
 [DecompressionResult](./ecs-framework-monorepo.decompressionresult.md)
 
 
@@ -1306,6 +1317,17 @@ RPC响应消息
 </td><td>
 
 网络发送器接口
+
+
+</td></tr>
+<tr><td>
+
+[ParsedHeader](./ecs-framework-monorepo.parsedheader.md)
+
+
+</td><td>
+
+容器头解析结果
 
 
 </td></tr>

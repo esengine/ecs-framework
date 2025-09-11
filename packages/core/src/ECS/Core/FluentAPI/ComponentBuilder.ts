@@ -12,8 +12,8 @@ export class ComponentBuilder<T extends Component> {
 
     /**
      * 设置组件属性
-     * @param property 属性名
-     * @param value 属性值
+     * @param property - 属性名
+     * @param value - 属性值
      * @returns 组件构建器
      */
     public set<K extends keyof T>(property: K, value: T[K]): ComponentBuilder<T> {
@@ -23,7 +23,7 @@ export class ComponentBuilder<T extends Component> {
 
     /**
      * 使用配置函数设置组件
-     * @param configurator 配置函数
+     * @param configurator - 配置函数
      * @returns 组件构建器
      */
     public configure(configurator: (component: T) => void): ComponentBuilder<T> {
@@ -33,9 +33,9 @@ export class ComponentBuilder<T extends Component> {
 
     /**
      * 条件性设置属性
-     * @param condition 条件
-     * @param property 属性名
-     * @param value 属性值
+     * @param condition - 条件
+     * @param property - 属性名
+     * @param value - 属性值
      * @returns 组件构建器
      */
     public setIf<K extends keyof T>(condition: boolean, property: K, value: T[K]): ComponentBuilder<T> {

@@ -599,7 +599,7 @@ export class SoAStorage<T extends Component> {
 
     /**
      * 执行向量化批量操作
-     * @param operation 操作函数，接收字段数组和活跃索引
+     * @param operation - 操作函数，接收字段数组和活跃索引
      */
     public performVectorizedOperation(operation: (fieldArrays: Map<string, Float32Array | Float64Array | Int32Array>, activeIndices: number[]) => void): void {
         const activeIndices = this.getActiveIndices();
