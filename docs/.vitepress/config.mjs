@@ -307,18 +307,9 @@ export default defineConfig({
       dark: 'github-dark'
     },
     
-    /** 配置代码块处理 */
-    config: (md) => {
-      // 不处理 text 类型的代码块中的特殊字符
-      md.renderer.rules.code_block = (tokens, idx) => {
-        const token = tokens[idx]
-        const langName = token.info.trim()
-        if (langName === 'text') {
-          // 对于 text 代码块，直接输出不进行Vue编译
-          return `<pre><code>${md.utils.escapeHtml(token.content)}</code></pre>`
-        }
-        return md.renderer.rules.code_block.apply(this, arguments)
-      }
+    /** 禁用 markdown-it-attrs 插件以避免 Duplicate attribute 错误 */
+    attrs: {
+      disable: true
     }
   },
   
