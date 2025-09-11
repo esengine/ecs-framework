@@ -316,7 +316,7 @@ export default defineConfig({
   // === 构建配置 ===
   
   /** 构建输出目录 */
-  outDir: '../dist/docs',
+  outDir: '.vitepress/dist',
   
   /** 缓存目录 */
   cacheDir: './.vitepress/cache',
