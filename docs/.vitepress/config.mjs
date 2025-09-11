@@ -36,11 +36,6 @@ export default defineConfig({
   /** 最后更新时间显示 */
   lastUpdated: true,
   
-  /** 排除有问题的API文档文件 */
-  srcExclude: [
-    '**/api/**/*.md'
-  ],
-  
   /** 忽略死链接检查 */
   ignoreDeadLinks: true,
   
@@ -310,6 +305,20 @@ export default defineConfig({
     theme: {
       light: 'github-light',
       dark: 'github-dark'
+    },
+    
+    /** 配置代码块处理 */
+    config: (md) => {
+      // 不处理 text 类型的代码块中的特殊字符
+      md.renderer.rules.code_block = (tokens, idx) => {
+        const token = tokens[idx]
+        const langName = token.info.trim()
+        if (langName === 'text') {
+          // 对于 text 代码块，直接输出不进行Vue编译
+          return `<pre><code>${md.utils.escapeHtml(token.content)}</code></pre>`
+        }
+        return md.renderer.rules.code_block.apply(this, arguments)
+      }
     }
   },
   
