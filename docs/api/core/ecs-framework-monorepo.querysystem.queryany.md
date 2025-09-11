@@ -39,7 +39,7 @@ componentTypes
 
 </td><td>
 
-ComponentType\[\]
+[ComponentType](./ecs-framework-monorepo.componenttype.md)<!-- -->\[\]
 
 
 </td><td>

@@ -81,7 +81,7 @@ Description
 
 </td><td>
 
-ComponentType&lt;T&gt;
+[ComponentType](./ecs-framework-monorepo.componenttype.md)<!-- -->&lt;T&gt;
 
 
 </td><td>

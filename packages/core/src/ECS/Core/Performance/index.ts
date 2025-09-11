@@ -8,7 +8,8 @@ export {
 export { 
     ArchetypeSystem, 
     Archetype, 
-    ArchetypeQueryResult 
+    ArchetypeQueryResult,
+    ArchetypeId 
 } from '../ArchetypeSystem';
 
 export { 

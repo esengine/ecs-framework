@@ -1785,7 +1785,18 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-[ComponentType](./ecs-framework-monorepo.componenttype.md)
+[ArchetypeId](./ecs-framework-monorepo.archetypeid.md)
+
+
+</td><td>
+
+原型标识符
+
+
+</td></tr>
+<tr><td>
+
+[ComponentConstructor](./ecs-framework-monorepo.componentconstructor.md)
 
 
 </td><td>
@@ -1793,6 +1804,17 @@ Description
 组件类型定义
 
 用于类型安全的组件操作 支持任意构造函数签名，提供更好的类型安全性
+
+
+</td></tr>
+<tr><td>
+
+[ComponentType](./ecs-framework-monorepo.componenttype.md)
+
+
+</td><td>
+
+组件类型定义
 
 
 </td></tr>
