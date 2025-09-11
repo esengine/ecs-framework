@@ -10,6 +10,12 @@
 
 TypeScript ECS (Entity-Component-System) 框架，专为游戏开发设计。
 
+## 文档导航
+
+- **[完整文档](https://esengine.github.io/ecs-framework/)** - 完整的框架文档和教程
+- **[API 参考](https://esengine.github.io/ecs-framework/api/core/)** - 详细的API文档
+- **[示例代码](https://github.com/esengine/ecs-framework/tree/master/examples)** - 完整的示例代码
+
 ## 项目特色
 
 <div align="center">
@@ -19,148 +25,12 @@ TypeScript ECS (Entity-Component-System) 框架，专为游戏开发设计。
 
 </div>
 
-## 架构原理
+## 架构概览
 
-ECS Framework 采用多World + 多Scene的现代化架构设计：
+ECS Framework 采用 **多World + 多Scene** 的现代化架构：
 
-```mermaid
-graph TD
-    subgraph Main["🎮 ECS Framework - 多World・多Scene架构"]
-        direction TB
-        
-        subgraph CoreLayer["⚙️ 核心层 (Core Foundation)"]
-            direction LR
-            Core["🔧 <b>Core</b><br/>📋 生命周期管理<br/>⚙️ 配置系统<br/>🔗 平台兼容"]
-            Registry["📝 <b>ComponentRegistry</b><br/>🏷️ 类型注册<br/>✨ 装饰器支持<br/>🔒 类型安全"]
-            Pool["🔢 <b>IdentifierPool</b><br/>🆔 实体ID分配<br/>♻️ ID回收<br/>📊 BigInt兼容"]
-            PoolMgr["♻️ <b>PoolManager</b><br/>🎯 对象池<br/>⚡ 内存优化<br/>📈 性能提升"]
-            EventBus["📡 <b>EventBus</b><br/>🔄 事件系统<br/>⚡ 异步/同步<br/>🎭 类型安全"]
-        end
-        
-        subgraph WorldLayer["🌍 世界管理层 (World Management)"]
-            direction TB
-            WorldMgr["🗺️ <b>WorldManager</b><br/>🚀 多World调度<br/>📊 资源管理<br/>🔍 统计监控<br/>🧹 自动清理"]
-            
-            subgraph WorldsContainer["多World容器"]
-                direction LR
-                World1["🌐 <b>GameWorld</b><br/>🎮 游戏逻辑<br/>🌟 全局系统<br/>🔄 跨Scene业务"]
-                World2["🌐 <b>UIWorld</b><br/>🎨 界面管理<br/>⚡ 独立更新<br/>🔒 资源隔离"]
-            end
-            
-            GlobalSys["🎭 <b>Global Systems</b><br/>🌐 NetworkSync<br/>👥 PlayerMgmt<br/>📡 跨Scene通信"]
-        end
-        
-        subgraph SceneLayer["🎬 场景层 (Scene Management)"]
-            direction LR
-            Scene1["🎯 <b>BattleScene</b><br/>⚔️ 实体管理<br/>🎪 系统调度<br/>⚡ 高性能处理"]
-            Scene2["🎯 <b>MenuScene</b><br/>🎨 界面逻辑<br/>🔄 生命周期<br/>💾 状态管理"]
-            Scene3["🎯 <b>UIScene</b><br/>📦 组件存储<br/>🔍 查询引擎<br/>🎭 交互处理"]
-        end
-        
-        subgraph ECLayer["🤖 实体组件层 (Entity-Component System)"]
-            direction TB
-            
-            subgraph EntityMgmt["📦 实体管理 (Entity Management)"]
-                direction LR
-                EntityMgr["👥 <b>EntityManager</b><br/>📋 集合管理<br/>🌳 层次结构<br/>⚡ 高效操作"]
-                Entities["🎭 <b>Entities</b><br/>👤 Player<br/>👹 Enemy<br/>💥 Bullet<br/>🎯 轻量容器"]
-            end
-            
-            subgraph ComponentStore["🧩 组件存储 (Component Storage)"]
-                direction LR
-                Storage["💾 <b>ComponentStorage</b><br/>📊 SoA模式<br/>📚 AoS模式<br/>⚡ 内存优化"]
-                StorageMgr["🗄️ <b>StorageManager</b><br/>🏷️ 类型管理<br/>🔄 脏标记<br/>📈 性能监控"]
-                Components["🎲 <b>Components</b><br/>📍 Position<br/>🏃 Velocity<br/>❤️ Health<br/>📊 纯数据"]
-            end
-        end
-        
-        subgraph SystemLayer["⚡ 系统层 (System Processing)"]
-            direction TB
-            
-            subgraph EntitySys["🔄 实体系统 (Entity Systems)"]
-                direction LR
-                EntitySystems["🎪 <b>EntitySystems</b><br/>🏃 MovementSystem<br/>🎨 RenderSystem<br/>🧠 AISystem<br/>⚡ 业务逻辑"]
-                Processors["📋 <b>EntityProcessors</b><br/>🎯 调度管理<br/>📊 优先级<br/>⚡ 批量处理"]
-            end
-        end
-        
-        subgraph QueryLayer["🔍 查询优化层 (Query & Optimization)"]
-            direction LR
-            Matcher["🎯 <b>Matcher</b><br/>✅ withAll<br/>🔄 withAny<br/>❌ withNone<br/>🌊 流式API<br/>💾 智能缓存"]
-            QuerySys["🔎 <b>QuerySystem</b><br/>⚡ 实时查询<br/>📦 批量优化<br/>🔄 自动更新"]
-            Archetype["🏗️ <b>ArchetypeSystem</b><br/>📊 组件分组<br/>🎯 原型缓存<br/>💻 BitSet优化"]
-        end
-        
-        subgraph DebugLayer["📊 监控调试层 (Debug & Monitoring)"]
-            direction LR
-            Debug["🐛 <b>DebugManager</b><br/>🌐 WebSocket调试<br/>🎮 Cocos Creator插件<br/>📸 内存快照"]
-            Perf["📈 <b>PerformanceMonitor</b><br/>📊 性能统计<br/>⚠️ 阈值告警<br/>📱 实时监控"]
-            Logger["📋 <b>Logger</b><br/>📊 分级日志<br/>🎨 彩色输出<br/>🔧 自定义处理器"]
-        end
-    end
-    
-    %% 连接关系 - 使用更丰富的箭头样式
-    Core -.->|初始化| WorldMgr
-    Core -.->|注册| Registry
-    Core -.->|分配| Pool
-    Core -.->|管理| PoolMgr
-    Core -.->|事件| EventBus
-    
-    WorldMgr ==>|调度| World1
-    WorldMgr ==>|调度| World2
-    World1 -.->|管理| GlobalSys
-    
-    World1 ==>|包含| Scene1
-    World1 ==>|包含| Scene2
-    World2 ==>|包含| Scene3
-    
-    Scene1 -->|使用| EntityMgr
-    Scene2 -->|使用| EntityMgr
-    Scene3 -->|使用| EntityMgr
-    
-    EntityMgr -->|管理| Entities
-    Entities -->|附加| Components
-    
-    Scene1 -->|存储| Storage
-    Scene2 -->|存储| Storage
-    Scene3 -->|存储| Storage
-    Storage -->|管理| StorageMgr
-    
-    Scene1 -->|调度| EntitySystems
-    Scene2 -->|调度| EntitySystems
-    Scene3 -->|调度| EntitySystems
-    EntitySystems -->|处理| Processors
-    
-    EntitySystems -->|查询| Matcher
-    Matcher -->|缓存| QuerySys
-    QuerySys -->|优化| Archetype
-    
-    Core -.->|调试| Debug
-    Core -.->|监控| Perf
-    Core -.->|日志| Logger
-    
-    %% 样式定义 - 使用Mermaid支持的语法
-    classDef coreStyle fill:#E3F2FD,stroke:#1976D2,stroke-width:3px,color:#0D47A1
-    classDef worldStyle fill:#F3E5F5,stroke:#7B1FA2,stroke-width:3px,color:#4A148C
-    classDef sceneStyle fill:#FFF3E0,stroke:#F57C00,stroke-width:3px,color:#E65100
-    classDef entityStyle fill:#E8F5E8,stroke:#388E3C,stroke-width:3px,color:#1B5E20
-    classDef systemStyle fill:#FCE4EC,stroke:#C2185B,stroke-width:3px,color:#880E4F
-    classDef queryStyle fill:#E0F2F1,stroke:#00695C,stroke-width:3px,color:#004D40
-    classDef debugStyle fill:#FFF8E1,stroke:#F9A825,stroke-width:3px,color:#FF8F00
-    
-    class Core,Registry,Pool,PoolMgr,EventBus coreStyle
-    class WorldMgr,World1,World2,GlobalSys worldStyle
-    class Scene1,Scene2,Scene3 sceneStyle
-    class EntityMgr,Entities,Storage,StorageMgr,Components entityStyle
-    class EntitySystems,Processors systemStyle
-    class Matcher,QuerySys,Archetype queryStyle
-    class Debug,Perf,Logger debugStyle
-```
-
-### 核心概念
-
-| 概念 | 职责 | 特点 |
-|------|------|------|
+| 核心概念 | 职责 | 特点 |
+|---------|------|------|
 | **Entity** | 游戏对象唯一标识 | 轻量级容器，无业务逻辑 |
 | **Component** | 纯数据结构 | 描述实体属性，支持SoA优化 |
 | **System** | 业务逻辑处理 | 操作组件数据，可热插拔 |
@@ -347,10 +217,10 @@ class GameSystem {
 | **SoA** (Structure of Arrays) | `{x:[1,2,3], y:[4,5,6], z:[7,8,9]}` | 批量处理 | SIMD优化，缓存友好 |
 
 **SoA 优势：**
-- 🚀 提升 2-4x 批量处理性能
-- 💾 更好的CPU缓存利用率  
-- 🔧 支持SIMD向量化操作
-- ⚡ 减少内存访问跳跃
+- 提升 2-4x 批量处理性能
+- 更好的CPU缓存利用率  
+- 支持SIMD向量化操作
+- 减少内存访问跳跃
 
 用法示例：
 
@@ -431,13 +301,15 @@ Matcher
     .none(DeadComponent, DisabledComponent);    // 排除这些
 ```
 
-## 文档
+## 完整文档
 
-- [快速入门](docs/getting-started.md) - 详细教程和平台集成
-- [技术概念](docs/concepts-explained.md) - ECS 架构和框架特性
-- [组件设计](docs/component-design-guide.md) - 组件设计最佳实践
-- [性能优化](docs/performance-optimization.md) - 性能优化技术
-- [API 参考](docs/core-concepts.md) - 完整 API 文档
+访问 **[https://esengine.github.io/ecs-framework/](https://esengine.github.io/ecs-framework/)** 获取：
+
+- **[快速入门](https://esengine.github.io/ecs-framework/guide/)** - 详细教程和平台集成
+- **[技术概念](https://esengine.github.io/ecs-framework/guide/concepts-explained)** - ECS 架构和框架特性
+- **[组件设计](https://esengine.github.io/ecs-framework/guide/component-design-guide)** - 组件设计最佳实践
+- **[性能优化](https://esengine.github.io/ecs-framework/guide/performance-optimization)** - 性能优化技术
+- **[API 参考](https://esengine.github.io/ecs-framework/api/core/)** - 完整 API 文档
 
 ## 扩展库
 
