@@ -64,7 +64,7 @@ jobs:
         
       # 构建文档
       - name: 构建文档
-        run: npx vitepress build docs
+        run: npx vitepress build docs --outDir .vitepress/dist
         
       # 设置 Pages 配置
       - name: 设置 Pages
