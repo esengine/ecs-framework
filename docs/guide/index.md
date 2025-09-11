@@ -90,7 +90,9 @@ function update(deltaTime) {
 
 ## 下一步
 
-- 学习更多[核心概念](./concepts-explained)
-- 了解[组件设计最佳实践](./component-design-guide)  
-- 查看[性能优化技巧](./performance-optimization)
+- 学习[架构概览](./01-01-architecture-overview)
+- 查看[快速入门](./01-02-getting-started)  
+- 了解[核心ECS框架](./02-core-ecs-framework)
+- 探索[高级特性](./03-advanced-features)
+- 查看[平台集成](./04-platform-integrations)
 - 浏览完整的[API文档](../api/core/)

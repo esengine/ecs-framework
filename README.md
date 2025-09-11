@@ -305,10 +305,12 @@ Matcher
 
 访问 **[https://esengine.github.io/ecs-framework/](https://esengine.github.io/ecs-framework/)** 获取：
 
-- **[快速入门](https://esengine.github.io/ecs-framework/guide/)** - 详细教程和平台集成
-- **[技术概念](https://esengine.github.io/ecs-framework/guide/concepts-explained)** - ECS 架构和框架特性
-- **[组件设计](https://esengine.github.io/ecs-framework/guide/component-design-guide)** - 组件设计最佳实践
-- **[性能优化](https://esengine.github.io/ecs-framework/guide/performance-optimization)** - 性能优化技术
+- **[使用指南](https://esengine.github.io/ecs-framework/guide/)** - 完整的框架使用教程
+- **[架构概览](https://esengine.github.io/ecs-framework/guide/01-01-architecture-overview)** - ECS 框架架构设计
+- **[快速入门](https://esengine.github.io/ecs-framework/guide/01-02-getting-started)** - 快速上手教程
+- **[核心框架](https://esengine.github.io/ecs-framework/guide/02-core-ecs-framework)** - 实体、组件、系统详解
+- **[高级特性](https://esengine.github.io/ecs-framework/guide/03-advanced-features)** - 查询系统和事件系统
+- **[平台集成](https://esengine.github.io/ecs-framework/guide/04-platform-integrations)** - Cocos Creator、AI系统、MVVM框架
 - **[API 参考](https://esengine.github.io/ecs-framework/api/core/)** - 完整 API 文档
 
 ## 扩展库
