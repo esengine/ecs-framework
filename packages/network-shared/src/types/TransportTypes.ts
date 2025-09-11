@@ -202,6 +202,15 @@ export interface IConnectionStats {
 }
 
 /**
+ * SSL配置
+ */
+export interface SSLConfig {
+  enabled: boolean;
+  cert?: string;
+  key?: string;
+}
+
+/**
  * 传输层配置
  */
 export interface ITransportConfig {
@@ -220,9 +229,5 @@ export interface ITransportConfig {
   /** 是否启用压缩 */
   compression?: boolean;
   /** SSL配置 */
-  ssl?: {
-    enabled: boolean;
-    cert?: string;
-    key?: string;
-  };
+  ssl?: SSLConfig;
 }

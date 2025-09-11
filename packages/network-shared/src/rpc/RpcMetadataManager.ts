@@ -1,7 +1,7 @@
 import { createLogger } from '@esengine/ecs-framework';
 import { EventEmitter } from '../utils/EventEmitter';
 import { RpcMethodMetadata, RpcMethodRegistry } from '../types/RpcTypes';
-import { getRpcMethods, RpcMethodValidator } from '../decorators/RpcDecorators';
+import { getRpcMethods, RpcMethodValidator, RpcValidationResult } from '../decorators/RpcDecorators';
 
 /**
  * RPC元数据管理器事件
@@ -11,6 +11,26 @@ export interface RpcMetadataManagerEvents {
     methodUnregistered: (methodName: string) => void;
     classRegistered: (className: string, methodCount: number) => void;
     classUnregistered: (className: string) => void;
+}
+
+/**
+ * 方法搜索查询条件
+ */
+export interface RpcMethodSearchQuery {
+    className?: string;
+    isServerRpc?: boolean;
+    requireAuth?: boolean;
+    target?: string;
+}
+
+/**
+ * RPC注册统计信息
+ */
+export interface RpcRegistryStats {
+    totalMethods: number;
+    serverRpcMethods: number;
+    clientRpcMethods: number;
+    registeredClasses: number;
 }
 
 /**
@@ -233,12 +253,7 @@ export class RpcMetadataManager extends EventEmitter {
     /**
      * 获取注册统计信息
      */
-    public getStats(): {
-        totalMethods: number;
-        serverRpcMethods: number;
-        clientRpcMethods: number;
-        registeredClasses: number;
-    } {
+    public getStats(): RpcRegistryStats {
         let serverRpcCount = 0;
         let clientRpcCount = 0;
         
@@ -265,7 +280,7 @@ export class RpcMetadataManager extends EventEmitter {
         methodName: string,
         args: unknown[],
         callerId?: string
-    ): { valid: boolean; error?: string } {
+    ): RpcValidationResult {
         const metadata = this.getMethodMetadata(methodName);
         if (!metadata) {
             return {
@@ -280,12 +295,7 @@ export class RpcMetadataManager extends EventEmitter {
     /**
      * 搜索方法
      */
-    public searchMethods(query: {
-        className?: string;
-        isServerRpc?: boolean;
-        requireAuth?: boolean;
-        target?: string;
-    }): RpcMethodMetadata[] {
+    public searchMethods(query: RpcMethodSearchQuery): RpcMethodMetadata[] {
         const results: RpcMethodMetadata[] = [];
         
         for (const [methodName, entry] of this.registry) {

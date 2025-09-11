@@ -52,15 +52,22 @@ export interface DeserializationResult<T = any> {
 }
 
 /**
- * 差量数据
+ * 字段变化映射
  */
-export interface DeltaData {
+export interface FieldChanges {
+    [key: string]: any;
+}
+
+/**
+ * 序列化差量数据
+ */
+export interface SerializerDeltaData {
     /** 基础版本 */
     baseVersion: number;
     /** 当前版本 */
     currentVersion: number;
     /** 变化的字段 */
-    changes: { [key: string]: any };
+    changes: FieldChanges;
     /** 删除的字段 */
     deletions: string[];
 }
@@ -77,6 +84,38 @@ export interface CompressionMetadata {
     compressedSize: number;
     /** 压缩时间戳 */
     timestamp: number;
+}
+
+/**
+ * 缓存统计信息
+ */
+export interface CacheStats {
+    deltaHistorySize: number;
+    compressionCacheSize: number;
+}
+
+/**
+ * 压缩结果
+ */
+export interface CompressionResult {
+    success: boolean;
+    data?: ArrayBuffer;
+}
+
+/**
+ * 解压结果
+ */
+export interface DecompressionResult {
+    success: boolean;
+    data?: string;
+}
+
+/**
+ * SyncBatch类型验证结果
+ */
+export interface SyncBatchValidationResult {
+    isValid: boolean;
+    errors: string[];
 }
 
 /**
@@ -280,7 +319,7 @@ export class SyncVarSerializer {
     /**
      * 获取缓存统计
      */
-    public getCacheStats(): { deltaHistorySize: number; compressionCacheSize: number } {
+    public getCacheStats(): CacheStats {
         return {
             deltaHistorySize: this.deltaHistory.size,
             compressionCacheSize: this.compressionCache.size
@@ -290,7 +329,7 @@ export class SyncVarSerializer {
     /**
      * 应用差量压缩
      */
-    private applyDeltaCompression(batch: SyncBatch): DeltaData | SyncBatch {
+    private applyDeltaCompression(batch: SyncBatch): SerializerDeltaData | SyncBatch {
         const key = batch.instanceId;
         const lastRecord = this.deltaHistory.get(key);
         
@@ -351,7 +390,7 @@ export class SyncVarSerializer {
     /**
      * 应用差量还原
      */
-    private applyDeltaRestore(deltaData: DeltaData): SyncBatch {
+    private applyDeltaRestore(deltaData: SerializerDeltaData): SyncBatch {
         // 这里应该根据baseVersion找到对应的基础数据
         // 简化实现，返回一个基本的SyncBatch
         return {
@@ -369,7 +408,7 @@ export class SyncVarSerializer {
     /**
      * 检查是否为差量数据
      */
-    private isDeltaData(data: any): data is DeltaData {
+    private isDeltaData(data: any): data is SerializerDeltaData {
         return data && 
                typeof data.baseVersion === 'number' &&
                typeof data.currentVersion === 'number' &&
@@ -380,7 +419,7 @@ export class SyncVarSerializer {
     /**
      * 压缩数据
      */
-    private compress(data: string): { success: boolean; data?: ArrayBuffer } {
+    private compress(data: string): CompressionResult {
         try {
             // 使用LZ字符串压缩算法
             const compressed = this.lzCompress(data);
@@ -399,7 +438,7 @@ export class SyncVarSerializer {
     /**
      * 解压缩数据
      */
-    private decompress(data: ArrayBuffer): { success: boolean; data?: string } {
+    private decompress(data: ArrayBuffer): DecompressionResult {
         try {
             const decoder = new TextDecoder();
             const compressedString = decoder.decode(data);
@@ -462,7 +501,7 @@ export class SyncVarSerializer {
     /**
      * 验证SyncBatch类型
      */
-    private validateSyncBatchType(data: any): { isValid: boolean; errors: string[] } {
+    private validateSyncBatchType(data: any): SyncBatchValidationResult {
         const errors: string[] = [];
         
         if (!data || typeof data !== 'object') {

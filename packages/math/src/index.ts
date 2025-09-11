@@ -9,10 +9,10 @@
  */
 
 // 核心数学类
-export { Vector2 } from './Vector2';
+export { Vector2, Vector2Object } from './Vector2';
 export { Matrix3 } from './Matrix3';
-export { Rectangle } from './Rectangle';
-export { Circle } from './Circle';
+export { Rectangle, RectangleObject } from './Rectangle';
+export { Circle, CircleObject } from './Circle';
 
 // 数学工具
 export { MathUtils } from './MathUtils';

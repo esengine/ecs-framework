@@ -29,18 +29,30 @@ export interface VersionedData {
 }
 
 /**
+ * 差量变更映射
+ */
+export interface DeltaChanges {
+    [key: string]: any;
+}
+
+/**
+ * 差量元数据
+ */
+export interface DeltaMetadata {
+    timestamp: number;
+    size: number;
+    compressionRatio: number;
+}
+
+/**
  * 差量数据
  */
 export interface DeltaData {
     baseVersion: number;
     targetVersion: number;
-    changes: { [key: string]: any };
+    changes: DeltaChanges;
     deletions: string[];
-    metadata: {
-        timestamp: number;
-        size: number;
-        compressionRatio: number;
-    };
+    metadata: DeltaMetadata;
 }
 
 /**
@@ -472,8 +484,8 @@ export class DeltaSync {
     /**
      * 计算变化
      */
-    private computeChanges(oldData: any, newData: any): { [key: string]: any } {
-        const changes: { [key: string]: any } = {};
+    private computeChanges(oldData: any, newData: any): DeltaChanges {
+        const changes: DeltaChanges = {};
         
         for (const [key, newValue] of Object.entries(newData)) {
             const oldValue = oldData[key];

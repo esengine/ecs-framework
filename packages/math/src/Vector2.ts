@@ -1,4 +1,12 @@
 /**
+ * 向量对象接口
+ */
+export interface Vector2Object {
+  x: number;
+  y: number;
+}
+
+/**
  * 2D向量类
  * 
  * 提供完整的2D向量运算功能，包括：
@@ -533,9 +541,9 @@ export class Vector2 {
 
   /**
    * 转换为普通对象
-   * @returns {x, y} 对象
+   * @returns 包含x、y属性的向量对象
    */
-  toObject(): { x: number; y: number } {
+  toObject(): Vector2Object {
     return { x: this.x, y: this.y };
   }
 }

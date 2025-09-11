@@ -66,6 +66,25 @@ export interface RpcReliabilityConfig {
 }
 
 /**
+ * RPC可靠性管理器统计信息
+ */
+export interface RpcReliabilityStats {
+    duplicateRecords: number;
+    activeTransactions: number;
+    totalQueuedCalls: number;
+    processingQueues: number;
+}
+
+/**
+ * 重复调用检查结果
+ */
+export interface DuplicateCallCheckResult {
+    isDuplicate: boolean;
+    response?: RpcCallResponse;
+    shouldProcess: boolean;
+}
+
+/**
  * 事务信息
  */
 interface TransactionInfo {
@@ -153,11 +172,7 @@ export class RpcReliabilityManager extends EventEmitter {
     /**
      * 检查并处理重复调用
      */
-    public checkDuplicateCall(request: RpcCallRequest): {
-        isDuplicate: boolean;
-        response?: RpcCallResponse;
-        shouldProcess: boolean;
-    } {
+    public checkDuplicateCall(request: RpcCallRequest): DuplicateCallCheckResult {
         if (!this.config.idempotency.enabled) {
             return { isDuplicate: false, shouldProcess: true };
         }
@@ -389,12 +404,7 @@ export class RpcReliabilityManager extends EventEmitter {
     /**
      * 获取统计信息
      */
-    public getStats(): {
-        duplicateRecords: number;
-        activeTransactions: number;
-        totalQueuedCalls: number;
-        processingQueues: number;
-    } {
+    public getStats(): RpcReliabilityStats {
         let totalQueuedCalls = 0;
         for (const queue of this.orderedQueues.values()) {
             totalQueuedCalls += queue.length;

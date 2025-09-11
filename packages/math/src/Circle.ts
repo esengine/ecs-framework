@@ -2,6 +2,15 @@ import { Vector2 } from './Vector2';
 import { Rectangle } from './Rectangle';
 
 /**
+ * 圆形对象接口
+ */
+export interface CircleObject {
+  x: number;
+  y: number;
+  radius: number;
+}
+
+/**
  * 2D圆形类
  * 
  * 表示一个圆形，提供圆形相关的几何运算功能：
@@ -586,9 +595,9 @@ export class Circle {
 
   /**
    * 转换为普通对象
-   * @returns {x, y, radius} 对象
+   * @returns 包含x、y、radius属性的圆形对象
    */
-  toObject(): { x: number; y: number; radius: number } {
+  toObject(): CircleObject {
     return { x: this.x, y: this.y, radius: this.radius };
   }
 }

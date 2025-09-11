@@ -10,6 +10,41 @@ import { SyncMode, AuthorityType, NetworkScope } from '../types/NetworkTypes';
 import { EventEmitter } from '../utils/EventEmitter';
 
 /**
+ * 属性值映射类型
+ */
+export interface PropertyChanges {
+    [propertyKey: string]: SyncVarValue;
+}
+
+/**
+ * 同步模式映射类型
+ */
+export interface SyncModeMap {
+    [propertyKey: string]: SyncMode;
+}
+
+/**
+ * 权限映射类型
+ */
+export interface AuthorityMap {
+    [propertyKey: string]: AuthorityType;
+}
+
+/**
+ * 作用域映射类型
+ */
+export interface ScopeMap {
+    [propertyKey: string]: NetworkScope;
+}
+
+/**
+ * 优先级映射类型
+ */
+export interface PriorityMap {
+    [propertyKey: string]: number;
+}
+
+/**
  * 同步批次数据
  */
 export interface SyncBatch {
@@ -18,17 +53,17 @@ export interface SyncBatch {
     /** 实例类型 */
     instanceType: string;
     /** 变化的属性数据 */
-    changes: { [propertyKey: string]: SyncVarValue };
+    changes: PropertyChanges;
     /** 时间戳 */
     timestamp: number;
     /** 同步模式映射 */
-    syncModes: { [propertyKey: string]: SyncMode };
+    syncModes: SyncModeMap;
     /** 权限映射 */
-    authorities: { [propertyKey: string]: AuthorityType };
+    authorities: AuthorityMap;
     /** 作用域映射 */
-    scopes: { [propertyKey: string]: NetworkScope };
+    scopes: ScopeMap;
     /** 优先级映射 */
-    priorities: { [propertyKey: string]: number };
+    priorities: PriorityMap;
 }
 
 /**

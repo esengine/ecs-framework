@@ -39,6 +39,7 @@ export default defineConfig({
   /** 忽略死链接检查 */
   ignoreDeadLinks: true,
   
+  
   // === Head 配置 ===
   head: [
     // 网站图标

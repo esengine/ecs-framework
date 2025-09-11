@@ -4,24 +4,205 @@
 import { MessageType, INetworkMessage, AuthorityType, SyncMode, RpcTarget } from '../types/NetworkTypes';
 
 /**
+ * 3D位置信息
+ */
+export interface Position3D {
+  x: number;
+  y: number;
+  z?: number;
+}
+
+/**
+ * 组件数据
+ */
+export interface ComponentData {
+  type: string;
+  data: any;
+}
+
+/**
+ * 客户端信息
+ */
+export interface ClientInfo {
+  name: string;
+  version: string;
+  platform: string;
+}
+
+/**
+ * 服务器信息
+ */
+export interface ServerInfo {
+  name: string;
+  version: string;
+  maxPlayers: number;
+  currentPlayers: number;
+}
+
+/**
+ * 玩家信息
+ */
+export interface PlayerInfo {
+  playerId: string;
+  playerName: string;
+}
+
+/**
+ * 连接数据
+ */
+export interface ConnectData {
+  clientVersion: string;
+  protocolVersion: string;
+  authToken?: string;
+  clientInfo: ClientInfo;
+}
+
+/**
+ * 连接响应数据
+ */
+export interface ConnectResponseData {
+  success: boolean;
+  clientId?: string;
+  error?: string;
+  serverInfo?: ServerInfo;
+}
+
+/**
+ * 断开连接数据
+ */
+export interface DisconnectData {
+  reason: string;
+  code: number;
+}
+
+/**
+ * 心跳数据
+ */
+export interface HeartbeatData {
+  clientTime: number;
+  serverTime?: number;
+}
+
+/**
+ * RPC请求数据
+ */
+export interface RpcRequestData {
+  callId: string;
+  methodName: string;
+  target: RpcTarget;
+  args: any[];
+  timeout?: number;
+}
+
+/**
+ * 实体创建数据
+ */
+export interface EntityCreateData {
+  entityId: string;
+  entityType: string;
+  ownerId: string;
+  authority: AuthorityType;
+  components: ComponentData[];
+  position?: Position3D;
+}
+
+/**
+ * 实体销毁数据
+ */
+export interface EntityDestroyData {
+  entityId: string;
+  reason?: string;
+}
+
+/**
+ * 组件同步数据
+ */
+export interface ComponentSyncData {
+  entityId: string;
+  componentType: string;
+  syncMode: SyncMode;
+  data: any;
+  timestamp: number;
+}
+
+/**
+ * 状态同步数据
+ */
+export interface StateSyncData {
+  entityId: string;
+  stateData: any;
+  timestamp: number;
+}
+
+/**
+ * 聊天数据
+ */
+export interface ChatData {
+  playerId: string;
+  message: string;
+  timestamp: number;
+  playerInfo?: PlayerInfo;
+}
+
+/**
+ * 加入房间数据
+ */
+export interface JoinRoomData {
+  roomId: string;
+  playerInfo: PlayerInfo;
+}
+
+/**
+ * 离开房间数据
+ */
+export interface LeaveRoomData {
+  roomId: string;
+  reason?: string;
+}
+
+/**
+ * 玩家加入数据
+ */
+export interface PlayerJoinedData {
+  playerId: string;
+  playerName: string;
+  roomId: string;
+}
+
+/**
+ * 玩家离开数据
+ */
+export interface PlayerLeftData {
+  playerId: string;
+  roomId: string;
+  reason?: string;
+}
+
+/**
+ * 自定义数据
+ */
+export interface CustomData {
+  eventType: string;
+  data: any;
+  timestamp: number;
+}
+
+/**
+ * 错误数据
+ */
+export interface ErrorData {
+  code: string;
+  message: string;
+  details?: any;
+  relatedMessageId?: string;
+}
+
+/**
  * 连接请求消息
  */
 export interface IConnectMessage extends INetworkMessage {
   type: MessageType.CONNECT;
-  data: {
-    /** 客户端版本 */
-    clientVersion: string;
-    /** 协议版本 */
-    protocolVersion: string;
-    /** 认证令牌 */
-    authToken?: string;
-    /** 客户端信息 */
-    clientInfo: {
-      name: string;
-      platform: string;
-      version: string;
-    };
-  };
+  data: ConnectData;
 }
 
 /**
@@ -29,21 +210,7 @@ export interface IConnectMessage extends INetworkMessage {
  */
 export interface IConnectResponseMessage extends INetworkMessage {
   type: MessageType.CONNECT;
-  data: {
-    /** 是否成功 */
-    success: boolean;
-    /** 分配的客户端ID */
-    clientId?: string;
-    /** 错误信息 */
-    error?: string;
-    /** 服务器信息 */
-    serverInfo?: {
-      name: string;
-      version: string;
-      maxPlayers: number;
-      currentPlayers: number;
-    };
-  };
+  data: ConnectResponseData;
 }
 
 /**
@@ -51,12 +218,7 @@ export interface IConnectResponseMessage extends INetworkMessage {
  */
 export interface IHeartbeatMessage extends INetworkMessage {
   type: MessageType.HEARTBEAT;
-  data: {
-    /** 客户端时间戳 */
-    clientTime: number;
-    /** 服务器时间戳（响应时包含） */
-    serverTime?: number;
-  };
+  data: HeartbeatData;
 }
 
 /**
@@ -122,20 +284,25 @@ export interface IRpcCallMessage extends INetworkMessage {
 }
 
 /**
+ * RPC响应数据
+ */
+export interface RpcResponseData {
+  /** 调用ID */
+  callId: string;
+  /** 是否成功 */
+  success: boolean;
+  /** 返回值 */
+  result?: any;
+  /** 错误信息 */
+  error?: string;
+}
+
+/**
  * RPC响应消息
  */
 export interface IRpcResponseMessage extends INetworkMessage {
   type: MessageType.RPC_RESPONSE;
-  data: {
-    /** 调用ID */
-    callId: string;
-    /** 是否成功 */
-    success: boolean;
-    /** 返回值 */
-    result?: any;
-    /** 错误信息 */
-    error?: string;
-  };
+  data: RpcResponseData;
 }
 
 /**
@@ -153,12 +320,9 @@ export interface IEntityCreateMessage extends INetworkMessage {
     /** 权限类型 */
     authority: AuthorityType;
     /** 初始组件数据 */
-    components: Array<{
-      type: string;
-      data: any;
-    }>;
+    components: ComponentData[];
     /** 位置信息 */
-    position?: { x: number; y: number; z?: number };
+    position?: Position3D;
   };
 }
 
@@ -199,12 +363,7 @@ export interface IJoinRoomMessage extends INetworkMessage {
  */
 export interface ILeaveRoomMessage extends INetworkMessage {
   type: MessageType.LEAVE_ROOM;
-  data: {
-    /** 房间ID */
-    roomId: string;
-    /** 离开原因 */
-    reason?: string;
-  };
+  data: LeaveRoomData;
 }
 
 /**
@@ -251,16 +410,7 @@ export interface IGameEventMessage extends INetworkMessage {
  */
 export interface IErrorMessage extends INetworkMessage {
   type: MessageType.ERROR;
-  data: {
-    /** 错误代码 */
-    code: string;
-    /** 错误消息 */
-    message: string;
-    /** 错误详情 */
-    details?: any;
-    /** 相关的消息ID */
-    relatedMessageId?: string;
-  };
+  data: ErrorData;
 }
 
 /**

@@ -6,6 +6,14 @@ import { createLogger } from '@esengine/ecs-framework';
 import { NetworkErrorType, INetworkError } from '../types/NetworkTypes';
 
 /**
+ * 错误趋势分析结果
+ */
+export interface ErrorTrendAnalysis {
+    trend: string;
+    recommendation: string;
+}
+
+/**
  * 错误严重级别
  */
 export enum ErrorSeverity {
@@ -439,7 +447,7 @@ export class ErrorHandler {
     /**
      * 获取错误趋势分析
      */
-    getErrorTrends() {
+    getErrorTrends(): ErrorTrendAnalysis {
         const totalErrors = this.stats.totalErrors;
         if (totalErrors === 0) {
             return { trend: 'stable', recommendation: '系统运行正常' };

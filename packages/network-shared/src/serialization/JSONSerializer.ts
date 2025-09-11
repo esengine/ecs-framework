@@ -17,6 +17,14 @@ export interface SerializerConfig {
 }
 
 /**
+ * JSON序列化消息验证结果
+ */
+export interface JsonMessageValidationResult {
+    isValid: boolean;
+    errors: string[];
+}
+
+/**
  * 自定义序列化器接口
  */
 export interface ICustomSerializer {
@@ -331,7 +339,7 @@ export class JSONSerializer {
     /**
      * 验证解析后的消息
      */
-    private validateParsedMessage(data: any): { isValid: boolean; errors: string[] } {
+    private validateParsedMessage(data: any): JsonMessageValidationResult {
         const errors: string[] = [];
 
         if (!data || typeof data !== 'object') {

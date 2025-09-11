@@ -1,6 +1,16 @@
 import { Vector2 } from './Vector2';
 
 /**
+ * 矩形对象接口
+ */
+export interface RectangleObject {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
  * 2D矩形类
  * 
  * 表示一个轴对齐的矩形，提供矩形相关的几何运算功能：
@@ -499,9 +509,9 @@ export class Rectangle {
 
   /**
    * 转换为普通对象
-   * @returns {x, y, width, height} 对象
+   * @returns 包含x、y、width、height属性的矩形对象
    */
-  toObject(): { x: number; y: number; width: number; height: number } {
+  toObject(): RectangleObject {
     return { x: this.x, y: this.y, width: this.width, height: this.height };
   }
 

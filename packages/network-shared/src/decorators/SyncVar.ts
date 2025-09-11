@@ -310,11 +310,27 @@ export function resetSyncVarStats(target: object): void {
 }
 
 /**
+ * SyncVar统计信息条目
+ */
+export interface SyncVarStatEntry {
+    syncCount: number;
+    lastSyncTime: number;
+    isDirty: boolean;
+}
+
+/**
+ * SyncVar统计信息映射
+ */
+export interface SyncVarStatsMap {
+    [key: string]: SyncVarStatEntry;
+}
+
+/**
  * 获取SyncVar统计信息
  */
-export function getSyncVarStats(target: object): { [key: string]: { syncCount: number; lastSyncTime: number; isDirty: boolean } } {
+export function getSyncVarStats(target: object): SyncVarStatsMap {
     const metadataMap = getSyncVarMetadata(target);
-    const stats: { [key: string]: { syncCount: number; lastSyncTime: number; isDirty: boolean } } = {};
+    const stats: SyncVarStatsMap = {};
     
     for (const [key, metadata] of metadataMap) {
         stats[String(key)] = {

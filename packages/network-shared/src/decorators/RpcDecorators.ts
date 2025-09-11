@@ -9,6 +9,14 @@ const RPC_METADATA_KEY = Symbol('rpc:metadata');
 const RPC_METHODS_KEY = Symbol('rpc:methods');
 
 /**
+ * RPC验证结果
+ */
+export interface RpcValidationResult {
+    valid: boolean;
+    error?: string;
+}
+
+/**
  * 服务端RPC装饰器选项
  */
 export interface ServerRpcOptions extends RpcOptions {
@@ -195,7 +203,7 @@ export class RpcMethodValidator {
         metadata: RpcMethodMetadata,
         args: unknown[],
         callerId?: string
-    ): { valid: boolean; error?: string } {
+    ): RpcValidationResult {
         // 参数数量检查
         if (args.length !== metadata.paramTypes.length) {
             return {
@@ -218,7 +226,7 @@ export class RpcMethodValidator {
     /**
      * 验证RPC方法定义
      */
-    static validateMethodDefinition(metadata: RpcMethodMetadata): { valid: boolean; error?: string } {
+    static validateMethodDefinition(metadata: RpcMethodMetadata): RpcValidationResult {
         // 方法名检查
         if (!metadata.methodName || typeof metadata.methodName !== 'string') {
             return {

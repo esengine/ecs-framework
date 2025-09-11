@@ -30,7 +30,7 @@ export {
     SyncVarSerializerConfig,
     SerializationResult as SyncVarSerializationResult,
     DeserializationResult as SyncVarDeserializationResult,
-    DeltaData as SyncVarDeltaData,
+    SerializerDeltaData as SyncVarDeltaData,
     CompressionMetadata 
 } from './serialization/SyncVarSerializer';
 

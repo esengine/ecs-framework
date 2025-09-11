@@ -93,6 +93,14 @@ export interface BandwidthMonitorEvents {
 }
 
 /**
+ * 超限检查结果
+ */
+export interface OverLimitResult {
+    upload: boolean;
+    download: boolean;
+}
+
+/**
  * 带宽监控器
  * 负责监控网络带宽使用情况并提供自适应调整
  */
@@ -210,7 +218,7 @@ export class BandwidthMonitor extends EventEmitter {
     /**
      * 检查是否超过限制
      */
-    public isOverLimit(): { upload: boolean; download: boolean } {
+    public isOverLimit(): OverLimitResult {
         if (!this.limits.enabled) {
             return { upload: false, download: false };
         }

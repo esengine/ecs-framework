@@ -16,6 +16,15 @@ export enum MessageIdGeneratorType {
 }
 
 /**
+ * 消息创建选项
+ */
+export interface MessageCreateOptions {
+    reliable?: boolean;
+    priority?: number;
+    timestamp?: number;
+}
+
+/**
  * 消息管理器配置
  */
 export interface MessageManagerConfig {
@@ -177,11 +186,7 @@ export class MessageManager {
         type: MessageType,
         data: any,
         senderId: string,
-        options: {
-            reliable?: boolean;
-            priority?: number;
-            timestamp?: number;
-        } = {}
+        options: MessageCreateOptions = {}
     ): T {
         const message: INetworkMessage = {
             type,
