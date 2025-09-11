@@ -323,11 +323,6 @@ export default defineConfig({
     theme: {
       light: 'github-light',
       dark: 'github-dark'
-    },
-    
-    /** 禁用 markdown-it-attrs 插件以避免 Duplicate attribute 错误 */
-    attrs: {
-      disable: true
     }
   },
   

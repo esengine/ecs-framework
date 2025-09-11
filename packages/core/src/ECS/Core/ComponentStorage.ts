@@ -9,6 +9,16 @@ import { ComponentRegistry, ComponentType } from './ComponentStorage/ComponentRe
 export { EnableSoA, HighPrecision, Float64, Int32, SerializeMap, SerializeSet, SerializeArray, DeepCopy };
 export { ComponentRegistry, ComponentType };
 
+/**
+ * 组件存储统计信息
+ */
+export interface StorageStats {
+    totalSlots: number;
+    usedSlots: number;
+    freeSlots: number;
+    fragmentation: number;
+}
+
 
 
 /**
@@ -147,13 +157,9 @@ export class ComponentStorage<T extends Component> {
 
     /**
      * 获取存储统计信息
+     * @returns 存储统计信息，包含总槽位数、已用槽位数、空闲槽位数和碎片化程度
      */
-    public getStats(): {
-        totalSlots: number;
-        usedSlots: number;
-        freeSlots: number;
-        fragmentation: number;
-    } {
+    public getStats(): StorageStats {
         const totalSlots = this.dense.length;
         const usedSlots = this.dense.length;
         const freeSlots = 0; // 永远无空洞

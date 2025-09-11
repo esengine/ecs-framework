@@ -6,6 +6,16 @@ import { Pool } from '../../Utils/Pool/Pool';
 import { IPoolable } from '../../Utils/Pool/IPoolable';
 
 /**
+ * 内存统计信息
+ */
+export interface MemoryStats {
+    entitiesMemory: number;
+    masksMemory: number;
+    mappingsMemory: number;
+    totalMemory: number;
+}
+
+/**
  * 可池化的实体集合
  * 
  * 实现IPoolable接口，支持对象池复用以减少内存分配开销。
@@ -321,13 +331,9 @@ export class ComponentSparseSet {
     
     /**
      * 获取内存使用统计
+     * @returns 内存统计信息，包含实体内存、掩码内存、映射内存和总内存使用量
      */
-    public getMemoryStats(): {
-        entitiesMemory: number;
-        masksMemory: number;
-        mappingsMemory: number;
-        totalMemory: number;
-    } {
+    public getMemoryStats(): MemoryStats {
         const entitiesStats = this._entities.getMemoryStats();
         const masksMemory = this._componentMasks.length * 16; // 估计每个BigInt 16字节
         

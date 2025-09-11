@@ -7,4 +7,4 @@ export { Bits } from './Bits';
 export { ComponentTypeManager } from './ComponentTypeManager';
 export { BitMask64Utils, BitMask64Data } from './BigIntCompatibility';
 export { SparseSet } from './SparseSet';
-export { ComponentSparseSet } from './ComponentSparseSet';
+export { ComponentSparseSet, MemoryStats } from './ComponentSparseSet';
