@@ -28,7 +28,7 @@ export default defineConfig({
    * 如果部署在子路径下（如 GitHub Pages 项目页面），需要配置此项
    * 例如：'/ecs-framework/' 
    */
-  base: '/',
+  base: '/ecs-framework/',
   
   /** 是否清理 URL 中的 .html 后缀 */
   cleanUrls: true,
