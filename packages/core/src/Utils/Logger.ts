@@ -287,9 +287,12 @@ export class LoggerManager {
     private static _instance: LoggerManager;
     private _loggers = new Map<string, ILogger>();
     private _defaultLogger: ILogger;
+    private _defaultLevel = LogLevel.Info;
 
     private constructor() {
-        this._defaultLogger = new ConsoleLogger();
+        this._defaultLogger = new ConsoleLogger({
+            level: this._defaultLevel,
+        });
     }
 
     /**
@@ -316,7 +319,7 @@ export class LoggerManager {
         if (!this._loggers.has(name)) {
             const logger = new ConsoleLogger({
                 prefix: name,
-                level: LogLevel.Info
+                level: this._defaultLevel,
             });
             this._loggers.set(name, logger);
         }
@@ -338,6 +341,8 @@ export class LoggerManager {
      * @param level 日志级别
      */
     public setGlobalLevel(level: LogLevel): void {
+        this._defaultLevel = level;
+
         if (this._defaultLogger instanceof ConsoleLogger) {
             this._defaultLogger.setLevel(level);
         }
