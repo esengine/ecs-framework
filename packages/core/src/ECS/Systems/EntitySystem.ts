@@ -5,6 +5,17 @@ import type { Scene } from '../Scene';
 import type { ISystemBase } from '../../Types';
 import type { QuerySystem } from '../Core/QuerySystem';
 import { getSystemInstanceTypeName } from '../Decorators';
+import type { EventListenerConfig, TypeSafeEventSystem, EventHandler } from '../Core/EventSystem';
+
+/**
+ * 事件监听器记录
+ */
+interface EventListenerRecord {
+    eventSystem: TypeSafeEventSystem;
+    eventType: string;
+    handler: EventHandler;
+    listenerRef: string;
+}
 
 /**
  * 实体系统的基类
@@ -37,6 +48,7 @@ export abstract class EntitySystem implements ISystemBase {
     private _initialized: boolean = false;
     private _matcher: Matcher;
     private _trackedEntities: Set<Entity> = new Set();
+    private _eventListeners: EventListenerRecord[] = [];
 
     /**
      * 获取系统处理的实体列表（动态查询）
@@ -146,12 +158,18 @@ export abstract class EntitySystem implements ISystemBase {
 
     /**
      * 重置系统状态
-     * 
+     *
      * 当系统从场景中移除时调用，重置初始化状态以便重新添加时能正确初始化。
      */
     public reset(): void {
         this._initialized = false;
         this._trackedEntities.clear();
+
+        // 清理所有事件监听器
+        this.cleanupEventListeners();
+
+        // 调用用户可重写的销毁方法
+        this.onDestroy();
     }
 
     /**
@@ -542,5 +560,91 @@ export abstract class EntitySystem implements ISystemBase {
      */
     protected onRemoved(entity: Entity): void {
         // 子类可以重写此方法
+    }
+
+    /**
+     * 添加事件监听器
+     *
+     * 推荐使用此方法而不是直接调用eventSystem.on()，
+     * 这样可以确保系统移除时自动清理监听器，避免内存泄漏。
+     *
+     * @param eventType 事件类型
+     * @param handler 事件处理函数
+     * @param config 监听器配置
+     */
+    protected addEventListener<T = any>(
+        eventType: string,
+        handler: EventHandler<T>,
+        config?: EventListenerConfig
+    ): void {
+        if (!this.scene?.eventSystem) {
+            console.warn(`[${this.systemName}] Cannot add event listener: scene.eventSystem not available`);
+            return;
+        }
+
+        const listenerRef = this.scene.eventSystem.on(eventType, handler, config);
+
+        // 跟踪监听器以便后续清理
+        if (listenerRef) {
+            this._eventListeners.push({
+                eventSystem: this.scene.eventSystem,
+                eventType,
+                handler,
+                listenerRef
+            });
+        }
+    }
+
+    /**
+     * 移除特定的事件监听器
+     *
+     * @param eventType 事件类型
+     * @param handler 事件处理函数
+     */
+    protected removeEventListener<T = any>(
+        eventType: string,
+        handler: EventHandler<T>
+    ): void {
+        const listenerIndex = this._eventListeners.findIndex(
+            listener => listener.eventType === eventType && listener.handler === handler
+        );
+
+        if (listenerIndex >= 0) {
+            const listener = this._eventListeners[listenerIndex];
+
+            // 从事件系统中移除
+            listener.eventSystem.off(eventType, listener.listenerRef);
+
+            // 从跟踪列表中移除
+            this._eventListeners.splice(listenerIndex, 1);
+        }
+    }
+
+    /**
+     * 清理所有事件监听器
+     *
+     * 系统移除时自动调用，清理所有通过addEventListener添加的监听器。
+     */
+    private cleanupEventListeners(): void {
+        for (const listener of this._eventListeners) {
+            try {
+                listener.eventSystem.off(listener.eventType, listener.listenerRef);
+            } catch (error) {
+                console.warn(`[${this.systemName}] Failed to remove event listener for "${listener.eventType}":`, error);
+            }
+        }
+
+        // 清空跟踪列表
+        this._eventListeners.length = 0;
+    }
+
+    /**
+     * 系统销毁时的回调
+     *
+     * 当系统从场景中移除时调用，子类可以重写此方法进行清理操作。
+     * 注意：事件监听器会被框架自动清理，无需手动处理。
+     */
+    protected onDestroy(): void {
+        // 子类可以重写此方法进行清理操作
     }
 }
