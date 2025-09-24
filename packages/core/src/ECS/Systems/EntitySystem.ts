@@ -162,6 +162,7 @@ export abstract class EntitySystem implements ISystemBase {
      * 当系统从场景中移除时调用，重置初始化状态以便重新添加时能正确初始化。
      */
     public reset(): void {
+        this.scene = null;
         this._initialized = false;
         this._trackedEntities.clear();
 

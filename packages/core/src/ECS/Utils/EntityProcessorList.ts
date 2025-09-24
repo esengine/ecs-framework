@@ -65,6 +65,15 @@ export class EntityProcessorList {
      */
     public end(): void {
         // 清理处理器
+        for (const processor of this._processors) {
+            try {
+                processor.reset();
+            } catch (error) {
+                EntityProcessorList._logger.error(`Error in processor ${getSystemInstanceTypeName(processor)}:`, error);
+            }
+        }
+        this._isDirty = false;
+        this._processors.length = 0;
     }
 
     /**
