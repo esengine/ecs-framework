@@ -5,7 +5,6 @@ import { PerformanceDataCollector } from './PerformanceDataCollector';
 import { ComponentDataCollector } from './ComponentDataCollector';
 import { SceneDataCollector } from './SceneDataCollector';
 import { WebSocketManager } from './WebSocketManager';
-import { Core } from '../../Core';
 import { Component } from '../../ECS/Component';
 import { ComponentPoolManager } from '../../ECS/Core/ComponentPool';
 import { Pool } from '../../Utils/Pool';
@@ -13,7 +12,7 @@ import { getComponentInstanceTypeName, getSystemInstanceTypeName } from '../../E
 
 /**
  * 调试管理器
- * 
+ *
  * 整合所有调试数据收集器，负责收集和发送调试数据
  */
 export class DebugManager {
@@ -24,14 +23,20 @@ export class DebugManager {
     private performanceCollector: PerformanceDataCollector;
     private componentCollector: ComponentDataCollector;
     private sceneCollector: SceneDataCollector;
+    private sceneProvider: () => any;
+    private performanceMonitorProvider: () => any;
 
     private frameCounter: number = 0;
     private lastSendTime: number = 0;
     private sendInterval: number;
     private isRunning: boolean = false;
 
-    constructor(core: Core, config: IECSDebugConfig) {
+    constructor(core: any, config: IECSDebugConfig) {
         this.config = config;
+
+        // 设置提供器函数
+        this.sceneProvider = () => (core as any).scene || (core.constructor as any).scene;
+        this.performanceMonitorProvider = () => core._performanceMonitor;
 
         // 初始化数据收集器
         this.entityCollector = new EntityDataCollector();
@@ -326,12 +331,12 @@ export class DebugManager {
     private captureMemorySnapshot(): any {
         const timestamp = Date.now();
 
-        // 使用专门的内存计算方法收集实体数据
-        const entityData = this.entityCollector.collectEntityDataWithMemory();
-
         // 收集其他内存统计
         const baseMemoryInfo = this.collectBaseMemoryInfo();
-        const scene = Core.scene;
+        const scene = this.sceneProvider();
+
+        // 使用专门的内存计算方法收集实体数据
+        const entityData = this.entityCollector.collectEntityDataWithMemory(scene);
         const componentMemoryStats = scene?.entities ? this.collectComponentMemoryStats(scene.entities) : { totalMemory: 0, componentTypes: 0, totalInstances: 0, breakdown: [] };
         const systemMemoryStats = this.collectSystemMemoryStats();
         const poolMemoryStats = this.collectPoolMemoryStats();
@@ -536,7 +541,7 @@ export class DebugManager {
             updateOrder: number;
         }>;
     } {
-        const scene = Core.scene;
+        const scene = this.sceneProvider();
         let totalSystemMemory = 0;
         const systemBreakdown: Array<{
             name: string;
@@ -710,8 +715,7 @@ export class DebugManager {
         error?: string;
     } {
         try {
-            const coreInstance = Core.Instance as Core & { _performanceMonitor?: unknown };
-            const performanceMonitor = coreInstance._performanceMonitor;
+            const performanceMonitor = this.performanceMonitorProvider();
             if (!performanceMonitor) {
                 return { enabled: false };
             }
@@ -744,7 +748,7 @@ export class DebugManager {
      */
     public getDebugData(): IECSDebugData {
         const currentTime = Date.now();
-        const scene = Core.scene;
+        const scene = this.sceneProvider();
 
         const debugData: IECSDebugData = {
             timestamp: currentTime,
@@ -756,27 +760,25 @@ export class DebugManager {
 
         // 根据配置收集各种数据
         if (this.config.channels.entities) {
-            debugData.entities = this.entityCollector.collectEntityData();
+            debugData.entities = this.entityCollector.collectEntityData(scene);
         }
 
         if (this.config.channels.systems) {
-            const coreInstance = Core.Instance as Core & { _performanceMonitor?: unknown };
-            const performanceMonitor = coreInstance._performanceMonitor;
-            debugData.systems = this.systemCollector.collectSystemData(performanceMonitor);
+            const performanceMonitor = this.performanceMonitorProvider();
+            debugData.systems = this.systemCollector.collectSystemData(performanceMonitor, scene);
         }
 
         if (this.config.channels.performance) {
-            const coreInstance = Core.Instance as Core & { _performanceMonitor?: unknown };
-            const performanceMonitor = coreInstance._performanceMonitor;
+            const performanceMonitor = this.performanceMonitorProvider();
             debugData.performance = this.performanceCollector.collectPerformanceData(performanceMonitor);
         }
 
         if (this.config.channels.components) {
-            debugData.components = this.componentCollector.collectComponentData();
+            debugData.components = this.componentCollector.collectComponentData(scene);
         }
 
         if (this.config.channels.scenes) {
-            debugData.scenes = this.sceneCollector.collectSceneData();
+            debugData.scenes = this.sceneCollector.collectSceneData(scene);
         }
 
         return debugData;

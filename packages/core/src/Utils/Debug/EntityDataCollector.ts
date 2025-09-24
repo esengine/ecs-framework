@@ -1,16 +1,15 @@
 import { IEntityDebugData } from '../../Types';
-import { Core } from '../../Core';
 import { Entity } from '../../ECS/Entity';
 import { Component } from '../../ECS/Component';
 import { ComponentTypeManager } from '../../ECS/Utils/ComponentTypeManager';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from '../../ECS/Decorators';
+import { IScene } from '../../ECS/IScene';
 
 /**
  * 实体数据收集器
  */
 export class EntityDataCollector {
-    public collectEntityData(): IEntityDebugData {
-        const scene = Core.scene;
+    public collectEntityData(scene?: IScene | null): IEntityDebugData {
         if (!scene) {
             return this.getEmptyEntityDebugData();
         }
@@ -51,7 +50,7 @@ export class EntityDataCollector {
     }
 
 
-    public getRawEntityList(): Array<{
+    public getRawEntityList(scene?: IScene | null): Array<{
         id: number;
         name: string;
         active: boolean;
@@ -65,7 +64,6 @@ export class EntityDataCollector {
         tag: number;
         updateOrder: number;
     }> {
-        const scene = Core.scene;
         if (!scene) return [];
 
         const entityList = (scene as any).entities;
@@ -88,9 +86,8 @@ export class EntityDataCollector {
     }
 
 
-    public getEntityDetails(entityId: number): any {
+    public getEntityDetails(entityId: number, scene?: IScene | null): any {
         try {
-            const scene = Core.scene;
             if (!scene) return null;
 
             const entityList = (scene as any).entities;
@@ -101,7 +98,7 @@ export class EntityDataCollector {
 
             const baseDebugInfo = entity.getDebugInfo ?
                 entity.getDebugInfo() :
-                this.buildFallbackEntityInfo(entity);
+                this.buildFallbackEntityInfo(entity, scene);
 
             const componentDetails = this.extractComponentDetails(entity.components);
 
@@ -155,8 +152,7 @@ export class EntityDataCollector {
     }
 
 
-    public collectEntityDataWithMemory(): IEntityDebugData {
-        const scene = Core.scene;
+    public collectEntityDataWithMemory(scene?: IScene | null): IEntityDebugData {
         if (!scene) {
             return this.getEmptyEntityDebugData();
         }
@@ -192,7 +188,7 @@ export class EntityDataCollector {
             entitiesPerArchetype: archetypeData.distribution,
             topEntitiesByComponents: archetypeData.topEntities,
             entityHierarchy: this.buildEntityHierarchyTree(entityList),
-            entityDetailsMap: this.buildEntityDetailsMap(entityList)
+            entityDetailsMap: this.buildEntityDetailsMap(entityList, scene)
         };
     }
 
@@ -635,20 +631,20 @@ export class EntityDataCollector {
     /**
      * 构建实体详情映射
      */
-    private buildEntityDetailsMap(entityList: { buffer?: Entity[] }): Record<number, any> {
+    private buildEntityDetailsMap(entityList: { buffer?: Entity[] }, scene?: IScene | null): Record<number, any> {
         if (!entityList?.buffer) return {};
 
         const entityDetailsMap: Record<number, any> = {};
         const entities = entityList.buffer;
         const batchSize = 100;
-        
+
         for (let i = 0; i < entities.length; i += batchSize) {
             const batch = entities.slice(i, i + batchSize);
-            
+
             batch.forEach((entity: Entity) => {
-                const baseDebugInfo = entity.getDebugInfo ? 
-                    entity.getDebugInfo() : 
-                    this.buildFallbackEntityInfo(entity);
+                const baseDebugInfo = entity.getDebugInfo ?
+                    entity.getDebugInfo() :
+                    this.buildFallbackEntityInfo(entity, scene);
 
                 const componentCacheStats = (entity as any).getComponentCacheStats ? 
                     (entity as any).getComponentCacheStats() : null;
@@ -676,8 +672,7 @@ export class EntityDataCollector {
     /**
      * 构建实体基础信息
      */
-    private buildFallbackEntityInfo(entity: Entity): any {
-        const scene = Core.scene;
+    private buildFallbackEntityInfo(entity: Entity, scene?: IScene | null): any {
         const sceneInfo = this.getSceneInfo(scene);
         
         return {
@@ -757,9 +752,8 @@ export class EntityDataCollector {
     /**
      * 获取组件的完整属性信息（仅在需要时调用）
      */
-    public getComponentProperties(entityId: number, componentIndex: number): Record<string, any> {
+    public getComponentProperties(entityId: number, componentIndex: number, scene?: IScene | null): Record<string, any> {
         try {
-            const scene = Core.scene;
             if (!scene) return {};
 
             const entityList = (scene as any).entities;
@@ -950,9 +944,8 @@ export class EntityDataCollector {
     /**
      * 展开懒加载对象（供调试面板调用）
      */
-    public expandLazyObject(entityId: number, componentIndex: number, propertyPath: string): any {
+    public expandLazyObject(entityId: number, componentIndex: number, propertyPath: string, scene?: IScene | null): any {
         try {
-            const scene = Core.scene;
             if (!scene) return null;
 
             const entityList = (scene as any).entities;
