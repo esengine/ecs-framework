@@ -8,6 +8,8 @@ import { IScene } from '../../ECS/IScene';
 export class SystemDataCollector {
     /**
      * 收集系统数据
+     * @param performanceMonitor 性能监视器实例
+     * @param scene 场景实例
      */
     public collectSystemData(performanceMonitor: any, scene?: IScene | null): ISystemDebugData {
         if (!scene) {

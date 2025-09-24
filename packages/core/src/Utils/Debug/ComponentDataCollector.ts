@@ -11,6 +11,7 @@ export class ComponentDataCollector {
 
     /**
      * 收集组件数据（轻量版，不计算实际内存大小）
+     * @param scene 场景实例
      */
     public collectComponentData(scene?: IScene | null): IComponentDebugData {
         if (!scene) {
@@ -167,6 +168,8 @@ export class ComponentDataCollector {
     /**
      * 为内存快照功能提供的详细内存计算
      * 只在用户主动请求内存快照时调用
+     * @param typeName 组件类型名称
+     * @param scene 场景实例
      */
     public calculateDetailedComponentMemory(typeName: string, scene?: IScene | null): number {
         if (!scene) return this.getEstimatedComponentSize(typeName, scene);

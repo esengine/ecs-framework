@@ -31,6 +31,11 @@ export class DebugManager {
     private sendInterval: number;
     private isRunning: boolean = false;
 
+    /**
+     * 构造调试管理器
+     * @param core Core实例
+     * @param config 调试配置
+     */
     constructor(core: any, config: IECSDebugConfig) {
         this.config = config;
 

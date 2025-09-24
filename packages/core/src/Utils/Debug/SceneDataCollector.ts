@@ -9,6 +9,7 @@ export class SceneDataCollector {
 
     /**
      * 收集场景数据
+     * @param scene 场景实例
      */
     public collectSceneData(scene?: IScene | null): ISceneDebugData {
         if (!scene) {

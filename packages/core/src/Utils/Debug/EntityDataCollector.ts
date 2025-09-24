@@ -9,6 +9,10 @@ import { IScene } from '../../ECS/IScene';
  * 实体数据收集器
  */
 export class EntityDataCollector {
+    /**
+     * 收集实体数据
+     * @param scene 场景实例
+     */
     public collectEntityData(scene?: IScene | null): IEntityDebugData {
         if (!scene) {
             return this.getEmptyEntityDebugData();
@@ -50,6 +54,10 @@ export class EntityDataCollector {
     }
 
 
+    /**
+     * 获取原始实体列表
+     * @param scene 场景实例
+     */
     public getRawEntityList(scene?: IScene | null): Array<{
         id: number;
         name: string;
@@ -86,6 +94,11 @@ export class EntityDataCollector {
     }
 
 
+    /**
+     * 获取实体详细信息
+     * @param entityId 实体ID
+     * @param scene 场景实例
+     */
     public getEntityDetails(entityId: number, scene?: IScene | null): any {
         try {
             if (!scene) return null;
@@ -152,6 +165,10 @@ export class EntityDataCollector {
     }
 
 
+    /**
+     * 收集实体数据（包含内存信息）
+     * @param scene 场景实例
+     */
     public collectEntityDataWithMemory(scene?: IScene | null): IEntityDebugData {
         if (!scene) {
             return this.getEmptyEntityDebugData();
@@ -751,6 +768,9 @@ export class EntityDataCollector {
 
     /**
      * 获取组件的完整属性信息（仅在需要时调用）
+     * @param entityId 实体ID
+     * @param componentIndex 组件索引
+     * @param scene 场景实例
      */
     public getComponentProperties(entityId: number, componentIndex: number, scene?: IScene | null): Record<string, any> {
         try {
@@ -943,6 +963,10 @@ export class EntityDataCollector {
 
     /**
      * 展开懒加载对象（供调试面板调用）
+     * @param entityId 实体ID
+     * @param componentIndex 组件索引
+     * @param propertyPath 属性路径
+     * @param scene 场景实例
      */
     public expandLazyObject(entityId: number, componentIndex: number, propertyPath: string, scene?: IScene | null): any {
         try {

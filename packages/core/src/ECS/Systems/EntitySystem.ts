@@ -425,7 +425,7 @@ export abstract class EntitySystem implements ISystemBase {
      * 
      * @param entities 要处理的实体列表
      */
-    protected process(_entities: Entity[]): void {
+    protected process(entities: Entity[]): void {
         // 子类必须实现此方法
     }
 
@@ -529,7 +529,7 @@ export abstract class EntitySystem implements ISystemBase {
      * 
      * @param entity 被添加的实体
      */
-    protected onAdded(_entity: Entity): void {
+    protected onAdded(entity: Entity): void {
         // 子类可以重写此方法
     }
 
@@ -540,7 +540,7 @@ export abstract class EntitySystem implements ISystemBase {
      * 
      * @param entity 被移除的实体
      */
-    protected onRemoved(_entity: Entity): void {
+    protected onRemoved(entity: Entity): void {
         // 子类可以重写此方法
     }
 }
