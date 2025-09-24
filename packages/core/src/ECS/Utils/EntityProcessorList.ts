@@ -67,7 +67,7 @@ export class EntityProcessorList {
         // 清理处理器
         for (const processor of this._processors) {
             try {
-                processor.update();
+                processor.reset();
             } catch (error) {
                 EntityProcessorList._logger.error(`Error in processor ${getSystemInstanceTypeName(processor)}:`, error);
             }
