@@ -41,32 +41,49 @@ interface EventListenerRecord {
  * ```
  */
 export abstract class EntitySystem implements ISystemBase {
-    private _updateOrder: number = 0;
-    private _enabled: boolean = true;
-    private _performanceMonitor = PerformanceMonitor.instance;
+    private _updateOrder: number;
+    private _enabled: boolean;
+    private _performanceMonitor: PerformanceMonitor;
     private _systemName: string;
-    private _initialized: boolean = false;
+    private _initialized: boolean;
     private _matcher: Matcher;
-    private _trackedEntities: Set<Entity> = new Set();
-    private _eventListeners: EventListenerRecord[] = [];
-    private _frameEntities: Entity[] | null = null;
-    private _cachedEntities: Entity[] | null = null;
+    private _eventListeners: EventListenerRecord[];
+    private _scene: Scene | null;
+
+    /**
+     * 实体ID映射缓存
+     */
+    private _entityIdMap: Map<number, Entity> | null;
+    private _entityIdMapVersion: number;
+    private _entityIdMapSize: number;
+
+    /**
+     * 统一的实体缓存管理器
+     */
+    private _entityCache: {
+        frame: Entity[] | null;
+        persistent: Entity[] | null;
+        tracked: Set<Entity>;
+        invalidate(): void;
+        clearFrame(): void;
+        clearAll(): void;
+    };
 
     /**
      * 获取系统处理的实体列表
      */
     public get entities(): readonly Entity[] {
-        // 如果在update周期内，优先使用_frameEntities
-        if (this._frameEntities !== null) {
-            return this._frameEntities;
+        // 如果在update周期内，优先使用帧缓存
+        if (this._entityCache.frame !== null) {
+            return this._entityCache.frame;
         }
 
         // 否则使用持久缓存
-        if (this._cachedEntities === null) {
-            this._cachedEntities = this.queryEntities();
+        if (this._entityCache.persistent === null) {
+            this._entityCache.persistent = this.queryEntities();
         }
 
-        return this._cachedEntities;
+        return this._entityCache.persistent;
     }
 
     /**
@@ -102,11 +119,36 @@ export abstract class EntitySystem implements ISystemBase {
     }
 
     constructor(matcher?: Matcher) {
-        this._matcher = matcher ? matcher : Matcher.empty();
+        this._updateOrder = 0;
+        this._enabled = true;
+        this._performanceMonitor = PerformanceMonitor.instance;
         this._systemName = getSystemInstanceTypeName(this);
-    }
+        this._initialized = false;
+        this._matcher = matcher || Matcher.empty();
+        this._eventListeners = [];
+        this._scene = null;
 
-    private _scene: Scene | null = null;
+        this._entityIdMap = null;
+        this._entityIdMapVersion = -1;
+        this._entityIdMapSize = 0;
+
+        this._entityCache = {
+            frame: null,
+            persistent: null,
+            tracked: new Set<Entity>(),
+            invalidate() {
+                this.persistent = null;
+            },
+            clearFrame() {
+                this.frame = null;
+            },
+            clearAll() {
+                this.frame = null;
+                this.persistent = null;
+                this.tracked.clear();
+            }
+        };
+    }
 
     /**
      * 这个系统所属的场景
@@ -153,7 +195,7 @@ export abstract class EntitySystem implements ISystemBase {
         // 框架内部初始化：触发一次实体查询，以便正确跟踪现有实体
         if (this.scene) {
             // 清理缓存确保初始化时重新查询
-            this._cachedEntities = null;
+            this._entityCache.invalidate();
             this.queryEntities();
         }
 
@@ -175,7 +217,7 @@ export abstract class EntitySystem implements ISystemBase {
      * 当Scene中的实体发生变化时调用
      */
     public clearEntityCache(): void {
-        this._cachedEntities = null;
+        this._entityCache.invalidate();
     }
 
     /**
@@ -186,9 +228,12 @@ export abstract class EntitySystem implements ISystemBase {
     public reset(): void {
         this.scene = null;
         this._initialized = false;
-        this._trackedEntities.clear();
-        this._cachedEntities = null;
-        this._frameEntities = null;
+        this._entityCache.clearAll();
+
+        // 清理实体ID映射缓存
+        this._entityIdMap = null;
+        this._entityIdMapVersion = -1;
+        this._entityIdMapSize = 0;
 
         // 清理所有事件监听器
         this.cleanupEventListeners();
@@ -230,15 +275,15 @@ export abstract class EntitySystem implements ISystemBase {
      * 检查是否为单一条件查询
      */
     private isSingleCondition(condition: any): boolean {
-        const conditionCount =
-            (condition.all.length > 0 ? 1 : 0) +
-            (condition.any.length > 0 ? 1 : 0) +
-            (condition.none.length > 0 ? 1 : 0) +
-            (condition.tag !== undefined ? 1 : 0) +
-            (condition.name !== undefined ? 1 : 0) +
-            (condition.component !== undefined ? 1 : 0);
+        const flags =
+            ((condition.all.length > 0) ? 1 : 0) |
+            ((condition.any.length > 0) ? 2 : 0) |
+            ((condition.none.length > 0) ? 4 : 0) |
+            ((condition.tag !== undefined) ? 8 : 0) |
+            ((condition.name !== undefined) ? 16 : 0) |
+            ((condition.component !== undefined) ? 32 : 0);
 
-        return conditionCount === 1;
+        return flags !== 0 && (flags & (flags - 1)) === 0;
     }
 
     /**
@@ -330,65 +375,113 @@ export abstract class EntitySystem implements ISystemBase {
      * 提取实体ID集合
      */
     private extractEntityIds(entities: Entity[]): Set<number> {
+        const len = entities.length;
         const idSet = new Set<number>();
-        for (let i = 0; i < entities.length; i++) {
-            idSet.add(entities[i].id);
+
+        for (let i = 0; i < len; i = (i + 1) | 0) {
+            idSet.add(entities[i].id | 0);
         }
         return idSet;
     }
 
     /**
      * ID集合交集运算
-     * 
-     * 使用单次扫描算法，选择较小集合进行迭代以提高效率
      */
     private intersectIdSets(setA: Set<number>, setB: Set<number>): Set<number> {
-        const [smaller, larger] = setA.size <= setB.size ? [setA, setB] : [setB, setA];
+        let smaller: Set<number>, larger: Set<number>;
+
+        if (setA.size <= setB.size) {
+            smaller = setA;
+            larger = setB;
+        } else {
+            smaller = setB;
+            larger = setA;
+        }
+
         const result = new Set<number>();
-        
+
         for (const id of smaller) {
             if (larger.has(id)) {
                 result.add(id);
             }
         }
-        
+
         return result;
     }
 
     /**
      * ID集合差集运算
-     * 
-     * 使用单次扫描算法计算setA - setB
      */
     private differenceIdSets(setA: Set<number>, setB: Set<number>): Set<number> {
         const result = new Set<number>();
-        
+
         for (const id of setA) {
             if (!setB.has(id)) {
                 result.add(id);
             }
         }
-        
+
         return result;
     }
 
     /**
-     * 从ID集合构建Entity数组
-     * 
-     * 先构建ID到Entity的映射，然后根据ID集合构建结果数组
+     * 获取或构建实体ID映射
      */
-    private idSetToEntityArray(idSet: Set<number>, allEntities: Entity[]): Entity[] {
-        const entityMap = new Map<number, Entity>();
-        for (const entity of allEntities) {
-            entityMap.set(entity.id, entity);
+    private getEntityIdMap(allEntities: Entity[]): Map<number, Entity> {
+        const currentVersion = this.scene?.querySystem?.version ?? 0;
+        if (this._entityIdMap !== null &&
+            this._entityIdMapVersion === currentVersion) {
+            return this._entityIdMap;
         }
 
-        const result: Entity[] = [];
+        return this.rebuildEntityIdMap(allEntities, currentVersion);
+    }
+
+    /**
+     * 重建实体ID映射
+     */
+    private rebuildEntityIdMap(allEntities: Entity[], version: number): Map<number, Entity> {
+        let entityMap = this._entityIdMap;
+
+        if (!entityMap) {
+            entityMap = new Map<number, Entity>();
+        } else {
+            entityMap.clear();
+        }
+
+        const len = allEntities.length;
+        for (let i = 0; i < len; i = (i + 1) | 0) {
+            const entity = allEntities[i];
+            entityMap.set(entity.id | 0, entity);
+        }
+
+        this._entityIdMap = entityMap;
+        this._entityIdMapVersion = version;
+        this._entityIdMapSize = len;
+
+        return entityMap;
+    }
+
+    /**
+     * 从ID集合构建Entity数组
+     */
+    private idSetToEntityArray(idSet: Set<number>, allEntities: Entity[]): Entity[] {
+        const entityMap = this.getEntityIdMap(allEntities);
+
+        const size = idSet.size;
+        const result = new Array(size);
+        let index = 0;
+
         for (const id of idSet) {
             const entity = entityMap.get(id);
-            if (entity) {
-                result.push(entity);
+            if (entity !== undefined) {
+                result[index] = entity;
+                index = (index + 1) | 0;
             }
+        }
+
+        if (index < size) {
+            result.length = index;
         }
 
         return result;
@@ -417,10 +510,10 @@ export abstract class EntitySystem implements ISystemBase {
         try {
             this.onBegin();
             // 查询实体并存储到帧缓存中
-            this._frameEntities = this.queryEntities();
-            entityCount = this._frameEntities.length;
+            this._entityCache.frame = this.queryEntities();
+            entityCount = this._entityCache.frame.length;
 
-            this.process(this._frameEntities);
+            this.process(this._entityCache.frame);
         } finally {
             this._performanceMonitor.endMonitoring(this._systemName, startTime, entityCount);
         }
@@ -439,14 +532,14 @@ export abstract class EntitySystem implements ISystemBase {
 
         try {
             // 使用缓存的实体列表，避免重复查询
-            const entities = this._frameEntities || [];
+            const entities = this._entityCache.frame || [];
             entityCount = entities.length;
             this.lateProcess(entities);
             this.onEnd();
         } finally {
             this._performanceMonitor.endMonitoring(`${this._systemName}_Late`, startTime, entityCount);
             // 清理帧缓存
-            this._frameEntities = null;
+            this._entityCache.clearFrame();
         }
     }
 
@@ -549,17 +642,17 @@ export abstract class EntitySystem implements ISystemBase {
 
         // 检查新增的实体
         for (const entity of currentEntities) {
-            if (!this._trackedEntities.has(entity)) {
-                this._trackedEntities.add(entity);
+            if (!this._entityCache.tracked.has(entity)) {
+                this._entityCache.tracked.add(entity);
                 this.onAdded(entity);
                 hasChanged = true;
             }
         }
 
         // 检查移除的实体
-        for (const entity of this._trackedEntities) {
+        for (const entity of this._entityCache.tracked) {
             if (!currentSet.has(entity)) {
-                this._trackedEntities.delete(entity);
+                this._entityCache.tracked.delete(entity);
                 this.onRemoved(entity);
                 hasChanged = true;
             }
@@ -567,7 +660,7 @@ export abstract class EntitySystem implements ISystemBase {
 
         // 如果实体发生了变化，使缓存失效
         if (hasChanged) {
-            this._cachedEntities = null;
+            this._entityCache.invalidate();
         }
     }
 
