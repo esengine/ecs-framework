@@ -13,7 +13,9 @@
   "references": [
     { "path": "./packages/core" },
     { "path": "./packages/math" },
-    { "path": "./packages/ecs-network" }
+    { "path": "./packages/network-client" },
+    { "path": "./packages/network-server" },
+    { "path": "./packages/network-shared" }
   ],
   "files": []
 }
