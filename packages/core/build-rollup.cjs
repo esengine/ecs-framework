@@ -64,12 +64,7 @@ function generatePackageJson() {
             'index.umd.js.map',
             'index.es5.js',
             'index.es5.js.map',
-            'index.d.ts',
-            'README.md',
-            'LICENSE',
-            'SECURITY.md',
-            'COCOS_USAGE.md',
-            '.npmignore'
+            'index.d.ts'
         ],
         keywords: [
             'ecs',
@@ -96,11 +91,7 @@ function generatePackageJson() {
 
 function copyFiles() {
     const filesToCopy = [
-        { src: './README.md', dest: './dist/README.md' },
-        { src: './LICENSE', dest: './dist/LICENSE' },
-        { src: './SECURITY.md', dest: './dist/SECURITY.md' },
-        { src: './COCOS_USAGE.md', dest: './dist/COCOS_USAGE.md' },
-        { src: './.npmignore', dest: './dist/.npmignore' }
+        // 移除不存在的文件以避免警告
     ];
 
     filesToCopy.forEach(({ src, dest }) => {
@@ -111,6 +102,10 @@ function copyFiles() {
             console.log(`  ⚠️  文件不存在: ${src}`);
         }
     });
+
+    if (filesToCopy.length === 0) {
+        console.log('  ℹ️  没有需要复制的文件');
+    }
 }
 
 function showBuildResults() {

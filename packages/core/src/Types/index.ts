@@ -25,7 +25,10 @@ export interface IComponent {
     onEnabled(): void;
     /** 组件禁用时的回调 */
     onDisabled(): void;
-    /** 更新组件 */
+    /**
+     * 更新组件
+     * @deprecated 不符合ECS架构规范，建议使用EntitySystem来处理更新逻辑
+     */
     update(): void;
 }
 

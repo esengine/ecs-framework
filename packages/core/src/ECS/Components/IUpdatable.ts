@@ -1,6 +1,6 @@
 /**
  * 可更新接口
- * 当添加到组件时，只要组件和实体被启用，就会在每帧调用update方法
+ * @deprecated 不符合ECS架构规范，建议使用EntitySystem来处理更新逻辑而非在组件中实现
  */
 export interface IUpdatable {
     enabled: boolean;

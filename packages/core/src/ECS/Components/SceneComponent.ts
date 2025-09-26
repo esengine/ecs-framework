@@ -49,6 +49,7 @@ export class SceneComponent {
 
     /**
      * 每帧更新
+     * @deprecated 不符合ECS架构规范，建议使用EntitySystem来处理场景级更新逻辑
      */
     public update(): void {
     }

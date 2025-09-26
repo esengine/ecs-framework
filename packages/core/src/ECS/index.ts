@@ -8,8 +8,6 @@ export { Scene } from './Scene';
 export { IScene, ISceneFactory, ISceneConfig } from './IScene';
 export { World, IWorldConfig } from './World';
 export { WorldManager, IWorldManagerConfig } from './WorldManager';
-export { EntityManager, EntityQueryBuilder } from './Core/EntityManager';
 export * from './Core/Events';
 export * from './Core/Query';
-export * from './Core/Performance';
 export * from './Core/Storage'; 

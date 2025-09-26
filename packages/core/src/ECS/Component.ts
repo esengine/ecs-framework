@@ -1,4 +1,5 @@
 import type { IComponent } from '../Types';
+import type { Entity } from './Entity'; 
 
 /**
  * 游戏组件基类
@@ -146,14 +147,10 @@ export abstract class Component implements IComponent {
 
     /**
      * 更新组件
-     * 
-     * 每帧调用，用于更新组件的逻辑。
-     * 子类应该重写此方法来实现具体的更新逻辑。
+     *
+     * @deprecated 不符合ECS架构规范，建议使用EntitySystem来处理更新逻辑
      */
     public update(): void {
     }
     
 }
-
-// 避免循环引用，在文件末尾导入Entity
-import type { Entity } from './Entity'; 

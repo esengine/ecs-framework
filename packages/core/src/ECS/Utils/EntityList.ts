@@ -220,7 +220,7 @@ export class EntityList {
      * @param componentType 组件类型
      * @returns 找到的所有实体数组
      */
-    public findEntitiesWithComponent<T extends Component>(componentType: new (...args: unknown[]) => T): Entity[] {
+    public findEntitiesWithComponent<T extends Component>(componentType: new (...args: any[]) => T): Entity[] {
         const result: Entity[] = [];
         
         for (const entity of this.buffer) {
