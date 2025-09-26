@@ -41,36 +41,36 @@ export class EventBus implements IEventBus {
      * 发射事件
      * @param eventType 事件类型
      * @param data 事件数据
+     * @param enhance 是否增强事件数据（添加timestamp、eventId等），默认false提升性能
      */
-    public emit<T>(eventType: string, data: T): void {
+    public emit<T>(eventType: string, data: T, enhance: boolean = false): void {
         this.validateEventType(eventType);
-        
-        // 增强事件数据
-        const enhancedData = this.enhanceEventData(eventType, data);
-        
+
+        const finalData = enhance ? this.enhanceEventData(eventType, data) : data;
+
         if (this.isDebugMode) {
-            EventBus._logger.info(`发射事件: ${eventType}`, enhancedData);
+            EventBus._logger.info(`发射事件: ${eventType}`, finalData);
         }
-        
-        this.eventSystem.emitSync(eventType, enhancedData);
+
+        this.eventSystem.emitSync(eventType, finalData);
     }
     
     /**
      * 异步发射事件
      * @param eventType 事件类型
      * @param data 事件数据
+     * @param enhance 是否增强事件数据（添加timestamp、eventId等），默认false提升性能
      */
-    public async emitAsync<T>(eventType: string, data: T): Promise<void> {
+    public async emitAsync<T>(eventType: string, data: T, enhance: boolean = false): Promise<void> {
         this.validateEventType(eventType);
-        
-        // 增强事件数据
-        const enhancedData = this.enhanceEventData(eventType, data);
-        
+
+        const finalData = enhance ? this.enhanceEventData(eventType, data) : data;
+
         if (this.isDebugMode) {
-            EventBus._logger.info(`发射异步事件: ${eventType}`, enhancedData);
+            EventBus._logger.info(`发射异步事件: ${eventType}`, finalData);
         }
-        
-        await this.eventSystem.emit(eventType, enhancedData);
+
+        await this.eventSystem.emit(eventType, finalData);
     }
     
     /**
@@ -265,7 +265,7 @@ export class EventBus implements IEventBus {
     public emitEntityCreated(entityData: IEntityEventData): void {
         this.emit(ECSEventType.ENTITY_CREATED, entityData);
     }
-    
+
     /**
      * 发射实体销毁事件
      * @param entityData 实体事件数据
@@ -273,7 +273,7 @@ export class EventBus implements IEventBus {
     public emitEntityDestroyed(entityData: IEntityEventData): void {
         this.emit(ECSEventType.ENTITY_DESTROYED, entityData);
     }
-    
+
     /**
      * 发射组件添加事件
      * @param componentData 组件事件数据
@@ -281,7 +281,7 @@ export class EventBus implements IEventBus {
     public emitComponentAdded(componentData: IComponentEventData): void {
         this.emit(ECSEventType.COMPONENT_ADDED, componentData);
     }
-    
+
     /**
      * 发射组件移除事件
      * @param componentData 组件事件数据
@@ -289,7 +289,7 @@ export class EventBus implements IEventBus {
     public emitComponentRemoved(componentData: IComponentEventData): void {
         this.emit(ECSEventType.COMPONENT_REMOVED, componentData);
     }
-    
+
     /**
      * 发射系统添加事件
      * @param systemData 系统事件数据
@@ -297,7 +297,7 @@ export class EventBus implements IEventBus {
     public emitSystemAdded(systemData: ISystemEventData): void {
         this.emit(ECSEventType.SYSTEM_ADDED, systemData);
     }
-    
+
     /**
      * 发射系统移除事件
      * @param systemData 系统事件数据
@@ -305,7 +305,7 @@ export class EventBus implements IEventBus {
     public emitSystemRemoved(systemData: ISystemEventData): void {
         this.emit(ECSEventType.SYSTEM_REMOVED, systemData);
     }
-    
+
     /**
      * 发射场景变化事件
      * @param sceneData 场景事件数据
@@ -313,7 +313,7 @@ export class EventBus implements IEventBus {
     public emitSceneChanged(sceneData: ISceneEventData): void {
         this.emit(ECSEventType.SCENE_ACTIVATED, sceneData);
     }
-    
+
     /**
      * 发射性能警告事件
      * @param performanceData 性能事件数据
@@ -375,16 +375,15 @@ export class EventBus implements IEventBus {
     // 私有方法
     
     /**
-     * 验证事件类型
+     * 验证事件类型（仅在debug模式下执行，提升性能）
      * @param eventType 事件类型
      */
     private validateEventType(eventType: string): void {
-        if (!EventTypeValidator.isValid(eventType)) {
-            if (this.isDebugMode) {
+        // 只在debug模式下进行验证，提升生产环境性能
+        if (this.isDebugMode) {
+            if (!EventTypeValidator.isValid(eventType)) {
                 EventBus._logger.warn(`未知事件类型: ${eventType}`);
-            }
-            // 在调试模式下添加自定义事件类型
-            if (this.isDebugMode) {
+                // 在调试模式下添加自定义事件类型
                 EventTypeValidator.addCustomType(eventType);
             }
         }

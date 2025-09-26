@@ -273,7 +273,7 @@ describe('EventBus - 事件总线测试', () => {
                 timestamp: Date.now()
             };
 
-            eventBus.emitEntityCreated(entityData);
+            eventBus.emit(ECSEventType.ENTITY_CREATED, entityData, true);
 
             expect(receivedData).not.toBeNull();
             expect(receivedData!.entityId).toBe(1);
@@ -370,7 +370,7 @@ describe('EventBus - 事件总线测试', () => {
             });
 
             const originalData = { message: 'test' };
-            eventBus.emit('enhanced:event', originalData);
+            eventBus.emit('enhanced:event', originalData, true);
 
             expect(receivedData.message).toBe('test');
             expect(receivedData.timestamp).toBeDefined();
