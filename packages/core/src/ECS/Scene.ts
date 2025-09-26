@@ -343,7 +343,14 @@ export class Scene implements IScene {
     public removeEntityProcessor(processor: EntitySystem) {
         this.entityProcessors.remove(processor);
         processor.reset();
-        processor.scene = null;
+    }
+
+    /**
+     * 从场景中删除系统（removeEntityProcessor的别名）
+     * @param system 系统
+     */
+    public removeSystem(system: EntitySystem) {
+        this.removeEntityProcessor(system);
     }
 
     /**
