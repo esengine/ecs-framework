@@ -12,11 +12,14 @@ export class EntityList {
     // 索引映射，提升查找性能
     private _idToEntity = new Map<number, Entity>();
     private _nameToEntities = new Map<string, Entity[]>();
-    
+
     // 延迟操作队列
     private _entitiesToAdd: Entity[] = [];
     private _entitiesToRemove: Entity[] = [];
     private _isUpdating = false;
+
+    // 是否启用实体直接更新
+    private _enableEntityDirectUpdate = false;
 
     public get count(): number {
         return this.buffer.length;
@@ -24,6 +27,13 @@ export class EntityList {
 
     constructor(scene: any) {
         this._scene = scene;
+    }
+
+    /**
+     * 设置是否启用实体直接更新
+     */
+    public setEnableEntityDirectUpdate(enabled: boolean): void {
+        this._enableEntityDirectUpdate = enabled;
     }
 
     /**
@@ -137,22 +147,25 @@ export class EntityList {
     }
 
     /**
-     * 更新所有实体
+     * 更新实体列表和实体
      */
     public update(): void {
         this._isUpdating = true;
-        
+
         try {
-            for (let i = 0; i < this.buffer.length; i++) {
-                const entity = this.buffer[i];
-                if (entity.enabled && !entity.isDestroyed) {
-                    entity.update();
+            // 只有启用实体直接更新时才遍历更新实体
+            if (this._enableEntityDirectUpdate) {
+                for (let i = 0; i < this.buffer.length; i++) {
+                    const entity = this.buffer[i];
+                    if (entity.enabled && !entity.isDestroyed) {
+                        entity.update();
+                    }
                 }
             }
         } finally {
             this._isUpdating = false;
         }
-        
+
         // 处理延迟操作
         this.updateLists();
     }

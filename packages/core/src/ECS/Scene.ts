@@ -95,6 +95,11 @@ export class Scene implements IScene {
             this.name = config.name;
         }
 
+        // 配置实体直接更新选项
+        if (config?.enableEntityDirectUpdate !== undefined) {
+            this.entities.setEnableEntityDirectUpdate(config.enableEntityDirectUpdate);
+        }
+
         if (!Entity.eventBus) {
             Entity.eventBus = new EventBus(false);
         }
@@ -172,7 +177,7 @@ export class Scene implements IScene {
     }
 
     /**
-     * 更新场景，更新实体组件、实体处理器等
+     * 更新场景
      */
     public update() {
         // 更新实体列表
@@ -182,10 +187,10 @@ export class Scene implements IScene {
         if (this.entityProcessors != null)
             this.entityProcessors.update();
 
-        // 更新实体组
+        // 更新实体
         this.entities.update();
 
-        // 更新实体处理器的后处理方法
+        // 更新实体处理器后处理
         if (this.entityProcessors != null)
             this.entityProcessors.lateUpdate();
     }
