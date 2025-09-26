@@ -45,15 +45,17 @@ export abstract class Component implements IComponent {
     
     /**
      * 组件启用状态
-     * 
+     *
      * 控制组件是否参与更新循环。
      */
     private _enabled: boolean = true;
     
     /**
      * 更新顺序
-     * 
+     *
      * 决定组件在更新循环中的执行顺序。
+     *
+     * @see EntitySystem
      */
     private _updateOrder: number = 0;
 
@@ -68,9 +70,10 @@ export abstract class Component implements IComponent {
 
     /**
      * 获取组件启用状态
-     * 
+     *
      * 组件的实际启用状态取决于自身状态和所属实体的状态。
-     * 
+     *
+     * @deprecated 不符合ECS架构规范，建议自己实现DisabledComponent标记组件替代
      * @returns 如果组件和所属实体都启用则返回true
      */
     public get enabled(): boolean {
@@ -79,9 +82,10 @@ export abstract class Component implements IComponent {
 
     /**
      * 设置组件启用状态
-     * 
+     *
      * 当状态改变时会触发相应的生命周期回调。
-     * 
+     *
+     * @deprecated 不符合ECS架构规范，建议自己实现DisabledComponent标记组件替代
      * @param value - 新的启用状态
      */
     public set enabled(value: boolean) {
@@ -97,7 +101,9 @@ export abstract class Component implements IComponent {
 
     /**
      * 获取更新顺序
-     * 
+     *
+     * @deprecated 不符合ECS架构规范，更新顺序应该由EntitySystem管理
+     * @see EntitySystem
      * @returns 组件的更新顺序值
      */
     public get updateOrder(): number {
@@ -106,7 +112,9 @@ export abstract class Component implements IComponent {
 
     /**
      * 设置更新顺序
-     * 
+     *
+     * @deprecated 不符合ECS架构规范，更新顺序应该由EntitySystem管理
+     * @see EntitySystem
      * @param value - 新的更新顺序值
      */
     public set updateOrder(value: number) {
