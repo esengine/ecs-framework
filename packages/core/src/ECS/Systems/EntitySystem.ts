@@ -49,12 +49,13 @@ export abstract class EntitySystem implements ISystemBase {
     private _matcher: Matcher;
     private _trackedEntities: Set<Entity> = new Set();
     private _eventListeners: EventListenerRecord[] = [];
+    private _frameEntities: Entity[] | null = null;
 
     /**
-     * 获取系统处理的实体列表（动态查询）
+     * 获取系统处理的实体列表
      */
     public get entities(): readonly Entity[] {
-        return this.queryEntities();
+        return this._frameEntities || [];
     }
 
     /**
@@ -381,8 +382,6 @@ export abstract class EntitySystem implements ISystemBase {
 
     /**
      * 更新系统
-     * 
-     * 在每帧调用，处理系统的主要逻辑。
      */
     public update(): void {
         if (!this._enabled || !this.onCheckProcessing()) {
@@ -394,11 +393,11 @@ export abstract class EntitySystem implements ISystemBase {
 
         try {
             this.onBegin();
-            // 动态查询实体并处理
-            const entities = this.queryEntities();
-            entityCount = entities.length;
+            // 查询实体并存储到帧缓存中
+            this._frameEntities = this.queryEntities();
+            entityCount = this._frameEntities.length;
 
-            this.process(entities);
+            this.process(this._frameEntities);
         } finally {
             this._performanceMonitor.endMonitoring(this._systemName, startTime, entityCount);
         }
@@ -406,8 +405,6 @@ export abstract class EntitySystem implements ISystemBase {
 
     /**
      * 后期更新系统
-     * 
-     * 在所有系统的update方法执行完毕后调用。
      */
     public lateUpdate(): void {
         if (!this._enabled || !this.onCheckProcessing()) {
@@ -418,13 +415,15 @@ export abstract class EntitySystem implements ISystemBase {
         let entityCount = 0;
 
         try {
-            // 动态查询实体并处理
-            const entities = this.queryEntities();
+            // 使用缓存的实体列表，避免重复查询
+            const entities = this._frameEntities || [];
             entityCount = entities.length;
             this.lateProcess(entities);
             this.onEnd();
         } finally {
             this._performanceMonitor.endMonitoring(`${this._systemName}_Late`, startTime, entityCount);
+            // 清理帧缓存
+            this._frameEntities = null;
         }
     }
 
