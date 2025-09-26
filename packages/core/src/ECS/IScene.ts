@@ -89,6 +89,11 @@ export interface IScene {
     createEntity(name: string): Entity;
 
     /**
+     * 清除所有EntitySystem的实体缓存
+     */
+    clearSystemEntityCaches(): void;
+
+    /**
      * 添加实体
      */
     addEntity(entity: Entity, deferCacheClear?: boolean): Entity;

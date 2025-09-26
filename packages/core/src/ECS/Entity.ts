@@ -373,6 +373,7 @@ export class Entity {
         if (this.scene && this.scene.querySystem) {
             this.scene.querySystem.removeEntity(this);
             this.scene.querySystem.addEntity(this);
+            this.scene.clearSystemEntityCaches();
         }
 
         return component;
@@ -523,6 +524,7 @@ export class Entity {
         if (this.scene && this.scene.querySystem) {
             this.scene.querySystem.removeEntity(this);
             this.scene.querySystem.addEntity(this);
+            this.scene.clearSystemEntityCaches();
         }
     }
 

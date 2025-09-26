@@ -50,12 +50,23 @@ export abstract class EntitySystem implements ISystemBase {
     private _trackedEntities: Set<Entity> = new Set();
     private _eventListeners: EventListenerRecord[] = [];
     private _frameEntities: Entity[] | null = null;
+    private _cachedEntities: Entity[] | null = null;
 
     /**
      * 获取系统处理的实体列表
      */
     public get entities(): readonly Entity[] {
-        return this._frameEntities || [];
+        // 如果在update周期内，优先使用_frameEntities
+        if (this._frameEntities !== null) {
+            return this._frameEntities;
+        }
+
+        // 否则使用持久缓存
+        if (this._cachedEntities === null) {
+            this._cachedEntities = this.queryEntities();
+        }
+
+        return this._cachedEntities;
     }
 
     /**
@@ -128,7 +139,7 @@ export abstract class EntitySystem implements ISystemBase {
 
     /**
      * 系统初始化（框架调用）
-     * 
+     *
      * 在系统创建时调用。框架内部使用，用户不应直接调用。
      */
     public initialize(): void {
@@ -141,6 +152,8 @@ export abstract class EntitySystem implements ISystemBase {
 
         // 框架内部初始化：触发一次实体查询，以便正确跟踪现有实体
         if (this.scene) {
+            // 清理缓存确保初始化时重新查询
+            this._cachedEntities = null;
             this.queryEntities();
         }
 
@@ -158,6 +171,14 @@ export abstract class EntitySystem implements ISystemBase {
     }
 
     /**
+     * 清除实体缓存（内部使用）
+     * 当Scene中的实体发生变化时调用
+     */
+    public clearEntityCache(): void {
+        this._cachedEntities = null;
+    }
+
+    /**
      * 重置系统状态
      *
      * 当系统从场景中移除时调用，重置初始化状态以便重新添加时能正确初始化。
@@ -166,6 +187,8 @@ export abstract class EntitySystem implements ISystemBase {
         this.scene = null;
         this._initialized = false;
         this._trackedEntities.clear();
+        this._cachedEntities = null;
+        this._frameEntities = null;
 
         // 清理所有事件监听器
         this.cleanupEventListeners();
@@ -522,12 +545,14 @@ export abstract class EntitySystem implements ISystemBase {
      */
     private updateEntityTracking(currentEntities: Entity[]): void {
         const currentSet = new Set(currentEntities);
+        let hasChanged = false;
 
         // 检查新增的实体
         for (const entity of currentEntities) {
             if (!this._trackedEntities.has(entity)) {
                 this._trackedEntities.add(entity);
                 this.onAdded(entity);
+                hasChanged = true;
             }
         }
 
@@ -536,7 +561,13 @@ export abstract class EntitySystem implements ISystemBase {
             if (!currentSet.has(entity)) {
                 this._trackedEntities.delete(entity);
                 this.onRemoved(entity);
+                hasChanged = true;
             }
+        }
+
+        // 如果实体发生了变化，使缓存失效
+        if (hasChanged) {
+            this._cachedEntities = null;
         }
     }
 

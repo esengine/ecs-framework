@@ -208,6 +208,16 @@ export class Scene implements IScene {
     }
 
     /**
+     * 清除所有EntitySystem的实体缓存
+     * 当实体或组件发生变化时调用
+     */
+    public clearSystemEntityCaches(): void {
+        for (const system of this.entityProcessors.processors) {
+            system.clearEntityCache();
+        }
+    }
+
+    /**
      * 在场景的实体列表中添加一个实体
      * @param entity 要添加的实体
      * @param deferCacheClear 是否延迟缓存清理（用于批量操作）
@@ -215,13 +225,18 @@ export class Scene implements IScene {
     public addEntity(entity: Entity, deferCacheClear: boolean = false) {
         this.entities.add(entity);
         entity.scene = this;
-        
+
         // 将实体添加到查询系统（可延迟缓存清理）
         this.querySystem.addEntity(entity, deferCacheClear);
-        
+
+        // 清除系统缓存以确保系统能及时发现新实体
+        if (!deferCacheClear) {
+            this.clearSystemEntityCaches();
+        }
+
         // 触发实体添加事件
         this.eventSystem.emitSync('entity:added', { entity, scene: this });
-        
+
         return entity;
     }
 
