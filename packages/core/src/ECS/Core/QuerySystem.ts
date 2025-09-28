@@ -229,9 +229,9 @@ export class QuerySystem {
 
     /**
      * 从查询系统移除实体
-     * 
+     *
      * 从查询系统中移除指定实体，并清理相关索引。
-     * 
+     *
      * @param entity 要移除的实体
      */
     public removeEntity(entity: Entity): void {
@@ -244,10 +244,45 @@ export class QuerySystem {
             this.archetypeSystem.removeEntity(entity);
 
             this.clearQueryCache();
-            
+
             // 更新版本号
             this._version++;
         }
+    }
+
+    /**
+     * 更新实体在查询系统中的索引
+     *
+     * 当实体的组件组合发生变化时调用此方法，高效地更新实体在查询系统中的索引。
+     *
+     * @param entity 要更新的实体
+     */
+    public updateEntity(entity: Entity): void {
+        // 检查实体是否在查询系统中
+        if (!this.entities.includes(entity)) {
+            // 如果实体不在系统中，直接添加
+            this.addEntity(entity);
+            return;
+        }
+
+        // 先从索引中移除实体的旧状态
+        this.removeEntityFromIndexes(entity);
+
+        // 更新ArchetypeSystem中的实体状态
+        this.archetypeSystem.updateEntity(entity);
+
+        // 更新ComponentIndexManager中的实体状态
+        this.componentIndexManager.removeEntity(entity);
+        this.componentIndexManager.addEntity(entity);
+
+        // 重新添加实体到索引（基于新的组件状态）
+        this.addEntityToIndexes(entity);
+
+        // 清理查询缓存，因为实体组件状态已改变
+        this.clearQueryCache();
+
+        // 更新版本号以使缓存失效
+        this._version++;
     }
 
     /**

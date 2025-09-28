@@ -844,4 +844,158 @@ describe('QuerySystem - 查询系统测试', () => {
             expect(archetype === undefined || typeof archetype === 'object').toBe(true);
         });
     });
+
+    describe('组件变动同步问题测试', () => {
+        test('没有Scene时组件变动不会自动同步（符合ECS架构）', () => {
+            // 创建一个独立的QuerySystem和实体
+            const independentQuerySystem = new QuerySystem();
+            const testEntity = new Entity('TestEntity', 9999);
+
+            // 确保实体没有scene
+            expect(testEntity.scene).toBe(null);
+
+            // 添加实体到查询系统
+            independentQuerySystem.addEntity(testEntity);
+
+            // 初始查询：应该没有PositionComponent的实体
+            const result1 = independentQuerySystem.queryAll(PositionComponent);
+            expect(result1.entities.length).toBe(0);
+
+            // 添加组件，但没有Scene，不会自动同步
+            testEntity.addComponent(new PositionComponent(100, 200));
+
+            // 查询系统不知道组件变化（这是预期行为）
+            const result2 = independentQuerySystem.queryAll(PositionComponent);
+            expect(result2.entities.length).toBe(0); // 查询系统没有自动更新
+            expect(testEntity.hasComponent(PositionComponent)).toBe(true); // 但实体确实有这个组件
+
+            // 手动同步后应该能找到
+            independentQuerySystem.updateEntity(testEntity);
+            const result3 = independentQuerySystem.queryAll(PositionComponent);
+            expect(result3.entities.length).toBe(1);
+            expect(result3.entities[0]).toBe(testEntity);
+        });
+
+        test('有Scene但没有querySystem时组件变动应该安全', () => {
+            const testEntity = new Entity('TestEntity2', 9998);
+
+            // 模拟一个没有querySystem的scene
+            const mockScene = {
+                querySystem: null,
+                componentStorageManager: null,
+                clearSystemEntityCaches: jest.fn()
+            };
+            testEntity.scene = mockScene as any;
+
+            // 添加组件应该不会抛出错误
+            expect(() => {
+                testEntity.addComponent(new PositionComponent(100, 200));
+            }).not.toThrow();
+
+            expect(testEntity.hasComponent(PositionComponent)).toBe(true);
+        });
+
+        test('有Scene时ArchetypeSystem组件变动能正确同步', () => {
+            const independentQuerySystem = new QuerySystem();
+            const testEntity = new Entity('ArchetypeTestEntity', 9997);
+
+            // 模拟Scene环境
+            const mockScene = {
+                querySystem: independentQuerySystem,
+                componentStorageManager: null,
+                clearSystemEntityCaches: jest.fn()
+            };
+            testEntity.scene = mockScene as any;
+
+            // 添加初始组件组合
+            testEntity.addComponent(new PositionComponent(0, 0));
+            independentQuerySystem.addEntity(testEntity);
+
+            // 获取初始archetype
+            const initialArchetype = independentQuerySystem.getEntityArchetype(testEntity);
+            expect(initialArchetype).toBeDefined();
+
+            // 添加另一个组件，通过Scene自动同步
+            testEntity.addComponent(new VelocityComponent(1, 1));
+
+            // 检查是否已移动到新的archetype
+            const currentArchetype = independentQuerySystem.getEntityArchetype(testEntity);
+
+            // 实体组件组合已改变，archetype系统应该已更新
+            const posVelQuery = independentQuerySystem.queryAll(PositionComponent, VelocityComponent);
+
+            console.log('有Scene时组件变动查询结果:', posVelQuery.entities.length);
+            console.log('实体是否有Position组件:', testEntity.hasComponent(PositionComponent));
+            console.log('实体是否有Velocity组件:', testEntity.hasComponent(VelocityComponent));
+
+            expect(posVelQuery.entities.length).toBe(1);
+            expect(posVelQuery.entities[0]).toBe(testEntity);
+            expect(testEntity.hasComponent(PositionComponent)).toBe(true);
+            expect(testEntity.hasComponent(VelocityComponent)).toBe(true);
+
+            // 验证archetype确实已更新
+            if (initialArchetype && currentArchetype) {
+                expect(currentArchetype.id).not.toBe(initialArchetype.id);
+            }
+        });
+
+        test('有Scene时removeAllComponents应该正确同步QuerySystem', () => {
+            const independentQuerySystem = new QuerySystem();
+            const testEntity = new Entity('RemoveAllTestEntity', 9996);
+
+            // 模拟Scene环境
+            const mockScene = {
+                querySystem: independentQuerySystem,
+                componentStorageManager: null,
+                clearSystemEntityCaches: jest.fn()
+            };
+            testEntity.scene = mockScene as any;
+
+            // 添加多个组件
+            testEntity.addComponent(new PositionComponent(10, 20));
+            testEntity.addComponent(new VelocityComponent(1, 1));
+            testEntity.addComponent(new HealthComponent(100));
+            independentQuerySystem.addEntity(testEntity);
+
+            // 验证实体有组件且能被查询到
+            const result1 = independentQuerySystem.queryAll(PositionComponent);
+            expect(result1.entities.length).toBe(1);
+            expect(result1.entities[0]).toBe(testEntity);
+
+            // 移除所有组件
+            testEntity.removeAllComponents();
+
+            // 查询系统应该知道组件已全部移除
+            const result2 = independentQuerySystem.queryAll(PositionComponent);
+            const result3 = independentQuerySystem.queryAll(VelocityComponent);
+            const result4 = independentQuerySystem.queryAll(HealthComponent);
+
+            expect(result2.entities.length).toBe(0);
+            expect(result3.entities.length).toBe(0);
+            expect(result4.entities.length).toBe(0);
+            expect(testEntity.components.length).toBe(0);
+        });
+
+        test('手动同步updateEntity应该工作正常', () => {
+            const independentQuerySystem = new QuerySystem();
+            const testEntity = new Entity('ManualSyncTestEntity', 9995);
+
+            independentQuerySystem.addEntity(testEntity);
+
+            // 添加组件但没有Scene，不会自动同步
+            testEntity.addComponent(new PositionComponent(10, 20));
+
+            // 查询系统还不知道
+            let result = independentQuerySystem.queryAll(PositionComponent);
+            expect(result.entities.length).toBe(0);
+
+            // 手动同步
+            independentQuerySystem.updateEntity(testEntity);
+
+            // 现在应该能找到
+            result = independentQuerySystem.queryAll(PositionComponent);
+            expect(result.entities.length).toBe(1);
+            expect(result.entities[0]).toBe(testEntity);
+        });
+    });
 });

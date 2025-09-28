@@ -71,6 +71,19 @@ export class Entity {
      * 用于发射组件相关事件
      */
     public static eventBus: EventBus | null = null;
+
+    /**
+     * 通知Scene中的QuerySystem实体组件发生变动
+     *
+     * @param entity 发生组件变动的实体
+     */
+    private static notifyQuerySystems(entity: Entity): void {
+        // 只通知Scene中的QuerySystem
+        if (entity.scene && entity.scene.querySystem) {
+            entity.scene.querySystem.updateEntity(entity);
+            entity.scene.clearSystemEntityCaches();
+        }
+    }
     
     /**
      * 实体名称
@@ -369,12 +382,9 @@ export class Entity {
             });
         }
         
-        
-        if (this.scene && this.scene.querySystem) {
-            this.scene.querySystem.removeEntity(this);
-            this.scene.querySystem.addEntity(this);
-            this.scene.clearSystemEntityCaches();
-        }
+
+        // 通知所有相关的QuerySystem组件已变动
+        Entity.notifyQuerySystems(this);
 
         return component;
     }
@@ -521,11 +531,8 @@ export class Entity {
         
         component.entity = null as any;
 
-        if (this.scene && this.scene.querySystem) {
-            this.scene.querySystem.removeEntity(this);
-            this.scene.querySystem.addEntity(this);
-            this.scene.clearSystemEntityCaches();
-        }
+        // 通知所有相关的QuerySystem组件已变动
+        Entity.notifyQuerySystems(this);
     }
 
     /**
@@ -564,8 +571,11 @@ export class Entity {
             
             component.entity = null as any;
         }
-        
+
         this.components.length = 0;
+
+        // 通知所有相关的QuerySystem组件已全部移除
+        Entity.notifyQuerySystems(this);
     }
 
     /**

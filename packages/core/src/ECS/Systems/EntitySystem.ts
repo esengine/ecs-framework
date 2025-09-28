@@ -1,6 +1,6 @@
 import { Entity } from '../Entity';
 import { PerformanceMonitor } from '../../Utils/PerformanceMonitor';
-import { Matcher } from '../Utils/Matcher';
+import { Matcher, type QueryCondition } from '../Utils/Matcher';
 import type { Scene } from '../Scene';
 import type { ISystemBase } from '../../Types';
 import type { QuerySystem } from '../Core/QuerySystem';
@@ -274,7 +274,7 @@ export abstract class EntitySystem implements ISystemBase {
     /**
      * 检查是否为单一条件查询
      */
-    private isSingleCondition(condition: any): boolean {
+    private isSingleCondition(condition: QueryCondition): boolean {
         const flags =
             ((condition.all.length > 0) ? 1 : 0) |
             ((condition.any.length > 0) ? 2 : 0) |
@@ -289,7 +289,7 @@ export abstract class EntitySystem implements ISystemBase {
     /**
      * 执行单一条件查询
      */
-    private executeSingleConditionQuery(condition: any, querySystem: any): readonly Entity[] {
+    private executeSingleConditionQuery(condition: QueryCondition, querySystem: QuerySystem): readonly Entity[] {
         // 按标签查询
         if (condition.tag !== undefined) {
             return querySystem.queryByTag(condition.tag).entities;
@@ -324,7 +324,7 @@ export abstract class EntitySystem implements ISystemBase {
     /**
      * 执行复合查询
      */
-    private executeComplexQueryWithIdSets(condition: any, querySystem: QuerySystem): readonly Entity[] {
+    private executeComplexQueryWithIdSets(condition: QueryCondition, querySystem: QuerySystem): readonly Entity[] {
         let resultIds: Set<number> | null = null;
 
         // 1. 应用标签条件作为基础集合
@@ -492,7 +492,7 @@ export abstract class EntitySystem implements ISystemBase {
      * 
      * 使用基于ID集合的单次扫描算法进行复杂查询
      */
-    private executeComplexQuery(condition: any, querySystem: QuerySystem): readonly Entity[] {
+    private executeComplexQuery(condition: QueryCondition, querySystem: QuerySystem): readonly Entity[] {
         return this.executeComplexQueryWithIdSets(condition, querySystem);
     }
 

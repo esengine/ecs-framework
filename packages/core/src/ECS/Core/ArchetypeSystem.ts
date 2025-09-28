@@ -87,14 +87,62 @@ export class ArchetypeSystem {
     public removeEntity(entity: Entity): void {
         const archetype = this._entityToArchetype.get(entity);
         if (!archetype) return;
-        
+
         const index = archetype.entities.indexOf(entity);
         if (index !== -1) {
             archetype.entities.splice(index, 1);
             archetype.updatedAt = Date.now();
         }
-        
+
         this._entityToArchetype.delete(entity);
+        this.invalidateQueryCache();
+    }
+
+    /**
+     * 更新实体的原型归属
+     *
+     * 当实体的组件组合发生变化时调用此方法，将实体从旧原型移动到新原型。
+     * 如果新的组件组合对应的原型不存在，将自动创建新原型。
+     *
+     * @param entity 要更新的实体
+     */
+    public updateEntity(entity: Entity): void {
+        const currentArchetype = this._entityToArchetype.get(entity);
+        const newComponentTypes = this.getEntityComponentTypes(entity);
+        const newArchetypeId = this.generateArchetypeId(newComponentTypes);
+
+        // 如果实体已在正确的原型中，无需更新
+        if (currentArchetype && currentArchetype.id === newArchetypeId) {
+            return;
+        }
+
+        // 从旧原型中移除实体
+        if (currentArchetype) {
+            const index = currentArchetype.entities.indexOf(entity);
+            if (index !== -1) {
+                currentArchetype.entities.splice(index, 1);
+                currentArchetype.updatedAt = Date.now();
+            }
+        }
+
+        // 获取或创建新原型
+        let newArchetype = this._archetypes.get(newArchetypeId);
+        if (!newArchetype) {
+            newArchetype = this.createArchetype(newComponentTypes);
+        }
+
+        // 将实体添加到新原型
+        newArchetype.entities.push(entity);
+        newArchetype.updatedAt = Date.now();
+        this._entityToArchetype.set(entity, newArchetype);
+
+        // 更新组件索引
+        if (currentArchetype) {
+            this.updateComponentIndexes(currentArchetype, currentArchetype.componentTypes, false);
+        }
+        this.updateComponentIndexes(newArchetype, newComponentTypes, true);
+
+        // 使查询缓存失效
         this.invalidateQueryCache();
     }
     
