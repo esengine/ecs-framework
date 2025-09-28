@@ -3,6 +3,12 @@ name: Deploy Documentation
 on:
   push:
     branches: [master]
+    paths:
+      - 'docs/**'
+      - 'packages/**'
+      - 'typedoc.json'
+      - 'package.json'
+      - '.github/workflows/docs.yml'
   workflow_dispatch:
 
 permissions:

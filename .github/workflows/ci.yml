@@ -3,8 +3,22 @@ name: CI
 on:
   push:
     branches: [ master, main, develop ]
+    paths:
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'jest.config.*'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches: [ master, main, develop ]
+    paths:
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'jest.config.*'
+      - '.github/workflows/ci.yml'
 
 jobs:
   test:
