@@ -55,6 +55,8 @@ pnpm-lock.yaml
 # 文档生成
 docs/api/
 docs/build/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
 
 # 备份文件
 *.bak

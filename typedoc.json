@@ -1,0 +1,63 @@
+{
+  "entryPoints": ["./packages/core/src/index.ts"],
+  "out": "./docs/api",
+  "plugin": ["typedoc-plugin-markdown"],
+  "readme": "none",
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": false,
+  "includeVersion": true,
+  "sort": ["source-order"],
+  "kindSortOrder": [
+    "Document",
+    "Project",
+    "Module",
+    "Namespace",
+    "Enum",
+    "EnumMember",
+    "Class",
+    "Interface",
+    "TypeAlias",
+    "Constructor",
+    "Property",
+    "Variable",
+    "Function",
+    "Accessor",
+    "Method",
+    "Parameter",
+    "TypeParameter",
+    "TypeLiteral",
+    "CallSignature",
+    "ConstructorSignature",
+    "IndexSignature",
+    "GetSignature",
+    "SetSignature"
+  ],
+  "categorizeByGroup": false,
+  "defaultCategory": "其他",
+  "categoryOrder": [
+    "核心",
+    "ECS",
+    "组件",
+    "系统",
+    "工具",
+    "*"
+  ],
+  "searchInComments": true,
+  "cleanOutputDir": true,
+  "titleLink": "/",
+  "navigationLinks": {
+    "首页": "/",
+    "指南": "/guide/",
+    "示例": "/examples/"
+  },
+  "sidebarLinks": {
+    "GitHub": "https://github.com/esengine/ecs-framework",
+    "NPM": "https://www.npmjs.com/package/@esengine/ecs-framework"
+  },
+  "hideGenerator": true,
+  "githubPages": false,
+  "disableSources": false,
+  "name": "ECS Framework API",
+  "skipErrorChecking": true
+}

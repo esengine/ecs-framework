@@ -39,7 +39,7 @@
     "publish:all:dist": "npm run publish:core && npm run publish:math && npm run publish:network-shared && npm run publish:network-client && npm run publish:network-server",
     "publish:core": "cd packages/core && npm run publish:npm",
     "publish:core:patch": "cd packages/core && npm run publish:patch",
-    "publish:math": "cd packages/math && npm run publish:npm", 
+    "publish:math": "cd packages/math && npm run publish:npm",
     "publish:math:patch": "cd packages/math && npm run publish:patch",
     "publish:network-shared": "cd packages/network-shared && npm run publish:npm",
     "publish:network-shared:patch": "cd packages/network-shared && npm run publish:patch",
@@ -48,11 +48,17 @@
     "publish:network-server": "cd packages/network-server && npm run publish:npm",
     "publish:network-server:patch": "cd packages/network-server && npm run publish:patch",
     "publish": "lerna publish",
-    "version": "lerna version"
+    "version": "lerna version",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "npm run docs:api && vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "docs:api": "typedoc",
+    "docs:api:watch": "typedoc --watch"
   },
   "author": "yhh",
   "license": "MIT",
   "devDependencies": {
+    "@iconify/json": "^2.2.388",
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-terser": "^0.4.4",
@@ -66,7 +72,11 @@
     "rollup-plugin-dts": "^6.2.1",
     "semver": "^7.6.3",
     "ts-jest": "^29.4.0",
-    "typescript": "^5.8.3"
+    "typedoc": "^0.28.13",
+    "typedoc-plugin-markdown": "^4.9.0",
+    "typescript": "^5.8.3",
+    "unplugin-icons": "^22.3.0",
+    "vitepress": "^1.6.4"
   },
   "publishConfig": {
     "access": "public"
