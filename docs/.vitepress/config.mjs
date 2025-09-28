@@ -16,7 +16,17 @@ export default defineConfig({
         compiler: 'vue3',
         autoInstall: true
       })
-    ]
+    ],
+    server: {
+      fs: {
+        allow: ['..']
+      },
+      middlewareMode: false,
+      headers: {
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+        'Cross-Origin-Opener-Policy': 'same-origin'
+      }
+    }
   },
   title: 'ECS Framework',
   description: '高性能TypeScript ECS框架 - 为游戏开发而生',
@@ -28,7 +38,13 @@ export default defineConfig({
       { text: '快速开始', link: '/guide/getting-started' },
       { text: '指南', link: '/guide/' },
       { text: 'API', link: '/api/README' },
-      { text: '示例', link: 'https://github.com/esengine/lawn-mower-demo' },
+      {
+        text: '示例',
+        items: [
+          { text: 'Worker系统演示', link: '/examples/worker-system-demo' },
+          { text: '割草机演示', link: 'https://github.com/esengine/lawn-mower-demo' }
+        ]
+      },
       {
         text: `v${corePackageJson.version}`,
         link: 'https://github.com/esengine/ecs-framework/releases'
@@ -55,6 +71,15 @@ export default defineConfig({
             { text: '事件系统 (Event)', link: '/guide/event-system' },
             { text: '时间和定时器 (Time)', link: '/guide/time-and-timers' },
             { text: '日志系统 (Logger)', link: '/guide/logging' }
+          ]
+        }
+      ],
+      '/examples/': [
+        {
+          text: '示例',
+          items: [
+            { text: '示例概览', link: '/examples/' },
+            { text: 'Worker系统演示', link: '/examples/worker-system-demo' }
           ]
         }
       ],

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECS Framework Worker System Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4a9eff;
+        }
+
+        .demo-area {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .canvas-container {
+            flex: 1;
+        }
+
+        #gameCanvas {
+            border: 2px solid #4a9eff;
+            background: #000;
+            display: block;
+        }
+
+        .controls {
+            width: 300px;
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+
+        .control-group input, .control-group button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 5px;
+            border: 1px solid #555;
+            background: #3a3a3a;
+            color: white;
+            border-radius: 4px;
+        }
+
+        .control-group button {
+            background: #4a9eff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .control-group button:hover {
+            background: #3a8eef;
+        }
+
+        .control-group button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .stats {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .stats h3 {
+            margin-top: 0;
+            color: #4a9eff;
+        }
+
+        .stat-line {
+            margin: 5px 0;
+        }
+
+        .worker-enabled {
+            color: #4eff4a;
+        }
+
+        .worker-disabled {
+            color: #ff4a4a;
+        }
+
+        .performance-high {
+            color: #4eff4a;
+        }
+
+        .performance-medium {
+            color: #ffff4a;
+        }
+
+        .performance-low {
+            color: #ff4a4a;
+        }
+    </style>
+  <script type="module" crossorigin src="/ecs-framework/demos/worker-system/assets/index-a4a166b2.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>ECS Framework Worker System 演示</h1>
+
+        <div class="demo-area">
+            <div class="canvas-container">
+                <canvas id="gameCanvas" width="800" height="600"></canvas>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label>实体数量:</label>
+                    <input type="range" id="entityCount" min="100" max="10000" value="1000" step="100">
+                    <span id="entityCountValue">1000</span>
+                </div>
+
+                <div class="control-group">
+                    <label>Worker 设置:</label>
+                    <button id="toggleWorker">禁用 Worker</button>
+                </div>
+
+                <div class="control-group">
+                    <button id="spawnParticles">生成粒子系统</button>
+                    <button id="clearEntities">清空所有实体</button>
+                    <button id="resetDemo">重置演示</button>
+                </div>
+
+                <div class="control-group">
+                    <label>物理参数:</label>
+                    <input type="range" id="gravity" min="0" max="500" value="100" step="10">
+                    <label>重力: <span id="gravityValue">100</span></label>
+
+                    <input type="range" id="friction" min="0" max="100" value="95" step="5">
+                    <label>摩擦力: <span id="frictionValue">95%</span></label>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <h3>性能统计</h3>
+            <div class="stat-line">FPS: <span id="fps">0</span></div>
+            <div class="stat-line">实体数量: <span id="entityCountStat">0</span></div>
+            <div class="stat-line">Worker状态: <span id="workerStatus" class="worker-disabled">未启用</span></div>
+            <div class="stat-line">Worker负载: <span id="workerLoad">N/A</span></div>
+            <div class="stat-line">物理系统耗时: <span id="physicsTime">0</span>ms</div>
+            <div class="stat-line">渲染系统耗时: <span id="renderTime">0</span>ms</div>
+            <div class="stat-line">总帧时间: <span id="frameTime">0</span>ms</div>
+            <div class="stat-line">内存使用: <span id="memoryUsage">0</span>MB</div>
+        </div>
+    </div>
+
+    
+</body>
+</html>
