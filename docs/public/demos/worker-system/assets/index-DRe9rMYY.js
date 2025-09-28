@@ -19,16 +19,12 @@
   }).observe(document, { childList: true, subtree: true });
   function getFetchOpts(link) {
     const fetchOpts = {};
-    if (link.integrity)
-      fetchOpts.integrity = link.integrity;
-    if (link.referrerPolicy)
-      fetchOpts.referrerPolicy = link.referrerPolicy;
+    if (link.integrity) fetchOpts.integrity = link.integrity;
+    if (link.referrerPolicy) fetchOpts.referrerPolicy = link.referrerPolicy;
     if (link.crossOrigin === "use-credentials")
       fetchOpts.credentials = "include";
-    else if (link.crossOrigin === "anonymous")
-      fetchOpts.credentials = "omit";
-    else
-      fetchOpts.credentials = "same-origin";
+    else if (link.crossOrigin === "anonymous") fetchOpts.credentials = "omit";
+    else fetchOpts.credentials = "same-origin";
     return fetchOpts;
   }
   function processPreload(link) {
@@ -1077,28 +1073,14 @@ var LogLevel;
   LogLevel2[LogLevel2["None"] = 5] = "None";
 })(LogLevel || (LogLevel = {}));
 const Colors = {
-  // 基础颜色
-  BLACK: "\x1B[30m",
   RED: "\x1B[31m",
   GREEN: "\x1B[32m",
   YELLOW: "\x1B[33m",
-  BLUE: "\x1B[34m",
-  MAGENTA: "\x1B[35m",
-  CYAN: "\x1B[36m",
-  WHITE: "\x1B[37m",
   // 亮色版本
   BRIGHT_BLACK: "\x1B[90m",
   BRIGHT_RED: "\x1B[91m",
-  BRIGHT_GREEN: "\x1B[92m",
-  BRIGHT_YELLOW: "\x1B[93m",
-  BRIGHT_BLUE: "\x1B[94m",
-  BRIGHT_MAGENTA: "\x1B[95m",
-  BRIGHT_CYAN: "\x1B[96m",
-  BRIGHT_WHITE: "\x1B[97m",
   // 特殊
-  RESET: "\x1B[0m",
-  BOLD: "\x1B[1m",
-  UNDERLINE: "\x1B[4m"
+  RESET: "\x1B[0m"
 };
 class ConsoleLogger {
   constructor(config = {}) {
@@ -1403,8 +1385,7 @@ class SoAStorage {
         const value = instance[key];
         const type = typeof value;
         if (type === "number") {
-          if (highPrecisionFields.has(key))
-            ;
+          if (highPrecisionFields.has(key)) ;
           else if (float64Fields.has(key)) {
             this.fields.set(key, new Float64Array(this._capacity));
           } else if (int32Fields.has(key)) {
@@ -11388,12 +11369,20 @@ class WorkerEntitySystem extends EntitySystem {
    */
   initializeSharedArrayBuffer() {
     try {
+      if (!this.isSharedArrayBufferSupported()) {
+        console.warn(`[${this.systemName}] SharedArrayBuffer not supported, falling back to traditional Worker mode`);
+        this.config.useSharedArrayBuffer = false;
+        return;
+      }
       const bufferSize = this.config.maxEntities * this.config.entityDataSize * 4;
       this.sharedBuffer = new SharedArrayBuffer(bufferSize);
       this.sharedFloatArray = new Float32Array(this.sharedBuffer);
+      console.log(`[${this.systemName}] SharedArrayBuffer initialized successfully (${bufferSize} bytes)`);
     } catch (error) {
-      console.warn(`[${this.systemName}] SharedArrayBuffer init failed:`, error);
+      console.warn(`[${this.systemName}] SharedArrayBuffer init failed, falling back to traditional Worker mode:`, error);
       this.config.useSharedArrayBuffer = false;
+      this.sharedBuffer = null;
+      this.sharedFloatArray = null;
     }
   }
   /**
@@ -11506,21 +11495,26 @@ class WorkerEntitySystem extends EntitySystem {
     this.isProcessing = true;
     try {
       if (this.config.enableWorker && this.workerPool) {
-        if (this.config.useSharedArrayBuffer && this.sharedFloatArray) {
+        if (this.config.useSharedArrayBuffer && this.sharedFloatArray && this.isSharedArrayBufferSupported()) {
           this.processWithSharedArrayBuffer(entities).finally(() => {
             this.isProcessing = false;
           });
         } else {
+          if (this.config.useSharedArrayBuffer) {
+            console.log(`[${this.systemName}] Falling back to traditional Worker mode for this frame`);
+          }
           this.processWithWorker(entities).finally(() => {
             this.isProcessing = false;
           });
         }
       } else {
+        console.log(`[${this.systemName}] Worker not available, processing synchronously`);
         this.processSynchronously(entities);
         this.isProcessing = false;
       }
     } catch (error) {
       this.isProcessing = false;
+      console.error(`[${this.systemName}] Processing failed:`, error);
       throw error;
     }
   }
@@ -11666,10 +11660,21 @@ class WorkerEntitySystem extends EntitySystem {
    * 获取系统性能信息
    */
   getWorkerInfo() {
+    let currentMode = "sync";
+    if (this.config.enableWorker && this.workerPool) {
+      if (this.config.useSharedArrayBuffer && this.sharedFloatArray && this.isSharedArrayBufferSupported()) {
+        currentMode = "shared-buffer";
+      } else {
+        currentMode = "worker";
+      }
+    }
     return {
       enabled: this.config.enableWorker,
       workerCount: this.config.workerCount,
-      isProcessing: this.isProcessing
+      isProcessing: this.isProcessing,
+      sharedArrayBufferSupported: this.isSharedArrayBufferSupported(),
+      sharedArrayBufferEnabled: this.config.useSharedArrayBuffer,
+      currentMode
     };
   }
   /**
@@ -11800,15 +11805,12 @@ class WebWorkerPool {
     this.busyWorkers.clear();
   }
 }
-var __defProp$3 = Object.defineProperty;
 var __getOwnPropDesc$3 = Object.getOwnPropertyDescriptor;
 var __decorateClass$3 = (decorators, target, key, kind) => {
   var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$3(target, key) : target;
   for (var i = decorators.length - 1, decorator; i >= 0; i--)
     if (decorator = decorators[i])
-      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result)
-    __defProp$3(target, key, result);
+      result = decorator(result) || result;
   return result;
 };
 let Position = class extends Component {
@@ -11890,15 +11892,12 @@ let Lifetime = class extends Component {
 Lifetime = __decorateClass$3([
   ECSComponent("Lifetime")
 ], Lifetime);
-var __defProp$2 = Object.defineProperty;
 var __getOwnPropDesc$2 = Object.getOwnPropertyDescriptor;
 var __decorateClass$2 = (decorators, target, key, kind) => {
   var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$2(target, key) : target;
   for (var i = decorators.length - 1, decorator; i >= 0; i--)
     if (decorator = decorators[i])
-      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result)
-    __defProp$2(target, key, result);
+      result = decorator(result) || result;
   return result;
 };
 let PhysicsWorkerSystem = class extends WorkerEntitySystem {
@@ -12004,8 +12003,7 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
           const relativeVelocityX = ball2.dx - ball1.dx;
           const relativeVelocityY = ball2.dy - ball1.dy;
           const velocityAlongNormal = relativeVelocityX * nx + relativeVelocityY * ny;
-          if (velocityAlongNormal > 0)
-            continue;
+          if (velocityAlongNormal > 0) continue;
           const restitution = (ball1.bounce + ball2.bounce) * 0.5;
           const impulseScalar = -(1 + restitution) * velocityAlongNormal / (1 / ball1.mass + 1 / ball2.mass);
           const impulseX = impulseScalar * nx;
@@ -12072,8 +12070,7 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
    */
   writeEntityToBuffer(entityData, offset) {
     const sharedArray = this.sharedFloatArray;
-    if (!sharedArray)
-      return;
+    if (!sharedArray) return;
     const currentEntityCount = Math.floor(offset / 9) + 1;
     sharedArray[0] = currentEntityCount;
     const dataOffset = offset + 9;
@@ -12099,8 +12096,7 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
    */
   readEntityFromBuffer(offset) {
     const sharedArray = this.sharedFloatArray;
-    if (!sharedArray)
-      return null;
+    if (!sharedArray) return null;
     const dataOffset = offset + 9;
     return {
       id: sharedArray[dataOffset + 0],
@@ -12129,8 +12125,7 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
       for (let i = startIndex; i < endIndex && i < actualEntityCount; i++) {
         const offset = i * 9 + 9;
         const id = sharedFloatArray[offset + 0];
-        if (id === 0)
-          continue;
+        if (id === 0) continue;
         let x = sharedFloatArray[offset + 1];
         let y = sharedFloatArray[offset + 2];
         let dx = sharedFloatArray[offset + 3];
@@ -12167,8 +12162,7 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
       for (let i = startIndex; i < endIndex && i < actualEntityCount; i++) {
         const offset1 = i * 9 + 9;
         const id1 = sharedFloatArray[offset1 + 0];
-        if (id1 === 0)
-          continue;
+        if (id1 === 0) continue;
         let x1 = sharedFloatArray[offset1 + 1];
         let y1 = sharedFloatArray[offset1 + 2];
         let dx1 = sharedFloatArray[offset1 + 3];
@@ -12177,12 +12171,10 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
         const bounce1 = sharedFloatArray[offset1 + 6];
         const radius1 = sharedFloatArray[offset1 + 8];
         for (let j = 0; j < actualEntityCount; j++) {
-          if (i === j)
-            continue;
+          if (i === j) continue;
           const offset2 = j * 9 + 9;
           const id2 = sharedFloatArray[offset2 + 0];
-          if (id2 === 0)
-            continue;
+          if (id2 === 0) continue;
           const x2 = sharedFloatArray[offset2 + 1];
           const y2 = sharedFloatArray[offset2 + 2];
           const dx2 = sharedFloatArray[offset2 + 3];
@@ -12190,8 +12182,7 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
           const mass2 = sharedFloatArray[offset2 + 5];
           const bounce2 = sharedFloatArray[offset2 + 6];
           const radius2 = sharedFloatArray[offset2 + 8];
-          if (isNaN(x2) || isNaN(y2) || isNaN(radius2) || radius2 <= 0)
-            continue;
+          if (isNaN(x2) || isNaN(y2) || isNaN(radius2) || radius2 <= 0) continue;
           const deltaX = x2 - x1;
           const deltaY = y2 - y1;
           const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
@@ -12207,8 +12198,7 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
             const relativeVelocityX = dx2 - dx1;
             const relativeVelocityY = dy2 - dy1;
             const velocityAlongNormal = relativeVelocityX * nx + relativeVelocityY * ny;
-            if (velocityAlongNormal > 0)
-              continue;
+            if (velocityAlongNormal > 0) continue;
             const restitution = (bounce1 + bounce2) * 0.5;
             const impulseScalar = -(1 + restitution) * velocityAlongNormal / (1 / mass1 + 1 / mass2);
             const impulseX = impulseScalar * nx;
@@ -12231,15 +12221,12 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
 PhysicsWorkerSystem = __decorateClass$2([
   ECSSystem("PhysicsWorkerSystem")
 ], PhysicsWorkerSystem);
-var __defProp$1 = Object.defineProperty;
 var __getOwnPropDesc$1 = Object.getOwnPropertyDescriptor;
 var __decorateClass$1 = (decorators, target, key, kind) => {
   var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$1(target, key) : target;
   for (var i = decorators.length - 1, decorator; i >= 0; i--)
     if (decorator = decorators[i])
-      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result)
-    __defProp$1(target, key, result);
+      result = decorator(result) || result;
   return result;
 };
 let RenderSystem = class extends EntitySystem {
@@ -12321,15 +12308,12 @@ let RenderSystem = class extends EntitySystem {
 RenderSystem = __decorateClass$1([
   ECSSystem("RenderSystem")
 ], RenderSystem);
-var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __decorateClass = (decorators, target, key, kind) => {
   var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc(target, key) : target;
   for (var i = decorators.length - 1, decorator; i >= 0; i--)
     if (decorator = decorators[i])
-      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result)
-    __defProp(target, key, result);
+      result = decorator(result) || result;
   return result;
 };
 let LifetimeSystem = class extends EntitySystem {
@@ -12507,8 +12491,7 @@ class WorkerDemo {
     this.lastWorkerStatusUpdate = 0;
     this.elements = {};
     this.gameLoop = () => {
-      if (!this.isRunning)
-        return;
+      if (!this.isRunning) return;
       const currentTime = performance.now();
       const deltaTime = (currentTime - this.lastTime) / 1e3;
       this.lastTime = currentTime;

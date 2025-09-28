@@ -53,7 +53,9 @@
     "docs:build": "npm run docs:api && vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "docs:api": "typedoc",
-    "docs:api:watch": "typedoc --watch"
+    "docs:api:watch": "typedoc --watch",
+    "update:worker-demo": "npm run build:core && cd examples/worker-system-demo && npm run build && cd ../.. && npm run copy:worker-demo",
+    "copy:worker-demo": "node scripts/update-worker-demo.js"
   },
   "author": "yhh",
   "license": "MIT",

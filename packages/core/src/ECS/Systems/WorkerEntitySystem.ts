@@ -246,15 +246,25 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
      */
     private initializeSharedArrayBuffer(): void {
         try {
+            // 检查是否支持SharedArrayBuffer
+            if (!this.isSharedArrayBufferSupported()) {
+                console.warn(`[${this.systemName}] SharedArrayBuffer not supported, falling back to traditional Worker mode`);
+                this.config.useSharedArrayBuffer = false;
+                return;
+            }
+
             // 使用配置的实体数据大小和最大实体数量
             // 预分配缓冲区：maxEntities * entityDataSize * 4字节
             const bufferSize = this.config.maxEntities * this.config.entityDataSize * 4;
             this.sharedBuffer = new SharedArrayBuffer(bufferSize);
             this.sharedFloatArray = new Float32Array(this.sharedBuffer);
 
+            console.log(`[${this.systemName}] SharedArrayBuffer initialized successfully (${bufferSize} bytes)`);
         } catch (error) {
-            console.warn(`[${this.systemName}] SharedArrayBuffer init failed:`, error);
+            console.warn(`[${this.systemName}] SharedArrayBuffer init failed, falling back to traditional Worker mode:`, error);
             this.config.useSharedArrayBuffer = false;
+            this.sharedBuffer = null;
+            this.sharedFloatArray = null;
         }
     }
 
@@ -377,23 +387,31 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
 
         try {
             if (this.config.enableWorker && this.workerPool) {
-                if (this.config.useSharedArrayBuffer && this.sharedFloatArray) {
+                // 检查SharedArrayBuffer是否真正可用
+                if (this.config.useSharedArrayBuffer && this.sharedFloatArray && this.isSharedArrayBufferSupported()) {
                     // 使用SharedArrayBuffer优化的异步处理
                     this.processWithSharedArrayBuffer(entities).finally(() => {
                         this.isProcessing = false;
                     });
                 } else {
+                    // 如果配置了SharedArrayBuffer但不可用，记录降级信息
+                    if (this.config.useSharedArrayBuffer) {
+                        console.log(`[${this.systemName}] Falling back to traditional Worker mode for this frame`);
+                    }
                     // 传统Worker异步处理
                     this.processWithWorker(entities).finally(() => {
                         this.isProcessing = false;
                     });
                 }
             } else {
+                // 同步处理（最后的fallback）
+                console.log(`[${this.systemName}] Worker not available, processing synchronously`);
                 this.processSynchronously(entities);
                 this.isProcessing = false;
             }
         } catch (error) {
             this.isProcessing = false;
+            console.error(`[${this.systemName}] Processing failed:`, error);
             throw error;
         }
     }
@@ -636,11 +654,27 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         enabled: boolean;
         workerCount: number;
         isProcessing: boolean;
+        sharedArrayBufferSupported: boolean;
+        sharedArrayBufferEnabled: boolean;
+        currentMode: 'shared-buffer' | 'worker' | 'sync';
     } {
+        let currentMode: 'shared-buffer' | 'worker' | 'sync' = 'sync';
+
+        if (this.config.enableWorker && this.workerPool) {
+            if (this.config.useSharedArrayBuffer && this.sharedFloatArray && this.isSharedArrayBufferSupported()) {
+                currentMode = 'shared-buffer';
+            } else {
+                currentMode = 'worker';
+            }
+        }
+
         return {
             enabled: this.config.enableWorker,
             workerCount: this.config.workerCount,
-            isProcessing: this.isProcessing
+            isProcessing: this.isProcessing,
+            sharedArrayBufferSupported: this.isSharedArrayBufferSupported(),
+            sharedArrayBufferEnabled: this.config.useSharedArrayBuffer,
+            currentMode
         };
     }
 
