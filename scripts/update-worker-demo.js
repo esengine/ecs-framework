@@ -47,18 +47,37 @@ function updateWorkerDemo() {
         fs.copyFileSync(sourcePath, targetPath);
         console.log(`📁 复制新文件: ${newJsFile}`);
 
-        // 3. 更新 index.html 中的引用
-        const indexHtmlPath = path.join(VITEPRESS_DEMO_DIR, 'index.html');
-        if (fs.existsSync(indexHtmlPath)) {
-            let content = fs.readFileSync(indexHtmlPath, 'utf-8');
+        // 3. 同步 HTML 结构更新
+        const sourceIndexPath = path.join(DEMO_DIST_DIR, 'index.html');
+        const targetIndexPath = path.join(VITEPRESS_DEMO_DIR, 'index.html');
+
+        if (fs.existsSync(sourceIndexPath) && fs.existsSync(targetIndexPath)) {
+            const sourceContent = fs.readFileSync(sourceIndexPath, 'utf-8');
+            let targetContent = fs.readFileSync(targetIndexPath, 'utf-8');
+
+            // 提取 controls 部分
+            const sourceControlsMatch = sourceContent.match(/<div class="controls">([\s\S]*?)<\/div>\s*<\/div>/);
+            const targetControlsMatch = targetContent.match(/<div class="controls">([\s\S]*?)<\/div>\s*<\/div>/);
+
+            if (sourceControlsMatch && targetControlsMatch) {
+                targetContent = targetContent.replace(targetControlsMatch[0], sourceControlsMatch[0]);
+            }
+
+            // 提取 stats 部分
+            const sourceStatsMatch = sourceContent.match(/<div class="stats">([\s\S]*?)<\/div>/);
+            const targetStatsMatch = targetContent.match(/<div class="stats">([\s\S]*?)<\/div>/);
+
+            if (sourceStatsMatch && targetStatsMatch) {
+                targetContent = targetContent.replace(targetStatsMatch[0], sourceStatsMatch[0]);
+            }
 
             // 更新 script 标签中的文件名
             const scriptRegex = /src="\/ecs-framework\/demos\/worker-system\/assets\/index-[^"]+\.js"/;
             const newScriptSrc = `/ecs-framework/demos/worker-system/assets/${newJsFile}`;
-            content = content.replace(scriptRegex, `src="${newScriptSrc}"`);
+            targetContent = targetContent.replace(scriptRegex, `src="${newScriptSrc}"`);
 
-            fs.writeFileSync(indexHtmlPath, content);
-            console.log(`📝 更新 index.html 引用: ${newJsFile}`);
+            fs.writeFileSync(targetIndexPath, targetContent);
+            console.log(`📝 更新 index.html 结构和引用: ${newJsFile}`);
         }
 
         console.log('✅ Worker System Demo 资源更新完成！');

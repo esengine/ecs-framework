@@ -139,6 +139,7 @@
                 <div class="control-group">
                     <label>Worker 设置:</label>
                     <button id="toggleWorker">禁用 Worker</button>
+                    <button id="toggleSAB">禁用 SharedArrayBuffer</button>
                 </div>
 
                 <div class="control-group">
@@ -164,6 +165,7 @@
             <div class="stat-line">实体数量: <span id="entityCountStat">0</span></div>
             <div class="stat-line">Worker状态: <span id="workerStatus" class="worker-disabled">未启用</span></div>
             <div class="stat-line">Worker负载: <span id="workerLoad">N/A</span></div>
+            <div class="stat-line">运行模式: <span id="sabStatus" class="worker-disabled">同步模式</span></div>
             <div class="stat-line">物理系统耗时: <span id="physicsTime">0</span>ms</div>
             <div class="stat-line">渲染系统耗时: <span id="renderTime">0</span>ms</div>
             <div class="stat-line">总帧时间: <span id="frameTime">0</span>ms</div>
