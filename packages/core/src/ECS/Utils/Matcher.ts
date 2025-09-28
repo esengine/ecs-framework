@@ -101,7 +101,7 @@ export class Matcher {
     }
 
     /**
-     * 创建空匙配器（向后兼容）
+     * 创建空匙配器
      */
     public static empty(): Matcher {
         return new Matcher();
