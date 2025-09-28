@@ -54,10 +54,10 @@ class WorkerDemo {
 
     private initializeUIElements(): void {
         const elementIds = [
-            'entityCount', 'entityCountValue', 'toggleWorker',
+            'entityCount', 'entityCountValue', 'toggleWorker', 'toggleSAB',
             'gravity', 'gravityValue', 'friction', 'frictionValue', 'spawnParticles',
             'clearEntities', 'resetDemo', 'fps', 'entityCountStat', 'workerStatus', 'workerLoad',
-            'physicsTime', 'renderTime', 'frameTime', 'memoryUsage'
+            'physicsTime', 'renderTime', 'frameTime', 'memoryUsage', 'sabStatus'
         ];
 
         for (const id of elementIds) {
@@ -89,6 +89,14 @@ class WorkerDemo {
             this.elements.toggleWorker.addEventListener('click', () => {
                 const workerEnabled = this.gameScene.toggleWorker();
                 this.elements.toggleWorker.textContent = workerEnabled ? '禁用 Worker' : '启用 Worker';
+                this.updateWorkerStatus();
+            });
+        }
+
+        // SharedArrayBuffer切换按钮
+        if (this.elements.toggleSAB) {
+            this.elements.toggleSAB.addEventListener('click', () => {
+                this.gameScene.toggleSharedArrayBuffer();
                 this.updateWorkerStatus();
             });
         }
@@ -249,6 +257,7 @@ class WorkerDemo {
         const systemInfo = this.gameScene.getSystemInfo();
         const workerInfo = systemInfo.physics;
         const entityCount = systemInfo.entityCount;
+        const status = this.gameScene.getPhysicsSystemStatus();
 
         if (this.elements.workerStatus) {
             if (workerInfo.enabled) {
@@ -266,6 +275,29 @@ class WorkerDemo {
                 this.elements.workerLoad.textContent = `${entitiesPerWorker}/Worker (共${workerInfo.workerCount}个)`;
             } else {
                 this.elements.workerLoad.textContent = 'N/A';
+            }
+        }
+
+        // 更新 SharedArrayBuffer 状态
+        if (this.elements.sabStatus) {
+            const modeNames = {
+                'shared-buffer': 'SharedArrayBuffer模式',
+                'single-worker': '单Worker模式',
+                'multi-worker': '多Worker模式',
+                'sync': '同步模式'
+            };
+
+            this.elements.sabStatus.textContent = modeNames[status.mode] || status.mode;
+            this.elements.sabStatus.className = status.mode === 'shared-buffer' ? 'worker-enabled' : 'worker-disabled';
+        }
+
+        // 更新 SharedArrayBuffer 按钮文本
+        if (this.elements.toggleSAB) {
+            if (status.sharedArrayBufferEnabled) {
+                this.elements.toggleSAB.textContent = '禁用 SharedArrayBuffer';
+            } else {
+                this.elements.toggleSAB.textContent = '启用 SharedArrayBuffer';
+                this.elements.toggleSAB.setAttribute('disabled', 'true'); // SAB 一旦禁用就无法重新启用
             }
         }
     }

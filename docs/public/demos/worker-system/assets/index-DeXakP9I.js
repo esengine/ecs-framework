@@ -11370,8 +11370,9 @@ class WorkerEntitySystem extends EntitySystem {
   initializeSharedArrayBuffer() {
     try {
       if (!this.isSharedArrayBufferSupported()) {
-        console.warn(`[${this.systemName}] SharedArrayBuffer not supported, falling back to traditional Worker mode`);
+        console.warn(`[${this.systemName}] SharedArrayBuffer not supported, falling back to single Worker mode for collision detection integrity`);
         this.config.useSharedArrayBuffer = false;
+        this.config.workerCount = 1;
         return;
       }
       const bufferSize = this.config.maxEntities * this.config.entityDataSize * 4;
@@ -11379,10 +11380,11 @@ class WorkerEntitySystem extends EntitySystem {
       this.sharedFloatArray = new Float32Array(this.sharedBuffer);
       console.log(`[${this.systemName}] SharedArrayBuffer initialized successfully (${bufferSize} bytes)`);
     } catch (error) {
-      console.warn(`[${this.systemName}] SharedArrayBuffer init failed, falling back to traditional Worker mode:`, error);
+      console.warn(`[${this.systemName}] SharedArrayBuffer init failed, falling back to single Worker mode for collision detection integrity:`, error);
       this.config.useSharedArrayBuffer = false;
       this.sharedBuffer = null;
       this.sharedFloatArray = null;
+      this.config.workerCount = 1;
     }
   }
   /**
@@ -11912,11 +11914,11 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
       Matcher.empty().all(Position, Velocity, Physics),
       {
         enableWorker,
-        workerCount: navigator.hardwareConcurrency || 2,
-        // 恢复多Worker
+        // 当 SharedArrayBuffer 可用时使用多 Worker，否则使用单 Worker 保证碰撞检测完整性
+        workerCount: this.isSharedArrayBufferAvailable() ? navigator.hardwareConcurrency || 2 : 1,
         systemConfig: defaultConfig,
         useSharedArrayBuffer: true
-        // 使用SharedArrayBuffer进行全局碰撞检测
+        // 优先使用 SharedArrayBuffer
       }
     );
     this.physicsConfig = {
@@ -11927,6 +11929,12 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
       // 减少地面摩擦
     };
     this.startTime = 0;
+  }
+  /**
+   * 检查 SharedArrayBuffer 是否可用
+   */
+  isSharedArrayBufferAvailable() {
+    return typeof SharedArrayBuffer !== "undefined" && self.crossOriginIsolated;
   }
   extractEntityData(entity) {
     const position = entity.getComponent(Position);
@@ -12049,6 +12057,45 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
    */
   getPhysicsConfig() {
     return { ...this.physicsConfig };
+  }
+  /**
+   * 强制禁用 SharedArrayBuffer（用于测试降级行为）
+   */
+  forceDisableSharedArrayBuffer() {
+    console.log(`[${this.systemName}] Manually disabling SharedArrayBuffer for testing`);
+    this.config.useSharedArrayBuffer = false;
+    this.config.workerCount = 1;
+    this.sharedBuffer = null;
+    this.sharedFloatArray = null;
+    if (this.workerPool) {
+      this.workerPool.destroy();
+      this.workerPool = null;
+    }
+    if (this.config.enableWorker) {
+      this.initializeWorkerPool();
+    }
+  }
+  /**
+   * 获取当前运行状态
+   */
+  getCurrentStatus() {
+    const workerInfo = this.getWorkerInfo();
+    let mode = "sync";
+    if (workerInfo.enabled) {
+      if (workerInfo.sharedArrayBufferEnabled && workerInfo.sharedArrayBufferSupported) {
+        mode = "shared-buffer";
+      } else if (workerInfo.workerCount === 1) {
+        mode = "single-worker";
+      } else {
+        mode = "multi-worker";
+      }
+    }
+    return {
+      mode,
+      sharedArrayBufferEnabled: workerInfo.sharedArrayBufferEnabled,
+      workerCount: workerInfo.workerCount,
+      workerEnabled: workerInfo.enabled
+    };
   }
   /**
    * 性能监控
@@ -12471,6 +12518,18 @@ class GameScene extends Scene {
     }
   }
   /**
+   * 切换 SharedArrayBuffer 状态
+   */
+  toggleSharedArrayBuffer() {
+    this.physicsSystem.forceDisableSharedArrayBuffer();
+  }
+  /**
+   * 获取物理系统状态
+   */
+  getPhysicsSystemStatus() {
+    return this.physicsSystem.getCurrentStatus();
+  }
+  /**
    * 获取系统信息
    */
   getSystemInfo() {
@@ -12533,6 +12592,7 @@ class WorkerDemo {
       "entityCount",
       "entityCountValue",
       "toggleWorker",
+      "toggleSAB",
       "gravity",
       "gravityValue",
       "friction",
@@ -12547,7 +12607,8 @@ class WorkerDemo {
       "physicsTime",
       "renderTime",
       "frameTime",
-      "memoryUsage"
+      "memoryUsage",
+      "sabStatus"
     ];
     for (const id of elementIds) {
       const element = document.getElementById(id);
@@ -12573,6 +12634,12 @@ class WorkerDemo {
       this.elements.toggleWorker.addEventListener("click", () => {
         const workerEnabled = this.gameScene.toggleWorker();
         this.elements.toggleWorker.textContent = workerEnabled ? "禁用 Worker" : "启用 Worker";
+        this.updateWorkerStatus();
+      });
+    }
+    if (this.elements.toggleSAB) {
+      this.elements.toggleSAB.addEventListener("click", () => {
+        this.gameScene.toggleSharedArrayBuffer();
         this.updateWorkerStatus();
       });
     }
@@ -12664,6 +12731,7 @@ class WorkerDemo {
     const systemInfo = this.gameScene.getSystemInfo();
     const workerInfo = systemInfo.physics;
     const entityCount = systemInfo.entityCount;
+    const status = this.gameScene.getPhysicsSystemStatus();
     if (this.elements.workerStatus) {
       if (workerInfo.enabled) {
         this.elements.workerStatus.textContent = `启用 (${workerInfo.workerCount} Workers)`;
@@ -12679,6 +12747,24 @@ class WorkerDemo {
         this.elements.workerLoad.textContent = `${entitiesPerWorker}/Worker (共${workerInfo.workerCount}个)`;
       } else {
         this.elements.workerLoad.textContent = "N/A";
+      }
+    }
+    if (this.elements.sabStatus) {
+      const modeNames = {
+        "shared-buffer": "SharedArrayBuffer模式",
+        "single-worker": "单Worker模式",
+        "multi-worker": "多Worker模式",
+        "sync": "同步模式"
+      };
+      this.elements.sabStatus.textContent = modeNames[status.mode] || status.mode;
+      this.elements.sabStatus.className = status.mode === "shared-buffer" ? "worker-enabled" : "worker-disabled";
+    }
+    if (this.elements.toggleSAB) {
+      if (status.sharedArrayBufferEnabled) {
+        this.elements.toggleSAB.textContent = "禁用 SharedArrayBuffer";
+      } else {
+        this.elements.toggleSAB.textContent = "启用 SharedArrayBuffer";
+        this.elements.toggleSAB.setAttribute("disabled", "true");
       }
     }
   }

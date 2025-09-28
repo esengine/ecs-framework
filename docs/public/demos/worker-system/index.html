@@ -118,7 +118,7 @@
             color: #ff4a4a;
         }
     </style>
-  <script type="module" crossorigin src="/ecs-framework/demos/worker-system/assets/index-DRe9rMYY.js"></script>
+  <script type="module" crossorigin src="/ecs-framework/demos/worker-system/assets/index-DeXakP9I.js"></script>
 </head>
 <body>
     <div class="container">
@@ -171,6 +171,17 @@
         </div>
     </div>
 
-    
+    <script>
+        // Register Service Worker for SharedArrayBuffer support on GitHub Pages
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/ecs-framework/sw.js')
+                .then((registration) => {
+                    console.log('Service Worker registered for SharedArrayBuffer support:', registration);
+                })
+                .catch((error) => {
+                    console.log('Service Worker registration failed:', error);
+                });
+        }
+    </script>
 </body>
 </html>

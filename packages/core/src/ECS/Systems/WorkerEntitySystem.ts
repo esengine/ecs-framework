@@ -186,8 +186,8 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
     protected config: Required<Omit<WorkerSystemConfig, 'systemConfig'>> & { systemConfig?: any };
     private workerPool: WebWorkerPool | null = null;
     private isProcessing = false;
-    private sharedBuffer: SharedArrayBuffer | null = null;
-    private sharedFloatArray: Float32Array | null = null;
+    protected sharedBuffer: SharedArrayBuffer | null = null;
+    protected sharedFloatArray: Float32Array | null = null;
 
     constructor(matcher?: Matcher, config: WorkerSystemConfig = {}) {
         super(matcher);
@@ -248,8 +248,10 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         try {
             // 检查是否支持SharedArrayBuffer
             if (!this.isSharedArrayBufferSupported()) {
-                console.warn(`[${this.systemName}] SharedArrayBuffer not supported, falling back to traditional Worker mode`);
+                console.warn(`[${this.systemName}] SharedArrayBuffer not supported, falling back to single Worker mode for collision detection integrity`);
                 this.config.useSharedArrayBuffer = false;
+                // 降级到单Worker模式：确保所有实体在同一个Worker中处理，维持实体间交互的完整性
+                this.config.workerCount = 1;
                 return;
             }
 
@@ -261,10 +263,11 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
 
             console.log(`[${this.systemName}] SharedArrayBuffer initialized successfully (${bufferSize} bytes)`);
         } catch (error) {
-            console.warn(`[${this.systemName}] SharedArrayBuffer init failed, falling back to traditional Worker mode:`, error);
+            console.warn(`[${this.systemName}] SharedArrayBuffer init failed, falling back to single Worker mode for collision detection integrity:`, error);
             this.config.useSharedArrayBuffer = false;
             this.sharedBuffer = null;
             this.sharedFloatArray = null;
+            this.config.workerCount = 1;
         }
     }
 
@@ -633,7 +636,20 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
      * 更新Worker配置
      */
     public updateConfig(newConfig: Partial<WorkerSystemConfig>): void {
+        const oldConfig = { ...this.config };
         Object.assign(this.config, newConfig);
+
+        // 如果 SharedArrayBuffer 设置发生变化，需要重新初始化
+        if (oldConfig.useSharedArrayBuffer !== this.config.useSharedArrayBuffer) {
+            this.reinitializeWorkerSystem();
+            return;
+        }
+
+        // 如果 Worker 数量发生变化，需要重新创建 Worker 池
+        if (oldConfig.workerCount !== this.config.workerCount) {
+            this.reinitializeWorkerPool();
+            return;
+        }
 
         // 如果禁用Worker，清理Worker池
         if (!this.config.enableWorker && this.workerPool) {
@@ -643,6 +659,46 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
 
         // 如果启用Worker但池不存在，重新创建
         if (this.config.enableWorker && !this.workerPool && this.isWorkerSupported()) {
+            this.initializeWorkerPool();
+        }
+    }
+
+    /**
+     * 重新初始化整个 Worker 系统（包括 SharedArrayBuffer）
+     */
+    private reinitializeWorkerSystem(): void {
+        // 清理现有资源
+        if (this.workerPool) {
+            this.workerPool.destroy();
+            this.workerPool = null;
+        }
+        this.sharedBuffer = null;
+        this.sharedFloatArray = null;
+
+        // 如果禁用 SharedArrayBuffer，降级到单 Worker 模式
+        if (!this.config.useSharedArrayBuffer) {
+            this.config.workerCount = 1;
+        }
+
+        // 重新初始化
+        if (this.config.enableWorker && this.isWorkerSupported()) {
+            if (this.config.useSharedArrayBuffer) {
+                this.initializeSharedArrayBuffer();
+            }
+            this.initializeWorkerPool();
+        }
+    }
+
+    /**
+     * 重新初始化 Worker 池（保持 SharedArrayBuffer）
+     */
+    private reinitializeWorkerPool(): void {
+        if (this.workerPool) {
+            this.workerPool.destroy();
+            this.workerPool = null;
+        }
+
+        if (this.config.enableWorker && this.isWorkerSupported()) {
             this.initializeWorkerPool();
         }
     }

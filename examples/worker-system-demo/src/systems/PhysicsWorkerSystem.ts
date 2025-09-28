@@ -37,13 +37,17 @@ export class PhysicsWorkerSystem extends WorkerEntitySystem<PhysicsEntityData> {
             groundFriction: 0.98
         };
 
+        // 检查 SharedArrayBuffer 是否可用
+        const isSharedArrayBufferAvailable = typeof SharedArrayBuffer !== 'undefined' && self.crossOriginIsolated;
+
         super(
             Matcher.empty().all(Position, Velocity, Physics),
             {
                 enableWorker,
-                workerCount: navigator.hardwareConcurrency || 2, // 恢复多Worker
+                // 当 SharedArrayBuffer 可用时使用多 Worker，否则使用单 Worker 保证碰撞检测完整性
+                workerCount: isSharedArrayBufferAvailable ? (navigator.hardwareConcurrency || 2) : 1,
                 systemConfig: defaultConfig,
-                useSharedArrayBuffer: true // 使用SharedArrayBuffer进行全局碰撞检测
+                useSharedArrayBuffer: true // 优先使用 SharedArrayBuffer
             }
         );
     }
@@ -226,6 +230,49 @@ export class PhysicsWorkerSystem extends WorkerEntitySystem<PhysicsEntityData> {
         return { ...this.physicsConfig };
     }
 
+    /**
+     * 禁用 SharedArrayBuffer（用于测试降级行为）
+     */
+    public disableSharedArrayBuffer(): void {
+        console.log(`[${this.systemName}] Disabling SharedArrayBuffer for testing - falling back to single Worker mode`);
+
+        // 使用正式的配置更新 API
+        this.updateConfig({
+            useSharedArrayBuffer: false
+        });
+    }
+
+    /**
+     * 获取当前运行状态
+     */
+    public getCurrentStatus(): {
+        mode: 'shared-buffer' | 'single-worker' | 'multi-worker' | 'sync';
+        sharedArrayBufferEnabled: boolean;
+        workerCount: number;
+        workerEnabled: boolean;
+    } {
+        const workerInfo = this.getWorkerInfo();
+
+        let mode: 'shared-buffer' | 'single-worker' | 'multi-worker' | 'sync' = 'sync';
+
+        if (workerInfo.enabled) {
+            if (workerInfo.sharedArrayBufferEnabled && workerInfo.sharedArrayBufferSupported) {
+                mode = 'shared-buffer';
+            } else if (workerInfo.workerCount === 1) {
+                mode = 'single-worker';
+            } else {
+                mode = 'multi-worker';
+            }
+        }
+
+        return {
+            mode,
+            sharedArrayBufferEnabled: workerInfo.sharedArrayBufferEnabled,
+            workerCount: workerInfo.workerCount,
+            workerEnabled: workerInfo.enabled
+        };
+    }
+
     private startTime: number = 0;
 
 
@@ -329,7 +376,7 @@ export class PhysicsWorkerSystem extends WorkerEntitySystem<PhysicsEntityData> {
                 let y = sharedFloatArray[offset + 2];
                 let dx = sharedFloatArray[offset + 3];
                 let dy = sharedFloatArray[offset + 4];
-                const mass = sharedFloatArray[offset + 5];
+                // const mass = sharedFloatArray[offset + 5]; // 未使用
                 const bounce = sharedFloatArray[offset + 6];
                 const friction = sharedFloatArray[offset + 7];
                 const radius = sharedFloatArray[offset + 8];

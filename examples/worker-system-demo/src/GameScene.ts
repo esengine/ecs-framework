@@ -161,6 +161,20 @@ export class GameScene extends Scene {
     }
 
     /**
+     * 切换 SharedArrayBuffer 状态
+     */
+    public toggleSharedArrayBuffer(): void {
+        this.physicsSystem.disableSharedArrayBuffer();
+    }
+
+    /**
+     * 获取物理系统状态
+     */
+    public getPhysicsSystemStatus() {
+        return this.physicsSystem.getCurrentStatus();
+    }
+
+    /**
      * 获取系统信息
      */
     public getSystemInfo() {
