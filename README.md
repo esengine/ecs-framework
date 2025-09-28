@@ -11,6 +11,7 @@
 ## 特性
 
 - **高性能** - 针对大规模实体优化，支持SoA存储和批量处理
+- **多线程计算** - Worker系统支持真正的并行处理，充分利用多核CPU性能
 - **类型安全** - 完整的TypeScript支持，编译时类型检查
 - **现代架构** - 支持多World、多Scene的分层架构设计
 - **开发友好** - 内置调试工具和性能监控
@@ -86,6 +87,7 @@ function gameLoop(deltaTime: number) {
 - **实体查询** - 使用 Matcher API 进行高效的实体过滤
 - **事件系统** - 类型安全的事件发布/订阅机制
 - **性能优化** - SoA 存储优化，支持大规模实体处理
+- **多线程支持** - Worker系统实现真正的并行计算，充分利用多核CPU
 - **多场景** - 支持 World/Scene 分层架构
 - **时间管理** - 内置定时器和时间控制系统
 
@@ -101,6 +103,7 @@ function gameLoop(deltaTime: number) {
 
 ## 示例项目
 
+- [Worker系统演示](https://esengine.github.io/ecs-framework/demos/worker-system/) - 多线程物理系统演示，展示高性能并行计算
 - [割草机演示](https://github.com/esengine/lawn-mower-demo) - 完整的游戏示例
 
 ## 文档

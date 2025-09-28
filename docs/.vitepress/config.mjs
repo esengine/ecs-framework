@@ -66,7 +66,13 @@ export default defineConfig({
           items: [
             { text: '实体类 (Entity)', link: '/guide/entity' },
             { text: '组件系统 (Component)', link: '/guide/component' },
-            { text: '系统架构 (System)', link: '/guide/system' },
+            {
+              text: '系统架构 (System)',
+              link: '/guide/system',
+              items: [
+                { text: 'Worker系统 (多线程)', link: '/guide/worker-system' }
+              ]
+            },
             { text: '场景管理 (Scene)', link: '/guide/scene' },
             { text: '事件系统 (Event)', link: '/guide/event-system' },
             { text: '时间和定时器 (Time)', link: '/guide/time-and-timers' },

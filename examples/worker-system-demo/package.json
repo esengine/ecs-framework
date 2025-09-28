@@ -1,0 +1,18 @@
+{
+  "name": "ecs-worker-system-demo",
+  "version": "1.0.0",
+  "description": "ECS Framework Worker System Demo",
+  "main": "src/main.ts",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vite": "^4.0.0"
+  },
+  "dependencies": {
+    "@esengine/ecs-framework": "file:../../packages/core"
+  }
+}

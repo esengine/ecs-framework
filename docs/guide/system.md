@@ -105,6 +105,14 @@ class AutoSaveSystem extends IntervalSystem {
 }
 ```
 
+### WorkerEntitySystem - 多线程系统
+
+基于Web Worker的多线程处理系统，适用于计算密集型任务，能够充分利用多核CPU性能。
+
+Worker系统提供了真正的并行计算能力，支持SharedArrayBuffer优化，并具有自动降级支持。特别适合物理模拟、粒子系统、AI计算等场景。
+
+**详细内容请参考：[Worker系统](/guide/worker-system)**
+
 ## 实体匹配器 (Matcher)
 
 Matcher 用于定义系统需要处理哪些实体。它提供了灵活的条件组合：

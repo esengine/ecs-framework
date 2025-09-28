@@ -11914,9 +11914,10 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
       {
         enableWorker,
         workerCount: navigator.hardwareConcurrency || 2,
+        // 恢复多Worker
         systemConfig: defaultConfig,
         useSharedArrayBuffer: true
-        // 启用SharedArrayBuffer优化
+        // 使用SharedArrayBuffer进行全局碰撞检测
       }
     );
     this.physicsConfig = {
@@ -11948,7 +11949,8 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
   /**
    * Worker处理函数 - 纯函数，会被序列化到Worker中执行
    * 注意：这个函数内部不能访问外部变量，必须是纯函数
-   * 添加了小球间碰撞检测，大大增加计算复杂度
+   * 非SharedArrayBuffer模式：每个Worker只能看到分配给它的实体批次
+   * 这会导致跨批次的碰撞检测缺失，但单批次内的碰撞是正确的
    */
   workerProcess(entities, deltaTime, systemConfig) {
     const config = systemConfig || {
@@ -12023,7 +12025,7 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
     return result;
   }
   /**
-   * 应用处理结果 - 将Worker计算结果应用回组件
+   * 应用处理结果
    */
   applyResult(entity, result) {
     if (!entity || !entity.enabled) {
@@ -12051,7 +12053,7 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
     return { ...this.physicsConfig };
   }
   /**
-   * 性能监控 - 重写onEnd来计算执行时间
+   * 性能监控
    */
   onEnd() {
     super.onEnd();
@@ -12060,7 +12062,7 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
     window.physicsExecutionTime = executionTime;
   }
   /**
-   * 获取实体数据大小 - 物理系统使用9个Float32值
+   * 获取实体数据大小
    */
   getDefaultEntityDataSize() {
     return 9;
@@ -12086,7 +12088,7 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
     sharedArray[dataOffset + 8] = entityData.radius;
   }
   /**
-   * 性能监控 - 重写onBegin来记录开始时间
+   * 性能监控开始
    */
   onBegin() {
     super.onBegin();
@@ -12113,8 +12115,7 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
     };
   }
   /**
-   * 提供SharedArrayBuffer处理函数 - 物理系统的具体实现
-   * 包含小球间碰撞检测的复杂计算
+   * SharedArrayBuffer处理函数
    */
   getSharedArrayBufferProcessFunction() {
     return function(sharedFloatArray, startIndex, endIndex, deltaTime, systemConfig) {
@@ -12214,11 +12215,9 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
             const impulseY = impulseScalar * ny;
             dx1 -= impulseX / mass1;
             dy1 -= impulseY / mass1;
-            if (i < j) {
-              const energyLoss = 0.98;
-              dx1 *= energyLoss;
-              dy1 *= energyLoss;
-            }
+            const energyLoss = 0.98;
+            dx1 *= energyLoss;
+            dy1 *= energyLoss;
           }
         }
         sharedFloatArray[offset1 + 1] = x1;
