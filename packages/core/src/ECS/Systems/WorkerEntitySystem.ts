@@ -195,10 +195,11 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
     private isProcessing = false;
     protected sharedBuffer: SharedArrayBuffer | null = null;
     protected sharedFloatArray: Float32Array | null = null;
-    private logger = createLogger('WorkerEntitySystem');
 
     constructor(matcher?: Matcher, config: WorkerSystemConfig = {}) {
         super(matcher);
+
+        this.logger = createLogger('WorkerEntitySystem');
 
         // 验证和调整 worker 数量，确保不超过系统最大值
         const requestedWorkerCount = config.workerCount ?? this.getMaxSystemWorkerCount();
