@@ -50,21 +50,6 @@ jobs:
       - name: Build documentation
         run: npm run docs:build
 
-      - name: Add COOP/COEP headers for SharedArrayBuffer support
-        run: |
-          # Create _headers file for Netlify compatibility
-          echo "/*" > docs/.vitepress/dist/_headers
-          echo "  Cross-Origin-Embedder-Policy: require-corp" >> docs/.vitepress/dist/_headers
-          echo "  Cross-Origin-Opener-Policy: same-origin" >> docs/.vitepress/dist/_headers
-
-          # Create .htaccess file for Apache compatibility (GitHub Pages sometimes uses this)
-          echo "Header always set Cross-Origin-Embedder-Policy require-corp" > docs/.vitepress/dist/.htaccess
-          echo "Header always set Cross-Origin-Opener-Policy same-origin" >> docs/.vitepress/dist/.htaccess
-
-          # Create a meta tag fallback in a headers.html file that can be included
-          echo '<meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">' > docs/.vitepress/dist/headers.html
-          echo '<meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">' >> docs/.vitepress/dist/headers.html
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

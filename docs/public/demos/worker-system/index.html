@@ -173,17 +173,38 @@
         </div>
     </div>
 
+    <!-- 使用 coi-serviceworker 启用 SharedArrayBuffer 支持 -->
+    <script src="/ecs-framework/coi-serviceworker.js"></script>
+
     <script>
-        // Register Service Worker for SharedArrayBuffer support on GitHub Pages
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/ecs-framework/sw.js')
-                .then((registration) => {
-                    console.log('Service Worker registered for SharedArrayBuffer support:', registration);
-                })
-                .catch((error) => {
-                    console.log('Service Worker registration failed:', error);
-                });
+        // Check SharedArrayBuffer support and display info
+        function checkSharedArrayBufferSupport() {
+            const hasSharedArrayBuffer = typeof SharedArrayBuffer !== 'undefined';
+            const isCrossOriginIsolated = self.crossOriginIsolated || false;
+            const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            const isGitHubPages = location.hostname === 'esengine.github.io';
+
+            console.log('=== SharedArrayBuffer 支持检测 ===');
+            console.log('SharedArrayBuffer 存在:', hasSharedArrayBuffer);
+            console.log('跨域隔离状态:', isCrossOriginIsolated);
+            console.log('是否本地环境:', isLocalhost);
+            console.log('是否 GitHub Pages:', isGitHubPages);
+
+            if (hasSharedArrayBuffer && isCrossOriginIsolated) {
+                console.log('✅ SharedArrayBuffer 功能已启用！');
+                console.log('系统将使用高性能的 SharedArrayBuffer 模式');
+            } else if (isGitHubPages) {
+                console.log('ℹ️ 如果页面刷新，可能是 coi-serviceworker 正在设置跨域隔离');
+                console.log('刷新后 SharedArrayBuffer 应该可用');
+            }
+
+            return hasSharedArrayBuffer && isCrossOriginIsolated;
         }
+
+        // Run check after page load
+        window.addEventListener('load', () => {
+            setTimeout(checkSharedArrayBufferSupport, 1000);
+        });
     </script>
 </body>
 </html>

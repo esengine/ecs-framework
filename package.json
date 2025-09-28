@@ -90,6 +90,7 @@
   "dependencies": {
     "@types/multer": "^1.4.13",
     "@types/ws": "^8.18.1",
+    "coi-serviceworker": "^0.1.7",
     "protobufjs": "^7.5.3",
     "reflect-metadata": "^0.2.2",
     "ws": "^8.18.2"
