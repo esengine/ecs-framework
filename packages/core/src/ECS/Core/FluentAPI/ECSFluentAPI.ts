@@ -62,11 +62,11 @@ export class ECSFluentAPI {
     }
 
     /**
-     * 查找实体（简化版）
+     * 查找实体
      * @param componentTypes 组件类型
      * @returns 实体数组
      */
-    public find(...componentTypes: ComponentType[]): Entity[] {
+    public find(...componentTypes: ComponentType[]): readonly Entity[] {
         return this.querySystem.queryAll(...componentTypes).entities;
     }
 

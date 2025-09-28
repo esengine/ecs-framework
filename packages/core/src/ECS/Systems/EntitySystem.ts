@@ -30,7 +30,7 @@ interface EventListenerRecord {
  *         super(Transform, Velocity);
  *     }
  * 
- *     protected process(entities: Entity[]): void {
+ *     protected process(entities: readonly Entity[]): void {
  *         for (const entity of entities) {
  *             const transform = entity.getComponent(Transform);
  *             const velocity = entity.getComponent(Velocity);
@@ -61,8 +61,8 @@ export abstract class EntitySystem implements ISystemBase {
      * 统一的实体缓存管理器
      */
     private _entityCache: {
-        frame: Entity[] | null;
-        persistent: Entity[] | null;
+        frame: readonly Entity[] | null;
+        persistent: readonly Entity[] | null;
         tracked: Set<Entity>;
         invalidate(): void;
         clearFrame(): void;
@@ -245,14 +245,14 @@ export abstract class EntitySystem implements ISystemBase {
     /**
      * 查询匹配的实体
      */
-    private queryEntities(): Entity[] {
+    private queryEntities(): readonly Entity[] {
         if (!this.scene?.querySystem || !this._matcher) {
             return [];
         }
 
         const condition = this._matcher.getCondition();
         const querySystem = this.scene.querySystem;
-        let currentEntities: Entity[] = [];
+        let currentEntities: readonly Entity[] = [];
 
         // 空条件返回所有实体
         if (this._matcher.isEmpty()) {
@@ -289,7 +289,7 @@ export abstract class EntitySystem implements ISystemBase {
     /**
      * 执行单一条件查询
      */
-    private executeSingleConditionQuery(condition: any, querySystem: any): Entity[] {
+    private executeSingleConditionQuery(condition: any, querySystem: any): readonly Entity[] {
         // 按标签查询
         if (condition.tag !== undefined) {
             return querySystem.queryByTag(condition.tag).entities;
@@ -324,7 +324,7 @@ export abstract class EntitySystem implements ISystemBase {
     /**
      * 执行复合查询
      */
-    private executeComplexQueryWithIdSets(condition: any, querySystem: QuerySystem): Entity[] {
+    private executeComplexQueryWithIdSets(condition: any, querySystem: QuerySystem): readonly Entity[] {
         let resultIds: Set<number> | null = null;
 
         // 1. 应用标签条件作为基础集合
@@ -374,7 +374,7 @@ export abstract class EntitySystem implements ISystemBase {
     /**
      * 提取实体ID集合
      */
-    private extractEntityIds(entities: Entity[]): Set<number> {
+    private extractEntityIds(entities: readonly Entity[]): Set<number> {
         const len = entities.length;
         const idSet = new Set<number>();
 
@@ -427,7 +427,7 @@ export abstract class EntitySystem implements ISystemBase {
     /**
      * 获取或构建实体ID映射
      */
-    private getEntityIdMap(allEntities: Entity[]): Map<number, Entity> {
+    private getEntityIdMap(allEntities: readonly Entity[]): Map<number, Entity> {
         const currentVersion = this.scene?.querySystem?.version ?? 0;
         if (this._entityIdMap !== null &&
             this._entityIdMapVersion === currentVersion) {
@@ -440,7 +440,7 @@ export abstract class EntitySystem implements ISystemBase {
     /**
      * 重建实体ID映射
      */
-    private rebuildEntityIdMap(allEntities: Entity[], version: number): Map<number, Entity> {
+    private rebuildEntityIdMap(allEntities: readonly Entity[], version: number): Map<number, Entity> {
         let entityMap = this._entityIdMap;
 
         if (!entityMap) {
@@ -465,7 +465,7 @@ export abstract class EntitySystem implements ISystemBase {
     /**
      * 从ID集合构建Entity数组
      */
-    private idSetToEntityArray(idSet: Set<number>, allEntities: Entity[]): Entity[] {
+    private idSetToEntityArray(idSet: Set<number>, allEntities: readonly Entity[]): readonly Entity[] {
         const entityMap = this.getEntityIdMap(allEntities);
 
         const size = idSet.size;
@@ -492,7 +492,7 @@ export abstract class EntitySystem implements ISystemBase {
      * 
      * 使用基于ID集合的单次扫描算法进行复杂查询
      */
-    private executeComplexQuery(condition: any, querySystem: QuerySystem): Entity[] {
+    private executeComplexQuery(condition: any, querySystem: QuerySystem): readonly Entity[] {
         return this.executeComplexQueryWithIdSets(condition, querySystem);
     }
 
@@ -559,7 +559,7 @@ export abstract class EntitySystem implements ISystemBase {
      * 
      * @param entities 要处理的实体列表
      */
-    protected process(entities: Entity[]): void {
+    protected process(entities: readonly Entity[]): void {
         // 子类必须实现此方法
     }
 
@@ -570,7 +570,7 @@ export abstract class EntitySystem implements ISystemBase {
      * 
      * @param entities 要处理的实体列表
      */
-    protected lateProcess(_entities: Entity[]): void {
+    protected lateProcess(_entities: readonly Entity[]): void {
         // 子类可以重写此方法
     }
 
@@ -636,7 +636,7 @@ export abstract class EntitySystem implements ISystemBase {
     /**
      * 更新实体跟踪，检查新增和移除的实体
      */
-    private updateEntityTracking(currentEntities: Entity[]): void {
+    private updateEntityTracking(currentEntities: readonly Entity[]): void {
         const currentSet = new Set(currentEntities);
         let hasChanged = false;
 

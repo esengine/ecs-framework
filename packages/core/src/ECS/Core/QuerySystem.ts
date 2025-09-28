@@ -8,7 +8,6 @@ import { getComponentTypeName } from '../Decorators';
 import { ComponentPoolManager } from './ComponentPool';
 import { ComponentIndexManager } from './ComponentIndex';
 import { ArchetypeSystem, Archetype, ArchetypeQueryResult } from './ArchetypeSystem';
-import { DirtyTrackingSystem, DirtyFlag } from './DirtyTrackingSystem';
 
 /**
  * 查询条件类型
@@ -35,7 +34,7 @@ export interface QueryCondition {
  * 实体查询结果接口
  */
 export interface QueryResult {
-    entities: Entity[];
+    entities: readonly Entity[];
     count: number;
     /** 查询执行时间（毫秒） */
     executionTime: number;
@@ -57,9 +56,10 @@ interface EntityIndex {
  * 查询缓存条目
  */
 interface QueryCacheEntry {
-    entities: Entity[];
+    entities: readonly Entity[];
     timestamp: number;
     hitCount: number;
+    version: number;
 }
 
 /**
@@ -87,8 +87,7 @@ export class QuerySystem {
     private _logger = createLogger('QuerySystem');
     private entities: Entity[] = [];
     private entityIndex: EntityIndex;
-    private indexDirty = true;
-    
+
     // 版本号，用于缓存失效
     private _version = 0;
 
@@ -97,13 +96,14 @@ export class QuerySystem {
     private cacheMaxSize = 1000;
     private cacheTimeout = 5000; // 5秒缓存过期
 
-    // 优化组件
-    private componentPoolManager: ComponentPoolManager;
+    // 性能优化缓存
+    private componentNameCache = new WeakMap<ComponentType, string>();
+    private cacheKeyCache = new Map<string, string>();
+    private componentMaskCache = new Map<string, BitMask64Data>();
 
     // 新增性能优化系统
     private componentIndexManager: ComponentIndexManager;
     private archetypeSystem: ArchetypeSystem;
-    private dirtyTrackingSystem: DirtyTrackingSystem;
 
     // 性能统计
     private queryStats = {
@@ -123,12 +123,9 @@ export class QuerySystem {
             byName: new Map()
         };
 
-        // 初始化优化组件
-        this.componentPoolManager = ComponentPoolManager.getInstance();
         // 初始化新的性能优化系统
         this.componentIndexManager = new ComponentIndexManager();
         this.archetypeSystem = new ArchetypeSystem();
-        this.dirtyTrackingSystem = new DirtyTrackingSystem();
     }
 
 
@@ -163,7 +160,6 @@ export class QuerySystem {
 
             this.componentIndexManager.addEntity(entity);
             this.archetypeSystem.addEntity(entity);
-            this.dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_ADDED);
 
 
             // 只有在非延迟模式下才立即清理缓存
@@ -246,7 +242,6 @@ export class QuerySystem {
 
             this.componentIndexManager.removeEntity(entity);
             this.archetypeSystem.removeEntity(entity);
-            this.dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_REMOVED);
 
             this.clearQueryCache();
             
@@ -256,53 +251,61 @@ export class QuerySystem {
     }
 
     /**
-     * 将实体添加到各种索引中（优化版本）
+     * 将实体添加到各种索引中
      */
     private addEntityToIndexes(entity: Entity): void {
         const mask = entity.componentMask;
 
-        // 组件掩码索引 - 优化Map操作
+        // 组件掩码索引
         const maskKey = mask.toString();
-        let maskSet = this.entityIndex.byMask.get(maskKey);
-        if (!maskSet) {
-            maskSet = new Set();
-            this.entityIndex.byMask.set(maskKey, maskSet);
-        }
+        const maskSet = this.entityIndex.byMask.get(maskKey) || this.createAndSetMaskIndex(maskKey);
         maskSet.add(entity);
 
-        // 组件类型索引 - 批量处理
+        // 组件类型索引 - 批量处理，预获取所有相关的Set
         const components = entity.components;
         for (let i = 0; i < components.length; i++) {
             const componentType = components[i].constructor as ComponentType;
-            let typeSet = this.entityIndex.byComponentType.get(componentType);
-            if (!typeSet) {
-                typeSet = new Set();
-                this.entityIndex.byComponentType.set(componentType, typeSet);
-            }
+            const typeSet = this.entityIndex.byComponentType.get(componentType) || this.createAndSetComponentIndex(componentType);
             typeSet.add(entity);
         }
 
-        // 标签索引 - 只在有标签时处理
+        // 标签索引
         const tag = entity.tag;
         if (tag !== undefined) {
-            let tagSet = this.entityIndex.byTag.get(tag);
-            if (!tagSet) {
-                tagSet = new Set();
-                this.entityIndex.byTag.set(tag, tagSet);
-            }
+            const tagSet = this.entityIndex.byTag.get(tag) || this.createAndSetTagIndex(tag);
             tagSet.add(entity);
         }
 
-        // 名称索引 - 只在有名称时处理
+        // 名称索引
         const name = entity.name;
         if (name) {
-            let nameSet = this.entityIndex.byName.get(name);
-            if (!nameSet) {
-                nameSet = new Set();
-                this.entityIndex.byName.set(name, nameSet);
-            }
+            const nameSet = this.entityIndex.byName.get(name) || this.createAndSetNameIndex(name);
             nameSet.add(entity);
         }
+    }
+
+    private createAndSetMaskIndex(maskKey: string): Set<Entity> {
+        const set = new Set<Entity>();
+        this.entityIndex.byMask.set(maskKey, set);
+        return set;
+    }
+
+    private createAndSetComponentIndex(componentType: ComponentType): Set<Entity> {
+        const set = new Set<Entity>();
+        this.entityIndex.byComponentType.set(componentType, set);
+        return set;
+    }
+
+    private createAndSetTagIndex(tag: number): Set<Entity> {
+        const set = new Set<Entity>();
+        this.entityIndex.byTag.set(tag, set);
+        return set;
+    }
+
+    private createAndSetNameIndex(name: string): Set<Entity> {
+        const set = new Set<Entity>();
+        this.entityIndex.byName.set(name, set);
+        return set;
     }
 
     /**
@@ -377,8 +380,6 @@ export class QuerySystem {
             this.componentIndexManager.addEntity(entity);
             this.archetypeSystem.addEntity(entity);
         }
-
-        this.indexDirty = false;
     }
 
     /**
@@ -402,7 +403,7 @@ export class QuerySystem {
         this.queryStats.totalQueries++;
 
         // 生成缓存键
-        const cacheKey = `all:${componentTypes.map(t => getComponentTypeName(t)).sort().join(',')}`;
+        const cacheKey = this.generateCacheKey('all', componentTypes);
 
         // 检查缓存
         const cached = this.getFromCache(cacheKey);
@@ -513,7 +514,7 @@ export class QuerySystem {
         const startTime = performance.now();
         this.queryStats.totalQueries++;
 
-        const cacheKey = `any:${componentTypes.map(t => getComponentTypeName(t)).sort().join(',')}`;
+        const cacheKey = this.generateCacheKey('any', componentTypes);
 
         // 检查缓存
         const cached = this.getFromCache(cacheKey);
@@ -571,7 +572,7 @@ export class QuerySystem {
         const startTime = performance.now();
         this.queryStats.totalQueries++;
 
-        const cacheKey = `none:${componentTypes.map(t => getComponentTypeName(t)).sort().join(',')}`;
+        const cacheKey = this.generateCacheKey('none', componentTypes);
 
         // 检查缓存
         const cached = this.getFromCache(cacheKey);
@@ -715,7 +716,7 @@ export class QuerySystem {
         const startTime = performance.now();
         this.queryStats.totalQueries++;
 
-        const cacheKey = `component:${getComponentTypeName(componentType)}`;
+        const cacheKey = this.generateCacheKey('component', [componentType]);
 
         // 检查缓存
         const cached = this.getFromCache(cacheKey);
@@ -747,12 +748,12 @@ export class QuerySystem {
     /**
      * 从缓存获取查询结果
      */
-    private getFromCache(cacheKey: string): Entity[] | null {
+    private getFromCache(cacheKey: string): readonly Entity[] | null {
         const entry = this.queryCache.get(cacheKey);
         if (!entry) return null;
 
-        // 检查缓存是否过期
-        if (Date.now() - entry.timestamp > this.cacheTimeout) {
+        // 检查缓存是否过期或版本过期
+        if (Date.now() - entry.timestamp > this.cacheTimeout || entry.version !== this._version) {
             this.queryCache.delete(cacheKey);
             return null;
         }
@@ -771,9 +772,10 @@ export class QuerySystem {
         }
 
         this.queryCache.set(cacheKey, {
-            entities: [...entities], // 复制数组避免引用问题
+            entities: entities, // 直接使用引用，通过版本号控制失效
             timestamp: Date.now(),
-            hitCount: 0
+            hitCount: 0,
+            version: this._version
         });
     }
 
@@ -791,12 +793,22 @@ export class QuerySystem {
 
         // 如果还是太满，移除最少使用的条目
         if (this.queryCache.size >= this.cacheMaxSize) {
-            const entries = Array.from(this.queryCache.entries());
-            entries.sort((a, b) => a[1].hitCount - b[1].hitCount);
+            let minHitCount = Infinity;
+            let oldestKey = '';
+            let oldestTimestamp = Infinity;
 
-            const toRemove = Math.floor(this.cacheMaxSize * 0.2); // 移除20%
-            for (let i = 0; i < toRemove && i < entries.length; i++) {
-                this.queryCache.delete(entries[i][0]);
+            // 单次遍历找到最少使用或最旧的条目
+            for (const [key, entry] of this.queryCache.entries()) {
+                if (entry.hitCount < minHitCount ||
+                    (entry.hitCount === minHitCount && entry.timestamp < oldestTimestamp)) {
+                    minHitCount = entry.hitCount;
+                    oldestKey = key;
+                    oldestTimestamp = entry.timestamp;
+                }
+            }
+
+            if (oldestKey) {
+                this.queryCache.delete(oldestKey);
             }
         }
     }
@@ -806,10 +818,48 @@ export class QuerySystem {
      */
     private clearQueryCache(): void {
         this.queryCache.clear();
+        this.cacheKeyCache.clear();
+        this.componentMaskCache.clear();
     }
 
     /**
-     * 公共方法：清理查询缓存
+     * 高效的缓存键生成
+     */
+    private generateCacheKey(prefix: string, componentTypes: ComponentType[]): string {
+        // 快速路径：单组件查询
+        if (componentTypes.length === 1) {
+            let name = this.componentNameCache.get(componentTypes[0]);
+            if (!name) {
+                name = getComponentTypeName(componentTypes[0]);
+                this.componentNameCache.set(componentTypes[0], name);
+            }
+            return `${prefix}:${name}`;
+        }
+
+        // 多组件查询：使用排序后的类型名称创建键
+        const sortKey = componentTypes.map(t => {
+            let name = this.componentNameCache.get(t);
+            if (!name) {
+                name = getComponentTypeName(t);
+                this.componentNameCache.set(t, name);
+            }
+            return name;
+        }).sort().join(',');
+
+        const fullKey = `${prefix}:${sortKey}`;
+
+        // 检查缓存的键是否已存在
+        let cachedKey = this.cacheKeyCache.get(fullKey);
+        if (!cachedKey) {
+            cachedKey = fullKey;
+            this.cacheKeyCache.set(fullKey, cachedKey);
+        }
+
+        return cachedKey;
+    }
+
+    /**
+     * 清理查询缓存
      * 
      * 用于外部调用清理缓存，通常在批量操作后使用。
      */
@@ -818,64 +868,34 @@ export class QuerySystem {
     }
 
     /**
-     * 批量更新实体组件
-     * 
-     * 对大量实体进行批量组件更新操作。
-     * 
-     * @param updates 更新操作列表，包含实体ID和新的组件掩码
-     * 
-     * @example
-     * ```typescript
-     * // 批量更新实体的组件配置
-     * const updates = [
-     *     { entityId: 1, componentMask: BigInt(0b1011) },
-     *     { entityId: 2, componentMask: BigInt(0b1101) }
-     * ];
-     * querySystem.batchUpdateComponents(updates);
-     * ```
-     */
-    public batchUpdateComponents(updates: Array<{ entityId: number, componentMask: bigint }>): void {
-        // 批量处理更新，先从索引中移除，再重新添加
-        const entitiesToUpdate: Entity[] = [];
-        
-        for (const update of updates) {
-            const entity = this.entities.find(e => e.id === update.entityId);
-            if (entity) {
-                // 先从所有索引中移除
-                this.removeEntityFromIndexes(entity);
-                entitiesToUpdate.push(entity);
-            }
-        }
-        
-        // 重新添加到索引中（此时实体的组件掩码已经更新）
-        for (const entity of entitiesToUpdate) {
-            this.addEntityToIndexes(entity);
-        }
-        
-        // 标记脏实体进行处理
-        for (const entity of entitiesToUpdate) {
-            this.dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_MODIFIED, []);
-        }
-        
-        // 批量更新后清除缓存
-        this.clearQueryCache();
-    }
-
-
-
-    /**
      * 创建组件掩码
-     * 
+     *
      * 根据组件类型列表生成对应的位掩码。
-     * 使用位掩码优化器进行缓存和预计算。
-     * 
+     * 使用缓存避免重复计算。
+     *
      * @param componentTypes 组件类型列表
      * @returns 生成的位掩码
      */
     private createComponentMask(componentTypes: ComponentType[]): BitMask64Data {
+        // 生成缓存键
+        const cacheKey = componentTypes.map(t => {
+            let name = this.componentNameCache.get(t);
+            if (!name) {
+                name = getComponentTypeName(t);
+                this.componentNameCache.set(t, name);
+            }
+            return name;
+        }).sort().join(',');
+
+        // 检查缓存
+        const cached = this.componentMaskCache.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
+
         let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         let hasValidComponents = false;
-        
+
         for (const type of componentTypes) {
             try {
                 const bitMask = ComponentRegistry.getBitMask(type);
@@ -885,12 +905,14 @@ export class QuerySystem {
                 this._logger.warn(`组件类型 ${getComponentTypeName(type)} 未注册，跳过`);
             }
         }
-        
+
         // 如果没有有效的组件类型，返回一个不可能匹配的掩码
         if (!hasValidComponents) {
-            return { lo: 0xFFFFFFFF, hi: 0xFFFFFFFF }; // 所有位都是1，不可能与任何实体匹配
+            mask = { lo: 0xFFFFFFFF, hi: 0xFFFFFFFF };
         }
-        
+
+        // 缓存结果
+        this.componentMaskCache.set(cacheKey, mask);
         return mask;
     }
 
@@ -904,8 +926,8 @@ export class QuerySystem {
     /**
      * 获取所有实体
      */
-    public getAllEntities(): Entity[] {
-        return [...this.entities];
+    public getAllEntities(): readonly Entity[] {
+        return this.entities;
     }
     
     /**
@@ -936,7 +958,6 @@ export class QuerySystem {
         optimizationStats: {
             componentIndex: any;
             archetypeSystem: any;
-            dirtyTracking: any;
         };
         cacheStats: {
             size: number;
@@ -962,8 +983,7 @@ export class QuerySystem {
                     id: a.id,
                     componentTypes: a.componentTypes.map(t => getComponentTypeName(t)),
                     entityCount: a.entities.length
-                })),
-                dirtyTracking: this.dirtyTrackingSystem.getStats()
+                }))
             },
             cacheStats: {
                 size: this.queryCache.size,
@@ -971,54 +991,6 @@ export class QuerySystem {
                     (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + '%' : '0%'
             }
         };
-    }
-
-
-    /**
-     * 配置脏标记系统
-     * 
-     * @param batchSize 批处理大小
-     * @param maxProcessingTime 最大处理时间
-     */
-    public configureDirtyTracking(batchSize: number, maxProcessingTime: number): void {
-        this.dirtyTrackingSystem.configureBatchProcessing(batchSize, maxProcessingTime);
-    }
-
-    /**
-     * 手动触发性能优化
-     */
-    public optimizePerformance(): void {
-        this.dirtyTrackingSystem.processDirtyEntities();
-        this.cleanupCache();
-
-        const stats = this.componentIndexManager.getStats();
-        // 基于SparseSet的索引已自动优化，无需手动切换索引类型
-    }
-
-    /**
-     * 开始新的帧
-     */
-    public beginFrame(): void {
-        this.dirtyTrackingSystem.beginFrame();
-    }
-
-    /**
-     * 结束当前帧
-     */
-    public endFrame(): void {
-        this.dirtyTrackingSystem.endFrame();
-    }
-
-    /**
-     * 标记实体组件已修改（用于脏标记追踪）
-     * 
-     * @param entity 修改的实体
-     * @param componentTypes 修改的组件类型
-     */
-    public markEntityDirty(entity: Entity, componentTypes: ComponentType[]): void {
-        this.queryStats.dirtyChecks++;
-        this.dirtyTrackingSystem.markDirty(entity, DirtyFlag.COMPONENT_MODIFIED, componentTypes);
-        this.clearQueryCache();
     }
 
     /**
