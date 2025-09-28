@@ -11649,12 +11649,53 @@ class WorkerEntitySystem extends EntitySystem {
    * 更新Worker配置
    */
   updateConfig(newConfig) {
+    const oldConfig = { ...this.config };
     Object.assign(this.config, newConfig);
+    if (oldConfig.useSharedArrayBuffer !== this.config.useSharedArrayBuffer) {
+      this.reinitializeWorkerSystem();
+      return;
+    }
+    if (oldConfig.workerCount !== this.config.workerCount) {
+      this.reinitializeWorkerPool();
+      return;
+    }
     if (!this.config.enableWorker && this.workerPool) {
       this.workerPool.destroy();
       this.workerPool = null;
     }
     if (this.config.enableWorker && !this.workerPool && this.isWorkerSupported()) {
+      this.initializeWorkerPool();
+    }
+  }
+  /**
+   * 重新初始化整个 Worker 系统（包括 SharedArrayBuffer）
+   */
+  reinitializeWorkerSystem() {
+    if (this.workerPool) {
+      this.workerPool.destroy();
+      this.workerPool = null;
+    }
+    this.sharedBuffer = null;
+    this.sharedFloatArray = null;
+    if (!this.config.useSharedArrayBuffer) {
+      this.config.workerCount = 1;
+    }
+    if (this.config.enableWorker && this.isWorkerSupported()) {
+      if (this.config.useSharedArrayBuffer) {
+        this.initializeSharedArrayBuffer();
+      }
+      this.initializeWorkerPool();
+    }
+  }
+  /**
+   * 重新初始化 Worker 池（保持 SharedArrayBuffer）
+   */
+  reinitializeWorkerPool() {
+    if (this.workerPool) {
+      this.workerPool.destroy();
+      this.workerPool = null;
+    }
+    if (this.config.enableWorker && this.isWorkerSupported()) {
       this.initializeWorkerPool();
     }
   }
@@ -11910,12 +11951,13 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
       canvasHeight: 600,
       groundFriction: 0.98
     };
+    const isSharedArrayBufferAvailable = typeof SharedArrayBuffer !== "undefined" && self.crossOriginIsolated;
     super(
       Matcher.empty().all(Position, Velocity, Physics),
       {
         enableWorker,
         // 当 SharedArrayBuffer 可用时使用多 Worker，否则使用单 Worker 保证碰撞检测完整性
-        workerCount: this.isSharedArrayBufferAvailable() ? navigator.hardwareConcurrency || 2 : 1,
+        workerCount: isSharedArrayBufferAvailable ? navigator.hardwareConcurrency || 2 : 1,
         systemConfig: defaultConfig,
         useSharedArrayBuffer: true
         // 优先使用 SharedArrayBuffer
@@ -11929,12 +11971,6 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
       // 减少地面摩擦
     };
     this.startTime = 0;
-  }
-  /**
-   * 检查 SharedArrayBuffer 是否可用
-   */
-  isSharedArrayBufferAvailable() {
-    return typeof SharedArrayBuffer !== "undefined" && self.crossOriginIsolated;
   }
   extractEntityData(entity) {
     const position = entity.getComponent(Position);
@@ -12059,21 +12095,13 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
     return { ...this.physicsConfig };
   }
   /**
-   * 强制禁用 SharedArrayBuffer（用于测试降级行为）
+   * 禁用 SharedArrayBuffer（用于测试降级行为）
    */
-  forceDisableSharedArrayBuffer() {
-    console.log(`[${this.systemName}] Manually disabling SharedArrayBuffer for testing`);
-    this.config.useSharedArrayBuffer = false;
-    this.config.workerCount = 1;
-    this.sharedBuffer = null;
-    this.sharedFloatArray = null;
-    if (this.workerPool) {
-      this.workerPool.destroy();
-      this.workerPool = null;
-    }
-    if (this.config.enableWorker) {
-      this.initializeWorkerPool();
-    }
+  disableSharedArrayBuffer() {
+    console.log(`[${this.systemName}] Disabling SharedArrayBuffer for testing - falling back to single Worker mode`);
+    this.updateConfig({
+      useSharedArrayBuffer: false
+    });
   }
   /**
    * 获取当前运行状态
@@ -12177,7 +12205,6 @@ let PhysicsWorkerSystem = class extends WorkerEntitySystem {
         let y = sharedFloatArray[offset + 2];
         let dx = sharedFloatArray[offset + 3];
         let dy = sharedFloatArray[offset + 4];
-        sharedFloatArray[offset + 5];
         const bounce = sharedFloatArray[offset + 6];
         const friction = sharedFloatArray[offset + 7];
         const radius = sharedFloatArray[offset + 8];
@@ -12521,7 +12548,7 @@ class GameScene extends Scene {
    * 切换 SharedArrayBuffer 状态
    */
   toggleSharedArrayBuffer() {
-    this.physicsSystem.forceDisableSharedArrayBuffer();
+    this.physicsSystem.disableSharedArrayBuffer();
   }
   /**
    * 获取物理系统状态
