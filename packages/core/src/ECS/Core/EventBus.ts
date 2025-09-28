@@ -469,39 +469,114 @@ export class GlobalEventBus {
 
 /**
  * 事件装饰器工厂
- * 用于自动注册事件监听器
+ * 用于自动注册事件监听器，支持自动清理
  */
 export function EventHandler(eventType: string, config: IEventListenerConfig = {}) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
         const originalMethod = descriptor.value;
-        
+
+        // 存储装饰器信息
+        if (!target.constructor._eventHandlers) {
+            target.constructor._eventHandlers = [];
+        }
+        target.constructor._eventHandlers.push({
+            eventType,
+            methodName: propertyKey,
+            config
+        });
+
         // 在类实例化时自动注册监听器
         const initMethod = target.constructor.prototype.initEventListeners || function() {};
         target.constructor.prototype.initEventListeners = function() {
             initMethod.call(this);
+
+            // 初始化监听器追踪数组
+            if (!this._decoratorEventListeners) {
+                this._decoratorEventListeners = [];
+            }
+
             const eventBus = GlobalEventBus.getInstance();
-            eventBus.on(eventType, originalMethod.bind(this), config);
+            const listenerId = eventBus.on(eventType, originalMethod.bind(this), config);
+
+            // 保存监听器ID用于后续清理
+            this._decoratorEventListeners.push({
+                eventType,
+                methodName: propertyKey,
+                listenerId
+            });
         };
-        
+
+        // 添加清理方法
+        const cleanupMethod = target.constructor.prototype.cleanupEventListeners || function() {};
+        target.constructor.prototype.cleanupEventListeners = function() {
+            cleanupMethod.call(this);
+
+            if (this._decoratorEventListeners) {
+                const eventBus = GlobalEventBus.getInstance();
+                for (const listener of this._decoratorEventListeners) {
+                    eventBus.off(listener.eventType, listener.listenerId);
+                }
+                this._decoratorEventListeners.length = 0;
+            }
+        };
+
         return descriptor;
     };
 }
 
 /**
  * 异步事件装饰器工厂
- * 用于自动注册异步事件监听器
+ * 用于自动注册异步事件监听器，支持自动清理
  */
 export function AsyncEventHandler(eventType: string, config: IEventListenerConfig = {}) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
         const originalMethod = descriptor.value;
-        
+
+        // 存储装饰器信息
+        if (!target.constructor._eventHandlers) {
+            target.constructor._eventHandlers = [];
+        }
+        target.constructor._eventHandlers.push({
+            eventType,
+            methodName: propertyKey,
+            config,
+            async: true
+        });
+
         const initMethod = target.constructor.prototype.initEventListeners || function() {};
         target.constructor.prototype.initEventListeners = function() {
             initMethod.call(this);
+
+            // 初始化监听器追踪数组
+            if (!this._decoratorEventListeners) {
+                this._decoratorEventListeners = [];
+            }
+
             const eventBus = GlobalEventBus.getInstance();
-            eventBus.onAsync(eventType, originalMethod.bind(this), config);
+            const listenerId = eventBus.onAsync(eventType, originalMethod.bind(this), config);
+
+            // 保存监听器ID用于后续清理
+            this._decoratorEventListeners.push({
+                eventType,
+                methodName: propertyKey,
+                listenerId
+            });
         };
-        
+
+        // 添加清理方法
+        const cleanupMethod = target.constructor.prototype.cleanupEventListeners || function() {};
+        target.constructor.prototype.cleanupEventListeners = function() {
+            cleanupMethod.call(this);
+
+            if (this._decoratorEventListeners) {
+                const eventBus = GlobalEventBus.getInstance();
+                for (const listener of this._decoratorEventListeners) {
+                    eventBus.off(listener.eventType, listener.listenerId);
+                }
+                this._decoratorEventListeners.length = 0;
+            }
+        };
+
         return descriptor;
     };
 } 

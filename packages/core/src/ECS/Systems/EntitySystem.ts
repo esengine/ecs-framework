@@ -18,6 +18,7 @@ interface EventListenerRecord {
     listenerRef: string;
 }
 
+
 /**
  * 实体系统的基类
  * 
@@ -51,6 +52,10 @@ export abstract class EntitySystem implements ISystemBase {
     private _eventListeners: EventListenerRecord[];
     private _scene: Scene | null;
     protected logger = createLogger('EntitySystem');
+
+    // 装饰器动态添加的方法（可选）
+    protected initEventListeners?: () => void;
+    protected cleanupEventListeners?: () => void;
 
     /**
      * 实体ID映射缓存
@@ -133,6 +138,9 @@ export abstract class EntitySystem implements ISystemBase {
         this._entityIdMap = null;
         this._entityIdMapVersion = -1;
         this._entityIdMapSize = 0;
+
+        // 初始化装饰器事件监听器
+        this.initDecoratorEventListeners();
 
         this._entityCache = {
             frame: null,
@@ -238,10 +246,8 @@ export abstract class EntitySystem implements ISystemBase {
         this._entityIdMapSize = 0;
 
         // 清理所有事件监听器
-        this.cleanupEventListeners();
-
-        // 调用用户可重写的销毁方法
-        this.onDestroy();
+        // 调用框架销毁方法
+        this.destroy();
     }
 
     /**
@@ -746,12 +752,29 @@ export abstract class EntitySystem implements ISystemBase {
         }
     }
 
+
     /**
-     * 清理所有事件监听器
-     *
-     * 系统移除时自动调用，清理所有通过addEventListener添加的监听器。
+     * 初始化装饰器事件监听器
      */
-    private cleanupEventListeners(): void {
+    protected initDecoratorEventListeners(): void {
+        if (this.initEventListeners) {
+            this.initEventListeners();
+        }
+    }
+
+    /**
+     * 清理装饰器事件监听器
+     */
+    protected cleanupDecoratorEventListeners(): void {
+        if (this.cleanupEventListeners) {
+            this.cleanupEventListeners();
+        }
+    }
+
+    /**
+     * 清理手动添加的事件监听器
+     */
+    private cleanupManualEventListeners(): void {
         for (const listener of this._eventListeners) {
             try {
                 listener.eventSystem.off(listener.eventType, listener.listenerRef);
@@ -765,7 +788,22 @@ export abstract class EntitySystem implements ISystemBase {
     }
 
     /**
-     * 系统销毁时的回调
+     * 框架内部销毁方法
+     * 由框架调用，处理系统的完整销毁流程
+     */
+    public destroy(): void {
+        // 1. 清理手动添加的事件监听器
+        this.cleanupManualEventListeners();
+
+        // 2. 清理装饰器事件监听器
+        this.cleanupDecoratorEventListeners();
+
+        // 3. 调用用户的销毁回调
+        this.onDestroy();
+    }
+
+    /**
+     * 用户销毁回调
      *
      * 当系统从场景中移除时调用，子类可以重写此方法进行清理操作。
      * 注意：事件监听器会被框架自动清理，无需手动处理。
