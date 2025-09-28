@@ -7,7 +7,7 @@ import { PerformanceMonitor } from './Utils/PerformanceMonitor';
 import { PoolManager } from './Utils/Pool/PoolManager';
 import { ECSFluentAPI, createECSAPI } from './ECS/Core/FluentAPI';
 import { IScene } from './ECS/IScene';
-import { WorldManager } from './ECS/WorldManager';
+import { WorldManager, IWorldManagerConfig } from './ECS/WorldManager';
 import { DebugManager } from './Utils/Debug';
 import { ICoreConfig, IECSDebugConfig } from './Types';
 import { createLogger } from './Utils/Logger';
@@ -432,21 +432,27 @@ export class Core {
 
     /**
      * 获取WorldManager实例
-     * 
+     *
+     * @param config 可选的WorldManager配置，用于覆盖默认配置
      * @returns WorldManager实例，如果未初始化则自动创建
      */
-    public static getWorldManager(): WorldManager {
+    public static getWorldManager(config?: Partial<IWorldManagerConfig>): WorldManager {
         if (!this._instance) {
             throw new Error("Core实例未创建，请先调用Core.create()");
         }
 
         if (!this._instance._worldManager) {
             // 多World模式的配置（用户主动获取WorldManager）
-            this._instance._worldManager = WorldManager.getInstance({
+            const defaultConfig = {
                 maxWorlds: 50,
                 autoCleanup: true,
                 cleanupInterval: 60000,
                 debug: this._instance._config.debug
+            };
+
+            this._instance._worldManager = WorldManager.getInstance({
+                ...defaultConfig,
+                ...config // 用户传入的配置会覆盖默认配置
             });
         }
 
@@ -455,11 +461,13 @@ export class Core {
 
     /**
      * 启用World管理
-     * 
+     *
      * 显式启用World功能，用于多房间/多世界架构
+     *
+     * @param config 可选的WorldManager配置，用于覆盖默认配置
      */
-    public static enableWorldManager(): WorldManager {
-        return this.getWorldManager();
+    public static enableWorldManager(config?: Partial<IWorldManagerConfig>): WorldManager {
+        return this.getWorldManager(config);
     }
 
     /**

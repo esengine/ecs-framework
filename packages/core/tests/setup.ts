@@ -14,11 +14,35 @@ const originalConsoleError = console.error;
 
 // 在测试环境中可以选择性地静默某些日志
 beforeAll(() => {
-  // 可以在这里设置全局的模拟或配置
+  // 在测试开始前确保 WorldManager 使用无定时器配置
+  // 这样后续的 Core.getWorldManager() 调用都会使用这个已创建的实例
+  try {
+    const { Core } = require('../src/Core');
+    // 确保 Core 实例已创建
+    if (!Core._instance) {
+      Core.create();
+    }
+    Core.getWorldManager({
+      autoCleanup: false,
+      cleanupInterval: 0
+    });
+  } catch (error) {
+    // 忽略初始化错误
+  }
 });
 
 afterAll(() => {
   // 清理全局资源
+  // 清理WorldManager以避免定时器阻止Jest退出
+  try {
+    const { Core } = require('../src/Core');
+    const worldManager = Core.getWorldManager();
+    if (worldManager) {
+      worldManager.destroy();
+    }
+  } catch (error) {
+    // 忽略清理错误，避免影响测试结果
+  }
 });
 
 // 每个测试前的清理
@@ -30,6 +54,25 @@ beforeEach(() => {
 afterEach(() => {
   // 恢复所有模拟
   jest.restoreAllMocks();
+
+  // 清理WorldManager状态以避免测试间的状态污染
+  try {
+    const { Core } = require('../src/Core');
+    const { WorldManager } = require('../src/ECS/WorldManager');
+
+    // 重置 Core 和 WorldManager 单例
+    if (Core._instance) {
+      Core.reset();
+    }
+    if (WorldManager._instance) {
+      if (WorldManager._instance.destroy) {
+        WorldManager._instance.destroy();
+      }
+      WorldManager.reset();
+    }
+  } catch (error) {
+    // 忽略清理错误
+  }
 });
 
 // 导出测试工具函数
