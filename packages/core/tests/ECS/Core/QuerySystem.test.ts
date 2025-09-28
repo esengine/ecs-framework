@@ -997,5 +997,56 @@ describe('QuerySystem - 查询系统测试', () => {
             expect(result.entities.length).toBe(1);
             expect(result.entities[0]).toBe(testEntity);
         });
+
+        test('addEntities应该正确更新componentIndexManager和archetypeSystem', () => {
+            const querySystem = new QuerySystem();
+
+            // 创建带组件的实体
+            const entity1 = new Entity('BatchEntity1', 8001);
+            const entity2 = new Entity('BatchEntity2', 8002);
+            const entity3 = new Entity('BatchEntity3', 8003);
+
+            entity1.addComponent(new PositionComponent(10, 20));
+            entity2.addComponent(new PositionComponent(30, 40));
+            entity2.addComponent(new VelocityComponent(1, 1));
+            entity3.addComponent(new VelocityComponent(2, 2));
+
+            // 批量添加实体
+            querySystem.addEntities([entity1, entity2, entity3]);
+
+            // 测试基本查询
+            const positionResult = querySystem.queryAll(PositionComponent);
+            const velocityResult = querySystem.queryAll(VelocityComponent);
+            const bothResult = querySystem.queryAll(PositionComponent, VelocityComponent);
+
+            console.log('addEntities后Position查询结果:', positionResult.entities.length);
+            console.log('addEntities后Velocity查询结果:', velocityResult.entities.length);
+            console.log('addEntities后Both查询结果:', bothResult.entities.length);
+
+            // 验证查询结果是否正确
+            expect(positionResult.entities.length).toBe(2); // entity1, entity2
+            expect(velocityResult.entities.length).toBe(2); // entity2, entity3
+            expect(bothResult.entities.length).toBe(1); // 只有entity2
+
+            expect(positionResult.entities).toContain(entity1);
+            expect(positionResult.entities).toContain(entity2);
+            expect(velocityResult.entities).toContain(entity2);
+            expect(velocityResult.entities).toContain(entity3);
+            expect(bothResult.entities).toContain(entity2);
+
+            // 验证ArchetypeSystem是否正确工作
+            const entity1Archetype = querySystem.getEntityArchetype(entity1);
+            const entity2Archetype = querySystem.getEntityArchetype(entity2);
+            const entity3Archetype = querySystem.getEntityArchetype(entity3);
+
+            expect(entity1Archetype).toBeDefined();
+            expect(entity2Archetype).toBeDefined();
+            expect(entity3Archetype).toBeDefined();
+
+            // entity2应该有不同的archetype（因为有两个组件）
+            if (entity1Archetype && entity2Archetype) {
+                expect(entity1Archetype.id).not.toBe(entity2Archetype.id);
+            }
+        });
     });
 });

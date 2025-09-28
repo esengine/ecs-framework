@@ -191,6 +191,11 @@ export class QuerySystem {
             if (!existingIds.has(entity.id)) {
                 this.entities.push(entity);
                 this.addEntityToIndexes(entity);
+
+                // 更新索引管理器
+                this.componentIndexManager.addEntity(entity);
+                this.archetypeSystem.addEntity(entity);
+
                 existingIds.add(entity.id);
                 addedCount++;
             }
@@ -221,6 +226,10 @@ export class QuerySystem {
         // 批量更新索引
         for (const entity of entities) {
             this.addEntityToIndexes(entity);
+
+            // 更新索引管理器
+            this.componentIndexManager.addEntity(entity);
+            this.archetypeSystem.addEntity(entity);
         }
 
         // 清理缓存
