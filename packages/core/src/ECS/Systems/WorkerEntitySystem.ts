@@ -2,6 +2,7 @@ import { Entity } from '../Entity';
 import { EntitySystem } from './EntitySystem';
 import { Matcher } from '../Utils/Matcher';
 import { Time } from '../../Utils/Time';
+import { createLogger } from '../../Utils/Logger';
 import type { IComponent } from '../../Types';
 
 /**
@@ -20,8 +21,10 @@ export type WorkerProcessFunction<T extends Record<string, any> = any> = (
 export interface WorkerSystemConfig {
     /** 是否启用Worker并行处理 */
     enableWorker?: boolean;
-    /** Worker数量，默认为CPU核心数 */
+    /** Worker数量，默认为CPU核心数，自动限制在系统最大值内 */
     workerCount?: number;
+    /** 每个Worker处理的实体数量，用于控制负载分布 */
+    entitiesPerWorker?: number;
     /** 系统配置数据，会传递给Worker */
     systemConfig?: any;
     /** 是否使用SharedArrayBuffer优化 */
@@ -63,7 +66,8 @@ export type SharedArrayBufferProcessFunction = (
  *     constructor() {
  *         super(Matcher.all(Transform, Velocity), {
  *             enableWorker: true,
- *             workerCount: 4,
+ *             workerCount: 8, // 指定8个worker，系统会自动限制在系统最大值内
+ *             entitiesPerWorker: 100, // 每个worker处理100个实体
  *             useSharedArrayBuffer: true,
  *             entityDataSize: 6, // x, y, vx, vy, radius, mass
  *             maxEntities: 10000,
@@ -183,19 +187,34 @@ export type SharedArrayBufferProcessFunction = (
  * ```
  */
 export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem {
-    protected config: Required<Omit<WorkerSystemConfig, 'systemConfig'>> & { systemConfig?: any };
+    protected config: Required<Omit<WorkerSystemConfig, 'systemConfig' | 'entitiesPerWorker'>> & {
+        systemConfig?: any;
+        entitiesPerWorker?: number;
+    };
     private workerPool: WebWorkerPool | null = null;
     private isProcessing = false;
     protected sharedBuffer: SharedArrayBuffer | null = null;
     protected sharedFloatArray: Float32Array | null = null;
+    private logger = createLogger('WorkerEntitySystem');
 
     constructor(matcher?: Matcher, config: WorkerSystemConfig = {}) {
         super(matcher);
 
+        // 验证和调整 worker 数量，确保不超过系统最大值
+        const requestedWorkerCount = config.workerCount ?? this.getMaxSystemWorkerCount();
+        const maxSystemWorkerCount = this.getMaxSystemWorkerCount();
+        const validatedWorkerCount = Math.min(requestedWorkerCount, maxSystemWorkerCount);
+
+        // 如果用户请求的数量超过系统最大值，给出警告
+        if (requestedWorkerCount > maxSystemWorkerCount) {
+            this.logger.warn(`请求 ${requestedWorkerCount} 个Worker，但系统最多支持 ${maxSystemWorkerCount} 个。实际使用 ${validatedWorkerCount} 个Worker。`);
+        }
+
         this.config = {
             enableWorker: config.enableWorker ?? true,
-            workerCount: config.workerCount ?? this.getOptimalWorkerCount(),
+            workerCount: validatedWorkerCount,
             systemConfig: config.systemConfig,
+            entitiesPerWorker: config.entitiesPerWorker,
             useSharedArrayBuffer: config.useSharedArrayBuffer ?? this.isSharedArrayBufferSupported(),
             entityDataSize: config.entityDataSize ?? this.getDefaultEntityDataSize(),
             maxEntities: config.maxEntities ?? 10000
@@ -226,13 +245,14 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
     }
 
     /**
-     * 获取最优Worker数量
+     * 获取系统支持的最大Worker数量
      */
-    private getOptimalWorkerCount(): number {
+    private getMaxSystemWorkerCount(): number {
         if (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) {
-            return Math.min(navigator.hardwareConcurrency, 4);
+            // 使用全部CPU核心数作为最大限制
+            return navigator.hardwareConcurrency;
         }
-        return 2;
+        return 4; // 降级默认值
     }
 
     /**
@@ -248,7 +268,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         try {
             // 检查是否支持SharedArrayBuffer
             if (!this.isSharedArrayBufferSupported()) {
-                console.warn(`[${this.systemName}] SharedArrayBuffer not supported, falling back to single Worker mode for collision detection integrity`);
+                this.logger.warn(`${this.systemName}: 不支持SharedArrayBuffer，降级到单Worker模式以保证数据处理完整性`);
                 this.config.useSharedArrayBuffer = false;
                 // 降级到单Worker模式：确保所有实体在同一个Worker中处理，维持实体间交互的完整性
                 this.config.workerCount = 1;
@@ -261,9 +281,9 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
             this.sharedBuffer = new SharedArrayBuffer(bufferSize);
             this.sharedFloatArray = new Float32Array(this.sharedBuffer);
 
-            console.log(`[${this.systemName}] SharedArrayBuffer initialized successfully (${bufferSize} bytes)`);
+            this.logger.info(`${this.systemName}: SharedArrayBuffer初始化成功 (${bufferSize} 字节)`);
         } catch (error) {
-            console.warn(`[${this.systemName}] SharedArrayBuffer init failed, falling back to single Worker mode for collision detection integrity:`, error);
+            this.logger.warn(`${this.systemName}: SharedArrayBuffer初始化失败，降级到单Worker模式以保证数据处理完整性`, error);
             this.config.useSharedArrayBuffer = false;
             this.sharedBuffer = null;
             this.sharedFloatArray = null;
@@ -283,7 +303,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
                 this.sharedBuffer // 传递SharedArrayBuffer给Worker池
             );
         } catch (error) {
-            console.error(`[${this.systemName}] Failed to initialize worker pool:`, error);
+            this.logger.error(`${this.systemName}: Worker池初始化失败`, error);
             this.config.enableWorker = false;
         }
     }
@@ -399,7 +419,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
                 } else {
                     // 如果配置了SharedArrayBuffer但不可用，记录降级信息
                     if (this.config.useSharedArrayBuffer) {
-                        console.log(`[${this.systemName}] Falling back to traditional Worker mode for this frame`);
+                        this.logger.info(`${this.systemName}: 本帧降级到传统Worker模式`);
                     }
                     // 传统Worker异步处理
                     this.processWithWorker(entities).finally(() => {
@@ -408,13 +428,13 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
                 }
             } else {
                 // 同步处理（最后的fallback）
-                console.log(`[${this.systemName}] Worker not available, processing synchronously`);
+                this.logger.info(`${this.systemName}: Worker不可用，使用同步处理`);
                 this.processSynchronously(entities);
                 this.isProcessing = false;
             }
         } catch (error) {
             this.isProcessing = false;
-            console.error(`[${this.systemName}] Processing failed:`, error);
+            this.logger.error(`${this.systemName}: 处理失败`, error);
             throw error;
         }
     }
@@ -506,19 +526,36 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
     }
 
     /**
-     * 创建数据批次 - 按Worker数量平均分配
+     * 创建数据批次 - 支持用户指定每个Worker的实体数量
      */
     private createBatches<T>(data: T[]): T[][] {
         const workerCount = this.config.workerCount;
         const batches: T[][] = [];
-        const batchSize = Math.ceil(data.length / workerCount);
 
-        for (let i = 0; i < workerCount; i++) {
-            const startIndex = i * batchSize;
-            const endIndex = Math.min(startIndex + batchSize, data.length);
+        // 如果用户指定了每个Worker处理的实体数量
+        if (this.config.entitiesPerWorker) {
+            const entitiesPerWorker = this.config.entitiesPerWorker;
 
-            if (startIndex < data.length) {
-                batches.push(data.slice(startIndex, endIndex));
+            for (let i = 0; i < data.length; i += entitiesPerWorker) {
+                const endIndex = Math.min(i + entitiesPerWorker, data.length);
+                batches.push(data.slice(i, endIndex));
+            }
+
+            // 限制批次数量不超过Worker数量
+            if (batches.length > workerCount) {
+                this.logger.warn(`${this.systemName}: 创建了 ${batches.length} 个批次，但只有 ${workerCount} 个Worker。某些Worker将依次处理多个批次。`);
+            }
+        } else {
+            // 默认行为：按Worker数量平均分配
+            const batchSize = Math.ceil(data.length / workerCount);
+
+            for (let i = 0; i < workerCount; i++) {
+                const startIndex = i * batchSize;
+                const endIndex = Math.min(startIndex + batchSize, data.length);
+
+                if (startIndex < data.length) {
+                    batches.push(data.slice(startIndex, endIndex));
+                }
             }
         }
 
@@ -549,17 +586,26 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
     protected abstract writeEntityToBuffer(entityData: TEntityData, offset: number): void;
 
     /**
-     * 创建SharedArrayBuffer任务
+     * 创建SharedArrayBuffer任务 - 支持用户指定每个Worker的实体数量
      */
     private createSharedArrayBufferTasks(entityCount: number): Promise<void>[] {
         const promises: Promise<void>[] = [];
-        const entitiesPerWorker = Math.ceil(entityCount / this.config.workerCount);
 
-        for (let i = 0; i < this.config.workerCount; i++) {
-            const startIndex = i * entitiesPerWorker;
-            const endIndex = Math.min(startIndex + entitiesPerWorker, entityCount);
+        // 如果用户指定了每个Worker处理的实体数量
+        if (this.config.entitiesPerWorker) {
+            const entitiesPerWorker = this.config.entitiesPerWorker;
+            const tasksNeeded = Math.ceil(entityCount / entitiesPerWorker);
+            const availableWorkers = this.config.workerCount;
 
-            if (startIndex < entityCount) {
+            // 如果任务数超过Worker数量，警告用户
+            if (tasksNeeded > availableWorkers) {
+                this.logger.warn(`${this.systemName}: 需要 ${tasksNeeded} 个任务处理 ${entityCount} 个实体（每任务 ${entitiesPerWorker} 个），但只有 ${availableWorkers} 个Worker。某些Worker将依次处理多个任务。`);
+            }
+
+            for (let i = 0; i < entityCount; i += entitiesPerWorker) {
+                const startIndex = i;
+                const endIndex = Math.min(i + entitiesPerWorker, entityCount);
+
                 const promise = this.workerPool!.executeSharedBuffer({
                     startIndex,
                     endIndex,
@@ -567,6 +613,24 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
                     systemConfig: this.config.systemConfig
                 });
                 promises.push(promise);
+            }
+        } else {
+            // 默认行为：按Worker数量平均分配
+            const entitiesPerWorker = Math.ceil(entityCount / this.config.workerCount);
+
+            for (let i = 0; i < this.config.workerCount; i++) {
+                const startIndex = i * entitiesPerWorker;
+                const endIndex = Math.min(startIndex + entitiesPerWorker, entityCount);
+
+                if (startIndex < entityCount) {
+                    const promise = this.workerPool!.executeSharedBuffer({
+                        startIndex,
+                        endIndex,
+                        deltaTime: Time.deltaTime,
+                        systemConfig: this.config.systemConfig
+                    });
+                    promises.push(promise);
+                }
             }
         }
 
@@ -637,6 +701,19 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
      */
     public updateConfig(newConfig: Partial<WorkerSystemConfig>): void {
         const oldConfig = { ...this.config };
+
+        // 如果更新了workerCount，需要验证并调整
+        if (newConfig.workerCount !== undefined) {
+            const maxSystemWorkerCount = this.getMaxSystemWorkerCount();
+            const validatedWorkerCount = Math.min(newConfig.workerCount, maxSystemWorkerCount);
+
+            if (newConfig.workerCount > maxSystemWorkerCount) {
+                this.logger.warn(`请求 ${newConfig.workerCount} 个Worker，但系统最多支持 ${maxSystemWorkerCount} 个。实际使用 ${validatedWorkerCount} 个Worker。`);
+            }
+
+            newConfig.workerCount = validatedWorkerCount;
+        }
+
         Object.assign(this.config, newConfig);
 
         // 如果 SharedArrayBuffer 设置发生变化，需要重新初始化
@@ -709,6 +786,8 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
     public getWorkerInfo(): {
         enabled: boolean;
         workerCount: number;
+        entitiesPerWorker?: number;
+        maxSystemWorkerCount: number;
         isProcessing: boolean;
         sharedArrayBufferSupported: boolean;
         sharedArrayBufferEnabled: boolean;
@@ -727,6 +806,8 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         return {
             enabled: this.config.enableWorker,
             workerCount: this.config.workerCount,
+            entitiesPerWorker: this.config.entitiesPerWorker,
+            maxSystemWorkerCount: this.getMaxSystemWorkerCount(),
             isProcessing: this.isProcessing,
             sharedArrayBufferSupported: this.isSharedArrayBufferSupported(),
             sharedArrayBufferEnabled: this.config.useSharedArrayBuffer,

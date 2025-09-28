@@ -5,6 +5,7 @@ import type { Scene } from '../Scene';
 import type { ISystemBase } from '../../Types';
 import type { QuerySystem } from '../Core/QuerySystem';
 import { getSystemInstanceTypeName } from '../Decorators';
+import { createLogger } from '../../Utils/Logger';
 import type { EventListenerConfig, TypeSafeEventSystem, EventHandler } from '../Core/EventSystem';
 
 /**
@@ -49,6 +50,7 @@ export abstract class EntitySystem implements ISystemBase {
     private _matcher: Matcher;
     private _eventListeners: EventListenerRecord[];
     private _scene: Scene | null;
+    protected logger = createLogger('EntitySystem');
 
     /**
      * 实体ID映射缓存
@@ -702,7 +704,7 @@ export abstract class EntitySystem implements ISystemBase {
         config?: EventListenerConfig
     ): void {
         if (!this.scene?.eventSystem) {
-            console.warn(`[${this.systemName}] Cannot add event listener: scene.eventSystem not available`);
+            this.logger.warn(`${this.systemName}: 无法添加事件监听器，scene.eventSystem 不可用`);
             return;
         }
 
@@ -754,7 +756,7 @@ export abstract class EntitySystem implements ISystemBase {
             try {
                 listener.eventSystem.off(listener.eventType, listener.listenerRef);
             } catch (error) {
-                console.warn(`[${this.systemName}] Failed to remove event listener for "${listener.eventType}":`, error);
+                this.logger.warn(`${this.systemName}: 移除事件监听器失败 "${listener.eventType}"`, error);
             }
         }
 

@@ -30,7 +30,8 @@ class PhysicsWorkerSystem extends WorkerEntitySystem<PhysicsData> {
   constructor() {
     super(Matcher.all(Position, Velocity, Physics), {
       enableWorker: true,              // 启用Worker并行处理
-      workerCount: 4,                  // Worker数量
+      workerCount: 8,                  // Worker数量，系统会自动限制在硬件支持范围内
+      entitiesPerWorker: 100,          // 每个Worker处理的实体数量
       useSharedArrayBuffer: true,      // 启用SharedArrayBuffer优化
       entityDataSize: 7,               // 每个实体数据大小
       maxEntities: 10000,              // 最大实体数量
@@ -132,8 +133,10 @@ Worker系统支持丰富的配置选项：
 interface WorkerSystemConfig {
   /** 是否启用Worker并行处理 */
   enableWorker?: boolean;
-  /** Worker数量，默认为CPU核心数 */
+  /** Worker数量，默认为CPU核心数，自动限制在系统最大值内 */
   workerCount?: number;
+  /** 每个Worker处理的实体数量，用于控制负载分布 */
+  entitiesPerWorker?: number;
   /** 系统配置数据，会传递给Worker */
   systemConfig?: any;
   /** 是否使用SharedArrayBuffer优化 */
@@ -153,8 +156,11 @@ constructor() {
     // 根据任务复杂度决定是否启用
     enableWorker: this.shouldUseWorker(),
 
-    // 限制Worker数量，避免创建过多线程
-    workerCount: Math.min(navigator.hardwareConcurrency || 2, 4),
+    // Worker数量：系统会自动限制在硬件支持范围内
+    workerCount: 8, // 请求8个Worker，实际数量受CPU核心数限制
+
+    // 每个Worker处理的实体数量（可选）
+    entitiesPerWorker: 200, // 精确控制负载分布
 
     // 大量简单计算时启用SharedArrayBuffer
     useSharedArrayBuffer: this.entityCount > 1000,
@@ -177,6 +183,14 @@ constructor() {
 private shouldUseWorker(): boolean {
   // 根据实体数量和计算复杂度决定
   return this.expectedEntityCount > 100;
+}
+
+// 获取系统信息
+getSystemInfo() {
+  const info = this.getWorkerInfo();
+  console.log(`Worker数量: ${info.workerCount}/${info.maxSystemWorkerCount}`);
+  console.log(`每Worker实体数: ${info.entitiesPerWorker || '自动分配'}`);
+  console.log(`当前模式: ${info.currentMode}`);
 }
 ```
 
@@ -271,7 +285,8 @@ class ParticlePhysicsWorkerSystem extends WorkerEntitySystem<ParticleData> {
   constructor() {
     super(Matcher.all(Position, Velocity, Physics, Renderable), {
       enableWorker: true,
-      workerCount: navigator.hardwareConcurrency || 2,
+      workerCount: 6,                  // 请求6个Worker，自动限制在CPU核心数内
+      entitiesPerWorker: 150,          // 每个Worker处理150个粒子
       useSharedArrayBuffer: true,
       entityDataSize: 9,
       maxEntities: 5000,
@@ -435,8 +450,11 @@ class ParticlePhysicsWorkerSystem extends WorkerEntitySystem<ParticleData> {
   public getPerformanceInfo(): {
     enabled: boolean;
     workerCount: number;
+    entitiesPerWorker?: number;
+    maxSystemWorkerCount: number;
     entityCount: number;
     isProcessing: boolean;
+    currentMode: string;
   } {
     const workerInfo = this.getWorkerInfo();
     return {
@@ -519,10 +537,12 @@ interface ComplexData {
 ### 3. Worker数量控制
 
 ```typescript
-// ✅ 推荐：适当的Worker数量
+// ✅ 推荐：灵活的Worker配置
 constructor() {
   super(matcher, {
-    workerCount: Math.min(navigator.hardwareConcurrency || 2, 4), // 限制最大数量
+    // 直接指定需要的Worker数量，系统会自动限制在硬件支持范围内
+    workerCount: 8,                     // 请求8个Worker
+    entitiesPerWorker: 100,            // 每个Worker处理100个实体
     enableWorker: this.shouldUseWorker(), // 条件启用
   });
 }
@@ -530,6 +550,15 @@ constructor() {
 private shouldUseWorker(): boolean {
   // 根据实体数量和复杂度决定是否使用Worker
   return this.expectedEntityCount > 100;
+}
+
+// 获取实际使用的Worker信息
+checkWorkerConfiguration() {
+  const info = this.getWorkerInfo();
+  console.log(`请求Worker数量: 8`);
+  console.log(`实际Worker数量: ${info.workerCount}`);
+  console.log(`系统最大支持: ${info.maxSystemWorkerCount}`);
+  console.log(`每Worker实体数: ${info.entitiesPerWorker || '自动分配'}`);
 }
 ```
 
@@ -557,14 +586,14 @@ public getPerformanceMetrics(): WorkerPerformanceMetrics {
 - 保持数据结构简单和扁平
 - 避免频繁的大数据传输
 
-### 3. 批处理大小
-根据实体数量和Worker数量调整批处理大小，平衡负载和开销。
-
-### 4. 降级策略
+### 3. 降级策略
 始终提供主线程回退方案，确保在不支持Worker的环境中正常运行。
 
-### 5. 内存管理
+### 4. 内存管理
 及时清理Worker池和共享缓冲区，避免内存泄漏。
+
+### 5. 负载均衡
+使用 `entitiesPerWorker` 参数精确控制负载分布，避免某些Worker空闲而其他Worker过载。
 
 ## 在线演示
 
