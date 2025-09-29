@@ -578,37 +578,4 @@ export class TypeSafeEventSystem {
  */
 export const GlobalEventSystem = new TypeSafeEventSystem();
 
-/**
- * 事件装饰器 - 用于自动注册事件监听器
- * @param eventType 事件类型
- * @param config 监听器配置
- */
-export function EventListener(eventType: string, config: EventListenerConfig = {}) {
-    return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        const originalMethod = descriptor.value;
-
-        // 在类实例化时自动注册监听器
-        const initMethod = target.constructor.prototype.initEventListeners || function () { };
-        target.constructor.prototype.initEventListeners = function () {
-            initMethod.call(this);
-            GlobalEventSystem.on(eventType, originalMethod.bind(this), config);
-        };
-    };
-}
-
-/**
- * 异步事件装饰器
- * @param eventType 事件类型
- * @param config 监听器配置
- */
-export function AsyncEventListener(eventType: string, config: EventListenerConfig = {}) {
-    return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        const originalMethod = descriptor.value;
-
-        const initMethod = target.constructor.prototype.initEventListeners || function () { };
-        target.constructor.prototype.initEventListeners = function () {
-            initMethod.call(this);
-            GlobalEventSystem.onAsync(eventType, originalMethod.bind(this), config);
-        };
-    };
-} 
+ 

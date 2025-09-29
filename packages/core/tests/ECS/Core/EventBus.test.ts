@@ -1,4 +1,4 @@
-import { EventBus, GlobalEventBus, EventHandler, AsyncEventHandler } from '../../../src/ECS/Core/EventBus';
+import { EventBus, GlobalEventBus } from '../../../src/ECS/Core/EventBus';
 import { IEventListenerConfig, IEventStats } from '../../../src/Types';
 import { ECSEventType, EventPriority } from '../../../src/ECS/CoreEvents';
 
@@ -477,53 +477,3 @@ describe('GlobalEventBus - 全局事件总线测试', () => {
     });
 });
 
-describe('事件装饰器测试', () => {
-    // Mock class for testing decorators
-    class TestClass {
-        public receivedEvents: any[] = [];
-        
-        @EventHandler('decorator:event')
-        handleEvent(data: any) {
-            this.receivedEvents.push(data);
-        }
-        
-        @AsyncEventHandler('async:decorator:event')
-        async handleAsyncEvent(data: any) {
-            this.receivedEvents.push(data);
-        }
-    }
-
-    test('EventHandler装饰器应该能够自动注册监听器', () => {
-        const instance = new TestClass();
-        
-        // 手动调用初始化方法来注册装饰器定义的监听器
-        if (typeof (instance as any).initEventListeners === 'function') {
-            (instance as any).initEventListeners();
-        }
-        
-        const eventBus = GlobalEventBus.getInstance();
-        eventBus.emit('decorator:event', { message: 'decorated event' });
-        
-        expect(instance.receivedEvents.length).toBe(1);
-        expect(instance.receivedEvents[0].message).toBe('decorated event');
-    });
-
-    test('AsyncEventHandler装饰器应该能够自动注册异步监听器', async () => {
-        const instance = new TestClass();
-        
-        // 手动调用初始化方法来注册装饰器定义的监听器
-        if (typeof (instance as any).initEventListeners === 'function') {
-            (instance as any).initEventListeners();
-        }
-        
-        const eventBus = GlobalEventBus.getInstance();
-        await eventBus.emitAsync('async:decorator:event', { message: 'async decorated event' });
-        
-        expect(instance.receivedEvents.length).toBe(1);
-        expect(instance.receivedEvents[0].message).toBe('async decorated event');
-    });
-
-    afterEach(() => {
-        GlobalEventBus.reset();
-    });
-});

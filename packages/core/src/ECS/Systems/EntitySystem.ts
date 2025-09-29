@@ -53,9 +53,6 @@ export abstract class EntitySystem implements ISystemBase {
     private _scene: Scene | null;
     protected logger = createLogger('EntitySystem');
 
-    // 装饰器动态添加的方法（可选）
-    protected initEventListeners?: () => void;
-    protected cleanupEventListeners?: () => void;
 
     /**
      * 实体ID映射缓存
@@ -139,8 +136,6 @@ export abstract class EntitySystem implements ISystemBase {
         this._entityIdMapVersion = -1;
         this._entityIdMapSize = 0;
 
-        // 初始化装饰器事件监听器
-        this.initDecoratorEventListeners();
 
         this._entityCache = {
             frame: null,
@@ -752,25 +747,6 @@ export abstract class EntitySystem implements ISystemBase {
         }
     }
 
-
-    /**
-     * 初始化装饰器事件监听器
-     */
-    protected initDecoratorEventListeners(): void {
-        if (this.initEventListeners) {
-            this.initEventListeners();
-        }
-    }
-
-    /**
-     * 清理装饰器事件监听器
-     */
-    protected cleanupDecoratorEventListeners(): void {
-        if (this.cleanupEventListeners) {
-            this.cleanupEventListeners();
-        }
-    }
-
     /**
      * 清理手动添加的事件监听器
      */
@@ -792,13 +768,8 @@ export abstract class EntitySystem implements ISystemBase {
      * 由框架调用，处理系统的完整销毁流程
      */
     public destroy(): void {
-        // 1. 清理手动添加的事件监听器
         this.cleanupManualEventListeners();
 
-        // 2. 清理装饰器事件监听器
-        this.cleanupDecoratorEventListeners();
-
-        // 3. 调用用户的销毁回调
         this.onDestroy();
     }
 

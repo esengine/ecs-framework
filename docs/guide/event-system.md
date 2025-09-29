@@ -317,50 +317,6 @@ class GameManager {
 }
 ```
 
-## 事件装饰器
-
-使用装饰器自动注册事件监听器：
-
-```typescript
-import { EventHandler, AsyncEventHandler } from '@esengine/ecs-framework';
-
-class PlayerController {
-  constructor() {
-    // 自动调用事件监听器注册
-    this.initEventListeners();
-  }
-
-  @EventHandler('player_input')
-  private onPlayerInput(data: { action: string, value: number }): void {
-    console.log(`玩家输入: ${data.action} = ${data.value}`);
-    // 处理玩家输入
-  }
-
-  @EventHandler('player_attack', { priority: 100 })
-  private onPlayerAttack(data: { damage: number, target: string }): void {
-    console.log(`玩家攻击 ${data.target}，造成 ${data.damage} 伤害`);
-    // 处理攻击逻辑
-  }
-
-  @AsyncEventHandler('save_progress')
-  private async onSaveProgress(data: { checkpointId: string }): Promise<void> {
-    console.log(`保存进度到检查点: ${data.checkpointId}`);
-    // 异步保存进度
-    await this.saveToCloud(data.checkpointId);
-  }
-
-  @EventHandler('game_over', { once: true })
-  private onGameOver(): void {
-    console.log('游戏结束！');
-    // 这个方法只会被调用一次
-  }
-
-  private async saveToCloud(checkpointId: string): Promise<void> {
-    // 模拟云端保存
-    return new Promise(resolve => setTimeout(resolve, 1500));
-  }
-}
-```
 
 ## 批处理事件
 
