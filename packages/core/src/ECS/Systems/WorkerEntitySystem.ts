@@ -4,6 +4,8 @@ import { Matcher } from '../Utils/Matcher';
 import { Time } from '../../Utils/Time';
 import { createLogger } from '../../Utils/Logger';
 import type { IComponent } from '../../Types';
+import { PlatformManager } from '../../Platform/PlatformManager';
+import type { IPlatformAdapter, PlatformWorker } from '../../Platform/IPlatformAdapter';
 
 /**
  * Worker处理函数类型
@@ -191,13 +193,17 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         systemConfig?: any;
         entitiesPerWorker?: number;
     };
-    private workerPool: WebWorkerPool | null = null;
+    private workerPool: PlatformWorkerPool | null = null;
     private isProcessing = false;
     protected sharedBuffer: SharedArrayBuffer | null = null;
     protected sharedFloatArray: Float32Array | null = null;
+    private platformAdapter: IPlatformAdapter;
 
     constructor(matcher?: Matcher, config: WorkerSystemConfig = {}) {
         super(matcher);
+
+        // 获取平台适配器
+        this.platformAdapter = PlatformManager.getInstance().getAdapter();
 
         // 验证和调整 worker 数量，确保不超过系统最大值
         const requestedWorkerCount = config.workerCount ?? this.getMaxSystemWorkerCount();
@@ -233,25 +239,22 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
      * 检查是否支持Worker
      */
     private isWorkerSupported(): boolean {
-        return typeof Worker !== 'undefined' && typeof Blob !== 'undefined';
+        return this.platformAdapter.isWorkerSupported();
     }
 
     /**
      * 检查是否支持SharedArrayBuffer
      */
     private isSharedArrayBufferSupported(): boolean {
-        return typeof SharedArrayBuffer !== 'undefined' && self.crossOriginIsolated;
+        return this.platformAdapter.isSharedArrayBufferSupported();
     }
 
     /**
      * 获取系统支持的最大Worker数量
      */
     private getMaxSystemWorkerCount(): number {
-        if (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) {
-            // 使用全部CPU核心数作为最大限制
-            return navigator.hardwareConcurrency;
-        }
-        return 4; // 降级默认值
+        const platformConfig = this.platformAdapter.getPlatformConfig();
+        return platformConfig.maxWorkerCount;
     }
 
     /**
@@ -267,7 +270,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         try {
             // 检查是否支持SharedArrayBuffer
             if (!this.isSharedArrayBufferSupported()) {
-                this.logger.warn(`${this.systemName}: 不支持SharedArrayBuffer，降级到单Worker模式以保证数据处理完整性`);
+                this.logger.warn(`${this.systemName}: 平台不支持SharedArrayBuffer，降级到单Worker模式以保证数据处理完整性`);
                 this.config.useSharedArrayBuffer = false;
                 // 降级到单Worker模式：确保所有实体在同一个Worker中处理，维持实体间交互的完整性
                 this.config.workerCount = 1;
@@ -277,8 +280,10 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
             // 使用配置的实体数据大小和最大实体数量
             // 预分配缓冲区：maxEntities * entityDataSize * 4字节
             const bufferSize = this.config.maxEntities * this.config.entityDataSize * 4;
-            this.sharedBuffer = new SharedArrayBuffer(bufferSize);
-            this.sharedFloatArray = new Float32Array(this.sharedBuffer);
+            this.sharedBuffer = this.platformAdapter.createSharedArrayBuffer(bufferSize);
+            if (this.sharedBuffer) {
+                this.sharedFloatArray = new Float32Array(this.sharedBuffer);
+            }
 
             this.logger.info(`${this.systemName}: SharedArrayBuffer初始化成功 (${bufferSize} 字节)`);
         } catch (error) {
@@ -296,9 +301,26 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
     private initializeWorkerPool(): void {
         try {
             const script = this.createWorkerScript();
-            this.workerPool = new WebWorkerPool(
-                this.config.workerCount,
-                script,
+
+            // 在WorkerEntitySystem中处理平台相关逻辑
+            const workers: PlatformWorker[] = [];
+            const platformConfig = this.platformAdapter.getPlatformConfig();
+            const fullScript = (platformConfig.workerScriptPrefix || '') + script;
+
+            for (let i = 0; i < this.config.workerCount; i++) {
+                try {
+                    const worker = this.platformAdapter.createWorker(fullScript, {
+                        name: `WorkerEntitySystem-${i}`
+                    });
+                    workers.push(worker);
+                } catch (error) {
+                    this.logger.error(`创建Worker ${i} 失败:`, error);
+                    throw error;
+                }
+            }
+
+            this.workerPool = new PlatformWorkerPool(
+                workers,
                 this.sharedBuffer // 传递SharedArrayBuffer给Worker池
             );
         } catch (error) {
@@ -832,10 +854,10 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
 }
 
 /**
- * Web Worker池管理器
+ * 平台适配的Worker池管理器
  */
-class WebWorkerPool {
-    private workers: Worker[] = [];
+class PlatformWorkerPool {
+    private workers: PlatformWorker[] = [];
     private taskQueue: Array<{
         id: string;
         data: any;
@@ -845,18 +867,22 @@ class WebWorkerPool {
     private busyWorkers = new Set<number>();
     private taskCounter = 0;
     private sharedBuffer: SharedArrayBuffer | null = null;
+    private readonly logger = createLogger('PlatformWorkerPool');
 
-    constructor(workerCount: number, script: string, sharedBuffer?: SharedArrayBuffer | null) {
-        this.sharedBuffer = sharedBuffer || null;
+    constructor(
+        workers: PlatformWorker[],
+        sharedBuffer: SharedArrayBuffer | null = null
+    ) {
+        this.sharedBuffer = sharedBuffer;
+        this.workers = workers;
 
-        const blob = new Blob([script], { type: 'application/javascript' });
-        const scriptURL = URL.createObjectURL(blob);
+        // 为每个Worker设置消息处理器
+        for (let i = 0; i < workers.length; i++) {
+            const worker = workers[i];
 
-        for (let i = 0; i < workerCount; i++) {
-            const worker = new Worker(scriptURL);
-
-            worker.onmessage = (e) => this.handleWorkerMessage(i, e.data);
-            worker.onerror = (error) => this.handleWorkerError(i, error);
+            // 设置消息处理器
+            worker.onMessage((event) => this.handleWorkerMessage(i, event.data));
+            worker.onError((error) => this.handleWorkerError(i, error));
 
             // 如果有SharedArrayBuffer，发送给Worker
             if (sharedBuffer) {
@@ -865,11 +891,7 @@ class WebWorkerPool {
                     sharedBuffer: sharedBuffer
                 });
             }
-
-            this.workers.push(worker);
         }
-
-        URL.revokeObjectURL(scriptURL);
     }
 
     /**

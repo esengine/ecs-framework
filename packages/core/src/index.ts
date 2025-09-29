@@ -32,4 +32,7 @@ export { ECSEventType, EventPriority, EVENT_TYPES, EventTypeValidator } from './
 
 // 工具类和类型定义
 export * from './Utils';
-export * from './Types'; 
+export * from './Types';
+
+// 平台适配
+export * from './Platform'; 
