@@ -66,13 +66,6 @@ interface QueryCacheEntry {
  * 高性能实体查询系统
  * 
  * 提供快速的实体查询功能，支持按组件类型、标签、名称等多种方式查询实体。
- * 系统采用多级索引和智能缓存机制，确保在大量实体场景下的查询性能。
- * 
- * 主要特性：
- * - 支持单组件和多组件查询
- * - 自动索引管理和缓存优化
- * - WebAssembly计算加速（如果可用）
- * - 详细的性能统计信息
  * 
  * @example
  * ```typescript
@@ -96,12 +89,8 @@ export class QuerySystem {
     private cacheMaxSize = 1000;
     private cacheTimeout = 5000; // 5秒缓存过期
 
-    // 性能优化缓存
-    private componentNameCache = new WeakMap<ComponentType, string>();
-    private cacheKeyCache = new Map<string, string>();
     private componentMaskCache = new Map<string, BitMask64Data>();
 
-    // 新增性能优化系统
     private componentIndexManager: ComponentIndexManager;
     private archetypeSystem: ArchetypeSystem;
 
@@ -862,7 +851,6 @@ export class QuerySystem {
      */
     private clearQueryCache(): void {
         this.queryCache.clear();
-        this.cacheKeyCache.clear();
         this.componentMaskCache.clear();
     }
 
@@ -872,34 +860,19 @@ export class QuerySystem {
     private generateCacheKey(prefix: string, componentTypes: ComponentType[]): string {
         // 快速路径：单组件查询
         if (componentTypes.length === 1) {
-            let name = this.componentNameCache.get(componentTypes[0]);
-            if (!name) {
-                name = getComponentTypeName(componentTypes[0]);
-                this.componentNameCache.set(componentTypes[0], name);
-            }
+            const name = getComponentTypeName(componentTypes[0]);
             return `${prefix}:${name}`;
         }
 
         // 多组件查询：使用排序后的类型名称创建键
         const sortKey = componentTypes.map(t => {
-            let name = this.componentNameCache.get(t);
-            if (!name) {
-                name = getComponentTypeName(t);
-                this.componentNameCache.set(t, name);
-            }
+            const name = getComponentTypeName(t);
             return name;
         }).sort().join(',');
 
         const fullKey = `${prefix}:${sortKey}`;
 
-        // 检查缓存的键是否已存在
-        let cachedKey = this.cacheKeyCache.get(fullKey);
-        if (!cachedKey) {
-            cachedKey = fullKey;
-            this.cacheKeyCache.set(fullKey, cachedKey);
-        }
-
-        return cachedKey;
+        return fullKey;
     }
 
     /**
@@ -923,11 +896,7 @@ export class QuerySystem {
     private createComponentMask(componentTypes: ComponentType[]): BitMask64Data {
         // 生成缓存键
         const cacheKey = componentTypes.map(t => {
-            let name = this.componentNameCache.get(t);
-            if (!name) {
-                name = getComponentTypeName(t);
-                this.componentNameCache.set(t, name);
-            }
+            const name = getComponentTypeName(t);
             return name;
         }).sort().join(',');
 
@@ -1026,7 +995,7 @@ export class QuerySystem {
                 archetypeSystem: this.archetypeSystem.getAllArchetypes().map(a => ({
                     id: a.id,
                     componentTypes: a.componentTypes.map(t => getComponentTypeName(t)),
-                    entityCount: a.entities.length
+                    entityCount: a.entities.size
                 }))
             },
             cacheStats: {

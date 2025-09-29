@@ -15,12 +15,8 @@ export interface Archetype {
     id: ArchetypeId;
     /** 包含的组件类型 */
     componentTypes: ComponentType[];
-    /** 属于该原型的实体列表 */
-    entities: Entity[];
-    /** 原型创建时间 */
-    createdAt: number;
-    /** 最后更新时间 */
-    updatedAt: number;
+    /** 属于该原型的实体集合 */
+    entities: Set<Entity>;
 }
 
 /**
@@ -31,10 +27,6 @@ export interface ArchetypeQueryResult {
     archetypes: Archetype[];
     /** 所有匹配实体的总数 */
     totalEntities: number;
-    /** 查询执行时间（毫秒） */
-    executionTime: number;
-    /** 是否使用了缓存 */
-    fromCache: boolean;
 }
 
 /**
@@ -45,21 +37,18 @@ export interface ArchetypeQueryResult {
 export class ArchetypeSystem {
     /** 所有原型的映射表 */
     private _archetypes = new Map<ArchetypeId, Archetype>();
-    
+
     /** 实体到原型的映射 */
     private _entityToArchetype = new Map<Entity, Archetype>();
-    
+
     /** 组件类型到原型的映射 */
     private _componentToArchetypes = new Map<ComponentType, Set<Archetype>>();
-    
-    /** 查询缓存 */
-    private _queryCache = new Map<string, {
-        result: ArchetypeQueryResult;
-        timestamp: number;
-    }>();
-    
-    private _cacheTimeout = 5000;
-    private _maxCacheSize = 100;
+
+    /** 实体组件类型缓存 */
+    private _entityComponentTypesCache = new Map<Entity, ComponentType[]>();
+
+    /** 原型ID缓存 */
+    private _archetypeIdCache = new Map<string, ArchetypeId>();
     
     /**
      * 添加实体到原型系统
@@ -67,18 +56,16 @@ export class ArchetypeSystem {
     public addEntity(entity: Entity): void {
         const componentTypes = this.getEntityComponentTypes(entity);
         const archetypeId = this.generateArchetypeId(componentTypes);
-        
+
         let archetype = this._archetypes.get(archetypeId);
         if (!archetype) {
             archetype = this.createArchetype(componentTypes);
         }
-        
-        archetype.entities.push(entity);
-        archetype.updatedAt = Date.now();
+
+        archetype.entities.add(entity);
         this._entityToArchetype.set(entity, archetype);
-        
+
         this.updateComponentIndexes(archetype, componentTypes, true);
-        this.invalidateQueryCache();
     }
     
     /**
@@ -88,14 +75,11 @@ export class ArchetypeSystem {
         const archetype = this._entityToArchetype.get(entity);
         if (!archetype) return;
 
-        const index = archetype.entities.indexOf(entity);
-        if (index !== -1) {
-            archetype.entities.splice(index, 1);
-            archetype.updatedAt = Date.now();
-        }
+        archetype.entities.delete(entity);
 
+        // 清理实体相关缓存
+        this._entityComponentTypesCache.delete(entity);
         this._entityToArchetype.delete(entity);
-        this.invalidateQueryCache();
     }
 
     /**
@@ -108,6 +92,9 @@ export class ArchetypeSystem {
      */
     public updateEntity(entity: Entity): void {
         const currentArchetype = this._entityToArchetype.get(entity);
+
+        // 清理实体组件类型缓存，强制重新计算
+        this._entityComponentTypesCache.delete(entity);
         const newComponentTypes = this.getEntityComponentTypes(entity);
         const newArchetypeId = this.generateArchetypeId(newComponentTypes);
 
@@ -116,13 +103,12 @@ export class ArchetypeSystem {
             return;
         }
 
+        const affectedComponentTypes = new Set<ComponentType>();
+
         // 从旧原型中移除实体
         if (currentArchetype) {
-            const index = currentArchetype.entities.indexOf(entity);
-            if (index !== -1) {
-                currentArchetype.entities.splice(index, 1);
-                currentArchetype.updatedAt = Date.now();
-            }
+            currentArchetype.entities.delete(entity);
+            currentArchetype.componentTypes.forEach(type => affectedComponentTypes.add(type));
         }
 
         // 获取或创建新原型
@@ -132,9 +118,9 @@ export class ArchetypeSystem {
         }
 
         // 将实体添加到新原型
-        newArchetype.entities.push(entity);
-        newArchetype.updatedAt = Date.now();
+        newArchetype.entities.add(entity);
         this._entityToArchetype.set(entity, newArchetype);
+        newComponentTypes.forEach(type => affectedComponentTypes.add(type));
 
         // 更新组件索引
         if (currentArchetype) {
@@ -142,27 +128,12 @@ export class ArchetypeSystem {
         }
         this.updateComponentIndexes(newArchetype, newComponentTypes, true);
 
-        // 使查询缓存失效
-        this.invalidateQueryCache();
     }
     
     /**
      * 查询包含指定组件组合的原型
      */
     public queryArchetypes(componentTypes: ComponentType[], operation: 'AND' | 'OR' = 'AND'): ArchetypeQueryResult {
-        const startTime = performance.now();
-        
-        const cacheKey = `${operation}:${componentTypes.map(t => getComponentTypeName(t)).sort().join(',')}`;
-        
-        // 检查缓存
-        const cached = this._queryCache.get(cacheKey);
-        if (cached && (Date.now() - cached.timestamp < this._cacheTimeout)) {
-            return {
-                ...cached.result,
-                executionTime: performance.now() - startTime,
-                fromCache: true
-            };
-        }
         
         const matchingArchetypes: Archetype[] = [];
         let totalEntities = 0;
@@ -171,7 +142,7 @@ export class ArchetypeSystem {
             for (const archetype of this._archetypes.values()) {
                 if (this.archetypeContainsAllComponents(archetype, componentTypes)) {
                     matchingArchetypes.push(archetype);
-                    totalEntities += archetype.entities.length;
+                    totalEntities += archetype.entities.size;
                 }
             }
         } else {
@@ -188,24 +159,14 @@ export class ArchetypeSystem {
             
             for (const archetype of foundArchetypes) {
                 matchingArchetypes.push(archetype);
-                totalEntities += archetype.entities.length;
+                totalEntities += archetype.entities.size;
             }
         }
         
-        const result: ArchetypeQueryResult = {
+        return {
             archetypes: matchingArchetypes,
-            totalEntities,
-            executionTime: performance.now() - startTime,
-            fromCache: false
+            totalEntities
         };
-        
-        // 缓存结果
-        this._queryCache.set(cacheKey, {
-            result,
-            timestamp: Date.now()
-        });
-        
-        return result;
     }
     
     /**
@@ -229,24 +190,38 @@ export class ArchetypeSystem {
         this._archetypes.clear();
         this._entityToArchetype.clear();
         this._componentToArchetypes.clear();
-        this._queryCache.clear();
+        this._entityComponentTypesCache.clear();
+        this._archetypeIdCache.clear();
     }
     
     /**
      * 获取实体的组件类型列表
      */
     private getEntityComponentTypes(entity: Entity): ComponentType[] {
-        return entity.components.map(component => component.constructor as ComponentType);
+        let componentTypes = this._entityComponentTypesCache.get(entity);
+        if (!componentTypes) {
+            componentTypes = entity.components.map(component => component.constructor as ComponentType);
+            this._entityComponentTypesCache.set(entity, componentTypes);
+        }
+        return componentTypes;
     }
     
     /**
      * 生成原型ID
      */
     private generateArchetypeId(componentTypes: ComponentType[]): ArchetypeId {
-        return componentTypes
+        // 创建缓存键
+        const cacheKey = componentTypes
             .map(type => getComponentTypeName(type))
             .sort()
             .join('|');
+
+        let archetypeId = this._archetypeIdCache.get(cacheKey);
+        if (!archetypeId) {
+            archetypeId = cacheKey;
+            this._archetypeIdCache.set(cacheKey, archetypeId);
+        }
+        return archetypeId;
     }
     
     /**
@@ -258,9 +233,7 @@ export class ArchetypeSystem {
         const archetype: Archetype = {
             id,
             componentTypes: [...componentTypes],
-            entities: [],
-            createdAt: Date.now(),
-            updatedAt: Date.now()
+            entities: new Set<Entity>()
         };
         
         this._archetypes.set(id, archetype);
@@ -301,10 +274,5 @@ export class ArchetypeSystem {
         }
     }
     
-    /**
-     * 使查询缓存失效
-     */
-    private invalidateQueryCache(): void {
-        this._queryCache.clear();
-    }
+
 }
