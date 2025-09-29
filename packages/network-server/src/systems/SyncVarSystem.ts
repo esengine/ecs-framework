@@ -69,7 +69,6 @@ interface SyncSystemStats {
  * 负责收集所有SyncVar变化并向客户端同步
  */
 export class SyncVarSystem extends EntitySystem {
-    private logger = createLogger('SyncVarSystem');
     private config: SyncVarSystemConfig;
     private syncVarManager: SyncVarManager;
     private serializer: SyncVarSerializer;
@@ -239,10 +238,15 @@ export class SyncVarSystem extends EntitySystem {
     /**
      * 销毁系统
      */
-    public destroy(): void {
+    public override destroy(): void {
         this.stopSyncTimer();
         this.clientStates.clear();
         this.pendingBatches.length = 0;
+        super.destroy();
+    }
+
+    protected override getLoggerName(): string {
+        return 'SyncVarSystem';
     }
 
     /**

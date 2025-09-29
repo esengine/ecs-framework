@@ -199,8 +199,6 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
     constructor(matcher?: Matcher, config: WorkerSystemConfig = {}) {
         super(matcher);
 
-        this.logger = createLogger('WorkerEntitySystem');
-
         // 验证和调整 worker 数量，确保不超过系统最大值
         const requestedWorkerCount = config.workerCount ?? this.getMaxSystemWorkerCount();
         const maxSystemWorkerCount = this.getMaxSystemWorkerCount();
@@ -826,6 +824,10 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
             this.workerPool.destroy();
             this.workerPool = null;
         }
+    }
+
+    protected override getLoggerName(): string {
+        return 'WorkerEntitySystem';
     }
 }
 

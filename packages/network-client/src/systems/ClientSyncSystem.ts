@@ -87,7 +87,6 @@ interface ClientSyncStats {
  * 负责接收和应用服务端同步数据，处理本地预测和插值
  */
 export class ClientSyncSystem extends EntitySystem {
-    private logger = createLogger('ClientSyncSystem');
     private config: ClientSyncSystemConfig;
     private syncVarManager: SyncVarManager;
     private serializer: SyncVarSerializer;
@@ -304,11 +303,16 @@ export class ClientSyncSystem extends EntitySystem {
     /**
      * 销毁系统
      */
-    public destroy(): void {
+    public override destroy(): void {
         this.remoteEntities.clear();
         this.predictions.clear();
         this.interpolations.clear();
         this.localEntityMap.clear();
+        super.destroy();
+    }
+
+    protected override getLoggerName(): string {
+        return 'ClientSyncSystem';
     }
 
     /**

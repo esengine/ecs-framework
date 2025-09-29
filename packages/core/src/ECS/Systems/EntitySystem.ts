@@ -51,7 +51,7 @@ export abstract class EntitySystem implements ISystemBase {
     private _matcher: Matcher;
     private _eventListeners: EventListenerRecord[];
     private _scene: Scene | null;
-    protected logger = createLogger('EntitySystem');
+    protected logger: ReturnType<typeof createLogger>;
 
 
     /**
@@ -135,6 +135,9 @@ export abstract class EntitySystem implements ISystemBase {
         this._entityIdMap = null;
         this._entityIdMapVersion = -1;
         this._entityIdMapSize = 0;
+
+        // 初始化logger
+        this.logger = createLogger(this.getLoggerName());
 
 
         this._entityCache = {
@@ -771,6 +774,14 @@ export abstract class EntitySystem implements ISystemBase {
         this.cleanupManualEventListeners();
 
         this.onDestroy();
+    }
+
+    /**
+     * 获取Logger名称
+     * 子类可以重写此方法来自定义logger名称
+     */
+    protected getLoggerName(): string {
+        return 'EntitySystem';
     }
 
     /**
