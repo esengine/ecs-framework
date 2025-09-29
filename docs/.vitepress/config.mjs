@@ -78,6 +78,16 @@ export default defineConfig({
             { text: '时间和定时器 (Time)', link: '/guide/time-and-timers' },
             { text: '日志系统 (Logger)', link: '/guide/logging' }
           ]
+        },
+        {
+          text: '平台适配器',
+          link: '/guide/platform-adapter',
+          collapsed: false,
+          items: [
+            { text: '浏览器适配器', link: '/guide/platform-adapter/browser' },
+            { text: '微信小游戏适配器', link: '/guide/platform-adapter/wechat-minigame' },
+            { text: 'Node.js适配器', link: '/guide/platform-adapter/nodejs' }
+          ]
         }
       ],
       '/examples/': [

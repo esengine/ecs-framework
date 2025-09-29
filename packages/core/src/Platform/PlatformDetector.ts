@@ -27,8 +27,15 @@ export class PlatformDetector {
             features.push('self');
         }
 
+        // 检测Node.js环境（优先级最高，因为Node.js可能包含全局对象模拟）
+        if (this.isNodeJS()) {
+            platform = 'nodejs';
+            confident = true;
+            adapterClass = 'NodeAdapter';
+            features.push('nodejs', 'process', 'require');
+        }
         // 检测微信小游戏环境
-        if (this.isWeChatMiniGame()) {
+        else if (this.isWeChatMiniGame()) {
             platform = 'wechat-minigame';
             confident = true;
             adapterClass = 'WeChatMiniGameAdapter';
@@ -120,6 +127,28 @@ export class PlatformDetector {
             return !!(tt.getSystemInfo && tt.createCanvas && tt.createImage);
         }
         return false;
+    }
+
+    /**
+     * 检测是否为Node.js环境
+     */
+    private static isNodeJS(): boolean {
+        try {
+            // 检查Node.js特有的全局对象和模块
+            return !!(
+                typeof process !== 'undefined' &&
+                process.versions &&
+                process.versions.node &&
+                typeof require !== 'undefined' &&
+                typeof module !== 'undefined' &&
+                typeof exports !== 'undefined' &&
+                // 确保不是在浏览器环境中的Node.js模拟
+                typeof window === 'undefined' &&
+                typeof document === 'undefined'
+            );
+        } catch {
+            return false;
+        }
     }
 
     /**

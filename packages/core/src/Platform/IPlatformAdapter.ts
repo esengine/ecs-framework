@@ -179,7 +179,7 @@ export interface PlatformDetectionResult {
     /**
      * 平台类型
      */
-    platform: 'browser' | 'wechat-minigame' | 'bytedance-minigame' | 'alipay-minigame' | 'baidu-minigame' | 'unknown';
+    platform: 'browser' | 'wechat-minigame' | 'bytedance-minigame' | 'alipay-minigame' | 'baidu-minigame' | 'nodejs' | 'unknown';
 
     /**
      * 是否确定检测结果
@@ -197,93 +197,3 @@ export interface PlatformDetectionResult {
     adapterClass?: string;
 }
 
-/**
- * 微信小游戏设备信息接口
- */
-export interface WeChatDeviceInfo {
-    // 设备基础信息
-    brand?: string;
-    model?: string;
-    platform?: string;
-    system?: string;
-    benchmarkLevel?: number;
-    cpuType?: string;
-    memorySize?: string;
-    deviceAbi?: string;
-    abi?: string;
-
-    // 窗口信息
-    screenWidth?: number;
-    screenHeight?: number;
-    screenTop?: number;
-    windowWidth?: number;
-    windowHeight?: number;
-    pixelRatio?: number;
-    statusBarHeight?: number;
-    safeArea?: {
-        top: number;
-        bottom: number;
-        left: number;
-        right: number;
-        width: number;
-        height: number;
-    };
-
-    // 应用信息
-    version?: string;
-    language?: string;
-    theme?: string;
-    SDKVersion?: string;
-    enableDebug?: boolean;
-    fontSizeSetting?: number;
-    host?: {
-        appId: string;
-    };
-}
-
-/**
- * 浏览器设备信息接口
- */
-export interface BrowserDeviceInfo {
-    // 浏览器信息
-    userAgent?: string;
-    vendor?: string;
-    language?: string;
-    languages?: string[];
-    cookieEnabled?: boolean;
-    onLine?: boolean;
-    doNotTrack?: string | null;
-
-    // 硬件信息
-    hardwareConcurrency?: number;
-    deviceMemory?: number;
-    maxTouchPoints?: number;
-
-    // 屏幕信息
-    screenWidth?: number;
-    screenHeight?: number;
-    availWidth?: number;
-    availHeight?: number;
-    colorDepth?: number;
-    pixelDepth?: number;
-
-    // 窗口信息
-    innerWidth?: number;
-    innerHeight?: number;
-    outerWidth?: number;
-    outerHeight?: number;
-    devicePixelRatio?: number;
-
-    // 连接信息（如果支持）
-    connection?: {
-        effectiveType?: string;
-        downlink?: number;
-        rtt?: number;
-        saveData?: boolean;
-    };
-
-    // 平台信息
-    platform?: string;
-    appVersion?: string;
-    appName?: string;
-}

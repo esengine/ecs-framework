@@ -24,3 +24,6 @@
 
 ### [日志系统 (Logger)](./logging.md)
 掌握分级日志系统，用于调试、监控和错误追踪。
+
+### [平台适配器 (Platform Adapter)](./platform-adapter.md)
+了解如何为不同平台实现和注册平台适配器，支持浏览器、小游戏、Node.js等环境。
