@@ -1,11 +1,12 @@
 import { BitMask64Data, BitMask64Utils } from './BigIntCompatibility';
 
 /**
- * 64位位集合类，用于高效的位操作
- * 支持最多64个位的设置、清除、查询和逻辑运算
+ * 位集合类，用于高效的位操作
+ * 自动扩展支持：默认 64 位，超过时自动扩展到 128/256 位
+ * 扩展模式性能略有下降，但仍然比数组遍历快得多
  */
 export class Bits {
-    /** 存储位数据的64位掩码 */
+    /** 存储位数据的掩码，支持扩展 */
     private _value: BitMask64Data;
 
     /**
@@ -27,36 +28,29 @@ export class Bits {
 
     /**
      * 设置指定位为1
-     * @param index 位索引，范围 [0, 63]
-     * @throws 当位索引为负数或超过64位限制时抛出错误
+     * 自动扩展：当索引超过 64 时，自动扩展到 128/256 位
+     * @param index 位索引（0-based）
+     * @throws 当位索引为负数时抛出错误
      */
     public set(index: number): void {
         if (index < 0) {
             throw new Error('Bit index cannot be negative');
         }
-        
-        if (index >= 64) {
-            throw new Error('Bit index exceeds 64-bit limit. ECS framework supports max 64 component types.');
-        }
-        
-        BitMask64Utils.setBit(this._value, index);
+
+        BitMask64Utils.setBitExtended(this._value, index);
     }
 
     /**
      * 清除指定位为0
-     * @param index 位索引，范围 [0, 63]
+     * @param index 位索引
      * @throws 当位索引为负数时抛出错误
      */
     public clear(index: number): void {
         if (index < 0) {
             throw new Error('Bit index cannot be negative');
         }
-        
-        if (index >= 64) {
-            return;
-        }
-        
-        BitMask64Utils.clearBit(this._value, index);
+
+        BitMask64Utils.clearBitExtended(this._value, index);
     }
 
     /**
@@ -65,12 +59,7 @@ export class Bits {
      * @returns 如果位被设置为1则返回true，否则返回false
      */
     public get(index: number): boolean {
-        if (index < 0 || index >= 64) {
-            return false;
-        }
-        
-        const mask = BitMask64Utils.create(index);
-        return BitMask64Utils.hasAny(this._value, mask);
+        return BitMask64Utils.getBitExtended(this._value, index);
     }
 
     /**

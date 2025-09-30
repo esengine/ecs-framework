@@ -1,15 +1,16 @@
 /**
- * 64位掩码兼容层
- */
-
-/**
- * 64位掩码数据结构，使用两个32位整数表示
+ * 位掩码数据结构
+ * 基础模式（64位）：使用 lo + hi 存储 64 位，segments 为空
+ * 扩展模式（128+位）：lo + hi 作为第一段，segments 存储额外的 64 位段
+ * segments[0] 对应 bit 64-127，segments[1] 对应 bit 128-191，以此类推
  */
 export interface BitMask64Data {
-    /** 低32位 */
+    /** 低32位（bit 0-31） */
     lo: number;
-    /** 高32位 */
+    /** 高32位（bit 32-63） */
     hi: number;
+    /** 扩展段数组，每个元素是一个 64 位段，用于超过 64 位的场景 */
+    segments?: BitMask64Data[];
 }
 
 export class BitMask64Utils {
@@ -55,12 +56,44 @@ export class BitMask64Utils {
 
     /**
      * 检查掩码是否包含所有指定的位
+     * 支持扩展模式，自动处理超过 64 位的掩码
      * @param mask 要检查的掩码
      * @param bits 指定的位模式
      * @returns 如果掩码包含bits中的所有位则返回true
      */
     public static hasAll(mask: BitMask64Data, bits: BitMask64Data): boolean {
-        return (mask.lo & bits.lo) === bits.lo && (mask.hi & bits.hi) === bits.hi;
+        // 检查第一个 64 位段
+        if ((mask.lo & bits.lo) !== bits.lo || (mask.hi & bits.hi) !== bits.hi) {
+            return false;
+        }
+
+        // 如果 bits 没有扩展段，检查完成
+        if (!bits.segments || bits.segments.length === 0) {
+            return true;
+        }
+
+        // 如果 bits 有扩展段但 mask 没有，返回 false
+        if (!mask.segments || mask.segments.length === 0) {
+            // 检查 bits 的扩展段是否全为 0
+            return bits.segments.every(seg => BitMask64Utils.isZero(seg));
+        }
+
+        // 递归检查每个扩展段
+        const minSegments = Math.min(mask.segments.length, bits.segments.length);
+        for (let i = 0; i < minSegments; i++) {
+            if (!BitMask64Utils.hasAll(mask.segments[i], bits.segments[i])) {
+                return false;
+            }
+        }
+
+        // 如果 bits 有更多段，检查这些段是否为空
+        for (let i = minSegments; i < bits.segments.length; i++) {
+            if (!BitMask64Utils.isZero(bits.segments[i])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -234,7 +267,98 @@ export class BitMask64Utils {
             hi &= hi - 1;
             count++;
         }
-        
+
         return count;
+    }
+
+    /**
+     * 设置扩展位（支持超过 64 位的索引）
+     * @param mask 要修改的掩码（原地修改）
+     * @param bitIndex 位索引（可以超过 63）
+     */
+    public static setBitExtended(mask: BitMask64Data, bitIndex: number): void {
+        if (bitIndex < 0) {
+            throw new Error('Bit index cannot be negative');
+        }
+
+        if (bitIndex < 64) {
+            BitMask64Utils.setBit(mask, bitIndex);
+            return;
+        }
+
+        // 计算段索引和段内位索引
+        const segmentIndex = Math.floor(bitIndex / 64) - 1;
+        const localBitIndex = bitIndex % 64;
+
+        // 确保 segments 数组存在
+        if (!mask.segments) {
+            mask.segments = [];
+        }
+
+        // 扩展 segments 数组
+        while (mask.segments.length <= segmentIndex) {
+            mask.segments.push(BitMask64Utils.clone(BitMask64Utils.ZERO));
+        }
+
+        // 设置对应段的位
+        BitMask64Utils.setBit(mask.segments[segmentIndex], localBitIndex);
+    }
+
+    /**
+     * 获取扩展位（支持超过 64 位的索引）
+     * @param mask 要检查的掩码
+     * @param bitIndex 位索引（可以超过 63）
+     * @returns 如果位被设置则返回 true
+     */
+    public static getBitExtended(mask: BitMask64Data, bitIndex: number): boolean {
+        if (bitIndex < 0) {
+            return false;
+        }
+
+        if (bitIndex < 64) {
+            const testMask = BitMask64Utils.create(bitIndex);
+            return BitMask64Utils.hasAny(mask, testMask);
+        }
+
+        if (!mask.segments) {
+            return false;
+        }
+
+        const segmentIndex = Math.floor(bitIndex / 64) - 1;
+        if (segmentIndex >= mask.segments.length) {
+            return false;
+        }
+
+        const localBitIndex = bitIndex % 64;
+        const testMask = BitMask64Utils.create(localBitIndex);
+        return BitMask64Utils.hasAny(mask.segments[segmentIndex], testMask);
+    }
+
+    /**
+     * 清除扩展位（支持超过 64 位的索引）
+     * @param mask 要修改的掩码（原地修改）
+     * @param bitIndex 位索引（可以超过 63）
+     */
+    public static clearBitExtended(mask: BitMask64Data, bitIndex: number): void {
+        if (bitIndex < 0) {
+            return;
+        }
+
+        if (bitIndex < 64) {
+            BitMask64Utils.clearBit(mask, bitIndex);
+            return;
+        }
+
+        if (!mask.segments) {
+            return;
+        }
+
+        const segmentIndex = Math.floor(bitIndex / 64) - 1;
+        if (segmentIndex >= mask.segments.length) {
+            return;
+        }
+
+        const localBitIndex = bitIndex % 64;
+        BitMask64Utils.clearBit(mask.segments[segmentIndex], localBitIndex);
     }
 }

@@ -438,9 +438,15 @@ describe('Bits - 高性能位操作类测试', () => {
             expect(bits.cardinality()).toBe(1);
         });
 
-        it('超过64位索引应该抛出错误', () => {
-            expect(() => bits.set(64)).toThrow('Bit index exceeds 64-bit limit');
-            expect(() => bits.set(100)).toThrow('Bit index exceeds 64-bit limit');
+        it('超过64位索引应该自动扩展', () => {
+            // 现在支持自动扩展到 128/256 位
+            expect(() => bits.set(64)).not.toThrow();
+            expect(() => bits.set(100)).not.toThrow();
+
+            // 验证扩展后的位可以正确读取
+            expect(bits.get(64)).toBe(true);
+            expect(bits.get(100)).toBe(true);
+            expect(bits.get(65)).toBe(false);
         });
 
         it('64位范围内的位运算应该正确', () => {

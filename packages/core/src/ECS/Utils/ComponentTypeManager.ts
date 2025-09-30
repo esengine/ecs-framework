@@ -5,6 +5,7 @@ import { ComponentType } from "../../Types";
 /**
  * 组件类型管理器
  * 负责管理组件类型的注册和ID分配
+ * 支持无限数量的组件类型（通过自动扩展 BitMask）
  */
 export class ComponentTypeManager {
     private static _instance: ComponentTypeManager;
@@ -31,13 +32,13 @@ export class ComponentTypeManager {
      */
     public getTypeId(componentType: ComponentType): number {
         let typeId = this._componentTypes.get(componentType);
-        
+
         if (typeId === undefined) {
             typeId = this._nextTypeId++;
             this._componentTypes.set(componentType, typeId);
             this._typeNames.set(typeId, getComponentTypeName(componentType));
         }
-        
+
         return typeId;
     }
 
