@@ -83,8 +83,8 @@ if (player.hasComponent(Position)) {
   console.log("玩家有位置组件");
 }
 
-// 获取所有组件实例（直接访问 components 属性）
-const allComponents = player.components;  // Component[]
+// 获取所有组件实例（只读属性）
+const allComponents = player.components;  // readonly Component[]
 
 // 获取指定类型的所有组件（支持同类型多组件）
 const allHealthComponents = player.getComponents(Health);  // Health[]
