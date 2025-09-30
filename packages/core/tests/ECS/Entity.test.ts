@@ -266,7 +266,7 @@ describe('Entity - 组件缓存优化测试', () => {
             expect(debugInfo.componentCount).toBe(2);
             expect(debugInfo.componentTypes).toContain('TestPositionComponent');
             expect(debugInfo.componentTypes).toContain('TestHealthComponent');
-            expect(debugInfo.indexMappingSize).toBe(2);
+            expect(debugInfo.cacheBuilt).toBe(true);
         });
     });
 });

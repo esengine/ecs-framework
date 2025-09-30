@@ -717,7 +717,7 @@ export class EntityDataCollector {
     /**
      * 提取组件详细信息
      */
-    public extractComponentDetails(components: Component[]): Array<{
+    public extractComponentDetails(components: readonly Component[]): Array<{
         typeName: string;
         properties: Record<string, any>;
     }> {

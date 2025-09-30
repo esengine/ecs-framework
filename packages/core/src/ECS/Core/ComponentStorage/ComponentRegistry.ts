@@ -15,6 +15,7 @@ export type ComponentType<T extends Component = Component> = new (...args: any[]
 export class ComponentRegistry {
     protected static readonly _logger = createLogger('ComponentStorage');
     private static componentTypes = new Map<Function, number>();
+    private static bitIndexToType = new Map<number, Function>();
     private static componentNameToType = new Map<string, Function>();
     private static componentNameToId = new Map<string, number>();
     private static maskCache = new Map<string, BitMask64Data>();
@@ -40,9 +41,10 @@ export class ComponentRegistry {
 
         const bitIndex = this.nextBitIndex++;
         this.componentTypes.set(componentType, bitIndex);
+        this.bitIndexToType.set(bitIndex, componentType);
         this.componentNameToType.set(typeName, componentType);
         this.componentNameToId.set(typeName, bitIndex);
-        
+
         return bitIndex;
     }
 
@@ -81,6 +83,15 @@ export class ComponentRegistry {
      */
     public static isRegistered<T extends Component>(componentType: ComponentType<T>): boolean {
         return this.componentTypes.has(componentType);
+    }
+
+    /**
+     * 通过位索引获取组件类型
+     * @param bitIndex 位索引
+     * @returns 组件类型构造函数或null
+     */
+    public static getTypeByBitIndex(bitIndex: number): ComponentType | null {
+        return (this.bitIndexToType.get(bitIndex) as ComponentType) || null;
     }
 
     /**
@@ -196,6 +207,7 @@ export class ComponentRegistry {
      */
     public static reset(): void {
         this.componentTypes.clear();
+        this.bitIndexToType.clear();
         this.componentNameToType.clear();
         this.componentNameToId.clear();
         this.maskCache.clear();

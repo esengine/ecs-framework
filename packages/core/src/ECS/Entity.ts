@@ -96,11 +96,6 @@ export class Entity {
     public readonly id: number;
     
     /**
-     * 组件集合
-     */
-    public readonly components: Component[] = [];
-    
-    /**
      * 所属场景引用
      */
     public scene: IScene | null = null;
@@ -124,36 +119,37 @@ export class Entity {
      * 激活状态
      */
     private _active: boolean = true;
-    
+
     /**
      * 实体标签
      */
     private _tag: number = 0;
-    
+
     /**
      * 启用状态
      */
     private _enabled: boolean = true;
-    
+
     /**
      * 更新顺序
      */
     private _updateOrder: number = 0;
 
     /**
-     * 组件位掩码
+     * 组件位掩码（用于快速 hasComponent 检查）
      */
     private _componentMask: BitMask64Data = BitMask64Utils.clone(BitMask64Utils.ZERO);
 
     /**
-     * 按组件类型ID直址的稀疏数组
+     * 懒加载的组件数组缓存
      */
-    private _componentsByTypeId: (Component | undefined)[] = [];
+    private _componentCache: Component[] | null = null;
 
     /**
-     * typeId到components数组中密集索引的映射表
+     * 本地组件存储（用于没有 Scene 的 Entity）
+     * 当 Entity 添加到 Scene 时，组件会迁移到 Scene 的 componentStorageManager
      */
-    private _componentDenseIndexByTypeId: number[] = [];
+    private _localComponents: Map<ComponentType, Component> = new Map();
 
     /**
      * 构造函数
@@ -172,6 +168,55 @@ export class Entity {
      */
     public get isDestroyed(): boolean {
         return this._isDestroyed;
+    }
+
+    /**
+     * 获取组件数组（懒加载）
+     * @returns 只读的组件数组
+     */
+    public get components(): readonly Component[] {
+        if (this._componentCache === null) {
+            this._rebuildComponentCache();
+        }
+        return this._componentCache!;
+    }
+
+    /**
+     * 从存储重建组件缓存
+     */
+    private _rebuildComponentCache(): void {
+        const components: Component[] = [];
+        const mask = this._componentMask;
+
+        // 遍历位掩码中设置的位
+        for (let bitIndex = 0; bitIndex < 64; bitIndex++) {
+            const bitMask = BitMask64Utils.create(bitIndex);
+            if (BitMask64Utils.hasAny(mask, bitMask)) {
+                const componentType = ComponentRegistry.getTypeByBitIndex(bitIndex);
+                if (componentType) {
+                    let component: Component | null = null;
+
+                    // 优先从 Scene 存储获取
+                    if (this.scene?.componentStorageManager) {
+                        component = this.scene.componentStorageManager.getComponent(
+                            this.id,
+                            componentType
+                        );
+                    }
+
+                    // Fallback 到本地存储
+                    if (!component) {
+                        component = this._localComponents.get(componentType) || null;
+                    }
+
+                    if (component) {
+                        components.push(component);
+                    }
+                }
+            }
+        }
+
+        this._componentCache = components;
     }
 
     /**
@@ -316,7 +361,7 @@ export class Entity {
 
     /**
      * 内部添加组件方法（不进行重复检查，用于初始化）
-     * 
+     *
      * @param component - 要添加的组件实例
      * @returns 添加的组件实例
      */
@@ -327,16 +372,15 @@ export class Entity {
             ComponentRegistry.register(componentType);
         }
 
-        const typeId = ComponentRegistry.getBitIndex(componentType);
+        // 存储到本地 Map
+        this._localComponents.set(componentType, component);
 
-        this._componentsByTypeId[typeId] = component;
-        
-        const denseIndex = this.components.length;
-        this._componentDenseIndexByTypeId[typeId] = denseIndex;
-        this.components.push(component);
-
+        // 更新位掩码
         const componentMask = ComponentRegistry.getBitMask(componentType);
         BitMask64Utils.orInPlace(this._componentMask, componentMask);
+
+        // 使缓存失效
+        this._componentCache = null;
 
         return component;
     }
@@ -384,50 +428,26 @@ export class Entity {
 
     /**
      * 获取指定类型的组件
-     * 
+     *
      * @param type - 组件类型
      * @returns 组件实例或null
      */
     public getComponent<T extends Component>(type: ComponentType<T>): T | null {
-        if (!ComponentRegistry.isRegistered(type)) {
+        // 快速检查：位掩码
+        if (!this.hasComponent(type)) {
             return null;
         }
 
-        const mask = ComponentRegistry.getBitMask(type);
-        if (BitMask64Utils.hasNone(this._componentMask, mask)) {
-            return null;
-        }
-
-        const typeId = ComponentRegistry.getBitIndex(type);
-        const component = this._componentsByTypeId[typeId];
-        
-        if (component && component.constructor === type) {
-            return component as T;
-        }
-
-        if (this.scene && this.scene.componentStorageManager) {
-            const storageComponent = this.scene.componentStorageManager.getComponent(this.id, type);
-            if (storageComponent) {
-                this._componentsByTypeId[typeId] = storageComponent;
-                if (!this.components.includes(storageComponent)) {
-                    const denseIndex = this.components.length;
-                    this._componentDenseIndexByTypeId[typeId] = denseIndex;
-                    this.components.push(storageComponent);
-                }
-                return storageComponent;
+        // 优先从 Scene 存储获取
+        if (this.scene?.componentStorageManager) {
+            const component = this.scene.componentStorageManager.getComponent(this.id, type);
+            if (component) {
+                return component;
             }
         }
 
-        for (let i = 0; i < this.components.length; i++) {
-            const component = this.components[i];
-            if (component instanceof type) {
-                this._componentsByTypeId[typeId] = component;
-                this._componentDenseIndexByTypeId[typeId] = i;
-                return component as T;
-            }
-        }
-
-        return null;
+        // Fallback 到本地存储
+        return (this._localComponents.get(type) as T) || null;
     }
 
 
@@ -468,40 +488,28 @@ export class Entity {
 
     /**
      * 移除指定的组件
-     * 
+     *
      * @param component - 要移除的组件实例
      */
     public removeComponent(component: Component): void {
         const componentType = component.constructor as ComponentType;
-        
+
         if (!ComponentRegistry.isRegistered(componentType)) {
             return;
         }
 
-        const typeId = ComponentRegistry.getBitIndex(componentType);
-        
-        this._componentsByTypeId[typeId] = undefined;
-        
-        BitMask64Utils.clearBit(this._componentMask, typeId);
-        
-        const denseIndex = this._componentDenseIndexByTypeId[typeId];
-        if (denseIndex !== undefined && denseIndex < this.components.length) {
-            const lastIndex = this.components.length - 1;
-            
-            if (denseIndex !== lastIndex) {
-                const lastComponent = this.components[lastIndex];
-                this.components[denseIndex] = lastComponent;
-                
-                const lastComponentType = lastComponent.constructor as ComponentType;
-                const lastTypeId = ComponentRegistry.getBitIndex(lastComponentType);
-                this._componentDenseIndexByTypeId[lastTypeId] = denseIndex;
-            }
-            
-            this.components.pop();
-        }
-        
-        this._componentDenseIndexByTypeId[typeId] = -1;
+        const bitIndex = ComponentRegistry.getBitIndex(componentType);
 
+        // 从本地存储移除
+        this._localComponents.delete(componentType);
+
+        // 更新位掩码
+        BitMask64Utils.clearBit(this._componentMask, bitIndex);
+
+        // 使缓存失效
+        this._componentCache = null;
+
+        // 从 Scene 存储移除
         if (this.scene && this.scene.componentStorageManager) {
             this.scene.componentStorageManager.removeComponent(this.id, componentType);
         }
@@ -509,7 +517,7 @@ export class Entity {
         if (component.onRemovedFromEntity) {
             component.onRemovedFromEntity();
         }
-        
+
         if (Entity.eventBus) {
             Entity.eventBus.emitComponentRemoved({
                 timestamp: Date.now(),
@@ -546,22 +554,25 @@ export class Entity {
      */
     public removeAllComponents(): void {
         const componentsToRemove = [...this.components];
-        
-        this._componentsByTypeId.length = 0;
-        this._componentDenseIndexByTypeId.length = 0;
+
+        // 清除本地存储
+        this._localComponents.clear();
+
+        // 清除位掩码
         BitMask64Utils.clear(this._componentMask);
-        
+
+        // 使缓存失效
+        this._componentCache = null;
+
         for (const component of componentsToRemove) {
             const componentType = component.constructor as ComponentType;
-            
+
             if (this.scene && this.scene.componentStorageManager) {
                 this.scene.componentStorageManager.removeComponent(this.id, componentType);
             }
 
             component.onRemovedFromEntity();
         }
-
-        this.components.length = 0;
 
         // 通知所有相关的QuerySystem组件已全部移除
         Entity.notifyQuerySystems(this);
@@ -895,8 +906,7 @@ export class Entity {
         childCount: number;
         childIds: number[];
         depth: number;
-        indexMappingSize: number;
-        denseIndexMappingSize: number;
+        cacheBuilt: boolean;
     } {
         return {
             name: this.name,
@@ -912,8 +922,7 @@ export class Entity {
             childCount: this._children.length,
             childIds: this._children.map(c => c.id),
             depth: this.getDepth(),
-            indexMappingSize: this._componentsByTypeId.filter(c => c !== undefined).length,
-            denseIndexMappingSize: this._componentDenseIndexByTypeId.filter(idx => idx !== -1 && idx !== undefined).length
+            cacheBuilt: this._componentCache !== null
         };
     }
 }
