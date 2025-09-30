@@ -1,5 +1,6 @@
-import { Core } from '@esengine/ecs-framework';
+import { Core, PlatformManager } from '@esengine/ecs-framework';
 import { GameScene } from './GameScene';
+import { BrowserAdapter } from './platform/BrowserAdapter';
 
 // 性能监控
 interface PerformanceStats {
@@ -24,6 +25,10 @@ class WorkerDemo {
     private elements: { [key: string]: HTMLElement } = {};
 
     constructor() {
+        // 注册浏览器适配器
+        const browserAdapter = new BrowserAdapter();
+        PlatformManager.getInstance().registerAdapter(browserAdapter);
+
         // 获取canvas
         this.canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
         if (!this.canvas) {
