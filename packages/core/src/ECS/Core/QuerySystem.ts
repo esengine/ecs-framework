@@ -285,12 +285,12 @@ export class QuerySystem {
      * 将实体添加到各种索引中
      */
     private addEntityToIndexes(entity: Entity): void {
-        // 组件类型索引 - 批量处理，预获取所有相关的Set
+        // 组件类型索引改为lazy cache，这里只清除相关缓存
         const components = entity.components;
         for (let i = 0; i < components.length; i++) {
             const componentType = components[i].constructor as ComponentType;
-            const typeSet = this.entityIndex.byComponentType.get(componentType) || this.createAndSetComponentIndex(componentType);
-            typeSet.add(entity);
+            // 清除该组件类型的缓存，下次查询时会重新构建
+            this.entityIndex.byComponentType.delete(componentType);
         }
 
         // 标签索引
@@ -308,9 +308,20 @@ export class QuerySystem {
         }
     }
 
-    private createAndSetComponentIndex(componentType: ComponentType): Set<Entity> {
-        const set = new Set<Entity>();
-        this.entityIndex.byComponentType.set(componentType, set);
+    /**
+     * Lazy获取组件类型索引，不存在时从ArchetypeSystem构建
+     */
+    private getComponentTypeIndex(componentType: ComponentType): Set<Entity> {
+        let set = this.entityIndex.byComponentType.get(componentType);
+        if (!set) {
+            // 从ArchetypeSystem构建
+            set = new Set<Entity>();
+            const entities = this.archetypeSystem.getEntitiesByComponent(componentType);
+            for (const entity of entities) {
+                set.add(entity);
+            }
+            this.entityIndex.byComponentType.set(componentType, set);
+        }
         return set;
     }
 
@@ -330,16 +341,11 @@ export class QuerySystem {
      * 从各种索引中移除实体
      */
     private removeEntityFromIndexes(entity: Entity): void {
-        // 从组件类型索引移除
+        // 组件类型索引改为lazy cache，这里只清除相关缓存
         for (const component of entity.components) {
             const componentType = component.constructor as ComponentType;
-            const typeSet = this.entityIndex.byComponentType.get(componentType);
-            if (typeSet) {
-                typeSet.delete(entity);
-                if (typeSet.size === 0) {
-                    this.entityIndex.byComponentType.delete(componentType);
-                }
-            }
+            // 清除该组件类型的缓存，下次查询时会重新构建
+            this.entityIndex.byComponentType.delete(componentType);
         }
 
         // 从标签索引移除
@@ -470,8 +476,8 @@ export class QuerySystem {
         let smallestSize = Infinity;
 
         for (const componentType of componentTypes) {
-            const set = this.entityIndex.byComponentType.get(componentType);
-            if (!set || set.size === 0) {
+            const set = this.getComponentTypeIndex(componentType);
+            if (set.size === 0) {
                 return []; // 如果任何组件没有实体，直接返回空结果
             }
             if (set.size < smallestSize) {
@@ -735,9 +741,9 @@ export class QuerySystem {
             };
         }
 
-        // 使用索引查询
+        // 使用索引查询（lazy构建）
         this.queryStats.indexHits++;
-        const entities = Array.from(this.entityIndex.byComponentType.get(componentType) || []);
+        const entities = Array.from(this.getComponentTypeIndex(componentType));
 
         // 缓存结果
         this.addToCache(cacheKey, entities);
