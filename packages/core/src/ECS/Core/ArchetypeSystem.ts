@@ -1,11 +1,11 @@
-import { Entity } from '../Entity';
-import { ComponentType } from './ComponentStorage';
-import { getComponentTypeName } from '../Decorators';
+import {Entity} from '../Entity';
+import {ComponentType} from './ComponentStorage';
+import {BitMask64Data, ComponentTypeManager} from "../Utils";
 
 /**
  * 原型标识符
  */
-export type ArchetypeId = string;
+export type ArchetypeId = BitMask64Data;
 
 /**
  * 原型数据结构
@@ -36,7 +36,7 @@ export interface ArchetypeQueryResult {
  */
 export class ArchetypeSystem {
     /** 所有原型的映射表 */
-    private _archetypes = new Map<ArchetypeId, Archetype>();
+    private _archetypes = new Map<number, Map<number, Archetype>>();
 
     /** 实体到原型的映射 */
     private _entityToArchetype = new Map<Entity, Archetype>();
@@ -47,8 +47,8 @@ export class ArchetypeSystem {
     /** 实体组件类型缓存 */
     private _entityComponentTypesCache = new Map<Entity, ComponentType[]>();
 
-    /** 原型ID缓存 */
-    private _archetypeIdCache = new Map<string, ArchetypeId>();
+    /** 所有原型 */
+    private _allArchetypes: Archetype[] = [];
     
     /**
      * 添加实体到原型系统
@@ -57,7 +57,7 @@ export class ArchetypeSystem {
         const componentTypes = this.getEntityComponentTypes(entity);
         const archetypeId = this.generateArchetypeId(componentTypes);
 
-        let archetype = this._archetypes.get(archetypeId);
+        let archetype = this.getArchetype(archetypeId);
         if (!archetype) {
             archetype = this.createArchetype(componentTypes);
         }
@@ -103,16 +103,13 @@ export class ArchetypeSystem {
             return;
         }
 
-        const affectedComponentTypes = new Set<ComponentType>();
-
         // 从旧原型中移除实体
         if (currentArchetype) {
             currentArchetype.entities.delete(entity);
-            currentArchetype.componentTypes.forEach(type => affectedComponentTypes.add(type));
         }
 
         // 获取或创建新原型
-        let newArchetype = this._archetypes.get(newArchetypeId);
+        let newArchetype = this.getArchetype(newArchetypeId);
         if (!newArchetype) {
             newArchetype = this.createArchetype(newComponentTypes);
         }
@@ -120,7 +117,6 @@ export class ArchetypeSystem {
         // 将实体添加到新原型
         newArchetype.entities.add(entity);
         this._entityToArchetype.set(entity, newArchetype);
-        newComponentTypes.forEach(type => affectedComponentTypes.add(type));
 
         // 更新组件索引
         if (currentArchetype) {
@@ -139,7 +135,7 @@ export class ArchetypeSystem {
         let totalEntities = 0;
         
         if (operation === 'AND') {
-            for (const archetype of this._archetypes.values()) {
+            for (const archetype of this._allArchetypes) {
                 if (this.archetypeContainsAllComponents(archetype, componentTypes)) {
                     matchingArchetypes.push(archetype);
                     totalEntities += archetype.entities.size;
@@ -180,7 +176,7 @@ export class ArchetypeSystem {
      * 获取所有原型
      */
     public getAllArchetypes(): Archetype[] {
-        return Array.from(this._archetypes.values());
+        return this._allArchetypes.slice();
     }
     
     /**
@@ -191,9 +187,30 @@ export class ArchetypeSystem {
         this._entityToArchetype.clear();
         this._componentToArchetypes.clear();
         this._entityComponentTypesCache.clear();
-        this._archetypeIdCache.clear();
+        this._allArchetypes = [];
     }
     
+    /**
+     * 根据原型ID获取原型
+     * @param archetypeId
+     * @private
+     */
+    private getArchetype(archetypeId: ArchetypeId): Archetype | undefined {
+        return this._archetypes.get(archetypeId.hi)?.get(archetypeId.lo);
+    }
+
+    /**
+     * 更新所有原型数组
+     */
+    private updateAllArchetypeArrays(): void {
+        this._allArchetypes = [];
+        for (const [, innerMap] of this._archetypes) {
+            for (const [, archetype] of innerMap) {
+                this._allArchetypes.push(archetype);
+            }
+        }
+    }
+
     /**
      * 获取实体的组件类型列表
      */
@@ -210,18 +227,8 @@ export class ArchetypeSystem {
      * 生成原型ID
      */
     private generateArchetypeId(componentTypes: ComponentType[]): ArchetypeId {
-        // 创建缓存键
-        const cacheKey = componentTypes
-            .map(type => getComponentTypeName(type))
-            .sort()
-            .join('|');
-
-        let archetypeId = this._archetypeIdCache.get(cacheKey);
-        if (!archetypeId) {
-            archetypeId = cacheKey;
-            this._archetypeIdCache.set(cacheKey, archetypeId);
-        }
-        return archetypeId;
+        let entityBits = ComponentTypeManager.instance.getEntityBits(componentTypes);
+        return entityBits.getValue();
     }
     
     /**
@@ -235,8 +242,15 @@ export class ArchetypeSystem {
             componentTypes: [...componentTypes],
             entities: new Set<Entity>()
         };
-        
-        this._archetypes.set(id, archetype);
+        // 存储原型ID - 原型
+        let archetypeGroup = this._archetypes.get(id.hi);
+        if (!archetypeGroup) {
+            archetypeGroup = new Map<number, Archetype>();
+            this._archetypes.set(id.hi, archetypeGroup);
+        }
+        archetypeGroup.set(id.lo, archetype);
+        // 更新数组
+        this.updateAllArchetypeArrays();
         return archetype;
     }
     
