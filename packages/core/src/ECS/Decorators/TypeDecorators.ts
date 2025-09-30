@@ -1,5 +1,6 @@
-import type { Component } from '../Component';
-import type { EntitySystem } from '../Systems/EntitySystem';
+import type {Component} from '../Component';
+import type {EntitySystem} from '../Systems';
+import {ComponentType} from "../../Types";
 
 /**
  * 存储组件类型名称的Symbol键
@@ -72,8 +73,8 @@ export function ECSSystem(typeName: string) {
  * @param componentType 组件构造函数
  * @returns 组件类型名称
  */
-export function getComponentTypeName<T extends Component>(
-    componentType: new (...args: any[]) => T
+export function getComponentTypeName(
+    componentType: ComponentType
 ): string {
     // 优先使用装饰器指定的名称
     const decoratorName = (componentType as any)[COMPONENT_TYPE_NAME];
@@ -111,7 +112,7 @@ export function getSystemTypeName<T extends EntitySystem>(
  * @returns 组件类型名称
  */
 export function getComponentInstanceTypeName(component: Component): string {
-    return getComponentTypeName(component.constructor as new (...args: any[]) => Component);
+    return getComponentTypeName(component.constructor as ComponentType);
 }
 
 /**
