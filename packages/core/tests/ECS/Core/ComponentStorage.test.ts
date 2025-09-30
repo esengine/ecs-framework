@@ -94,18 +94,6 @@ describe('ComponentRegistry - 组件注册表测试', () => {
             expect(ComponentRegistry.isRegistered(TestComponent)).toBe(true);
         });
 
-        test('超过最大组件数量应该抛出错误', () => {
-            // 设置较小的最大组件数量用于测试
-            (ComponentRegistry as any).maxComponents = 3;
-            
-            ComponentRegistry.register(TestComponent);
-            ComponentRegistry.register(PositionComponent);
-            ComponentRegistry.register(VelocityComponent);
-            
-            expect(() => {
-                ComponentRegistry.register(HealthComponent);
-            }).toThrow('Maximum number of component types (3) exceeded');
-        });
     });
 
     describe('位掩码功能', () => {

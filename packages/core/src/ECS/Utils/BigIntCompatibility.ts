@@ -61,7 +61,32 @@ export class BitMask64Utils {
      * @returns 如果掩码包含bits中的任意位则返回true
      */
     public static hasAny(mask: BitMask64Data, bits: BitMask64Data): boolean {
-        return (mask.lo & bits.lo) !== 0 || (mask.hi & bits.hi) !== 0;
+        // 检查第一个 64 位段
+        if ((mask.lo & bits.lo) !== 0 || (mask.hi & bits.hi) !== 0) {
+            return true;
+        }
+
+        // 如果 bits 没有扩展段，检查完成
+        if (!bits.segments || bits.segments.length === 0) {
+            return false;
+        }
+
+        // 如果 bits 有扩展段但 mask 没有，返回 false
+        if (!mask.segments || mask.segments.length === 0) {
+            return false;
+        }
+
+        // 检查每个扩展段
+        const minSegments = Math.min(mask.segments.length, bits.segments.length);
+        for (let i = 0; i < minSegments; i++) {
+            const maskSeg = mask.segments[i];
+            const bitsSeg = bits.segments[i];
+            if ((maskSeg.lo & bitsSeg.lo) !== 0 || (maskSeg.hi & bitsSeg.hi) !== 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -181,6 +206,24 @@ export class BitMask64Utils {
     public static orInPlace(target: BitMask64Data, other: BitMask64Data): void {
         target.lo |= other.lo;
         target.hi |= other.hi;
+
+        // 处理扩展段
+        if (other.segments && other.segments.length > 0) {
+            if (!target.segments) {
+                target.segments = [];
+            }
+
+            // 确保 target 有足够的段
+            while (target.segments.length < other.segments.length) {
+                target.segments.push({ lo: 0, hi: 0 });
+            }
+
+            // 对每个段执行或操作
+            for (let i = 0; i < other.segments.length; i++) {
+                target.segments[i].lo |= other.segments[i].lo;
+                target.segments[i].hi |= other.segments[i].hi;
+            }
+        }
     }
 
     /**

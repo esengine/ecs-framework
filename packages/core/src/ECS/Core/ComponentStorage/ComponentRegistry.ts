@@ -20,7 +20,6 @@ export class ComponentRegistry {
     private static componentNameToId = new Map<string, number>();
     private static maskCache = new Map<string, BitMask64Data>();
     private static nextBitIndex = 0;
-    private static maxComponents = 64; // 支持最多64种组件类型
 
     /**
      * 注册组件类型并分配位掩码
@@ -29,14 +28,10 @@ export class ComponentRegistry {
      */
     public static register<T extends Component>(componentType: ComponentType<T>): number {
         const typeName = getComponentTypeName(componentType);
-        
+
         if (this.componentTypes.has(componentType)) {
             const existingIndex = this.componentTypes.get(componentType)!;
             return existingIndex;
-        }
-
-        if (this.nextBitIndex >= this.maxComponents) {
-            throw new Error(`Maximum number of component types (${this.maxComponents}) exceeded`);
         }
 
         const bitIndex = this.nextBitIndex++;
@@ -59,7 +54,10 @@ export class ComponentRegistry {
             const typeName = getComponentTypeName(componentType);
             throw new Error(`Component type ${typeName} is not registered`);
         }
-        return BitMask64Utils.create(bitIndex);
+
+        const mask: BitMask64Data = { lo: 0, hi: 0 };
+        BitMask64Utils.setBitExtended(mask, bitIndex);
+        return mask;
     }
 
     /**
@@ -92,6 +90,14 @@ export class ComponentRegistry {
      */
     public static getTypeByBitIndex(bitIndex: number): ComponentType | null {
         return (this.bitIndexToType.get(bitIndex) as ComponentType) || null;
+    }
+
+    /**
+     * 获取当前已注册的组件类型数量
+     * @returns 已注册数量
+     */
+    public static getRegisteredCount(): number {
+        return this.nextBitIndex;
     }
 
     /**
@@ -136,10 +142,6 @@ export class ComponentRegistry {
     public static registerComponentByName(componentName: string): number {
         if (this.componentNameToId.has(componentName)) {
             return this.componentNameToId.get(componentName)!;
-        }
-
-        if (this.nextBitIndex >= this.maxComponents) {
-            throw new Error(`Maximum number of component types (${this.maxComponents}) exceeded`);
         }
 
         const bitIndex = this.nextBitIndex++;

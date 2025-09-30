@@ -188,10 +188,10 @@ export class Entity {
         const components: Component[] = [];
         const mask = this._componentMask;
 
-        // 遍历位掩码中设置的位
-        for (let bitIndex = 0; bitIndex < 64; bitIndex++) {
-            const bitMask = BitMask64Utils.create(bitIndex);
-            if (BitMask64Utils.hasAny(mask, bitMask)) {
+        const maxBitIndex = ComponentRegistry.getRegisteredCount();
+
+        for (let bitIndex = 0; bitIndex < maxBitIndex; bitIndex++) {
+            if (BitMask64Utils.getBitExtended(mask, bitIndex)) {
                 const componentType = ComponentRegistry.getTypeByBitIndex(bitIndex);
                 if (componentType) {
                     let component: Component | null = null;
@@ -504,7 +504,7 @@ export class Entity {
         this._localComponents.delete(componentType);
 
         // 更新位掩码
-        BitMask64Utils.clearBit(this._componentMask, bitIndex);
+        BitMask64Utils.clearBitExtended(this._componentMask, bitIndex);
 
         // 使缓存失效
         this._componentCache = null;
