@@ -1,6 +1,6 @@
 import {Entity} from '../Entity';
 import {ComponentType} from './ComponentStorage';
-import {BitMask64Data, ComponentTypeManager} from "../Utils";
+import {BitMask64Data, BitMask64Utils, ComponentTypeManager} from "../Utils";
 
 /**
  * 原型标识符
@@ -128,15 +128,23 @@ export class ArchetypeSystem {
     
     /**
      * 查询包含指定组件组合的原型
+     *
+     * @param componentTypes 要查询的组件类型列表
+     * @param operation 查询操作类型：'AND'（包含所有）或 'OR'（包含任意）
+     * @returns 匹配的原型列表及实体总数
      */
     public queryArchetypes(componentTypes: ComponentType[], operation: 'AND' | 'OR' = 'AND'): ArchetypeQueryResult {
-        
+
         const matchingArchetypes: Archetype[] = [];
         let totalEntities = 0;
-        
+
         if (operation === 'AND') {
+            // 生成查询的 BitMask
+            const queryMask = this.generateArchetypeId(componentTypes);
+
+            // 使用 BitMask 位运算快速判断原型是否包含所有指定组件
             for (const archetype of this._allArchetypes) {
-                if (this.archetypeContainsAllComponents(archetype, componentTypes)) {
+                if (BitMask64Utils.hasAll(archetype.id, queryMask)) {
                     matchingArchetypes.push(archetype);
                     totalEntities += archetype.entities.size;
                 }
@@ -252,18 +260,6 @@ export class ArchetypeSystem {
         // 更新数组
         this.updateAllArchetypeArrays();
         return archetype;
-    }
-    
-    /**
-     * 检查原型是否包含所有指定组件
-     */
-    private archetypeContainsAllComponents(archetype: Archetype, componentTypes: ComponentType[]): boolean {
-        for (const componentType of componentTypes) {
-            if (!archetype.componentTypes.includes(componentType)) {
-                return false;
-            }
-        }
-        return true;
     }
     
     /**
