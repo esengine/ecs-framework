@@ -278,12 +278,17 @@ class WeChatWorker implements PlatformWorker {
                 // 直接使用文件路径
                 this.scriptPath = script;
                 this.isTemporaryFile = false;
-                this.worker = wx.createWorker(this.scriptPath);
+                this.worker = wx.createWorker(this.scriptPath, {
+                    useExperimentalWorker: true // 启用实验性Worker获得更好性能
+                });
             } else {
+                // 微信小游戏不支持动态脚本内容，只能使用文件路径
                 // 将脚本内容写入文件系统
                 this.scriptPath = this.writeScriptToFile(script, options.name);
                 this.isTemporaryFile = true;
-                this.worker = wx.createWorker(this.scriptPath);
+                this.worker = wx.createWorker(this.scriptPath, {
+                    useExperimentalWorker: true
+                });
             }
         } catch (error) {
             throw new Error(`创建微信Worker失败: ${(error as Error).message}`);
@@ -303,6 +308,7 @@ class WeChatWorker implements PlatformWorker {
 
     /**
      * 将脚本内容写入文件系统
+     * 注意：微信小游戏不支持blob URL，只能使用文件系统
      */
     private writeScriptToFile(script: string, name?: string): string {
         const fs = wx.getFileSystemManager();
@@ -398,11 +404,85 @@ if (typeof wx !== 'undefined') {
 }
 ```
 
-### 3. Worker 使用方式
+### 3. WorkerEntitySystem 使用方式
 
-微信小游戏适配器支持两种 Worker 使用方式：
+微信小游戏适配器与 WorkerEntitySystem 配合使用，自动处理 Worker 脚本创建：
 
-#### 方式一：使用脚本文件路径（推荐）
+#### 基本使用方式（推荐）
+
+```typescript
+import { WorkerEntitySystem, Matcher, Entity } from '@esengine/ecs-framework';
+
+interface PhysicsData {
+    id: number;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    mass: number;
+}
+
+class PhysicsSystem extends WorkerEntitySystem<PhysicsData> {
+    constructor() {
+        super(Matcher.all(Transform, Velocity), {
+            enableWorker: true,
+            workerCount: 1, // 微信小游戏限制只能创建1个Worker
+            systemConfig: { gravity: 100, friction: 0.95 }
+        });
+    }
+
+    protected getDefaultEntityDataSize(): number {
+        return 6; // id, x, y, vx, vy, mass
+    }
+
+    protected extractEntityData(entity: Entity): PhysicsData {
+        const transform = entity.getComponent(Transform);
+        const velocity = entity.getComponent(Velocity);
+        const physics = entity.getComponent(Physics);
+
+        return {
+            id: entity.id,
+            x: transform.x,
+            y: transform.y,
+            vx: velocity.x,
+            vy: velocity.y,
+            mass: physics.mass
+        };
+    }
+
+    // WorkerEntitySystem 会自动将此函数序列化并写入临时文件
+    protected workerProcess(entities: PhysicsData[], deltaTime: number, config: any): PhysicsData[] {
+        return entities.map(entity => {
+            // 应用重力
+            entity.vy += config.gravity * deltaTime;
+
+            // 更新位置
+            entity.x += entity.vx * deltaTime;
+            entity.y += entity.vy * deltaTime;
+
+            // 应用摩擦力
+            entity.vx *= config.friction;
+            entity.vy *= config.friction;
+
+            return entity;
+        });
+    }
+
+    protected applyResult(entity: Entity, result: PhysicsData): void {
+        const transform = entity.getComponent(Transform);
+        const velocity = entity.getComponent(Velocity);
+
+        transform.x = result.x;
+        transform.y = result.y;
+        velocity.x = result.vx;
+        velocity.y = result.vy;
+    }
+}
+```
+
+#### 使用预先创建的 Worker 文件（可选）
+
+如果你希望使用预先创建的 Worker 文件：
 
 ```typescript
 // 1. 在 game.json 中配置 Worker 路径
@@ -412,57 +492,30 @@ if (typeof wx !== 'undefined') {
 }
 */
 
-// 2. 创建 Worker 脚本文件 workers/physics.js
+// 2. 创建 workers/physics.js 文件
 // workers/physics.js 内容：
 /*
-// 微信小游戏 Worker 中使用 worker 对象，不是 self
-worker.onMessage(function(data) {
-    const { entities, deltaTime, systemConfig } = data;
+// 微信小游戏 Worker 使用标准的 self.onmessage
+self.onmessage = function(e) {
+    const { type, id, entities, deltaTime, systemConfig } = e.data;
 
-    // 处理物理计算
-    const results = entities.map(entity => {
-        entity.vy += systemConfig.gravity * deltaTime;
-        entity.x += entity.vx * deltaTime;
-        entity.y += entity.vy * deltaTime;
-        return entity;
-    });
-
-    worker.postMessage({ result: results });
-});
-*/
-
-// 2. 在 WorkerEntitySystem 中使用
-class PhysicsSystem extends WorkerEntitySystem {
-    constructor() {
-        super(Matcher.all(Transform, Velocity), {
-            enableWorker: true,
-            workerCount: 1, // 微信小游戏限制
-            systemConfig: { gravity: 100 }
-        });
-    }
-
-    // 重写创建 Worker 脚本的方法，返回文件路径
-    private createWorkerScript(): string {
-        return 'workers/physics.js'; // 微信小游戏使用相对路径
-    }
-}
-```
-
-#### 方式二：动态脚本内容（自动处理）
-
-```typescript
-// WorkerEntitySystem 会自动将用户的 workerProcess 函数序列化
-class PhysicsSystem extends WorkerEntitySystem {
-    protected workerProcess(entities, deltaTime, config) {
-        return entities.map(entity => {
-            entity.vy += config.gravity * deltaTime;
+    if (entities) {
+        // 处理物理计算
+        const results = entities.map(entity => {
+            entity.vy += systemConfig.gravity * deltaTime;
             entity.x += entity.vx * deltaTime;
             entity.y += entity.vy * deltaTime;
             return entity;
         });
+
+        self.postMessage({ id, result: results });
     }
-}
-// 框架会自动将此函数内容写入临时文件并创建 Worker
+};
+*/
+
+// 3. 通过平台适配器直接创建（不推荐，WorkerEntitySystem会自动处理）
+const adapter = PlatformManager.getInstance().getAdapter();
+const worker = adapter.createWorker('workers/physics.js');
 ```
 
 ### 4. 获取设备信息
@@ -492,14 +545,15 @@ if (manager.hasAdapter()) {
 
 - **数量限制**: 最多只能创建 1 个 Worker
 - **版本要求**: 需要基础库 1.9.90 及以上版本
-- **配置要求**: 必须在 `game.json` 中配置 workers 路径
-- **文件路径**: Worker 脚本必须为项目内的相对路径
+- **脚本支持**: 不支持 blob URL，只能使用文件路径或写入文件系统
+- **文件路径**: Worker 脚本路径必须为绝对路径，但不能以 "/" 开头
 - **生命周期**: 创建新 Worker 前必须先调用 `Worker.terminate()` 终止当前 Worker
-- **API 差异**: 使用 `worker.onMessage()` 而不是 `self.onmessage`
+- **消息处理**: Worker 内使用标准的 `self.onmessage`，主线程使用 `worker.onMessage()`
+- **实验性功能**: 支持 `useExperimentalWorker` 选项获得更好的 iOS 性能
 
-#### 必要配置
+#### Worker 配置（可选）
 
-在 `game.json` 中添加 workers 配置：
+如果使用预先创建的 Worker 文件，需要在 `game.json` 中添加 workers 配置：
 
 ```json
 {
@@ -509,6 +563,8 @@ if (manager.hasAdapter()) {
   "subpackages": []
 }
 ```
+
+**注意**: 使用 WorkerEntitySystem 时无需此配置，框架会自动将脚本写入临时文件。
 
 ### 内存限制
 
