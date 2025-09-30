@@ -46,7 +46,6 @@ export interface QueryResult {
  * 实体索引结构
  */
 interface EntityIndex {
-    byMask: Map<string, Set<Entity>>;
     byComponentType: Map<ComponentType, Set<Entity>>;
     byTag: Map<number, Set<Entity>>;
     byName: Map<string, Set<Entity>>;
@@ -106,7 +105,6 @@ export class QuerySystem {
 
     constructor() {
         this.entityIndex = {
-            byMask: new Map(),
             byComponentType: new Map(),
             byTag: new Map(),
             byName: new Map()
@@ -287,13 +285,6 @@ export class QuerySystem {
      * 将实体添加到各种索引中
      */
     private addEntityToIndexes(entity: Entity): void {
-        const mask = entity.componentMask;
-
-        // 组件掩码索引
-        const maskKey = BitMask64Utils.toString(mask, 16);
-        const maskSet = this.entityIndex.byMask.get(maskKey) || this.createAndSetMaskIndex(maskKey);
-        maskSet.add(entity);
-
         // 组件类型索引 - 批量处理，预获取所有相关的Set
         const components = entity.components;
         for (let i = 0; i < components.length; i++) {
@@ -315,12 +306,6 @@ export class QuerySystem {
             const nameSet = this.entityIndex.byName.get(name) || this.createAndSetNameIndex(name);
             nameSet.add(entity);
         }
-    }
-
-    private createAndSetMaskIndex(maskKey: string): Set<Entity> {
-        const set = new Set<Entity>();
-        this.entityIndex.byMask.set(maskKey, set);
-        return set;
     }
 
     private createAndSetComponentIndex(componentType: ComponentType): Set<Entity> {
@@ -345,18 +330,6 @@ export class QuerySystem {
      * 从各种索引中移除实体
      */
     private removeEntityFromIndexes(entity: Entity): void {
-        const mask = entity.componentMask;
-
-        // 从组件掩码索引移除
-        const maskKey = BitMask64Utils.toString(mask, 16);
-        const maskSet = this.entityIndex.byMask.get(maskKey);
-        if (maskSet) {
-            maskSet.delete(entity);
-            if (maskSet.size === 0) {
-                this.entityIndex.byMask.delete(maskKey);
-            }
-        }
-
         // 从组件类型索引移除
         for (const component of entity.components) {
             const componentType = component.constructor as ComponentType;
@@ -394,12 +367,11 @@ export class QuerySystem {
 
     /**
      * 重建所有索引
-     * 
+     *
      * 清空并重新构建所有查询索引。
      * 通常在大量实体变更后调用以确保索引一致性。
      */
     private rebuildIndexes(): void {
-        this.entityIndex.byMask.clear();
         this.entityIndex.byComponentType.clear();
         this.entityIndex.byTag.clear();
         this.entityIndex.byName.clear();
@@ -954,7 +926,6 @@ export class QuerySystem {
     public getStats(): {
         entityCount: number;
         indexStats: {
-            maskIndexSize: number;
             componentIndexSize: number;
             tagIndexSize: number;
             nameIndexSize: number;
@@ -980,7 +951,6 @@ export class QuerySystem {
         return {
             entityCount: this.entities.length,
             indexStats: {
-                maskIndexSize: this.entityIndex.byMask.size,
                 componentIndexSize: this.entityIndex.byComponentType.size,
                 tagIndexSize: this.entityIndex.byTag.size,
                 nameIndexSize: this.entityIndex.byName.size

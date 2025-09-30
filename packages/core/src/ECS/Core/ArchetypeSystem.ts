@@ -186,7 +186,25 @@ export class ArchetypeSystem {
     public getAllArchetypes(): Archetype[] {
         return this._allArchetypes.slice();
     }
-    
+
+    /**
+     * 获取包含指定组件类型的所有实体
+     */
+    public getEntitiesByComponent(componentType: ComponentType): Entity[] {
+        const archetypes = this._componentToArchetypes.get(componentType);
+        if (!archetypes || archetypes.size === 0) {
+            return [];
+        }
+
+        const entities: Entity[] = [];
+        for (const archetype of archetypes) {
+            for (const entity of archetype.entities) {
+                entities.push(entity);
+            }
+        }
+        return entities;
+    }
+
     /**
      * 清空所有数据
      */
