@@ -290,7 +290,7 @@ export class QuerySystem {
         const mask = entity.componentMask;
 
         // 组件掩码索引
-        const maskKey = mask.toString();
+        const maskKey = BitMask64Utils.toString(mask, 16);
         const maskSet = this.entityIndex.byMask.get(maskKey) || this.createAndSetMaskIndex(maskKey);
         maskSet.add(entity);
 
@@ -348,7 +348,7 @@ export class QuerySystem {
         const mask = entity.componentMask;
 
         // 从组件掩码索引移除
-        const maskKey = mask.toString();
+        const maskKey = BitMask64Utils.toString(mask, 16);
         const maskSet = this.entityIndex.byMask.get(maskKey);
         if (maskSet) {
             maskSet.delete(entity);
