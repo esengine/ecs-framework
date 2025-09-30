@@ -1049,4 +1049,60 @@ describe('QuerySystem - 查询系统测试', () => {
             }
         });
     });
+
+    describe('组件掩码字符串索引', () => {
+        test('应该为不同的组件组合生成不同的掩码字符串', () => {
+            // 创建具有不同组件组合的实体
+            const entity1 = new Entity('Entity1', 101);
+            const entity2 = new Entity('Entity2', 102);
+            const entity3 = new Entity('Entity3', 103);
+
+            entity1.addComponent(new PositionComponent(1, 1));
+            entity2.addComponent(new VelocityComponent(2, 2));
+            entity3.addComponent(new PositionComponent(3, 3));
+            entity3.addComponent(new VelocityComponent(4, 4));
+
+            const allEntities = [...entities, entity1, entity2, entity3];
+            querySystem.setEntities(allEntities);
+
+            // 查询包含指定组件的实体（queryAll 是包含关系，不是仅有）
+            const withPosition = querySystem.queryAll(PositionComponent);
+            const withVelocity = querySystem.queryAll(VelocityComponent);
+            const withBoth = querySystem.queryAll(PositionComponent, VelocityComponent);
+
+            // entity1 应该在 withPosition 中
+            expect(withPosition.entities.some(e => e.id === 101)).toBe(true);
+            // entity2 应该在 withVelocity 中
+            expect(withVelocity.entities.some(e => e.id === 102)).toBe(true);
+            // entity3 应该在所有查询中（因为它包含 Position 和 Velocity）
+            expect(withPosition.entities.some(e => e.id === 103)).toBe(true);
+            expect(withVelocity.entities.some(e => e.id === 103)).toBe(true);
+            expect(withBoth.entities.some(e => e.id === 103)).toBe(true);
+
+            // withBoth 只应该包含同时有两个组件的实体
+            expect(withBoth.entities.some(e => e.id === 101)).toBe(false); // 只有 Position
+            expect(withBoth.entities.some(e => e.id === 102)).toBe(false); // 只有 Velocity
+        });
+
+        test('相同组件组合的实体应该使用相同的掩码索引', () => {
+            const entity1 = new Entity('Entity1', 201);
+            const entity2 = new Entity('Entity2', 202);
+
+            // 两个实体都有相同的组件组合
+            entity1.addComponent(new PositionComponent(1, 1));
+            entity1.addComponent(new VelocityComponent(2, 2));
+
+            entity2.addComponent(new PositionComponent(3, 3));
+            entity2.addComponent(new VelocityComponent(4, 4));
+
+            const allEntities = [...entities, entity1, entity2];
+            querySystem.setEntities(allEntities);
+
+            // 查询应该同时返回这两个实体
+            const result = querySystem.queryAll(PositionComponent, VelocityComponent);
+
+            expect(result.entities.some(e => e.id === 201)).toBe(true);
+            expect(result.entities.some(e => e.id === 202)).toBe(true);
+        });
+    });
 });

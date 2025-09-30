@@ -6,7 +6,6 @@ import { createLogger } from '../../Utils/Logger';
 import { getComponentTypeName } from '../Decorators';
 
 import { ComponentPoolManager } from './ComponentPool';
-import { ComponentIndexManager } from './ComponentIndex';
 import { ArchetypeSystem, Archetype, ArchetypeQueryResult } from './ArchetypeSystem';
 
 /**
@@ -46,8 +45,6 @@ export interface QueryResult {
  * 实体索引结构
  */
 interface EntityIndex {
-    byMask: Map<string, Set<Entity>>;
-    byComponentType: Map<ComponentType, Set<Entity>>;
     byTag: Map<number, Set<Entity>>;
     byName: Map<string, Set<Entity>>;
 }
@@ -91,7 +88,6 @@ export class QuerySystem {
 
     private componentMaskCache = new Map<string, BitMask64Data>();
 
-    private componentIndexManager: ComponentIndexManager;
     private archetypeSystem: ArchetypeSystem;
 
     // 性能统计
@@ -106,14 +102,10 @@ export class QuerySystem {
 
     constructor() {
         this.entityIndex = {
-            byMask: new Map(),
-            byComponentType: new Map(),
             byTag: new Map(),
             byName: new Map()
         };
 
-        // 初始化新的性能优化系统
-        this.componentIndexManager = new ComponentIndexManager();
         this.archetypeSystem = new ArchetypeSystem();
     }
 
@@ -147,7 +139,6 @@ export class QuerySystem {
             this.entities.push(entity);
             this.addEntityToIndexes(entity);
 
-            this.componentIndexManager.addEntity(entity);
             this.archetypeSystem.addEntity(entity);
 
 
@@ -182,7 +173,6 @@ export class QuerySystem {
                 this.addEntityToIndexes(entity);
 
                 // 更新索引管理器
-                this.componentIndexManager.addEntity(entity);
                 this.archetypeSystem.addEntity(entity);
 
                 existingIds.add(entity.id);
@@ -217,7 +207,6 @@ export class QuerySystem {
             this.addEntityToIndexes(entity);
 
             // 更新索引管理器
-            this.componentIndexManager.addEntity(entity);
             this.archetypeSystem.addEntity(entity);
         }
 
@@ -238,7 +227,6 @@ export class QuerySystem {
             this.entities.splice(index, 1);
             this.removeEntityFromIndexes(entity);
 
-            this.componentIndexManager.removeEntity(entity);
             this.archetypeSystem.removeEntity(entity);
 
             this.clearQueryCache();
@@ -268,11 +256,6 @@ export class QuerySystem {
 
         // 更新ArchetypeSystem中的实体状态
         this.archetypeSystem.updateEntity(entity);
-
-        // 更新ComponentIndexManager中的实体状态
-        this.componentIndexManager.removeEntity(entity);
-        this.componentIndexManager.addEntity(entity);
-
         // 重新添加实体到索引（基于新的组件状态）
         this.addEntityToIndexes(entity);
 
@@ -287,21 +270,6 @@ export class QuerySystem {
      * 将实体添加到各种索引中
      */
     private addEntityToIndexes(entity: Entity): void {
-        const mask = entity.componentMask;
-
-        // 组件掩码索引
-        const maskKey = mask.toString();
-        const maskSet = this.entityIndex.byMask.get(maskKey) || this.createAndSetMaskIndex(maskKey);
-        maskSet.add(entity);
-
-        // 组件类型索引 - 批量处理，预获取所有相关的Set
-        const components = entity.components;
-        for (let i = 0; i < components.length; i++) {
-            const componentType = components[i].constructor as ComponentType;
-            const typeSet = this.entityIndex.byComponentType.get(componentType) || this.createAndSetComponentIndex(componentType);
-            typeSet.add(entity);
-        }
-
         // 标签索引
         const tag = entity.tag;
         if (tag !== undefined) {
@@ -317,17 +285,6 @@ export class QuerySystem {
         }
     }
 
-    private createAndSetMaskIndex(maskKey: string): Set<Entity> {
-        const set = new Set<Entity>();
-        this.entityIndex.byMask.set(maskKey, set);
-        return set;
-    }
-
-    private createAndSetComponentIndex(componentType: ComponentType): Set<Entity> {
-        const set = new Set<Entity>();
-        this.entityIndex.byComponentType.set(componentType, set);
-        return set;
-    }
 
     private createAndSetTagIndex(tag: number): Set<Entity> {
         const set = new Set<Entity>();
@@ -345,30 +302,6 @@ export class QuerySystem {
      * 从各种索引中移除实体
      */
     private removeEntityFromIndexes(entity: Entity): void {
-        const mask = entity.componentMask;
-
-        // 从组件掩码索引移除
-        const maskKey = mask.toString();
-        const maskSet = this.entityIndex.byMask.get(maskKey);
-        if (maskSet) {
-            maskSet.delete(entity);
-            if (maskSet.size === 0) {
-                this.entityIndex.byMask.delete(maskKey);
-            }
-        }
-
-        // 从组件类型索引移除
-        for (const component of entity.components) {
-            const componentType = component.constructor as ComponentType;
-            const typeSet = this.entityIndex.byComponentType.get(componentType);
-            if (typeSet) {
-                typeSet.delete(entity);
-                if (typeSet.size === 0) {
-                    this.entityIndex.byComponentType.delete(componentType);
-                }
-            }
-        }
-
         // 从标签索引移除
         if (entity.tag !== undefined) {
             const tagSet = this.entityIndex.byTag.get(entity.tag);
@@ -394,23 +327,19 @@ export class QuerySystem {
 
     /**
      * 重建所有索引
-     * 
+     *
      * 清空并重新构建所有查询索引。
      * 通常在大量实体变更后调用以确保索引一致性。
      */
     private rebuildIndexes(): void {
-        this.entityIndex.byMask.clear();
-        this.entityIndex.byComponentType.clear();
         this.entityIndex.byTag.clear();
         this.entityIndex.byName.clear();
-        
+
         // 清理ArchetypeSystem和ComponentIndexManager
         this.archetypeSystem.clear();
-        this.componentIndexManager.clear();
 
         for (const entity of this.entities) {
             this.addEntityToIndexes(entity);
-            this.componentIndexManager.addEntity(entity);
             this.archetypeSystem.addEntity(entity);
         }
     }
@@ -450,26 +379,13 @@ export class QuerySystem {
             };
         }
 
-        let entities: Entity[] = [];
-
+        this.queryStats.archetypeHits++;
         const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'AND');
-        if (archetypeResult.archetypes.length > 0) {
-            this.queryStats.archetypeHits++;
-            for (const archetype of archetypeResult.archetypes) {
-                entities.push(...archetype.entities);
-            }
-        } else {
-            try {
-                if (componentTypes.length === 1) {
-                    this.queryStats.indexHits++;
-                    const indexResult = this.componentIndexManager.query(componentTypes[0]);
-                    entities = Array.from(indexResult);
-                } else {
-                    const indexResult = this.componentIndexManager.queryMultiple(componentTypes, 'AND');
-                    entities = Array.from(indexResult);
-                }
-            } catch (error) {
-                entities = [];
+
+        const entities: Entity[] = [];
+        for (const archetype of archetypeResult.archetypes) {
+            for (const entity of archetype.entities) {
+                entities.push(entity);
             }
         }
 
@@ -493,31 +409,11 @@ export class QuerySystem {
      * @returns 匹配的实体列表
      */
     private queryMultipleComponents(componentTypes: ComponentType[]): Entity[] {
-        // 找到最小的组件集合作为起点
-        let smallestSet: Set<Entity> | null = null;
-        let smallestSize = Infinity;
-
-        for (const componentType of componentTypes) {
-            const set = this.entityIndex.byComponentType.get(componentType);
-            if (!set || set.size === 0) {
-                return []; // 如果任何组件没有实体，直接返回空结果
-            }
-            if (set.size < smallestSize) {
-                smallestSize = set.size;
-                smallestSet = set;
-            }
-        }
-
-        if (!smallestSet) {
-            return []; // 如果没有找到任何组件集合，返回空结果
-        }
-
-        // 从最小集合开始，逐步过滤
-        const mask = this.createComponentMask(componentTypes);
+        const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'AND');
         const result: Entity[] = [];
 
-        for (const entity of smallestSet) {
-            if (BitMask64Utils.hasAll(entity.componentMask, mask)) {
+        for (const archetype of archetypeResult.archetypes) {
+            for (const entity of archetype.entities) {
                 result.push(entity);
             }
         }
@@ -561,18 +457,14 @@ export class QuerySystem {
             };
         }
 
+        this.queryStats.archetypeHits++;
         const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'OR');
-        let entities: Entity[];
 
-        if (archetypeResult.archetypes.length > 0) {
-            this.queryStats.archetypeHits++;
-            entities = [];
-            for (const archetype of archetypeResult.archetypes) {
-                entities.push(...archetype.entities);
+        const entities: Entity[] = [];
+        for (const archetype of archetypeResult.archetypes) {
+            for (const entity of archetype.entities) {
+                entities.push(entity);
             }
-        } else {
-            const indexResult = this.componentIndexManager.queryMultiple(componentTypes, 'OR');
-            entities = Array.from(indexResult);
         }
         
         this.addToCache(cacheKey, entities);
@@ -763,9 +655,8 @@ export class QuerySystem {
             };
         }
 
-        // 使用索引查询
         this.queryStats.indexHits++;
-        const entities = Array.from(this.entityIndex.byComponentType.get(componentType) || []);
+        const entities = this.archetypeSystem.getEntitiesByComponent(componentType);
 
         // 缓存结果
         this.addToCache(cacheKey, entities);
@@ -954,7 +845,6 @@ export class QuerySystem {
     public getStats(): {
         entityCount: number;
         indexStats: {
-            maskIndexSize: number;
             componentIndexSize: number;
             tagIndexSize: number;
             nameIndexSize: number;
@@ -969,7 +859,6 @@ export class QuerySystem {
             cacheHitRate: string;
         };
         optimizationStats: {
-            componentIndex: any;
             archetypeSystem: any;
         };
         cacheStats: {
@@ -980,8 +869,7 @@ export class QuerySystem {
         return {
             entityCount: this.entities.length,
             indexStats: {
-                maskIndexSize: this.entityIndex.byMask.size,
-                componentIndexSize: this.entityIndex.byComponentType.size,
+                componentIndexSize: this.archetypeSystem.getAllArchetypes().length,
                 tagIndexSize: this.entityIndex.byTag.size,
                 nameIndexSize: this.entityIndex.byName.size
             },
@@ -991,7 +879,6 @@ export class QuerySystem {
                     (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + '%' : '0%'
             },
             optimizationStats: {
-                componentIndex: this.componentIndexManager.getStats(),
                 archetypeSystem: this.archetypeSystem.getAllArchetypes().map(a => ({
                     id: a.id,
                     componentTypes: a.componentTypes.map(t => getComponentTypeName(t)),
