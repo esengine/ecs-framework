@@ -60,6 +60,78 @@ export function Int32(target: any, propertyKey: string | symbol): void {
     target.constructor.__int32Fields.add(key);
 }
 
+/**
+ * 32位无符号整数装饰器
+ * 标记字段使用Uint32Array存储（适用于无符号整数，如ID、标志位等）
+ */
+export function Uint32(target: any, propertyKey: string | symbol): void {
+    const key = String(propertyKey);
+    if (!target.constructor.__uint32Fields) {
+        target.constructor.__uint32Fields = new Set();
+    }
+    target.constructor.__uint32Fields.add(key);
+}
+
+/**
+ * 16位整数装饰器
+ * 标记字段使用Int16Array存储（适用于小范围整数）
+ */
+export function Int16(target: any, propertyKey: string | symbol): void {
+    const key = String(propertyKey);
+    if (!target.constructor.__int16Fields) {
+        target.constructor.__int16Fields = new Set();
+    }
+    target.constructor.__int16Fields.add(key);
+}
+
+/**
+ * 16位无符号整数装饰器
+ * 标记字段使用Uint16Array存储（适用于小范围无符号整数）
+ */
+export function Uint16(target: any, propertyKey: string | symbol): void {
+    const key = String(propertyKey);
+    if (!target.constructor.__uint16Fields) {
+        target.constructor.__uint16Fields = new Set();
+    }
+    target.constructor.__uint16Fields.add(key);
+}
+
+/**
+ * 8位整数装饰器
+ * 标记字段使用Int8Array存储（适用于很小的整数值）
+ */
+export function Int8(target: any, propertyKey: string | symbol): void {
+    const key = String(propertyKey);
+    if (!target.constructor.__int8Fields) {
+        target.constructor.__int8Fields = new Set();
+    }
+    target.constructor.__int8Fields.add(key);
+}
+
+/**
+ * 8位无符号整数装饰器
+ * 标记字段使用Uint8Array存储（适用于字节值、布尔标志等）
+ */
+export function Uint8(target: any, propertyKey: string | symbol): void {
+    const key = String(propertyKey);
+    if (!target.constructor.__uint8Fields) {
+        target.constructor.__uint8Fields = new Set();
+    }
+    target.constructor.__uint8Fields.add(key);
+}
+
+/**
+ * 8位夹紧整数装饰器
+ * 标记字段使用Uint8ClampedArray存储（适用于颜色值等需要夹紧的数据）
+ */
+export function Uint8Clamped(target: any, propertyKey: string | symbol): void {
+    const key = String(propertyKey);
+    if (!target.constructor.__uint8ClampedFields) {
+        target.constructor.__uint8ClampedFields = new Set();
+    }
+    target.constructor.__uint8ClampedFields.add(key);
+}
+
 
 /**
  * 序列化Map装饰器
@@ -110,12 +182,160 @@ export function DeepCopy(target: any, propertyKey: string | symbol): void {
 }
 
 /**
+ * 自动类型推断装饰器
+ * 根据字段的默认值和数值范围自动选择最优的TypedArray类型
+ *
+ * @param options 类型推断选项
+ * @param options.minValue 数值的最小值（用于范围优化）
+ * @param options.maxValue 数值的最大值（用于范围优化）
+ * @param options.precision 是否需要浮点精度（true: 使用浮点数组, false: 使用整数数组）
+ * @param options.signed 是否需要符号位（仅在整数模式下有效）
+ */
+export function AutoTyped(options?: {
+    minValue?: number;
+    maxValue?: number;
+    precision?: boolean;
+    signed?: boolean;
+}) {
+    return function (target: any, propertyKey: string | symbol): void {
+        const key = String(propertyKey);
+        if (!target.constructor.__autoTypedFields) {
+            target.constructor.__autoTypedFields = new Map();
+        }
+        target.constructor.__autoTypedFields.set(key, options || {});
+    };
+}
+
+/**
+ * 自动类型推断器
+ * 根据数值类型和范围自动选择最优的TypedArray类型
+ */
+export class TypeInference {
+    /**
+     * 根据数值范围推断最优的TypedArray类型
+     */
+    public static inferOptimalType(value: any, options: {
+        minValue?: number;
+        maxValue?: number;
+        precision?: boolean;
+        signed?: boolean;
+    } = {}): string {
+        const type = typeof value;
+
+        if (type === 'boolean') {
+            return 'uint8'; // 布尔值使用最小的无符号整数
+        }
+
+        if (type !== 'number') {
+            return 'float32'; // 非数值类型默认使用Float32
+        }
+
+        const { minValue, maxValue, precision, signed } = options;
+
+        // 如果显式要求精度，使用浮点数
+        if (precision === true) {
+            // 检查是否需要双精度
+            if (Math.abs(value) > 3.4028235e+38 || (minValue !== undefined && Math.abs(minValue) > 3.4028235e+38) || (maxValue !== undefined && Math.abs(maxValue) > 3.4028235e+38)) {
+                return 'float64';
+            }
+            return 'float32';
+        }
+
+        // 如果显式禁用精度，或者是整数值，尝试使用整数数组
+        if (precision === false || Number.isInteger(value)) {
+            const actualMin = minValue !== undefined ? minValue : value;
+            const actualMax = maxValue !== undefined ? maxValue : value;
+            const needsSigned = signed !== false && (actualMin < 0 || value < 0);
+
+            // 根据范围选择最小的整数类型
+            if (needsSigned) {
+                // 有符号整数
+                if (actualMin >= -128 && actualMax <= 127) {
+                    return 'int8';
+                } else if (actualMin >= -32768 && actualMax <= 32767) {
+                    return 'int16';
+                } else if (actualMin >= -2147483648 && actualMax <= 2147483647) {
+                    return 'int32';
+                } else {
+                    return 'float64'; // 超出int32范围，使用双精度浮点
+                }
+            } else {
+                // 无符号整数
+                if (actualMax <= 255) {
+                    return 'uint8';
+                } else if (actualMax <= 65535) {
+                    return 'uint16';
+                } else if (actualMax <= 4294967295) {
+                    return 'uint32';
+                } else {
+                    return 'float64'; // 超出uint32范围，使用双精度浮点
+                }
+            }
+        }
+
+        // 默认情况：检查是否为小数
+        if (!Number.isInteger(value)) {
+            return 'float32';
+        }
+
+        // 整数值，但没有指定范围，根据值的大小选择
+        if (value >= 0 && value <= 255) {
+            return 'uint8';
+        } else if (value >= -128 && value <= 127) {
+            return 'int8';
+        } else if (value >= 0 && value <= 65535) {
+            return 'uint16';
+        } else if (value >= -32768 && value <= 32767) {
+            return 'int16';
+        } else if (value >= 0 && value <= 4294967295) {
+            return 'uint32';
+        } else if (value >= -2147483648 && value <= 2147483647) {
+            return 'int32';
+        } else {
+            return 'float64';
+        }
+    }
+
+    /**
+     * 根据推断的类型名创建对应的TypedArray构造函数
+     */
+    public static getTypedArrayConstructor(typeName: string): typeof Float32Array | typeof Float64Array | typeof Int32Array | typeof Uint32Array | typeof Int16Array | typeof Uint16Array | typeof Int8Array | typeof Uint8Array | typeof Uint8ClampedArray {
+        switch (typeName) {
+            case 'float32': return Float32Array;
+            case 'float64': return Float64Array;
+            case 'int32': return Int32Array;
+            case 'uint32': return Uint32Array;
+            case 'int16': return Int16Array;
+            case 'uint16': return Uint16Array;
+            case 'int8': return Int8Array;
+            case 'uint8': return Uint8Array;
+            case 'uint8clamped': return Uint8ClampedArray;
+            default: return Float32Array;
+        }
+    }
+}
+
+/**
+ * SoA存储器支持的TypedArray类型
+ */
+export type SupportedTypedArray =
+    | Float32Array
+    | Float64Array
+    | Int32Array
+    | Uint32Array
+    | Int16Array
+    | Uint16Array
+    | Int8Array
+    | Uint8Array
+    | Uint8ClampedArray;
+
+/**
  * SoA存储器（需要装饰器启用）
  * 使用Structure of Arrays存储模式，在大规模批量操作时提供优异性能
  */
 export class SoAStorage<T extends Component> {
     private static readonly _logger = createLogger('SoAStorage');
-    private fields = new Map<string, Float32Array | Float64Array | Int32Array>();
+    private fields = new Map<string, SupportedTypedArray>();
     private stringFields = new Map<string, string[]>(); // 专门存储字符串
     private serializedFields = new Map<string, string[]>(); // 序列化存储Map/Set/Array
     private complexFields = new Map<number, Map<string, any>>(); // 存储复杂对象
@@ -137,6 +357,13 @@ export class SoAStorage<T extends Component> {
         const float64Fields = (componentType as any).__float64Fields || new Set();
         const float32Fields = (componentType as any).__float32Fields || new Set();
         const int32Fields = (componentType as any).__int32Fields || new Set();
+        const uint32Fields = (componentType as any).__uint32Fields || new Set();
+        const int16Fields = (componentType as any).__int16Fields || new Set();
+        const uint16Fields = (componentType as any).__uint16Fields || new Set();
+        const int8Fields = (componentType as any).__int8Fields || new Set();
+        const uint8Fields = (componentType as any).__uint8Fields || new Set();
+        const uint8ClampedFields = (componentType as any).__uint8ClampedFields || new Set();
+        const autoTypedFields = (componentType as any).__autoTypedFields || new Map();
         const serializeMapFields = (componentType as any).__serializeMapFields || new Set();
         const serializeSetFields = (componentType as any).__serializeSetFields || new Set();
         const serializeArrayFields = (componentType as any).__serializeArrayFields || new Set();
@@ -151,22 +378,52 @@ export class SoAStorage<T extends Component> {
                     if (highPrecisionFields.has(key)) {
                         // 标记为高精度，作为复杂对象处理
                         // 不添加到fields，会在updateComponentAtIndex中自动添加到complexFields
+                    } else if (autoTypedFields.has(key)) {
+                        // 使用自动类型推断
+                        const options = autoTypedFields.get(key);
+                        const inferredType = TypeInference.inferOptimalType(value, options);
+                        const ArrayConstructor = TypeInference.getTypedArrayConstructor(inferredType);
+                        this.fields.set(key, new ArrayConstructor(this._capacity));
+                        SoAStorage._logger.info(`字段 ${key} 自动推断为 ${inferredType} 类型，值: ${value}, 选项:`, options);
                     } else if (float64Fields.has(key)) {
-                        // 使用Float64Array存储
+                        // 使用Float64Array存储（高精度浮点数）
                         this.fields.set(key, new Float64Array(this._capacity));
                     } else if (int32Fields.has(key)) {
-                        // 使用Int32Array存储
+                        // 使用Int32Array存储（32位有符号整数）
                         this.fields.set(key, new Int32Array(this._capacity));
+                    } else if (uint32Fields.has(key)) {
+                        // 使用Uint32Array存储（32位无符号整数）
+                        this.fields.set(key, new Uint32Array(this._capacity));
+                    } else if (int16Fields.has(key)) {
+                        // 使用Int16Array存储（16位有符号整数）
+                        this.fields.set(key, new Int16Array(this._capacity));
+                    } else if (uint16Fields.has(key)) {
+                        // 使用Uint16Array存储（16位无符号整数）
+                        this.fields.set(key, new Uint16Array(this._capacity));
+                    } else if (int8Fields.has(key)) {
+                        // 使用Int8Array存储（8位有符号整数）
+                        this.fields.set(key, new Int8Array(this._capacity));
+                    } else if (uint8Fields.has(key)) {
+                        // 使用Uint8Array存储（8位无符号整数）
+                        this.fields.set(key, new Uint8Array(this._capacity));
+                    } else if (uint8ClampedFields.has(key)) {
+                        // 使用Uint8ClampedArray存储（8位夹紧无符号整数）
+                        this.fields.set(key, new Uint8ClampedArray(this._capacity));
                     } else if (float32Fields.has(key)) {
-                        // 使用Float32Array存储
+                        // 使用Float32Array存储（32位浮点数）
                         this.fields.set(key, new Float32Array(this._capacity));
                     } else {
                         // 默认使用Float32Array
                         this.fields.set(key, new Float32Array(this._capacity));
                     }
                 } else if (type === 'boolean') {
-                    // 布尔值使用Float32Array存储为0/1
-                    this.fields.set(key, new Float32Array(this._capacity));
+                    // 布尔值默认使用Uint8Array存储为0/1（更节省内存）
+                    if (uint8Fields.has(key) || (!float32Fields.has(key) && !float64Fields.has(key))) {
+                        this.fields.set(key, new Uint8Array(this._capacity));
+                    } else {
+                        // 兼容性：如果显式指定浮点类型则使用原有方式
+                        this.fields.set(key, new Float32Array(this._capacity));
+                    }
                 } else if (type === 'string') {
                     // 字符串专门处理
                     this.stringFields.set(key, new Array(this._capacity));
@@ -430,16 +687,32 @@ export class SoAStorage<T extends Component> {
     private resize(newCapacity: number): void {
         // 调整数值字段的TypedArray
         for (const [fieldName, oldArray] of this.fields.entries()) {
-            let newArray: Float32Array | Float64Array | Int32Array;
-            
+            let newArray: SupportedTypedArray;
+
             if (oldArray instanceof Float32Array) {
                 newArray = new Float32Array(newCapacity);
             } else if (oldArray instanceof Float64Array) {
                 newArray = new Float64Array(newCapacity);
-            } else {
+            } else if (oldArray instanceof Int32Array) {
                 newArray = new Int32Array(newCapacity);
+            } else if (oldArray instanceof Uint32Array) {
+                newArray = new Uint32Array(newCapacity);
+            } else if (oldArray instanceof Int16Array) {
+                newArray = new Int16Array(newCapacity);
+            } else if (oldArray instanceof Uint16Array) {
+                newArray = new Uint16Array(newCapacity);
+            } else if (oldArray instanceof Int8Array) {
+                newArray = new Int8Array(newCapacity);
+            } else if (oldArray instanceof Uint8Array) {
+                newArray = new Uint8Array(newCapacity);
+            } else if (oldArray instanceof Uint8ClampedArray) {
+                newArray = new Uint8ClampedArray(newCapacity);
+            } else {
+                // 默认回退到Float32Array
+                newArray = new Float32Array(newCapacity);
+                SoAStorage._logger.warn(`未知的TypedArray类型用于字段 ${fieldName}，回退到Float32Array`);
             }
-            
+
             newArray.set(oldArray);
             this.fields.set(fieldName, newArray);
         }
@@ -469,11 +742,11 @@ export class SoAStorage<T extends Component> {
         return Array.from(this.entityToIndex.values());
     }
     
-    public getFieldArray(fieldName: string): Float32Array | Float64Array | Int32Array | null {
+    public getFieldArray(fieldName: string): SupportedTypedArray | null {
         return this.fields.get(fieldName) || null;
     }
-    
-    public getTypedFieldArray<K extends keyof T>(fieldName: K): Float32Array | Float64Array | Int32Array | null {
+
+    public getTypedFieldArray<K extends keyof T>(fieldName: K): SupportedTypedArray | null {
         return this.fields.get(String(fieldName)) || null;
     }
     
@@ -566,16 +839,38 @@ export class SoAStorage<T extends Component> {
         for (const [fieldName, array] of this.fields.entries()) {
             let bytesPerElement: number;
             let typeName: string;
-            
+
             if (array instanceof Float32Array) {
                 bytesPerElement = 4;
                 typeName = 'float32';
             } else if (array instanceof Float64Array) {
                 bytesPerElement = 8;
                 typeName = 'float64';
-            } else {
+            } else if (array instanceof Int32Array) {
                 bytesPerElement = 4;
                 typeName = 'int32';
+            } else if (array instanceof Uint32Array) {
+                bytesPerElement = 4;
+                typeName = 'uint32';
+            } else if (array instanceof Int16Array) {
+                bytesPerElement = 2;
+                typeName = 'int16';
+            } else if (array instanceof Uint16Array) {
+                bytesPerElement = 2;
+                typeName = 'uint16';
+            } else if (array instanceof Int8Array) {
+                bytesPerElement = 1;
+                typeName = 'int8';
+            } else if (array instanceof Uint8Array) {
+                bytesPerElement = 1;
+                typeName = 'uint8';
+            } else if (array instanceof Uint8ClampedArray) {
+                bytesPerElement = 1;
+                typeName = 'uint8clamped';
+            } else {
+                // 默认回退
+                bytesPerElement = 4;
+                typeName = 'unknown';
             }
             
             const memory = array.length * bytesPerElement;
@@ -603,7 +898,7 @@ export class SoAStorage<T extends Component> {
      * 执行向量化批量操作
      * @param operation 操作函数，接收字段数组和活跃索引
      */
-    public performVectorizedOperation(operation: (fieldArrays: Map<string, Float32Array | Float64Array | Int32Array>, activeIndices: number[]) => void): void {
+    public performVectorizedOperation(operation: (fieldArrays: Map<string, SupportedTypedArray>, activeIndices: number[]) => void): void {
         const activeIndices = this.getActiveIndices();
         operation(this.fields, activeIndices);
     }

@@ -10,4 +10,5 @@ export { World, IWorldConfig } from './World';
 export { WorldManager, IWorldManagerConfig } from './WorldManager';
 export * from './Core/Events';
 export * from './Core/Query';
-export * from './Core/Storage'; 
+export * from './Core/Storage';
+export * from './Core/StorageDecorators'; 

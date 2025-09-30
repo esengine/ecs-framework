@@ -1,12 +1,11 @@
 import { Component } from '../Component';
 import { BitMask64Utils, BitMask64Data } from '../Utils/BigIntCompatibility';
-import { SoAStorage, EnableSoA, HighPrecision, Float64, Int32, SerializeMap, SerializeSet, SerializeArray, DeepCopy } from './SoAStorage';
+import { SoAStorage, SupportedTypedArray } from './SoAStorage';
 import { createLogger } from '../../Utils/Logger';
 import { getComponentTypeName } from '../Decorators';
 import { ComponentRegistry, ComponentType } from './ComponentStorage/ComponentRegistry';
 
-// 重新导出装饰器和核心类型
-export { EnableSoA, HighPrecision, Float64, Int32, SerializeMap, SerializeSet, SerializeArray, DeepCopy };
+// 导出核心类型
 export { ComponentRegistry, ComponentType };
 
 
@@ -203,9 +202,9 @@ export class ComponentStorageManager {
      * @returns TypedArray或null
      */
     public getFieldArray<T extends Component>(
-        componentType: ComponentType<T>, 
+        componentType: ComponentType<T>,
         fieldName: string
-    ): Float32Array | Float64Array | Int32Array | null {
+    ): SupportedTypedArray | null {
         const soaStorage = this.getSoAStorage(componentType);
         return soaStorage ? soaStorage.getFieldArray(fieldName) : null;
     }
@@ -217,9 +216,9 @@ export class ComponentStorageManager {
      * @returns TypedArray或null
      */
     public getTypedFieldArray<T extends Component, K extends keyof T>(
-        componentType: ComponentType<T>, 
+        componentType: ComponentType<T>,
         fieldName: K
-    ): Float32Array | Float64Array | Int32Array | null {
+    ): SupportedTypedArray | null {
         const soaStorage = this.getSoAStorage(componentType);
         return soaStorage ? soaStorage.getTypedFieldArray(fieldName) : null;
     }
