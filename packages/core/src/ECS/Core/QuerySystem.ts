@@ -285,14 +285,6 @@ export class QuerySystem {
      * 将实体添加到各种索引中
      */
     private addEntityToIndexes(entity: Entity): void {
-        // 组件类型索引改为lazy cache，这里只清除相关缓存
-        const components = entity.components;
-        for (let i = 0; i < components.length; i++) {
-            const componentType = components[i].constructor as ComponentType;
-            // 清除该组件类型的缓存，下次查询时会重新构建
-            this.entityIndex.byComponentType.delete(componentType);
-        }
-
         // 标签索引
         const tag = entity.tag;
         if (tag !== undefined) {
@@ -341,13 +333,6 @@ export class QuerySystem {
      * 从各种索引中移除实体
      */
     private removeEntityFromIndexes(entity: Entity): void {
-        // 组件类型索引改为lazy cache，这里只清除相关缓存
-        for (const component of entity.components) {
-            const componentType = component.constructor as ComponentType;
-            // 清除该组件类型的缓存，下次查询时会重新构建
-            this.entityIndex.byComponentType.delete(componentType);
-        }
-
         // 从标签索引移除
         if (entity.tag !== undefined) {
             const tagSet = this.entityIndex.byTag.get(entity.tag);
