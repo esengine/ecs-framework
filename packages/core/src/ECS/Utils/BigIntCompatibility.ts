@@ -1,4 +1,14 @@
 /**
+ * 基础 64 位段结构
+ */
+export interface BitMask64Segment {
+    /** 低32位（bit 0-31） */
+    lo: number;
+    /** 高32位（bit 32-63） */
+    hi: number;
+}
+
+/**
  * 位掩码数据结构
  * 基础模式（64位）：使用 lo + hi 存储 64 位，segments 为空
  * 扩展模式（128+位）：lo + hi 作为第一段，segments 存储额外的 64 位段
@@ -10,7 +20,7 @@ export interface BitMask64Data {
     /** 高32位（bit 32-63） */
     hi: number;
     /** 扩展段数组，每个元素是一个 64 位段，用于超过 64 位的场景 */
-    segments?: BitMask64Data[];
+    segments?: BitMask64Segment[];
 }
 
 export class BitMask64Utils {
@@ -78,10 +88,12 @@ export class BitMask64Utils {
             return bits.segments.every(seg => BitMask64Utils.isZero(seg));
         }
 
-        // 递归检查每个扩展段
+        // 检查每个扩展段
         const minSegments = Math.min(mask.segments.length, bits.segments.length);
         for (let i = 0; i < minSegments; i++) {
-            if (!BitMask64Utils.hasAll(mask.segments[i], bits.segments[i])) {
+            const maskSeg = mask.segments[i];
+            const bitsSeg = bits.segments[i];
+            if ((maskSeg.lo & bitsSeg.lo) !== bitsSeg.lo || (maskSeg.hi & bitsSeg.hi) !== bitsSeg.hi) {
                 return false;
             }
         }
@@ -111,7 +123,7 @@ export class BitMask64Utils {
      * @param mask 要检查的掩码
      * @returns 如果掩码所有位都为0则返回true
      */
-    public static isZero(mask: BitMask64Data): boolean {
+    public static isZero(mask: BitMask64Data | BitMask64Segment): boolean {
         return mask.lo === 0 && mask.hi === 0;
     }
 
@@ -297,11 +309,16 @@ export class BitMask64Utils {
 
         // 扩展 segments 数组
         while (mask.segments.length <= segmentIndex) {
-            mask.segments.push(BitMask64Utils.clone(BitMask64Utils.ZERO));
+            mask.segments.push({ lo: 0, hi: 0 });
         }
 
         // 设置对应段的位
-        BitMask64Utils.setBit(mask.segments[segmentIndex], localBitIndex);
+        const segment = mask.segments[segmentIndex];
+        if (localBitIndex < 32) {
+            segment.lo |= (1 << localBitIndex);
+        } else {
+            segment.hi |= (1 << (localBitIndex - 32));
+        }
     }
 
     /**
@@ -330,8 +347,13 @@ export class BitMask64Utils {
         }
 
         const localBitIndex = bitIndex % 64;
-        const testMask = BitMask64Utils.create(localBitIndex);
-        return BitMask64Utils.hasAny(mask.segments[segmentIndex], testMask);
+        const segment = mask.segments[segmentIndex];
+
+        if (localBitIndex < 32) {
+            return (segment.lo & (1 << localBitIndex)) !== 0;
+        } else {
+            return (segment.hi & (1 << (localBitIndex - 32))) !== 0;
+        }
     }
 
     /**
@@ -359,6 +381,12 @@ export class BitMask64Utils {
         }
 
         const localBitIndex = bitIndex % 64;
-        BitMask64Utils.clearBit(mask.segments[segmentIndex], localBitIndex);
+        const segment = mask.segments[segmentIndex];
+
+        if (localBitIndex < 32) {
+            segment.lo &= ~(1 << localBitIndex);
+        } else {
+            segment.hi &= ~(1 << (localBitIndex - 32));
+        }
     }
 }
