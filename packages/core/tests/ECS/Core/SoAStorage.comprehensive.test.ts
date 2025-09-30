@@ -1,5 +1,6 @@
 import { Component } from '../../../src/ECS/Component';
-import { ComponentStorageManager, EnableSoA, HighPrecision, Float64, Int32, SerializeMap, SerializeSet, SerializeArray, DeepCopy } from '../../../src/ECS/Core/ComponentStorage';
+import { ComponentStorageManager } from '../../../src/ECS/Core/ComponentStorage';
+import { EnableSoA, HighPrecision, Float64, Int32, SerializeMap, SerializeSet, SerializeArray, DeepCopy } from '../../../src/ECS/Core/SoAStorage';
 import { SoAStorage } from '../../../src/ECS/Core/SoAStorage';
 
 // 综合测试组件，覆盖所有装饰器
@@ -245,7 +246,7 @@ describe('SoA存储综合测试覆盖', () => {
         expect(preciseArray).toBeInstanceOf(Float64Array);
         expect(intArray).toBeInstanceOf(Int32Array);
         expect(normalArray).toBeInstanceOf(Float32Array);
-        expect(flagArray).toBeInstanceOf(Float32Array);
+        expect(flagArray).toBeInstanceOf(Uint8Array);
         
         // 高精度字段不应该在TypedArray中
         const bigIntArray = storage.getFieldArray('bigIntId');

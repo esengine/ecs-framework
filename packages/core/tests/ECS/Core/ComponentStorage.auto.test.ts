@@ -1,5 +1,6 @@
 import { Component } from '../../../src/ECS/Component';
-import { ComponentStorageManager, EnableSoA } from '../../../src/ECS/Core/ComponentStorage';
+import { ComponentStorageManager } from '../../../src/ECS/Core/ComponentStorage';
+import { EnableSoA } from '../../../src/ECS/Core/SoAStorage';
 
 // 默认原始存储组件
 class PositionComponent extends Component {

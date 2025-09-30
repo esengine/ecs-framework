@@ -1,5 +1,6 @@
 import { Component } from '../../../src/ECS/Component';
-import { ComponentStorageManager, EnableSoA, HighPrecision, Float64 } from '../../../src/ECS/Core/ComponentStorage';
+import { ComponentStorageManager } from '../../../src/ECS/Core/ComponentStorage';
+import { EnableSoA, HighPrecision, Float64 } from '../../../src/ECS/Core/SoAStorage';
 
 // 包含所有基础类型的组件
 @EnableSoA

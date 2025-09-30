@@ -1,5 +1,6 @@
 import { Component } from '../../../src/ECS/Component';
-import { ComponentStorageManager, EnableSoA, SerializeMap, SerializeSet, SerializeArray, DeepCopy } from '../../../src/ECS/Core/ComponentStorage';
+import { ComponentStorageManager } from '../../../src/ECS/Core/ComponentStorage';
+import { EnableSoA, SerializeMap, SerializeSet, SerializeArray, DeepCopy } from '../../../src/ECS/Core/SoAStorage';
 
 // 测试组件：使用集合类型装饰器
 @EnableSoA

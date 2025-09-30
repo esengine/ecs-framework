@@ -1,6 +1,6 @@
 import { Component } from '../../../src/ECS/Component';
-import { ComponentStorageManager, EnableSoA, HighPrecision, Float64, Int32 } from '../../../src/ECS/Core/ComponentStorage';
-import { SoAStorage } from '../../../src/ECS/Core/SoAStorage';
+import { ComponentStorageManager } from '../../../src/ECS/Core/ComponentStorage';
+import { SoAStorage, EnableSoA, HighPrecision, Float64, Int32 } from '../../../src/ECS/Core/SoAStorage';
 
 // 测试组件：使用不同的数值类型装饰器
 @EnableSoA
@@ -104,7 +104,7 @@ describe('SoA数值类型装饰器测试', () => {
         expect(normalFloatArray).toBeInstanceOf(Float32Array);
         expect(preciseFloatArray).toBeInstanceOf(Float64Array);
         expect(integerArray).toBeInstanceOf(Int32Array);
-        expect(flagArray).toBeInstanceOf(Float32Array);
+        expect(flagArray).toBeInstanceOf(Uint8Array);
         
         // 高精度字段不应该在TypedArray中
         const highPrecisionArray = storage.getFieldArray('highPrecisionNumber');
