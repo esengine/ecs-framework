@@ -1,6 +1,6 @@
-import { Component } from '../Component';
 import { Bits } from './Bits';
 import { getComponentTypeName } from '../Decorators';
+import { ComponentType } from "../../Types";
 
 /**
  * 组件类型管理器
@@ -29,7 +29,7 @@ export class ComponentTypeManager {
      * @param componentType 组件类型构造函数
      * @returns 组件类型ID
      */
-    public getTypeId<T extends Component>(componentType: new (...args: unknown[]) => T): number {
+    public getTypeId(componentType: ComponentType): number {
         let typeId = this._componentTypes.get(componentType);
         
         if (typeId === undefined) {
@@ -55,7 +55,7 @@ export class ComponentTypeManager {
      * @param componentTypes 组件类型构造函数数组
      * @returns Bits对象
      */
-    public createBits(...componentTypes: (new (...args: unknown[]) => Component)[]): Bits {
+    public createBits(...componentTypes: ComponentType[]): Bits {
         const bits = new Bits();
         
         for (const componentType of componentTypes) {
@@ -71,11 +71,11 @@ export class ComponentTypeManager {
      * @param components 组件数组
      * @returns Bits对象
      */
-    public getEntityBits(components: Component[]): Bits {
+    public getEntityBits(components: ComponentType[]): Bits {
         const bits = new Bits();
         
         for (const component of components) {
-            const typeId = this.getTypeId(component.constructor as new (...args: unknown[]) => Component);
+            const typeId = this.getTypeId(component);
             bits.set(typeId);
         }
         
