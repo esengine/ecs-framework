@@ -46,7 +46,6 @@ export interface QueryResult {
  * 实体索引结构
  */
 interface EntityIndex {
-    byComponentType: Map<ComponentType, Set<Entity>>;
     byTag: Map<number, Set<Entity>>;
     byName: Map<string, Set<Entity>>;
 }
@@ -105,7 +104,6 @@ export class QuerySystem {
 
     constructor() {
         this.entityIndex = {
-            byComponentType: new Map(),
             byTag: new Map(),
             byName: new Map()
         };
@@ -300,22 +298,6 @@ export class QuerySystem {
         }
     }
 
-    /**
-     * Lazy获取组件类型索引，不存在时从ArchetypeSystem构建
-     */
-    private getComponentTypeIndex(componentType: ComponentType): Set<Entity> {
-        let set = this.entityIndex.byComponentType.get(componentType);
-        if (!set) {
-            // 从ArchetypeSystem构建
-            set = new Set<Entity>();
-            const entities = this.archetypeSystem.getEntitiesByComponent(componentType);
-            for (const entity of entities) {
-                set.add(entity);
-            }
-            this.entityIndex.byComponentType.set(componentType, set);
-        }
-        return set;
-    }
 
     private createAndSetTagIndex(tag: number): Set<Entity> {
         const set = new Set<Entity>();
@@ -363,10 +345,9 @@ export class QuerySystem {
      * 通常在大量实体变更后调用以确保索引一致性。
      */
     private rebuildIndexes(): void {
-        this.entityIndex.byComponentType.clear();
         this.entityIndex.byTag.clear();
         this.entityIndex.byName.clear();
-        
+
         // 清理ArchetypeSystem和ComponentIndexManager
         this.archetypeSystem.clear();
         this.componentIndexManager.clear();
@@ -456,31 +437,11 @@ export class QuerySystem {
      * @returns 匹配的实体列表
      */
     private queryMultipleComponents(componentTypes: ComponentType[]): Entity[] {
-        // 找到最小的组件集合作为起点
-        let smallestSet: Set<Entity> | null = null;
-        let smallestSize = Infinity;
-
-        for (const componentType of componentTypes) {
-            const set = this.getComponentTypeIndex(componentType);
-            if (set.size === 0) {
-                return []; // 如果任何组件没有实体，直接返回空结果
-            }
-            if (set.size < smallestSize) {
-                smallestSize = set.size;
-                smallestSet = set;
-            }
-        }
-
-        if (!smallestSet) {
-            return []; // 如果没有找到任何组件集合，返回空结果
-        }
-
-        // 从最小集合开始，逐步过滤
-        const mask = this.createComponentMask(componentTypes);
+        const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'AND');
         const result: Entity[] = [];
 
-        for (const entity of smallestSet) {
-            if (BitMask64Utils.hasAll(entity.componentMask, mask)) {
+        for (const archetype of archetypeResult.archetypes) {
+            for (const entity of archetype.entities) {
                 result.push(entity);
             }
         }
@@ -726,9 +687,8 @@ export class QuerySystem {
             };
         }
 
-        // 使用索引查询（lazy构建）
         this.queryStats.indexHits++;
-        const entities = Array.from(this.getComponentTypeIndex(componentType));
+        const entities = this.archetypeSystem.getEntitiesByComponent(componentType);
 
         // 缓存结果
         this.addToCache(cacheKey, entities);
@@ -942,7 +902,7 @@ export class QuerySystem {
         return {
             entityCount: this.entities.length,
             indexStats: {
-                componentIndexSize: this.entityIndex.byComponentType.size,
+                componentIndexSize: this.archetypeSystem.getAllArchetypes().length,
                 tagIndexSize: this.entityIndex.byTag.size,
                 nameIndexSize: this.entityIndex.byName.size
             },
