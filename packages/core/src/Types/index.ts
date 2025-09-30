@@ -4,32 +4,20 @@
 
 /**
  * 组件接口
- * 
- * 定义组件的基本契约，所有组件都应该实现此接口
+ *
+ * 定义组件的基本契约。
+ * 在 ECS 架构中，组件应该是纯数据容器，不包含业务逻辑。
  */
 export interface IComponent {
     /** 组件唯一标识符 */
     readonly id: number;
     /** 组件所属的实体ID */
     entityId?: string | number;
-    /** 组件启用状态 */
-    enabled: boolean;
-    /** 更新顺序 */
-    updateOrder: number;
-    
+
     /** 组件添加到实体时的回调 */
     onAddedToEntity(): void;
     /** 组件从实体移除时的回调 */
     onRemovedFromEntity(): void;
-    /** 组件启用时的回调 */
-    onEnabled(): void;
-    /** 组件禁用时的回调 */
-    onDisabled(): void;
-    /**
-     * 更新组件
-     * @deprecated 不符合ECS架构规范，建议使用EntitySystem来处理更新逻辑
-     */
-    update(): void;
 }
 
 /**

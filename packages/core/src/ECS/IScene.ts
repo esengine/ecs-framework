@@ -152,13 +152,4 @@ export interface ISceneConfig {
      * 场景名称
      */
     name?: string;
-    /**
-     * 调试配置
-     */
-    debug?: boolean;
-    /**
-     * 是否启用实体直接更新
-     * @default false
-     */
-    enableEntityDirectUpdate?: boolean;
 }

@@ -16,10 +16,6 @@ export class EntityList {
     // 延迟操作队列
     private _entitiesToAdd: Entity[] = [];
     private _entitiesToRemove: Entity[] = [];
-    private _isUpdating = false;
-
-    // 是否启用实体直接更新
-    private _enableEntityDirectUpdate = false;
 
     public get count(): number {
         return this.buffer.length;
@@ -30,23 +26,11 @@ export class EntityList {
     }
 
     /**
-     * 设置是否启用实体直接更新
-     */
-    public setEnableEntityDirectUpdate(enabled: boolean): void {
-        this._enableEntityDirectUpdate = enabled;
-    }
-
-    /**
-     * 添加实体（立即添加或延迟添加）
+     * 添加实体
      * @param entity 要添加的实体
      */
     public add(entity: Entity): void {
-        if (this._isUpdating) {
-            // 如果正在更新中，延迟添加
-            this._entitiesToAdd.push(entity);
-        } else {
-            this.addImmediate(entity);
-        }
+        this.addImmediate(entity);
     }
 
     /**
@@ -67,16 +51,11 @@ export class EntityList {
     }
 
     /**
-     * 移除实体（立即移除或延迟移除）
+     * 移除实体
      * @param entity 要移除的实体
      */
     public remove(entity: Entity): void {
-        if (this._isUpdating) {
-            // 如果正在更新中，延迟移除
-            this._entitiesToRemove.push(entity);
-        } else {
-            this.removeImmediate(entity);
-        }
+        this.removeImmediate(entity);
     }
 
     /**
@@ -147,25 +126,11 @@ export class EntityList {
     }
 
     /**
-     * 更新实体列表和实体
+     * 更新实体列表
+     *
+     * 处理延迟操作（添加/删除实体）
      */
     public update(): void {
-        this._isUpdating = true;
-
-        try {
-            // 只有启用实体直接更新时才遍历更新实体
-            if (this._enableEntityDirectUpdate) {
-                for (let i = 0; i < this.buffer.length; i++) {
-                    const entity = this.buffer[i];
-                    if (entity.enabled && !entity.isDestroyed) {
-                        entity.update();
-                    }
-                }
-            }
-        } finally {
-            this._isUpdating = false;
-        }
-
         // 处理延迟操作
         this.updateLists();
     }

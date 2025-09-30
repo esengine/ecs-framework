@@ -104,12 +104,7 @@ export class Entity {
      * 所属场景引用
      */
     public scene: IScene | null = null;
-    
-    /**
-     * 更新间隔
-     */
-    public updateInterval: number = 1;
-    
+
     /**
      * 销毁状态标志
      */
@@ -334,8 +329,6 @@ export class Entity {
 
         const typeId = ComponentRegistry.getBitIndex(componentType);
 
-        component.entity = this;
-
         this._componentsByTypeId[typeId] = component;
         
         const denseIndex = this.components.length;
@@ -528,8 +521,6 @@ export class Entity {
                 component: component
             });
         }
-        
-        component.entity = null as any;
 
         // 通知所有相关的QuerySystem组件已变动
         Entity.notifyQuerySystems(this);
@@ -568,8 +559,6 @@ export class Entity {
             }
 
             component.onRemovedFromEntity();
-            
-            component.entity = null as any;
         }
 
         this.components.length = 0;
@@ -833,26 +822,6 @@ export class Entity {
         }
     }
 
-    /**
-     * 更新实体
-     * 
-     * 调用所有组件的更新方法，并更新子实体。
-     */
-    public update(): void {
-        if (!this.activeInHierarchy || this._isDestroyed) {
-            return;
-        }
-
-        for (const component of this.components) {
-            if (component.enabled) {
-                component.update();
-            }
-        }
-
-        for (const child of this._children) {
-            child.update();
-        }
-    }
 
     /**
      * 销毁实体

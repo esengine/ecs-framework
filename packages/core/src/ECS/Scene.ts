@@ -95,11 +95,6 @@ export class Scene implements IScene {
             this.name = config.name;
         }
 
-        // 配置实体直接更新选项
-        if (config?.enableEntityDirectUpdate !== undefined) {
-            this.entities.setEnableEntityDirectUpdate(config.enableEntityDirectUpdate);
-        }
-
         if (!Entity.eventBus) {
             Entity.eventBus = new EventBus(false);
         }
@@ -180,15 +175,12 @@ export class Scene implements IScene {
      * 更新场景
      */
     public update() {
-        // 更新实体列表
+        // 更新实体列表（处理延迟操作）
         this.entities.updateLists();
 
         // 更新实体处理器
         if (this.entityProcessors != null)
             this.entityProcessors.update();
-
-        // 更新实体
-        this.entities.update();
 
         // 更新实体处理器后处理
         if (this.entityProcessors != null)

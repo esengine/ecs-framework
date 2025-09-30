@@ -68,7 +68,7 @@ describe('Entity - 组件缓存优化测试', () => {
             expect(addedComponent).toBe(position);
             expect(entity.components.length).toBe(1);
             expect(entity.components[0]).toBe(position);
-            expect(position.entity).toBe(entity);
+            expect(entity.hasComponent(TestPositionComponent)).toBe(true);
         });
 
         test('应该能够获取组件', () => {
@@ -96,7 +96,7 @@ describe('Entity - 组件缓存优化测试', () => {
             entity.removeComponent(position);
             expect(entity.components.length).toBe(0);
             expect(entity.hasComponent(TestPositionComponent)).toBe(false);
-            expect(position.entity).toBeNull();
+            expect(entity.getComponent(TestPositionComponent)).toBeNull();
         });
     });
 
