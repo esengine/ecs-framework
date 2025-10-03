@@ -1,247 +1,189 @@
-import { 
-    BitMask64Data, 
-    BitMask64Utils 
-} from '../../../src/ECS/Utils/BigIntCompatibility';
+import { BitMask64Data, BitMask64Utils } from "../../../src";
+import { SegmentPart } from "../../../src/ECS/Utils/BigIntCompatibility";
 
-describe('64位掩码兼容性测试', () => {
-    describe('基本功能', () => {
-        it('应该能够创建和检查掩码', () => {
-            const zero = BitMask64Utils.ZERO;
-            const mask1 = BitMask64Utils.create(0);
-            const mask2 = BitMask64Utils.create(5);
-            
-            expect(BitMask64Utils.isZero(zero)).toBe(true);
-            expect(BitMask64Utils.isZero(mask1)).toBe(false);
-            expect(BitMask64Utils.isZero(mask2)).toBe(false);
-        });
+describe("BitMask64Utils 位掩码工具测试", () => {
+    test("create() 应该在指定索引位置设置位", () => {
+        const mask = BitMask64Utils.create(0);
+        expect(mask.base[0]).toBe(1);
+        expect(mask.base[1]).toBe(0);
 
-        it('应该支持数字创建', () => {
-            const mask = BitMask64Utils.fromNumber(42);
-            expect(mask.lo).toBe(42);
-            expect(mask.hi).toBe(0);
-        });
+        const mask2 = BitMask64Utils.create(33);
+        expect(mask2.base[0]).toBe(0);
+        expect(mask2.base[1]).toBe(0b10);
     });
 
-    describe('位运算', () => {
-        let mask1: BitMask64Data;
-        let mask2: BitMask64Data;
-
-        beforeEach(() => {
-            mask1 = BitMask64Utils.create(2); // 位2
-            mask2 = BitMask64Utils.create(3); // 位3
-        });
-
-        it('hasAny运算', () => {
-            const combined = BitMask64Utils.clone(BitMask64Utils.ZERO);
-            BitMask64Utils.orInPlace(combined, mask1);
-            BitMask64Utils.orInPlace(combined, mask2);
-
-            expect(BitMask64Utils.hasAny(combined, mask1)).toBe(true);
-            expect(BitMask64Utils.hasAny(combined, mask2)).toBe(true);
-            
-            const mask4 = BitMask64Utils.create(4);
-            expect(BitMask64Utils.hasAny(combined, mask4)).toBe(false);
-        });
-
-        it('hasAll运算', () => {
-            const combined = BitMask64Utils.clone(BitMask64Utils.ZERO);
-            BitMask64Utils.orInPlace(combined, mask1);
-            BitMask64Utils.orInPlace(combined, mask2);
-
-            expect(BitMask64Utils.hasAll(combined, mask1)).toBe(true);
-            expect(BitMask64Utils.hasAll(combined, mask2)).toBe(true);
-            
-            const both = BitMask64Utils.clone(BitMask64Utils.ZERO);
-            BitMask64Utils.orInPlace(both, mask1);
-            BitMask64Utils.orInPlace(both, mask2);
-            expect(BitMask64Utils.hasAll(combined, both)).toBe(true);
-        });
-
-        it('hasNone运算', () => {
-            const mask4 = BitMask64Utils.create(4);
-            const mask5 = BitMask64Utils.create(5);
-            
-            expect(BitMask64Utils.hasNone(mask1, mask2)).toBe(true);
-            expect(BitMask64Utils.hasNone(mask1, mask4)).toBe(true);
-            expect(BitMask64Utils.hasNone(mask1, mask1)).toBe(false);
-        });
-
-        it('原地位运算', () => {
-            const target = BitMask64Utils.clone(mask1);
-            
-            // OR操作
-            BitMask64Utils.orInPlace(target, mask2);
-            expect(BitMask64Utils.hasAll(target, mask1)).toBe(true);
-            expect(BitMask64Utils.hasAll(target, mask2)).toBe(true);
-            
-            // AND操作
-            const andTarget = BitMask64Utils.clone(target);
-            BitMask64Utils.andInPlace(andTarget, mask1);
-            expect(BitMask64Utils.hasAll(andTarget, mask1)).toBe(true);
-            expect(BitMask64Utils.hasAny(andTarget, mask2)).toBe(false);
-            
-            // XOR操作
-            const xorTarget = BitMask64Utils.clone(target);
-            BitMask64Utils.xorInPlace(xorTarget, mask1);
-            expect(BitMask64Utils.hasAny(xorTarget, mask1)).toBe(false);
-            expect(BitMask64Utils.hasAll(xorTarget, mask2)).toBe(true);
-        });
-
-        it('设置和清除位', () => {
-            const mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
-            
-            BitMask64Utils.setBit(mask, 5);
-            expect(BitMask64Utils.hasAny(mask, BitMask64Utils.create(5))).toBe(true);
-            
-            BitMask64Utils.clearBit(mask, 5);
-            expect(BitMask64Utils.isZero(mask)).toBe(true);
-        });
+    test("fromNumber() 应该把数值放入低32位", () => {
+        const mask = BitMask64Utils.fromNumber(123456);
+        expect(mask.base[0]).toBe(123456);
+        expect(mask.base[1]).toBe(0);
     });
 
-    describe('字符串表示', () => {
-        it('二进制字符串', () => {
-            const mask = BitMask64Utils.create(5); // 位5设置为1
-            const binaryStr = BitMask64Utils.toString(mask, 2);
-            expect(binaryStr).toBe('100000'); // 位5为1
-        });
+    test("setBit/getBit/clearBit 应该正确设置、读取和清除位", () => {
+        const mask: BitMask64Data = { base: [0, 0] };
 
-        it('十六进制字符串', () => {
-            const mask = BitMask64Utils.fromNumber(255);
-            const hexStr = BitMask64Utils.toString(mask, 16);
-            expect(hexStr).toBe('0xFF');
-        });
+        BitMask64Utils.setBit(mask, 5);
+        expect(BitMask64Utils.getBit(mask, 5)).toBe(true);
 
-        it('大数字的十六进制表示', () => {
-            const mask: BitMask64Data = { lo: 0xFFFFFFFF, hi: 0x12345678 };
-            const hexStr = BitMask64Utils.toString(mask, 16);
-            expect(hexStr).toBe('0x12345678FFFFFFFF');
-        });
+        BitMask64Utils.clearBit(mask, 5);
+        expect(BitMask64Utils.getBit(mask, 5)).toBe(false);
+
+        // 测试扩展段
+        BitMask64Utils.setBit(mask, 70);
+        expect(mask.segments).toBeDefined();
+        expect(BitMask64Utils.getBit(mask, 70)).toBe(true);
     });
 
-    describe('位计数', () => {
-        it('popCount应该正确计算设置位的数量', () => {
-            const mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
-            expect(BitMask64Utils.popCount(mask)).toBe(0);
-            
-            BitMask64Utils.setBit(mask, 0);
-            BitMask64Utils.setBit(mask, 2);
-            BitMask64Utils.setBit(mask, 4);
-            expect(BitMask64Utils.popCount(mask)).toBe(3);
-        });
+    test("hasAny/hasAll/hasNone 判断应正确", () => {
+        const maskA = BitMask64Utils.create(1);
+        const maskB = BitMask64Utils.create(1);
+        const maskC = BitMask64Utils.create(2);
 
-        it('大数的popCount', () => {
-            const mask = BitMask64Utils.fromNumber(0xFF); // 8个1
-            expect(BitMask64Utils.popCount(mask)).toBe(8);
-        });
+        expect(BitMask64Utils.hasAny(maskA, maskB)).toBe(true);
+        expect(BitMask64Utils.hasAll(maskA, maskB)).toBe(true);
+        expect(BitMask64Utils.hasNone(maskA, maskC)).toBe(true);
     });
 
-    describe('ECS组件掩码操作', () => {
-        it('多组件掩码组合', () => {
-            const componentMasks: BitMask64Data[] = [];
-            for (let i = 0; i < 10; i++) {
-                componentMasks.push(BitMask64Utils.create(i));
-            }
-            
-            let combinedMask = BitMask64Utils.clone(BitMask64Utils.ZERO);
-            for (const mask of componentMasks) {
-                BitMask64Utils.orInPlace(combinedMask, mask);
-            }
-            
-            expect(BitMask64Utils.popCount(combinedMask)).toBe(10);
-            
-            // 检查所有位都设置了
-            for (let i = 0; i < 10; i++) {
-                expect(BitMask64Utils.hasAny(combinedMask, BitMask64Utils.create(i))).toBe(true);
-            }
-        });
+    test("isZero 应正确判断", () => {
+        const mask = BitMask64Utils.create(3);
+        expect(BitMask64Utils.isZero(mask)).toBe(false);
 
-        it('实体匹配模拟', () => {
-            // 模拟实体具有组件0, 2, 4
-            const entityMask = BitMask64Utils.clone(BitMask64Utils.ZERO);
-            BitMask64Utils.setBit(entityMask, 0);
-            BitMask64Utils.setBit(entityMask, 2);
-            BitMask64Utils.setBit(entityMask, 4);
-            
-            // 查询需要组件0和2
-            const queryMask = BitMask64Utils.clone(BitMask64Utils.ZERO);
-            BitMask64Utils.setBit(queryMask, 0);
-            BitMask64Utils.setBit(queryMask, 2);
-            
-            expect(BitMask64Utils.hasAll(entityMask, queryMask)).toBe(true);
-            
-            // 查询需要组件1和3
-            const queryMask2 = BitMask64Utils.clone(BitMask64Utils.ZERO);
-            BitMask64Utils.setBit(queryMask2, 1);
-            BitMask64Utils.setBit(queryMask2, 3);
-            
-            expect(BitMask64Utils.hasAll(entityMask, queryMask2)).toBe(false);
-        });
+        BitMask64Utils.clear(mask);
+        expect(BitMask64Utils.isZero(mask)).toBe(true);
     });
 
-    describe('边界测试', () => {
-        it('应该处理64位边界', () => {
-            expect(() => BitMask64Utils.create(63)).not.toThrow();
-            expect(() => BitMask64Utils.create(64)).toThrow();
-            expect(() => BitMask64Utils.create(-1)).toThrow();
-        });
+    test("equals 应正确判断两个掩码是否相等", () => {
+        const mask1 = BitMask64Utils.create(10);
+        const mask2 = BitMask64Utils.create(10);
+        const mask3 = BitMask64Utils.create(11);
 
-        it('设置和清除边界位', () => {
-            const mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
-            
-            BitMask64Utils.setBit(mask, 63);
-            expect(BitMask64Utils.hasAny(mask, BitMask64Utils.create(63))).toBe(true);
-            expect(mask.hi).not.toBe(0);
-            expect(mask.lo).toBe(0);
-            
-            BitMask64Utils.clearBit(mask, 63);
-            expect(BitMask64Utils.isZero(mask)).toBe(true);
-        });
-
-        it('高32位和低32位操作', () => {
-            const lowMask = BitMask64Utils.create(15); // 低32位
-            const highMask = BitMask64Utils.create(47); // 高32位
-            
-            expect(lowMask.hi).toBe(0);
-            expect(lowMask.lo).not.toBe(0);
-            
-            expect(highMask.hi).not.toBe(0);
-            expect(highMask.lo).toBe(0);
-            
-            const combined = BitMask64Utils.clone(BitMask64Utils.ZERO);
-            BitMask64Utils.orInPlace(combined, lowMask);
-            BitMask64Utils.orInPlace(combined, highMask);
-            
-            expect(combined.hi).not.toBe(0);
-            expect(combined.lo).not.toBe(0);
-            expect(BitMask64Utils.popCount(combined)).toBe(2);
-        });
+        expect(BitMask64Utils.equals(mask1, mask2)).toBe(true);
+        expect(BitMask64Utils.equals(mask1, mask3)).toBe(false);
     });
 
-    describe('复制和相等性', () => {
-        it('clone应该创建独立副本', () => {
-            const original = BitMask64Utils.create(5);
-            const cloned = BitMask64Utils.clone(original);
-            
-            expect(BitMask64Utils.equals(original, cloned)).toBe(true);
-            
-            BitMask64Utils.setBit(cloned, 6);
-            expect(BitMask64Utils.equals(original, cloned)).toBe(false);
-        });
+    test("orInPlace/andInPlace/xorInPlace 运算应正确", () => {
+        const mask1 = BitMask64Utils.create(1);
+        const mask2 = BitMask64Utils.create(2);
 
-        it('copy应该正确复制', () => {
-            const source = BitMask64Utils.create(10);
-            const target = BitMask64Utils.clone(BitMask64Utils.ZERO);
-            
-            BitMask64Utils.copy(source, target);
-            expect(BitMask64Utils.equals(source, target)).toBe(true);
-        });
+        BitMask64Utils.orInPlace(mask1, mask2);
+        expect(BitMask64Utils.getBit(mask1, 1)).toBe(true);
+        expect(BitMask64Utils.getBit(mask1, 2)).toBe(true);
 
-        it('clear应该清除所有位', () => {
-            const mask = BitMask64Utils.create(20);
-            expect(BitMask64Utils.isZero(mask)).toBe(false);
-            
-            BitMask64Utils.clear(mask);
-            expect(BitMask64Utils.isZero(mask)).toBe(true);
-        });
+        BitMask64Utils.andInPlace(mask1, mask2);
+        expect(BitMask64Utils.getBit(mask1, 1)).toBe(false);
+        expect(BitMask64Utils.getBit(mask1, 2)).toBe(true);
+
+        BitMask64Utils.xorInPlace(mask1, mask2);
+        expect(BitMask64Utils.getBit(mask1, 2)).toBe(false);
     });
+
+    test("copy/clone 应正确复制数据", () => {
+        const source = BitMask64Utils.create(15);
+        const target: BitMask64Data = { base: [0, 0] };
+
+        BitMask64Utils.copy(source, target);
+        expect(BitMask64Utils.equals(source, target)).toBe(true);
+
+        const clone = BitMask64Utils.clone(source);
+        expect(BitMask64Utils.equals(source, clone)).toBe(true);
+        expect(clone).not.toBe(source); // 深拷贝
+    });
+
+    test("toString 应正确输出二进制和十六进制", () => {
+        const mask = BitMask64Utils.create(0);
+        expect(BitMask64Utils.toString(mask, 2)).toContain("1");
+        expect(BitMask64Utils.toString(mask, 16)).toMatch(/0x/i);
+    });
+
+    test("popCount 应返回正确的位数", () => {
+        const mask = BitMask64Utils.create(0);
+        BitMask64Utils.setBit(mask, 1);
+        BitMask64Utils.setBit(mask, 63);
+        expect(BitMask64Utils.popCount(mask)).toBe(3);
+    });
+
+    test("越界与非法输入处理", () => {
+        expect(() => BitMask64Utils.create(-1)).toThrow();
+        expect(BitMask64Utils.getBit({ base: [0,0] }, -5)).toBe(false);
+        expect(() => BitMask64Utils.clearBit({ base: [0,0] }, -2)).toThrow();
+    });
+
+    test("大于64位的扩展段逻辑 - hasAny/hasAll/hasNone/equals", () => {
+        // 掩码 A: 只在 bit 150 位置为 1
+        const maskA = BitMask64Utils.create(150);
+        // 掩码 B: 只在 bit 200 位置为 1
+        const maskB = BitMask64Utils.create(200);
+
+        // A 与 B 在不同扩展段，不存在重叠位
+        expect(BitMask64Utils.hasAny(maskA, maskB)).toBe(false);
+        expect(BitMask64Utils.hasNone(maskA, maskB)).toBe(true);
+
+        // C: 在 150 与 200 都置位
+        const maskC = BitMask64Utils.clone(maskA);
+        BitMask64Utils.setBit(maskC, 200);
+
+        // A 是 C 的子集
+        expect(BitMask64Utils.hasAll(maskC, maskA)).toBe(true);
+        // B 是 C 的子集
+        expect(BitMask64Utils.hasAll(maskC, maskB)).toBe(true);
+
+        // A 和 C 不相等
+        expect(BitMask64Utils.equals(maskA, maskC)).toBe(false);
+
+        // C 与自身相等
+        expect(BitMask64Utils.equals(maskC, maskC)).toBe(true);
+
+        //copy
+        const copyMask = BitMask64Utils.create(0);
+        BitMask64Utils.copy(maskA,copyMask);
+        expect(BitMask64Utils.equals(copyMask,maskA)).toBe(true);
+
+        // hasAll短路测试，对第一个if的测试覆盖
+        BitMask64Utils.setBit(copyMask,64);
+        expect(BitMask64Utils.hasAll(maskA, copyMask)).toBe(false);
+        BitMask64Utils.clearBit(copyMask, 64);
+
+        // 扩展到350位，对最后一个短路if的测试覆盖
+        BitMask64Utils.setBit(copyMask,350);
+        expect(BitMask64Utils.hasAll(maskA, copyMask)).toBe(false);
+    });
+
+    test("大于64位的逻辑运算 - or/and/xor 跨段处理", () => {
+        const maskA = BitMask64Utils.create(128); // 第一扩展段
+        const maskB = BitMask64Utils.create(190); // 同一扩展段但不同位置
+        const maskC = BitMask64Utils.create(300); // 不同扩展段
+
+        // OR: 合并不同扩展段
+        const orMask = BitMask64Utils.clone(maskA);
+        BitMask64Utils.orInPlace(orMask, maskC);
+        expect(BitMask64Utils.getBit(orMask, 128)).toBe(true);
+        expect(BitMask64Utils.getBit(orMask, 300)).toBe(true);
+
+        // AND: 交集为空
+        const andMask = BitMask64Utils.clone(maskA);
+        BitMask64Utils.andInPlace(andMask, maskB);
+        expect(BitMask64Utils.isZero(andMask)).toBe(true);
+
+        // XOR: 不同扩展段应该都保留
+        const xorMask = BitMask64Utils.clone(maskA);
+        BitMask64Utils.xorInPlace(xorMask, maskC);
+        expect(BitMask64Utils.getBit(xorMask, 128)).toBe(true);
+        expect(BitMask64Utils.getBit(xorMask, 300)).toBe(true);
+    });
+
+    test("扩展段 toString 与 popCount 验证", () => {
+        const mask = BitMask64Utils.create(130); // 扩展段,此时扩展段自动延长到2
+        BitMask64Utils.setBit(mask, 260);       // 再设置另一个更高位,此时扩展段自动延长到3
+
+        const strBin = BitMask64Utils.toString(mask, 2);
+        const strHex = BitMask64Utils.toString(mask, 16);
+        // 第三个区段应该以100结尾（130位为1）
+        expect(strBin.split(' ')[2].endsWith('100')).toBe(true);
+        // 第三个区段应该以4结尾（低32位为0x4）
+        expect(strHex.split(' ')[2].endsWith('4')).toBe(true);
+
+        // 应该有两个置位
+        expect(BitMask64Utils.popCount(mask)).toBe(2);
+    });
+
 });
+

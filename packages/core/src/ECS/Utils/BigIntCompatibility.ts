@@ -1,31 +1,31 @@
 /**
- * 基础 64 位段结构
+ * 位枚举
  */
-export interface BitMask64Segment {
-    /** 低32位（bit 0-31） */
-    lo: number;
-    /** 高32位（bit 32-63） */
-    hi: number;
+export enum SegmentPart {
+    LOW = 0,
+    HIGH = 1,
 }
+/**
+ * 基础 64 位段结构
+ * [低32位，高32位]
+ */
+export type BitMask64Segment = [number,number]
 
 /**
  * 位掩码数据结构
- * 基础模式（64位）：使用 lo + hi 存储 64 位，segments 为空
- * 扩展模式（128+位）：lo + hi 作为第一段，segments 存储额外的 64 位段
+ * 基础模式（64位）：使用 base[lo , hi] 存储 64 位，segments 为空
+ * 扩展模式（128+位）：base[lo , hi] 作为第一段，segments 存储额外的 64 位段
  * segments[0] 对应 bit 64-127，segments[1] 对应 bit 128-191，以此类推
  */
 export interface BitMask64Data {
-    /** 低32位（bit 0-31） */
-    lo: number;
-    /** 高32位（bit 32-63） */
-    hi: number;
+    base: BitMask64Segment;
     /** 扩展段数组，每个元素是一个 64 位段，用于超过 64 位的场景 */
     segments?: BitMask64Segment[];
 }
 
 export class BitMask64Utils {
     /** 零掩码常量，所有位都为0 */
-    public static readonly ZERO: BitMask64Data = { lo: 0, hi: 0 };
+    public static readonly ZERO: Readonly<BitMask64Data> = { base: [0, 0], segments: undefined };
 
     /**
      * 根据位索引创建64位掩码
@@ -34,15 +34,12 @@ export class BitMask64Utils {
      * @throws 当位索引超出范围时抛出错误
      */
     public static create(bitIndex: number): BitMask64Data {
-        if (bitIndex < 0 || bitIndex >= 64) {
-            throw new Error(`Bit index ${bitIndex} out of range [0, 63]`);
+        if (bitIndex < 0) {
+            throw new Error(`Bit index ${bitIndex} out of range [0, ∞)`);
         }
-        
-        if (bitIndex < 32) {
-            return { lo: 1 << bitIndex, hi: 0 };
-        } else {
-            return { lo: 0, hi: 1 << (bitIndex - 32) };
-        }
+        const mask: BitMask64Data = { base: [0, 0], segments: undefined };
+        BitMask64Utils.setBit(mask, bitIndex);
+        return mask;
     }
 
     /**
@@ -51,7 +48,7 @@ export class BitMask64Utils {
      * @returns 低32位为输入值、高32位为0的掩码
      */
     public static fromNumber(value: number): BitMask64Data {
-        return { lo: value >>> 0, hi: 0 };
+        return { base: [value >>> 0, 0], segments: undefined};
     }
 
     /**
@@ -61,75 +58,50 @@ export class BitMask64Utils {
      * @returns 如果掩码包含bits中的任意位则返回true
      */
     public static hasAny(mask: BitMask64Data, bits: BitMask64Data): boolean {
-        // 检查第一个 64 位段
-        if ((mask.lo & bits.lo) !== 0 || (mask.hi & bits.hi) !== 0) {
-            return true;
-        }
-
-        // 如果 bits 没有扩展段，检查完成
-        if (!bits.segments || bits.segments.length === 0) {
-            return false;
-        }
-
-        // 如果 bits 有扩展段但 mask 没有，返回 false
-        if (!mask.segments || mask.segments.length === 0) {
-            return false;
-        }
-
-        // 检查每个扩展段
-        const minSegments = Math.min(mask.segments.length, bits.segments.length);
-        for (let i = 0; i < minSegments; i++) {
-            const maskSeg = mask.segments[i];
-            const bitsSeg = bits.segments[i];
-            if ((maskSeg.lo & bitsSeg.lo) !== 0 || (maskSeg.hi & bitsSeg.hi) !== 0) {
-                return true;
-            }
-        }
-
-        return false;
+        const bitsBase = bits.base;
+        const maskBase = mask.base;
+        const bitsSegments = bits.segments;
+        const maskSegments = mask.segments;
+        const baseHasAny = (maskBase[SegmentPart.LOW] & bitsBase[SegmentPart.LOW]) !== 0 || (maskBase[SegmentPart.HIGH] & bitsBase[SegmentPart.HIGH]) !== 0;
+        // 基础区段就包含指定的位,或任意一个参数不含扩展区段，直接短路
+        if(baseHasAny || !bitsSegments || !maskSegments) return baseHasAny;
+        // 额外检查扩展区域是否包含指定的位 - 如果bitsSegments[index]不存在，会被转为NaN，NaN的位运算始终返回0
+        return maskSegments.some((seg, index) => (seg[SegmentPart.LOW] & bitsSegments[index][SegmentPart.LOW]) !== 0 || (seg[SegmentPart.HIGH] & bitsSegments[index][SegmentPart.HIGH]) !== 0)
     }
 
     /**
      * 检查掩码是否包含所有指定的位
-     * 支持扩展模式，自动处理超过 64 位的掩码
      * @param mask 要检查的掩码
      * @param bits 指定的位模式
      * @returns 如果掩码包含bits中的所有位则返回true
      */
     public static hasAll(mask: BitMask64Data, bits: BitMask64Data): boolean {
-        // 检查第一个 64 位段
-        if ((mask.lo & bits.lo) !== bits.lo || (mask.hi & bits.hi) !== bits.hi) {
-            return false;
-        }
+        const maskBase = mask.base;
+        const bitsBase = bits.base;
+        const maskSegments = mask.segments;
+        const bitsSegments = bits.segments;
+        const baseHasAll = (maskBase[SegmentPart.LOW] & bitsBase[SegmentPart.LOW]) === bitsBase[SegmentPart.LOW] && (maskBase[SegmentPart.HIGH] & bitsBase[SegmentPart.HIGH]) === bitsBase[SegmentPart.HIGH];
+        // 基础区域就不包含指定的位，或bits没有扩展区段，直接短路。
+        if(!baseHasAll || !bitsSegments) return baseHasAll;
 
-        // 如果 bits 没有扩展段，检查完成
-        if (!bits.segments || bits.segments.length === 0) {
-            return true;
+        // 扩展区段的hasAll匹配逻辑
+        const maskSegmentsLength = maskSegments?.length ?? 0;
+        // 对mask/bits中都存在的区段，进行hasAll判断
+        if(maskSegments){
+            for (let i = 0; i < Math.min(maskSegmentsLength,bitsSegments.length); i++) {
+                if((maskSegments[i][SegmentPart.LOW] & bitsSegments[i][SegmentPart.LOW]) !== bitsSegments[i][SegmentPart.LOW] || (maskSegments[i][SegmentPart.HIGH] & bitsSegments[i][SegmentPart.HIGH]) !== bitsSegments[i][SegmentPart.HIGH]){
+                    // 存在不匹配的位，直接短路
+                    return false;
+                }
+            }
         }
-
-        // 如果 bits 有扩展段但 mask 没有，返回 false
-        if (!mask.segments || mask.segments.length === 0) {
-            // 检查 bits 的扩展段是否全为 0
-            return bits.segments.every(seg => BitMask64Utils.isZero(seg));
-        }
-
-        // 检查每个扩展段
-        const minSegments = Math.min(mask.segments.length, bits.segments.length);
-        for (let i = 0; i < minSegments; i++) {
-            const maskSeg = mask.segments[i];
-            const bitsSeg = bits.segments[i];
-            if ((maskSeg.lo & bitsSeg.lo) !== bitsSeg.lo || (maskSeg.hi & bitsSeg.hi) !== bitsSeg.hi) {
+        // 对mask中不存在，但bits中存在的区段，进行isZero判断
+        for (let i = maskSegmentsLength; i < bitsSegments.length; i++) {
+            if(bitsSegments[i][SegmentPart.LOW] !== 0 || bitsSegments[i][SegmentPart.HIGH] !== 0){
+                // 存在不为0的区段，直接短路
                 return false;
             }
         }
-
-        // 如果 bits 有更多段，检查这些段是否为空
-        for (let i = minSegments; i < bits.segments.length; i++) {
-            if (!BitMask64Utils.isZero(bits.segments[i])) {
-                return false;
-            }
-        }
-
         return true;
     }
 
@@ -140,7 +112,15 @@ export class BitMask64Utils {
      * @returns 如果掩码不包含bits中的任何位则返回true
      */
     public static hasNone(mask: BitMask64Data, bits: BitMask64Data): boolean {
-        return (mask.lo & bits.lo) === 0 && (mask.hi & bits.hi) === 0;
+        const maskBase = mask.base;
+        const bitsBase = bits.base;
+        const maskSegments = mask.segments;
+        const bitsSegments = bits.segments;
+        const baseHasNone = (maskBase[SegmentPart.LOW] & bitsBase[SegmentPart.LOW]) === 0 && (maskBase[SegmentPart.HIGH] & bitsBase[SegmentPart.HIGH]) === 0;
+        //不含扩展区域，或基础区域就包含指定的位，或bits不含拓展区段，直接短路。
+        if(!maskSegments || !baseHasNone || !bitsSegments) return baseHasNone;
+        // 额外检查扩展区域是否都包含指定的位 - 此时bitsSegments存在,如果bitsSegments[index]不存在，会被转为NaN，NaN的位运算始终返回0
+        return maskSegments.every((seg, index) => (seg[SegmentPart.LOW] & bitsSegments[index][SegmentPart.LOW]) === 0 && (seg[SegmentPart.HIGH] & bitsSegments[index][SegmentPart.HIGH]) === 0);
     }
 
     /**
@@ -148,8 +128,14 @@ export class BitMask64Utils {
      * @param mask 要检查的掩码
      * @returns 如果掩码所有位都为0则返回true
      */
-    public static isZero(mask: BitMask64Data | BitMask64Segment): boolean {
-        return mask.lo === 0 && mask.hi === 0;
+    public static isZero(mask: BitMask64Data): boolean {
+        const baseIsZero = mask.base[SegmentPart.LOW] === 0 && mask.base[SegmentPart.HIGH] === 0;
+        if(!mask.segments || !baseIsZero){
+            // 不含扩展区域，或基础区域值就不为0，直接短路
+            return baseIsZero;
+        }
+        // 额外检查扩展区域是否都为0
+        return mask.segments.every(seg => seg[SegmentPart.LOW] === 0 && seg[SegmentPart.HIGH] === 0);
     }
 
     /**
@@ -159,42 +145,82 @@ export class BitMask64Utils {
      * @returns 如果两个掩码完全相等则返回true
      */
     public static equals(a: BitMask64Data, b: BitMask64Data): boolean {
-        return a.lo === b.lo && a.hi === b.hi;
+        let baseEquals = a.base[SegmentPart.LOW] === b.base[SegmentPart.LOW] && a.base[SegmentPart.HIGH] === b.base[SegmentPart.HIGH];
+        // base不相等，或ab都没有扩展区域位，直接返回base比较结果
+        if(!baseEquals || (!a.segments && !b.segments)) return baseEquals;
+        // 不能假设a，b的segments都存在或长度相同.
+        const aSegments = a.segments ?? [];
+        const bSegments = b.segments ?? [];
+        for (let i = 0; i < Math.max(aSegments.length, bSegments.length); i++) {
+            const aSeg: BitMask64Segment | undefined = aSegments[i]; // 可能为undefined
+            const bSeg: BitMask64Segment | undefined = bSegments[i]; // 可能为undefined
+            if(aSeg && !bSeg){
+                //bSeg不存在，则必须要求aSeg全为0
+                if(aSeg[SegmentPart.LOW] !== 0 || aSeg[SegmentPart.HIGH] !== 0) return false;
+            }else if(!aSeg && bSeg){
+                //aSeg不存在，则必须要求bSeg全为0
+                if(bSeg[SegmentPart.LOW] !== 0 || bSeg[SegmentPart.HIGH] !== 0) return false;
+            }else{
+                //理想状态：aSeg/bSeg都存在
+                if(aSeg[SegmentPart.LOW] !== bSeg[SegmentPart.LOW] || aSeg[SegmentPart.HIGH] !== bSeg[SegmentPart.HIGH]) return false;
+            }
+        }
+        return true;
     }
 
     /**
-     * 设置掩码中指定位为1
+     * 设置掩码中指定位为1，必要时自动扩展
      * @param mask 要修改的掩码（原地修改）
-     * @param bitIndex 位索引，范围 [0, 63]
+     * @param bitIndex 位索引，不小于零
      * @throws 当位索引超出范围时抛出错误
      */
     public static setBit(mask: BitMask64Data, bitIndex: number): void {
-        if (bitIndex < 0 || bitIndex >= 64) {
+        if (bitIndex < 0) {
             throw new Error(`Bit index ${bitIndex} out of range [0, 63]`);
         }
-        
-        if (bitIndex < 32) {
-            mask.lo |= (1 << bitIndex);
+        const targetSeg = BitMask64Utils.getSegmentByBitIndex(mask, bitIndex)!;
+        const mod = bitIndex & 63; // bitIndex % 64 优化方案
+        if(mod < 32){
+            targetSeg[SegmentPart.LOW] |= (1 << mod);
         } else {
-            mask.hi |= (1 << (bitIndex - 32));
+            targetSeg[SegmentPart.HIGH] |= (1 << (mod - 32));
         }
     }
 
     /**
-     * 清除掩码中指定位为0
+     * 获取掩码中指定位，如果位超出当前掩码的区段长度，则直接返回0
+     * @param mask 掩码
+     * @param bitIndex 位索引，不小于零
+     */
+    public static getBit(mask: BitMask64Data, bitIndex: number): boolean {
+        if (bitIndex < 0) {
+            return false;
+        }
+        const targetSeg = BitMask64Utils.getSegmentByBitIndex(mask, bitIndex, false);
+        if(!targetSeg) return false;
+        const mod = bitIndex & 63; // bitIndex % 64 优化方案
+        if(mod < 32){
+            return (targetSeg[SegmentPart.LOW] & (1 << mod)) !== 0;
+        } else {
+            return (targetSeg[SegmentPart.HIGH] & (1 << (mod - 32))) !== 0;
+        }
+    }
+    /**
+     * 清除掩码中指定位为0，如果位超出当前掩码的区段长度，则什么也不做
      * @param mask 要修改的掩码（原地修改）
-     * @param bitIndex 位索引，范围 [0, 63]
-     * @throws 当位索引超出范围时抛出错误
+     * @param bitIndex 位索引，不小于0
      */
     public static clearBit(mask: BitMask64Data, bitIndex: number): void {
-        if (bitIndex < 0 || bitIndex >= 64) {
+        if (bitIndex < 0) {
             throw new Error(`Bit index ${bitIndex} out of range [0, 63]`);
         }
-        
-        if (bitIndex < 32) {
-            mask.lo &= ~(1 << bitIndex);
+        const targetSeg = BitMask64Utils.getSegmentByBitIndex(mask, bitIndex, false);
+        if(!targetSeg) return;
+        const mod = bitIndex & 63; // bitIndex % 64 优化方案
+        if(mod < 32){
+            targetSeg[SegmentPart.LOW] &= ~(1 << mod);
         } else {
-            mask.hi &= ~(1 << (bitIndex - 32));
+            targetSeg[SegmentPart.HIGH] &= ~(1 << (mod - 32));
         }
     }
 
@@ -204,24 +230,26 @@ export class BitMask64Utils {
      * @param other 用于按位或的掩码
      */
     public static orInPlace(target: BitMask64Data, other: BitMask64Data): void {
-        target.lo |= other.lo;
-        target.hi |= other.hi;
+        target.base[SegmentPart.LOW] |= other.base[SegmentPart.LOW];
+        target.base[SegmentPart.HIGH] |= other.base[SegmentPart.HIGH];
 
         // 处理扩展段
-        if (other.segments && other.segments.length > 0) {
+        const otherSegments = other.segments;
+        if (otherSegments && otherSegments.length > 0) {
             if (!target.segments) {
                 target.segments = [];
             }
+            const targetSegments = target.segments;
 
             // 确保 target 有足够的段
-            while (target.segments.length < other.segments.length) {
-                target.segments.push({ lo: 0, hi: 0 });
+            while (targetSegments.length < otherSegments.length) {
+                targetSegments.push([0, 0]);
             }
 
             // 对每个段执行或操作
-            for (let i = 0; i < other.segments.length; i++) {
-                target.segments[i].lo |= other.segments[i].lo;
-                target.segments[i].hi |= other.segments[i].hi;
+            for (let i = 0; i < otherSegments.length; i++) {
+                targetSegments[i][SegmentPart.LOW] |= otherSegments[i][SegmentPart.LOW];
+                targetSegments[i][SegmentPart.HIGH] |= otherSegments[i][SegmentPart.HIGH];
             }
         }
     }
@@ -232,8 +260,27 @@ export class BitMask64Utils {
      * @param other 用于按位与的掩码
      */
     public static andInPlace(target: BitMask64Data, other: BitMask64Data): void {
-        target.lo &= other.lo;
-        target.hi &= other.hi;
+        target.base[SegmentPart.LOW] &= other.base[SegmentPart.LOW];
+        target.base[SegmentPart.HIGH] &= other.base[SegmentPart.HIGH];
+
+        // 处理扩展段
+        const otherSegments = other.segments;
+        if (otherSegments && otherSegments.length > 0) {
+            if (!target.segments) {
+                target.segments = [];
+            }
+            const targetSegments = target.segments;
+            // 确保 target 有足够的段
+            while (targetSegments.length < otherSegments.length) {
+                targetSegments.push([0, 0]);
+            }
+
+            // 对每个段执行与操作
+            for (let i = 0; i < otherSegments.length; i++) {
+                targetSegments[i][SegmentPart.LOW] &= otherSegments[i][SegmentPart.LOW];
+                targetSegments[i][SegmentPart.HIGH] &= otherSegments[i][SegmentPart.HIGH];
+            }
+        }
     }
 
     /**
@@ -242,8 +289,25 @@ export class BitMask64Utils {
      * @param other 用于按位异或的掩码
      */
     public static xorInPlace(target: BitMask64Data, other: BitMask64Data): void {
-        target.lo ^= other.lo;
-        target.hi ^= other.hi;
+        target.base[SegmentPart.LOW] ^= other.base[SegmentPart.LOW];
+        target.base[SegmentPart.HIGH] ^= other.base[SegmentPart.HIGH];
+
+        // 处理扩展段
+        const otherSegments = other.segments;
+        if (!otherSegments || otherSegments.length == 0) return;
+        if (!target.segments) target.segments = [];
+
+        const targetSegments = target.segments;
+        // 确保 target 有足够的段
+        while (targetSegments.length < otherSegments.length) {
+            targetSegments.push([0, 0]);
+        }
+
+        // 对每个段执行异或操作
+        for (let i = 0; i < otherSegments.length; i++) {
+            targetSegments[i][SegmentPart.LOW] ^= otherSegments[i][SegmentPart.LOW];
+            targetSegments[i][SegmentPart.HIGH] ^= otherSegments[i][SegmentPart.HIGH];
+        }
     }
 
     /**
@@ -251,18 +315,43 @@ export class BitMask64Utils {
      * @param mask 要清除的掩码（原地修改）
      */
     public static clear(mask: BitMask64Data): void {
-        mask.lo = 0;
-        mask.hi = 0;
+        mask.base[SegmentPart.LOW] = 0;
+        mask.base[SegmentPart.HIGH] = 0;
+        for (let i = 0; i < (mask.segments?.length ?? 0); i++) {
+            const seg = mask.segments![i];
+            seg[SegmentPart.LOW] = 0;
+            seg[SegmentPart.HIGH] = 0;
+        }
     }
 
     /**
-     * 将源掩码的值复制到目标掩码
+     * 将源掩码的值复制到目标掩码，如果source包含扩展段，则target也会至少扩展到source扩展段的长度
      * @param source 源掩码
      * @param target 目标掩码（原地修改）
      */
     public static copy(source: BitMask64Data, target: BitMask64Data): void {
-        target.lo = source.lo;
-        target.hi = source.hi;
+        BitMask64Utils.clear(target);
+        target.base[SegmentPart.LOW] = source.base[SegmentPart.LOW];
+        target.base[SegmentPart.HIGH] = source.base[SegmentPart.HIGH];
+        // source没有扩展段，直接退出
+        if(!source.segments || source.segments.length == 0) return;
+        // 没有拓展段,则直接复制数组
+        if(!target.segments){
+            target.segments = source.segments.map(seg => [...seg]);
+            return;
+        }
+        // source有扩展段，target扩展段不足，则补充长度
+        const copyLength = source.segments.length - target.segments.length;
+        for (let i = 0; i < copyLength; i++) {
+            target.segments.push([0,0]);
+        }
+        // 逐个重写
+        for (let i = 0; i < length; i++) {
+            const targetSeg = target.segments![i];
+            const sourSeg = source.segments![i];
+            targetSeg[SegmentPart.LOW] = sourSeg[SegmentPart.LOW];
+            targetSeg[SegmentPart.HIGH] = sourSeg[SegmentPart.HIGH];
+        }
     }
 
     /**
@@ -271,36 +360,57 @@ export class BitMask64Utils {
      * @returns 新的掩码对象，内容与源掩码相同
      */
     public static clone(mask: BitMask64Data): BitMask64Data {
-        return { lo: mask.lo, hi: mask.hi };
+        return {
+            base: mask.base.slice() as BitMask64Segment,
+            segments: mask.segments ? mask.segments.map(seg => [...seg]) : undefined
+        };
     }
 
     /**
-     * 将掩码转换为字符串表示
+     * 将掩码转换为字符串表示,每个区段之间将使用空格分割。
      * @param mask 要转换的掩码
-     * @param radix 进制，支持2（二进制）或16（十六进制），默认为2
+     * @param radix 进制，支持2（二进制）或16（十六进制），默认为2，其他的值被视为2
+     * @param printHead 打印头
      * @returns 掩码的字符串表示，二进制不带前缀，十六进制带0x前缀
-     * @throws 当进制不支持时抛出错误
      */
-    public static toString(mask: BitMask64Data, radix: number = 2): string {
-        if (radix === 2) {
-            if (mask.hi === 0) {
-                return mask.lo.toString(2);
-            } else {
-                const hiBits = mask.hi.toString(2);
-                const loBits = mask.lo.toString(2).padStart(32, '0');
-                return hiBits + loBits;
+    public static toString(mask: BitMask64Data, radix: 2 | 16 = 2, printHead: boolean = false): string {
+        if(radix != 2 && radix != 16) radix = 2;
+        const totalLength = mask.segments?.length ?? 0;
+        let result: string = '';
+        if(printHead){
+            let paddingLength = 0;
+            if(radix === 2){
+                paddingLength = 64 + 1 + 1;
+            }else{
+                paddingLength = 16 + 2 + 1;
             }
-        } else if (radix === 16) {
-            if (mask.hi === 0) {
-                return '0x' + mask.lo.toString(16).toUpperCase();
-            } else {
-                const hiBits = mask.hi.toString(16).toUpperCase();
-                const loBits = mask.lo.toString(16).toUpperCase().padStart(8, '0');
-                return '0x' + hiBits + loBits;
+            for (let i = 0; i <= totalLength; i++) {
+                const title = i === 0 ? '0 (Base):' : `${i} (${64 * i}):`;
+                result += title.toString().padEnd(paddingLength);
             }
-        } else {
-            throw new Error('Only radix 2 and 16 are supported');
+            result += '\n';
         }
+
+        for (let i = -1; i < totalLength; i++) {
+            let segResult = '';
+            const bitMaskData = i == -1 ? mask.base : mask.segments![i];
+            let hi = bitMaskData[SegmentPart.HIGH];
+            let lo = bitMaskData[SegmentPart.LOW];
+            if(radix == 2){
+                const hiBits = hi.toString(2).padStart(32, '0');
+                const loBits = lo.toString(2).padStart(32, '0');
+                segResult = hiBits + '_' + loBits; //高低位之间使用_隔离
+            }else{
+                const hiBits = hi.toString(16).toUpperCase().padStart(8, '0');
+                const loBits = lo.toString(16).toUpperCase().padStart(8, '0');
+                segResult = '0x' + hiBits + loBits;
+            }
+            if(i === -1)
+                result += segResult;
+            else
+                result += ' ' + segResult; // 不同段之间使用空格隔离
+        }
+        return result;
     }
 
     /**
@@ -310,126 +420,49 @@ export class BitMask64Utils {
      */
     public static popCount(mask: BitMask64Data): number {
         let count = 0;
-        let lo = mask.lo;
-        let hi = mask.hi;
-        
-        while (lo) {
-            lo &= lo - 1;
-            count++;
+        for (let i = -1; i < (mask.segments?.length ?? 0); i++) {
+            const bitMaskData = i == -1 ? mask.base : mask.segments![i];
+            let lo = bitMaskData[SegmentPart.LOW];
+            let hi = bitMaskData[SegmentPart.HIGH];
+            while (lo) {
+                lo &= lo - 1;
+                count++;
+            }
+            while (hi) {
+                hi &= hi - 1;
+                count++;
+            }
         }
-        
-        while (hi) {
-            hi &= hi - 1;
-            count++;
-        }
-
         return count;
     }
 
     /**
-     * 设置扩展位（支持超过 64 位的索引）
-     * @param mask 要修改的掩码（原地修改）
-     * @param bitIndex 位索引（可以超过 63）
+     * 获取包含目标位的BitMask64Segment
+     * @param mask 要操作的掩码
+     * @param bitIndex 目标位
+     * @param createNewSegment 如果bitIndex超过了当前范围，是否自动补充扩展区域，默认为真
+     * @private
      */
-    public static setBitExtended(mask: BitMask64Data, bitIndex: number): void {
-        if (bitIndex < 0) {
-            throw new Error('Bit index cannot be negative');
-        }
-
-        if (bitIndex < 64) {
-            BitMask64Utils.setBit(mask, bitIndex);
-            return;
-        }
-
-        // 计算段索引和段内位索引
-        const segmentIndex = Math.floor(bitIndex / 64) - 1;
-        const localBitIndex = bitIndex % 64;
-
-        // 确保 segments 数组存在
-        if (!mask.segments) {
-            mask.segments = [];
-        }
-
-        // 扩展 segments 数组
-        while (mask.segments.length <= segmentIndex) {
-            mask.segments.push({ lo: 0, hi: 0 });
-        }
-
-        // 设置对应段的位
-        const segment = mask.segments[segmentIndex];
-        if (localBitIndex < 32) {
-            segment.lo |= (1 << localBitIndex);
-        } else {
-            segment.hi |= (1 << (localBitIndex - 32));
-        }
-    }
-
-    /**
-     * 获取扩展位（支持超过 64 位的索引）
-     * @param mask 要检查的掩码
-     * @param bitIndex 位索引（可以超过 63）
-     * @returns 如果位被设置则返回 true
-     */
-    public static getBitExtended(mask: BitMask64Data, bitIndex: number): boolean {
-        if (bitIndex < 0) {
-            return false;
-        }
-
-        if (bitIndex < 64) {
-            const testMask = BitMask64Utils.create(bitIndex);
-            return BitMask64Utils.hasAny(mask, testMask);
-        }
-
-        if (!mask.segments) {
-            return false;
-        }
-
-        const segmentIndex = Math.floor(bitIndex / 64) - 1;
-        if (segmentIndex >= mask.segments.length) {
-            return false;
-        }
-
-        const localBitIndex = bitIndex % 64;
-        const segment = mask.segments[segmentIndex];
-
-        if (localBitIndex < 32) {
-            return (segment.lo & (1 << localBitIndex)) !== 0;
-        } else {
-            return (segment.hi & (1 << (localBitIndex - 32))) !== 0;
-        }
-    }
-
-    /**
-     * 清除扩展位（支持超过 64 位的索引）
-     * @param mask 要修改的掩码（原地修改）
-     * @param bitIndex 位索引（可以超过 63）
-     */
-    public static clearBitExtended(mask: BitMask64Data, bitIndex: number): void {
-        if (bitIndex < 0) {
-            return;
-        }
-
-        if (bitIndex < 64) {
-            BitMask64Utils.clearBit(mask, bitIndex);
-            return;
-        }
-
-        if (!mask.segments) {
-            return;
-        }
-
-        const segmentIndex = Math.floor(bitIndex / 64) - 1;
-        if (segmentIndex >= mask.segments.length) {
-            return;
-        }
-
-        const localBitIndex = bitIndex % 64;
-        const segment = mask.segments[segmentIndex];
-
-        if (localBitIndex < 32) {
-            segment.lo &= ~(1 << localBitIndex);
-        } else {
-            segment.hi &= ~(1 << (localBitIndex - 32));
+    private static getSegmentByBitIndex(mask: BitMask64Data,bitIndex: number, createNewSegment: boolean = true): BitMask64Segment | null{
+        if(bitIndex <= 63){
+            // 基础位
+            return mask.base;
+        }else{
+            // 扩展位
+            let segments = mask.segments;
+            if(!segments) {
+                if(!createNewSegment) return null;
+                segments = mask.segments = [];
+            }
+            const targetSegIndex = (bitIndex >> 6) - 1; // Math.floor(bitIndex / 64) - 1的位运算优化
+            if(segments.length <= targetSegIndex){
+                if(!createNewSegment) return null;
+                const diff = targetSegIndex - segments.length + 1;
+                for (let i = 0; i < diff; i++) {
+                    segments.push([0, 0]);
+                }
+            }
+            return  segments[targetSegIndex];
         }
     }
 }
