@@ -1,9 +1,8 @@
-import { BitMask64Data, BitMask64Utils } from './BigIntCompatibility';
+import { SegmentPart, BitMask64Data, BitMask64Utils } from './BigIntCompatibility';
 
 /**
  * 位集合类，用于高效的位操作
- * 自动扩展支持：默认 64 位，超过时自动扩展到 128/256 位
- * 扩展模式性能略有下降，但仍然比数组遍历快得多
+ * 支持任意位的位运算操作.
  */
 export class Bits {
     /** 存储位数据的掩码，支持扩展 */
@@ -37,7 +36,7 @@ export class Bits {
             throw new Error('Bit index cannot be negative');
         }
 
-        BitMask64Utils.setBitExtended(this._value, index);
+        BitMask64Utils.setBit(this._value, index);
     }
 
     /**
@@ -50,7 +49,7 @@ export class Bits {
             throw new Error('Bit index cannot be negative');
         }
 
-        BitMask64Utils.clearBitExtended(this._value, index);
+        BitMask64Utils.clearBit(this._value, index);
     }
 
     /**
@@ -59,7 +58,7 @@ export class Bits {
      * @returns 如果位被设置为1则返回true，否则返回false
      */
     public get(index: number): boolean {
-        return BitMask64Utils.getBitExtended(this._value, index);
+        return BitMask64Utils.getBit(this._value, index);
     }
 
     /**
@@ -163,16 +162,16 @@ export class Bits {
         
         if (maxBits <= 32) {
             const mask = (1 << maxBits) - 1;
-            result._value.lo = (~result._value.lo) & mask;
-            result._value.hi = 0;
+            result._value.base[SegmentPart.LOW] = (~result._value.base[SegmentPart.LOW]) & mask;
+            result._value.base[SegmentPart.HIGH] = 0;
         } else {
-            result._value.lo = ~result._value.lo;
+            result._value.base[SegmentPart.LOW] = ~result._value.base[SegmentPart.LOW];
             if (maxBits < 64) {
                 const remainingBits = maxBits - 32;
                 const mask = (1 << remainingBits) - 1;
-                result._value.hi = (~result._value.hi) & mask;
+                result._value.base[SegmentPart.HIGH] = (~result._value.base[SegmentPart.HIGH]) & mask;
             } else {
-                result._value.hi = ~result._value.hi;
+                result._value.base[SegmentPart.HIGH] = ~result._value.base[SegmentPart.HIGH];
             }
         }
         
@@ -237,9 +236,10 @@ export class Bits {
      * @param maxBits 最大位数，默认为64
      * @returns 二进制字符串表示，每8位用空格分隔
      */
-    public toBinaryString(maxBits: number = 64): string {
-        if (maxBits > 64) maxBits = 64;
-        
+    public toBinaryString(maxBits: number = 0): string {
+        if(maxBits == 0){
+            maxBits = 64 + (this._value.segments ? this._value.segments.length * 64 : 0);
+        }
         let result = '';
         for (let i = maxBits - 1; i >= 0; i--) {
             result += this.get(i) ? '1' : '0';
@@ -265,16 +265,16 @@ export class Bits {
      */
     public static fromBinaryString(binaryString: string): Bits {
         const cleanString = binaryString.replace(/\s/g, '');
-        let data: BitMask64Data;
+        let data: BitMask64Data = { base: undefined!, segments: undefined};
         if (cleanString.length <= 32) {
             const num = parseInt(cleanString, 2);
-            data = { lo: num >>> 0, hi: 0 };
+            data.base = [num >>> 0, 0];
         } else {
             const loBits = cleanString.substring(cleanString.length - 32);
             const hiBits = cleanString.substring(0, cleanString.length - 32);
             const lo = parseInt(loBits, 2);
             const hi = parseInt(hiBits, 2);
-            data = { lo: lo >>> 0, hi: hi >>> 0 };
+            data.base = [lo >>> 0, hi >>> 0];
         }
         return new Bits(data);
     }
@@ -286,16 +286,16 @@ export class Bits {
      */
     public static fromHexString(hexString: string): Bits {
         const cleanString = hexString.replace(/^0x/i, '');
-        let data: BitMask64Data;
+        let data: BitMask64Data = { base: undefined!, segments: undefined};
         if (cleanString.length <= 8) {
             const num = parseInt(cleanString, 16);
-            data = { lo: num >>> 0, hi: 0 };
+            data.base = [num >>> 0, 0];
         } else {
             const loBits = cleanString.substring(cleanString.length - 8);
             const hiBits = cleanString.substring(0, cleanString.length - 8);
             const lo = parseInt(loBits, 16);
             const hi = parseInt(hiBits, 16);
-            data = { lo: lo >>> 0, hi: hi >>> 0 };
+            data.base = [lo >>> 0, hi >>> 0];
         }
         return new Bits(data);
     }
@@ -318,16 +318,16 @@ export class Bits {
             return -1;
         }
         
-        if (this._value.hi !== 0) {
+        if (this._value.base[SegmentPart.HIGH] !== 0) {
             for (let i = 31; i >= 0; i--) {
-                if ((this._value.hi & (1 << i)) !== 0) {
+                if ((this._value.base[SegmentPart.HIGH] & (1 << i)) !== 0) {
                     return i + 32;
                 }
             }
         }
         
         for (let i = 31; i >= 0; i--) {
-            if ((this._value.lo & (1 << i)) !== 0) {
+            if ((this._value.base[SegmentPart.LOW] & (1 << i)) !== 0) {
                 return i;
             }
         }
@@ -345,13 +345,13 @@ export class Bits {
         }
         
         for (let i = 0; i < 32; i++) {
-            if ((this._value.lo & (1 << i)) !== 0) {
+            if ((this._value.base[SegmentPart.LOW] & (1 << i)) !== 0) {
                 return i;
             }
         }
         
         for (let i = 0; i < 32; i++) {
-            if ((this._value.hi & (1 << i)) !== 0) {
+            if ((this._value.base[SegmentPart.HIGH] & (1 << i)) !== 0) {
                 return i + 32;
             }
         }

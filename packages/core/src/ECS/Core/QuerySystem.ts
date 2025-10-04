@@ -4,9 +4,8 @@ import { ComponentRegistry, ComponentType } from './ComponentStorage';
 import { BitMask64Utils, BitMask64Data } from '../Utils/BigIntCompatibility';
 import { createLogger } from '../../Utils/Logger';
 import { getComponentTypeName } from '../Decorators';
-
-import { ComponentPoolManager } from './ComponentPool';
-import { ArchetypeSystem, Archetype, ArchetypeQueryResult } from './ArchetypeSystem';
+import { Archetype, ArchetypeSystem } from './ArchetypeSystem';
+import { ComponentTypeManager } from "../Utils";
 
 /**
  * 查询条件类型
@@ -787,8 +786,7 @@ export class QuerySystem {
     private createComponentMask(componentTypes: ComponentType[]): BitMask64Data {
         // 生成缓存键
         const cacheKey = componentTypes.map(t => {
-            const name = getComponentTypeName(t);
-            return name;
+            return getComponentTypeName(t);
         }).sort().join(',');
 
         // 检查缓存
@@ -797,27 +795,10 @@ export class QuerySystem {
             return cached;
         }
 
-        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
-        let hasValidComponents = false;
-
-        for (const type of componentTypes) {
-            try {
-                const bitMask = ComponentRegistry.getBitMask(type);
-                BitMask64Utils.orInPlace(mask, bitMask);
-                hasValidComponents = true;
-            } catch (error) {
-                this._logger.warn(`组件类型 ${getComponentTypeName(type)} 未注册，跳过`);
-            }
-        }
-
-        // 如果没有有效的组件类型，返回一个不可能匹配的掩码
-        if (!hasValidComponents) {
-            mask = { lo: 0xFFFFFFFF, hi: 0xFFFFFFFF };
-        }
-
+        let mask = ComponentTypeManager.instance.getEntityBits(componentTypes);
         // 缓存结果
-        this.componentMaskCache.set(cacheKey, mask);
-        return mask;
+        this.componentMaskCache.set(cacheKey, mask.getValue());
+        return mask.getValue();
     }
 
     /**

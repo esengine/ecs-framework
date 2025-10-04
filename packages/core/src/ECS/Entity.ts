@@ -191,7 +191,7 @@ export class Entity {
         const maxBitIndex = ComponentRegistry.getRegisteredCount();
 
         for (let bitIndex = 0; bitIndex < maxBitIndex; bitIndex++) {
-            if (BitMask64Utils.getBitExtended(mask, bitIndex)) {
+            if (BitMask64Utils.getBit(mask, bitIndex)) {
                 const componentType = ComponentRegistry.getTypeByBitIndex(bitIndex);
                 if (componentType) {
                     let component: Component | null = null;
@@ -504,7 +504,7 @@ export class Entity {
         this._localComponents.delete(componentType);
 
         // 更新位掩码
-        BitMask64Utils.clearBitExtended(this._componentMask, bitIndex);
+        BitMask64Utils.clearBit(this._componentMask, bitIndex);
 
         // 使缓存失效
         this._componentCache = null;
