@@ -1,6 +1,7 @@
-import {Entity} from '../Entity';
-import {ComponentType} from './ComponentStorage';
-import {BitMask64Data, BitMask64Utils, ComponentTypeManager} from "../Utils";
+import { Entity } from '../Entity';
+import { ComponentType } from './ComponentStorage';
+import { BitMask64Data, BitMask64Utils, ComponentTypeManager } from "../Utils";
+import { BitMaskHashMap } from "../Utils/BitMaskHashMap";
 
 /**
  * 原型标识符
@@ -36,7 +37,7 @@ export interface ArchetypeQueryResult {
  */
 export class ArchetypeSystem {
     /** 所有原型的映射表 */
-    private _archetypes = new Map<number, Map<number, Archetype>>();
+    private _archetypes = new BitMaskHashMap<Archetype>();
 
     /** 实体到原型的映射 */
     private _entityToArchetype = new Map<Entity, Archetype>();
@@ -57,7 +58,7 @@ export class ArchetypeSystem {
         const componentTypes = this.getEntityComponentTypes(entity);
         const archetypeId = this.generateArchetypeId(componentTypes);
 
-        let archetype = this.getArchetype(archetypeId);
+        let archetype = this._archetypes.get(archetypeId);
         if (!archetype) {
             archetype = this.createArchetype(componentTypes);
         }
@@ -109,7 +110,7 @@ export class ArchetypeSystem {
         }
 
         // 获取或创建新原型
-        let newArchetype = this.getArchetype(newArchetypeId);
+        let newArchetype = this._archetypes.get(newArchetypeId);
         if (!newArchetype) {
             newArchetype = this.createArchetype(newComponentTypes);
         }
@@ -215,25 +216,14 @@ export class ArchetypeSystem {
         this._entityComponentTypesCache.clear();
         this._allArchetypes = [];
     }
-    
-    /**
-     * 根据原型ID获取原型
-     * @param archetypeId
-     * @private
-     */
-    private getArchetype(archetypeId: ArchetypeId): Archetype | undefined {
-        return this._archetypes.get(archetypeId.hi)?.get(archetypeId.lo);
-    }
 
     /**
      * 更新所有原型数组
      */
     private updateAllArchetypeArrays(): void {
         this._allArchetypes = [];
-        for (const [, innerMap] of this._archetypes) {
-            for (const [, archetype] of innerMap) {
-                this._allArchetypes.push(archetype);
-            }
+        for (let archetype of this._archetypes.values()) {
+            this._allArchetypes.push(archetype);
         }
     }
 
@@ -269,12 +259,7 @@ export class ArchetypeSystem {
             entities: new Set<Entity>()
         };
         // 存储原型ID - 原型
-        let archetypeGroup = this._archetypes.get(id.hi);
-        if (!archetypeGroup) {
-            archetypeGroup = new Map<number, Archetype>();
-            this._archetypes.set(id.hi, archetypeGroup);
-        }
-        archetypeGroup.set(id.lo, archetype);
+        this._archetypes.set(id,archetype);
         // 更新数组
         this.updateAllArchetypeArrays();
         return archetype;
