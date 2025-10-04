@@ -1,5 +1,4 @@
 import { BitMask64Data, BitMask64Utils } from "../../../src";
-import { SegmentPart } from "../../../src/ECS/Utils/BigIntCompatibility";
 
 describe("BitMask64Utils 位掩码工具测试", () => {
     test("create() 应该在指定索引位置设置位", () => {
@@ -88,19 +87,6 @@ describe("BitMask64Utils 位掩码工具测试", () => {
         expect(clone).not.toBe(source); // 深拷贝
     });
 
-    test("toString 应正确输出二进制和十六进制", () => {
-        const mask = BitMask64Utils.create(0);
-        expect(BitMask64Utils.toString(mask, 2)).toContain("1");
-        expect(BitMask64Utils.toString(mask, 16)).toMatch(/0x/i);
-    });
-
-    test("popCount 应返回正确的位数", () => {
-        const mask = BitMask64Utils.create(0);
-        BitMask64Utils.setBit(mask, 1);
-        BitMask64Utils.setBit(mask, 63);
-        expect(BitMask64Utils.popCount(mask)).toBe(3);
-    });
-
     test("越界与非法输入处理", () => {
         expect(() => BitMask64Utils.create(-1)).toThrow();
         expect(BitMask64Utils.getBit({ base: [0,0] }, -5)).toBe(false);
@@ -170,19 +156,27 @@ describe("BitMask64Utils 位掩码工具测试", () => {
         expect(BitMask64Utils.getBit(xorMask, 300)).toBe(true);
     });
 
-    test("扩展段 toString 与 popCount 验证", () => {
-        const mask = BitMask64Utils.create(130); // 扩展段,此时扩展段自动延长到2
-        BitMask64Utils.setBit(mask, 260);       // 再设置另一个更高位,此时扩展段自动延长到3
+    test("toString 与 popCount 应该在扩展段正常工作", () => {
+        const mask = BitMask64Utils.create(0);
+        BitMask64Utils.setBit(mask, 130);       // 扩展段,此时扩展段长度延长到2
+        BitMask64Utils.setBit(mask, 260);       // 再设置另一个超出当前最高段范围更高位,此时扩展段长度延长到3
+        // 现在应该有三个置位
+        expect(BitMask64Utils.popCount(mask)).toBe(3);
+
 
         const strBin = BitMask64Utils.toString(mask, 2);
         const strHex = BitMask64Utils.toString(mask, 16);
         // 第三个区段应该以100结尾（130位为1）
         expect(strBin.split(' ')[2].endsWith('100')).toBe(true);
-        // 第三个区段应该以4结尾（低32位为0x4）
-        expect(strHex.split(' ')[2].endsWith('4')).toBe(true);
+        // 不存在高位的第三个区段字符串应为0x4
+        expect(strHex.split(' ')[2]).toBe('0x4');
 
-        // 应该有两个置位
-        expect(BitMask64Utils.popCount(mask)).toBe(2);
+        // 设置第244位为1 这是第四个区段的第(256 - 244 =)12位
+        BitMask64Utils.setBit(mask, 244);
+        // 四个区段的在二进制下第12位的字符串应为'1'
+        expect(BitMask64Utils.toString(mask, 2).split(' ')[3][11]).toBe('1');
+        // 第四个区段的十六进制下所有字符串应为'0x10000000000000',即二进制的'10000 00000000 00000000 00000000 00000000 00000000 00000000'
+        expect(BitMask64Utils.toString(mask, 16).split(' ')[3]).toBe('0x10000000000000');
     });
 
 });

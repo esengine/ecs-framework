@@ -401,8 +401,16 @@ export class BitMask64Utils {
                 const loBits = lo.toString(2).padStart(32, '0');
                 segResult = hiBits + '_' + loBits; //高低位之间使用_隔离
             }else{
-                const hiBits = hi.toString(16).toUpperCase().padStart(8, '0');
-                const loBits = lo.toString(16).toUpperCase().padStart(8, '0');
+                let hiBits = hi ? hi.toString(16).toUpperCase() : '';
+                if(printHead){
+                    // 存在标头，则输出高位之前需要补齐位数
+                    hiBits = hiBits.padStart(8, '0');
+                }
+                let loBits = lo.toString(16).toUpperCase();
+                if(hiBits){
+                    // 存在高位 则输出低位之前需要补齐位数
+                    loBits = loBits.padStart(8, '0');
+                }
                 segResult = '0x' + hiBits + loBits;
             }
             if(i === -1)
