@@ -54,10 +54,7 @@ export class ComponentRegistry {
             const typeName = getComponentTypeName(componentType);
             throw new Error(`Component type ${typeName} is not registered`);
         }
-
-        const mask: BitMask64Data = { lo: 0, hi: 0 };
-        BitMask64Utils.setBitExtended(mask, bitIndex);
-        return mask;
+        return BitMask64Utils.create(bitIndex);
     }
 
     /**
