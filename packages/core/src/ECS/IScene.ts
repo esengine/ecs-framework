@@ -9,7 +9,7 @@ import { TypeSafeEventSystem } from './Core/EventSystem';
 
 /**
  * 场景接口定义
- * 
+ *
  * 定义场景应该实现的核心功能和属性，使用接口而非继承提供更灵活的实现方式。
  */
 export interface IScene {
@@ -17,6 +17,25 @@ export interface IScene {
      * 场景名称
      */
     name: string;
+
+    /**
+     * 场景自定义数据
+     *
+     * 用于存储场景级别的配置和状态数据，例如：
+     * - 天气状态
+     * - 时间设置
+     * - 游戏难度
+     * - 音频配置
+     * - 关卡检查点
+     *
+     * @example
+     * ```typescript
+     * scene.sceneData.set('weather', 'rainy');
+     * scene.sceneData.set('timeOfDay', 14.5);
+     * scene.sceneData.set('checkpoint', { x: 100, y: 200 });
+     * ```
+     */
+    readonly sceneData: Map<string, any>;
 
     /**
      * 场景中的实体集合

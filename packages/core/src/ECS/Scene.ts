@@ -10,6 +10,7 @@ import { EventBus } from './Core/EventBus';
 import { IScene, ISceneConfig } from './IScene';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from './Decorators';
 import { TypedQueryBuilder } from './Core/Query/TypedQuery';
+import { SceneSerializer, SceneSerializationOptions, SceneDeserializationOptions } from './Serialization/SceneSerializer';
 
 /**
  * 游戏场景默认实现类
@@ -20,14 +21,21 @@ import { TypedQueryBuilder } from './Core/Query/TypedQuery';
 export class Scene implements IScene {
     /**
      * 场景名称
-     * 
+     *
      * 用于标识和调试的友好名称。
      */
     public name: string = "";
 
     /**
+     * 场景自定义数据
+     *
+     * 用于存储场景级别的配置和状态数据。
+     */
+    public readonly sceneData: Map<string, any> = new Map();
+
+    /**
      * 场景中的实体集合
-     * 
+     *
      * 管理场景内所有实体的生命周期。
      */
     public readonly entities: EntityList;
@@ -488,5 +496,47 @@ export class Scene implements IScene {
             })),
             componentStats: this.componentStorageManager.getAllStats()
         };
+    }
+
+    /**
+     * 序列化场景
+     *
+     * 将场景及其所有实体、组件序列化为JSON字符串
+     *
+     * @param options 序列化选项
+     * @returns 序列化后的JSON字符串
+     *
+     * @example
+     * ```typescript
+     * const saveData = scene.serialize({
+     *     components: [PlayerComponent, PositionComponent],
+     *     format: 'json',
+     *     pretty: true
+     * });
+     * ```
+     */
+    public serialize(options?: SceneSerializationOptions): string {
+        return SceneSerializer.serialize(this, options);
+    }
+
+    /**
+     * 反序列化场景
+     *
+     * 从序列化数据恢复场景状态
+     *
+     * @param saveData 序列化的数据
+     * @param options 反序列化选项
+     *
+     * @example
+     * ```typescript
+     * scene.deserialize(saveData, {
+     *     strategy: 'replace',
+     *     preserveIds: false,
+     *     componentRegistry: ComponentTypeRegistry.getRegistry()
+     * });
+     * ```
+     */
+    public deserialize(saveData: string, options?: SceneDeserializationOptions): void {
+        SceneSerializer.deserialize(this, saveData, options);
     }
 }
