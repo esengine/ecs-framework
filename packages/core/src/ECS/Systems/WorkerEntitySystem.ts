@@ -198,6 +198,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
     protected sharedBuffer: SharedArrayBuffer | null = null;
     protected sharedFloatArray: Float32Array | null = null;
     private platformAdapter: IPlatformAdapter;
+    private hasLoggedSyncMode = false; 
 
     constructor(matcher?: Matcher, config: WorkerSystemConfig = {}) {
         super(matcher);
@@ -449,7 +450,10 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
                 }
             } else {
                 // 同步处理（最后的fallback）
-                this.logger.info(`${this.systemName}: Worker不可用，使用同步处理`);
+                if (!this.hasLoggedSyncMode) {
+                    this.logger.info(`${this.systemName}: Worker不可用，使用同步处理`);
+                    this.hasLoggedSyncMode = true;
+                }
                 this.processSynchronously(entities);
                 this.isProcessing = false;
             }

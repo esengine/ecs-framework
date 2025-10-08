@@ -501,21 +501,26 @@ export class Scene implements IScene {
     /**
      * 序列化场景
      *
-     * 将场景及其所有实体、组件序列化为JSON字符串
+     * 将场景及其所有实体、组件序列化为JSON字符串或二进制Buffer
      *
      * @param options 序列化选项
-     * @returns 序列化后的JSON字符串
+     * @returns 序列化后的数据（JSON字符串或二进制Buffer）
      *
      * @example
      * ```typescript
-     * const saveData = scene.serialize({
-     *     components: [PlayerComponent, PositionComponent],
+     * // JSON格式
+     * const jsonData = scene.serialize({
      *     format: 'json',
      *     pretty: true
      * });
+     *
+     * // 二进制格式（更小、更快）
+     * const binaryData = scene.serialize({
+     *     format: 'binary'
+     * });
      * ```
      */
-    public serialize(options?: SceneSerializationOptions): string {
+    public serialize(options?: SceneSerializationOptions): string | Buffer {
         return SceneSerializer.serialize(this, options);
     }
 
@@ -524,19 +529,23 @@ export class Scene implements IScene {
      *
      * 从序列化数据恢复场景状态
      *
-     * @param saveData 序列化的数据
+     * @param saveData 序列化的数据（JSON字符串或二进制Buffer）
      * @param options 反序列化选项
      *
      * @example
      * ```typescript
-     * scene.deserialize(saveData, {
-     *     strategy: 'replace',
-     *     preserveIds: false,
-     *     componentRegistry: ComponentTypeRegistry.getRegistry()
+     * // 从JSON恢复（自动从ComponentRegistry获取组件类型）
+     * scene.deserialize(jsonData, {
+     *     strategy: 'replace'
+     * });
+     *
+     * // 从二进制恢复
+     * scene.deserialize(binaryData, {
+     *     strategy: 'replace'
      * });
      * ```
      */
-    public deserialize(saveData: string, options?: SceneDeserializationOptions): void {
+    public deserialize(saveData: string | Buffer, options?: SceneDeserializationOptions): void {
         SceneSerializer.deserialize(this, saveData, options);
     }
 }

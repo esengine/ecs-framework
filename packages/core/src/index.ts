@@ -29,7 +29,6 @@ export * from './ECS';
 
 // TypeScript类型增强API
 export * from './ECS/TypedEntity';
-export * from './ECS/Systems/TypedEntitySystem';
 export * from './ECS/Core/Query/TypedQuery';
 
 // 事件系统
@@ -38,6 +37,9 @@ export { ECSEventType, EventPriority, EVENT_TYPES, EventTypeValidator } from './
 // 工具类和类型定义
 export * from './Utils';
 export * from './Types';
+
+// 显式导出ComponentPool类（解决与Types中ComponentPool接口的命名冲突）
+export { ComponentPool, ComponentPoolManager } from './ECS/Core/Storage';
 
 // 平台适配
 export * from './Platform'; 

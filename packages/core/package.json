@@ -58,6 +58,7 @@
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-terser": "^0.4.4",
     "@types/jest": "^29.5.14",
+    "@types/msgpack-lite": "^0.1.11",
     "@types/node": "^20.19.17",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
@@ -75,5 +76,8 @@
     "type": "git",
     "url": "https://github.com/esengine/ecs-framework.git",
     "directory": "packages/core"
+  },
+  "dependencies": {
+    "msgpack-lite": "^0.1.26"
   }
 }

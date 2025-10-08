@@ -7,11 +7,11 @@
 import type { IScene } from '../IScene';
 import { Entity } from '../Entity';
 import { Component } from '../Component';
-import { ComponentType } from '../Core/ComponentStorage';
+import { ComponentType, ComponentRegistry } from '../Core/ComponentStorage';
 import { EntitySerializer, SerializedEntity } from './EntitySerializer';
 import { getComponentTypeName } from '../Decorators';
 import { getSerializationMetadata } from './SerializationDecorators';
-import { ComponentTypeRegistry } from './ComponentTypeRegistry';
+import * as msgpack from 'msgpack-lite';
 
 /**
  * 场景序列化格式
@@ -154,9 +154,9 @@ export class SceneSerializer {
      *
      * @param scene 要序列化的场景
      * @param options 序列化选项
-     * @returns 序列化后的数据（JSON字符串或二进制数据）
+     * @returns 序列化后的数据（JSON字符串或二进制Buffer）
      */
-    public static serialize(scene: IScene, options?: SceneSerializationOptions): string {
+    public static serialize(scene: IScene, options?: SceneSerializationOptions): string | Buffer {
         const opts: SceneSerializationOptions = {
             systems: false,
             format: 'json',
@@ -206,8 +206,8 @@ export class SceneSerializer {
                 ? JSON.stringify(serializedScene, null, 2)
                 : JSON.stringify(serializedScene);
         } else {
-            // 二进制格式（未来实现）
-            throw new Error('Binary serialization format is not yet implemented');
+            // 二进制格式（使用 MessagePack）
+            return msgpack.encode(serializedScene);
         }
     }
 
@@ -215,12 +215,12 @@ export class SceneSerializer {
      * 反序列化场景
      *
      * @param scene 目标场景
-     * @param saveData 序列化的数据
+     * @param saveData 序列化的数据（JSON字符串或二进制Buffer）
      * @param options 反序列化选项
      */
     public static deserialize(
         scene: IScene,
-        saveData: string,
+        saveData: string | Buffer,
         options?: SceneDeserializationOptions
     ): void {
         const opts: SceneDeserializationOptions = {
@@ -232,7 +232,13 @@ export class SceneSerializer {
         // 解析数据
         let serializedScene: SerializedScene;
         try {
-            serializedScene = JSON.parse(saveData);
+            if (typeof saveData === 'string') {
+                // JSON格式
+                serializedScene = JSON.parse(saveData);
+            } else {
+                // 二进制格式（MessagePack）
+                serializedScene = msgpack.decode(saveData);
+            }
         } catch (error) {
             throw new Error(`Failed to parse save data: ${error}`);
         }
@@ -455,7 +461,7 @@ export class SceneSerializer {
      * 从所有已注册的组件类型构建注册表
      */
     private static getGlobalComponentRegistry(): Map<string, ComponentType> {
-        return ComponentTypeRegistry.getRegistry();
+        return ComponentRegistry.getAllComponentNames() as Map<string, ComponentType>;
     }
 
     /**

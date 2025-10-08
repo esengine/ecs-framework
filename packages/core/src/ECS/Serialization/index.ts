@@ -49,6 +49,3 @@ export type {
     ComponentMigrationFunction,
     SceneMigrationFunction
 } from './VersionMigration';
-
-// 组件类型注册表
-export { ComponentTypeRegistry } from './ComponentTypeRegistry';

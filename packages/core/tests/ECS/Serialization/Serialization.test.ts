@@ -14,11 +14,11 @@ import {
     ComponentSerializer,
     EntitySerializer,
     SceneSerializer,
-    ComponentTypeRegistry,
     VersionMigrationManager,
     MigrationBuilder
 } from '../../../src/ECS/Serialization';
 import { ECSComponent } from '../../../src/ECS/Decorators';
+import { ComponentRegistry } from '../../../src/ECS/Core/ComponentStorage';
 
 // 测试组件定义
 @ECSComponent('Position')
@@ -83,14 +83,8 @@ class NonSerializableComponent extends Component {
 
 describe('ECS Serialization System', () => {
     beforeEach(() => {
-        // 注册组件类型
-        ComponentTypeRegistry.clear();
-        ComponentTypeRegistry.registerMany([
-            PositionComponent,
-            VelocityComponent,
-            PlayerComponent,
-            HealthComponent
-        ]);
+        // @ECSComponent装饰器会自动注册组件到ComponentRegistry，无需手动注册
+        ComponentRegistry.reset(); // 清空测试环境
     });
 
     describe('Component Serialization', () => {
@@ -112,7 +106,7 @@ describe('ECS Serialization System', () => {
                 data: { x: 150, y: 250 }
             };
 
-            const registry = ComponentTypeRegistry.getRegistry();
+            const registry = ComponentRegistry.getAllComponentNames() as Map<string, any>;
             const component = ComponentSerializer.deserialize(serializedData, registry);
 
             expect(component).not.toBeNull();
@@ -152,7 +146,7 @@ describe('ECS Serialization System', () => {
                 }
             };
 
-            const registry = ComponentTypeRegistry.getRegistry();
+            const registry = ComponentRegistry.getAllComponentNames() as Map<string, any>;
             const component = ComponentSerializer.deserialize(
                 serializedData,
                 registry
@@ -231,7 +225,7 @@ describe('ECS Serialization System', () => {
                 children: []
             };
 
-            const registry = ComponentTypeRegistry.getRegistry();
+            const registry = ComponentRegistry.getAllComponentNames() as Map<string, any>;
             let idCounter = 10;
             const entity = EntitySerializer.deserialize(
                 serializedEntity,
@@ -267,8 +261,9 @@ describe('ECS Serialization System', () => {
             const saveData = scene.serialize({ format: 'json', pretty: true });
 
             expect(saveData).toBeTruthy();
+            expect(typeof saveData).toBe('string');
 
-            const parsed = JSON.parse(saveData);
+            const parsed = JSON.parse(saveData as string);
             expect(parsed.name).toBe('TestScene');
             expect(parsed.version).toBe(1);
             expect(parsed.entities.length).toBe(2);
@@ -287,7 +282,7 @@ describe('ECS Serialization System', () => {
             // 清空并重新加载
             scene.deserialize(saveData, {
                 strategy: 'replace',
-                componentRegistry: ComponentTypeRegistry.getRegistry()
+                // componentRegistry会自动从ComponentRegistry获取
             });
 
             expect(scene.entities.count).toBeGreaterThan(0);
@@ -300,10 +295,11 @@ describe('ECS Serialization System', () => {
             entity.addComponent(new HealthComponent());
 
             const saveData = scene.serialize({
-                components: [PositionComponent, PlayerComponent]
+                components: [PositionComponent, PlayerComponent],
+                format: 'json'
             });
 
-            const parsed = JSON.parse(saveData);
+            const parsed = JSON.parse(saveData as string);
             expect(parsed.entities.length).toBeGreaterThan(0);
         });
 
@@ -315,8 +311,8 @@ describe('ECS Serialization System', () => {
             parent.addComponent(new PositionComponent(0, 0));
             child.addComponent(new PositionComponent(10, 10));
 
-            const saveData = scene.serialize();
-            const parsed = JSON.parse(saveData);
+            const saveData = scene.serialize({ format: 'json' });
+            const parsed = JSON.parse(saveData as string);
 
             // 只有父实体在顶层
             expect(parsed.entities.length).toBe(1);
@@ -327,8 +323,8 @@ describe('ECS Serialization System', () => {
             const entity = scene.createEntity('Test');
             entity.addComponent(new PositionComponent(5, 5));
 
-            const saveData = scene.serialize();
-            const validation = SceneSerializer.validate(saveData);
+            const saveData = scene.serialize({ format: 'json' });
+            const validation = SceneSerializer.validate(saveData as string);
 
             expect(validation.valid).toBe(true);
             expect(validation.version).toBe(1);
@@ -338,8 +334,8 @@ describe('ECS Serialization System', () => {
             const entity = scene.createEntity('InfoTest');
             entity.addComponent(new PositionComponent(1, 1));
 
-            const saveData = scene.serialize();
-            const info = SceneSerializer.getInfo(saveData);
+            const saveData = scene.serialize({ format: 'json' });
+            const info = SceneSerializer.getInfo(saveData as string);
 
             expect(info).not.toBeNull();
             expect(info!.name).toBe('TestScene');
@@ -434,48 +430,7 @@ describe('ECS Serialization System', () => {
         });
     });
 
-    describe('ComponentTypeRegistry', () => {
-        it('should register and retrieve component types', () => {
-            ComponentTypeRegistry.clear();
-            ComponentTypeRegistry.register(PositionComponent);
-
-            expect(ComponentTypeRegistry.has('Position')).toBe(true);
-            expect(ComponentTypeRegistry.get('Position')).toBe(PositionComponent);
-        });
-
-        it('should register multiple component types', () => {
-            ComponentTypeRegistry.clear();
-            ComponentTypeRegistry.registerMany([
-                PositionComponent,
-                VelocityComponent,
-                PlayerComponent
-            ]);
-
-            expect(ComponentTypeRegistry.size).toBe(3);
-        });
-
-        it('should get all type names', () => {
-            ComponentTypeRegistry.clear();
-            ComponentTypeRegistry.register(PositionComponent);
-            ComponentTypeRegistry.register(VelocityComponent);
-
-            const typeNames = ComponentTypeRegistry.getAllTypeNames();
-
-            expect(typeNames).toContain('Position');
-            expect(typeNames).toContain('Velocity');
-        });
-
-        it('should unregister component types', () => {
-            ComponentTypeRegistry.clear();
-            ComponentTypeRegistry.register(PositionComponent);
-
-            expect(ComponentTypeRegistry.has('Position')).toBe(true);
-
-            ComponentTypeRegistry.unregister('Position');
-
-            expect(ComponentTypeRegistry.has('Position')).toBe(false);
-        });
-    });
+    // ComponentTypeRegistry已被移除，现在使用ComponentRegistry自动管理组件类型
 
     describe('Integration Tests', () => {
         it('should perform full save/load cycle', () => {
@@ -508,7 +463,7 @@ describe('ECS Serialization System', () => {
             // 反序列化
             scene2.deserialize(saveData, {
                 strategy: 'replace',
-                componentRegistry: ComponentTypeRegistry.getRegistry()
+                // componentRegistry会自动从ComponentRegistry获取
             });
 
             // 验证
@@ -549,7 +504,7 @@ describe('ECS Serialization System', () => {
             // 反序列化
             scene2.deserialize(saveData, {
                 strategy: 'replace',
-                componentRegistry: ComponentTypeRegistry.getRegistry()
+                // componentRegistry会自动从ComponentRegistry获取
             });
 
             // 验证场景数据
@@ -567,6 +522,101 @@ describe('ECS Serialization System', () => {
             expect(metadata).toBeInstanceOf(Map);
             expect(metadata.get('author')).toBe('test');
             expect(metadata.get('version')).toBe('1.0');
+
+            scene1.end();
+            scene2.end();
+        });
+
+        it('should serialize and deserialize using binary format', () => {
+            const scene1 = new Scene({ name: 'BinaryTest' });
+
+            // 创建测试数据
+            const player = scene1.createEntity('Player');
+            const playerComp = new PlayerComponent();
+            playerComp.name = 'BinaryHero';
+            playerComp.level = 5;
+            playerComp.inventory.set('sword', 1);
+            player.addComponent(playerComp);
+            player.addComponent(new PositionComponent(100, 200));
+
+            scene1.sceneData.set('weather', 'sunny');
+            scene1.sceneData.set('score', 9999);
+
+            // 二进制序列化
+            const binaryData = scene1.serialize({ format: 'binary' });
+
+            // 验证是Buffer类型
+            expect(Buffer.isBuffer(binaryData)).toBe(true);
+
+            // JSON序列化对比
+            const jsonData = scene1.serialize({ format: 'json', pretty: false });
+
+            // 二进制应该更小
+            const binarySize = (binaryData as Buffer).length;
+            const jsonSize = (jsonData as string).length;
+            console.log(`Binary size: ${binarySize} bytes, JSON size: ${jsonSize} bytes`);
+            expect(binarySize).toBeLessThan(jsonSize);
+
+            // 新场景反序列化二进制数据
+            const scene2 = new Scene({ name: 'LoadTest' });
+            scene2.deserialize(binaryData, {
+                strategy: 'replace',
+                // componentRegistry会自动从ComponentRegistry获取
+            });
+
+            // 验证数据完整性
+            const loadedPlayer = scene2.findEntity('Player');
+            expect(loadedPlayer).not.toBeNull();
+
+            const loadedPlayerComp = loadedPlayer!.getComponent(PlayerComponent as any) as PlayerComponent;
+            expect(loadedPlayerComp.name).toBe('BinaryHero');
+            expect(loadedPlayerComp.level).toBe(5);
+            expect(loadedPlayerComp.inventory.get('sword')).toBe(1);
+
+            const loadedPos = loadedPlayer!.getComponent(PositionComponent as any) as PositionComponent;
+            expect(loadedPos.x).toBe(100);
+            expect(loadedPos.y).toBe(200);
+
+            expect(scene2.sceneData.get('weather')).toBe('sunny');
+            expect(scene2.sceneData.get('score')).toBe(9999);
+
+            scene1.end();
+            scene2.end();
+        });
+
+        it('should handle complex nested data in binary format', () => {
+            const scene1 = new Scene({ name: 'NestedBinaryTest' });
+
+            // 复杂嵌套数据
+            scene1.sceneData.set('config', {
+                graphics: {
+                    quality: 'high',
+                    resolution: { width: 1920, height: 1080 }
+                },
+                audio: {
+                    masterVolume: 0.8,
+                    effects: new Map([['music', 0.7], ['sfx', 0.9]])
+                },
+                tags: new Set(['multiplayer', 'ranked']),
+                timestamp: new Date('2024-01-01')
+            });
+
+            // 二进制序列化
+            const binaryData = scene1.serialize({ format: 'binary' });
+
+            // 反序列化
+            const scene2 = new Scene({ name: 'LoadTest' });
+            scene2.deserialize(binaryData, {
+                // componentRegistry会自动从ComponentRegistry获取
+            });
+
+            const config = scene2.sceneData.get('config');
+            expect(config.graphics.quality).toBe('high');
+            expect(config.graphics.resolution.width).toBe(1920);
+            expect(config.audio.masterVolume).toBe(0.8);
+            expect(config.audio.effects.get('music')).toBe(0.7);
+            expect(config.tags.has('multiplayer')).toBe(true);
+            expect(config.timestamp).toBeInstanceOf(Date);
 
             scene1.end();
             scene2.end();
