@@ -1,7 +1,7 @@
 {
-  "name": "ecs-worker-system-demo",
+  "name": "ecs-core-demos",
   "version": "1.0.0",
-  "description": "ECS Framework Worker System Demo",
+  "description": "ECS Framework Core Demos - Multiple Interactive Examples",
   "main": "src/main.ts",
   "scripts": {
     "dev": "vite",
