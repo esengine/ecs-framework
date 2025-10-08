@@ -7,6 +7,7 @@ import type { QuerySystem } from '../Core/QuerySystem';
 import { getSystemInstanceTypeName } from '../Decorators';
 import { createLogger } from '../../Utils/Logger';
 import type { EventListenerConfig, TypeSafeEventSystem, EventHandler } from '../Core/EventSystem';
+import type { ComponentConstructor, ComponentInstance } from '../../Types/TypeHelpers';
 
 /**
  * 事件监听器记录
@@ -21,17 +22,22 @@ interface EventListenerRecord {
 
 /**
  * 实体系统的基类
- * 
+ *
  * 用于处理一组符合特定条件的实体。系统是ECS架构中的逻辑处理单元，
  * 负责对拥有特定组件组合的实体执行业务逻辑。
- * 
+ *
+ * 支持泛型参数以提供类型安全的组件访问：
+ *
+ * @template TComponents - 系统需要的组件类型数组
+ *
  * @example
  * ```typescript
+ * // 传统方式
  * class MovementSystem extends EntitySystem {
  *     constructor() {
- *         super(Transform, Velocity);
+ *         super(Matcher.of(Transform, Velocity));
  *     }
- * 
+ *
  *     protected process(entities: readonly Entity[]): void {
  *         for (const entity of entities) {
  *             const transform = entity.getComponent(Transform);
@@ -40,9 +46,26 @@ interface EventListenerRecord {
  *         }
  *     }
  * }
+ *
+ * // 类型安全方式
+ * class MovementSystem extends EntitySystem<[typeof Transform, typeof Velocity]> {
+ *     constructor() {
+ *         super(Matcher.of(Transform, Velocity));
+ *     }
+ *
+ *     protected process(entities: readonly Entity[]): void {
+ *         for (const entity of entities) {
+ *             // 类型安全的组件访问
+ *             const [transform, velocity] = this.getComponents(entity);
+ *             transform.position.add(velocity.value);
+ *         }
+ *     }
+ * }
  * ```
  */
-export abstract class EntitySystem implements ISystemBase {
+export abstract class EntitySystem<
+    TComponents extends readonly ComponentConstructor[] = []
+> implements ISystemBase {
     private _updateOrder: number;
     private _enabled: boolean;
     private _performanceMonitor: PerformanceMonitor;
@@ -792,5 +815,236 @@ export abstract class EntitySystem implements ISystemBase {
      */
     protected onDestroy(): void {
         // 子类可以重写此方法进行清理操作
+    }
+
+    // ============================================================
+    // 类型安全的辅助方法
+    // ============================================================
+
+    /**
+     * 类型安全地获取单个组件
+     *
+     * 相比Entity.getComponent，此方法保证返回非空值，
+     * 如果组件不存在会抛出错误而不是返回null
+     *
+     * @param entity 实体
+     * @param componentType 组件类型
+     * @returns 组件实例（保证非空）
+     * @throws 如果组件不存在则抛出错误
+     *
+     * @example
+     * ```typescript
+     * protected process(entities: readonly Entity[]): void {
+     *     for (const entity of entities) {
+     *         const transform = this.requireComponent(entity, Transform);
+     *         // transform 保证非空，类型为 Transform
+     *     }
+     * }
+     * ```
+     */
+    protected requireComponent<T extends ComponentConstructor>(
+        entity: Entity,
+        componentType: T
+    ): ComponentInstance<T> {
+        const component = entity.getComponent(componentType as any);
+        if (!component) {
+            throw new Error(
+                `Component ${componentType.name} not found on entity ${entity.name} in ${this.systemName}`
+            );
+        }
+        return component as ComponentInstance<T>;
+    }
+
+    /**
+     * 批量获取实体的所有必需组件
+     *
+     * 根据泛型参数TComponents推断返回类型，
+     * 返回一个元组，包含所有组件实例
+     *
+     * @param entity 实体
+     * @param components 组件类型数组
+     * @returns 组件实例元组
+     *
+     * @example
+     * ```typescript
+     * class MySystem extends EntitySystem<[typeof Position, typeof Velocity]> {
+     *     protected process(entities: readonly Entity[]): void {
+     *         for (const entity of entities) {
+     *             const [pos, vel] = this.getComponents(entity, Position, Velocity);
+     *             // pos: Position, vel: Velocity (自动类型推断)
+     *             pos.x += vel.x;
+     *         }
+     *     }
+     * }
+     * ```
+     */
+    protected getComponents<T extends readonly ComponentConstructor[]>(
+        entity: Entity,
+        ...components: T
+    ): { [K in keyof T]: ComponentInstance<T[K]> } {
+        return components.map((type) =>
+            this.requireComponent(entity, type)
+        ) as any;
+    }
+
+    /**
+     * 遍历实体并处理每个实体
+     *
+     * 提供更简洁的语法糖，避免手动遍历
+     *
+     * @param entities 实体列表
+     * @param processor 处理函数
+     *
+     * @example
+     * ```typescript
+     * protected process(entities: readonly Entity[]): void {
+     *     this.forEach(entities, (entity) => {
+     *         const transform = this.requireComponent(entity, Transform);
+     *         transform.position.y -= 9.8 * Time.deltaTime;
+     *     });
+     * }
+     * ```
+     */
+    protected forEach(
+        entities: readonly Entity[],
+        processor: (entity: Entity, index: number) => void
+    ): void {
+        for (let i = 0; i < entities.length; i++) {
+            processor(entities[i], i);
+        }
+    }
+
+    /**
+     * 过滤实体
+     *
+     * @param entities 实体列表
+     * @param predicate 过滤条件
+     * @returns 过滤后的实体数组
+     *
+     * @example
+     * ```typescript
+     * protected process(entities: readonly Entity[]): void {
+     *     const activeEntities = this.filterEntities(entities, (entity) => {
+     *         const health = this.requireComponent(entity, Health);
+     *         return health.value > 0;
+     *     });
+     * }
+     * ```
+     */
+    protected filterEntities(
+        entities: readonly Entity[],
+        predicate: (entity: Entity, index: number) => boolean
+    ): Entity[] {
+        return Array.from(entities).filter(predicate);
+    }
+
+    /**
+     * 映射实体到另一种类型
+     *
+     * @param entities 实体列表
+     * @param mapper 映射函数
+     * @returns 映射后的结果数组
+     *
+     * @example
+     * ```typescript
+     * protected process(entities: readonly Entity[]): void {
+     *     const positions = this.mapEntities(entities, (entity) => {
+     *         const transform = this.requireComponent(entity, Transform);
+     *         return transform.position;
+     *     });
+     * }
+     * ```
+     */
+    protected mapEntities<R>(
+        entities: readonly Entity[],
+        mapper: (entity: Entity, index: number) => R
+    ): R[] {
+        return Array.from(entities).map(mapper);
+    }
+
+    /**
+     * 查找第一个满足条件的实体
+     *
+     * @param entities 实体列表
+     * @param predicate 查找条件
+     * @returns 第一个满足条件的实体，或undefined
+     *
+     * @example
+     * ```typescript
+     * protected process(entities: readonly Entity[]): void {
+     *     const player = this.findEntity(entities, (entity) =>
+     *         entity.hasComponent(PlayerTag)
+     *     );
+     * }
+     * ```
+     */
+    protected findEntity(
+        entities: readonly Entity[],
+        predicate: (entity: Entity, index: number) => boolean
+    ): Entity | undefined {
+        for (let i = 0; i < entities.length; i++) {
+            if (predicate(entities[i], i)) {
+                return entities[i];
+            }
+        }
+        return undefined;
+    }
+
+    /**
+     * 检查是否存在满足条件的实体
+     *
+     * @param entities 实体列表
+     * @param predicate 检查条件
+     * @returns 是否存在满足条件的实体
+     *
+     * @example
+     * ```typescript
+     * protected process(entities: readonly Entity[]): void {
+     *     const hasLowHealth = this.someEntity(entities, (entity) => {
+     *         const health = this.requireComponent(entity, Health);
+     *         return health.value < 20;
+     *     });
+     * }
+     * ```
+     */
+    protected someEntity(
+        entities: readonly Entity[],
+        predicate: (entity: Entity, index: number) => boolean
+    ): boolean {
+        for (let i = 0; i < entities.length; i++) {
+            if (predicate(entities[i], i)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 检查是否所有实体都满足条件
+     *
+     * @param entities 实体列表
+     * @param predicate 检查条件
+     * @returns 是否所有实体都满足条件
+     *
+     * @example
+     * ```typescript
+     * protected process(entities: readonly Entity[]): void {
+     *     const allHealthy = this.everyEntity(entities, (entity) => {
+     *         const health = this.requireComponent(entity, Health);
+     *         return health.value > 50;
+     *     });
+     * }
+     * ```
+     */
+    protected everyEntity(
+        entities: readonly Entity[],
+        predicate: (entity: Entity, index: number) => boolean
+    ): boolean {
+        for (let i = 0; i < entities.length; i++) {
+            if (!predicate(entities[i], i)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

@@ -27,6 +27,11 @@ export type { ILogger, LoggerConfig } from './Utils/Logger';
 // ECS核心组件
 export * from './ECS';
 
+// TypeScript类型增强API
+export * from './ECS/TypedEntity';
+export * from './ECS/Systems/TypedEntitySystem';
+export * from './ECS/Core/Query/TypedQuery';
+
 // 事件系统
 export { ECSEventType, EventPriority, EVENT_TYPES, EventTypeValidator } from './ECS/CoreEvents';
 

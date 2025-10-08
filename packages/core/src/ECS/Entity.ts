@@ -346,13 +346,19 @@ export class Entity {
 
     /**
      * 创建并添加组件
-     * 
-     * @param componentType - 组件类型
+     *
+     * @param componentType - 组件类型构造函数
      * @param args - 组件构造函数参数
      * @returns 创建的组件实例
+     *
+     * @example
+     * ```typescript
+     * const position = entity.createComponent(Position, 100, 200);
+     * const health = entity.createComponent(Health, 100);
+     * ```
      */
     public createComponent<T extends Component>(
-        componentType: ComponentType<T>, 
+        componentType: ComponentType<T>,
         ...args: any[]
     ): T {
         const component = new componentType(...args);
@@ -387,10 +393,16 @@ export class Entity {
 
     /**
      * 添加组件到实体
-     * 
+     *
      * @param component - 要添加的组件实例
      * @returns 添加的组件实例
-     * @throws {Error} 如果组件类型已存在
+     * @throws {Error} 如果实体已存在该类型的组件
+     *
+     * @example
+     * ```typescript
+     * const position = new Position(100, 200);
+     * entity.addComponent(position);
+     * ```
      */
     public addComponent<T extends Component>(component: T): T {
         const componentType = component.constructor as ComponentType<T>;
@@ -429,8 +441,17 @@ export class Entity {
     /**
      * 获取指定类型的组件
      *
-     * @param type - 组件类型
-     * @returns 组件实例或null
+     * @param type - 组件类型构造函数
+     * @returns 组件实例，如果不存在则返回null
+     *
+     * @example
+     * ```typescript
+     * const position = entity.getComponent(Position);
+     * if (position) {
+     *     position.x += 10;
+     *     position.y += 20;
+     * }
+     * ```
      */
     public getComponent<T extends Component>(type: ComponentType<T>): T | null {
         // 快速检查：位掩码
@@ -442,7 +463,7 @@ export class Entity {
         if (this.scene?.componentStorageManager) {
             const component = this.scene.componentStorageManager.getComponent(this.id, type);
             if (component) {
-                return component;
+                return component as T;
             }
         }
 
@@ -454,10 +475,18 @@ export class Entity {
 
 
     /**
-     * 检查实体是否有指定类型的组件
-     * 
-     * @param type - 组件类型
-     * @returns 如果有该组件则返回true
+     * 检查实体是否拥有指定类型的组件
+     *
+     * @param type - 组件类型构造函数
+     * @returns 如果实体拥有该组件返回true，否则返回false
+     *
+     * @example
+     * ```typescript
+     * if (entity.hasComponent(Position)) {
+     *     const position = entity.getComponent(Position)!;
+     *     position.x += 10;
+     * }
+     * ```
      */
     public hasComponent<T extends Component>(type: ComponentType<T>): boolean {
         if (!ComponentRegistry.isRegistered(type)) {
@@ -470,13 +499,22 @@ export class Entity {
 
     /**
      * 获取或创建指定类型的组件
-     * 
-     * @param type - 组件类型
-     * @param args - 组件构造函数参数（仅在创建时使用）
+     *
+     * 如果组件已存在则返回现有组件，否则创建新组件并添加到实体
+     *
+     * @param type - 组件类型构造函数
+     * @param args - 组件构造函数参数（仅在创建新组件时使用）
      * @returns 组件实例
+     *
+     * @example
+     * ```typescript
+     * // 确保实体拥有Position组件
+     * const position = entity.getOrCreateComponent(Position, 0, 0);
+     * position.x = 100;
+     * ```
      */
     public getOrCreateComponent<T extends Component>(
-        type: ComponentType<T>, 
+        type: ComponentType<T>,
         ...args: any[]
     ): T {
         let component = this.getComponent(type);

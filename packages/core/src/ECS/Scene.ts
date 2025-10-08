@@ -9,6 +9,7 @@ import { TypeSafeEventSystem } from './Core/EventSystem';
 import { EventBus } from './Core/EventBus';
 import { IScene, ISceneConfig } from './IScene';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from './Decorators';
+import { TypedQueryBuilder } from './Core/Query/TypedQuery';
 
 /**
  * 游戏场景默认实现类
@@ -317,6 +318,70 @@ export class Scene implements IScene {
      */
     public getEntitiesByTag(tag: number): Entity[] {
         return this.findEntitiesByTag(tag);
+    }
+
+    /**
+     * 查询拥有所有指定组件的实体
+     *
+     * @param componentTypes - 组件类型数组
+     * @returns 查询结果
+     *
+     * @example
+     * ```typescript
+     * const result = scene.queryAll(Position, Velocity);
+     * for (const entity of result.entities) {
+     *     const pos = entity.getComponent(Position);
+     *     const vel = entity.getComponent(Velocity);
+     * }
+     * ```
+     */
+    public queryAll(...componentTypes: any[]): { entities: readonly Entity[] } {
+        return this.querySystem.queryAll(...componentTypes);
+    }
+
+    /**
+     * 查询拥有任意一个指定组件的实体
+     *
+     * @param componentTypes - 组件类型数组
+     * @returns 查询结果
+     */
+    public queryAny(...componentTypes: any[]): { entities: readonly Entity[] } {
+        return this.querySystem.queryAny(...componentTypes);
+    }
+
+    /**
+     * 查询不包含指定组件的实体
+     *
+     * @param componentTypes - 组件类型数组
+     * @returns 查询结果
+     */
+    public queryNone(...componentTypes: any[]): { entities: readonly Entity[] } {
+        return this.querySystem.queryNone(...componentTypes);
+    }
+
+    /**
+     * 创建类型安全的查询构建器
+     *
+     * @returns 查询构建器，支持链式调用
+     *
+     * @example
+     * ```typescript
+     * // 使用查询构建器
+     * const matcher = scene.query()
+     *     .withAll(Position, Velocity)
+     *     .withNone(Disabled)
+     *     .buildMatcher();
+     *
+     * // 在System中使用
+     * class MovementSystem extends EntitySystem {
+     *     constructor() {
+     *         super(matcher);
+     *     }
+     * }
+     * ```
+     */
+    public query(): TypedQueryBuilder {
+        return new TypedQueryBuilder();
     }
 
     /**

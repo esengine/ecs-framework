@@ -2,6 +2,9 @@
  * 框架核心类型定义
  */
 
+// 导出TypeScript类型增强工具
+export * from './TypeHelpers';
+
 /**
  * 组件接口
  *
