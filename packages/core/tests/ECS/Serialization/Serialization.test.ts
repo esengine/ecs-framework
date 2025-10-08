@@ -83,8 +83,14 @@ class NonSerializableComponent extends Component {
 
 describe('ECS Serialization System', () => {
     beforeEach(() => {
-        // @ECSComponent装饰器会自动注册组件到ComponentRegistry，无需手动注册
-        ComponentRegistry.reset(); // 清空测试环境
+        // 清空测试环境
+        ComponentRegistry.reset();
+
+        // 重新注册测试组件（因为reset会清空所有注册）
+        ComponentRegistry.register(PositionComponent);
+        ComponentRegistry.register(VelocityComponent);
+        ComponentRegistry.register(PlayerComponent);
+        ComponentRegistry.register(HealthComponent);
     });
 
     describe('Component Serialization', () => {
