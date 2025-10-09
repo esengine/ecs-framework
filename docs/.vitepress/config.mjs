@@ -74,6 +74,7 @@ export default defineConfig({
               ]
             },
             { text: '场景管理 (Scene)', link: '/guide/scene' },
+            { text: '序列化系统 (Serialization)', link: '/guide/serialization' },
             { text: '事件系统 (Event)', link: '/guide/event-system' },
             { text: '时间和定时器 (Time)', link: '/guide/time-and-timers' },
             { text: '日志系统 (Logger)', link: '/guide/logging' }
