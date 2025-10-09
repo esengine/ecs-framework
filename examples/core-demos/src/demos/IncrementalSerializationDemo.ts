@@ -2,7 +2,9 @@ import { DemoBase, DemoInfo } from './DemoBase';
 import {
     Component,
     ECSComponent,
+    Entity,
     EntitySystem,
+    Matcher,
     Serializable,
     Serialize,
     IncrementalSerializer
@@ -47,19 +49,19 @@ class RenderableComponent extends Component {
 
 // ===== 系统定义 =====
 class MovementSystem extends EntitySystem {
-    update() {
-        if (!this.scene) return;
-        const entities = this.scene.entities.buffer;
-        for (const entity of entities) {
-            const pos = entity.getComponent(PositionComponent);
-            const vel = entity.getComponent(VelocityComponent);
-            if (pos && vel) {
-                pos.x += vel.vx;
-                pos.y += vel.vy;
+    constructor() {
+        super(Matcher.all(PositionComponent, VelocityComponent));
+    }
 
-                if (pos.x < 0 || pos.x > 1200) vel.vx *= -1;
-                if (pos.y < 0 || pos.y > 600) vel.vy *= -1;
-            }
+    protected override process(entities: readonly Entity[]): void {
+        for (const entity of entities) {
+            const [pos, vel] = this.getComponents(entity, PositionComponent, VelocityComponent);
+
+            pos.x += vel.vx;
+            pos.y += vel.vy;
+
+            if (pos.x < 0 || pos.x > 1200) vel.vx *= -1;
+            if (pos.y < 0 || pos.y > 600) vel.vy *= -1;
         }
     }
 }
@@ -69,34 +71,29 @@ class RenderSystem extends EntitySystem {
     private ctx: CanvasRenderingContext2D;
 
     constructor(canvas: HTMLCanvasElement) {
-        super();
+        super(Matcher.all(PositionComponent, RenderableComponent));
         this.canvas = canvas;
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error('Failed to get canvas context');
         this.ctx = ctx;
     }
 
-    update() {
-        if (!this.scene) return;
-
+    protected override process(entities: readonly Entity[]): void {
         this.ctx.fillStyle = '#0a0a15';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        const entities = this.scene.entities.buffer;
         for (const entity of entities) {
-            const pos = entity.getComponent(PositionComponent);
-            const render = entity.getComponent(RenderableComponent);
-            if (pos && render) {
-                this.ctx.fillStyle = render.color;
-                this.ctx.beginPath();
-                this.ctx.arc(pos.x, pos.y, render.radius, 0, Math.PI * 2);
-                this.ctx.fill();
+            const [pos, render] = this.getComponents(entity, PositionComponent, RenderableComponent);
 
-                this.ctx.fillStyle = 'white';
-                this.ctx.font = '10px Arial';
-                this.ctx.textAlign = 'center';
-                this.ctx.fillText(entity.name, pos.x, pos.y - render.radius - 5);
-            }
+            this.ctx.fillStyle = render.color;
+            this.ctx.beginPath();
+            this.ctx.arc(pos.x, pos.y, render.radius, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            this.ctx.fillStyle = 'white';
+            this.ctx.font = '10px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(entity.name, pos.x, pos.y - render.radius - 5);
         }
     }
 }

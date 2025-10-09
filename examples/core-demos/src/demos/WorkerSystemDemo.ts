@@ -447,20 +447,18 @@ class RenderSystem extends EntitySystem {
     private ctx: CanvasRenderingContext2D;
 
     constructor(canvas: HTMLCanvasElement) {
-        super(Matcher.empty().all(Position, Renderable));
+        super(Matcher.all(Position, Renderable));
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
     }
 
-    protected override process(entities: Entity[]): void {
+    protected override process(entities: readonly Entity[]): void {
         this.ctx.fillStyle = '#000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         for (const entity of entities) {
-            const position = entity.getComponent(Position);
-            const renderable = entity.getComponent(Renderable);
-
-            if (!position || !renderable) continue;
+            const position = this.requireComponent(entity, Position);
+            const renderable = this.requireComponent(entity, Renderable);
 
             this.ctx.fillStyle = renderable.color;
             this.ctx.beginPath();
@@ -473,15 +471,14 @@ class RenderSystem extends EntitySystem {
 @ECSSystem('LifetimeSystem')
 class LifetimeSystem extends EntitySystem {
     constructor() {
-        super(Matcher.empty().all(Lifetime));
+        super(Matcher.all(Lifetime));
     }
 
-    protected override process(entities: Entity[]): void {
+    protected override process(entities: readonly Entity[]): void {
         const deltaTime = Time.deltaTime;
 
         for (const entity of entities) {
-            const lifetime = entity.getComponent(Lifetime);
-            if (!lifetime) continue;
+            const lifetime = this.requireComponent(entity, Lifetime);
 
             lifetime.currentAge += deltaTime;
             if (lifetime.isDead()) {
