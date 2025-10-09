@@ -436,20 +436,42 @@ describe('Incremental Serialization System', () => {
     });
 
     describe('Incremental Serialization', () => {
-        it('应该序列化和反序列化增量快照', () => {
+        it('应该序列化和反序列化增量快照（JSON格式）', () => {
             scene.createIncrementalSnapshot();
 
             const entity = scene.createEntity('Entity');
             entity.addComponent(new PositionComponent(50, 100));
 
             const incremental = scene.serializeIncremental();
-            const json = IncrementalSerializer.serializeIncremental(incremental);
+            const json = IncrementalSerializer.serializeIncremental(incremental, { format: 'json' });
 
             expect(typeof json).toBe('string');
 
             const deserialized = IncrementalSerializer.deserializeIncremental(json);
             expect(deserialized.version).toBe(incremental.version);
             expect(deserialized.entityChanges.length).toBe(incremental.entityChanges.length);
+            expect(deserialized.componentChanges.length).toBe(incremental.componentChanges.length);
+        });
+
+        it('应该序列化和反序列化增量快照（二进制格式）', () => {
+            scene.createIncrementalSnapshot();
+
+            const entity = scene.createEntity('Entity');
+            entity.addComponent(new PositionComponent(50, 100));
+            entity.tag = 42;
+            scene.sceneData.set('weather', 'sunny');
+
+            const incremental = scene.serializeIncremental();
+            const binary = IncrementalSerializer.serializeIncremental(incremental, { format: 'binary' });
+
+            expect(Buffer.isBuffer(binary)).toBe(true);
+
+            const deserialized = IncrementalSerializer.deserializeIncremental(binary);
+            expect(deserialized.version).toBe(incremental.version);
+            expect(deserialized.sceneName).toBe(incremental.sceneName);
+            expect(deserialized.entityChanges.length).toBe(incremental.entityChanges.length);
+            expect(deserialized.componentChanges.length).toBe(incremental.componentChanges.length);
+            expect(deserialized.sceneDataChanges.length).toBe(incremental.sceneDataChanges.length);
         });
 
         it('应该美化JSON输出', () => {
@@ -458,10 +480,157 @@ describe('Incremental Serialization System', () => {
             entity.addComponent(new PositionComponent(10, 20));
 
             const incremental = scene.serializeIncremental();
-            const prettyJson = IncrementalSerializer.serializeIncremental(incremental, true);
+            const prettyJson = IncrementalSerializer.serializeIncremental(incremental, { format: 'json', pretty: true });
 
+            expect(typeof prettyJson).toBe('string');
             expect(prettyJson).toContain('\n');
             expect(prettyJson).toContain('  ');
+        });
+
+        it('二进制格式应该比JSON格式更小', () => {
+            const entities = [];
+            for (let i = 0; i < 50; i++) {
+                const entity = scene.createEntity(`Entity_${i}`);
+                entity.addComponent(new PositionComponent(i * 10, i * 20));
+                entity.addComponent(new VelocityComponent());
+                entities.push(entity);
+            }
+
+            scene.createIncrementalSnapshot();
+
+            for (const entity of entities) {
+                const pos = entity.getComponent(PositionComponent)!;
+                pos.x += 100;
+                pos.y += 200;
+            }
+
+            const incremental = scene.serializeIncremental();
+
+            const jsonData = IncrementalSerializer.serializeIncremental(incremental, { format: 'json' });
+            const binaryData = IncrementalSerializer.serializeIncremental(incremental, { format: 'binary' });
+
+            const jsonSize = Buffer.byteLength(jsonData as string);
+            const binarySize = (binaryData as Buffer).length;
+
+            expect(binarySize).toBeLessThan(jsonSize);
+        });
+
+        it('二进制和JSON格式应该包含相同的数据', () => {
+            scene.createIncrementalSnapshot();
+
+            const entity1 = scene.createEntity('Entity1');
+            entity1.addComponent(new PositionComponent(10, 20));
+            entity1.addComponent(new VelocityComponent());
+            entity1.tag = 99;
+
+            const entity2 = scene.createEntity('Entity2');
+            entity2.addComponent(new HealthComponent());
+
+            scene.sceneData.set('level', 5);
+            scene.sceneData.set('score', 1000);
+
+            const incremental = scene.serializeIncremental();
+
+            const jsonData = IncrementalSerializer.serializeIncremental(incremental, { format: 'json' });
+            const binaryData = IncrementalSerializer.serializeIncremental(incremental, { format: 'binary' });
+
+            const fromJson = IncrementalSerializer.deserializeIncremental(jsonData);
+            const fromBinary = IncrementalSerializer.deserializeIncremental(binaryData);
+
+            expect(fromJson.version).toBe(fromBinary.version);
+            expect(fromJson.timestamp).toBe(fromBinary.timestamp);
+            expect(fromJson.sceneName).toBe(fromBinary.sceneName);
+            expect(fromJson.entityChanges.length).toBe(fromBinary.entityChanges.length);
+            expect(fromJson.componentChanges.length).toBe(fromBinary.componentChanges.length);
+            expect(fromJson.sceneDataChanges.length).toBe(fromBinary.sceneDataChanges.length);
+
+            expect(fromJson.entityChanges[0].entityName).toBe(fromBinary.entityChanges[0].entityName);
+            expect(fromJson.entityChanges[0].entityData?.tag).toBe(fromBinary.entityChanges[0].entityData?.tag);
+        });
+
+        it('应该正确应用二进制格式反序列化的增量快照', () => {
+            const scene1 = new Scene({ name: 'Scene1' });
+            scene1.createIncrementalSnapshot();
+
+            const entity = scene1.createEntity('TestEntity');
+            entity.addComponent(new PositionComponent(100, 200));
+            entity.tag = 77;
+
+            const incremental = scene1.serializeIncremental();
+            const binaryData = IncrementalSerializer.serializeIncremental(incremental, { format: 'binary' });
+
+            const deserializedIncremental = IncrementalSerializer.deserializeIncremental(binaryData);
+
+            const scene2 = new Scene({ name: 'Scene2' });
+            scene2.applyIncremental(deserializedIncremental);
+
+            expect(scene2.entities.count).toBe(1);
+            const restoredEntity = scene2.findEntity('TestEntity');
+            expect(restoredEntity).not.toBeNull();
+            expect(restoredEntity!.tag).toBe(77);
+            expect(restoredEntity!.hasComponent(PositionComponent)).toBe(true);
+
+            const pos = restoredEntity!.getComponent(PositionComponent)!;
+            expect(pos.x).toBe(100);
+            expect(pos.y).toBe(200);
+
+            scene1.end();
+            scene2.end();
+        });
+
+        it('Scene.applyIncremental应该直接支持二进制Buffer', () => {
+            const scene1 = new Scene({ name: 'Scene1' });
+            scene1.createIncrementalSnapshot();
+
+            const entity1 = scene1.createEntity('Entity1');
+            entity1.addComponent(new PositionComponent(10, 20));
+            entity1.addComponent(new VelocityComponent());
+
+            const entity2 = scene1.createEntity('Entity2');
+            entity2.addComponent(new HealthComponent());
+
+            const incremental = scene1.serializeIncremental();
+            const binaryData = IncrementalSerializer.serializeIncremental(incremental, { format: 'binary' });
+
+            const scene2 = new Scene({ name: 'Scene2' });
+            scene2.applyIncremental(binaryData);
+
+            expect(scene2.entities.count).toBe(2);
+
+            const e1 = scene2.findEntity('Entity1');
+            expect(e1).not.toBeNull();
+            expect(e1!.hasComponent(PositionComponent)).toBe(true);
+            expect(e1!.hasComponent(VelocityComponent)).toBe(true);
+
+            const e2 = scene2.findEntity('Entity2');
+            expect(e2).not.toBeNull();
+            expect(e2!.hasComponent(HealthComponent)).toBe(true);
+
+            scene1.end();
+            scene2.end();
+        });
+
+        it('Scene.applyIncremental应该直接支持JSON字符串', () => {
+            const scene1 = new Scene({ name: 'Scene1' });
+            scene1.createIncrementalSnapshot();
+
+            const entity = scene1.createEntity('TestEntity');
+            entity.addComponent(new PositionComponent(50, 100));
+            entity.tag = 99;
+
+            const incremental = scene1.serializeIncremental();
+            const jsonData = IncrementalSerializer.serializeIncremental(incremental, { format: 'json' });
+
+            const scene2 = new Scene({ name: 'Scene2' });
+            scene2.applyIncremental(jsonData);
+
+            expect(scene2.entities.count).toBe(1);
+            const restoredEntity = scene2.findEntity('TestEntity');
+            expect(restoredEntity).not.toBeNull();
+            expect(restoredEntity!.tag).toBe(99);
+
+            scene1.end();
+            scene2.end();
         });
     });
 

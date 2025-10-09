@@ -251,13 +251,25 @@ console.log('更新组件:', stats.updatedComponents);
 #### 4. 序列化增量数据
 
 ```typescript
-// 转换为JSON字符串
-const json = IncrementalSerializer.serializeIncremental(incremental);
+// JSON格式（默认）
+const jsonData = IncrementalSerializer.serializeIncremental(incremental, {
+  format: 'json'
+});
 
-// 发送到服务器或保存
-socket.send(json);
-// 或
-localStorage.setItem('changes', json);
+// 二进制格式（更小的体积，更高性能）
+const binaryData = IncrementalSerializer.serializeIncremental(incremental, {
+  format: 'binary'
+});
+
+// 美化JSON输出（便于调试）
+const prettyJson = IncrementalSerializer.serializeIncremental(incremental, {
+  format: 'json',
+  pretty: true
+});
+
+// 发送或保存
+socket.send(binaryData);  // 网络传输使用二进制
+localStorage.setItem('changes', jsonData);  // 本地存储可用JSON
 ```
 
 #### 5. 应用增量变更
@@ -266,11 +278,16 @@ localStorage.setItem('changes', json);
 // 在另一个场景应用变更
 const otherScene = new Scene();
 
-// 从JSON字符串应用
-otherScene.applyIncremental(json);
-
-// 或直接应用增量对象
+// 直接应用增量对象
 otherScene.applyIncremental(incremental);
+
+// 从JSON字符串应用
+const jsonData = IncrementalSerializer.serializeIncremental(incremental, { format: 'json' });
+otherScene.applyIncremental(jsonData);
+
+// 从二进制Buffer应用
+const binaryData = IncrementalSerializer.serializeIncremental(incremental, { format: 'binary' });
+otherScene.applyIncremental(binaryData);
 ```
 
 ### 增量快照管理
@@ -322,6 +339,16 @@ interface IncrementalSerializationOptions {
   // 是否压缩快照（使用JSON序列化）
   // 默认false
   compressSnapshot?: boolean;
+
+  // 序列化格式
+  // 'json': JSON格式（可读性好，方便调试）
+  // 'binary': MessagePack二进制格式（体积小，性能高）
+  // 默认 'json'
+  format?: 'json' | 'binary';
+
+  // 是否美化JSON输出（仅在format='json'时有效）
+  // 默认false
+  pretty?: boolean;
 }
 
 // 使用选项
@@ -513,17 +540,21 @@ class NetworkSync {
 
     // 只在有变更时发送
     if (stats.totalChanges > 0) {
-      const json = IncrementalSerializer.serializeIncremental(incremental);
-      this.socket.send(json);
+      // 使用二进制格式减少网络传输量
+      const binaryData = IncrementalSerializer.serializeIncremental(incremental, {
+        format: 'binary'
+      });
+      this.socket.send(binaryData);
 
       // 更新基准
       this.scene.updateIncrementalSnapshot();
     }
   }
 
-  private receiveIncremental(data: string): void {
-    const incremental = IncrementalSerializer.deserializeIncremental(data);
-    this.scene.applyIncremental(incremental);
+  private receiveIncremental(data: ArrayBuffer): void {
+    // 直接应用二进制数据
+    const buffer = Buffer.from(data);
+    this.scene.applyIncremental(buffer);
   }
 }
 ```
@@ -750,23 +781,27 @@ class LargeDataComponent extends Component {
 
 ### 全量序列化API
 
-- `scene.serialize(options?): string | Buffer` - 序列化场景
-- `scene.deserialize(data, options?)` - 反序列化场景
-- `SceneSerializer.validate(data)` - 验证序列化数据
-- `SceneSerializer.getInfo(data)` - 获取序列化数据信息
+- [`Scene.serialize()`](/api/classes/Scene#serialize) - 序列化场景
+- [`Scene.deserialize()`](/api/classes/Scene#deserialize) - 反序列化场景
+- [`SceneSerializer`](/api/classes/SceneSerializer) - 场景序列化器
+- [`ComponentSerializer`](/api/classes/ComponentSerializer) - 组件序列化器
 
 ### 增量序列化API
 
-- `scene.createIncrementalSnapshot(options?)` - 创建基础快照
-- `scene.serializeIncremental(options?)` - 获取增量变更
-- `scene.applyIncremental(incremental)` - 应用增量变更
-- `scene.updateIncrementalSnapshot(options?)` - 更新快照基准
-- `scene.clearIncrementalSnapshot()` - 清除快照
-- `scene.hasIncrementalSnapshot()` - 检查是否有快照
-- `IncrementalSerializer.getIncrementalStats(incremental)` - 获取统计信息
+- [`Scene.createIncrementalSnapshot()`](/api/classes/Scene#createincrementalsnapshot) - 创建基础快照
+- [`Scene.serializeIncremental()`](/api/classes/Scene#serializeincremental) - 获取增量变更
+- [`Scene.applyIncremental()`](/api/classes/Scene#applyincremental) - 应用增量变更（支持IncrementalSnapshot对象、JSON字符串或二进制Buffer）
+- [`Scene.updateIncrementalSnapshot()`](/api/classes/Scene#updateincrementalsnapshot) - 更新快照基准
+- [`Scene.clearIncrementalSnapshot()`](/api/classes/Scene#clearincrementalsnapshot) - 清除快照
+- [`Scene.hasIncrementalSnapshot()`](/api/classes/Scene#hasincrementalsnapshot) - 检查是否有快照
+- [`IncrementalSerializer`](/api/classes/IncrementalSerializer) - 增量序列化器
+- [`IncrementalSnapshot`](/api/interfaces/IncrementalSnapshot) - 增量快照接口
+- [`IncrementalSerializationOptions`](/api/interfaces/IncrementalSerializationOptions) - 增量序列化选项
+- [`IncrementalSerializationFormat`](/api/type-aliases/IncrementalSerializationFormat) - 序列化格式类型
 
 ### 版本迁移API
 
+- [`VersionMigrationManager`](/api/classes/VersionMigrationManager) - 版本迁移管理器
 - `VersionMigrationManager.registerComponentMigration()` - 注册组件迁移
 - `VersionMigrationManager.registerSceneMigration()` - 注册场景迁移
 - `VersionMigrationManager.canMigrateComponent()` - 检查是否可以迁移

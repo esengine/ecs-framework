@@ -618,24 +618,28 @@ export class Scene implements IScene {
     /**
      * 应用增量变更到场景
      *
-     * @param incremental 增量快照数据（JSON字符串或对象）
+     * @param incremental 增量快照数据（IncrementalSnapshot对象、JSON字符串或二进制Buffer）
      * @param componentRegistry 组件类型注册表（可选，默认使用全局注册表）
      *
      * @example
      * ```typescript
-     * // 应用增量变更
+     * // 应用增量变更对象
      * scene.applyIncremental(incrementalSnapshot);
      *
-     * // 或从JSON字符串应用
-     * const incremental = IncrementalSerializer.deserializeIncremental(jsonString);
-     * scene.applyIncremental(incremental);
+     * // 从JSON字符串应用
+     * const jsonData = IncrementalSerializer.serializeIncremental(snapshot, { format: 'json' });
+     * scene.applyIncremental(jsonData);
+     *
+     * // 从二进制Buffer应用
+     * const binaryData = IncrementalSerializer.serializeIncremental(snapshot, { format: 'binary' });
+     * scene.applyIncremental(binaryData);
      * ```
      */
     public applyIncremental(
-        incremental: IncrementalSnapshot | string,
+        incremental: IncrementalSnapshot | string | Buffer,
         componentRegistry?: Map<string, any>
     ): void {
-        const snapshot = typeof incremental === 'string'
+        const snapshot = (typeof incremental === 'string' || Buffer.isBuffer(incremental))
             ? IncrementalSerializer.deserializeIncremental(incremental)
             : incremental;
 

@@ -11,6 +11,7 @@ import { Component } from '../Component';
 import { ComponentSerializer, SerializedComponent } from './ComponentSerializer';
 import { SerializedEntity } from './EntitySerializer';
 import { ComponentType } from '../Core/ComponentStorage';
+import * as msgpack from 'msgpack-lite';
 
 /**
  * 变更操作类型
@@ -118,6 +119,11 @@ interface SceneSnapshot {
 }
 
 /**
+ * 增量序列化格式
+ */
+export type IncrementalSerializationFormat = 'json' | 'binary';
+
+/**
  * 增量序列化选项
  */
 export interface IncrementalSerializationOptions {
@@ -138,6 +144,20 @@ export interface IncrementalSerializationOptions {
      * 默认false，设为true可减少内存占用但增加CPU开销
      */
     compressSnapshot?: boolean;
+
+    /**
+     * 序列化格式
+     * - 'json': JSON格式（可读性好，方便调试）
+     * - 'binary': MessagePack二进制格式（体积小，性能高）
+     * 默认 'json'
+     */
+    format?: IncrementalSerializationFormat;
+
+    /**
+     * 是否美化JSON输出（仅在format='json'时有效）
+     * 默认false
+     */
+    pretty?: boolean;
 }
 
 /**
@@ -585,40 +605,93 @@ export class IncrementalSerializer {
     }
 
     /**
-     * 序列化增量快照为JSON
+     * 序列化增量快照
      *
      * @param incremental 增量快照
-     * @param pretty 是否美化输出
-     * @returns JSON字符串
+     * @param options 序列化选项
+     * @returns 序列化后的数据（JSON字符串或二进制Buffer）
+     *
+     * @example
+     * ```typescript
+     * // JSON格式（默认）
+     * const jsonData = IncrementalSerializer.serializeIncremental(snapshot);
+     *
+     * // 二进制格式
+     * const binaryData = IncrementalSerializer.serializeIncremental(snapshot, {
+     *     format: 'binary'
+     * });
+     *
+     * // 美化JSON
+     * const prettyJson = IncrementalSerializer.serializeIncremental(snapshot, {
+     *     format: 'json',
+     *     pretty: true
+     * });
+     * ```
      */
     public static serializeIncremental(
         incremental: IncrementalSnapshot,
-        pretty: boolean = false
-    ): string {
-        return pretty
-            ? JSON.stringify(incremental, null, 2)
-            : JSON.stringify(incremental);
+        options?: { format?: IncrementalSerializationFormat; pretty?: boolean }
+    ): string | Buffer {
+        const opts = {
+            format: 'json' as IncrementalSerializationFormat,
+            pretty: false,
+            ...options
+        };
+
+        if (opts.format === 'binary') {
+            return msgpack.encode(incremental);
+        } else {
+            return opts.pretty
+                ? JSON.stringify(incremental, null, 2)
+                : JSON.stringify(incremental);
+        }
     }
 
     /**
-     * 从JSON反序列化增量快照
+     * 反序列化增量快照
      *
-     * @param json JSON字符串
+     * @param data 序列化的数据（JSON字符串或二进制Buffer）
      * @returns 增量快照
+     *
+     * @example
+     * ```typescript
+     * // 从JSON反序列化
+     * const snapshot = IncrementalSerializer.deserializeIncremental(jsonString);
+     *
+     * // 从二进制反序列化
+     * const snapshot = IncrementalSerializer.deserializeIncremental(buffer);
+     * ```
      */
-    public static deserializeIncremental(json: string): IncrementalSnapshot {
-        return JSON.parse(json);
+    public static deserializeIncremental(data: string | Buffer): IncrementalSnapshot {
+        if (typeof data === 'string') {
+            // JSON格式
+            return JSON.parse(data);
+        } else {
+            // 二进制格式（MessagePack）
+            return msgpack.decode(data);
+        }
     }
 
     /**
      * 计算增量快照的大小（字节）
      *
      * @param incremental 增量快照
+     * @param format 序列化格式，默认为 'json'
      * @returns 字节数
      */
-    public static getIncrementalSize(incremental: IncrementalSnapshot): number {
-        const json = this.serializeIncremental(incremental);
-        return new Blob([json]).size;
+    public static getIncrementalSize(
+        incremental: IncrementalSnapshot,
+        format: IncrementalSerializationFormat = 'json'
+    ): number {
+        const data = this.serializeIncremental(incremental, { format });
+
+        if (typeof data === 'string') {
+            // JSON格式：计算UTF-8编码后的字节数
+            return Buffer.byteLength(data, 'utf8');
+        } else {
+            // 二进制格式：直接返回Buffer长度
+            return data.length;
+        }
     }
 
     /**

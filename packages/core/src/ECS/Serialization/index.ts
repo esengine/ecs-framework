@@ -55,6 +55,7 @@ export { IncrementalSerializer, ChangeOperation } from './IncrementalSerializer'
 export type {
     IncrementalSnapshot,
     IncrementalSerializationOptions,
+    IncrementalSerializationFormat,
     EntityChange,
     ComponentChange,
     SceneDataChange

@@ -166,11 +166,17 @@ export class IncrementalSerializationDemo extends DemoBase {
         const incremental = this.scene.serializeIncremental();
         const stats = IncrementalSerializer.getIncrementalStats(incremental);
 
+        // 计算JSON和二进制格式的大小
+        const jsonSize = IncrementalSerializer.getIncrementalSize(incremental, 'json');
+        const binarySize = IncrementalSerializer.getIncrementalSize(incremental, 'binary');
+
         this.incrementalHistory.push({
             label,
             incremental,
             stats,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            jsonSize,
+            binarySize
         });
 
         this.scene.updateIncrementalSnapshot();
@@ -226,8 +232,16 @@ export class IncrementalSerializationDemo extends DemoBase {
                     <div class="stat-value" id="historyCount">0</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">最后快照大小</div>
-                    <div class="stat-value" id="snapshotSize">0B</div>
+                    <div class="stat-label">JSON大小</div>
+                    <div class="stat-value" id="jsonSize">0B</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">二进制大小</div>
+                    <div class="stat-value" id="binarySize">0B</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">压缩率</div>
+                    <div class="stat-value" id="compressionRatio">0%</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">总变更数</div>
@@ -358,8 +372,12 @@ export class IncrementalSerializationDemo extends DemoBase {
                     </div>
                     <div style="font-size: 11px; color: #8892b0; margin-top: 4px;">
                         实体: +${item.stats.addedEntities} -${item.stats.removedEntities} ~${item.stats.updatedEntities} |
-                        组件: +${item.stats.addedComponents} -${item.stats.removedComponents} ~${item.stats.updatedComponents} |
-                        总变更: ${item.stats.totalChanges}
+                        组件: +${item.stats.addedComponents} -${item.stats.removedComponents} ~${item.stats.updatedComponents}
+                    </div>
+                    <div style="font-size: 11px; color: #8892b0; margin-top: 2px;">
+                        JSON: ${this.formatBytes(item.jsonSize)} |
+                        Binary: ${this.formatBytes(item.binarySize)} |
+                        <span style="color: #4ecdc4;">节省: ${((1 - item.binarySize / item.jsonSize) * 100).toFixed(1)}%</span>
                     </div>
                 </div>
             `;
@@ -381,11 +399,19 @@ export class IncrementalSerializationDemo extends DemoBase {
         const item = this.incrementalHistory[index];
         const detailsPanel = document.getElementById('snapshotDetails')!;
 
+        const compressionRatio = ((1 - item.binarySize / item.jsonSize) * 100).toFixed(1);
+
         const details = {
             版本: item.incremental.version,
             基础版本: item.incremental.baseVersion,
             时间戳: new Date(item.incremental.timestamp).toLocaleString(),
             场景名称: item.incremental.sceneName,
+            格式对比: {
+                JSON大小: this.formatBytes(item.jsonSize),
+                二进制大小: this.formatBytes(item.binarySize),
+                压缩率: `${compressionRatio}%`,
+                节省字节: this.formatBytes(item.jsonSize - item.binarySize)
+            },
             统计: item.stats,
             实体变更: item.incremental.entityChanges.map((c: any) => ({
                 操作: c.operation,
@@ -413,8 +439,15 @@ export class IncrementalSerializationDemo extends DemoBase {
 
         if (this.incrementalHistory.length > 0) {
             const lastItem = this.incrementalHistory[this.incrementalHistory.length - 1];
-            const size = IncrementalSerializer.getIncrementalSize(lastItem.incremental);
-            document.getElementById('snapshotSize')!.textContent = this.formatBytes(size);
+
+            document.getElementById('jsonSize')!.textContent = this.formatBytes(lastItem.jsonSize);
+            document.getElementById('binarySize')!.textContent = this.formatBytes(lastItem.binarySize);
+
+            const compressionRatio = ((1 - lastItem.binarySize / lastItem.jsonSize) * 100).toFixed(1);
+            const ratioElement = document.getElementById('compressionRatio')!;
+            ratioElement.textContent = `${compressionRatio}%`;
+            ratioElement.style.color = parseFloat(compressionRatio) > 30 ? '#4ecdc4' : '#ffe66d';
+
             document.getElementById('totalChanges')!.textContent = lastItem.stats.totalChanges.toString();
         }
     }
