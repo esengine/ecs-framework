@@ -49,3 +49,13 @@ export type {
     ComponentMigrationFunction,
     SceneMigrationFunction
 } from './VersionMigration';
+
+// 增量序列化
+export { IncrementalSerializer, ChangeOperation } from './IncrementalSerializer';
+export type {
+    IncrementalSnapshot,
+    IncrementalSerializationOptions,
+    EntityChange,
+    ComponentChange,
+    SceneDataChange
+} from './IncrementalSerializer';

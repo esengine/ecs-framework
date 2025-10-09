@@ -3,7 +3,7 @@ import { EntityList } from './Utils/EntityList';
 import { EntityProcessorList } from './Utils/EntityProcessorList';
 import { IdentifierPool } from './Utils/IdentifierPool';
 import { EntitySystem } from './Systems/EntitySystem';
-import { ComponentStorageManager } from './Core/ComponentStorage';
+import { ComponentStorageManager, ComponentRegistry } from './Core/ComponentStorage';
 import { QuerySystem } from './Core/QuerySystem';
 import { TypeSafeEventSystem } from './Core/EventSystem';
 import { EventBus } from './Core/EventBus';
@@ -11,6 +11,7 @@ import { IScene, ISceneConfig } from './IScene';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from './Decorators';
 import { TypedQueryBuilder } from './Core/Query/TypedQuery';
 import { SceneSerializer, SceneSerializationOptions, SceneDeserializationOptions } from './Serialization/SceneSerializer';
+import { IncrementalSerializer, IncrementalSnapshot, IncrementalSerializationOptions } from './Serialization/IncrementalSerializer';
 
 /**
  * 游戏场景默认实现类
@@ -547,5 +548,143 @@ export class Scene implements IScene {
      */
     public deserialize(saveData: string | Buffer, options?: SceneDeserializationOptions): void {
         SceneSerializer.deserialize(this, saveData, options);
+    }
+
+    // ==================== 增量序列化 API ====================
+
+    /** 增量序列化的基础快照 */
+    private _incrementalBaseSnapshot?: any;
+
+    /**
+     * 创建增量序列化的基础快照
+     *
+     * 在需要进行增量序列化前，先调用此方法创建基础快照
+     *
+     * @param options 序列化选项
+     *
+     * @example
+     * ```typescript
+     * // 创建基础快照
+     * scene.createIncrementalSnapshot();
+     *
+     * // 进行一些修改...
+     * entity.addComponent(new PositionComponent(100, 200));
+     *
+     * // 计算增量变更
+     * const incremental = scene.serializeIncremental();
+     * ```
+     */
+    public createIncrementalSnapshot(options?: IncrementalSerializationOptions): void {
+        this._incrementalBaseSnapshot = IncrementalSerializer.createSnapshot(this, options);
+    }
+
+    /**
+     * 增量序列化场景
+     *
+     * 只序列化相对于基础快照的变更部分
+     *
+     * @param options 序列化选项
+     * @returns 增量快照对象
+     *
+     * @example
+     * ```typescript
+     * // 创建基础快照
+     * scene.createIncrementalSnapshot();
+     *
+     * // 修改场景
+     * const entity = scene.createEntity('NewEntity');
+     * entity.addComponent(new PositionComponent(50, 100));
+     *
+     * // 获取增量变更
+     * const incremental = scene.serializeIncremental();
+     * console.log(`变更数量: ${incremental.entityChanges.length}`);
+     *
+     * // 序列化为JSON
+     * const json = IncrementalSerializer.serializeIncremental(incremental);
+     * ```
+     */
+    public serializeIncremental(options?: IncrementalSerializationOptions): IncrementalSnapshot {
+        if (!this._incrementalBaseSnapshot) {
+            throw new Error('必须先调用 createIncrementalSnapshot() 创建基础快照');
+        }
+
+        return IncrementalSerializer.computeIncremental(
+            this,
+            this._incrementalBaseSnapshot,
+            options
+        );
+    }
+
+    /**
+     * 应用增量变更到场景
+     *
+     * @param incremental 增量快照数据（JSON字符串或对象）
+     * @param componentRegistry 组件类型注册表（可选，默认使用全局注册表）
+     *
+     * @example
+     * ```typescript
+     * // 应用增量变更
+     * scene.applyIncremental(incrementalSnapshot);
+     *
+     * // 或从JSON字符串应用
+     * const incremental = IncrementalSerializer.deserializeIncremental(jsonString);
+     * scene.applyIncremental(incremental);
+     * ```
+     */
+    public applyIncremental(
+        incremental: IncrementalSnapshot | string,
+        componentRegistry?: Map<string, any>
+    ): void {
+        const snapshot = typeof incremental === 'string'
+            ? IncrementalSerializer.deserializeIncremental(incremental)
+            : incremental;
+
+        const registry = componentRegistry || ComponentRegistry.getAllComponentNames() as Map<string, any>;
+
+        IncrementalSerializer.applyIncremental(this, snapshot, registry);
+    }
+
+    /**
+     * 更新增量快照基准
+     *
+     * 将当前场景状态设为新的增量序列化基准
+     *
+     * @param options 序列化选项
+     *
+     * @example
+     * ```typescript
+     * // 创建初始快照
+     * scene.createIncrementalSnapshot();
+     *
+     * // 进行一些修改并序列化
+     * const incremental1 = scene.serializeIncremental();
+     *
+     * // 更新基准，之后的增量将基于当前状态
+     * scene.updateIncrementalSnapshot();
+     *
+     * // 继续修改
+     * const incremental2 = scene.serializeIncremental();
+     * ```
+     */
+    public updateIncrementalSnapshot(options?: IncrementalSerializationOptions): void {
+        this.createIncrementalSnapshot(options);
+    }
+
+    /**
+     * 清除增量快照
+     *
+     * 释放快照占用的内存
+     */
+    public clearIncrementalSnapshot(): void {
+        this._incrementalBaseSnapshot = undefined;
+    }
+
+    /**
+     * 检查是否有增量快照
+     *
+     * @returns 如果已创建增量快照返回true
+     */
+    public hasIncrementalSnapshot(): boolean {
+        return this._incrementalBaseSnapshot !== undefined;
     }
 }

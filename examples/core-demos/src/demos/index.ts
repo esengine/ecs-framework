@@ -1,12 +1,13 @@
 import { DemoBase } from './DemoBase';
 import { SerializationDemo } from './SerializationDemo';
+import { IncrementalSerializationDemo } from './IncrementalSerializationDemo';
 import { WorkerSystemDemo } from './WorkerSystemDemo';
 
-export { DemoBase, SerializationDemo, WorkerSystemDemo };
+export { DemoBase, SerializationDemo, IncrementalSerializationDemo, WorkerSystemDemo };
 
 // Demo注册表
 export const DEMO_REGISTRY: typeof DemoBase[] = [
     SerializationDemo,
-    WorkerSystemDemo,
-    // 更多demos可以在这里添加
+    IncrementalSerializationDemo,
+    WorkerSystemDemo
 ];
