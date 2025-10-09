@@ -9,7 +9,7 @@ export class WebSocketManager {
     private reconnectInterval: number = 2000;
     private url: string;
     private autoReconnect: boolean;
-    private reconnectTimer?: NodeJS.Timeout;
+    private reconnectTimer?: ReturnType<typeof setTimeout>;
     private onOpen?: (event: Event) => void;
     private onClose?: (event: CloseEvent) => void;
     private onError?: (error: Event | any) => void;

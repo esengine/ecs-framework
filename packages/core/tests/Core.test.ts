@@ -1,10 +1,10 @@
 import { Core } from '../src/Core';
 import { Scene } from '../src/ECS/Scene';
+import { SceneManager } from '../src/ECS/SceneManager';
 import { Entity } from '../src/ECS/Entity';
 import { Component } from '../src/ECS/Component';
 import { GlobalManager } from '../src/Utils/GlobalManager';
 import { ITimer } from '../src/Utils/Timers/ITimer';
-import { WorldManager } from '../src/ECS/WorldManager';
 
 // 测试组件
 class TestComponent extends Component {
@@ -65,10 +65,9 @@ describe('Core - 核心管理系统测试', () => {
     beforeEach(() => {
         // 清除之前的实例
         (Core as any)._instance = null;
-        
-        // 重置WorldManager全局状态
-        WorldManager.reset();
-        
+
+        // 注意：WorldManager不再是单例，无需reset
+
         // 模拟console.warn以避免测试输出
         originalConsoleWarn = console.warn;
         console.warn = jest.fn();
@@ -77,12 +76,11 @@ describe('Core - 核心管理系统测试', () => {
     afterEach(() => {
         // 恢复console.warn
         console.warn = originalConsoleWarn;
-        
+
         // 清理Core实例
-        (Core as any)._instance = null;
-        
-        // 重置WorldManager全局状态
-        WorldManager.reset();
+        if (Core.Instance) {
+            Core.destroy();
+        }
     });
 
     describe('实例创建和管理', () => {
@@ -128,96 +126,36 @@ describe('Core - 核心管理系统测试', () => {
         });
     });
 
-    describe('场景管理', () => {
+    // 注意：场景管理功能已移至SceneManager
+    // 相关测试请查看 SceneManager.test.ts
+
+    describe('更新循环 - 全局服务', () => {
         let core: Core;
-        let testScene: TestScene;
-
-        beforeEach(() => {
-            core = Core.create(true);
-            testScene = new TestScene();
-        });
-
-        test('应该能够设置场景', () => {
-            Core.setScene(testScene);
-            
-            expect(Core.scene).toBe(testScene);
-            expect(testScene.beginCalled).toBe(true);
-        });
-
-        test('应该能够使用推荐的setScene方法设置场景', () => {
-            const scene = Core.setScene(testScene);
-            
-            expect(Core.scene).toBe(testScene);
-            expect(testScene.beginCalled).toBe(true);
-            expect(scene).toBe(testScene); // 应该返回场景实例
-        });
-
-        test('设置新场景应该触发场景切换', () => {
-            const firstScene = new TestScene();
-            const secondScene = new TestScene();
-            
-            // 设置第一个场景
-            Core.setScene(firstScene);
-            expect(firstScene.beginCalled).toBe(true);
-            
-            // 设置第二个场景（应该在下一帧切换）
-            Core.setScene(secondScene);
-            
-            // 模拟更新循环触发场景切换
-            Core.update(0.016);
-            
-            expect(firstScene.endCalled).toBe(true);
-            expect(secondScene.beginCalled).toBe(true);
-            expect(Core.scene).toBe(secondScene);
-        });
-
-        test('获取场景在未设置时应该返回null', () => {
-            // 创建全新的Core实例，确保没有场景设置
-            const core = Core.create(false);
-            expect(Core.scene).toBeNull();
-        });
-    });
-
-    describe('更新循环', () => {
-        let core: Core;
-        let testScene: TestScene;
         let globalManager: TestGlobalManager;
 
         beforeEach(() => {
             core = Core.create(true);
-            testScene = new TestScene();
             globalManager = new TestGlobalManager();
-            
             Core.registerGlobalManager(globalManager);
-            Core.setScene(testScene);
         });
 
-        test('应该能够执行更新循环', () => {
-            const deltaTime = 0.016;
-            
-            Core.update(deltaTime);
-            
-            expect(testScene.updateCallCount).toBe(1);
+        test('应该能够更新全局管理器', () => {
+            Core.update(0.016);
             expect(globalManager.updateCallCount).toBe(1);
         });
 
         test('暂停状态下不应该执行更新', () => {
             Core.paused = true;
-            
             Core.update(0.016);
-            
-            expect(testScene.updateCallCount).toBe(0);
             expect(globalManager.updateCallCount).toBe(0);
-            
+
             // 恢复状态
             Core.paused = false;
         });
 
         test('禁用的全局管理器不应该被更新', () => {
             globalManager.enabled = false;
-            
             Core.update(0.016);
-            
             expect(globalManager.updateCallCount).toBe(0);
         });
 
@@ -225,8 +163,6 @@ describe('Core - 核心管理系统测试', () => {
             Core.update(0.016);
             Core.update(0.016);
             Core.update(0.016);
-            
-            expect(testScene.updateCallCount).toBe(3);
             expect(globalManager.updateCallCount).toBe(3);
         });
     });
@@ -410,41 +346,8 @@ describe('Core - 核心管理系统测试', () => {
         });
     });
 
-    describe('ECS API集成', () => {
-        let core: Core;
-        let testScene: TestScene;
-
-        beforeEach(() => {
-            core = Core.create(true);
-            testScene = new TestScene();
-        });
-
-        test('设置支持ECS的场景应该初始化ECS API', () => {
-            // 模拟带有querySystem和eventSystem的场景
-            const ecsScene = Object.assign(testScene, {
-                querySystem: { query: jest.fn() },
-                eventSystem: { emit: jest.fn() }
-            });
-            
-            Core.setScene(ecsScene);
-            
-            expect(Core.ecsAPI).toBeDefined();
-        });
-
-        test('设置普通场景不应该初始化ECS API', () => {
-            // 创建一个普通场景对象（不继承Scene）
-            const plainScene = {
-                initialize: () => {},
-                begin: () => {},
-                end: () => {},
-                update: () => {}
-            };
-            
-            Core.setScene(plainScene as any);
-            
-            expect(Core.ecsAPI).toBeNull();
-        });
-    });
+    // ECS API 现在由 SceneManager 管理
+    // 相关测试请查看 SceneManager.test.ts
 
     describe('性能监控集成', () => {
         let core: Core;
@@ -455,52 +358,21 @@ describe('Core - 核心管理系统测试', () => {
 
         test('调试模式下应该启用性能监控', () => {
             const performanceMonitor = (core as any)._performanceMonitor;
-            
+
             expect(performanceMonitor).toBeDefined();
             // 性能监控器应该在调试模式下被启用
             expect(performanceMonitor.isEnabled).toBe(true);
         });
 
         test('更新循环应该包含性能监控', () => {
-            const scene = new TestScene();
-            Core.setScene(scene);
-            
             const performanceMonitor = (core as any)._performanceMonitor;
             const startMonitoringSpy = jest.spyOn(performanceMonitor, 'startMonitoring');
             const endMonitoringSpy = jest.spyOn(performanceMonitor, 'endMonitoring');
-            
+
             Core.update(0.016);
-            
+
             expect(startMonitoringSpy).toHaveBeenCalled();
             expect(endMonitoringSpy).toHaveBeenCalled();
-        });
-    });
-
-    describe('错误处理', () => {
-        test('设置null场景应该被忽略', () => {
-            const core = Core.create(false);
-            
-            // Core的新架构中场景不能直接设置为null
-            // 默认情况下Core.scene应该为null（没有设置场景时）
-            expect(Core.scene).toBeNull();
-        });
-
-        test('应该处理场景更新中的异常', () => {
-            const core = Core.create(true);
-            const errorScene = new TestScene();
-            
-            // 模拟场景更新抛出异常
-            errorScene.update = () => {
-                throw new Error('Test error');
-            };
-            
-            Core.setScene(errorScene);
-            
-            // 由于Core目前不捕获场景异常，我们预期它会抛出异常
-            // 这是一个已知的行为，可以在未来版本中改进
-            expect(() => {
-                Core.update(0.016);
-            }).toThrow('Test error');
         });
     });
 });

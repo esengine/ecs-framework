@@ -289,12 +289,20 @@ class StatsScene extends Scene {
 
 ## 场景集成到框架
 
-场景可以通过两种方式运行：
+ECS Framework 提供了灵活的场景管理架构，适用于不同规模的应用：
 
-### 1. 简单的单场景应用
+### 1. 使用 SceneManager（推荐大多数应用）
+
+适用于 95% 的游戏应用（单人游戏、简单多人游戏、移动游戏等）：
 
 ```typescript
-import { Core } from '@esengine/ecs-framework';
+import { Core, SceneManager } from '@esengine/ecs-framework';
+
+// 初始化Core（全局服务）
+Core.create({ debug: true });
+
+// 创建场景管理器
+const sceneManager = new SceneManager();
 
 // 创建游戏场景
 class GameScene extends Scene {
@@ -305,21 +313,52 @@ class GameScene extends Scene {
   }
 }
 
-// 启动游戏
-Core.create();
+// 设置场景
 const gameScene = new GameScene();
-Core.setScene(gameScene);
+sceneManager.setScene(gameScene);
+
+// 游戏循环
+function gameLoop(deltaTime: number) {
+  Core.update(deltaTime);      // 更新全局服务
+  sceneManager.update();        // 更新当前场景
+}
 ```
 
-### 2. 复杂的多场景应用
+### 2. 场景切换
+
+SceneManager 支持流畅的场景切换：
 
 ```typescript
-import { WorldManager } from '@esengine/ecs-framework';
+// 立即切换场景
+const menuScene = new MenuScene();
+sceneManager.setScene(menuScene);
 
-// 获取WorldManager实例
-const worldManager = WorldManager.getInstance();
+// 延迟切换场景（在下一帧切换）
+const gameScene = new GameScene();
+sceneManager.startSceneTransition(gameScene, false);
 
-// 创建World
+// 访问当前场景
+const currentScene = sceneManager.currentScene;
+
+// 访问 ECS API
+const ecsAPI = sceneManager.ecsAPI;
+const entity = ecsAPI?.createEntity('player');
+```
+
+### 3. 使用 WorldManager（高级用例）
+
+适用于需要完全隔离的多世界应用（MMO服务器、游戏房间系统等）：
+
+```typescript
+import { Core, WorldManager } from '@esengine/ecs-framework';
+
+// 初始化Core（全局服务）
+Core.create({ debug: true });
+
+// 创建世界管理器
+const worldManager = new WorldManager();
+
+// 创建多个独立的游戏世界
 const gameWorld = worldManager.createWorld('game', {
   name: 'MainGame',
   maxScenes: 5
@@ -331,6 +370,12 @@ const gameScene = gameWorld.createScene('game', new GameScene());
 
 // 激活场景
 gameWorld.setSceneActive('menu', true);
+
+// 游戏循环
+function gameLoop(deltaTime: number) {
+  Core.update(deltaTime);      // 更新全局服务
+  worldManager.updateAll();    // 更新所有世界
+}
 ```
 
 ## 多场景管理
@@ -376,21 +421,43 @@ class GameWorld extends World {
 }
 ```
 
-## 与 World 的关系
+## 架构层次
 
-Scene 的运行架构层次：
+ECS Framework 的架构层次清晰，职责分明：
 
 ```typescript
-// Core -> WorldManager -> World -> Scene -> EntitySystem -> Entity -> Component
+// 架构层次：
+// Core (全局服务) → SceneManager (场景管理) → Scene → EntitySystem → Entity → Component
+// 或
+// Core (全局服务) → WorldManager (世界管理) → World → Scene → EntitySystem → Entity → Component
 
-// 1. 简单应用：Core直接管理单个Scene
-Core.setScene(new GameScene());
+// 1. 推荐：使用 SceneManager 管理单场景/场景切换
+import { Core, SceneManager } from '@esengine/ecs-framework';
 
-// 2. 复杂应用：WorldManager管理多个World，每个World管理多个Scene
-const worldManager = WorldManager.getInstance();
+Core.create({ debug: true });
+const sceneManager = new SceneManager();
+sceneManager.setScene(new GameScene());
+
+// 游戏循环
+function gameLoop(deltaTime: number) {
+  Core.update(deltaTime);      // 全局服务
+  sceneManager.update();        // 场景更新
+}
+
+// 2. 高级：使用 WorldManager 管理多世界
+import { Core, WorldManager } from '@esengine/ecs-framework';
+
+Core.create({ debug: true });
+const worldManager = new WorldManager();
 const world = worldManager.createWorld('gameWorld');
 const scene = world.createScene('mainScene', new GameScene());
 world.setSceneActive('mainScene', true);
+
+// 游戏循环
+function gameLoop(deltaTime: number) {
+  Core.update(deltaTime);      // 全局服务
+  worldManager.updateAll();    // 所有世界更新
+}
 ```
 
 ## 最佳实践

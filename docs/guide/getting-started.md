@@ -264,22 +264,17 @@ player.addComponent(new Velocity(50, 30));  // 每秒移动 50 像素（x方向�
 player.addComponent(new Sprite("player.png", 64, 64));
 ```
 
-## World 概念
+## 场景管理
 
-World 是 Scene 的容器，用于管理多个独立的游戏世界。这种设计特别适用于：
-- 多人游戏房间（每个房间一个 World）
-- 不同的游戏模式
-- 独立的模拟环境
-
-### 基本用法
+Core 内置了场景管理功能，使用非常简单：
 
 ```typescript
-import { World, Scene } from '@esengine/ecs-framework'
+import { Core, Scene } from '@esengine/ecs-framework';
 
-// 创建游戏房间的World
-const roomWorld = new World({ name: 'Room_001' });
+// 初始化Core
+Core.create({ debug: true });
 
-// 在World中创建多个Scene
+// 创建并设置场景
 class GameScene extends Scene {
   initialize(): void {
     this.name = "GamePlay";
@@ -288,78 +283,106 @@ class GameScene extends Scene {
   }
 }
 
-class UIScene extends Scene {
-  initialize(): void {
-    this.name = "UI";
-    // UI相关系统
-  }
+const gameScene = new GameScene();
+Core.setScene(gameScene);
+
+// 游戏循环（自动更新场景）
+function gameLoop(deltaTime: number) {
+  Core.update(deltaTime);  // 自动更新全局服务和场景
 }
 
-// 添加Scene到World
-const gameScene = roomWorld.createScene('game', new GameScene());
-const uiScene = roomWorld.createScene('ui', new UIScene());
+// 切换场景
+Core.loadScene(new MenuScene());  // 延迟切换（下一帧）
+Core.setScene(new GameScene());   // 立即切换
 
-// 激活Scene
-roomWorld.setSceneActive('game', true);
-roomWorld.setSceneActive('ui', true);
+// 访问当前场景
+const currentScene = Core.scene;
 
-// 启动World
-roomWorld.start();
+// 使用流式API
+const player = Core.ecsAPI?.createEntity('Player')
+  .addComponent(Position, 100, 100)
+  .addComponent(Velocity, 50, 0);
 ```
 
-### World 生命周期
+### 高级：使用 WorldManager 管理多世界
 
-World 提供了完整的生命周期管理：
-- `start()`: 启动 World 和所有全局系统
-- `updateGlobalSystems()`: 更新全局系统（由 Core.update() 调用）
-- `updateScenes()`: 更新所有激活的 Scene（由 Core.update() 调用）
-- `stop()`: 停止 World
-- `destroy()`: 销毁 World 和所有资源
+仅适用于复杂的服务器端应用（MMO游戏服务器、游戏房间系统等）：
+
+```typescript
+import { Core, WorldManager } from '@esengine/ecs-framework';
+
+// 初始化Core
+Core.create({ debug: true });
+
+// 创建世界管理器（手动管理）
+const worldManager = new WorldManager();
+
+// 创建多个独立的游戏世界
+const room1 = worldManager.createWorld('room_001');
+const room2 = worldManager.createWorld('room_002');
+
+// 在每个世界中创建场景
+const gameScene1 = room1.createScene('game', new GameScene());
+const gameScene2 = room2.createScene('game', new GameScene());
+
+// 激活场景
+room1.setSceneActive('game', true);
+room2.setSceneActive('game', true);
+
+// 游戏循环（需要手动更新世界）
+function gameLoop(deltaTime: number) {
+  Core.update(deltaTime);       // 更新全局服务
+  worldManager.updateAll();     // 手动更新所有世界
+}
+```
 
 ## 与游戏引擎集成
 
 ### Laya 引擎集成
 
 ```typescript
-import { Stage } from "laya/display/Stage"
-import { Stat } from "laya/utils/Stat"
-import { Laya } from "Laya"
+import { Stage } from "laya/display/Stage";
+import { Laya } from "Laya";
+import { Core } from '@esengine/ecs-framework';
 
 // 初始化 Laya
 Laya.init(800, 600).then(() => {
   // 初始化 ECS
-  const core = Core.create(true)
-
-  // 设置场景...
+  Core.create(true);
+  Core.setScene(new GameScene());
 
   // 启动游戏循环
   Laya.timer.frameLoop(1, this, () => {
-    const deltaTime = Laya.timer.delta / 1000 // 转换为秒
-    Core.update(deltaTime)
-  })
-})
+    const deltaTime = Laya.timer.delta / 1000;
+    Core.update(deltaTime);  // 自动更新全局服务和场景
+  });
+});
 ```
 
 ### Cocos Creator 集成
 
 ```typescript
-import { Component, _decorator } from 'cc'
+import { Component, _decorator } from 'cc';
+import { Core } from '@esengine/ecs-framework';
 
-const { ccclass } = _decorator
+const { ccclass } = _decorator;
 
 @ccclass('ECSGameManager')
 export class ECSGameManager extends Component {
-
   onLoad() {
     // 初始化 ECS
-    const core = Core.create(true)
-
-    // 设置场景...
+    Core.create(true);
+    Core.setScene(new GameScene());
   }
 
   update(deltaTime: number) {
-    // 更新 ECS
-    Core.update(deltaTime)
+    // 自动更新全局服务和场景
+    Core.update(deltaTime);
+  }
+
+  onDestroy() {
+    // 清理资源
+    Core.destroy();
   }
 }
 ```
@@ -378,7 +401,7 @@ export class ECSGameManager extends Component {
 
 确保：
 1. 系统已添加到场景：`this.addSystem(system)` （在 Scene 的 initialize 方法中）
-2. 场景已设置为当前场景：`Core.setScene(scene)`
+2. 场景已设置：`Core.setScene(scene)`
 3. 游戏循环在调用：`Core.update(deltaTime)`
 
 ### 如何调试 ECS 应用？

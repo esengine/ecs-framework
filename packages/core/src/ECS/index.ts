@@ -6,6 +6,7 @@ export * from './Utils';
 export * from './Decorators';
 export { Scene } from './Scene';
 export { IScene, ISceneFactory, ISceneConfig } from './IScene';
+export { SceneManager } from './SceneManager';
 export { World, IWorldConfig } from './World';
 export { WorldManager, IWorldManagerConfig } from './WorldManager';
 export * from './Core/Events';

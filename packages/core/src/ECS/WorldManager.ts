@@ -30,40 +30,45 @@ export interface IWorldManagerConfig {
 
 /**
  * World管理器 - 管理所有World实例
- * 
- * WorldManager是全局单例，负责管理所有World的生命周期。
+ *
+ * WorldManager负责管理多个独立的World实例。
  * 每个World都是独立的ECS环境，可以包含多个Scene。
- * 
- * 设计理念：
- * - Core负责单Scene的传统ECS管理
- * - World负责多Scene的管理和协调
- * - WorldManager负责多World的全局管理
- * 
+ *
+ * 适用场景：
+ * - MMO游戏的多房间管理
+ * - 服务器端的多游戏实例
+ * - 需要完全隔离的多个游戏环境
+ *
  * @example
  * ```typescript
- * // 获取全局WorldManager
- * const worldManager = WorldManager.getInstance();
- * 
+ * // 创建WorldManager实例
+ * const worldManager = new WorldManager({
+ *     maxWorlds: 100,
+ *     autoCleanup: true
+ * });
+ *
  * // 创建游戏房间World
- * const roomWorld = worldManager.createWorld('room_001', {
+ * const room1 = worldManager.createWorld('room_001', {
  *     name: 'GameRoom_001',
  *     maxScenes: 5
  * });
- * 
- * // 在游戏循环中更新所有World
- * worldManager.updateAll(deltaTime);
+ * room1.setActive(true);
+ *
+ * // 游戏循环
+ * function gameLoop(deltaTime: number) {
+ *     Core.update(deltaTime);
+ *     worldManager.updateAll();  // 更新所有活跃World
+ * }
  * ```
  */
 export class WorldManager {
-    private static _instance: WorldManager | null = null;
-    
     private readonly _config: IWorldManagerConfig;
     private readonly _worlds: Map<string, World> = new Map();
     private readonly _activeWorlds: Set<string> = new Set();
-    private _cleanupTimer: NodeJS.Timeout | null = null;
+    private _cleanupTimer: ReturnType<typeof setInterval> | null = null;
     private _isRunning: boolean = false;
 
-    private constructor(config: IWorldManagerConfig = {}) {
+    public constructor(config: IWorldManagerConfig = {}) {
         this._config = {
             maxWorlds: 50,
             autoCleanup: true,
@@ -72,6 +77,9 @@ export class WorldManager {
             ...config
         };
 
+        // 默认启动运行状态
+        this._isRunning = true;
+
         logger.info('WorldManager已初始化', {
             maxWorlds: this._config.maxWorlds,
             autoCleanup: this._config.autoCleanup,
@@ -79,26 +87,6 @@ export class WorldManager {
         });
 
         this.startCleanupTimer();
-    }
-
-    /**
-     * 获取WorldManager单例实例
-     */
-    public static getInstance(config?: IWorldManagerConfig): WorldManager {
-        if (!this._instance) {
-            this._instance = new WorldManager(config);
-        }
-        return this._instance;
-    }
-
-    /**
-     * 重置WorldManager实例（主要用于测试）
-     */
-    public static reset(): void {
-        if (this._instance) {
-            this._instance.destroy();
-            this._instance = null;
-        }
     }
 
     // ===== World管理 =====
@@ -206,8 +194,36 @@ export class WorldManager {
     // ===== 批量操作 =====
 
     /**
+     * 更新所有活跃的World
+     *
+     * 应该在每帧的游戏循环中调用。
+     * 会自动更新所有活跃World的全局系统和场景。
+     *
+     * @example
+     * ```typescript
+     * function gameLoop(deltaTime: number) {
+     *     Core.update(deltaTime);      // 更新全局服务
+     *     worldManager.updateAll();    // 更新所有World
+     * }
+     * ```
+     */
+    public updateAll(): void {
+        if (!this._isRunning) return;
+
+        for (const worldId of this._activeWorlds) {
+            const world = this._worlds.get(worldId);
+            if (world && world.isActive) {
+                // 更新World的全局System
+                world.updateGlobalSystems();
+
+                // 更新World中的所有Scene
+                world.updateScenes();
+            }
+        }
+    }
+
+    /**
      * 获取所有激活的World
-     * 注意：此方法供Core.update()使用
      */
     public getActiveWorlds(): World[] {
         const activeWorlds: World[] = [];

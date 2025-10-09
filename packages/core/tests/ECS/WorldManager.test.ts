@@ -39,13 +39,12 @@ class TestGlobalSystem {
 
 describe('WorldManager', () => {
     let worldManager: WorldManager;
-    
+
     beforeEach(() => {
-        // 重置单例
-        WorldManager['_instance'] = null;
-        worldManager = WorldManager.getInstance();
+        // WorldManager不再是单例，直接创建新实例
+        worldManager = new WorldManager();
     });
-    
+
     afterEach(() => {
         // 清理所有World
         if (worldManager) {
@@ -56,33 +55,40 @@ describe('WorldManager', () => {
             // 清理定时器
             worldManager.destroy();
         }
-        WorldManager['_instance'] = null;
     });
-    
-    describe('单例模式', () => {
-        test('获取实例应该返回相同的实例', () => {
-            const instance1 = WorldManager.getInstance();
-            const instance2 = WorldManager.getInstance();
-            
-            expect(instance1).toBe(instance2);
+
+    describe('实例化', () => {
+        test('可以创建多个独立的WorldManager实例', () => {
+            const manager1 = new WorldManager();
+            const manager2 = new WorldManager();
+
+            expect(manager1).not.toBe(manager2);
+
+            manager1.createWorld('world1');
+            expect(manager2.getWorld('world1')).toBeNull();
+
+            // 清理
+            manager1.destroy();
+            manager2.destroy();
         });
-        
+
         test('使用配置创建实例应该正确', () => {
-            WorldManager['_instance'] = null;
-            
             const config: IWorldManagerConfig = {
                 maxWorlds: 10,
                 autoCleanup: true,
                 debug: false
             };
-            
-            const instance = WorldManager.getInstance(config);
-            
+
+            const instance = new WorldManager(config);
+
             expect(instance).toBeDefined();
-            expect(instance).toBe(WorldManager.getInstance());
+            expect(instance.worldCount).toBe(0);
+
+            // 清理
+            instance.destroy();
         });
     });
-    
+
     describe('World管理', () => {
         test('创建World应该成功', () => {
             const world = worldManager.createWorld('test-world');
@@ -115,19 +121,17 @@ describe('WorldManager', () => {
         });
         
         test('超出最大World数量应该抛出错误', () => {
-            WorldManager['_instance'] = null;
-            const limitedManager = WorldManager.getInstance({ maxWorlds: 2 });
-            
+            const limitedManager = new WorldManager({ maxWorlds: 2 });
+
             limitedManager.createWorld('world1');
             limitedManager.createWorld('world2');
-            
+
             expect(() => {
                 limitedManager.createWorld('world3');
             }).toThrow("已达到最大World数量限制: 2");
-            
+
             // 清理
-            limitedManager.removeWorld('world1');
-            limitedManager.removeWorld('world2');
+            limitedManager.destroy();
         });
         
         test('获取World应该正确', () => {
@@ -430,35 +434,31 @@ describe('WorldManager', () => {
             };
             
             expect(() => {
-                WorldManager.getInstance(invalidConfig);
+                new WorldManager(invalidConfig);
             }).not.toThrow();
         });
-        
-        test('配置更新应该影响后续操作', () => {
-            WorldManager['_instance'] = null;
-            
+
+        test('配置应该正确应用于新实例', () => {
             const config: IWorldManagerConfig = {
                 maxWorlds: 3,
                 autoCleanup: true,
                 debug: true
             };
-            
-            const manager = WorldManager.getInstance(config);
-            
+
+            const manager = new WorldManager(config);
+
             // 创建到限制数量的World
             manager.createWorld('world1');
             manager.createWorld('world2');
             manager.createWorld('world3');
-            
+
             // 第四个应该失败
             expect(() => {
                 manager.createWorld('world4');
             }).toThrow();
-            
+
             // 清理
-            manager.removeWorld('world1');
-            manager.removeWorld('world2');
-            manager.removeWorld('world3');
+            manager.destroy();
         });
     });
 });

@@ -5,61 +5,53 @@ import { Timer } from './Utils/Timers/Timer';
 import { Time } from './Utils/Time';
 import { PerformanceMonitor } from './Utils/PerformanceMonitor';
 import { PoolManager } from './Utils/Pool/PoolManager';
-import { ECSFluentAPI, createECSAPI } from './ECS/Core/FluentAPI';
-import { IScene } from './ECS/IScene';
-import { WorldManager, IWorldManagerConfig } from './ECS/WorldManager';
 import { DebugManager } from './Utils/Debug';
 import { ICoreConfig, IECSDebugConfig } from './Types';
 import { createLogger } from './Utils/Logger';
+import { SceneManager } from './ECS/SceneManager';
+import { IScene } from './ECS/IScene';
 
 /**
  * 游戏引擎核心类
- * 
- * 负责管理游戏的生命周期、场景切换、全局管理器和定时器系统。
- * 提供统一的游戏循环管理。
- * 
+ *
+ * 职责：
+ * - 提供全局服务（Timer、Performance、Pool等）
+ * - 管理场景生命周期（内置SceneManager）
+ * - 管理全局管理器的生命周期
+ * - 提供统一的游戏循环更新入口
+ *
  * @example
  * ```typescript
- * // 创建核心实例
- * const core = Core.create(true);
- * 
- * // 设置场景
- * Core.scene = new MyScene();
- * 
- * // 在游戏循环中更新（Laya引擎示例）
- * Laya.timer.frameLoop(1, this, () => {
- *     const deltaTime = Laya.timer.delta / 1000;
+ * // 初始化并设置场景
+ * Core.create({ debug: true });
+ * Core.setScene(new GameScene());
+ *
+ * // 游戏循环（自动更新全局服务和场景）
+ * function gameLoop(deltaTime: number) {
  *     Core.update(deltaTime);
- * });
- * 
- * // 调度定时器
+ * }
+ *
+ * // 使用定时器
  * Core.schedule(1.0, false, null, (timer) => {
- *     Core._logger.info("1秒后执行");
+ *     console.log("1秒后执行");
  * });
+ *
+ * // 切换场景
+ * Core.loadScene(new MenuScene());  // 延迟切换
+ * Core.setScene(new GameScene());   // 立即切换
+ *
+ * // 获取当前场景
+ * const currentScene = Core.scene;
  * ```
  */
 export class Core {
     /**
      * 游戏暂停状态
-     * 
+     *
      * 当设置为true时，游戏循环将暂停执行。
      */
     public static paused = false;
 
-    /**
-     * 默认World ID
-     * 
-     * 用于单Scene模式的默认World标识
-     */
-    private static readonly DEFAULT_WORLD_ID = '__default__';
-
-    /**
-     * 默认Scene ID
-     * 
-     * 用于单Scene模式的默认Scene标识
-     */
-    private static readonly DEFAULT_SCENE_ID = '__main__';
-    
     /**
      * 全局核心实例
      */
@@ -69,81 +61,71 @@ export class Core {
      * Core专用日志器
      */
     private static _logger = createLogger('Core');
-    
+
     /**
      * 实体系统启用状态
-     * 
+     *
      * 控制是否启用ECS实体系统功能。
      */
     public static entitySystemsEnabled: boolean;
-    
+
     /**
      * 调试模式标志
-     * 
+     *
      * 在调试模式下会启用额外的性能监控和错误检查。
      */
     public readonly debug: boolean;
-    
-    
+
     /**
      * 全局管理器集合
-     * 
+     *
      * 存储所有注册的全局管理器实例。
      */
     public _globalManagers: GlobalManager[] = [];
-    
+
     /**
      * 定时器管理器
-     * 
+     *
      * 负责管理所有的游戏定时器。
      */
     public _timerManager: TimerManager;
 
     /**
      * 性能监控器
-     * 
+     *
      * 监控游戏性能并提供优化建议。
      */
     public _performanceMonitor: PerformanceMonitor;
 
     /**
      * 对象池管理器
-     * 
+     *
      * 管理所有对象池的生命周期。
      */
     public _poolManager: PoolManager;
 
     /**
-     * ECS流式API
-     * 
-     * 提供便捷的ECS操作接口。
-     */
-    public _ecsAPI?: ECSFluentAPI;
-    
-
-    /**
      * 调试管理器
-     * 
+     *
      * 负责收集和发送调试数据。
      */
     public _debugManager?: DebugManager;
 
     /**
-     * World管理器
-     * 
-     * 管理多个World实例，支持多房间/多世界架构。
+     * 场景管理器
+     *
+     * 管理当前场景的生命周期。
      */
-    public _worldManager?: WorldManager;
+    private _sceneManager: SceneManager;
 
     /**
      * Core配置
      */
     private _config: ICoreConfig;
 
-
     /**
      * 创建核心实例
-     * 
+     *
      * @param config - Core配置对象
      */
     private constructor(config: ICoreConfig = {}) {
@@ -156,14 +138,13 @@ export class Core {
             ...config
         };
 
-
-        // 初始化管理器
+        // 初始化定时器管理器
         this._timerManager = new TimerManager();
         Core.registerGlobalManager(this._timerManager);
 
         // 初始化性能监控器
         this._performanceMonitor = PerformanceMonitor.instance;
-        
+
         // 在调试模式下启用性能监控
         if (this._config.debug) {
             this._performanceMonitor.enable();
@@ -171,7 +152,10 @@ export class Core {
 
         // 初始化对象池管理器
         this._poolManager = PoolManager.getInstance();
-        
+
+        // 初始化场景管理器
+        this._sceneManager = new SceneManager();
+
         Core.entitySystemsEnabled = this._config.enableEntitySystems ?? true;
         this.debug = this._config.debug ?? true;
 
@@ -180,13 +164,12 @@ export class Core {
             this._debugManager = new DebugManager(this, this._config.debugConfig);
         }
 
-
         this.initialize();
     }
 
     /**
      * 获取核心实例
-     * 
+     *
      * @returns 全局核心实例
      */
     public static get Instance() {
@@ -194,104 +177,148 @@ export class Core {
     }
 
     /**
-     * 获取当前活动的场景（属性访问器）
-     * 
-     * @returns 当前场景实例，如果没有则返回null
-     */
-    public static get scene(): IScene | null {
-        return this.getScene();
-    }
-
-    /**
-     * 获取当前活动的场景（方法调用）
-     * 
-     * @returns 当前场景实例，如果没有则返回null
-     */
-    public static getScene<T extends IScene>(): T | null {
-        if (!this._instance) {
-            return null;
-        }
-
-        // 确保默认World存在
-        this._instance.ensureDefaultWorld();
-        
-        const defaultWorld = this._instance._worldManager!.getWorld(this.DEFAULT_WORLD_ID);
-        return defaultWorld?.getScene(this.DEFAULT_SCENE_ID) as T || null;
-    }
-
-
-    /**
-     * 设置当前场景
-     * 
-     * @param scene - 要设置的场景实例
-     * @returns 设置的场景实例，便于链式调用
-     */
-    public static setScene<T extends IScene>(scene: T): T {
-        if (!this._instance) {
-            throw new Error("Core实例未创建，请先调用Core.create()");
-        }
-
-        // 确保默认World存在
-        this._instance.ensureDefaultWorld();
-        
-        const defaultWorld = this._instance._worldManager!.getWorld(this.DEFAULT_WORLD_ID)!;
-        
-        // 移除旧的主Scene（如果存在）
-        if (defaultWorld.getScene(this.DEFAULT_SCENE_ID)) {
-            defaultWorld.removeScene(this.DEFAULT_SCENE_ID);
-        }
-
-        // 添加新Scene到默认World
-        defaultWorld.createScene(this.DEFAULT_SCENE_ID, scene);
-        defaultWorld.setSceneActive(this.DEFAULT_SCENE_ID, true);
-
-        // 触发场景切换回调
-        this._instance.onSceneChanged();
-        
-        return scene;
-    }
-
-
-    /**
      * 创建Core实例
-     * 
+     *
      * 如果实例已存在，则返回现有实例。
-     * 
+     *
      * @param config - Core配置，也可以直接传入boolean表示debug模式（向后兼容）
      * @returns Core实例
+     *
+     * @example
+     * ```typescript
+     * // 方式1：使用配置对象
+     * Core.create({
+     *     debug: true,
+     *     enableEntitySystems: true,
+     *     debugConfig: {
+     *         enabled: true,
+     *         websocketUrl: 'ws://localhost:9229'
+     *     }
+     * });
+     *
+     * // 方式2：简单模式（向后兼容）
+     * Core.create(true);  // debug = true
+     * ```
      */
     public static create(config: ICoreConfig | boolean = true): Core {
         if (this._instance == null) {
             // 向后兼容：如果传入boolean，转换为配置对象
-            const coreConfig: ICoreConfig = typeof config === 'boolean' 
+            const coreConfig: ICoreConfig = typeof config === 'boolean'
                 ? { debug: config, enableEntitySystems: true }
                 : config;
             this._instance = new Core(coreConfig);
+        } else {
+            this._logger.warn('Core实例已创建，返回现有实例');
         }
         return this._instance;
     }
 
     /**
-     * 更新游戏逻辑
-     * 
-     * 此方法应该在游戏引擎的更新循环中调用。
-     * 
-     * @param deltaTime - 外部引擎提供的帧时间间隔（秒）
-     * 
+     * 设置当前场景
+     *
+     * @param scene - 要设置的场景
+     * @returns 设置的场景实例
+     *
      * @example
      * ```typescript
-     * // Laya引擎
+     * Core.create({ debug: true });
+     *
+     * // 创建并设置场景
+     * const gameScene = new GameScene();
+     * Core.setScene(gameScene);
+     * ```
+     */
+    public static setScene<T extends IScene>(scene: T): T {
+        if (!this._instance) {
+            Core._logger.warn("Core实例未创建，请先调用Core.create()");
+            throw new Error("Core实例未创建");
+        }
+
+        return this._instance._sceneManager.setScene(scene);
+    }
+
+    /**
+     * 获取当前场景
+     *
+     * @returns 当前场景，如果没有场景则返回null
+     */
+    public static get scene(): IScene | null {
+        if (!this._instance) {
+            return null;
+        }
+        return this._instance._sceneManager.currentScene;
+    }
+
+    /**
+     * 获取ECS流式API
+     *
+     * @returns ECS API实例，如果当前没有场景则返回null
+     *
+     * @example
+     * ```typescript
+     * // 使用流式API创建实体
+     * const player = Core.ecsAPI?.createEntity('Player')
+     *     .addComponent(Position, 100, 100)
+     *     .addComponent(Velocity, 50, 0);
+     *
+     * // 查询实体
+     * const enemies = Core.ecsAPI?.query(Enemy, Transform);
+     *
+     * // 发射事件
+     * Core.ecsAPI?.emit('game:start', { level: 1 });
+     * ```
+     */
+    public static get ecsAPI() {
+        if (!this._instance) {
+            return null;
+        }
+        return this._instance._sceneManager.api;
+    }
+
+    /**
+     * 延迟加载场景（下一帧切换）
+     *
+     * @param scene - 要加载的场景
+     *
+     * @example
+     * ```typescript
+     * // 延迟切换场景（在下一帧生效）
+     * Core.loadScene(new MenuScene());
+     * ```
+     */
+    public static loadScene<T extends IScene>(scene: T): void {
+        if (!this._instance) {
+            Core._logger.warn("Core实例未创建，请先调用Core.create()");
+            return;
+        }
+
+        this._instance._sceneManager.loadScene(scene);
+    }
+
+    /**
+     * 更新游戏逻辑
+     *
+     * 此方法应该在游戏引擎的更新循环中调用。
+     * 会自动更新全局服务和当前场景。
+     *
+     * @param deltaTime - 外部引擎提供的帧时间间隔（秒）
+     *
+     * @example
+     * ```typescript
+     * // 初始化
+     * Core.create({ debug: true });
+     * Core.setScene(new GameScene());
+     *
+     * // Laya引擎集成
      * Laya.timer.frameLoop(1, this, () => {
      *     const deltaTime = Laya.timer.delta / 1000;
-     *     Core.update(deltaTime);
+     *     Core.update(deltaTime);  // 自动更新全局服务和场景
      * });
-     * 
-     * // Cocos Creator
+     *
+     * // Cocos Creator集成
      * update(deltaTime: number) {
-     *     Core.update(deltaTime);
+     *     Core.update(deltaTime);  // 自动更新全局服务和场景
      * }
-     * 
-
      * ```
      */
     public static update(deltaTime: number): void {
@@ -299,15 +326,15 @@ export class Core {
             Core._logger.warn("Core实例未创建，请先调用Core.create()");
             return;
         }
-        
+
         this._instance.updateInternal(deltaTime);
     }
 
     /**
      * 注册全局管理器
-     * 
+     *
      * 将管理器添加到全局管理器列表中，并启用它。
-     * 
+     *
      * @param manager - 要注册的全局管理器
      */
     public static registerGlobalManager(manager: GlobalManager) {
@@ -317,9 +344,9 @@ export class Core {
 
     /**
      * 注销全局管理器
-     * 
+     *
      * 从全局管理器列表中移除管理器，并禁用它。
-     * 
+     *
      * @param manager - 要注销的全局管理器
      */
     public static unregisterGlobalManager(manager: GlobalManager) {
@@ -329,7 +356,7 @@ export class Core {
 
     /**
      * 获取指定类型的全局管理器
-     * 
+     *
      * @param type - 管理器类型构造函数
      * @returns 管理器实例，如果未找到则返回null
      */
@@ -343,14 +370,27 @@ export class Core {
 
     /**
      * 调度定时器
-     * 
+     *
      * 创建一个定时器，在指定时间后执行回调函数。
-     * 
+     *
      * @param timeInSeconds - 延迟时间（秒）
      * @param repeats - 是否重复执行，默认为false
      * @param context - 回调函数的上下文，默认为null
      * @param onTime - 定时器触发时的回调函数
      * @returns 创建的定时器实例
+     *
+     * @example
+     * ```typescript
+     * // 一次性定时器
+     * Core.schedule(1.0, false, null, (timer) => {
+     *     console.log("1秒后执行一次");
+     * });
+     *
+     * // 重复定时器
+     * Core.schedule(0.5, true, null, (timer) => {
+     *     console.log("每0.5秒执行一次");
+     * });
+     * ```
      */
     public static schedule<TContext = unknown>(timeInSeconds: number, repeats: boolean = false, context?: TContext, onTime?: (timer: ITimer<TContext>) => void): Timer<TContext> {
         if (!onTime) {
@@ -360,17 +400,8 @@ export class Core {
     }
 
     /**
-     * 获取ECS流式API
-     * 
-     * @returns ECS API实例，如果未初始化则返回null
-     */
-    public static get ecsAPI(): ECSFluentAPI | null {
-        return this._instance?._ecsAPI || null;
-    }
-
-    /**
      * 启用调试功能
-     * 
+     *
      * @param config 调试配置
      */
     public static enableDebug(config: IECSDebugConfig): void {
@@ -408,7 +439,7 @@ export class Core {
 
     /**
      * 获取调试数据
-     * 
+     *
      * @returns 当前调试数据，如果调试未启用则返回null
      */
     public static getDebugData(): unknown {
@@ -421,118 +452,30 @@ export class Core {
 
     /**
      * 检查调试是否启用
-     * 
+     *
      * @returns 调试状态
      */
     public static get isDebugEnabled(): boolean {
         return this._instance?._config.debugConfig?.enabled || false;
     }
 
-
-
-    /**
-     * 获取WorldManager实例
-     *
-     * @param config 可选的WorldManager配置，用于覆盖默认配置
-     * @returns WorldManager实例，如果未初始化则自动创建
-     */
-    public static getWorldManager(config?: Partial<IWorldManagerConfig>): WorldManager {
-        if (!this._instance) {
-            throw new Error("Core实例未创建，请先调用Core.create()");
-        }
-
-        if (!this._instance._worldManager) {
-            // 多World模式的配置（用户主动获取WorldManager）
-            const defaultConfig = {
-                maxWorlds: 50,
-                autoCleanup: true,
-                cleanupInterval: 60000,
-                debug: this._instance._config.debug
-            };
-
-            this._instance._worldManager = WorldManager.getInstance({
-                ...defaultConfig,
-                ...config // 用户传入的配置会覆盖默认配置
-            });
-        }
-
-        return this._instance._worldManager;
-    }
-
-    /**
-     * 启用World管理
-     *
-     * 显式启用World功能，用于多房间/多世界架构
-     *
-     * @param config 可选的WorldManager配置，用于覆盖默认配置
-     */
-    public static enableWorldManager(config?: Partial<IWorldManagerConfig>): WorldManager {
-        return this.getWorldManager(config);
-    }
-
-    /**
-     * 确保默认World存在
-     * 
-     * 内部方法，用于懒初始化默认World
-     */
-    private ensureDefaultWorld(): void {
-        if (!this._worldManager) {
-            this._worldManager = WorldManager.getInstance({
-                maxWorlds: 1,        // 单场景用户只需要1个World
-                autoCleanup: false,   // 单场景不需要自动清理
-                cleanupInterval: 0,   // 禁用清理定时器
-                debug: this._config.debug
-            });
-        }
-
-        // 检查默认World是否存在
-        if (!this._worldManager.getWorld(Core.DEFAULT_WORLD_ID)) {
-            this._worldManager.createWorld(Core.DEFAULT_WORLD_ID, {
-                name: 'DefaultWorld',
-                maxScenes: 1,
-                autoCleanup: false
-            });
-            this._worldManager.setWorldActive(Core.DEFAULT_WORLD_ID, true);
-        }
-    }
-
-    /**
-     * 场景切换回调
-     * 
-     * 在场景切换时调用，用于重置时间系统等。
-     */
-    public onSceneChanged() {
-        Time.sceneChanged();
-        
-        // 获取当前Scene（从默认World）
-        const currentScene = Core.getScene();
-        
-        // 初始化ECS API（如果场景支持）
-        if (currentScene && currentScene.querySystem && currentScene.eventSystem) {
-            this._ecsAPI = createECSAPI(currentScene, currentScene.querySystem, currentScene.eventSystem);
-        }
-
-        // 延迟调试管理器通知，避免在场景初始化过程中干扰属性
-        if (this._debugManager) {
-            queueMicrotask(() => {
-                this._debugManager?.onSceneChanged();
-            });
-        }
-    }
-
     /**
      * 初始化核心系统
-     * 
+     *
      * 执行核心系统的初始化逻辑。
      */
     protected initialize() {
         // 核心系统初始化
+        Core._logger.info('Core initialized', {
+            debug: this.debug,
+            entitySystemsEnabled: Core.entitySystemsEnabled,
+            debugEnabled: this._config.debugConfig?.enabled || false
+        });
     }
-
 
     /**
      * 内部更新方法
-     * 
+     *
      * @param deltaTime - 帧时间间隔（秒）
      */
     private updateInternal(deltaTime: number): void {
@@ -560,26 +503,8 @@ export class Core {
         // 更新对象池管理器
         this._poolManager.update();
 
-        // 更新所有World
-        if (this._worldManager) {
-            const worldsStartTime = this._performanceMonitor.startMonitoring('Worlds.update');
-            const activeWorlds = this._worldManager.getActiveWorlds();
-            let totalWorldEntities = 0;
-
-            for (const world of activeWorlds) {
-                // 更新World的全局System
-                world.updateGlobalSystems();
-                
-                // 更新World中的所有Scene
-                world.updateScenes();
-
-                // 统计实体数量（用于性能监控）
-                const worldStats = world.getStats();
-                totalWorldEntities += worldStats.totalEntities;
-            }
-
-            this._performanceMonitor.endMonitoring('Worlds.update', worldsStartTime, totalWorldEntities);
-        }
+        // 更新场景
+        this._sceneManager.update();
 
         // 更新调试管理器（基于FPS的数据发送）
         if (this._debugManager) {
@@ -588,5 +513,30 @@ export class Core {
 
         // 结束性能监控
         this._performanceMonitor.endMonitoring('Core.update', frameStartTime);
+    }
+
+    /**
+     * 销毁Core实例
+     *
+     * 清理所有资源，通常在应用程序关闭时调用。
+     */
+    public static destroy(): void {
+        if (!this._instance) return;
+
+        // 停止调试管理器
+        if (this._instance._debugManager) {
+            this._instance._debugManager.stop();
+        }
+
+        // 清理全局管理器
+        for (const manager of this._instance._globalManagers) {
+            manager.enabled = false;
+        }
+        this._instance._globalManagers = [];
+
+        Core._logger.info('Core destroyed');
+
+        // @ts-ignore - 清空实例引用
+        this._instance = null;
     }
 }
