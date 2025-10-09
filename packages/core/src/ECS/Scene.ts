@@ -639,9 +639,13 @@ export class Scene implements IScene {
         incremental: IncrementalSnapshot | string | Buffer,
         componentRegistry?: Map<string, any>
     ): void {
-        const snapshot = (typeof incremental === 'string' || Buffer.isBuffer(incremental))
-            ? IncrementalSerializer.deserializeIncremental(incremental)
-            : incremental;
+        const isSerializedData = typeof incremental === 'string' ||
+            (typeof Buffer !== 'undefined' && Buffer.isBuffer(incremental)) ||
+            incremental instanceof Uint8Array;
+
+        const snapshot = isSerializedData
+            ? IncrementalSerializer.deserializeIncremental(incremental as string | Buffer)
+            : incremental as IncrementalSnapshot;
 
         const registry = componentRegistry || ComponentRegistry.getAllComponentNames() as Map<string, any>;
 

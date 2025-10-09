@@ -687,7 +687,15 @@ export class IncrementalSerializer {
 
         if (typeof data === 'string') {
             // JSON格式：计算UTF-8编码后的字节数
-            return Buffer.byteLength(data, 'utf8');
+            // 使用 Blob 来计算浏览器和 Node.js 环境兼容的字节数
+            if (typeof Blob !== 'undefined') {
+                return new Blob([data]).size;
+            } else if (typeof Buffer !== 'undefined') {
+                return Buffer.byteLength(data, 'utf8');
+            } else {
+                // 回退方案：粗略估算（不精确，但可用）
+                return new TextEncoder().encode(data).length;
+            }
         } else {
             // 二进制格式：直接返回Buffer长度
             return data.length;
