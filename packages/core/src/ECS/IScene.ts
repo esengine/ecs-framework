@@ -165,4 +165,12 @@ export interface ISceneConfig {
      * 场景名称
      */
     name?: string;
+
+    /**
+     * 性能监控器实例（可选）
+     *
+     * 如果不提供，Scene会自动从Core.services获取全局PerformanceMonitor。
+     * 提供此参数可以实现场景级别的独立性能监控。
+     */
+    performanceMonitor?: any;
 }

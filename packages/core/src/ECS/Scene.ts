@@ -90,6 +90,13 @@ export class Scene implements IScene {
     private readonly logger: ReturnType<typeof createLogger>;
 
     /**
+     * 性能监控器
+     *
+     * 用于监控场景和系统的性能。可以在构造函数中注入，如果不提供则从Core获取。
+     */
+    private readonly _performanceMonitor: PerformanceMonitor;
+
+    /**
      * 场景是否已开始运行
      */
     private _didSceneBegin: boolean = false;
@@ -166,6 +173,12 @@ export class Scene implements IScene {
         this.eventSystem = new TypeSafeEventSystem();
         this._services = new ServiceContainer();
         this.logger = createLogger('Scene');
+
+        if (config?.performanceMonitor) {
+            this._performanceMonitor = config.performanceMonitor;
+        } else {
+            this._performanceMonitor = Core.services.resolve(PerformanceMonitor);
+        }
 
         if (config?.name) {
             this.name = config.name;
@@ -547,8 +560,7 @@ export class Scene implements IScene {
 
         system.scene = this;
 
-        const perfMonitor = Core.services.resolve(PerformanceMonitor);
-        system.setPerformanceMonitor(perfMonitor);
+        system.setPerformanceMonitor(this._performanceMonitor);
 
         const metadata = getSystemMetadata(constructor);
         if (metadata?.updateOrder !== undefined) {

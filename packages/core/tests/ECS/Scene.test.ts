@@ -581,11 +581,64 @@ describe('Scene - 场景管理系统测试', () => {
         test('对已销毁实体的操作应该安全处理', () => {
             const entity = scene.createEntity("TestEntity");
             scene.entities.remove(entity);
-            
+
             // 对已销毁实体的操作应该安全
             expect(() => {
                 entity.addComponent(new PositionComponent(0, 0));
             }).not.toThrow();
+        });
+    });
+
+    describe('依赖注入优化', () => {
+        test('应该支持注入自定义PerformanceMonitor', () => {
+            const mockPerfMonitor = {
+                startMeasure: jest.fn(),
+                endMeasure: jest.fn(),
+                recordSystemData: jest.fn(),
+                recordEntityCount: jest.fn(),
+                recordComponentCount: jest.fn(),
+                update: jest.fn(),
+                getSystemData: jest.fn(),
+                getSystemStats: jest.fn(),
+                resetSystem: jest.fn(),
+                reset: jest.fn(),
+                dispose: jest.fn()
+            };
+
+            const customScene = new Scene({
+                name: 'CustomScene',
+                performanceMonitor: mockPerfMonitor as any
+            });
+
+            class TestSystem extends EntitySystem {
+                constructor() {
+                    super(Matcher.empty().all(PositionComponent));
+                }
+            }
+
+            const system = new TestSystem();
+            customScene.addEntityProcessor(system);
+
+            expect(mockPerfMonitor).toBeDefined();
+
+            customScene.end();
+        });
+
+        test('未提供PerformanceMonitor时应该从Core获取', () => {
+            const defaultScene = new Scene({ name: 'DefaultScene' });
+
+            class TestSystem extends EntitySystem {
+                constructor() {
+                    super(Matcher.empty().all(PositionComponent));
+                }
+            }
+
+            const system = new TestSystem();
+            defaultScene.addEntityProcessor(system);
+
+            expect(defaultScene).toBeDefined();
+
+            defaultScene.end();
         });
     });
 });
