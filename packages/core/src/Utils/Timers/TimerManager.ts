@@ -1,15 +1,19 @@
-import { GlobalManager } from '../GlobalManager';
 import { Timer } from './Timer';
 import { ITimer } from './ITimer';
 import type { IService } from '../../Core/ServiceContainer';
+import type { IUpdatable } from '../../Types/IUpdatable';
+import { Updatable } from '../../Core/DI';
 
 /**
+ * 定时器管理器
+ *
  * 允许动作的延迟和重复执行
  */
-export class TimerManager extends GlobalManager implements IService {
+@Updatable()
+export class TimerManager implements IService, IUpdatable {
     public _timers: Array<Timer<unknown>> = [];
 
-    public override update() {
+    public update() {
         for (let i = this._timers.length - 1; i >= 0; i --){
             if (this._timers[i].tick()){
                 this._timers[i].unload();

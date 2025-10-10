@@ -1,6 +1,5 @@
 import { Entity } from './Entity';
 import { EntityList } from './Utils/EntityList';
-import { EntityProcessorList } from './Utils/EntityProcessorList';
 import { IdentifierPool } from './Utils/IdentifierPool';
 import { EntitySystem } from './Systems/EntitySystem';
 import { ComponentStorageManager, ComponentRegistry } from './Core/ComponentStorage';
@@ -8,13 +7,17 @@ import { QuerySystem } from './Core/QuerySystem';
 import { TypeSafeEventSystem } from './Core/EventSystem';
 import { EventBus } from './Core/EventBus';
 import { IScene, ISceneConfig } from './IScene';
-import { getComponentInstanceTypeName, getSystemInstanceTypeName } from './Decorators';
+import { getComponentInstanceTypeName, getSystemInstanceTypeName, getSystemMetadata } from "./Decorators";
 import { TypedQueryBuilder } from './Core/Query/TypedQuery';
 import { SceneSerializer, SceneSerializationOptions, SceneDeserializationOptions } from './Serialization/SceneSerializer';
 import { IncrementalSerializer, IncrementalSnapshot, IncrementalSerializationOptions } from './Serialization/IncrementalSerializer';
 import { ComponentPoolManager } from './Core/ComponentPool';
 import { PerformanceMonitor } from '../Utils/PerformanceMonitor';
 import { Core } from '../Core';
+import { ServiceContainer, type ServiceType } from '../Core/ServiceContainer';
+import { createInstance, isInjectable } from '../Core/DI';
+import { isUpdatable, getUpdatableMetadata } from '../Core/DI/Decorators';
+import { createLogger } from '../Utils/Logger';
 
 /**
  * 游戏场景默认实现类
@@ -44,12 +47,6 @@ export class Scene implements IScene {
      */
     public readonly entities: EntityList;
     
-    /**
-     * 实体系统处理器集合
-     * 
-     * 管理场景内所有实体系统的执行。
-     */
-    public readonly entityProcessors: EntityProcessorList;
 
     /**
      * 实体ID池
@@ -74,36 +71,115 @@ export class Scene implements IScene {
 
     /**
      * 事件系统
-     * 
+     *
      * 类型安全的事件系统。
      */
     public readonly eventSystem: TypeSafeEventSystem;
-    
+
+    /**
+     * 服务容器
+     *
+     * 场景级别的依赖注入容器，用于管理EntitySystem和其他服务的生命周期。
+     * 每个Scene拥有独立的服务容器，实现场景间的隔离。
+     */
+    private readonly _services: ServiceContainer;
+
+    /**
+     * 日志记录器
+     */
+    private readonly logger: ReturnType<typeof createLogger>;
+
+    /**
+     * 性能监控器
+     *
+     * 用于监控场景和系统的性能。可以在构造函数中注入，如果不提供则从Core获取。
+     */
+    private readonly _performanceMonitor: PerformanceMonitor;
+
     /**
      * 场景是否已开始运行
      */
     private _didSceneBegin: boolean = false;
 
     /**
-     * 获取系统列表（兼容性属性）
+     * 获取场景中所有已注册的EntitySystem
+     *
+     * 按updateOrder排序。
+     *
+     * @returns 系统列表
      */
     public get systems(): EntitySystem[] {
-        return this.entityProcessors.processors;
+        // 从ServiceContainer获取所有EntitySystem实例
+        const services = this._services.getAll();
+        const systems: EntitySystem[] = [];
+
+        for (const service of services) {
+            if (service instanceof EntitySystem) {
+                systems.push(service);
+            }
+        }
+
+        // 按updateOrder排序
+        systems.sort((a, b) => a.updateOrder - b.updateOrder);
+
+        return systems;
     }
 
+    /**
+     * 通过类型获取System实例
+     *
+     * @param systemType System类型
+     * @returns System实例，如果未找到则返回null
+     *
+     * @example
+     * ```typescript
+     * const physics = scene.getSystem(PhysicsSystem);
+     * if (physics) {
+     *     physics.doSomething();
+     * }
+     * ```
+     */
+    public getSystem<T extends EntitySystem>(systemType: ServiceType<T>): T | null {
+        return this._services.tryResolve(systemType) as T | null;
+    }
+
+
+    /**
+     * 获取场景的服务容器
+     *
+     * 用于注册和解析场景级别的服务（如EntitySystem）。
+     *
+     * @example
+     * ```typescript
+     * // 注册服务
+     * scene.services.registerSingleton(PhysicsSystem);
+     *
+     * // 解析服务
+     * const physics = scene.services.resolve(PhysicsSystem);
+     * ```
+     */
+    public get services(): ServiceContainer {
+        return this._services;
+    }
 
     /**
      * 创建场景实例
      */
     constructor(config?: ISceneConfig) {
         this.entities = new EntityList(this);
-        this.entityProcessors = new EntityProcessorList();
         this.identifierPool = new IdentifierPool();
         this.componentStorageManager = new ComponentStorageManager();
         this.querySystem = new QuerySystem();
         this.eventSystem = new TypeSafeEventSystem();
+        this._services = new ServiceContainer();
+        this.logger = createLogger('Scene');
 
-        // 应用配置
+        if (config?.performanceMonitor) {
+            this._performanceMonitor = config.performanceMonitor;
+        } else {
+            this._performanceMonitor = Core.services.resolve(PerformanceMonitor);
+        }
+
         if (config?.name) {
             this.name = config.name;
         }
@@ -111,7 +187,7 @@ export class Scene implements IScene {
         if (!Entity.eventBus) {
             Entity.eventBus = new EventBus(false);
         }
-        
+
         if (Entity.eventBus) {
             Entity.eventBus.onComponentAdded((data: unknown) => {
                 this.eventSystem.emitSync('component:added', data);
@@ -149,10 +225,6 @@ export class Scene implements IScene {
      * 这个方法会启动场景。它将启动实体处理器等，并调用onStart方法。
      */
     public begin() {
-        // 启动实体处理器
-        if (this.entityProcessors != null)
-            this.entityProcessors.begin();
-
         // 标记场景已开始运行并调用onStart方法
         this._didSceneBegin = true;
         this.onStart();
@@ -176,9 +248,8 @@ export class Scene implements IScene {
         // 清空组件存储
         this.componentStorageManager.clear();
 
-        // 结束实体处理器
-        if (this.entityProcessors)
-            this.entityProcessors.end();
+        // 清空服务容器（会调用所有服务的dispose方法，包括所有EntitySystem）
+        this._services.clear();
 
         // 调用卸载方法
         this.unload();
@@ -192,11 +263,28 @@ export class Scene implements IScene {
 
         this.entities.updateLists();
 
-        if (this.entityProcessors != null)
-            this.entityProcessors.update();
+        // 更新所有EntitySystem
+        const systems = this.systems;
+        for (const system of systems) {
+            if (system.enabled) {
+                try {
+                    system.update();
+                } catch (error) {
+                    this.logger.error(`Error in system ${system.constructor.name}.update():`, error);
+                }
+            }
+        }
 
-        if (this.entityProcessors != null)
-            this.entityProcessors.lateUpdate();
+        // LateUpdate
+        for (const system of systems) {
+            if (system.enabled) {
+                try {
+                    system.lateUpdate();
+                } catch (error) {
+                    this.logger.error(`Error in system ${system.constructor.name}.lateUpdate():`, error);
+                }
+            }
+        }
     }
 
     /**
@@ -216,7 +304,7 @@ export class Scene implements IScene {
      * 当实体或组件发生变化时调用
      */
     public clearSystemEntityCaches(): void {
-        for (const system of this.entityProcessors.processors) {
+        for (const system of this.systems) {
             system.clearEntityCache();
         }
     }
@@ -419,23 +507,120 @@ export class Scene implements IScene {
 
     /**
      * 在场景中添加一个EntitySystem处理器
-     * @param processor 处理器
+     *
+     * 支持两种使用方式：
+     * 1. 传入类型（推荐）：自动使用DI创建实例，支持@Injectable和@Inject装饰器
+     * 2. 传入实例：直接使用提供的实例
+     *
+     * @param systemTypeOrInstance 系统类型或系统实例
+     * @returns 添加的处理器实例
+     *
+     * @example
+     * ```typescript
+     * // 方式1：传入类型，自动DI（推荐）
+     * @Injectable()
+     * class PhysicsSystem extends EntitySystem {
+     *     constructor(@Inject(CollisionSystem) private collision: CollisionSystem) {
+     *         super(Matcher.of(Transform));
+     *     }
+     * }
+     * scene.addEntityProcessor(PhysicsSystem);
+     *
+     * // 方式2：传入实例
+     * const system = new MySystem();
+     * scene.addEntityProcessor(system);
+     * ```
      */
-    public addEntityProcessor(processor: EntitySystem) {
-        if (this.entityProcessors.processors.includes(processor)) {
-            return processor;
+    public addEntityProcessor<T extends EntitySystem>(
+        systemTypeOrInstance: ServiceType<T> | T
+    ): T {
+        let system: T;
+        let constructor: any;
+
+        if (typeof systemTypeOrInstance === 'function') {
+            constructor = systemTypeOrInstance;
+
+            if (this._services.isRegistered(constructor)) {
+                return this._services.resolve(constructor) as T;
+            }
+
+            if (isInjectable(constructor)) {
+                system = createInstance(constructor, this._services) as T;
+            } else {
+                system = new (constructor as any)() as T;
+            }
+        } else {
+            system = systemTypeOrInstance;
+            constructor = system.constructor;
+
+            if (this._services.isRegistered(constructor)) {
+                return system;
+            }
         }
 
-        processor.scene = this;
+        system.scene = this;
 
-        // 从Core获取PerformanceMonitor并注入到System
-        const perfMonitor = Core.services.resolve(PerformanceMonitor);
-        processor.setPerformanceMonitor(perfMonitor);
+        system.setPerformanceMonitor(this._performanceMonitor);
 
-        this.entityProcessors.add(processor);
-        processor.initialize();
-        processor.setUpdateOrder(this.entityProcessors.count - 1);
-        return processor;
+        const metadata = getSystemMetadata(constructor);
+        if (metadata?.updateOrder !== undefined) {
+            system.setUpdateOrder(metadata.updateOrder);
+        }
+        if (metadata?.enabled !== undefined) {
+            system.enabled = metadata.enabled;
+        }
+
+        this._services.registerInstance(constructor, system);
+
+        system.initialize();
+
+        return system;
+    }
+
+    /**
+     * 批量注册EntitySystem到场景（使用DI）
+     *
+     * 自动按照依赖顺序注册多个System。
+     * 所有System必须使用@Injectable装饰器标记。
+     *
+     * @param systemTypes System类型数组
+     * @returns 注册的System实例数组
+     *
+     * @example
+     * ```typescript
+     * @Injectable()
+     * @ECSSystem('Collision', { updateOrder: 5 })
+     * class CollisionSystem extends EntitySystem implements IService {
+     *     constructor() { super(Matcher.of(Collider)); }
+     *     dispose() {}
+     * }
+     *
+     * @Injectable()
+     * @ECSSystem('Physics', { updateOrder: 10 })
+     * class PhysicsSystem extends EntitySystem implements IService {
+     *     constructor(@Inject(CollisionSystem) private collision: CollisionSystem) {
+     *         super(Matcher.of(Transform, RigidBody));
+     *     }
+     *     dispose() {}
+     * }
+     *
+     * // 批量注册（自动解析依赖顺序）
+     * scene.registerSystems([
+     *     CollisionSystem,
+     *     PhysicsSystem,  // 自动注入CollisionSystem
+     *     RenderSystem
+     * ]);
+     * ```
+     */
+    public registerSystems(systemTypes: Array<ServiceType<EntitySystem>>): EntitySystem[] {
+        const registeredSystems: EntitySystem[] = [];
+
+        for (const systemType of systemTypes) {
+            const system = this.addEntityProcessor(systemType);
+            registeredSystems.push(system);
+        }
+
+        return registeredSystems;
     }
 
     /**
@@ -450,8 +635,13 @@ export class Scene implements IScene {
      * 从场景中删除EntitySystem处理器
      * @param processor 要删除的处理器
      */
-    public removeEntityProcessor(processor: EntitySystem) {
-        this.entityProcessors.remove(processor);
+    public removeEntityProcessor(processor: EntitySystem): void {
+        const constructor = processor.constructor as any;
+
+        // 从ServiceContainer移除
+        this._services.unregister(constructor);
+
+        // 重置System状态
         processor.reset();
     }
 
@@ -465,10 +655,24 @@ export class Scene implements IScene {
 
     /**
      * 获取指定类型的EntitySystem处理器
+     *
+     * @deprecated 推荐使用依赖注入代替此方法。使用 `scene.services.resolve(SystemType)` 或在System构造函数中使用 `@Inject(SystemType)` 装饰器。
+     *
      * @param type 处理器类型
+     * @returns 处理器实例，如果未找到则返回null
+     *
+     * @example
+     * ```typescript
+     * @Injectable()
+     * class MySystem extends EntitySystem {
+     *     constructor(@Inject(PhysicsSystem) private physics: PhysicsSystem) {
+     *         super();
+     *     }
+     * }
+     * ```
      */
     public getEntityProcessor<T extends EntitySystem>(type: new (...args: unknown[]) => T): T | null {
-        return this.entityProcessors.getProcessor(type);
+        return this._services.tryResolve(type as any) as T | null;
     }
 
     /**
@@ -481,7 +685,7 @@ export class Scene implements IScene {
     } {
         return {
             entityCount: this.entities.count,
-            processorCount: this.entityProcessors.count,
+            processorCount: this.systems.length,
             componentStorageStats: this.componentStorageManager.getAllStats()
         };
     }
@@ -508,10 +712,11 @@ export class Scene implements IScene {
         }>;
         componentStats: Map<string, any>;
     } {
+        const systems = this.systems;
         return {
             name: this.name || this.constructor.name,
             entityCount: this.entities.count,
-            processorCount: this.entityProcessors.count,
+            processorCount: systems.length,
             isRunning: this._didSceneBegin,
             entities: this.entities.buffer.map(entity => ({
                 name: entity.name,
@@ -519,7 +724,7 @@ export class Scene implements IScene {
                 componentCount: entity.components.length,
                 componentTypes: entity.components.map(c => getComponentInstanceTypeName(c))
             })),
-            processors: this.entityProcessors.processors.map(processor => ({
+            processors: systems.map(processor => ({
                 name: getSystemInstanceTypeName(processor),
                 updateOrder: processor.updateOrder,
                 entityCount: (processor as any)._entities?.length || 0

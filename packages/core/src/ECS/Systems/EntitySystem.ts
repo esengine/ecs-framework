@@ -8,6 +8,7 @@ import { getSystemInstanceTypeName } from '../Decorators';
 import { createLogger } from '../../Utils/Logger';
 import type { EventListenerConfig, TypeSafeEventSystem, EventHandler } from '../Core/EventSystem';
 import type { ComponentConstructor, ComponentInstance } from '../../Types/TypeHelpers';
+import type { IService } from '../../Core/ServiceContainer';
 
 /**
  * 事件监听器记录
@@ -65,7 +66,7 @@ interface EventListenerRecord {
  */
 export abstract class EntitySystem<
     TComponents extends readonly ComponentConstructor[] = []
-> implements ISystemBase {
+> implements ISystemBase, IService {
     private _updateOrder: number;
     private _enabled: boolean;
     private _performanceMonitor: PerformanceMonitor | null;
@@ -222,9 +223,6 @@ export abstract class EntitySystem<
      */
     public setUpdateOrder(order: number): void {
         this._updateOrder = order;
-        if (this.scene && this.scene.entityProcessors) {
-            this.scene.entityProcessors.setDirty();
-        }
     }
 
     /**
@@ -725,13 +723,41 @@ export abstract class EntitySystem<
 
     /**
      * 当实体从系统中移除时调用
-     * 
+     *
      * 子类可以重写此方法来处理实体移除事件。
-     * 
+     *
      * @param entity 被移除的实体
      */
     protected onRemoved(entity: Entity): void {
         // 子类可以重写此方法
+    }
+
+    /**
+     * 释放系统资源
+     *
+     * 实现IService接口要求的dispose方法。
+     * 当系统从Scene中移除或Scene销毁时调用。
+     *
+     * 默认行为：
+     * - 移除所有事件监听器
+     * - 清空所有缓存
+     * - 重置初始化状态
+     *
+     * 子类可以重写此方法来清理自定义资源，但应该调用super.dispose()。
+     */
+    public dispose(): void {
+        // 移除所有事件监听器
+        this.cleanupManualEventListeners();
+
+        // 清空所有缓存
+        this._entityCache.clearAll();
+        this._entityIdMap = null;
+
+        // 重置状态
+        this._initialized = false;
+        this._scene = null;
+
+        this.logger.debug(`System ${this._systemName} disposed`);
     }
 
     /**

@@ -10,11 +10,15 @@ import { ComponentPoolManager } from '../../ECS/Core/ComponentPool';
 import { Pool } from '../../Utils/Pool';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from '../../ECS/Decorators';
 import type { IService } from '../../Core/ServiceContainer';
+import { SceneManager } from '../../ECS/SceneManager';
+import { PerformanceMonitor } from '../PerformanceMonitor';
 
 /**
  * 调试管理器
  *
  * 整合所有调试数据收集器，负责收集和发送调试数据
+ *
+ * 通过构造函数接收SceneManager和PerformanceMonitor，避免直接依赖Core实例
  */
 export class DebugManager implements IService {
     private config: IECSDebugConfig;
@@ -24,8 +28,8 @@ export class DebugManager implements IService {
     private performanceCollector: PerformanceDataCollector;
     private componentCollector: ComponentDataCollector;
     private sceneCollector: SceneDataCollector;
-    private sceneProvider: () => any;
-    private performanceMonitorProvider: () => any;
+    private sceneManager: SceneManager;
+    private performanceMonitor: PerformanceMonitor;
 
     private frameCounter: number = 0;
     private lastSendTime: number = 0;
@@ -34,15 +38,18 @@ export class DebugManager implements IService {
 
     /**
      * 构造调试管理器
-     * @param core Core实例
+     * @param sceneManager 场景管理器
+     * @param performanceMonitor 性能监控器
      * @param config 调试配置
      */
-    constructor(core: any, config: IECSDebugConfig) {
+    constructor(
+        sceneManager: SceneManager,
+        performanceMonitor: PerformanceMonitor,
+        config: IECSDebugConfig
+    ) {
         this.config = config;
-
-        // 设置提供器函数
-        this.sceneProvider = () => (core as any).scene || (core.constructor as any).scene;
-        this.performanceMonitorProvider = () => core._performanceMonitor;
+        this.sceneManager = sceneManager;
+        this.performanceMonitor = performanceMonitor;
 
         // 初始化数据收集器
         this.entityCollector = new EntityDataCollector();
@@ -339,7 +346,7 @@ export class DebugManager implements IService {
 
         // 收集其他内存统计
         const baseMemoryInfo = this.collectBaseMemoryInfo();
-        const scene = this.sceneProvider();
+        const scene = this.sceneManager.currentScene;
 
         // 使用专门的内存计算方法收集实体数据
         const entityData = this.entityCollector.collectEntityDataWithMemory(scene);
@@ -453,7 +460,7 @@ export class DebugManager implements IService {
     /**
      * 收集组件内存统计（仅用于内存快照）
      */
-    private collectComponentMemoryStats(entityList: { buffer: Array<{ id: number; name?: string; destroyed?: boolean; components?: Component[] }> }): {
+    private collectComponentMemoryStats(entityList: { buffer: Array<{ id: number; name?: string; destroyed?: boolean; components?: readonly Component[] }> }): {
         totalMemory: number;
         componentTypes: number;
         totalInstances: number;
@@ -547,7 +554,7 @@ export class DebugManager implements IService {
             updateOrder: number;
         }>;
     } {
-        const scene = this.sceneProvider();
+        const scene = this.sceneManager.currentScene;
         let totalSystemMemory = 0;
         const systemBreakdown: Array<{
             name: string;
@@ -557,11 +564,11 @@ export class DebugManager implements IService {
         }> = [];
 
         try {
-            const entityProcessors = scene?.entityProcessors;
-            if (entityProcessors && entityProcessors.processors) {
+            const systems = scene?.systems;
+            if (systems) {
                 const systemTypeMemoryCache = new Map<string, number>();
 
-                for (const system of entityProcessors.processors) {
+                for (const system of systems) {
                     const systemTypeName = getSystemInstanceTypeName(system);
 
                     let systemMemory: number;
@@ -721,16 +728,15 @@ export class DebugManager implements IService {
         error?: string;
     } {
         try {
-            const performanceMonitor = this.performanceMonitorProvider();
-            if (!performanceMonitor) {
+            if (!this.performanceMonitor) {
                 return { enabled: false };
             }
 
-            const stats = performanceMonitor.getAllSystemStats();
-            const warnings = performanceMonitor.getPerformanceWarnings();
+            const stats = this.performanceMonitor.getAllSystemStats();
+            const warnings = this.performanceMonitor.getPerformanceWarnings();
 
             return {
-                enabled: (performanceMonitor as { enabled?: boolean }).enabled ?? false,
+                enabled: (this.performanceMonitor as { enabled?: boolean }).enabled ?? false,
                 systemCount: stats.size,
                 warnings: warnings.slice(0, 10), // 最多10个警告
                 topSystems: Array.from(stats.entries()).map((entry) => {
@@ -754,7 +760,7 @@ export class DebugManager implements IService {
      */
     public getDebugData(): IECSDebugData {
         const currentTime = Date.now();
-        const scene = this.sceneProvider();
+        const scene = this.sceneManager.currentScene;
 
         const debugData: IECSDebugData = {
             timestamp: currentTime,
@@ -770,13 +776,11 @@ export class DebugManager implements IService {
         }
 
         if (this.config.channels.systems) {
-            const performanceMonitor = this.performanceMonitorProvider();
-            debugData.systems = this.systemCollector.collectSystemData(performanceMonitor, scene);
+            debugData.systems = this.systemCollector.collectSystemData(this.performanceMonitor, scene);
         }
 
         if (this.config.channels.performance) {
-            const performanceMonitor = this.performanceMonitorProvider();
-            debugData.performance = this.performanceCollector.collectPerformanceData(performanceMonitor);
+            debugData.performance = this.performanceCollector.collectPerformanceData(this.performanceMonitor);
         }
 
         if (this.config.channels.components) {

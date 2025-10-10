@@ -3,8 +3,10 @@ import { Scene } from '../src/ECS/Scene';
 import { SceneManager } from '../src/ECS/SceneManager';
 import { Entity } from '../src/ECS/Entity';
 import { Component } from '../src/ECS/Component';
-import { GlobalManager } from '../src/Utils/GlobalManager';
 import { ITimer } from '../src/Utils/Timers/ITimer';
+import { Updatable } from '../src/Core/DI';
+import type { IService } from '../src/Core/ServiceContainer';
+import type { IUpdatable } from '../src/Types/IUpdatable';
 
 // 测试组件
 class TestComponent extends Component {
@@ -41,21 +43,17 @@ class TestScene extends Scene {
     }
 }
 
-// 测试全局管理器
-class TestGlobalManager extends GlobalManager {
+// 测试可更新服务
+@Updatable()
+class TestUpdatableService implements IService, IUpdatable {
     public updateCallCount = 0;
-    public override _enabled = false;
-    
-    public override get enabled(): boolean {
-        return this._enabled;
-    }
-    
-    public override set enabled(value: boolean) {
-        this._enabled = value;
+
+    public update(): void {
+        this.updateCallCount++;
     }
 
-    public override update(): void {
-        this.updateCallCount++;
+    public dispose(): void {
+        // 清理资源
     }
 }
 
@@ -129,96 +127,75 @@ describe('Core - 核心管理系统测试', () => {
     // 注意：场景管理功能已移至SceneManager
     // 相关测试请查看 SceneManager.test.ts
 
-    describe('更新循环 - 全局服务', () => {
+    describe('更新循环 - 可更新服务', () => {
         let core: Core;
-        let globalManager: TestGlobalManager;
+        let updatableService: TestUpdatableService;
 
         beforeEach(() => {
             core = Core.create(true);
-            globalManager = new TestGlobalManager();
-            Core.registerGlobalManager(globalManager);
+            updatableService = new TestUpdatableService();
+            Core.services.registerInstance(TestUpdatableService, updatableService);
         });
 
-        test('应该能够更新全局管理器', () => {
+        test('应该能够更新可更新服务', () => {
             Core.update(0.016);
-            expect(globalManager.updateCallCount).toBe(1);
+            expect(updatableService.updateCallCount).toBe(1);
         });
 
         test('暂停状态下不应该执行更新', () => {
             Core.paused = true;
             Core.update(0.016);
-            expect(globalManager.updateCallCount).toBe(0);
+            expect(updatableService.updateCallCount).toBe(0);
 
             // 恢复状态
             Core.paused = false;
-        });
-
-        test('禁用的全局管理器不应该被更新', () => {
-            globalManager.enabled = false;
-            Core.update(0.016);
-            expect(globalManager.updateCallCount).toBe(0);
         });
 
         test('多次更新应该累积调用', () => {
             Core.update(0.016);
             Core.update(0.016);
             Core.update(0.016);
-            expect(globalManager.updateCallCount).toBe(3);
+            expect(updatableService.updateCallCount).toBe(3);
         });
     });
 
-    describe('全局管理器管理', () => {
+    describe('服务容器集成', () => {
         let core: Core;
-        let manager1: TestGlobalManager;
-        let manager2: TestGlobalManager;
+        let service1: TestUpdatableService;
 
         beforeEach(() => {
             core = Core.create(true);
-            manager1 = new TestGlobalManager();
-            manager2 = new TestGlobalManager();
+            service1 = new TestUpdatableService();
         });
 
-        test('应该能够注册全局管理器', () => {
-            Core.registerGlobalManager(manager1);
-            
-            expect(manager1.enabled).toBe(true);
-            
+        test('应该能够通过ServiceContainer注册可更新服务', () => {
+            Core.services.registerInstance(TestUpdatableService, service1);
+
             // 测试更新是否被调用
             Core.update(0.016);
-            expect(manager1.updateCallCount).toBe(1);
+            expect(service1.updateCallCount).toBe(1);
         });
 
-        test('应该能够注销全局管理器', () => {
-            Core.registerGlobalManager(manager1);
-            Core.unregisterGlobalManager(manager1);
-            
-            expect(manager1.enabled).toBe(false);
-            
+        test('应该能够注销服务', () => {
+            Core.services.registerInstance(TestUpdatableService, service1);
+            Core.services.unregister(TestUpdatableService);
+
             // 测试更新不应该被调用
             Core.update(0.016);
-            expect(manager1.updateCallCount).toBe(0);
+            expect(service1.updateCallCount).toBe(0);
         });
 
-        test('应该能够获取指定类型的全局管理器', () => {
-            Core.registerGlobalManager(manager1);
-            
-            const retrieved = Core.getGlobalManager(TestGlobalManager);
-            expect(retrieved).toBe(manager1);
+        test('应该能够通过ServiceContainer解析服务', () => {
+            Core.services.registerInstance(TestUpdatableService, service1);
+
+            const retrieved = Core.services.resolve(TestUpdatableService);
+            expect(retrieved).toBe(service1);
         });
 
-        test('获取不存在的管理器应该返回null', () => {
-            const retrieved = Core.getGlobalManager(TestGlobalManager);
-            expect(retrieved).toBeNull();
-        });
-
-        test('应该能够管理多个全局管理器', () => {
-            Core.registerGlobalManager(manager1);
-            Core.registerGlobalManager(manager2);
-            
-            Core.update(0.016);
-            
-            expect(manager1.updateCallCount).toBe(1);
-            expect(manager2.updateCallCount).toBe(1);
+        test('解析不存在的服务应该抛出错误', () => {
+            expect(() => {
+                Core.services.resolve(TestUpdatableService);
+            }).toThrow();
         });
     });
 

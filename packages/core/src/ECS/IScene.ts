@@ -1,6 +1,5 @@
 import { Entity } from './Entity';
 import { EntityList } from './Utils/EntityList';
-import { EntityProcessorList } from './Utils/EntityProcessorList';
 import { IdentifierPool } from './Utils/IdentifierPool';
 import { EntitySystem } from './Systems/EntitySystem';
 import { ComponentStorageManager } from './Core/ComponentStorage';
@@ -41,12 +40,7 @@ export interface IScene {
      * 场景中的实体集合
      */
     readonly entities: EntityList;
-    
-    /**
-     * 实体系统处理器集合
-     */
-    readonly entityProcessors: EntityProcessorList;
-    
+
     /**
      * 标识符池
      */
@@ -171,4 +165,12 @@ export interface ISceneConfig {
      * 场景名称
      */
     name?: string;
+
+    /**
+     * 性能监控器实例（可选）
+     *
+     * 如果不提供，Scene会自动从Core.services获取全局PerformanceMonitor。
+     * 提供此参数可以实现场景级别的独立性能监控。
+     */
+    performanceMonitor?: any;
 }
