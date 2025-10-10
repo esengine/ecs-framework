@@ -16,7 +16,7 @@ export interface IComponent {
     /** 组件唯一标识符 */
     readonly id: number;
     /** 组件所属的实体ID */
-    entityId?: string | number;
+    entityId: number | null;
 
     /** 组件添加到实体时的回调 */
     onAddedToEntity(): void;

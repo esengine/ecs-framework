@@ -409,6 +409,10 @@ export class Entity {
 
         this.scene.componentStorageManager.addComponent(this.id, component);
 
+        component.entityId = this.id;
+        if (this.scene.referenceTracker) {
+            this.scene.referenceTracker.registerEntityScene(this.id, this.scene);
+        }
         component.onAddedToEntity();
 
         if (Entity.eventBus) {
@@ -538,9 +542,15 @@ export class Entity {
             this.scene.componentStorageManager.removeComponent(this.id, componentType);
         }
 
+        if (this.scene?.referenceTracker) {
+            this.scene.referenceTracker.clearComponentReferences(component);
+        }
+
         if (component.onRemovedFromEntity) {
             component.onRemovedFromEntity();
         }
+
+        component.entityId = null;
 
         if (Entity.eventBus) {
             Entity.eventBus.emitComponentRemoved({
@@ -866,6 +876,11 @@ export class Entity {
         }
 
         this._isDestroyed = true;
+
+        if (this.scene && this.scene.referenceTracker) {
+            this.scene.referenceTracker.clearReferencesTo(this.id);
+            this.scene.referenceTracker.unregisterEntityScene(this.id);
+        }
 
         const childrenToDestroy = [...this._children];
         for (const child of childrenToDestroy) {

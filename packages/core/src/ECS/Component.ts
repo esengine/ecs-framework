@@ -46,6 +46,13 @@ export abstract class Component implements IComponent {
     public readonly id: number;
 
     /**
+     * 所属实体ID
+     *
+     * 存储实体ID而非引用，避免循环引用，符合ECS数据导向设计。
+     */
+    public entityId: number | null = null;
+
+    /**
      * 创建组件实例
      *
      * 自动分配唯一ID给组件。
