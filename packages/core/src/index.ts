@@ -5,6 +5,8 @@
 
 // 核心模块
 export { Core } from './Core';
+export { ServiceContainer, ServiceLifetime } from './Core/ServiceContainer';
+export type { IService, ServiceType } from './Core/ServiceContainer';
 
 // 核心管理器
 export { Emitter, FuncPack } from './Utils/Emitter';

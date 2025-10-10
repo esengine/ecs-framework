@@ -10,6 +10,7 @@ import { ICoreConfig, IECSDebugConfig } from './Types';
 import { createLogger } from './Utils/Logger';
 import { SceneManager } from './ECS/SceneManager';
 import { IScene } from './ECS/IScene';
+import { ServiceContainer } from './Core/ServiceContainer';
 
 /**
  * 游戏引擎核心类
@@ -77,6 +78,13 @@ export class Core {
     public readonly debug: boolean;
 
     /**
+     * 服务容器
+     *
+     * 管理所有服务的注册、解析和生命周期。
+     */
+    private _serviceContainer: ServiceContainer;
+
+    /**
      * 全局管理器集合
      *
      * 存储所有注册的全局管理器实例。
@@ -138,23 +146,29 @@ export class Core {
             ...config
         };
 
+        // 初始化服务容器
+        this._serviceContainer = new ServiceContainer();
+
         // 初始化定时器管理器
         this._timerManager = new TimerManager();
         Core.registerGlobalManager(this._timerManager);
+        this._serviceContainer.registerInstance(TimerManager, this._timerManager);
 
         // 初始化性能监控器
-        this._performanceMonitor = PerformanceMonitor.instance;
+        this._performanceMonitor = new PerformanceMonitor();
+        this._serviceContainer.registerInstance(PerformanceMonitor, this._performanceMonitor);
 
         // 在调试模式下启用性能监控
         if (this._config.debug) {
             this._performanceMonitor.enable();
         }
 
-        // 初始化对象池管理器
+        // 初始化对象池管理器（单例模式）
         this._poolManager = PoolManager.getInstance();
 
         // 初始化场景管理器
         this._sceneManager = new SceneManager();
+        this._serviceContainer.registerInstance(SceneManager, this._sceneManager);
 
         Core.entitySystemsEnabled = this._config.enableEntitySystems ?? true;
         this.debug = this._config.debug ?? true;
@@ -162,6 +176,7 @@ export class Core {
         // 初始化调试管理器
         if (this._config.debugConfig?.enabled) {
             this._debugManager = new DebugManager(this, this._config.debugConfig);
+            this._serviceContainer.registerInstance(DebugManager, this._debugManager);
         }
 
         this.initialize();
@@ -174,6 +189,29 @@ export class Core {
      */
     public static get Instance() {
         return this._instance;
+    }
+
+    /**
+     * 获取服务容器
+     *
+     * 用于注册和解析自定义服务。
+     *
+     * @returns 服务容器实例
+     *
+     * @example
+     * ```typescript
+     * // 注册自定义服务
+     * Core.services.registerSingleton(MyService);
+     *
+     * // 解析服务
+     * const myService = Core.services.resolve(MyService);
+     * ```
+     */
+    public static get services(): ServiceContainer {
+        if (!this._instance) {
+            throw new Error('Core实例未创建，请先调用Core.create()');
+        }
+        return this._instance._serviceContainer;
     }
 
     /**

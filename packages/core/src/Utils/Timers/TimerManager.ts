@@ -1,11 +1,12 @@
 import { GlobalManager } from '../GlobalManager';
 import { Timer } from './Timer';
 import { ITimer } from './ITimer';
+import type { IService } from '../../Core/ServiceContainer';
 
 /**
  * 允许动作的延迟和重复执行
  */
-export class TimerManager extends GlobalManager {
+export class TimerManager extends GlobalManager implements IService {
     public _timers: Array<Timer<unknown>> = [];
 
     public override update() {
@@ -30,5 +31,15 @@ export class TimerManager extends GlobalManager {
         this._timers.push(timer as Timer<unknown>);
 
         return timer;
+    }
+
+    /**
+     * 释放资源
+     */
+    public dispose(): void {
+        for (const timer of this._timers) {
+            timer.unload();
+        }
+        this._timers = [];
     }
 }

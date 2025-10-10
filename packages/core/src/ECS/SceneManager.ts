@@ -3,6 +3,7 @@ import { ECSFluentAPI, createECSAPI } from './Core/FluentAPI';
 import { Time } from '../Utils/Time';
 import { Core } from '../Core';
 import { createLogger } from '../Utils/Logger';
+import type { IService } from '../Core/ServiceContainer';
 
 /**
  * 单场景管理器
@@ -46,7 +47,7 @@ import { createLogger } from '../Utils/Logger';
  * sceneManager.loadScene(new MenuScene());
  * ```
  */
-export class SceneManager {
+export class SceneManager implements IService {
     /**
      * 当前活跃场景
      */
@@ -234,5 +235,12 @@ export class SceneManager {
      */
     public get hasPendingScene(): boolean {
         return this._nextScene !== null;
+    }
+
+    /**
+     * 释放资源（IService接口）
+     */
+    public dispose(): void {
+        this.destroy();
     }
 }

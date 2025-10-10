@@ -68,7 +68,7 @@ export abstract class EntitySystem<
 > implements ISystemBase {
     private _updateOrder: number;
     private _enabled: boolean;
-    private _performanceMonitor: PerformanceMonitor;
+    private _performanceMonitor: PerformanceMonitor | null;
     private _systemName: string;
     private _initialized: boolean;
     private _matcher: Matcher;
@@ -148,7 +148,7 @@ export abstract class EntitySystem<
     constructor(matcher?: Matcher) {
         this._updateOrder = 0;
         this._enabled = true;
-        this._performanceMonitor = PerformanceMonitor.instance;
+        this._performanceMonitor = null;
         this._systemName = getSystemInstanceTypeName(this);
         this._initialized = false;
         this._matcher = matcher || Matcher.empty();
@@ -190,6 +190,23 @@ export abstract class EntitySystem<
 
     public set scene(value: Scene | null) {
         this._scene = value;
+    }
+
+    /**
+     * 设置性能监控器
+     */
+    public setPerformanceMonitor(monitor: PerformanceMonitor): void {
+        this._performanceMonitor = monitor;
+    }
+
+    /**
+     * 获取性能监控器
+     */
+    private getPerformanceMonitor(): PerformanceMonitor {
+        if (!this._performanceMonitor) {
+            throw new Error(`${this._systemName}: PerformanceMonitor未注入，请确保在Core.create()之后再添加System到Scene`);
+        }
+        return this._performanceMonitor;
     }
 
     /**
@@ -533,7 +550,8 @@ export abstract class EntitySystem<
             return;
         }
 
-        const startTime = this._performanceMonitor.startMonitoring(this._systemName);
+        const monitor = this.getPerformanceMonitor();
+        const startTime = monitor.startMonitoring(this._systemName);
         let entityCount = 0;
 
         try {
@@ -544,7 +562,7 @@ export abstract class EntitySystem<
 
             this.process(this._entityCache.frame);
         } finally {
-            this._performanceMonitor.endMonitoring(this._systemName, startTime, entityCount);
+            monitor.endMonitoring(this._systemName, startTime, entityCount);
         }
     }
 
@@ -556,7 +574,8 @@ export abstract class EntitySystem<
             return;
         }
 
-        const startTime = this._performanceMonitor.startMonitoring(`${this._systemName}_Late`);
+        const monitor = this.getPerformanceMonitor();
+        const startTime = monitor.startMonitoring(`${this._systemName}_Late`);
         let entityCount = 0;
 
         try {
@@ -566,7 +585,7 @@ export abstract class EntitySystem<
             this.lateProcess(entities);
             this.onEnd();
         } finally {
-            this._performanceMonitor.endMonitoring(`${this._systemName}_Late`, startTime, entityCount);
+            monitor.endMonitoring(`${this._systemName}_Late`, startTime, entityCount);
             // 清理帧缓存
             this._entityCache.clearFrame();
         }
@@ -626,27 +645,27 @@ export abstract class EntitySystem<
 
     /**
      * 获取系统的性能数据
-     * 
+     *
      * @returns 性能数据或undefined
      */
     public getPerformanceData() {
-        return this._performanceMonitor.getSystemData(this._systemName);
+        return this.getPerformanceMonitor().getSystemData(this._systemName);
     }
 
     /**
      * 获取系统的性能统计
-     * 
+     *
      * @returns 性能统计或undefined
      */
     public getPerformanceStats() {
-        return this._performanceMonitor.getSystemStats(this._systemName);
+        return this.getPerformanceMonitor().getSystemStats(this._systemName);
     }
 
     /**
      * 重置系统的性能数据
      */
     public resetPerformanceData(): void {
-        this._performanceMonitor.resetSystem(this._systemName);
+        this.getPerformanceMonitor().resetSystem(this._systemName);
     }
 
     /**
