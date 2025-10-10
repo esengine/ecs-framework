@@ -6,10 +6,59 @@ import { createLogger } from '../../Utils/Logger';
 const logger = createLogger('ReferenceTracker');
 
 /**
+ * WeakRef 接口定义
+ *
+ * 用于 ES2020 环境下的类型定义
+ */
+interface IWeakRef<T extends object> {
+    deref(): T | undefined;
+}
+
+/**
+ * WeakRef Polyfill for ES2020 compatibility
+ *
+ * 为了兼容 Cocos Creator、Laya、微信小游戏等目标平台（仅支持 ES2020），
+ * 提供 WeakRef 的 Polyfill 实现。
+ *
+ * - 现代浏览器：自动使用原生 WeakRef (自动 GC)
+ * - 旧环境：使用 Polyfill (无自动 GC，但 Scene 销毁时会手动清理)
+ */
+class WeakRefPolyfill<T extends object> implements IWeakRef<T> {
+    private _target: T;
+
+    constructor(target: T) {
+        this._target = target;
+    }
+
+    deref(): T | undefined {
+        return this._target;
+    }
+}
+
+/**
+ * WeakRef 构造函数类型
+ */
+interface IWeakRefConstructor {
+    new <T extends object>(target: T): IWeakRef<T>;
+}
+
+/**
+ * WeakRef 实现
+ *
+ * 优先使用原生 WeakRef，不支持时降级到 Polyfill
+ */
+const WeakRefImpl: IWeakRefConstructor = (
+    (typeof globalThis !== 'undefined' && (globalThis as any).WeakRef) ||
+    (typeof global !== 'undefined' && (global as any).WeakRef) ||
+    (typeof window !== 'undefined' && (window as any).WeakRef) ||
+    WeakRefPolyfill
+) as IWeakRefConstructor;
+
+/**
  * Entity引用记录
  */
 export interface EntityRefRecord {
-    component: WeakRef<Component>;
+    component: IWeakRef<Component>;
     propertyKey: string;
 }
 
@@ -18,7 +67,7 @@ export interface EntityRefRecord {
  *
  * 使用全局Map记录每个Entity ID对应的Scene，用于装饰器通过Component.entityId查找Scene。
  */
-const globalEntitySceneMap = new Map<number, WeakRef<IScene>>();
+const globalEntitySceneMap = new Map<number, IWeakRef<IScene>>();
 
 /**
  * 通过Entity ID获取Scene
@@ -52,7 +101,7 @@ export class ReferenceTracker {
     /**
      * 当前Scene的引用
      */
-    private _scene: WeakRef<IScene> | null = null;
+    private _scene: IWeakRef<IScene> | null = null;
 
     /**
      * 注册Entity引用
@@ -76,7 +125,7 @@ export class ReferenceTracker {
         }
 
         records.add({
-            component: new WeakRef(component),
+            component: new WeakRefImpl(component),
             propertyKey
         });
     }
@@ -229,7 +278,7 @@ export class ReferenceTracker {
      * @param scene Scene实例
      */
     public setScene(scene: IScene): void {
-        this._scene = new WeakRef(scene);
+        this._scene = new WeakRefImpl(scene);
     }
 
     /**
@@ -239,7 +288,7 @@ export class ReferenceTracker {
      * @param scene Scene实例
      */
     public registerEntityScene(entityId: number, scene: IScene): void {
-        globalEntitySceneMap.set(entityId, new WeakRef(scene));
+        globalEntitySceneMap.set(entityId, new WeakRefImpl(scene));
     }
 
     /**
