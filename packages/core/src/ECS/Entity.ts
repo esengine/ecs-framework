@@ -146,12 +146,6 @@ export class Entity {
     private _componentCache: Component[] | null = null;
 
     /**
-     * 本地组件存储（用于没有 Scene 的 Entity）
-     * 当 Entity 添加到 Scene 时，组件会迁移到 Scene 的 componentStorageManager
-     */
-    private _localComponents: Map<ComponentType, Component> = new Map();
-
-    /**
      * 构造函数
      *
      * @param name - 实体名称
@@ -186,28 +180,23 @@ export class Entity {
      */
     private _rebuildComponentCache(): void {
         const components: Component[] = [];
-        const mask = this._componentMask;
 
+        if (!this.scene?.componentStorageManager) {
+            this._componentCache = components;
+            return;
+        }
+
+        const mask = this._componentMask;
         const maxBitIndex = ComponentRegistry.getRegisteredCount();
 
         for (let bitIndex = 0; bitIndex < maxBitIndex; bitIndex++) {
             if (BitMask64Utils.getBit(mask, bitIndex)) {
                 const componentType = ComponentRegistry.getTypeByBitIndex(bitIndex);
                 if (componentType) {
-                    let component: Component | null = null;
-
-                    // 优先从 Scene 存储获取
-                    if (this.scene?.componentStorageManager) {
-                        component = this.scene.componentStorageManager.getComponent(
-                            this.id,
-                            componentType
-                        );
-                    }
-
-                    // Fallback 到本地存储
-                    if (!component) {
-                        component = this._localComponents.get(componentType) || null;
-                    }
+                    const component = this.scene.componentStorageManager.getComponent(
+                        this.id,
+                        componentType
+                    );
 
                     if (component) {
                         components.push(component);
@@ -378,9 +367,6 @@ export class Entity {
             ComponentRegistry.register(componentType);
         }
 
-        // 存储到本地 Map
-        this._localComponents.set(componentType, component);
-
         // 更新位掩码
         const componentMask = ComponentRegistry.getBitMask(componentType);
         BitMask64Utils.orInPlace(this._componentMask, componentMask);
@@ -406,19 +392,25 @@ export class Entity {
      */
     public addComponent<T extends Component>(component: T): T {
         const componentType = component.constructor as ComponentType<T>;
-        
+
+        if (!this.scene) {
+            throw new Error(`Entity must be added to Scene before adding components. Use scene.createEntity() instead of new Entity()`);
+        }
+
+        if (!this.scene.componentStorageManager) {
+            throw new Error(`Scene does not have componentStorageManager`);
+        }
+
         if (this.hasComponent(componentType)) {
             throw new Error(`Entity ${this.name} already has component ${getComponentTypeName(componentType)}`);
         }
 
         this.addComponentInternal(component);
-        
-        if (this.scene && this.scene.componentStorageManager) {
-            this.scene.componentStorageManager.addComponent(this.id, component);
-        }
+
+        this.scene.componentStorageManager.addComponent(this.id, component);
 
         component.onAddedToEntity();
-        
+
         if (Entity.eventBus) {
             Entity.eventBus.emitComponentAdded({
                 timestamp: Date.now(),
@@ -430,7 +422,7 @@ export class Entity {
                 component: component
             });
         }
-        
+
 
         // 通知所有相关的QuerySystem组件已变动
         Entity.notifyQuerySystems(this);
@@ -459,16 +451,13 @@ export class Entity {
             return null;
         }
 
-        // 优先从 Scene 存储获取
-        if (this.scene?.componentStorageManager) {
-            const component = this.scene.componentStorageManager.getComponent(this.id, type);
-            if (component) {
-                return component as T;
-            }
+        // 从Scene存储获取
+        if (!this.scene?.componentStorageManager) {
+            return null;
         }
 
-        // Fallback 到本地存储
-        return (this._localComponents.get(type) as T) || null;
+        const component = this.scene.componentStorageManager.getComponent(this.id, type);
+        return component as T | null;
     }
 
 
@@ -538,17 +527,14 @@ export class Entity {
 
         const bitIndex = ComponentRegistry.getBitIndex(componentType);
 
-        // 从本地存储移除
-        this._localComponents.delete(componentType);
-
         // 更新位掩码
         BitMask64Utils.clearBit(this._componentMask, bitIndex);
 
         // 使缓存失效
         this._componentCache = null;
 
-        // 从 Scene 存储移除
-        if (this.scene && this.scene.componentStorageManager) {
+        // 从Scene存储移除
+        if (this.scene?.componentStorageManager) {
             this.scene.componentStorageManager.removeComponent(this.id, componentType);
         }
 
@@ -593,9 +579,6 @@ export class Entity {
     public removeAllComponents(): void {
         const componentsToRemove = [...this.components];
 
-        // 清除本地存储
-        this._localComponents.clear();
-
         // 清除位掩码
         BitMask64Utils.clear(this._componentMask);
 
@@ -605,7 +588,7 @@ export class Entity {
         for (const component of componentsToRemove) {
             const componentType = component.constructor as ComponentType;
 
-            if (this.scene && this.scene.componentStorageManager) {
+            if (this.scene?.componentStorageManager) {
                 this.scene.componentStorageManager.removeComponent(this.id, componentType);
             }
 

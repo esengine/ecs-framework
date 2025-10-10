@@ -8,6 +8,7 @@ import { Entity } from '../Entity';
 import { Component } from '../Component';
 import { ComponentType } from '../Core/ComponentStorage';
 import { ComponentSerializer, SerializedComponent } from './ComponentSerializer';
+import { IScene } from '../IScene';
 
 /**
  * 序列化后的实体数据
@@ -108,17 +109,24 @@ export class EntitySerializer {
      * @param componentRegistry 组件类型注册表
      * @param idGenerator 实体ID生成器（用于生成新ID或保持原ID）
      * @param preserveIds 是否保持原始ID（默认false）
+     * @param scene 目标场景（可选，用于设置entity.scene以支持添加组件）
      * @returns 反序列化后的实体
      */
     public static deserialize(
         serializedEntity: SerializedEntity,
         componentRegistry: Map<string, ComponentType>,
         idGenerator: () => number,
-        preserveIds: boolean = false
+        preserveIds: boolean = false,
+        scene?: IScene
     ): Entity {
         // 创建实体（使用原始ID或新生成的ID）
         const entityId = preserveIds ? serializedEntity.id : idGenerator();
         const entity = new Entity(serializedEntity.name, entityId);
+
+        // 如果提供了scene，先设置entity.scene以支持添加组件
+        if (scene) {
+            entity.scene = scene;
+        }
 
         // 恢复实体属性
         entity.tag = serializedEntity.tag;
@@ -142,7 +150,8 @@ export class EntitySerializer {
                 childData,
                 componentRegistry,
                 idGenerator,
-                preserveIds
+                preserveIds,
+                scene
             );
             entity.addChild(childEntity);
         }
@@ -181,13 +190,15 @@ export class EntitySerializer {
      * @param componentRegistry 组件类型注册表
      * @param idGenerator 实体ID生成器
      * @param preserveIds 是否保持原始ID
+     * @param scene 目标场景（可选，用于设置entity.scene以支持添加组件）
      * @returns 反序列化后的实体数组
      */
     public static deserializeEntities(
         serializedEntities: SerializedEntity[],
         componentRegistry: Map<string, ComponentType>,
         idGenerator: () => number,
-        preserveIds: boolean = false
+        preserveIds: boolean = false,
+        scene?: IScene
     ): Entity[] {
         const result: Entity[] = [];
 
@@ -196,7 +207,8 @@ export class EntitySerializer {
                 serialized,
                 componentRegistry,
                 idGenerator,
-                preserveIds
+                preserveIds,
+                scene
             );
             result.push(entity);
         }

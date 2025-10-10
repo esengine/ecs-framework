@@ -269,7 +269,8 @@ export class SceneSerializer {
             serializedScene.entities,
             componentRegistry,
             idGenerator,
-            opts.preserveIds || false
+            opts.preserveIds || false,
+            scene
         );
 
         // 将实体添加到场景

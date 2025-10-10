@@ -1,3 +1,4 @@
+import { Scene } from '../../../src/ECS/Scene';
 import { PassiveSystem } from '../../../src/ECS/Systems/PassiveSystem';
 import { IntervalSystem } from '../../../src/ECS/Systems/IntervalSystem';
 import { ProcessingSystem } from '../../../src/ECS/Systems/ProcessingSystem';
@@ -78,10 +79,12 @@ class ConcreteProcessingSystem extends ProcessingSystem {
 }
 
 describe('System Types - 系统类型测试', () => {
+    let scene: Scene;
     let entity: Entity;
 
     beforeEach(() => {
-        entity = new Entity('TestEntity', 1);
+        scene = new Scene();
+        entity = scene.createEntity('TestEntity');
         // 重置时间系统
         Time.update(0.016);
         // 注册测试组件类型
@@ -282,10 +285,10 @@ describe('System Types - 系统类型测试', () => {
             const interval = new ConcreteIntervalSystem(0.1);
             const processing = new ConcreteProcessingSystem();
             
-            const matchingEntity = new Entity('Matching', 1);
+            const matchingEntity = scene.createEntity('Matching');
             matchingEntity.addComponent(new TestComponent(100));
             
-            const nonMatchingEntity = new Entity('NonMatching', 2);
+            const nonMatchingEntity = scene.createEntity('NonMatching');
             nonMatchingEntity.addComponent(new AnotherComponent('test'));
             
             // 所有系统都应该匹配TestComponent

@@ -90,7 +90,7 @@ describe('EntitySystem', () => {
     beforeEach(() => {
         scene = new Scene();
         system = new ConcreteEntitySystem();
-        entity = new Entity('test_entity', 1);
+        entity = scene.createEntity('test_entity');
         entity.addComponent(new TestComponent(10));
 
         scene.addEntity(entity);

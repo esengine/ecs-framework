@@ -568,9 +568,9 @@ describe('FluentAPI - 流式API测试', () => {
         let batchOp: EntityBatchOperator;
 
         beforeEach(() => {
-            entity1 = new Entity('Entity1', 1);
-            entity2 = new Entity('Entity2', 2);
-            entity3 = new Entity('Entity3', 3);
+            entity1 = scene.createEntity('Entity1');
+            entity2 = scene.createEntity('Entity2');
+            entity3 = scene.createEntity('Entity3');
             batchOp = new EntityBatchOperator([entity1, entity2, entity3]);
         });
 

@@ -14,7 +14,9 @@ export class EntityBuilder {
     constructor(scene: IScene, storageManager: ComponentStorageManager) {
         this.scene = scene;
         this.storageManager = storageManager;
-        this.entity = new Entity("", scene.identifierPool.checkOut());
+        const id = scene.identifierPool.checkOut();
+        this.entity = new Entity("", id);
+        this.entity.scene = this.scene as any;
     }
 
     /**
