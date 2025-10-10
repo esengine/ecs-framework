@@ -77,19 +77,16 @@ export class QuerySystem {
     private entities: Entity[] = [];
     private entityIndex: EntityIndex;
 
-    // 版本号，用于缓存失效
     private _version = 0;
 
-    // 查询缓存系统
     private queryCache = new Map<string, QueryCacheEntry>();
     private cacheMaxSize = 1000;
-    private cacheTimeout = 5000; // 5秒缓存过期
+    private cacheTimeout = 5000;
 
     private componentMaskCache = new Map<string, BitMask64Data>();
 
     private archetypeSystem: ArchetypeSystem;
 
-    // 性能统计
     private queryStats = {
         totalQueries: 0,
         cacheHits: 0,
@@ -98,6 +95,9 @@ export class QuerySystem {
         archetypeHits: 0,
         dirtyChecks: 0
     };
+
+    private resultArrayPool: Entity[][] = [];
+    private poolMaxSize = 50;
 
     constructor() {
         this.entityIndex = {
@@ -108,7 +108,19 @@ export class QuerySystem {
         this.archetypeSystem = new ArchetypeSystem();
     }
 
+    private acquireResultArray(): Entity[] {
+        if (this.resultArrayPool.length > 0) {
+            return this.resultArrayPool.pop()!;
+        }
+        return [];
+    }
 
+    private releaseResultArray(array: Entity[]): void {
+        if (this.resultArrayPool.length < this.poolMaxSize) {
+            array.length = 0;
+            this.resultArrayPool.push(array);
+        }
+    }
 
     /**
      * 设置实体列表并重建索引
@@ -459,18 +471,21 @@ export class QuerySystem {
         this.queryStats.archetypeHits++;
         const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'OR');
 
-        const entities: Entity[] = [];
+        const entities = this.acquireResultArray();
         for (const archetype of archetypeResult.archetypes) {
             for (const entity of archetype.entities) {
                 entities.push(entity);
             }
         }
-        
-        this.addToCache(cacheKey, entities);
+
+        const frozenEntities = [...entities];
+        this.releaseResultArray(entities);
+
+        this.addToCache(cacheKey, frozenEntities);
 
         return {
-            entities,
-            count: entities.length,
+            entities: frozenEntities,
+            count: frozenEntities.length,
             executionTime: performance.now() - startTime,
             fromCache: false
         };

@@ -518,20 +518,16 @@ describe('Scene - 场景管理系统测试', () => {
             
             // 测试查询性能
             const queryStartTime = performance.now();
-            
+
             const positionResult = scene.querySystem.queryAll(PositionComponent);
             const velocityResult = scene.querySystem.queryAll(VelocityComponent);
             const healthResult = scene.querySystem.queryAll(HealthComponent);
-            
+
             const queryTime = performance.now() - queryStartTime;
-            
+
             expect(positionResult.entities.length).toBe(entityCount);
             expect(velocityResult.entities.length).toBe(entityCount / 2);
             expect(healthResult.entities.length).toBe(Math.floor(entityCount / 3) + 1);
-            
-            // 性能断言（这些值可能需要根据实际环境调整）
-            // 性能记录：场景创建性能数据，不设硬阈值避免CI不稳定
-            // 性能记录：场景查询性能数据，不设硬阈值避免CI不稳定
             
             console.log(`创建${entityCount}个实体耗时: ${creationTime.toFixed(2)}ms`);
             console.log(`查询操作耗时: ${queryTime.toFixed(2)}ms`);

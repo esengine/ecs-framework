@@ -65,8 +65,6 @@ export class ArchetypeSystem {
 
         archetype.entities.add(entity);
         this._entityToArchetype.set(entity, archetype);
-
-        this.updateComponentIndexes(archetype, componentTypes, true);
     }
     
     /**
@@ -119,12 +117,6 @@ export class ArchetypeSystem {
         newArchetype.entities.add(entity);
         this._entityToArchetype.set(entity, newArchetype);
 
-        // 更新组件索引
-        if (currentArchetype) {
-            this.updateComponentIndexes(currentArchetype, currentArchetype.componentTypes, false);
-        }
-        this.updateComponentIndexes(newArchetype, newComponentTypes, true);
-
     }
     
     /**
@@ -140,19 +132,52 @@ export class ArchetypeSystem {
         let totalEntities = 0;
 
         if (operation === 'AND') {
-            // 生成查询的 BitMask
-            const queryMask = this.generateArchetypeId(componentTypes);
-
-            // 使用 BitMask 位运算快速判断原型是否包含所有指定组件
-            for (const archetype of this._allArchetypes) {
-                if (BitMask64Utils.hasAll(archetype.id, queryMask)) {
+            if (componentTypes.length === 0) {
+                for (const archetype of this._allArchetypes) {
                     matchingArchetypes.push(archetype);
                     totalEntities += archetype.entities.size;
+                }
+                return { archetypes: matchingArchetypes, totalEntities };
+            }
+
+            if (componentTypes.length === 1) {
+                const archetypes = this._componentToArchetypes.get(componentTypes[0]);
+                if (archetypes) {
+                    for (const archetype of archetypes) {
+                        matchingArchetypes.push(archetype);
+                        totalEntities += archetype.entities.size;
+                    }
+                }
+                return { archetypes: matchingArchetypes, totalEntities };
+            }
+
+            let smallestSet: Set<Archetype> | undefined;
+            let smallestSize = Infinity;
+
+            for (const componentType of componentTypes) {
+                const archetypes = this._componentToArchetypes.get(componentType);
+                if (!archetypes || archetypes.size === 0) {
+                    return { archetypes: [], totalEntities: 0 };
+                }
+                if (archetypes.size < smallestSize) {
+                    smallestSize = archetypes.size;
+                    smallestSet = archetypes;
+                }
+            }
+
+            const queryMask = this.generateArchetypeId(componentTypes);
+
+            if (smallestSet) {
+                for (const archetype of smallestSet) {
+                    if (BitMask64Utils.hasAll(archetype.id, queryMask)) {
+                        matchingArchetypes.push(archetype);
+                        totalEntities += archetype.entities.size;
+                    }
                 }
             }
         } else {
             const foundArchetypes = new Set<Archetype>();
-            
+
             for (const componentType of componentTypes) {
                 const archetypes = this._componentToArchetypes.get(componentType);
                 if (archetypes) {
@@ -161,13 +186,13 @@ export class ArchetypeSystem {
                     }
                 }
             }
-            
+
             for (const archetype of foundArchetypes) {
                 matchingArchetypes.push(archetype);
                 totalEntities += archetype.entities.size;
             }
         }
-        
+
         return {
             archetypes: matchingArchetypes,
             totalEntities
@@ -252,40 +277,26 @@ export class ArchetypeSystem {
      */
     private createArchetype(componentTypes: ComponentType[]): Archetype {
         const id = this.generateArchetypeId(componentTypes);
-        
+
         const archetype: Archetype = {
             id,
             componentTypes: [...componentTypes],
             entities: new Set<Entity>()
         };
-        // 存储原型ID - 原型
         this._archetypes.set(id,archetype);
-        // 更新数组
         this.updateAllArchetypeArrays();
-        return archetype;
-    }
-    
-    /**
-     * 更新组件索引
-     */
-    private updateComponentIndexes(archetype: Archetype, componentTypes: ComponentType[], add: boolean): void {
+
         for (const componentType of componentTypes) {
             let archetypes = this._componentToArchetypes.get(componentType);
             if (!archetypes) {
                 archetypes = new Set();
                 this._componentToArchetypes.set(componentType, archetypes);
             }
-            
-            if (add) {
-                archetypes.add(archetype);
-            } else {
-                archetypes.delete(archetype);
-                if (archetypes.size === 0) {
-                    this._componentToArchetypes.delete(componentType);
-                }
-            }
+            archetypes.add(archetype);
         }
+
+        return archetype;
     }
-    
+
 
 }
