@@ -874,8 +874,8 @@ export class Entity {
 
     /**
      * 销毁实体
-     * 
-     * 移除所有组件、子实体并标记为已销毁。
+     *
+     * 移除所有组件、子实体并标记为已销毁
      */
     public destroy(): void {
         if (this._isDestroyed) {
@@ -883,27 +883,64 @@ export class Entity {
         }
 
         this._isDestroyed = true;
-        
+
         const childrenToDestroy = [...this._children];
         for (const child of childrenToDestroy) {
             child.destroy();
         }
-        
+
         if (this._parent) {
             this._parent.removeChild(this);
         }
-        
+
         this.removeAllComponents();
-        
+
         if (this.scene) {
             if (this.scene.querySystem) {
                 this.scene.querySystem.removeEntity(this);
             }
-            
+
             if (this.scene.entities) {
                 this.scene.entities.remove(this);
             }
         }
+    }
+
+    /**
+     * 批量销毁所有子实体
+     */
+    public destroyAllChildren(): void {
+        if (this._children.length === 0) return;
+
+        const scene = this.scene;
+        const toDestroy: Entity[] = [];
+
+        const collectChildren = (entity: Entity) => {
+            for (const child of entity._children) {
+                toDestroy.push(child);
+                collectChildren(child);
+            }
+        };
+        collectChildren(this);
+
+        for (const entity of toDestroy) {
+            entity._isDestroyed = true;
+        }
+
+        for (const entity of toDestroy) {
+            entity.removeAllComponents();
+        }
+
+        if (scene) {
+            for (const entity of toDestroy) {
+                scene.entities.remove(entity);
+                scene.querySystem.removeEntity(entity);
+            }
+
+            scene.clearSystemEntityCaches();
+        }
+
+        this._children.length = 0;
     }
 
     /**

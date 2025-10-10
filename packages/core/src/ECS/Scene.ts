@@ -12,6 +12,7 @@ import { getComponentInstanceTypeName, getSystemInstanceTypeName } from './Decor
 import { TypedQueryBuilder } from './Core/Query/TypedQuery';
 import { SceneSerializer, SceneSerializationOptions, SceneDeserializationOptions } from './Serialization/SceneSerializer';
 import { IncrementalSerializer, IncrementalSnapshot, IncrementalSerializationOptions } from './Serialization/IncrementalSerializer';
+import { ComponentPoolManager } from './Core/ComponentPool';
 
 /**
  * 游戏场景默认实现类
@@ -185,14 +186,13 @@ export class Scene implements IScene {
      * 更新场景
      */
     public update() {
-        // 更新实体列表（处理延迟操作）
+        ComponentPoolManager.getInstance().update();
+
         this.entities.updateLists();
 
-        // 更新实体处理器
         if (this.entityProcessors != null)
             this.entityProcessors.update();
 
-        // 更新实体处理器后处理
         if (this.entityProcessors != null)
             this.entityProcessors.lateUpdate();
     }
@@ -274,12 +274,34 @@ export class Scene implements IScene {
 
 
     /**
+     * 批量销毁实体
+     */
+    public destroyEntities(entities: Entity[]): void {
+        if (entities.length === 0) return;
+
+        for (const entity of entities) {
+            entity._isDestroyed = true;
+        }
+
+        for (const entity of entities) {
+            entity.removeAllComponents();
+        }
+
+        for (const entity of entities) {
+            this.entities.remove(entity);
+            this.querySystem.removeEntity(entity);
+        }
+
+        this.querySystem.clearCache();
+        this.clearSystemEntityCaches();
+    }
+
+    /**
      * 从场景中删除所有实体
      */
     public destroyAllEntities() {
         this.entities.removeAllEntities();
-        
-        // 清理查询系统中的实体引用和缓存
+
         this.querySystem.setEntities([]);
     }
 
