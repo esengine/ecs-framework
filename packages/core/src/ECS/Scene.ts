@@ -6,6 +6,7 @@ import { ComponentStorageManager, ComponentRegistry } from './Core/ComponentStor
 import { QuerySystem } from './Core/QuerySystem';
 import { TypeSafeEventSystem } from './Core/EventSystem';
 import { EventBus } from './Core/EventBus';
+import { ReferenceTracker } from './Core/ReferenceTracker';
 import { IScene, ISceneConfig } from './IScene';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName, getSystemMetadata } from "./Decorators";
 import { TypedQueryBuilder } from './Core/Query/TypedQuery';
@@ -75,6 +76,13 @@ export class Scene implements IScene {
      * 类型安全的事件系统。
      */
     public readonly eventSystem: TypeSafeEventSystem;
+
+    /**
+     * 引用追踪器
+     *
+     * 追踪Component中对Entity的引用，当Entity销毁时自动清理引用。
+     */
+    public readonly referenceTracker: ReferenceTracker;
 
     /**
      * 服务容器
@@ -171,6 +179,7 @@ export class Scene implements IScene {
         this.componentStorageManager = new ComponentStorageManager();
         this.querySystem = new QuerySystem();
         this.eventSystem = new TypeSafeEventSystem();
+        this.referenceTracker = new ReferenceTracker();
         this._services = new ServiceContainer();
         this.logger = createLogger('Scene');
 

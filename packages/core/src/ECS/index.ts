@@ -13,4 +13,6 @@ export * from './Core/Events';
 export * from './Core/Query';
 export * from './Core/Storage';
 export * from './Core/StorageDecorators';
-export * from './Serialization'; 
+export * from './Serialization';
+export { ReferenceTracker, getSceneByEntityId } from './Core/ReferenceTracker';
+export type { EntityRefRecord } from './Core/ReferenceTracker'; 

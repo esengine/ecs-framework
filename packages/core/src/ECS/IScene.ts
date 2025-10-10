@@ -5,6 +5,7 @@ import { EntitySystem } from './Systems/EntitySystem';
 import { ComponentStorageManager } from './Core/ComponentStorage';
 import { QuerySystem } from './Core/QuerySystem';
 import { TypeSafeEventSystem } from './Core/EventSystem';
+import type { ReferenceTracker } from './Core/ReferenceTracker';
 
 /**
  * 场景接口定义
@@ -60,6 +61,11 @@ export interface IScene {
      * 事件系统
      */
     readonly eventSystem: TypeSafeEventSystem;
+
+    /**
+     * 引用追踪器
+     */
+    readonly referenceTracker: ReferenceTracker;
 
     /**
      * 获取系统列表
