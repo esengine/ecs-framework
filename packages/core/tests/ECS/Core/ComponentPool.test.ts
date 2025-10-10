@@ -138,8 +138,11 @@ describe('ComponentPool - 组件对象池测试', () => {
             expect(pool.getAvailableCount()).toBe(0);
         });
 
-        it('多次预热应该正确累加', () => {
+        it('多次预热应该填充到最大值', () => {
             pool.prewarm(3);
+            expect(pool.getAvailableCount()).toBe(3);
+            pool.prewarm(5);
+            expect(pool.getAvailableCount()).toBe(5);
             pool.prewarm(2);
             expect(pool.getAvailableCount()).toBe(5);
         });

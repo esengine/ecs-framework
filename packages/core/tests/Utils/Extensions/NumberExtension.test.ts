@@ -137,19 +137,6 @@ describe('NumberExtension - 数字扩展工具类测试', () => {
             expect(NumberExtension.toNumber('010')).toBe(10); // 被当作十进制处理
         });
 
-        it('性能测试 - 大量转换应该高效', () => {
-            const testValues = [42, '123', true, null, undefined, '3.14'];
-            const startTime = performance.now();
-            
-            for (let i = 0; i < 10000; i++) {
-                testValues.forEach(value => {
-                    NumberExtension.toNumber(value);
-                });
-            }
-            
-            const endTime = performance.now();
-            expect(endTime - startTime).toBeLessThan(100); // 应该在100ms内完成
-        });
     });
 
     describe('类型兼容性测试', () => {

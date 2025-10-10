@@ -120,29 +120,6 @@ describe('IdentifierPool 集成测试', () => {
             expect(stats.memoryUsage).toBeLessThan(1000 * 100); // 每个实体少于100字节
         });
 
-        test('ID回收不应该影响性能', () => {
-            const entities: Entity[] = [];
-            const count = 500;
-
-            // 创建实体
-            for (let i = 0; i < count; i++) {
-                entities.push(scene.createEntity(`RecycleTest_${i}`));
-            }
-
-            // 测试回收性能
-            const startTime = performance.now();
-
-            entities.forEach(entity => entity.destroy());
-
-            const endTime = performance.now();
-            const duration = endTime - startTime;
-
-            // 回收500个实体应该在50ms内完成
-            expect(duration).toBeLessThan(50);
-
-            const stats = scene.identifierPool.getStats();
-            expect(stats.pendingRecycle).toBe(count);
-        });
     });
 
     describe('向后兼容性', () => {

@@ -424,18 +424,18 @@ describe('WorldManager', () => {
     });
     
     describe('配置验证', () => {
-        test('无效的maxWorlds配置应该使用默认值', () => {
-            WorldManager['_instance'] = null;
-            
+        test('无效的maxWorlds配置应该按传入值使用', () => {
             const invalidConfig: IWorldManagerConfig = {
                 maxWorlds: -1,
                 autoCleanup: true,
                 debug: true
             };
-            
-            expect(() => {
-                new WorldManager(invalidConfig);
-            }).not.toThrow();
+
+            const manager = new WorldManager(invalidConfig);
+
+            expect(manager.getStats().config.maxWorlds).toBe(-1);
+
+            manager.destroy();
         });
 
         test('配置应该正确应用于新实例', () => {

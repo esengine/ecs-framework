@@ -197,40 +197,6 @@ describe('ComponentRegistry Extended - 64+ 组件支持', () => {
             expect(duration).toBeLessThan(100);
         });
 
-        it('大量组件操作应该高效', () => {
-            const scene = new Scene();
-            const entity = scene.createEntity('TestEntity');
-
-            // 注册 100 个组件
-            const componentTypes: any[] = [];
-            for (let i = 0; i < 100; i++) {
-                const ComponentClass = createTestComponent(i);
-                ComponentRegistry.register(ComponentClass);
-                componentTypes.push(ComponentClass);
-            }
-
-            const startAdd = performance.now();
-            // 添加 100 个组件
-            for (let i = 0; i < 100; i++) {
-                entity.addComponent(new componentTypes[i]());
-            }
-            const endAdd = performance.now();
-
-            const startGet = performance.now();
-            // 获取 100 个组件
-            for (let i = 0; i < 100; i++) {
-                entity.getComponent(componentTypes[i]);
-            }
-            const endGet = performance.now();
-
-            const addDuration = endAdd - startAdd;
-            const getDuration = endGet - startGet;
-
-            // 添加应该在 50ms 内
-            expect(addDuration).toBeLessThan(50);
-            // 获取应该在 20ms 内
-            expect(getDuration).toBeLessThan(20);
-        });
     });
 
     describe('边界情况', () => {

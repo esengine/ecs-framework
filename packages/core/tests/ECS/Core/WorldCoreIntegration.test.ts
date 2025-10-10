@@ -133,7 +133,7 @@ describe('World与Core集成测试', () => {
         test('Core + WorldManager 应该正确协作', () => {
             const world = worldManager.createWorld('test-world');
             const scene = world.createScene('main', new Scene());
-            world.setActive(true);
+            world.start();
 
             // 游戏循环
             Core.update(0.016);      // 更新全局服务
@@ -147,7 +147,7 @@ describe('World与Core集成测试', () => {
             const globalSystem = new NetworkGlobalSystem();
 
             world.addGlobalSystem(globalSystem);
-            world.setActive(true);
+            worldManager.setWorldActive('test-world', true);
 
             // 更新World
             worldManager.updateAll();
