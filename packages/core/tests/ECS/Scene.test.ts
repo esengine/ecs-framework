@@ -129,7 +129,7 @@ describe('Scene - 场景管理系统测试', () => {
             expect(scene).toBeInstanceOf(Scene);
             expect(scene.name).toBe("");
             expect(scene.entities).toBeDefined();
-            expect(scene.entityProcessors).toBeDefined();
+            expect(scene.systems).toBeDefined();
             expect(scene.identifierPool).toBeDefined();
         });
 
@@ -140,7 +140,7 @@ describe('Scene - 场景管理系统测试', () => {
 
         test('场景应该有正确的初始状态', () => {
             expect(scene.entities.count).toBe(0);
-            expect(scene.entityProcessors.count).toBe(0);
+            expect(scene.systems.length).toBe(0);
         });
 
         test('应该能够使用配置创建场景', () => {
@@ -248,16 +248,16 @@ describe('Scene - 场景管理系统测试', () => {
 
         test('应该能够添加实体系统', () => {
             scene.addEntityProcessor(movementSystem);
-            
-            expect(scene.entityProcessors.count).toBe(1);
+
+            expect(scene.systems.length).toBe(1);
             expect(movementSystem.scene).toBe(scene);
         });
 
         test('应该能够移除实体系统', () => {
             scene.addEntityProcessor(movementSystem);
             scene.removeEntityProcessor(movementSystem);
-            
-            expect(scene.entityProcessors.count).toBe(0);
+
+            expect(scene.systems.length).toBe(0);
             expect(movementSystem.scene).toBeNull();
         });
 
@@ -270,8 +270,8 @@ describe('Scene - 场景管理系统测试', () => {
         test('应该能够管理多个实体系统', () => {
             scene.addEntityProcessor(movementSystem);
             scene.addEntityProcessor(renderSystem);
-            
-            expect(scene.entityProcessors.count).toBe(2);
+
+            expect(scene.systems.length).toBe(2);
         });
 
         test('系统应该按更新顺序执行', () => {
@@ -537,11 +537,12 @@ describe('Scene - 场景管理系统测试', () => {
     describe('错误处理和边界情况', () => {
         test('重复添加同一个系统应该安全处理', () => {
             const system = new MovementSystem();
-            
+
+
             scene.addEntityProcessor(system);
-            scene.addEntityProcessor(system); // 重复添加
-            
-            expect(scene.entityProcessors.count).toBe(1);
+            scene.addEntityProcessor(system);
+
+            expect(scene.systems.length).toBe(1);
         });
 
         test('系统处理过程中的异常应该被正确处理', () => {

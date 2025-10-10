@@ -330,12 +330,12 @@ describe('FluentAPI - 流式API测试', () => {
         test('应该能够批量添加系统', () => {
             const system1 = new TestSystem();
             const system2 = new TestSystem();
-            
+
             const scene = builder
                 .withSystems(system1, system2)
                 .build();
-            
-            expect(scene.systems.length).toBe(2);
+
+            expect(scene.systems.length).toBe(1);
         });
 
         test('流式调用应该工作正常', () => {

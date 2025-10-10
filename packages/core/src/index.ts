@@ -8,6 +8,18 @@ export { Core } from './Core';
 export { ServiceContainer, ServiceLifetime } from './Core/ServiceContainer';
 export type { IService, ServiceType } from './Core/ServiceContainer';
 
+// 依赖注入
+export {
+    Injectable,
+    Inject,
+    Updatable,
+    registerInjectable,
+    createInstance,
+    isUpdatable,
+    getUpdatableMetadata
+} from './Core/DI';
+export type { InjectableMetadata, UpdatableMetadata } from './Core/DI';
+
 // 核心管理器
 export { Emitter, FuncPack } from './Utils/Emitter';
 export { GlobalManager } from './Utils/GlobalManager';

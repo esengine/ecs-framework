@@ -1,6 +1,5 @@
 import { Entity } from './Entity';
 import { EntityList } from './Utils/EntityList';
-import { EntityProcessorList } from './Utils/EntityProcessorList';
 import { IdentifierPool } from './Utils/IdentifierPool';
 import { EntitySystem } from './Systems/EntitySystem';
 import { ComponentStorageManager } from './Core/ComponentStorage';
@@ -41,12 +40,7 @@ export interface IScene {
      * 场景中的实体集合
      */
     readonly entities: EntityList;
-    
-    /**
-     * 实体系统处理器集合
-     */
-    readonly entityProcessors: EntityProcessorList;
-    
+
     /**
      * 标识符池
      */

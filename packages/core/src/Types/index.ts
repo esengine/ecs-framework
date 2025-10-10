@@ -4,6 +4,7 @@
 
 // 导出TypeScript类型增强工具
 export * from './TypeHelpers';
+export * from './IUpdatable';
 
 /**
  * 组件接口

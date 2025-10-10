@@ -40,31 +40,69 @@ export function ECSComponent(typeName: string) {
 }
 
 /**
+ * System元数据配置
+ */
+export interface SystemMetadata {
+    /**
+     * 更新顺序（数值越小越先执行，默认0）
+     */
+    updateOrder?: number;
+
+    /**
+     * 是否默认启用（默认true）
+     */
+    enabled?: boolean;
+}
+
+/**
  * 系统类型装饰器
  * 用于为系统类指定固定的类型名称，避免在代码混淆后失效
- * 
+ *
  * @param typeName 系统类型名称
+ * @param metadata 系统元数据配置
  * @example
  * ```typescript
+ * // 基本使用
  * @ECSSystem('Movement')
  * class MovementSystem extends EntitySystem {
  *     protected process(entities: Entity[]): void {
  *         // 系统逻辑
  *     }
  * }
+ *
+ * // 配置更新顺序
+ * @Injectable()
+ * @ECSSystem('Physics', { updateOrder: 10 })
+ * class PhysicsSystem extends EntitySystem {
+ *     constructor(@Inject(CollisionSystem) private collision: CollisionSystem) {
+ *         super(Matcher.of(Transform, RigidBody));
+ *     }
+ * }
  * ```
  */
-export function ECSSystem(typeName: string) {
+export function ECSSystem(typeName: string, metadata?: SystemMetadata) {
     return function <T extends new (...args: any[]) => EntitySystem>(target: T): T {
         if (!typeName || typeof typeName !== 'string') {
             throw new Error('ECSSystem装饰器必须提供有效的类型名称');
         }
-        
+
         // 在构造函数上存储类型名称
         (target as any)[SYSTEM_TYPE_NAME] = typeName;
-        
+
+        // 存储元数据
+        if (metadata) {
+            (target as any).__systemMetadata__ = metadata;
+        }
+
         return target;
     };
+}
+
+/**
+ * 获取System的元数据
+ */
+export function getSystemMetadata(systemType: new (...args: any[]) => EntitySystem): SystemMetadata | undefined {
+    return (systemType as any).__systemMetadata__;
 }
 
 /**

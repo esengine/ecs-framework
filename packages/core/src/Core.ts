@@ -1,4 +1,3 @@
-import { GlobalManager } from './Utils/GlobalManager';
 import { TimerManager } from './Utils/Timers/TimerManager';
 import { ITimer } from './Utils/Timers/ITimer';
 import { Timer } from './Utils/Timers/Timer';
@@ -6,7 +5,7 @@ import { Time } from './Utils/Time';
 import { PerformanceMonitor } from './Utils/PerformanceMonitor';
 import { PoolManager } from './Utils/Pool/PoolManager';
 import { DebugManager } from './Utils/Debug';
-import { ICoreConfig, IECSDebugConfig } from './Types';
+import { ICoreConfig, IECSDebugConfig, IUpdatable, isUpdatable } from './Types';
 import { createLogger } from './Utils/Logger';
 import { SceneManager } from './ECS/SceneManager';
 import { IScene } from './ECS/IScene';
@@ -55,8 +54,10 @@ export class Core {
 
     /**
      * 全局核心实例
+     *
+     * 可能为null表示Core尚未初始化或已被销毁
      */
-    private static _instance: Core;
+    private static _instance: Core | null = null;
 
     /**
      * Core专用日志器
@@ -83,13 +84,6 @@ export class Core {
      * 管理所有服务的注册、解析和生命周期。
      */
     private _serviceContainer: ServiceContainer;
-
-    /**
-     * 全局管理器集合
-     *
-     * 存储所有注册的全局管理器实例。
-     */
-    public _globalManagers: GlobalManager[] = [];
 
     /**
      * 定时器管理器
@@ -151,7 +145,6 @@ export class Core {
 
         // 初始化定时器管理器
         this._timerManager = new TimerManager();
-        Core.registerGlobalManager(this._timerManager);
         this._serviceContainer.registerInstance(TimerManager, this._timerManager);
 
         // 初始化性能监控器
@@ -175,7 +168,13 @@ export class Core {
 
         // 初始化调试管理器
         if (this._config.debugConfig?.enabled) {
-            this._debugManager = new DebugManager(this, this._config.debugConfig);
+            // 使用DI容器创建DebugManager（前两个参数从容器解析，config手动传入）
+            const config = this._config.debugConfig;
+            this._debugManager = new DebugManager(
+                this._serviceContainer.resolve(SceneManager),
+                this._serviceContainer.resolve(PerformanceMonitor),
+                config
+            );
             this._serviceContainer.registerInstance(DebugManager, this._debugManager);
         }
 
@@ -197,6 +196,7 @@ export class Core {
      * 用于注册和解析自定义服务。
      *
      * @returns 服务容器实例
+     * @throws 如果Core实例未创建
      *
      * @example
      * ```typescript
@@ -368,43 +368,6 @@ export class Core {
         this._instance.updateInternal(deltaTime);
     }
 
-    /**
-     * 注册全局管理器
-     *
-     * 将管理器添加到全局管理器列表中，并启用它。
-     *
-     * @param manager - 要注册的全局管理器
-     */
-    public static registerGlobalManager(manager: GlobalManager) {
-        this._instance._globalManagers.push(manager);
-        manager.enabled = true;
-    }
-
-    /**
-     * 注销全局管理器
-     *
-     * 从全局管理器列表中移除管理器，并禁用它。
-     *
-     * @param manager - 要注销的全局管理器
-     */
-    public static unregisterGlobalManager(manager: GlobalManager) {
-        this._instance._globalManagers.splice(this._instance._globalManagers.indexOf(manager), 1);
-        manager.enabled = false;
-    }
-
-    /**
-     * 获取指定类型的全局管理器
-     *
-     * @param type - 管理器类型构造函数
-     * @returns 管理器实例，如果未找到则返回null
-     */
-    public static getGlobalManager<T extends GlobalManager>(type: new (...args: unknown[]) => T): T | null {
-        for (const manager of this._instance._globalManagers) {
-            if (manager instanceof type)
-                return manager as T;
-        }
-        return null;
-    }
 
     /**
      * 调度定时器
@@ -416,6 +379,7 @@ export class Core {
      * @param context - 回调函数的上下文，默认为null
      * @param onTime - 定时器触发时的回调函数
      * @returns 创建的定时器实例
+     * @throws 如果Core实例未创建或onTime回调未提供
      *
      * @example
      * ```typescript
@@ -431,6 +395,9 @@ export class Core {
      * ```
      */
     public static schedule<TContext = unknown>(timeInSeconds: number, repeats: boolean = false, context?: TContext, onTime?: (timer: ITimer<TContext>) => void): Timer<TContext> {
+        if (!this._instance) {
+            throw new Error('Core实例未创建，请先调用Core.create()');
+        }
         if (!onTime) {
             throw new Error('onTime callback is required');
         }
@@ -451,7 +418,13 @@ export class Core {
         if (this._instance._debugManager) {
             this._instance._debugManager.updateConfig(config);
         } else {
-            this._instance._debugManager = new DebugManager(this._instance, config);
+            // 使用DI容器创建DebugManager
+            this._instance._debugManager = new DebugManager(
+                this._instance._serviceContainer.resolve(SceneManager),
+                this._instance._serviceContainer.resolve(PerformanceMonitor),
+                config
+            );
+            this._instance._serviceContainer.registerInstance(DebugManager, this._instance._debugManager);
         }
 
         // 更新Core配置
@@ -530,13 +503,10 @@ export class Core {
             this._performanceMonitor.updateFPS(Time.deltaTime);
         }
 
-        // 更新全局管理器
-        const managersStartTime = this._performanceMonitor.startMonitoring('GlobalManagers.update');
-        for (const globalManager of this._globalManagers) {
-            if (globalManager.enabled)
-                globalManager.update();
-        }
-        this._performanceMonitor.endMonitoring('GlobalManagers.update', managersStartTime, this._globalManagers.length);
+        // 更新所有可更新的服务
+        const servicesStartTime = this._performanceMonitor.startMonitoring('Services.update');
+        this._serviceContainer.updateAll(deltaTime);
+        this._performanceMonitor.endMonitoring('Services.update', servicesStartTime, this._serviceContainer.getUpdatableCount());
 
         // 更新对象池管理器
         this._poolManager.update();
@@ -566,15 +536,12 @@ export class Core {
             this._instance._debugManager.stop();
         }
 
-        // 清理全局管理器
-        for (const manager of this._instance._globalManagers) {
-            manager.enabled = false;
-        }
-        this._instance._globalManagers = [];
+        // 清理所有服务
+        this._instance._serviceContainer.clear();
 
         Core._logger.info('Core destroyed');
 
-        // @ts-ignore - 清空实例引用
+        // 清空实例引用，允许重新创建Core实例
         this._instance = null;
     }
 }
