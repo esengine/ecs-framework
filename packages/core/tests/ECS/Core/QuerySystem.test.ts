@@ -2,6 +2,7 @@ import { QuerySystem, QueryBuilder, QueryConditionType } from '../../../src/ECS/
 import { Entity } from '../../../src/ECS/Entity';
 import { Component } from '../../../src/ECS/Component';
 import { ComponentRegistry, ComponentType } from '../../../src/ECS/Core/ComponentStorage';
+import { Scene } from '../../../src/ECS/Scene';
 
 // 测试组件
 class PositionComponent extends Component {
@@ -75,6 +76,7 @@ class PhysicsComponent extends Component {
 describe('QuerySystem - 查询系统测试', () => {
     let querySystem: QuerySystem;
     let entities: Entity[];
+    let scene: Scene;
     let originalAddComponent: any;
     let originalRemoveComponent: any;
     let originalRemoveAllComponents: any;
@@ -82,13 +84,14 @@ describe('QuerySystem - 查询系统测试', () => {
     beforeEach(() => {
         querySystem = new QuerySystem();
         entities = [];
+        scene = new Scene();
 
         // 创建测试实体
         for (let i = 0; i < 10; i++) {
-            const entity = new Entity(`Entity_${i}`, i + 1);
+            const entity = scene.createEntity(`Entity_${i}`);
             entities.push(entity);
         }
-        
+
         // 将实体添加到查询系统
         querySystem.setEntities(entities);
         
@@ -288,16 +291,12 @@ describe('QuerySystem - 查询系统测试', () => {
 
             // 创建大量具有相同组件组合的实体
             for (let i = 0; i < entityCount; i++) {
-                const entity = new Entity(`PerfEntity_${i}`, i + 100);
-                testEntities.push(entity);
-            }
-            
-            // 先添加组件
-            for (const entity of testEntities) {
+                const entity = scene.createEntity(`PerfEntity_${i}`);
                 entity.addComponent(new PositionComponent(0, 0));
                 entity.addComponent(new VelocityComponent(1, 1));
+                testEntities.push(entity);
             }
-            
+
             // 将实体添加到查询系统
             querySystem.setEntities([...entities, ...testEntities]);
 
@@ -343,31 +342,27 @@ describe('QuerySystem - 查询系统测试', () => {
             const entityCount = 5000;
             const testEntities: Entity[] = [];
 
-            // 创建大量实体
+            // 创建大量实体并分配组件
             for (let i = 0; i < entityCount; i++) {
-                const entity = new Entity(`MaskEntity_${i}`, i + 200);
-                testEntities.push(entity);
-            }
-            
-            // 先随机分配组件
-            for (let i = 0; i < entityCount; i++) {
-                const entity = testEntities[i];
-                
+                const entity = scene.createEntity(`MaskEntity_${i}`);
+
                 entity.addComponent(new PositionComponent(i, i));
-                
+
                 if (i % 2 === 0) {
                     entity.addComponent(new VelocityComponent(1, 1));
                 }
-                
+
                 if (i % 3 === 0) {
                     entity.addComponent(new HealthComponent(100));
                 }
-                
+
                 if (i % 5 === 0) {
                     entity.addComponent(new RenderComponent(true));
                 }
+
+                testEntities.push(entity);
             }
-            
+
             // 将实体添加到查询系统
             querySystem.setEntities([...entities, ...testEntities]);
 
@@ -499,13 +494,13 @@ describe('QuerySystem - 查询系统测试', () => {
 
             // 创建大量实体
             for (let i = 0; i < entityCount; i++) {
-                const entity = new Entity(`MemEntity_${i}`, i + 300);
+                const entity = scene.createEntity(`MemEntity_${i}`);
                 entity.addComponent(new PositionComponent(i, i));
-                
+
                 if (i % 2 === 0) {
                     entity.addComponent(new VelocityComponent(1, 1));
                 }
-                
+
                 testEntities.push(entity);
             }
 
@@ -785,7 +780,7 @@ describe('QuerySystem - 查询系统测试', () => {
 
     describe('实体管理功能', () => {
         test('应该能够添加和移除单个实体', () => {
-            const newEntity = new Entity('NewEntity', 999);
+            const newEntity = scene.createEntity('NewEntity');
             
             querySystem.addEntity(newEntity);
             let stats = querySystem.getStats();
@@ -798,9 +793,9 @@ describe('QuerySystem - 查询系统测试', () => {
 
         test('应该能够批量添加实体', () => {
             const newEntities = [
-                new Entity('Batch1', 997),
-                new Entity('Batch2', 998),
-                new Entity('Batch3', 999)
+                scene.createEntity('Batch1'),
+                scene.createEntity('Batch2'),
+                scene.createEntity('Batch3')
             ];
             
             querySystem.addEntities(newEntities);
@@ -810,8 +805,8 @@ describe('QuerySystem - 查询系统测试', () => {
 
         test('应该能够批量添加实体（无重复检查）', () => {
             const newEntities = [
-                new Entity('Unchecked1', 995),
-                new Entity('Unchecked2', 996)
+                scene.createEntity('Unchecked1'),
+                scene.createEntity('Unchecked2')
             ];
             
             querySystem.addEntitiesUnchecked(newEntities);
@@ -846,43 +841,34 @@ describe('QuerySystem - 查询系统测试', () => {
     });
 
     describe('组件变动同步问题测试', () => {
-        test('没有Scene时组件变动不会自动同步（符合ECS架构）', () => {
+        test('Entity必须有Scene才能添加组件', () => {
             // 创建一个独立的QuerySystem和实体
             const independentQuerySystem = new QuerySystem();
-            const testEntity = new Entity('TestEntity', 9999);
+            const testEntity = scene.createEntity('TestEntity');
 
-            // 确保实体没有scene
-            expect(testEntity.scene).toBe(null);
+            // Entity现在必须有scene
+            expect(testEntity.scene).toBeTruthy();
 
             // 添加实体到查询系统
             independentQuerySystem.addEntity(testEntity);
 
-            // 初始查询：应该没有PositionComponent的实体
-            const result1 = independentQuerySystem.queryAll(PositionComponent);
-            expect(result1.entities.length).toBe(0);
-
-            // 添加组件，但没有Scene，不会自动同步
+            // 添加组件
             testEntity.addComponent(new PositionComponent(100, 200));
-
-            // 查询系统不知道组件变化（这是预期行为）
-            const result2 = independentQuerySystem.queryAll(PositionComponent);
-            expect(result2.entities.length).toBe(0); // 查询系统没有自动更新
-            expect(testEntity.hasComponent(PositionComponent)).toBe(true); // 但实体确实有这个组件
 
             // 手动同步后应该能找到
             independentQuerySystem.updateEntity(testEntity);
-            const result3 = independentQuerySystem.queryAll(PositionComponent);
-            expect(result3.entities.length).toBe(1);
-            expect(result3.entities[0]).toBe(testEntity);
+            const result = independentQuerySystem.queryAll(PositionComponent);
+            expect(result.entities.length).toBe(1);
+            expect(result.entities[0]).toBe(testEntity);
         });
 
         test('有Scene但没有querySystem时组件变动应该安全', () => {
-            const testEntity = new Entity('TestEntity2', 9998);
+            const testEntity = scene.createEntity('TestEntity2');
 
-            // 模拟一个没有querySystem的scene
+            // 模拟一个没有querySystem的scene（但保留componentStorageManager）
             const mockScene = {
                 querySystem: null,
-                componentStorageManager: null,
+                componentStorageManager: scene.componentStorageManager,
                 clearSystemEntityCaches: jest.fn()
             };
             testEntity.scene = mockScene as any;
@@ -897,12 +883,12 @@ describe('QuerySystem - 查询系统测试', () => {
 
         test('有Scene时ArchetypeSystem组件变动能正确同步', () => {
             const independentQuerySystem = new QuerySystem();
-            const testEntity = new Entity('ArchetypeTestEntity', 9997);
+            const testEntity = scene.createEntity('ArchetypeTestEntity');
 
-            // 模拟Scene环境
+            // 模拟Scene环境（保留componentStorageManager）
             const mockScene = {
                 querySystem: independentQuerySystem,
-                componentStorageManager: null,
+                componentStorageManager: scene.componentStorageManager,
                 clearSystemEntityCaches: jest.fn()
             };
             testEntity.scene = mockScene as any;
@@ -941,12 +927,12 @@ describe('QuerySystem - 查询系统测试', () => {
 
         test('有Scene时removeAllComponents应该正确同步QuerySystem', () => {
             const independentQuerySystem = new QuerySystem();
-            const testEntity = new Entity('RemoveAllTestEntity', 9996);
+            const testEntity = scene.createEntity('RemoveAllTestEntity');
 
-            // 模拟Scene环境
+            // 模拟Scene环境（保留componentStorageManager）
             const mockScene = {
                 querySystem: independentQuerySystem,
-                componentStorageManager: null,
+                componentStorageManager: scene.componentStorageManager,
                 clearSystemEntityCaches: jest.fn()
             };
             testEntity.scene = mockScene as any;
@@ -978,7 +964,7 @@ describe('QuerySystem - 查询系统测试', () => {
 
         test('手动同步updateEntity应该工作正常', () => {
             const independentQuerySystem = new QuerySystem();
-            const testEntity = new Entity('ManualSyncTestEntity', 9995);
+            const testEntity = scene.createEntity('ManualSyncTestEntity');
 
             independentQuerySystem.addEntity(testEntity);
 
@@ -1002,9 +988,9 @@ describe('QuerySystem - 查询系统测试', () => {
             const querySystem = new QuerySystem();
 
             // 创建带组件的实体
-            const entity1 = new Entity('BatchEntity1', 8001);
-            const entity2 = new Entity('BatchEntity2', 8002);
-            const entity3 = new Entity('BatchEntity3', 8003);
+            const entity1 = scene.createEntity('BatchEntity1');
+            const entity2 = scene.createEntity('BatchEntity2');
+            const entity3 = scene.createEntity('BatchEntity3');
 
             entity1.addComponent(new PositionComponent(10, 20));
             entity2.addComponent(new PositionComponent(30, 40));
@@ -1053,9 +1039,9 @@ describe('QuerySystem - 查询系统测试', () => {
     describe('组件掩码字符串索引', () => {
         test('应该为不同的组件组合生成不同的掩码字符串', () => {
             // 创建具有不同组件组合的实体
-            const entity1 = new Entity('Entity1', 101);
-            const entity2 = new Entity('Entity2', 102);
-            const entity3 = new Entity('Entity3', 103);
+            const entity1 = scene.createEntity('Entity1');
+            const entity2 = scene.createEntity('Entity2');
+            const entity3 = scene.createEntity('Entity3');
 
             entity1.addComponent(new PositionComponent(1, 1));
             entity2.addComponent(new VelocityComponent(2, 2));
@@ -1071,22 +1057,22 @@ describe('QuerySystem - 查询系统测试', () => {
             const withBoth = querySystem.queryAll(PositionComponent, VelocityComponent);
 
             // entity1 应该在 withPosition 中
-            expect(withPosition.entities.some(e => e.id === 101)).toBe(true);
+            expect(withPosition.entities).toContain(entity1);
             // entity2 应该在 withVelocity 中
-            expect(withVelocity.entities.some(e => e.id === 102)).toBe(true);
+            expect(withVelocity.entities).toContain(entity2);
             // entity3 应该在所有查询中（因为它包含 Position 和 Velocity）
-            expect(withPosition.entities.some(e => e.id === 103)).toBe(true);
-            expect(withVelocity.entities.some(e => e.id === 103)).toBe(true);
-            expect(withBoth.entities.some(e => e.id === 103)).toBe(true);
+            expect(withPosition.entities).toContain(entity3);
+            expect(withVelocity.entities).toContain(entity3);
+            expect(withBoth.entities).toContain(entity3);
 
             // withBoth 只应该包含同时有两个组件的实体
-            expect(withBoth.entities.some(e => e.id === 101)).toBe(false); // 只有 Position
-            expect(withBoth.entities.some(e => e.id === 102)).toBe(false); // 只有 Velocity
+            expect(withBoth.entities).not.toContain(entity1); // 只有 Position
+            expect(withBoth.entities).not.toContain(entity2); // 只有 Velocity
         });
 
         test('相同组件组合的实体应该使用相同的掩码索引', () => {
-            const entity1 = new Entity('Entity1', 201);
-            const entity2 = new Entity('Entity2', 202);
+            const entity1 = scene.createEntity('Entity1');
+            const entity2 = scene.createEntity('Entity2');
 
             // 两个实体都有相同的组件组合
             entity1.addComponent(new PositionComponent(1, 1));
@@ -1101,8 +1087,8 @@ describe('QuerySystem - 查询系统测试', () => {
             // 查询应该同时返回这两个实体
             const result = querySystem.queryAll(PositionComponent, VelocityComponent);
 
-            expect(result.entities.some(e => e.id === 201)).toBe(true);
-            expect(result.entities.some(e => e.id === 202)).toBe(true);
+            expect(result.entities).toContain(entity1);
+            expect(result.entities).toContain(entity2);
         });
     });
 });

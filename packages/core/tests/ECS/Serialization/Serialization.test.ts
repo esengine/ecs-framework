@@ -82,6 +82,8 @@ class NonSerializableComponent extends Component {
 }
 
 describe('ECS Serialization System', () => {
+    let scene: Scene;
+
     beforeEach(() => {
         // 清空测试环境
         ComponentRegistry.reset();
@@ -91,6 +93,9 @@ describe('ECS Serialization System', () => {
         ComponentRegistry.register(VelocityComponent);
         ComponentRegistry.register(PlayerComponent);
         ComponentRegistry.register(HealthComponent);
+
+        // 创建测试场景
+        scene = new Scene();
     });
 
     describe('Component Serialization', () => {
@@ -185,22 +190,22 @@ describe('ECS Serialization System', () => {
 
     describe('Entity Serialization', () => {
         it('should serialize an entity with components', () => {
-            const entity = new Entity('Player', 1);
+            const entity = scene.createEntity('Player');
             entity.addComponent(new PositionComponent(50, 100));
             entity.addComponent(new VelocityComponent());
             entity.tag = 10;
 
             const serialized = EntitySerializer.serialize(entity);
 
-            expect(serialized.id).toBe(1);
+            expect(serialized.id).toBe(entity.id);
             expect(serialized.name).toBe('Player');
             expect(serialized.tag).toBe(10);
             expect(serialized.components.length).toBe(2);
         });
 
         it('should serialize entity hierarchy', () => {
-            const parent = new Entity('Parent', 1);
-            const child = new Entity('Child', 2);
+            const parent = scene.createEntity('Parent');
+            const child = scene.createEntity('Child');
 
             parent.addComponent(new PositionComponent(0, 0));
             child.addComponent(new PositionComponent(10, 10));
@@ -209,7 +214,7 @@ describe('ECS Serialization System', () => {
             const serialized = EntitySerializer.serialize(parent);
 
             expect(serialized.children.length).toBe(1);
-            expect(serialized.children[0].id).toBe(2);
+            expect(serialized.children[0].id).toBe(child.id);
             expect(serialized.children[0].name).toBe('Child');
         });
 
@@ -237,7 +242,8 @@ describe('ECS Serialization System', () => {
                 serializedEntity,
                 registry,
                 () => idCounter++,
-                false
+                false,
+                scene
             );
 
             expect(entity.name).toBe('TestEntity');

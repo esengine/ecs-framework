@@ -1,5 +1,6 @@
 import { Entity } from '../../src/ECS/Entity';
 import { Component } from '../../src/ECS/Component';
+import { Scene } from '../../src/ECS/Scene';
 
 // 测试组件类
 class TestPositionComponent extends Component {
@@ -48,17 +49,19 @@ class TestRenderComponent extends Component {
 
 describe('Entity - 组件缓存优化测试', () => {
     let entity: Entity;
+    let scene: Scene;
 
     beforeEach(() => {
-        // 创建新的实体
-        entity = new Entity('TestEntity', 1);
+        scene = new Scene();
+        entity = scene.createEntity('TestEntity');
     });
 
     describe('基本功能测试', () => {
         test('应该能够创建实体', () => {
             expect(entity.name).toBe('TestEntity');
-            expect(entity.id).toBe(1);
+            expect(entity.id).toBeGreaterThanOrEqual(0);
             expect(entity.components.length).toBe(0);
+            expect(entity.scene).toBe(scene);
         });
 
         test('应该能够添加组件', () => {
@@ -262,7 +265,7 @@ describe('Entity - 组件缓存优化测试', () => {
             const debugInfo = entity.getDebugInfo();
 
             expect(debugInfo.name).toBe('TestEntity');
-            expect(debugInfo.id).toBe(1);
+            expect(debugInfo.id).toBeGreaterThanOrEqual(0);
             expect(debugInfo.componentCount).toBe(2);
             expect(debugInfo.componentTypes).toContain('TestPositionComponent');
             expect(debugInfo.componentTypes).toContain('TestHealthComponent');

@@ -1,6 +1,7 @@
 import { ComponentSparseSet } from '../../../src/ECS/Utils/ComponentSparseSet';
 import { Entity } from '../../../src/ECS/Entity';
 import { Component } from '../../../src/ECS/Component';
+import { Scene } from '../../../src/ECS/Scene';
 
 // 测试组件类
 class PositionComponent extends Component {
@@ -32,20 +33,21 @@ describe('ComponentSparseSet', () => {
     let entity1: Entity;
     let entity2: Entity;
     let entity3: Entity;
+    let scene: Scene;
 
     beforeEach(() => {
         componentSparseSet = new ComponentSparseSet();
-        
-        // 创建测试实体
-        entity1 = new Entity('entity1', 1);
+        scene = new Scene();
+
+        entity1 = scene.createEntity('entity1');
         entity1.addComponent(new PositionComponent(10, 20));
         entity1.addComponent(new VelocityComponent(1, 2));
-        
-        entity2 = new Entity('entity2', 2);
+
+        entity2 = scene.createEntity('entity2');
         entity2.addComponent(new PositionComponent(30, 40));
         entity2.addComponent(new HealthComponent(80, 100));
-        
-        entity3 = new Entity('entity3', 3);
+
+        entity3 = scene.createEntity('entity3');
         entity3.addComponent(new VelocityComponent(3, 4));
         entity3.addComponent(new HealthComponent(50, 100));
         entity3.addComponent(new RenderComponent(true));
@@ -358,16 +360,16 @@ describe('ComponentSparseSet', () => {
             
             // 创建大量实体
             for (let i = 0; i < 1000; i++) {
-                const entity = new Entity(`entity${i}`, i);
+                const entity = scene.createEntity(`entity${i}`);
                 entity.addComponent(new PositionComponent(i, i));
-                
+
                 if (i % 2 === 0) {
                     entity.addComponent(new VelocityComponent(1, 1));
                 }
                 if (i % 3 === 0) {
                     entity.addComponent(new HealthComponent(100, 100));
                 }
-                
+
                 entities.push(entity);
                 componentSparseSet.addEntity(entity);
             }

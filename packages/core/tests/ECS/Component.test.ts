@@ -1,5 +1,6 @@
 import { Component } from '../../src/ECS/Component';
 import { Entity } from '../../src/ECS/Entity';
+import { Scene } from '../../src/ECS/Scene';
 
 // 测试组件
 class TestComponent extends Component {
@@ -23,12 +24,13 @@ class AnotherTestComponent extends Component {
 describe('Component - 组件基类测试', () => {
     let component: TestComponent;
     let entity: Entity;
+    let scene: Scene;
 
     beforeEach(() => {
-        // Reset component ID generator to avoid BigInt issues
         Component._idGenerator = 0;
         component = new TestComponent();
-        entity = new Entity('TestEntity', 1);
+        scene = new Scene();
+        entity = scene.createEntity('TestEntity');
     });
 
     describe('基本功能', () => {
