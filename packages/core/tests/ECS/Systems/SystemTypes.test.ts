@@ -7,6 +7,7 @@ import { Component } from '../../../src/ECS/Component';
 import { ComponentRegistry } from '../../../src/ECS/Core/ComponentStorage';
 import { Time } from '../../../src/Utils/Time';
 import { Matcher } from '../../../src/ECS/Utils/Matcher';
+import { Core } from '../../../src/Core';
 
 // 测试组件
 class TestComponent extends Component {
@@ -83,6 +84,7 @@ describe('System Types - 系统类型测试', () => {
     let entity: Entity;
 
     beforeEach(() => {
+        Core.create();
         scene = new Scene();
         entity = scene.createEntity('TestEntity');
         // 重置时间系统
@@ -97,6 +99,7 @@ describe('System Types - 系统类型测试', () => {
 
         beforeEach(() => {
             passiveSystem = new ConcretePassiveSystem();
+            scene.addEntityProcessor(passiveSystem);
         });
 
         test('应该能够创建被动系统', () => {
@@ -136,6 +139,7 @@ describe('System Types - 系统类型测试', () => {
 
         beforeEach(() => {
             intervalSystem = new ConcreteIntervalSystem(testInterval);
+            scene.addEntityProcessor(intervalSystem);
         });
 
         test('应该能够创建间隔系统', () => {
@@ -218,6 +222,7 @@ describe('System Types - 系统类型测试', () => {
 
         beforeEach(() => {
             processingSystem = new ConcreteProcessingSystem();
+            scene.addEntityProcessor(processingSystem);
         });
 
         test('应该能够创建处理系统', () => {

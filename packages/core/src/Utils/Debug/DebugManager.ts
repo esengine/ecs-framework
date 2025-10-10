@@ -9,13 +9,14 @@ import { Component } from '../../ECS/Component';
 import { ComponentPoolManager } from '../../ECS/Core/ComponentPool';
 import { Pool } from '../../Utils/Pool';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from '../../ECS/Decorators';
+import type { IService } from '../../Core/ServiceContainer';
 
 /**
  * 调试管理器
  *
  * 整合所有调试数据收集器，负责收集和发送调试数据
  */
-export class DebugManager {
+export class DebugManager implements IService {
     private config: IECSDebugConfig;
     private webSocketManager: WebSocketManager;
     private entityCollector: EntityDataCollector;
@@ -820,5 +821,12 @@ export class DebugManager {
         } catch (error) {
             // console.error('[ECS Debug] 发送调试数据失败:', error);
         }
+    }
+
+    /**
+     * 释放资源
+     */
+    public dispose(): void {
+        this.stop();
     }
 } 

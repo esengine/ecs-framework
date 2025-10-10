@@ -99,20 +99,20 @@ export interface PerformanceThresholds {
     };
 }
 
+import type { IService } from '../Core/ServiceContainer';
+
 /**
  * 高性能监控器
  * 用于监控ECS系统的性能表现，提供详细的分析和优化建议
  */
-export class PerformanceMonitor {
-    private static _instance: PerformanceMonitor;
-    
+export class PerformanceMonitor implements IService {
     private _systemData = new Map<string, PerformanceData>();
     private _systemStats = new Map<string, PerformanceStats>();
     private _warnings: PerformanceWarning[] = [];
     private _isEnabled = false;
     private _maxRecentSamples = 60; // 保留最近60帧的数据
     private _maxWarnings = 100; // 最大警告数量
-    
+
     // 性能阈值配置
     private _thresholds: PerformanceThresholds = {
         executionTime: { warning: 16.67, critical: 33.33 }, // 60fps和30fps对应的帧时间
@@ -139,18 +139,8 @@ export class PerformanceMonitor {
     private _gcCount = 0;
     private _lastGcCheck = 0;
     private _gcCheckInterval = 1000;
-    
-    /**
-     * 获取单例实例
-     */
-    public static get instance(): PerformanceMonitor {
-        if (!PerformanceMonitor._instance) {
-            PerformanceMonitor._instance = new PerformanceMonitor();
-        }
-        return PerformanceMonitor._instance;
-    }
 
-    private constructor() {}
+    constructor() {}
 
     /**
      * 启用性能监控
@@ -392,12 +382,24 @@ export class PerformanceMonitor {
      */
     public setMaxRecentSamples(maxSamples: number): void {
         this._maxRecentSamples = maxSamples;
-        
+
         // 裁剪现有数据
         for (const stats of this._systemStats.values()) {
             while (stats.recentTimes.length > maxSamples) {
                 stats.recentTimes.shift();
             }
         }
+    }
+
+    /**
+     * 释放资源
+     */
+    public dispose(): void {
+        this._systemData.clear();
+        this._systemStats.clear();
+        this._warnings = [];
+        this._fpsHistory = [];
+        this._memoryHistory = [];
+        this._isEnabled = false;
     }
 } 

@@ -13,6 +13,8 @@ import { TypedQueryBuilder } from './Core/Query/TypedQuery';
 import { SceneSerializer, SceneSerializationOptions, SceneDeserializationOptions } from './Serialization/SceneSerializer';
 import { IncrementalSerializer, IncrementalSnapshot, IncrementalSerializationOptions } from './Serialization/IncrementalSerializer';
 import { ComponentPoolManager } from './Core/ComponentPool';
+import { PerformanceMonitor } from '../Utils/PerformanceMonitor';
+import { Core } from '../Core';
 
 /**
  * 游戏场景默认实现类
@@ -423,8 +425,13 @@ export class Scene implements IScene {
         if (this.entityProcessors.processors.includes(processor)) {
             return processor;
         }
-        
+
         processor.scene = this;
+
+        // 从Core获取PerformanceMonitor并注入到System
+        const perfMonitor = Core.services.resolve(PerformanceMonitor);
+        processor.setPerformanceMonitor(perfMonitor);
+
         this.entityProcessors.add(processor);
         processor.initialize();
         processor.setUpdateOrder(this.entityProcessors.count - 1);
