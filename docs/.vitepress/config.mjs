@@ -73,7 +73,14 @@ export default defineConfig({
                 { text: 'Worker系统 (多线程)', link: '/guide/worker-system' }
               ]
             },
-            { text: '场景管理 (Scene)', link: '/guide/scene' },
+            {
+              text: '场景管理 (Scene)',
+              link: '/guide/scene',
+              items: [
+                { text: 'SceneManager', link: '/guide/scene-manager' },
+                { text: 'WorldManager', link: '/guide/world-manager' }
+              ]
+            },
             { text: '序列化系统 (Serialization)', link: '/guide/serialization' },
             { text: '事件系统 (Event)', link: '/guide/event-system' },
             { text: '时间和定时器 (Time)', link: '/guide/time-and-timers' },

@@ -11,6 +11,22 @@
 - 事件系统支持
 - 性能监控和调试信息
 
+## 场景管理方式
+
+ECS Framework 提供了两种场景管理方式：
+
+1. **[SceneManager](./scene-manager.md)** - 适用于 95% 的游戏应用
+   - 单人游戏、简单多人游戏、移动游戏
+   - 轻量级，简单直观的 API
+   - 支持场景切换
+
+2. **[WorldManager](./world-manager.md)** - 适用于高级多世界隔离场景
+   - MMO 游戏服务器、游戏房间系统
+   - 多 World 管理，每个 World 可包含多个场景
+   - 完全隔离的独立环境
+
+本文档重点介绍 Scene 类本身的使用方法。关于场景管理器的详细信息，请查看对应的文档。
+
 ## 创建场景
 
 ### 继承 Scene 类
@@ -105,6 +121,13 @@ class ExampleScene extends Scene {
 const scene = new ExampleScene();
 // 场景的 initialize(), begin(), update(), end() 由框架自动调用
 ```
+
+**生命周期方法**：
+
+1. `initialize()` - 场景初始化，设置系统和初始实体
+2. `begin()` / `onStart()` - 场景开始运行
+3. `update()` - 每帧更新（由场景管理器调用）
+4. `end()` / `unload()` - 场景卸载，清理资源
 
 ## 实体管理
 
@@ -247,13 +270,40 @@ class EventScene extends Scene {
   }
 
   public triggerGameEvent(): void {
-    // 发送事件
+    // 发送事件（同步）
     this.eventSystem.emitSync('custom_event', {
       message: "这是自定义事件",
       timestamp: Date.now()
     });
+
+    // 发送事件（异步）
+    this.eventSystem.emit('async_event', {
+      data: "异步事件数据"
+    });
   }
 }
+```
+
+### 事件系统 API
+
+```typescript
+// 监听事件
+this.eventSystem.on('event_name', callback);
+
+// 监听一次（自动取消订阅）
+this.eventSystem.once('event_name', callback);
+
+// 取消监听
+this.eventSystem.off('event_name', callback);
+
+// 同步发送事件
+this.eventSystem.emitSync('event_name', data);
+
+// 异步发送事件
+this.eventSystem.emit('event_name', data);
+
+// 清除所有事件监听
+this.eventSystem.clear();
 ```
 
 ## 场景统计和调试
@@ -287,176 +337,58 @@ class StatsScene extends Scene {
 }
 ```
 
-## 场景集成到框架
+## 组件查询
 
-ECS Framework 提供了灵活的场景管理架构，适用于不同规模的应用：
-
-### 1. 使用 SceneManager（推荐大多数应用）
-
-适用于 95% 的游戏应用（单人游戏、简单多人游戏、移动游戏等）：
+Scene 提供了强大的组件查询系统：
 
 ```typescript
-import { Core, Scene, SceneManager } from '@esengine/ecs-framework';
-
-// 初始化Core（全局服务）
-Core.create({ debug: true });
-
-// 从服务容器获取 SceneManager（Core 已自动创建并注册）
-const sceneManager = Core.services.resolve(SceneManager);
-
-// 创建游戏场景
-class GameScene extends Scene {
+class QueryScene extends Scene {
   protected initialize(): void {
-    this.name = "GameScene";
-    this.addSystem(new MovementSystem());
-    this.addSystem(new RenderSystem());
-  }
-}
-
-// 设置场景
-const gameScene = new GameScene();
-sceneManager.setScene(gameScene);
-
-// 游戏循环
-function gameLoop(deltaTime: number) {
-  Core.update(deltaTime);      // 更新全局服务
-  sceneManager.update();        // 更新当前场景
-}
-```
-
-### 2. 场景切换
-
-SceneManager 支持流畅的场景切换：
-
-```typescript
-// 立即切换场景
-const menuScene = new MenuScene();
-sceneManager.setScene(menuScene);
-
-// 延迟切换场景（在下一帧切换）
-const gameScene = new GameScene();
-sceneManager.startSceneTransition(gameScene, false);
-
-// 访问当前场景
-const currentScene = sceneManager.currentScene;
-
-// 访问 ECS API
-const ecsAPI = sceneManager.ecsAPI;
-const entity = ecsAPI?.createEntity('player');
-```
-
-### 3. 使用 WorldManager（高级用例）
-
-适用于需要完全隔离的多世界应用（MMO服务器、游戏房间系统等）：
-
-```typescript
-import { Core, WorldManager } from '@esengine/ecs-framework';
-
-// 初始化Core（全局服务）
-Core.create({ debug: true });
-
-// 从服务容器获取 WorldManager（Core 已自动创建并注册）
-const worldManager = Core.services.resolve(WorldManager);
-
-// 创建多个独立的游戏世界
-const gameWorld = worldManager.createWorld('game', {
-  name: 'MainGame',
-  maxScenes: 5
-});
-
-// 在World中创建场景
-const menuScene = gameWorld.createScene('menu', new MenuScene());
-const gameScene = gameWorld.createScene('game', new GameScene());
-
-// 激活场景
-gameWorld.setSceneActive('menu', true);
-
-// 游戏循环
-function gameLoop(deltaTime: number) {
-  Core.update(deltaTime);      // 更新全局服务
-  worldManager.updateAll();    // 更新所有世界
-}
-```
-
-## 多场景管理
-
-在World中可以管理多个场景，通过激活/停用来切换：
-
-```typescript
-class GameWorld extends World {
-  private menuScene: Scene;
-  private gameScene: Scene;
-  private gameOverScene: Scene;
-
-  public initialize(): void {
-    // 创建多个场景
-    this.menuScene = this.createScene('menu', new MenuScene());
-    this.gameScene = this.createScene('game', new GameScene());
-    this.gameOverScene = this.createScene('gameover', new GameOverScene());
-
-    // 设置初始场景
-    this.showMenu();
+    // 创建一些实体
+    for (let i = 0; i < 10; i++) {
+      const entity = this.createEntity(`Entity_${i}`);
+      entity.addComponent(new Transform(i * 10, 0));
+      entity.addComponent(new Velocity(1, 0));
+      if (i % 2 === 0) {
+        entity.addComponent(new Renderer());
+      }
+    }
   }
 
-  public showMenu(): void {
-    this.deactivateAllScenes();
-    this.setSceneActive('menu', true);
-  }
+  public queryEntities(): void {
+    // 通过 QuerySystem 查询
+    const entities = this.querySystem.query([Transform, Velocity]);
+    console.log(`找到 ${entities.length} 个有 Transform 和 Velocity 的实体`);
 
-  public startGame(): void {
-    this.deactivateAllScenes();
-    this.setSceneActive('game', true);
-  }
-
-  public showGameOver(): void {
-    this.deactivateAllScenes();
-    this.setSceneActive('gameover', true);
-  }
-
-  private deactivateAllScenes(): void {
-    this.setSceneActive('menu', false);
-    this.setSceneActive('game', false);
-    this.setSceneActive('gameover', false);
+    // 使用 ECS 流式 API（如果通过 SceneManager）
+    // const api = sceneManager.api;
+    // const entities = api?.find(Transform, Velocity);
   }
 }
 ```
 
-## 架构层次
+## 性能监控
 
-ECS Framework 的架构层次清晰，职责分明：
+Scene 内置了性能监控功能：
 
 ```typescript
-// 架构层次：
-// Core (全局服务) → SceneManager (场景管理) → Scene → EntitySystem → Entity → Component
-// 或
-// Core (全局服务) → WorldManager (世界管理) → World → Scene → EntitySystem → Entity → Component
+class PerformanceScene extends Scene {
+  public showPerformance(): void {
+    // 获取性能数据
+    const perfData = this.performanceMonitor?.getPerformanceData();
+    if (perfData) {
+      console.log('FPS:', perfData.fps);
+      console.log('帧时间:', perfData.frameTime);
+      console.log('实体更新时间:', perfData.entityUpdateTime);
+      console.log('系统更新时间:', perfData.systemUpdateTime);
+    }
 
-// 1. 推荐：使用 SceneManager 管理单场景/场景切换
-import { Core, SceneManager } from '@esengine/ecs-framework';
-
-Core.create({ debug: true });
-const sceneManager = Core.services.resolve(SceneManager);
-sceneManager.setScene(new GameScene());
-
-// 游戏循环
-function gameLoop(deltaTime: number) {
-  Core.update(deltaTime);      // 全局服务
-  sceneManager.update();        // 场景更新
-}
-
-// 2. 高级：使用 WorldManager 管理多世界
-import { Core, WorldManager } from '@esengine/ecs-framework';
-
-Core.create({ debug: true });
-const worldManager = Core.services.resolve(WorldManager);
-const world = worldManager.createWorld('gameWorld');
-const scene = world.createScene('mainScene', new GameScene());
-world.setSceneActive('mainScene', true);
-
-// 游戏循环
-function gameLoop(deltaTime: number) {
-  Core.update(deltaTime);      // 全局服务
-  worldManager.updateAll();    // 所有世界更新
+    // 获取性能报告
+    const report = this.performanceMonitor?.generateReport();
+    if (report) {
+      console.log('性能报告:', report);
+    }
+  }
 }
 ```
 
@@ -465,7 +397,7 @@ function gameLoop(deltaTime: number) {
 ### 1. 场景职责分离
 
 ```typescript
-// ✅ 好的场景设计 - 职责清晰
+// 好的场景设计 - 职责清晰
 class MenuScene extends Scene {
   // 只处理菜单相关逻辑
 }
@@ -478,7 +410,7 @@ class InventoryScene extends Scene {
   // 只处理物品栏逻辑
 }
 
-// ❌ 避免的场景设计 - 职责混乱
+// 避免的场景设计 - 职责混乱
 class MegaScene extends Scene {
   // 包含菜单、游戏、物品栏等所有逻辑
 }
@@ -525,12 +457,25 @@ class ResourceScene extends Scene {
 
   private loadResources(): void {
     // 加载场景所需资源
+    this.textures.set('player', this.loadTexture('player.png'));
+    this.sounds.set('bgm', this.loadSound('bgm.mp3'));
   }
 
   public unload(): void {
     // 清理资源
     this.textures.clear();
     this.sounds.clear();
+    console.log('场景资源已清理');
+  }
+
+  private loadTexture(path: string): any {
+    // 加载纹理
+    return null;
+  }
+
+  private loadSound(path: string): any {
+    // 加载音效
+    return null;
   }
 }
 ```
@@ -571,7 +516,146 @@ class EventHandlingScene extends Scene {
   private onPlayerInput(data: any): void {
     // 处理玩家输入
   }
+
+  public unload(): void {
+    // 清理事件监听
+    this.eventSystem.clear();
+  }
 }
 ```
+
+### 5. 初始化顺序
+
+```typescript
+class ProperInitScene extends Scene {
+  protected initialize(): void {
+    // 1. 首先设置场景配置
+    this.name = "GameScene";
+
+    // 2. 然后添加系统（按依赖顺序）
+    this.addSystem(new InputSystem());
+    this.addSystem(new MovementSystem());
+    this.addSystem(new PhysicsSystem());
+    this.addSystem(new RenderSystem());
+
+    // 3. 最后创建实体
+    this.createEntities();
+
+    // 4. 设置事件监听
+    this.setupEvents();
+  }
+
+  private createEntities(): void {
+    // 创建实体
+  }
+
+  private setupEvents(): void {
+    // 设置事件监听
+  }
+}
+```
+
+## 完整示例
+
+```typescript
+import { Scene, EntitySystem, Entity, Matcher } from '@esengine/ecs-framework';
+
+// 定义组件
+class Transform {
+  constructor(public x: number, public y: number) {}
+}
+
+class Velocity {
+  constructor(public vx: number, public vy: number) {}
+}
+
+class Health {
+  constructor(public value: number) {}
+}
+
+// 定义系统
+class MovementSystem extends EntitySystem {
+  constructor() {
+    super(Matcher.all(Transform, Velocity));
+  }
+
+  process(entities: readonly Entity[]): void {
+    for (const entity of entities) {
+      const transform = entity.getComponent(Transform);
+      const velocity = entity.getComponent(Velocity);
+
+      if (transform && velocity) {
+        transform.x += velocity.vx;
+        transform.y += velocity.vy;
+      }
+    }
+  }
+}
+
+// 定义场景
+class GameScene extends Scene {
+  protected initialize(): void {
+    this.name = "GameScene";
+
+    // 添加系统
+    this.addSystem(new MovementSystem());
+
+    // 创建玩家
+    const player = this.createEntity("Player");
+    player.addComponent(new Transform(400, 300));
+    player.addComponent(new Velocity(0, 0));
+    player.addComponent(new Health(100));
+
+    // 创建敌人
+    for (let i = 0; i < 5; i++) {
+      const enemy = this.createEntity(`Enemy_${i}`);
+      enemy.addComponent(new Transform(
+        Math.random() * 800,
+        Math.random() * 600
+      ));
+      enemy.addComponent(new Velocity(
+        Math.random() * 100 - 50,
+        Math.random() * 100 - 50
+      ));
+      enemy.addComponent(new Health(50));
+    }
+
+    // 设置事件监听
+    this.eventSystem.on('player_died', () => {
+      console.log('玩家死亡！');
+    });
+  }
+
+  public onStart(): void {
+    console.log('游戏场景启动');
+  }
+
+  public unload(): void {
+    console.log('游戏场景卸载');
+    this.eventSystem.clear();
+  }
+}
+
+// 使用场景
+// 方式1：通过 SceneManager（推荐）
+import { Core, SceneManager } from '@esengine/ecs-framework';
+
+Core.create({ debug: true });
+const sceneManager = Core.services.resolve(SceneManager);
+sceneManager.setScene(new GameScene());
+
+// 方式2：通过 WorldManager（高级用例）
+import { WorldManager } from '@esengine/ecs-framework';
+
+const worldManager = Core.services.resolve(WorldManager);
+const world = worldManager.createWorld('game');
+world.createScene('main', new GameScene());
+world.setSceneActive('main', true);
+```
+
+## 下一步
+
+- 了解 [SceneManager](./scene-manager.md) - 适用于大多数游戏的简单场景管理
+- 了解 [WorldManager](./world-manager.md) - 适用于需要多世界隔离的高级场景
 
 场景是 ECS 框架的核心容器，正确使用场景管理能让你的游戏架构更加清晰、模块化和易于维护。
