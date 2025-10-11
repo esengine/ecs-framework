@@ -6,6 +6,7 @@ import { createLogger } from '../../Utils/Logger';
 import { getComponentTypeName } from '../Decorators';
 import { Archetype, ArchetypeSystem } from './ArchetypeSystem';
 import { ComponentTypeManager } from "../Utils";
+import { ReactiveQuery, ReactiveQueryConfig } from './ReactiveQuery';
 
 /**
  * 查询条件类型
@@ -124,15 +125,16 @@ export class QuerySystem {
 
     /**
      * 设置实体列表并重建索引
-     * 
+     *
      * 当实体集合发生大规模变化时调用此方法。
      * 系统将重新构建所有索引以确保查询性能。
-     * 
+     *
      * @param entities 新的实体列表
      */
     public setEntities(entities: Entity[]): void {
         this.entities = entities;
         this.clearQueryCache();
+        this.clearReactiveQueries();
         this.rebuildIndexes();
     }
 
@@ -152,12 +154,14 @@ export class QuerySystem {
 
             this.archetypeSystem.addEntity(entity);
 
+            // 通知响应式查询
+            this.notifyReactiveQueriesEntityAdded(entity);
 
             // 只有在非延迟模式下才立即清理缓存
             if (!deferCacheClear) {
                 this.clearQueryCache();
             }
-            
+
             // 更新版本号
             this._version++;
         }
@@ -240,6 +244,9 @@ export class QuerySystem {
 
             this.archetypeSystem.removeEntity(entity);
 
+            // 通知响应式查询
+            this.notifyReactiveQueriesEntityRemoved(entity);
+
             this.clearQueryCache();
 
             // 更新版本号
@@ -269,6 +276,9 @@ export class QuerySystem {
         this.archetypeSystem.updateEntity(entity);
         // 重新添加实体到索引（基于新的组件状态）
         this.addEntityToIndexes(entity);
+
+        // 通知响应式查询
+        this.notifyReactiveQueriesEntityChanged(entity);
 
         // 清理查询缓存，因为实体组件状态已改变
         this.clearQueryCache();
@@ -357,13 +367,13 @@ export class QuerySystem {
 
     /**
      * 查询包含所有指定组件的实体
-     * 
+     *
      * 返回同时包含所有指定组件类型的实体列表。
-     * 系统会自动选择最高效的查询策略，包括索引查找和缓存机制。
-     * 
+     * 内部使用响应式查询作为智能缓存,自动跟踪实体变化,性能更优。
+     *
      * @param componentTypes 要查询的组件类型列表
      * @returns 查询结果，包含匹配的实体和性能信息
-     * 
+     *
      * @example
      * ```typescript
      * // 查询同时具有位置和速度组件的实体
@@ -375,38 +385,20 @@ export class QuerySystem {
         const startTime = performance.now();
         this.queryStats.totalQueries++;
 
-        // 生成缓存键
-        const cacheKey = this.generateCacheKey('all', componentTypes);
+        // 使用内部响应式查询作为智能缓存
+        const reactiveQuery = this.getOrCreateReactiveQuery(QueryConditionType.ALL, componentTypes);
 
-        // 检查缓存
-        const cached = this.getFromCache(cacheKey);
-        if (cached) {
-            this.queryStats.cacheHits++;
-            return {
-                entities: cached,
-                count: cached.length,
-                executionTime: performance.now() - startTime,
-                fromCache: true
-            };
-        }
+        // 从响应式查询获取结果(永远是最新的)
+        const entities = reactiveQuery.getEntities();
 
-        this.queryStats.archetypeHits++;
-        const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'AND');
-
-        const entities: Entity[] = [];
-        for (const archetype of archetypeResult.archetypes) {
-            for (const entity of archetype.entities) {
-                entities.push(entity);
-            }
-        }
-
-        this.addToCache(cacheKey, entities);
+        // 统计为缓存命中(响应式查询本质上是永不过期的智能缓存)
+        this.queryStats.cacheHits++;
 
         return {
             entities,
             count: entities.length,
             executionTime: performance.now() - startTime,
-            fromCache: false
+            fromCache: true
         };
     }
 
@@ -436,13 +428,13 @@ export class QuerySystem {
 
     /**
      * 查询包含任意指定组件的实体
-     * 
+     *
      * 返回包含任意一个指定组件类型的实体列表。
-     * 使用集合合并算法确保高效的查询性能。
-     * 
+     * 内部使用响应式查询作为智能缓存,自动跟踪实体变化,性能更优。
+     *
      * @param componentTypes 要查询的组件类型列表
      * @returns 查询结果，包含匹配的实体和性能信息
-     * 
+     *
      * @example
      * ```typescript
      * // 查询具有武器或护甲组件的实体
@@ -454,52 +446,32 @@ export class QuerySystem {
         const startTime = performance.now();
         this.queryStats.totalQueries++;
 
-        const cacheKey = this.generateCacheKey('any', componentTypes);
+        // 使用内部响应式查询作为智能缓存
+        const reactiveQuery = this.getOrCreateReactiveQuery(QueryConditionType.ANY, componentTypes);
 
-        // 检查缓存
-        const cached = this.getFromCache(cacheKey);
-        if (cached) {
-            this.queryStats.cacheHits++;
-            return {
-                entities: cached,
-                count: cached.length,
-                executionTime: performance.now() - startTime,
-                fromCache: true
-            };
-        }
+        // 从响应式查询获取结果(永远是最新的)
+        const entities = reactiveQuery.getEntities();
 
-        this.queryStats.archetypeHits++;
-        const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'OR');
-
-        const entities = this.acquireResultArray();
-        for (const archetype of archetypeResult.archetypes) {
-            for (const entity of archetype.entities) {
-                entities.push(entity);
-            }
-        }
-
-        const frozenEntities = [...entities];
-        this.releaseResultArray(entities);
-
-        this.addToCache(cacheKey, frozenEntities);
+        // 统计为缓存命中(响应式查询本质上是永不过期的智能缓存)
+        this.queryStats.cacheHits++;
 
         return {
-            entities: frozenEntities,
-            count: frozenEntities.length,
+            entities,
+            count: entities.length,
             executionTime: performance.now() - startTime,
-            fromCache: false
+            fromCache: true
         };
     }
 
     /**
      * 查询不包含任何指定组件的实体
-     * 
+     *
      * 返回不包含任何指定组件类型的实体列表。
-     * 适用于排除特定类型实体的查询场景。
-     * 
+     * 内部使用响应式查询作为智能缓存,自动跟踪实体变化,性能更优。
+     *
      * @param componentTypes 要排除的组件类型列表
      * @returns 查询结果，包含匹配的实体和性能信息
-     * 
+     *
      * @example
      * ```typescript
      * // 查询不具有AI和玩家控制组件的实体（如静态物体）
@@ -511,32 +483,20 @@ export class QuerySystem {
         const startTime = performance.now();
         this.queryStats.totalQueries++;
 
-        const cacheKey = this.generateCacheKey('none', componentTypes);
+        // 使用内部响应式查询作为智能缓存
+        const reactiveQuery = this.getOrCreateReactiveQuery(QueryConditionType.NONE, componentTypes);
 
-        // 检查缓存
-        const cached = this.getFromCache(cacheKey);
-        if (cached) {
-            this.queryStats.cacheHits++;
-            return {
-                entities: cached,
-                count: cached.length,
-                executionTime: performance.now() - startTime,
-                fromCache: true
-            };
-        }
+        // 从响应式查询获取结果(永远是最新的)
+        const entities = reactiveQuery.getEntities();
 
-        const mask = this.createComponentMask(componentTypes);
-        const entities = this.entities.filter(entity =>
-            BitMask64Utils.hasNone(entity.componentMask, mask)
-        );
-
-        this.addToCache(cacheKey, entities);
+        // 统计为缓存命中(响应式查询本质上是永不过期的智能缓存)
+        this.queryStats.cacheHits++;
 
         return {
             entities,
             count: entities.length,
             executionTime: performance.now() - startTime,
-            fromCache: false
+            fromCache: true
         };
     }
 
@@ -760,6 +720,20 @@ export class QuerySystem {
     }
 
     /**
+     * 清除所有响应式查询
+     *
+     * 销毁所有响应式查询实例并清理索引
+     * 通常在setEntities时调用以确保缓存一致性
+     */
+    private clearReactiveQueries(): void {
+        for (const query of this._reactiveQueries.values()) {
+            query.dispose();
+        }
+        this._reactiveQueries.clear();
+        this._reactiveQueriesByComponent.clear();
+    }
+
+    /**
      * 高效的缓存键生成
      */
     private generateCacheKey(prefix: string, componentTypes: ComponentType[]): string {
@@ -891,11 +865,186 @@ export class QuerySystem {
 
     /**
      * 获取实体所属的原型信息
-     * 
+     *
      * @param entity 要查询的实体
      */
     public getEntityArchetype(entity: Entity): Archetype | undefined {
         return this.archetypeSystem.getEntityArchetype(entity);
+    }
+
+    // ============================================================
+    // 响应式查询支持(内部智能缓存)
+    // ============================================================
+
+    /**
+     * 响应式查询集合(内部使用,作为智能缓存)
+     * 传统查询API(queryAll/queryAny/queryNone)内部自动使用响应式查询优化性能
+     */
+    private _reactiveQueries: Map<string, ReactiveQuery> = new Map();
+
+    /**
+     * 按组件类型索引的响应式查询
+     * 用于快速定位哪些查询关心某个组件类型
+     */
+    private _reactiveQueriesByComponent: Map<ComponentType, Set<ReactiveQuery>> = new Map();
+
+    /**
+     * 获取或创建内部响应式查询(作为智能缓存)
+     *
+     * @param queryType 查询类型
+     * @param componentTypes 组件类型列表
+     * @returns 响应式查询实例
+     */
+    private getOrCreateReactiveQuery(
+        queryType: QueryConditionType,
+        componentTypes: ComponentType[]
+    ): ReactiveQuery {
+        // 生成缓存键(与传统缓存键格式一致)
+        const cacheKey = this.generateCacheKey(queryType, componentTypes);
+
+        // 检查是否已存在响应式查询
+        let reactiveQuery = this._reactiveQueries.get(cacheKey);
+
+        if (!reactiveQuery) {
+            // 创建查询条件
+            const mask = this.createComponentMask(componentTypes);
+            const condition: QueryCondition = {
+                type: queryType,
+                componentTypes,
+                mask
+            };
+
+            // 创建响应式查询(禁用批量模式,保持实时性)
+            reactiveQuery = new ReactiveQuery(condition, {
+                enableBatchMode: false,
+                debug: false
+            });
+
+            // 初始化查询结果(使用传统方式获取初始数据)
+            const initialEntities = this.executeTraditionalQuery(queryType, componentTypes);
+            reactiveQuery.initializeWith(initialEntities);
+
+            // 注册响应式查询
+            this._reactiveQueries.set(cacheKey, reactiveQuery);
+
+            // 为每个组件类型注册索引
+            for (const type of componentTypes) {
+                let queries = this._reactiveQueriesByComponent.get(type);
+                if (!queries) {
+                    queries = new Set();
+                    this._reactiveQueriesByComponent.set(type, queries);
+                }
+                queries.add(reactiveQuery);
+            }
+
+            this._logger.debug(`创建内部响应式查询缓存: ${cacheKey}`);
+        }
+
+        return reactiveQuery;
+    }
+
+    /**
+     * 执行传统查询(内部使用,用于响应式查询初始化)
+     *
+     * @param queryType 查询类型
+     * @param componentTypes 组件类型列表
+     * @returns 匹配的实体列表
+     */
+    private executeTraditionalQuery(
+        queryType: QueryConditionType,
+        componentTypes: ComponentType[]
+    ): Entity[] {
+        switch (queryType) {
+            case QueryConditionType.ALL: {
+                const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'AND');
+                const entities: Entity[] = [];
+                for (const archetype of archetypeResult.archetypes) {
+                    for (const entity of archetype.entities) {
+                        entities.push(entity);
+                    }
+                }
+                return entities;
+            }
+            case QueryConditionType.ANY: {
+                const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'OR');
+                const entities: Entity[] = [];
+                for (const archetype of archetypeResult.archetypes) {
+                    for (const entity of archetype.entities) {
+                        entities.push(entity);
+                    }
+                }
+                return entities;
+            }
+            case QueryConditionType.NONE: {
+                const mask = this.createComponentMask(componentTypes);
+                return this.entities.filter(entity =>
+                    BitMask64Utils.hasNone(entity.componentMask, mask)
+                );
+            }
+            default:
+                return [];
+        }
+    }
+
+    /**
+     * 通知所有响应式查询实体已添加
+     *
+     * 使用组件类型索引,只通知关心该实体组件的查询
+     *
+     * @param entity 添加的实体
+     */
+    private notifyReactiveQueriesEntityAdded(entity: Entity): void {
+        if (this._reactiveQueries.size === 0) return;
+
+        const notified = new Set<ReactiveQuery>();
+
+        for (const component of entity.components) {
+            const componentType = component.constructor as ComponentType;
+            const queries = this._reactiveQueriesByComponent.get(componentType);
+
+            if (queries) {
+                for (const query of queries) {
+                    if (!notified.has(query)) {
+                        query.notifyEntityAdded(entity);
+                        notified.add(query);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 通知所有响应式查询实体已移除
+     *
+     * 使用组件类型索引,只通知关心该实体组件的查询
+     * 注意:实体移除时可能已经清空了components,所以需要通知所有查询让它们自己判断
+     *
+     * @param entity 移除的实体
+     */
+    private notifyReactiveQueriesEntityRemoved(entity: Entity): void {
+        if (this._reactiveQueries.size === 0) return;
+
+        for (const query of this._reactiveQueries.values()) {
+            query.notifyEntityRemoved(entity);
+        }
+    }
+
+    /**
+     * 通知所有响应式查询实体已变化
+     *
+     * 实体组件变化时需要通知所有查询,因为:
+     * 1. 可能从匹配变为不匹配(移除组件)
+     * 2. 可能从不匹配变为匹配(添加组件)
+     * 让每个查询自己判断是否需要响应
+     *
+     * @param entity 变化的实体
+     */
+    private notifyReactiveQueriesEntityChanged(entity: Entity): void {
+        if (this._reactiveQueries.size === 0) return;
+
+        for (const query of this._reactiveQueries.values()) {
+            query.notifyEntityChanged(entity);
+        }
     }
 }
 
