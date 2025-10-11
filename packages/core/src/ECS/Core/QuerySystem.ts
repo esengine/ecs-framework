@@ -756,11 +756,13 @@ export class QuerySystem {
 
     /**
      * 清理查询缓存
-     * 
+     *
      * 用于外部调用清理缓存，通常在批量操作后使用。
+     * 注意:此方法也会清理响应式查询缓存
      */
     public clearCache(): void {
         this.clearQueryCache();
+        this.clearReactiveQueries();
     }
 
     /**
@@ -856,7 +858,7 @@ export class QuerySystem {
                 }))
             },
             cacheStats: {
-                size: this.queryCache.size,
+                size: this._reactiveQueries.size,
                 hitRate: this.queryStats.totalQueries > 0 ?
                     (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + '%' : '0%'
             }
