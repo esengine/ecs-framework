@@ -14,7 +14,6 @@ import { SceneSerializer, SceneSerializationOptions, SceneDeserializationOptions
 import { IncrementalSerializer, IncrementalSnapshot, IncrementalSerializationOptions } from './Serialization/IncrementalSerializer';
 import { ComponentPoolManager } from './Core/ComponentPool';
 import { PerformanceMonitor } from '../Utils/PerformanceMonitor';
-import { Core } from '../Core';
 import { ServiceContainer, type ServiceType } from '../Core/ServiceContainer';
 import { createInstance, isInjectable } from '../Core/DI';
 import { isUpdatable, getUpdatableMetadata } from '../Core/DI/Decorators';
@@ -183,11 +182,9 @@ export class Scene implements IScene {
         this._services = new ServiceContainer();
         this.logger = createLogger('Scene');
 
-        if (config?.performanceMonitor) {
-            this._performanceMonitor = config.performanceMonitor;
-        } else {
-            this._performanceMonitor = Core.services.resolve(PerformanceMonitor);
-        }
+        // 从配置获取 PerformanceMonitor，如果未提供则创建一个新实例
+        // Scene 应该是独立的，不依赖于 Core，通过构造函数参数明确依赖关系
+        this._performanceMonitor = config?.performanceMonitor || new PerformanceMonitor();
 
         if (config?.name) {
             this.name = config.name;

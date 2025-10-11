@@ -1,7 +1,6 @@
 import { IScene } from './IScene';
 import { ECSFluentAPI, createECSAPI } from './Core/FluentAPI';
 import { Time } from '../Utils/Time';
-import { Core } from '../Core';
 import { createLogger } from '../Utils/Logger';
 import type { IService } from '../Core/ServiceContainer';
 
@@ -69,6 +68,21 @@ export class SceneManager implements IService {
     private _logger = createLogger('SceneManager');
 
     /**
+     * 场景切换回调函数
+     */
+    private _onSceneChangedCallback?: () => void;
+
+    /**
+     * 设置场景切换回调
+     *
+     * @param callback 场景切换时的回调函数
+     * @internal
+     */
+    public setSceneChangedCallback(callback: () => void): void {
+        this._onSceneChangedCallback = callback;
+    }
+
+    /**
      * 设置当前场景（立即切换）
      *
      * 会自动处理旧场景的结束和新场景的初始化。
@@ -104,10 +118,9 @@ export class SceneManager implements IService {
         // 触发场景切换回调
         Time.sceneChanged();
 
-        // 通知调试管理器
-        const coreInstance = Core.Instance;
-        if (coreInstance && coreInstance._debugManager) {
-            coreInstance._debugManager.onSceneChanged();
+        // 通知调试管理器（通过回调）
+        if (this._onSceneChangedCallback) {
+            this._onSceneChangedCallback();
         }
 
         this._logger.info(`Scene changed to: ${scene.name}`);

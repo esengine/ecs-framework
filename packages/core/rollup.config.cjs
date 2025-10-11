@@ -52,6 +52,13 @@ module.exports = [
       })
     ],
     external,
+    onwarn(warning, warn) {
+      // 忽略 msgpack-lite 的循环依赖警告
+      if (warning.code === 'CIRCULAR_DEPENDENCY' && warning.ids && warning.ids.some(id => id.includes('msgpack-lite'))) {
+        return;
+      }
+      warn(warning);
+    },
     treeshake: {
       moduleSideEffects: false,
       propertyReadSideEffects: false,
@@ -78,6 +85,12 @@ module.exports = [
       })
     ],
     external,
+    onwarn(warning, warn) {
+      if (warning.code === 'CIRCULAR_DEPENDENCY' && warning.ids && warning.ids.some(id => id.includes('msgpack-lite'))) {
+        return;
+      }
+      warn(warning);
+    },
     treeshake: {
       moduleSideEffects: false
     }
@@ -103,6 +116,12 @@ module.exports = [
       })
     ],
     external: [],
+    onwarn(warning, warn) {
+      if (warning.code === 'CIRCULAR_DEPENDENCY' && warning.ids && warning.ids.some(id => id.includes('msgpack-lite'))) {
+        return;
+      }
+      warn(warning);
+    },
     treeshake: {
       moduleSideEffects: false
     }
@@ -157,6 +176,12 @@ module.exports = [
       })
     ],
     external: [],
+    onwarn(warning, warn) {
+      if (warning.code === 'CIRCULAR_DEPENDENCY' && warning.ids && warning.ids.some(id => id.includes('msgpack-lite'))) {
+        return;
+      }
+      warn(warning);
+    },
     treeshake: {
       moduleSideEffects: false
     }

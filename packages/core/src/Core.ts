@@ -173,6 +173,13 @@ export class Core {
         this._sceneManager = new SceneManager();
         this._serviceContainer.registerInstance(SceneManager, this._sceneManager);
 
+        // 设置场景切换回调，通知调试管理器
+        this._sceneManager.setSceneChangedCallback(() => {
+            if (this._debugManager) {
+                this._debugManager.onSceneChanged();
+            }
+        });
+
         // 初始化插件管理器
         this._pluginManager = new PluginManager();
         this._pluginManager.initialize(this, this._serviceContainer);

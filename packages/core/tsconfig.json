@@ -28,7 +28,7 @@
     "noUncheckedIndexedAccess": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "importHelpers": false,
+    "importHelpers": true,
     "downlevelIteration": true,
     "isolatedModules": false,
     "allowJs": true,
