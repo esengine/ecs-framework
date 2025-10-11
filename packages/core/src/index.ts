@@ -8,6 +8,11 @@ export { Core } from './Core';
 export { ServiceContainer, ServiceLifetime } from './Core/ServiceContainer';
 export type { IService, ServiceType } from './Core/ServiceContainer';
 
+// 插件系统
+export { PluginManager } from './Core/PluginManager';
+export { PluginState } from './Core/Plugin';
+export type { IPlugin, IPluginMetadata } from './Core/Plugin';
+
 // 依赖注入
 export {
     Injectable,
