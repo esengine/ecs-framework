@@ -314,8 +314,8 @@ import { Core, WorldManager } from '@esengine/ecs-framework';
 // 初始化Core
 Core.create({ debug: true });
 
-// 创建世界管理器（手动管理）
-const worldManager = new WorldManager();
+// 从服务容器获取 WorldManager（Core 已自动创建并注册）
+const worldManager = Core.services.resolve(WorldManager);
 
 // 创建多个独立的游戏世界
 const room1 = worldManager.createWorld('room_001');

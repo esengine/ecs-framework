@@ -296,13 +296,13 @@ ECS Framework 提供了灵活的场景管理架构，适用于不同规模的应
 适用于 95% 的游戏应用（单人游戏、简单多人游戏、移动游戏等）：
 
 ```typescript
-import { Core, SceneManager } from '@esengine/ecs-framework';
+import { Core, Scene, SceneManager } from '@esengine/ecs-framework';
 
 // 初始化Core（全局服务）
 Core.create({ debug: true });
 
-// 创建场景管理器
-const sceneManager = new SceneManager();
+// 从服务容器获取 SceneManager（Core 已自动创建并注册）
+const sceneManager = Core.services.resolve(SceneManager);
 
 // 创建游戏场景
 class GameScene extends Scene {
@@ -355,8 +355,8 @@ import { Core, WorldManager } from '@esengine/ecs-framework';
 // 初始化Core（全局服务）
 Core.create({ debug: true });
 
-// 创建世界管理器
-const worldManager = new WorldManager();
+// 从服务容器获取 WorldManager（Core 已自动创建并注册）
+const worldManager = Core.services.resolve(WorldManager);
 
 // 创建多个独立的游戏世界
 const gameWorld = worldManager.createWorld('game', {
@@ -435,7 +435,7 @@ ECS Framework 的架构层次清晰，职责分明：
 import { Core, SceneManager } from '@esengine/ecs-framework';
 
 Core.create({ debug: true });
-const sceneManager = new SceneManager();
+const sceneManager = Core.services.resolve(SceneManager);
 sceneManager.setScene(new GameScene());
 
 // 游戏循环
@@ -448,7 +448,7 @@ function gameLoop(deltaTime: number) {
 import { Core, WorldManager } from '@esengine/ecs-framework';
 
 Core.create({ debug: true });
-const worldManager = new WorldManager();
+const worldManager = Core.services.resolve(WorldManager);
 const world = worldManager.createWorld('gameWorld');
 const scene = world.createScene('mainScene', new GameScene());
 world.setSceneActive('mainScene', true);

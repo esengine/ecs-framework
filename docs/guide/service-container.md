@@ -196,14 +196,48 @@ const fps = monitor.getFPS();
 
 ### SceneManager
 
-场景管理器，管理场景的生命周期：
+场景管理器，管理单场景应用的场景生命周期：
 
 ```typescript
 const sceneManager = Core.services.resolve(SceneManager);
 
+// 设置当前场景
+sceneManager.setScene(new GameScene());
+
 // 获取当前场景
 const currentScene = sceneManager.currentScene;
+
+// 延迟切换场景
+sceneManager.loadScene(new MenuScene());
+
+// 更新场景
+sceneManager.update();
 ```
+
+### WorldManager
+
+世界管理器，管理多个独立的 World 实例（高级用例）：
+
+```typescript
+const worldManager = Core.services.resolve(WorldManager);
+
+// 创建独立的游戏世界
+const gameWorld = worldManager.createWorld('game_room_001', {
+  name: 'GameRoom',
+  maxScenes: 5
+});
+
+// 在World中创建场景
+const scene = gameWorld.createScene('battle', new BattleScene());
+gameWorld.setSceneActive('battle', true);
+
+// 更新所有World
+worldManager.updateAll();
+```
+
+**适用场景**:
+- SceneManager: 适用于 95% 的游戏（单人游戏、简单多人游戏）
+- WorldManager: 适用于 MMO 服务器、游戏房间系统等需要完全隔离的多世界应用
 
 ### PoolManager
 
