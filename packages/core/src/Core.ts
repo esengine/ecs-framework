@@ -10,6 +10,8 @@ import { createLogger } from './Utils/Logger';
 import { SceneManager } from './ECS/SceneManager';
 import { IScene } from './ECS/IScene';
 import { ServiceContainer } from './Core/ServiceContainer';
+import { PluginManager } from './Core/PluginManager';
+import { IPlugin } from './Core/Plugin';
 
 /**
  * 游戏引擎核心类
@@ -121,6 +123,13 @@ export class Core {
     private _sceneManager: SceneManager;
 
     /**
+     * 插件管理器
+     *
+     * 管理所有插件的生命周期。
+     */
+    private _pluginManager: PluginManager;
+
+    /**
      * Core配置
      */
     private _config: ICoreConfig;
@@ -162,6 +171,11 @@ export class Core {
         // 初始化场景管理器
         this._sceneManager = new SceneManager();
         this._serviceContainer.registerInstance(SceneManager, this._sceneManager);
+
+        // 初始化插件管理器
+        this._pluginManager = new PluginManager();
+        this._pluginManager.initialize(this, this._serviceContainer);
+        this._serviceContainer.registerInstance(PluginManager, this._pluginManager);
 
         Core.entitySystemsEnabled = this._config.enableEntitySystems ?? true;
         this.debug = this._config.debug ?? true;
@@ -468,6 +482,90 @@ export class Core {
      */
     public static get isDebugEnabled(): boolean {
         return this._instance?._config.debugConfig?.enabled || false;
+    }
+
+    /**
+     * 安装插件
+     *
+     * @param plugin - 插件实例
+     * @throws 如果Core实例未创建或插件安装失败
+     *
+     * @example
+     * ```typescript
+     * Core.create({ debug: true });
+     *
+     * // 安装插件
+     * await Core.installPlugin(new MyPlugin());
+     * ```
+     */
+    public static async installPlugin(plugin: IPlugin): Promise<void> {
+        if (!this._instance) {
+            throw new Error('Core实例未创建，请先调用Core.create()');
+        }
+
+        await this._instance._pluginManager.install(plugin);
+    }
+
+    /**
+     * 卸载插件
+     *
+     * @param name - 插件名称
+     * @throws 如果Core实例未创建或插件卸载失败
+     *
+     * @example
+     * ```typescript
+     * await Core.uninstallPlugin('my-plugin');
+     * ```
+     */
+    public static async uninstallPlugin(name: string): Promise<void> {
+        if (!this._instance) {
+            throw new Error('Core实例未创建，请先调用Core.create()');
+        }
+
+        await this._instance._pluginManager.uninstall(name);
+    }
+
+    /**
+     * 获取插件实例
+     *
+     * @param name - 插件名称
+     * @returns 插件实例，如果未安装则返回undefined
+     *
+     * @example
+     * ```typescript
+     * const myPlugin = Core.getPlugin('my-plugin');
+     * if (myPlugin) {
+     *     console.log(myPlugin.version);
+     * }
+     * ```
+     */
+    public static getPlugin(name: string): IPlugin | undefined {
+        if (!this._instance) {
+            return undefined;
+        }
+
+        return this._instance._pluginManager.getPlugin(name);
+    }
+
+    /**
+     * 检查插件是否已安装
+     *
+     * @param name - 插件名称
+     * @returns 是否已安装
+     *
+     * @example
+     * ```typescript
+     * if (Core.isPluginInstalled('my-plugin')) {
+     *     console.log('Plugin is installed');
+     * }
+     * ```
+     */
+    public static isPluginInstalled(name: string): boolean {
+        if (!this._instance) {
+            return false;
+        }
+
+        return this._instance._pluginManager.isInstalled(name);
     }
 
     /**
