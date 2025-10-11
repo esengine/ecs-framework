@@ -1,21 +1,18 @@
 import { IPoolable, PoolStats } from './IPoolable';
 import { Pool } from './Pool';
+import type { IService } from '../../Core/ServiceContainer';
 
 /**
  * 池管理器
  * 统一管理所有对象池
  */
-export class PoolManager {
-    private static instance: PoolManager;
+export class PoolManager implements IService {
     private pools = new Map<string, Pool<any>>();
     private autoCompactInterval = 60000; // 60秒
     private lastCompactTime = 0;
 
-    public static getInstance(): PoolManager {
-        if (!PoolManager.instance) {
-            PoolManager.instance = new PoolManager();
-        }
-        return PoolManager.instance;
+    constructor() {
+        // 普通构造函数，不再使用单例模式
     }
 
     /**
@@ -227,5 +224,13 @@ export class PoolManager {
         this.clearAllPools();
         this.pools.clear();
         this.lastCompactTime = 0;
+    }
+
+    /**
+     * 释放资源
+     * 实现 IService 接口
+     */
+    public dispose(): void {
+        this.reset();
     }
 }

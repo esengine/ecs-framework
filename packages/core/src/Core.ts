@@ -165,8 +165,9 @@ export class Core {
             this._performanceMonitor.enable();
         }
 
-        // 初始化对象池管理器（单例模式）
-        this._poolManager = PoolManager.getInstance();
+        // 初始化对象池管理器
+        this._poolManager = new PoolManager();
+        this._serviceContainer.registerInstance(PoolManager, this._poolManager);
 
         // 初始化场景管理器
         this._sceneManager = new SceneManager();
