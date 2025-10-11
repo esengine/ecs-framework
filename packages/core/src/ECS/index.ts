@@ -15,4 +15,6 @@ export * from './Core/Storage';
 export * from './Core/StorageDecorators';
 export * from './Serialization';
 export { ReferenceTracker, getSceneByEntityId } from './Core/ReferenceTracker';
-export type { EntityRefRecord } from './Core/ReferenceTracker'; 
+export type { EntityRefRecord } from './Core/ReferenceTracker';
+export { ReactiveQuery, ReactiveQueryChangeType } from './Core/ReactiveQuery';
+export type { ReactiveQueryChange, ReactiveQueryListener, ReactiveQueryConfig } from './Core/ReactiveQuery'; 

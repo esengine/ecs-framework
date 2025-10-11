@@ -449,22 +449,24 @@ describe('QuerySystem - 查询系统测试', () => {
             expect(parseFloat(stats.cacheStats.hitRate)).toBeLessThanOrEqual(100);
         });
 
-        test('缓存命中率应该在重复查询时提高', () => {
+        test('缓存命中率应该在重复查询时保持高命中率', () => {
             entities[0].addComponent(new PositionComponent(10, 20));
             entities[1].addComponent(new PositionComponent(30, 40));
 
-            // 第一次查询（缓存未命中）
+            // 第一次查询(创建响应式查询缓存)
             querySystem.queryAll(PositionComponent);
             let stats = querySystem.getStats();
             const initialHitRate = parseFloat(stats.cacheStats.hitRate);
 
-            // 重复查询（应该命中缓存）
+            // 重复查询(应该持续命中响应式查询缓存)
             for (let i = 0; i < 10; i++) {
                 querySystem.queryAll(PositionComponent);
             }
 
             stats = querySystem.getStats();
-            expect(parseFloat(stats.cacheStats.hitRate)).toBeGreaterThan(initialHitRate);
+            // 响应式查询永远100%命中,这是期望的优化效果
+            expect(parseFloat(stats.cacheStats.hitRate)).toBeGreaterThanOrEqual(initialHitRate);
+            expect(parseFloat(stats.cacheStats.hitRate)).toBe(100);
         });
 
         test('应该能够清理查询缓存', () => {
