@@ -1,5 +1,6 @@
 import { World, IWorldConfig } from './World';
 import { createLogger } from '../Utils/Logger';
+import type { IService } from '../Core/ServiceContainer';
 
 const logger = createLogger('WorldManager');
 
@@ -61,7 +62,7 @@ export interface IWorldManagerConfig {
  * }
  * ```
  */
-export class WorldManager {
+export class WorldManager implements IService {
     private readonly _config: IWorldManagerConfig;
     private readonly _worlds: Map<string, World> = new Map();
     private readonly _activeWorlds: Set<string> = new Set();
@@ -385,6 +386,14 @@ export class WorldManager {
         this._isRunning = false;
 
         logger.info('WorldManager已销毁');
+    }
+
+    /**
+     * 实现 IService 接口的 dispose 方法
+     * 调用 destroy 方法进行清理
+     */
+    public dispose(): void {
+        this.destroy();
     }
 
     // ===== 私有方法 =====

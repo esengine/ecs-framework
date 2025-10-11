@@ -12,6 +12,7 @@ import { IScene } from './ECS/IScene';
 import { ServiceContainer } from './Core/ServiceContainer';
 import { PluginManager } from './Core/PluginManager';
 import { IPlugin } from './Core/Plugin';
+import { WorldManager } from './ECS/WorldManager';
 
 /**
  * 游戏引擎核心类
@@ -123,6 +124,13 @@ export class Core {
     private _sceneManager: SceneManager;
 
     /**
+     * World管理器
+     *
+     * 管理多个独立的World实例（可选）。
+     */
+    private _worldManager: WorldManager;
+
+    /**
      * 插件管理器
      *
      * 管理所有插件的生命周期。
@@ -179,6 +187,10 @@ export class Core {
                 this._debugManager.onSceneChanged();
             }
         });
+
+        // 初始化World管理器
+        this._worldManager = new WorldManager();
+        this._serviceContainer.registerInstance(WorldManager, this._worldManager);
 
         // 初始化插件管理器
         this._pluginManager = new PluginManager();
