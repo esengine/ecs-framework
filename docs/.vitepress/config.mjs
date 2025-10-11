@@ -81,6 +81,14 @@ export default defineConfig({
           ]
         },
         {
+          text: '高级特性',
+          collapsed: false,
+          items: [
+            { text: '服务容器 (Service Container)', link: '/guide/service-container' },
+            { text: '插件系统 (Plugin System)', link: '/guide/plugin-system' }
+          ]
+        },
+        {
           text: '平台适配器',
           link: '/guide/platform-adapter',
           collapsed: false,

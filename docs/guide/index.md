@@ -30,3 +30,11 @@
 
 ### [平台适配器 (Platform Adapter)](./platform-adapter.md)
 了解如何为不同平台实现和注册平台适配器，支持浏览器、小游戏、Node.js等环境。
+
+## 高级特性
+
+### [服务容器 (Service Container)](./service-container.md)
+掌握依赖注入和服务管理，实现松耦合的架构设计。
+
+### [插件系统 (Plugin System)](./plugin-system.md)
+学习如何开发和使用插件，扩展框架功能，实现功能模块化。

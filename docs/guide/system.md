@@ -354,14 +354,18 @@ class PerformanceSystem extends EntitySystem {
 
 ### 添加系统到场景
 
+框架提供了两种方式添加系统：传入实例或传入类型（自动依赖注入）。
+
 ```typescript
 // 在场景子类中添加系统
 class GameScene extends Scene {
   protected initialize(): void {
-    // 添加系统
+    // 方式1：传入实例
     this.addSystem(new MovementSystem());
     this.addSystem(new RenderSystem());
-    this.addSystem(new PhysicsSystem());
+
+    // 方式2：传入类型（自动依赖注入）
+    this.addEntityProcessor(PhysicsSystem);
 
     // 设置系统更新顺序
     const movementSystem = this.getSystem(MovementSystem);
@@ -371,6 +375,48 @@ class GameScene extends Scene {
   }
 }
 ```
+
+### 系统依赖注入
+
+系统实现了 `IService` 接口，支持通过依赖注入获取其他服务或系统：
+
+```typescript
+import { ECSSystem, Injectable, Inject } from '@esengine/ecs-framework';
+
+@Injectable()
+@ECSSystem('Physics')
+class PhysicsSystem extends EntitySystem {
+  constructor(
+    @Inject(CollisionService) private collision: CollisionService
+  ) {
+    super(Matcher.all(Transform, RigidBody));
+  }
+
+  protected process(entities: readonly Entity[]): void {
+    // 使用注入的服务
+    this.collision.detectCollisions(entities);
+  }
+
+  // 实现 IService 接口的 dispose 方法
+  public dispose(): void {
+    // 清理资源
+  }
+}
+
+// 使用时传入类型即可，框架会自动注入依赖
+class GameScene extends Scene {
+  protected initialize(): void {
+    // 自动依赖注入
+    this.addEntityProcessor(PhysicsSystem);
+  }
+}
+```
+
+注意事项：
+- 使用 `@Injectable()` 装饰器标记需要依赖注入的系统
+- 在构造函数参数中使用 `@Inject()` 装饰器声明依赖
+- 系统必须实现 `dispose()` 方法（IService 接口要求）
+- 使用 `addEntityProcessor(类型)` 而不是 `addSystem(new 类型())` 来启用依赖注入
 
 ### 系统更新顺序
 
