@@ -249,6 +249,30 @@ export class Core {
     }
 
     /**
+     * 获取World管理器
+     *
+     * 用于管理多个独立的World实例（高级用户）。
+     *
+     * @returns WorldManager实例
+     * @throws 如果Core实例未创建
+     *
+     * @example
+     * ```typescript
+     * // 创建多个游戏房间
+     * const wm = Core.worldManager;
+     * const room1 = wm.createWorld('room_001');
+     * room1.createScene('game', new GameScene());
+     * room1.start();
+     * ```
+     */
+    public static get worldManager(): WorldManager {
+        if (!this._instance) {
+            throw new Error('Core实例未创建，请先调用Core.create()');
+        }
+        return this._instance._worldManager;
+    }
+
+    /**
      * 创建Core实例
      *
      * 如果实例已存在，则返回现有实例。
@@ -629,8 +653,11 @@ export class Core {
         // 更新对象池管理器
         this._poolManager.update();
 
-        // 更新场景
+        // 更新默认场景（通过 SceneManager）
         this._sceneManager.update();
+
+        // 更新额外的 WorldManager
+        this._worldManager.updateAll();
 
         // 更新调试管理器（基于FPS的数据发送）
         if (this._debugManager) {

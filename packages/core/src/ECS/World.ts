@@ -184,6 +184,17 @@ export class World {
     }
 
     /**
+     * 移除所有Scene
+     */
+    public removeAllScenes(): void {
+        const sceneIds = Array.from(this._scenes.keys());
+        for (const sceneId of sceneIds) {
+            this.removeScene(sceneId);
+        }
+        logger.info(`从World '${this.name}' 中移除所有Scene`);
+    }
+
+    /**
      * 设置Scene激活状态
      */
     public setSceneActive(sceneId: string, active: boolean): void {

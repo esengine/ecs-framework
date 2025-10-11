@@ -3,6 +3,7 @@ import { ECSFluentAPI, createECSAPI } from './Core/FluentAPI';
 import { Time } from '../Utils/Time';
 import { createLogger } from '../Utils/Logger';
 import type { IService } from '../Core/ServiceContainer';
+import { World } from './World';
 
 /**
  * 单场景管理器
@@ -48,9 +49,9 @@ import type { IService } from '../Core/ServiceContainer';
  */
 export class SceneManager implements IService {
     /**
-     * 当前活跃场景
+     * 内部默认World
      */
-    private _currentScene: IScene | null = null;
+    private _defaultWorld: World;
 
     /**
      * 待切换的下一个场景（延迟切换用）
@@ -71,6 +72,16 @@ export class SceneManager implements IService {
      * 场景切换回调函数
      */
     private _onSceneChangedCallback?: () => void;
+
+    /**
+     * 默认场景ID
+     */
+    private static readonly DEFAULT_SCENE_ID = '__main__';
+
+    constructor() {
+        this._defaultWorld = new World({ name: '__default__' });
+        this._defaultWorld.start();
+    }
 
     /**
      * 设置场景切换回调
@@ -97,16 +108,12 @@ export class SceneManager implements IService {
      * ```
      */
     public setScene<T extends IScene>(scene: T): T {
-        // 结束旧场景
-        if (this._currentScene) {
-            this._logger.info(`Ending scene: ${this._currentScene.name}`);
-            this._currentScene.end();
-        }
+        // 移除旧场景
+        this._defaultWorld.removeAllScenes();
 
-        // 设置并初始化新场景
-        this._currentScene = scene;
-        this._currentScene.initialize();
-        this._currentScene.begin();
+        // 通过 World 创建新场景
+        this._defaultWorld.createScene(SceneManager.DEFAULT_SCENE_ID, scene);
+        this._defaultWorld.setSceneActive(SceneManager.DEFAULT_SCENE_ID, true);
 
         // 重建ECS API
         if (scene.querySystem && scene.eventSystem) {
@@ -160,7 +167,7 @@ export class SceneManager implements IService {
      * @returns 当前场景实例，如果没有场景则返回null
      */
     public get currentScene(): IScene | null {
-        return this._currentScene;
+        return this._defaultWorld.getScene(SceneManager.DEFAULT_SCENE_ID);
     }
 
     /**
@@ -207,10 +214,9 @@ export class SceneManager implements IService {
             this._nextScene = null;
         }
 
-        // 更新当前场景
-        if (this._currentScene) {
-            this._currentScene.update();
-        }
+        // 通过 World 统一更新
+        this._defaultWorld.updateGlobalSystems();
+        this._defaultWorld.updateScenes();
     }
 
     /**
@@ -220,12 +226,9 @@ export class SceneManager implements IService {
      * 通常在应用程序关闭时调用。
      */
     public destroy(): void {
-        if (this._currentScene) {
-            this._logger.info(`Destroying scene: ${this._currentScene.name}`);
-            this._currentScene.end();
-            this._currentScene = null;
-        }
+        this._logger.info('SceneManager destroying');
 
+        this._defaultWorld.destroy();
         this._nextScene = null;
         this._ecsAPI = null;
 
@@ -238,7 +241,7 @@ export class SceneManager implements IService {
      * @returns 如果有活跃场景返回true，否则返回false
      */
     public get hasScene(): boolean {
-        return this._currentScene !== null;
+        return this._defaultWorld.getScene(SceneManager.DEFAULT_SCENE_ID) !== null;
     }
 
     /**
