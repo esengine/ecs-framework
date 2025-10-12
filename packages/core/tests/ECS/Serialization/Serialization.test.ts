@@ -557,14 +557,14 @@ describe('ECS Serialization System', () => {
             // 二进制序列化
             const binaryData = scene1.serialize({ format: 'binary' });
 
-            // 验证是Buffer类型
-            expect(Buffer.isBuffer(binaryData)).toBe(true);
+            // 验证是Uint8Array类型
+            expect(binaryData instanceof Uint8Array).toBe(true);
 
             // JSON序列化对比
             const jsonData = scene1.serialize({ format: 'json', pretty: false });
 
             // 二进制应该更小
-            const binarySize = (binaryData as Buffer).length;
+            const binarySize = (binaryData as Uint8Array).length;
             const jsonSize = (jsonData as string).length;
             console.log(`Binary size: ${binarySize} bytes, JSON size: ${jsonSize} bytes`);
             expect(binarySize).toBeLessThan(jsonSize);

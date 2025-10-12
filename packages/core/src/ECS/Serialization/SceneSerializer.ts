@@ -11,7 +11,7 @@ import { ComponentType, ComponentRegistry } from '../Core/ComponentStorage';
 import { EntitySerializer, SerializedEntity } from './EntitySerializer';
 import { getComponentTypeName } from '../Decorators';
 import { getSerializationMetadata } from './SerializationDecorators';
-import * as msgpack from 'msgpack-lite';
+import { encode, decode } from '@msgpack/msgpack';
 
 /**
  * 场景序列化格式
@@ -154,9 +154,9 @@ export class SceneSerializer {
      *
      * @param scene 要序列化的场景
      * @param options 序列化选项
-     * @returns 序列化后的数据（JSON字符串或二进制Buffer）
+     * @returns 序列化后的数据（JSON字符串或二进制Uint8Array）
      */
-    public static serialize(scene: IScene, options?: SceneSerializationOptions): string | Buffer {
+    public static serialize(scene: IScene, options?: SceneSerializationOptions): string | Uint8Array {
         const opts: SceneSerializationOptions = {
             systems: false,
             format: 'json',
@@ -207,7 +207,7 @@ export class SceneSerializer {
                 : JSON.stringify(serializedScene);
         } else {
             // 二进制格式（使用 MessagePack）
-            return msgpack.encode(serializedScene);
+            return encode(serializedScene);
         }
     }
 
@@ -215,12 +215,12 @@ export class SceneSerializer {
      * 反序列化场景
      *
      * @param scene 目标场景
-     * @param saveData 序列化的数据（JSON字符串或二进制Buffer）
+     * @param saveData 序列化的数据（JSON字符串或二进制Uint8Array）
      * @param options 反序列化选项
      */
     public static deserialize(
         scene: IScene,
-        saveData: string | Buffer,
+        saveData: string | Uint8Array,
         options?: SceneDeserializationOptions
     ): void {
         const opts: SceneDeserializationOptions = {
@@ -237,7 +237,7 @@ export class SceneSerializer {
                 serializedScene = JSON.parse(saveData);
             } else {
                 // 二进制格式（MessagePack）
-                serializedScene = msgpack.decode(saveData);
+                serializedScene = decode(saveData) as SerializedScene;
             }
         } catch (error) {
             throw new Error(`Failed to parse save data: ${error}`);

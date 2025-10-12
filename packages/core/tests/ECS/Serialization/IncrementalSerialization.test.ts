@@ -464,7 +464,7 @@ describe('Incremental Serialization System', () => {
             const incremental = scene.serializeIncremental();
             const binary = IncrementalSerializer.serializeIncremental(incremental, { format: 'binary' });
 
-            expect(Buffer.isBuffer(binary)).toBe(true);
+            expect(binary instanceof Uint8Array).toBe(true);
 
             const deserialized = IncrementalSerializer.deserializeIncremental(binary);
             expect(deserialized.version).toBe(incremental.version);
