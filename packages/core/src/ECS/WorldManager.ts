@@ -1,8 +1,6 @@
 import { World, IWorldConfig } from './World';
 import { createLogger } from '../Utils/Logger';
 import type { IService } from '../Core/ServiceContainer';
-import type { IUpdatable } from '../Types/IUpdatable';
-import { Injectable, Updatable } from '../Core/DI';
 
 const logger = createLogger('WorldManager');
 
@@ -14,28 +12,21 @@ export interface IWorldManagerConfig {
      * 最大World数量
      */
     maxWorlds?: number;
-
+    
     /**
      * 是否自动清理空World
      */
     autoCleanup?: boolean;
-
+    
     /**
      * 清理间隔（毫秒）
      */
     cleanupInterval?: number;
-
+    
     /**
      * 是否启用调试模式
      */
     debug?: boolean;
-
-    /**
-     * 是否创建默认World(默认true)
-     *
-     * 当通过Core使用时应该为true,直接使用WorldManager时可设为false
-     */
-    createDefaultWorld?: boolean;
 }
 
 /**
@@ -66,18 +57,12 @@ export interface IWorldManagerConfig {
  *
  * // 游戏循环
  * function gameLoop(deltaTime: number) {
- *     Core.update(deltaTime);  // 自动更新所有@Updatable服务(包括WorldManager)
+ *     Core.update(deltaTime);
+ *     worldManager.updateAll();  // 更新所有活跃World
  * }
  * ```
  */
-@Injectable()
-@Updatable(5)
-export class WorldManager implements IService, IUpdatable {
-    /**
-     * 默认World的ID
-     */
-    public static readonly DEFAULT_WORLD_ID = '__default__';
-
+export class WorldManager implements IService {
     private readonly _config: IWorldManagerConfig;
     private readonly _worlds: Map<string, World> = new Map();
     private readonly _activeWorlds: Set<string> = new Set();
@@ -90,48 +75,22 @@ export class WorldManager implements IService, IUpdatable {
             autoCleanup: true,
             cleanupInterval: 30000, // 30秒
             debug: false,
-            createDefaultWorld: true,  // 默认创建
             ...config
         };
 
         // 默认启动运行状态
         this._isRunning = true;
 
-        // 如果配置要求,创建并注册默认World
-        if (this._config.createDefaultWorld) {
-            const defaultWorld = new World({ name: WorldManager.DEFAULT_WORLD_ID });
-            this._worlds.set(WorldManager.DEFAULT_WORLD_ID, defaultWorld);
-            this._activeWorlds.add(WorldManager.DEFAULT_WORLD_ID);
-            defaultWorld.start();
-        }
-
         logger.info('WorldManager已初始化', {
             maxWorlds: this._config.maxWorlds,
             autoCleanup: this._config.autoCleanup,
-            cleanupInterval: this._config.cleanupInterval,
-            defaultWorldCreated: this._config.createDefaultWorld
+            cleanupInterval: this._config.cleanupInterval
         });
 
         this.startCleanupTimer();
     }
 
     // ===== World管理 =====
-
-    /**
-     * 获取默认World
-     *
-     * 默认World由WorldManager自动创建，供SceneManager使用。
-     * 此方法主要供SceneManager内部使用。
-     *
-     * @returns 默认World实例
-     */
-    public getDefaultWorld(): World {
-        const defaultWorld = this._worlds.get(WorldManager.DEFAULT_WORLD_ID);
-        if (!defaultWorld) {
-            throw new Error('默认World不存在，这不应该发生');
-        }
-        return defaultWorld;
-    }
 
     /**
      * 创建新World
@@ -164,16 +123,8 @@ export class WorldManager implements IService, IUpdatable {
 
     /**
      * 移除World
-     *
-     * 注意:默认World不能被删除
      */
     public removeWorld(worldId: string): boolean {
-        // 防止删除默认World
-        if (worldId === WorldManager.DEFAULT_WORLD_ID) {
-            logger.warn('无法删除默认World');
-            return false;
-        }
-
         const world = this._worlds.get(worldId);
         if (!world) {
             return false;
@@ -246,12 +197,18 @@ export class WorldManager implements IService, IUpdatable {
     /**
      * 更新所有活跃的World
      *
-     * 此方法由ServiceContainer自动调用(@Updatable装饰器)
+     * 应该在每帧的游戏循环中调用。
      * 会自动更新所有活跃World的全局系统和场景。
      *
-     * @param deltaTime 帧时间间隔(未使用,保留用于接口兼容)
+     * @example
+     * ```typescript
+     * function gameLoop(deltaTime: number) {
+     *     Core.update(deltaTime);      // 更新全局服务
+     *     worldManager.updateAll();    // 更新所有World
+     * }
+     * ```
      */
-    public update(deltaTime?: number): void {
+    public updateAll(): void {
         if (!this._isRunning) return;
 
         for (const worldId of this._activeWorlds) {

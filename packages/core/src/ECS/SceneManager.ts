@@ -3,10 +3,7 @@ import { ECSFluentAPI, createECSAPI } from './Core/FluentAPI';
 import { Time } from '../Utils/Time';
 import { createLogger } from '../Utils/Logger';
 import type { IService } from '../Core/ServiceContainer';
-import type { IUpdatable } from '../Types/IUpdatable';
 import { World } from './World';
-import { WorldManager } from './WorldManager';
-import { Injectable, Inject, Updatable } from '../Core/DI';
 
 /**
  * 单场景管理器
@@ -21,12 +18,14 @@ import { Injectable, Inject, Updatable } from '../Core/DI';
  * - 简单直观的API
  * - 支持延迟场景切换
  * - 自动管理ECS API
- * - 通过依赖注入获取WorldManager的默认World
  *
  * @example
  * ```typescript
  * // 初始化Core
  * Core.create({ debug: true });
+ *
+ * // 创建场景管理器
+ * const sceneManager = new SceneManager();
  *
  * // 设置场景
  * class GameScene extends Scene {
@@ -36,22 +35,21 @@ import { Injectable, Inject, Updatable } from '../Core/DI';
  *     }
  * }
  *
- * Core.setScene(new GameScene());
+ * sceneManager.setScene(new GameScene());
  *
  * // 游戏循环
  * function gameLoop(deltaTime: number) {
- *     Core.update(deltaTime);  // 自动更新所有服务(包括SceneManager)
+ *     Core.update(deltaTime);      // 更新全局服务
+ *     sceneManager.update();       // 更新场景
  * }
  *
  * // 延迟切换场景（下一帧生效）
- * Core.loadScene(new MenuScene());
+ * sceneManager.loadScene(new MenuScene());
  * ```
  */
-@Injectable()
-@Updatable(10)
-export class SceneManager implements IService, IUpdatable {
+export class SceneManager implements IService {
     /**
-     * 内部默认World(从WorldManager获取)
+     * 内部默认World
      */
     private _defaultWorld: World;
 
@@ -80,18 +78,9 @@ export class SceneManager implements IService, IUpdatable {
      */
     private static readonly DEFAULT_SCENE_ID = '__main__';
 
-    /**
-     * 构造函数
-     *
-     * WorldManager通过依赖注入自动传入
-     *
-     * @param worldManager WorldManager实例,用于获取默认World
-     */
-    constructor(
-        @Inject(WorldManager) worldManager: WorldManager
-    ) {
-        // 使用WorldManager管理的默认World
-        this._defaultWorld = worldManager.getDefaultWorld();
+    constructor() {
+        this._defaultWorld = new World({ name: '__default__' });
+        this._defaultWorld.start();
     }
 
     /**
