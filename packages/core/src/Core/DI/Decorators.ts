@@ -35,6 +35,12 @@ export interface InjectableMetadata {
      * 依赖列表
      */
     dependencies: Array<ServiceType<any> | string | symbol>;
+
+    /**
+     * 属性注入映射
+     * key: 属性名, value: 服务类型
+     */
+    properties?: Map<string | symbol, ServiceType<any>>;
 }
 
 /**
@@ -77,10 +83,12 @@ export interface UpdatableMetadata {
  */
 export function Injectable(): ClassDecorator {
     return function <T extends Function>(target: T): T {
-        // 标记为可注入
+        const existing = injectableMetadata.get(target);
+
         injectableMetadata.set(target, {
             injectable: true,
-            dependencies: []
+            dependencies: [],
+            properties: existing?.properties
         });
 
         return target;
@@ -142,20 +150,7 @@ export function Updatable(priority: number = 0): ClassDecorator {
  *
  * 标记构造函数参数需要注入的服务类型
  *
- * @param serviceType 服务类型标识符（类、字符串或Symbol）
- *
- * @example
- * ```typescript
- * @Injectable()
- * class MySystem extends EntitySystem {
- *     constructor(
- *         @Inject(TimeService) private timeService: TimeService,
- *         @Inject(PhysicsService) private physics: PhysicsService
- *     ) {
- *         super();
- *     }
- * }
- * ```
+ * @param serviceType 服务类型标识符
  */
 export function Inject(serviceType: ServiceType<any> | string | symbol): ParameterDecorator {
     return function (target: Object, propertyKey: string | symbol | undefined, parameterIndex: number) {
@@ -168,6 +163,35 @@ export function Inject(serviceType: ServiceType<any> | string | symbol): Paramet
 
         // 记录参数索引和服务类型的映射
         params.set(parameterIndex, serviceType);
+    };
+}
+
+/**
+ * @InjectProperty() 装饰器
+ *
+ * 通过属性装饰器注入依赖
+ *
+ * 注入时机：在构造函数执行后、onInitialize() 调用前完成
+ *
+ * @param serviceType 服务类型
+ */
+export function InjectProperty(serviceType: ServiceType<any>): PropertyDecorator {
+    return function (target: any, propertyKey: string | symbol) {
+        let metadata = injectableMetadata.get(target.constructor);
+
+        if (!metadata) {
+            metadata = {
+                injectable: true,
+                dependencies: []
+            };
+            injectableMetadata.set(target.constructor, metadata);
+        }
+
+        if (!metadata.properties) {
+            metadata.properties = new Map();
+        }
+
+        metadata.properties.set(propertyKey, serviceType);
     };
 }
 
@@ -250,6 +274,29 @@ export function createInstance<T>(
 
     // 创建实例
     return new constructor(...dependencies);
+}
+
+/**
+ * 为实例注入属性依赖
+ *
+ * @param instance 目标实例
+ * @param container 服务容器
+ */
+export function injectProperties<T>(instance: T, container: ServiceContainer): void {
+    const constructor = (instance as any).constructor;
+    const metadata = getInjectableMetadata(constructor);
+
+    if (!metadata?.properties || metadata.properties.size === 0) {
+        return;
+    }
+
+    for (const [propertyKey, serviceType] of metadata.properties) {
+        const service = container.resolve(serviceType);
+
+        if (service !== null) {
+            (instance as any)[propertyKey] = service;
+        }
+    }
 }
 
 /**
