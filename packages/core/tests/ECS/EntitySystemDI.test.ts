@@ -3,7 +3,7 @@ import { EntitySystem } from '../../src/ECS/Systems/EntitySystem';
 import { Entity } from '../../src/ECS/Entity';
 import { Component } from '../../src/ECS/Component';
 import { Matcher } from '../../src/ECS/Utils/Matcher';
-import { Injectable, Inject } from '../../src/Core/DI';
+import { Injectable, Inject, InjectProperty } from '../../src/Core/DI';
 import { Core } from '../../src/Core';
 import type { IService } from '../../src/Core/ServiceContainer';
 import { ECSSystem } from '../../src/ECS/Decorators';
@@ -421,6 +421,172 @@ describe('EntitySystem - 依赖注入测试', () => {
             const transform = entity.getComponent(Transform)!;
             expect(transform.x).toBeCloseTo(1.6, 1);
             expect(transform.y).toBeCloseTo(0.8, 1);
+        });
+    });
+
+    describe('属性注入 @InjectProperty', () => {
+        test('应该支持单个属性注入', () => {
+            @Injectable()
+            @ECSSystem('Config')
+            class GameConfig extends EntitySystem implements IService {
+                public bulletDamage = 10;
+
+                constructor() {
+                    super(Matcher.empty());
+                }
+                override dispose() {}
+            }
+
+            @Injectable()
+            @ECSSystem('Combat')
+            class CombatSystem extends EntitySystem implements IService {
+                @InjectProperty(GameConfig)
+                gameConfig!: GameConfig;
+
+                constructor() {
+                    super(Matcher.empty().all(Health));
+                }
+
+                protected override onInitialize(): void {
+                    expect(this.gameConfig).toBeInstanceOf(GameConfig);
+                    expect(this.gameConfig.bulletDamage).toBe(10);
+                }
+
+                override dispose() {}
+            }
+
+            scene.addEntityProcessor(GameConfig);
+            scene.addEntityProcessor(CombatSystem);
+        });
+
+        test('应该支持多个属性注入', () => {
+            @Injectable()
+            @ECSSystem('Time')
+            class TimeService extends EntitySystem implements IService {
+                public deltaTime = 0.016;
+                constructor() {
+                    super(Matcher.empty());
+                }
+                override dispose() {}
+            }
+
+            @Injectable()
+            @ECSSystem('Collision')
+            class CollisionSystem extends EntitySystem implements IService {
+                public checkCount = 0;
+                constructor() {
+                    super(Matcher.empty());
+                }
+                override dispose() {}
+            }
+
+            @Injectable()
+            @ECSSystem('Physics')
+            class PhysicsSystem extends EntitySystem implements IService {
+                @InjectProperty(TimeService)
+                time!: TimeService;
+
+                @InjectProperty(CollisionSystem)
+                collision!: CollisionSystem;
+
+                constructor() {
+                    super(Matcher.empty());
+                }
+
+                protected override onInitialize(): void {
+                    expect(this.time).toBeInstanceOf(TimeService);
+                    expect(this.collision).toBeInstanceOf(CollisionSystem);
+                    expect(this.time.deltaTime).toBe(0.016);
+                }
+
+                override dispose() {}
+            }
+
+            scene.registerSystems([TimeService, CollisionSystem, PhysicsSystem]);
+        });
+
+        test('属性注入应该在onInitialize之前完成', () => {
+            @Injectable()
+            @ECSSystem('Service')
+            class TestService extends EntitySystem implements IService {
+                public value = 42;
+                constructor() {
+                    super(Matcher.empty());
+                }
+                override dispose() {}
+            }
+
+            @Injectable()
+            @ECSSystem('Consumer')
+            class ConsumerSystem extends EntitySystem implements IService {
+                @InjectProperty(TestService)
+                service!: TestService;
+
+                private initializeValue = 0;
+
+                constructor() {
+                    super(Matcher.empty());
+                }
+
+                protected override onInitialize(): void {
+                    this.initializeValue = this.service.value;
+                }
+
+                public getInitializeValue(): number {
+                    return this.initializeValue;
+                }
+
+                override dispose() {}
+            }
+
+            scene.addEntityProcessor(TestService);
+            const consumer = scene.addEntityProcessor(ConsumerSystem);
+
+            expect(consumer.getInitializeValue()).toBe(42);
+        });
+
+        test('属性注入可以与构造函数注入混合使用', () => {
+            @Injectable()
+            @ECSSystem('A')
+            class ServiceA extends EntitySystem implements IService {
+                public valueA = 'A';
+                constructor() {
+                    super(Matcher.empty());
+                }
+                override dispose() {}
+            }
+
+            @Injectable()
+            @ECSSystem('B')
+            class ServiceB extends EntitySystem implements IService {
+                public valueB = 'B';
+                constructor() {
+                    super(Matcher.empty());
+                }
+                override dispose() {}
+            }
+
+            @Injectable()
+            @ECSSystem('Mixed')
+            class MixedSystem extends EntitySystem implements IService {
+                @InjectProperty(ServiceB)
+                serviceB!: ServiceB;
+
+                constructor(@Inject(ServiceA) public serviceA: ServiceA) {
+                    super(Matcher.empty());
+                }
+
+                protected override onInitialize(): void {
+                    expect(this.serviceA).toBeInstanceOf(ServiceA);
+                    expect(this.serviceB).toBeInstanceOf(ServiceB);
+                    expect(this.serviceA.valueA).toBe('A');
+                    expect(this.serviceB.valueB).toBe('B');
+                }
+
+                override dispose() {}
+            }
+
+            scene.registerSystems([ServiceA, ServiceB, MixedSystem]);
         });
     });
 });

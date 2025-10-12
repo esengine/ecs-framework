@@ -15,7 +15,7 @@ import { IncrementalSerializer, IncrementalSnapshot, IncrementalSerializationOpt
 import { ComponentPoolManager } from './Core/ComponentPool';
 import { PerformanceMonitor } from '../Utils/PerformanceMonitor';
 import { ServiceContainer, type ServiceType } from '../Core/ServiceContainer';
-import { createInstance, isInjectable } from '../Core/DI';
+import { createInstance, isInjectable, injectProperties } from '../Core/DI';
 import { isUpdatable, getUpdatableMetadata } from '../Core/DI/Decorators';
 import { createLogger } from '../Utils/Logger';
 
@@ -577,6 +577,8 @@ export class Scene implements IScene {
         }
 
         this._services.registerInstance(constructor, system);
+
+        injectProperties(system, this._services);
 
         system.initialize();
 
