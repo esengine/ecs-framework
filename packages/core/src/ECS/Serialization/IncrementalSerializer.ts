@@ -11,7 +11,7 @@ import { Component } from '../Component';
 import { ComponentSerializer, SerializedComponent } from './ComponentSerializer';
 import { SerializedEntity } from './EntitySerializer';
 import { ComponentType } from '../Core/ComponentStorage';
-import * as msgpack from 'msgpack-lite';
+import { encode, decode } from '@msgpack/msgpack';
 
 /**
  * 变更操作类型
@@ -609,7 +609,7 @@ export class IncrementalSerializer {
      *
      * @param incremental 增量快照
      * @param options 序列化选项
-     * @returns 序列化后的数据（JSON字符串或二进制Buffer）
+     * @returns 序列化后的数据（JSON字符串或二进制Uint8Array）
      *
      * @example
      * ```typescript
@@ -631,7 +631,7 @@ export class IncrementalSerializer {
     public static serializeIncremental(
         incremental: IncrementalSnapshot,
         options?: { format?: IncrementalSerializationFormat; pretty?: boolean }
-    ): string | Buffer {
+    ): string | Uint8Array {
         const opts = {
             format: 'json' as IncrementalSerializationFormat,
             pretty: false,
@@ -639,7 +639,7 @@ export class IncrementalSerializer {
         };
 
         if (opts.format === 'binary') {
-            return msgpack.encode(incremental);
+            return encode(incremental);
         } else {
             return opts.pretty
                 ? JSON.stringify(incremental, null, 2)
@@ -650,7 +650,7 @@ export class IncrementalSerializer {
     /**
      * 反序列化增量快照
      *
-     * @param data 序列化的数据（JSON字符串或二进制Buffer）
+     * @param data 序列化的数据（JSON字符串或二进制Uint8Array）
      * @returns 增量快照
      *
      * @example
@@ -662,13 +662,13 @@ export class IncrementalSerializer {
      * const snapshot = IncrementalSerializer.deserializeIncremental(buffer);
      * ```
      */
-    public static deserializeIncremental(data: string | Buffer): IncrementalSnapshot {
+    public static deserializeIncremental(data: string | Uint8Array): IncrementalSnapshot {
         if (typeof data === 'string') {
             // JSON格式
             return JSON.parse(data);
         } else {
             // 二进制格式（MessagePack）
-            return msgpack.decode(data);
+            return decode(data) as IncrementalSnapshot;
         }
     }
 

@@ -742,10 +742,10 @@ export class Scene implements IScene {
     /**
      * 序列化场景
      *
-     * 将场景及其所有实体、组件序列化为JSON字符串或二进制Buffer
+     * 将场景及其所有实体、组件序列化为JSON字符串或二进制Uint8Array
      *
      * @param options 序列化选项
-     * @returns 序列化后的数据（JSON字符串或二进制Buffer）
+     * @returns 序列化后的数据（JSON字符串或二进制Uint8Array）
      *
      * @example
      * ```typescript
@@ -761,7 +761,7 @@ export class Scene implements IScene {
      * });
      * ```
      */
-    public serialize(options?: SceneSerializationOptions): string | Buffer {
+    public serialize(options?: SceneSerializationOptions): string | Uint8Array {
         return SceneSerializer.serialize(this, options);
     }
 
@@ -770,7 +770,7 @@ export class Scene implements IScene {
      *
      * 从序列化数据恢复场景状态
      *
-     * @param saveData 序列化的数据（JSON字符串或二进制Buffer）
+     * @param saveData 序列化的数据（JSON字符串或二进制Uint8Array）
      * @param options 反序列化选项
      *
      * @example
@@ -786,7 +786,7 @@ export class Scene implements IScene {
      * });
      * ```
      */
-    public deserialize(saveData: string | Buffer, options?: SceneDeserializationOptions): void {
+    public deserialize(saveData: string | Uint8Array, options?: SceneDeserializationOptions): void {
         SceneSerializer.deserialize(this, saveData, options);
     }
 
@@ -858,7 +858,7 @@ export class Scene implements IScene {
     /**
      * 应用增量变更到场景
      *
-     * @param incremental 增量快照数据（IncrementalSnapshot对象、JSON字符串或二进制Buffer）
+     * @param incremental 增量快照数据（IncrementalSnapshot对象、JSON字符串或二进制Uint8Array）
      * @param componentRegistry 组件类型注册表（可选，默认使用全局注册表）
      *
      * @example
@@ -870,21 +870,20 @@ export class Scene implements IScene {
      * const jsonData = IncrementalSerializer.serializeIncremental(snapshot, { format: 'json' });
      * scene.applyIncremental(jsonData);
      *
-     * // 从二进制Buffer应用
+     * // 从二进制Uint8Array应用
      * const binaryData = IncrementalSerializer.serializeIncremental(snapshot, { format: 'binary' });
      * scene.applyIncremental(binaryData);
      * ```
      */
     public applyIncremental(
-        incremental: IncrementalSnapshot | string | Buffer,
+        incremental: IncrementalSnapshot | string | Uint8Array,
         componentRegistry?: Map<string, any>
     ): void {
         const isSerializedData = typeof incremental === 'string' ||
-            (typeof Buffer !== 'undefined' && Buffer.isBuffer(incremental)) ||
             incremental instanceof Uint8Array;
 
         const snapshot = isSerializedData
-            ? IncrementalSerializer.deserializeIncremental(incremental as string | Buffer)
+            ? IncrementalSerializer.deserializeIncremental(incremental as string | Uint8Array)
             : incremental as IncrementalSnapshot;
 
         const registry = componentRegistry || ComponentRegistry.getAllComponentNames() as Map<string, any>;
