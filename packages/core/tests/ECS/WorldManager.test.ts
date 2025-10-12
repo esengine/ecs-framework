@@ -42,8 +42,7 @@ describe('WorldManager', () => {
 
     beforeEach(() => {
         // WorldManager不再是单例，直接创建新实例
-        // 测试时不创建默认World
-        worldManager = new WorldManager({ createDefaultWorld: false });
+        worldManager = new WorldManager();
     });
 
     afterEach(() => {
@@ -60,8 +59,8 @@ describe('WorldManager', () => {
 
     describe('实例化', () => {
         test('可以创建多个独立的WorldManager实例', () => {
-            const manager1 = new WorldManager({ createDefaultWorld: false });
-            const manager2 = new WorldManager({ createDefaultWorld: false });
+            const manager1 = new WorldManager();
+            const manager2 = new WorldManager();
 
             expect(manager1).not.toBe(manager2);
 
@@ -77,8 +76,7 @@ describe('WorldManager', () => {
             const config: IWorldManagerConfig = {
                 maxWorlds: 10,
                 autoCleanup: true,
-                debug: false,
-                createDefaultWorld: false
+                debug: false
             };
 
             const instance = new WorldManager(config);
@@ -123,7 +121,7 @@ describe('WorldManager', () => {
         });
         
         test('超出最大World数量应该抛出错误', () => {
-            const limitedManager = new WorldManager({ maxWorlds: 2, createDefaultWorld: false });
+            const limitedManager = new WorldManager({ maxWorlds: 2 });
 
             limitedManager.createWorld('world1');
             limitedManager.createWorld('world2');
@@ -430,8 +428,7 @@ describe('WorldManager', () => {
             const invalidConfig: IWorldManagerConfig = {
                 maxWorlds: -1,
                 autoCleanup: true,
-                debug: true,
-                createDefaultWorld: false
+                debug: true
             };
 
             const manager = new WorldManager(invalidConfig);
@@ -445,8 +442,7 @@ describe('WorldManager', () => {
             const config: IWorldManagerConfig = {
                 maxWorlds: 3,
                 autoCleanup: true,
-                debug: true,
-                createDefaultWorld: false
+                debug: true
             };
 
             const manager = new WorldManager(config);

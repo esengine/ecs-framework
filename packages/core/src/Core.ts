@@ -13,7 +13,6 @@ import { ServiceContainer } from './Core/ServiceContainer';
 import { PluginManager } from './Core/PluginManager';
 import { IPlugin } from './Core/Plugin';
 import { WorldManager } from './ECS/WorldManager';
-import { registerInjectable } from './Core/DI';
 
 /**
  * 游戏引擎核心类
@@ -178,14 +177,9 @@ export class Core {
         this._poolManager = new PoolManager();
         this._serviceContainer.registerInstance(PoolManager, this._poolManager);
 
-        // 使用依赖注入自动注册WorldManager和SceneManager
-        // WorldManager会在构造时创建默认World
-        registerInjectable(this._serviceContainer, WorldManager);
-        this._worldManager = this._serviceContainer.resolve(WorldManager);
-
-        // SceneManager会通过@Inject自动获取WorldManager
-        registerInjectable(this._serviceContainer, SceneManager);
-        this._sceneManager = this._serviceContainer.resolve(SceneManager);
+        // 初始化场景管理器
+        this._sceneManager = new SceneManager();
+        this._serviceContainer.registerInstance(SceneManager, this._sceneManager);
 
         // 设置场景切换回调，通知调试管理器
         this._sceneManager.setSceneChangedCallback(() => {
@@ -193,6 +187,10 @@ export class Core {
                 this._debugManager.onSceneChanged();
             }
         });
+
+        // 初始化World管理器
+        this._worldManager = new WorldManager();
+        this._serviceContainer.registerInstance(WorldManager, this._worldManager);
 
         // 初始化插件管理器
         this._pluginManager = new PluginManager();
@@ -647,13 +645,19 @@ export class Core {
             this._performanceMonitor.updateFPS(Time.deltaTime);
         }
 
-        // 更新所有@Updatable服务(包括TimerManager, WorldManager, SceneManager等)
+        // 更新所有可更新的服务
         const servicesStartTime = this._performanceMonitor.startMonitoring('Services.update');
         this._serviceContainer.updateAll(deltaTime);
         this._performanceMonitor.endMonitoring('Services.update', servicesStartTime, this._serviceContainer.getUpdatableCount());
 
         // 更新对象池管理器
         this._poolManager.update();
+
+        // 更新默认场景（通过 SceneManager）
+        this._sceneManager.update();
+
+        // 更新额外的 WorldManager
+        this._worldManager.updateAll();
 
         // 更新调试管理器（基于FPS的数据发送）
         if (this._debugManager) {
