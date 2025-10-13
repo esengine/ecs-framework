@@ -7,6 +7,7 @@
 export {
     Injectable,
     Inject,
+    InjectProperty,
     Updatable,
     isInjectable,
     getInjectableMetadata,
@@ -14,6 +15,7 @@ export {
     isUpdatable,
     getUpdatableMetadata,
     createInstance,
+    injectProperties,
     registerInjectable
 } from './Decorators';
 

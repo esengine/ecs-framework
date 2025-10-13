@@ -14,6 +14,18 @@
 - **JSON格式**：人类可读，便于调试和编辑
 - **Binary格式**：使用MessagePack，体积更小，性能更高
 
+> **📢 v2.2.2 重要变更**
+>
+> 从 v2.2.2 开始，二进制序列化格式返回 `Uint8Array` 而非 Node.js 的 `Buffer`，以确保浏览器兼容性：
+> - `serialize({ format: 'binary' })` 返回 `string | Uint8Array`（原为 `string | Buffer`）
+> - `deserialize(data)` 接收 `string | Uint8Array`（原为 `string | Buffer`）
+> - `applyIncremental(data)` 接收 `IncrementalSnapshot | string | Uint8Array`（原为包含 `Buffer`）
+>
+> **迁移影响**：
+> - ✅ **运行时兼容**：Node.js 的 `Buffer` 继承自 `Uint8Array`，现有代码可直接运行
+> - ⚠️ **类型检查**：如果你的 TypeScript 代码中显式使用了 `Buffer` 类型，需要改为 `Uint8Array`
+> - ✅ **浏览器支持**：`Uint8Array` 是标准 JavaScript 类型，所有现代浏览器都支持
+
 ## 全量序列化
 
 ### 基础用法
@@ -63,6 +75,7 @@ const binaryData = scene.serialize({
 });
 
 // 保存为文件（Node.js环境）
+// 注意：binaryData 是 Uint8Array 类型，Node.js 的 fs 可以直接写入
 fs.writeFileSync('save.bin', binaryData);
 ```
 
@@ -285,7 +298,7 @@ otherScene.applyIncremental(incremental);
 const jsonData = IncrementalSerializer.serializeIncremental(incremental, { format: 'json' });
 otherScene.applyIncremental(jsonData);
 
-// 从二进制Buffer应用
+// 从二进制Uint8Array应用
 const binaryData = IncrementalSerializer.serializeIncremental(incremental, { format: 'binary' });
 otherScene.applyIncremental(binaryData);
 ```
@@ -552,9 +565,9 @@ class NetworkSync {
   }
 
   private receiveIncremental(data: ArrayBuffer): void {
-    // 直接应用二进制数据
-    const buffer = Buffer.from(data);
-    this.scene.applyIncremental(buffer);
+    // 直接应用二进制数据（ArrayBuffer 转 Uint8Array）
+    const uint8Array = new Uint8Array(data);
+    this.scene.applyIncremental(uint8Array);
   }
 }
 ```
@@ -790,7 +803,7 @@ class LargeDataComponent extends Component {
 
 - [`Scene.createIncrementalSnapshot()`](/api/classes/Scene#createincrementalsnapshot) - 创建基础快照
 - [`Scene.serializeIncremental()`](/api/classes/Scene#serializeincremental) - 获取增量变更
-- [`Scene.applyIncremental()`](/api/classes/Scene#applyincremental) - 应用增量变更（支持IncrementalSnapshot对象、JSON字符串或二进制Buffer）
+- [`Scene.applyIncremental()`](/api/classes/Scene#applyincremental) - 应用增量变更（支持IncrementalSnapshot对象、JSON字符串或二进制Uint8Array）
 - [`Scene.updateIncrementalSnapshot()`](/api/classes/Scene#updateincrementalsnapshot) - 更新快照基准
 - [`Scene.clearIncrementalSnapshot()`](/api/classes/Scene#clearincrementalsnapshot) - 清除快照
 - [`Scene.hasIncrementalSnapshot()`](/api/classes/Scene#hasincrementalsnapshot) - 检查是否有快照

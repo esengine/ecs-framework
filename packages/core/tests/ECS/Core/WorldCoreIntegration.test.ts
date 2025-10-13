@@ -47,6 +47,13 @@ class NetworkGlobalSystem implements IGlobalSystem {
 
 /**
  * World与Core集成测试
+ *
+ * 注意：v3.0重构后，Core不再直接管理Scene/World
+ * - 场景管理由 SceneManager 负责
+ * - 多世界管理由 WorldManager 负责
+ * - Core 仅负责全局服务（Timer、Performance等）
+ *
+ * 大部分旧的集成测试已移至 SceneManager.test.ts 和 WorldManager.test.ts
  */
 describe('World与Core集成测试', () => {
     let worldManager: WorldManager;
@@ -60,10 +67,8 @@ describe('World与Core集成测试', () => {
         Core.create({ debug: false });
 
         // WorldManager和SceneManager不再是单例
-        // SceneManager需要WorldManager的默认World,所以必须创建
-        worldManager = new WorldManager({ createDefaultWorld: true });
-        // SceneManager需要WorldManager实例
-        sceneManager = new SceneManager(worldManager);
+        worldManager = new WorldManager();
+        sceneManager = new SceneManager();
     });
 
     afterEach(() => {
@@ -104,8 +109,7 @@ describe('World与Core集成测试', () => {
             const world1 = worldManager.createWorld('world1');
             const world2 = worldManager.createWorld('world2');
 
-            // worldManager已包含默认World,所以总数是3
-            expect(worldManager.worldCount).toBe(3);
+            expect(worldManager.worldCount).toBe(2);
             expect(worldManager.getWorld('world1')).toBe(world1);
             expect(worldManager.getWorld('world2')).toBe(world2);
         });
@@ -133,7 +137,7 @@ describe('World与Core集成测试', () => {
 
             // 游戏循环
             Core.update(0.016);      // 更新全局服务
-            worldManager.update(); // 更新所有World
+            worldManager.updateAll(); // 更新所有World
 
             expect(world.isActive).toBe(true);
         });
@@ -146,7 +150,7 @@ describe('World与Core集成测试', () => {
             worldManager.setWorldActive('test-world', true);
 
             // 更新World
-            worldManager.update();
+            worldManager.updateAll();
 
             expect(globalSystem.syncCount).toBeGreaterThan(0);
         });
@@ -154,8 +158,8 @@ describe('World与Core集成测试', () => {
 
     describe('隔离性测试', () => {
         test('多个WorldManager实例应该完全隔离', () => {
-            const manager1 = new WorldManager({ createDefaultWorld: false });
-            const manager2 = new WorldManager({ createDefaultWorld: false });
+            const manager1 = new WorldManager();
+            const manager2 = new WorldManager();
 
             manager1.createWorld('world1');
             manager2.createWorld('world2');
@@ -171,10 +175,8 @@ describe('World与Core集成测试', () => {
         });
 
         test('多个SceneManager实例应该完全隔离', () => {
-            const wm1 = new WorldManager({ createDefaultWorld: true });
-            const wm2 = new WorldManager({ createDefaultWorld: true });
-            const sm1 = new SceneManager(wm1);
-            const sm2 = new SceneManager(wm2);
+            const sm1 = new SceneManager();
+            const sm2 = new SceneManager();
 
             const scene1 = new Scene();
             const scene2 = new Scene();
@@ -188,8 +190,6 @@ describe('World与Core集成测试', () => {
             // 清理
             sm1.destroy();
             sm2.destroy();
-            wm1.destroy();
-            wm2.destroy();
         });
     });
 });
