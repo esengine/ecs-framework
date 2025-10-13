@@ -12,14 +12,14 @@ import { getComponentInstanceTypeName, getSystemInstanceTypeName } from '../../E
 import type { IService } from '../../Core/ServiceContainer';
 import { SceneManager } from '../../ECS/SceneManager';
 import { PerformanceMonitor } from '../PerformanceMonitor';
+import { Injectable, Inject } from '../../Core/DI/Decorators';
 
 /**
  * 调试管理器
  *
  * 整合所有调试数据收集器，负责收集和发送调试数据
- *
- * 通过构造函数接收SceneManager和PerformanceMonitor，避免直接依赖Core实例
  */
+@Injectable()
 export class DebugManager implements IService {
     private config: IECSDebugConfig;
     private webSocketManager: WebSocketManager;
@@ -36,15 +36,9 @@ export class DebugManager implements IService {
     private sendInterval: number;
     private isRunning: boolean = false;
 
-    /**
-     * 构造调试管理器
-     * @param sceneManager 场景管理器
-     * @param performanceMonitor 性能监控器
-     * @param config 调试配置
-     */
     constructor(
-        sceneManager: SceneManager,
-        performanceMonitor: PerformanceMonitor,
+        @Inject(SceneManager) sceneManager: SceneManager,
+        @Inject(PerformanceMonitor) performanceMonitor: PerformanceMonitor,
         config: IECSDebugConfig
     ) {
         this.config = config;
