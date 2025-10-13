@@ -13,6 +13,8 @@ import { ServiceContainer } from './Core/ServiceContainer';
 import { PluginManager } from './Core/PluginManager';
 import { IPlugin } from './Core/Plugin';
 import { WorldManager } from './ECS/WorldManager';
+import { DebugConfigService } from './Utils/Debug/DebugConfigService';
+import { createInstance } from './Core/DI/Decorators';
 
 /**
  * 游戏引擎核心类
@@ -202,14 +204,15 @@ export class Core {
 
         // 初始化调试管理器
         if (this._config.debugConfig?.enabled) {
-            // 使用DI容器创建DebugManager（前两个参数从容器解析，config手动传入）
-            const config = this._config.debugConfig;
-            this._debugManager = new DebugManager(
-                this._serviceContainer.resolve(SceneManager),
-                this._serviceContainer.resolve(PerformanceMonitor),
-                config
+            const configService = new DebugConfigService();
+            configService.setConfig(this._config.debugConfig);
+            this._serviceContainer.registerInstance(DebugConfigService, configService);
+
+            this._serviceContainer.registerSingleton(DebugManager, (c) =>
+                createInstance(DebugManager, c)
             );
-            this._serviceContainer.registerInstance(DebugManager, this._debugManager);
+
+            this._debugManager = this._serviceContainer.resolve(DebugManager);
         }
 
         this.initialize();
@@ -476,13 +479,15 @@ export class Core {
         if (this._instance._debugManager) {
             this._instance._debugManager.updateConfig(config);
         } else {
-            // 使用DI容器创建DebugManager
-            this._instance._debugManager = new DebugManager(
-                this._instance._serviceContainer.resolve(SceneManager),
-                this._instance._serviceContainer.resolve(PerformanceMonitor),
-                config
+            const configService = new DebugConfigService();
+            configService.setConfig(config);
+            this._instance._serviceContainer.registerInstance(DebugConfigService, configService);
+
+            this._instance._serviceContainer.registerSingleton(DebugManager, (c) =>
+                createInstance(DebugManager, c)
             );
-            this._instance._serviceContainer.registerInstance(DebugManager, this._instance._debugManager);
+
+            this._instance._debugManager = this._instance._serviceContainer.resolve(DebugManager);
         }
 
         // 更新Core配置
@@ -658,11 +663,6 @@ export class Core {
 
         // 更新额外的 WorldManager
         this._worldManager.updateAll();
-
-        // 更新调试管理器（基于FPS的数据发送）
-        if (this._debugManager) {
-            this._debugManager.onFrameUpdate(deltaTime);
-        }
 
         // 结束性能监控
         this._performanceMonitor.endMonitoring('Core.update', frameStartTime);
