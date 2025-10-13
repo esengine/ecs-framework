@@ -10,17 +10,20 @@ import { ComponentPoolManager } from '../../ECS/Core/ComponentPool';
 import { Pool } from '../../Utils/Pool';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from '../../ECS/Decorators';
 import type { IService } from '../../Core/ServiceContainer';
+import type { IUpdatable } from '../../Types/IUpdatable';
 import { SceneManager } from '../../ECS/SceneManager';
 import { PerformanceMonitor } from '../PerformanceMonitor';
+import { Injectable, Inject, Updatable } from '../../Core/DI/Decorators';
+import { DebugConfigService } from './DebugConfigService';
 
 /**
  * 调试管理器
  *
  * 整合所有调试数据收集器，负责收集和发送调试数据
- *
- * 通过构造函数接收SceneManager和PerformanceMonitor，避免直接依赖Core实例
  */
-export class DebugManager implements IService {
+@Injectable()
+@Updatable()
+export class DebugManager implements IService, IUpdatable {
     private config: IECSDebugConfig;
     private webSocketManager: WebSocketManager;
     private entityCollector: EntityDataCollector;
@@ -36,18 +39,12 @@ export class DebugManager implements IService {
     private sendInterval: number;
     private isRunning: boolean = false;
 
-    /**
-     * 构造调试管理器
-     * @param sceneManager 场景管理器
-     * @param performanceMonitor 性能监控器
-     * @param config 调试配置
-     */
     constructor(
-        sceneManager: SceneManager,
-        performanceMonitor: PerformanceMonitor,
-        config: IECSDebugConfig
+        @Inject(SceneManager) sceneManager: SceneManager,
+        @Inject(PerformanceMonitor) performanceMonitor: PerformanceMonitor,
+        @Inject(DebugConfigService) configService: DebugConfigService
     ) {
-        this.config = config;
+        this.config = configService.getConfig();
         this.sceneManager = sceneManager;
         this.performanceMonitor = performanceMonitor;
 
@@ -60,15 +57,15 @@ export class DebugManager implements IService {
 
         // 初始化WebSocket管理器
         this.webSocketManager = new WebSocketManager(
-            config.websocketUrl,
-            config.autoReconnect !== false
+            this.config.websocketUrl,
+            this.config.autoReconnect !== false
         );
 
         // 设置消息处理回调
         this.webSocketManager.setMessageHandler(this.handleMessage.bind(this));
 
         // 计算发送间隔（基于帧率）
-        const debugFrameRate = config.debugFrameRate || 30;
+        const debugFrameRate = this.config.debugFrameRate || 30;
         this.sendInterval = 1000 / debugFrameRate;
 
         this.start();
@@ -116,16 +113,12 @@ export class DebugManager implements IService {
         }
     }
 
-    /**
-     * 帧更新回调
-     */
-    public onFrameUpdate(deltaTime: number): void {
+    public update(deltaTime?: number): void {
         if (!this.isRunning || !this.config.enabled) return;
 
         this.frameCounter++;
         const currentTime = Date.now();
 
-        // 基于配置的帧率发送数据
         if (currentTime - this.lastSendTime >= this.sendInterval) {
             this.sendDebugData();
             this.lastSendTime = currentTime;
