@@ -239,17 +239,24 @@ export class QuerySystem {
     public removeEntity(entity: Entity): void {
         const index = this.entities.indexOf(entity);
         if (index !== -1) {
+            const componentTypes: ComponentType[] = [];
+            for (const component of entity.components) {
+                componentTypes.push(component.constructor as ComponentType);
+            }
+
             this.entities.splice(index, 1);
             this.removeEntityFromIndexes(entity);
 
             this.archetypeSystem.removeEntity(entity);
 
-            // 通知响应式查询
-            this.notifyReactiveQueriesEntityRemoved(entity);
+            if (componentTypes.length > 0) {
+                this.notifyReactiveQueriesEntityRemoved(entity, componentTypes);
+            } else {
+                this.notifyReactiveQueriesEntityRemovedFallback(entity);
+            }
 
             this.clearQueryCache();
 
-            // 更新版本号
             this._version++;
         }
     }
@@ -766,6 +773,104 @@ export class QuerySystem {
     }
 
     /**
+     * 创建响应式查询
+     *
+     * 响应式查询会自动跟踪实体/组件的变化,并通过事件通知订阅者。
+     * 适合需要实时响应实体变化的场景(如UI更新、AI系统等)。
+     *
+     * @param componentTypes 查询的组件类型列表
+     * @param config 可选的查询配置
+     * @returns 响应式查询实例
+     *
+     * @example
+     * ```typescript
+     * const query = querySystem.createReactiveQuery([Position, Velocity], {
+     *     enableBatchMode: true,
+     *     batchDelay: 16
+     * });
+     *
+     * query.subscribe((change) => {
+     *     if (change.type === ReactiveQueryChangeType.ADDED) {
+     *         console.log('新实体:', change.entity);
+     *     }
+     * });
+     * ```
+     */
+    public createReactiveQuery(
+        componentTypes: ComponentType[],
+        config?: ReactiveQueryConfig
+    ): ReactiveQuery {
+        if (!componentTypes || componentTypes.length === 0) {
+            throw new Error('组件类型列表不能为空');
+        }
+
+        const mask = this.createComponentMask(componentTypes);
+        const condition: QueryCondition = {
+            type: QueryConditionType.ALL,
+            componentTypes,
+            mask
+        };
+
+        const query = new ReactiveQuery(condition, config);
+
+        const initialEntities = this.executeTraditionalQuery(
+            QueryConditionType.ALL,
+            componentTypes
+        );
+        query.initializeWith(initialEntities);
+
+        const cacheKey = this.generateCacheKey('all', componentTypes);
+        this._reactiveQueries.set(cacheKey, query);
+
+        for (const type of componentTypes) {
+            let queries = this._reactiveQueriesByComponent.get(type);
+            if (!queries) {
+                queries = new Set();
+                this._reactiveQueriesByComponent.set(type, queries);
+            }
+            queries.add(query);
+        }
+
+        return query;
+    }
+
+    /**
+     * 销毁响应式查询
+     *
+     * 清理查询占用的资源,包括监听器和实体引用。
+     * 销毁后的查询不应再被使用。
+     *
+     * @param query 要销毁的响应式查询
+     *
+     * @example
+     * ```typescript
+     * const query = querySystem.createReactiveQuery([Position, Velocity]);
+     * // ... 使用查询
+     * querySystem.destroyReactiveQuery(query);
+     * ```
+     */
+    public destroyReactiveQuery(query: ReactiveQuery): void {
+        if (!query) {
+            return;
+        }
+
+        const cacheKey = query.id;
+        this._reactiveQueries.delete(cacheKey);
+
+        for (const type of query.condition.componentTypes) {
+            const queries = this._reactiveQueriesByComponent.get(type);
+            if (queries) {
+                queries.delete(query);
+                if (queries.size === 0) {
+                    this._reactiveQueriesByComponent.delete(type);
+                }
+            }
+        }
+
+        query.dispose();
+    }
+
+    /**
      * 创建组件掩码
      *
      * 根据组件类型列表生成对应的位掩码。
@@ -1016,14 +1121,39 @@ export class QuerySystem {
     }
 
     /**
-     * 通知所有响应式查询实体已移除
+     * 通知响应式查询实体已移除
      *
      * 使用组件类型索引,只通知关心该实体组件的查询
-     * 注意:实体移除时可能已经清空了components,所以需要通知所有查询让它们自己判断
+     *
+     * @param entity 移除的实体
+     * @param componentTypes 实体移除前的组件类型列表
+     */
+    private notifyReactiveQueriesEntityRemoved(entity: Entity, componentTypes: ComponentType[]): void {
+        if (this._reactiveQueries.size === 0) return;
+
+        const notified = new Set<ReactiveQuery>();
+
+        for (const componentType of componentTypes) {
+            const queries = this._reactiveQueriesByComponent.get(componentType);
+            if (queries) {
+                for (const query of queries) {
+                    if (!notified.has(query)) {
+                        query.notifyEntityRemoved(entity);
+                        notified.add(query);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 通知响应式查询实体已移除(后备方案)
+     *
+     * 当实体已经清空组件时使用,通知所有查询
      *
      * @param entity 移除的实体
      */
-    private notifyReactiveQueriesEntityRemoved(entity: Entity): void {
+    private notifyReactiveQueriesEntityRemovedFallback(entity: Entity): void {
         if (this._reactiveQueries.size === 0) return;
 
         for (const query of this._reactiveQueries.values()) {
@@ -1032,20 +1162,37 @@ export class QuerySystem {
     }
 
     /**
-     * 通知所有响应式查询实体已变化
+     * 通知响应式查询实体已变化
      *
-     * 实体组件变化时需要通知所有查询,因为:
-     * 1. 可能从匹配变为不匹配(移除组件)
-     * 2. 可能从不匹配变为匹配(添加组件)
-     * 让每个查询自己判断是否需要响应
+     * 使用混合策略:
+     * 1. 通知关心当前组件的查询
+     * 2. 通知当前包含该实体的查询(处理组件移除情况)
      *
      * @param entity 变化的实体
      */
     private notifyReactiveQueriesEntityChanged(entity: Entity): void {
         if (this._reactiveQueries.size === 0) return;
 
+        const notified = new Set<ReactiveQuery>();
+
+        for (const component of entity.components) {
+            const componentType = component.constructor as ComponentType;
+            const queries = this._reactiveQueriesByComponent.get(componentType);
+            if (queries) {
+                for (const query of queries) {
+                    if (!notified.has(query)) {
+                        query.notifyEntityChanged(entity);
+                        notified.add(query);
+                    }
+                }
+            }
+        }
+
         for (const query of this._reactiveQueries.values()) {
-            query.notifyEntityChanged(entity);
+            if (!notified.has(query) && query.getEntities().includes(entity)) {
+                query.notifyEntityChanged(entity);
+                notified.add(query);
+            }
         }
     }
 }

@@ -149,13 +149,20 @@ export class ReactiveQuery {
      * @returns 取消订阅的函数
      */
     public subscribe(listener: ReactiveQueryListener): () => void {
+        if (!this._active) {
+            throw new Error(`Cannot subscribe to disposed ReactiveQuery ${this._id}`);
+        }
+
+        if (typeof listener !== 'function') {
+            throw new TypeError('Listener must be a function');
+        }
+
         this._listeners.push(listener);
 
         if (this._config.debug) {
             logger.debug(`订阅ReactiveQuery: ${this._id}, 监听器数量: ${this._listeners.length}`);
         }
 
-        // 返回取消订阅函数
         return () => {
             const index = this._listeners.indexOf(listener);
             if (index !== -1) {
@@ -379,7 +386,9 @@ export class ReactiveQuery {
      * 通知所有监听器
      */
     private notifyListeners(change: ReactiveQueryChange): void {
-        for (const listener of this._listeners) {
+        const listeners = [...this._listeners];
+
+        for (const listener of listeners) {
             try {
                 listener(change);
             } catch (error) {
@@ -418,7 +427,15 @@ export class ReactiveQuery {
      * 释放所有资源,清空监听器和结果集
      */
     public dispose(): void {
-        this.pause();
+        if (this._batchChanges.timer !== null) {
+            clearTimeout(this._batchChanges.timer);
+            this._batchChanges.timer = null;
+        }
+
+        this._batchChanges.added.length = 0;
+        this._batchChanges.removed.length = 0;
+
+        this._active = false;
         this.unsubscribeAll();
         this._entities.length = 0;
         this._entityIdSet.clear();
