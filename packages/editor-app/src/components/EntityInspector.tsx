@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Entity, Core } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub, ComponentRegistry } from '@esengine/editor-core';
 import { AddComponent } from './AddComponent';
+import { PropertyInspector } from './PropertyInspector';
 import '../styles/EntityInspector.css';
 
 interface EntityInspectorProps {
@@ -12,6 +13,7 @@ interface EntityInspectorProps {
 export function EntityInspector({ entityStore, messageHub }: EntityInspectorProps) {
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [showAddComponent, setShowAddComponent] = useState(false);
+  const [expandedComponents, setExpandedComponents] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const handleSelection = (data: { entity: Entity | null }) => {
@@ -50,6 +52,28 @@ export function EntityInspector({ entityStore, messageHub }: EntityInspectorProp
       selectedEntity.removeComponent(component);
       messageHub.publish('component:removed', { entity: selectedEntity, component });
     }
+  };
+
+  const toggleComponentExpanded = (index: number) => {
+    setExpandedComponents(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const handlePropertyChange = (component: any, propertyName: string, value: any) => {
+    if (!selectedEntity) return;
+    messageHub.publish('component:property:changed', {
+      entity: selectedEntity,
+      component,
+      propertyName,
+      value
+    });
   };
 
   if (!selectedEntity) {
@@ -107,19 +131,39 @@ export function EntityInspector({ entityStore, messageHub }: EntityInspectorProp
               <div className="empty-state">No components</div>
             ) : (
               <ul className="component-list">
-                {components.map((component, index) => (
-                  <li key={index} className="component-item">
-                    <span className="component-icon">🔧</span>
-                    <span className="component-name">{component.constructor.name}</span>
-                    <button
-                      className="remove-component-btn"
-                      onClick={() => handleRemoveComponent(index)}
-                      title="Remove Component"
-                    >
-                      ×
-                    </button>
-                  </li>
-                ))}
+                {components.map((component, index) => {
+                  const isExpanded = expandedComponents.has(index);
+                  return (
+                    <li key={index} className="component-item">
+                      <div className="component-header">
+                        <button
+                          className="component-expand-btn"
+                          onClick={() => toggleComponentExpanded(index)}
+                          title={isExpanded ? 'Collapse' : 'Expand'}
+                        >
+                          {isExpanded ? '▼' : '▶'}
+                        </button>
+                        <span className="component-icon">🔧</span>
+                        <span className="component-name">{component.constructor.name}</span>
+                        <button
+                          className="remove-component-btn"
+                          onClick={() => handleRemoveComponent(index)}
+                          title="Remove Component"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {isExpanded && (
+                        <div className="component-properties">
+                          <PropertyInspector
+                            component={component}
+                            onChange={(propertyName, value) => handlePropertyChange(component, propertyName, value)}
+                          />
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

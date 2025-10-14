@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Core, Scene } from '@esengine/ecs-framework';
-import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService } from '@esengine/editor-core';
+import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, PropertyMetadataService } from '@esengine/editor-core';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
@@ -13,12 +13,42 @@ import { en, zh } from './locales';
 import './styles/App.css';
 
 // 在 App 组件外部初始化 Core 和基础服务
-Core.create({ debug: true });
+const coreInstance = Core.create({ debug: true });
 
 const localeService = new LocaleService();
 localeService.registerTranslations('en', en);
 localeService.registerTranslations('zh', zh);
 Core.services.registerInstance(LocaleService, localeService);
+
+const propertyMetadata = new PropertyMetadataService();
+Core.services.registerInstance(PropertyMetadataService, propertyMetadata);
+
+propertyMetadata.register(TransformComponent, {
+  properties: {
+    x: { type: 'number', label: 'X Position' },
+    y: { type: 'number', label: 'Y Position' },
+    rotation: { type: 'number', label: 'Rotation', min: 0, max: 360 },
+    scaleX: { type: 'number', label: 'Scale X', min: 0, step: 0.1 },
+    scaleY: { type: 'number', label: 'Scale Y', min: 0, step: 0.1 }
+  }
+});
+
+propertyMetadata.register(SpriteComponent, {
+  properties: {
+    texturePath: { type: 'string', label: 'Texture Path' },
+    color: { type: 'color', label: 'Tint Color' },
+    visible: { type: 'boolean', label: 'Visible' }
+  }
+});
+
+propertyMetadata.register(RigidBodyComponent, {
+  properties: {
+    mass: { type: 'number', label: 'Mass', min: 0, step: 0.1 },
+    friction: { type: 'number', label: 'Friction', min: 0, max: 1, step: 0.01 },
+    restitution: { type: 'number', label: 'Restitution', min: 0, max: 1, step: 0.01 },
+    isDynamic: { type: 'boolean', label: 'Dynamic' }
+  }
+});
 
 function App() {
   const [initialized, setInitialized] = useState(false);
@@ -68,7 +98,7 @@ function App() {
         Core.services.registerInstance(ComponentRegistry, componentRegistry);
 
         const pluginMgr = new EditorPluginManager();
-        pluginMgr.initialize(Core, Core.services);
+        pluginMgr.initialize(coreInstance, Core.services);
 
         await pluginMgr.installEditor(new SceneInspectorPlugin());
 

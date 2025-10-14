@@ -13,5 +13,6 @@ export * from './Services/SerializerRegistry';
 export * from './Services/EntityStoreService';
 export * from './Services/ComponentRegistry';
 export * from './Services/LocaleService';
+export * from './Services/PropertyMetadata';
 
 export * from './Types/UITypes';

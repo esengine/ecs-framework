@@ -90,20 +90,46 @@
 }
 
 .component-item {
-  display: flex;
-  align-items: center;
-  padding: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   background-color: #252526;
   border: 1px solid #3c3c3c;
   border-radius: 3px;
   font-size: 13px;
-  position: relative;
+  overflow: hidden;
 }
 
 .component-item:hover {
-  background-color: #2a2d2e;
   border-color: #505050;
+}
+
+.component-header {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.component-header:hover {
+  background-color: #2a2d2e;
+}
+
+.component-expand-btn {
+  background: none;
+  border: none;
+  color: #858585;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 4px;
+  margin-right: 4px;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.component-expand-btn:hover {
+  color: #cccccc;
 }
 
 .component-icon {
@@ -130,6 +156,12 @@
 
 .remove-component-btn:hover {
   color: #ff5555;
+}
+
+.component-properties {
+  border-top: 1px solid #3c3c3c;
+  background-color: #1e1e1e;
+  padding: 4px;
 }
 
 .empty-state {
