@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Core, Scene } from '@esengine/ecs-framework';
-import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService } from '@esengine/editor-core';
+import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry } from '@esengine/editor-core';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
 import { TauriAPI } from './api/tauri';
+import { TransformComponent } from './example-components/TransformComponent';
+import { SpriteComponent } from './example-components/SpriteComponent';
+import { RigidBodyComponent } from './example-components/RigidBodyComponent';
 import './styles/App.css';
 
 function App() {
@@ -26,11 +29,34 @@ function App() {
         const messageHub = new MessageHub();
         const serializerRegistry = new SerializerRegistry();
         const entityStore = new EntityStoreService(messageHub);
+        const componentRegistry = new ComponentRegistry();
+
+        componentRegistry.register({
+          name: 'Transform',
+          type: TransformComponent,
+          category: 'Transform',
+          description: 'Position, rotation and scale'
+        });
+
+        componentRegistry.register({
+          name: 'Sprite',
+          type: SpriteComponent,
+          category: 'Rendering',
+          description: 'Sprite renderer'
+        });
+
+        componentRegistry.register({
+          name: 'RigidBody',
+          type: RigidBodyComponent,
+          category: 'Physics',
+          description: 'Physics body'
+        });
 
         Core.services.registerInstance(UIRegistry, uiRegistry);
         Core.services.registerInstance(MessageHub, messageHub);
         Core.services.registerInstance(SerializerRegistry, serializerRegistry);
         Core.services.registerInstance(EntityStoreService, entityStore);
+        Core.services.registerInstance(ComponentRegistry, componentRegistry);
 
         const pluginMgr = new EditorPluginManager();
         pluginMgr.initialize(coreInstance, Core.services);

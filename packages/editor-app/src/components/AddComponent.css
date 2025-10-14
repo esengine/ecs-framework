@@ -1,0 +1,175 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.add-component-dialog {
+  background-color: #2d2d2d;
+  border-radius: 8px;
+  width: 500px;
+  max-width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #404040;
+}
+
+.dialog-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #fff;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  line-height: 20px;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: #fff;
+}
+
+.dialog-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px 20px;
+}
+
+.component-filter {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: #1e1e1e;
+  border: 1px solid #404040;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.component-filter:focus {
+  outline: none;
+  border-color: #007acc;
+}
+
+.component-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 200px;
+  max-height: 400px;
+}
+
+.component-category {
+  margin-bottom: 16px;
+}
+
+.category-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #404040;
+}
+
+.component-option {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  transition: background-color 0.2s;
+}
+
+.component-option:hover {
+  background-color: #3a3a3a;
+}
+
+.component-option.selected {
+  background-color: #094771;
+  border: 1px solid #007acc;
+}
+
+.component-name {
+  font-size: 14px;
+  color: #fff;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.component-description {
+  font-size: 12px;
+  color: #aaa;
+}
+
+.empty-message {
+  color: #888;
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 14px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 20px;
+  border-top: 1px solid #404040;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-cancel {
+  background-color: #3a3a3a;
+  color: #fff;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background-color: #4a4a4a;
+}
+
+.btn-primary {
+  background-color: #007acc;
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #0098ff;
+}

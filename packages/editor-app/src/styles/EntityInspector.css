@@ -30,6 +30,9 @@
 }
 
 .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 12px;
   font-weight: 600;
   color: #858585;
@@ -38,6 +41,26 @@
   margin-bottom: 8px;
   padding: 4px 0;
   border-bottom: 1px solid #3c3c3c;
+}
+
+.add-component-btn {
+  background-color: #007acc;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  width: 20px;
+  height: 20px;
+  font-size: 16px;
+  line-height: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.add-component-btn:hover {
+  background-color: #0098ff;
 }
 
 .section-content {
@@ -75,6 +98,7 @@
   border: 1px solid #3c3c3c;
   border-radius: 3px;
   font-size: 13px;
+  position: relative;
 }
 
 .component-item:hover {
@@ -88,7 +112,24 @@
 }
 
 .component-name {
+  flex: 1;
   color: #cccccc;
+}
+
+.remove-component-btn {
+  background: none;
+  border: none;
+  color: #858585;
+  font-size: 18px;
+  line-height: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  transition: color 0.2s;
+  margin-left: 8px;
+}
+
+.remove-component-btn:hover {
+  color: #ff5555;
 }
 
 .empty-state {
