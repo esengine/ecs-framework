@@ -1,6 +1,6 @@
 import { Entity } from '../Entity';
-import { ComponentType } from './ComponentStorage';
-import { BitMask64Data, BitMask64Utils, ComponentTypeManager } from "../Utils";
+import { ComponentType, ComponentRegistry } from './ComponentStorage';
+import { BitMask64Data, BitMask64Utils } from "../Utils";
 import { BitMaskHashMap } from "../Utils/BitMaskHashMap";
 
 /**
@@ -266,10 +266,18 @@ export class ArchetypeSystem {
     
     /**
      * 生成原型ID
+     * 使用ComponentRegistry确保与Entity.componentMask使用相同的bitIndex
      */
     private generateArchetypeId(componentTypes: ComponentType[]): ArchetypeId {
-        let entityBits = ComponentTypeManager.instance.getEntityBits(componentTypes);
-        return entityBits.getValue();
+        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
+        for (const type of componentTypes) {
+            if (!ComponentRegistry.isRegistered(type)) {
+                ComponentRegistry.register(type);
+            }
+            const bitMask = ComponentRegistry.getBitMask(type);
+            BitMask64Utils.orInPlace(mask, bitMask);
+        }
+        return mask;
     }
     
     /**
