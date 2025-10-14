@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Entity } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub } from '@esengine/editor-core';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/SceneHierarchy.css';
 
 interface SceneHierarchyProps {
@@ -11,6 +12,7 @@ interface SceneHierarchyProps {
 export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps) {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const { t } = useLocale();
 
   useEffect(() => {
     const updateEntities = () => {
@@ -43,11 +45,11 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
   return (
     <div className="scene-hierarchy">
       <div className="hierarchy-header">
-        <h3>Scene Hierarchy</h3>
+        <h3>{t('hierarchy.title')}</h3>
       </div>
       <div className="hierarchy-content">
         {entities.length === 0 ? (
-          <div className="empty-state">No entities in scene</div>
+          <div className="empty-state">{t('hierarchy.empty')}</div>
         ) : (
           <ul className="entity-list">
             {entities.map(entity => (

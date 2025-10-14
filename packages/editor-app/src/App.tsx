@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Core, Scene } from '@esengine/ecs-framework';
-import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry } from '@esengine/editor-core';
+import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService } from '@esengine/editor-core';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
@@ -8,20 +8,29 @@ import { TauriAPI } from './api/tauri';
 import { TransformComponent } from './example-components/TransformComponent';
 import { SpriteComponent } from './example-components/SpriteComponent';
 import { RigidBodyComponent } from './example-components/RigidBodyComponent';
+import { useLocale } from './hooks/useLocale';
+import { en, zh } from './locales';
 import './styles/App.css';
+
+// 在 App 组件外部初始化 Core 和基础服务
+Core.create({ debug: true });
+
+const localeService = new LocaleService();
+localeService.registerTranslations('en', en);
+localeService.registerTranslations('zh', zh);
+Core.services.registerInstance(LocaleService, localeService);
 
 function App() {
   const [initialized, setInitialized] = useState(false);
   const [pluginManager, setPluginManager] = useState<EditorPluginManager | null>(null);
   const [entityStore, setEntityStore] = useState<EntityStoreService | null>(null);
   const [messageHub, setMessageHub] = useState<MessageHub | null>(null);
-  const [status, setStatus] = useState('Initializing...');
+  const { t, locale, changeLocale } = useLocale();
+  const [status, setStatus] = useState(t('header.status.initializing'));
 
   useEffect(() => {
     const initializeEditor = async () => {
       try {
-        const coreInstance = Core.create({ debug: true });
-
         const editorScene = new Scene();
         Core.setScene(editorScene);
 
@@ -59,7 +68,7 @@ function App() {
         Core.services.registerInstance(ComponentRegistry, componentRegistry);
 
         const pluginMgr = new EditorPluginManager();
-        pluginMgr.initialize(coreInstance, Core.services);
+        pluginMgr.initialize(Core, Core.services);
 
         await pluginMgr.installEditor(new SceneInspectorPlugin());
 
@@ -70,18 +79,14 @@ function App() {
         setPluginManager(pluginMgr);
         setEntityStore(entityStore);
         setMessageHub(messageHub);
-        setStatus('Editor Ready');
+        setStatus(t('header.status.ready'));
       } catch (error) {
         console.error('Failed to initialize editor:', error);
-        setStatus('Initialization Failed');
+        setStatus(t('header.status.failed'));
       }
     };
 
     initializeEditor();
-
-    return () => {
-      Core.destroy();
-    };
   }, []);
 
   const handleCreateEntity = () => {
@@ -102,16 +107,24 @@ function App() {
     }
   };
 
+  const handleLocaleChange = () => {
+    const newLocale = locale === 'en' ? 'zh' : 'en';
+    changeLocale(newLocale);
+  };
+
   return (
     <div className="editor-container">
       <div className="editor-header">
-        <h1>ECS Framework Editor</h1>
+        <h1>{t('app.title')}</h1>
         <div className="header-toolbar">
           <button onClick={handleCreateEntity} disabled={!initialized} className="toolbar-btn">
-            ➕ Create Entity
+            {t('header.toolbar.createEntity')}
           </button>
           <button onClick={handleDeleteEntity} disabled={!entityStore?.getSelectedEntity()} className="toolbar-btn">
-            🗑️ Delete Entity
+            {t('header.toolbar.deleteEntity')}
+          </button>
+          <button onClick={handleLocaleChange} className="toolbar-btn locale-btn" title={locale === 'en' ? '切换到中文' : 'Switch to English'}>
+            {locale === 'en' ? '中' : 'EN'}
           </button>
         </div>
         <span className="status">{status}</span>
@@ -128,13 +141,13 @@ function App() {
 
         <div className="main-content">
           <div className="viewport">
-            <h3>Viewport</h3>
-            <p>Scene viewport will appear here</p>
+            <h3>{t('viewport.title')}</h3>
+            <p>{t('viewport.placeholder')}</p>
           </div>
 
           <div className="bottom-panel">
-            <h4>Console</h4>
-            <p>Console output will appear here</p>
+            <h4>{t('console.title')}</h4>
+            <p>{t('console.placeholder')}</p>
           </div>
         </div>
 
@@ -148,9 +161,9 @@ function App() {
       </div>
 
       <div className="editor-footer">
-        <span>Plugins: {pluginManager?.getAllEditorPlugins().length ?? 0}</span>
-        <span>Entities: {entityStore?.getAllEntities().length ?? 0}</span>
-        <span>Core: {initialized ? 'Active' : 'Inactive'}</span>
+        <span>{t('footer.plugins')}: {pluginManager?.getAllEditorPlugins().length ?? 0}</span>
+        <span>{t('footer.entities')}: {entityStore?.getAllEntities().length ?? 0}</span>
+        <span>{t('footer.core')}: {initialized ? t('footer.active') : t('footer.inactive')}</span>
       </div>
     </div>
   );

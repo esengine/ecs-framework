@@ -12,5 +12,6 @@ export * from './Services/MessageHub';
 export * from './Services/SerializerRegistry';
 export * from './Services/EntityStoreService';
 export * from './Services/ComponentRegistry';
+export * from './Services/LocaleService';
 
 export * from './Types/UITypes';
