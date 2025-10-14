@@ -875,6 +875,7 @@ export class QuerySystem {
      *
      * 根据组件类型列表生成对应的位掩码。
      * 使用缓存避免重复计算。
+     * 注意:必须使用ComponentRegistry来确保与Entity.componentMask使用相同的bitIndex
      *
      * @param componentTypes 组件类型列表
      * @returns 生成的位掩码
@@ -891,10 +892,20 @@ export class QuerySystem {
             return cached;
         }
 
-        let mask = ComponentTypeManager.instance.getEntityBits(componentTypes);
+        // 使用ComponentRegistry而不是ComponentTypeManager,确保bitIndex一致
+        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
+        for (const type of componentTypes) {
+            // 确保组件已注册
+            if (!ComponentRegistry.isRegistered(type)) {
+                ComponentRegistry.register(type);
+            }
+            const bitMask = ComponentRegistry.getBitMask(type);
+            BitMask64Utils.orInPlace(mask, bitMask);
+        }
+
         // 缓存结果
-        this.componentMaskCache.set(cacheKey, mask.getValue());
-        return mask.getValue();
+        this.componentMaskCache.set(cacheKey, mask);
+        return mask;
     }
 
     /**
@@ -1165,13 +1176,15 @@ export class QuerySystem {
      * 通知响应式查询实体已变化
      *
      * 使用混合策略:
-     * 1. 通知关心当前组件的查询
-     * 2. 通知当前包含该实体的查询(处理组件移除情况)
+     * 1. 首先通知关心实体当前组件的查询
+     * 2. 然后通知所有其他查询(包括那些可能因为组件移除而不再匹配的查询)
      *
      * @param entity 变化的实体
      */
     private notifyReactiveQueriesEntityChanged(entity: Entity): void {
-        if (this._reactiveQueries.size === 0) return;
+        if (this._reactiveQueries.size === 0) {
+            return;
+        }
 
         const notified = new Set<ReactiveQuery>();
 
@@ -1189,9 +1202,8 @@ export class QuerySystem {
         }
 
         for (const query of this._reactiveQueries.values()) {
-            if (!notified.has(query) && query.getEntities().includes(entity)) {
+            if (!notified.has(query)) {
                 query.notifyEntityChanged(entity);
-                notified.add(query);
             }
         }
     }
