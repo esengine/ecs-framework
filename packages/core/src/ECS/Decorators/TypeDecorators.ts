@@ -75,7 +75,7 @@ export interface SystemMetadata {
  * @ECSSystem('Physics', { updateOrder: 10 })
  * class PhysicsSystem extends EntitySystem {
  *     constructor(@Inject(CollisionSystem) private collision: CollisionSystem) {
- *         super(Matcher.of(Transform, RigidBody));
+ *         super(Matcher.empty().all(Transform, RigidBody));
  *     }
  * }
  * ```
