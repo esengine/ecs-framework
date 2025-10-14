@@ -60,15 +60,15 @@ afterEach(() => {
     const { Core } = require('../src/Core');
     const { WorldManager } = require('../src/ECS/WorldManager');
 
-    // 重置 Core 和 WorldManager 单例
+    // 销毁 Core 和 WorldManager 单例
     if (Core._instance) {
-      Core.reset();
+      Core.destroy();
     }
     if (WorldManager._instance) {
       if (WorldManager._instance.destroy) {
         WorldManager._instance.destroy();
       }
-      WorldManager.reset();
+      WorldManager._instance = null;
     }
   } catch (error) {
     // 忽略清理错误

@@ -547,7 +547,9 @@ export class Scene implements IScene {
             constructor = systemTypeOrInstance;
 
             if (this._services.isRegistered(constructor)) {
-                return this._services.resolve(constructor) as T;
+                const existingSystem = this._services.resolve(constructor) as T;
+                this.logger.debug(`System ${constructor.name} already registered, returning existing instance`);
+                return existingSystem;
             }
 
             if (isInjectable(constructor)) {
@@ -560,7 +562,17 @@ export class Scene implements IScene {
             constructor = system.constructor;
 
             if (this._services.isRegistered(constructor)) {
-                return system;
+                const existingSystem = this._services.resolve(constructor);
+                if (existingSystem === system) {
+                    this.logger.debug(`System ${constructor.name} instance already registered, returning it`);
+                    return system;
+                } else {
+                    this.logger.warn(
+                        `Attempting to register a different instance of ${constructor.name}, ` +
+                        `but type is already registered. Returning existing instance.`
+                    );
+                    return existingSystem as T;
+                }
             }
         }
 
@@ -581,6 +593,8 @@ export class Scene implements IScene {
         injectProperties(system, this._services);
 
         system.initialize();
+
+        this.logger.debug(`System ${constructor.name} registered and initialized`);
 
         return system;
     }

@@ -555,6 +555,7 @@ export abstract class EntitySystem<
         try {
             this.onBegin();
             // 查询实体并存储到帧缓存中
+            // 响应式查询会自动维护最新的实体列表，updateEntityTracking会在检测到变化时invalidate
             this._entityCache.frame = this.queryEntities();
             entityCount = this._entityCache.frame.length;
 
