@@ -36,7 +36,7 @@ interface EventListenerRecord {
  * // 传统方式
  * class MovementSystem extends EntitySystem {
  *     constructor() {
- *         super(Matcher.of(Transform, Velocity));
+ *         super(Matcher.empty().all(Transform, Velocity));
  *     }
  *
  *     protected process(entities: readonly Entity[]): void {
@@ -51,7 +51,7 @@ interface EventListenerRecord {
  * // 类型安全方式
  * class MovementSystem extends EntitySystem<[typeof Transform, typeof Velocity]> {
  *     constructor() {
- *         super(Matcher.of(Transform, Velocity));
+ *         super(Matcher.empty().all(Transform, Velocity));
  *     }
  *
  *     protected process(entities: readonly Entity[]): void {

@@ -527,7 +527,7 @@ export class Scene implements IScene {
      * @Injectable()
      * class PhysicsSystem extends EntitySystem {
      *     constructor(@Inject(CollisionSystem) private collision: CollisionSystem) {
-     *         super(Matcher.of(Transform));
+     *         super(Matcher.empty().all(Transform));
      *     }
      * }
      * scene.addEntityProcessor(PhysicsSystem);
@@ -613,7 +613,7 @@ export class Scene implements IScene {
      * @Injectable()
      * @ECSSystem('Collision', { updateOrder: 5 })
      * class CollisionSystem extends EntitySystem implements IService {
-     *     constructor() { super(Matcher.of(Collider)); }
+     *     constructor() { super(Matcher.empty().all(Collider)); }
      *     dispose() {}
      * }
      *
@@ -621,7 +621,7 @@ export class Scene implements IScene {
      * @ECSSystem('Physics', { updateOrder: 10 })
      * class PhysicsSystem extends EntitySystem implements IService {
      *     constructor(@Inject(CollisionSystem) private collision: CollisionSystem) {
-     *         super(Matcher.of(Transform, RigidBody));
+     *         super(Matcher.empty().all(Transform, RigidBody));
      *     }
      *     dispose() {}
      * }
