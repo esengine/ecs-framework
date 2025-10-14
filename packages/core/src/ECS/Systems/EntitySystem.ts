@@ -554,10 +554,8 @@ export abstract class EntitySystem<
 
         try {
             this.onBegin();
-            // 清除持久缓存,确保每次update都重新查询并检测实体变化
-            // 这对于响应式查询正确工作至关重要
-            this._entityCache.invalidate();
             // 查询实体并存储到帧缓存中
+            // 响应式查询会自动维护最新的实体列表，updateEntityTracking会在检测到变化时invalidate
             this._entityCache.frame = this.queryEntities();
             entityCount = this._entityCache.frame.length;
 
