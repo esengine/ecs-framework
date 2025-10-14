@@ -1,7 +1,6 @@
 import { IEntityDebugData } from '../../Types';
 import { Entity } from '../../ECS/Entity';
 import { Component } from '../../ECS/Component';
-import { ComponentTypeManager } from '../../ECS/Utils/ComponentTypeManager';
 import { getComponentInstanceTypeName, getSystemInstanceTypeName } from '../../ECS/Decorators';
 import { IScene } from '../../ECS/IScene';
 
@@ -722,20 +721,7 @@ export class EntityDataCollector {
         properties: Record<string, any>;
     }> {
         return components.map((component: Component) => {
-            let typeName = getComponentInstanceTypeName(component);
-            
-            if (!typeName || typeName === 'Object' || typeName === 'Function') {
-                try {
-                    const typeManager = ComponentTypeManager.instance;
-                    const componentType = component.constructor as any;
-                    const typeId = typeManager.getTypeId(componentType);
-                    typeName = typeManager.getTypeName(typeId);
-                } catch (error) {
-                    typeName = 'UnknownComponent';
-                }
-            }
-            
-            // 提取实际的组件属性
+            const typeName = getComponentInstanceTypeName(component);
             const properties: Record<string, any> = {};
             
             try {

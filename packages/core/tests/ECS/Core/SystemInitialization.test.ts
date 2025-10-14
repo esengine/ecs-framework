@@ -3,7 +3,6 @@ import { Entity } from '../../../src/ECS/Entity';
 import { Component } from '../../../src/ECS/Component';
 import { EntitySystem } from '../../../src/ECS/Systems/EntitySystem';
 import { Matcher } from '../../../src/ECS/Utils/Matcher';
-import { ComponentTypeManager } from '../../../src/ECS/Utils/ComponentTypeManager';
 
 /**
  * System初始化测试套件

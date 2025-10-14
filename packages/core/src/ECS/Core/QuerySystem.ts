@@ -5,7 +5,6 @@ import { BitMask64Utils, BitMask64Data } from '../Utils/BigIntCompatibility';
 import { createLogger } from '../../Utils/Logger';
 import { getComponentTypeName } from '../Decorators';
 import { Archetype, ArchetypeSystem } from './ArchetypeSystem';
-import { ComponentTypeManager } from "../Utils";
 import { ReactiveQuery, ReactiveQueryConfig } from './ReactiveQuery';
 import { QueryCondition, QueryConditionType, QueryResult } from './QueryTypes';
 

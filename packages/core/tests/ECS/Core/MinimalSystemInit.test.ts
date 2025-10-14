@@ -3,7 +3,7 @@ import { Entity } from '../../../src/ECS/Entity';
 import { Component } from '../../../src/ECS/Component';
 import { EntitySystem } from '../../../src/ECS/Systems/EntitySystem';
 import { Matcher } from '../../../src/ECS/Utils/Matcher';
-import { ComponentTypeManager } from '../../../src/ECS/Utils/ComponentTypeManager';
+import { ComponentRegistry } from '../../../src/ECS/Core/ComponentStorage';
 
 // 简单的测试组件
 class HealthComponent extends Component {
@@ -34,7 +34,7 @@ describe('MinimalSystemInit - 最小化系统初始化测试', () => {
     let scene: Scene;
 
     beforeEach(() => {
-        ComponentTypeManager.instance.reset();
+        ComponentRegistry.reset();
         scene = new Scene();
     });
 
@@ -52,7 +52,7 @@ describe('MinimalSystemInit - 最小化系统初始化测试', () => {
         entity.addComponent(new HealthComponent(100));
 
         console.log('[Test] Entity created with HealthComponent');
-        console.log('[Test] ComponentTypeManager registered types:', ComponentTypeManager.instance.registeredTypeCount);
+        console.log('[Test] ComponentRegistry registered types:', ComponentRegistry.getRegisteredCount());
 
         // 2. 验证QuerySystem能查询到实体
         const queryResult = scene.querySystem.queryAll(HealthComponent);

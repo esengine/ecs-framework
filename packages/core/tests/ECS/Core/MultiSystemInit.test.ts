@@ -3,7 +3,7 @@ import { Entity } from '../../../src/ECS/Entity';
 import { Component } from '../../../src/ECS/Component';
 import { EntitySystem } from '../../../src/ECS/Systems/EntitySystem';
 import { Matcher } from '../../../src/ECS/Utils/Matcher';
-import { ComponentTypeManager } from '../../../src/ECS/Utils/ComponentTypeManager';
+import { ComponentRegistry } from '../../../src/ECS/Core/ComponentStorage';
 
 // 测试组件
 class PositionComponent extends Component {
@@ -71,7 +71,7 @@ describe('MultiSystemInit - 多系统初始化测试', () => {
     let scene: Scene;
 
     beforeEach(() => {
-        ComponentTypeManager.instance.reset();
+        ComponentRegistry.reset();
         scene = new Scene();
     });
 
@@ -91,7 +91,7 @@ describe('MultiSystemInit - 多系统初始化测试', () => {
         entity.addComponent(new HealthComponent(100));
 
         console.log('[Test] Entity created with Position, Velocity, Health');
-        console.log('[Test] ComponentTypeManager registered types:', ComponentTypeManager.instance.registeredTypeCount);
+        console.log('[Test] ComponentRegistry registered types:', ComponentRegistry.getRegisteredCount());
 
         // 2. 验证QuerySystem能查询到实体
         const movementQuery = scene.querySystem.queryAll(PositionComponent, VelocityComponent);
