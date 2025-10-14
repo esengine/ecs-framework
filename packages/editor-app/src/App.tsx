@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Core, Scene } from '@esengine/ecs-framework';
-import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, PropertyMetadataService } from '@esengine/editor-core';
+import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, PropertyMetadataService, ProjectService } from '@esengine/editor-core';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
@@ -69,6 +69,7 @@ function App() {
         const serializerRegistry = new SerializerRegistry();
         const entityStore = new EntityStoreService(messageHub);
         const componentRegistry = new ComponentRegistry();
+        const projectService = new ProjectService(messageHub);
 
         componentRegistry.register({
           name: 'Transform',
@@ -96,6 +97,7 @@ function App() {
         Core.services.registerInstance(SerializerRegistry, serializerRegistry);
         Core.services.registerInstance(EntityStoreService, entityStore);
         Core.services.registerInstance(ComponentRegistry, componentRegistry);
+        Core.services.registerInstance(ProjectService, projectService);
 
         const pluginMgr = new EditorPluginManager();
         pluginMgr.initialize(coreInstance, Core.services);
@@ -142,11 +144,30 @@ function App() {
     changeLocale(newLocale);
   };
 
+  const handleOpenProject = async () => {
+    try {
+      const projectPath = await TauriAPI.openProjectDialog();
+      if (projectPath) {
+        const projectService = Core.services.resolve(ProjectService);
+        if (projectService) {
+          await projectService.openProject(projectPath);
+          setStatus(t('header.status.projectOpened'));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to open project:', error);
+      setStatus(t('header.status.failed'));
+    }
+  };
+
   return (
     <div className="editor-container">
       <div className="editor-header">
         <h1>{t('app.title')}</h1>
         <div className="header-toolbar">
+          <button onClick={handleOpenProject} disabled={!initialized} className="toolbar-btn">
+            {t('header.toolbar.openProject')}
+          </button>
           <button onClick={handleCreateEntity} disabled={!initialized} className="toolbar-btn">
             {t('header.toolbar.createEntity')}
           </button>

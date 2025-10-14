@@ -6,13 +6,15 @@ export const en: Translations = {
     },
     header: {
         toolbar: {
+            openProject: 'Open Project',
             createEntity: 'Create Entity',
             deleteEntity: 'Delete Entity'
         },
         status: {
             initializing: 'Initializing...',
             ready: 'Editor Ready',
-            failed: 'Initialization Failed'
+            failed: 'Initialization Failed',
+            projectOpened: 'Project Opened'
         }
     },
     hierarchy: {

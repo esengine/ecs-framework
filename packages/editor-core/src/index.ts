@@ -14,5 +14,6 @@ export * from './Services/EntityStoreService';
 export * from './Services/ComponentRegistry';
 export * from './Services/LocaleService';
 export * from './Services/PropertyMetadata';
+export * from './Services/ProjectService';
 
 export * from './Types/UITypes';

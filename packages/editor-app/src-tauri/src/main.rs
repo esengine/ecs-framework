@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::Manager;
+use tauri::AppHandle;
 
 // IPC Commands
 #[tauri::command]
@@ -25,10 +26,20 @@ fn save_project(path: String, data: String) -> Result<(), String> {
 
 #[tauri::command]
 fn export_binary(data: Vec<u8>, output_path: String) -> Result<(), String> {
-    // 二进制导出逻辑
     std::fs::write(&output_path, data)
         .map_err(|e| format!("Failed to export binary: {}", e))?;
     Ok(())
+}
+
+#[tauri::command]
+async fn open_project_dialog(app: AppHandle) -> Result<Option<String>, String> {
+    use tauri::api::dialog::blocking::FileDialogBuilder;
+
+    let result = FileDialogBuilder::new()
+        .set_title("Select Project Directory")
+        .pick_folder();
+
+    Ok(result.map(|path| path.to_string_lossy().to_string()))
 }
 
 fn main() {
@@ -47,7 +58,8 @@ fn main() {
             greet,
             open_project,
             save_project,
-            export_binary
+            export_binary,
+            open_project_dialog
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

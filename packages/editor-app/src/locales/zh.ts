@@ -6,13 +6,15 @@ export const zh: Translations = {
     },
     header: {
         toolbar: {
+            openProject: '打开项目',
             createEntity: '创建实体',
             deleteEntity: '删除实体'
         },
         status: {
             initializing: '初始化中...',
             ready: '编辑器就绪',
-            failed: '初始化失败'
+            failed: '初始化失败',
+            projectOpened: '项目已打开'
         }
     },
     hierarchy: {

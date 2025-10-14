@@ -11,9 +11,10 @@ export class TauriAPI {
     return await invoke<string>('greet', { name });
   }
 
-  /**
-   * 打开项目
-   */
+  static async openProjectDialog(): Promise<string | null> {
+    return await invoke<string | null>('open_project_dialog');
+  }
+
   static async openProject(path: string): Promise<string> {
     return await invoke<string>('open_project', { path });
   }
