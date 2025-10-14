@@ -69,3 +69,12 @@ docs/.vitepress/dist/
 /demo/.idea/
 /demo/.vscode/
 /demo_wxgame/
+
+# Tauri 构建产物
+**/src-tauri/target/
+**/src-tauri/WixTools/
+**/src-tauri/gen/
+
+# Tauri 捆绑输出
+**/src-tauri/target/release/bundle/
+**/src-tauri/target/debug/bundle/
