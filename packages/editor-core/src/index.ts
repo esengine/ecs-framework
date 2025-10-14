@@ -10,5 +10,6 @@ export * from './Plugins/EditorPluginManager';
 export * from './Services/UIRegistry';
 export * from './Services/MessageHub';
 export * from './Services/SerializerRegistry';
+export * from './Services/EntityStoreService';
 
 export * from './Types/UITypes';

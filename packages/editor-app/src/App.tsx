@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Core } from '@esengine/ecs-framework';
-import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry } from '@esengine/editor-core';
+import { Core, Scene } from '@esengine/ecs-framework';
+import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService } from '@esengine/editor-core';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
+import { SceneHierarchy } from './components/SceneHierarchy';
+import { EntityInspector } from './components/EntityInspector';
 import { TauriAPI } from './api/tauri';
 import './styles/App.css';
 
 function App() {
-  const [core, setCore] = useState<Core | null>(null);
+  const [initialized, setInitialized] = useState(false);
   const [pluginManager, setPluginManager] = useState<EditorPluginManager | null>(null);
+  const [entityStore, setEntityStore] = useState<EntityStoreService | null>(null);
+  const [messageHub, setMessageHub] = useState<MessageHub | null>(null);
   const [status, setStatus] = useState('Initializing...');
 
   useEffect(() => {
@@ -15,13 +19,18 @@ function App() {
       try {
         const coreInstance = Core.create({ debug: true });
 
+        const editorScene = new Scene();
+        Core.setScene(editorScene);
+
         const uiRegistry = new UIRegistry();
         const messageHub = new MessageHub();
         const serializerRegistry = new SerializerRegistry();
+        const entityStore = new EntityStoreService(messageHub);
 
         Core.services.registerInstance(UIRegistry, uiRegistry);
         Core.services.registerInstance(MessageHub, messageHub);
         Core.services.registerInstance(SerializerRegistry, serializerRegistry);
+        Core.services.registerInstance(EntityStoreService, entityStore);
 
         const pluginMgr = new EditorPluginManager();
         pluginMgr.initialize(coreInstance, Core.services);
@@ -31,8 +40,10 @@ function App() {
         const greeting = await TauriAPI.greet('Developer');
         console.log(greeting);
 
-        setCore(coreInstance);
+        setInitialized(true);
         setPluginManager(pluginMgr);
+        setEntityStore(entityStore);
+        setMessageHub(messageHub);
         setStatus('Editor Ready');
       } catch (error) {
         console.error('Failed to initialize editor:', error);
@@ -47,17 +58,46 @@ function App() {
     };
   }, []);
 
+  const handleCreateEntity = () => {
+    if (!initialized || !entityStore) return;
+    const scene = Core.scene;
+    if (!scene) return;
+
+    const entity = scene.createEntity('Entity');
+    entityStore.addEntity(entity);
+  };
+
+  const handleDeleteEntity = () => {
+    if (!entityStore) return;
+    const selected = entityStore.getSelectedEntity();
+    if (selected) {
+      selected.destroy();
+      entityStore.removeEntity(selected);
+    }
+  };
+
   return (
     <div className="editor-container">
       <div className="editor-header">
         <h1>ECS Framework Editor</h1>
+        <div className="header-toolbar">
+          <button onClick={handleCreateEntity} disabled={!initialized} className="toolbar-btn">
+            ➕ Create Entity
+          </button>
+          <button onClick={handleDeleteEntity} disabled={!entityStore?.getSelectedEntity()} className="toolbar-btn">
+            🗑️ Delete Entity
+          </button>
+        </div>
         <span className="status">{status}</span>
       </div>
 
       <div className="editor-content">
         <div className="sidebar-left">
-          <h3>Hierarchy</h3>
-          <p>Scene hierarchy will appear here</p>
+          {entityStore && messageHub ? (
+            <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />
+          ) : (
+            <div className="loading">Loading...</div>
+          )}
         </div>
 
         <div className="main-content">
@@ -73,14 +113,18 @@ function App() {
         </div>
 
         <div className="sidebar-right">
-          <h3>Inspector</h3>
-          <p>Entity inspector will appear here</p>
+          {entityStore && messageHub ? (
+            <EntityInspector entityStore={entityStore} messageHub={messageHub} />
+          ) : (
+            <div className="loading">Loading...</div>
+          )}
         </div>
       </div>
 
       <div className="editor-footer">
         <span>Plugins: {pluginManager?.getAllEditorPlugins().length ?? 0}</span>
-        <span>Core: {core ? 'Active' : 'Inactive'}</span>
+        <span>Entities: {entityStore?.getAllEntities().length ?? 0}</span>
+        <span>Core: {initialized ? 'Active' : 'Inactive'}</span>
       </div>
     </div>
   );

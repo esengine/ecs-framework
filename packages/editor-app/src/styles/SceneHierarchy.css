@@ -1,0 +1,70 @@
+.scene-hierarchy {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #1e1e1e;
+  color: #cccccc;
+}
+
+.hierarchy-header {
+  padding: 10px;
+  border-bottom: 1px solid #3c3c3c;
+  background-color: #252526;
+}
+
+.hierarchy-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #cccccc;
+}
+
+.hierarchy-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.empty-state {
+  padding: 20px;
+  text-align: center;
+  color: #858585;
+  font-size: 13px;
+}
+
+.entity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.entity-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.1s;
+}
+
+.entity-item:hover {
+  background-color: #2a2d2e;
+}
+
+.entity-item.selected {
+  background-color: #094771;
+}
+
+.entity-item.selected:hover {
+  background-color: #0e639c;
+}
+
+.entity-icon {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.entity-name {
+  font-size: 13px;
+  color: #cccccc;
+}

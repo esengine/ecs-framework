@@ -14,12 +14,40 @@
   padding: 8px 16px;
   background-color: #2d2d2d;
   border-bottom: 1px solid #3e3e3e;
+  gap: 16px;
 }
 
 .editor-header h1 {
   font-size: 16px;
   font-weight: 600;
   margin: 0;
+}
+
+.header-toolbar {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.toolbar-btn {
+  padding: 6px 12px;
+  background-color: #0e639c;
+  color: #ffffff;
+  border: none;
+  border-radius: 3px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background-color: #1177bb;
+}
+
+.toolbar-btn:disabled {
+  background-color: #3c3c3c;
+  color: #858585;
+  cursor: not-allowed;
 }
 
 .editor-header .status {
@@ -38,8 +66,7 @@
   width: 250px;
   background-color: #252526;
   border-right: 1px solid #3e3e3e;
-  padding: 12px;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .sidebar-right {
@@ -52,6 +79,15 @@
   font-size: 14px;
   margin-bottom: 12px;
   color: #ffffff;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: #858585;
+  font-size: 13px;
 }
 
 .main-content {

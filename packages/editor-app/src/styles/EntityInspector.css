@@ -1,0 +1,99 @@
+.entity-inspector {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #1e1e1e;
+  color: #cccccc;
+}
+
+.inspector-header {
+  padding: 10px;
+  border-bottom: 1px solid #3c3c3c;
+  background-color: #252526;
+}
+
+.inspector-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #cccccc;
+}
+
+.inspector-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.inspector-section {
+  margin-bottom: 16px;
+}
+
+.section-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #858585;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid #3c3c3c;
+}
+
+.section-content {
+  padding: 8px 0;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.info-label {
+  color: #858585;
+  font-weight: 500;
+}
+
+.info-value {
+  color: #cccccc;
+}
+
+.component-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.component-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  margin-bottom: 4px;
+  background-color: #252526;
+  border: 1px solid #3c3c3c;
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.component-item:hover {
+  background-color: #2a2d2e;
+  border-color: #505050;
+}
+
+.component-icon {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.component-name {
+  color: #cccccc;
+}
+
+.empty-state {
+  padding: 20px;
+  text-align: center;
+  color: #858585;
+  font-size: 13px;
+}
