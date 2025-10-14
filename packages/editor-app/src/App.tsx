@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Core, Scene } from '@esengine/ecs-framework';
-import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, PropertyMetadataService, ProjectService } from '@esengine/editor-core';
+import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, PropertyMetadataService, ProjectService, ComponentDiscoveryService, ComponentLoaderService } from '@esengine/editor-core';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
@@ -70,6 +70,8 @@ function App() {
         const entityStore = new EntityStoreService(messageHub);
         const componentRegistry = new ComponentRegistry();
         const projectService = new ProjectService(messageHub);
+        const componentDiscovery = new ComponentDiscoveryService(messageHub);
+        const componentLoader = new ComponentLoaderService(messageHub, componentRegistry);
 
         componentRegistry.register({
           name: 'Transform',
@@ -98,6 +100,8 @@ function App() {
         Core.services.registerInstance(EntityStoreService, entityStore);
         Core.services.registerInstance(ComponentRegistry, componentRegistry);
         Core.services.registerInstance(ProjectService, projectService);
+        Core.services.registerInstance(ComponentDiscoveryService, componentDiscovery);
+        Core.services.registerInstance(ComponentLoaderService, componentLoader);
 
         const pluginMgr = new EditorPluginManager();
         pluginMgr.initialize(coreInstance, Core.services);
@@ -147,12 +151,36 @@ function App() {
   const handleOpenProject = async () => {
     try {
       const projectPath = await TauriAPI.openProjectDialog();
-      if (projectPath) {
-        const projectService = Core.services.resolve(ProjectService);
-        if (projectService) {
-          await projectService.openProject(projectPath);
-          setStatus(t('header.status.projectOpened'));
-        }
+      if (!projectPath) return;
+
+      const projectService = Core.services.resolve(ProjectService);
+      const discoveryService = Core.services.resolve(ComponentDiscoveryService);
+      const loaderService = Core.services.resolve(ComponentLoaderService);
+
+      if (!projectService || !discoveryService || !loaderService) {
+        console.error('Required services not available');
+        return;
+      }
+
+      await projectService.openProject(projectPath);
+      setStatus('Scanning components...');
+
+      const componentsPath = projectService.getComponentsPath();
+      if (componentsPath) {
+        const componentInfos = await discoveryService.scanComponents({
+          basePath: componentsPath,
+          pattern: '**/*Component.ts',
+          scanFunction: TauriAPI.scanDirectory,
+          readFunction: TauriAPI.readFileContent
+        });
+
+        setStatus(`Loading ${componentInfos.length} components...`);
+
+        await loaderService.loadComponents(componentInfos);
+
+        setStatus(t('header.status.projectOpened') + ` (${componentInfos.length} components loaded)`);
+      } else {
+        setStatus(t('header.status.projectOpened'));
       }
     } catch (error) {
       console.error('Failed to open project:', error);

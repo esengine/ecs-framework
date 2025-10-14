@@ -35,6 +35,20 @@ export class TauriAPI {
       outputPath
     });
   }
+
+  /**
+   * 扫描目录查找匹配模式的文件
+   */
+  static async scanDirectory(path: string, pattern: string): Promise<string[]> {
+    return await invoke<string[]>('scan_directory', { path, pattern });
+  }
+
+  /**
+   * 读取文件内容
+   */
+  static async readFileContent(path: string): Promise<string> {
+    return await invoke<string>('read_file_content', { path });
+  }
 }
 
 /**

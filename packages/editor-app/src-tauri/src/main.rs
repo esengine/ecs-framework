@@ -33,18 +33,58 @@ fn export_binary(data: Vec<u8>, output_path: String) -> Result<(), String> {
 
 #[tauri::command]
 async fn open_project_dialog(app: AppHandle) -> Result<Option<String>, String> {
-    use tauri::api::dialog::blocking::FileDialogBuilder;
+    use tauri_plugin_dialog::DialogExt;
 
-    let result = FileDialogBuilder::new()
+    let folder = app.dialog()
+        .file()
         .set_title("Select Project Directory")
-        .pick_folder();
+        .blocking_pick_folder();
 
-    Ok(result.map(|path| path.to_string_lossy().to_string()))
+    Ok(folder.map(|path| path.to_string()))
+}
+
+#[tauri::command]
+fn scan_directory(path: String, pattern: String) -> Result<Vec<String>, String> {
+    use glob::glob;
+    use std::path::Path;
+
+    let base_path = Path::new(&path);
+    if !base_path.exists() {
+        return Err(format!("Directory does not exist: {}", path));
+    }
+
+    let glob_pattern = format!("{}/{}", path, pattern);
+    let mut files = Vec::new();
+
+    match glob(&glob_pattern) {
+        Ok(entries) => {
+            for entry in entries {
+                match entry {
+                    Ok(path) => {
+                        if path.is_file() {
+                            files.push(path.to_string_lossy().to_string());
+                        }
+                    }
+                    Err(e) => eprintln!("Error reading entry: {}", e),
+                }
+            }
+        }
+        Err(e) => return Err(format!("Failed to scan directory: {}", e)),
+    }
+
+    Ok(files)
+}
+
+#[tauri::command]
+fn read_file_content(path: String) -> Result<String, String> {
+    std::fs::read_to_string(&path)
+        .map_err(|e| format!("Failed to read file {}: {}", path, e))
 }
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // 应用启动时的初始化逻辑
             #[cfg(debug_assertions)]
@@ -59,7 +99,9 @@ fn main() {
             open_project,
             save_project,
             export_binary,
-            open_project_dialog
+            open_project_dialog,
+            scan_directory,
+            read_file_content
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
