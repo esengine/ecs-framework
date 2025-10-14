@@ -1,5 +1,5 @@
 import { Entity } from '../Entity';
-import { QueryCondition, QueryConditionType } from './QuerySystem';
+import { QueryCondition, QueryConditionType } from './QueryTypes';
 import { BitMask64Utils } from '../Utils/BigIntCompatibility';
 import { createLogger } from '../../Utils/Logger';
 
