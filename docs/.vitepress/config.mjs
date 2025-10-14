@@ -66,6 +66,7 @@ export default defineConfig({
           items: [
             { text: '实体类 (Entity)', link: '/guide/entity' },
             { text: '组件系统 (Component)', link: '/guide/component' },
+            { text: '实体查询系统', link: '/guide/entity-query' },
             {
               text: '系统架构 (System)',
               link: '/guide/system',
