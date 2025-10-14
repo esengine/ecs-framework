@@ -205,9 +205,14 @@ describe('SystemInitialization - 系统初始化测试', () => {
     let scene: Scene;
 
     beforeEach(() => {
-        ComponentTypeManager.instance.reset();
         scene = new Scene();
         scene.name = 'InitializationTestScene';
+    });
+
+    afterEach(() => {
+        if (scene) {
+            scene.end();
+        }
     });
 
     describe('初始化时序', () => {
