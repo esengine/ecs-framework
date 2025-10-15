@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
+import { FileTree } from './FileTree';
+import { ResizablePanel } from './ResizablePanel';
 import '../styles/AssetBrowser.css';
 
 interface AssetItem {
@@ -14,10 +16,13 @@ interface AssetBrowserProps {
   locale: string;
 }
 
+type ViewMode = 'tree-split' | 'tree-only';
+
 export function AssetBrowser({ projectPath, locale }: AssetBrowserProps) {
-  const [currentPath, setCurrentPath] = useState<string>('');
+  const [viewMode, setViewMode] = useState<ViewMode>('tree-split');
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [assets, setAssets] = useState<AssetItem[]>([]);
-  const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
 
   const translations = {
@@ -26,22 +31,26 @@ export function AssetBrowser({ projectPath, locale }: AssetBrowserProps) {
       noProject: 'No project loaded',
       loading: 'Loading...',
       empty: 'No assets found',
+      search: 'Search...',
+      viewTreeSplit: 'Tree + List',
+      viewTreeOnly: 'Tree Only',
       name: 'Name',
       type: 'Type',
       file: 'File',
-      folder: 'Folder',
-      backToParent: 'Back to parent folder'
+      folder: 'Folder'
     },
     zh: {
       title: '资产',
       noProject: '没有加载项目',
       loading: '加载中...',
       empty: '没有找到资产',
+      search: '搜索...',
+      viewTreeSplit: '树形+列表',
+      viewTreeOnly: '纯树形',
       name: '名称',
       type: '类型',
       file: '文件',
-      folder: '文件夹',
-      backToParent: '返回上一级'
+      folder: '文件夹'
     }
   };
 
@@ -49,13 +58,14 @@ export function AssetBrowser({ projectPath, locale }: AssetBrowserProps) {
 
   useEffect(() => {
     if (projectPath) {
-      setCurrentPath(projectPath);
-      loadAssets(projectPath);
+      if (viewMode === 'tree-split') {
+        loadAssets(projectPath);
+      }
     } else {
       setAssets([]);
-      setCurrentPath('');
+      setSelectedPath(null);
     }
-  }, [projectPath]);
+  }, [projectPath, viewMode]);
 
   const loadAssets = async (path: string) => {
     setLoading(true);
@@ -83,28 +93,26 @@ export function AssetBrowser({ projectPath, locale }: AssetBrowserProps) {
     }
   };
 
-  const handleAssetClick = (asset: AssetItem) => {
-    setSelectedAsset(asset.path);
-    if (asset.type === 'folder') {
-      setCurrentPath(asset.path);
-      loadAssets(asset.path);
+  const handleTreeSelect = (path: string) => {
+    setSelectedPath(path);
+    if (viewMode === 'tree-split') {
+      loadAssets(path);
     }
+  };
+
+  const handleAssetClick = (asset: AssetItem) => {
+    setSelectedPath(asset.path);
   };
 
   const handleAssetDoubleClick = (asset: AssetItem) => {
     console.log('Open asset:', asset);
   };
 
-  const handleBackToParent = () => {
-    if (!currentPath || !projectPath) return;
-    if (currentPath === projectPath) return;
-
-    const parentPath = currentPath.split(/[\\/]/).slice(0, -1).join(currentPath.includes('\\') ? '\\' : '/');
-    setCurrentPath(parentPath);
-    loadAssets(parentPath);
-  };
-
-  const canGoBack = currentPath && projectPath && currentPath !== projectPath;
+  const filteredAssets = searchQuery
+    ? assets.filter(asset =>
+        asset.type === 'file' && asset.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : assets.filter(asset => asset.type === 'file');
 
   const getFileIcon = (extension?: string) => {
     switch (extension?.toLowerCase()) {
@@ -147,12 +155,6 @@ export function AssetBrowser({ projectPath, locale }: AssetBrowserProps) {
     }
   };
 
-  const getFolderIcon = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="asset-icon folder">
-      <path d="M3 7V17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17V9C21 7.89543 20.1046 7 19 7H13L11 5H5C3.89543 5 3 5.89543 3 7Z" strokeWidth="2"/>
-    </svg>
-  );
-
   if (!projectPath) {
     return (
       <div className="asset-browser">
@@ -166,69 +168,114 @@ export function AssetBrowser({ projectPath, locale }: AssetBrowserProps) {
     );
   }
 
-  return (
-    <div className="asset-browser">
-      <div className="asset-browser-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-          <h3 style={{ margin: 0 }}>{t.title}</h3>
-          {canGoBack && (
-            <button
-              onClick={handleBackToParent}
-              className="back-button"
-              title={t.backToParent}
-              style={{
-                padding: '4px 8px',
-                background: '#0e639c',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 12H5M12 19l-7-7 7-7"/>
-              </svg>
-              ↑
-            </button>
-          )}
-        </div>
-        <div className="asset-path">{currentPath}</div>
+  const renderListView = () => (
+    <div className="asset-browser-list">
+      <div className="asset-browser-toolbar">
+        <input
+          type="text"
+          className="asset-search"
+          placeholder={t.search}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
-
       {loading ? (
         <div className="asset-browser-loading">
           <p>{t.loading}</p>
         </div>
-      ) : assets.length === 0 ? (
+      ) : filteredAssets.length === 0 ? (
         <div className="asset-browser-empty">
           <p>{t.empty}</p>
         </div>
       ) : (
-        <div className="asset-browser-content">
-          <div className="asset-list">
-            {assets.map((asset, index) => (
-              <div
-                key={index}
-                className={`asset-item ${selectedAsset === asset.path ? 'selected' : ''}`}
-                onClick={() => handleAssetClick(asset)}
-                onDoubleClick={() => handleAssetDoubleClick(asset)}
-              >
-                {asset.type === 'folder' ? getFolderIcon() : getFileIcon(asset.extension)}
-                <div className="asset-name" title={asset.name}>
-                  {asset.name}
-                </div>
-                <div className="asset-type">
-                  {asset.type === 'folder' ? t.folder : asset.extension || t.file}
-                </div>
+        <div className="asset-list">
+          {filteredAssets.map((asset, index) => (
+            <div
+              key={index}
+              className={`asset-item ${selectedPath === asset.path ? 'selected' : ''}`}
+              onClick={() => handleAssetClick(asset)}
+              onDoubleClick={() => handleAssetDoubleClick(asset)}
+            >
+              {getFileIcon(asset.extension)}
+              <div className="asset-name" title={asset.name}>
+                {asset.name}
               </div>
-            ))}
-          </div>
+              <div className="asset-type">
+                {asset.extension || t.file}
+              </div>
+            </div>
+          ))}
         </div>
       )}
+    </div>
+  );
+
+  return (
+    <div className="asset-browser">
+      <div className="asset-browser-header">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <h3 style={{ margin: 0 }}>{t.title}</h3>
+          <div className="view-mode-buttons">
+            <button
+              className={`view-mode-btn ${viewMode === 'tree-split' ? 'active' : ''}`}
+              onClick={() => setViewMode('tree-split')}
+              title={t.viewTreeSplit}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="18"/>
+                <rect x="14" y="3" width="7" height="18"/>
+              </svg>
+            </button>
+            <button
+              className={`view-mode-btn ${viewMode === 'tree-only' ? 'active' : ''}`}
+              onClick={() => setViewMode('tree-only')}
+              title={t.viewTreeOnly}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="asset-browser-content">
+        {viewMode === 'tree-only' ? (
+          <div className="asset-browser-tree-only">
+            <div className="asset-browser-toolbar">
+              <input
+                type="text"
+                className="asset-search"
+                placeholder={t.search}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <FileTree
+              rootPath={projectPath}
+              onSelectFile={handleTreeSelect}
+              selectedPath={selectedPath}
+            />
+          </div>
+        ) : (
+          <ResizablePanel
+            direction="horizontal"
+            defaultSize={200}
+            minSize={150}
+            maxSize={400}
+            leftOrTop={
+              <div className="asset-browser-tree">
+                <FileTree
+                  rootPath={projectPath}
+                  onSelectFile={handleTreeSelect}
+                  selectedPath={selectedPath}
+                />
+              </div>
+            }
+            rightOrBottom={renderListView()}
+          />
+        )}
+      </div>
     </div>
   );
 }
