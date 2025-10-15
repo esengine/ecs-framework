@@ -63,6 +63,13 @@ export class TauriAPI {
   static async setProjectBasePath(path: string): Promise<void> {
     return await invoke<void>('set_project_base_path', { path });
   }
+
+  /**
+   * 切换开发者工具（仅在debug模式下可用）
+   */
+  static async toggleDevtools(): Promise<void> {
+    return await invoke<void>('toggle_devtools');
+  }
 }
 
 export interface DirectoryEntry {

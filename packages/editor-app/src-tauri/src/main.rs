@@ -155,6 +155,28 @@ fn set_project_base_path(
     Ok(())
 }
 
+#[tauri::command]
+fn toggle_devtools(app: AppHandle) -> Result<(), String> {
+    #[cfg(debug_assertions)]
+    {
+        if let Some(window) = app.get_webview_window("main") {
+            if window.is_devtools_open() {
+                window.close_devtools();
+            } else {
+                window.open_devtools();
+            }
+            Ok(())
+        } else {
+            Err("Window not found".to_string())
+        }
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        Err("DevTools are only available in debug mode".to_string())
+    }
+}
+
 fn main() {
     let project_paths: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
     let project_paths_clone = Arc::clone(&project_paths);
@@ -209,12 +231,6 @@ fn main() {
             }
         })
         .setup(move |app| {
-            #[cfg(debug_assertions)]
-            {
-                let window = app.get_webview_window("main").unwrap();
-                window.open_devtools();
-            }
-
             app.manage(project_paths);
             Ok(())
         })
@@ -227,7 +243,8 @@ fn main() {
             scan_directory,
             read_file_content,
             list_directory,
-            set_project_base_path
+            set_project_base_path,
+            toggle_devtools
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

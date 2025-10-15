@@ -40,6 +40,19 @@ function App() {
   const [showPluginManager, setShowPluginManager] = useState(false);
 
   useEffect(() => {
+    // 禁用默认右键菜单
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, []);
+
+  useEffect(() => {
     const initializeEditor = async () => {
       try {
         (window as any).__ECS_FRAMEWORK__ = await import('@esengine/ecs-framework');
@@ -190,6 +203,14 @@ function App() {
     changeLocale(newLocale);
   };
 
+  const handleToggleDevtools = async () => {
+    try {
+      await TauriAPI.toggleDevtools();
+    } catch (error) {
+      console.error('Failed to toggle devtools:', error);
+    }
+  };
+
   useEffect(() => {
     if (projectLoaded && entityStore && messageHub && logService) {
       setPanels([
@@ -283,6 +304,7 @@ function App() {
           onCloseProject={handleCloseProject}
           onExit={handleExit}
           onOpenPluginManager={() => setShowPluginManager(true)}
+          onToggleDevtools={handleToggleDevtools}
         />
         <div className="header-right">
           <button onClick={handleLocaleChange} className="toolbar-btn locale-btn" title={locale === 'en' ? '切换到中文' : 'Switch to English'}>

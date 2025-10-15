@@ -272,6 +272,24 @@
   transform: translateX(-50%) translateY(0);
 }
 
+/* Scrollbar */
+.console-content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.console-content::-webkit-scrollbar-track {
+  background: var(--color-bg-elevated);
+}
+
+.console-content::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 5px;
+}
+
+.console-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .console-btn,
   .console-filter-btn,

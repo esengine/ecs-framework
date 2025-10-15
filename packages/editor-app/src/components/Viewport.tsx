@@ -35,6 +35,9 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // Set initial cursor style
+    canvas.style.cursor = 'grab';
+
     const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
     if (!gl) {
       console.error('WebGL not supported');
@@ -75,6 +78,7 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
         isDraggingRef.current = true;
         lastMousePosRef.current = { x: e.clientX, y: e.clientY };
         canvas.style.cursor = 'grabbing';
+        e.preventDefault();
       }
     };
 
@@ -100,8 +104,8 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
     };
 
     const handleMouseUp = () => {
-      isDraggingRef.current = false;
-      if (canvas) {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
         canvas.style.cursor = 'grab';
       }
     };
@@ -115,20 +119,21 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
       }
     };
 
+    // Register mousedown and wheel on canvas
     canvas.addEventListener('mousedown', handleMouseDown);
-    canvas.addEventListener('mousemove', handleMouseMove);
-    canvas.addEventListener('mouseup', handleMouseUp);
-    canvas.addEventListener('mouseleave', handleMouseUp);
     canvas.addEventListener('wheel', handleWheel, { passive: false });
+
+    // Register mousemove and mouseup globally to handle dragging outside canvas
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
 
     return () => {
       window.removeEventListener('resize', resizeCanvas);
       resizeObserver.disconnect();
       canvas.removeEventListener('mousedown', handleMouseDown);
-      canvas.removeEventListener('mousemove', handleMouseMove);
-      canvas.removeEventListener('mouseup', handleMouseUp);
-      canvas.removeEventListener('mouseleave', handleMouseUp);
       canvas.removeEventListener('wheel', handleWheel);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }

@@ -20,6 +20,7 @@ interface MenuBarProps {
   onCloseProject?: () => void;
   onExit?: () => void;
   onOpenPluginManager?: () => void;
+  onToggleDevtools?: () => void;
 }
 
 export function MenuBar({
@@ -31,7 +32,8 @@ export function MenuBar({
   onOpenProject,
   onCloseProject,
   onExit,
-  onOpenPluginManager
+  onOpenPluginManager,
+  onToggleDevtools
 }: MenuBarProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -64,7 +66,8 @@ export function MenuBar({
         pluginManager: 'Plugin Manager',
         help: 'Help',
         documentation: 'Documentation',
-        about: 'About'
+        about: 'About',
+        devtools: 'Developer Tools'
       },
       zh: {
         file: '文件',
@@ -92,7 +95,8 @@ export function MenuBar({
         pluginManager: '插件管理器',
         help: '帮助',
         documentation: '文档',
-        about: '关于'
+        about: '关于',
+        devtools: '开发者工具'
       }
     };
     return translations[locale]?.[key] || key;
@@ -129,7 +133,9 @@ export function MenuBar({
       { label: t('console'), disabled: true },
       { label: t('viewport'), disabled: true },
       { separator: true },
-      { label: t('pluginManager'), onClick: onOpenPluginManager }
+      { label: t('pluginManager'), onClick: onOpenPluginManager },
+      { separator: true },
+      { label: t('devtools'), onClick: onToggleDevtools }
     ],
     help: [
       { label: t('documentation'), disabled: true },
