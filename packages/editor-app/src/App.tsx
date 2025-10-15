@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { Core, Scene } from '@esengine/ecs-framework';
 import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, PropertyMetadataService, ProjectService, ComponentDiscoveryService, ComponentLoaderService } from '@esengine/editor-core';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
+import { StartupPage } from './components/StartupPage';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
+import { AssetBrowser } from './components/AssetBrowser';
 import { TauriAPI } from './api/tauri';
 import { TransformComponent } from './example-components/TransformComponent';
 import { SpriteComponent } from './example-components/SpriteComponent';
@@ -12,7 +14,6 @@ import { useLocale } from './hooks/useLocale';
 import { en, zh } from './locales';
 import './styles/App.css';
 
-// 在 App 组件外部初始化 Core 和基础服务
 const coreInstance = Core.create({ debug: true });
 
 const localeService = new LocaleService();
@@ -52,6 +53,8 @@ propertyMetadata.register(RigidBodyComponent, {
 
 function App() {
   const [initialized, setInitialized] = useState(false);
+  const [projectLoaded, setProjectLoaded] = useState(false);
+  const [currentProjectPath, setCurrentProjectPath] = useState<string | null>(null);
   const [pluginManager, setPluginManager] = useState<EditorPluginManager | null>(null);
   const [entityStore, setEntityStore] = useState<EntityStoreService | null>(null);
   const [messageHub, setMessageHub] = useState<MessageHub | null>(null);
@@ -125,29 +128,6 @@ function App() {
     initializeEditor();
   }, []);
 
-  const handleCreateEntity = () => {
-    if (!initialized || !entityStore) return;
-    const scene = Core.scene;
-    if (!scene) return;
-
-    const entity = scene.createEntity('Entity');
-    entityStore.addEntity(entity);
-  };
-
-  const handleDeleteEntity = () => {
-    if (!entityStore) return;
-    const selected = entityStore.getSelectedEntity();
-    if (selected) {
-      selected.destroy();
-      entityStore.removeEntity(selected);
-    }
-  };
-
-  const handleLocaleChange = () => {
-    const newLocale = locale === 'en' ? 'zh' : 'en';
-    changeLocale(newLocale);
-  };
-
   const handleOpenProject = async () => {
     try {
       const projectPath = await TauriAPI.openProjectDialog();
@@ -182,20 +162,66 @@ function App() {
       } else {
         setStatus(t('header.status.projectOpened'));
       }
+
+      setCurrentProjectPath(projectPath);
+      setProjectLoaded(true);
     } catch (error) {
       console.error('Failed to open project:', error);
       setStatus(t('header.status.failed'));
     }
   };
 
+  const handleCreateProject = async () => {
+    console.log('Create project not implemented yet');
+  };
+
+  const handleCreateEntity = () => {
+    if (!initialized || !entityStore) return;
+    const scene = Core.scene;
+    if (!scene) return;
+
+    const entity = scene.createEntity('Entity');
+    entityStore.addEntity(entity);
+  };
+
+  const handleDeleteEntity = () => {
+    if (!entityStore) return;
+    const selected = entityStore.getSelectedEntity();
+    if (selected) {
+      selected.destroy();
+      entityStore.removeEntity(selected);
+    }
+  };
+
+  const handleLocaleChange = () => {
+    const newLocale = locale === 'en' ? 'zh' : 'en';
+    changeLocale(newLocale);
+  };
+
+  if (!initialized) {
+    return (
+      <div className="editor-loading">
+        <h2>Loading Editor...</h2>
+      </div>
+    );
+  }
+
+  if (!projectLoaded) {
+    return (
+      <StartupPage
+        onOpenProject={handleOpenProject}
+        onCreateProject={handleCreateProject}
+        recentProjects={[]}
+        locale={locale}
+      />
+    );
+  }
+
   return (
     <div className="editor-container">
       <div className="editor-header">
         <h1>{t('app.title')}</h1>
         <div className="header-toolbar">
-          <button onClick={handleOpenProject} disabled={!initialized} className="toolbar-btn">
-            {t('header.toolbar.openProject')}
-          </button>
           <button onClick={handleCreateEntity} disabled={!initialized} className="toolbar-btn">
             {t('header.toolbar.createEntity')}
           </button>
@@ -225,8 +251,7 @@ function App() {
           </div>
 
           <div className="bottom-panel">
-            <h4>{t('console.title')}</h4>
-            <p>{t('console.placeholder')}</p>
+            <AssetBrowser projectPath={currentProjectPath} locale={locale} />
           </div>
         </div>
 

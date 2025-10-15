@@ -10,7 +10,7 @@ interface EntityInspectorProps {
   messageHub: MessageHub;
 }
 
-export function EntityInspector({ entityStore, messageHub }: EntityInspectorProps) {
+export function EntityInspector({ entityStore: _entityStore, messageHub }: EntityInspectorProps) {
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [showAddComponent, setShowAddComponent] = useState(false);
   const [expandedComponents, setExpandedComponents] = useState<Set<number>>(new Set());

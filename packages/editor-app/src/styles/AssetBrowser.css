@@ -1,0 +1,130 @@
+.asset-browser {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #1e1e1e;
+  border-top: 1px solid #333;
+}
+
+.asset-browser-header {
+  padding: 12px 15px;
+  background: #252526;
+  border-bottom: 1px solid #333;
+}
+
+.asset-browser-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #cccccc;
+}
+
+.asset-path {
+  font-size: 11px;
+  color: #858585;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-browser-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.asset-browser-loading,
+.asset-browser-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #858585;
+  font-size: 13px;
+}
+
+.asset-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.asset-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  user-select: none;
+}
+
+.asset-item:hover {
+  background: #2a2d2e;
+}
+
+.asset-item.selected {
+  background: #094771;
+}
+
+.asset-item.selected:hover {
+  background: #0e6caa;
+}
+
+.asset-icon {
+  width: 48px;
+  height: 48px;
+  color: #cccccc;
+  margin-bottom: 8px;
+  stroke-width: 1.5;
+}
+
+.asset-icon.folder {
+  color: #dcb67a;
+}
+
+.asset-name {
+  font-size: 12px;
+  color: #cccccc;
+  text-align: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4px;
+}
+
+.asset-type {
+  font-size: 10px;
+  color: #858585;
+  text-transform: uppercase;
+}
+
+.asset-browser-content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.asset-browser-content::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.asset-browser-content::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 5px;
+}
+
+.asset-browser-content::-webkit-scrollbar-thumb:hover {
+  background: #4e4e4e;
+}
+
+@media (max-width: 768px) {
+  .asset-list {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  }
+
+  .asset-icon {
+    width: 32px;
+    height: 32px;
+  }
+}
