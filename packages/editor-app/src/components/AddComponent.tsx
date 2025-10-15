@@ -16,13 +16,26 @@ export function AddComponent({ entity, componentRegistry, onAdd, onCancel }: Add
   const [filter, setFilter] = useState('');
 
   useEffect(() => {
+    if (!componentRegistry) {
+      console.error('ComponentRegistry is null');
+      return;
+    }
+
     const allComponents = componentRegistry.getAllComponents();
+    console.log('All registered components:', allComponents);
+
+    allComponents.forEach(comp => {
+      console.log(`Component ${comp.name}: has type = ${!!comp.type}`);
+    });
+
     const existingComponentNames = entity.components.map(c => c.constructor.name);
 
     const availableComponents = allComponents.filter(
-      comp => !existingComponentNames.includes(comp.name)
+      comp => comp.type && !existingComponentNames.includes(comp.name)
     );
 
+    console.log('Available components to add:', availableComponents);
+    console.log('Components filtered out:', allComponents.filter(comp => !comp.type).map(c => c.name));
     setComponents(availableComponents);
   }, [entity, componentRegistry]);
 

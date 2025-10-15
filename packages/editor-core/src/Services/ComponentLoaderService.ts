@@ -57,40 +57,58 @@ export class ComponentLoaderService implements IService {
         modulePathTransform?: (filePath: string) => string
     ): Promise<LoadedComponentInfo | null> {
         try {
-            const modulePath = modulePathTransform
-                ? modulePathTransform(componentInfo.path)
-                : this.convertToModulePath(componentInfo.path);
-
-            logger.debug(`Loading component from: ${modulePath}`);
-
-            const module = await import(/* @vite-ignore */ modulePath);
-
             if (!componentInfo.className) {
                 logger.warn(`No class name found for component: ${componentInfo.fileName}`);
                 return null;
             }
 
-            const componentClass = module[componentInfo.className];
+            let componentClass: typeof Component | undefined;
 
-            if (!componentClass || !(componentClass.prototype instanceof Component)) {
-                logger.error(`Invalid component class: ${componentInfo.className}`);
-                return null;
+            if (modulePathTransform) {
+                const modulePath = modulePathTransform(componentInfo.path);
+                logger.info(`Attempting to load component from: ${modulePath}`);
+                logger.info(`Looking for export: ${componentInfo.className}`);
+
+                try {
+                    const module = await import(/* @vite-ignore */ modulePath);
+                    logger.info(`Module loaded, exports:`, Object.keys(module));
+
+                    componentClass = module[componentInfo.className] || module.default;
+
+                    if (!componentClass) {
+                        logger.warn(`Component class ${componentInfo.className} not found in module exports`);
+                        logger.warn(`Available exports: ${Object.keys(module).join(', ')}`);
+                    } else {
+                        logger.info(`Successfully loaded component class: ${componentInfo.className}`);
+                    }
+                } catch (error) {
+                    logger.error(`Failed to import component module: ${modulePath}`, error);
+                }
             }
 
             this.componentRegistry.register({
                 name: componentInfo.className,
-                type: componentClass
+                type: componentClass as any,
+                category: componentInfo.className.includes('Transform') ? 'Transform' :
+                         componentInfo.className.includes('Render') || componentInfo.className.includes('Sprite') ? 'Rendering' :
+                         componentInfo.className.includes('Physics') || componentInfo.className.includes('RigidBody') ? 'Physics' :
+                         'Custom',
+                description: `Component from ${componentInfo.fileName}`,
+                metadata: {
+                    path: componentInfo.path,
+                    fileName: componentInfo.fileName
+                }
             });
 
             const loadedInfo: LoadedComponentInfo = {
                 fileInfo: componentInfo,
-                componentClass,
+                componentClass: (componentClass || Component) as any,
                 loadedAt: Date.now()
             };
 
             this.loadedComponents.set(componentInfo.path, loadedInfo);
 
-            logger.info(`Component loaded and registered: ${componentInfo.className}`);
+            logger.info(`Component ${componentClass ? 'loaded' : 'metadata registered'}: ${componentInfo.className}`);
 
             return loadedInfo;
         } catch (error) {
@@ -125,13 +143,7 @@ export class ComponentLoaderService implements IService {
     }
 
     private convertToModulePath(filePath: string): string {
-        const normalizedPath = filePath.replace(/\\/g, '/');
-
-        if (normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) {
-            return normalizedPath;
-        }
-
-        return `file:///${normalizedPath}`;
+        return filePath;
     }
 
     public dispose(): void {

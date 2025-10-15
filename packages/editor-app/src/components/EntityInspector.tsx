@@ -3,6 +3,7 @@ import { Entity, Core } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub, ComponentRegistry } from '@esengine/editor-core';
 import { AddComponent } from './AddComponent';
 import { PropertyInspector } from './PropertyInspector';
+import { FileSearch, Plus, ChevronDown, ChevronRight, X, Settings } from 'lucide-react';
 import '../styles/EntityInspector.css';
 
 interface EntityInspectorProps {
@@ -37,11 +38,16 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
       return;
     }
 
+    console.log('Attempting to create component:', componentName);
     const component = componentRegistry.createInstance(componentName);
+    console.log('Created component:', component);
+
     if (component) {
       selectedEntity.addComponent(component);
       messageHub.publish('component:added', { entity: selectedEntity, component });
       setShowAddComponent(false);
+    } else {
+      console.error('Failed to create component instance for:', componentName);
     }
   };
 
@@ -80,10 +86,15 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
     return (
       <div className="entity-inspector">
         <div className="inspector-header">
+          <FileSearch size={16} className="inspector-header-icon" />
           <h3>Inspector</h3>
         </div>
         <div className="inspector-content">
-          <div className="empty-state">No entity selected</div>
+          <div className="empty-state">
+            <FileSearch size={48} strokeWidth={1.5} className="empty-icon" />
+            <div className="empty-title">No entity selected</div>
+            <div className="empty-hint">Select an entity from the hierarchy</div>
+          </div>
         </div>
       </div>
     );
@@ -94,11 +105,15 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
   return (
     <div className="entity-inspector">
       <div className="inspector-header">
+        <FileSearch size={16} className="inspector-header-icon" />
         <h3>Inspector</h3>
       </div>
-      <div className="inspector-content">
+      <div className="inspector-content scrollable">
         <div className="inspector-section">
-          <div className="section-header">Entity Info</div>
+          <div className="section-header">
+            <Settings size={12} className="section-icon" />
+            <span>Entity Info</span>
+          </div>
           <div className="section-content">
             <div className="info-row">
               <span className="info-label">ID:</span>
@@ -117,44 +132,47 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
 
         <div className="inspector-section">
           <div className="section-header">
+            <Settings size={12} className="section-icon" />
             <span>Components ({components.length})</span>
             <button
               className="add-component-btn"
               onClick={() => setShowAddComponent(true)}
               title="Add Component"
             >
-              +
+              <Plus size={12} />
             </button>
           </div>
           <div className="section-content">
             {components.length === 0 ? (
-              <div className="empty-state">No components</div>
+              <div className="empty-state-small">No components</div>
             ) : (
               <ul className="component-list">
                 {components.map((component, index) => {
                   const isExpanded = expandedComponents.has(index);
                   return (
-                    <li key={index} className="component-item">
-                      <div className="component-header">
+                    <li key={index} className={`component-item ${isExpanded ? 'expanded' : ''}`}>
+                      <div className="component-header" onClick={() => toggleComponentExpanded(index)}>
                         <button
                           className="component-expand-btn"
-                          onClick={() => toggleComponentExpanded(index)}
                           title={isExpanded ? 'Collapse' : 'Expand'}
                         >
-                          {isExpanded ? '▼' : '▶'}
+                          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                         </button>
-                        <span className="component-icon">🔧</span>
+                        <Settings size={14} className="component-icon" />
                         <span className="component-name">{component.constructor.name}</span>
                         <button
                           className="remove-component-btn"
-                          onClick={() => handleRemoveComponent(index)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveComponent(index);
+                          }}
                           title="Remove Component"
                         >
-                          ×
+                          <X size={14} />
                         </button>
                       </div>
                       {isExpanded && (
-                        <div className="component-properties">
+                        <div className="component-properties animate-slideDown">
                           <PropertyInspector
                             component={component}
                             onChange={(propertyName, value) => handlePropertyChange(component, propertyName, value)}

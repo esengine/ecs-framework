@@ -4,7 +4,7 @@ import { createLogger } from '@esengine/ecs-framework';
 
 const logger = createLogger('PropertyMetadata');
 
-export type PropertyType = 'number' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3';
+export type PropertyType = 'number' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum';
 
 export interface PropertyMetadata {
     type: PropertyType;

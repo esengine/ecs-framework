@@ -56,6 +56,13 @@ export class TauriAPI {
   static async listDirectory(path: string): Promise<DirectoryEntry[]> {
     return await invoke<DirectoryEntry[]>('list_directory', { path });
   }
+
+  /**
+   * 设置项目基础路径，用于 Custom Protocol
+   */
+  static async setProjectBasePath(path: string): Promise<void> {
+    return await invoke<void>('set_project_base_path', { path });
+  }
 }
 
 export interface DirectoryEntry {

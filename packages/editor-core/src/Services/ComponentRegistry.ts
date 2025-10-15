@@ -2,9 +2,14 @@ import { Injectable, IService, Component } from '@esengine/ecs-framework';
 
 export interface ComponentTypeInfo {
   name: string;
-  type: new (...args: any[]) => Component;
+  type?: new (...args: any[]) => Component;
   category?: string;
   description?: string;
+  metadata?: {
+    path?: string;
+    fileName?: string;
+    [key: string]: any;
+  };
 }
 
 /**
@@ -40,7 +45,7 @@ export class ComponentRegistry implements IService {
 
   public createInstance(name: string, ...args: any[]): Component | null {
     const info = this.components.get(name);
-    if (!info) return null;
+    if (!info || !info.type) return null;
 
     return new info.type(...args);
   }

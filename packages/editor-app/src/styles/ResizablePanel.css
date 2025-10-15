@@ -19,31 +19,35 @@
 }
 
 .resizer {
-  background: #252526;
+  background: var(--color-bg-elevated);
   position: relative;
-  z-index: 10;
-  transition: background-color 0.2s ease;
+  z-index: var(--z-index-base);
+  transition: background-color var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .resizer:hover {
-  background: #094771;
+  background: var(--color-primary-subtle);
+}
+
+.resizer:active {
+  background: var(--color-primary);
 }
 
 .resizer-horizontal {
   width: 4px;
   cursor: col-resize;
-  flex-shrink: 0;
 }
 
 .resizer-vertical {
   height: 4px;
   cursor: row-resize;
-  flex-shrink: 0;
 }
 
 .resizer-handle {
   position: absolute;
   background: transparent;
+  pointer-events: none;
 }
 
 .resizer-horizontal .resizer-handle {
@@ -60,10 +64,6 @@
   transform: translate(-50%, -50%);
   width: 40px;
   height: 12px;
-}
-
-.resizer:active {
-  background: #0e6caa;
 }
 
 body.resizing {

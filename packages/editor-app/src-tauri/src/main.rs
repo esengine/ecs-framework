@@ -3,6 +3,8 @@
 
 use tauri::Manager;
 use tauri::AppHandle;
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 
 // IPC Commands
 #[tauri::command]
@@ -143,17 +145,77 @@ fn list_directory(path: String) -> Result<Vec<DirectoryEntry>, String> {
     Ok(entries)
 }
 
+#[tauri::command]
+fn set_project_base_path(
+    path: String,
+    state: tauri::State<Arc<Mutex<HashMap<String, String>>>>
+) -> Result<(), String> {
+    let mut paths = state.lock().map_err(|e| format!("Failed to lock state: {}", e))?;
+    paths.insert("current".to_string(), path);
+    Ok(())
+}
+
 fn main() {
+    let project_paths: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
+    let project_paths_clone = Arc::clone(&project_paths);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
-        .setup(|app| {
-            // 应用启动时的初始化逻辑
+        .register_uri_scheme_protocol("project", move |_app, request| {
+            let project_paths = Arc::clone(&project_paths_clone);
+
+            let uri = request.uri();
+            let path = uri.path();
+
+            let file_path = {
+                let paths = project_paths.lock().unwrap();
+                if let Some(base_path) = paths.get("current") {
+                    format!("{}{}", base_path, path)
+                } else {
+                    return tauri::http::Response::builder()
+                        .status(404)
+                        .body(Vec::new())
+                        .unwrap();
+                }
+            };
+
+            match std::fs::read(&file_path) {
+                Ok(content) => {
+                    let mime_type = if file_path.ends_with(".ts") || file_path.ends_with(".tsx") {
+                        "application/javascript"
+                    } else if file_path.ends_with(".js") {
+                        "application/javascript"
+                    } else if file_path.ends_with(".json") {
+                        "application/json"
+                    } else {
+                        "text/plain"
+                    };
+
+                    tauri::http::Response::builder()
+                        .status(200)
+                        .header("Content-Type", mime_type)
+                        .header("Access-Control-Allow-Origin", "*")
+                        .body(content)
+                        .unwrap()
+                }
+                Err(e) => {
+                    eprintln!("Failed to read file {}: {}", file_path, e);
+                    tauri::http::Response::builder()
+                        .status(404)
+                        .body(Vec::new())
+                        .unwrap()
+                }
+            }
+        })
+        .setup(move |app| {
             #[cfg(debug_assertions)]
             {
                 let window = app.get_webview_window("main").unwrap();
                 window.open_devtools();
             }
+
+            app.manage(project_paths);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -164,7 +226,8 @@ fn main() {
             open_project_dialog,
             scan_directory,
             read_file_content,
-            list_directory
+            list_directory,
+            set_project_base_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
