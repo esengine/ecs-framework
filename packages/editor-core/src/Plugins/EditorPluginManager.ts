@@ -63,9 +63,12 @@ export class EditorPluginManager extends PluginManager {
         this.pluginMetadata.set(plugin.name, metadata);
 
         try {
+            console.log('[EditorPluginManager] Checking registerMenuItems:', !!plugin.registerMenuItems);
             if (plugin.registerMenuItems) {
                 const menuItems = plugin.registerMenuItems();
+                console.log('[EditorPluginManager] Got menu items:', menuItems);
                 this.uiRegistry.registerMenus(menuItems);
+                console.log('[EditorPluginManager] Registered menu items to UIRegistry');
                 logger.debug(`Registered ${menuItems.length} menu items for ${plugin.name}`);
             }
 

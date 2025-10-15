@@ -4,6 +4,7 @@
   --color-bg-elevated: #252526;
   --color-bg-overlay: #2d2d2d;
   --color-bg-input: #3c3c3c;
+  --color-bg-inset: #181818;
   --color-bg-hover: #2a2d2e;
   --color-bg-active: #37373d;
 
@@ -29,6 +30,7 @@
   --color-success: #4ec9b0;
   --color-warning: #ce9178;
   --color-error: #f48771;
+  --color-danger: #f14c4c;
   --color-info: #4fc1ff;
 
   /* 颜色系统 - 特殊 */

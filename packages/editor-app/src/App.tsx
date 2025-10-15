@@ -1,13 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Core, Scene } from '@esengine/ecs-framework';
 import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, ComponentLoaderService, PropertyMetadataService, LogService } from '@esengine/editor-core';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
+import { ProfilerPlugin } from './plugins/ProfilerPlugin';
 import { StartupPage } from './components/StartupPage';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
 import { AssetBrowser } from './components/AssetBrowser';
 import { ConsolePanel } from './components/ConsolePanel';
+import { ProfilerPanel } from './components/ProfilerPanel';
 import { PluginManagerWindow } from './components/PluginManagerWindow';
+import { ProfilerWindow } from './components/ProfilerWindow';
+import { PortManager } from './components/PortManager';
 import { Viewport } from './components/Viewport';
 import { MenuBar } from './components/MenuBar';
 import { DockContainer, DockablePanel } from './components/DockContainer';
@@ -25,6 +29,7 @@ localeService.registerTranslations('zh', zh);
 Core.services.registerInstance(LocaleService, localeService);
 
 function App() {
+  const initRef = useRef(false);
   const [initialized, setInitialized] = useState(false);
   const [projectLoaded, setProjectLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,10 +39,13 @@ function App() {
   const [entityStore, setEntityStore] = useState<EntityStoreService | null>(null);
   const [messageHub, setMessageHub] = useState<MessageHub | null>(null);
   const [logService, setLogService] = useState<LogService | null>(null);
+  const [uiRegistry, setUiRegistry] = useState<UIRegistry | null>(null);
   const { t, locale, changeLocale } = useLocale();
   const [status, setStatus] = useState(t('header.status.initializing'));
   const [panels, setPanels] = useState<DockablePanel[]>([]);
   const [showPluginManager, setShowPluginManager] = useState(false);
+  const [showProfiler, setShowProfiler] = useState(false);
+  const [showPortManager, setShowPortManager] = useState(false);
 
   useEffect(() => {
     // 禁用默认右键菜单
@@ -54,7 +62,15 @@ function App() {
 
   useEffect(() => {
     const initializeEditor = async () => {
+      // 使用 ref 防止 React StrictMode 的双重调用
+      if (initRef.current) {
+        console.log('[App] Already initialized via ref, skipping second initialization');
+        return;
+      }
+      initRef.current = true;
+
       try {
+        console.log('[App] Starting editor initialization...');
         (window as any).__ECS_FRAMEWORK__ = await import('@esengine/ecs-framework');
 
         const editorScene = new Scene();
@@ -84,8 +100,23 @@ function App() {
 
         const pluginMgr = new EditorPluginManager();
         pluginMgr.initialize(coreInstance, Core.services);
+        Core.services.registerInstance(EditorPluginManager, pluginMgr);
 
         await pluginMgr.installEditor(new SceneInspectorPlugin());
+        await pluginMgr.installEditor(new ProfilerPlugin());
+
+        console.log('[App] All plugins installed');
+        console.log('[App] UIRegistry menu count:', uiRegistry.getAllMenus().length);
+        console.log('[App] UIRegistry all menus:', uiRegistry.getAllMenus());
+        console.log('[App] UIRegistry window menus:', uiRegistry.getChildMenus('window'));
+
+        messageHub.subscribe('ui:openWindow', (data: any) => {
+          if (data.windowId === 'profiler') {
+            setShowProfiler(true);
+          } else if (data.windowId === 'pluginManager') {
+            setShowPluginManager(true);
+          }
+        });
 
         const greeting = await TauriAPI.greet('Developer');
         console.log(greeting);
@@ -95,6 +126,7 @@ function App() {
         setEntityStore(entityStore);
         setMessageHub(messageHub);
         setLogService(logService);
+        setUiRegistry(uiRegistry);
         setStatus(t('header.status.ready'));
       } catch (error) {
         console.error('Failed to initialize editor:', error);
@@ -296,6 +328,9 @@ function App() {
       <div className="editor-header">
         <MenuBar
           locale={locale}
+          uiRegistry={uiRegistry || undefined}
+          messageHub={messageHub || undefined}
+          pluginManager={pluginManager || undefined}
           onNewScene={handleNewScene}
           onOpenScene={handleOpenScene}
           onSaveScene={handleSaveScene}
@@ -304,6 +339,8 @@ function App() {
           onCloseProject={handleCloseProject}
           onExit={handleExit}
           onOpenPluginManager={() => setShowPluginManager(true)}
+          onOpenProfiler={() => setShowProfiler(true)}
+          onOpenPortManager={() => setShowPortManager(true)}
           onToggleDevtools={handleToggleDevtools}
         />
         <div className="header-right">
@@ -329,6 +366,14 @@ function App() {
           pluginManager={pluginManager}
           onClose={() => setShowPluginManager(false)}
         />
+      )}
+
+      {showProfiler && (
+        <ProfilerWindow onClose={() => setShowProfiler(false)} />
+      )}
+
+      {showPortManager && (
+        <PortManager onClose={() => setShowPortManager(false)} />
       )}
     </div>
   );

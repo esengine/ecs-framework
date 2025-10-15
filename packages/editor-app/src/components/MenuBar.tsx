@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
+import { UIRegistry, MessageHub, EditorPluginManager } from '@esengine/editor-core';
+import type { MenuItem as PluginMenuItem } from '@esengine/editor-core';
 import '../styles/MenuBar.css';
 
 interface MenuItem {
@@ -12,6 +14,9 @@ interface MenuItem {
 
 interface MenuBarProps {
   locale?: string;
+  uiRegistry?: UIRegistry;
+  messageHub?: MessageHub;
+  pluginManager?: EditorPluginManager;
   onNewScene?: () => void;
   onOpenScene?: () => void;
   onSaveScene?: () => void;
@@ -20,11 +25,16 @@ interface MenuBarProps {
   onCloseProject?: () => void;
   onExit?: () => void;
   onOpenPluginManager?: () => void;
+  onOpenProfiler?: () => void;
+  onOpenPortManager?: () => void;
   onToggleDevtools?: () => void;
 }
 
 export function MenuBar({
   locale = 'en',
+  uiRegistry,
+  messageHub,
+  pluginManager,
   onNewScene,
   onOpenScene,
   onSaveScene,
@@ -33,10 +43,73 @@ export function MenuBar({
   onCloseProject,
   onExit,
   onOpenPluginManager,
+  onOpenProfiler,
+  onOpenPortManager,
   onToggleDevtools
 }: MenuBarProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [pluginMenuItems, setPluginMenuItems] = useState<PluginMenuItem[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const updateMenuItems = () => {
+    if (uiRegistry && pluginManager) {
+      const items = uiRegistry.getChildMenus('window');
+      // 过滤掉被禁用插件的菜单项
+      const enabledPlugins = pluginManager.getAllPluginMetadata()
+        .filter(p => p.enabled)
+        .map(p => p.name);
+
+      // 只显示启用插件的菜单项
+      const filteredItems = items.filter(item => {
+        // 检查菜单项是否属于某个插件
+        return enabledPlugins.some(pluginName => {
+          const plugin = pluginManager.getEditorPlugin(pluginName);
+          if (plugin && plugin.registerMenuItems) {
+            const pluginMenus = plugin.registerMenuItems();
+            return pluginMenus.some(m => m.id === item.id);
+          }
+          return false;
+        });
+      });
+
+      setPluginMenuItems(filteredItems);
+      console.log('[MenuBar] Updated menu items:', filteredItems);
+    } else if (uiRegistry) {
+      // 如果没有 pluginManager，显示所有菜单项
+      const items = uiRegistry.getChildMenus('window');
+      setPluginMenuItems(items);
+      console.log('[MenuBar] Updated menu items (no filter):', items);
+    }
+  };
+
+  useEffect(() => {
+    updateMenuItems();
+  }, [uiRegistry, pluginManager]);
+
+  useEffect(() => {
+    if (messageHub) {
+      const unsubscribeInstalled = messageHub.subscribe('plugin:installed', () => {
+        console.log('[MenuBar] Plugin installed, updating menu items');
+        updateMenuItems();
+      });
+
+      const unsubscribeEnabled = messageHub.subscribe('plugin:enabled', () => {
+        console.log('[MenuBar] Plugin enabled, updating menu items');
+        updateMenuItems();
+      });
+
+      const unsubscribeDisabled = messageHub.subscribe('plugin:disabled', () => {
+        console.log('[MenuBar] Plugin disabled, updating menu items');
+        updateMenuItems();
+      });
+
+      return () => {
+        unsubscribeInstalled();
+        unsubscribeEnabled();
+        unsubscribeDisabled();
+      };
+    }
+  }, [messageHub, uiRegistry, pluginManager]);
 
   const t = (key: string) => {
     const translations: Record<string, Record<string, string>> = {
@@ -64,6 +137,8 @@ export function MenuBar({
         console: 'Console',
         viewport: 'Viewport',
         pluginManager: 'Plugin Manager',
+        tools: 'Tools',
+        portManager: 'Port Manager',
         help: 'Help',
         documentation: 'Documentation',
         about: 'About',
@@ -93,6 +168,8 @@ export function MenuBar({
         console: '控制台',
         viewport: '视口',
         pluginManager: '插件管理器',
+        tools: '工具',
+        portManager: '端口管理器',
         help: '帮助',
         documentation: '文档',
         about: '关于',
@@ -133,9 +210,19 @@ export function MenuBar({
       { label: t('console'), disabled: true },
       { label: t('viewport'), disabled: true },
       { separator: true },
+      ...pluginMenuItems.map(item => ({
+        label: item.label,
+        shortcut: item.shortcut,
+        disabled: item.disabled,
+        onClick: item.onClick
+      })),
+      ...(pluginMenuItems.length > 0 ? [{ separator: true }] : []),
       { label: t('pluginManager'), onClick: onOpenPluginManager },
       { separator: true },
       { label: t('devtools'), onClick: onToggleDevtools }
+    ],
+    tools: [
+      { label: t('portManager'), onClick: onOpenPortManager }
     ],
     help: [
       { label: t('documentation'), disabled: true },

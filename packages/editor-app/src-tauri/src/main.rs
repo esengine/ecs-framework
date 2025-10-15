@@ -5,6 +5,7 @@ use tauri::Manager;
 use tauri::AppHandle;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use ecs_editor_lib::profiler_ws::ProfilerServer;
 
 // IPC Commands
 #[tauri::command]
@@ -177,9 +178,67 @@ fn toggle_devtools(app: AppHandle) -> Result<(), String> {
     }
 }
 
+// Profiler State
+pub struct ProfilerState {
+    pub server: Arc<tokio::sync::Mutex<Option<Arc<ProfilerServer>>>>,
+}
+
+#[tauri::command]
+async fn start_profiler_server(
+    port: u16,
+    state: tauri::State<'_, ProfilerState>,
+) -> Result<String, String> {
+    let mut server_lock = state.server.lock().await;
+
+    if server_lock.is_some() {
+        return Err("Profiler server is already running".to_string());
+    }
+
+    let server = Arc::new(ProfilerServer::new(port));
+
+    match server.start().await {
+        Ok(_) => {
+            *server_lock = Some(server);
+            Ok(format!("Profiler server started on port {}", port))
+        }
+        Err(e) => Err(format!("Failed to start profiler server: {}", e)),
+    }
+}
+
+#[tauri::command]
+async fn stop_profiler_server(
+    state: tauri::State<'_, ProfilerState>,
+) -> Result<String, String> {
+    let mut server_lock = state.server.lock().await;
+
+    if server_lock.is_none() {
+        return Err("Profiler server is not running".to_string());
+    }
+
+    // 调用 stop 方法正确关闭服务器
+    if let Some(server) = server_lock.as_ref() {
+        server.stop().await;
+    }
+
+    *server_lock = None;
+    Ok("Profiler server stopped".to_string())
+}
+
+#[tauri::command]
+async fn get_profiler_status(
+    state: tauri::State<'_, ProfilerState>,
+) -> Result<bool, String> {
+    let server_lock = state.server.lock().await;
+    Ok(server_lock.is_some())
+}
+
 fn main() {
     let project_paths: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
     let project_paths_clone = Arc::clone(&project_paths);
+
+    let profiler_state = ProfilerState {
+        server: Arc::new(tokio::sync::Mutex::new(None)),
+    };
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -232,6 +291,7 @@ fn main() {
         })
         .setup(move |app| {
             app.manage(project_paths);
+            app.manage(profiler_state);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -244,7 +304,10 @@ fn main() {
             read_file_content,
             list_directory,
             set_project_base_path,
-            toggle_devtools
+            toggle_devtools,
+            start_profiler_server,
+            stop_profiler_server,
+            get_profiler_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
