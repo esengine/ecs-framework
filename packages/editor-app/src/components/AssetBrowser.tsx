@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TauriAPI } from '../api/tauri';
+import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import '../styles/AssetBrowser.css';
 
 interface AssetItem {
@@ -58,25 +58,18 @@ export function AssetBrowser({ projectPath, locale }: AssetBrowserProps) {
   const loadAssets = async (path: string) => {
     setLoading(true);
     try {
-      const files = await TauriAPI.scanDirectory(path, '*');
+      const entries = await TauriAPI.listDirectory(path);
 
-      const assetItems: AssetItem[] = files.map(filePath => {
-        const name = filePath.split(/[\\/]/).pop() || '';
-        const extension = name.includes('.') ? name.split('.').pop() : undefined;
+      const assetItems: AssetItem[] = entries.map((entry: DirectoryEntry) => {
+        const extension = entry.is_dir ? undefined :
+          (entry.name.includes('.') ? entry.name.split('.').pop() : undefined);
 
         return {
-          name,
-          path: filePath,
-          type: 'file' as const,
+          name: entry.name,
+          path: entry.path,
+          type: entry.is_dir ? 'folder' as const : 'file' as const,
           extension
         };
-      });
-
-      assetItems.sort((a, b) => {
-        if (a.type === b.type) {
-          return a.name.localeCompare(b.name);
-        }
-        return a.type === 'folder' ? -1 : 1;
       });
 
       setAssets(assetItems);

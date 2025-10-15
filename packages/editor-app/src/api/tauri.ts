@@ -49,6 +49,19 @@ export class TauriAPI {
   static async readFileContent(path: string): Promise<string> {
     return await invoke<string>('read_file_content', { path });
   }
+
+  /**
+   * 列出目录内容
+   */
+  static async listDirectory(path: string): Promise<DirectoryEntry[]> {
+    return await invoke<DirectoryEntry[]>('list_directory', { path });
+  }
+}
+
+export interface DirectoryEntry {
+  name: string;
+  path: string;
+  is_dir: boolean;
 }
 
 /**

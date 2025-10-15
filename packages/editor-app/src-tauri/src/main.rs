@@ -88,6 +88,61 @@ fn read_file_content(path: String) -> Result<String, String> {
         .map_err(|e| format!("Failed to read file {}: {}", path, e))
 }
 
+#[derive(serde::Serialize)]
+struct DirectoryEntry {
+    name: String,
+    path: String,
+    is_dir: bool,
+}
+
+#[tauri::command]
+fn list_directory(path: String) -> Result<Vec<DirectoryEntry>, String> {
+    use std::fs;
+    use std::path::Path;
+
+    let dir_path = Path::new(&path);
+    if !dir_path.exists() {
+        return Err(format!("Directory does not exist: {}", path));
+    }
+
+    if !dir_path.is_dir() {
+        return Err(format!("Path is not a directory: {}", path));
+    }
+
+    let mut entries = Vec::new();
+
+    match fs::read_dir(dir_path) {
+        Ok(read_dir) => {
+            for entry in read_dir {
+                match entry {
+                    Ok(entry) => {
+                        let entry_path = entry.path();
+                        if let Some(name) = entry_path.file_name() {
+                            entries.push(DirectoryEntry {
+                                name: name.to_string_lossy().to_string(),
+                                path: entry_path.to_string_lossy().to_string(),
+                                is_dir: entry_path.is_dir(),
+                            });
+                        }
+                    }
+                    Err(e) => eprintln!("Error reading directory entry: {}", e),
+                }
+            }
+        }
+        Err(e) => return Err(format!("Failed to read directory: {}", e)),
+    }
+
+    entries.sort_by(|a, b| {
+        match (a.is_dir, b.is_dir) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+        }
+    });
+
+    Ok(entries)
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -108,7 +163,8 @@ fn main() {
             export_binary,
             open_project_dialog,
             scan_directory,
-            read_file_content
+            read_file_content,
+            list_directory
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

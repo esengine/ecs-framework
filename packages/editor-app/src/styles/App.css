@@ -63,15 +63,9 @@
 
 .sidebar-left,
 .sidebar-right {
-  width: 250px;
+  height: 100%;
   background-color: #252526;
-  border-right: 1px solid #3e3e3e;
   overflow: hidden;
-}
-
-.sidebar-right {
-  border-right: none;
-  border-left: 1px solid #3e3e3e;
 }
 
 .sidebar-left h3,
@@ -91,16 +85,13 @@
 }
 
 .main-content {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
+  height: 100%;
   overflow: hidden;
 }
 
 .viewport {
-  flex: 1;
+  height: 100%;
   background-color: #1e1e1e;
-  border-bottom: 1px solid #3e3e3e;
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -113,9 +104,8 @@
 }
 
 .bottom-panel {
-  height: 200px;
+  height: 100%;
   background-color: #252526;
-  padding: 12px;
   overflow-y: auto;
 }
 

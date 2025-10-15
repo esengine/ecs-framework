@@ -6,6 +6,7 @@ import { StartupPage } from './components/StartupPage';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
 import { AssetBrowser } from './components/AssetBrowser';
+import { ResizablePanel } from './components/ResizablePanel';
 import { TauriAPI } from './api/tauri';
 import { TransformComponent } from './example-components/TransformComponent';
 import { SpriteComponent } from './example-components/SpriteComponent';
@@ -236,32 +237,60 @@ function App() {
       </div>
 
       <div className="editor-content">
-        <div className="sidebar-left">
-          {entityStore && messageHub ? (
-            <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />
-          ) : (
-            <div className="loading">Loading...</div>
-          )}
-        </div>
-
-        <div className="main-content">
-          <div className="viewport">
-            <h3>{t('viewport.title')}</h3>
-            <p>{t('viewport.placeholder')}</p>
-          </div>
-
-          <div className="bottom-panel">
-            <AssetBrowser projectPath={currentProjectPath} locale={locale} />
-          </div>
-        </div>
-
-        <div className="sidebar-right">
-          {entityStore && messageHub ? (
-            <EntityInspector entityStore={entityStore} messageHub={messageHub} />
-          ) : (
-            <div className="loading">Loading...</div>
-          )}
-        </div>
+        <ResizablePanel
+          direction="horizontal"
+          defaultSize={250}
+          minSize={150}
+          maxSize={400}
+          leftOrTop={
+            <div className="sidebar-left">
+              {entityStore && messageHub ? (
+                <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />
+              ) : (
+                <div className="loading">Loading...</div>
+              )}
+            </div>
+          }
+          rightOrBottom={
+            <ResizablePanel
+              direction="horizontal"
+              side="right"
+              defaultSize={280}
+              minSize={200}
+              maxSize={500}
+              leftOrTop={
+                <ResizablePanel
+                  direction="vertical"
+                  defaultSize={200}
+                  minSize={100}
+                  maxSize={400}
+                  leftOrTop={
+                    <div className="main-content">
+                      <div className="viewport">
+                        <h3>{t('viewport.title')}</h3>
+                        <p>{t('viewport.placeholder')}</p>
+                      </div>
+                    </div>
+                  }
+                  rightOrBottom={
+                    <div className="bottom-panel">
+                      <AssetBrowser projectPath={currentProjectPath} locale={locale} />
+                    </div>
+                  }
+                />
+              }
+              rightOrBottom={
+                <div className="sidebar-right">
+                  {entityStore && messageHub ? (
+                    <EntityInspector entityStore={entityStore} messageHub={messageHub} />
+                  ) : (
+                    <div className="loading">Loading...</div>
+                  )}
+                </div>
+              }
+            />
+          }
+        />
       </div>
 
       <div className="editor-footer">
