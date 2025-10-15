@@ -275,12 +275,35 @@ export class SceneSerializer {
 
         // 将实体添加到场景
         for (const entity of entities) {
-            scene.addEntity(entity);
+            scene.addEntity(entity, true);
+            this.addChildrenRecursively(entity, scene);
         }
+
+        // 统一清理缓存（批量操作完成后）
+        scene.querySystem.clearCache();
+        scene.clearSystemEntityCaches();
 
         // 反序列化场景自定义数据
         if (serializedScene.sceneData) {
             this.deserializeSceneData(serializedScene.sceneData, scene.sceneData);
+        }
+    }
+
+    /**
+     * 递归添加实体的所有子实体到场景
+     *
+     * 修复反序列化时子实体丢失的问题：
+     * EntitySerializer.deserialize会提前设置子实体的scene引用，
+     * 导致Entity.addChild的条件判断(!child.scene)跳过scene.addEntity调用。
+     * 因此需要在SceneSerializer中统一递归添加所有子实体。
+     *
+     * @param entity 父实体
+     * @param scene 目标场景
+     */
+    private static addChildrenRecursively(entity: Entity, scene: IScene): void {
+        for (const child of entity.children) {
+            scene.addEntity(child, true);  // 延迟缓存清理
+            this.addChildrenRecursively(child, scene);  // 递归处理子实体的子实体
         }
     }
 
