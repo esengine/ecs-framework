@@ -7,6 +7,7 @@ import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
 import { AssetBrowser } from './components/AssetBrowser';
 import { ConsolePanel } from './components/ConsolePanel';
+import { Viewport } from './components/Viewport';
 import { DockContainer, DockablePanel } from './components/DockContainer';
 import { TauriAPI } from './api/tauri';
 import { useLocale } from './hooks/useLocale';
@@ -189,12 +190,7 @@ function App() {
           id: 'viewport',
           title: locale === 'zh' ? '视口' : 'Viewport',
           position: 'center',
-          content: (
-            <div className="viewport">
-              <h3>{t('viewport.title')}</h3>
-              <p>{t('viewport.placeholder')}</p>
-            </div>
-          ),
+          content: <Viewport locale={locale} />,
           closable: false
         },
         {

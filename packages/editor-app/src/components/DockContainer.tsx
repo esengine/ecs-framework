@@ -68,8 +68,8 @@ export function DockContainer({ panels, onPanelClose }: DockContainerProps) {
       <ResizablePanel
         direction="vertical"
         defaultSize={200}
-        minSize={100}
-        maxSize={400}
+        minSize={32}
+        maxSize={600}
         leftOrTop={content}
         rightOrBottom={
           <div className="dock-bottom">
@@ -85,8 +85,8 @@ export function DockContainer({ panels, onPanelClose }: DockContainerProps) {
       <ResizablePanel
         direction="vertical"
         defaultSize={200}
-        minSize={100}
-        maxSize={400}
+        minSize={32}
+        maxSize={600}
         leftOrTop={
           <div className="dock-top">
             {renderPanelGroup('top')}
