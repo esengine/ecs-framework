@@ -6,7 +6,7 @@ import { StartupPage } from './components/StartupPage';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
 import { AssetBrowser } from './components/AssetBrowser';
-import { ResizablePanel } from './components/ResizablePanel';
+import { DockContainer, DockablePanel } from './components/DockContainer';
 import { TauriAPI } from './api/tauri';
 import { TransformComponent } from './example-components/TransformComponent';
 import { SpriteComponent } from './example-components/SpriteComponent';
@@ -61,6 +61,7 @@ function App() {
   const [messageHub, setMessageHub] = useState<MessageHub | null>(null);
   const { t, locale, changeLocale } = useLocale();
   const [status, setStatus] = useState(t('header.status.initializing'));
+  const [panels, setPanels] = useState<DockablePanel[]>([]);
 
   useEffect(() => {
     const initializeEditor = async () => {
@@ -199,6 +200,63 @@ function App() {
     changeLocale(newLocale);
   };
 
+  useEffect(() => {
+    if (projectLoaded && entityStore && messageHub) {
+      const defaultPanels: DockablePanel[] = [
+        {
+          id: 'scene-hierarchy',
+          title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
+          position: 'left',
+          content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />,
+          closable: false
+        },
+        {
+          id: 'inspector',
+          title: locale === 'zh' ? '检视器' : 'Inspector',
+          position: 'right',
+          content: <EntityInspector entityStore={entityStore} messageHub={messageHub} />,
+          closable: false
+        },
+        {
+          id: 'viewport',
+          title: locale === 'zh' ? '视口' : 'Viewport',
+          position: 'center',
+          content: (
+            <div className="viewport">
+              <h3>{t('viewport.title')}</h3>
+              <p>{t('viewport.placeholder')}</p>
+            </div>
+          ),
+          closable: false
+        },
+        {
+          id: 'assets',
+          title: locale === 'zh' ? '资产' : 'Assets',
+          position: 'bottom',
+          content: <AssetBrowser projectPath={currentProjectPath} locale={locale} />,
+          closable: false
+        },
+        {
+          id: 'console',
+          title: locale === 'zh' ? '控制台' : 'Console',
+          position: 'bottom',
+          content: (
+            <div style={{ padding: '12px', height: '100%', overflow: 'auto' }}>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#ffffff' }}>
+                {locale === 'zh' ? '控制台' : 'Console'}
+              </h4>
+              <p style={{ fontSize: '12px', color: '#858585' }}>
+                {locale === 'zh' ? '控制台输出将显示在这里...' : 'Console output will appear here...'}
+              </p>
+            </div>
+          ),
+          closable: false
+        }
+      ];
+      setPanels(defaultPanels);
+    }
+  }, [projectLoaded, entityStore, messageHub, locale, currentProjectPath, t]);
+
   if (!initialized) {
     return (
       <div className="editor-loading">
@@ -237,60 +295,7 @@ function App() {
       </div>
 
       <div className="editor-content">
-        <ResizablePanel
-          direction="horizontal"
-          defaultSize={250}
-          minSize={150}
-          maxSize={400}
-          leftOrTop={
-            <div className="sidebar-left">
-              {entityStore && messageHub ? (
-                <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />
-              ) : (
-                <div className="loading">Loading...</div>
-              )}
-            </div>
-          }
-          rightOrBottom={
-            <ResizablePanel
-              direction="horizontal"
-              side="right"
-              defaultSize={280}
-              minSize={200}
-              maxSize={500}
-              leftOrTop={
-                <ResizablePanel
-                  direction="vertical"
-                  defaultSize={200}
-                  minSize={100}
-                  maxSize={400}
-                  leftOrTop={
-                    <div className="main-content">
-                      <div className="viewport">
-                        <h3>{t('viewport.title')}</h3>
-                        <p>{t('viewport.placeholder')}</p>
-                      </div>
-                    </div>
-                  }
-                  rightOrBottom={
-                    <div className="bottom-panel">
-                      <AssetBrowser projectPath={currentProjectPath} locale={locale} />
-                    </div>
-                  }
-                />
-              }
-              rightOrBottom={
-                <div className="sidebar-right">
-                  {entityStore && messageHub ? (
-                    <EntityInspector entityStore={entityStore} messageHub={messageHub} />
-                  ) : (
-                    <div className="loading">Loading...</div>
-                  )}
-                </div>
-              }
-            />
-          }
-        />
+        <DockContainer panels={panels} />
       </div>
 
       <div className="editor-footer">

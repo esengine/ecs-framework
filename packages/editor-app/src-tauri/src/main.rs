@@ -46,7 +46,7 @@ async fn open_project_dialog(app: AppHandle) -> Result<Option<String>, String> {
 #[tauri::command]
 fn scan_directory(path: String, pattern: String) -> Result<Vec<String>, String> {
     use glob::glob;
-    use std::path::{Path, MAIN_SEPARATOR};
+    use std::path::Path;
 
     let base_path = Path::new(&path);
     if !base_path.exists() {

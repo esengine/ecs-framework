@@ -29,7 +29,8 @@ export function AssetBrowser({ projectPath, locale }: AssetBrowserProps) {
       name: 'Name',
       type: 'Type',
       file: 'File',
-      folder: 'Folder'
+      folder: 'Folder',
+      backToParent: 'Back to parent folder'
     },
     zh: {
       title: '资产',
@@ -39,7 +40,8 @@ export function AssetBrowser({ projectPath, locale }: AssetBrowserProps) {
       name: '名称',
       type: '类型',
       file: '文件',
-      folder: '文件夹'
+      folder: '文件夹',
+      backToParent: '返回上一级'
     }
   };
 
@@ -92,6 +94,17 @@ export function AssetBrowser({ projectPath, locale }: AssetBrowserProps) {
   const handleAssetDoubleClick = (asset: AssetItem) => {
     console.log('Open asset:', asset);
   };
+
+  const handleBackToParent = () => {
+    if (!currentPath || !projectPath) return;
+    if (currentPath === projectPath) return;
+
+    const parentPath = currentPath.split(/[\\/]/).slice(0, -1).join(currentPath.includes('\\') ? '\\' : '/');
+    setCurrentPath(parentPath);
+    loadAssets(parentPath);
+  };
+
+  const canGoBack = currentPath && projectPath && currentPath !== projectPath;
 
   const getFileIcon = (extension?: string) => {
     switch (extension?.toLowerCase()) {
@@ -156,7 +169,33 @@ export function AssetBrowser({ projectPath, locale }: AssetBrowserProps) {
   return (
     <div className="asset-browser">
       <div className="asset-browser-header">
-        <h3>{t.title}</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <h3 style={{ margin: 0 }}>{t.title}</h3>
+          {canGoBack && (
+            <button
+              onClick={handleBackToParent}
+              className="back-button"
+              title={t.backToParent}
+              style={{
+                padding: '4px 8px',
+                background: '#0e639c',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+              ↑
+            </button>
+          )}
+        </div>
         <div className="asset-path">{currentPath}</div>
       </div>
 
