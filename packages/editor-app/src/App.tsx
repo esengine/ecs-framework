@@ -26,6 +26,8 @@ Core.services.registerInstance(LocaleService, localeService);
 function App() {
   const [initialized, setInitialized] = useState(false);
   const [projectLoaded, setProjectLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [currentProjectPath, setCurrentProjectPath] = useState<string | null>(null);
   const [pluginManager, setPluginManager] = useState<EditorPluginManager | null>(null);
   const [entityStore, setEntityStore] = useState<EntityStoreService | null>(null);
@@ -93,12 +95,16 @@ function App() {
       const projectPath = await TauriAPI.openProjectDialog();
       if (!projectPath) return;
 
+      setIsLoading(true);
+      setLoadingMessage(locale === 'zh' ? '正在打开项目...' : 'Opening project...');
+
       const projectService = Core.services.resolve(ProjectService);
       const discoveryService = Core.services.resolve(ComponentDiscoveryService);
       const loaderService = Core.services.resolve(ComponentLoaderService);
 
       if (!projectService || !discoveryService || !loaderService) {
         console.error('Required services not available');
+        setIsLoading(false);
         return;
       }
 
@@ -110,6 +116,7 @@ function App() {
         body: JSON.stringify({ path: projectPath })
       });
 
+      setLoadingMessage(locale === 'zh' ? '正在扫描组件...' : 'Scanning components...');
       setStatus('Scanning components...');
 
       const componentsPath = projectService.getComponentsPath();
@@ -121,6 +128,7 @@ function App() {
           readFunction: TauriAPI.readFileContent
         });
 
+        setLoadingMessage(locale === 'zh' ? `正在加载 ${componentInfos.length} 个组件...` : `Loading ${componentInfos.length} components...`);
         setStatus(`Loading ${componentInfos.length} components...`);
 
         const modulePathTransform = (filePath: string) => {
@@ -137,9 +145,11 @@ function App() {
 
       setCurrentProjectPath(projectPath);
       setProjectLoaded(true);
+      setIsLoading(false);
     } catch (error) {
       console.error('Failed to open project:', error);
       setStatus(t('header.status.failed'));
+      setIsLoading(false);
     }
   };
 
@@ -239,12 +249,22 @@ function App() {
 
   if (!projectLoaded) {
     return (
-      <StartupPage
-        onOpenProject={handleOpenProject}
-        onCreateProject={handleCreateProject}
-        recentProjects={[]}
-        locale={locale}
-      />
+      <>
+        <StartupPage
+          onOpenProject={handleOpenProject}
+          onCreateProject={handleCreateProject}
+          recentProjects={[]}
+          locale={locale}
+        />
+        {isLoading && (
+          <div className="loading-overlay">
+            <div className="loading-content">
+              <Loader2 size={40} className="animate-spin" />
+              <p className="loading-message">{loadingMessage}</p>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
