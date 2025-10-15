@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Core, Scene } from '@esengine/ecs-framework';
-import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, ComponentLoaderService, PropertyMetadataService } from '@esengine/editor-core';
+import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, ComponentLoaderService, PropertyMetadataService, LogService } from '@esengine/editor-core';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
 import { StartupPage } from './components/StartupPage';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
 import { AssetBrowser } from './components/AssetBrowser';
+import { ConsolePanel } from './components/ConsolePanel';
 import { DockContainer, DockablePanel } from './components/DockContainer';
 import { TauriAPI } from './api/tauri';
 import { useLocale } from './hooks/useLocale';
@@ -27,6 +28,7 @@ function App() {
   const [pluginManager, setPluginManager] = useState<EditorPluginManager | null>(null);
   const [entityStore, setEntityStore] = useState<EntityStoreService | null>(null);
   const [messageHub, setMessageHub] = useState<MessageHub | null>(null);
+  const [logService, setLogService] = useState<LogService | null>(null);
   const { t, locale, changeLocale } = useLocale();
   const [status, setStatus] = useState(t('header.status.initializing'));
   const [panels, setPanels] = useState<DockablePanel[]>([]);
@@ -48,6 +50,7 @@ function App() {
         const componentDiscovery = new ComponentDiscoveryService(messageHub);
         const componentLoader = new ComponentLoaderService(messageHub, componentRegistry);
         const propertyMetadata = new PropertyMetadataService();
+        const logService = new LogService();
 
         Core.services.registerInstance(UIRegistry, uiRegistry);
         Core.services.registerInstance(MessageHub, messageHub);
@@ -58,6 +61,7 @@ function App() {
         Core.services.registerInstance(ComponentDiscoveryService, componentDiscovery);
         Core.services.registerInstance(ComponentLoaderService, componentLoader);
         Core.services.registerInstance(PropertyMetadataService, propertyMetadata);
+        Core.services.registerInstance(LogService, logService);
 
         const pluginMgr = new EditorPluginManager();
         pluginMgr.initialize(coreInstance, Core.services);
@@ -71,6 +75,7 @@ function App() {
         setPluginManager(pluginMgr);
         setEntityStore(entityStore);
         setMessageHub(messageHub);
+        setLogService(logService);
         setStatus(t('header.status.ready'));
       } catch (error) {
         console.error('Failed to initialize editor:', error);
@@ -164,7 +169,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (projectLoaded && entityStore && messageHub) {
+    if (projectLoaded && entityStore && messageHub && logService) {
       setPanels([
         {
           id: 'scene-hierarchy',
@@ -203,21 +208,12 @@ function App() {
           id: 'console',
           title: locale === 'zh' ? '控制台' : 'Console',
           position: 'bottom',
-          content: (
-            <div style={{ padding: '12px', height: '100%', overflow: 'auto' }}>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#ffffff' }}>
-                {locale === 'zh' ? '控制台' : 'Console'}
-              </h4>
-              <p style={{ fontSize: '12px', color: '#858585' }}>
-                {locale === 'zh' ? '控制台输出将显示在这里...' : 'Console output will appear here...'}
-              </p>
-            </div>
-          ),
+          content: <ConsolePanel logService={logService} />,
           closable: false
         }
       ]);
     }
-  }, [projectLoaded, entityStore, messageHub, locale, currentProjectPath, t]);
+  }, [projectLoaded, entityStore, messageHub, logService, locale, currentProjectPath, t]);
 
   const handlePanelMove = (panelId: string, newPosition: any) => {
     setPanels(prevPanels =>
