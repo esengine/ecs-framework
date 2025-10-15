@@ -46,17 +46,24 @@ async fn open_project_dialog(app: AppHandle) -> Result<Option<String>, String> {
 #[tauri::command]
 fn scan_directory(path: String, pattern: String) -> Result<Vec<String>, String> {
     use glob::glob;
-    use std::path::Path;
+    use std::path::{Path, MAIN_SEPARATOR};
 
     let base_path = Path::new(&path);
     if !base_path.exists() {
         return Err(format!("Directory does not exist: {}", path));
     }
 
-    let glob_pattern = format!("{}/{}", path, pattern);
+    let separator = if path.contains('\\') { '\\' } else { '/' };
+    let glob_pattern = format!("{}{}{}", path.trim_end_matches(&['/', '\\'][..]), separator, pattern);
+    let normalized_pattern = if cfg!(windows) {
+        glob_pattern.replace('/', "\\")
+    } else {
+        glob_pattern.replace('\\', "/")
+    };
+
     let mut files = Vec::new();
 
-    match glob(&glob_pattern) {
+    match glob(&normalized_pattern) {
         Ok(entries) => {
             for entry in entries {
                 match entry {

@@ -169,7 +169,7 @@ function App() {
       if (componentsPath) {
         const componentInfos = await discoveryService.scanComponents({
           basePath: componentsPath,
-          pattern: '**/*Component.ts',
+          pattern: '**/*.ts',
           scanFunction: TauriAPI.scanDirectory,
           readFunction: TauriAPI.readFileContent
         });

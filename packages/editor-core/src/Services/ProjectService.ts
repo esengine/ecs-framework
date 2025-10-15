@@ -81,10 +81,14 @@ export class ProjectService implements IService {
     }
 
     public getComponentsPath(): string | null {
-        if (!this.currentProject || !this.projectConfig?.componentsPath) {
+        if (!this.currentProject) {
             return null;
         }
-        return `${this.currentProject.path}/${this.projectConfig.componentsPath}`;
+        if (!this.projectConfig?.componentsPath) {
+            return this.currentProject.path;
+        }
+        const sep = this.currentProject.path.includes('\\') ? '\\' : '/';
+        return `${this.currentProject.path}${sep}${this.projectConfig.componentsPath}`;
     }
 
     private async validateProject(projectPath: string): Promise<ProjectInfo> {
@@ -96,7 +100,8 @@ export class ProjectService implements IService {
             name: projectName
         };
 
-        const configPath = `${projectPath}/ecs-editor.config.json`;
+        const sep = projectPath.includes('\\') ? '\\' : '/';
+        const configPath = `${projectPath}${sep}ecs-editor.config.json`;
 
         try {
             projectInfo.configPath = configPath;
@@ -111,8 +116,8 @@ export class ProjectService implements IService {
     private async loadConfig(configPath: string): Promise<ProjectConfig> {
         return {
             projectType: 'cocos',
-            componentsPath: 'assets/scripts/components',
-            componentPattern: '**/*Component.ts',
+            componentsPath: '',
+            componentPattern: '**/*.ts',
             buildOutput: 'temp/editor-components'
         };
     }
