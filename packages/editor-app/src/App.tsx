@@ -8,11 +8,12 @@ import { EntityInspector } from './components/EntityInspector';
 import { AssetBrowser } from './components/AssetBrowser';
 import { ConsolePanel } from './components/ConsolePanel';
 import { Viewport } from './components/Viewport';
+import { MenuBar } from './components/MenuBar';
 import { DockContainer, DockablePanel } from './components/DockContainer';
 import { TauriAPI } from './api/tauri';
 import { useLocale } from './hooks/useLocale';
 import { en, zh } from './locales';
-import { Plus, Trash2, Loader2, Globe } from 'lucide-react';
+import { Loader2, Globe } from 'lucide-react';
 import './styles/App.css';
 
 const coreInstance = Core.create({ debug: true });
@@ -146,22 +147,30 @@ function App() {
     console.log('Create project not implemented yet');
   };
 
-  const handleCreateEntity = () => {
-    if (!initialized || !entityStore) return;
-    const scene = Core.scene;
-    if (!scene) return;
-
-    const entity = scene.createEntity('Entity');
-    entityStore.addEntity(entity);
+  const handleNewScene = () => {
+    console.log('New scene not implemented yet');
   };
 
-  const handleDeleteEntity = () => {
-    if (!entityStore) return;
-    const selected = entityStore.getSelectedEntity();
-    if (selected) {
-      selected.destroy();
-      entityStore.removeEntity(selected);
-    }
+  const handleOpenScene = () => {
+    console.log('Open scene not implemented yet');
+  };
+
+  const handleSaveScene = () => {
+    console.log('Save scene not implemented yet');
+  };
+
+  const handleSaveSceneAs = () => {
+    console.log('Save scene as not implemented yet');
+  };
+
+  const handleCloseProject = () => {
+    setProjectLoaded(false);
+    setCurrentProjectPath(null);
+    setStatus(t('header.status.ready'));
+  };
+
+  const handleExit = () => {
+    window.close();
   };
 
   const handleLocaleChange = () => {
@@ -242,21 +251,22 @@ function App() {
   return (
     <div className="editor-container">
       <div className="editor-header">
-        <h1>{t('app.title')}</h1>
-        <div className="header-toolbar">
-          <button onClick={handleCreateEntity} disabled={!initialized} className="toolbar-btn">
-            <Plus size={14} />
-            {t('header.toolbar.createEntity')}
-          </button>
-          <button onClick={handleDeleteEntity} disabled={!entityStore?.getSelectedEntity()} className="toolbar-btn">
-            <Trash2 size={14} />
-            {t('header.toolbar.deleteEntity')}
-          </button>
+        <MenuBar
+          locale={locale}
+          onNewScene={handleNewScene}
+          onOpenScene={handleOpenScene}
+          onSaveScene={handleSaveScene}
+          onSaveSceneAs={handleSaveSceneAs}
+          onOpenProject={handleOpenProject}
+          onCloseProject={handleCloseProject}
+          onExit={handleExit}
+        />
+        <div className="header-right">
           <button onClick={handleLocaleChange} className="toolbar-btn locale-btn" title={locale === 'en' ? '切换到中文' : 'Switch to English'}>
             <Globe size={14} />
           </button>
+          <span className="status">{status}</span>
         </div>
-        <span className="status">{status}</span>
       </div>
 
       <div className="editor-content">

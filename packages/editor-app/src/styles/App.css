@@ -27,7 +27,7 @@
 .editor-header {
   display: flex;
   align-items: center;
-  gap: var(--spacing-lg);
+  justify-content: space-between;
   height: var(--layout-header-height);
   padding: 0 var(--spacing-lg);
   background-color: var(--color-bg-elevated);
@@ -35,19 +35,11 @@
   flex-shrink: 0;
 }
 
-.editor-header h1 {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
-.header-toolbar {
+.header-right {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  flex: 1;
+  gap: var(--spacing-md);
+  margin-left: auto;
 }
 
 .toolbar-btn {
@@ -99,15 +91,17 @@
 
 .locale-btn {
   width: var(--size-button-sm);
+  height: var(--size-button-sm);
   padding: 0;
-  background-color: var(--color-bg-overlay);
+  background-color: transparent;
   color: var(--color-text-primary);
-  font-weight: var(--font-weight-semibold);
+  border: 1px solid var(--color-border-default);
 }
 
 .locale-btn:hover:not(:disabled) {
   background-color: var(--color-bg-hover);
   color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .editor-header .status {
