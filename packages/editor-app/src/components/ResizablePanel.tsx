@@ -9,6 +9,7 @@ interface ResizablePanelProps {
   minSize?: number;
   maxSize?: number;
   side?: 'left' | 'right' | 'top' | 'bottom';
+  storageKey?: string;
 }
 
 export function ResizablePanel({
@@ -18,11 +19,31 @@ export function ResizablePanel({
   defaultSize = 250,
   minSize = 150,
   maxSize = 600,
-  side = 'left'
+  side = 'left',
+  storageKey
 }: ResizablePanelProps) {
-  const [size, setSize] = useState(defaultSize);
+  const getInitialSize = () => {
+    if (storageKey) {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsedSize = parseInt(saved, 10);
+        if (!isNaN(parsedSize)) {
+          return Math.max(minSize, Math.min(maxSize, parsedSize));
+        }
+      }
+    }
+    return defaultSize;
+  };
+
+  const [size, setSize] = useState(getInitialSize);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (storageKey && !isDragging) {
+      localStorage.setItem(storageKey, size.toString());
+    }
+  }, [size, isDragging, storageKey]);
 
   useEffect(() => {
     if (!isDragging) return;

@@ -70,6 +70,7 @@ export function DockContainer({ panels, onPanelClose }: DockContainerProps) {
         defaultSize={200}
         minSize={32}
         maxSize={600}
+        storageKey="editor-panel-bottom-size"
         leftOrTop={content}
         rightOrBottom={
           <div className="dock-bottom">
@@ -87,6 +88,7 @@ export function DockContainer({ panels, onPanelClose }: DockContainerProps) {
         defaultSize={200}
         minSize={32}
         maxSize={600}
+        storageKey="editor-panel-top-size"
         leftOrTop={
           <div className="dock-top">
             {renderPanelGroup('top')}
@@ -105,6 +107,7 @@ export function DockContainer({ panels, onPanelClose }: DockContainerProps) {
           defaultSize={250}
           minSize={150}
           maxSize={400}
+          storageKey="editor-panel-left-size"
           leftOrTop={
             <div className="dock-left">
               {renderPanelGroup('left')}
@@ -117,6 +120,7 @@ export function DockContainer({ panels, onPanelClose }: DockContainerProps) {
               defaultSize={280}
               minSize={200}
               maxSize={500}
+              storageKey="editor-panel-right-size"
               leftOrTop={content}
               rightOrBottom={
                 <div className="dock-right">
@@ -134,6 +138,7 @@ export function DockContainer({ panels, onPanelClose }: DockContainerProps) {
           defaultSize={250}
           minSize={150}
           maxSize={400}
+          storageKey="editor-panel-left-size"
           leftOrTop={
             <div className="dock-left">
               {renderPanelGroup('left')}
@@ -150,6 +155,7 @@ export function DockContainer({ panels, onPanelClose }: DockContainerProps) {
           defaultSize={280}
           minSize={200}
           maxSize={500}
+          storageKey="editor-panel-right-size"
           leftOrTop={content}
           rightOrBottom={
             <div className="dock-right">
