@@ -19,6 +19,7 @@ interface MenuBarProps {
   onOpenProject?: () => void;
   onCloseProject?: () => void;
   onExit?: () => void;
+  onOpenPluginManager?: () => void;
 }
 
 export function MenuBar({
@@ -29,7 +30,8 @@ export function MenuBar({
   onSaveSceneAs,
   onOpenProject,
   onCloseProject,
-  onExit
+  onExit,
+  onOpenPluginManager
 }: MenuBarProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -59,6 +61,7 @@ export function MenuBar({
         assets: 'Assets',
         console: 'Console',
         viewport: 'Viewport',
+        pluginManager: 'Plugin Manager',
         help: 'Help',
         documentation: 'Documentation',
         about: 'About'
@@ -86,6 +89,7 @@ export function MenuBar({
         assets: '资产',
         console: '控制台',
         viewport: '视口',
+        pluginManager: '插件管理器',
         help: '帮助',
         documentation: '文档',
         about: '关于'
@@ -123,7 +127,9 @@ export function MenuBar({
       { label: t('inspector'), disabled: true },
       { label: t('assets'), disabled: true },
       { label: t('console'), disabled: true },
-      { label: t('viewport'), disabled: true }
+      { label: t('viewport'), disabled: true },
+      { separator: true },
+      { label: t('pluginManager'), onClick: onOpenPluginManager }
     ],
     help: [
       { label: t('documentation'), disabled: true },

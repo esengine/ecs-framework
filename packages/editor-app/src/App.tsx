@@ -7,6 +7,7 @@ import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
 import { AssetBrowser } from './components/AssetBrowser';
 import { ConsolePanel } from './components/ConsolePanel';
+import { PluginManagerWindow } from './components/PluginManagerWindow';
 import { Viewport } from './components/Viewport';
 import { MenuBar } from './components/MenuBar';
 import { DockContainer, DockablePanel } from './components/DockContainer';
@@ -36,6 +37,7 @@ function App() {
   const { t, locale, changeLocale } = useLocale();
   const [status, setStatus] = useState(t('header.status.initializing'));
   const [panels, setPanels] = useState<DockablePanel[]>([]);
+  const [showPluginManager, setShowPluginManager] = useState(false);
 
   useEffect(() => {
     const initializeEditor = async () => {
@@ -280,6 +282,7 @@ function App() {
           onOpenProject={handleOpenProject}
           onCloseProject={handleCloseProject}
           onExit={handleExit}
+          onOpenPluginManager={() => setShowPluginManager(true)}
         />
         <div className="header-right">
           <button onClick={handleLocaleChange} className="toolbar-btn locale-btn" title={locale === 'en' ? '切换到中文' : 'Switch to English'}>
@@ -298,6 +301,13 @@ function App() {
         <span>{t('footer.entities')}: {entityStore?.getAllEntities().length ?? 0}</span>
         <span>{t('footer.core')}: {initialized ? t('footer.active') : t('footer.inactive')}</span>
       </div>
+
+      {showPluginManager && pluginManager && (
+        <PluginManagerWindow
+          pluginManager={pluginManager}
+          onClose={() => setShowPluginManager(false)}
+        />
+      )}
     </div>
   );
 }
