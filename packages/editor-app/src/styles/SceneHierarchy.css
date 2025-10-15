@@ -29,6 +29,20 @@
   color: var(--color-text-primary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  flex: 1;
+}
+
+.remote-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background-color: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  border-radius: var(--radius-sm);
+  color: rgb(16, 185, 129);
+  font-size: var(--font-size-xs);
+  animation: pulse-green 1.5s ease-in-out infinite;
 }
 
 .hierarchy-content {
@@ -132,4 +146,54 @@
 
 .entity-item.selected .entity-name {
   font-weight: var(--font-weight-medium);
+}
+
+/* Remote entity styles */
+.entity-item.remote-entity {
+  cursor: default;
+  border-left: 2px solid rgba(16, 185, 129, 0.5);
+}
+
+.entity-item.remote-entity:hover {
+  background-color: rgba(16, 185, 129, 0.05);
+}
+
+.entity-item.remote-entity::before {
+  display: none;
+}
+
+.entity-item.remote-entity.disabled {
+  opacity: 0.5;
+}
+
+.entity-item.remote-entity.disabled .entity-name {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary);
+}
+
+.component-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background-color: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  border-radius: var(--radius-full);
+  color: rgb(16, 185, 129);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+}
+
+@keyframes pulse-green {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.05);
+  }
 }

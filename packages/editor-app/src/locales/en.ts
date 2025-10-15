@@ -14,7 +14,8 @@ export const en: Translations = {
             initializing: 'Initializing...',
             ready: 'Editor Ready',
             failed: 'Initialization Failed',
-            projectOpened: 'Project Opened'
+            projectOpened: 'Project Opened',
+            remoteConnected: 'Remote Game Connected'
         }
     },
     hierarchy: {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Core } from '@esengine/ecs-framework';
 import { Activity, BarChart3, Clock, Cpu, RefreshCw, Pause, Play, X, Wifi, WifiOff, Server, Search, Table2, TreePine } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import { ProfilerService } from '../services/ProfilerService';
 import '../styles/ProfilerWindow.css';
 
 interface SystemPerformanceData {
@@ -31,45 +31,27 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
   const [dataSource, setDataSource] = useState<DataSource>('local');
   const [viewMode, setViewMode] = useState<'tree' | 'table'>('table');
   const [searchQuery, setSearchQuery] = useState('');
-  const [wsPort, setWsPort] = useState('8080');
   const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [isServerRunning, setIsServerRunning] = useState(false);
   const animationRef = useRef<number>();
-  const wsRef = useRef<WebSocket | null>(null);
 
-  // WebSocket connection management
+  // Check ProfilerService connection status
   useEffect(() => {
-    if (dataSource === 'remote' && isConnected && wsRef.current) {
-      // Keep WebSocket connection alive
-      const pingInterval = setInterval(() => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ type: 'ping' }));
-        }
-      }, 5000);
+    const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
 
-      return () => clearInterval(pingInterval);
+    if (!profilerService) {
+      return;
     }
-  }, [dataSource, isConnected]);
 
-  // Cleanup WebSocket and stop server on unmount
-  useEffect(() => {
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-
-      // Check if server is running and stop it
-      invoke<boolean>('get_profiler_status')
-        .then(isRunning => {
-          if (isRunning) {
-            return invoke<string>('stop_profiler_server');
-          }
-        })
-        .then(() => console.log('[Profiler] Server stopped on unmount'))
-        .catch(err => console.error('[Profiler] Failed to stop server on unmount:', err));
+    const checkStatus = () => {
+      setIsConnected(profilerService.isConnected());
+      setIsServerRunning(profilerService.isServerActive());
     };
+
+    checkStatus();
+    const interval = setInterval(checkStatus, 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const buildSystemTree = (flatSystems: Map<string, any>, statsMap: Map<string, any>): SystemPerformanceData[] => {
@@ -144,6 +126,7 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
     return [coreNode];
   };
 
+  // Subscribe to local performance data
   useEffect(() => {
     if (dataSource !== 'local') return;
 
@@ -181,6 +164,39 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
     };
   }, [isPaused, sortBy, dataSource]);
 
+  // Subscribe to remote performance data from ProfilerService
+  useEffect(() => {
+    if (dataSource !== 'remote') return;
+
+    const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
+
+    if (!profilerService) {
+      console.warn('[ProfilerWindow] ProfilerService not available');
+      return;
+    }
+
+    const unsubscribe = profilerService.subscribe((data) => {
+      if (isPaused) return;
+
+      handleRemoteDebugData({
+        performance: {
+          frameTime: data.totalFrameTime,
+          systemPerformance: data.systems.map(sys => ({
+            systemName: sys.name,
+            lastExecutionTime: sys.executionTime,
+            averageTime: sys.averageTime,
+            minTime: 0,
+            maxTime: 0,
+            entityCount: sys.entityCount,
+            percentage: sys.percentage
+          }))
+        }
+      });
+    });
+
+    return () => unsubscribe();
+  }, [dataSource, isPaused]);
+
   const handleReset = () => {
     if (dataSource === 'local') {
       const coreInstance = Core.Instance;
@@ -194,84 +210,6 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
     }
   };
 
-  const handleConnect = async () => {
-    if (isConnecting) return;
-
-    if (wsRef.current) {
-      wsRef.current.close();
-    }
-
-    setIsConnecting(true);
-    setConnectionError(null);
-
-    try {
-      const port = parseInt(wsPort);
-      const result = await invoke<string>('start_profiler_server', { port });
-      console.log('[Profiler]', result);
-
-      const ws = new WebSocket(`ws://localhost:${wsPort}`);
-
-      ws.onopen = () => {
-        console.log('[Profiler] Frontend connected to profiler server');
-        setIsConnected(true);
-        setIsConnecting(false);
-        setConnectionError(null);
-      };
-
-      ws.onclose = () => {
-        console.log('[Profiler] Frontend disconnected');
-        setIsConnected(false);
-        setIsConnecting(false);
-      };
-
-      ws.onerror = (error) => {
-        console.error('[Profiler] WebSocket error:', error);
-        setConnectionError(`Failed to connect to profiler server`);
-        setIsConnected(false);
-        setIsConnecting(false);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-
-          if (message.type === 'debug_data' && message.data) {
-            handleRemoteDebugData(message.data);
-          } else if (message.type === 'pong') {
-            // Ping-pong response, connection is alive
-          }
-        } catch (error) {
-          console.error('[Profiler] Failed to parse message:', error);
-        }
-      };
-
-      wsRef.current = ws;
-    } catch (error) {
-      console.error('[Profiler] Failed to start server:', error);
-      setConnectionError(String(error));
-      setIsConnected(false);
-      setIsConnecting(false);
-    }
-  };
-
-  const handleDisconnect = async () => {
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-
-    try {
-      // Stop WebSocket server in Tauri backend
-      const result = await invoke<string>('stop_profiler_server');
-      console.log('[Profiler]', result);
-    } catch (error) {
-      console.error('[Profiler] Failed to stop server:', error);
-    }
-
-    setIsConnected(false);
-    setSystems([]);
-    setTotalFrameTime(0);
-  };
 
   const handleRemoteDebugData = (debugData: any) => {
     if (isPaused) return;
@@ -310,9 +248,6 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
-    } else if (newSource === 'local' && dataSource === 'remote') {
-      // Switching to local
-      handleDisconnect();
     }
     setDataSource(newSource);
     setSystems([]);
@@ -424,42 +359,25 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
 
             {dataSource === 'remote' && (
               <div className="profiler-connection">
-                <input
-                  type="text"
-                  className="connection-port"
-                  placeholder="Port"
-                  value={wsPort}
-                  onChange={(e) => setWsPort(e.target.value)}
-                  disabled={isConnected || isConnecting}
-                />
+                <div className="connection-port-display">
+                  <Server size={14} />
+                  <span>Port: 8080</span>
+                </div>
                 {isConnected ? (
-                  <button
-                    className="connection-btn disconnect"
-                    onClick={handleDisconnect}
-                    title="Disconnect"
-                  >
-                    <WifiOff size={14} />
-                    <span>Disconnect</span>
-                  </button>
-                ) : (
-                  <button
-                    className="connection-btn connect"
-                    onClick={handleConnect}
-                    disabled={isConnecting}
-                    title="Connect to Remote Game"
-                  >
+                  <div className="connection-status-indicator connected">
                     <Wifi size={14} />
-                    <span>{isConnecting ? 'Connecting...' : 'Connect'}</span>
-                  </button>
-                )}
-                {isConnected && (
-                  <span className="connection-status connected">Connected</span>
-                )}
-                {isConnecting && (
-                  <span className="connection-status connected">Connecting...</span>
-                )}
-                {connectionError && (
-                  <span className="connection-status error" title={connectionError}>Error</span>
+                    <span>Connected</span>
+                  </div>
+                ) : isServerRunning ? (
+                  <div className="connection-status-indicator waiting">
+                    <WifiOff size={14} />
+                    <span>Waiting for game...</span>
+                  </div>
+                ) : (
+                  <div className="connection-status-indicator disconnected">
+                    <WifiOff size={14} />
+                    <span>Server Off</span>
+                  </div>
                 )}
               </div>
             )}

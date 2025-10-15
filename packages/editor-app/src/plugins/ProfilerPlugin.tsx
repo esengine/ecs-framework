@@ -1,5 +1,7 @@
 import type { Core, ServiceContainer } from '@esengine/ecs-framework';
-import { IEditorPlugin, EditorPluginCategory, MenuItem, MessageHub } from '@esengine/editor-core';
+import { IEditorPlugin, EditorPluginCategory, MenuItem, MessageHub, PanelDescriptor } from '@esengine/editor-core';
+import { ProfilerDockPanel } from '../components/ProfilerDockPanel';
+import { ProfilerService } from '../services/ProfilerService';
 
 /**
  * Profiler Plugin
@@ -15,14 +17,30 @@ export class ProfilerPlugin implements IEditorPlugin {
   readonly icon = '📊';
 
   private messageHub: MessageHub | null = null;
+  private profilerService: ProfilerService | null = null;
 
   async install(_core: Core, services: ServiceContainer): Promise<void> {
     this.messageHub = services.resolve(MessageHub);
-    console.log('[ProfilerPlugin] Installed');
+
+    // 创建并启动 ProfilerService
+    this.profilerService = new ProfilerService();
+
+    // 将服务实例存储到全局，供组件访问
+    (window as any).__PROFILER_SERVICE__ = this.profilerService;
+
+    console.log('[ProfilerPlugin] Installed and ProfilerService started');
   }
 
   async uninstall(): Promise<void> {
-    console.log('[ProfilerPlugin] Uninstalled');
+    // 清理 ProfilerService
+    if (this.profilerService) {
+      this.profilerService.destroy();
+      this.profilerService = null;
+    }
+
+    delete (window as any).__PROFILER_SERVICE__;
+
+    console.log('[ProfilerPlugin] Uninstalled and ProfilerService stopped');
   }
 
   async onEditorReady(): Promise<void> {
@@ -44,5 +62,18 @@ export class ProfilerPlugin implements IEditorPlugin {
     ];
     console.log('[ProfilerPlugin] Registering menu items:', items);
     return items;
+  }
+
+  registerPanels(): PanelDescriptor[] {
+    return [
+      {
+        id: 'profiler-monitor',
+        title: 'Performance Monitor',
+        position: 'center' as any,
+        closable: true,
+        component: ProfilerDockPanel,
+        order: 200
+      }
+    ];
   }
 }

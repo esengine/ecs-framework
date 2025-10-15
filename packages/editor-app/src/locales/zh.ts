@@ -14,7 +14,8 @@ export const zh: Translations = {
             initializing: '初始化中...',
             ready: '编辑器就绪',
             failed: '初始化失败',
-            projectOpened: '项目已打开'
+            projectOpened: '项目已打开',
+            remoteConnected: '远程游戏已连接'
         }
     },
     hierarchy: {

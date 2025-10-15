@@ -46,6 +46,8 @@ function App() {
   const [showPluginManager, setShowPluginManager] = useState(false);
   const [showProfiler, setShowProfiler] = useState(false);
   const [showPortManager, setShowPortManager] = useState(false);
+  const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
+  const [isRemoteConnected, setIsRemoteConnected] = useState(false);
 
   useEffect(() => {
     // 禁用默认右键菜单
@@ -59,6 +61,57 @@ function App() {
       document.removeEventListener('contextmenu', handleContextMenu);
     };
   }, []);
+
+  useEffect(() => {
+    if (messageHub) {
+      const unsubscribeEnabled = messageHub.subscribe('plugin:enabled', () => {
+        console.log('[App] Plugin enabled, updating panels');
+        setPluginUpdateTrigger(prev => prev + 1);
+      });
+
+      const unsubscribeDisabled = messageHub.subscribe('plugin:disabled', () => {
+        console.log('[App] Plugin disabled, updating panels');
+        setPluginUpdateTrigger(prev => prev + 1);
+      });
+
+      return () => {
+        unsubscribeEnabled();
+        unsubscribeDisabled();
+      };
+    }
+  }, [messageHub]);
+
+  // 监听远程连接状态
+  useEffect(() => {
+    const checkConnection = () => {
+      const profilerService = (window as any).__PROFILER_SERVICE__;
+      if (profilerService && profilerService.isConnected()) {
+        if (!isRemoteConnected) {
+          console.log('[App] Remote game connected');
+          setIsRemoteConnected(true);
+          setStatus(t('header.status.remoteConnected'));
+        }
+      } else {
+        if (isRemoteConnected) {
+          console.log('[App] Remote game disconnected');
+          setIsRemoteConnected(false);
+          if (projectLoaded) {
+            const projectService = Core.services.resolve(ProjectService);
+            const componentRegistry = Core.services.resolve(ComponentRegistry);
+            const componentCount = componentRegistry?.getRegisteredComponents().length || 0;
+            setStatus(t('header.status.projectOpened') + (componentCount > 0 ? ` (${componentCount} components registered)` : ''));
+          } else {
+            setStatus(t('header.status.ready'));
+          }
+        }
+      }
+    };
+
+    checkConnection();
+    const interval = setInterval(checkConnection, 1000);
+
+    return () => clearInterval(interval);
+  }, [projectLoaded, isRemoteConnected, t]);
 
   useEffect(() => {
     const initializeEditor = async () => {
@@ -244,8 +297,8 @@ function App() {
   };
 
   useEffect(() => {
-    if (projectLoaded && entityStore && messageHub && logService) {
-      setPanels([
+    if (projectLoaded && entityStore && messageHub && logService && uiRegistry && pluginManager) {
+      const corePanels: DockablePanel[] = [
         {
           id: 'scene-hierarchy',
           title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
@@ -281,9 +334,41 @@ function App() {
           content: <ConsolePanel logService={logService} />,
           closable: false
         }
-      ]);
+      ];
+
+      const enabledPlugins = pluginManager.getAllPluginMetadata()
+        .filter(p => p.enabled)
+        .map(p => p.name);
+
+      const pluginPanels: DockablePanel[] = uiRegistry.getAllPanels()
+        .filter(panelDesc => {
+          if (!panelDesc.component) {
+            return false;
+          }
+          return enabledPlugins.some(pluginName => {
+            const plugin = pluginManager.getEditorPlugin(pluginName);
+            if (plugin && plugin.registerPanels) {
+              const pluginPanels = plugin.registerPanels();
+              return pluginPanels.some(p => p.id === panelDesc.id);
+            }
+            return false;
+          });
+        })
+        .map(panelDesc => {
+          const Component = panelDesc.component;
+          return {
+            id: panelDesc.id,
+            title: (panelDesc as any).titleZh && locale === 'zh' ? (panelDesc as any).titleZh : panelDesc.title,
+            position: panelDesc.position as any,
+            content: <Component />,
+            closable: panelDesc.closable ?? true
+          };
+        });
+
+      console.log('[App] Loading plugin panels:', pluginPanels);
+      setPanels([...corePanels, ...pluginPanels]);
     }
-  }, [projectLoaded, entityStore, messageHub, logService, locale, currentProjectPath, t]);
+  }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger]);
 
   const handlePanelMove = (panelId: string, newPosition: any) => {
     setPanels(prevPanels =>
@@ -325,7 +410,7 @@ function App() {
 
   return (
     <div className="editor-container">
-      <div className="editor-header">
+      <div className={`editor-header ${isRemoteConnected ? 'remote-connected' : ''}`}>
         <MenuBar
           locale={locale}
           uiRegistry={uiRegistry || undefined}
