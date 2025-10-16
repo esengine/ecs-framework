@@ -18,5 +18,6 @@ export * from './Services/ProjectService';
 export * from './Services/ComponentDiscoveryService';
 export * from './Services/ComponentLoaderService';
 export * from './Services/LogService';
+export * from './Services/SettingsRegistry';
 
 export * from './Types/UITypes';

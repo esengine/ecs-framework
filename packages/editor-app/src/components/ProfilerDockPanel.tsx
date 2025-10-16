@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Activity, Cpu, Layers, Package, Wifi, WifiOff, Maximize2 } from 'lucide-react';
 import { ProfilerService, ProfilerData } from '../services/ProfilerService';
+import { SettingsService } from '../services/SettingsService';
 import { Core } from '@esengine/ecs-framework';
 import { MessageHub } from '@esengine/editor-core';
 import '../styles/ProfilerDockPanel.css';
@@ -9,6 +10,25 @@ export function ProfilerDockPanel() {
   const [profilerData, setProfilerData] = useState<ProfilerData | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isServerRunning, setIsServerRunning] = useState(false);
+  const [port, setPort] = useState('8080');
+
+  useEffect(() => {
+    const settings = SettingsService.getInstance();
+    setPort(settings.get('profiler.port', '8080'));
+
+    const handleSettingsChange = ((event: CustomEvent) => {
+      const newPort = event.detail['profiler.port'];
+      if (newPort) {
+        setPort(newPort);
+      }
+    }) as EventListener;
+
+    window.addEventListener('settings:changed', handleSettingsChange);
+
+    return () => {
+      window.removeEventListener('settings:changed', handleSettingsChange);
+    };
+  }, []);
 
   useEffect(() => {
     const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
@@ -99,7 +119,7 @@ export function ProfilerDockPanel() {
         <div className="profiler-dock-empty">
           <Activity size={32} />
           <p>Waiting for game connection...</p>
-          <p className="hint">Connect your game to port 8080</p>
+          <p className="hint">Connect to: <code>ws://localhost:{port}</code></p>
         </div>
       ) : (
         <div className="profiler-dock-content">

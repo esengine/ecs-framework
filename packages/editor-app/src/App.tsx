@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Core, Scene } from '@esengine/ecs-framework';
-import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, ComponentLoaderService, PropertyMetadataService, LogService } from '@esengine/editor-core';
+import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, ComponentLoaderService, PropertyMetadataService, LogService, SettingsRegistry } from '@esengine/editor-core';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
 import { ProfilerPlugin } from './plugins/ProfilerPlugin';
 import { StartupPage } from './components/StartupPage';
@@ -12,6 +12,7 @@ import { ProfilerPanel } from './components/ProfilerPanel';
 import { PluginManagerWindow } from './components/PluginManagerWindow';
 import { ProfilerWindow } from './components/ProfilerWindow';
 import { PortManager } from './components/PortManager';
+import { SettingsWindow } from './components/SettingsWindow';
 import { Viewport } from './components/Viewport';
 import { MenuBar } from './components/MenuBar';
 import { DockContainer, DockablePanel } from './components/DockContainer';
@@ -40,12 +41,14 @@ function App() {
   const [messageHub, setMessageHub] = useState<MessageHub | null>(null);
   const [logService, setLogService] = useState<LogService | null>(null);
   const [uiRegistry, setUiRegistry] = useState<UIRegistry | null>(null);
+  const [settingsRegistry, setSettingsRegistry] = useState<SettingsRegistry | null>(null);
   const { t, locale, changeLocale } = useLocale();
   const [status, setStatus] = useState(t('header.status.initializing'));
   const [panels, setPanels] = useState<DockablePanel[]>([]);
   const [showPluginManager, setShowPluginManager] = useState(false);
   const [showProfiler, setShowProfiler] = useState(false);
   const [showPortManager, setShowPortManager] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
   const [isRemoteConnected, setIsRemoteConnected] = useState(false);
 
@@ -139,6 +142,7 @@ function App() {
         const componentLoader = new ComponentLoaderService(messageHub, componentRegistry);
         const propertyMetadata = new PropertyMetadataService();
         const logService = new LogService();
+        const settingsRegistry = new SettingsRegistry();
 
         Core.services.registerInstance(UIRegistry, uiRegistry);
         Core.services.registerInstance(MessageHub, messageHub);
@@ -150,6 +154,7 @@ function App() {
         Core.services.registerInstance(ComponentLoaderService, componentLoader);
         Core.services.registerInstance(PropertyMetadataService, propertyMetadata);
         Core.services.registerInstance(LogService, logService);
+        Core.services.registerInstance(SettingsRegistry, settingsRegistry);
 
         const pluginMgr = new EditorPluginManager();
         pluginMgr.initialize(coreInstance, Core.services);
@@ -180,6 +185,7 @@ function App() {
         setMessageHub(messageHub);
         setLogService(logService);
         setUiRegistry(uiRegistry);
+        setSettingsRegistry(settingsRegistry);
         setStatus(t('header.status.ready'));
       } catch (error) {
         console.error('Failed to initialize editor:', error);
@@ -426,6 +432,7 @@ function App() {
           onOpenPluginManager={() => setShowPluginManager(true)}
           onOpenProfiler={() => setShowProfiler(true)}
           onOpenPortManager={() => setShowPortManager(true)}
+          onOpenSettings={() => setShowSettings(true)}
           onToggleDevtools={handleToggleDevtools}
         />
         <div className="header-right">
@@ -459,6 +466,10 @@ function App() {
 
       {showPortManager && (
         <PortManager onClose={() => setShowPortManager(false)} />
+      )}
+
+      {showSettings && settingsRegistry && (
+        <SettingsWindow onClose={() => setShowSettings(false)} settingsRegistry={settingsRegistry} />
       )}
     </div>
   );

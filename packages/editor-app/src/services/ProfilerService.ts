@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { SettingsService } from './SettingsService';
 
 export interface SystemPerformanceData {
   name: string;
@@ -57,13 +58,45 @@ type ProfilerDataListener = (data: ProfilerData) => void;
 export class ProfilerService {
   private ws: WebSocket | null = null;
   private isServerRunning = false;
-  private wsPort = '8080';
+  private wsPort: string;
   private listeners: Set<ProfilerDataListener> = new Set();
   private currentData: ProfilerData | null = null;
   private checkServerInterval: NodeJS.Timeout | null = null;
   private reconnectTimeout: NodeJS.Timeout | null = null;
 
   constructor() {
+    const settings = SettingsService.getInstance();
+    this.wsPort = settings.get('profiler.port', '8080');
+
+    this.startServerCheck();
+    this.listenToSettingsChanges();
+  }
+
+  private listenToSettingsChanges(): void {
+    window.addEventListener('settings:changed', ((event: CustomEvent) => {
+      const newPort = event.detail['profiler.port'];
+      if (newPort && newPort !== this.wsPort) {
+        this.wsPort = newPort;
+        this.reconnectWithNewPort();
+      }
+    }) as EventListener);
+  }
+
+  private async reconnectWithNewPort(): Promise<void> {
+    this.disconnect();
+
+    if (this.checkServerInterval) {
+      clearInterval(this.checkServerInterval);
+      this.checkServerInterval = null;
+    }
+
+    try {
+      await invoke('stop_profiler_server');
+      this.isServerRunning = false;
+    } catch (error) {
+      console.error('[ProfilerService] Failed to stop server:', error);
+    }
+
     this.startServerCheck();
   }
 

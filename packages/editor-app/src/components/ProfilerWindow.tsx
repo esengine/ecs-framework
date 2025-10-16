@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Core } from '@esengine/ecs-framework';
 import { Activity, BarChart3, Clock, Cpu, RefreshCw, Pause, Play, X, Wifi, WifiOff, Server, Search, Table2, TreePine } from 'lucide-react';
 import { ProfilerService } from '../services/ProfilerService';
+import { SettingsService } from '../services/SettingsService';
 import '../styles/ProfilerWindow.css';
 
 interface SystemPerformanceData {
@@ -33,7 +34,26 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [isServerRunning, setIsServerRunning] = useState(false);
+  const [port, setPort] = useState('8080');
   const animationRef = useRef<number>();
+
+  useEffect(() => {
+    const settings = SettingsService.getInstance();
+    setPort(settings.get('profiler.port', '8080'));
+
+    const handleSettingsChange = ((event: CustomEvent) => {
+      const newPort = event.detail['profiler.port'];
+      if (newPort) {
+        setPort(newPort);
+      }
+    }) as EventListener;
+
+    window.addEventListener('settings:changed', handleSettingsChange);
+
+    return () => {
+      window.removeEventListener('settings:changed', handleSettingsChange);
+    };
+  }, []);
 
   // Check ProfilerService connection status
   useEffect(() => {
@@ -361,7 +381,7 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
               <div className="profiler-connection">
                 <div className="connection-port-display">
                   <Server size={14} />
-                  <span>Port: 8080</span>
+                  <span>ws://localhost:{port}</span>
                 </div>
                 {isConnected ? (
                   <div className="connection-status-indicator connected">
