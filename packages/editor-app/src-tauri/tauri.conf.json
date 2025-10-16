@@ -1,6 +1,6 @@
 {
   "productName": "ECS Framework Editor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "identifier": "com.esengine.editor",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -53,13 +53,17 @@
       "assetProtocol": {
         "enable": true,
         "scope": {
-          "allow": ["**"]
+          "allow": [
+            "**"
+          ]
         }
       },
       "capabilities": [
         {
           "identifier": "main",
-          "windows": ["main"],
+          "windows": [
+            "main"
+          ],
           "permissions": [
             "core:default",
             "shell:default",
