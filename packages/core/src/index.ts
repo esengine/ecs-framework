@@ -13,6 +13,9 @@ export { PluginManager } from './Core/PluginManager';
 export { PluginState } from './Core/Plugin';
 export type { IPlugin, IPluginMetadata } from './Core/Plugin';
 
+// 内置插件
+export * from './Plugins';
+
 // 依赖注入
 export {
     Injectable,

@@ -1,0 +1,124 @@
+:root {
+  /* 颜色系统 - 背景 */
+  --color-bg-base: #1e1e1e;
+  --color-bg-elevated: #252526;
+  --color-bg-overlay: #2d2d2d;
+  --color-bg-input: #3c3c3c;
+  --color-bg-inset: #181818;
+  --color-bg-hover: #2a2d2e;
+  --color-bg-active: #37373d;
+
+  /* 颜色系统 - 文本 */
+  --color-text-primary: #cccccc;
+  --color-text-secondary: #9d9d9d;
+  --color-text-tertiary: #6a6a6a;
+  --color-text-disabled: #4d4d4d;
+  --color-text-inverse: #ffffff;
+
+  /* 颜色系统 - 边框 */
+  --color-border-default: #3e3e42;
+  --color-border-subtle: #2b2b2b;
+  --color-border-strong: #505050;
+
+  /* 颜色系统 - 主题色 */
+  --color-primary: #007acc;
+  --color-primary-hover: #1177bb;
+  --color-primary-active: #0e639c;
+  --color-primary-subtle: rgba(0, 122, 204, 0.1);
+
+  /* 颜色系统 - 功能色 */
+  --color-success: #4ec9b0;
+  --color-warning: #ce9178;
+  --color-error: #f48771;
+  --color-danger: #f14c4c;
+  --color-info: #4fc1ff;
+
+  /* 颜色系统 - 特殊 */
+  --color-selected: #094771;
+  --color-selected-hover: #0e639c;
+  --color-focus: #007acc;
+  --color-shadow: rgba(0, 0, 0, 0.5);
+
+  /* 字体系统 */
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  --font-family-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
+
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.2;
+  --line-height-base: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* 间距系统 (4px 基准) */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+  --spacing-3xl: 32px;
+  --spacing-4xl: 40px;
+
+  /* 圆角 */
+  --radius-none: 0;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-full: 9999px;
+
+  /* 阴影 */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.4);
+
+  /* 过渡 */
+  --transition-fast: 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* Z-index 层级 */
+  --z-index-base: 1;
+  --z-index-dropdown: 10;
+  --z-index-sticky: 20;
+  --z-index-overlay: 30;
+  --z-index-modal: 40;
+  --z-index-popover: 50;
+  --z-index-tooltip: 60;
+
+  /* 尺寸 */
+  --size-icon-sm: 14px;
+  --size-icon-md: 16px;
+  --size-icon-lg: 20px;
+  --size-icon-xl: 24px;
+
+  --size-input-sm: 28px;
+  --size-input-md: 32px;
+  --size-input-lg: 36px;
+
+  --size-button-sm: 28px;
+  --size-button-md: 32px;
+  --size-button-lg: 36px;
+
+  /* 布局 */
+  --layout-sidebar-min: 180px;
+  --layout-sidebar-default: 250px;
+  --layout-sidebar-max: 400px;
+  --layout-header-height: 40px;
+  --layout-footer-height: 24px;
+  --layout-panel-header: 36px;
+}

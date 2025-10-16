@@ -1,0 +1,82 @@
+.menu-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+  user-select: none;
+}
+
+.menu-item {
+  position: relative;
+}
+
+.menu-button {
+  height: 32px;
+  padding: 0 12px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary, #cccccc);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  border-radius: 3px;
+}
+
+.menu-button:hover {
+  background-color: var(--color-bg-hover, rgba(255, 255, 255, 0.1));
+}
+
+.menu-button.active {
+  background-color: var(--color-bg-active, rgba(255, 255, 255, 0.15));
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  background: var(--color-bg-elevated, #252526);
+  border: 1px solid var(--color-border-default, #3e3e42);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  padding: 4px 0;
+  z-index: 1000;
+  margin-top: 2px;
+}
+
+.menu-dropdown-item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 16px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary, #cccccc);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s;
+}
+
+.menu-dropdown-item:hover:not(.disabled) {
+  background-color: var(--color-bg-hover, rgba(255, 255, 255, 0.1));
+}
+
+.menu-dropdown-item.disabled {
+  color: var(--color-text-disabled, #6e6e6e);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.menu-shortcut {
+  margin-left: 24px;
+  color: var(--color-text-secondary, #858585);
+  font-size: 12px;
+}
+
+.menu-separator {
+  height: 1px;
+  background-color: var(--color-border-default, #3e3e42);
+  margin: 4px 8px;
+}

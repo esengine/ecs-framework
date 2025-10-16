@@ -38,6 +38,13 @@ export class DebugManager implements IService, IUpdatable {
     private lastSendTime: number = 0;
     private sendInterval: number;
     private isRunning: boolean = false;
+    private originalConsole = {
+        log: console.log.bind(console),
+        debug: console.debug.bind(console),
+        info: console.info.bind(console),
+        warn: console.warn.bind(console),
+        error: console.error.bind(console)
+    };
 
     constructor(
         @Inject(SceneManager) sceneManager: SceneManager,
@@ -68,6 +75,9 @@ export class DebugManager implements IService, IUpdatable {
         const debugFrameRate = this.config.debugFrameRate || 30;
         this.sendInterval = 1000 / debugFrameRate;
 
+        // 拦截 console 日志
+        this.interceptConsole();
+
         this.start();
     }
 
@@ -89,6 +99,118 @@ export class DebugManager implements IService, IUpdatable {
 
         this.isRunning = false;
         this.webSocketManager.disconnect();
+    }
+
+    /**
+     * 拦截 console 日志并转发到编辑器
+     */
+    private interceptConsole(): void {
+        console.log = (...args: unknown[]) => {
+            this.sendLog('info', this.formatLogMessage(args));
+            this.originalConsole.log(...args);
+        };
+
+        console.debug = (...args: unknown[]) => {
+            this.sendLog('debug', this.formatLogMessage(args));
+            this.originalConsole.debug(...args);
+        };
+
+        console.info = (...args: unknown[]) => {
+            this.sendLog('info', this.formatLogMessage(args));
+            this.originalConsole.info(...args);
+        };
+
+        console.warn = (...args: unknown[]) => {
+            this.sendLog('warn', this.formatLogMessage(args));
+            this.originalConsole.warn(...args);
+        };
+
+        console.error = (...args: unknown[]) => {
+            this.sendLog('error', this.formatLogMessage(args));
+            this.originalConsole.error(...args);
+        };
+    }
+
+    /**
+     * 格式化日志消息
+     */
+    private formatLogMessage(args: unknown[]): string {
+        return args.map(arg => {
+            if (typeof arg === 'string') return arg;
+            if (arg instanceof Error) return `${arg.name}: ${arg.message}`;
+            if (arg === null) return 'null';
+            if (arg === undefined) return 'undefined';
+            if (typeof arg === 'object') {
+                try {
+                    return this.safeStringify(arg, 6);
+                } catch {
+                    return Object.prototype.toString.call(arg);
+                }
+            }
+            return String(arg);
+        }).join(' ');
+    }
+
+    /**
+     * 安全的 JSON 序列化,支持循环引用和深度限制
+     */
+    private safeStringify(obj: any, maxDepth: number = 6): string {
+        const seen = new WeakSet();
+
+        const stringify = (value: any, depth: number): any => {
+            if (value === null) return null;
+            if (value === undefined) return undefined;
+            if (typeof value !== 'object') return value;
+
+            if (depth >= maxDepth) {
+                return '[Max Depth Reached]';
+            }
+
+            if (seen.has(value)) {
+                return '[Circular]';
+            }
+
+            seen.add(value);
+
+            if (Array.isArray(value)) {
+                const result = value.map(item => stringify(item, depth + 1));
+                seen.delete(value);
+                return result;
+            }
+
+            const result: any = {};
+            for (const key in value) {
+                if (Object.prototype.hasOwnProperty.call(value, key)) {
+                    result[key] = stringify(value[key], depth + 1);
+                }
+            }
+            seen.delete(value);
+            return result;
+        };
+
+        return JSON.stringify(stringify(obj, 0));
+    }
+
+    /**
+     * 发送日志到编辑器
+     */
+    private sendLog(level: string, message: string): void {
+        if (!this.webSocketManager.getConnectionStatus()) {
+            return;
+        }
+
+        try {
+            this.webSocketManager.send({
+                type: 'log',
+                data: {
+                    level,
+                    message,
+                    timestamp: new Date().toISOString()
+                }
+            });
+        } catch (error) {
+            // 静默失败，避免递归日志
+        }
     }
 
     /**
@@ -206,7 +328,8 @@ export class DebugManager implements IService, IUpdatable {
                 return;
             }
 
-            const expandedData = this.entityCollector.expandLazyObject(entityId, componentIndex, propertyPath);
+            const scene = this.sceneManager.currentScene;
+            const expandedData = this.entityCollector.expandLazyObject(entityId, componentIndex, propertyPath, scene);
 
             this.webSocketManager.send({
                 type: 'expand_lazy_object_response',
@@ -238,7 +361,8 @@ export class DebugManager implements IService, IUpdatable {
                 return;
             }
 
-            const properties = this.entityCollector.getComponentProperties(entityId, componentIndex);
+            const scene = this.sceneManager.currentScene;
+            const properties = this.entityCollector.getComponentProperties(entityId, componentIndex, scene);
 
             this.webSocketManager.send({
                 type: 'get_component_properties_response',
@@ -261,7 +385,8 @@ export class DebugManager implements IService, IUpdatable {
         try {
             const { requestId } = message;
 
-            const rawEntityList = this.entityCollector.getRawEntityList();
+            const scene = this.sceneManager.currentScene;
+            const rawEntityList = this.entityCollector.getRawEntityList(scene);
 
             this.webSocketManager.send({
                 type: 'get_raw_entity_list_response',
@@ -293,7 +418,8 @@ export class DebugManager implements IService, IUpdatable {
                 return;
             }
 
-            const entityDetails = this.entityCollector.getEntityDetails(entityId);
+            const scene = this.sceneManager.currentScene;
+            const entityDetails = this.entityCollector.getEntityDetails(entityId, scene);
 
             this.webSocketManager.send({
                 type: 'get_entity_details_response',
@@ -825,5 +951,12 @@ export class DebugManager implements IService, IUpdatable {
      */
     public dispose(): void {
         this.stop();
+
+        // 恢复原始 console 方法
+        console.log = this.originalConsole.log;
+        console.debug = this.originalConsole.debug;
+        console.info = this.originalConsole.info;
+        console.warn = this.originalConsole.warn;
+        console.error = this.originalConsole.error;
     }
 } 

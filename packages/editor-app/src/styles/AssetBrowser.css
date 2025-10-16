@@ -1,0 +1,210 @@
+.asset-browser {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #1e1e1e;
+  border-top: 1px solid #333;
+}
+
+.asset-browser-header {
+  padding: 12px 15px;
+  background: #252526;
+  border-bottom: 1px solid #333;
+}
+
+.asset-browser-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #cccccc;
+}
+
+.view-mode-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.view-mode-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid #3e3e3e;
+  border-radius: 3px;
+  color: #cccccc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.view-mode-btn:hover {
+  background: #2a2d2e;
+  border-color: #007acc;
+}
+
+.view-mode-btn.active {
+  background: #0e639c;
+  border-color: #0e639c;
+  color: #ffffff;
+}
+
+.asset-browser-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.asset-browser-tree,
+.asset-browser-tree-only {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.asset-browser-list {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.asset-browser-toolbar {
+  padding: 8px;
+  background: #252526;
+  border-bottom: 1px solid #3e3e3e;
+}
+
+.asset-search {
+  width: 100%;
+  padding: 6px 10px;
+  background: #3c3c3c;
+  border: 1px solid #3e3e3e;
+  border-radius: 3px;
+  color: #cccccc;
+  font-size: 13px;
+  outline: none;
+}
+
+.asset-search:focus {
+  border-color: #007acc;
+  background: #3e3e3e;
+}
+
+.asset-search::placeholder {
+  color: #858585;
+}
+
+.asset-browser-loading,
+.asset-browser-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #858585;
+  font-size: 13px;
+}
+
+.asset-list {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+  padding: 10px;
+  overflow-y: auto;
+  align-content: start;
+}
+
+.asset-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  user-select: none;
+}
+
+.asset-item:hover {
+  background: #2a2d2e;
+}
+
+.asset-item.selected {
+  background: #094771;
+}
+
+.asset-item.selected:hover {
+  background: #0e6caa;
+}
+
+.asset-icon {
+  width: 48px;
+  height: 48px;
+  color: #cccccc;
+  margin-bottom: 8px;
+  stroke-width: 1.5;
+}
+
+.asset-icon.folder {
+  color: #dcb67a;
+}
+
+.asset-name {
+  font-size: 12px;
+  color: #cccccc;
+  text-align: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4px;
+}
+
+.asset-type {
+  font-size: 10px;
+  color: #858585;
+  text-transform: uppercase;
+}
+
+.asset-browser-list,
+.asset-list {
+  overflow-y: auto;
+}
+
+.asset-browser-list::-webkit-scrollbar,
+.asset-list::-webkit-scrollbar,
+.file-tree::-webkit-scrollbar {
+  width: 10px;
+}
+
+.asset-browser-list::-webkit-scrollbar-track,
+.asset-list::-webkit-scrollbar-track,
+.file-tree::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.asset-browser-list::-webkit-scrollbar-thumb,
+.asset-list::-webkit-scrollbar-thumb,
+.file-tree::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 5px;
+}
+
+.asset-browser-list::-webkit-scrollbar-thumb:hover,
+.asset-list::-webkit-scrollbar-thumb:hover,
+.file-tree::-webkit-scrollbar-thumb:hover {
+  background: #4e4e4e;
+}
+
+@media (max-width: 768px) {
+  .asset-list {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  }
+
+  .asset-icon {
+    width: 32px;
+    height: 32px;
+  }
+}

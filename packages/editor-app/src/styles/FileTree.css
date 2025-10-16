@@ -1,0 +1,78 @@
+.file-tree {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #1e1e1e;
+  color: #cccccc;
+  user-select: none;
+}
+
+.file-tree::-webkit-scrollbar {
+  width: 10px;
+}
+
+.file-tree::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.file-tree::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 5px;
+}
+
+.file-tree::-webkit-scrollbar-thumb:hover {
+  background: #4e4e4e;
+}
+
+.file-tree.loading,
+.file-tree.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #858585;
+  font-size: 12px;
+}
+
+.tree-node {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: background 0.1s ease;
+}
+
+.tree-node:hover {
+  background: #2a2d2e;
+}
+
+.tree-node.selected {
+  background: #37373d;
+}
+
+.tree-arrow {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 4px;
+  font-size: 10px;
+  color: #cccccc;
+}
+
+.tree-icon {
+  margin-right: 6px;
+  font-size: 14px;
+}
+
+.tree-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-children {
+  /* Children are indented via inline style */
+}

@@ -1,0 +1,77 @@
+.resizable-panel {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.resizable-panel-horizontal {
+  flex-direction: row;
+}
+
+.resizable-panel-vertical {
+  flex-direction: column;
+}
+
+.panel-section {
+  overflow: hidden;
+  position: relative;
+}
+
+.resizer {
+  background: var(--color-bg-elevated);
+  position: relative;
+  z-index: var(--z-index-base);
+  transition: background-color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.resizer:hover {
+  background: var(--color-primary-subtle);
+}
+
+.resizer:active {
+  background: var(--color-primary);
+}
+
+.resizer-horizontal {
+  width: 4px;
+  cursor: col-resize;
+}
+
+.resizer-vertical {
+  height: 4px;
+  cursor: row-resize;
+}
+
+.resizer-handle {
+  position: absolute;
+  background: transparent;
+  pointer-events: none;
+}
+
+.resizer-horizontal .resizer-handle {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 40px;
+}
+
+.resizer-vertical .resizer-handle {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 12px;
+}
+
+body.resizing {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+body.resizing-vertical {
+  cursor: row-resize !important;
+  user-select: none !important;
+}
