@@ -150,7 +150,7 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
                     <div className="about-info">
                         <h3>ECS Framework Editor</h3>
                         <p className="about-version">
-                            {t('version')}: {version}
+                            {t('version')}: Editor {version}
                         </p>
                         <p className="about-description">
                             {t('description')}

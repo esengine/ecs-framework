@@ -93,8 +93,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: packages/editor-app
-          tagName: ${{ github.event.inputs.version || github.ref_name }}
-          releaseName: 'ECS Editor ${{ github.event.inputs.version || github.ref_name }}'
+          tagName: ${{ github.event_name == 'workflow_dispatch' && format('editor-v{0}', github.event.inputs.version) || github.ref_name }}
+          releaseName: 'ECS Editor v${{ github.event.inputs.version || github.ref_name }}'
           releaseBody: 'See the assets to download this version and install.'
           releaseDraft: false
           prerelease: false
