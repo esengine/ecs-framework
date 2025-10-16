@@ -86,7 +86,7 @@ jobs:
           npm run build
 
       - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v0.5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -99,6 +99,7 @@ jobs:
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
+          updaterJsonKeepUniversal: false
           args: ${{ matrix.platform == 'macos-latest' && format('--target {0}', matrix.target) || '' }}
 
   # 构建成功后，创建 PR 更新版本号
