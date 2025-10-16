@@ -125,8 +125,7 @@ export class ProfilerService {
   private async startServer(): Promise<void> {
     try {
       const port = parseInt(this.wsPort);
-      const result = await invoke<string>('start_profiler_server', { port });
-      console.log('[ProfilerService]', result);
+      await invoke<string>('start_profiler_server', { port });
       this.isServerRunning = true;
     } catch (error) {
       console.error('[ProfilerService] Failed to start server:', error);
@@ -137,16 +136,13 @@ export class ProfilerService {
     if (this.ws) return;
 
     try {
-      console.log(`[ProfilerService] Connecting to ws://localhost:${this.wsPort}`);
       const ws = new WebSocket(`ws://localhost:${this.wsPort}`);
 
       ws.onopen = () => {
-        console.log('[ProfilerService] Connected to profiler server');
         this.notifyListeners(this.createEmptyData());
       };
 
       ws.onclose = () => {
-        console.log('[ProfilerService] Disconnected from profiler server');
         this.ws = null;
 
         // 如果服务器还在运行，尝试重连
@@ -186,7 +182,6 @@ export class ProfilerService {
 
   public requestEntityDetails(entityId: number): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.warn('[ProfilerService] Cannot request entity details: WebSocket not connected');
       return;
     }
 
@@ -196,7 +191,6 @@ export class ProfilerService {
         requestId: `entity_details_${entityId}_${Date.now()}`,
         entityId
       };
-      console.log('[ProfilerService] Requesting entity details:', request);
       this.ws.send(JSON.stringify(request));
     } catch (error) {
       console.error('[ProfilerService] Failed to request entity details:', error);
@@ -251,7 +245,6 @@ export class ProfilerService {
 
   private requestRawEntityList(): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.warn('[ProfilerService] Cannot request entity list: WebSocket not connected');
       return;
     }
 
@@ -260,7 +253,6 @@ export class ProfilerService {
         type: 'get_raw_entity_list',
         requestId: `entity_list_${Date.now()}`
       };
-      console.log('[ProfilerService] Requesting entity list:', request);
       this.ws.send(JSON.stringify(request));
     } catch (error) {
       console.error('[ProfilerService] Failed to request entity list:', error);
@@ -269,11 +261,8 @@ export class ProfilerService {
 
   private handleRawEntityListResponse(data: any): void {
     if (!data || !Array.isArray(data)) {
-      console.warn('[ProfilerService] Invalid raw entity list response:', data);
       return;
     }
-
-    console.log('[ProfilerService] Received raw entity list, count:', data.length);
 
     const entities: RemoteEntity[] = data.map((e: any) => ({
       id: e.id,
@@ -298,11 +287,8 @@ export class ProfilerService {
 
   private handleEntityDetailsResponse(data: any): void {
     if (!data) {
-      console.warn('[ProfilerService] Invalid entity details response:', data);
       return;
     }
-
-    console.log('[ProfilerService] Received entity details:', data);
 
     const entityDetails: RemoteEntityDetails = {
       id: data.id,

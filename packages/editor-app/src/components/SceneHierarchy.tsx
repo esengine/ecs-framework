@@ -48,19 +48,14 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
     const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
 
     if (!profilerService) {
-      console.warn('[SceneHierarchy] ProfilerService not available');
       return;
     }
 
-    console.log('[SceneHierarchy] Subscribing to ProfilerService');
-
     const unsubscribe = profilerService.subscribe((data) => {
       const connected = profilerService.isConnected();
-      console.log('[SceneHierarchy] Received data, connected:', connected, 'entities:', data.entities?.length || 0);
       setIsRemoteConnected(connected);
 
       if (connected && data.entities && data.entities.length > 0) {
-        console.log('[SceneHierarchy] Setting remote entities:', data.entities);
         setRemoteEntities(data.entities);
       } else {
         setRemoteEntities([]);

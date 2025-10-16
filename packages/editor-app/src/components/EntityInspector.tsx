@@ -36,7 +36,6 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
     const handleEntityDetails = (event: Event) => {
       const customEvent = event as CustomEvent;
       const details = customEvent.detail;
-      console.log('[EntityInspector] Received entity details:', details);
       setRemoteEntityDetails(details);
     };
 
@@ -61,9 +60,7 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
       return;
     }
 
-    console.log('Attempting to create component:', componentName);
     const component = componentRegistry.createInstance(componentName);
-    console.log('Created component:', component);
 
     if (component) {
       selectedEntity.addComponent(component);

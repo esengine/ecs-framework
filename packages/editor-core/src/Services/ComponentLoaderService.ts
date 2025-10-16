@@ -28,8 +28,6 @@ export class ComponentLoaderService implements IService {
         componentInfos: ComponentFileInfo[],
         modulePathTransform?: (filePath: string) => string
     ): Promise<LoadedComponentInfo[]> {
-        logger.info(`Loading ${componentInfos.length} components`);
-
         const loadedComponents: LoadedComponentInfo[] = [];
 
         for (const componentInfo of componentInfos) {
@@ -48,7 +46,6 @@ export class ComponentLoaderService implements IService {
             components: loadedComponents
         });
 
-        logger.info(`Successfully loaded ${loadedComponents.length} components`);
         return loadedComponents;
     }
 
@@ -66,20 +63,15 @@ export class ComponentLoaderService implements IService {
 
             if (modulePathTransform) {
                 const modulePath = modulePathTransform(componentInfo.path);
-                logger.info(`Attempting to load component from: ${modulePath}`);
-                logger.info(`Looking for export: ${componentInfo.className}`);
 
                 try {
                     const module = await import(/* @vite-ignore */ modulePath);
-                    logger.info(`Module loaded, exports:`, Object.keys(module));
 
                     componentClass = module[componentInfo.className] || module.default;
 
                     if (!componentClass) {
                         logger.warn(`Component class ${componentInfo.className} not found in module exports`);
                         logger.warn(`Available exports: ${Object.keys(module).join(', ')}`);
-                    } else {
-                        logger.info(`Successfully loaded component class: ${componentInfo.className}`);
                     }
                 } catch (error) {
                     logger.error(`Failed to import component module: ${modulePath}`, error);
@@ -108,8 +100,6 @@ export class ComponentLoaderService implements IService {
 
             this.loadedComponents.set(componentInfo.path, loadedInfo);
 
-            logger.info(`Component ${componentClass ? 'loaded' : 'metadata registered'}: ${componentInfo.className}`);
-
             return loadedInfo;
         } catch (error) {
             logger.error(`Failed to load component: ${componentInfo.fileName}`, error);
@@ -131,7 +121,6 @@ export class ComponentLoaderService implements IService {
         this.componentRegistry.unregister(loadedComponent.fileInfo.className);
         this.loadedComponents.delete(filePath);
 
-        logger.info(`Component unloaded: ${loadedComponent.fileInfo.className}`);
         return true;
     }
 
@@ -139,7 +128,6 @@ export class ComponentLoaderService implements IService {
         for (const [filePath] of this.loadedComponents) {
             this.unloadComponent(filePath);
         }
-        logger.info('Cleared all loaded components');
     }
 
     private convertToModulePath(filePath: string): string {
@@ -148,6 +136,5 @@ export class ComponentLoaderService implements IService {
 
     public dispose(): void {
         this.clearLoadedComponents();
-        logger.info('ComponentLoaderService disposed');
     }
 }
