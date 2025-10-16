@@ -1,0 +1,88 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="#1E1E1E"/>
+
+  <!-- 背景光晕 -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#569CD6;stop-opacity:0.15" />
+      <stop offset="100%" style="stop-color:#569CD6;stop-opacity:0" />
+    </radialGradient>
+
+    <linearGradient id="cubeGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#569CD6" />
+      <stop offset="100%" style="stop-color:#4A8BC2" />
+    </linearGradient>
+
+    <linearGradient id="cubeGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4EC9B0" />
+      <stop offset="100%" style="stop-color:#3DA592" />
+    </linearGradient>
+
+    <filter id="shadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="2" dy="2" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- 背景光晕效果 -->
+  <circle cx="256" cy="256" r="200" fill="url(#glow)"/>
+
+  <!-- 主立方体框架 -->
+  <g filter="url(#shadow)">
+    <!-- 后面的立方体边缘 -->
+    <path d="M 180 140 L 332 140 L 332 292 L 180 292 Z"
+          stroke="url(#cubeGrad1)"
+          stroke-width="6"
+          fill="none"
+          opacity="0.4"/>
+
+    <!-- 前面的立方体 -->
+    <path d="M 140 180 L 292 180 L 292 332 L 140 332 Z"
+          stroke="url(#cubeGrad1)"
+          stroke-width="8"
+          fill="rgba(86, 156, 214, 0.08)"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+
+    <!-- 连接线（3D效果） -->
+    <line x1="140" y1="180" x2="180" y2="140" stroke="url(#cubeGrad1)" stroke-width="6" opacity="0.6" stroke-linecap="round"/>
+    <line x1="292" y1="180" x2="332" y2="140" stroke="url(#cubeGrad1)" stroke-width="6" opacity="0.6" stroke-linecap="round"/>
+    <line x1="292" y1="332" x2="332" y2="292" stroke="url(#cubeGrad1)" stroke-width="6" opacity="0.6" stroke-linecap="round"/>
+    <line x1="140" y1="332" x2="180" y2="292" stroke="url(#cubeGrad1)" stroke-width="6" opacity="0.6" stroke-linecap="round"/>
+
+    <!-- Entity 点（橙色） -->
+    <circle cx="216" cy="216" r="14" fill="#CE9178" opacity="0.95">
+      <animate attributeName="opacity" values="0.95;1;0.95" dur="2s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- Component 点（青绿色） -->
+    <circle cx="256" cy="256" r="14" fill="#4EC9B0" opacity="0.95">
+      <animate attributeName="opacity" values="0.95;1;0.95" dur="2s" begin="0.3s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- System 点（蓝色） -->
+    <circle cx="296" cy="296" r="14" fill="#569CD6" opacity="0.95">
+      <animate attributeName="opacity" values="0.95;1;0.95" dur="2s" begin="0.6s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- 点之间的连接线 -->
+    <line x1="216" y1="216" x2="256" y2="256" stroke="#4EC9B0" stroke-width="2" opacity="0.5" stroke-linecap="round"/>
+    <line x1="256" y1="256" x2="296" y2="296" stroke="#569CD6" stroke-width="2" opacity="0.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- 角落装饰线 -->
+  <g stroke="#4EC9B0" stroke-width="3" opacity="0.3" stroke-linecap="round">
+    <line x1="130" y1="170" x2="130" y2="190"/>
+    <line x1="130" y1="170" x2="150" y2="170"/>
+
+    <line x1="302" y1="342" x2="302" y2="322"/>
+    <line x1="302" y1="342" x2="282" y2="342"/>
+  </g>
+</svg>
