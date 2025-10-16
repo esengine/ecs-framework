@@ -186,6 +186,30 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
       );
     }
 
+    if (valueType === 'object' && value.r !== undefined && value.g !== undefined && value.b !== undefined) {
+      const r = Math.round(value.r * 255);
+      const g = Math.round(value.g * 255);
+      const b = Math.round(value.b * 255);
+      const a = value.a !== undefined ? value.a : 1;
+      const hexColor = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+
+      return (
+        <div key={key} className="property-field">
+          <label className="property-label">{key}</label>
+          <div className="property-color-wrapper">
+            <div className="property-color-preview" style={{ backgroundColor: hexColor, opacity: a }} />
+            <input
+              type="text"
+              className="property-input property-input-color-text"
+              value={`${hexColor.toUpperCase()} (${a.toFixed(2)})`}
+              disabled
+              style={{ flex: 1 }}
+            />
+          </div>
+        </div>
+      );
+    }
+
     if (valueType === 'object' && value.minX !== undefined && value.maxX !== undefined && value.minY !== undefined && value.maxY !== undefined) {
       return (
         <div key={key} className="property-field" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
