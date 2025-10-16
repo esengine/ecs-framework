@@ -70,8 +70,7 @@ export abstract class Component implements IComponent {
      * 这是一个生命周期钩子，用于组件的初始化逻辑。
      * 虽然保留此方法，但建议将复杂的初始化逻辑放在 System 中处理。
      */
-    public onAddedToEntity(): void {
-    }
+    public onAddedToEntity(): void {}
 
     /**
      * 组件从实体移除时的回调
@@ -82,7 +81,5 @@ export abstract class Component implements IComponent {
      * 这是一个生命周期钩子，用于组件的清理逻辑。
      * 虽然保留此方法，但建议将复杂的清理逻辑放在 System 中处理。
      */
-    public onRemovedFromEntity(): void {
-    }
-
+    public onRemovedFromEntity(): void {}
 }
