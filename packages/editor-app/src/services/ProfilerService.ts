@@ -12,7 +12,35 @@ export interface RemoteEntity {
   id: number;
   name: string;
   enabled: boolean;
-  components: string[];
+  active: boolean;
+  activeInHierarchy: boolean;
+  componentCount: number;
+  componentTypes: string[];
+  parentId: number | null;
+  childIds: number[];
+  depth: number;
+  tag: number;
+  updateOrder: number;
+}
+
+export interface RemoteComponentDetail {
+  typeName: string;
+  properties: Record<string, any>;
+}
+
+export interface RemoteEntityDetails {
+  id: number;
+  name: string;
+  enabled: boolean;
+  active: boolean;
+  activeInHierarchy: boolean;
+  scene: string;
+  sceneName: string;
+  sceneType: string;
+  componentCount: number;
+  componentTypes: string[];
+  components: RemoteComponentDetail[];
+  parentName: string | null;
 }
 
 export interface ProfilerData {
@@ -140,6 +168,10 @@ export class ProfilerService {
           const message = JSON.parse(event.data);
           if (message.type === 'debug_data' && message.data) {
             this.handleDebugData(message.data);
+          } else if (message.type === 'get_raw_entity_list_response' && message.data) {
+            this.handleRawEntityListResponse(message.data);
+          } else if (message.type === 'get_entity_details_response' && message.data) {
+            this.handleEntityDetailsResponse(message.data);
           }
         } catch (error) {
           console.error('[ProfilerService] Failed to parse message:', error);
@@ -149,6 +181,25 @@ export class ProfilerService {
       this.ws = ws;
     } catch (error) {
       console.error('[ProfilerService] Failed to create WebSocket:', error);
+    }
+  }
+
+  public requestEntityDetails(entityId: number): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.warn('[ProfilerService] Cannot request entity details: WebSocket not connected');
+      return;
+    }
+
+    try {
+      const request = {
+        type: 'get_entity_details',
+        requestId: `entity_details_${entityId}_${Date.now()}`,
+        entityId
+      };
+      console.log('[ProfilerService] Requesting entity details:', request);
+      this.ws.send(JSON.stringify(request));
+    } catch (error) {
+      console.error('[ProfilerService] Failed to request entity details:', error);
     }
   }
 
@@ -179,38 +230,9 @@ export class ProfilerService {
       });
     }
 
-    const entityCount = debugData.entities?.totalCount || 0;
+    const entityCount = debugData.entities?.totalEntities || debugData.entities?.totalCount || 0;
     const componentTypes = debugData.components?.types || [];
     const componentCount = componentTypes.length;
-
-    // 解析实体列表
-    console.log('[ProfilerService] debugData.entities:', debugData.entities);
-    let entities: RemoteEntity[] = [];
-
-    // 尝试从 topEntitiesByComponents 获取实体列表
-    if (debugData.entities?.topEntitiesByComponents && Array.isArray(debugData.entities.topEntitiesByComponents)) {
-      console.log('[ProfilerService] Found topEntitiesByComponents, length:', debugData.entities.topEntitiesByComponents.length);
-      entities = debugData.entities.topEntitiesByComponents.map((e: any) => ({
-        id: parseInt(e.id) || 0,
-        name: e.name || `Entity ${e.id}`,
-        enabled: true, // topEntitiesByComponents doesn't have enabled flag, assume true
-        components: [] // componentCount is provided but not component names
-      }));
-      console.log('[ProfilerService] Parsed entities from topEntitiesByComponents:', entities.length);
-    }
-    // 尝试从 entities 获取实体列表（旧格式兼容）
-    else if (debugData.entities?.entities && Array.isArray(debugData.entities.entities)) {
-      console.log('[ProfilerService] Found entities array, length:', debugData.entities.entities.length);
-      entities = debugData.entities.entities.map((e: any) => ({
-        id: e.id,
-        name: e.name || `Entity ${e.id}`,
-        enabled: e.enabled !== false,
-        components: e.components || []
-      }));
-      console.log('[ProfilerService] Parsed entities:', entities.length);
-    } else {
-      console.log('[ProfilerService] No entities array found');
-    }
 
     this.currentData = {
       totalFrameTime,
@@ -218,10 +240,88 @@ export class ProfilerService {
       entityCount,
       componentCount,
       fps,
-      entities
+      entities: []
     };
 
     this.notifyListeners(this.currentData);
+
+    // 请求完整的实体列表
+    this.requestRawEntityList();
+  }
+
+  private requestRawEntityList(): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.warn('[ProfilerService] Cannot request entity list: WebSocket not connected');
+      return;
+    }
+
+    try {
+      const request = {
+        type: 'get_raw_entity_list',
+        requestId: `entity_list_${Date.now()}`
+      };
+      console.log('[ProfilerService] Requesting entity list:', request);
+      this.ws.send(JSON.stringify(request));
+    } catch (error) {
+      console.error('[ProfilerService] Failed to request entity list:', error);
+    }
+  }
+
+  private handleRawEntityListResponse(data: any): void {
+    if (!data || !Array.isArray(data)) {
+      console.warn('[ProfilerService] Invalid raw entity list response:', data);
+      return;
+    }
+
+    console.log('[ProfilerService] Received raw entity list, count:', data.length);
+
+    const entities: RemoteEntity[] = data.map((e: any) => ({
+      id: e.id,
+      name: e.name || `Entity ${e.id}`,
+      enabled: e.enabled !== false,
+      active: e.active !== false,
+      activeInHierarchy: e.activeInHierarchy !== false,
+      componentCount: e.componentCount || 0,
+      componentTypes: e.componentTypes || [],
+      parentId: e.parentId || null,
+      childIds: e.childIds || [],
+      depth: e.depth || 0,
+      tag: e.tag || 0,
+      updateOrder: e.updateOrder || 0
+    }));
+
+    if (this.currentData) {
+      this.currentData.entities = entities;
+      this.notifyListeners(this.currentData);
+    }
+  }
+
+  private handleEntityDetailsResponse(data: any): void {
+    if (!data) {
+      console.warn('[ProfilerService] Invalid entity details response:', data);
+      return;
+    }
+
+    console.log('[ProfilerService] Received entity details:', data);
+
+    const entityDetails: RemoteEntityDetails = {
+      id: data.id,
+      name: data.name || `Entity ${data.id}`,
+      enabled: data.enabled !== false,
+      active: data.active !== false,
+      activeInHierarchy: data.activeInHierarchy !== false,
+      scene: data.scene || '',
+      sceneName: data.sceneName || '',
+      sceneType: data.sceneType || '',
+      componentCount: data.componentCount || 0,
+      componentTypes: data.componentTypes || [],
+      components: data.components || [],
+      parentName: data.parentName || null
+    };
+
+    window.dispatchEvent(new CustomEvent('profiler:entity-details', {
+      detail: entityDetails
+    }));
   }
 
   private createEmptyData(): ProfilerData {

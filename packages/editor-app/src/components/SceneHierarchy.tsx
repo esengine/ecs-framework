@@ -74,6 +74,27 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
     entityStore.selectEntity(entity);
   };
 
+  const handleRemoteEntityClick = (entity: RemoteEntity) => {
+    setSelectedId(entity.id);
+
+    // 请求完整的实体详情（包含组件属性）
+    const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
+    if (profilerService) {
+      profilerService.requestEntityDetails(entity.id);
+    }
+
+    // 先发布基本信息，详细信息稍后通过 ProfilerService 异步返回
+    messageHub.publish('remote-entity:selected', {
+      entity: {
+        id: entity.id,
+        name: entity.name,
+        enabled: entity.enabled,
+        componentCount: entity.componentCount,
+        componentTypes: entity.componentTypes
+      }
+    });
+  };
+
   // Determine which entities to display
   const displayEntities = isRemoteConnected ? remoteEntities : entities;
   const showRemoteIndicator = isRemoteConnected && remoteEntities.length > 0;
@@ -105,13 +126,14 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
             {remoteEntities.map(entity => (
               <li
                 key={entity.id}
-                className={`entity-item remote-entity ${!entity.enabled ? 'disabled' : ''}`}
-                title={`${entity.name} - ${entity.components.join(', ')}`}
+                className={`entity-item remote-entity ${selectedId === entity.id ? 'selected' : ''} ${!entity.enabled ? 'disabled' : ''}`}
+                title={`${entity.name} - ${entity.componentTypes.join(', ')}`}
+                onClick={() => handleRemoteEntityClick(entity)}
               >
                 <Box size={14} className="entity-icon" />
                 <span className="entity-name">{entity.name}</span>
-                {entity.components.length > 0 && (
-                  <span className="component-count">{entity.components.length}</span>
+                {entity.componentCount > 0 && (
+                  <span className="component-count">{entity.componentCount}</span>
                 )}
               </li>
             ))}

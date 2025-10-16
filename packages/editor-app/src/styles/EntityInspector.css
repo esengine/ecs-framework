@@ -39,6 +39,26 @@
   min-height: 0;
 }
 
+.inspector-content::-webkit-scrollbar {
+  width: 14px;
+}
+
+.inspector-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.inspector-content::-webkit-scrollbar-thumb {
+  background: rgba(121, 121, 121, 0.4);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+.inspector-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 100, 100, 0.7);
+  background-clip: padding-box;
+}
+
 .inspector-section {
   margin-bottom: var(--spacing-lg);
 }

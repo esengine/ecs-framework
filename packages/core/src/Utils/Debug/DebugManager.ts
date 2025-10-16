@@ -206,7 +206,8 @@ export class DebugManager implements IService, IUpdatable {
                 return;
             }
 
-            const expandedData = this.entityCollector.expandLazyObject(entityId, componentIndex, propertyPath);
+            const scene = this.sceneManager.currentScene;
+            const expandedData = this.entityCollector.expandLazyObject(entityId, componentIndex, propertyPath, scene);
 
             this.webSocketManager.send({
                 type: 'expand_lazy_object_response',
@@ -238,7 +239,8 @@ export class DebugManager implements IService, IUpdatable {
                 return;
             }
 
-            const properties = this.entityCollector.getComponentProperties(entityId, componentIndex);
+            const scene = this.sceneManager.currentScene;
+            const properties = this.entityCollector.getComponentProperties(entityId, componentIndex, scene);
 
             this.webSocketManager.send({
                 type: 'get_component_properties_response',
@@ -261,7 +263,8 @@ export class DebugManager implements IService, IUpdatable {
         try {
             const { requestId } = message;
 
-            const rawEntityList = this.entityCollector.getRawEntityList();
+            const scene = this.sceneManager.currentScene;
+            const rawEntityList = this.entityCollector.getRawEntityList(scene);
 
             this.webSocketManager.send({
                 type: 'get_raw_entity_list_response',
@@ -293,7 +296,8 @@ export class DebugManager implements IService, IUpdatable {
                 return;
             }
 
-            const entityDetails = this.entityCollector.getEntityDetails(entityId);
+            const scene = this.sceneManager.currentScene;
+            const entityDetails = this.entityCollector.getEntityDetails(entityId, scene);
 
             this.webSocketManager.send({
                 type: 'get_entity_details_response',

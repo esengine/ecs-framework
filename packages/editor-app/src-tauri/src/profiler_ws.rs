@@ -131,10 +131,10 @@ async fn handle_connection(
     while let Some(msg) = ws_receiver.next().await {
         match msg {
             Ok(Message::Text(text)) => {
-                // Parse incoming debug data from game client
+                // Parse incoming messages
                 if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&text) {
                     if json_value.get("type").and_then(|t| t.as_str()) == Some("debug_data") {
-                        // Broadcast to frontend (ProfilerWindow)
+                        // Broadcast debug data from game client to all clients (including frontend)
                         tx.send(text).ok();
                     } else if json_value.get("type").and_then(|t| t.as_str()) == Some("ping") {
                         // Respond to ping
@@ -145,6 +145,10 @@ async fn handle_connection(
                             })
                             .to_string(),
                         );
+                    } else {
+                        // Forward all other messages (like get_raw_entity_list, get_entity_details, etc.)
+                        // to all connected clients (this enables frontend -> game client communication)
+                        tx.send(text).ok();
                     }
                 }
             }

@@ -263,8 +263,7 @@ export class EntityDataCollector {
                 componentCount: entity.components?.length || 0,
                 memory: 0
             }))
-            .sort((a: any, b: any) => b.componentCount - a.componentCount)
-            .slice(0, 10);
+            .sort((a: any, b: any) => b.componentCount - a.componentCount);
     }
 
 
@@ -303,7 +302,7 @@ export class EntityDataCollector {
             });
 
             if (archetype.entities) {
-                archetype.entities.slice(0, 5).forEach((entity: any) => {
+                archetype.entities.forEach((entity: any) => {
                     topEntities.push({
                         id: entity.id.toString(),
                         name: entity.name || `Entity_${entity.id}`,
@@ -352,7 +351,7 @@ export class EntityDataCollector {
             });
 
             if (archetype.entities) {
-                archetype.entities.slice(0, 5).forEach((entity: any) => {
+                archetype.entities.forEach((entity: any) => {
                     topEntities.push({
                         id: entity.id.toString(),
                         name: entity.name || `Entity_${entity.id}`,
