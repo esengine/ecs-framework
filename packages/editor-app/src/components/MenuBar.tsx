@@ -29,6 +29,7 @@ interface MenuBarProps {
   onOpenPortManager?: () => void;
   onOpenSettings?: () => void;
   onToggleDevtools?: () => void;
+  onOpenAbout?: () => void;
 }
 
 export function MenuBar({
@@ -47,7 +48,8 @@ export function MenuBar({
   onOpenProfiler,
   onOpenPortManager,
   onOpenSettings,
-  onToggleDevtools
+  onToggleDevtools,
+  onOpenAbout
 }: MenuBarProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [pluginMenuItems, setPluginMenuItems] = useState<PluginMenuItem[]>([]);
@@ -144,6 +146,7 @@ export function MenuBar({
         settings: 'Settings',
         help: 'Help',
         documentation: 'Documentation',
+        checkForUpdates: 'Check for Updates',
         about: 'About',
         devtools: 'Developer Tools'
       },
@@ -176,6 +179,7 @@ export function MenuBar({
         settings: '设置',
         help: '帮助',
         documentation: '文档',
+        checkForUpdates: '检查更新',
         about: '关于',
         devtools: '开发者工具'
       }
@@ -233,7 +237,8 @@ export function MenuBar({
     help: [
       { label: t('documentation'), disabled: true },
       { separator: true },
-      { label: t('about'), disabled: true }
+      { label: t('checkForUpdates'), onClick: onOpenAbout },
+      { label: t('about'), onClick: onOpenAbout }
     ]
   };
 
