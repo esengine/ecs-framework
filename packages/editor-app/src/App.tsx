@@ -17,6 +17,7 @@ import { Viewport } from './components/Viewport';
 import { MenuBar } from './components/MenuBar';
 import { DockContainer, DockablePanel } from './components/DockContainer';
 import { TauriAPI } from './api/tauri';
+import { SettingsService } from './services/SettingsService';
 import { useLocale } from './hooks/useLocale';
 import { en, zh } from './locales';
 import { Loader2, Globe } from 'lucide-react';
@@ -51,6 +52,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
   const [isRemoteConnected, setIsRemoteConnected] = useState(false);
+  const [isProfilerMode, setIsProfilerMode] = useState(false);
 
   useEffect(() => {
     // 禁用默认右键菜单
@@ -144,6 +146,12 @@ function App() {
         const logService = new LogService();
         const settingsRegistry = new SettingsRegistry();
 
+        // 监听远程日志事件
+        window.addEventListener('profiler:remote-log', ((event: CustomEvent) => {
+          const { level, message, timestamp } = event.detail;
+          logService.addRemoteLog(level, message, timestamp);
+        }) as EventListener);
+
         Core.services.registerInstance(UIRegistry, uiRegistry);
         Core.services.registerInstance(MessageHub, messageHub);
         Core.services.registerInstance(SerializerRegistry, serializerRegistry);
@@ -196,11 +204,8 @@ function App() {
     initializeEditor();
   }, []);
 
-  const handleOpenProject = async () => {
+  const handleOpenRecentProject = async (projectPath: string) => {
     try {
-      const projectPath = await TauriAPI.openProjectDialog();
-      if (!projectPath) return;
-
       setIsLoading(true);
       setLoadingMessage(locale === 'zh' ? '正在打开项目...' : 'Opening project...');
 
@@ -249,6 +254,9 @@ function App() {
         setStatus(t('header.status.projectOpened'));
       }
 
+      const settings = SettingsService.getInstance();
+      settings.addRecentProject(projectPath);
+
       setCurrentProjectPath(projectPath);
       setProjectLoaded(true);
       setIsLoading(false);
@@ -259,8 +267,25 @@ function App() {
     }
   };
 
+  const handleOpenProject = async () => {
+    try {
+      const projectPath = await TauriAPI.openProjectDialog();
+      if (!projectPath) return;
+
+      await handleOpenRecentProject(projectPath);
+    } catch (error) {
+      console.error('Failed to open project dialog:', error);
+    }
+  };
+
   const handleCreateProject = async () => {
     console.log('Create project not implemented yet');
+  };
+
+  const handleProfilerMode = async () => {
+    setIsProfilerMode(true);
+    setProjectLoaded(true);
+    setStatus(t('header.status.profilerMode') || 'Profiler Mode - Waiting for connection...');
   };
 
   const handleNewScene = () => {
@@ -282,6 +307,7 @@ function App() {
   const handleCloseProject = () => {
     setProjectLoaded(false);
     setCurrentProjectPath(null);
+    setIsProfilerMode(false);
     setStatus(t('header.status.ready'));
   };
 
@@ -304,43 +330,71 @@ function App() {
 
   useEffect(() => {
     if (projectLoaded && entityStore && messageHub && logService && uiRegistry && pluginManager) {
-      const corePanels: DockablePanel[] = [
-        {
-          id: 'scene-hierarchy',
-          title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
-          position: 'left',
-          content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />,
-          closable: false
-        },
-        {
-          id: 'inspector',
-          title: locale === 'zh' ? '检视器' : 'Inspector',
-          position: 'right',
-          content: <EntityInspector entityStore={entityStore} messageHub={messageHub} />,
-          closable: false
-        },
-        {
-          id: 'viewport',
-          title: locale === 'zh' ? '视口' : 'Viewport',
-          position: 'center',
-          content: <Viewport locale={locale} />,
-          closable: false
-        },
-        {
-          id: 'assets',
-          title: locale === 'zh' ? '资产' : 'Assets',
-          position: 'bottom',
-          content: <AssetBrowser projectPath={currentProjectPath} locale={locale} />,
-          closable: false
-        },
-        {
-          id: 'console',
-          title: locale === 'zh' ? '控制台' : 'Console',
-          position: 'bottom',
-          content: <ConsolePanel logService={logService} />,
-          closable: false
-        }
-      ];
+      let corePanels: DockablePanel[];
+
+      if (isProfilerMode) {
+        corePanels = [
+          {
+            id: 'scene-hierarchy',
+            title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
+            position: 'left',
+            content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />,
+            closable: false
+          },
+          {
+            id: 'inspector',
+            title: locale === 'zh' ? '检视器' : 'Inspector',
+            position: 'right',
+            content: <EntityInspector entityStore={entityStore} messageHub={messageHub} />,
+            closable: false
+          },
+          {
+            id: 'console',
+            title: locale === 'zh' ? '控制台' : 'Console',
+            position: 'bottom',
+            content: <ConsolePanel logService={logService} />,
+            closable: false
+          }
+        ];
+      } else {
+        corePanels = [
+          {
+            id: 'scene-hierarchy',
+            title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
+            position: 'left',
+            content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />,
+            closable: false
+          },
+          {
+            id: 'inspector',
+            title: locale === 'zh' ? '检视器' : 'Inspector',
+            position: 'right',
+            content: <EntityInspector entityStore={entityStore} messageHub={messageHub} />,
+            closable: false
+          },
+          {
+            id: 'viewport',
+            title: locale === 'zh' ? '视口' : 'Viewport',
+            position: 'center',
+            content: <Viewport locale={locale} />,
+            closable: false
+          },
+          {
+            id: 'assets',
+            title: locale === 'zh' ? '资产' : 'Assets',
+            position: 'bottom',
+            content: <AssetBrowser projectPath={currentProjectPath} locale={locale} />,
+            closable: false
+          },
+          {
+            id: 'console',
+            title: locale === 'zh' ? '控制台' : 'Console',
+            position: 'bottom',
+            content: <ConsolePanel logService={logService} />,
+            closable: false
+          }
+        ];
+      }
 
       const enabledPlugins = pluginManager.getAllPluginMetadata()
         .filter(p => p.enabled)
@@ -374,7 +428,7 @@ function App() {
       console.log('[App] Loading plugin panels:', pluginPanels);
       setPanels([...corePanels, ...pluginPanels]);
     }
-  }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger]);
+  }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode]);
 
   const handlePanelMove = (panelId: string, newPosition: any) => {
     setPanels(prevPanels =>
@@ -394,12 +448,17 @@ function App() {
   }
 
   if (!projectLoaded) {
+    const settings = SettingsService.getInstance();
+    const recentProjects = settings.getRecentProjects();
+
     return (
       <>
         <StartupPage
           onOpenProject={handleOpenProject}
           onCreateProject={handleCreateProject}
-          recentProjects={[]}
+          onOpenRecentProject={handleOpenRecentProject}
+          onProfilerMode={handleProfilerMode}
+          recentProjects={recentProjects}
           locale={locale}
         />
         {isLoading && (

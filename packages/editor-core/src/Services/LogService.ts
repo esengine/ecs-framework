@@ -122,6 +122,28 @@ export class LogService implements IService {
     }
 
     /**
+     * 添加远程日志（从远程游戏接收）
+     */
+    public addRemoteLog(level: LogLevel, message: string, timestamp?: Date): void {
+        const entry: LogEntry = {
+            id: this.nextId++,
+            timestamp: timestamp || new Date(),
+            level,
+            source: 'remote',
+            message,
+            args: []
+        };
+
+        this.logs.push(entry);
+
+        if (this.logs.length > this.maxLogs) {
+            this.logs.shift();
+        }
+
+        this.notifyListeners(entry);
+    }
+
+    /**
      * 通知监听器
      */
     private notifyListeners(entry: LogEntry): void {

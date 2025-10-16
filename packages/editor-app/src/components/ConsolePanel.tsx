@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { LogService, LogEntry } from '@esengine/editor-core';
 import { LogLevel } from '@esengine/ecs-framework';
-import { Trash2, AlertCircle, Info, AlertTriangle, XCircle, Bug, Search, Filter } from 'lucide-react';
+import { Trash2, AlertCircle, Info, AlertTriangle, XCircle, Bug, Search, Maximize2, ChevronRight, ChevronDown } from 'lucide-react';
+import { JsonViewer } from './JsonViewer';
 import '../styles/ConsolePanel.css';
 
 interface ConsolePanelProps {
@@ -19,6 +20,8 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
         LogLevel.Fatal
     ]));
     const [autoScroll, setAutoScroll] = useState(true);
+    const [expandedLogs, setExpandedLogs] = useState<Set<number>>(new Set());
+    const [jsonViewerData, setJsonViewerData] = useState<any>(null);
     const logContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -110,6 +113,110 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
         });
     };
 
+    const toggleLogExpand = (logId: number) => {
+        const newExpanded = new Set(expandedLogs);
+        if (newExpanded.has(logId)) {
+            newExpanded.delete(logId);
+        } else {
+            newExpanded.add(logId);
+        }
+        setExpandedLogs(newExpanded);
+    };
+
+    const extractJSON = (message: string): { prefix: string; json: string; suffix: string } | null => {
+        const jsonStartChars = ['{', '['];
+        let startIndex = -1;
+
+        for (const char of jsonStartChars) {
+            const index = message.indexOf(char);
+            if (index !== -1 && (startIndex === -1 || index < startIndex)) {
+                startIndex = index;
+            }
+        }
+
+        if (startIndex === -1) return null;
+
+        for (let endIndex = message.length; endIndex > startIndex; endIndex--) {
+            const possibleJson = message.substring(startIndex, endIndex);
+            try {
+                JSON.parse(possibleJson);
+                return {
+                    prefix: message.substring(0, startIndex).trim(),
+                    json: possibleJson,
+                    suffix: message.substring(endIndex).trim()
+                };
+            } catch {
+                continue;
+            }
+        }
+
+        return null;
+    };
+
+    const tryParseJSON = (message: string): { isJSON: boolean; parsed?: any; jsonStr?: string } => {
+        try {
+            const parsed = JSON.parse(message);
+            return { isJSON: true, parsed, jsonStr: message };
+        } catch {
+            const extracted = extractJSON(message);
+            if (extracted) {
+                try {
+                    const parsed = JSON.parse(extracted.json);
+                    return { isJSON: true, parsed, jsonStr: extracted.json };
+                } catch {
+                    return { isJSON: false };
+                }
+            }
+            return { isJSON: false };
+        }
+    };
+
+    const openJsonViewer = (jsonStr: string) => {
+        try {
+            const parsed = JSON.parse(jsonStr);
+            setJsonViewerData(parsed);
+        } catch {
+            console.error('Failed to parse JSON:', jsonStr);
+        }
+    };
+
+    const formatMessage = (message: string, isExpanded: boolean): JSX.Element => {
+        const MAX_PREVIEW_LENGTH = 200;
+        const { isJSON, jsonStr } = tryParseJSON(message);
+        const extracted = extractJSON(message);
+
+        const shouldTruncate = message.length > MAX_PREVIEW_LENGTH && !isExpanded;
+
+        return (
+            <div className="log-message-container">
+                <div className="log-message-text">
+                    {shouldTruncate ? (
+                        <>
+                            {extracted && extracted.prefix && <span>{extracted.prefix} </span>}
+                            <span className="log-message-preview">
+                                {message.substring(0, MAX_PREVIEW_LENGTH)}...
+                            </span>
+                        </>
+                    ) : (
+                        <span>{message}</span>
+                    )}
+                </div>
+                {isJSON && jsonStr && (
+                    <button
+                        className="log-open-json-btn"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            openJsonViewer(jsonStr);
+                        }}
+                        title="Open in JSON Viewer"
+                    >
+                        <Maximize2 size={12} />
+                    </button>
+                )}
+            </div>
+        );
+    };
+
     const levelCounts = {
         [LogLevel.Debug]: logs.filter(l => l.level === LogLevel.Debug).length,
         [LogLevel.Info]: logs.filter(l => l.level === LogLevel.Info).length,
@@ -184,24 +291,46 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
                         <p>No logs to display</p>
                     </div>
                 ) : (
-                    filteredLogs.map(log => (
-                        <div key={log.id} className={`log-entry ${getLevelClass(log.level)}`}>
-                            <div className="log-entry-icon">
-                                {getLevelIcon(log.level)}
+                    filteredLogs.map(log => {
+                        const isExpanded = expandedLogs.has(log.id);
+                        const shouldShowExpander = log.message.length > 200;
+
+                        return (
+                            <div
+                                key={log.id}
+                                className={`log-entry ${getLevelClass(log.level)} ${log.source === 'remote' ? 'log-entry-remote' : ''} ${isExpanded ? 'log-entry-expanded' : ''}`}
+                            >
+                                {shouldShowExpander && (
+                                    <div
+                                        className="log-entry-expander"
+                                        onClick={() => toggleLogExpand(log.id)}
+                                    >
+                                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                    </div>
+                                )}
+                                <div className="log-entry-icon">
+                                    {getLevelIcon(log.level)}
+                                </div>
+                                <div className="log-entry-time">
+                                    {formatTime(log.timestamp)}
+                                </div>
+                                <div className={`log-entry-source ${log.source === 'remote' ? 'source-remote' : ''}`}>
+                                    [{log.source === 'remote' ? '🌐 Remote' : log.source}]
+                                </div>
+                                <div className="log-entry-message">
+                                    {formatMessage(log.message, isExpanded)}
+                                </div>
                             </div>
-                            <div className="log-entry-time">
-                                {formatTime(log.timestamp)}
-                            </div>
-                            <div className="log-entry-source">
-                                [{log.source}]
-                            </div>
-                            <div className="log-entry-message">
-                                {log.message}
-                            </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
+            {jsonViewerData && (
+                <JsonViewer
+                    data={jsonViewerData}
+                    onClose={() => setJsonViewerData(null)}
+                />
+            )}
             {!autoScroll && (
                 <button
                     className="console-scroll-to-bottom"

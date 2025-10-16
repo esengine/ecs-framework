@@ -42,6 +42,7 @@
 }
 
 .startup-action-btn {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -70,6 +71,28 @@
 .startup-action-btn.primary:hover {
   background-color: #1177bb;
   border-color: #1177bb;
+}
+
+.startup-action-btn.disabled {
+  background-color: #252526;
+  border-color: #3e3e42;
+  color: #6e6e6e;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.startup-action-btn.disabled:hover {
+  background-color: #252526;
+  border-color: #3e3e42;
+}
+
+.badge-coming-soon {
+  margin-left: auto;
+  font-size: 10px;
+  padding: 2px 6px;
+  background-color: #3e3e42;
+  border-radius: 2px;
+  color: #858585;
 }
 
 .btn-icon {

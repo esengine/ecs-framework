@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { SettingsService } from './SettingsService';
+import { LogLevel } from '@esengine/ecs-framework';
 
 export interface SystemPerformanceData {
   name: string;
@@ -201,6 +202,8 @@ export class ProfilerService {
             this.handleRawEntityListResponse(message.data);
           } else if (message.type === 'get_entity_details_response' && message.data) {
             this.handleEntityDetailsResponse(message.data);
+          } else if (message.type === 'log' && message.data) {
+            this.handleRemoteLog(message.data);
           }
         } catch (error) {
           console.error('[ProfilerService] Failed to parse message:', error);
@@ -340,6 +343,39 @@ export class ProfilerService {
 
     window.dispatchEvent(new CustomEvent('profiler:entity-details', {
       detail: entityDetails
+    }));
+  }
+
+  private handleRemoteLog(data: any): void {
+    if (!data) {
+      return;
+    }
+
+    const levelMap: Record<string, LogLevel> = {
+      'debug': LogLevel.Debug,
+      'info': LogLevel.Info,
+      'warn': LogLevel.Warn,
+      'error': LogLevel.Error,
+      'fatal': LogLevel.Fatal
+    };
+
+    const level = levelMap[data.level?.toLowerCase() || 'info'] || LogLevel.Info;
+
+    let message = data.message || '';
+    if (typeof message === 'object') {
+      try {
+        message = JSON.stringify(message, null, 2);
+      } catch {
+        message = String(message);
+      }
+    }
+
+    window.dispatchEvent(new CustomEvent('profiler:remote-log', {
+      detail: {
+        level,
+        message,
+        timestamp: data.timestamp ? new Date(data.timestamp) : new Date()
+      }
     }));
   }
 

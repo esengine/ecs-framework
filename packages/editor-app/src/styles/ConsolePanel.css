@@ -209,11 +209,112 @@
   opacity: 0.7;
 }
 
+.log-entry-source.source-remote {
+  color: #4a9eff;
+  opacity: 1;
+  font-weight: 600;
+}
+
+.log-entry-remote {
+  border-left: 2px solid #4a9eff;
+  background: rgba(74, 158, 255, 0.05);
+}
+
+.log-entry-expander {
+  display: flex;
+  align-items: center;
+  padding-top: 2px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+}
+
+.log-entry-expander:hover {
+  color: var(--color-text-primary);
+}
+
+.log-entry-expanded {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.log-entry-expanded .log-entry-message {
+  padding-left: 22px;
+  width: 100%;
+}
+
 .log-entry-message {
   flex: 1;
   color: var(--color-text-primary);
   word-break: break-word;
   padding-top: 2px;
+}
+
+.log-message-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+}
+
+.log-message-preview {
+  opacity: 0.9;
+  flex: 1;
+}
+
+.log-open-json-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: white;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.log-open-json-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.log-message-json {
+  margin: 4px 0 0 0;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-default);
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow: auto;
+  white-space: pre;
+  color: #a0e7a0;
+  max-height: 400px;
+}
+
+.log-message-json::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.log-message-json::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.log-message-json::-webkit-scrollbar-thumb {
+  background: rgba(160, 231, 160, 0.3);
+  border-radius: 4px;
+}
+
+.log-message-json::-webkit-scrollbar-thumb:hover {
+  background: rgba(160, 231, 160, 0.5);
 }
 
 .log-entry-debug {

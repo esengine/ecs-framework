@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Activity, Cpu, Layers, Package, Wifi, WifiOff, Maximize2 } from 'lucide-react';
+import { Activity, Cpu, Layers, Package, Wifi, WifiOff, Maximize2, Pause, Play } from 'lucide-react';
 import { ProfilerService, ProfilerData } from '../services/ProfilerService';
 import { SettingsService } from '../services/SettingsService';
 import { Core } from '@esengine/ecs-framework';
@@ -11,6 +11,7 @@ export function ProfilerDockPanel() {
   const [isConnected, setIsConnected] = useState(false);
   const [isServerRunning, setIsServerRunning] = useState(false);
   const [port, setPort] = useState('8080');
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     const settings = SettingsService.getInstance();
@@ -42,7 +43,9 @@ export function ProfilerDockPanel() {
 
     // 订阅数据更新
     const unsubscribe = profilerService.subscribe((data: ProfilerData) => {
-      setProfilerData(data);
+      if (!isPaused) {
+        setProfilerData(data);
+      }
     });
 
     // 定期检查连接状态
@@ -58,7 +61,7 @@ export function ProfilerDockPanel() {
       unsubscribe();
       clearInterval(interval);
     };
-  }, []);
+  }, [isPaused]);
 
   const fps = profilerData?.fps || 0;
   const totalFrameTime = profilerData?.totalFrameTime || 0;
@@ -74,19 +77,32 @@ export function ProfilerDockPanel() {
     }
   };
 
+  const handleTogglePause = () => {
+    setIsPaused(!isPaused);
+  };
+
   return (
     <div className="profiler-dock-panel">
       <div className="profiler-dock-header">
         <h3>Performance Monitor</h3>
         <div className="profiler-dock-header-actions">
           {isConnected && (
-            <button
-              className="profiler-dock-details-btn"
-              onClick={handleOpenDetails}
-              title="Open detailed profiler"
-            >
-              <Maximize2 size={14} />
-            </button>
+            <>
+              <button
+                className="profiler-dock-pause-btn"
+                onClick={handleTogglePause}
+                title={isPaused ? 'Resume data updates' : 'Pause data updates'}
+              >
+                {isPaused ? <Play size={14} /> : <Pause size={14} />}
+              </button>
+              <button
+                className="profiler-dock-details-btn"
+                onClick={handleOpenDetails}
+                title="Open detailed profiler"
+              >
+                <Maximize2 size={14} />
+              </button>
+            </>
           )}
           <div className="profiler-dock-status">
             {isConnected ? (

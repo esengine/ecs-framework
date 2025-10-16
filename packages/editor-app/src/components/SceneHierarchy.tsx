@@ -56,8 +56,24 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
       setIsRemoteConnected(connected);
 
       if (connected && data.entities && data.entities.length > 0) {
-        setRemoteEntities(data.entities);
-      } else {
+        // 只在实体列表发生实质性变化时才更新
+        setRemoteEntities(prev => {
+          if (prev.length !== data.entities!.length) {
+            return data.entities!;
+          }
+
+          // 检查实体ID和名称是否变化
+          const hasChanged = data.entities!.some((entity, index) => {
+            const prevEntity = prev[index];
+            return !prevEntity ||
+                   prevEntity.id !== entity.id ||
+                   prevEntity.name !== entity.name ||
+                   prevEntity.componentCount !== entity.componentCount;
+          });
+
+          return hasChanged ? data.entities! : prev;
+        });
+      } else if (!connected) {
         setRemoteEntities([]);
       }
     });

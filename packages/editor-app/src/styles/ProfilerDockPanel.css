@@ -28,6 +28,7 @@
   gap: 8px;
 }
 
+.profiler-dock-pause-btn,
 .profiler-dock-details-btn {
   display: flex;
   align-items: center;
@@ -43,10 +44,16 @@
   transition: all var(--transition-fast);
 }
 
+.profiler-dock-pause-btn:hover,
 .profiler-dock-details-btn:hover {
   background: var(--color-bg-hover);
   border-color: var(--color-border-strong);
   color: var(--color-text-primary);
+}
+
+.profiler-dock-pause-btn:active,
+.profiler-dock-details-btn:active {
+  transform: scale(0.95);
 }
 
 .profiler-dock-status {

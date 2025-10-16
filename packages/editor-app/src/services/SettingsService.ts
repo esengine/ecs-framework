@@ -64,4 +64,25 @@ export class SettingsService {
   public getAll(): Record<string, any> {
     return Object.fromEntries(this.settings);
   }
+
+  public getRecentProjects(): string[] {
+    return this.get<string[]>('recentProjects', []);
+  }
+
+  public addRecentProject(projectPath: string): void {
+    const recentProjects = this.getRecentProjects();
+    const filtered = recentProjects.filter(p => p !== projectPath);
+    const updated = [projectPath, ...filtered].slice(0, 10);
+    this.set('recentProjects', updated);
+  }
+
+  public removeRecentProject(projectPath: string): void {
+    const recentProjects = this.getRecentProjects();
+    const filtered = recentProjects.filter(p => p !== projectPath);
+    this.set('recentProjects', filtered);
+  }
+
+  public clearRecentProjects(): void {
+    this.set('recentProjects', []);
+  }
 }
