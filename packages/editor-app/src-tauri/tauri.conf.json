@@ -55,12 +55,35 @@
         "scope": {
           "allow": ["**"]
         }
-      }
+      },
+      "capabilities": [
+        {
+          "identifier": "main",
+          "windows": ["main"],
+          "permissions": [
+            "core:default",
+            "shell:default",
+            "dialog:default",
+            "updater:default",
+            "updater:allow-check",
+            "updater:allow-download",
+            "updater:allow-install"
+          ]
+        }
+      ]
     }
   },
   "plugins": {
     "shell": {
       "open": true
+    },
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://github.com/esengine/ecs-framework/releases/latest/download/latest.json"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFDQjNFNDIxREFBODNDNkMKUldSc1BLamFJZVN6SEJIRXRWWEovVXRta08yNWFkZmtKNnZoSHFmbi9ZdGxubUMzSHJaN3J0VEcK"
     }
   }
 }

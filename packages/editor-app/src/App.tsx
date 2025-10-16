@@ -12,11 +12,13 @@ import { PluginManagerWindow } from './components/PluginManagerWindow';
 import { ProfilerWindow } from './components/ProfilerWindow';
 import { PortManager } from './components/PortManager';
 import { SettingsWindow } from './components/SettingsWindow';
+import { AboutDialog } from './components/AboutDialog';
 import { Viewport } from './components/Viewport';
 import { MenuBar } from './components/MenuBar';
 import { DockContainer, DockablePanel } from './components/DockContainer';
 import { TauriAPI } from './api/tauri';
 import { SettingsService } from './services/SettingsService';
+import { checkForUpdatesOnStartup } from './utils/updater';
 import { useLocale } from './hooks/useLocale';
 import { en, zh } from './locales';
 import { Loader2, Globe } from 'lucide-react';
@@ -49,6 +51,7 @@ function App() {
   const [showProfiler, setShowProfiler] = useState(false);
   const [showPortManager, setShowPortManager] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
   const [isRemoteConnected, setIsRemoteConnected] = useState(false);
   const [isProfilerMode, setIsProfilerMode] = useState(false);
@@ -193,6 +196,9 @@ function App() {
         setUiRegistry(uiRegistry);
         setSettingsRegistry(settingsRegistry);
         setStatus(t('header.status.ready'));
+
+        // Check for updates on startup (after 3 seconds)
+        checkForUpdatesOnStartup();
       } catch (error) {
         console.error('Failed to initialize editor:', error);
         setStatus(t('header.status.failed'));
@@ -324,6 +330,10 @@ function App() {
     } catch (error) {
       console.error('Failed to toggle devtools:', error);
     }
+  };
+
+  const handleOpenAbout = () => {
+    setShowAbout(true);
   };
 
   useEffect(() => {
@@ -491,6 +501,7 @@ function App() {
           onOpenPortManager={() => setShowPortManager(true)}
           onOpenSettings={() => setShowSettings(true)}
           onToggleDevtools={handleToggleDevtools}
+          onOpenAbout={handleOpenAbout}
         />
         <div className="header-right">
           <button onClick={handleLocaleChange} className="toolbar-btn locale-btn" title={locale === 'en' ? '切换到中文' : 'Switch to English'}>
@@ -527,6 +538,10 @@ function App() {
 
       {showSettings && settingsRegistry && (
         <SettingsWindow onClose={() => setShowSettings(false)} settingsRegistry={settingsRegistry} />
+      )}
+
+      {showAbout && (
+        <AboutDialog onClose={() => setShowAbout(false)} locale={locale} />
       )}
     </div>
   );

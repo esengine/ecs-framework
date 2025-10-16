@@ -59,6 +59,14 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Update version in config files (for manual trigger)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          cd packages/editor-app
+          # 临时更新版本号用于构建（不提交到仓库）
+          npm version ${{ github.event.inputs.version }} --no-git-tag-version
+          node scripts/sync-version.js
+
       - name: Cache TypeScript build
         uses: actions/cache@v4
         with:
@@ -81,6 +89,8 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: packages/editor-app
           tagName: ${{ github.event.inputs.version || github.ref_name }}
@@ -88,4 +98,53 @@ jobs:
           releaseBody: 'See the assets to download this version and install.'
           releaseDraft: false
           prerelease: false
+          includeUpdaterJson: true
           args: ${{ matrix.platform == 'macos-latest' && format('--target {0}', matrix.target) || '' }}
+
+  # 构建成功后，创建 PR 更新版本号
+  update-version-pr:
+    needs: build-tauri
+    if: github.event_name == 'workflow_dispatch' && success()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Update version files
+        run: |
+          cd packages/editor-app
+          npm version ${{ github.event.inputs.version }} --no-git-tag-version
+          node scripts/sync-version.js
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(editor): bump version to ${{ github.event.inputs.version }}"
+          branch: release/editor-v${{ github.event.inputs.version }}
+          delete-branch: true
+          title: "chore(editor): Release v${{ github.event.inputs.version }}"
+          body: |
+            ## 🚀 Release v${{ github.event.inputs.version }}
+
+            This PR updates the editor version after successful release build.
+
+            ### Changes
+            - ✅ Updated `packages/editor-app/package.json` → `${{ github.event.inputs.version }}`
+            - ✅ Updated `packages/editor-app/src-tauri/tauri.conf.json` → `${{ github.event.inputs.version }}`
+
+            ### Release
+            - 📦 [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/editor-v${{ github.event.inputs.version }})
+
+            ---
+            *This PR was automatically created by the release workflow.*
+          labels: |
+            release
+            editor
+            automated pr
