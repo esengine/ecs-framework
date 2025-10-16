@@ -95,11 +95,47 @@ function gameLoop(deltaTime: number) {
 
 支持主流游戏引擎和 Web 平台：
 
-- **Cocos Creator** - 内置引擎集成支持，提供[专用调试插件](https://store.cocos.com/app/detail/7823)
-- **Laya 引擎** - 完整的生命周期管理
+- **Cocos Creator**
+- **Laya 引擎**
 - **原生 Web** - 浏览器环境直接运行
 - **小游戏平台** - 微信、支付宝等小游戏
 
+## ECS Framework Editor
+
+跨平台桌面编辑器，提供可视化开发和调试工具。
+
+### 主要功能
+
+- **场景管理** - 可视化场景层级和实体管理
+- **组件检视** - 实时查看和编辑实体组件
+- **性能分析** - 内置 Profiler 监控系统性能
+- **插件系统** - 可扩展的插件架构
+- **远程调试** - 连接运行中的游戏进行实时调试
+- **自动更新** - 支持热更新，自动获取最新版本
+
+### 下载
+
+[![Latest Release](https://img.shields.io/github/v/release/esengine/ecs-framework?label=下载最新版本&style=for-the-badge)](https://github.com/esengine/ecs-framework/releases/latest)
+
+支持 Windows、macOS (Intel & Apple Silicon)
+
+### 截图
+
+<img src="screenshots/main_screetshot.png" alt="ECS Framework Editor" width="800">
+
+<details>
+<summary>查看更多截图</summary>
+
+**性能分析器**
+<img src="screenshots/performance_profiler.png" alt="Performance Profiler" width="600">
+
+**插件管理**
+<img src="screenshots/plugin_manager.png" alt="Plugin Manager" width="600">
+
+**设置界面**
+<img src="screenshots/settings.png" alt="Settings" width="600">
+
+</details>
 
 ## 示例项目
 
