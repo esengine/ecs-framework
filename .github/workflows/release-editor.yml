@@ -44,6 +44,12 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/editor-app/src-tauri
+          cache-on-failure: true
+
       - name: Install dependencies (Ubuntu)
         if: matrix.platform == 'ubuntu-latest'
         run: |
@@ -52,6 +58,16 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Cache TypeScript build
+        uses: actions/cache@v4
+        with:
+          path: |
+            packages/core/bin
+            packages/editor-core/dist
+          key: ${{ runner.os }}-ts-build-${{ hashFiles('packages/core/src/**', 'packages/editor-core/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-ts-build-
 
       - name: Build core package
         run: npm run build:core
