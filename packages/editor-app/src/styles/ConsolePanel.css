@@ -107,37 +107,46 @@
 }
 
 .console-filter-btn:nth-child(1) {
-  color: #858585;
+  color: #10b981;
 }
 
 .console-filter-btn:nth-child(1).active {
+  color: #34d399;
+  border-color: #10b981;
+}
+
+.console-filter-btn:nth-child(2) {
+  color: #858585;
+}
+
+.console-filter-btn:nth-child(2).active {
   color: #a0a0a0;
   border-color: #858585;
 }
 
-.console-filter-btn:nth-child(2) {
+.console-filter-btn:nth-child(3) {
   color: #4a9eff;
 }
 
-.console-filter-btn:nth-child(2).active {
+.console-filter-btn:nth-child(3).active {
   color: #6eb3ff;
   border-color: #4a9eff;
 }
 
-.console-filter-btn:nth-child(3) {
+.console-filter-btn:nth-child(4) {
   color: #ffc107;
 }
 
-.console-filter-btn:nth-child(3).active {
+.console-filter-btn:nth-child(4).active {
   color: #ffd54f;
   border-color: #ffc107;
 }
 
-.console-filter-btn:nth-child(4) {
+.console-filter-btn:nth-child(5) {
   color: #f44336;
 }
 
-.console-filter-btn:nth-child(4).active {
+.console-filter-btn:nth-child(5).active {
   color: #ef5350;
   border-color: #f44336;
 }
@@ -213,6 +222,19 @@
   color: #4a9eff;
   opacity: 1;
   font-weight: 600;
+}
+
+.log-entry-client {
+  color: #10b981;
+  font-size: 9px;
+  white-space: nowrap;
+  padding: 1px 6px;
+  flex-shrink: 0;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-family: var(--font-family-mono);
 }
 
 .log-entry-remote {

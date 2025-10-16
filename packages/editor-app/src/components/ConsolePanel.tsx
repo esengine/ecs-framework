@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { LogService, LogEntry } from '@esengine/editor-core';
 import { LogLevel } from '@esengine/ecs-framework';
-import { Trash2, AlertCircle, Info, AlertTriangle, XCircle, Bug, Search, Maximize2, ChevronRight, ChevronDown } from 'lucide-react';
+import { Trash2, AlertCircle, Info, AlertTriangle, XCircle, Bug, Search, Maximize2, ChevronRight, ChevronDown, Wifi } from 'lucide-react';
 import { JsonViewer } from './JsonViewer';
 import '../styles/ConsolePanel.css';
 
@@ -19,6 +19,7 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
         LogLevel.Error,
         LogLevel.Fatal
     ]));
+    const [showRemoteOnly, setShowRemoteOnly] = useState(false);
     const [autoScroll, setAutoScroll] = useState(true);
     const [expandedLogs, setExpandedLogs] = useState<Set<number>>(new Set());
     const [jsonViewerData, setJsonViewerData] = useState<any>(null);
@@ -65,6 +66,7 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
 
     const filteredLogs = logs.filter(log => {
         if (!levelFilter.has(log.level)) return false;
+        if (showRemoteOnly && log.source !== 'remote') return false;
         if (filter && !log.message.toLowerCase().includes(filter.toLowerCase())) {
             return false;
         }
@@ -224,6 +226,8 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
         [LogLevel.Error]: logs.filter(l => l.level === LogLevel.Error || l.level === LogLevel.Fatal).length
     };
 
+    const remoteLogCount = logs.filter(l => l.source === 'remote').length;
+
     return (
         <div className="console-panel">
             <div className="console-toolbar">
@@ -246,6 +250,14 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
                     </div>
                 </div>
                 <div className="console-toolbar-right">
+                    <button
+                        className={`console-filter-btn ${showRemoteOnly ? 'active' : ''}`}
+                        onClick={() => setShowRemoteOnly(!showRemoteOnly)}
+                        title="Show Remote Logs Only"
+                    >
+                        <Wifi size={14} />
+                        {remoteLogCount > 0 && <span>{remoteLogCount}</span>}
+                    </button>
                     <button
                         className={`console-filter-btn ${levelFilter.has(LogLevel.Debug) ? 'active' : ''}`}
                         onClick={() => toggleLevelFilter(LogLevel.Debug)}
@@ -317,6 +329,11 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
                                 <div className={`log-entry-source ${log.source === 'remote' ? 'source-remote' : ''}`}>
                                     [{log.source === 'remote' ? '🌐 Remote' : log.source}]
                                 </div>
+                                {log.clientId && (
+                                    <div className="log-entry-client" title={`Client: ${log.clientId}`}>
+                                        {log.clientId}
+                                    </div>
+                                )}
                                 <div className="log-entry-message">
                                     {formatMessage(log.message, isExpanded)}
                                 </div>

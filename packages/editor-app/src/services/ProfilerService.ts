@@ -64,6 +64,7 @@ export class ProfilerService {
   private currentData: ProfilerData | null = null;
   private checkServerInterval: NodeJS.Timeout | null = null;
   private reconnectTimeout: NodeJS.Timeout | null = null;
+  private clientIdMap: Map<string, string> = new Map(); // 客户端地址 -> 客户端ID映射
 
   constructor() {
     const settings = SettingsService.getInstance();
@@ -370,11 +371,14 @@ export class ProfilerService {
       }
     }
 
+    const clientId = data.clientId || data.client_id || 'unknown';
+
     window.dispatchEvent(new CustomEvent('profiler:remote-log', {
       detail: {
         level,
         message,
-        timestamp: data.timestamp ? new Date(data.timestamp) : new Date()
+        timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
+        clientId
       }
     }));
   }

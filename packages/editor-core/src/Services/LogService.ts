@@ -8,6 +8,7 @@ export interface LogEntry {
     source: string;
     message: string;
     args: unknown[];
+    clientId?: string; // 远程客户端ID
 }
 
 export type LogListener = (entry: LogEntry) => void;
@@ -124,14 +125,15 @@ export class LogService implements IService {
     /**
      * 添加远程日志（从远程游戏接收）
      */
-    public addRemoteLog(level: LogLevel, message: string, timestamp?: Date): void {
+    public addRemoteLog(level: LogLevel, message: string, timestamp?: Date, clientId?: string): void {
         const entry: LogEntry = {
             id: this.nextId++,
             timestamp: timestamp || new Date(),
             level,
             source: 'remote',
             message,
-            args: []
+            args: [],
+            clientId
         };
 
         this.logs.push(entry);

@@ -45,6 +45,35 @@
   animation: pulse-green 1.5s ease-in-out infinite;
 }
 
+.hierarchy-search {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--color-border-default);
+  background-color: var(--color-bg-base);
+  flex-shrink: 0;
+}
+
+.hierarchy-search svg {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.hierarchy-search input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  padding: 0;
+}
+
+.hierarchy-search input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
 .hierarchy-content {
   flex: 1;
   overflow-y: auto;
@@ -169,6 +198,21 @@
 .entity-item.remote-entity.disabled .entity-name {
   text-decoration: line-through;
   color: var(--color-text-tertiary);
+}
+
+.entity-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  background-color: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: var(--radius-sm);
+  color: rgb(167, 139, 250);
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-family-mono);
+  flex-shrink: 0;
 }
 
 .component-count {

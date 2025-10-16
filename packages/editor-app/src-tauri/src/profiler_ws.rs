@@ -132,11 +132,13 @@ async fn handle_connection(
         match msg {
             Ok(Message::Text(text)) => {
                 // Parse incoming messages
-                if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&text) {
-                    if json_value.get("type").and_then(|t| t.as_str()) == Some("debug_data") {
+                if let Ok(mut json_value) = serde_json::from_str::<serde_json::Value>(&text) {
+                    let msg_type = json_value.get("type").and_then(|t| t.as_str());
+
+                    if msg_type == Some("debug_data") {
                         // Broadcast debug data from game client to all clients (including frontend)
                         tx.send(text).ok();
-                    } else if json_value.get("type").and_then(|t| t.as_str()) == Some("ping") {
+                    } else if msg_type == Some("ping") {
                         // Respond to ping
                         let _ = tx.send(
                             serde_json::json!({
@@ -145,6 +147,12 @@ async fn handle_connection(
                             })
                             .to_string(),
                         );
+                    } else if msg_type == Some("log") {
+                        // Inject clientId into log messages
+                        if let Some(data) = json_value.get_mut("data").and_then(|d| d.as_object_mut()) {
+                            data.insert("clientId".to_string(), serde_json::Value::String(peer_addr.to_string()));
+                        }
+                        tx.send(json_value.to_string()).ok();
                     } else {
                         // Forward all other messages (like get_raw_entity_list, get_entity_details, etc.)
                         // to all connected clients (this enables frontend -> game client communication)

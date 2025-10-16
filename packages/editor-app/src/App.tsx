@@ -148,8 +148,8 @@ function App() {
 
         // 监听远程日志事件
         window.addEventListener('profiler:remote-log', ((event: CustomEvent) => {
-          const { level, message, timestamp } = event.detail;
-          logService.addRemoteLog(level, message, timestamp);
+          const { level, message, timestamp, clientId } = event.detail;
+          logService.addRemoteLog(level, message, timestamp, clientId);
         }) as EventListener);
 
         Core.services.registerInstance(UIRegistry, uiRegistry);

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Entity } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
-import { Box, Layers, Wifi } from 'lucide-react';
+import { Box, Layers, Wifi, Search } from 'lucide-react';
 import { ProfilerService, RemoteEntity } from '../services/ProfilerService';
 import '../styles/SceneHierarchy.css';
 
@@ -16,6 +16,7 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
   const [remoteEntities, setRemoteEntities] = useState<RemoteEntity[]>([]);
   const [isRemoteConnected, setIsRemoteConnected] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const { t } = useLocale();
 
   // Subscribe to local entity changes
@@ -106,8 +107,33 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
     });
   };
 
+  // Filter entities based on search query
+  const filterEntities = <T extends Entity | RemoteEntity>(entityList: T[]): T[] => {
+    if (!searchQuery.trim()) return entityList;
+
+    const query = searchQuery.toLowerCase();
+    return entityList.filter(entity => {
+      const name = 'name' in entity ? entity.name : `Entity ${entity.id}`;
+      const id = entity.id.toString();
+
+      // Search by name or ID
+      if (name.toLowerCase().includes(query) || id.includes(query)) {
+        return true;
+      }
+
+      // Search by component types (for remote entities)
+      if ('componentTypes' in entity && Array.isArray(entity.componentTypes)) {
+        return entity.componentTypes.some(type =>
+          type.toLowerCase().includes(query)
+        );
+      }
+
+      return false;
+    });
+  };
+
   // Determine which entities to display
-  const displayEntities = isRemoteConnected ? remoteEntities : entities;
+  const displayEntities = filterEntities(isRemoteConnected ? remoteEntities : entities);
   const showRemoteIndicator = isRemoteConnected && remoteEntities.length > 0;
 
   return (
@@ -120,6 +146,15 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
             <Wifi size={12} />
           </div>
         )}
+      </div>
+      <div className="hierarchy-search">
+        <Search size={14} />
+        <input
+          type="text"
+          placeholder={t('hierarchy.search') || 'Search entities...'}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
       <div className="hierarchy-content scrollable">
         {displayEntities.length === 0 ? (
@@ -134,7 +169,7 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
           </div>
         ) : isRemoteConnected ? (
           <ul className="entity-list">
-            {remoteEntities.map(entity => (
+            {displayEntities.map(entity => (
               <li
                 key={entity.id}
                 className={`entity-item remote-entity ${selectedId === entity.id ? 'selected' : ''} ${!entity.enabled ? 'disabled' : ''}`}
@@ -143,6 +178,11 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
               >
                 <Box size={14} className="entity-icon" />
                 <span className="entity-name">{entity.name}</span>
+                {entity.tag !== 0 && (
+                  <span className="entity-tag" title={`Tag: ${entity.tag}`}>
+                    #{entity.tag}
+                  </span>
+                )}
                 {entity.componentCount > 0 && (
                   <span className="component-count">{entity.componentCount}</span>
                 )}
