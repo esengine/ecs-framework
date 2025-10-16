@@ -9,7 +9,7 @@ interface PortManagerProps {
 
 export function PortManager({ onClose }: PortManagerProps) {
   const [isServerRunning, setIsServerRunning] = useState(false);
-  const [serverPort, setServerPort] = useState<number>(8080);
+  const [serverPort] = useState<number>(8080);
   const [isChecking, setIsChecking] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
 

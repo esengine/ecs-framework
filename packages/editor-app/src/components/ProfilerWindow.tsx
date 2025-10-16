@@ -28,7 +28,7 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
   const [systems, setSystems] = useState<SystemPerformanceData[]>([]);
   const [totalFrameTime, setTotalFrameTime] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [sortBy, setSortBy] = useState<'time' | 'average' | 'name'>('time');
+  const [sortBy] = useState<'time' | 'average' | 'name'>('time');
   const [dataSource, setDataSource] = useState<DataSource>('local');
   const [viewMode, setViewMode] = useState<'tree' | 'table'>('table');
   const [searchQuery, setSearchQuery] = useState('');

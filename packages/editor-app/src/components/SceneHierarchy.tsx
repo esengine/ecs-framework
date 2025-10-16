@@ -108,12 +108,12 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
   };
 
   // Filter entities based on search query
-  const filterEntities = <T extends Entity | RemoteEntity>(entityList: T[]): T[] => {
+  const filterRemoteEntities = (entityList: RemoteEntity[]): RemoteEntity[] => {
     if (!searchQuery.trim()) return entityList;
 
     const query = searchQuery.toLowerCase();
     return entityList.filter(entity => {
-      const name = 'name' in entity ? entity.name : `Entity ${entity.id}`;
+      const name = entity.name;
       const id = entity.id.toString();
 
       // Search by name or ID
@@ -121,8 +121,8 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
         return true;
       }
 
-      // Search by component types (for remote entities)
-      if ('componentTypes' in entity && Array.isArray(entity.componentTypes)) {
+      // Search by component types
+      if (Array.isArray(entity.componentTypes)) {
         return entity.componentTypes.some(type =>
           type.toLowerCase().includes(query)
         );
@@ -132,8 +132,20 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
     });
   };
 
+  const filterLocalEntities = (entityList: Entity[]): Entity[] => {
+    if (!searchQuery.trim()) return entityList;
+
+    const query = searchQuery.toLowerCase();
+    return entityList.filter(entity => {
+      const id = entity.id.toString();
+      return id.includes(query);
+    });
+  };
+
   // Determine which entities to display
-  const displayEntities = filterEntities(isRemoteConnected ? remoteEntities : entities);
+  const displayEntities = isRemoteConnected
+    ? filterRemoteEntities(remoteEntities)
+    : filterLocalEntities(entities);
   const showRemoteIndicator = isRemoteConnected && remoteEntities.length > 0;
 
   return (
@@ -169,7 +181,7 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
           </div>
         ) : isRemoteConnected ? (
           <ul className="entity-list">
-            {displayEntities.map(entity => (
+            {(displayEntities as RemoteEntity[]).map(entity => (
               <li
                 key={entity.id}
                 className={`entity-item remote-entity ${selectedId === entity.id ? 'selected' : ''} ${!entity.enabled ? 'disabled' : ''}`}

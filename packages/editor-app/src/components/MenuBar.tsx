@@ -4,7 +4,7 @@ import type { MenuItem as PluginMenuItem } from '@esengine/editor-core';
 import '../styles/MenuBar.css';
 
 interface MenuItem {
-  label: string;
+  label?: string;
   shortcut?: string;
   disabled?: boolean;
   separator?: boolean;
@@ -215,12 +215,12 @@ export function MenuBar({
       { label: t('viewport'), disabled: true },
       { separator: true },
       ...pluginMenuItems.map(item => ({
-        label: item.label,
+        label: item.label || '',
         shortcut: item.shortcut,
         disabled: item.disabled,
         onClick: item.onClick
       })),
-      ...(pluginMenuItems.length > 0 ? [{ separator: true }] : []),
+      ...(pluginMenuItems.length > 0 ? [{ separator: true } as MenuItem] : []),
       { label: t('pluginManager'), onClick: onOpenPluginManager },
       { separator: true },
       { label: t('devtools'), onClick: onToggleDevtools }
@@ -255,7 +255,7 @@ export function MenuBar({
   };
 
   const handleMenuItemClick = (item: MenuItem) => {
-    if (!item.disabled && !item.separator && item.onClick) {
+    if (!item.disabled && !item.separator && item.onClick && item.label) {
       item.onClick();
       setOpenMenu(null);
     }
@@ -271,7 +271,7 @@ export function MenuBar({
           >
             {t(menuKey)}
           </button>
-          {openMenu === menuKey && (
+          {openMenu === menuKey && menus[menuKey] && (
             <div className="menu-dropdown">
               {menus[menuKey].map((item, index) => {
                 if (item.separator) {
@@ -284,7 +284,7 @@ export function MenuBar({
                     onClick={() => handleMenuItemClick(item)}
                     disabled={item.disabled}
                   >
-                    <span>{item.label}</span>
+                    <span>{item.label || ''}</span>
                     {item.shortcut && <span className="menu-shortcut">{item.shortcut}</span>}
                   </button>
                 );

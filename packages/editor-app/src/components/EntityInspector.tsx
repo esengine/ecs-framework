@@ -464,7 +464,7 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
           <div className="section-content">
             <div className="info-row">
               <span className="info-label">ID:</span>
-              <span className="info-value">{selectedEntity.id}</span>
+              <span className="info-value">{selectedEntity!.id}</span>
             </div>
             <div className="info-row">
               <span className="info-label">Name:</span>

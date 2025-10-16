@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Core } from '@esengine/ecs-framework';
-import { Activity, BarChart3, Clock, Cpu, TrendingUp, RefreshCw, Pause, Play } from 'lucide-react';
+import { Activity, BarChart3, Clock, Cpu, RefreshCw, Pause, Play } from 'lucide-react';
 import '../styles/ProfilerPanel.css';
 
 interface SystemPerformanceData {

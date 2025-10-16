@@ -8,7 +8,6 @@ import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
 import { AssetBrowser } from './components/AssetBrowser';
 import { ConsolePanel } from './components/ConsolePanel';
-import { ProfilerPanel } from './components/ProfilerPanel';
 import { PluginManagerWindow } from './components/PluginManagerWindow';
 import { ProfilerWindow } from './components/ProfilerWindow';
 import { PortManager } from './components/PortManager';
@@ -101,9 +100,8 @@ function App() {
           console.log('[App] Remote game disconnected');
           setIsRemoteConnected(false);
           if (projectLoaded) {
-            const projectService = Core.services.resolve(ProjectService);
             const componentRegistry = Core.services.resolve(ComponentRegistry);
-            const componentCount = componentRegistry?.getRegisteredComponents().length || 0;
+            const componentCount = componentRegistry?.getAllComponents().length || 0;
             setStatus(t('header.status.projectOpened') + (componentCount > 0 ? ` (${componentCount} components registered)` : ''));
           } else {
             setStatus(t('header.status.ready'));
