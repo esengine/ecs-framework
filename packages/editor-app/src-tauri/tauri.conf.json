@@ -9,8 +9,24 @@
     "frontendDist": "../dist"
   },
   "bundle": {
-    "active": false,
-    "targets": "all"
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    },
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.13",
+      "exceptionDomain": "",
+      "signingIdentity": null,
+      "providerShortName": null,
+      "entitlements": null
+    }
   },
   "app": {
     "windows": [

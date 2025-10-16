@@ -1,0 +1,111 @@
+name: Release Editor App
+
+on:
+  push:
+    tags:
+      - 'editor-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create-release.outputs.id }}
+      release_upload_url: ${{ steps.create-release.outputs.upload_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Release
+        id: create-release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.event.inputs.version || github.ref_name }}
+          release_name: ECS Editor ${{ github.event.inputs.version || github.ref_name }}
+          draft: true
+          prerelease: false
+
+  build-tauri:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            arch: x64
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            arch: x64
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            arch: arm64
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install dependencies (Ubuntu)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build core package
+        run: npm run build:core
+
+      - name: Build editor-core package
+        run: |
+          cd packages/editor-core
+          npm run build
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: packages/editor-app
+          tagName: ${{ github.event.inputs.version || github.ref_name }}
+          releaseName: 'ECS Editor ${{ github.event.inputs.version || github.ref_name }}'
+          releaseBody: 'See the assets to download this version and install.'
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.platform == 'macos-latest' && format('--target {0}', matrix.target) || '' }}
+
+  publish-release:
+    needs: build-tauri
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ needs.create-release.outputs.release_id }},
+              draft: false
+            })
