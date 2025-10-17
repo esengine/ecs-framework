@@ -30,7 +30,7 @@
   align-items: center;
   justify-content: center;
   color: #858585;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .tree-node {
@@ -38,7 +38,7 @@
   align-items: center;
   padding: 4px 8px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   white-space: nowrap;
   transition: background 0.1s ease;
 }
@@ -58,13 +58,13 @@
   align-items: center;
   justify-content: center;
   margin-right: 4px;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   color: #cccccc;
 }
 
 .tree-icon {
   margin-right: 6px;
-  font-size: 14px;
+  font-size: var(--font-size-md);
 }
 
 .tree-label {
