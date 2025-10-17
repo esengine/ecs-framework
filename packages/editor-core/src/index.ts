@@ -16,8 +16,9 @@ export * from './Services/LocaleService';
 export * from './Services/PropertyMetadata';
 export * from './Services/ProjectService';
 export * from './Services/ComponentDiscoveryService';
-export * from './Services/ComponentLoaderService';
 export * from './Services/LogService';
 export * from './Services/SettingsRegistry';
+export * from './Services/SceneManagerService';
 
 export * from './Types/UITypes';
+export * from './Types/IFileAPI';

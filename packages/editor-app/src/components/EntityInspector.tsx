@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Entity, Core } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub, ComponentRegistry } from '@esengine/editor-core';
-import { AddComponent } from './AddComponent';
 import { PropertyInspector } from './PropertyInspector';
-import { FileSearch, Plus, ChevronDown, ChevronRight, X, Settings } from 'lucide-react';
+import { FileSearch, ChevronDown, ChevronRight, X, Settings } from 'lucide-react';
 import '../styles/EntityInspector.css';
 
 interface EntityInspectorProps {
@@ -15,22 +14,21 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [remoteEntity, setRemoteEntity] = useState<any | null>(null);
   const [remoteEntityDetails, setRemoteEntityDetails] = useState<any | null>(null);
-  const [showAddComponent, setShowAddComponent] = useState(false);
   const [expandedComponents, setExpandedComponents] = useState<Set<number>>(new Set());
+  const [componentVersion, setComponentVersion] = useState(0);
 
   useEffect(() => {
     const handleSelection = (data: { entity: Entity | null }) => {
       setSelectedEntity(data.entity);
       setRemoteEntity(null);
       setRemoteEntityDetails(null);
-      setShowAddComponent(false);
+      setComponentVersion(0);
     };
 
     const handleRemoteSelection = (data: { entity: any }) => {
       setRemoteEntity(data.entity);
       setRemoteEntityDetails(null);
       setSelectedEntity(null);
-      setShowAddComponent(false);
     };
 
     const handleEntityDetails = (event: Event) => {
@@ -39,37 +37,25 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
       setRemoteEntityDetails(details);
     };
 
+    const handleComponentChange = () => {
+      setComponentVersion(prev => prev + 1);
+    };
+
     const unsubSelect = messageHub.subscribe('entity:selected', handleSelection);
     const unsubRemoteSelect = messageHub.subscribe('remote-entity:selected', handleRemoteSelection);
+    const unsubComponentAdded = messageHub.subscribe('component:added', handleComponentChange);
+    const unsubComponentRemoved = messageHub.subscribe('component:removed', handleComponentChange);
 
     window.addEventListener('profiler:entity-details', handleEntityDetails);
 
     return () => {
       unsubSelect();
       unsubRemoteSelect();
+      unsubComponentAdded();
+      unsubComponentRemoved();
       window.removeEventListener('profiler:entity-details', handleEntityDetails);
     };
   }, [messageHub]);
-
-  const handleAddComponent = (componentName: string) => {
-    if (!selectedEntity) return;
-
-    const componentRegistry = Core.services.resolve(ComponentRegistry);
-    if (!componentRegistry) {
-      console.error('ComponentRegistry not found');
-      return;
-    }
-
-    const component = componentRegistry.createInstance(componentName);
-
-    if (component) {
-      selectedEntity.addComponent(component);
-      messageHub.publish('component:added', { entity: selectedEntity, component });
-      setShowAddComponent(false);
-    } else {
-      console.error('Failed to create component instance for:', componentName);
-    }
-  };
 
   const handleRemoveComponent = (index: number) => {
     if (!selectedEntity) return;
@@ -481,19 +467,12 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
           <div className="section-header">
             <Settings size={12} className="section-icon" />
             <span>Components ({components.length})</span>
-            <button
-              className="add-component-btn"
-              onClick={() => setShowAddComponent(true)}
-              title="Add Component"
-            >
-              <Plus size={12} />
-            </button>
           </div>
           <div className="section-content">
             {components.length === 0 ? (
               <div className="empty-state-small">No components</div>
             ) : (
-              <ul className="component-list">
+              <ul className="component-list" key={componentVersion}>
                 {components.map((component, index) => {
                   const isExpanded = expandedComponents.has(index);
                   return (
@@ -534,15 +513,6 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
           </div>
         </div>
       </div>
-
-      {showAddComponent && selectedEntity && (
-        <AddComponent
-          entity={selectedEntity}
-          componentRegistry={Core.services.resolve(ComponentRegistry)}
-          onAdd={handleAddComponent}
-          onCancel={() => setShowAddComponent(false)}
-        />
-      )}
     </div>
   );
 }

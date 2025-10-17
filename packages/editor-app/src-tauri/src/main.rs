@@ -35,6 +35,26 @@ fn export_binary(data: Vec<u8>, output_path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn create_directory(path: String) -> Result<(), String> {
+    std::fs::create_dir_all(&path)
+        .map_err(|e| format!("Failed to create directory: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+fn write_file_content(path: String, content: String) -> Result<(), String> {
+    std::fs::write(&path, content)
+        .map_err(|e| format!("Failed to write file: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+fn path_exists(path: String) -> Result<bool, String> {
+    use std::path::Path;
+    Ok(Path::new(&path).exists())
+}
+
+#[tauri::command]
 async fn open_project_dialog(app: AppHandle) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::DialogExt;
 
@@ -44,6 +64,37 @@ async fn open_project_dialog(app: AppHandle) -> Result<Option<String>, String> {
         .blocking_pick_folder();
 
     Ok(folder.map(|path| path.to_string()))
+}
+
+#[tauri::command]
+async fn save_scene_dialog(app: AppHandle, default_name: Option<String>) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let mut dialog = app.dialog()
+        .file()
+        .set_title("Save ECS Scene")
+        .add_filter("ECS Scene Files", &["ecs"]);
+
+    if let Some(name) = default_name {
+        dialog = dialog.set_file_name(&name);
+    }
+
+    let file = dialog.blocking_save_file();
+
+    Ok(file.map(|path| path.to_string()))
+}
+
+#[tauri::command]
+async fn open_scene_dialog(app: AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let file = app.dialog()
+        .file()
+        .set_title("Open ECS Scene")
+        .add_filter("ECS Scene Files", &["ecs"])
+        .blocking_pick_file();
+
+    Ok(file.map(|path| path.to_string()))
 }
 
 #[tauri::command]
@@ -300,7 +351,12 @@ fn main() {
             open_project,
             save_project,
             export_binary,
+            create_directory,
+            write_file_content,
+            path_exists,
             open_project_dialog,
+            save_scene_dialog,
+            open_scene_dialog,
             scan_directory,
             read_file_content,
             list_directory,

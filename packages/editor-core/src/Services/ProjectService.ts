@@ -1,7 +1,8 @@
 import type { IService } from '@esengine/ecs-framework';
 import { Injectable } from '@esengine/ecs-framework';
-import { createLogger } from '@esengine/ecs-framework';
+import { createLogger, Scene } from '@esengine/ecs-framework';
 import { MessageHub } from './MessageHub';
+import type { IFileAPI } from '../Types/IFileAPI';
 
 const logger = createLogger('ProjectService');
 
@@ -19,6 +20,8 @@ export interface ProjectConfig {
     componentsPath?: string;
     componentPattern?: string;
     buildOutput?: string;
+    scenesPath?: string;
+    defaultScene?: string;
 }
 
 @Injectable()
@@ -26,9 +29,55 @@ export class ProjectService implements IService {
     private currentProject: ProjectInfo | null = null;
     private projectConfig: ProjectConfig | null = null;
     private messageHub: MessageHub;
+    private fileAPI: IFileAPI;
 
-    constructor(messageHub: MessageHub) {
+    constructor(messageHub: MessageHub, fileAPI: IFileAPI) {
         this.messageHub = messageHub;
+        this.fileAPI = fileAPI;
+    }
+
+    public async createProject(projectPath: string): Promise<void> {
+        try {
+            const sep = projectPath.includes('\\') ? '\\' : '/';
+            const configPath = `${projectPath}${sep}ecs-editor.config.json`;
+
+            const configExists = await this.fileAPI.pathExists(configPath);
+            if (configExists) {
+                throw new Error('ECS project already exists in this directory');
+            }
+
+            const config: ProjectConfig = {
+                projectType: 'cocos',
+                componentsPath: 'components',
+                componentPattern: '**/*.ts',
+                buildOutput: 'temp/editor-components',
+                scenesPath: 'ecs-scenes',
+                defaultScene: 'main.ecs'
+            };
+
+            await this.fileAPI.writeFileContent(configPath, JSON.stringify(config, null, 2));
+
+            const scenesPath = `${projectPath}${sep}${config.scenesPath}`;
+            await this.fileAPI.createDirectory(scenesPath);
+
+            const defaultScenePath = `${scenesPath}${sep}${config.defaultScene}`;
+            const emptyScene = new Scene();
+            const sceneData = emptyScene.serialize({
+                format: 'json',
+                pretty: true,
+                includeMetadata: true
+            }) as string;
+            await this.fileAPI.writeFileContent(defaultScenePath, sceneData);
+
+            await this.messageHub.publish('project:created', {
+                path: projectPath
+            });
+
+            logger.info('Project created', { path: projectPath });
+        } catch (error) {
+            logger.error('Failed to create project', error);
+            throw error;
+        }
     }
 
     public async openProject(projectPath: string): Promise<void> {
@@ -91,6 +140,28 @@ export class ProjectService implements IService {
         return `${this.currentProject.path}${sep}${this.projectConfig.componentsPath}`;
     }
 
+    public getScenesPath(): string | null {
+        if (!this.currentProject) {
+            return null;
+        }
+        const scenesPath = this.projectConfig?.scenesPath || 'assets/scenes';
+        const sep = this.currentProject.path.includes('\\') ? '\\' : '/';
+        return `${this.currentProject.path}${sep}${scenesPath}`;
+    }
+
+    public getDefaultScenePath(): string | null {
+        if (!this.currentProject) {
+            return null;
+        }
+        const scenesPath = this.getScenesPath();
+        if (!scenesPath) {
+            return null;
+        }
+        const defaultScene = this.projectConfig?.defaultScene || 'main.scene';
+        const sep = this.currentProject.path.includes('\\') ? '\\' : '/';
+        return `${scenesPath}${sep}${defaultScene}`;
+    }
+
     private async validateProject(projectPath: string): Promise<ProjectInfo> {
         const projectName = projectPath.split(/[\\/]/).pop() || 'Unknown Project';
 
@@ -118,7 +189,9 @@ export class ProjectService implements IService {
             projectType: 'cocos',
             componentsPath: '',
             componentPattern: '**/*.ts',
-            buildOutput: 'temp/editor-components'
+            buildOutput: 'temp/editor-components',
+            scenesPath: 'ecs-scenes',
+            defaultScene: 'main.ecs'
         };
     }
 
