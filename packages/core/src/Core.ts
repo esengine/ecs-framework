@@ -180,7 +180,7 @@ export class Core {
         this._serviceContainer.registerInstance(PoolManager, this._poolManager);
 
         // 初始化场景管理器
-        this._sceneManager = new SceneManager();
+        this._sceneManager = new SceneManager(this._performanceMonitor);
         this._serviceContainer.registerInstance(SceneManager, this._sceneManager);
 
         // 设置场景切换回调，通知调试管理器
