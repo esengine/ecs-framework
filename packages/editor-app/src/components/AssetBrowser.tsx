@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Core } from '@esengine/ecs-framework';
+import { MessageHub } from '@esengine/editor-core';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { FileTree } from './FileTree';
 import { ResizablePanel } from './ResizablePanel';
@@ -14,11 +16,12 @@ interface AssetItem {
 interface AssetBrowserProps {
   projectPath: string | null;
   locale: string;
+  onOpenScene?: (scenePath: string) => void;
 }
 
 type ViewMode = 'tree-split' | 'tree-only';
 
-export function AssetBrowser({ projectPath, locale }: AssetBrowserProps) {
+export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('tree-split');
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [assets, setAssets] = useState<AssetItem[]>([]);
@@ -67,6 +70,29 @@ export function AssetBrowser({ projectPath, locale }: AssetBrowserProps) {
     }
   }, [projectPath, viewMode]);
 
+  // Listen for asset reveal requests
+  useEffect(() => {
+    const messageHub = Core.services.resolve(MessageHub);
+    if (!messageHub) return;
+
+    const unsubscribe = messageHub.subscribe('asset:reveal', (data: any) => {
+      const filePath = data.path;
+      if (filePath) {
+        setSelectedPath(filePath);
+
+        if (viewMode === 'tree-split') {
+          const lastSlashIndex = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+          const dirPath = lastSlashIndex > 0 ? filePath.substring(0, lastSlashIndex) : null;
+          if (dirPath) {
+            loadAssets(dirPath);
+          }
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [viewMode]);
+
   const loadAssets = async (path: string) => {
     setLoading(true);
     try {
@@ -105,7 +131,11 @@ export function AssetBrowser({ projectPath, locale }: AssetBrowserProps) {
   };
 
   const handleAssetDoubleClick = (asset: AssetItem) => {
-    console.log('Open asset:', asset);
+    if (asset.type === 'file' && asset.extension === 'ecs') {
+      if (onOpenScene) {
+        onOpenScene(asset.path);
+      }
+    }
   };
 
   const filteredAssets = searchQuery

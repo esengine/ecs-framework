@@ -70,6 +70,49 @@ export class TauriAPI {
   static async toggleDevtools(): Promise<void> {
     return await invoke<void>('toggle_devtools');
   }
+
+  /**
+   * 打开保存场景对话框
+   * @param defaultName 默认文件名（可选）
+   * @returns 用户选择的文件路径，取消则返回 null
+   */
+  static async saveSceneDialog(defaultName?: string): Promise<string | null> {
+    return await invoke<string | null>('save_scene_dialog', { defaultName });
+  }
+
+  /**
+   * 打开场景文件选择对话框
+   * @returns 用户选择的文件路径，取消则返回 null
+   */
+  static async openSceneDialog(): Promise<string | null> {
+    return await invoke<string | null>('open_scene_dialog');
+  }
+
+  /**
+   * 创建目录
+   * @param path 目录路径
+   */
+  static async createDirectory(path: string): Promise<void> {
+    return await invoke<void>('create_directory', { path });
+  }
+
+  /**
+   * 写入文件内容
+   * @param path 文件路径
+   * @param content 文件内容
+   */
+  static async writeFileContent(path: string, content: string): Promise<void> {
+    return await invoke<void>('write_file_content', { path, content });
+  }
+
+  /**
+   * 检查路径是否存在
+   * @param path 文件或目录路径
+   * @returns 路径是否存在
+   */
+  static async pathExists(path: string): Promise<boolean> {
+    return await invoke<boolean>('path_exists', { path });
+  }
 }
 
 export interface DirectoryEntry {

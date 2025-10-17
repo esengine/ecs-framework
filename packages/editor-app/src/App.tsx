@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Core, Scene } from '@esengine/ecs-framework';
-import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, ComponentLoaderService, PropertyMetadataService, LogService, SettingsRegistry } from '@esengine/editor-core';
+import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, PropertyMetadataService, LogService, SettingsRegistry, SceneManagerService } from '@esengine/editor-core';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
 import { ProfilerPlugin } from './plugins/ProfilerPlugin';
 import { StartupPage } from './components/StartupPage';
@@ -13,10 +13,13 @@ import { ProfilerWindow } from './components/ProfilerWindow';
 import { PortManager } from './components/PortManager';
 import { SettingsWindow } from './components/SettingsWindow';
 import { AboutDialog } from './components/AboutDialog';
+import { ErrorDialog } from './components/ErrorDialog';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { Viewport } from './components/Viewport';
 import { MenuBar } from './components/MenuBar';
 import { DockContainer, DockablePanel } from './components/DockContainer';
 import { TauriAPI } from './api/tauri';
+import { TauriFileAPI } from './adapters/TauriFileAPI';
 import { SettingsService } from './services/SettingsService';
 import { checkForUpdatesOnStartup } from './utils/updater';
 import { useLocale } from './hooks/useLocale';
@@ -44,6 +47,7 @@ function App() {
   const [logService, setLogService] = useState<LogService | null>(null);
   const [uiRegistry, setUiRegistry] = useState<UIRegistry | null>(null);
   const [settingsRegistry, setSettingsRegistry] = useState<SettingsRegistry | null>(null);
+  const [sceneManager, setSceneManager] = useState<SceneManagerService | null>(null);
   const { t, locale, changeLocale } = useLocale();
   const [status, setStatus] = useState(t('header.status.initializing'));
   const [panels, setPanels] = useState<DockablePanel[]>([]);
@@ -55,6 +59,14 @@ function App() {
   const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
   const [isRemoteConnected, setIsRemoteConnected] = useState(false);
   const [isProfilerMode, setIsProfilerMode] = useState(false);
+  const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   useEffect(() => {
     // 禁用默认右键菜单
@@ -72,12 +84,10 @@ function App() {
   useEffect(() => {
     if (messageHub) {
       const unsubscribeEnabled = messageHub.subscribe('plugin:enabled', () => {
-        console.log('[App] Plugin enabled, updating panels');
         setPluginUpdateTrigger(prev => prev + 1);
       });
 
       const unsubscribeDisabled = messageHub.subscribe('plugin:disabled', () => {
-        console.log('[App] Plugin disabled, updating panels');
         setPluginUpdateTrigger(prev => prev + 1);
       });
 
@@ -94,13 +104,11 @@ function App() {
       const profilerService = (window as any).__PROFILER_SERVICE__;
       if (profilerService && profilerService.isConnected()) {
         if (!isRemoteConnected) {
-          console.log('[App] Remote game connected');
           setIsRemoteConnected(true);
           setStatus(t('header.status.remoteConnected'));
         }
       } else {
         if (isRemoteConnected) {
-          console.log('[App] Remote game disconnected');
           setIsRemoteConnected(false);
           if (projectLoaded) {
             const componentRegistry = Core.services.resolve(ComponentRegistry);
@@ -123,13 +131,11 @@ function App() {
     const initializeEditor = async () => {
       // 使用 ref 防止 React StrictMode 的双重调用
       if (initRef.current) {
-        console.log('[App] Already initialized via ref, skipping second initialization');
         return;
       }
       initRef.current = true;
 
       try {
-        console.log('[App] Starting editor initialization...');
         (window as any).__ECS_FRAMEWORK__ = await import('@esengine/ecs-framework');
 
         const editorScene = new Scene();
@@ -140,12 +146,13 @@ function App() {
         const serializerRegistry = new SerializerRegistry();
         const entityStore = new EntityStoreService(messageHub);
         const componentRegistry = new ComponentRegistry();
-        const projectService = new ProjectService(messageHub);
+        const fileAPI = new TauriFileAPI();
+        const projectService = new ProjectService(messageHub, fileAPI);
         const componentDiscovery = new ComponentDiscoveryService(messageHub);
-        const componentLoader = new ComponentLoaderService(messageHub, componentRegistry);
         const propertyMetadata = new PropertyMetadataService();
         const logService = new LogService();
         const settingsRegistry = new SettingsRegistry();
+        const sceneManagerService = new SceneManagerService(messageHub, fileAPI, projectService);
 
         // 监听远程日志事件
         window.addEventListener('profiler:remote-log', ((event: CustomEvent) => {
@@ -160,10 +167,10 @@ function App() {
         Core.services.registerInstance(ComponentRegistry, componentRegistry);
         Core.services.registerInstance(ProjectService, projectService);
         Core.services.registerInstance(ComponentDiscoveryService, componentDiscovery);
-        Core.services.registerInstance(ComponentLoaderService, componentLoader);
         Core.services.registerInstance(PropertyMetadataService, propertyMetadata);
         Core.services.registerInstance(LogService, logService);
         Core.services.registerInstance(SettingsRegistry, settingsRegistry);
+        Core.services.registerInstance(SceneManagerService, sceneManagerService);
 
         const pluginMgr = new EditorPluginManager();
         pluginMgr.initialize(coreInstance, Core.services);
@@ -171,11 +178,6 @@ function App() {
 
         await pluginMgr.installEditor(new SceneInspectorPlugin());
         await pluginMgr.installEditor(new ProfilerPlugin());
-
-        console.log('[App] All plugins installed');
-        console.log('[App] UIRegistry menu count:', uiRegistry.getAllMenus().length);
-        console.log('[App] UIRegistry all menus:', uiRegistry.getAllMenus());
-        console.log('[App] UIRegistry window menus:', uiRegistry.getChildMenus('window'));
 
         messageHub.subscribe('ui:openWindow', (data: any) => {
           if (data.windowId === 'profiler') {
@@ -185,8 +187,7 @@ function App() {
           }
         });
 
-        const greeting = await TauriAPI.greet('Developer');
-        console.log(greeting);
+        await TauriAPI.greet('Developer');
 
         setInitialized(true);
         setPluginManager(pluginMgr);
@@ -195,6 +196,7 @@ function App() {
         setLogService(logService);
         setUiRegistry(uiRegistry);
         setSettingsRegistry(settingsRegistry);
+        setSceneManager(sceneManagerService);
         setStatus(t('header.status.ready'));
 
         // Check for updates on startup (after 3 seconds)
@@ -211,13 +213,11 @@ function App() {
   const handleOpenRecentProject = async (projectPath: string) => {
     try {
       setIsLoading(true);
-      setLoadingMessage(locale === 'zh' ? '正在打开项目...' : 'Opening project...');
+      setLoadingMessage(locale === 'zh' ? '步骤 1/2: 打开项目配置...' : 'Step 1/2: Opening project config...');
 
       const projectService = Core.services.resolve(ProjectService);
-      const discoveryService = Core.services.resolve(ComponentDiscoveryService);
-      const loaderService = Core.services.resolve(ComponentLoaderService);
 
-      if (!projectService || !discoveryService || !loaderService) {
+      if (!projectService) {
         console.error('Required services not available');
         setIsLoading(false);
         return;
@@ -231,31 +231,27 @@ function App() {
         body: JSON.stringify({ path: projectPath })
       });
 
-      setLoadingMessage(locale === 'zh' ? '正在扫描组件...' : 'Scanning components...');
-      setStatus('Scanning components...');
+      setStatus(t('header.status.projectOpened'));
 
-      const componentsPath = projectService.getComponentsPath();
-      if (componentsPath) {
-        const componentInfos = await discoveryService.scanComponents({
-          basePath: componentsPath,
-          pattern: '**/*.ts',
-          scanFunction: TauriAPI.scanDirectory,
-          readFunction: TauriAPI.readFileContent
-        });
+      setLoadingMessage(locale === 'zh' ? '步骤 2/2: 加载场景...' : 'Step 2/2: Loading scene...');
 
-        setLoadingMessage(locale === 'zh' ? `正在加载 ${componentInfos.length} 个组件...` : `Loading ${componentInfos.length} components...`);
-        setStatus(`Loading ${componentInfos.length} components...`);
+      const sceneManagerService = Core.services.resolve(SceneManagerService);
+      const scenesPath = projectService.getScenesPath();
+      if (scenesPath && sceneManagerService) {
+        try {
+          const sceneFiles = await TauriAPI.scanDirectory(scenesPath, '*.ecs');
 
-        const modulePathTransform = (filePath: string) => {
-          const relativePath = filePath.replace(projectPath, '').replace(/\\/g, '/');
-          return `/@user-project${relativePath}`;
-        };
+          if (sceneFiles.length > 0) {
+            const defaultScenePath = projectService.getDefaultScenePath();
+            const sceneToLoad = sceneFiles.find(f => f === defaultScenePath) || sceneFiles[0];
 
-        await loaderService.loadComponents(componentInfos, modulePathTransform);
-
-        setStatus(t('header.status.projectOpened') + ` (${componentInfos.length} components registered)`);
-      } else {
-        setStatus(t('header.status.projectOpened'));
+            await sceneManagerService.openScene(sceneToLoad);
+          } else {
+            await sceneManagerService.newScene();
+          }
+        } catch (error) {
+          await sceneManagerService.newScene();
+        }
       }
 
       const settings = SettingsService.getInstance();
@@ -268,6 +264,14 @@ function App() {
       console.error('Failed to open project:', error);
       setStatus(t('header.status.failed'));
       setIsLoading(false);
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setErrorDialog({
+        title: locale === 'zh' ? '打开项目失败' : 'Failed to Open Project',
+        message: locale === 'zh'
+          ? `无法打开项目:\n${errorMessage}`
+          : `Failed to open project:\n${errorMessage}`
+      });
     }
   };
 
@@ -283,7 +287,72 @@ function App() {
   };
 
   const handleCreateProject = async () => {
-    console.log('Create project not implemented yet');
+    let selectedProjectPath: string | null = null;
+
+    try {
+      selectedProjectPath = await TauriAPI.openProjectDialog();
+      if (!selectedProjectPath) return;
+
+      setIsLoading(true);
+      setLoadingMessage(locale === 'zh' ? '正在创建项目...' : 'Creating project...');
+
+      const projectService = Core.services.resolve(ProjectService);
+      if (!projectService) {
+        console.error('ProjectService not available');
+        setIsLoading(false);
+        setErrorDialog({
+          title: locale === 'zh' ? '创建项目失败' : 'Failed to Create Project',
+          message: locale === 'zh' ? '项目服务不可用，请重启编辑器' : 'Project service is not available. Please restart the editor.'
+        });
+        return;
+      }
+
+      await projectService.createProject(selectedProjectPath);
+
+      setLoadingMessage(locale === 'zh' ? '项目创建成功，正在打开...' : 'Project created, opening...');
+
+      await handleOpenRecentProject(selectedProjectPath);
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      setIsLoading(false);
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const pathToOpen = selectedProjectPath;
+
+      if (errorMessage.includes('already exists') && pathToOpen) {
+        setConfirmDialog({
+          title: locale === 'zh' ? '项目已存在' : 'Project Already Exists',
+          message: locale === 'zh'
+            ? '该目录下已存在 ECS 项目，是否要打开该项目？'
+            : 'An ECS project already exists in this directory. Do you want to open it?',
+          confirmText: locale === 'zh' ? '打开项目' : 'Open Project',
+          cancelText: locale === 'zh' ? '取消' : 'Cancel',
+          onConfirm: () => {
+            setConfirmDialog(null);
+            setIsLoading(true);
+            setLoadingMessage(locale === 'zh' ? '正在打开项目...' : 'Opening project...');
+            handleOpenRecentProject(pathToOpen).catch((err) => {
+              console.error('Failed to open project:', err);
+              setIsLoading(false);
+              setErrorDialog({
+                title: locale === 'zh' ? '打开项目失败' : 'Failed to Open Project',
+                message: locale === 'zh'
+                  ? `无法打开项目:\n${err instanceof Error ? err.message : String(err)}`
+                  : `Failed to open project:\n${err instanceof Error ? err.message : String(err)}`
+              });
+            });
+          }
+        });
+      } else {
+        setStatus(locale === 'zh' ? '创建项目失败' : 'Failed to create project');
+        setErrorDialog({
+          title: locale === 'zh' ? '创建项目失败' : 'Failed to Create Project',
+          message: locale === 'zh'
+            ? `无法创建项目:\n${errorMessage}`
+            : `Failed to create project:\n${errorMessage}`
+        });
+      }
+    }
   };
 
   const handleProfilerMode = async () => {
@@ -292,20 +361,109 @@ function App() {
     setStatus(t('header.status.profilerMode') || 'Profiler Mode - Waiting for connection...');
   };
 
-  const handleNewScene = () => {
-    console.log('New scene not implemented yet');
+  const handleNewScene = async () => {
+    if (!sceneManager) {
+      console.error('SceneManagerService not available');
+      return;
+    }
+
+    try {
+      await sceneManager.newScene();
+      setStatus(locale === 'zh' ? '已创建新场景' : 'New scene created');
+    } catch (error) {
+      console.error('Failed to create new scene:', error);
+      setStatus(locale === 'zh' ? '创建场景失败' : 'Failed to create scene');
+    }
   };
 
-  const handleOpenScene = () => {
-    console.log('Open scene not implemented yet');
+  const handleOpenScene = async () => {
+    if (!sceneManager) {
+      console.error('SceneManagerService not available');
+      return;
+    }
+
+    try {
+      await sceneManager.openScene();
+      const sceneState = sceneManager.getSceneState();
+      setStatus(locale === 'zh' ? `已打开场景: ${sceneState.sceneName}` : `Scene opened: ${sceneState.sceneName}`);
+    } catch (error) {
+      console.error('Failed to open scene:', error);
+      setStatus(locale === 'zh' ? '打开场景失败' : 'Failed to open scene');
+    }
   };
 
-  const handleSaveScene = () => {
-    console.log('Save scene not implemented yet');
+  const handleOpenSceneByPath = useCallback(async (scenePath: string) => {
+    console.log('[App] handleOpenSceneByPath called with:', scenePath);
+
+    if (!sceneManager) {
+      console.error('SceneManagerService not available');
+      return;
+    }
+
+    try {
+      console.log('[App] Opening scene:', scenePath);
+      await sceneManager.openScene(scenePath);
+      const sceneState = sceneManager.getSceneState();
+      console.log('[App] Scene opened, state:', sceneState);
+      setStatus(locale === 'zh' ? `已打开场景: ${sceneState.sceneName}` : `Scene opened: ${sceneState.sceneName}`);
+    } catch (error) {
+      console.error('Failed to open scene:', error);
+      setStatus(locale === 'zh' ? '打开场景失败' : 'Failed to open scene');
+      setErrorDialog({
+        title: locale === 'zh' ? '打开场景失败' : 'Failed to Open Scene',
+        message: locale === 'zh'
+          ? `无法打开场景:\n${error instanceof Error ? error.message : String(error)}`
+          : `Failed to open scene:\n${error instanceof Error ? error.message : String(error)}`
+      });
+    }
+  }, [sceneManager, locale]);
+
+  const handleSaveScene = async () => {
+    if (!sceneManager) {
+      console.error('SceneManagerService not available');
+      return;
+    }
+
+    try {
+      await sceneManager.saveScene();
+      const sceneState = sceneManager.getSceneState();
+      setStatus(locale === 'zh' ? `已保存场景: ${sceneState.sceneName}` : `Scene saved: ${sceneState.sceneName}`);
+    } catch (error) {
+      console.error('Failed to save scene:', error);
+      setStatus(locale === 'zh' ? '保存场景失败' : 'Failed to save scene');
+    }
   };
 
-  const handleSaveSceneAs = () => {
-    console.log('Save scene as not implemented yet');
+  const handleSaveSceneAs = async () => {
+    if (!sceneManager) {
+      console.error('SceneManagerService not available');
+      return;
+    }
+
+    try {
+      await sceneManager.saveSceneAs();
+      const sceneState = sceneManager.getSceneState();
+      setStatus(locale === 'zh' ? `已保存场景: ${sceneState.sceneName}` : `Scene saved: ${sceneState.sceneName}`);
+    } catch (error) {
+      console.error('Failed to save scene as:', error);
+      setStatus(locale === 'zh' ? '另存场景失败' : 'Failed to save scene as');
+    }
+  };
+
+  const handleExportScene = async () => {
+    if (!sceneManager) {
+      console.error('SceneManagerService not available');
+      return;
+    }
+
+    try {
+      await sceneManager.exportScene();
+      const sceneState = sceneManager.getSceneState();
+      setStatus(locale === 'zh' ? `已导出场景: ${sceneState.sceneName}` : `Scene exported: ${sceneState.sceneName}`);
+    } catch (error) {
+      console.error('Failed to export scene:', error);
+      setStatus(locale === 'zh' ? '导出场景失败' : 'Failed to export scene');
+    }
   };
 
   const handleCloseProject = () => {
@@ -391,7 +549,7 @@ function App() {
             id: 'assets',
             title: locale === 'zh' ? '资产' : 'Assets',
             position: 'bottom',
-            content: <AssetBrowser projectPath={currentProjectPath} locale={locale} />,
+            content: <AssetBrowser projectPath={currentProjectPath} locale={locale} onOpenScene={handleOpenSceneByPath} />,
             closable: false
           },
           {
@@ -436,7 +594,7 @@ function App() {
       console.log('[App] Loading plugin panels:', pluginPanels);
       setPanels([...corePanels, ...pluginPanels]);
     }
-  }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode]);
+  }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode, handleOpenSceneByPath]);
 
   const handlePanelMove = (panelId: string, newPosition: any) => {
     setPanels(prevPanels =>
@@ -476,6 +634,23 @@ function App() {
               <p className="loading-message">{loadingMessage}</p>
             </div>
           </div>
+        )}
+        {errorDialog && (
+          <ErrorDialog
+            title={errorDialog.title}
+            message={errorDialog.message}
+            onClose={() => setErrorDialog(null)}
+          />
+        )}
+        {confirmDialog && (
+          <ConfirmDialog
+            title={confirmDialog.title}
+            message={confirmDialog.message}
+            confirmText={confirmDialog.confirmText}
+            cancelText={confirmDialog.cancelText}
+            onConfirm={confirmDialog.onConfirm}
+            onCancel={() => setConfirmDialog(null)}
+          />
         )}
       </>
     );
@@ -542,6 +717,14 @@ function App() {
 
       {showAbout && (
         <AboutDialog onClose={() => setShowAbout(false)} locale={locale} />
+      )}
+
+      {errorDialog && (
+        <ErrorDialog
+          title={errorDialog.title}
+          message={errorDialog.message}
+          onClose={() => setErrorDialog(null)}
+        />
       )}
     </div>
   );

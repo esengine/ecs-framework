@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Entity } from '@esengine/ecs-framework';
-import { EntityStoreService, MessageHub } from '@esengine/editor-core';
+import { Entity, Core } from '@esengine/ecs-framework';
+import { EntityStoreService, MessageHub, SceneManagerService } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
-import { Box, Layers, Wifi, Search } from 'lucide-react';
+import { Box, Layers, Wifi, Search, Plus, Trash2 } from 'lucide-react';
 import { ProfilerService, RemoteEntity } from '../services/ProfilerService';
+import { confirm } from '@tauri-apps/plugin-dialog';
 import '../styles/SceneHierarchy.css';
 
 interface SceneHierarchyProps {
@@ -17,7 +18,51 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
   const [isRemoteConnected, setIsRemoteConnected] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const { t } = useLocale();
+  const [sceneName, setSceneName] = useState<string>('Untitled');
+  const [sceneFilePath, setSceneFilePath] = useState<string | null>(null);
+  const [isSceneModified, setIsSceneModified] = useState<boolean>(false);
+  const { t, locale } = useLocale();
+
+  // Subscribe to scene changes
+  useEffect(() => {
+    const sceneManager = Core.services.resolve(SceneManagerService);
+
+    const updateSceneInfo = () => {
+      if (sceneManager) {
+        const state = sceneManager.getSceneState();
+        setSceneName(state.sceneName);
+        setIsSceneModified(state.isModified);
+      }
+    };
+
+    updateSceneInfo();
+
+    const unsubLoaded = messageHub.subscribe('scene:loaded', (data: any) => {
+      if (data.sceneName) {
+        setSceneName(data.sceneName);
+        setSceneFilePath(data.path || null);
+        setIsSceneModified(data.isModified || false);
+      } else {
+        updateSceneInfo();
+      }
+    });
+    const unsubNew = messageHub.subscribe('scene:new', () => {
+      updateSceneInfo();
+    });
+    const unsubSaved = messageHub.subscribe('scene:saved', () => {
+      updateSceneInfo();
+    });
+    const unsubModified = messageHub.subscribe('scene:modified', () => {
+      updateSceneInfo();
+    });
+
+    return () => {
+      unsubLoaded();
+      unsubNew();
+      unsubSaved();
+      unsubModified();
+    };
+  }, [messageHub]);
 
   // Subscribe to local entity changes
   useEffect(() => {
@@ -107,6 +152,57 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
     });
   };
 
+  const handleSceneNameClick = () => {
+    if (sceneFilePath) {
+      messageHub.publish('asset:reveal', { path: sceneFilePath });
+    }
+  };
+
+  const handleCreateEntity = () => {
+    const scene = Core.scene;
+    if (!scene) return;
+
+    const entityCount = entityStore.getAllEntities().length;
+    const entityName = `Entity ${entityCount + 1}`;
+    const entity = scene.createEntity(entityName);
+    entityStore.addEntity(entity);
+    entityStore.selectEntity(entity);
+  };
+
+  const handleDeleteEntity = async () => {
+    if (!selectedId) return;
+
+    const entity = entityStore.getEntity(selectedId);
+    if (!entity) return;
+
+    const confirmed = await confirm(
+      locale === 'zh'
+        ? `确定要删除实体 "${entity.name}" 吗？此操作无法撤销。`
+        : `Are you sure you want to delete entity "${entity.name}"? This action cannot be undone.`,
+      {
+        title: locale === 'zh' ? '删除实体' : 'Delete Entity',
+        kind: 'warning'
+      }
+    );
+
+    if (confirmed) {
+      entity.destroy();
+      entityStore.removeEntity(entity);
+    }
+  };
+
+  // Listen for Delete key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' && selectedId && !isRemoteConnected) {
+        handleDeleteEntity();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedId, isRemoteConnected]);
+
   // Filter entities based on search query
   const filterRemoteEntities = (entityList: RemoteEntity[]): RemoteEntity[] => {
     if (!searchQuery.trim()) return entityList;
@@ -153,6 +249,15 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
       <div className="hierarchy-header">
         <Layers size={16} className="hierarchy-header-icon" />
         <h3>{t('hierarchy.title')}</h3>
+        <div
+          className="scene-name-container clickable"
+          onClick={handleSceneNameClick}
+          title={sceneFilePath ? `${sceneName} - 点击跳转到文件` : sceneName}
+        >
+          <span className="scene-name">
+            {sceneName}{isSceneModified ? '*' : ''}
+          </span>
+        </div>
         {showRemoteIndicator && (
           <div className="remote-indicator" title="Showing remote entities">
             <Wifi size={12} />
@@ -168,6 +273,26 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
+      {!isRemoteConnected && (
+        <div className="hierarchy-toolbar">
+          <button
+            className="toolbar-btn"
+            onClick={handleCreateEntity}
+            title={locale === 'zh' ? '创建实体' : 'Create Entity'}
+          >
+            <Plus size={14} />
+            <span>{locale === 'zh' ? '创建实体' : 'Create Entity'}</span>
+          </button>
+          <button
+            className="toolbar-btn"
+            onClick={handleDeleteEntity}
+            disabled={!selectedId}
+            title={locale === 'zh' ? '删除实体' : 'Delete Entity'}
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      )}
       <div className="hierarchy-content scrollable">
         {displayEntities.length === 0 ? (
           <div className="empty-state">

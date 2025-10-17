@@ -17,6 +17,7 @@
     "@esengine/ecs-framework": "file:../core",
     "@esengine/editor-core": "file:../editor-core",
     "@tauri-apps/api": "^2.2.0",
+    "@tauri-apps/plugin-dialog": "^2.4.0",
     "@tauri-apps/plugin-shell": "^2.0.0",
     "json5": "^2.2.3",
     "lucide-react": "^0.545.0",

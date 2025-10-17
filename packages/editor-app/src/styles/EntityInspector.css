@@ -4,6 +4,7 @@
   height: 100%;
   background-color: var(--color-bg-base);
   color: var(--color-text-primary);
+  position: relative;
 }
 
 .inspector-header {
