@@ -3,6 +3,7 @@ import { Core, Scene } from '@esengine/ecs-framework';
 import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, PropertyMetadataService, LogService, SettingsRegistry, SceneManagerService } from '@esengine/editor-core';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
 import { ProfilerPlugin } from './plugins/ProfilerPlugin';
+import { EditorAppearancePlugin } from './plugins/EditorAppearancePlugin';
 import { StartupPage } from './components/StartupPage';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
@@ -178,6 +179,7 @@ function App() {
 
         await pluginMgr.installEditor(new SceneInspectorPlugin());
         await pluginMgr.installEditor(new ProfilerPlugin());
+        await pluginMgr.installEditor(new EditorAppearancePlugin());
 
         messageHub.subscribe('ui:openWindow', (data: any) => {
           if (data.windowId === 'profiler') {

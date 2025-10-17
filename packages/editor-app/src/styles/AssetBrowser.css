@@ -14,7 +14,7 @@
 
 .asset-browser-header h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: #cccccc;
 }
@@ -83,7 +83,7 @@
   border: 1px solid #3e3e3e;
   border-radius: 3px;
   color: #cccccc;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   outline: none;
 }
 
@@ -103,7 +103,7 @@
   justify-content: center;
   height: 200px;
   color: #858585;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .asset-list {
@@ -152,7 +152,7 @@
 }
 
 .asset-name {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #cccccc;
   text-align: center;
   width: 100%;
@@ -163,7 +163,7 @@
 }
 
 .asset-type {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   color: #858585;
   text-transform: uppercase;
 }
