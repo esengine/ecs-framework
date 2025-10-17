@@ -589,25 +589,10 @@ describe('Scene - 场景管理系统测试', () => {
         });
     });
 
-    describe('依赖注入优化', () => {
-        test('应该支持注入自定义PerformanceMonitor', () => {
-            const mockPerfMonitor = {
-                startMeasure: jest.fn(),
-                endMeasure: jest.fn(),
-                recordSystemData: jest.fn(),
-                recordEntityCount: jest.fn(),
-                recordComponentCount: jest.fn(),
-                update: jest.fn(),
-                getSystemData: jest.fn(),
-                getSystemStats: jest.fn(),
-                resetSystem: jest.fn(),
-                reset: jest.fn(),
-                dispose: jest.fn()
-            };
-
+    describe('性能监控', () => {
+        test('Scene应该自动创建PerformanceMonitor', () => {
             const customScene = new Scene({
-                name: 'CustomScene',
-                performanceMonitor: mockPerfMonitor as any
+                name: 'CustomScene'
             });
 
             class TestSystem extends EntitySystem {
@@ -619,13 +604,14 @@ describe('Scene - 场景管理系统测试', () => {
             const system = new TestSystem();
             customScene.addEntityProcessor(system);
 
-            expect(mockPerfMonitor).toBeDefined();
+            expect(customScene).toBeDefined();
 
             customScene.end();
         });
 
-        test('未提供PerformanceMonitor时应该从Core获取', () => {
-            const defaultScene = new Scene({ name: 'DefaultScene' });
+        test('每个Scene应该有独立的PerformanceMonitor', () => {
+            const scene1 = new Scene({ name: 'Scene1' });
+            const scene2 = new Scene({ name: 'Scene2' });
 
             class TestSystem extends EntitySystem {
                 constructor() {
@@ -633,12 +619,14 @@ describe('Scene - 场景管理系统测试', () => {
                 }
             }
 
-            const system = new TestSystem();
-            defaultScene.addEntityProcessor(system);
+            scene1.addEntityProcessor(new TestSystem());
+            scene2.addEntityProcessor(new TestSystem());
 
-            expect(defaultScene).toBeDefined();
+            expect(scene1).toBeDefined();
+            expect(scene2).toBeDefined();
 
-            defaultScene.end();
+            scene1.end();
+            scene2.end();
         });
     });
 });

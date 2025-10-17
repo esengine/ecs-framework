@@ -4,6 +4,7 @@ import { Time } from '../Utils/Time';
 import { createLogger } from '../Utils/Logger';
 import type { IService } from '../Core/ServiceContainer';
 import { World } from './World';
+import { PerformanceMonitor } from '../Utils/PerformanceMonitor';
 
 /**
  * 单场景管理器
@@ -74,13 +75,19 @@ export class SceneManager implements IService {
     private _onSceneChangedCallback?: () => void;
 
     /**
+     * 性能监控器（从 Core 注入）
+     */
+    private _performanceMonitor: PerformanceMonitor | null = null;
+
+    /**
      * 默认场景ID
      */
     private static readonly DEFAULT_SCENE_ID = '__main__';
 
-    constructor() {
+    constructor(performanceMonitor?: PerformanceMonitor) {
         this._defaultWorld = new World({ name: '__default__' });
         this._defaultWorld.start();
+        this._performanceMonitor = performanceMonitor || null;
     }
 
     /**
@@ -110,6 +117,11 @@ export class SceneManager implements IService {
     public setScene<T extends IScene>(scene: T): T {
         // 移除旧场景
         this._defaultWorld.removeAllScenes();
+
+        // 注册全局 PerformanceMonitor 到 Scene 的 ServiceContainer
+        if (this._performanceMonitor) {
+            scene.services.registerInstance(PerformanceMonitor, this._performanceMonitor);
+        }
 
         // 通过 World 创建新场景
         this._defaultWorld.createScene(SceneManager.DEFAULT_SCENE_ID, scene);
