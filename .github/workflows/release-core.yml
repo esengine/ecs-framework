@@ -1,0 +1,187 @@
+name: Release Core Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: 'patch'
+      custom_version:
+        description: 'Custom version (optional, overrides version_type)'
+        required: false
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: |
+          cd packages/core
+          npm run test:ci
+
+      - name: Determine version
+        id: version
+        run: |
+          cd packages/core
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+          if [ -n "${{ github.event.inputs.custom_version }}" ]; then
+            NEW_VERSION="${{ github.event.inputs.custom_version }}"
+            echo "Using custom version: $NEW_VERSION"
+          else
+            # 使用 npm version 命令计算新版本（但不实际提交）
+            npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+            NEW_VERSION=$(node -p "require('./package.json').version")
+            echo "Bumping ${{ github.event.inputs.version_type }} version: $CURRENT_VERSION → $NEW_VERSION"
+            # 恢复 package.json 以便后续步骤重新修改
+            git checkout package.json
+          fi
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update package version
+        run: |
+          cd packages/core
+          npm version ${{ steps.version.outputs.new_version }} --no-git-tag-version
+
+      - name: Build package
+        run: |
+          cd packages/core
+          npm run build:npm
+
+      - name: Publish to npm
+        run: |
+          cd packages/core/dist
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create Git tag
+        run: |
+          git tag -a "core-v${{ steps.version.outputs.new_version }}" -m "Release @esengine/ecs-framework v${{ steps.version.outputs.new_version }}"
+          git push origin "core-v${{ steps.version.outputs.new_version }}"
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: core-v${{ steps.version.outputs.new_version }}
+          release_name: '@esengine/ecs-framework v${{ steps.version.outputs.new_version }}'
+          body: |
+            ## 🚀 @esengine/ecs-framework v${{ steps.version.outputs.new_version }}
+
+            ### 📦 Installation
+            ```bash
+            npm install @esengine/ecs-framework@${{ steps.version.outputs.new_version }}
+            ```
+
+            ### 📝 Changes
+            Release version: **v${{ steps.version.outputs.new_version }}** (bumped from v${{ steps.version.outputs.current_version }})
+
+            ### 🔗 Links
+            - [npm Package](https://www.npmjs.com/package/@esengine/ecs-framework/v/${{ steps.version.outputs.new_version }})
+            - [Documentation](https://github.com/${{ github.repository }})
+
+            ---
+            *Version type: `${{ github.event.inputs.version_type }}`*
+          draft: false
+          prerelease: false
+
+  # 发布成功后，创建 PR 更新版本号
+  update-version-pr:
+    needs: release
+    if: success()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Get new version
+        id: version
+        run: |
+          cd packages/core
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+
+          if [ -n "${{ github.event.inputs.custom_version }}" ]; then
+            NEW_VERSION="${{ github.event.inputs.custom_version }}"
+          else
+            npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+            NEW_VERSION=$(node -p "require('./package.json').version")
+            git checkout package.json
+          fi
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update version in package.json
+        run: |
+          cd packages/core
+          npm version ${{ steps.version.outputs.new_version }} --no-git-tag-version
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(core): bump version to ${{ steps.version.outputs.new_version }}"
+          branch: release/core-v${{ steps.version.outputs.new_version }}
+          delete-branch: true
+          title: "chore(core): Release v${{ steps.version.outputs.new_version }}"
+          body: |
+            ## 🚀 Release @esengine/ecs-framework v${{ steps.version.outputs.new_version }}
+
+            This PR updates the core package version after successful npm release.
+
+            ### Changes
+            - ✅ Updated `packages/core/package.json` → `${{ steps.version.outputs.new_version }}`
+
+            ### Release Information
+            - 📦 **Version Type**: `${{ github.event.inputs.version_type }}`
+            - 🏷️ **Git Tag**: `core-v${{ steps.version.outputs.new_version }}`
+            - 📋 [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/core-v${{ steps.version.outputs.new_version }})
+            - 📦 [npm Package](https://www.npmjs.com/package/@esengine/ecs-framework/v/${{ steps.version.outputs.new_version }})
+
+            ### Next Steps
+            - [ ] Review the changes
+            - [ ] Merge this PR to update the version in the repository
+
+            ---
+            *This PR was automatically created by the release workflow.*
+          labels: |
+            release
+            core
+            automated pr
