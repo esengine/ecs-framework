@@ -126,54 +126,57 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
+          cache: 'npm'
 
-      - name: Get new version
-        id: version
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update version in package.json
         run: |
           cd packages/core
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
 
           if [ -n "${{ github.event.inputs.custom_version }}" ]; then
             NEW_VERSION="${{ github.event.inputs.custom_version }}"
           else
             npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
             NEW_VERSION=$(node -p "require('./package.json').version")
-            git checkout package.json
           fi
 
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Update version in package.json
-        run: |
-          cd packages/core
-          npm version ${{ steps.version.outputs.new_version }} --no-git-tag-version
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore(core): bump version to ${{ steps.version.outputs.new_version }}"
-          branch: release/core-v${{ steps.version.outputs.new_version }}
+          commit-message: "chore(core): bump version to ${{ env.NEW_VERSION }}"
+          branch: release/core-v${{ env.NEW_VERSION }}
           delete-branch: true
-          title: "chore(core): Release v${{ steps.version.outputs.new_version }}"
+          title: "chore(core): Release v${{ env.NEW_VERSION }}"
           body: |
-            ## 🚀 Release @esengine/ecs-framework v${{ steps.version.outputs.new_version }}
+            ## 🚀 Release @esengine/ecs-framework v${{ env.NEW_VERSION }}
 
             This PR updates the core package version after successful npm release.
 
             ### Changes
-            - ✅ Updated `packages/core/package.json` → `${{ steps.version.outputs.new_version }}`
+            - ✅ Updated `packages/core/package.json` → `${{ env.NEW_VERSION }}`
 
             ### Release Information
             - 📦 **Version Type**: `${{ github.event.inputs.version_type }}`
-            - 🏷️ **Git Tag**: `core-v${{ steps.version.outputs.new_version }}`
-            - 📋 [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/core-v${{ steps.version.outputs.new_version }})
-            - 📦 [npm Package](https://www.npmjs.com/package/@esengine/ecs-framework/v/${{ steps.version.outputs.new_version }})
+            - 🏷️ **Git Tag**: `core-v${{ env.NEW_VERSION }}`
+            - 📋 [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/core-v${{ env.NEW_VERSION }})
+            - 📦 [npm Package](https://www.npmjs.com/package/@esengine/ecs-framework/v/${{ env.NEW_VERSION }})
 
             ### Next Steps
             - [ ] Review the changes
