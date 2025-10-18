@@ -12,27 +12,52 @@ permissions:
 jobs:
   ai-helper:
     runs-on: ubuntu-latest
-    # 只在用户提到 @ai-helper 时触发
-    if: contains(github.event.comment.body, '@ai-helper')
+    # 只在真实用户提到 @ai-helper 时触发，忽略机器人评论
+    if: |
+      contains(github.event.comment.body, '@ai-helper') &&
+      github.event.comment.user.type != 'Bot'
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Get Issue Details
-        id: issue
+      - name: Create Prompt File
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
             const issue = await github.rest.issues.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number
             });
-            return {
-              title: issue.data.title,
-              body: issue.data.body,
-              number: issue.data.number
-            };
+
+            const lines = [];
+            lines.push('用户在 Issue #' + context.issue.number + ' 中请求帮助。\n');
+            lines.push('Issue 标题：');
+            lines.push(issue.data.title || '(无标题)');
+            lines.push('\nIssue 内容：');
+            lines.push(issue.data.body || '(无内容)');
+            lines.push('\n用户评论：');
+            lines.push(context.payload.comment.body);
+            lines.push('\n请按以下步骤回答：');
+            lines.push('1. 使用 GitHub 工具搜索项目中的相关代码和文件');
+            lines.push('2. 分析用户的问题');
+            lines.push('3. 基于实际代码提供准确的解决方案');
+            lines.push('4. 提供相关文档链接和代码示例');
+            lines.push('\n用以下格式回复：');
+            lines.push('\n你好！我是 AI 助手，让我帮你分析这个问题。');
+            lines.push('\n**问题分析**');
+            lines.push('[分析内容]');
+            lines.push('\n**建议方案**');
+            lines.push('[基于项目实际代码的解决方案]');
+            lines.push('\n**相关代码**');
+            lines.push('[引用项目中的相关代码片段]');
+            lines.push('\n**相关资源**');
+            lines.push('- 文档链接');
+            lines.push('- 示例链接');
+            lines.push('\n如果我的建议没有解决问题，请提供更多信息，维护者会尽快回复！');
+
+            fs.writeFileSync('prompt.txt', lines.join('\n'));
 
       - name: AI Analysis
         uses: actions/ai-inference@v1
@@ -54,41 +79,7 @@ jobs:
             在回答之前，先搜索相关代码和文档，确保答案准确。
 
             请用中文友好地回复用户的问题。
-          prompt: |
-            用户在 Issue #${{ github.event.issue.number }} 中请求帮助。
-
-            Issue 标题：${{ fromJSON(steps.issue.outputs.result).title }}
-
-            Issue 内容：
-            ${{ fromJSON(steps.issue.outputs.result).body }}
-
-            用户评论：
-            ${{ github.event.comment.body }}
-
-            请按以下步骤回答：
-            1. 使用 GitHub 工具搜索项目中的相关代码和文件
-            2. 分析用户的问题
-            3. 基于实际代码提供准确的解决方案
-            4. 提供相关文档链接和代码示例
-
-            用以下格式回复：
-
-            👋 你好！我是 AI 助手，让我帮你分析这个问题。
-
-            **问题分析**
-            [分析内容]
-
-            **建议方案**
-            [基于项目实际代码的解决方案]
-
-            **相关代码**
-            [引用项目中的相关代码片段]
-
-            **相关资源**
-            - 📚 [文档链接]
-            - 💡 [示例链接]
-
-            如果我的建议没有解决问题，请提供更多信息，维护者会尽快回复！
+          prompt: prompt.txt
 
       - name: Post AI Response
         uses: actions/github-script@v7
