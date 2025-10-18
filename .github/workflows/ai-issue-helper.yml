@@ -31,50 +31,31 @@ jobs:
               issue_number: context.issue.number
             });
 
-            core.exportVariable('ISSUE_TITLE', issue.data.title || '');
-            core.exportVariable('ISSUE_BODY', issue.data.body || '');
-            core.exportVariable('COMMENT_BODY', context.payload.comment.body || '');
+            // 限制长度，避免超过 token 限制
+            const maxLength = 1000;
+            const truncate = (str, max) => {
+              if (!str) return '';
+              return str.length > max ? str.substring(0, max) + '...[内容过长已截断]' : str;
+            };
+
+            core.exportVariable('ISSUE_TITLE', truncate(issue.data.title || '', 200));
+            core.exportVariable('ISSUE_BODY', truncate(issue.data.body || '', maxLength));
+            core.exportVariable('COMMENT_BODY', truncate(context.payload.comment.body || '', 500));
             core.exportVariable('ISSUE_NUMBER', context.issue.number);
 
       - name: Create Prompt
         id: prompt
         run: |
           cat > prompt.txt << 'PROMPT_EOF'
-          用户在 Issue #${{ env.ISSUE_NUMBER }} 中请求帮助。
+          Issue #${{ env.ISSUE_NUMBER }}
 
-          Issue 标题：
-          ${{ env.ISSUE_TITLE }}
+          标题: ${{ env.ISSUE_TITLE }}
 
-          Issue 内容：
-          ${{ env.ISSUE_BODY }}
+          内容: ${{ env.ISSUE_BODY }}
 
-          用户评论：
-          ${{ env.COMMENT_BODY }}
+          评论: ${{ env.COMMENT_BODY }}
 
-          请按以下步骤回答：
-          1. 使用 GitHub 工具搜索项目中的相关代码和文件
-          2. 分析用户的问题
-          3. 基于实际代码提供准确的解决方案
-          4. 提供相关文档链接和代码示例
-
-          用以下格式回复：
-
-          你好！我是 AI 助手，让我帮你分析这个问题。
-
-          **问题分析**
-          [分析内容]
-
-          **建议方案**
-          [基于项目实际代码的解决方案]
-
-          **相关代码**
-          [引用项目中的相关代码片段]
-
-          **相关资源**
-          - 文档链接
-          - 示例链接
-
-          如果我的建议没有解决问题，请提供更多信息，维护者会尽快回复！
+          请搜索项目代码并提供解决方案。
           PROMPT_EOF
 
       - name: AI Analysis
@@ -83,20 +64,11 @@ jobs:
         with:
           model: 'gpt-4o-mini'
           enable-github-mcp: true
+          max-tokens: 1000
           system-prompt: |
-            你是 ECS Framework 项目的 AI 助手。
-
-            项目信息：
-            - 这是一个高性能 TypeScript ECS (Entity-Component-System) 框架
-            - 支持 Cocos Creator、Laya 引擎和 Web 平台
-            - 主要代码在 packages/core/src 目录
-            - 文档地址：https://esengine.github.io/ecs-framework/
-            - AI 文档：https://deepwiki.com/esengine/ecs-framework
-
-            你可以使用 GitHub 工具搜索代码、查看文件内容来准确回答问题。
-            在回答之前，先搜索相关代码和文档，确保答案准确。
-
-            请用中文友好地回复用户的问题。
+            你是 ECS Framework (TypeScript ECS 框架) 的 AI 助手。
+            主要代码在 packages/core/src。
+            搜索相关代码后，用中文简洁回答问题，包含问题分析、解决方案和代码引用。
           prompt-file: prompt.txt
 
       - name: Post AI Response
