@@ -90,33 +90,6 @@ jobs:
           git tag -a "core-v${{ steps.version.outputs.new_version }}" -m "Release @esengine/ecs-framework v${{ steps.version.outputs.new_version }}"
           git push origin "core-v${{ steps.version.outputs.new_version }}"
 
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: core-v${{ steps.version.outputs.new_version }}
-          release_name: '@esengine/ecs-framework v${{ steps.version.outputs.new_version }}'
-          body: |
-            ## 🚀 @esengine/ecs-framework v${{ steps.version.outputs.new_version }}
-
-            ### 📦 Installation
-            ```bash
-            npm install @esengine/ecs-framework@${{ steps.version.outputs.new_version }}
-            ```
-
-            ### 📝 Changes
-            Release version: **v${{ steps.version.outputs.new_version }}** (bumped from v${{ steps.version.outputs.current_version }})
-
-            ### 🔗 Links
-            - [npm Package](https://www.npmjs.com/package/@esengine/ecs-framework/v/${{ steps.version.outputs.new_version }})
-            - [Documentation](https://github.com/${{ github.repository }})
-
-            ---
-            *Version type: `${{ github.event.inputs.version_type }}`*
-          draft: false
-          prerelease: false
-
   # 发布成功后，创建 PR 更新版本号
   update-version-pr:
     needs: release
@@ -149,6 +122,7 @@ jobs:
 
           if [ -n "${{ github.event.inputs.custom_version }}" ]; then
             NEW_VERSION="${{ github.event.inputs.custom_version }}"
+            npm version $NEW_VERSION --no-git-tag-version --allow-same-version
           else
             npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
             NEW_VERSION=$(node -p "require('./package.json').version")
@@ -156,11 +130,20 @@ jobs:
 
           echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
+          # 验证文件已修改
+          git diff --exit-code package.json && echo "::error::No version change detected" && exit 1 || true
+
+          echo "Updated package.json to version: $NEW_VERSION"
+          cat package.json | grep version
+
       - name: Create Pull Request
+        id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore(core): bump version to ${{ env.NEW_VERSION }}"
+          committer: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
+          author: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
           branch: release/core-v${{ env.NEW_VERSION }}
           delete-branch: true
           title: "chore(core): Release v${{ env.NEW_VERSION }}"
@@ -175,8 +158,7 @@ jobs:
             ### Release Information
             - 📦 **Version Type**: `${{ github.event.inputs.version_type }}`
             - 🏷️ **Git Tag**: `core-v${{ env.NEW_VERSION }}`
-            - 📋 [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/core-v${{ env.NEW_VERSION }})
-            - 📦 [npm Package](https://www.npmjs.com/package/@esengine/ecs-framework/v/${{ env.NEW_VERSION }})
+            - 📦 **npm Package**: https://www.npmjs.com/package/@esengine/ecs-framework/v/${{ env.NEW_VERSION }}
 
             ### Next Steps
             - [ ] Review the changes
@@ -188,3 +170,10 @@ jobs:
             release
             core
             automated pr
+          add-paths: |
+            packages/core/package.json
+
+      - name: Check PR creation
+        run: |
+          echo "Pull Request Number - ${{ steps.cpr.outputs.pull-request-number }}"
+          echo "Pull Request URL - ${{ steps.cpr.outputs.pull-request-url }}"
