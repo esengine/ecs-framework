@@ -14,37 +14,76 @@ jobs:
     # 只在用户提到 @ai-helper 时触发
     if: contains(github.event.comment.body, '@ai-helper')
     steps:
-      - name: AI Assistance
-        uses: github/issue-assessment-action@v1
+      - name: Get Issue Details
+        id: issue
+        uses: actions/github-script@v7
         with:
-          assessments:
-            - name: help-request
-              prompt: |
-                用户在 issue 中提到了 @ai-helper，请分析他们的问题并提供帮助。
+          script: |
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            return {
+              title: issue.data.title,
+              body: issue.data.body,
+              number: issue.data.number
+            };
 
-                检查：
-                1. 用户遇到的具体问题
-                2. 可能的解决方案
-                3. 相关文档链接
-                4. 类似的已解决 issue
+      - name: AI Analysis
+        uses: actions/ai-inference@v1
+        id: ai
+        with:
+          model: 'gpt-4o-mini'
+          system-prompt: |
+            你是 ECS Framework 项目的 AI 助手。
+            项目信息：
+            - 这是一个高性能 TypeScript ECS (Entity-Component-System) 框架
+            - 支持 Cocos Creator、Laya 引擎和 Web 平台
+            - 文档地址：https://esengine.github.io/ecs-framework/
+            - AI 文档：https://deepwiki.com/esengine/ecs-framework
 
-                用中文友好地回复，提供：
-                - 问题分析
-                - 建议的解决方案（如果可以推断）
-                - 相关资源链接
-                - 需要提供的额外信息（如果需要）
+            请用中文友好地回复用户的问题。
+          prompt: |
+            用户在 Issue #${{ github.event.issue.number }} 中请求帮助。
 
-                格式：
-                👋 你好！我是 AI 助手，让我帮你分析这个问题。
+            Issue 标题：${{ steps.issue.outputs.result.title }}
 
-                【问题分析】
-                ...
+            Issue 内容：
+            ${{ steps.issue.outputs.result.body }}
 
-                【建议方案】
-                ...
+            用户评论：
+            ${{ github.event.comment.body }}
 
-                【相关资源】
-                - 📚 文档：...
-                - 💡 示例：...
+            请分析用户的问题并提供帮助：
+            1. 问题分析
+            2. 可能的解决方案
+            3. 相关文档链接
+            4. 需要补充的信息（如果有）
 
-                如果我的建议没有解决问题，请提供更多信息，维护者会尽快回复！
+            用以下格式回复：
+
+            👋 你好！我是 AI 助手，让我帮你分析这个问题。
+
+            **问题分析**
+            [分析内容]
+
+            **建议方案**
+            [解决方案]
+
+            **相关资源**
+            - 📚 [文档链接]
+            - 💡 [示例链接]
+
+            如果我的建议没有解决问题，请提供更多信息，维护者会尽快回复！
+
+      - name: Post AI Response
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `${{ steps.ai.outputs.response }}`
+            });

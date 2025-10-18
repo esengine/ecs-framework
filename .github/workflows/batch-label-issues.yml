@@ -146,9 +146,7 @@ jobs:
                 gh issue edit $ISSUE_NUM --add-label "$label" 2>&1 | grep -v "already exists" || true
               done
               echo "   💬 添加说明评论..."
-              gh issue comment $ISSUE_NUM --body "🤖 自动标签系统检测到此 issue 并添加了相关标签。如有误判，请告知维护者。
-
-🤖 Auto-labeling system detected and labeled this issue. Please let maintainers know if this is incorrect." || true
+              gh issue comment $ISSUE_NUM --body $'🤖 自动标签系统检测到此 issue 并添加了相关标签。如有误判，请告知维护者。\n\n🤖 Auto-labeling system detected and labeled this issue. Please let maintainers know if this is incorrect.' || true
             else
               echo "   ℹ️  未检测到明确类型"
             fi

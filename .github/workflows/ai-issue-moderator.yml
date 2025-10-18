@@ -5,12 +5,6 @@ on:
     types: [opened]
   issue_comment:
     types: [created]
-  workflow_dispatch:
-    inputs:
-      issue_number:
-        description: 'Issue 编号（留空则检查所有打开的 issue）'
-        required: false
-        type: string
 
 permissions:
   issues: write
@@ -20,46 +14,42 @@ jobs:
   moderate:
     runs-on: ubuntu-latest
     steps:
-      - name: Get issue number
-        id: issue
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ -n "${{ github.event.inputs.issue_number }}" ]; then
-              echo "number=${{ github.event.inputs.issue_number }}" >> $GITHUB_OUTPUT
-            else
-              echo "number=all" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
-          fi
-      - name: AI Content Moderation
-        uses: github/content-moderation-action@v1
+      - name: Check Content
+        uses: actions/ai-inference@v1
+        id: check
         with:
-          # 检测垃圾内容
-          spam-detection: true
-
-          # 检测 AI 生成内容
-          ai-generated-detection: true
-
-          # 自定义提示
-          custom-prompt: |
-            分析这个 issue/评论是否包含：
+          model: 'gpt-4o-mini'
+          system-prompt: |
+            你是一个内容审查助手。
+            检查内容是否包含：
             1. 垃圾信息或广告
-            2. 纯 AI 生成的无意义内容
-            3. 恶意或攻击性内容
-            4. 与项目无关的内容
+            2. 恶意或攻击性内容
+            3. 与项目完全无关的内容
 
-            如果是垃圾内容，返回 "SPAM"
-            如果是正常内容，返回 "OK"
+            只返回 "SPAM" 或 "OK"，不要其他内容。
+          prompt: |
+            标题：${{ github.event.issue.title || github.event.comment.body }}
 
-          # 垃圾内容处理
-          on-spam:
-            labels:
-              - "spam"
-            minimize: true  # 隐藏内容
-            comment: |
-              🤖 这个 issue 被 AI 检测为可能的垃圾内容，已自动隐藏。
-              如果这是误判，请联系维护者。
+            内容：
+            ${{ github.event.issue.body || github.event.comment.body }}
 
-              🤖 This issue was detected as potential spam by AI and has been hidden.
-              If this is a false positive, please contact the maintainers.
+      - name: Mark as Spam
+        if: contains(steps.check.outputs.response, 'SPAM')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // 添加 spam 标签
+            github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['spam']
+            });
+
+            // 添加评论
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '🤖 这个内容被 AI 检测为可能的垃圾内容。如果这是误判，请联系维护者。\n\n🤖 This content was detected as potential spam by AI. If this is a false positive, please contact the maintainers.'
+            });
