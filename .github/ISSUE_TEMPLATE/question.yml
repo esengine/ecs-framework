@@ -1,0 +1,64 @@
+name: ❓ Question / 问题咨询
+description: Ask a question about using the framework / 询问框架使用问题
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        💡 提示：如果是简单问题，可以先查看：
+        - [📚 文档](https://esengine.github.io/ecs-framework/)
+        - [📖 AI 文档助手](https://deepwiki.com/esengine/ecs-framework)
+        - [💬 QQ 交流群](https://jq.qq.com/?_wv=1027&k=29w1Nud6)
+
+        💡 Tip: For simple questions, please check first:
+        - [📚 Documentation](https://esengine.github.io/ecs-framework/)
+        - [📖 AI Documentation](https://deepwiki.com/esengine/ecs-framework)
+
+  - type: textarea
+    id: question
+    attributes:
+      label: 你的问题 / Your Question
+      description: 清晰描述你的问题 / Describe your question clearly
+      placeholder: 如何在 Cocos Creator 中使用 ECS Framework？
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 背景信息 / Context
+      description: 提供更多上下文帮助理解问题 / Provide more context to help understand
+      placeholder: |
+        我正在开发一个多人在线游戏...
+        我尝试过...但是...
+    validations:
+      required: false
+
+  - type: textarea
+    id: code
+    attributes:
+      label: 相关代码 / Related Code
+      description: 如果适用，提供相关代码片段 / If applicable, provide relevant code snippet
+      render: typescript
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / Version
+      description: 使用的框架版本 / Framework version you're using
+      placeholder: 例如 / e.g., 2.2.8
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 检查清单 / Checklist
+      options:
+        - label: 我已经查看过文档 / I have checked the documentation
+          required: true
+        - label: 我已经搜索过类似问题 / I have searched for similar questions
+          required: true

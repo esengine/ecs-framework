@@ -1,0 +1,130 @@
+name: 🐛 Bug Report / 错误报告
+description: Report a bug or issue / 报告一个错误或问题
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你提交 Bug 报告！请填写以下信息帮助我们更快定位问题。
+        Thanks for reporting a bug! Please fill in the information below to help us locate the issue faster.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述 / Bug Description
+      description: 清晰简洁地描述遇到的问题 / A clear and concise description of the bug
+      placeholder: 例如：当我创建超过1000个实体时，游戏卡顿严重...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤 / Steps to Reproduce
+      description: 如何复现这个问题？/ How can we reproduce this issue?
+      placeholder: |
+        1. 创建场景
+        2. 添加 1000 个实体
+        3. 运行游戏
+        4. 观察卡顿
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为 / Expected Behavior
+      description: 你期望发生什么？/ What did you expect to happen?
+      placeholder: 游戏应该流畅运行，FPS 保持在 60...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为 / Actual Behavior
+      description: 实际发生了什么？/ What actually happened?
+      placeholder: FPS 降到 20，游戏严重卡顿...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / Version
+      description: 使用的 @esengine/ecs-framework 版本 / Version of @esengine/ecs-framework
+      placeholder: 例如 / e.g., 2.2.8
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 平台 / Platform
+      description: 在哪个平台遇到问题？/ Which platform did you encounter the issue?
+      multiple: true
+      options:
+        - Web / 浏览器
+        - Cocos Creator
+        - Laya Engine
+        - WeChat Mini Game / 微信小游戏
+        - Other / 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息 / Environment
+      description: |
+        相关环境信息 / Relevant environment information
+        例如：操作系统、浏览器版本、Node.js 版本等
+      placeholder: |
+        - OS: Windows 11
+        - Browser: Chrome 120
+        - Node.js: 20.10.0
+      value: |
+        - OS:
+        - Browser:
+        - Node.js:
+    validations:
+      required: false
+
+  - type: textarea
+    id: code
+    attributes:
+      label: 代码示例 / Code Sample
+      description: 如果可能，提供最小可复现代码 / If possible, provide minimal reproducible code
+      render: typescript
+      placeholder: |
+        import { Core, Scene, Entity } from '@esengine/ecs-framework';
+
+        // 你的代码 / Your code here
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 错误日志 / Error Logs
+      description: 相关的错误日志或截图 / Relevant error logs or screenshots
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 检查清单 / Checklist
+      options:
+        - label: 我已经搜索过类似的 issue / I have searched for similar issues
+          required: true
+        - label: 我使用的是最新版本 / I am using the latest version
+          required: false
+        - label: 我愿意提交 PR 修复此问题 / I am willing to submit a PR to fix this issue
+          required: false

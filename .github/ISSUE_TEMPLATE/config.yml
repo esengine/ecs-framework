@@ -1,0 +1,17 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📚 文档 / Documentation
+    url: https://esengine.github.io/ecs-framework/
+    about: 查看完整文档和教程 / View full documentation and tutorials
+
+  - name: 🤖 AI 文档助手 / AI Documentation Assistant
+    url: https://deepwiki.com/esengine/ecs-framework
+    about: 使用 AI 助手快速找到答案 / Use AI assistant to quickly find answers
+
+  - name: 💬 QQ 交流群 / QQ Group
+    url: https://jq.qq.com/?_wv=1027&k=29w1Nud6
+    about: 加入社区交流群 / Join the community group
+
+  - name: 🌟 GitHub Discussions
+    url: https://github.com/esengine/ecs-framework/discussions
+    about: 参与社区讨论 / Join community discussions

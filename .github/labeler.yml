@@ -1,0 +1,32 @@
+# 自动标签配置
+# 根据 issue/PR 内容自动打标签
+
+'bug':
+  - '/(bug|错误|崩溃|crash|error|exception|问题)/i'
+
+'enhancement':
+  - '/(feature|功能|enhancement|improve|优化|建议)/i'
+
+'documentation':
+  - '/(doc|文档|readme|guide|tutorial|教程)/i'
+
+'question':
+  - '/(question|疑问|how to|如何|怎么)/i'
+
+'performance':
+  - '/(performance|性能|slow|慢|lag|卡顿|optimize)/i'
+
+'core':
+  - '/(@esengine\/ecs-framework|packages\/core|core package)/i'
+
+'editor':
+  - '/(editor|编辑器|tauri)/i'
+
+'network':
+  - '/(network|网络|multiplayer|多人)/i'
+
+'help wanted':
+  - '/(help wanted|需要帮助|求助)/i'
+
+'good first issue':
+  - '/(good first issue|新手友好|beginner)/i'

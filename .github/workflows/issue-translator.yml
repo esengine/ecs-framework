@@ -1,0 +1,28 @@
+name: Issue Translator
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Translate Issues
+        uses: tomsun28/issues-translate-action@v2.7
+        with:
+          IS_MODIFY_TITLE: false
+          # 设置为 true 会修改标题，false 只在评论中添加翻译
+          CUSTOM_BOT_NOTE: |
+            <details>
+            <summary>🌏 Translation / 翻译</summary>
+
+            Bot detected the issue body's language is not English, translate it automatically.
+            机器人检测到 issue 内容非英文，自动翻译。
+
+            </details>

@@ -1,0 +1,90 @@
+name: ✨ Feature Request / 功能建议
+description: Suggest a new feature or enhancement / 建议新功能或改进
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你的功能建议！请详细描述你的想法。
+        Thanks for your feature suggestion! Please describe your idea in detail.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题描述 / Problem Description
+      description: 这个功能解决什么问题？/ What problem does this feature solve?
+      placeholder: 当我需要...的时候，现在很不方便，因为... / When I need to..., it's inconvenient because...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 建议的解决方案 / Proposed Solution
+      description: 你希望如何实现这个功能？/ How would you like this feature to work?
+      placeholder: 可以添加一个新的 API，例如... / Could add a new API, for example...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 其他方案 / Alternatives
+      description: 你考虑过哪些替代方案？/ What alternatives have you considered?
+      placeholder: 也可以通过...来实现，但是... / Could also achieve this by..., but...
+    validations:
+      required: false
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: 使用示例 / Usage Example
+      description: 展示这个功能如何使用 / Show how this feature would be used
+      render: typescript
+      placeholder: |
+        // 理想的 API 设计 / Ideal API design
+        const pool = new ComponentPool(MyComponent, { size: 100 });
+        const component = pool.acquire();
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 影响范围 / Scope
+      description: 这个功能主要影响哪个部分？/ Which part does this feature mainly affect?
+      options:
+        - Core / 核心框架
+        - Performance / 性能
+        - API Design / API 设计
+        - Developer Experience / 开发体验
+        - Documentation / 文档
+        - Editor / 编辑器
+        - Other / 其他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 优先级 / Priority
+      description: 你认为这个功能有多重要？/ How important do you think this feature is?
+      options:
+        - High / 高 - 非常需要这个功能
+        - Medium / 中 - 有会更好
+        - Low / 低 - 可有可无
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 检查清单 / Checklist
+      options:
+        - label: 我已经搜索过类似的功能请求 / I have searched for similar feature requests
+          required: true
+        - label: 这个功能不会破坏现有 API / This feature won't break existing APIs
+          required: false
+        - label: 我愿意提交 PR 实现此功能 / I am willing to submit a PR to implement this feature
+          required: false
