@@ -62,9 +62,9 @@ jobs:
         uses: actions/ai-inference@v1
         id: ai
         with:
-          model: 'gpt-4o-mini'
+          model: 'gpt-4o'
           enable-github-mcp: true
-          max-tokens: 1000
+          max-tokens: 1500
           system-prompt: |
             你是 ECS Framework (TypeScript ECS 框架) 的 AI 助手。
             主要代码在 packages/core/src。
