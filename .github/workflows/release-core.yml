@@ -148,7 +148,27 @@ jobs:
           delete-branch: true
           title: "chore(core): Release v${{ env.NEW_VERSION }}"
           body: |
-            ## 🚀 Release @esengine/ecs-framework v${{ env.NEW_VERSION }}
+            ## 🚀 发布 @esengine/ecs-framework v${{ env.NEW_VERSION }} / Release @esengine/ecs-framework v${{ env.NEW_VERSION }}
+
+            **中文说明**
+
+            此 PR 在成功发布到 npm 后更新核心包的版本号。
+
+            ### 变更内容
+            - ✅ 更新 `packages/core/package.json` → `${{ env.NEW_VERSION }}`
+
+            ### 发布信息
+            - 📦 **版本类型**: `${{ github.event.inputs.version_type }}`
+            - 🏷️ **Git 标签**: `core-v${{ env.NEW_VERSION }}`
+            - 📦 **npm 包**: https://www.npmjs.com/package/@esengine/ecs-framework/v/${{ env.NEW_VERSION }}
+
+            ### 下一步
+            - [ ] 审查变更内容
+            - [ ] 合并此 PR 以更新仓库中的版本号
+
+            ---
+
+            **English Description**
 
             This PR updates the core package version after successful npm release.
 
@@ -165,7 +185,7 @@ jobs:
             - [ ] Merge this PR to update the version in the repository
 
             ---
-            *This PR was automatically created by the release workflow.*
+            *此 PR 由发布工作流自动创建 / This PR was automatically created by the release workflow.*
           labels: |
             release
             core
