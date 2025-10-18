@@ -48,10 +48,10 @@ jobs:
           prompt: |
             用户在 Issue #${{ github.event.issue.number }} 中请求帮助。
 
-            Issue 标题：${{ steps.issue.outputs.result.title }}
+            Issue 标题：${{ fromJSON(steps.issue.outputs.result).title }}
 
             Issue 内容：
-            ${{ steps.issue.outputs.result.body }}
+            ${{ fromJSON(steps.issue.outputs.result).body }}
 
             用户评论：
             ${{ github.event.comment.body }}
