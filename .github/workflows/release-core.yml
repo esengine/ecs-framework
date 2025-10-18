@@ -116,6 +116,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # 获取上一个core版本的tag
+          PREVIOUS_TAG=$(git tag -l "core-v*" --sort=-v:refname | head -n 1)
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "No previous tag found, using initial commit"
+            PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+
+          echo "Generating changelog from $PREVIOUS_TAG to HEAD"
+
+          # 生成变更日志（只包含core相关的提交）
+          CHANGELOG=$(git log $PREVIOUS_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges -- packages/core/)
+
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="No changes to core package since last release"
+          fi
+
+          # 保存到文件以便在PR中使用
+          echo "$CHANGELOG" > /tmp/changelog.txt
+
+          # 输出用于调试
+          echo "Changelog:"
+          cat /tmp/changelog.txt
+
       - name: Update version in package.json
         run: |
           cd packages/core
@@ -136,6 +163,63 @@ jobs:
           echo "Updated package.json to version: $NEW_VERSION"
           cat package.json | grep version
 
+      - name: Prepare PR body
+        id: pr_body
+        run: |
+          CHANGELOG_CONTENT=$(cat /tmp/changelog.txt)
+
+          # 创建PR描述
+          cat > /tmp/pr_body.md <<EOF
+          ## 🚀 发布 @esengine/ecs-framework v${{ env.NEW_VERSION }} / Release @esengine/ecs-framework v${{ env.NEW_VERSION }}
+
+          **中文说明**
+
+          此 PR 在成功发布到 npm 后更新核心包的版本号。
+
+          ### 📝 更新日志
+          \`\`\`
+          ${CHANGELOG_CONTENT}
+          \`\`\`
+
+          ### 变更内容
+          - ✅ 更新 \`packages/core/package.json\` → \`${{ env.NEW_VERSION }}\`
+
+          ### 发布信息
+          - 📦 **版本类型**: \`${{ github.event.inputs.version_type }}\`
+          - 🏷️ **Git 标签**: \`core-v${{ env.NEW_VERSION }}\`
+          - 📦 **npm 包**: https://www.npmjs.com/package/@esengine/ecs-framework/v/${{ env.NEW_VERSION }}
+
+          ### 下一步
+          - [ ] 审查变更内容
+          - [ ] 合并此 PR 以更新仓库中的版本号
+
+          ---
+
+          **English Description**
+
+          This PR updates the core package version after successful npm release.
+
+          ### 📝 Changelog
+          \`\`\`
+          ${CHANGELOG_CONTENT}
+          \`\`\`
+
+          ### Changes
+          - ✅ Updated \`packages/core/package.json\` → \`${{ env.NEW_VERSION }}\`
+
+          ### Release Information
+          - 📦 **Version Type**: \`${{ github.event.inputs.version_type }}\`
+          - 🏷️ **Git Tag**: \`core-v${{ env.NEW_VERSION }}\`
+          - 📦 **npm Package**: https://www.npmjs.com/package/@esengine/ecs-framework/v/${{ env.NEW_VERSION }}
+
+          ### Next Steps
+          - [ ] Review the changes
+          - [ ] Merge this PR to update the version in the repository
+
+          ---
+          *此 PR 由发布工作流自动创建 / This PR was automatically created by the release workflow.*
+          EOF
+
       - name: Create Pull Request
         id: cpr
         uses: peter-evans/create-pull-request@v6
@@ -147,45 +231,7 @@ jobs:
           branch: release/core-v${{ env.NEW_VERSION }}
           delete-branch: true
           title: "chore(core): Release v${{ env.NEW_VERSION }}"
-          body: |
-            ## 🚀 发布 @esengine/ecs-framework v${{ env.NEW_VERSION }} / Release @esengine/ecs-framework v${{ env.NEW_VERSION }}
-
-            **中文说明**
-
-            此 PR 在成功发布到 npm 后更新核心包的版本号。
-
-            ### 变更内容
-            - ✅ 更新 `packages/core/package.json` → `${{ env.NEW_VERSION }}`
-
-            ### 发布信息
-            - 📦 **版本类型**: `${{ github.event.inputs.version_type }}`
-            - 🏷️ **Git 标签**: `core-v${{ env.NEW_VERSION }}`
-            - 📦 **npm 包**: https://www.npmjs.com/package/@esengine/ecs-framework/v/${{ env.NEW_VERSION }}
-
-            ### 下一步
-            - [ ] 审查变更内容
-            - [ ] 合并此 PR 以更新仓库中的版本号
-
-            ---
-
-            **English Description**
-
-            This PR updates the core package version after successful npm release.
-
-            ### Changes
-            - ✅ Updated `packages/core/package.json` → `${{ env.NEW_VERSION }}`
-
-            ### Release Information
-            - 📦 **Version Type**: `${{ github.event.inputs.version_type }}`
-            - 🏷️ **Git Tag**: `core-v${{ env.NEW_VERSION }}`
-            - 📦 **npm Package**: https://www.npmjs.com/package/@esengine/ecs-framework/v/${{ env.NEW_VERSION }}
-
-            ### Next Steps
-            - [ ] Review the changes
-            - [ ] Merge this PR to update the version in the repository
-
-            ---
-            *此 PR 由发布工作流自动创建 / This PR was automatically created by the release workflow.*
+          body-path: /tmp/pr_body.md
           labels: |
             release
             core
