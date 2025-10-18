@@ -1,0 +1,65 @@
+name: AI Issue Moderator
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue 编号（留空则检查所有打开的 issue）'
+        required: false
+        type: string
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  moderate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get issue number
+        id: issue
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ -n "${{ github.event.inputs.issue_number }}" ]; then
+              echo "number=${{ github.event.inputs.issue_number }}" >> $GITHUB_OUTPUT
+            else
+              echo "number=all" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          fi
+      - name: AI Content Moderation
+        uses: github/content-moderation-action@v1
+        with:
+          # 检测垃圾内容
+          spam-detection: true
+
+          # 检测 AI 生成内容
+          ai-generated-detection: true
+
+          # 自定义提示
+          custom-prompt: |
+            分析这个 issue/评论是否包含：
+            1. 垃圾信息或广告
+            2. 纯 AI 生成的无意义内容
+            3. 恶意或攻击性内容
+            4. 与项目无关的内容
+
+            如果是垃圾内容，返回 "SPAM"
+            如果是正常内容，返回 "OK"
+
+          # 垃圾内容处理
+          on-spam:
+            labels:
+              - "spam"
+            minimize: true  # 隐藏内容
+            comment: |
+              🤖 这个 issue 被 AI 检测为可能的垃圾内容，已自动隐藏。
+              如果这是误判，请联系维护者。
+
+              🤖 This issue was detected as potential spam by AI and has been hidden.
+              If this is a false positive, please contact the maintainers.
