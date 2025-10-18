@@ -19,21 +19,9 @@
       ]
     ],
     "scope-enum": [
-      2,
-      "always",
-      [
-        "core",
-        "math",
-        "network-client",
-        "network-server",
-        "network-shared",
-        "editor",
-        "docs",
-        "ci",
-        "deps"
-      ]
+      0
     ],
-    "scope-empty": [1, "never"],
+    "scope-empty": [0],
     "subject-empty": [2, "never"],
     "subject-case": [0],
     "header-max-length": [2, "always", 100]
