@@ -19,6 +19,7 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sceneName, setSceneName] = useState<string>('Untitled');
+  const [remoteSceneName, setRemoteSceneName] = useState<string | null>(null);
   const [sceneFilePath, setSceneFilePath] = useState<string | null>(null);
   const [isSceneModified, setIsSceneModified] = useState<boolean>(false);
   const { t, locale } = useLocale();
@@ -97,6 +98,9 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
       return;
     }
 
+    const initiallyConnected = profilerService.isConnected();
+    setIsRemoteConnected(initiallyConnected);
+
     const unsubscribe = profilerService.subscribe((data) => {
       const connected = profilerService.isConnected();
       setIsRemoteConnected(connected);
@@ -119,12 +123,31 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
 
           return hasChanged ? data.entities! : prev;
         });
+
+        // 请求第一个实体的详情以获取场景名称
+        if (!remoteSceneName && data.entities.length > 0) {
+          profilerService.requestEntityDetails(data.entities[0].id);
+        }
       } else if (!connected) {
         setRemoteEntities([]);
+        setRemoteSceneName(null);
       }
     });
 
     return () => unsubscribe();
+  }, [remoteSceneName]);
+
+  // Listen for entity details to get remote scene name
+  useEffect(() => {
+    const handleEntityDetails = ((event: CustomEvent) => {
+      const details = event.detail;
+      if (details && details.sceneName) {
+        setRemoteSceneName(details.sceneName);
+      }
+    }) as EventListener;
+
+    window.addEventListener('profiler:entity-details', handleEntityDetails);
+    return () => window.removeEventListener('profiler:entity-details', handleEntityDetails);
   }, []);
 
   const handleEntityClick = (entity: Entity) => {
@@ -243,6 +266,7 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
     ? filterRemoteEntities(remoteEntities)
     : filterLocalEntities(entities);
   const showRemoteIndicator = isRemoteConnected && remoteEntities.length > 0;
+  const displaySceneName = isRemoteConnected && remoteSceneName ? remoteSceneName : sceneName;
 
   return (
     <div className="scene-hierarchy">
@@ -250,12 +274,12 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
         <Layers size={16} className="hierarchy-header-icon" />
         <h3>{t('hierarchy.title')}</h3>
         <div
-          className="scene-name-container clickable"
-          onClick={handleSceneNameClick}
-          title={sceneFilePath ? `${sceneName} - 点击跳转到文件` : sceneName}
+          className={`scene-name-container ${!isRemoteConnected && sceneFilePath ? 'clickable' : ''}`}
+          onClick={!isRemoteConnected ? handleSceneNameClick : undefined}
+          title={!isRemoteConnected && sceneFilePath ? `${displaySceneName} - 点击跳转到文件` : displaySceneName}
         >
           <span className="scene-name">
-            {sceneName}{isSceneModified ? '*' : ''}
+            {displaySceneName}{!isRemoteConnected && isSceneModified ? '*' : ''}
           </span>
         </div>
         {showRemoteIndicator && (

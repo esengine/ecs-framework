@@ -65,13 +65,20 @@ export class ProfilerService {
   private checkServerInterval: NodeJS.Timeout | null = null;
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private clientIdMap: Map<string, string> = new Map(); // 客户端地址 -> 客户端ID映射
+  private autoStart: boolean;
 
   constructor() {
     const settings = SettingsService.getInstance();
     this.wsPort = settings.get('profiler.port', '8080');
+    this.autoStart = settings.get('profiler.autoStart', true);
 
     this.startServerCheck();
     this.listenToSettingsChanges();
+
+    // 如果设置了自动启动，则启动服务器
+    if (this.autoStart) {
+      this.manualStartServer();
+    }
   }
 
   private listenToSettingsChanges(): void {
@@ -123,6 +130,26 @@ export class ProfilerService {
     return this.isServerRunning;
   }
 
+  /**
+   * 手动启动服务器
+   */
+  public async manualStartServer(): Promise<void> {
+    await this.startServer();
+  }
+
+  /**
+   * 手动停止服务器
+   */
+  public async manualStopServer(): Promise<void> {
+    try {
+      await invoke('stop_profiler_server');
+      this.isServerRunning = false;
+      this.disconnect();
+    } catch (error) {
+      console.error('[ProfilerService] Failed to stop server:', error);
+    }
+  }
+
   private startServerCheck(): void {
     this.checkServerStatus();
     this.checkServerInterval = setInterval(() => {
@@ -136,12 +163,6 @@ export class ProfilerService {
       const wasRunning = this.isServerRunning;
       this.isServerRunning = status;
 
-      // 如果服务器还没运行，自动启动它
-      if (!status) {
-        await this.startServer();
-        return;
-      }
-
       // 服务器启动了，尝试连接
       if (status && !this.ws) {
         this.connectToServer();
@@ -149,7 +170,6 @@ export class ProfilerService {
 
       // 服务器从运行变为停止
       if (wasRunning && !status) {
-        console.log('[ProfilerService] Server stopped');
         this.disconnect();
       }
     } catch (error) {
@@ -180,6 +200,11 @@ export class ProfilerService {
       ws.onclose = () => {
         this.ws = null;
 
+        // 通知监听器连接已断开
+        if (this.currentData) {
+          this.notifyListeners(this.currentData);
+        }
+
         // 如果服务器还在运行，尝试重连
         if (this.isServerRunning && !this.reconnectTimeout) {
           this.reconnectTimeout = setTimeout(() => {
@@ -192,6 +217,11 @@ export class ProfilerService {
       ws.onerror = (error) => {
         console.error('[ProfilerService] WebSocket error:', error);
         this.ws = null;
+
+        // 通知监听器连接出错
+        if (this.currentData) {
+          this.notifyListeners(this.currentData);
+        }
       };
 
       ws.onmessage = (event) => {
@@ -404,6 +434,8 @@ export class ProfilerService {
   }
 
   private disconnect(): void {
+    const hadConnection = this.ws !== null;
+
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -412,6 +444,11 @@ export class ProfilerService {
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
+    }
+
+    // 如果有连接且手动断开，通知监听器
+    if (hadConnection && this.currentData) {
+      this.notifyListeners(this.currentData);
     }
   }
 

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { X, Server, WifiOff } from 'lucide-react';
+import { X, Server, WifiOff, Wifi } from 'lucide-react';
+import { SettingsService } from '../services/SettingsService';
+import { ProfilerService } from '../services/ProfilerService';
 import '../styles/PortManager.css';
 
 interface PortManagerProps {
@@ -9,9 +11,28 @@ interface PortManagerProps {
 
 export function PortManager({ onClose }: PortManagerProps) {
   const [isServerRunning, setIsServerRunning] = useState(false);
-  const [serverPort] = useState<number>(8080);
+  const [serverPort, setServerPort] = useState<string>('8080');
   const [isChecking, setIsChecking] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+
+  useEffect(() => {
+    const settings = SettingsService.getInstance();
+    setServerPort(settings.get('profiler.port', '8080'));
+
+    const handleSettingsChange = ((event: CustomEvent) => {
+      const newPort = event.detail['profiler.port'];
+      if (newPort) {
+        setServerPort(newPort);
+      }
+    }) as EventListener;
+
+    window.addEventListener('settings:changed', handleSettingsChange);
+
+    return () => {
+      window.removeEventListener('settings:changed', handleSettingsChange);
+    };
+  }, []);
 
   useEffect(() => {
     checkServerStatus();
@@ -33,13 +54,31 @@ export function PortManager({ onClose }: PortManagerProps) {
   const handleStopServer = async () => {
     setIsStopping(true);
     try {
-      const result = await invoke<string>('stop_profiler_server');
-      console.log('[PortManager]', result);
-      setIsServerRunning(false);
+      const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
+      if (profilerService) {
+        await profilerService.manualStopServer();
+        setIsServerRunning(false);
+      }
     } catch (error) {
       console.error('[PortManager] Failed to stop server:', error);
     } finally {
       setIsStopping(false);
+    }
+  };
+
+  const handleStartServer = async () => {
+    setIsStarting(true);
+    try {
+      const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
+      if (profilerService) {
+        await profilerService.manualStartServer();
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await checkServerStatus();
+      }
+    } catch (error) {
+      console.error('[PortManager] Failed to start server:', error);
+    } finally {
+      setIsStarting(false);
     }
   };
 
@@ -88,10 +127,22 @@ export function PortManager({ onClose }: PortManagerProps) {
             )}
 
             {!isServerRunning && (
-              <div className="port-hint">
-                <p>No server is currently running.</p>
-                <p className="hint-text">Open Profiler window to start the server.</p>
-              </div>
+              <>
+                <div className="port-actions">
+                  <button
+                    className="action-btn primary"
+                    onClick={handleStartServer}
+                    disabled={isStarting}
+                  >
+                    <Wifi size={16} />
+                    <span>{isStarting ? 'Starting...' : 'Start Server'}</span>
+                  </button>
+                </div>
+                <div className="port-hint">
+                  <p>No server is currently running.</p>
+                  <p className="hint-text">Click "Start Server" to start the profiler server.</p>
+                </div>
+              </>
             )}
           </div>
 
@@ -100,7 +151,7 @@ export function PortManager({ onClose }: PortManagerProps) {
             <ul>
               <li>Use this when the Profiler server port is stuck and cannot be restarted</li>
               <li>The server will automatically stop when the Profiler window is closed</li>
-              <li>Default port: 8080</li>
+              <li>Current configured port: {serverPort}</li>
             </ul>
           </div>
         </div>

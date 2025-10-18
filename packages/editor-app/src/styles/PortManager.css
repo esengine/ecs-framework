@@ -167,6 +167,15 @@
   transition: all var(--transition-fast);
 }
 
+.action-btn.primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.action-btn.primary:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
 .action-btn.danger {
   background: var(--color-danger);
   color: white;
