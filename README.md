@@ -11,7 +11,43 @@
 [![GitHub stars](https://img.shields.io/github/stars/esengine/ecs-framework?style=social)](https://github.com/esengine/ecs-framework/stargazers)
 [![DeepWiki](https://img.shields.io/badge/_AI_文档-DeepWiki-6366f1?style=flat&logo=gitbook&logoColor=white)](https://deepwiki.com/esengine/ecs-framework)
 
-一个高性能的 TypeScript ECS (Entity-Component-System) 框架，专为现代游戏开发而设计。
+<div align="center">
+
+  <p>一个高性能的 TypeScript ECS (Entity-Component-System) 框架，专为现代游戏开发而设计。</p>
+
+  <p>A high-performance TypeScript ECS (Entity-Component-System) framework designed for modern game development.</p>
+
+</div>
+
+---
+
+## 📊 项目统计 / Project Stats
+
+<div align="center">
+
+[![Star History Chart](https://api.star-history.com/svg?repos=esengine/ecs-framework&type=Date)](https://star-history.com/#esengine/ecs-framework&Date)
+
+</div>
+
+<div align="center">
+
+<a href="https://github.com/esengine/ecs-framework/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=esengine/ecs-framework" />
+</a>
+
+</div>
+
+### 📈 下载趋势 / Download Trends
+
+<div align="center">
+
+[![NPM Downloads](https://img.shields.io/npm/dt/@esengine/ecs-framework?label=Total%20Downloads&style=for-the-badge&color=blue)](https://www.npmjs.com/package/@esengine/ecs-framework)
+
+[![NPM Trends](https://img.shields.io/npm/dm/@esengine/ecs-framework?label=Monthly%20Downloads&style=for-the-badge&color=success)](https://npmtrends.com/@esengine/ecs-framework)
+
+</div>
+
+---
 
 ## 特性
 
@@ -96,6 +132,30 @@ function gameLoop(deltaTime: number) {
 - **多场景** - 支持 World/Scene 分层架构
 - **时间管理** - 内置定时器和时间控制系统
 
+## 🏗️ 架构设计 / Architecture
+
+```mermaid
+graph TB
+    A[Core 核心] --> B[World 世界]
+    B --> C[Scene 场景]
+    C --> D[EntityManager 实体管理器]
+    C --> E[SystemManager 系统管理器]
+    D --> F[Entity 实体]
+    F --> G[Component 组件]
+    E --> H[EntitySystem 实体系统]
+    E --> I[WorkerSystem 工作线程系统]
+
+    style A fill:#e1f5ff
+    style B fill:#fff3e0
+    style C fill:#f3e5f5
+    style D fill:#e8f5e9
+    style E fill:#fff9c4
+    style F fill:#ffebee
+    style G fill:#e0f2f1
+    style H fill:#fce4ec
+    style I fill:#f1f8e9
+```
+
 ## 平台支持
 
 支持主流游戏引擎和 Web 平台：
@@ -159,9 +219,28 @@ function gameLoop(deltaTime: number) {
 - [路径寻找](https://github.com/esengine/ecs-astar) - A*、BFS、Dijkstra 算法
 - [AI 系统](https://github.com/esengine/BehaviourTree-ai) - 行为树、效用 AI
 
+## 💪 支持项目 / Support the Project
+
+如果这个项目对你有帮助，请考虑：
+
+If this project helps you, please consider:
+
+<div align="center">
+
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?style=for-the-badge&logo=github)](https://github.com/sponsors/esengine)
+[![Star on GitHub](https://img.shields.io/badge/⭐_Star-on_GitHub-yellow?style=for-the-badge&logo=github)](https://github.com/esengine/ecs-framework)
+
+</div>
+
+- ⭐ 给项目点个 Star
+- 🐛 报告 Bug 或提出新功能
+- 📝 改进文档
+- 💖 成为赞助者
+
 ## 社区与支持
 
 - [问题反馈](https://github.com/esengine/ecs-framework/issues) - Bug 报告和功能建议
+- [讨论区](https://github.com/esengine/ecs-framework/discussions) - 提问、分享想法
 - [QQ 交流群](https://jq.qq.com/?_wv=1027&k=29w1Nud6) - ecs游戏框架交流
 
 ## 贡献者 / Contributors
@@ -173,8 +252,19 @@ Thanks goes to these wonderful people:
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/esengine"><img src="https://avatars.githubusercontent.com/esengine?s=100" width="100px;" alt="esengine"/><br /><sub><b>esengine</b></sub></a><br /><a href="#maintenance-esengine" title="Maintenance">🚧</a> <a href="https://github.com/esengine/ecs-framework/commits?author=esengine" title="Code">💻</a> <a href="#design-esengine" title="Design">🎨</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/foxling"><img src="https://avatars.githubusercontent.com/foxling?s=100" width="100px;" alt="LING YE"/><br /><sub><b>LING YE</b></sub></a><br /><a href="https://github.com/esengine/ecs-framework/commits?author=foxling" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/MirageTank"><img src="https://avatars.githubusercontent.com/MirageTank?s=100" width="100px;" alt="MirageTank"/><br /><sub><b>MirageTank</b></sub></a><br /><a href="https://github.com/esengine/ecs-framework/commits?author=MirageTank" title="Code">💻</a></td>
+    </tr>
+  </tbody>
+</table>
+
 <!-- markdownlint-restore -->
 <!-- prettier-ignore-end -->
+
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 本项目遵循 [all-contributors](https://github.com/all-contributors/all-contributors) 规范。欢迎任何形式的贡献！
