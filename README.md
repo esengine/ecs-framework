@@ -1,9 +1,13 @@
 # ECS Framework
 
 [![CI](https://github.com/esengine/ecs-framework/workflows/CI/badge.svg)](https://github.com/esengine/ecs-framework/actions)
+[![codecov](https://codecov.io/gh/esengine/ecs-framework/graph/badge.svg)](https://codecov.io/gh/esengine/ecs-framework)
 [![npm version](https://badge.fury.io/js/%40esengine%2Fecs-framework.svg)](https://badge.fury.io/js/%40esengine%2Fecs-framework)
+[![npm downloads](https://img.shields.io/npm/dm/@esengine/ecs-framework.svg)](https://www.npmjs.com/package/@esengine/ecs-framework)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@esengine/ecs-framework)](https://bundlephobia.com/package/@esengine/ecs-framework)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![All Contributors](https://img.shields.io/badge/all_contributors-0-orange.svg?style=flat-square)](#contributors)
 [![GitHub stars](https://img.shields.io/github/stars/esengine/ecs-framework?style=social)](https://github.com/esengine/ecs-framework/stargazers)
 [![DeepWiki](https://img.shields.io/badge/_AI_文档-DeepWiki-6366f1?style=flat&logo=gitbook&logoColor=white)](https://deepwiki.com/esengine/ecs-framework)
 
@@ -145,6 +149,7 @@ function gameLoop(deltaTime: number) {
 
 ## 文档
 
+- [📚 AI智能文档](https://deepwiki.com/esengine/ecs-framework) - AI助手随时解答你的问题
 - [快速入门](https://esengine.github.io/ecs-framework/guide/getting-started.html) - 详细教程和平台集成
 - [完整指南](https://esengine.github.io/ecs-framework/guide/) - ECS 概念和使用指南
 - [API 参考](https://esengine.github.io/ecs-framework/api/) - 完整 API 文档
@@ -158,6 +163,21 @@ function gameLoop(deltaTime: number) {
 
 - [问题反馈](https://github.com/esengine/ecs-framework/issues) - Bug 报告和功能建议
 - [QQ 交流群](https://jq.qq.com/?_wv=1027&k=29w1Nud6) - ecs游戏框架交流
+
+## 贡献者 / Contributors
+
+感谢所有为这个项目做出贡献的人！
+
+Thanks goes to these wonderful people:
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+本项目遵循 [all-contributors](https://github.com/all-contributors/all-contributors) 规范。欢迎任何形式的贡献！
 
 ## 许可证
 
