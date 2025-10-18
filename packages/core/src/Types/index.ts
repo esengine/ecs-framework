@@ -2,6 +2,8 @@
  * 框架核心类型定义
  */
 
+import type { IWorldManagerConfig } from '../ECS';
+
 // 导出TypeScript类型增强工具
 export * from './TypeHelpers';
 export * from './IUpdatable';
@@ -264,6 +266,8 @@ export interface ICoreConfig {
     enableEntitySystems?: boolean;
     /** 调试配置 */
     debugConfig?: IECSDebugConfig;
+    /** WorldManager配置 */
+    worldManagerConfig?: IWorldManagerConfig;
 }
 
 /**
