@@ -1,0 +1,41 @@
+{
+  "extends": ["@commitlint/config-conventional"],
+  "rules": {
+    "type-enum": [
+      2,
+      "always",
+      [
+        "feat",
+        "fix",
+        "docs",
+        "style",
+        "refactor",
+        "perf",
+        "test",
+        "build",
+        "ci",
+        "chore",
+        "revert"
+      ]
+    ],
+    "scope-enum": [
+      2,
+      "always",
+      [
+        "core",
+        "math",
+        "network-client",
+        "network-server",
+        "network-shared",
+        "editor",
+        "docs",
+        "ci",
+        "deps"
+      ]
+    ],
+    "scope-empty": [1, "never"],
+    "subject-empty": [2, "never"],
+    "subject-case": [0],
+    "header-max-length": [2, "always", 100]
+  }
+}

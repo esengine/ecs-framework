@@ -1,0 +1,84 @@
+queue_rules:
+  - name: default
+    conditions:
+      - check-success=CI
+      - check-success=Commit Lint
+
+pull_request_rules:
+  # 自动合并 Dependabot 的 patch 版本更新
+  - name: 自动合并 Dependabot patch 更新
+    conditions:
+      - author=dependabot[bot]
+      - check-success=CI
+      - check-success=Commit Lint
+      - title~=^build\(deps\): bump .* from .* to .*
+      - files~=^package-lock\.json$
+    actions:
+      review:
+        type: APPROVE
+        message: 自动批准 Dependabot 的 patch 更新
+      queue:
+        name: default
+        method: squash
+        commit_message_template: |
+          {{ title }} (#{{ number }})
+
+          {{ body }}
+
+  # 自动合并有 'automerge' 标签且测试通过的 PR
+  - name: 自动合并标记的 PR
+    conditions:
+      - label=automerge
+      - check-success=CI
+      - check-success=Commit Lint
+      - "#approved-reviews-by>=1"
+      - "#changes-requested-reviews-by=0"
+    actions:
+      queue:
+        name: default
+        method: squash
+
+  # 自动给小 PR 添加标签
+  - name: 标记小 PR 方便快速 Review
+    conditions:
+      - files<=3
+      - lines<=50
+    actions:
+      label:
+        add:
+          - quick-review
+
+  # 提醒大 PR 需要拆分
+  - name: 提醒大 PR
+    conditions:
+      - lines>1000
+    actions:
+      comment:
+        message: |
+          ⚠️ 这个 PR 改动超过 1000 行，建议拆分成多个小 PR，便于 Review 和测试。
+
+          ⚠️ This PR has over 1000 lines changed. Consider splitting it into smaller PRs for easier review and testing.
+
+  # 自动更新过期的分支
+  - name: 自动更新过期分支
+    conditions:
+      - -draft
+      - -closed
+      - base=master
+      - "#approved-reviews-by>=1"
+    actions:
+      update:
+        method: rebase
+
+  # 感谢首次贡献者
+  - name: 感谢新贡献者
+    conditions:
+      - author!=dependabot[bot]
+      - author!=dependabot-preview[bot]
+      - "#commits-behind=0"
+    actions:
+      comment:
+        message: |
+          🎉 感谢你的贡献！我们会尽快 Review。
+
+          🎉 Thanks for your contribution! We'll review it soon.

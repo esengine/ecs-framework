@@ -1,0 +1,95 @@
+# GitHub Labels 配置
+# 可以使用 https://github.com/Financial-Times/github-label-sync 来同步标签
+
+# Size Labels (PR 大小)
+- name: 'size/XS'
+  color: '00ff00'
+  description: '极小的改动 (< 10 行)'
+
+- name: 'size/S'
+  color: '00ff00'
+  description: '小改动 (10-100 行)'
+
+- name: 'size/M'
+  color: 'ffff00'
+  description: '中等改动 (100-500 行)'
+
+- name: 'size/L'
+  color: 'ff9900'
+  description: '大改动 (500-1000 行)'
+
+- name: 'size/XL'
+  color: 'ff0000'
+  description: '超大改动 (> 1000 行)'
+
+# Type Labels
+- name: 'bug'
+  color: 'd73a4a'
+  description: '错误或问题'
+
+- name: 'enhancement'
+  color: 'a2eeef'
+  description: '新功能或改进'
+
+- name: 'documentation'
+  color: '0075ca'
+  description: '文档相关'
+
+- name: 'question'
+  color: 'd876e3'
+  description: '问题咨询'
+
+- name: 'performance'
+  color: 'ff6b6b'
+  description: '性能相关'
+
+# Scope Labels
+- name: 'core'
+  color: '5319e7'
+  description: '核心包相关'
+
+- name: 'editor'
+  color: '5319e7'
+  description: '编辑器相关'
+
+- name: 'network'
+  color: '5319e7'
+  description: '网络相关'
+
+# Status Labels
+- name: 'stale'
+  color: 'ededed'
+  description: '长时间无活动'
+
+- name: 'wip'
+  color: 'fbca04'
+  description: '进行中'
+
+- name: 'help wanted'
+  color: '008672'
+  description: '需要帮助'
+
+- name: 'good first issue'
+  color: '7057ff'
+  description: '适合新手'
+
+- name: 'quick-review'
+  color: '00ff00'
+  description: '小改动，快速 Review'
+
+- name: 'automerge'
+  color: 'bfdadc'
+  description: '自动合并'
+
+- name: 'pinned'
+  color: 'c2e0c6'
+  description: '置顶，不会被标记为 stale'
+
+- name: 'security'
+  color: 'ee0701'
+  description: '安全相关，高优先级'
+
+# Dependencies
+- name: 'dependencies'
+  color: '0366d6'
+  description: '依赖更新'
