@@ -5,6 +5,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub stars](https://img.shields.io/github/stars/esengine/ecs-framework?style=social)](https://github.com/esengine/ecs-framework/stargazers)
+[![DeepWiki](https://img.shields.io/badge/_AI_文档-DeepWiki-6366f1?style=flat&logo=gitbook&logoColor=white)](https://deepwiki.com/esengine/ecs-framework)
 
 一个高性能的 TypeScript ECS (Entity-Component-System) 框架，专为现代游戏开发而设计。
 
