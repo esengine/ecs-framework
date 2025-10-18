@@ -7,6 +7,7 @@ on:
 permissions:
   issues: write
   contents: read
+  models: read
 
 jobs:
   ai-helper:
