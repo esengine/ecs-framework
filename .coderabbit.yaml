@@ -1,0 +1,36 @@
+# CodeRabbit 配置文件
+# https://docs.coderabbit.ai/configuration
+
+language: "zh-CN" # 使用中文评论
+reviews:
+  # 审查级别
+  profile: "chill" # "chill" 或 "strict" 或 "assertive"
+
+  # 自动审查设置
+  auto_review:
+    enabled: true
+    drafts: false # 草稿 PR 不自动审查
+    base_branches:
+      - master
+      - main
+
+  # 审查内容
+  request_changes_workflow: false # 不阻止 PR 合并
+  high_level_summary: true # 生成高层次摘要
+  poem: false # 不生成诗歌（可以改为 true 增加趣味）
+  review_status: true # 显示审查状态
+
+  # 忽略的文件
+  path_filters:
+    - "!**/*.md" # 不审查 markdown
+    - "!**/package-lock.json" # 不审查 lock 文件
+    - "!**/dist/**" # 不审查构建输出
+    - "!**/*.min.js" # 不审查压缩文件
+
+# 聊天设置
+chat:
+  auto_reply: true # 自动回复问题
+
+# 提交建议
+suggestions:
+  enabled: true # 启用代码建议

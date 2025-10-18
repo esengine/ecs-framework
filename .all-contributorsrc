@@ -1,55 +1,62 @@
 {
-  "projectName": "ecs-framework",
-  "projectOwner": "esengine",
-  "repoType": "github",
-  "repoHost": "https://github.com",
-  "files": [
-    "README.md"
-  ],
-  "imageSize": 100,
-  "commit": true,
-  "commitConvention": "angular",
-  "contributors": [],
-  "contributorsPerLine": 7,
-  "contributorsSortAlphabetically": false,
-  "badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-<%= contributors.length %>-orange.svg?style=flat-square)](#contributors)",
-  "contributorTemplate": "<a href=\"<%= contributor.profile %>\"><img src=\"<%= contributor.avatar_url %>\" width=\"<%= options.imageSize %>px;\" alt=\"<%= contributor.name %>\"/><br /><sub><b><%= contributor.name %></b></sub></a>",
-  "types": {
-    "code": {
-      "symbol": "💻",
-      "description": "Code",
-      "link": "[<%= symbol %>](<%= url %> \"Code\")"
+    "projectName": "ecs-framework",
+    "projectOwner": "esengine",
+    "repoType": "github",
+    "repoHost": "https://github.com",
+    "files": ["README.md"],
+    "imageSize": 100,
+    "commit": true,
+    "commitConvention": "angular",
+    "contributors": [
+        {
+            "login": "yhh",
+            "name": "Frank Huang",
+            "avatar_url": "https://avatars.githubusercontent.com/u/145575?v=4",
+            "profile": "https://github.com/yhh",
+            "contributions": ["code"]
+        }
+    ],
+    "contributorsPerLine": 7,
+    "contributorsSortAlphabetically": false,
+    "badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-<%= contributors.length %>-orange.svg?style=flat-square)](#contributors)",
+    "contributorTemplate": "<a href=\"<%= contributor.profile %>\"><img src=\"<%= contributor.avatar_url %>\" width=\"<%= options.imageSize %>px;\" alt=\"<%= contributor.name %>\"/><br /><sub><b><%= contributor.name %></b></sub></a>",
+    "types": {
+        "code": {
+            "symbol": "💻",
+            "description": "Code",
+            "link": "[<%= symbol %>](<%= url %> \"Code\")"
+        },
+        "doc": {
+            "symbol": "📖",
+            "description": "Documentation",
+            "link": "[<%= symbol %>](<%= url %> \"Documentation\")"
+        },
+        "test": {
+            "symbol": "⚠️",
+            "description": "Tests",
+            "link": "[<%= symbol %>](<%= url %> \"Tests\")"
+        },
+        "bug": {
+            "symbol": "🐛",
+            "description": "Bug reports",
+            "link": "[<%= symbol %>](<%= url %> \"Bug reports\")"
+        },
+        "example": {
+            "symbol": "💡",
+            "description": "Examples",
+            "link": "[<%= symbol %>](<%= url %> \"Examples\")"
+        },
+        "design": {
+            "symbol": "🎨",
+            "description": "Design",
+            "link": "[<%= symbol %>](<%= url %> \"Design\")"
+        },
+        "ideas": {
+            "symbol": "🤔",
+            "description": "Ideas & Planning",
+            "link": "[<%= symbol %>](<%= url %> \"Ideas & Planning\")"
+        }
     },
-    "doc": {
-      "symbol": "📖",
-      "description": "Documentation",
-      "link": "[<%= symbol %>](<%= url %> \"Documentation\")"
-    },
-    "test": {
-      "symbol": "⚠️",
-      "description": "Tests",
-      "link": "[<%= symbol %>](<%= url %> \"Tests\")"
-    },
-    "bug": {
-      "symbol": "🐛",
-      "description": "Bug reports",
-      "link": "[<%= symbol %>](<%= url %> \"Bug reports\")"
-    },
-    "example": {
-      "symbol": "💡",
-      "description": "Examples",
-      "link": "[<%= symbol %>](<%= url %> \"Examples\")"
-    },
-    "design": {
-      "symbol": "🎨",
-      "description": "Design",
-      "link": "[<%= symbol %>](<%= url %> \"Design\")"
-    },
-    "ideas": {
-      "symbol": "🤔",
-      "description": "Ideas & Planning",
-      "link": "[<%= symbol %>](<%= url %> \"Ideas & Planning\")"
-    }
-  },
-  "skipCi": true
+    "skipCi": true
 }
+
