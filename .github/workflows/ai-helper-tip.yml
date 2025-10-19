@@ -1,0 +1,61 @@
+name: AI Helper Tip
+
+# 对所有新创建的 issue 自动回复 AI 助手使用说明（新老用户都适用）
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  tip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post AI Helper Usage Tip
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const message = [
+              "## 🤖 AI 助手可用 | AI Helper Available",
+              "",
+              "**中文说明：**",
+              "",
+              "本项目配备了 AI 智能助手，可以帮助你快速获得解答！",
+              "",
+              "**使用方法：** 在评论中提及 `@ai-helper`，AI 会自动搜索项目代码并提供解决方案。",
+              "",
+              "**示例：**",
+              "```",
+              "@ai-helper 如何创建一个新的 System？",
+              "@ai-helper 这个报错是什么原因？",
+              "```",
+              "",
+              "---",
+              "",
+              "**English:**",
+              "",
+              "This project has an AI assistant to help you get answers quickly!",
+              "",
+              "**How to use:** Mention `@ai-helper` in a comment, and AI will automatically search the codebase and provide solutions.",
+              "",
+              "**Examples:**",
+              "```",
+              "@ai-helper How do I create a new System?",
+              "@ai-helper What causes this error?",
+              "```",
+              "",
+              "---",
+              "",
+              "💡 *AI 助手基于代码库提供建议，复杂问题建议等待维护者回复*",
+              "💡 *AI suggestions are based on the codebase. For complex issues, please wait for maintainer responses*"
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: message
+            });
+
+            console.log('✅ AI helper tip posted successfully');
