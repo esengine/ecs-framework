@@ -4,47 +4,87 @@ updates:
   - package-ecosystem: "npm"
     directory: "/packages/core"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+      interval: "monthly"  # 改为每月更新，减少干扰
+    open-pull-requests-limit: 3  # 减少同时打开的 PR 数量
     labels:
       - "dependencies"
       - "core"
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
+    groups:
+      # 将开发依赖打包在一起
+      dev-dependencies:
+        dependency-type: "development"
+      # 将生产依赖的 patch 更新打包在一起
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+          - "minor"
+    # 忽略频繁更新但不重要的包
+    ignore:
+      - dependency-name: "@types/*"
+        update-types: ["version-update:semver-patch"]
 
   # 编辑器应用依赖
   - package-ecosystem: "npm"
     directory: "/packages/editor-app"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 3
     labels:
       - "dependencies"
       - "editor"
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+          - "minor"
+    ignore:
+      - dependency-name: "@types/*"
+        update-types: ["version-update:semver-patch"]
 
   # 根目录依赖
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 3
     labels:
       - "dependencies"
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+          - "minor"
+    ignore:
+      - dependency-name: "@types/*"
+        update-types: ["version-update:semver-patch"]
 
-  # GitHub Actions
+  # GitHub Actions - 保持更新以获取安全修复
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 2
     labels:
       - "dependencies"
       - "github-actions"
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

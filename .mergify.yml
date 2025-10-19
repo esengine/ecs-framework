@@ -4,19 +4,118 @@ queue_rules:
       - check-success=CI
       - check-success=Commit Lint
 
+  # 开发依赖队列 - 只需要 Commit Lint 通过
+  - name: dev-dependencies
+    conditions:
+      - check-success=Commit Lint
+
 pull_request_rules:
-  # 自动合并 Dependabot 的更新
-  - name: 自动合并 Dependabot 更新
+  # 自动合并 Dependabot 开发依赖分组更新（风险低，允许 CI 失败）
+  - name: 自动合并 Dependabot 开发依赖
     conditions:
       - author=dependabot[bot]
+      - or:
+        - title~=(?i)dev.dependencies
+        - label=dependencies
+        - body~=(?i)development.dependencies
+      - check-success=Commit Lint
+      # 排除主要版本更新
+      - -title~=(?i)major
+    actions:
+      review:
+        type: APPROVE
+        message: |
+          🤖 自动批准开发依赖更新
+
+          开发依赖更新风险较低，即使测试失败也不影响生产环境。
+          如有问题会在后续开发中发现并修复。
+      queue:
+        name: dev-dependencies
+      label:
+        add:
+          - auto-merged
+
+  # 自动合并 Dependabot 生产依赖的 patch 更新（必须 CI 通过）
+  - name: 自动合并 Dependabot 生产依赖 patch 更新
+    conditions:
+      - author=dependabot[bot]
+      - or:
+        - title~=(?i)production.dependencies
+        - and:
+          - label=dependencies
+          - -body~=(?i)development.dependencies
+      - title~=(?i)patch
       - check-success=CI
       - check-success=Commit Lint
     actions:
       review:
         type: APPROVE
-        message: 自动批准 Dependabot 更新
+        message: 🤖 自动批准生产依赖 patch 更新（测试通过）
       queue:
         name: default
+      label:
+        add:
+          - auto-merged
+
+  # 自动合并 GitHub Actions 更新（风险低）
+  - name: 自动合并 GitHub Actions 更新
+    conditions:
+      - author=dependabot[bot]
+      - label=github-actions
+      - check-success=Commit Lint
+    actions:
+      review:
+        type: APPROVE
+        message: 🤖 自动批准 GitHub Actions 更新
+      queue:
+        name: dev-dependencies
+      label:
+        add:
+          - auto-merged
+
+  # 标记需要人工审核的重要更新
+  - name: 标记需要人工审核的生产依赖更新
+    conditions:
+      - author=dependabot[bot]
+      - or:
+        - title~=(?i)production.dependencies
+        - and:
+          - label=dependencies
+          - -body~=(?i)development.dependencies
+      - or:
+        - title~=(?i)minor
+        - title~=(?i)major
+        - -check-success=CI
+    actions:
+      label:
+        add:
+          - needs-manual-review
+      comment:
+        message: |
+          ⚠️ **需要人工审核**
+
+          此更新属于以下情况之一，建议人工审核：
+          - 生产依赖的 minor/major 版本更新
+          - CI 测试未通过
+
+          Please review this update manually.
+
+  # 自动关闭超过 30 天未合并的 Dependabot PR（避免堆积）
+  - name: 关闭过期的 Dependabot PR
+    conditions:
+      - author=dependabot[bot]
+      - updated-at<30 days ago
+      - -merged
+      - -closed
+    actions:
+      close:
+        message: |
+          🤖 自动关闭此 PR
+
+          此 PR 已超过 30 天未合并。Dependabot 会在下次运行时创建新的更新。
+          如果需要此更新，请手动更新依赖或等待下次自动更新。
+
+          This PR has been open for over 30 days. Dependabot will create a new update in the next run if needed.
 
   # 自动合并有 'automerge' 标签且测试通过的 PR
   - name: 自动合并标记的 PR

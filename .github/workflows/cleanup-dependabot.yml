@@ -1,0 +1,146 @@
+name: Cleanup Old Dependabot PRs
+
+# 手动触发的 workflow，用于清理堆积的 Dependabot PR
+on:
+  workflow_dispatch:
+    inputs:
+      days_old:
+        description: '关闭多少天前创建的 PR（默认 7 天）'
+        required: false
+        default: '7'
+      dry_run:
+        description: '试运行模式（true=仅显示，不关闭）'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: List and Close Old Dependabot PRs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const daysOld = parseInt('${{ github.event.inputs.days_old }}') || 7;
+            const dryRun = '${{ github.event.inputs.dry_run }}' === 'true';
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+            console.log(`🔍 查找超过 ${daysOld} 天的 Dependabot PR...`);
+            console.log(`📅 截止日期: ${cutoffDate.toISOString()}`);
+            console.log(`🏃 模式: ${dryRun ? '试运行（不会实际关闭）' : '实际执行'}`);
+            console.log('---');
+
+            // 获取所有 Dependabot PR
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+
+            const dependabotPRs = pulls.filter(pr =>
+              pr.user.login === 'dependabot[bot]' &&
+              new Date(pr.created_at) < cutoffDate
+            );
+
+            console.log(`📊 找到 ${dependabotPRs.length} 个符合条件的 Dependabot PR`);
+            console.log('');
+
+            if (dependabotPRs.length === 0) {
+              console.log('✅ 没有需要清理的 PR');
+              return;
+            }
+
+            // 按类型分组
+            const byType = {
+              dev: [],
+              prod: [],
+              actions: [],
+              other: []
+            };
+
+            for (const pr of dependabotPRs) {
+              const title = pr.title.toLowerCase();
+              const labels = pr.labels.map(l => l.name);
+
+              let type = 'other';
+              if (title.includes('dev-dependencies') || title.includes('development')) {
+                type = 'dev';
+              } else if (title.includes('production-dependencies')) {
+                type = 'prod';
+              } else if (labels.includes('github-actions')) {
+                type = 'actions';
+              }
+
+              byType[type].push(pr);
+            }
+
+            console.log('📋 PR 分类统计:');
+            console.log(`  🔧 开发依赖: ${byType.dev.length} 个`);
+            console.log(`  📦 生产依赖: ${byType.prod.length} 个`);
+            console.log(`  ⚙️  GitHub Actions: ${byType.actions.length} 个`);
+            console.log(`  ❓ 其他: ${byType.other.length} 个`);
+            console.log('');
+
+            // 处理每个 PR
+            for (const pr of dependabotPRs) {
+              const age = Math.floor((Date.now() - new Date(pr.created_at)) / (1000 * 60 * 60 * 24));
+
+              console.log(`${dryRun ? '🔍' : '🗑️ '} #${pr.number}: ${pr.title}`);
+              console.log(`   创建时间: ${pr.created_at} (${age} 天前)`);
+              console.log(`   链接: ${pr.html_url}`);
+
+              if (!dryRun) {
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  state: 'closed'
+                });
+
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: `🤖 **自动关闭旧的 Dependabot PR**
+
+此 PR 已超过 ${daysOld} 天未合并，已被自动关闭以清理积压。
+
+📌 **下一步：**
+- Dependabot 已配置为月度运行，届时会创建新的分组更新
+- 新的 Mergify 规则会智能处理不同类型的依赖更新
+- 开发依赖和 GitHub Actions 会自动合并（即使 CI 失败）
+- 生产依赖需要 CI 通过才会自动合并
+
+如果需要立即应用此更新，请手动更新依赖。
+
+---
+*此操作由仓库维护者手动触发的清理工作流执行*`
+                });
+
+                console.log('   ✅ 已关闭并添加说明');
+              } else {
+                console.log('   ℹ️  试运行模式 - 未执行操作');
+              }
+              console.log('');
+            }
+
+            console.log('---');
+            if (dryRun) {
+              console.log(`✨ 试运行完成！共发现 ${dependabotPRs.length} 个待清理的 PR`);
+              console.log('💡 要实际执行清理，请将 dry_run 参数设为 false 重新运行');
+            } else {
+              console.log(`✅ 清理完成！已关闭 ${dependabotPRs.length} 个 Dependabot PR`);
+            }
