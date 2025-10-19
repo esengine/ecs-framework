@@ -1,0 +1,73 @@
+name: AI Batch Analyze Issues
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '分析模式'
+        required: true
+        type: choice
+        options:
+          - 'recent' # 最近 10 个 issue
+          - 'open' # 所有打开的 issue
+          - 'all' # 所有 issue（慎用）
+        default: 'recent'
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Install GitHub CLI
+        run: |
+          gh --version || (curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh)
+
+      - name: Batch Analyze Issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MODE="${{ github.event.inputs.mode }}"
+
+          # 获取 issue 列表
+          if [ "$MODE" = "recent" ]; then
+            echo "📊 分析最近 10 个 issue..."
+            ISSUES=$(gh issue list --limit 10 --json number --jq '.[].number')
+          elif [ "$MODE" = "open" ]; then
+            echo "📊 分析所有打开的 issue..."
+            ISSUES=$(gh issue list --state open --json number --jq '.[].number')
+          else
+            echo "📊 分析所有 issue（这可能需要很长时间）..."
+            ISSUES=$(gh issue list --state all --limit 100 --json number --jq '.[].number')
+          fi
+
+          # 为每个 issue 添加 AI 分析评论
+          for issue_num in $ISSUES; do
+            echo "🤖 分析 Issue #$issue_num..."
+
+            # 获取 issue 内容
+            ISSUE_BODY=$(gh issue view $issue_num --json body --jq '.body')
+            ISSUE_TITLE=$(gh issue view $issue_num --json title --jq '.title')
+
+            # 添加触发评论
+            gh issue comment $issue_num --body "@ai-helper 请帮我分析这个 issue" || true
+
+            # 避免 API 限制
+            sleep 2
+          done
+
+          echo "✅ 批量分析完成！"
+          echo "查看结果：https://github.com/${{ github.repository }}/issues"

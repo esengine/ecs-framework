@@ -1,0 +1,160 @@
+name: Batch Label Issues
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '标签模式'
+        required: true
+        type: choice
+        options:
+          - 'recent' # 最近 20 个 issue
+          - 'open' # 所有打开的 issue
+          - 'unlabeled' # 只处理没有标签的 issue
+          - 'all' # 所有 issue（慎用）
+        default: 'recent'
+
+      skip_labeled:
+        description: '跳过已有标签的 issue'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  batch-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Batch Label Issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MODE="${{ github.event.inputs.mode }}"
+          SKIP_LABELED="${{ github.event.inputs.skip_labeled }}"
+
+          echo "📊 开始批量打标签..."
+          echo "模式: $MODE"
+          echo "跳过已标签: $SKIP_LABELED"
+
+          # 获取 issue 列表
+          if [ "$MODE" = "recent" ]; then
+            echo "📋 获取最近 20 个 issue..."
+            ISSUES=$(gh issue list --limit 20 --json number,labels,title,body --jq '.[] | {number, labels: [.labels[].name], title, body}')
+          elif [ "$MODE" = "open" ]; then
+            echo "📋 获取所有打开的 issue..."
+            ISSUES=$(gh issue list --state open --json number,labels,title,body --jq '.[] | {number, labels: [.labels[].name], title, body}')
+          elif [ "$MODE" = "unlabeled" ]; then
+            echo "📋 获取没有标签的 issue..."
+            ISSUES=$(gh issue list --state all --json number,labels,title,body --jq '.[] | select(.labels | length == 0) | {number, labels: [.labels[].name], title, body}')
+          else
+            echo "📋 获取所有 issue（限制 100 个）..."
+            ISSUES=$(gh issue list --state all --limit 100 --json number,labels,title,body --jq '.[] | {number, labels: [.labels[].name], title, body}')
+          fi
+
+          # 临时文件
+          echo "$ISSUES" > /tmp/issues.json
+
+          # 处理每个 issue
+          cat /tmp/issues.json | jq -c '.' | while read -r issue; do
+            ISSUE_NUM=$(echo "$issue" | jq -r '.number')
+            EXISTING_LABELS=$(echo "$issue" | jq -r '.labels | join(",")')
+            TITLE=$(echo "$issue" | jq -r '.title')
+            BODY=$(echo "$issue" | jq -r '.body')
+
+            echo ""
+            echo "🔍 处理 Issue #$ISSUE_NUM: $TITLE"
+            echo "   现有标签: $EXISTING_LABELS"
+
+            # 跳过已有标签的 issue
+            if [ "$SKIP_LABELED" = "true" ] && [ ! -z "$EXISTING_LABELS" ]; then
+              echo "   ⏭️  跳过（已有标签）"
+              continue
+            fi
+
+            # 分析内容并打标签
+            LABELS_TO_ADD=""
+
+            # 检测 bug
+            if echo "$TITLE $BODY" | grep -iE "(bug|错误|崩溃|crash|error|exception|问题|fix)" > /dev/null; then
+              LABELS_TO_ADD="$LABELS_TO_ADD bug"
+              echo "   🐛 检测到: bug"
+            fi
+
+            # 检测 feature request
+            if echo "$TITLE $BODY" | grep -iE "(feature|功能|enhancement|improve|优化|建议|新增|添加|add)" > /dev/null; then
+              LABELS_TO_ADD="$LABELS_TO_ADD enhancement"
+              echo "   ✨ 检测到: enhancement"
+            fi
+
+            # 检测 question
+            if echo "$TITLE $BODY" | grep -iE "(question|疑问|how to|如何|怎么|为什么|why|咨询|\?|？)" > /dev/null; then
+              LABELS_TO_ADD="$LABELS_TO_ADD question"
+              echo "   ❓ 检测到: question"
+            fi
+
+            # 检测 documentation
+            if echo "$TITLE $BODY" | grep -iE "(doc|文档|readme|guide|tutorial|教程|说明)" > /dev/null; then
+              LABELS_TO_ADD="$LABELS_TO_ADD documentation"
+              echo "   📖 检测到: documentation"
+            fi
+
+            # 检测 performance
+            if echo "$TITLE $BODY" | grep -iE "(performance|性能|slow|慢|lag|卡顿|optimize|优化)" > /dev/null; then
+              LABELS_TO_ADD="$LABELS_TO_ADD performance"
+              echo "   ⚡ 检测到: performance"
+            fi
+
+            # 检测 core
+            if echo "$TITLE $BODY" | grep -iE "(@esengine/ecs-framework|packages/core|core package|核心包)" > /dev/null; then
+              LABELS_TO_ADD="$LABELS_TO_ADD core"
+              echo "   🎯 检测到: core"
+            fi
+
+            # 检测 editor
+            if echo "$TITLE $BODY" | grep -iE "(editor|编辑器|tauri)" > /dev/null; then
+              LABELS_TO_ADD="$LABELS_TO_ADD editor"
+              echo "   🎨 检测到: editor"
+            fi
+
+            # 检测 network
+            if echo "$TITLE $BODY" | grep -iE "(network|网络|multiplayer|多人|同步)" > /dev/null; then
+              LABELS_TO_ADD="$LABELS_TO_ADD network"
+              echo "   🌐 检测到: network"
+            fi
+
+            # 检测 help wanted
+            if echo "$TITLE $BODY" | grep -iE "(help wanted|需要帮助|求助)" > /dev/null; then
+              LABELS_TO_ADD="$LABELS_TO_ADD help wanted"
+              echo "   🆘 检测到: help wanted"
+            fi
+
+            # 添加标签
+            if [ ! -z "$LABELS_TO_ADD" ]; then
+              echo "   ✅ 添加标签: $LABELS_TO_ADD"
+              for label in $LABELS_TO_ADD; do
+                gh issue edit $ISSUE_NUM --add-label "$label" 2>&1 | grep -v "already exists" || true
+              done
+              echo "   💬 添加说明评论..."
+              gh issue comment $ISSUE_NUM --body $'🤖 自动标签系统检测到此 issue 并添加了相关标签。如有误判，请告知维护者。\n\n🤖 Auto-labeling system detected and labeled this issue. Please let maintainers know if this is incorrect.' || true
+            else
+              echo "   ℹ️  未检测到明确类型"
+            fi
+
+            # 避免 API 限制
+            sleep 1
+          done
+
+          echo ""
+          echo "✅ 批量标签完成！"
+          echo "查看结果: https://github.com/${{ github.repository }}/issues"
