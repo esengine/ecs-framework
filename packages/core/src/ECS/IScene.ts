@@ -6,7 +6,10 @@ import { ComponentStorageManager } from './Core/ComponentStorage';
 import { QuerySystem } from './Core/QuerySystem';
 import { TypeSafeEventSystem } from './Core/EventSystem';
 import type { ReferenceTracker } from './Core/ReferenceTracker';
-import type { ServiceContainer } from '../Core/ServiceContainer';
+import type { ServiceContainer, ServiceType } from '../Core/ServiceContainer';
+import type { TypedQueryBuilder } from './Core/Query/TypedQuery';
+import type { SceneSerializationOptions, SceneDeserializationOptions } from './Serialization/SceneSerializer';
+import type { IncrementalSnapshot, IncrementalSerializationOptions } from './Serialization/IncrementalSerializer';
 
 /**
  * 场景接口定义
@@ -159,6 +162,140 @@ export interface IScene {
      * 获取实体处理器
      */
     getEntityProcessor<T extends EntitySystem>(type: new (...args: any[]) => T): T | null;
+
+    /**
+     * 根据ID查找实体
+     */
+    findEntityById(id: number): Entity | null;
+
+    /**
+     * 根据名称查找实体
+     */
+    getEntityByName(name: string): Entity | null;
+
+    /**
+     * 根据标签查找实体
+     */
+    getEntitiesByTag(tag: number): Entity[];
+
+    /**
+     * 批量销毁实体
+     */
+    destroyEntities(entities: Entity[]): void;
+
+    /**
+     * 查询拥有所有指定组件的实体
+     */
+    queryAll(...componentTypes: any[]): { entities: readonly Entity[] };
+
+    /**
+     * 查询拥有任意一个指定组件的实体
+     */
+    queryAny(...componentTypes: any[]): { entities: readonly Entity[] };
+
+    /**
+     * 查询不包含指定组件的实体
+     */
+    queryNone(...componentTypes: any[]): { entities: readonly Entity[] };
+
+    /**
+     * 创建类型安全的查询构建器
+     */
+    query(): TypedQueryBuilder;
+
+    /**
+     * 通过类型获取System实例
+     */
+    getSystem<T extends EntitySystem>(systemType: ServiceType<T>): T | null;
+
+    /**
+     * 批量注册EntitySystem到场景
+     */
+    registerSystems(systemTypes: Array<ServiceType<EntitySystem>>): EntitySystem[];
+
+    /**
+     * 添加系统到场景
+     */
+    addSystem(system: EntitySystem): EntitySystem;
+
+    /**
+     * 从场景中删除系统
+     */
+    removeSystem(system: EntitySystem): void;
+
+    /**
+     * 获取场景统计信息
+     */
+    getStats(): {
+        entityCount: number;
+        processorCount: number;
+        componentStorageStats: Map<string, any>;
+    };
+
+    /**
+     * 获取场景的调试信息
+     */
+    getDebugInfo(): {
+        name: string;
+        entityCount: number;
+        processorCount: number;
+        isRunning: boolean;
+        entities: Array<{
+            name: string;
+            id: number;
+            componentCount: number;
+            componentTypes: string[];
+        }>;
+        processors: Array<{
+            name: string;
+            updateOrder: number;
+            entityCount: number;
+        }>;
+        componentStats: Map<string, any>;
+    };
+
+    /**
+     * 序列化场景
+     */
+    serialize(options?: SceneSerializationOptions): string | Uint8Array;
+
+    /**
+     * 反序列化场景
+     */
+    deserialize(saveData: string | Uint8Array, options?: SceneDeserializationOptions): void;
+
+    /**
+     * 创建增量序列化的基础快照
+     */
+    createIncrementalSnapshot(options?: IncrementalSerializationOptions): void;
+
+    /**
+     * 增量序列化场景
+     */
+    serializeIncremental(options?: IncrementalSerializationOptions): IncrementalSnapshot;
+
+    /**
+     * 应用增量变更到场景
+     */
+    applyIncremental(
+        incremental: IncrementalSnapshot | string | Uint8Array,
+        componentRegistry?: Map<string, any>
+    ): void;
+
+    /**
+     * 更新增量快照基准
+     */
+    updateIncrementalSnapshot(options?: IncrementalSerializationOptions): void;
+
+    /**
+     * 清除增量快照
+     */
+    clearIncrementalSnapshot(): void;
+
+    /**
+     * 检查是否有增量快照
+     */
+    hasIncrementalSnapshot(): boolean;
 }
 
 /**
