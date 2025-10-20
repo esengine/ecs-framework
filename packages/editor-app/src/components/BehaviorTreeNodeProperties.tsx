@@ -1,0 +1,300 @@
+import React from 'react';
+import { NodeTemplate, PropertyDefinition } from '@esengine/behavior-tree';
+
+interface BehaviorTreeNodePropertiesProps {
+    selectedNode?: {
+        template: NodeTemplate;
+        data: Record<string, any>;
+    };
+    onPropertyChange?: (propertyName: string, value: any) => void;
+}
+
+/**
+ * 行为树节点属性编辑器
+ *
+ * 根据节点模板动态生成属性编辑界面
+ */
+export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProps> = ({
+    selectedNode,
+    onPropertyChange
+}) => {
+    if (!selectedNode) {
+        return (
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                color: '#666',
+                fontSize: '14px'
+            }}>
+                未选择节点
+            </div>
+        );
+    }
+
+    const { template, data } = selectedNode;
+
+    const handleChange = (propName: string, value: any) => {
+        onPropertyChange?.(propName, value);
+    };
+
+    const renderProperty = (prop: PropertyDefinition) => {
+        const value = data[prop.name] ?? prop.defaultValue;
+
+        switch (prop.type) {
+            case 'string':
+            case 'variable':
+                return (
+                    <input
+                        type="text"
+                        value={value || ''}
+                        onChange={(e) => handleChange(prop.name, e.target.value)}
+                        placeholder={prop.description}
+                        style={{
+                            width: '100%',
+                            padding: '6px',
+                            backgroundColor: '#3c3c3c',
+                            border: '1px solid #555',
+                            borderRadius: '3px',
+                            color: '#cccccc',
+                            fontSize: '13px'
+                        }}
+                    />
+                );
+
+            case 'number':
+                return (
+                    <input
+                        type="number"
+                        value={value ?? ''}
+                        onChange={(e) => handleChange(prop.name, parseFloat(e.target.value))}
+                        min={prop.min}
+                        max={prop.max}
+                        step={prop.step || 1}
+                        placeholder={prop.description}
+                        style={{
+                            width: '100%',
+                            padding: '6px',
+                            backgroundColor: '#3c3c3c',
+                            border: '1px solid #555',
+                            borderRadius: '3px',
+                            color: '#cccccc',
+                            fontSize: '13px'
+                        }}
+                    />
+                );
+
+            case 'boolean':
+                return (
+                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            checked={value || false}
+                            onChange={(e) => handleChange(prop.name, e.target.checked)}
+                            style={{ marginRight: '8px' }}
+                        />
+                        <span style={{ fontSize: '13px' }}>{prop.description || '启用'}</span>
+                    </label>
+                );
+
+            case 'select':
+                return (
+                    <select
+                        value={value || ''}
+                        onChange={(e) => handleChange(prop.name, e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '6px',
+                            backgroundColor: '#3c3c3c',
+                            border: '1px solid #555',
+                            borderRadius: '3px',
+                            color: '#cccccc',
+                            fontSize: '13px'
+                        }}
+                    >
+                        <option value="">请选择...</option>
+                        {prop.options?.map((opt, idx) => (
+                            <option key={idx} value={opt.value}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
+                );
+
+            case 'code':
+                return (
+                    <textarea
+                        value={value || ''}
+                        onChange={(e) => handleChange(prop.name, e.target.value)}
+                        placeholder={prop.description}
+                        rows={5}
+                        style={{
+                            width: '100%',
+                            padding: '6px',
+                            backgroundColor: '#3c3c3c',
+                            border: '1px solid #555',
+                            borderRadius: '3px',
+                            color: '#cccccc',
+                            fontSize: '13px',
+                            fontFamily: 'monospace',
+                            resize: 'vertical'
+                        }}
+                    />
+                );
+
+            case 'blackboard':
+                return (
+                    <div style={{ display: 'flex', gap: '5px' }}>
+                        <input
+                            type="text"
+                            value={value || ''}
+                            onChange={(e) => handleChange(prop.name, e.target.value)}
+                            placeholder="黑板变量名"
+                            style={{
+                                flex: 1,
+                                padding: '6px',
+                                backgroundColor: '#3c3c3c',
+                                border: '1px solid #555',
+                                borderRadius: '3px',
+                                color: '#cccccc',
+                                fontSize: '13px'
+                            }}
+                        />
+                        <button
+                            style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#0e639c',
+                                border: 'none',
+                                borderRadius: '3px',
+                                color: '#fff',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                            }}
+                        >
+                            选择
+                        </button>
+                    </div>
+                );
+
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <div style={{
+            height: '100%',
+            backgroundColor: '#1e1e1e',
+            color: '#cccccc',
+            fontFamily: 'sans-serif',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
+            {/* 节点信息 */}
+            <div style={{
+                padding: '15px',
+                borderBottom: '1px solid #333'
+            }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    marginBottom: '10px'
+                }}>
+                    {template.icon && (
+                        <span style={{ marginRight: '10px', fontSize: '24px' }}>
+                            {template.icon}
+                        </span>
+                    )}
+                    <div>
+                        <h3 style={{ margin: 0, fontSize: '16px' }}>{template.displayName}</h3>
+                        <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                            {template.category}
+                        </div>
+                    </div>
+                </div>
+                <div style={{ fontSize: '13px', color: '#999', lineHeight: '1.5' }}>
+                    {template.description}
+                </div>
+            </div>
+
+            {/* 属性列表 */}
+            <div style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '15px'
+            }}>
+                {template.properties.length === 0 ? (
+                    <div style={{ color: '#666', fontSize: '13px', textAlign: 'center', paddingTop: '20px' }}>
+                        此节点没有可配置的属性
+                    </div>
+                ) : (
+                    template.properties.map((prop, index) => (
+                        <div key={index} style={{ marginBottom: '20px' }}>
+                            <label style={{
+                                display: 'block',
+                                marginBottom: '8px',
+                                fontSize: '13px',
+                                fontWeight: 'bold',
+                                color: '#cccccc'
+                            }}>
+                                {prop.label}
+                                {prop.required && (
+                                    <span style={{ color: '#f48771', marginLeft: '4px' }}>*</span>
+                                )}
+                            </label>
+                            {renderProperty(prop)}
+                            {prop.description && prop.type !== 'boolean' && (
+                                <div style={{
+                                    marginTop: '5px',
+                                    fontSize: '11px',
+                                    color: '#666',
+                                    lineHeight: '1.4'
+                                }}>
+                                    {prop.description}
+                                </div>
+                            )}
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* 操作按钮 */}
+            <div style={{
+                padding: '15px',
+                borderTop: '1px solid #333',
+                display: 'flex',
+                gap: '10px'
+            }}>
+                <button
+                    style={{
+                        flex: 1,
+                        padding: '8px',
+                        backgroundColor: '#0e639c',
+                        border: 'none',
+                        borderRadius: '3px',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        fontSize: '13px'
+                    }}
+                >
+                    应用
+                </button>
+                <button
+                    style={{
+                        flex: 1,
+                        padding: '8px',
+                        backgroundColor: '#3c3c3c',
+                        border: 'none',
+                        borderRadius: '3px',
+                        color: '#cccccc',
+                        cursor: 'pointer',
+                        fontSize: '13px'
+                    }}
+                >
+                    重置
+                </button>
+            </div>
+        </div>
+    );
+};

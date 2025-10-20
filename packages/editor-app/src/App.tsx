@@ -4,6 +4,7 @@ import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, Entity
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
 import { ProfilerPlugin } from './plugins/ProfilerPlugin';
 import { EditorAppearancePlugin } from './plugins/EditorAppearancePlugin';
+import { BehaviorTreePlugin } from './plugins/BehaviorTreePlugin';
 import { StartupPage } from './components/StartupPage';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
@@ -16,6 +17,7 @@ import { SettingsWindow } from './components/SettingsWindow';
 import { AboutDialog } from './components/AboutDialog';
 import { ErrorDialog } from './components/ErrorDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
+import { BehaviorTreeWindow } from './components/BehaviorTreeWindow';
 import { Viewport } from './components/Viewport';
 import { MenuBar } from './components/MenuBar';
 import { DockContainer, DockablePanel } from './components/DockContainer';
@@ -57,6 +59,7 @@ function App() {
   const [showPortManager, setShowPortManager] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showBehaviorTreeEditor, setShowBehaviorTreeEditor] = useState(false);
   const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
   const [isRemoteConnected, setIsRemoteConnected] = useState(false);
   const [isProfilerMode, setIsProfilerMode] = useState(false);
@@ -180,12 +183,15 @@ function App() {
         await pluginMgr.installEditor(new SceneInspectorPlugin());
         await pluginMgr.installEditor(new ProfilerPlugin());
         await pluginMgr.installEditor(new EditorAppearancePlugin());
+        await pluginMgr.installEditor(new BehaviorTreePlugin());
 
         messageHub.subscribe('ui:openWindow', (data: any) => {
           if (data.windowId === 'profiler') {
             setShowProfiler(true);
           } else if (data.windowId === 'pluginManager') {
             setShowPluginManager(true);
+          } else if (data.windowId === 'behavior-tree-editor') {
+            setShowBehaviorTreeEditor(true);
           }
         });
 
@@ -719,6 +725,13 @@ function App() {
 
       {showAbout && (
         <AboutDialog onClose={() => setShowAbout(false)} locale={locale} />
+      )}
+
+      {showBehaviorTreeEditor && (
+        <BehaviorTreeWindow
+          isOpen={showBehaviorTreeEditor}
+          onClose={() => setShowBehaviorTreeEditor(false)}
+        />
       )}
 
       {errorDialog && (

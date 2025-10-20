@@ -40,3 +40,7 @@ export * from './BehaviorTreePlugin';
 // 辅助工具
 export * from './BehaviorTreeStarter';
 export * from './BehaviorTreeBuilder';
+
+// 序列化（编辑器支持）
+export * from './Serialization/BehaviorTreePersistence';
+export * from './Serialization/NodeTemplates';

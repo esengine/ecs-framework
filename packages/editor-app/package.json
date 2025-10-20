@@ -14,6 +14,7 @@
     "version": "node scripts/sync-version.js && git add src-tauri/tauri.conf.json"
   },
   "dependencies": {
+    "@esengine/behavior-tree": "file:../behavior-tree",
     "@esengine/ecs-framework": "file:../core",
     "@esengine/editor-core": "file:../editor-core",
     "@tauri-apps/api": "^2.2.0",
