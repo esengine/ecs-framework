@@ -67,7 +67,7 @@ export class NodeTemplates {
                 type: NodeType.Composite,
                 displayName: '序列',
                 category: '复合节点',
-                icon: '→',
+                icon: 'List',
                 description: '按顺序执行子节点，全部成功才成功',
                 color: '#4CAF50',
                 defaultConfig: {
@@ -80,7 +80,7 @@ export class NodeTemplates {
                 type: NodeType.Composite,
                 displayName: '选择器',
                 category: '复合节点',
-                icon: '?',
+                icon: 'GitBranch',
                 description: '按顺序执行子节点，任一成功则成功',
                 color: '#2196F3',
                 defaultConfig: {
@@ -93,7 +93,7 @@ export class NodeTemplates {
                 type: NodeType.Composite,
                 displayName: '并行',
                 category: '复合节点',
-                icon: '‖',
+                icon: 'Layers',
                 description: '同时执行所有子节点，全部成功才成功',
                 color: '#FF9800',
                 defaultConfig: {
@@ -106,7 +106,7 @@ export class NodeTemplates {
                 type: NodeType.Composite,
                 displayName: '并行选择器',
                 category: '复合节点',
-                icon: '‖?',
+                icon: 'Layers',
                 description: '同时执行所有子节点，任一成功则成功',
                 color: '#FF5722',
                 defaultConfig: {
@@ -119,7 +119,7 @@ export class NodeTemplates {
                 type: NodeType.Composite,
                 displayName: '随机序列',
                 category: '复合节点',
-                icon: '🎲→',
+                icon: 'Shuffle',
                 description: '随机顺序执行子节点，全部成功才成功',
                 color: '#9C27B0',
                 defaultConfig: {
@@ -132,7 +132,7 @@ export class NodeTemplates {
                 type: NodeType.Composite,
                 displayName: '随机选择器',
                 category: '复合节点',
-                icon: '🎲?',
+                icon: 'Shuffle',
                 description: '随机顺序执行子节点，任一成功则成功',
                 color: '#E91E63',
                 defaultConfig: {
@@ -153,7 +153,7 @@ export class NodeTemplates {
                 type: NodeType.Decorator,
                 displayName: '反转',
                 category: '装饰器',
-                icon: '!',
+                icon: 'RotateCcw',
                 description: '反转子节点的执行结果',
                 color: '#607D8B',
                 defaultConfig: {
@@ -166,7 +166,7 @@ export class NodeTemplates {
                 type: NodeType.Decorator,
                 displayName: '重复',
                 category: '装饰器',
-                icon: '↻',
+                icon: 'Repeat',
                 description: '重复执行子节点指定次数',
                 color: '#795548',
                 defaultConfig: {
@@ -196,7 +196,7 @@ export class NodeTemplates {
                 type: NodeType.Decorator,
                 displayName: '直到成功',
                 category: '装饰器',
-                icon: '✓',
+                icon: 'CheckCircle',
                 description: '重复执行直到子节点成功',
                 color: '#4CAF50',
                 defaultConfig: {
@@ -209,7 +209,7 @@ export class NodeTemplates {
                 type: NodeType.Decorator,
                 displayName: '直到失败',
                 category: '装饰器',
-                icon: '✗',
+                icon: 'XCircle',
                 description: '重复执行直到子节点失败',
                 color: '#F44336',
                 defaultConfig: {
@@ -222,7 +222,7 @@ export class NodeTemplates {
                 type: NodeType.Decorator,
                 displayName: '总是成功',
                 category: '装饰器',
-                icon: '✓✓',
+                icon: 'CheckCheck',
                 description: '无论子节点结果都返回成功',
                 color: '#8BC34A',
                 defaultConfig: {
@@ -235,7 +235,7 @@ export class NodeTemplates {
                 type: NodeType.Decorator,
                 displayName: '总是失败',
                 category: '装饰器',
-                icon: '✗✗',
+                icon: 'XCircle',
                 description: '无论子节点结果都返回失败',
                 color: '#E57373',
                 defaultConfig: {
@@ -248,7 +248,7 @@ export class NodeTemplates {
                 type: NodeType.Decorator,
                 displayName: '条件',
                 category: '装饰器',
-                icon: '?',
+                icon: 'HelpCircle',
                 description: '基于条件决定是否执行子节点',
                 color: '#03A9F4',
                 defaultConfig: {
@@ -271,7 +271,7 @@ export class NodeTemplates {
                 type: NodeType.Decorator,
                 displayName: '冷却',
                 category: '装饰器',
-                icon: '❄',
+                icon: 'Snowflake',
                 description: '冷却时间内阻止执行',
                 color: '#00BCD4',
                 defaultConfig: {
@@ -295,7 +295,7 @@ export class NodeTemplates {
                 type: NodeType.Decorator,
                 displayName: '超时',
                 category: '装饰器',
-                icon: '⏱',
+                icon: 'Timer',
                 description: '超时则返回失败',
                 color: '#FF5722',
                 defaultConfig: {
@@ -327,7 +327,7 @@ export class NodeTemplates {
                 type: NodeType.Action,
                 displayName: '等待',
                 category: '动作',
-                icon: '⏸',
+                icon: 'Clock',
                 description: '等待指定时间',
                 color: '#9E9E9E',
                 defaultConfig: {
@@ -352,7 +352,7 @@ export class NodeTemplates {
                 type: NodeType.Action,
                 displayName: '日志',
                 category: '动作',
-                icon: '📝',
+                icon: 'FileText',
                 description: '输出日志消息',
                 color: '#673AB7',
                 defaultConfig: {
@@ -394,7 +394,7 @@ export class NodeTemplates {
                 type: NodeType.Action,
                 displayName: '设置变量',
                 category: '动作',
-                icon: '=',
+                icon: 'Edit',
                 description: '设置黑板变量的值',
                 color: '#3F51B5',
                 defaultConfig: {
@@ -424,7 +424,7 @@ export class NodeTemplates {
                 type: NodeType.Action,
                 displayName: '修改变量',
                 category: '动作',
-                icon: '±',
+                icon: 'Calculator',
                 description: '对黑板变量执行数学操作',
                 color: '#009688',
                 defaultConfig: {
@@ -470,7 +470,7 @@ export class NodeTemplates {
                 type: NodeType.Action,
                 displayName: '自定义动作',
                 category: '动作',
-                icon: '⚙',
+                icon: 'Code',
                 description: '执行自定义代码',
                 color: '#FFC107',
                 defaultConfig: {
@@ -501,7 +501,7 @@ export class NodeTemplates {
                 type: NodeType.Condition,
                 displayName: '比较变量',
                 category: '条件',
-                icon: '≈',
+                icon: 'Equal',
                 description: '比较黑板变量的值',
                 color: '#00BCD4',
                 defaultConfig: {
@@ -554,7 +554,7 @@ export class NodeTemplates {
                 type: NodeType.Condition,
                 displayName: '检查变量存在',
                 category: '条件',
-                icon: '?',
+                icon: 'HelpCircle',
                 description: '检查黑板变量是否存在',
                 color: '#4CAF50',
                 defaultConfig: {
@@ -590,7 +590,7 @@ export class NodeTemplates {
                 type: NodeType.Condition,
                 displayName: '随机概率',
                 category: '条件',
-                icon: '🎲',
+                icon: 'Dices',
                 description: '按概率返回成功或失败',
                 color: '#E91E63',
                 defaultConfig: {
@@ -615,7 +615,7 @@ export class NodeTemplates {
                 type: NodeType.Condition,
                 displayName: '自定义条件',
                 category: '条件',
-                icon: '⚙',
+                icon: 'Settings',
                 description: '执行自定义条件代码',
                 color: '#FF9800',
                 defaultConfig: {

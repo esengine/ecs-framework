@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TreePine, X, Settings, Clipboard } from 'lucide-react';
 import { BehaviorTreeEditor } from './BehaviorTreeEditor';
 import { BehaviorTreeNodePalette } from './BehaviorTreeNodePalette';
 import { BehaviorTreeNodeProperties } from './BehaviorTreeNodeProperties';
 import { BehaviorTreeBlackboard } from './BehaviorTreeBlackboard';
+import { useBehaviorTreeStore } from '../stores/behaviorTreeStore';
 import type { NodeTemplate } from '@esengine/behavior-tree';
 
 interface BehaviorTreeWindowProps {
@@ -18,7 +20,11 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     isOpen,
     onClose
 }) => {
+    const { t } = useTranslation();
+    const { nodes, updateNodes } = useBehaviorTreeStore();
+
     const [selectedNode, setSelectedNode] = useState<{
+        id: string;
         template: NodeTemplate;
         data: Record<string, any>;
     } | undefined>();
@@ -30,6 +36,16 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     });
 
     const [rightPanelTab, setRightPanelTab] = useState<'properties' | 'blackboard'>('blackboard');
+
+    // 监听节点列表变化，如果选中的节点被删除，清除选中状态
+    useEffect(() => {
+        if (selectedNode && selectedNode.id) {
+            const nodeStillExists = nodes.some(node => node.id === selectedNode.id);
+            if (!nodeStillExists) {
+                setSelectedNode(undefined);
+            }
+        }
+    }, [nodes, selectedNode]);
 
     const handleVariableChange = (key: string, value: any) => {
         setBlackboardVariables(prev => ({ ...prev, [key]: value }));
@@ -43,6 +59,17 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
         setBlackboardVariables(prev => {
             const newVars = { ...prev };
             delete newVars[key];
+            return newVars;
+        });
+    };
+
+    const handleVariableRename = (oldKey: string, newKey: string) => {
+        if (oldKey === newKey) return;
+        setBlackboardVariables(prev => {
+            const newVars = { ...prev };
+            const value = newVars[oldKey];
+            delete newVars[oldKey];
+            newVars[newKey] = value;
             return newVars;
         });
     };
@@ -100,7 +127,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                         fontWeight: 'bold'
                     }}>
                         <TreePine size={24} />
-                        <span>Behavior Tree Editor</span>
+                        <span>{t('behaviorTree.title')}</span>
                     </div>
                     <button
                         onClick={onClose}
@@ -124,7 +151,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                         }}
                     >
                         <X size={16} />
-                        Close
+                        {t('behaviorTree.close')}
                     </button>
                 </div>
 
@@ -152,7 +179,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                             fontSize: '14px',
                             fontWeight: 'bold'
                         }}>
-                            Node Palette
+                            {t('behaviorTree.nodePalette')}
                         </div>
                         <div style={{
                             flex: 1,
@@ -162,6 +189,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                             <BehaviorTreeNodePalette
                                 onNodeSelect={(template) => {
                                     setSelectedNode({
+                                        id: '',
                                         template,
                                         data: { ...template.defaultConfig }
                                     });
@@ -180,9 +208,47 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                     }}>
                         <BehaviorTreeEditor
                             onNodeSelect={(node) => {
+                                let template = node.template;
+                                let data = node.data;
+
+                                // 如果是黑板变量节点，动态生成属性
+                                if (node.data.nodeType === 'blackboard-variable') {
+                                    const varName = node.data.variableName || '';
+                                    const varValue = blackboardVariables[varName];
+                                    const varType = typeof varValue === 'number' ? 'number' :
+                                                   typeof varValue === 'boolean' ? 'boolean' : 'string';
+
+                                    data = {
+                                        ...node.data,
+                                        __blackboardValue: varValue
+                                    };
+
+                                    template = {
+                                        ...node.template,
+                                        properties: [
+                                            {
+                                                name: 'variableName',
+                                                label: t('behaviorTree.variableName'),
+                                                type: 'variable',
+                                                defaultValue: varName,
+                                                description: t('behaviorTree.variableName'),
+                                                required: true
+                                            },
+                                            {
+                                                name: '__blackboardValue',
+                                                label: t('behaviorTree.currentValue'),
+                                                type: varType,
+                                                defaultValue: varValue,
+                                                description: t('behaviorTree.currentValue')
+                                            }
+                                        ]
+                                    };
+                                }
+
                                 setSelectedNode({
-                                    template: node.template,
-                                    data: node.data
+                                    id: node.id,
+                                    template,
+                                    data
                                 });
                             }}
                             onNodeCreate={(template, position) => {
@@ -226,7 +292,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                                 }}
                             >
                                 <Settings size={16} />
-                                Properties
+                                {t('behaviorTree.properties')}
                             </button>
                             <button
                                 onClick={() => setRightPanelTab('blackboard')}
@@ -248,7 +314,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                                 }}
                             >
                                 <Clipboard size={16} />
-                                Blackboard
+                                {t('behaviorTree.blackboard')}
                             </button>
                         </div>
 
@@ -259,13 +325,99 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                                     selectedNode={selectedNode}
                                     onPropertyChange={(propertyName, value) => {
                                         if (selectedNode) {
-                                            setSelectedNode({
-                                                ...selectedNode,
-                                                data: {
-                                                    ...selectedNode.data,
-                                                    [propertyName]: value
+                                            // 如果是黑板变量节点的值修改
+                                            if (selectedNode.data.nodeType === 'blackboard-variable' && propertyName === '__blackboardValue') {
+                                                const varName = selectedNode.data.variableName;
+                                                if (varName) {
+                                                    handleVariableChange(varName, value);
+                                                    setSelectedNode({
+                                                        ...selectedNode,
+                                                        data: {
+                                                            ...selectedNode.data,
+                                                            __blackboardValue: value
+                                                        }
+                                                    });
                                                 }
-                                            });
+                                                return;
+                                            }
+
+                                            // 如果修改的是黑板变量的名称
+                                            if (selectedNode.data.nodeType === 'blackboard-variable' && propertyName === 'variableName') {
+                                                const newVarValue = blackboardVariables[value];
+                                                const newVarType = typeof newVarValue === 'number' ? 'number' :
+                                                                  typeof newVarValue === 'boolean' ? 'boolean' : 'string';
+
+                                                updateNodes(nodes => nodes.map(node => {
+                                                    if (node.id === selectedNode.id) {
+                                                        return {
+                                                            ...node,
+                                                            data: {
+                                                                ...node.data,
+                                                                [propertyName]: value
+                                                            },
+                                                            template: {
+                                                                ...node.template,
+                                                                displayName: value
+                                                            }
+                                                        };
+                                                    }
+                                                    return node;
+                                                }));
+
+                                                const updatedTemplate = {
+                                                    ...selectedNode.template,
+                                                    displayName: value,
+                                                    properties: [
+                                                        {
+                                                            name: 'variableName',
+                                                            label: t('behaviorTree.variableName'),
+                                                            type: 'variable' as const,
+                                                            defaultValue: value,
+                                                            description: t('behaviorTree.variableName'),
+                                                            required: true
+                                                        },
+                                                        {
+                                                            name: '__blackboardValue',
+                                                            label: t('behaviorTree.currentValue'),
+                                                            type: newVarType as 'string' | 'number' | 'boolean',
+                                                            defaultValue: newVarValue,
+                                                            description: t('behaviorTree.currentValue')
+                                                        }
+                                                    ]
+                                                };
+
+                                                setSelectedNode({
+                                                    ...selectedNode,
+                                                    template: updatedTemplate,
+                                                    data: {
+                                                        ...selectedNode.data,
+                                                        [propertyName]: value,
+                                                        __blackboardValue: newVarValue
+                                                    }
+                                                });
+                                            } else {
+                                                // 普通属性修改
+                                                updateNodes(nodes => nodes.map(node => {
+                                                    if (node.id === selectedNode.id) {
+                                                        return {
+                                                            ...node,
+                                                            data: {
+                                                                ...node.data,
+                                                                [propertyName]: value
+                                                            }
+                                                        };
+                                                    }
+                                                    return node;
+                                                }));
+
+                                                setSelectedNode({
+                                                    ...selectedNode,
+                                                    data: {
+                                                        ...selectedNode.data,
+                                                        [propertyName]: value
+                                                    }
+                                                });
+                                            }
                                         }
                                     }}
                                 />
@@ -275,6 +427,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                                     onVariableChange={handleVariableChange}
                                     onVariableAdd={handleVariableAdd}
                                     onVariableDelete={handleVariableDelete}
+                                    onVariableRename={handleVariableRename}
                                 />
                             )}
                         </div>

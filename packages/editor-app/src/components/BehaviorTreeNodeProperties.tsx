@@ -1,5 +1,20 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { NodeTemplate, PropertyDefinition } from '@esengine/behavior-tree';
+import {
+    List, GitBranch, Layers, Shuffle,
+    RotateCcw, Repeat, CheckCircle, XCircle, CheckCheck, HelpCircle, Snowflake, Timer,
+    Clock, FileText, Edit, Calculator, Code,
+    Equal, Dices, Settings, Database,
+    LucideIcon
+} from 'lucide-react';
+
+const iconMap: Record<string, LucideIcon> = {
+    List, GitBranch, Layers, Shuffle,
+    RotateCcw, Repeat, CheckCircle, XCircle, CheckCheck, HelpCircle, Snowflake, Timer,
+    Clock, FileText, Edit, Calculator, Code,
+    Equal, Dices, Settings, Database
+};
 
 interface BehaviorTreeNodePropertiesProps {
     selectedNode?: {
@@ -18,6 +33,8 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
     selectedNode,
     onPropertyChange
 }) => {
+    const { t } = useTranslation();
+
     if (!selectedNode) {
         return (
             <div style={{
@@ -28,7 +45,7 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
                 color: '#666',
                 fontSize: '14px'
             }}>
-                未选择节点
+                {t('behaviorTree.noNodeSelected')}
             </div>
         );
     }
@@ -201,11 +218,20 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
                     alignItems: 'center',
                     marginBottom: '10px'
                 }}>
-                    {template.icon && (
-                        <span style={{ marginRight: '10px', fontSize: '24px' }}>
-                            {template.icon}
-                        </span>
-                    )}
+                    {template.icon && (() => {
+                        const IconComponent = iconMap[template.icon];
+                        return IconComponent ? (
+                            <IconComponent
+                                size={24}
+                                color={template.color || '#cccccc'}
+                                style={{ marginRight: '10px' }}
+                            />
+                        ) : (
+                            <span style={{ marginRight: '10px', fontSize: '24px' }}>
+                                {template.icon}
+                            </span>
+                        );
+                    })()}
                     <div>
                         <h3 style={{ margin: 0, fontSize: '16px' }}>{template.displayName}</h3>
                         <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
@@ -226,7 +252,7 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
             }}>
                 {template.properties.length === 0 ? (
                     <div style={{ color: '#666', fontSize: '13px', textAlign: 'center', paddingTop: '20px' }}>
-                        此节点没有可配置的属性
+                        {t('behaviorTree.noConfigurableProperties')}
                     </div>
                 ) : (
                     template.properties.map((prop, index) => (
@@ -278,7 +304,7 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
                         fontSize: '13px'
                     }}
                 >
-                    应用
+                    {t('behaviorTree.apply')}
                 </button>
                 <button
                     style={{
@@ -292,7 +318,7 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
                         fontSize: '13px'
                     }}
                 >
-                    重置
+                    {t('behaviorTree.reset')}
                 </button>
             </div>
         </div>

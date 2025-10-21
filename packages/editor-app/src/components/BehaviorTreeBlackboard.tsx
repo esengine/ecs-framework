@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clipboard } from 'lucide-react';
+import { Clipboard, Edit2, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface BlackboardVariable {
     key: string;
@@ -12,6 +12,7 @@ interface BehaviorTreeBlackboardProps {
     onVariableChange: (key: string, value: any) => void;
     onVariableAdd: (key: string, value: any, type: BlackboardVariable['type']) => void;
     onVariableDelete: (key: string) => void;
+    onVariableRename?: (oldKey: string, newKey: string) => void;
 }
 
 /**
@@ -23,14 +24,18 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
     variables,
     onVariableChange,
     onVariableAdd,
-    onVariableDelete
+    onVariableDelete,
+    onVariableRename
 }) => {
     const [isAdding, setIsAdding] = useState(false);
     const [newKey, setNewKey] = useState('');
     const [newValue, setNewValue] = useState('');
     const [newType, setNewType] = useState<BlackboardVariable['type']>('string');
     const [editingKey, setEditingKey] = useState<string | null>(null);
+    const [editingNewKey, setEditingNewKey] = useState('');
     const [editValue, setEditValue] = useState('');
+    const [editType, setEditType] = useState<BlackboardVariable['type']>('string');
+    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
     const handleAddVariable = () => {
         if (!newKey.trim()) return;
@@ -56,16 +61,22 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
 
     const handleStartEdit = (key: string, value: any) => {
         setEditingKey(key);
+        setEditingNewKey(key);
+        const currentType = getVariableType(value);
+        setEditType(currentType);
         setEditValue(typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value));
     };
 
-    const handleSaveEdit = (key: string, type: BlackboardVariable['type']) => {
+    const handleSaveEdit = (key: string) => {
+        const newKey = editingNewKey.trim();
+        if (!newKey) return;
+
         let parsedValue: any = editValue;
-        if (type === 'number') {
+        if (editType === 'number') {
             parsedValue = parseFloat(editValue) || 0;
-        } else if (type === 'boolean') {
-            parsedValue = editValue === 'true';
-        } else if (type === 'object') {
+        } else if (editType === 'boolean') {
+            parsedValue = editValue === 'true' || editValue === '1';
+        } else if (editType === 'object') {
             try {
                 parsedValue = JSON.parse(editValue);
             } catch {
@@ -73,8 +84,23 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
             }
         }
 
-        onVariableChange(key, parsedValue);
+        if (newKey !== key && onVariableRename) {
+            onVariableRename(key, newKey);
+        }
+        onVariableChange(newKey, parsedValue);
         setEditingKey(null);
+    };
+
+    const toggleGroup = (groupName: string) => {
+        setCollapsedGroups(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(groupName)) {
+                newSet.delete(groupName);
+            } else {
+                newSet.add(groupName);
+            }
+            return newSet;
+        });
     };
 
     const getVariableType = (value: any): BlackboardVariable['type'] => {
@@ -85,6 +111,27 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
     };
 
     const variableEntries = Object.entries(variables);
+
+    const groupedVariables: Record<string, Array<{ fullKey: string; varName: string; value: any }>> = variableEntries.reduce((groups, [key, value]) => {
+        const parts = key.split('.');
+        const groupName = (parts.length > 1 && parts[0]) ? parts[0] : 'default';
+        const varName = parts.length > 1 ? parts.slice(1).join('.') : key;
+
+        if (!groups[groupName]) {
+            groups[groupName] = [];
+        }
+        const group = groups[groupName];
+        if (group) {
+            group.push({ fullKey: key, varName, value });
+        }
+        return groups;
+    }, {} as Record<string, Array<{ fullKey: string; varName: string; value: any }>>);
+
+    const groupNames = Object.keys(groupedVariables).sort((a, b) => {
+        if (a === 'default') return 1;
+        if (b === 'default') return -1;
+        return a.localeCompare(b);
+    });
 
     return (
         <div style={{
@@ -162,110 +209,168 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
                     </div>
                 )}
 
-                {variableEntries.map(([key, value]) => {
+                {groupNames.map(groupName => {
+                    const isCollapsed = collapsedGroups.has(groupName);
+                    const groupVars = groupedVariables[groupName];
+
+                    if (!groupVars) return null;
+
+                    return (
+                        <div key={groupName} style={{ marginBottom: '8px' }}>
+                            {groupName !== 'default' && (
+                                <div
+                                    onClick={() => toggleGroup(groupName)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '4px 6px',
+                                        backgroundColor: '#252525',
+                                        borderRadius: '3px',
+                                        cursor: 'pointer',
+                                        marginBottom: '4px',
+                                        userSelect: 'none'
+                                    }}
+                                >
+                                    {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                                    <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: 'bold',
+                                        color: '#888'
+                                    }}>
+                                        {groupName} ({groupVars.length})
+                                    </span>
+                                </div>
+                            )}
+
+                            {!isCollapsed && groupVars.map(({ fullKey: key, varName, value }) => {
                     const type = getVariableType(value);
                     const isEditing = editingKey === key;
+
+                    const handleDragStart = (e: React.DragEvent) => {
+                        const variableData = {
+                            variableName: key,
+                            variableValue: value,
+                            variableType: type
+                        };
+                        e.dataTransfer.setData('application/blackboard-variable', JSON.stringify(variableData));
+                        e.dataTransfer.effectAllowed = 'copy';
+                    };
+
+                    const typeColor =
+                        type === 'number' ? '#4ec9b0' :
+                        type === 'boolean' ? '#569cd6' :
+                        type === 'object' ? '#ce9178' : '#d4d4d4';
+
+                    const displayValue = type === 'object' ?
+                        JSON.stringify(value) :
+                        String(value);
+
+                    const truncatedValue = displayValue.length > 30 ?
+                        displayValue.substring(0, 30) + '...' :
+                        displayValue;
 
                     return (
                         <div
                             key={key}
+                            draggable={!isEditing}
+                            onDragStart={handleDragStart}
                             style={{
-                                marginBottom: '10px',
-                                padding: '10px',
+                                marginBottom: '6px',
+                                padding: '6px 8px',
                                 backgroundColor: '#2d2d2d',
-                                borderRadius: '4px',
-                                borderLeft: `3px solid ${
-                                    type === 'number' ? '#4ec9b0' :
-                                    type === 'boolean' ? '#569cd6' :
-                                    type === 'object' ? '#ce9178' : '#d4d4d4'
-                                }`
+                                borderRadius: '3px',
+                                borderLeft: `3px solid ${typeColor}`,
+                                cursor: isEditing ? 'default' : 'grab'
                             }}
                         >
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: '6px'
-                            }}>
-                                <div style={{
-                                    fontSize: '13px',
-                                    fontWeight: 'bold',
-                                    color: '#9cdcfe'
-                                }}>
-                                    {key}
-                                </div>
-                                <div style={{ display: 'flex', gap: '5px' }}>
-                                    {!isEditing && (
-                                        <button
-                                            onClick={() => handleStartEdit(key, value)}
-                                            style={{
-                                                padding: '3px 8px',
-                                                backgroundColor: '#3c3c3c',
-                                                border: 'none',
-                                                borderRadius: '2px',
-                                                color: '#ccc',
-                                                cursor: 'pointer',
-                                                fontSize: '11px'
-                                            }}
-                                        >
-                                            Edit
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => onVariableDelete(key)}
-                                        style={{
-                                            padding: '3px 8px',
-                                            backgroundColor: '#f44336',
-                                            border: 'none',
-                                            borderRadius: '2px',
-                                            color: '#fff',
-                                            cursor: 'pointer',
-                                            fontSize: '11px'
-                                        }}
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div style={{
-                                fontSize: '11px',
-                                color: '#666',
-                                marginBottom: '6px'
-                            }}>
-                                Type: {type}
-                            </div>
-
                             {isEditing ? (
                                 <div>
+                                    <div style={{
+                                        fontSize: '10px',
+                                        color: '#666',
+                                        marginBottom: '4px'
+                                    }}>
+                                        Name
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={editingNewKey}
+                                        onChange={(e) => setEditingNewKey(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '4px',
+                                            marginBottom: '4px',
+                                            backgroundColor: '#1e1e1e',
+                                            border: '1px solid #3c3c3c',
+                                            borderRadius: '2px',
+                                            color: '#9cdcfe',
+                                            fontSize: '11px',
+                                            fontFamily: 'monospace'
+                                        }}
+                                        placeholder="Variable name (e.g., player.health)"
+                                    />
+                                    <div style={{
+                                        fontSize: '10px',
+                                        color: '#666',
+                                        marginBottom: '4px'
+                                    }}>
+                                        Type
+                                    </div>
+                                    <select
+                                        value={editType}
+                                        onChange={(e) => setEditType(e.target.value as BlackboardVariable['type'])}
+                                        style={{
+                                            width: '100%',
+                                            padding: '4px',
+                                            marginBottom: '4px',
+                                            backgroundColor: '#1e1e1e',
+                                            border: '1px solid #3c3c3c',
+                                            borderRadius: '2px',
+                                            color: '#cccccc',
+                                            fontSize: '10px'
+                                        }}
+                                    >
+                                        <option value="string">String</option>
+                                        <option value="number">Number</option>
+                                        <option value="boolean">Boolean</option>
+                                        <option value="object">Object (JSON)</option>
+                                    </select>
+                                    <div style={{
+                                        fontSize: '10px',
+                                        color: '#666',
+                                        marginBottom: '4px'
+                                    }}>
+                                        Value
+                                    </div>
                                     <textarea
                                         value={editValue}
                                         onChange={(e) => setEditValue(e.target.value)}
                                         style={{
                                             width: '100%',
-                                            minHeight: type === 'object' ? '80px' : '30px',
-                                            padding: '6px',
+                                            minHeight: editType === 'object' ? '60px' : '24px',
+                                            padding: '4px',
                                             backgroundColor: '#1e1e1e',
                                             border: '1px solid #0e639c',
-                                            borderRadius: '3px',
+                                            borderRadius: '2px',
                                             color: '#cccccc',
-                                            fontSize: '12px',
+                                            fontSize: '11px',
                                             fontFamily: 'monospace',
                                             resize: 'vertical',
-                                            marginBottom: '6px'
+                                            marginBottom: '4px'
                                         }}
                                     />
-                                    <div style={{ display: 'flex', gap: '5px' }}>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
                                         <button
-                                            onClick={() => handleSaveEdit(key, type)}
+                                            onClick={() => handleSaveEdit(key)}
                                             style={{
-                                                padding: '4px 12px',
+                                                padding: '3px 8px',
                                                 backgroundColor: '#0e639c',
                                                 border: 'none',
-                                                borderRadius: '3px',
+                                                borderRadius: '2px',
                                                 color: '#fff',
                                                 cursor: 'pointer',
-                                                fontSize: '11px'
+                                                fontSize: '10px'
                                             }}
                                         >
                                             Save
@@ -273,13 +378,13 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
                                         <button
                                             onClick={() => setEditingKey(null)}
                                             style={{
-                                                padding: '4px 12px',
+                                                padding: '3px 8px',
                                                 backgroundColor: '#3c3c3c',
                                                 border: 'none',
-                                                borderRadius: '3px',
+                                                borderRadius: '2px',
                                                 color: '#ccc',
                                                 cursor: 'pointer',
-                                                fontSize: '11px'
+                                                fontSize: '10px'
                                             }}
                                         >
                                             Cancel
@@ -288,19 +393,81 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
                                 </div>
                             ) : (
                                 <div style={{
-                                    padding: '6px',
-                                    backgroundColor: '#1e1e1e',
-                                    borderRadius: '3px',
-                                    fontSize: '12px',
-                                    fontFamily: 'monospace',
-                                    color: type === 'number' ? '#4ec9b0' :
-                                          type === 'boolean' ? '#569cd6' :
-                                          type === 'object' ? '#ce9178' : '#d4d4d4',
-                                    wordBreak: 'break-all'
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    gap: '8px'
                                 }}>
-                                    {type === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{
+                                            fontSize: '11px',
+                                            color: '#9cdcfe',
+                                            fontWeight: 'bold',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}>
+                                            {varName} <span style={{
+                                                color: '#666',
+                                                fontWeight: 'normal',
+                                                fontSize: '10px'
+                                            }}>({type})</span>
+                                        </div>
+                                        <div style={{
+                                            fontSize: '10px',
+                                            fontFamily: 'monospace',
+                                            color: typeColor,
+                                            marginTop: '2px',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }} title={displayValue}>
+                                            {truncatedValue}
+                                        </div>
+                                    </div>
+                                    <div style={{
+                                        display: 'flex',
+                                        gap: '2px',
+                                        flexShrink: 0
+                                    }}>
+                                        <button
+                                            onClick={() => handleStartEdit(key, value)}
+                                            style={{
+                                                padding: '2px',
+                                                backgroundColor: 'transparent',
+                                                border: 'none',
+                                                color: '#ccc',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}
+                                            title="Edit"
+                                        >
+                                            <Edit2 size={12} />
+                                        </button>
+                                        <button
+                                            onClick={() => onVariableDelete(key)}
+                                            style={{
+                                                padding: '2px',
+                                                backgroundColor: 'transparent',
+                                                border: 'none',
+                                                color: '#f44336',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}
+                                            title="Delete"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
+                                    </div>
                                 </div>
                             )}
+                        </div>
+                    );
+                            })}
                         </div>
                     );
                 })}
