@@ -4,27 +4,12 @@
 [submodule "thirdparty/admin-backend"]
 	path = thirdparty/admin-backend
 	url = https://github.com/esengine/admin-backend.git
-[submodule "extensions/cocos/cocos-ecs/extensions/cocos-ecs-extension"]
-	path = extensions/cocos/cocos-ecs/extensions/cocos-ecs-extension
-	url = https://github.com/esengine/cocos-ecs-extension.git
-[submodule "extensions/cocos/cocos-ecs/extensions/behaviour-tree"]
-	path = extensions/cocos/cocos-ecs/extensions/behaviour-tree
-	url = https://github.com/esengine/behaviour-tree.git
-[submodule "extensions/cocos/cocos-ecs/extensions/cocos-terrain-gen"]
-	path = extensions/cocos/cocos-ecs/extensions/cocos-terrain-gen
-	url = https://github.com/esengine/cocos-terrain-gen.git
-[submodule "extensions/cocos/cocos-ecs/extensions/mvvm-designer"]
-	path = extensions/cocos/cocos-ecs/extensions/mvvm-designer
-	url = https://github.com/esengine/mvvm-designer.git
 [submodule "thirdparty/mvvm-ui-framework"]
 	path = thirdparty/mvvm-ui-framework
 	url = https://github.com/esengine/mvvm-ui-framework.git
 [submodule "thirdparty/cocos-nexus"]
 	path = thirdparty/cocos-nexus
 	url = https://github.com/esengine/cocos-nexus.git
-[submodule "extensions/cocos/cocos-ecs/extensions/utilityai_designer"]
-	path = extensions/cocos/cocos-ecs/extensions/utilityai_designer
-	url = https://github.com/esengine/utilityai_designer.git
 [submodule "thirdparty/ecs-astar"]
 	path = thirdparty/ecs-astar
 	url = https://github.com/esengine/ecs-astar.git
