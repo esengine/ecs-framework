@@ -73,7 +73,10 @@
             "updater:default",
             "updater:allow-check",
             "updater:allow-download",
-            "updater:allow-install"
+            "updater:allow-install",
+            "fs:default",
+            "fs:allow-read-text-file",
+            "fs:allow-write-text-file"
           ]
         }
       ]
@@ -82,6 +85,9 @@
   "plugins": {
     "shell": {
       "open": true
+    },
+    "fs": {
+      "requireLiteralLeadingDot": false
     },
     "updater": {
       "active": true,

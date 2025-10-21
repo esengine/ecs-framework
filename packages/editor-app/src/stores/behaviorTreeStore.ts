@@ -91,6 +91,10 @@ interface BehaviorTreeState {
 
     // 强制更新
     triggerForceUpdate: () => void;
+
+    // 数据导出/导入
+    exportToJSON: (metadata: { name: string; description: string }, blackboard: Record<string, any>) => string;
+    importFromJSON: (json: string) => { blackboard: Record<string, any> };
 }
 
 const ROOT_NODE_ID = 'root-node';
@@ -219,6 +223,39 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
 
     // 强制更新
     triggerForceUpdate: () => set((state: BehaviorTreeState) => ({ forceUpdateCounter: state.forceUpdateCounter + 1 })),
+
+    exportToJSON: (metadata: { name: string; description: string }, blackboard: Record<string, any>) => {
+        const state = get();
+        const now = new Date().toISOString();
+        const data = {
+            version: '1.0.0',
+            metadata: {
+                name: metadata.name,
+                description: metadata.description,
+                createdAt: now,
+                modifiedAt: now
+            },
+            nodes: state.nodes,
+            connections: state.connections,
+            blackboard: blackboard,
+            canvasState: {
+                offset: state.canvasOffset,
+                scale: state.canvasScale
+            }
+        };
+        return JSON.stringify(data, null, 2);
+    },
+
+    importFromJSON: (json: string) => {
+        const data = JSON.parse(json);
+        set({
+            nodes: data.nodes || [],
+            connections: data.connections || [],
+            canvasOffset: data.canvasState?.offset || { x: 0, y: 0 },
+            canvasScale: data.canvasState?.scale || 1
+        });
+        return { blackboard: data.blackboard || {} };
+    }
 }));
 
 export type { BehaviorTreeNode, Connection };

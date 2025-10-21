@@ -1,0 +1,229 @@
+.flexlayout-dock-container {
+  width: 100%;
+  height: 100%;
+  background: #1e1e1e;
+  position: relative;
+  overflow: hidden;
+}
+
+.flexlayout__layout {
+  background: #1e1e1e;
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.flexlayout__tabset {
+  background: #252526;
+}
+
+.flexlayout__tabset_header {
+  background: #2d2d30;
+  border-bottom: 1px solid #3e3e42;
+  height: 32px;
+  min-height: 32px;
+}
+
+.flexlayout__tab {
+  background: #2d2d30;
+  color: #cccccc;
+  border: none;
+  border-right: 1px solid #3e3e42;
+  padding: 0 12px;
+  height: 32px;
+  line-height: 32px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.flexlayout__tab:hover {
+  background: #383838;
+  color: #ffffff;
+}
+
+.flexlayout__tab_button--selected {
+  background: #094771;
+  color: #ffffff;
+  border-bottom: 2px solid #007acc;
+}
+
+.flexlayout__tab_button_leading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.flexlayout__tab_button_content {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+}
+
+.flexlayout__tab_button--selected .flexlayout__tab_button_content {
+  font-weight: 500;
+}
+
+.flexlayout__tab_button_trailing {
+  margin-left: 8px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.flexlayout__tab:hover .flexlayout__tab_button_trailing {
+  opacity: 1;
+}
+
+.flexlayout__tab_button_trailing svg {
+  width: 12px;
+  height: 12px;
+  color: #cccccc;
+}
+
+.flexlayout__tab_button_trailing:hover svg {
+  color: #ffffff;
+}
+
+.flexlayout__tabset_tabbar_outer {
+  background: #2d2d30;
+}
+
+.flexlayout__tabset-selected {
+  background: #1e1e1e;
+}
+
+.flexlayout__splitter {
+  background: #3e3e42;
+  transition: background-color 0.15s ease;
+}
+
+.flexlayout__splitter:hover {
+  background: #007acc;
+}
+
+.flexlayout__splitter_border {
+  background: #3e3e42;
+}
+
+.flexlayout__outline_rect {
+  border: 2px solid #007acc;
+  box-shadow: 0 0 20px rgba(0, 122, 204, 0.5);
+  background: rgba(0, 122, 204, 0.1);
+}
+
+.flexlayout__edge_rect {
+  background: rgba(0, 122, 204, 0.3);
+  border: 2px solid #007acc;
+}
+
+.flexlayout__drag_rect {
+  border: 2px solid #007acc;
+  background: rgba(0, 122, 204, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.flexlayout__tabset_content {
+  background: #1e1e1e;
+  overflow: auto;
+}
+
+.flexlayout__tab_toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+}
+
+.flexlayout__tab_toolbar_button {
+  background: transparent;
+  border: none;
+  color: #cccccc;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 3px;
+  transition: background-color 0.15s ease;
+}
+
+.flexlayout__tab_toolbar_button:hover {
+  background: #383838;
+  color: #ffffff;
+}
+
+.flexlayout__tab_toolbar_button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.flexlayout__popup_menu {
+  background: #252526;
+  border: 1px solid #454545;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  border-radius: 3px;
+}
+
+.flexlayout__popup_menu_item {
+  color: #cccccc;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.flexlayout__popup_menu_item:hover {
+  background: #2a2d2e;
+  color: #ffffff;
+}
+
+.flexlayout__popup_menu_item:active {
+  background: #094771;
+}
+
+.flexlayout__border {
+  background: #2d2d30;
+  border: 1px solid #3e3e42;
+}
+
+.flexlayout__border_top,
+.flexlayout__border_bottom {
+  border-left: none;
+  border-right: none;
+}
+
+.flexlayout__border_left,
+.flexlayout__border_right {
+  border-top: none;
+  border-bottom: none;
+}
+
+.flexlayout__border_button {
+  background: #2d2d30;
+  color: #cccccc;
+  border: none;
+  border-bottom: 1px solid #3e3e42;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.flexlayout__border_button:hover {
+  background: #383838;
+  color: #ffffff;
+}
+
+.flexlayout__border_button--selected {
+  background: #094771;
+  color: #ffffff;
+}
+
+.flexlayout__error_boundary_container {
+  background: #1e1e1e;
+  color: #f48771;
+  padding: 16px;
+  font-family: monospace;
+}
+
+.flexlayout__error_boundary_message {
+  margin-bottom: 8px;
+  font-weight: 600;
+}

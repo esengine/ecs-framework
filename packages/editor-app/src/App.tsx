@@ -20,7 +20,7 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { BehaviorTreeWindow } from './components/BehaviorTreeWindow';
 import { Viewport } from './components/Viewport';
 import { MenuBar } from './components/MenuBar';
-import { DockContainer, DockablePanel } from './components/DockContainer';
+import { FlexLayoutDockContainer, FlexDockPanel } from './components/FlexLayoutDockContainer';
 import { TauriAPI } from './api/tauri';
 import { TauriFileAPI } from './adapters/TauriFileAPI';
 import { SettingsService } from './services/SettingsService';
@@ -53,13 +53,14 @@ function App() {
   const [sceneManager, setSceneManager] = useState<SceneManagerService | null>(null);
   const { t, locale, changeLocale } = useLocale();
   const [status, setStatus] = useState(t('header.status.initializing'));
-  const [panels, setPanels] = useState<DockablePanel[]>([]);
+  const [panels, setPanels] = useState<FlexDockPanel[]>([]);
   const [showPluginManager, setShowPluginManager] = useState(false);
   const [showProfiler, setShowProfiler] = useState(false);
   const [showPortManager, setShowPortManager] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showBehaviorTreeEditor, setShowBehaviorTreeEditor] = useState(false);
+  const [behaviorTreeFilePath, setBehaviorTreeFilePath] = useState<string | null>(null);
   const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
   const [isRemoteConnected, setIsRemoteConnected] = useState(false);
   const [isProfilerMode, setIsProfilerMode] = useState(false);
@@ -426,6 +427,11 @@ function App() {
     }
   }, [sceneManager, locale]);
 
+  const handleOpenBehaviorTree = useCallback((btreePath: string) => {
+    setBehaviorTreeFilePath(btreePath);
+    setShowBehaviorTreeEditor(true);
+  }, []);
+
   const handleSaveScene = async () => {
     if (!sceneManager) {
       console.error('SceneManagerService not available');
@@ -504,28 +510,25 @@ function App() {
 
   useEffect(() => {
     if (projectLoaded && entityStore && messageHub && logService && uiRegistry && pluginManager) {
-      let corePanels: DockablePanel[];
+      let corePanels: FlexDockPanel[];
 
       if (isProfilerMode) {
         corePanels = [
           {
             id: 'scene-hierarchy',
             title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
-            position: 'left',
             content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />,
             closable: false
           },
           {
             id: 'inspector',
             title: locale === 'zh' ? '检视器' : 'Inspector',
-            position: 'right',
             content: <EntityInspector entityStore={entityStore} messageHub={messageHub} />,
             closable: false
           },
           {
             id: 'console',
             title: locale === 'zh' ? '控制台' : 'Console',
-            position: 'bottom',
             content: <ConsolePanel logService={logService} />,
             closable: false
           }
@@ -535,35 +538,24 @@ function App() {
           {
             id: 'scene-hierarchy',
             title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
-            position: 'left',
             content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />,
             closable: false
           },
           {
             id: 'inspector',
             title: locale === 'zh' ? '检视器' : 'Inspector',
-            position: 'right',
             content: <EntityInspector entityStore={entityStore} messageHub={messageHub} />,
-            closable: false
-          },
-          {
-            id: 'viewport',
-            title: locale === 'zh' ? '视口' : 'Viewport',
-            position: 'center',
-            content: <Viewport locale={locale} />,
             closable: false
           },
           {
             id: 'assets',
             title: locale === 'zh' ? '资产' : 'Assets',
-            position: 'bottom',
-            content: <AssetBrowser projectPath={currentProjectPath} locale={locale} onOpenScene={handleOpenSceneByPath} />,
+            content: <AssetBrowser projectPath={currentProjectPath} locale={locale} onOpenScene={handleOpenSceneByPath} onOpenBehaviorTree={handleOpenBehaviorTree} />,
             closable: false
           },
           {
             id: 'console',
             title: locale === 'zh' ? '控制台' : 'Console',
-            position: 'bottom',
             content: <ConsolePanel logService={logService} />,
             closable: false
           }
@@ -574,7 +566,7 @@ function App() {
         .filter(p => p.enabled)
         .map(p => p.name);
 
-      const pluginPanels: DockablePanel[] = uiRegistry.getAllPanels()
+      const pluginPanels: FlexDockPanel[] = uiRegistry.getAllPanels()
         .filter(panelDesc => {
           if (!panelDesc.component) {
             return false;
@@ -593,7 +585,6 @@ function App() {
           return {
             id: panelDesc.id,
             title: (panelDesc as any).titleZh && locale === 'zh' ? (panelDesc as any).titleZh : panelDesc.title,
-            position: panelDesc.position as any,
             content: <Component />,
             closable: panelDesc.closable ?? true
           };
@@ -604,13 +595,6 @@ function App() {
     }
   }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode, handleOpenSceneByPath]);
 
-  const handlePanelMove = (panelId: string, newPosition: any) => {
-    setPanels(prevPanels =>
-      prevPanels.map(panel =>
-        panel.id === panelId ? { ...panel, position: newPosition } : panel
-      )
-    );
-  };
 
   if (!initialized) {
     return (
@@ -695,7 +679,7 @@ function App() {
       </div>
 
       <div className="editor-content">
-        <DockContainer panels={panels} onPanelMove={handlePanelMove} />
+        <FlexLayoutDockContainer panels={panels} />
       </div>
 
       <div className="editor-footer">
@@ -730,7 +714,11 @@ function App() {
       {showBehaviorTreeEditor && (
         <BehaviorTreeWindow
           isOpen={showBehaviorTreeEditor}
-          onClose={() => setShowBehaviorTreeEditor(false)}
+          onClose={() => {
+            setShowBehaviorTreeEditor(false);
+            setBehaviorTreeFilePath(null);
+          }}
+          filePath={behaviorTreeFilePath}
         />
       )}
 

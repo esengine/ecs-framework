@@ -68,6 +68,43 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
+  container-name: asset-list-container;
+}
+
+.asset-browser-breadcrumb {
+  padding: 8px 12px;
+  background: #2d2d30;
+  border-bottom: 1px solid #3e3e3e;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+  min-height: 32px;
+}
+
+.breadcrumb-item {
+  color: #cccccc;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.breadcrumb-item:hover {
+  background: #3e3e3e;
+  color: #ffffff;
+}
+
+.breadcrumb-item:active {
+  background: #094771;
+}
+
+.breadcrumb-separator {
+  color: #858585;
+  pointer-events: none;
 }
 
 .asset-browser-toolbar {
@@ -109,11 +146,76 @@
 .asset-list {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
   padding: 10px;
   overflow-y: auto;
   align-content: start;
+}
+
+/* 容器查询：根据容器宽度调整布局 */
+@container (max-width: 400px) {
+  .asset-list {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 6px;
+  }
+}
+
+@container (max-width: 250px) {
+  .asset-list {
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 4px;
+    padding: 6px;
+  }
+}
+
+@container (max-width: 150px) {
+  .asset-list {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .asset-item {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 6px 8px;
+    gap: 8px;
+  }
+
+  .asset-icon {
+    width: 24px;
+    height: 24px;
+    margin-bottom: 0;
+  }
+
+  .asset-name {
+    text-align: left;
+    margin-bottom: 0;
+  }
+
+  .asset-type {
+    display: none;
+  }
+}
+
+/* 中等窄度优化 */
+@container (max-width: 250px) {
+  .asset-item {
+    padding: 8px 6px;
+  }
+
+  .asset-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .asset-name {
+    font-size: 11px;
+  }
+
+  .asset-type {
+    font-size: 9px;
+  }
 }
 
 .asset-item {
@@ -198,13 +300,3 @@
   background: #4e4e4e;
 }
 
-@media (max-width: 768px) {
-  .asset-list {
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  }
-
-  .asset-icon {
-    width: 32px;
-    height: 32px;
-  }
-}

@@ -1,27 +1,34 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TreePine, X, Settings, Clipboard } from 'lucide-react';
+import { TreePine, X, Settings, Clipboard, Save, FolderOpen } from 'lucide-react';
+import { save, open } from '@tauri-apps/plugin-dialog';
+import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { BehaviorTreeEditor } from './BehaviorTreeEditor';
 import { BehaviorTreeNodePalette } from './BehaviorTreeNodePalette';
 import { BehaviorTreeNodeProperties } from './BehaviorTreeNodeProperties';
 import { BehaviorTreeBlackboard } from './BehaviorTreeBlackboard';
 import { useBehaviorTreeStore } from '../stores/behaviorTreeStore';
 import type { NodeTemplate } from '@esengine/behavior-tree';
+import { createLogger } from '@esengine/ecs-framework';
 
 interface BehaviorTreeWindowProps {
     isOpen: boolean;
     onClose: () => void;
+    filePath?: string | null;
 }
 
 /**
  * 行为树编辑器窗口
  */
+const logger = createLogger('BehaviorTreeWindow');
+
 export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     isOpen,
-    onClose
+    onClose,
+    filePath
 }) => {
     const { t } = useTranslation();
-    const { nodes, updateNodes } = useBehaviorTreeStore();
+    const { nodes, updateNodes, exportToJSON, importFromJSON } = useBehaviorTreeStore();
 
     const [selectedNode, setSelectedNode] = useState<{
         id: string;
@@ -73,6 +80,64 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
             return newVars;
         });
     };
+
+    const handleSave = async () => {
+        try {
+            const filePath = await save({
+                filters: [{
+                    name: 'Behavior Tree',
+                    extensions: ['btree']
+                }],
+                defaultPath: 'behavior-tree.btree'
+            });
+
+            if (filePath) {
+                const json = exportToJSON(
+                    { name: 'behavior-tree', description: '' },
+                    blackboardVariables
+                );
+                await writeTextFile(filePath, json);
+                logger.info('行为树已保存', filePath);
+            }
+        } catch (error) {
+            logger.error('保存失败', error);
+        }
+    };
+
+    const handleLoad = async () => {
+        try {
+            const selected = await open({
+                multiple: false,
+                filters: [{
+                    name: 'Behavior Tree',
+                    extensions: ['btree']
+                }]
+            });
+
+            if (selected) {
+                const json = await readTextFile(selected as string);
+                const result = importFromJSON(json);
+                setBlackboardVariables(result.blackboard);
+                logger.info('行为树已加载', selected);
+            }
+        } catch (error) {
+            logger.error('加载失败', error);
+        }
+    };
+
+    useEffect(() => {
+        if (filePath && isOpen) {
+            readTextFile(filePath)
+                .then((json: string) => {
+                    const result = importFromJSON(json);
+                    setBlackboardVariables(result.blackboard);
+                    logger.info('自动加载行为树文件', filePath);
+                })
+                .catch((error: any) => {
+                    logger.error('自动加载文件失败', error);
+                });
+        }
+    }, [filePath, isOpen, importFromJSON]);
 
     if (!isOpen) return null;
 
@@ -129,30 +194,80 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                         <TreePine size={24} />
                         <span>{t('behaviorTree.title')}</span>
                     </div>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            padding: '6px 12px',
-                            backgroundColor: 'transparent',
-                            border: '1px solid #666',
-                            borderRadius: '4px',
-                            color: '#cccccc',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#444';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
-                    >
-                        <X size={16} />
-                        {t('behaviorTree.close')}
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                            onClick={handleSave}
+                            style={{
+                                padding: '6px 12px',
+                                backgroundColor: 'transparent',
+                                border: '1px solid #666',
+                                borderRadius: '4px',
+                                color: '#cccccc',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#444';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
+                        >
+                            <Save size={16} />
+                            保存
+                        </button>
+                        <button
+                            onClick={handleLoad}
+                            style={{
+                                padding: '6px 12px',
+                                backgroundColor: 'transparent',
+                                border: '1px solid #666',
+                                borderRadius: '4px',
+                                color: '#cccccc',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#444';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
+                        >
+                            <FolderOpen size={16} />
+                            打开
+                        </button>
+                        <button
+                            onClick={onClose}
+                            style={{
+                                padding: '6px 12px',
+                                backgroundColor: 'transparent',
+                                border: '1px solid #666',
+                                borderRadius: '4px',
+                                color: '#cccccc',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#444';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
+                        >
+                            <X size={16} />
+                            {t('behaviorTree.close')}
+                        </button>
+                    </div>
                 </div>
 
                 {/* 主内容区域 */}
