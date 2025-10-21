@@ -40,7 +40,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     // 监听节点列表变化，如果选中的节点被删除，清除选中状态
     useEffect(() => {
         if (selectedNode && selectedNode.id) {
-            const nodeStillExists = nodes.some(node => node.id === selectedNode.id);
+            const nodeStillExists = nodes.some((node: any) => node.id === selectedNode.id);
             if (!nodeStillExists) {
                 setSelectedNode(undefined);
             }
@@ -347,7 +347,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                                                 const newVarType = typeof newVarValue === 'number' ? 'number' :
                                                                   typeof newVarValue === 'boolean' ? 'boolean' : 'string';
 
-                                                updateNodes(nodes => nodes.map(node => {
+                                                updateNodes((nodes: any) => nodes.map((node: any) => {
                                                     if (node.id === selectedNode.id) {
                                                         return {
                                                             ...node,
@@ -397,7 +397,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                                                 });
                                             } else {
                                                 // 普通属性修改
-                                                updateNodes(nodes => nodes.map(node => {
+                                                updateNodes((nodes: any) => nodes.map((node: any) => {
                                                     if (node.id === selectedNode.id) {
                                                         return {
                                                             ...node,

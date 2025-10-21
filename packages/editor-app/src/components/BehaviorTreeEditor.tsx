@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { NodeTemplate } from '@esengine/behavior-tree';
+import { NodeTemplate, PropertyDefinition } from '@esengine/behavior-tree';
 import {
     TreePine, Play, Pause, Square, SkipForward, RotateCcw, Trash2,
     List, GitBranch, Layers, Shuffle,
@@ -174,12 +174,12 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
             if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeIds.length > 0) {
                 // 不能删除 Root 节点
-                const nodesToDelete = selectedNodeIds.filter(id => id !== ROOT_NODE_ID);
+                const nodesToDelete = selectedNodeIds.filter((id: string) => id !== ROOT_NODE_ID);
                 if (nodesToDelete.length > 0) {
                     // 删除节点
                     removeNodes(nodesToDelete);
                     // 删除相关连接
-                    removeConnections(conn =>
+                    removeConnections((conn: Connection) =>
                         !nodesToDelete.includes(conn.from) && !nodesToDelete.includes(conn.to)
                     );
                     // 清空选择
@@ -306,7 +306,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         if (e.ctrlKey || e.metaKey) {
             if (selectedNodeIds.includes(node.id)) {
                 // 取消选择
-                setSelectedNodeIds(selectedNodeIds.filter(id => id !== node.id));
+                setSelectedNodeIds(selectedNodeIds.filter((id: string) => id !== node.id));
             } else {
                 // 添加到选择
                 setSelectedNodeIds([...selectedNodeIds, node.id]);
@@ -334,7 +334,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         setIsBoxSelecting(false);
         setBoxSelectStart(null);
         setBoxSelectEnd(null);
-        const node = nodes.find(n => n.id === nodeId);
+        const node = nodes.find((n: BehaviorTreeNode) => n.id === nodeId);
         if (!node) return;
 
         const rect = canvasRef.current?.getBoundingClientRect();
@@ -357,8 +357,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
         // 记录所有要拖动节点的起始位置
         const startPositions = new Map<string, { x: number; y: number }>();
-        nodesToDrag.forEach(id => {
-            const n = nodes.find(node => node.id === id);
+        nodesToDrag.forEach((id: string) => {
+            const n = nodes.find((node: BehaviorTreeNode) => node.id === id);
             if (n) {
                 startPositions.set(id, { ...n.position });
             }
@@ -407,7 +407,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         // 将临时位置同步到 zustand store
         if (dragDelta.dx !== 0 || dragDelta.dy !== 0) {
             const updates = new Map<string, { x: number; y: number }>();
-            dragStartPositions.forEach((startPos, nodeId) => {
+            dragStartPositions.forEach((startPos: { x: number; y: number }, nodeId: string) => {
                 updates.set(nodeId, {
                     x: startPos.x + dragDelta.dx,
                     y: startPos.y + dragDelta.dy
@@ -473,7 +473,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             if (connectingFromProperty || propertyName) {
                 // 检查是否已经存在属性连接
                 const existingConnection = connections.find(
-                    conn => conn.from === connectingFrom &&
+                    (conn: Connection) => conn.from === connectingFrom &&
                            conn.to === nodeId &&
                            conn.fromProperty === connectingFromProperty &&
                            conn.toProperty === propertyName
@@ -491,7 +491,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 // 节点级别的连接
                 // Root 节点只能有一个子节点
                 if (connectingFrom === ROOT_NODE_ID) {
-                    const rootNode = nodes.find(n => n.id === ROOT_NODE_ID);
+                    const rootNode = nodes.find((n: BehaviorTreeNode) => n.id === ROOT_NODE_ID);
                     if (rootNode && rootNode.children.length > 0) {
                         alert('根节点只能连接一个子节点');
                         clearConnecting();
@@ -501,7 +501,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
                 // 检查是否已经存在连接
                 const existingConnection = connections.find(
-                    conn => conn.from === connectingFrom && conn.to === nodeId && conn.connectionType === 'node'
+                    (conn: Connection) => conn.from === connectingFrom && conn.to === nodeId && conn.connectionType === 'node'
                 );
                 if (!existingConnection) {
                     setConnections([...connections, {
@@ -510,7 +510,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         connectionType: 'node'
                     }]);
                     // 更新节点的 children
-                    setNodes(nodes.map(node =>
+                    setNodes(nodes.map((node: BehaviorTreeNode) =>
                         node.id === connectingFrom
                             ? { ...node, children: [...node.children, nodeId] }
                             : node
@@ -535,7 +535,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
             // 检测哪些节点在框选区域内
             const selectedInBox = nodes
-                .filter(node => {
+                .filter((node: BehaviorTreeNode) => {
                     // Root 节点不参与框选
                     if (node.id === ROOT_NODE_ID) return false;
 
@@ -544,7 +544,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     const nodeY = node.position.y;
                     return nodeX >= minX && nodeX <= maxX && nodeY >= minY && nodeY <= maxY;
                 })
-                .map(node => node.id);
+                .map((node: BehaviorTreeNode) => node.id);
 
             // 根据是否按下 Ctrl/Cmd 决定是添加选择还是替换选择
             if (e.ctrlKey || e.metaKey) {
@@ -617,7 +617,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             selector = `[data-node-id="${nodeId}"][data-property="${propertyName}"]`;
         } else {
             // 节点的端口
-            const node = nodes.find(n => n.id === nodeId);
+            const node = nodes.find((n: BehaviorTreeNode) => n.id === nodeId);
             if (!node) return null;
 
             // 黑板变量节点的右侧输出引脚
@@ -701,11 +701,11 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     // 运行控制函数
     const simulateNodeExecution = async (nodeId: string): Promise<NodeExecutionStatus> => {
         setNodeExecutionStatus(prev => ({ ...prev, [nodeId]: 'running' }));
-        setExecutionHistory(prev => [...prev, `执行中: ${nodes.find(n => n.id === nodeId)?.template.displayName}`]);
+        setExecutionHistory(prev => [...prev, `执行中: ${nodes.find((n: BehaviorTreeNode) => n.id === nodeId)?.template.displayName}`]);
 
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        const node = nodes.find(n => n.id === nodeId);
+        const node = nodes.find((n: BehaviorTreeNode) => n.id === nodeId);
         if (!node) return 'failure';
 
         let status: NodeExecutionStatus = 'success';
@@ -919,9 +919,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     overflow: 'visible'
                 }}>
                     {/* 已有的连接 */}
-                    {connections.map((conn, index) => {
-                        const fromNode = nodes.find(n => n.id === conn.from);
-                        const toNode = nodes.find(n => n.id === conn.to);
+                    {connections.map((conn: Connection, index: number) => {
+                        const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === conn.from);
+                        const toNode = nodes.find((n: BehaviorTreeNode) => n.id === conn.to);
                         if (!fromNode || !toNode) return null;
 
                         let x1, y1, x2, y2;
@@ -979,7 +979,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     })}
                     {/* 正在拖拽的连接线 */}
                     {connectingFrom && connectingToPos && (() => {
-                        const fromNode = nodes.find(n => n.id === connectingFrom);
+                        const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === connectingFrom);
                         if (!fromNode) return null;
 
                         let x1, y1;
@@ -1049,7 +1049,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 })()}
 
                 {/* 节点列表 */}
-                {nodes.map(node => {
+                {nodes.map((node: BehaviorTreeNode) => {
                     const executionStatus = nodeExecutionStatus[node.id] || 'idle';
                     const isRoot = node.id === ROOT_NODE_ID;
                     const isBlackboardVariable = node.data.nodeType === 'blackboard-variable';
@@ -1195,10 +1195,10 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                         borderTop: '1px solid #444',
                                         fontSize: '11px'
                                     }}>
-                                        {node.template.properties.map((prop, idx) => {
+                                        {node.template.properties.map((prop: PropertyDefinition, idx: number) => {
                                             // 检查该属性是否已有连接
                                             const hasConnection = connections.some(
-                                                conn => conn.toProperty === prop.name && conn.to === node.id
+                                                (conn: Connection) => conn.toProperty === prop.name && conn.to === node.id
                                             );
 
                                             return (

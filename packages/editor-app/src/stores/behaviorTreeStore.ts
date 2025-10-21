@@ -125,75 +125,75 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     // 强制更新计数器初始值
     forceUpdateCounter: 0,
 
-    setNodes: (nodes) => set({ nodes }),
+    setNodes: (nodes: BehaviorTreeNode[]) => set({ nodes }),
 
-    updateNodes: (updater) => set((state) => ({ nodes: updater(state.nodes) })),
+    updateNodes: (updater: (nodes: BehaviorTreeNode[]) => BehaviorTreeNode[]) => set((state: BehaviorTreeState) => ({ nodes: updater(state.nodes) })),
 
-    addNode: (node) => set((state) => ({ nodes: [...state.nodes, node] })),
+    addNode: (node: BehaviorTreeNode) => set((state: BehaviorTreeState) => ({ nodes: [...state.nodes, node] })),
 
-    removeNodes: (nodeIds) => set((state) => ({
-        nodes: state.nodes.filter(n => !nodeIds.includes(n.id)),
+    removeNodes: (nodeIds: string[]) => set((state: BehaviorTreeState) => ({
+        nodes: state.nodes.filter((n: BehaviorTreeNode) => !nodeIds.includes(n.id)),
     })),
 
-    updateNodePosition: (nodeId, position) => set((state) => ({
-        nodes: state.nodes.map(n =>
+    updateNodePosition: (nodeId: string, position: { x: number; y: number }) => set((state: BehaviorTreeState) => ({
+        nodes: state.nodes.map((n: BehaviorTreeNode) =>
             n.id === nodeId ? { ...n, position } : n
         ),
     })),
 
-    updateNodesPosition: (updates) => set((state) => ({
-        nodes: state.nodes.map(node => {
+    updateNodesPosition: (updates: Map<string, { x: number; y: number }>) => set((state: BehaviorTreeState) => ({
+        nodes: state.nodes.map((node: BehaviorTreeNode) => {
             const newPos = updates.get(node.id);
             return newPos ? { ...node, position: newPos } : node;
         }),
     })),
 
-    setConnections: (connections) => set({ connections }),
+    setConnections: (connections: Connection[]) => set({ connections }),
 
-    addConnection: (connection) => set((state) => ({
+    addConnection: (connection: Connection) => set((state: BehaviorTreeState) => ({
         connections: [...state.connections, connection],
     })),
 
-    removeConnections: (filter) => set((state) => ({
+    removeConnections: (filter: (conn: Connection) => boolean) => set((state: BehaviorTreeState) => ({
         connections: state.connections.filter(filter),
     })),
 
-    setSelectedNodeIds: (nodeIds) => set({ selectedNodeIds: nodeIds }),
+    setSelectedNodeIds: (nodeIds: string[]) => set({ selectedNodeIds: nodeIds }),
 
-    toggleNodeSelection: (nodeId) => set((state) => ({
+    toggleNodeSelection: (nodeId: string) => set((state: BehaviorTreeState) => ({
         selectedNodeIds: state.selectedNodeIds.includes(nodeId)
-            ? state.selectedNodeIds.filter(id => id !== nodeId)
+            ? state.selectedNodeIds.filter((id: string) => id !== nodeId)
             : [...state.selectedNodeIds, nodeId],
     })),
 
     clearSelection: () => set({ selectedNodeIds: [] }),
 
-    startDragging: (nodeId, startPositions) => set({
+    startDragging: (nodeId: string, startPositions: Map<string, { x: number; y: number }>) => set({
         draggingNodeId: nodeId,
         dragStartPositions: startPositions,
     }),
 
     stopDragging: () => set({ draggingNodeId: null }),
 
-    setIsDraggingNode: (isDragging) => set({ isDraggingNode: isDragging }),
+    setIsDraggingNode: (isDragging: boolean) => set({ isDraggingNode: isDragging }),
 
     // 画布变换 Actions
-    setCanvasOffset: (offset) => set({ canvasOffset: offset }),
+    setCanvasOffset: (offset: { x: number; y: number }) => set({ canvasOffset: offset }),
 
-    setCanvasScale: (scale) => set({ canvasScale: scale }),
+    setCanvasScale: (scale: number) => set({ canvasScale: scale }),
 
-    setIsPanning: (isPanning) => set({ isPanning }),
+    setIsPanning: (isPanning: boolean) => set({ isPanning }),
 
-    setPanStart: (panStart) => set({ panStart }),
+    setPanStart: (panStart: { x: number; y: number }) => set({ panStart }),
 
     resetView: () => set({ canvasOffset: { x: 0, y: 0 }, canvasScale: 1 }),
 
     // 连接 Actions
-    setConnectingFrom: (nodeId) => set({ connectingFrom: nodeId }),
+    setConnectingFrom: (nodeId: string | null) => set({ connectingFrom: nodeId }),
 
-    setConnectingFromProperty: (propertyName) => set({ connectingFromProperty: propertyName }),
+    setConnectingFromProperty: (propertyName: string | null) => set({ connectingFromProperty: propertyName }),
 
-    setConnectingToPos: (pos) => set({ connectingToPos: pos }),
+    setConnectingToPos: (pos: { x: number; y: number } | null) => set({ connectingToPos: pos }),
 
     clearConnecting: () => set({
         connectingFrom: null,
@@ -202,11 +202,11 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     }),
 
     // 框选 Actions
-    setIsBoxSelecting: (isSelecting) => set({ isBoxSelecting: isSelecting }),
+    setIsBoxSelecting: (isSelecting: boolean) => set({ isBoxSelecting: isSelecting }),
 
-    setBoxSelectStart: (pos) => set({ boxSelectStart: pos }),
+    setBoxSelectStart: (pos: { x: number; y: number } | null) => set({ boxSelectStart: pos }),
 
-    setBoxSelectEnd: (pos) => set({ boxSelectEnd: pos }),
+    setBoxSelectEnd: (pos: { x: number; y: number } | null) => set({ boxSelectEnd: pos }),
 
     clearBoxSelect: () => set({
         isBoxSelecting: false,
@@ -215,10 +215,10 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     }),
 
     // 拖动偏移 Actions
-    setDragDelta: (delta) => set({ dragDelta: delta }),
+    setDragDelta: (delta: { dx: number; dy: number }) => set({ dragDelta: delta }),
 
     // 强制更新
-    triggerForceUpdate: () => set((state) => ({ forceUpdateCounter: state.forceUpdateCounter + 1 })),
+    triggerForceUpdate: () => set((state: BehaviorTreeState) => ({ forceUpdateCounter: state.forceUpdateCounter + 1 })),
 }));
 
 export type { BehaviorTreeNode, Connection };
