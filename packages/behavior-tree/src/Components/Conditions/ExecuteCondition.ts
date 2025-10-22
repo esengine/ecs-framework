@@ -1,5 +1,7 @@
 import { Component, ECSComponent, Entity } from '@esengine/ecs-framework';
 import { Serializable, Serialize, IgnoreSerialization } from '@esengine/ecs-framework';
+import { NodeType } from '../../Types/TaskStatus';
+import { BehaviorNode, BehaviorProperty } from '../../Decorators/BehaviorNodeDecorator';
 import { BlackboardComponent } from '../BlackboardComponent';
 
 /**
@@ -16,18 +18,33 @@ export type CustomConditionFunction = (
  *
  * 允许用户提供自定义的条件检查函数
  */
+@BehaviorNode({
+    displayName: '自定义条件',
+    category: '条件',
+    type: NodeType.Condition,
+    icon: 'Code',
+    description: '执行自定义条件代码',
+    color: '#9C27B0'
+})
 @ECSComponent('ExecuteCondition')
 @Serializable({ version: 1 })
 export class ExecuteCondition extends Component {
-    /** 条件代码（字符串，会被编译为函数） */
+    @BehaviorProperty({
+        label: '条件代码',
+        type: 'code',
+        description: 'JavaScript 代码，返回 boolean',
+        required: true
+    })
     @Serialize()
     conditionCode?: string;
 
-    /** 自定义参数 */
     @Serialize()
     parameters: Record<string, any> = {};
 
-    /** 是否反转结果 */
+    @BehaviorProperty({
+        label: '反转结果',
+        type: 'boolean'
+    })
     @Serialize()
     invertResult: boolean = false;
 

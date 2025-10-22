@@ -138,9 +138,33 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
 
     addNode: (node: BehaviorTreeNode) => set((state: BehaviorTreeState) => ({ nodes: [...state.nodes, node] })),
 
-    removeNodes: (nodeIds: string[]) => set((state: BehaviorTreeState) => ({
-        nodes: state.nodes.filter((n: BehaviorTreeNode) => !nodeIds.includes(n.id)),
-    })),
+    removeNodes: (nodeIds: string[]) => set((state: BehaviorTreeState) => {
+        // 收集所有需要删除的节点（包括子节点）
+        const nodesToDelete = new Set<string>(nodeIds);
+
+        // 递归收集所有子节点
+        const collectChildren = (id: string) => {
+            const node = state.nodes.find((n: BehaviorTreeNode) => n.id === id);
+            if (node) {
+                node.children.forEach((childId: string) => {
+                    nodesToDelete.add(childId);
+                    collectChildren(childId);
+                });
+            }
+        };
+
+        nodeIds.forEach(collectChildren);
+
+        // 过滤掉删除的节点，并清理所有节点的 children 引用
+        const remainingNodes = state.nodes
+            .filter((n: BehaviorTreeNode) => !nodesToDelete.has(n.id))
+            .map((n: BehaviorTreeNode) => ({
+                ...n,
+                children: n.children.filter((childId: string) => !nodesToDelete.has(childId))
+            }));
+
+        return { nodes: remainingNodes };
+    }),
 
     updateNodePosition: (nodeId: string, position: { x: number; y: number }) => set((state: BehaviorTreeState) => ({
         nodes: state.nodes.map((n: BehaviorTreeNode) =>

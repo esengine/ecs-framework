@@ -69,6 +69,22 @@ export enum DecoratorType {
 }
 
 /**
+ * 中止类型
+ *
+ * 用于动态优先级和条件重新评估
+ */
+export enum AbortType {
+    /** 无 - 不中止任何节点 */
+    None = 'none',
+    /** 自身 - 条件变化时可以中止自身的执行 */
+    Self = 'self',
+    /** 低优先级 - 条件满足时可以中止低优先级的兄弟节点 */
+    LowerPriority = 'lower-priority',
+    /** 两者 - 可以中止自身和低优先级节点 */
+    Both = 'both'
+}
+
+/**
  * 黑板变量类型
  */
 export enum BlackboardValueType {

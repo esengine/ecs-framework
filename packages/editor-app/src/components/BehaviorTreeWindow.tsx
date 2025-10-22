@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TreePine, X, Settings, Clipboard, Save, FolderOpen } from 'lucide-react';
+import { TreePine, X, Settings, Clipboard, Save, FolderOpen, Maximize2, Minimize2 } from 'lucide-react';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { BehaviorTreeEditor } from './BehaviorTreeEditor';
@@ -44,6 +44,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     });
 
     const [rightPanelTab, setRightPanelTab] = useState<'properties' | 'blackboard'>('blackboard');
+    const [isFullscreen, setIsFullscreen] = useState(false);
 
     // 监听节点列表变化，如果选中的节点被删除，清除选中状态
     useEffect(() => {
@@ -126,6 +127,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
         }
     };
 
+
     useEffect(() => {
         if (filePath && isOpen) {
             readTextFile(filePath)
@@ -143,35 +145,29 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div
-            className="behavior-tree-overlay"
-            onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                    onClose();
-                }
-            }}
-        >
-            <div
-                className="behavior-tree-window"
-                onClick={(e) => e.stopPropagation()}
-            >
+        <div className="behavior-tree-overlay">
+            <div className={`behavior-tree-window ${isFullscreen ? 'fullscreen' : ''}`}>
                 <div className="behavior-tree-header">
                     <div className="behavior-tree-title">
                         <TreePine size={20} />
                         <span>{t('behaviorTree.title')}</span>
                     </div>
                     <div className="behavior-tree-toolbar">
-                        <button onClick={handleSave} className="behavior-tree-toolbar-btn">
+                        <button onClick={handleSave} className="behavior-tree-toolbar-btn" title="保存">
                             <Save size={16} />
-                            保存
                         </button>
-                        <button onClick={handleLoad} className="behavior-tree-toolbar-btn">
+                        <button onClick={handleLoad} className="behavior-tree-toolbar-btn" title="打开">
                             <FolderOpen size={16} />
-                            打开
                         </button>
-                        <button onClick={onClose} className="behavior-tree-toolbar-btn">
+                        <button
+                            onClick={() => setIsFullscreen(!isFullscreen)}
+                            className="behavior-tree-toolbar-btn"
+                            title={isFullscreen ? "退出全屏" : "全屏"}
+                        >
+                            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                        </button>
+                        <button onClick={onClose} className="behavior-tree-toolbar-btn" title={t('behaviorTree.close')}>
                             <X size={16} />
-                            {t('behaviorTree.close')}
                         </button>
                     </div>
                 </div>

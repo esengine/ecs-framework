@@ -6,10 +6,12 @@ import {
     Repeat, CheckCircle, XCircle, CheckCheck, HelpCircle, Snowflake, Timer,
     Clock, FileText, Edit, Calculator, Code,
     Equal, Dices, Settings,
-    Database,
+    Database, AlertTriangle,
     LucideIcon
 } from 'lucide-react';
 import { useBehaviorTreeStore, BehaviorTreeNode, Connection } from '../stores/behaviorTreeStore';
+import { BehaviorTreeExecutor, ExecutionStatus, ExecutionLog } from '../utils/BehaviorTreeExecutor';
+import { BehaviorTreeExecutionPanel } from './BehaviorTreeExecutionPanel';
 import '../styles/BehaviorTreeNode.css';
 
 type NodeExecutionStatus = 'idle' | 'running' | 'success' | 'failure';
@@ -153,11 +155,29 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
     // 运行状态
     const [executionMode, setExecutionMode] = useState<ExecutionMode>('idle');
-    const [nodeExecutionStatus, setNodeExecutionStatus] = useState<Record<string, NodeExecutionStatus>>({});
     const [executionHistory, setExecutionHistory] = useState<string[]>([]);
+    const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
+    const [executionSpeed, setExecutionSpeed] = useState<number>(1.0);
+    const [tickCount, setTickCount] = useState(0);
     const executionTimerRef = useRef<number | null>(null);
     const executionModeRef = useRef<ExecutionMode>('idle');
-    const [tickCount, setTickCount] = useState(0);
+    const executorRef = useRef<BehaviorTreeExecutor | null>(null);
+    const animationFrameRef = useRef<number | null>(null);
+    const lastTickTimeRef = useRef<number>(0);
+    const executionSpeedRef = useRef<number>(1.0);
+    const statusTimersRef = useRef<Map<string, number>>(new Map());
+
+    // 缓存DOM元素引用和上一次的状态
+    const domCacheRef = useRef<{
+        nodes: Map<string, Element>;
+        connections: Map<string, Element>;
+        lastNodeStatus: Map<string, NodeExecutionStatus>;
+    }>({
+        nodes: new Map(),
+        connections: new Map(),
+        lastNodeStatus: new Map()
+    });
+    const lastLogUpdateRef = useRef<number>(0);
 
     // 键盘事件监听 - 删除选中节点
     useEffect(() => {
@@ -710,138 +730,271 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         return offsetFromTop - nodeHalfHeight;
     };
 
-    // 运行控制函数
-    const simulateNodeExecution = async (nodeId: string): Promise<NodeExecutionStatus> => {
-        setNodeExecutionStatus(prev => ({ ...prev, [nodeId]: 'running' }));
-        setExecutionHistory(prev => [...prev, `执行中: ${nodes.find((n: BehaviorTreeNode) => n.id === nodeId)?.template.displayName}`]);
+    // 执行状态回调（直接操作DOM，不触发React重渲染）
+    const handleExecutionStatusUpdate = (statuses: ExecutionStatus[], logs: ExecutionLog[]): void => {
+        const now = performance.now();
 
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        const node = nodes.find((n: BehaviorTreeNode) => n.id === nodeId);
-        if (!node) return 'failure';
-
-        let status: NodeExecutionStatus = 'success';
-
-        // Root 节点直接执行子节点
-        if (nodeId === ROOT_NODE_ID) {
-            if (node.children.length > 0 && node.children[0]) {
-                status = await simulateNodeExecution(node.children[0]);
-            }
-            setNodeExecutionStatus(prev => ({ ...prev, [nodeId]: status }));
-            return status;
+        // 节流日志更新：最多每100ms更新一次
+        if (now - lastLogUpdateRef.current > 100) {
+            setExecutionLogs([...logs]);
+            lastLogUpdateRef.current = now;
         }
 
-        if (node.template.type === 'condition') {
-            const checkKey = node.data.checkKey as string;
-            const checkValue = node.data.checkValue;
-            const actualValue = blackboardVariables[checkKey];
-            status = actualValue === checkValue ? 'success' : 'failure';
-        } else if (node.template.type === 'action') {
-            status = Math.random() > 0.3 ? 'success' : 'failure';
-        } else if (node.template.type === 'composite') {
-            if (node.data.compositeType === 'sequence') {
-                for (const childId of node.children) {
-                    const childStatus = await simulateNodeExecution(childId);
-                    if (childStatus === 'failure') {
-                        status = 'failure';
-                        break;
-                    }
-                }
-            } else if (node.data.compositeType === 'selector') {
-                status = 'failure';
-                for (const childId of node.children) {
-                    const childStatus = await simulateNodeExecution(childId);
-                    if (childStatus === 'success') {
-                        status = 'success';
-                        break;
-                    }
-                }
-            } else {
-                for (const childId of node.children) {
-                    await simulateNodeExecution(childId);
-                }
-            }
-        } else if (node.template.type === 'decorator') {
-            if (node.children.length > 0 && node.children[0]) {
-                status = await simulateNodeExecution(node.children[0]);
-            }
-        }
+        const cache = domCacheRef.current;
+        const statusMap: Record<string, NodeExecutionStatus> = {};
 
-        setNodeExecutionStatus(prev => ({ ...prev, [nodeId]: status }));
-        const statusText = status === 'success' ? '成功' : status === 'failure' ? '失败' : status;
-        setExecutionHistory(prev => [...prev, `${node.template.displayName}: ${statusText}`]);
-        return status;
+        // 直接操作DOM来更新节点样式，避免重渲染
+        statuses.forEach(s => {
+            statusMap[s.nodeId] = s.status;
+
+            // 检查状态是否真的变化了
+            const lastStatus = cache.lastNodeStatus.get(s.nodeId);
+            if (lastStatus === s.status) {
+                return; // 状态未变化，跳过
+            }
+            cache.lastNodeStatus.set(s.nodeId, s.status);
+
+            // 获取或缓存节点DOM
+            let nodeElement = cache.nodes.get(s.nodeId);
+            if (!nodeElement) {
+                nodeElement = document.querySelector(`[data-node-id="${s.nodeId}"]`) || undefined;
+                if (nodeElement) {
+                    cache.nodes.set(s.nodeId, nodeElement);
+                } else {
+                    return;
+                }
+            }
+
+            // 移除所有状态类
+            nodeElement.classList.remove('running', 'success', 'failure', 'executed');
+
+            // 添加当前状态类
+            if (s.status === 'running') {
+                nodeElement.classList.add('running');
+            } else if (s.status === 'success') {
+                nodeElement.classList.add('success');
+
+                // 清除之前的定时器
+                const existingTimer = statusTimersRef.current.get(s.nodeId);
+                if (existingTimer) {
+                    clearTimeout(existingTimer);
+                }
+
+                // 2秒后移除success状态，添加executed标记
+                const timer = window.setTimeout(() => {
+                    nodeElement!.classList.remove('success');
+                    nodeElement!.classList.add('executed');
+                    statusTimersRef.current.delete(s.nodeId);
+                }, 2000);
+
+                statusTimersRef.current.set(s.nodeId, timer);
+            } else if (s.status === 'failure') {
+                nodeElement.classList.add('failure');
+
+                // 清除之前的定时器
+                const existingTimer = statusTimersRef.current.get(s.nodeId);
+                if (existingTimer) {
+                    clearTimeout(existingTimer);
+                }
+
+                // 2秒后移除failure状态
+                const timer = window.setTimeout(() => {
+                    nodeElement!.classList.remove('failure');
+                    statusTimersRef.current.delete(s.nodeId);
+                }, 2000);
+
+                statusTimersRef.current.set(s.nodeId, timer);
+            }
+        });
+
+        // 更新连线颜色（直接操作DOM）
+        updateConnectionStyles(statusMap);
     };
 
-    const handlePlay = async () => {
+    // 更新连线样式（直接操作DOM，缓存查询）
+    const updateConnectionStyles = (statusMap: Record<string, NodeExecutionStatus>): void => {
+        const cache = domCacheRef.current;
+
+        connections.forEach((conn) => {
+            const connKey = `${conn.from}-${conn.to}`;
+
+            // 获取或缓存连线DOM
+            let pathElement = cache.connections.get(connKey);
+            if (!pathElement) {
+                pathElement = document.querySelector(`[data-connection-id="${connKey}"]`) || undefined;
+                if (pathElement) {
+                    cache.connections.set(connKey, pathElement);
+                } else {
+                    return;
+                }
+            }
+
+            const fromStatus = statusMap[conn.from];
+            const toStatus = statusMap[conn.to];
+            const isActive = fromStatus === 'running' || toStatus === 'running';
+
+            if (conn.connectionType === 'property') {
+                pathElement.setAttribute('stroke', '#9c27b0');
+                pathElement.setAttribute('stroke-width', '2');
+            } else if (isActive) {
+                pathElement.setAttribute('stroke', '#ffa726');
+                pathElement.setAttribute('stroke-width', '3');
+            } else {
+                // 获取或缓存节点DOM
+                let fromElement = cache.nodes.get(conn.from);
+                if (!fromElement) {
+                    fromElement = document.querySelector(`[data-node-id="${conn.from}"]`) || undefined;
+                    if (fromElement) cache.nodes.set(conn.from, fromElement);
+                }
+
+                let toElement = cache.nodes.get(conn.to);
+                if (!toElement) {
+                    toElement = document.querySelector(`[data-node-id="${conn.to}"]`) || undefined;
+                    if (toElement) cache.nodes.set(conn.to, toElement);
+                }
+
+                const isExecuted = fromElement?.classList.contains('executed') &&
+                                 toElement?.classList.contains('executed');
+
+                if (isExecuted) {
+                    pathElement.setAttribute('stroke', '#4caf50');
+                    pathElement.setAttribute('stroke-width', '2.5');
+                } else {
+                    pathElement.setAttribute('stroke', '#0e639c');
+                    pathElement.setAttribute('stroke-width', '2');
+                }
+            }
+        });
+    };
+
+    // Tick 循环（基于时间间隔）
+    const tickLoop = (currentTime: number): void => {
+        if (executionModeRef.current !== 'running') {
+            return;
+        }
+
+        if (!executorRef.current) {
+            return;
+        }
+
+        // 根据速度计算 tick 间隔（毫秒）
+        // 速度 1.0 = 每秒60次tick (16.67ms)
+        // 速度 0.5 = 每秒30次tick (33.33ms)
+        // 速度 0.1 = 每秒6次tick (166.67ms)
+        const baseTickInterval = 16.67; // 基础间隔 (60 fps)
+        const tickInterval = baseTickInterval / executionSpeedRef.current;
+
+        // 检查是否到了执行下一个tick的时间
+        if (lastTickTimeRef.current === 0 || (currentTime - lastTickTimeRef.current) >= tickInterval) {
+            const deltaTime = 0.016; // 固定的 deltaTime
+
+            // 执行tick但不触发重渲染
+            executorRef.current.tick(deltaTime);
+
+            lastTickTimeRef.current = currentTime;
+        }
+
+        // 继续循环（保持60fps）
+        animationFrameRef.current = requestAnimationFrame(tickLoop);
+    };
+
+    // 速度变化处理
+    const handleSpeedChange = (speed: number) => {
+        setExecutionSpeed(speed);
+        executionSpeedRef.current = speed;
+    };
+
+    const handlePlay = () => {
         if (executionModeRef.current === 'running') return;
 
         executionModeRef.current = 'running';
         setExecutionMode('running');
-        setNodeExecutionStatus({});
-        setExecutionHistory(['从根节点开始执行...']);
+        setExecutionHistory(['使用ECS系统执行行为树...']);
         setTickCount(0);
+        lastTickTimeRef.current = 0;
 
-        let currentTick = 0;
-        const runLoop = async () => {
-            while (executionModeRef.current === 'running') {
-                currentTick++;
-                setTickCount(currentTick);
-                setExecutionHistory(prev => [...prev, `\n--- 第 ${currentTick} 帧 ---`]);
+        if (!executorRef.current) {
+            executorRef.current = new BehaviorTreeExecutor();
+        }
 
-                setNodeExecutionStatus({});
+        executorRef.current.buildTree(
+            nodes,
+            ROOT_NODE_ID,
+            blackboardVariables || {},
+            handleExecutionStatusUpdate
+        );
 
-                await simulateNodeExecution(ROOT_NODE_ID);
+        executorRef.current.start();
 
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-
-            setExecutionHistory(prev => [...prev, `执行停止，共 ${currentTick} 帧`]);
-        };
-
-        runLoop();
+        animationFrameRef.current = requestAnimationFrame(tickLoop);
     };
 
-    const handlePause = async () => {
+    const handlePause = () => {
         if (executionModeRef.current === 'running') {
             executionModeRef.current = 'paused';
             setExecutionMode('paused');
             setExecutionHistory(prev => [...prev, '执行已暂停']);
+
+            if (executorRef.current) {
+                executorRef.current.pause();
+            }
+
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
+                animationFrameRef.current = null;
+            }
         } else if (executionModeRef.current === 'paused') {
             executionModeRef.current = 'running';
             setExecutionMode('running');
             setExecutionHistory(prev => [...prev, '执行已恢复']);
+            lastTickTimeRef.current = 0;
 
-            let currentTick = tickCount;
-            const runLoop = async () => {
-                while (executionModeRef.current === 'running') {
-                    currentTick++;
-                    setTickCount(currentTick);
-                    setExecutionHistory(prev => [...prev, `\n--- 第 ${currentTick} 帧 ---`]);
+            if (executorRef.current) {
+                executorRef.current.resume();
+            }
 
-                    setNodeExecutionStatus({});
-
-                    await simulateNodeExecution(ROOT_NODE_ID);
-
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-
-                setExecutionHistory(prev => [...prev, `执行停止，共 ${currentTick} 帧`]);
-            };
-
-            runLoop();
+            animationFrameRef.current = requestAnimationFrame(tickLoop);
         }
     };
 
     const handleStop = () => {
         executionModeRef.current = 'idle';
         setExecutionMode('idle');
-        setNodeExecutionStatus({});
         setExecutionHistory([]);
         setTickCount(0);
-        if (executionTimerRef.current) {
-            clearInterval(executionTimerRef.current);
-            executionTimerRef.current = null;
+        lastTickTimeRef.current = 0;
+
+        // 清除所有状态定时器
+        statusTimersRef.current.forEach(timer => clearTimeout(timer));
+        statusTimersRef.current.clear();
+
+        // 清除DOM缓存
+        const cache = domCacheRef.current;
+        cache.lastNodeStatus.clear();
+
+        // 使用缓存来移除节点状态类
+        cache.nodes.forEach(node => {
+            node.classList.remove('running', 'success', 'failure', 'executed');
+        });
+
+        // 使用缓存来重置连线样式
+        cache.connections.forEach((path, connKey) => {
+            const connectionType = path.getAttribute('data-connection-type');
+            if (connectionType === 'property') {
+                path.setAttribute('stroke', '#9c27b0');
+            } else {
+                path.setAttribute('stroke', '#0e639c');
+            }
+            path.setAttribute('stroke-width', '2');
+        });
+
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+        }
+
+        if (executorRef.current) {
+            executorRef.current.stop();
         }
     };
 
@@ -851,8 +1004,24 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
     const handleReset = () => {
         handleStop();
+
+        if (executorRef.current) {
+            executorRef.current.cleanup();
+        }
+
         setExecutionHistory(['重置到初始状态']);
     };
+
+    useEffect(() => {
+        return () => {
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
+            }
+            if (executorRef.current) {
+                executorRef.current.destroy();
+            }
+        };
+    }, []);
 
     return (
         <div style={{
@@ -875,42 +1044,49 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     }
                 }
             `}</style>
-            {/* 画布 */}
-            <div
-                ref={canvasRef}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-                onWheel={handleWheel}
-                onMouseDown={handleCanvasMouseDown}
-                onMouseMove={(e) => {
-                    handleNodeMouseMove(e);
-                    handleCanvasMouseMove(e);
-                }}
-                onMouseUp={(e) => {
-                    handleNodeMouseUp();
-                    handleCanvasMouseUp(e);
-                }}
-                onMouseLeave={(e) => {
-                    handleNodeMouseUp();
-                    handleCanvasMouseUp(e);
-                }}
-                style={{
-                    flex: 1,
-                    width: '100%',
-                    backgroundImage: `
-                        linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)
-                    `,
-                    backgroundSize: `${20 * canvasScale}px ${20 * canvasScale}px`,
-                    backgroundPosition: `${canvasOffset.x}px ${canvasOffset.y}px`,
-                    position: 'relative',
-                    minHeight: 0,
-                    overflow: 'hidden',
-                    cursor: isPanning ? 'grabbing' : (draggingNodeId ? 'grabbing' : (connectingFrom ? 'crosshair' : 'default'))
-                }}
-            >
+
+            {/* 画布区域容器 */}
+            <div style={{
+                flex: 1,
+                position: 'relative',
+                minHeight: 0,
+                overflow: 'hidden'
+            }}>
+                {/* 画布 */}
+                <div
+                    ref={canvasRef}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                    onWheel={handleWheel}
+                    onMouseDown={handleCanvasMouseDown}
+                    onMouseMove={(e) => {
+                        handleNodeMouseMove(e);
+                        handleCanvasMouseMove(e);
+                    }}
+                    onMouseUp={(e) => {
+                        handleNodeMouseUp();
+                        handleCanvasMouseUp(e);
+                    }}
+                    onMouseLeave={(e) => {
+                        handleNodeMouseUp();
+                        handleCanvasMouseUp(e);
+                    }}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        backgroundImage: `
+                            linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)
+                        `,
+                        backgroundSize: `${20 * canvasScale}px ${20 * canvasScale}px`,
+                        backgroundPosition: `${canvasOffset.x}px ${canvasOffset.y}px`,
+                        position: 'relative',
+                        overflow: 'hidden',
+                        cursor: isPanning ? 'grabbing' : (draggingNodeId ? 'grabbing' : (connectingFrom ? 'crosshair' : 'default'))
+                    }}
+                >
                 {/* 内容容器 - 应用变换 */}
                 <div style={{
                     width: '100%',
@@ -938,7 +1114,10 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
                         let x1, y1, x2, y2;
                         let pathD: string;
+
+                        // 默认颜色和宽度（会被DOM操作动态更新）
                         const color = conn.connectionType === 'property' ? '#9c27b0' : '#0e639c';
+                        const strokeWidth = 2;
 
                         if (conn.connectionType === 'property') {
                             // 属性连接：从DOM获取实际引脚位置
@@ -982,9 +1161,11 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         return (
                             <path
                                 key={index}
+                                data-connection-id={`${conn.from}-${conn.to}`}
+                                data-connection-type={conn.connectionType || 'node'}
                                 d={pathD}
                                 stroke={color}
-                                strokeWidth="2"
+                                strokeWidth={strokeWidth}
                                 fill="none"
                             />
                         );
@@ -1062,20 +1243,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
                 {/* 节点列表 */}
                 {nodes.map((node: BehaviorTreeNode) => {
-                    const executionStatus = nodeExecutionStatus[node.id] || 'idle';
                     const isRoot = node.id === ROOT_NODE_ID;
                     const isBlackboardVariable = node.data.nodeType === 'blackboard-variable';
                     const isSelected = selectedNodeIds.includes(node.id);
-                    const getStatusColor = () => {
-                        if (isSelected) return '#0e639c';
-                        switch (executionStatus) {
-                            case 'running': return '#ffa726';
-                            case 'success': return '#4caf50';
-                            case 'failure': return '#f44336';
-                            default: return isRoot ? '#FFD700' : (isBlackboardVariable ? '#9c27b0' : '#444');
-                        }
-                    };
-                    const statusColor = getStatusColor();
 
                     // 如果节点正在拖动，使用临时位置
                     const isBeingDragged = dragStartPositions.has(node.id);
@@ -1085,13 +1255,13 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     const nodeClasses = [
                         'bt-node',
                         isSelected && 'selected',
-                        executionStatus === 'running' && 'running',
                         isRoot && 'root'
                     ].filter(Boolean).join(' ');
 
                     return (
                     <div
                         key={node.id}
+                        data-node-id={node.id}
                         className={nodeClasses}
                         onClick={(e) => handleNodeClick(e, node)}
                         onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
@@ -1145,6 +1315,34 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                     <div className="bt-node-header-title">
                                         {isRoot ? 'ROOT' : node.template.displayName}
                                     </div>
+                                    {/* 空节点警告图标 */}
+                                    {!isRoot && node.template.type === 'composite' && !nodes.some(n =>
+                                        connections.some(c => c.from === node.id && c.to === n.id)
+                                    ) && (
+                                        <div
+                                            className="bt-node-empty-warning-container"
+                                            style={{
+                                                marginLeft: 'auto',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                cursor: 'help',
+                                                pointerEvents: 'auto',
+                                                position: 'relative'
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <AlertTriangle
+                                                size={14}
+                                                style={{
+                                                    color: '#ff9800',
+                                                    flexShrink: 0
+                                                }}
+                                            />
+                                            <div className="bt-node-empty-warning-tooltip">
+                                                空节点：没有子节点，执行时会直接跳过
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* 节点主体 */}
@@ -1277,7 +1475,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     onClick={handlePlay}
                     disabled={executionMode === 'running'}
                     style={{
-                        padding: '8px 16px',
+                        padding: '8px',
                         backgroundColor: executionMode === 'running' ? '#2d2d2d' : '#4caf50',
                         border: 'none',
                         borderRadius: '4px',
@@ -1287,18 +1485,17 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         fontWeight: 'bold',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px'
+                        justifyContent: 'center'
                     }}
-                    title="运行"
+                    title="运行 (Play)"
                 >
                     <Play size={16} />
-                    Play
                 </button>
                 <button
                     onClick={handlePause}
                     disabled={executionMode === 'idle'}
                     style={{
-                        padding: '8px 16px',
+                        padding: '8px',
                         backgroundColor: executionMode === 'idle' ? '#2d2d2d' : '#ff9800',
                         border: 'none',
                         borderRadius: '4px',
@@ -1307,18 +1504,17 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         fontSize: '14px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px'
+                        justifyContent: 'center'
                     }}
-                    title="暂停/继续"
+                    title={executionMode === 'paused' ? '继续' : '暂停'}
                 >
                     {executionMode === 'paused' ? <Play size={16} /> : <Pause size={16} />}
-                    {executionMode === 'paused' ? '继续' : '暂停'}
                 </button>
                 <button
                     onClick={handleStop}
                     disabled={executionMode === 'idle'}
                     style={{
-                        padding: '8px 16px',
+                        padding: '8px',
                         backgroundColor: executionMode === 'idle' ? '#2d2d2d' : '#f44336',
                         border: 'none',
                         borderRadius: '4px',
@@ -1327,18 +1523,17 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         fontSize: '14px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px'
+                        justifyContent: 'center'
                     }}
                     title="停止"
                 >
                     <Square size={16} />
-                    停止
                 </button>
                 <button
                     onClick={handleStep}
                     disabled={executionMode !== 'idle' && executionMode !== 'paused'}
                     style={{
-                        padding: '8px 16px',
+                        padding: '8px',
                         backgroundColor: (executionMode !== 'idle' && executionMode !== 'paused') ? '#2d2d2d' : '#2196f3',
                         border: 'none',
                         borderRadius: '4px',
@@ -1347,17 +1542,16 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         fontSize: '14px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px'
+                        justifyContent: 'center'
                     }}
-                    title="步进"
+                    title="单步执行"
                 >
                     <SkipForward size={16} />
-                    单步
                 </button>
                 <button
                     onClick={handleReset}
                     style={{
-                        padding: '8px 16px',
+                        padding: '8px',
                         backgroundColor: '#9e9e9e',
                         border: 'none',
                         borderRadius: '4px',
@@ -1366,12 +1560,11 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         fontSize: '14px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px'
+                        justifyContent: 'center'
                     }}
                     title="重置"
                 >
                     <RotateCcw size={16} />
-                    重置
                 </button>
 
                 {/* 分隔符 */}
@@ -1484,6 +1677,22 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     )}
                     <div>{selectedNodeIds.length > 0 ? `已选择 ${selectedNodeIds.length} 个节点` : '未选择节点'}</div>
                 </div>
+            </div>
+        </div>
+
+            {/* 执行面板 */}
+            <div style={{
+                height: '250px',
+                borderTop: '1px solid #333'
+            }}>
+                <BehaviorTreeExecutionPanel
+                    logs={executionLogs}
+                    onClearLogs={() => setExecutionLogs([])}
+                    isRunning={executionMode === 'running'}
+                    tickCount={tickCount}
+                    executionSpeed={executionSpeed}
+                    onSpeedChange={handleSpeedChange}
+                />
             </div>
         </div>
     );

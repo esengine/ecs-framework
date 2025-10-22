@@ -21,6 +21,13 @@
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   position: relative;
+  transition: all 0.3s ease;
+}
+
+.behavior-tree-window.fullscreen {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
 }
 
 .behavior-tree-header {
@@ -47,7 +54,7 @@
 }
 
 .behavior-tree-toolbar-btn {
-  padding: 6px 12px;
+  padding: 8px;
   background: transparent;
   border: 1px solid #3e3e42;
   border-radius: 3px;
@@ -56,8 +63,10 @@
   font-size: 13px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
   transition: all 0.15s ease;
+  min-width: 32px;
+  min-height: 32px;
 }
 
 .behavior-tree-toolbar-btn:hover {

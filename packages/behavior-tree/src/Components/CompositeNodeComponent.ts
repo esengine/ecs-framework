@@ -14,12 +14,11 @@ export class CompositeNodeComponent extends Component {
     @Serialize()
     compositeType: CompositeType = CompositeType.Sequence;
 
-    /** 是否在重启时重新洗牌子节点（RandomSequence/RandomSelector） */
-    @Serialize()
-    reshuffleOnRestart: boolean = true;
-
     /** 随机化的子节点索引顺序 */
-    private shuffledIndices: number[] = [];
+    protected shuffledIndices: number[] = [];
+
+    /** 是否在重启时重新洗牌（子类可选） */
+    protected reshuffleOnRestart: boolean = true;
 
     /**
      * 获取下一个子节点索引

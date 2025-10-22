@@ -4,6 +4,10 @@ import { DecoratorNodeComponent } from '../Components/DecoratorNodeComponent';
 import { BlackboardComponent } from '../Components/BlackboardComponent';
 import { ActiveNode } from '../Components/ActiveNode';
 import { TaskStatus, NodeType, DecoratorType } from '../Types/TaskStatus';
+import { RepeaterNode } from '../Components/Decorators/RepeaterNode';
+import { ConditionalNode } from '../Components/Decorators/ConditionalNode';
+import { CooldownNode } from '../Components/Decorators/CooldownNode';
+import { TimeoutNode } from '../Components/Decorators/TimeoutNode';
 
 /**
  * 装饰器节点执行系统
@@ -15,17 +19,22 @@ import { TaskStatus, NodeType, DecoratorType } from '../Types/TaskStatus';
  */
 export class DecoratorExecutionSystem extends EntitySystem {
     constructor() {
-        super(Matcher.empty().all(BehaviorTreeNode, DecoratorNodeComponent, ActiveNode));
+        super(Matcher.empty().all(BehaviorTreeNode, ActiveNode));
         this.updateOrder = 200;
     }
 
     protected override process(entities: readonly Entity[]): void {
         for (const entity of entities) {
             const node = entity.getComponent(BehaviorTreeNode)!;
-            const decorator = entity.getComponent(DecoratorNodeComponent)!;
 
-            // 确保是装饰器节点
+            // 只处理装饰器节点
             if (node.nodeType !== NodeType.Decorator) {
+                continue;
+            }
+
+            // 使用 getComponentByType 支持继承查找
+            const decorator = entity.getComponentByType(DecoratorNodeComponent);
+            if (!decorator) {
                 continue;
             }
 
@@ -131,6 +140,8 @@ export class DecoratorExecutionSystem extends EntitySystem {
         child: Entity,
         childNode: BehaviorTreeNode
     ): void {
+        const repeater = decorator as RepeaterNode;
+
         // 如果子节点未激活，激活它
         if (!child.hasComponent(ActiveNode)) {
             child.addComponent(new ActiveNode());
@@ -145,18 +156,18 @@ export class DecoratorExecutionSystem extends EntitySystem {
         }
 
         // 子节点完成
-        if (childNode.status === TaskStatus.Failure && decorator.endOnFailure) {
+        if (childNode.status === TaskStatus.Failure && repeater.endOnFailure) {
             node.status = TaskStatus.Failure;
-            decorator.reset();
+            repeater.reset();
             this.completeNode(entity);
             return;
         }
 
         // 增加重复计数
-        decorator.incrementRepeat();
+        repeater.incrementRepeat();
 
         // 检查是否继续重复
-        if (decorator.shouldContinueRepeat()) {
+        if (repeater.shouldContinueRepeat()) {
             // 重置子节点并继续
             childNode.invalidate();
             child.addComponent(new ActiveNode());
@@ -164,7 +175,7 @@ export class DecoratorExecutionSystem extends EntitySystem {
         } else {
             // 完成
             node.status = TaskStatus.Success;
-            decorator.reset();
+            repeater.reset();
             this.completeNode(entity);
         }
     }
@@ -267,8 +278,10 @@ export class DecoratorExecutionSystem extends EntitySystem {
         child: Entity,
         childNode: BehaviorTreeNode
     ): void {
+        const conditional = decorator as ConditionalNode;
+
         // 评估条件
-        const conditionMet = decorator.evaluateCondition(entity, this.findBlackboard(entity));
+        const conditionMet = conditional.evaluateCondition(entity, this.findBlackboard(entity));
 
         if (!conditionMet) {
             // 条件不满足，直接失败
@@ -301,8 +314,10 @@ export class DecoratorExecutionSystem extends EntitySystem {
         child: Entity,
         childNode: BehaviorTreeNode
     ): void {
+        const cooldown = decorator as CooldownNode;
+
         // 检查冷却
-        if (!decorator.canExecute(Time.totalTime)) {
+        if (!cooldown.canExecute(Time.totalTime)) {
             node.status = TaskStatus.Failure;
             this.completeNode(entity);
             return;
@@ -317,7 +332,7 @@ export class DecoratorExecutionSystem extends EntitySystem {
         node.status = childNode.status;
 
         if (childNode.status !== TaskStatus.Running) {
-            decorator.recordExecution(Time.totalTime);
+            cooldown.recordExecution(Time.totalTime);
             this.completeNode(entity);
         }
     }
@@ -332,11 +347,13 @@ export class DecoratorExecutionSystem extends EntitySystem {
         child: Entity,
         childNode: BehaviorTreeNode
     ): void {
-        decorator.recordExecution(Time.totalTime);
+        const timeout = decorator as TimeoutNode;
 
-        if (decorator.isTimeout(Time.totalTime)) {
+        timeout.recordStartTime(Time.totalTime);
+
+        if (timeout.isTimeout(Time.totalTime)) {
             node.status = TaskStatus.Failure;
-            decorator.reset();
+            timeout.reset();
             // 移除子节点的活跃标记
             child.removeComponentByType(ActiveNode);
             this.completeNode(entity);
@@ -352,7 +369,7 @@ export class DecoratorExecutionSystem extends EntitySystem {
         node.status = childNode.status;
 
         if (childNode.status !== TaskStatus.Running) {
-            decorator.reset();
+            timeout.reset();
             this.completeNode(entity);
         }
     }

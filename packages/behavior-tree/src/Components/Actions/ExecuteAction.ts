@@ -1,7 +1,8 @@
 import { Component, ECSComponent, Entity } from '@esengine/ecs-framework';
 import { Serializable, Serialize, IgnoreSerialization } from '@esengine/ecs-framework';
-import { TaskStatus } from '../../Types/TaskStatus';
+import { TaskStatus, NodeType } from '../../Types/TaskStatus';
 import { BlackboardComponent } from '../BlackboardComponent';
+import { BehaviorNode, BehaviorProperty } from '../../Decorators/BehaviorNodeDecorator';
 
 /**
  * 自定义动作函数类型
@@ -17,14 +18,26 @@ export type CustomActionFunction = (
  *
  * 允许用户提供自定义的动作执行函数
  */
+@BehaviorNode({
+    displayName: '自定义动作',
+    category: '动作',
+    type: NodeType.Action,
+    icon: 'Code',
+    description: '执行自定义代码',
+    color: '#FFC107'
+})
 @ECSComponent('ExecuteAction')
 @Serializable({ version: 1 })
 export class ExecuteAction extends Component {
-    /** 动作代码（字符串，会被编译为函数） */
+    @BehaviorProperty({
+        label: '动作代码',
+        type: 'code',
+        description: 'JavaScript 代码，返回 TaskStatus',
+        required: true
+    })
     @Serialize()
-    actionCode?: string;
+    actionCode?: string = 'return TaskStatus.Success;';
 
-    /** 自定义参数 */
     @Serialize()
     parameters: Record<string, any> = {};
 

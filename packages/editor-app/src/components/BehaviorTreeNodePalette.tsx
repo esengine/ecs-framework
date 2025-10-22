@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NodeTemplates, NodeTemplate } from '@esengine/behavior-tree';
+import { NodeIcon } from './NodeIcon';
 
 interface BehaviorTreeNodePaletteProps {
     onNodeSelect?: (template: NodeTemplate) => void;
@@ -135,8 +136,8 @@ export const BehaviorTreeNodePalette: React.FC<BehaviorTreeNodePaletteProps> = (
                             pointerEvents: 'none'
                         }}>
                             {template.icon && (
-                                <span style={{ marginRight: '8px', fontSize: '16px' }}>
-                                    {template.icon}
+                                <span style={{ marginRight: '8px', display: 'flex', alignItems: 'center' }}>
+                                    <NodeIcon iconName={template.icon} size={16} />
                                 </span>
                             )}
                             <strong style={{ fontSize: '14px' }}>{template.displayName}</strong>

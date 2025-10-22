@@ -18,6 +18,17 @@ import { BlackboardExistsCondition } from './Components/Conditions/BlackboardExi
 import { RandomProbabilityCondition } from './Components/Conditions/RandomProbabilityCondition';
 import { ExecuteCondition, CustomConditionFunction } from './Components/Conditions/ExecuteCondition';
 
+// 导入装饰器组件
+import { RepeaterNode } from './Components/Decorators/RepeaterNode';
+import { InverterNode } from './Components/Decorators/InverterNode';
+import { UntilSuccessNode } from './Components/Decorators/UntilSuccessNode';
+import { UntilFailNode } from './Components/Decorators/UntilFailNode';
+import { AlwaysSucceedNode } from './Components/Decorators/AlwaysSucceedNode';
+import { AlwaysFailNode } from './Components/Decorators/AlwaysFailNode';
+import { ConditionalNode } from './Components/Decorators/ConditionalNode';
+import { CooldownNode } from './Components/Decorators/CooldownNode';
+import { TimeoutNode } from './Components/Decorators/TimeoutNode';
+
 /**
  * 行为树构建器
  *
@@ -168,98 +179,6 @@ export class BehaviorTreeBuilder {
      * 创建反转装饰器
      */
     inverter(name: string = 'Inverter'): BehaviorTreeBuilder {
-        return this.decorator(name, DecoratorType.Inverter);
-    }
-
-    /**
-     * 创建重复装饰器
-     */
-    repeater(name: string = 'Repeater', count: number = -1, endOnFailure: boolean = false): BehaviorTreeBuilder {
-        this.decorator(name, DecoratorType.Repeater);
-
-        const decorator = this.currentEntity.getComponent(DecoratorNodeComponent);
-        if (decorator) {
-            decorator.repeatCount = count;
-            decorator.endOnFailure = endOnFailure;
-        }
-
-        return this;
-    }
-
-    /**
-     * 创建直到成功装饰器
-     */
-    untilSuccess(name: string = 'UntilSuccess'): BehaviorTreeBuilder {
-        return this.decorator(name, DecoratorType.UntilSuccess);
-    }
-
-    /**
-     * 创建直到失败装饰器
-     */
-    untilFail(name: string = 'UntilFail'): BehaviorTreeBuilder {
-        return this.decorator(name, DecoratorType.UntilFail);
-    }
-
-    /**
-     * 创建总是成功装饰器
-     */
-    alwaysSucceed(name: string = 'AlwaysSucceed'): BehaviorTreeBuilder {
-        return this.decorator(name, DecoratorType.AlwaysSucceed);
-    }
-
-    /**
-     * 创建总是失败装饰器
-     */
-    alwaysFail(name: string = 'AlwaysFail'): BehaviorTreeBuilder {
-        return this.decorator(name, DecoratorType.AlwaysFail);
-    }
-
-    /**
-     * 创建条件装饰器
-     */
-    conditional(name: string, conditionCode: string): BehaviorTreeBuilder {
-        this.decorator(name, DecoratorType.Conditional);
-
-        const decorator = this.currentEntity.getComponent(DecoratorNodeComponent);
-        if (decorator) {
-            decorator.conditionCode = conditionCode;
-        }
-
-        return this;
-    }
-
-    /**
-     * 创建冷却装饰器
-     */
-    cooldown(name: string = 'Cooldown', cooldownTime: number = 1.0): BehaviorTreeBuilder {
-        this.decorator(name, DecoratorType.Cooldown);
-
-        const decorator = this.currentEntity.getComponent(DecoratorNodeComponent);
-        if (decorator) {
-            decorator.cooldownTime = cooldownTime;
-        }
-
-        return this;
-    }
-
-    /**
-     * 创建超时装饰器
-     */
-    timeout(name: string = 'Timeout', timeoutDuration: number = 5.0): BehaviorTreeBuilder {
-        this.decorator(name, DecoratorType.Timeout);
-
-        const decorator = this.currentEntity.getComponent(DecoratorNodeComponent);
-        if (decorator) {
-            decorator.timeoutDuration = timeoutDuration;
-        }
-
-        return this;
-    }
-
-    /**
-     * 创建装饰器节点
-     */
-    private decorator(name: string, type: DecoratorType): BehaviorTreeBuilder {
         this.entityStack.push(this.currentEntity);
 
         const entity = this.scene.createEntity(name);
@@ -269,8 +188,164 @@ export class BehaviorTreeBuilder {
         node.nodeType = NodeType.Decorator;
         node.nodeName = name;
 
-        const decorator = entity.addComponent(new DecoratorNodeComponent());
-        decorator.decoratorType = type;
+        entity.addComponent(new InverterNode());
+
+        this.currentEntity = entity;
+        return this;
+    }
+
+    /**
+     * 创建重复装饰器
+     */
+    repeater(name: string = 'Repeater', count: number = -1, endOnFailure: boolean = false): BehaviorTreeBuilder {
+        this.entityStack.push(this.currentEntity);
+
+        const entity = this.scene.createEntity(name);
+        this.currentEntity.addChild(entity);
+
+        const node = entity.addComponent(new BehaviorTreeNode());
+        node.nodeType = NodeType.Decorator;
+        node.nodeName = name;
+
+        const decorator = entity.addComponent(new RepeaterNode());
+        decorator.repeatCount = count;
+        decorator.endOnFailure = endOnFailure;
+
+        this.currentEntity = entity;
+        return this;
+    }
+
+    /**
+     * 创建直到成功装饰器
+     */
+    untilSuccess(name: string = 'UntilSuccess'): BehaviorTreeBuilder {
+        this.entityStack.push(this.currentEntity);
+
+        const entity = this.scene.createEntity(name);
+        this.currentEntity.addChild(entity);
+
+        const node = entity.addComponent(new BehaviorTreeNode());
+        node.nodeType = NodeType.Decorator;
+        node.nodeName = name;
+
+        entity.addComponent(new UntilSuccessNode());
+
+        this.currentEntity = entity;
+        return this;
+    }
+
+    /**
+     * 创建直到失败装饰器
+     */
+    untilFail(name: string = 'UntilFail'): BehaviorTreeBuilder {
+        this.entityStack.push(this.currentEntity);
+
+        const entity = this.scene.createEntity(name);
+        this.currentEntity.addChild(entity);
+
+        const node = entity.addComponent(new BehaviorTreeNode());
+        node.nodeType = NodeType.Decorator;
+        node.nodeName = name;
+
+        entity.addComponent(new UntilFailNode());
+
+        this.currentEntity = entity;
+        return this;
+    }
+
+    /**
+     * 创建总是成功装饰器
+     */
+    alwaysSucceed(name: string = 'AlwaysSucceed'): BehaviorTreeBuilder {
+        this.entityStack.push(this.currentEntity);
+
+        const entity = this.scene.createEntity(name);
+        this.currentEntity.addChild(entity);
+
+        const node = entity.addComponent(new BehaviorTreeNode());
+        node.nodeType = NodeType.Decorator;
+        node.nodeName = name;
+
+        entity.addComponent(new AlwaysSucceedNode());
+
+        this.currentEntity = entity;
+        return this;
+    }
+
+    /**
+     * 创建总是失败装饰器
+     */
+    alwaysFail(name: string = 'AlwaysFail'): BehaviorTreeBuilder {
+        this.entityStack.push(this.currentEntity);
+
+        const entity = this.scene.createEntity(name);
+        this.currentEntity.addChild(entity);
+
+        const node = entity.addComponent(new BehaviorTreeNode());
+        node.nodeType = NodeType.Decorator;
+        node.nodeName = name;
+
+        entity.addComponent(new AlwaysFailNode());
+
+        this.currentEntity = entity;
+        return this;
+    }
+
+    /**
+     * 创建条件装饰器
+     */
+    conditional(name: string, conditionCode: string): BehaviorTreeBuilder {
+        this.entityStack.push(this.currentEntity);
+
+        const entity = this.scene.createEntity(name);
+        this.currentEntity.addChild(entity);
+
+        const node = entity.addComponent(new BehaviorTreeNode());
+        node.nodeType = NodeType.Decorator;
+        node.nodeName = name;
+
+        const decorator = entity.addComponent(new ConditionalNode());
+        decorator.conditionCode = conditionCode;
+
+        this.currentEntity = entity;
+        return this;
+    }
+
+    /**
+     * 创建冷却装饰器
+     */
+    cooldown(name: string = 'Cooldown', cooldownTime: number = 1.0): BehaviorTreeBuilder {
+        this.entityStack.push(this.currentEntity);
+
+        const entity = this.scene.createEntity(name);
+        this.currentEntity.addChild(entity);
+
+        const node = entity.addComponent(new BehaviorTreeNode());
+        node.nodeType = NodeType.Decorator;
+        node.nodeName = name;
+
+        const decorator = entity.addComponent(new CooldownNode());
+        decorator.cooldownTime = cooldownTime;
+
+        this.currentEntity = entity;
+        return this;
+    }
+
+    /**
+     * 创建超时装饰器
+     */
+    timeout(name: string = 'Timeout', timeoutDuration: number = 5.0): BehaviorTreeBuilder {
+        this.entityStack.push(this.currentEntity);
+
+        const entity = this.scene.createEntity(name);
+        this.currentEntity.addChild(entity);
+
+        const node = entity.addComponent(new BehaviorTreeNode());
+        node.nodeType = NodeType.Decorator;
+        node.nodeName = name;
+
+        const decorator = entity.addComponent(new TimeoutNode());
+        decorator.timeoutDuration = timeoutDuration;
 
         this.currentEntity = entity;
         return this;

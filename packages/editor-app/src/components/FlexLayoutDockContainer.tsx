@@ -1,5 +1,5 @@
 import { useRef, useCallback, ReactNode, useMemo } from 'react';
-import { Layout, Model, TabNode, IJsonModel, Actions } from 'flexlayout-react';
+import { Layout, Model, TabNode, IJsonModel, Actions, IJsonTabSetNode, IJsonRowNode } from 'flexlayout-react';
 import 'flexlayout-react/style/light.css';
 import '../styles/FlexLayoutDock.css';
 
@@ -25,7 +25,7 @@ export function FlexLayoutDockContainer({ panels, onPanelClose }: FlexLayoutDock
     );
 
     // Build center column children
-    const centerColumnChildren = [];
+    const centerColumnChildren: (IJsonTabSetNode | IJsonRowNode)[] = [];
     if (centerPanels.length > 0) {
       centerColumnChildren.push({
         type: 'tabset',
@@ -54,7 +54,7 @@ export function FlexLayoutDockContainer({ panels, onPanelClose }: FlexLayoutDock
     }
 
     // Build main row children
-    const mainRowChildren = [];
+    const mainRowChildren: (IJsonTabSetNode | IJsonRowNode)[] = [];
     if (leftPanels.length > 0) {
       mainRowChildren.push({
         type: 'tabset',
@@ -70,7 +70,20 @@ export function FlexLayoutDockContainer({ panels, onPanelClose }: FlexLayoutDock
     }
     if (centerColumnChildren.length > 0) {
       if (centerColumnChildren.length === 1) {
-        mainRowChildren.push({ ...centerColumnChildren[0], weight: 60 });
+        const centerChild = centerColumnChildren[0];
+        if (centerChild && centerChild.type === 'tabset') {
+          mainRowChildren.push({
+            type: 'tabset',
+            weight: 60,
+            children: centerChild.children
+          } as IJsonTabSetNode);
+        } else if (centerChild) {
+          mainRowChildren.push({
+            type: 'row',
+            weight: 60,
+            children: centerChild.children
+          } as IJsonRowNode);
+        }
       } else {
         mainRowChildren.push({
           type: 'row',
