@@ -20,34 +20,77 @@
 }
 
 .flexlayout__tabset_header {
-  background: #2d2d30;
-  border-bottom: 1px solid #3e3e42;
-  height: 32px;
-  min-height: 32px;
+  background: #252526;
+  border-bottom: 1px solid #1e1e1e;
+  height: 28px;
+  min-height: 28px;
 }
 
 .flexlayout__tab {
-  background: #2d2d30;
-  color: #cccccc;
+  background: transparent;
+  color: #969696;
   border: none;
-  border-right: 1px solid #3e3e42;
-  padding: 0 12px;
-  height: 32px;
-  line-height: 32px;
+  padding: 0 16px;
+  height: 28px;
+  line-height: 28px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: all 0.1s ease;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  position: relative;
+}
+
+.flexlayout__tab::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: transparent;
+  transition: background-color 0.1s ease;
 }
 
 .flexlayout__tab:hover {
-  background: #383838;
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.03);
+  color: #e0e0e0;
+}
+
+.flexlayout__tab_button {
+  background: transparent !important;
+  color: #969696;
+  border: none !important;
+  border-right: none !important;
+  padding: 0 16px;
+  height: 28px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  position: relative;
+}
+
+.flexlayout__tab_button::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: transparent;
+  transition: background-color 0.1s ease;
+}
+
+.flexlayout__tab_button:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: #e0e0e0;
 }
 
 .flexlayout__tab_button--selected {
-  background: #094771;
-  color: #ffffff;
-  border-bottom: 2px solid #007acc;
+  background: transparent !important;
+  color: #ffffff !important;
+  border-bottom: none !important;
+}
+
+.flexlayout__tab_button--selected::after {
+  background: #007acc;
 }
 
 .flexlayout__tab_button_leading {
@@ -95,8 +138,12 @@
 }
 
 .flexlayout__splitter {
-  background: #3e3e42;
-  transition: background-color 0.15s ease;
+  background: linear-gradient(to right, transparent, #3e3e42 40%, #3e3e42 60%, transparent);
+  transition: all 0.15s ease;
+}
+
+.flexlayout__splitter_horz {
+  background: linear-gradient(to bottom, transparent, #3e3e42 40%, #3e3e42 60%, transparent);
 }
 
 .flexlayout__splitter:hover {
@@ -104,7 +151,7 @@
 }
 
 .flexlayout__splitter_border {
-  background: #3e3e42;
+  background: #1e1e1e;
 }
 
 .flexlayout__outline_rect {
@@ -180,8 +227,8 @@
 }
 
 .flexlayout__border {
-  background: #2d2d30;
-  border: 1px solid #3e3e42;
+  background: #252526;
+  border: 1px solid #1e1e1e;
 }
 
 .flexlayout__border_top,
@@ -197,23 +244,39 @@
 }
 
 .flexlayout__border_button {
-  background: #2d2d30;
-  color: #cccccc;
+  background: transparent;
+  color: #969696;
   border: none;
-  border-bottom: 1px solid #3e3e42;
+  border-bottom: 1px solid #1e1e1e;
   padding: 8px 12px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: all 0.1s ease;
+  position: relative;
+}
+
+.flexlayout__border_button::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: transparent;
+  transition: background-color 0.1s ease;
 }
 
 .flexlayout__border_button:hover {
-  background: #383838;
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.03);
+  color: #e0e0e0;
 }
 
 .flexlayout__border_button--selected {
-  background: #094771;
+  background: transparent;
   color: #ffffff;
+}
+
+.flexlayout__border_button--selected::after {
+  background: #007acc;
 }
 
 .flexlayout__error_boundary_container {

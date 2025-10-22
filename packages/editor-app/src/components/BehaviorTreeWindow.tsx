@@ -10,6 +10,7 @@ import { BehaviorTreeBlackboard } from './BehaviorTreeBlackboard';
 import { useBehaviorTreeStore } from '../stores/behaviorTreeStore';
 import type { NodeTemplate } from '@esengine/behavior-tree';
 import { createLogger } from '@esengine/ecs-framework';
+import '../styles/BehaviorTreeWindow.css';
 
 interface BehaviorTreeWindowProps {
     isOpen: boolean;
@@ -143,18 +144,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
 
     return (
         <div
-            style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                zIndex: 9999,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-            }}
+            className="behavior-tree-overlay"
             onClick={(e) => {
                 if (e.target === e.currentTarget) {
                     onClose();
@@ -162,145 +152,36 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
             }}
         >
             <div
+                className="behavior-tree-window"
                 onClick={(e) => e.stopPropagation()}
-                style={{
-                    width: '90%',
-                    height: '90%',
-                    backgroundColor: '#1e1e1e',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                    position: 'relative'
-                }}>
-                {/* 标题栏 */}
-                <div style={{
-                    padding: '12px 20px',
-                    backgroundColor: '#2d2d2d',
-                    borderBottom: '1px solid #444',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        color: '#cccccc',
-                        fontSize: '16px',
-                        fontWeight: 'bold'
-                    }}>
-                        <TreePine size={24} />
+            >
+                <div className="behavior-tree-header">
+                    <div className="behavior-tree-title">
+                        <TreePine size={20} />
                         <span>{t('behaviorTree.title')}</span>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                            onClick={handleSave}
-                            style={{
-                                padding: '6px 12px',
-                                backgroundColor: 'transparent',
-                                border: '1px solid #666',
-                                borderRadius: '4px',
-                                color: '#cccccc',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#444';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                            }}
-                        >
+                    <div className="behavior-tree-toolbar">
+                        <button onClick={handleSave} className="behavior-tree-toolbar-btn">
                             <Save size={16} />
                             保存
                         </button>
-                        <button
-                            onClick={handleLoad}
-                            style={{
-                                padding: '6px 12px',
-                                backgroundColor: 'transparent',
-                                border: '1px solid #666',
-                                borderRadius: '4px',
-                                color: '#cccccc',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#444';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                            }}
-                        >
+                        <button onClick={handleLoad} className="behavior-tree-toolbar-btn">
                             <FolderOpen size={16} />
                             打开
                         </button>
-                        <button
-                            onClick={onClose}
-                            style={{
-                                padding: '6px 12px',
-                                backgroundColor: 'transparent',
-                                border: '1px solid #666',
-                                borderRadius: '4px',
-                                color: '#cccccc',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#444';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                            }}
-                        >
+                        <button onClick={onClose} className="behavior-tree-toolbar-btn">
                             <X size={16} />
                             {t('behaviorTree.close')}
                         </button>
                     </div>
                 </div>
 
-                {/* 主内容区域 */}
-                <div style={{
-                    flex: 1,
-                    display: 'flex',
-                    overflow: 'hidden',
-                    position: 'relative'
-                }}>
-                    {/* 左侧节点面板 */}
-                    <div style={{
-                        width: '280px',
-                        borderRight: '1px solid #333',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        position: 'relative',
-                        zIndex: 1
-                    }}>
-                        <div style={{
-                            padding: '12px 15px',
-                            backgroundColor: '#2d2d2d',
-                            borderBottom: '1px solid #333',
-                            color: '#cccccc',
-                            fontSize: '14px',
-                            fontWeight: 'bold'
-                        }}>
+                <div className="behavior-tree-content">
+                    <div className="behavior-tree-panel behavior-tree-panel-left">
+                        <div className="behavior-tree-panel-header">
                             {t('behaviorTree.nodePalette')}
                         </div>
-                        <div style={{
-                            flex: 1,
-                            overflow: 'auto',
-                            position: 'relative'
-                        }}>
+                        <div className="behavior-tree-panel-content">
                             <BehaviorTreeNodePalette
                                 onNodeSelect={(template) => {
                                     setSelectedNode({
@@ -313,14 +194,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                         </div>
                     </div>
 
-                    {/* 中央编辑器 */}
-                    <div style={{
-                        flex: 1,
-                        overflow: 'hidden',
-                        position: 'relative',
-                        display: 'flex',
-                        flexDirection: 'column'
-                    }}>
+                    <div className="behavior-tree-panel behavior-tree-panel-center">
                         <BehaviorTreeEditor
                             onNodeSelect={(node) => {
                                 let template = node.template;
@@ -373,68 +247,25 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                         />
                     </div>
 
-                    {/* 右侧面板 */}
-                    <div style={{
-                        width: '320px',
-                        borderLeft: '1px solid #333',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column'
-                    }}>
-                        {/* Tab 切换 */}
-                        <div style={{
-                            display: 'flex',
-                            backgroundColor: '#2d2d2d',
-                            borderBottom: '1px solid #333'
-                        }}>
+                    <div className="behavior-tree-panel behavior-tree-panel-right">
+                        <div className="behavior-tree-tabs">
                             <button
                                 onClick={() => setRightPanelTab('properties')}
-                                style={{
-                                    flex: 1,
-                                    padding: '12px 15px',
-                                    backgroundColor: rightPanelTab === 'properties' ? '#1e1e1e' : 'transparent',
-                                    border: 'none',
-                                    borderBottom: rightPanelTab === 'properties' ? '2px solid #0e639c' : '2px solid transparent',
-                                    color: rightPanelTab === 'properties' ? '#cccccc' : '#666',
-                                    fontSize: '14px',
-                                    fontWeight: 'bold',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '6px'
-                                }}
+                                className={`behavior-tree-tab ${rightPanelTab === 'properties' ? 'active' : ''}`}
                             >
                                 <Settings size={16} />
                                 {t('behaviorTree.properties')}
                             </button>
                             <button
                                 onClick={() => setRightPanelTab('blackboard')}
-                                style={{
-                                    flex: 1,
-                                    padding: '12px 15px',
-                                    backgroundColor: rightPanelTab === 'blackboard' ? '#1e1e1e' : 'transparent',
-                                    border: 'none',
-                                    borderBottom: rightPanelTab === 'blackboard' ? '2px solid #0e639c' : '2px solid transparent',
-                                    color: rightPanelTab === 'blackboard' ? '#cccccc' : '#666',
-                                    fontSize: '14px',
-                                    fontWeight: 'bold',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '6px'
-                                }}
+                                className={`behavior-tree-tab ${rightPanelTab === 'blackboard' ? 'active' : ''}`}
                             >
                                 <Clipboard size={16} />
                                 {t('behaviorTree.blackboard')}
                             </button>
                         </div>
 
-                        {/* 面板内容 */}
-                        <div style={{ flex: 1, overflow: 'hidden' }}>
+                        <div className="behavior-tree-panel-content">
                             {rightPanelTab === 'properties' ? (
                                 <BehaviorTreeNodeProperties
                                     selectedNode={selectedNode}

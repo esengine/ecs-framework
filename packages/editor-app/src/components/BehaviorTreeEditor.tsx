@@ -10,6 +10,7 @@ import {
     LucideIcon
 } from 'lucide-react';
 import { useBehaviorTreeStore, BehaviorTreeNode, Connection } from '../stores/behaviorTreeStore';
+import '../styles/BehaviorTreeNode.css';
 
 type NodeExecutionStatus = 'idle' | 'running' | 'success' | 'failure';
 type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
@@ -118,7 +119,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         setBoxSelectEnd,
         clearBoxSelect,
         setDragDelta,
-        triggerForceUpdate
+        triggerForceUpdate,
+        sortChildrenByPosition
     } = useBehaviorTreeStore();
 
     // 初始化根节点
@@ -414,6 +416,11 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 });
             });
             updateNodesPosition(updates);
+
+            // 拖动结束后，自动排序子节点
+            setTimeout(() => {
+                sortChildrenByPosition();
+            }, 0);
         }
 
         // 重置偏移量
@@ -515,6 +522,11 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                             ? { ...node, children: [...node.children, nodeId] }
                             : node
                     ));
+
+                    // 创建连接后，自动排序子节点
+                    setTimeout(() => {
+                        sortChildrenByPosition();
+                    }, 0);
                 }
             }
         }
@@ -1070,174 +1082,111 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     const posX = node.position.x + (isBeingDragged ? dragDelta.dx : 0);
                     const posY = node.position.y + (isBeingDragged ? dragDelta.dy : 0);
 
+                    const nodeClasses = [
+                        'bt-node',
+                        isSelected && 'selected',
+                        executionStatus === 'running' && 'running',
+                        isRoot && 'root'
+                    ].filter(Boolean).join(' ');
+
                     return (
                     <div
                         key={node.id}
+                        className={nodeClasses}
                         onClick={(e) => handleNodeClick(e, node)}
                         onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
                         style={{
-                            position: 'absolute',
                             left: posX,
                             top: posY,
                             transform: 'translate(-50%, -50%)',
-                            minWidth: '150px',
-                            padding: '12px',
-                            backgroundColor: isRoot ? '#3d3d1e' : '#2d2d2d',
-                            borderTop: `2px solid ${statusColor}`,
-                            borderRight: `2px solid ${statusColor}`,
-                            borderBottom: `2px solid ${statusColor}`,
-                            borderLeft: `4px solid ${isRoot ? '#FFD700' : (node.template.color || '#666')}`,
-                            borderRadius: '6px',
                             cursor: isRoot ? 'default' : (draggingNodeId === node.id ? 'grabbing' : 'grab'),
-                            boxShadow: executionStatus === 'running'
-                                ? `0 0 20px ${statusColor}`
-                                : (isSelected ? '0 0 15px rgba(14, 99, 156, 0.5)' : (isRoot ? '0 4px 12px rgba(255, 215, 0, 0.3)' : '0 2px 8px rgba(0,0,0,0.3)')),
                             transition: draggingNodeId === node.id ? 'none' : 'all 0.2s',
-                            zIndex: isRoot ? 50 : (draggingNodeId === node.id ? 100 : (isSelected ? 10 : 1)),
-                            userSelect: 'none',
-                            opacity: executionStatus === 'running' ? 0.9 : 1,
-                            animation: executionStatus === 'running' ? 'pulse 1s infinite' : 'none'
+                            zIndex: isRoot ? 50 : (draggingNodeId === node.id ? 100 : (isSelected ? 10 : 1))
                         }}
                     >
                         {isBlackboardVariable ? (
-                            // 黑板变量节点的渲染
                             <>
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    marginBottom: '6px'
-                                }}>
-                                    <Database size={18} color="#9c27b0" style={{ marginRight: '8px' }} />
-                                    <strong style={{
-                                        fontSize: '14px',
-                                        color: '#9c27b0'
-                                    }}>
+                                <div className="bt-node-header blackboard">
+                                    <Database size={16} className="bt-node-header-icon" />
+                                    <div className="bt-node-header-title">
                                         {node.data.variableName || 'Variable'}
-                                    </strong>
+                                    </div>
                                 </div>
-                                <div style={{
-                                    fontSize: '11px',
-                                    color: '#999',
-                                    marginTop: '4px',
-                                    padding: '4px 8px',
-                                    backgroundColor: '#333',
-                                    borderRadius: '3px'
-                                }}>
-                                    {JSON.stringify(blackboardVariables[node.data.variableName])}
+                                <div className="bt-node-body">
+                                    <div className="bt-node-blackboard-value">
+                                        {JSON.stringify(blackboardVariables[node.data.variableName])}
+                                    </div>
                                 </div>
-                                {/* 输出引脚 - 右侧 */}
                                 <div
                                     data-port="true"
                                     data-node-id={node.id}
                                     data-port-type="variable-output"
                                     onMouseDown={(e) => handlePortMouseDown(e, node.id, '__value__')}
-                                    style={{
-                                        position: 'absolute',
-                                        right: '-8px',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        width: '12px',
-                                        height: '12px',
-                                        borderRadius: '50%',
-                                        backgroundColor: '#9c27b0',
-                                        border: '2px solid #1e1e1e',
-                                        cursor: 'pointer',
-                                        zIndex: 10
-                                    }}
+                                    className="bt-node-port bt-node-port-variable-output"
                                     title="Output"
                                 />
                             </>
                         ) : (
-                            // 普通节点的渲染
                             <>
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    marginBottom: '6px'
-                                }}>
+                                {/* 标题栏 - 带渐变 */}
+                                <div className={`bt-node-header ${isRoot ? 'root' : (node.template.type || 'action')}`}>
                                     {isRoot ? (
-                                        <TreePine size={18} color="#FFD700" style={{ marginRight: '8px' }} />
+                                        <TreePine size={16} className="bt-node-header-icon" />
                                     ) : (
                                         node.template.icon && (() => {
                                             const IconComponent = iconMap[node.template.icon];
                                             return IconComponent ? (
-                                                <IconComponent
-                                                    size={18}
-                                                    color={node.template.color || '#cccccc'}
-                                                    style={{ marginRight: '8px' }}
-                                                />
+                                                <IconComponent size={16} className="bt-node-header-icon" />
                                             ) : (
-                                                <span style={{ marginRight: '8px', fontSize: '18px' }}>
-                                                    {node.template.icon}
-                                                </span>
+                                                <span className="bt-node-header-icon">{node.template.icon}</span>
                                             );
                                         })()
                                     )}
-                                    <strong style={{
-                                        fontSize: '14px',
-                                        color: isRoot ? '#FFD700' : '#cccccc'
-                                    }}>
+                                    <div className="bt-node-header-title">
                                         {isRoot ? 'ROOT' : node.template.displayName}
-                                    </strong>
-                                </div>
-                                <div style={{
-                                    fontSize: '11px',
-                                    color: '#666'
-                                }}>
-                                    {node.template.category}
+                                    </div>
                                 </div>
 
-                                {/* 属性引脚列表 */}
+                                {/* 节点主体 */}
+                                <div className="bt-node-body">
+                                    {!isRoot && (
+                                        <div className="bt-node-category">
+                                            {node.template.category}
+                                        </div>
+                                    )}
+
+                                {/* 属性列表 */}
                                 {node.template.properties.length > 0 && (
-                                    <div style={{
-                                        marginTop: '8px',
-                                        paddingTop: '8px',
-                                        borderTop: '1px solid #444',
-                                        fontSize: '11px'
-                                    }}>
+                                    <div className="bt-node-properties">
                                         {node.template.properties.map((prop: PropertyDefinition, idx: number) => {
-                                            // 检查该属性是否已有连接
                                             const hasConnection = connections.some(
                                                 (conn: Connection) => conn.toProperty === prop.name && conn.to === node.id
                                             );
+                                            const propValue = node.data[prop.name];
 
                                             return (
-                                                <div key={idx} style={{
-                                                    position: 'relative',
-                                                    marginBottom: '4px',
-                                                    paddingLeft: '8px',
-                                                    height: '18px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    color: '#999'
-                                                }}>
-                                                    {/* 属性输入引脚 */}
+                                                <div key={idx} className="bt-node-property">
                                                     <div
                                                         data-port="true"
                                                         data-node-id={node.id}
                                                         data-property={prop.name}
                                                         data-port-type="property-input"
                                                         onMouseUp={(e) => handlePortMouseUp(e, node.id, prop.name)}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            left: '-8px',
-                                                            top: '3px',
-                                                            width: '12px',
-                                                            height: '12px',
-                                                            borderRadius: '50%',
-                                                            backgroundColor: hasConnection ? '#4caf50' : '#666',
-                                                            border: '2px solid #1e1e1e',
-                                                            cursor: 'pointer',
-                                                            zIndex: 10
-                                                        }}
+                                                        className={`bt-node-port bt-node-port-property ${hasConnection ? 'connected' : ''}`}
                                                         title={`Input: ${prop.label}`}
                                                     />
-                                                    <span style={{ fontSize: '11px' }}>{prop.label}</span>
+                                                    <span className="bt-node-property-label">{prop.label}:</span>
+                                                    {propValue !== undefined && (
+                                                        <span className="bt-node-property-value">
+                                                            {String(propValue)}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             );
                                         })}
                                     </div>
                                 )}
+                                </div>
 
                                 {/* 输入端口（顶部）- Root 节点不显示 */}
                                 {!isRoot && (
@@ -1246,19 +1195,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                         data-node-id={node.id}
                                         data-port-type="node-input"
                                         onMouseUp={(e) => handlePortMouseUp(e, node.id)}
-                                        style={{
-                                            position: 'absolute',
-                                            top: '-8px',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            width: '16px',
-                                            height: '16px',
-                                            borderRadius: '50%',
-                                            backgroundColor: '#0e639c',
-                                            border: '2px solid #1e1e1e',
-                                            cursor: 'pointer',
-                                            zIndex: 10
-                                        }}
+                                        className="bt-node-port bt-node-port-input"
                                         title="Input"
                                     />
                                 )}
@@ -1269,19 +1206,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                     data-node-id={node.id}
                                     data-port-type="node-output"
                                     onMouseDown={(e) => handlePortMouseDown(e, node.id)}
-                                    style={{
-                                        position: 'absolute',
-                                        bottom: '-8px',
-                                        left: '50%',
-                                        transform: 'translateX(-50%)',
-                                        width: '16px',
-                                        height: '16px',
-                                        borderRadius: '50%',
-                                        backgroundColor: '#0e639c',
-                                        border: '2px solid #1e1e1e',
-                                        cursor: 'pointer',
-                                        zIndex: 10
-                                    }}
+                                    className="bt-node-port bt-node-port-output"
                                     title="Output"
                                 />
                             </>

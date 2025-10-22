@@ -92,6 +92,9 @@ interface BehaviorTreeState {
     // 强制更新
     triggerForceUpdate: () => void;
 
+    // 自动排序子节点
+    sortChildrenByPosition: () => void;
+
     // 数据导出/导入
     exportToJSON: (metadata: { name: string; description: string }, blackboard: Record<string, any>) => string;
     importFromJSON: (json: string) => { blackboard: Record<string, any> };
@@ -223,6 +226,29 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
 
     // 强制更新
     triggerForceUpdate: () => set((state: BehaviorTreeState) => ({ forceUpdateCounter: state.forceUpdateCounter + 1 })),
+
+    // 自动排序子节点（按X坐标从左到右）
+    sortChildrenByPosition: () => set((state: BehaviorTreeState) => {
+        const nodeMap = new Map<string, BehaviorTreeNode>();
+        state.nodes.forEach(node => nodeMap.set(node.id, node));
+
+        const sortedNodes = state.nodes.map(node => {
+            if (node.children.length <= 1) {
+                return node;
+            }
+
+            const sortedChildren = [...node.children].sort((a, b) => {
+                const nodeA = nodeMap.get(a);
+                const nodeB = nodeMap.get(b);
+                if (!nodeA || !nodeB) return 0;
+                return nodeA.position.x - nodeB.position.x;
+            });
+
+            return { ...node, children: sortedChildren };
+        });
+
+        return { nodes: sortedNodes };
+    }),
 
     exportToJSON: (metadata: { name: string; description: string }, blackboard: Record<string, any>) => {
         const state = get();
