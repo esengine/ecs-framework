@@ -3,6 +3,7 @@ import {
     BehaviorTreeNode as BehaviorTreeNodeComponent,
     BlackboardComponent,
     ActiveNode,
+    PropertyBindings,
     RootExecutionSystem,
     LeafExecutionSystem,
     DecoratorExecutionSystem,
@@ -75,6 +76,8 @@ export class BehaviorTreeExecutor {
     private lastStatuses: Map<string, 'running' | 'success' | 'failure' | 'idle'> = new Map();
     private debugMode = false;
     private tickCount = 0;
+    // 存储节点ID -> 属性绑定信息的映射
+    private propertyBindingsMap: Map<string, Map<string, string>> = new Map();
 
     constructor() {
         this.world = new World({ name: 'BehaviorTreeWorld' });
@@ -94,6 +97,7 @@ export class BehaviorTreeExecutor {
         nodes: BehaviorTreeNode[],
         rootNodeId: string,
         blackboard: Record<string, any>,
+        connections: Array<{ from: string; to: string; fromProperty?: string; toProperty?: string; connectionType: 'node' | 'property' }>,
         callback: ExecutionCallback
     ): void {
         this.cleanup();
@@ -109,17 +113,24 @@ export class BehaviorTreeExecutor {
             return;
         }
 
+        // 先创建黑板组件
+        const blackboardComp = new BlackboardComponent();
+        Object.entries(this.blackboardVariables).forEach(([key, value]) => {
+            const type = typeof value === 'number' ? 'number' :
+                        typeof value === 'string' ? 'string' :
+                        typeof value === 'boolean' ? 'boolean' :
+                        'object';
+            blackboardComp.defineVariable(key, type as any, value);
+        });
+
+        // 在创建实体之前先处理属性连接，这样创建组件时就能读到正确的值
+        this.applyPropertyConnections(connections, nodeMap, blackboardComp);
+
+        // 创建实体树
         this.rootEntity = this.createEntityFromNode(rootNode, nodeMap, null);
 
         if (this.rootEntity) {
-            const blackboardComp = new BlackboardComponent();
-            Object.entries(this.blackboardVariables).forEach(([key, value]) => {
-                const type = typeof value === 'number' ? 'number' :
-                            typeof value === 'string' ? 'string' :
-                            typeof value === 'boolean' ? 'boolean' :
-                            'object';
-                blackboardComp.defineVariable(key, type as any, value);
-            });
+            // 将黑板组件添加到根实体
             this.rootEntity.addComponent(blackboardComp);
 
             if (this.debugMode) {
@@ -130,6 +141,66 @@ export class BehaviorTreeExecutor {
                 }
             }
         }
+    }
+
+    /**
+     * 应用属性连接
+     * 记录属性到黑板变量的绑定关系
+     */
+    private applyPropertyConnections(
+        connections: Array<{ from: string; to: string; fromProperty?: string; toProperty?: string; connectionType: 'node' | 'property' }>,
+        nodeMap: Map<string, BehaviorTreeNode>,
+        blackboard: BlackboardComponent
+    ): void {
+        // 清空之前的绑定信息
+        this.propertyBindingsMap.clear();
+
+        // 过滤出属性类型的连接
+        const propertyConnections = connections.filter(conn => conn.connectionType === 'property');
+
+        logger.info(`[属性绑定] 找到 ${propertyConnections.length} 个属性连接`);
+
+        propertyConnections.forEach(conn => {
+            const fromNode = nodeMap.get(conn.from);
+            const toNode = nodeMap.get(conn.to);
+
+            if (!fromNode || !toNode || !conn.toProperty) {
+                logger.warn(`[属性绑定] 连接数据不完整: from=${conn.from}, to=${conn.to}, toProperty=${conn.toProperty}`);
+                return;
+            }
+
+            let variableName: string | undefined;
+
+            // 检查 from 节点是否是黑板变量节点
+            if (fromNode.data.nodeType === 'blackboard-variable') {
+                // 黑板变量节点，变量名在 data.variableName 中
+                variableName = fromNode.data.variableName;
+            } else if (conn.fromProperty) {
+                // 普通节点的属性连接
+                variableName = conn.fromProperty;
+            }
+
+            if (!variableName) {
+                logger.warn(`[属性绑定] 无法确定变量名: from节点=${fromNode.template.displayName}`);
+                return;
+            }
+
+            if (!blackboard.hasVariable(variableName)) {
+                logger.warn(`[属性绑定] 黑板变量不存在: ${variableName}`);
+                return;
+            }
+
+            // 记录绑定信息到 Map
+            let nodeBindings = this.propertyBindingsMap.get(toNode.id);
+            if (!nodeBindings) {
+                nodeBindings = new Map<string, string>();
+                this.propertyBindingsMap.set(toNode.id, nodeBindings);
+            }
+
+            nodeBindings.set(conn.toProperty, variableName);
+
+            logger.info(`[属性绑定] 成功绑定: 节点 "${toNode.template.displayName}" 的属性 "${conn.toProperty}" -> 黑板变量 "${variableName}"`);
+        });
     }
 
     /**
@@ -152,6 +223,17 @@ export class BehaviorTreeExecutor {
         entity.addComponent(btNode);
 
         this.addNodeComponents(entity, node);
+
+        // 检查是否有属性绑定，如果有则添加 PropertyBindings 组件
+        const bindings = this.propertyBindingsMap.get(node.id);
+        if (bindings && bindings.size > 0) {
+            const propertyBindings = new PropertyBindings();
+            bindings.forEach((variableName, propertyName) => {
+                propertyBindings.addBinding(propertyName, variableName);
+            });
+            entity.addComponent(propertyBindings);
+            logger.info(`[PropertyBindings] 为节点 "${node.template.displayName}" 添加了 ${bindings.size} 个属性绑定`);
+        }
 
         node.children.forEach(childId => {
             const childNode = nodeMap.get(childId);
@@ -496,6 +578,13 @@ export class BehaviorTreeExecutor {
     }
 
     /**
+     * 获取当前tick计数
+     */
+    getTickCount(): number {
+        return this.tickCount;
+    }
+
+    /**
      * 获取黑板变量
      */
     getBlackboardVariables(): Record<string, any> {
@@ -610,6 +699,7 @@ export class BehaviorTreeExecutor {
     cleanup(): void {
         this.stop();
         this.entityMap.clear();
+        this.propertyBindingsMap.clear();
         this.rootEntity = null;
 
         this.scene.destroyAllEntities();

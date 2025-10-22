@@ -2,6 +2,7 @@ import { EntitySystem, Matcher, Entity, Time } from '@esengine/ecs-framework';
 import { BehaviorTreeNode } from '../Components/BehaviorTreeNode';
 import { BlackboardComponent } from '../Components/BlackboardComponent';
 import { ActiveNode } from '../Components/ActiveNode';
+import { PropertyBindings } from '../Components/PropertyBindings';
 import { TaskStatus, NodeType } from '../Types/TaskStatus';
 
 // 导入具体的动作组件
@@ -96,7 +97,9 @@ export class LeafExecutionSystem extends EntitySystem {
     private executeLogAction(entity: Entity): TaskStatus {
         const logAction = entity.getComponent(LogAction)!;
 
-        let message = logAction.message;
+        // 从 PropertyBindings 读取绑定的黑板变量值
+        let message = this.resolvePropertyValue(entity, 'message', logAction.message);
+
         if (logAction.includeEntityInfo) {
             message = `[Entity: ${entity.name}] ${message}`;
         }
@@ -141,12 +144,8 @@ export class LeafExecutionSystem extends EntitySystem {
             }
             valueToSet = blackboard.getValue(action.sourceVariable);
         } else {
-            valueToSet = action.value;
-
-            // 处理变量引用 {{varName}}
-            if (typeof valueToSet === 'string') {
-                valueToSet = this.resolveVariableReferences(valueToSet, blackboard);
-            }
+            // 从 PropertyBindings 读取绑定的值
+            valueToSet = this.resolvePropertyValue(entity, 'value', action.value);
         }
 
         const success = blackboard.setValue(action.variableName, valueToSet, action.force);
@@ -171,12 +170,9 @@ export class LeafExecutionSystem extends EntitySystem {
         }
 
         let currentValue = blackboard.getValue(action.variableName);
-        let operand = action.operand;
 
-        // 解析操作数中的变量引用
-        if (typeof operand === 'string') {
-            operand = this.resolveVariableReferences(operand, blackboard);
-        }
+        // 从 PropertyBindings 读取绑定的值
+        let operand = this.resolvePropertyValue(entity, 'operand', action.operand);
 
         // 执行操作
         let newValue: any;
@@ -279,12 +275,9 @@ export class LeafExecutionSystem extends EntitySystem {
         }
 
         const value = blackboard.getValue(condition.variableName);
-        let compareValue = condition.compareValue;
 
-        // 解析变量引用
-        if (typeof compareValue === 'string') {
-            compareValue = this.resolveVariableReferences(compareValue, blackboard);
-        }
+        // 从 PropertyBindings 读取绑定的值
+        let compareValue = this.resolvePropertyValue(entity, 'compareValue', condition.compareValue);
 
         let result = false;
         switch (condition.operator) {
@@ -371,28 +364,35 @@ export class LeafExecutionSystem extends EntitySystem {
     }
 
     /**
-     * 解析字符串中的变量引用 {{varName}}
+     * 解析属性值
+     * 如果属性绑定到黑板变量，从黑板读取最新值
      */
-    private resolveVariableReferences(value: string, blackboard: BlackboardComponent): any {
-        // 纯变量引用，返回原始值
-        const pureMatch = value.match(/^{{\s*(\w+)\s*}}$/);
-        if (pureMatch) {
-            const varName = pureMatch[1];
-            if (blackboard.hasVariable(varName)) {
-                return blackboard.getValue(varName);
-            }
-            return value;
+    private resolvePropertyValue(entity: Entity, propertyName: string, defaultValue: any): any {
+        // 检查实体是否有 PropertyBindings 组件
+        const bindings = entity.getComponent(PropertyBindings);
+        if (!bindings || !bindings.hasBinding(propertyName)) {
+            // 没有绑定，返回默认值
+            return defaultValue;
         }
 
-        // 字符串模板，替换所有变量引用
-        return value.replace(/\{\{(\w+)\}\}/g, (match, varName) => {
-            if (blackboard.hasVariable(varName)) {
-                const val = blackboard.getValue(varName);
-                return val !== undefined ? String(val) : match;
-            }
-            return match;
-        });
+        // 有绑定，从黑板读取值
+        const blackboardKey = bindings.getBinding(propertyName)!;
+        const blackboard = this.findBlackboard(entity);
+
+        if (!blackboard) {
+            this.logger.warn(`[属性绑定] 未找到黑板组件，实体: ${entity.name}`);
+            return defaultValue;
+        }
+
+        if (!blackboard.hasVariable(blackboardKey)) {
+            this.logger.warn(`[属性绑定] 黑板变量不存在: ${blackboardKey}`);
+            return defaultValue;
+        }
+
+        const value = blackboard.getValue(blackboardKey);
+        return value;
     }
+
 
     /**
      * 移除节点的活跃标记

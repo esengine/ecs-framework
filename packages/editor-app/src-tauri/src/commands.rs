@@ -74,3 +74,22 @@ pub async fn get_profiler_status(
     let server_lock = state.server.lock().await;
     Ok(server_lock.is_some())
 }
+
+#[tauri::command]
+pub async fn read_behavior_tree_file(file_path: String) -> Result<String, String> {
+    use std::fs;
+
+    // 使用 Rust 标准库直接读取文件，绕过 Tauri 的 scope 限制
+    fs::read_to_string(&file_path)
+        .map_err(|e| format!("Failed to read file {}: {}", file_path, e))
+}
+
+#[tauri::command]
+pub async fn write_behavior_tree_file(file_path: String, content: String) -> Result<(), String> {
+    use std::fs;
+
+    // 使用 Rust 标准库直接写入文件
+    fs::write(&file_path, content)
+        .map_err(|e| format!("Failed to write file {}: {}", file_path, e))
+}
+

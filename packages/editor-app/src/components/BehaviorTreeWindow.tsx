@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TreePine, X, Settings, Clipboard, Save, FolderOpen, Maximize2, Minimize2 } from 'lucide-react';
 import { save, open } from '@tauri-apps/plugin-dialog';
-import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
+import { invoke } from '@tauri-apps/api/core';
 import { BehaviorTreeEditor } from './BehaviorTreeEditor';
 import { BehaviorTreeNodePalette } from './BehaviorTreeNodePalette';
 import { BehaviorTreeNodeProperties } from './BehaviorTreeNodeProperties';
@@ -98,7 +98,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                     { name: 'behavior-tree', description: '' },
                     blackboardVariables
                 );
-                await writeTextFile(filePath, json);
+                await invoke('write_behavior_tree_file', { filePath, content: json });
                 logger.info('行为树已保存', filePath);
             }
         } catch (error) {
@@ -117,7 +117,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
             });
 
             if (selected) {
-                const json = await readTextFile(selected as string);
+                const json = await invoke<string>('read_behavior_tree_file', { filePath: selected as string });
                 const result = importFromJSON(json);
                 setBlackboardVariables(result.blackboard);
                 logger.info('行为树已加载', selected);
@@ -130,7 +130,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
 
     useEffect(() => {
         if (filePath && isOpen) {
-            readTextFile(filePath)
+            invoke<string>('read_behavior_tree_file', { filePath })
                 .then((json: string) => {
                     const result = importFromJSON(json);
                     setBlackboardVariables(result.blackboard);

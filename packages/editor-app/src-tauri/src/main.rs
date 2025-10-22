@@ -283,6 +283,24 @@ async fn get_profiler_status(
     Ok(server_lock.is_some())
 }
 
+#[tauri::command]
+async fn read_behavior_tree_file(file_path: String) -> Result<String, String> {
+    use std::fs;
+
+    // 使用 Rust 标准库直接读取文件，绕过 Tauri 的 scope 限制
+    fs::read_to_string(&file_path)
+        .map_err(|e| format!("Failed to read file {}: {}", file_path, e))
+}
+
+#[tauri::command]
+async fn write_behavior_tree_file(file_path: String, content: String) -> Result<(), String> {
+    use std::fs;
+
+    // 使用 Rust 标准库直接写入文件
+    fs::write(&file_path, content)
+        .map_err(|e| format!("Failed to write file {}: {}", file_path, e))
+}
+
 fn main() {
     let project_paths: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
     let project_paths_clone = Arc::clone(&project_paths);
@@ -365,7 +383,9 @@ fn main() {
             toggle_devtools,
             start_profiler_server,
             stop_profiler_server,
-            get_profiler_status
+            get_profiler_status,
+            read_behavior_tree_file,
+            write_behavior_tree_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

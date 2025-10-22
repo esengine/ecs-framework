@@ -891,6 +891,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             // 执行tick但不触发重渲染
             executorRef.current.tick(deltaTime);
 
+            // 更新 tick 计数显示
+            setTickCount(executorRef.current.getTickCount());
+
             lastTickTimeRef.current = currentTime;
         }
 
@@ -921,6 +924,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             nodes,
             ROOT_NODE_ID,
             blackboardVariables || {},
+            connections,
             handleExecutionStatusUpdate
         );
 

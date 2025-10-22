@@ -116,7 +116,7 @@ export class CompositeExecutionSystem extends EntitySystem {
         if (node.currentChildIndex >= children.length) {
             // 所有子节点都成功
             node.status = TaskStatus.Success;
-            node.reset();
+            node.currentChildIndex = 0; // 只重置索引，保持状态为Success
             this.completeNode(entity);
             return;
         }
@@ -143,10 +143,12 @@ export class CompositeExecutionSystem extends EntitySystem {
         } else if (childNode.status === TaskStatus.Failure) {
             // 任一失败则失败
             node.status = TaskStatus.Failure;
-            node.reset();
+            node.currentChildIndex = 0; // 只重置索引，保持状态为Failure
             this.completeNode(entity);
         } else if (childNode.status === TaskStatus.Success) {
             // 成功则移动到下一个子节点
+            // 重置已完成的子节点状态，以便下次行为树重新执行时从头开始
+            childNode.reset();
             node.currentChildIndex++;
             // 继续保持活跃，下一帧处理下一个子节点
             node.status = TaskStatus.Running;
@@ -170,7 +172,7 @@ export class CompositeExecutionSystem extends EntitySystem {
         if (node.currentChildIndex >= children.length) {
             // 所有子节点都失败
             node.status = TaskStatus.Failure;
-            node.reset();
+            node.currentChildIndex = 0; // 只重置索引，保持状态为Failure
             this.completeNode(entity);
             return;
         }
@@ -197,10 +199,12 @@ export class CompositeExecutionSystem extends EntitySystem {
         } else if (childNode.status === TaskStatus.Success) {
             // 任一成功则成功
             node.status = TaskStatus.Success;
-            node.reset();
+            node.currentChildIndex = 0; // 只重置索引，保持状态为Success
             this.completeNode(entity);
         } else if (childNode.status === TaskStatus.Failure) {
             // 失败则移动到下一个子节点
+            // 重置已完成的子节点状态，以便下次行为树重新执行时从头开始
+            childNode.reset();
             node.currentChildIndex++;
             // 继续保持活跃，下一帧处理下一个子节点
             node.status = TaskStatus.Running;
@@ -234,12 +238,12 @@ export class CompositeExecutionSystem extends EntitySystem {
             node.status = TaskStatus.Running;
         } else if (hasFailed) {
             node.status = TaskStatus.Failure;
-            node.reset();
+            node.currentChildIndex = 0; // 只重置索引，保持状态为Failure
             this.completeNode(entity);
         } else {
             // 所有子节点都成功
             node.status = TaskStatus.Success;
-            node.reset();
+            node.currentChildIndex = 0; // 只重置索引，保持状态为Success
             this.completeNode(entity);
         }
     }
@@ -270,7 +274,7 @@ export class CompositeExecutionSystem extends EntitySystem {
         if (hasSucceeded) {
             // 任一成功则成功
             node.status = TaskStatus.Success;
-            node.reset();
+            node.currentChildIndex = 0; // 只重置索引，保持状态为Success
             // 停止所有子节点
             for (const child of children) {
                 child.removeComponentByType(ActiveNode);
@@ -281,7 +285,7 @@ export class CompositeExecutionSystem extends EntitySystem {
         } else {
             // 所有子节点都失败
             node.status = TaskStatus.Failure;
-            node.reset();
+            node.currentChildIndex = 0; // 只重置索引，保持状态为Failure
             this.completeNode(entity);
         }
     }
@@ -301,7 +305,7 @@ export class CompositeExecutionSystem extends EntitySystem {
         if (childIndex >= children.length) {
             // 所有子节点都成功
             node.status = TaskStatus.Success;
-            node.reset();
+            node.currentChildIndex = 0; // 只重置索引，保持状态为Success
             composite.resetShuffle();
             this.completeNode(entity);
             return;
@@ -328,11 +332,13 @@ export class CompositeExecutionSystem extends EntitySystem {
             node.status = TaskStatus.Running;
         } else if (childNode.status === TaskStatus.Failure) {
             node.status = TaskStatus.Failure;
-            node.reset();
+            node.currentChildIndex = 0; // 只重置索引，保持状态为Failure
             composite.resetShuffle();
             this.completeNode(entity);
         } else if (childNode.status === TaskStatus.Success) {
             // 成功则移动到下一个子节点
+            // 重置已完成的子节点状态，以便下次行为树重新执行时从头开始
+            childNode.reset();
             node.currentChildIndex++;
             node.status = TaskStatus.Running;
         }
@@ -353,7 +359,7 @@ export class CompositeExecutionSystem extends EntitySystem {
         if (childIndex >= children.length) {
             // 所有子节点都失败
             node.status = TaskStatus.Failure;
-            node.reset();
+            node.currentChildIndex = 0; // 只重置索引，保持状态为Failure
             composite.resetShuffle();
             this.completeNode(entity);
             return;
@@ -380,11 +386,13 @@ export class CompositeExecutionSystem extends EntitySystem {
             node.status = TaskStatus.Running;
         } else if (childNode.status === TaskStatus.Success) {
             node.status = TaskStatus.Success;
-            node.reset();
+            node.currentChildIndex = 0; // 只重置索引，保持状态为Success
             composite.resetShuffle();
             this.completeNode(entity);
         } else if (childNode.status === TaskStatus.Failure) {
             // 失败则移动到下一个子节点
+            // 重置已完成的子节点状态，以便下次行为树重新执行时从头开始
+            childNode.reset();
             node.currentChildIndex++;
             node.status = TaskStatus.Running;
         }
@@ -653,10 +661,30 @@ export class CompositeExecutionSystem extends EntitySystem {
     }
 
     /**
+     * 递归重置所有子节点的状态
+     */
+    private resetAllChildren(entity: Entity): void {
+        for (const child of entity.children) {
+            const childNode = child.getComponent(BehaviorTreeNode);
+            if (childNode) {
+                childNode.reset();
+            }
+            // 递归重置孙子节点
+            this.resetAllChildren(child);
+        }
+    }
+
+    /**
      * 完成节点执行
      */
     private completeNode(entity: Entity): void {
         entity.removeComponentByType(ActiveNode);
+
+        // 如果是复合节点完成，重置所有子节点状态
+        const node = entity.getComponent(BehaviorTreeNode);
+        if (node && node.nodeType === NodeType.Composite) {
+            this.resetAllChildren(entity);
+        }
 
         // 通知父节点
         if (entity.parent && entity.parent.hasComponent(BehaviorTreeNode)) {
