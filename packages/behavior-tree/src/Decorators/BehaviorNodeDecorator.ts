@@ -11,6 +11,7 @@ export interface BehaviorNodeMetadata {
     icon?: string;
     description: string;
     color?: string;
+    className?: string;
 }
 
 /**
@@ -70,7 +71,11 @@ class NodeClassRegistry {
  */
 export function BehaviorNode(metadata: BehaviorNodeMetadata) {
     return function <T extends { new (...args: any[]): any }>(constructor: T) {
-        NodeClassRegistry.registerNodeClass(constructor, metadata);
+        const metadataWithClassName = {
+            ...metadata,
+            className: constructor.name
+        };
+        NodeClassRegistry.registerNodeClass(constructor, metadataWithClassName);
         return constructor;
     };
 }
@@ -160,6 +165,7 @@ export function getRegisteredNodeTemplates(): NodeTemplate[] {
             icon: metadata.icon,
             description: metadata.description,
             color: metadata.color,
+            className: metadata.className,
             defaultConfig,
             properties
         };

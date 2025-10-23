@@ -195,8 +195,14 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
         setLevelFilter(newFilter);
     };
 
+    // 使用ref保存缓存，避免每次都重新计算
+    const parsedLogsCacheRef = useRef<Map<number, ParsedLogData>>(new Map());
+
     const extractJSON = useMemo(() => {
         return (message: string): { prefix: string; json: string; suffix: string } | null => {
+            // 快速路径：如果消息太短，直接返回
+            if (message.length < 2) return null;
+
             const jsonStartChars = ['{', '['];
             let startIndex = -1;
 
@@ -209,17 +215,51 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
 
             if (startIndex === -1) return null;
 
-            for (let endIndex = message.length; endIndex > startIndex; endIndex--) {
-                const possibleJson = message.substring(startIndex, endIndex);
-                try {
-                    JSON.parse(possibleJson);
-                    return {
-                        prefix: message.substring(0, startIndex).trim(),
-                        json: possibleJson,
-                        suffix: message.substring(endIndex).trim()
-                    };
-                } catch {
+            // 使用栈匹配算法，更高效地找到JSON边界
+            const startChar = message[startIndex];
+            const endChar = startChar === '{' ? '}' : ']';
+            let depth = 0;
+            let inString = false;
+            let escape = false;
+
+            for (let i = startIndex; i < message.length; i++) {
+                const char = message[i];
+
+                if (escape) {
+                    escape = false;
                     continue;
+                }
+
+                if (char === '\\') {
+                    escape = true;
+                    continue;
+                }
+
+                if (char === '"') {
+                    inString = !inString;
+                    continue;
+                }
+
+                if (inString) continue;
+
+                if (char === startChar) {
+                    depth++;
+                } else if (char === endChar) {
+                    depth--;
+                    if (depth === 0) {
+                        // 找到匹配的结束符
+                        const possibleJson = message.substring(startIndex, i + 1);
+                        try {
+                            JSON.parse(possibleJson);
+                            return {
+                                prefix: message.substring(0, startIndex).trim(),
+                                json: possibleJson,
+                                suffix: message.substring(i + 1).trim()
+                            };
+                        } catch {
+                            return null;
+                        }
+                    }
                 }
             }
 
@@ -228,11 +268,15 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
     }, []);
 
     const parsedLogsCache = useMemo(() => {
-        const cache = new Map<number, ParsedLogData>();
+        const cache = parsedLogsCacheRef.current;
 
+        // 只处理新增的日志
         for (const log of logs) {
+            // 如果已经缓存过，跳过
+            if (cache.has(log.id)) continue;
+
             try {
-                const parsed = JSON.parse(log.message);
+                JSON.parse(log.message);
                 cache.set(log.id, {
                     isJSON: true,
                     jsonStr: log.message,
@@ -260,6 +304,14 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
                         extracted: null
                     });
                 }
+            }
+        }
+
+        // 清理不再需要的缓存（日志被删除）
+        const logIds = new Set(logs.map(log => log.id));
+        for (const cachedId of cache.keys()) {
+            if (!logIds.has(cachedId)) {
+                cache.delete(cachedId);
             }
         }
 

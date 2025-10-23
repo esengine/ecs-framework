@@ -19,6 +19,7 @@ export * from './Components/CompositeNodeComponent';
 export * from './Components/DecoratorNodeComponent';
 export * from './Components/ActiveNode';
 export * from './Components/PropertyBindings';
+export * from './Components/LogOutput';
 
 // 动作组件
 export * from './Components/Actions/WaitAction';

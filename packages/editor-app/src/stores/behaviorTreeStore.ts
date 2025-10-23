@@ -25,6 +25,13 @@ interface BehaviorTreeState {
     dragStartPositions: Map<string, { x: number; y: number }>;
     isDraggingNode: boolean;
 
+    // 黑板变量
+    blackboardVariables: Record<string, any>;
+    // 初始黑板变量（设计时的值，用于保存）
+    initialBlackboardVariables: Record<string, any>;
+    // 是否正在运行行为树
+    isExecuting: boolean;
+
     // 画布变换
     canvasOffset: { x: number; y: number };
     canvasScale: number;
@@ -92,6 +99,12 @@ interface BehaviorTreeState {
     // 强制更新
     triggerForceUpdate: () => void;
 
+    // 黑板变量 Actions
+    setBlackboardVariables: (variables: Record<string, any>) => void;
+    updateBlackboardVariable: (name: string, value: any) => void;
+    setInitialBlackboardVariables: (variables: Record<string, any>) => void;
+    setIsExecuting: (isExecuting: boolean) => void;
+
     // 自动排序子节点
     sortChildrenByPosition: () => void;
 
@@ -109,6 +122,11 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     draggingNodeId: null,
     dragStartPositions: new Map(),
     isDraggingNode: false,
+
+    // 黑板变量初始值
+    blackboardVariables: {},
+    initialBlackboardVariables: {},
+    isExecuting: false,
 
     // 画布变换初始值
     canvasOffset: { x: 0, y: 0 },
@@ -139,21 +157,8 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     addNode: (node: BehaviorTreeNode) => set((state: BehaviorTreeState) => ({ nodes: [...state.nodes, node] })),
 
     removeNodes: (nodeIds: string[]) => set((state: BehaviorTreeState) => {
-        // 收集所有需要删除的节点（包括子节点）
+        // 只删除指定的节点，不删除子节点
         const nodesToDelete = new Set<string>(nodeIds);
-
-        // 递归收集所有子节点
-        const collectChildren = (id: string) => {
-            const node = state.nodes.find((n: BehaviorTreeNode) => n.id === id);
-            if (node) {
-                node.children.forEach((childId: string) => {
-                    nodesToDelete.add(childId);
-                    collectChildren(childId);
-                });
-            }
-        };
-
-        nodeIds.forEach(collectChildren);
 
         // 过滤掉删除的节点，并清理所有节点的 children 引用
         const remainingNodes = state.nodes
@@ -251,6 +256,20 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     // 强制更新
     triggerForceUpdate: () => set((state: BehaviorTreeState) => ({ forceUpdateCounter: state.forceUpdateCounter + 1 })),
 
+    // 黑板变量 Actions
+    setBlackboardVariables: (variables: Record<string, any>) => set({ blackboardVariables: variables }),
+
+    updateBlackboardVariable: (name: string, value: any) => set((state: BehaviorTreeState) => ({
+        blackboardVariables: {
+            ...state.blackboardVariables,
+            [name]: value
+        }
+    })),
+
+    setInitialBlackboardVariables: (variables: Record<string, any>) => set({ initialBlackboardVariables: variables }),
+
+    setIsExecuting: (isExecuting: boolean) => set({ isExecuting }),
+
     // 自动排序子节点（按X坐标从左到右）
     sortChildrenByPosition: () => set((state: BehaviorTreeState) => {
         const nodeMap = new Map<string, BehaviorTreeNode>();
@@ -298,13 +317,15 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
 
     importFromJSON: (json: string) => {
         const data = JSON.parse(json);
+        const blackboard = data.blackboard || {};
         set({
             nodes: data.nodes || [],
             connections: data.connections || [],
+            blackboardVariables: blackboard,
             canvasOffset: data.canvasState?.offset || { x: 0, y: 0 },
             canvasScale: data.canvasState?.scale || 1
         });
-        return { blackboard: data.blackboard || {} };
+        return { blackboard };
     }
 }));
 

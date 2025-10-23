@@ -17,12 +17,15 @@ export const BehaviorTreeNodePalette: React.FC<BehaviorTreeNodePaletteProps> = (
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const allTemplates = NodeTemplates.getAllTemplates();
 
-    // 按类别分组
-    const categories = ['all', ...new Set(allTemplates.map(t => t.category))];
+    // 按类别分组（排除根节点类别）
+    const categories = ['all', ...new Set(allTemplates
+        .filter(t => t.category !== '根节点')
+        .map(t => t.category))];
 
-    const filteredTemplates = selectedCategory === 'all'
+    const filteredTemplates = (selectedCategory === 'all'
         ? allTemplates
-        : allTemplates.filter(t => t.category === selectedCategory);
+        : allTemplates.filter(t => t.category === selectedCategory))
+        .filter(t => t.category !== '根节点');
 
     const handleNodeClick = (template: NodeTemplate) => {
         onNodeSelect?.(template);
@@ -37,6 +40,17 @@ export const BehaviorTreeNodePalette: React.FC<BehaviorTreeNodePaletteProps> = (
         const dragImage = e.currentTarget as HTMLElement;
         if (dragImage) {
             e.dataTransfer.setDragImage(dragImage, 50, 25);
+        }
+    };
+
+    const getTypeColor = (type: string): string => {
+        switch (type) {
+            case 'composite': return '#1976d2';
+            case 'action': return '#388e3c';
+            case 'condition': return '#d32f2f';
+            case 'decorator': return '#fb8c00';
+            case 'blackboard': return '#8e24aa';
+            default: return '#7b1fa2';
         }
     };
 
@@ -97,51 +111,68 @@ export const BehaviorTreeNodePalette: React.FC<BehaviorTreeNodePaletteProps> = (
                 overflowY: 'auto',
                 padding: '10px'
             }}>
-                {filteredTemplates.map((template, index) => (
-                    <div
-                        key={index}
-                        draggable={true}
-                        onDragStart={(e) => handleDragStart(e, template)}
-                        onClick={() => handleNodeClick(template)}
-                        style={{
-                            padding: '10px',
-                            marginBottom: '8px',
-                            backgroundColor: '#2d2d2d',
-                            borderLeft: `4px solid ${template.color || '#666'}`,
-                            borderRadius: '3px',
-                            cursor: 'grab',
-                            transition: 'all 0.2s',
-                            userSelect: 'none',
-                            WebkitUserSelect: 'none'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#3d3d3d';
-                            e.currentTarget.style.transform = 'translateX(2px)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#2d2d2d';
-                            e.currentTarget.style.transform = 'translateX(0)';
-                        }}
-                        onMouseDown={(e) => {
-                            e.currentTarget.style.cursor = 'grabbing';
-                        }}
-                        onMouseUp={(e) => {
-                            e.currentTarget.style.cursor = 'grab';
-                        }}
-                    >
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            marginBottom: '5px',
-                            pointerEvents: 'none'
-                        }}>
-                            {template.icon && (
-                                <span style={{ marginRight: '8px', display: 'flex', alignItems: 'center' }}>
-                                    <NodeIcon iconName={template.icon} size={16} />
-                                </span>
-                            )}
-                            <strong style={{ fontSize: '14px' }}>{template.displayName}</strong>
-                        </div>
+                {filteredTemplates.map((template, index) => {
+                    const className = template.className || '';
+                    return (
+                        <div
+                            key={index}
+                            draggable={true}
+                            onDragStart={(e) => handleDragStart(e, template)}
+                            onClick={() => handleNodeClick(template)}
+                            style={{
+                                padding: '10px',
+                                marginBottom: '8px',
+                                backgroundColor: '#2d2d2d',
+                                borderLeft: `4px solid ${getTypeColor(template.type || '')}`,
+                                borderRadius: '3px',
+                                cursor: 'grab',
+                                transition: 'all 0.2s',
+                                userSelect: 'none',
+                                WebkitUserSelect: 'none'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#3d3d3d';
+                                e.currentTarget.style.transform = 'translateX(2px)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#2d2d2d';
+                                e.currentTarget.style.transform = 'translateX(0)';
+                            }}
+                            onMouseDown={(e) => {
+                                e.currentTarget.style.cursor = 'grabbing';
+                            }}
+                            onMouseUp={(e) => {
+                                e.currentTarget.style.cursor = 'grab';
+                            }}
+                        >
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                marginBottom: '5px',
+                                pointerEvents: 'none',
+                                gap: '8px'
+                            }}>
+                                {template.icon && (
+                                    <span style={{ display: 'flex', alignItems: 'center', paddingTop: '2px' }}>
+                                        <NodeIcon iconName={template.icon} size={16} />
+                                    </span>
+                                )}
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '2px' }}>
+                                        {template.displayName}
+                                    </div>
+                                    {className && (
+                                        <div style={{
+                                            color: '#666',
+                                            fontSize: '10px',
+                                            fontFamily: 'Consolas, Monaco, monospace',
+                                            opacity: 0.8
+                                        }}>
+                                            {className}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         <div style={{
                             fontSize: '12px',
                             color: '#999',
@@ -158,8 +189,9 @@ export const BehaviorTreeNodePalette: React.FC<BehaviorTreeNodePaletteProps> = (
                         }}>
                             {template.category}
                         </div>
-                    </div>
-                ))}
+                        </div>
+                    );
+                })}
             </div>
 
             {/* 帮助提示 */}

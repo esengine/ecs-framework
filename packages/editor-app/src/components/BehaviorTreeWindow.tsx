@@ -29,19 +29,23 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     filePath
 }) => {
     const { t } = useTranslation();
-    const { nodes, updateNodes, exportToJSON, importFromJSON } = useBehaviorTreeStore();
+    const {
+        nodes,
+        updateNodes,
+        exportToJSON,
+        importFromJSON,
+        blackboardVariables,
+        setBlackboardVariables,
+        updateBlackboardVariable,
+        initialBlackboardVariables,
+        isExecuting
+    } = useBehaviorTreeStore();
 
     const [selectedNode, setSelectedNode] = useState<{
         id: string;
         template: NodeTemplate;
         data: Record<string, any>;
     } | undefined>();
-
-    const [blackboardVariables, setBlackboardVariables] = useState<Record<string, any>>({
-        health: 100,
-        hasWeapon: true,
-        enemyDistance: 5.0
-    });
 
     const [rightPanelTab, setRightPanelTab] = useState<'properties' | 'blackboard'>('blackboard');
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -57,34 +61,40 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     }, [nodes, selectedNode]);
 
     const handleVariableChange = (key: string, value: any) => {
-        setBlackboardVariables(prev => ({ ...prev, [key]: value }));
+        updateBlackboardVariable(key, value);
     };
 
     const handleVariableAdd = (key: string, value: any) => {
-        setBlackboardVariables(prev => ({ ...prev, [key]: value }));
+        updateBlackboardVariable(key, value);
     };
 
     const handleVariableDelete = (key: string) => {
-        setBlackboardVariables(prev => {
-            const newVars = { ...prev };
-            delete newVars[key];
-            return newVars;
-        });
+        const newVars = { ...blackboardVariables };
+        delete newVars[key];
+        setBlackboardVariables(newVars);
     };
 
     const handleVariableRename = (oldKey: string, newKey: string) => {
         if (oldKey === newKey) return;
-        setBlackboardVariables(prev => {
-            const newVars = { ...prev };
-            const value = newVars[oldKey];
-            delete newVars[oldKey];
-            newVars[newKey] = value;
-            return newVars;
-        });
+        const newVars = { ...blackboardVariables };
+        const value = newVars[oldKey];
+        delete newVars[oldKey];
+        newVars[newKey] = value;
+        setBlackboardVariables(newVars);
     };
 
     const handleSave = async () => {
         try {
+            // 检查是否正在运行
+            if (isExecuting) {
+                const confirmed = window.confirm(
+                    '行为树正在运行中。保存将使用设计时的初始值，运行时修改的黑板变量不会被保存。\n\n是否继续保存？'
+                );
+                if (!confirmed) {
+                    return;
+                }
+            }
+
             const filePath = await save({
                 filters: [{
                     name: 'Behavior Tree',
@@ -94,9 +104,11 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
             });
 
             if (filePath) {
+                // 使用初始黑板变量（设计时的值）而不是运行时的值
+                const varsToSave = isExecuting ? initialBlackboardVariables : blackboardVariables;
                 const json = exportToJSON(
                     { name: 'behavior-tree', description: '' },
-                    blackboardVariables
+                    varsToSave
                 );
                 await invoke('write_behavior_tree_file', { filePath, content: json });
                 logger.info('行为树已保存', filePath);
@@ -118,8 +130,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
 
             if (selected) {
                 const json = await invoke<string>('read_behavior_tree_file', { filePath: selected as string });
-                const result = importFromJSON(json);
-                setBlackboardVariables(result.blackboard);
+                importFromJSON(json);
                 logger.info('行为树已加载', selected);
             }
         } catch (error) {
@@ -132,8 +143,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
         if (filePath && isOpen) {
             invoke<string>('read_behavior_tree_file', { filePath })
                 .then((json: string) => {
-                    const result = importFromJSON(json);
-                    setBlackboardVariables(result.blackboard);
+                    importFromJSON(json);
                     logger.info('自动加载行为树文件', filePath);
                 })
                 .catch((error: any) => {
@@ -366,6 +376,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                             ) : (
                                 <BehaviorTreeBlackboard
                                     variables={blackboardVariables}
+                                    initialVariables={isExecuting ? initialBlackboardVariables : undefined}
                                     onVariableChange={handleVariableChange}
                                     onVariableAdd={handleVariableAdd}
                                     onVariableDelete={handleVariableDelete}

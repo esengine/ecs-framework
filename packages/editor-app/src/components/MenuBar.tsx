@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { UIRegistry, MessageHub, EditorPluginManager } from '@esengine/editor-core';
 import type { MenuItem as PluginMenuItem } from '@esengine/editor-core';
+import * as LucideIcons from 'lucide-react';
 import '../styles/MenuBar.css';
 
 interface MenuItem {
   label?: string;
   shortcut?: string;
+  icon?: string;
   disabled?: boolean;
   separator?: boolean;
   submenu?: MenuItem[];
@@ -212,15 +214,9 @@ export function MenuBar({
       { label: t('selectAll'), shortcut: 'Ctrl+A', disabled: true }
     ],
     window: [
-      { label: t('sceneHierarchy'), disabled: true },
-      { label: t('inspector'), disabled: true },
-      { label: t('assets'), disabled: true },
-      { label: t('console'), disabled: true },
-      { label: t('viewport'), disabled: true },
-      { separator: true },
       ...pluginMenuItems.map(item => ({
         label: item.label || '',
-        shortcut: item.shortcut,
+        icon: item.icon,
         disabled: item.disabled,
         onClick: item.onClick
       })),
@@ -282,6 +278,7 @@ export function MenuBar({
                 if (item.separator) {
                   return <div key={index} className="menu-separator" />;
                 }
+                const IconComponent = item.icon ? (LucideIcons as any)[item.icon] : null;
                 return (
                   <button
                     key={index}
@@ -289,7 +286,10 @@ export function MenuBar({
                     onClick={() => handleMenuItemClick(item)}
                     disabled={item.disabled}
                   >
-                    <span>{item.label || ''}</span>
+                    <span className="menu-item-content">
+                      {IconComponent && <IconComponent size={16} />}
+                      <span>{item.label || ''}</span>
+                    </span>
                     {item.shortcut && <span className="menu-shortcut">{item.shortcut}</span>}
                   </button>
                 );

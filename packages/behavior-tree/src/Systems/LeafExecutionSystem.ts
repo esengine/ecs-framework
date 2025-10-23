@@ -3,6 +3,7 @@ import { BehaviorTreeNode } from '../Components/BehaviorTreeNode';
 import { BlackboardComponent } from '../Components/BlackboardComponent';
 import { ActiveNode } from '../Components/ActiveNode';
 import { PropertyBindings } from '../Components/PropertyBindings';
+import { LogOutput } from '../Components/LogOutput';
 import { TaskStatus, NodeType } from '../Types/TaskStatus';
 
 // 导入具体的动作组件
@@ -52,6 +53,8 @@ export class LeafExecutionSystem extends EntitySystem {
     private executeAction(entity: Entity, node: BehaviorTreeNode): void {
         let status = TaskStatus.Failure;
 
+        const { displayName, nodeIdShort } = this.getNodeInfo(entity);
+
         // 检测实体有哪些动作组件并执行
         if (entity.hasComponent(WaitAction)) {
             status = this.executeWaitAction(entity);
@@ -64,10 +67,20 @@ export class LeafExecutionSystem extends EntitySystem {
         } else if (entity.hasComponent(ExecuteAction)) {
             status = this.executeCustomAction(entity);
         } else {
-            this.logger.warn(`动作节点没有找到任何已知的动作组件`);
+            this.outputLog(entity, `动作节点没有找到任何已知的动作组件`, 'warn');
         }
 
         node.status = status;
+
+        // 输出节点执行后的状态
+        const statusText = status === TaskStatus.Success ? 'Success' :
+                          status === TaskStatus.Failure ? 'Failure' :
+                          status === TaskStatus.Running ? 'Running' : 'Unknown';
+
+        if (status !== TaskStatus.Running) {
+            this.outputLog(entity, `[${displayName}#${nodeIdShort}] 执行完成 -> ${statusText}`,
+                          status === TaskStatus.Success ? 'info' : 'warn');
+        }
 
         // 如果不是 Running 状态，节点执行完成
         if (status !== TaskStatus.Running) {
@@ -81,10 +94,26 @@ export class LeafExecutionSystem extends EntitySystem {
      */
     private executeWaitAction(entity: Entity): TaskStatus {
         const waitAction = entity.getComponent(WaitAction)!;
+        const node = entity.getComponent(BehaviorTreeNode);
+
+        const { displayName, nodeIdShort } = this.getNodeInfo(entity);
+
+        // 从 PropertyBindings 读取绑定的黑板变量值
+        const waitTime = this.resolvePropertyValue(entity, 'waitTime', waitAction.waitTime);
+
         waitAction.elapsedTime += Time.deltaTime;
 
-        if (waitAction.elapsedTime >= waitAction.waitTime) {
+        // 输出调试信息（显示在UI中）
+        this.outputLog(
+            entity,
+            `[${displayName}#${nodeIdShort}] deltaTime=${Time.deltaTime.toFixed(3)}s, ` +
+            `elapsed=${waitAction.elapsedTime.toFixed(3)}s/${waitTime.toFixed(3)}s`,
+            'info'
+        );
+
+        if (waitAction.elapsedTime >= waitTime) {
             waitAction.reset();
+            this.outputLog(entity, `[${displayName}#${nodeIdShort}] 等待完成，返回成功`, 'info');
             return TaskStatus.Success;
         }
 
@@ -96,14 +125,23 @@ export class LeafExecutionSystem extends EntitySystem {
      */
     private executeLogAction(entity: Entity): TaskStatus {
         const logAction = entity.getComponent(LogAction)!;
+        const node = entity.getComponent(BehaviorTreeNode);
 
         // 从 PropertyBindings 读取绑定的黑板变量值
         let message = this.resolvePropertyValue(entity, 'message', logAction.message);
+
+        const { displayName, nodeIdShort } = this.getNodeInfo(entity);
+
+        // 在消息前添加节点ID信息
+        if (node) {
+            message = `[${displayName}#${nodeIdShort}] ${message}`;
+        }
 
         if (logAction.includeEntityInfo) {
             message = `[Entity: ${entity.name}] ${message}`;
         }
 
+        // 输出到浏览器控制台
         switch (logAction.level) {
             case 'info':
                 console.info(message);
@@ -119,7 +157,30 @@ export class LeafExecutionSystem extends EntitySystem {
                 break;
         }
 
+        // 同时记录到LogOutput组件，以便在UI中显示
+        const rootEntity = this.findRootEntity(entity);
+        if (rootEntity) {
+            const logOutput = rootEntity.getComponent(LogOutput);
+            if (logOutput) {
+                logOutput.addMessage(message, logAction.level);
+            }
+        }
+
         return TaskStatus.Success;
+    }
+
+    /**
+     * 查找根实体
+     */
+    private findRootEntity(entity: Entity): Entity | null {
+        let current: Entity | null = entity;
+        while (current) {
+            if (!current.parent) {
+                return current;
+            }
+            current = current.parent;
+        }
+        return null;
     }
 
     /**
@@ -130,7 +191,7 @@ export class LeafExecutionSystem extends EntitySystem {
         const blackboard = this.findBlackboard(entity);
 
         if (!blackboard) {
-            this.logger.warn('未找到黑板组件');
+            this.outputLog(entity, '未找到黑板组件', 'warn');
             return TaskStatus.Failure;
         }
 
@@ -139,7 +200,7 @@ export class LeafExecutionSystem extends EntitySystem {
         // 如果指定了源变量，从中读取值
         if (action.sourceVariable) {
             if (!blackboard.hasVariable(action.sourceVariable)) {
-                this.logger.warn(`源变量不存在: ${action.sourceVariable}`);
+                this.outputLog(entity, `源变量不存在: ${action.sourceVariable}`, 'warn');
                 return TaskStatus.Failure;
             }
             valueToSet = blackboard.getValue(action.sourceVariable);
@@ -160,12 +221,12 @@ export class LeafExecutionSystem extends EntitySystem {
         const blackboard = this.findBlackboard(entity);
 
         if (!blackboard) {
-            this.logger.warn('未找到黑板组件');
+            this.outputLog(entity, '未找到黑板组件', 'warn');
             return TaskStatus.Failure;
         }
 
         if (!blackboard.hasVariable(action.variableName)) {
-            this.logger.warn(`变量不存在: ${action.variableName}`);
+            this.outputLog(entity, `变量不存在: ${action.variableName}`, 'warn');
             return TaskStatus.Failure;
         }
 
@@ -178,23 +239,23 @@ export class LeafExecutionSystem extends EntitySystem {
         let newValue: any;
         switch (action.operation) {
             case ModifyOperation.Add:
-                newValue = currentValue + operand;
+                newValue = Number(currentValue) + Number(operand);
                 break;
             case ModifyOperation.Subtract:
-                newValue = currentValue - operand;
+                newValue = Number(currentValue) - Number(operand);
                 break;
             case ModifyOperation.Multiply:
-                newValue = currentValue * operand;
+                newValue = Number(currentValue) * Number(operand);
                 break;
             case ModifyOperation.Divide:
-                if (operand === 0) {
-                    this.logger.warn('除数不能为0');
+                if (Number(operand) === 0) {
+                    this.outputLog(entity, '除数不能为0', 'warn');
                     return TaskStatus.Failure;
                 }
-                newValue = currentValue / operand;
+                newValue = Number(currentValue) / Number(operand);
                 break;
             case ModifyOperation.Modulo:
-                newValue = currentValue % operand;
+                newValue = Number(currentValue) % Number(operand);
                 break;
             case ModifyOperation.Append:
                 if (Array.isArray(currentValue)) {
@@ -202,7 +263,7 @@ export class LeafExecutionSystem extends EntitySystem {
                 } else if (typeof currentValue === 'string') {
                     newValue = currentValue + operand;
                 } else {
-                    this.logger.warn(`变量 ${action.variableName} 不支持 append 操作`);
+                    this.outputLog(entity, `变量 ${action.variableName} 不支持 append 操作`, 'warn');
                     return TaskStatus.Failure;
                 }
                 break;
@@ -210,7 +271,7 @@ export class LeafExecutionSystem extends EntitySystem {
                 if (Array.isArray(currentValue)) {
                     newValue = currentValue.filter(item => item !== operand);
                 } else {
-                    this.logger.warn(`变量 ${action.variableName} 不是数组，不支持 remove 操作`);
+                    this.outputLog(entity, `变量 ${action.variableName} 不是数组，不支持 remove 操作`, 'warn');
                     return TaskStatus.Failure;
                 }
                 break;
@@ -243,6 +304,8 @@ export class LeafExecutionSystem extends EntitySystem {
     private executeCondition(entity: Entity, node: BehaviorTreeNode): void {
         let result = false;
 
+        const { displayName, nodeIdShort } = this.getNodeInfo(entity);
+
         // 检测实体有哪些条件组件并评估
         if (entity.hasComponent(BlackboardCompareCondition)) {
             result = this.evaluateBlackboardCompare(entity);
@@ -253,10 +316,15 @@ export class LeafExecutionSystem extends EntitySystem {
         } else if (entity.hasComponent(ExecuteCondition)) {
             result = this.evaluateCustomCondition(entity);
         } else {
-            this.logger.warn('条件节点没有找到任何已知的条件组件');
+            this.outputLog(entity, '条件节点没有找到任何已知的条件组件', 'warn');
         }
 
         node.status = result ? TaskStatus.Success : TaskStatus.Failure;
+
+        // 输出条件评估结果
+        const statusText = result ? 'Success (true)' : 'Failure (false)';
+        this.outputLog(entity, `[${displayName}#${nodeIdShort}] 条件评估 -> ${statusText}`,
+                      result ? 'info' : 'warn');
 
         // 条件节点总是立即完成
         this.deactivateNode(entity);
@@ -343,7 +411,15 @@ export class LeafExecutionSystem extends EntitySystem {
      */
     private evaluateRandomProbability(entity: Entity): boolean {
         const condition = entity.getComponent(RandomProbabilityCondition)!;
-        return condition.evaluate();
+
+        // 从 PropertyBindings 读取绑定的黑板变量值
+        const probability = this.resolvePropertyValue(entity, 'probability', condition.probability);
+
+        // 使用解析后的概率值进行评估
+        if (condition.alwaysRandomize || condition['cachedResult'] === undefined) {
+            condition['cachedResult'] = Math.random() < probability;
+        }
+        return condition['cachedResult'];
     }
 
     /**
@@ -380,12 +456,12 @@ export class LeafExecutionSystem extends EntitySystem {
         const blackboard = this.findBlackboard(entity);
 
         if (!blackboard) {
-            this.logger.warn(`[属性绑定] 未找到黑板组件，实体: ${entity.name}`);
+            this.outputLog(entity, `[属性绑定] 未找到黑板组件，实体: ${entity.name}`, 'warn');
             return defaultValue;
         }
 
         if (!blackboard.hasVariable(blackboardKey)) {
-            this.logger.warn(`[属性绑定] 黑板变量不存在: ${blackboardKey}`);
+            this.outputLog(entity, `[属性绑定] 黑板变量不存在: ${blackboardKey}`, 'warn');
             return defaultValue;
         }
 
@@ -428,6 +504,59 @@ export class LeafExecutionSystem extends EntitySystem {
         }
 
         return undefined;
+    }
+
+    /**
+     * 从Entity提取节点显示名称和ID
+     */
+    private getNodeInfo(entity: Entity): { displayName: string; nodeIdShort: string } {
+        let displayName = 'Node';
+        let nodeIdShort = '';
+
+        if (entity.name && entity.name.includes('#')) {
+            const parts = entity.name.split('#');
+            displayName = parts[0];
+            nodeIdShort = parts[1];
+        } else {
+            nodeIdShort = entity.id.toString().substring(0, 8);
+        }
+
+        return { displayName, nodeIdShort };
+    }
+
+    /**
+     * 统一的日志输出方法
+     * 同时输出到控制台和LogOutput组件，确保用户在UI中能看到
+     */
+    private outputLog(
+        entity: Entity,
+        message: string,
+        level: 'log' | 'info' | 'warn' | 'error' = 'info'
+    ): void {
+        // 输出到浏览器控制台（方便开发调试）
+        switch (level) {
+            case 'info':
+                this.logger.info(message);
+                break;
+            case 'warn':
+                this.logger.warn(message);
+                break;
+            case 'error':
+                this.logger.error(message);
+                break;
+            default:
+                this.logger.info(message);
+                break;
+        }
+
+        // 输出到LogOutput组件（显示在UI中）
+        const rootEntity = this.findRootEntity(entity);
+        if (rootEntity) {
+            const logOutput = rootEntity.getComponent(LogOutput);
+            if (logOutput) {
+                logOutput.addMessage(message, level);
+            }
+        }
     }
 
     protected override getLoggerName(): string {

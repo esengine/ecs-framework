@@ -14,7 +14,7 @@ export class BehaviorTreePlugin implements IEditorPlugin {
     readonly displayName = 'Behavior Tree Editor';
     readonly category = EditorPluginCategory.Tool;
     readonly description = 'Visual behavior tree editor for AI development';
-    readonly icon = '🌲';
+    readonly icon = 'Network';
 
     private core?: Core;
     private services?: ServiceContainer;
@@ -40,27 +40,8 @@ export class BehaviorTreePlugin implements IEditorPlugin {
                 onClick: () => {
                     this.messageHub?.publish('ui:openWindow', { windowId: 'behavior-tree-editor' });
                 },
-                shortcut: 'Ctrl+Shift+T',
-                icon: '🌲',
+                icon: 'Network',
                 order: 50
-            },
-            {
-                id: 'view-behavior-tree-nodes',
-                label: 'Behavior Tree Nodes',
-                parentId: 'window',
-                onClick: () => {
-                    // Show Behavior Tree Nodes Panel
-                },
-                order: 51
-            },
-            {
-                id: 'view-node-properties',
-                label: 'Node Properties',
-                parentId: 'window',
-                onClick: () => {
-                    // Show Node Properties Panel
-                },
-                order: 52
             }
         ];
     }
@@ -71,7 +52,7 @@ export class BehaviorTreePlugin implements IEditorPlugin {
                 id: 'toolbar-new-behavior-tree',
                 label: 'New Behavior Tree',
                 groupId: 'behavior-tree-tools',
-                icon: '🌲',
+                icon: 'FilePlus',
                 onClick: () => this.createNewBehaviorTree(),
                 order: 10
             },
@@ -79,7 +60,7 @@ export class BehaviorTreePlugin implements IEditorPlugin {
                 id: 'toolbar-save-behavior-tree',
                 label: 'Save Behavior Tree',
                 groupId: 'behavior-tree-tools',
-                icon: '💾',
+                icon: 'Save',
                 onClick: () => this.saveBehaviorTree(),
                 order: 20
             },
@@ -87,7 +68,7 @@ export class BehaviorTreePlugin implements IEditorPlugin {
                 id: 'toolbar-validate-behavior-tree',
                 label: 'Validate Behavior Tree',
                 groupId: 'behavior-tree-tools',
-                icon: '✓',
+                icon: 'CheckCircle',
                 onClick: () => this.validateBehaviorTree(),
                 order: 30
             }
@@ -102,7 +83,7 @@ export class BehaviorTreePlugin implements IEditorPlugin {
                 position: PanelPosition.Center,
                 resizable: true,
                 closable: true,
-                icon: '🌲',
+                icon: 'Network',
                 order: 10
             },
             {
@@ -112,7 +93,7 @@ export class BehaviorTreePlugin implements IEditorPlugin {
                 defaultSize: 250,
                 resizable: true,
                 closable: true,
-                icon: '📦',
+                icon: 'Package',
                 order: 20
             },
             {
@@ -122,7 +103,7 @@ export class BehaviorTreePlugin implements IEditorPlugin {
                 defaultSize: 300,
                 resizable: true,
                 closable: true,
-                icon: '⚙️',
+                icon: 'Settings',
                 order: 20
             }
         ];

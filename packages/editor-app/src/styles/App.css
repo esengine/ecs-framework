@@ -164,6 +164,7 @@
   display: flex;
   flex: 1;
   overflow: hidden;
+  cursor: default;
 }
 
 .viewport {

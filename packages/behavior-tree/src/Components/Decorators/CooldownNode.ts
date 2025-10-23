@@ -44,6 +44,10 @@ export class CooldownNode extends DecoratorNodeComponent {
      * 检查是否可以执行
      */
     canExecute(currentTime: number): boolean {
+        // 如果从未执行过，允许执行
+        if (this.lastExecutionTime === 0) {
+            return true;
+        }
         return currentTime - this.lastExecutionTime >= this.cooldownTime;
     }
 

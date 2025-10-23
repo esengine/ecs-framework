@@ -1,14 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { NodeTemplate, PropertyDefinition } from '@esengine/behavior-tree';
+import { NodeTemplate, PropertyDefinition, NodeType, NodeTemplates } from '@esengine/behavior-tree';
 import {
     TreePine, Play, Pause, Square, SkipForward, RotateCcw, Trash2,
     List, GitBranch, Layers, Shuffle,
     Repeat, CheckCircle, XCircle, CheckCheck, HelpCircle, Snowflake, Timer,
     Clock, FileText, Edit, Calculator, Code,
     Equal, Dices, Settings,
-    Database, AlertTriangle,
+    Database, AlertTriangle, Search, X,
     LucideIcon
 } from 'lucide-react';
+import { ask } from '@tauri-apps/plugin-dialog';
 import { useBehaviorTreeStore, BehaviorTreeNode, Connection } from '../stores/behaviorTreeStore';
 import { BehaviorTreeExecutor, ExecutionStatus, ExecutionLog } from '../utils/BehaviorTreeExecutor';
 import { BehaviorTreeExecutionPanel } from './BehaviorTreeExecutionPanel';
@@ -53,6 +54,16 @@ const iconMap: Record<string, LucideIcon> = {
 };
 
 /**
+ * 生成短位唯一ID
+ * 使用时间戳和随机数组合，确保唯一性
+ */
+function generateUniqueId(): string {
+    const timestamp = Date.now().toString(36);
+    const randomPart = Math.random().toString(36).substring(2, 8);
+    return `${timestamp}${randomPart}`;
+}
+
+/**
  * 行为树编辑器主组件
  *
  * 提供可视化的行为树编辑画布
@@ -66,7 +77,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 }) => {
     // 创建固定的 Root 节点
     const rootNodeTemplate: NodeTemplate = {
-        type: 'composite' as any,
+        type: NodeType.Composite,
         displayName: '根节点',
         category: '根节点',
         icon: '🌳',
@@ -122,7 +133,12 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         clearBoxSelect,
         setDragDelta,
         triggerForceUpdate,
-        sortChildrenByPosition
+        sortChildrenByPosition,
+        setBlackboardVariables,
+        setInitialBlackboardVariables,
+        setIsExecuting,
+        initialBlackboardVariables,
+        isExecuting
     } = useBehaviorTreeStore();
 
     // 初始化根节点
@@ -153,6 +169,20 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const canvasRef = useRef<HTMLDivElement>(null);
 
+    // 快速创建菜单状态
+    const [quickCreateMenu, setQuickCreateMenu] = useState<{
+        visible: boolean;
+        position: { x: number; y: number };
+        searchText: string;
+        selectedIndex: number;
+    }>({
+        visible: false,
+        position: { x: 0, y: 0 },
+        searchText: '',
+        selectedIndex: 0
+    });
+    const selectedNodeRef = useRef<HTMLDivElement>(null);
+
     // 运行状态
     const [executionMode, setExecutionMode] = useState<ExecutionMode>('idle');
     const [executionHistory, setExecutionHistory] = useState<string[]>([]);
@@ -166,6 +196,25 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     const lastTickTimeRef = useRef<number>(0);
     const executionSpeedRef = useRef<number>(1.0);
     const statusTimersRef = useRef<Map<string, number>>(new Map());
+    // 保存设计时的初始黑板变量值（用于保存和停止后还原）
+    const initialBlackboardVariablesRef = useRef<Record<string, any>>({});
+
+    // 跟踪运行时添加的节点（在运行中未生效的节点）
+    const [uncommittedNodeIds, setUncommittedNodeIds] = useState<Set<string>>(new Set());
+    const activeNodeIdsRef = useRef<Set<string>>(new Set());
+
+    // 自动滚动到选中的节点
+    useEffect(() => {
+        if (quickCreateMenu.visible && selectedNodeRef.current) {
+            selectedNodeRef.current.scrollIntoView({
+                block: 'nearest',
+                behavior: 'smooth'
+            });
+        }
+    }, [quickCreateMenu.selectedIndex, quickCreateMenu.visible]);
+
+    // 选中的连线
+    const [selectedConnection, setSelectedConnection] = useState<{from: string; to: string} | null>(null);
 
     // 缓存DOM元素引用和上一次的状态
     const domCacheRef = useRef<{
@@ -194,25 +243,63 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 return;
             }
 
-            if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeIds.length > 0) {
-                // 不能删除 Root 节点
-                const nodesToDelete = selectedNodeIds.filter((id: string) => id !== ROOT_NODE_ID);
-                if (nodesToDelete.length > 0) {
-                    // 删除节点
-                    removeNodes(nodesToDelete);
-                    // 删除相关连接
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                e.preventDefault();
+
+                // 优先删除选中的连线
+                if (selectedConnection) {
                     removeConnections((conn: Connection) =>
-                        !nodesToDelete.includes(conn.from) && !nodesToDelete.includes(conn.to)
+                        !(conn.from === selectedConnection.from && conn.to === selectedConnection.to)
                     );
-                    // 清空选择
-                    setSelectedNodeIds([]);
+                    setSelectedConnection(null);
+                    return;
+                }
+
+                // 删除选中的节点
+                if (selectedNodeIds.length > 0) {
+                    // 不能删除 Root 节点
+                    const nodesToDelete = selectedNodeIds.filter((id: string) => id !== ROOT_NODE_ID);
+                    if (nodesToDelete.length > 0) {
+                        // 删除节点
+                        removeNodes(nodesToDelete);
+                        // 删除相关连接
+                        removeConnections((conn: Connection) =>
+                            !nodesToDelete.includes(conn.from) && !nodesToDelete.includes(conn.to)
+                        );
+                        // 清空选择
+                        setSelectedNodeIds([]);
+                    }
                 }
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedNodeIds, removeNodes, removeConnections, setSelectedNodeIds]);
+    }, [selectedNodeIds, selectedConnection, removeNodes, removeConnections, setSelectedNodeIds]);
+
+    // 监听节点变化，跟踪运行时添加的节点
+    useEffect(() => {
+        if (executionMode === 'idle') {
+            // 重新运行时清空未提交节点列表
+            setUncommittedNodeIds(new Set());
+            // 记录当前所有节点ID
+            activeNodeIdsRef.current = new Set(nodes.map(n => n.id));
+        } else if (executionMode === 'running' || executionMode === 'paused') {
+            // 检测新增的节点
+            const currentNodeIds = new Set(nodes.map(n => n.id));
+            const newNodeIds = new Set<string>();
+
+            currentNodeIds.forEach(id => {
+                if (!activeNodeIdsRef.current.has(id)) {
+                    newNodeIds.add(id);
+                }
+            });
+
+            if (newNodeIds.size > 0) {
+                setUncommittedNodeIds(prev => new Set([...prev, ...newNodeIds]));
+            }
+        }
+    }, [nodes, executionMode]);
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
@@ -236,7 +323,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
                 // 创建黑板变量节点
                 const variableTemplate: NodeTemplate = {
-                    type: 'action' as any,
+                    type: NodeType.Action,
                     displayName: variableData.variableName,
                     category: 'Blackboard Variable',
                     icon: 'Database',
@@ -259,7 +346,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 };
 
                 const newNode: BehaviorTreeNode = {
-                    id: `var_${variableData.variableName}_${Date.now()}`,
+                    id: `var_${variableData.variableName}_${generateUniqueId()}`,
                     template: variableTemplate,
                     data: {
                         nodeType: 'blackboard-variable',
@@ -285,7 +372,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             const template: NodeTemplate = JSON.parse(templateData);
 
             const newNode: BehaviorTreeNode = {
-                id: `node_${Date.now()}`,
+                id: `node_${generateUniqueId()}`,
                 template,
                 data: { ...template.defaultConfig },
                 position,
@@ -341,6 +428,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     };
 
     const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
+        // 只允许左键拖动节点
+        if (e.button !== 0) return;
+
         // Root 节点不能拖动
         if (nodeId === ROOT_NODE_ID) return;
 
@@ -457,13 +547,21 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
     const handlePortMouseDown = (e: React.MouseEvent, nodeId: string, propertyName?: string) => {
         e.stopPropagation();
+        const target = e.currentTarget as HTMLElement;
+        const portType = target.getAttribute('data-port-type');
+
         setConnectingFrom(nodeId);
         setConnectingFromProperty(propertyName || null);
+
+        // 存储起点引脚类型到 DOM 属性，供 mouseUp 使用
+        if (canvasRef.current) {
+            canvasRef.current.setAttribute('data-connecting-from-port-type', portType || '');
+        }
     };
 
     const handleCanvasMouseMove = (e: React.MouseEvent) => {
-        // 处理连接线拖拽
-        if (connectingFrom && canvasRef.current) {
+        // 处理连接线拖拽（如果快速创建菜单显示了，不更新预览连接线）
+        if (connectingFrom && canvasRef.current && !quickCreateMenu.visible) {
             const rect = canvasRef.current.getBoundingClientRect();
             // 将鼠标坐标转换为画布坐标系
             const canvasX = (e.clientX - rect.left - canvasOffset.x) / canvasScale;
@@ -495,65 +593,142 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
     const handlePortMouseUp = (e: React.MouseEvent, nodeId: string, propertyName?: string) => {
         e.stopPropagation();
-        if (connectingFrom && connectingFrom !== nodeId) {
-            // 属性级别的连接
-            if (connectingFromProperty || propertyName) {
-                // 检查是否已经存在属性连接
-                const existingConnection = connections.find(
-                    (conn: Connection) => conn.from === connectingFrom &&
-                           conn.to === nodeId &&
-                           conn.fromProperty === connectingFromProperty &&
-                           conn.toProperty === propertyName
-                );
-                if (!existingConnection) {
-                    setConnections([...connections, {
-                        from: connectingFrom,
-                        to: nodeId,
-                        fromProperty: connectingFromProperty || undefined,
-                        toProperty: propertyName || undefined,
-                        connectionType: 'property'
-                    }]);
-                }
-            } else {
-                // 节点级别的连接
-                // Root 节点只能有一个子节点
-                if (connectingFrom === ROOT_NODE_ID) {
-                    const rootNode = nodes.find((n: BehaviorTreeNode) => n.id === ROOT_NODE_ID);
-                    if (rootNode && rootNode.children.length > 0) {
-                        alert('根节点只能连接一个子节点');
-                        clearConnecting();
-                        return;
-                    }
-                }
+        if (!connectingFrom) {
+            clearConnecting();
+            return;
+        }
 
-                // 检查是否已经存在连接
-                const existingConnection = connections.find(
-                    (conn: Connection) => conn.from === connectingFrom && conn.to === nodeId && conn.connectionType === 'node'
-                );
-                if (!existingConnection) {
-                    setConnections([...connections, {
-                        from: connectingFrom,
-                        to: nodeId,
-                        connectionType: 'node'
-                    }]);
-                    // 更新节点的 children
-                    setNodes(nodes.map((node: BehaviorTreeNode) =>
-                        node.id === connectingFrom
-                            ? { ...node, children: [...node.children, nodeId] }
-                            : node
-                    ));
+        // 禁止连接到自己
+        if (connectingFrom === nodeId) {
+            alert('不能将节点连接到自己');
+            clearConnecting();
+            return;
+        }
 
-                    // 创建连接后，自动排序子节点
-                    setTimeout(() => {
-                        sortChildrenByPosition();
-                    }, 0);
+        const target = e.currentTarget as HTMLElement;
+        const toPortType = target.getAttribute('data-port-type');
+        const fromPortType = canvasRef.current?.getAttribute('data-connecting-from-port-type');
+
+        // 智能判断连接方向
+        let actualFrom = connectingFrom;
+        let actualTo = nodeId;
+        let actualFromProperty = connectingFromProperty;
+        let actualToProperty = propertyName;
+
+        // 判断是否需要反转方向
+        const needReverse =
+            (fromPortType === 'node-input' || fromPortType === 'property-input') &&
+            (toPortType === 'node-output' || toPortType === 'variable-output');
+
+        if (needReverse) {
+            // 反转连接方向
+            actualFrom = nodeId;
+            actualTo = connectingFrom;
+            actualFromProperty = propertyName || null;
+            actualToProperty = connectingFromProperty ?? undefined;
+        }
+
+        // 属性级别的连接
+        if (actualFromProperty || actualToProperty) {
+            // 检查是否已经存在相同的属性连接
+            const existingConnection = connections.find(
+                (conn: Connection) =>
+                    (conn.from === actualFrom && conn.to === actualTo &&
+                     conn.fromProperty === actualFromProperty && conn.toProperty === actualToProperty) ||
+                    (conn.from === actualTo && conn.to === actualFrom &&
+                     conn.fromProperty === actualToProperty && conn.toProperty === actualFromProperty)
+            );
+
+            if (existingConnection) {
+                alert('该连接已存在');
+                clearConnecting();
+                return;
+            }
+
+            setConnections([...connections, {
+                from: actualFrom,
+                to: actualTo,
+                fromProperty: actualFromProperty || undefined,
+                toProperty: actualToProperty || undefined,
+                connectionType: 'property'
+            }]);
+        } else {
+            // 节点级别的连接
+            // Root 节点只能有一个子节点
+            if (actualFrom === ROOT_NODE_ID) {
+                const rootNode = nodes.find((n: BehaviorTreeNode) => n.id === ROOT_NODE_ID);
+                if (rootNode && rootNode.children.length > 0) {
+                    alert('根节点只能连接一个子节点');
+                    clearConnecting();
+                    return;
                 }
             }
+
+            // 检查是否已经存在相同的节点连接
+            const existingConnection = connections.find(
+                (conn: Connection) =>
+                    (conn.from === actualFrom && conn.to === actualTo && conn.connectionType === 'node') ||
+                    (conn.from === actualTo && conn.to === actualFrom && conn.connectionType === 'node')
+            );
+
+            if (existingConnection) {
+                alert('该连接已存在');
+                clearConnecting();
+                return;
+            }
+
+            setConnections([...connections, {
+                from: actualFrom,
+                to: actualTo,
+                connectionType: 'node'
+            }]);
+
+            // 更新节点的 children
+            setNodes(nodes.map((node: BehaviorTreeNode) =>
+                node.id === actualFrom
+                    ? { ...node, children: [...node.children, actualTo] }
+                    : node
+            ));
+
+            // 创建连接后，自动排序子节点
+            setTimeout(() => {
+                sortChildrenByPosition();
+            }, 0);
         }
+
         clearConnecting();
     };
 
+    const handleNodeMouseUpForConnection = (e: React.MouseEvent, nodeId: string) => {
+        // 如果正在连接，尝试自动连接到这个节点
+        if (connectingFrom && connectingFrom !== nodeId) {
+            // 直接调用 handlePortMouseUp 来完成连接
+            handlePortMouseUp(e, nodeId);
+        }
+    };
+
     const handleCanvasMouseUp = (e: React.MouseEvent) => {
+        // 如果快速创建菜单已经显示，不要清除连接状态
+        if (quickCreateMenu.visible) {
+            return;
+        }
+
+        // 如果正在连接，显示快速创建菜单
+        if (connectingFrom && connectingToPos) {
+            setQuickCreateMenu({
+                visible: true,
+                position: {
+                    x: e.clientX,
+                    y: e.clientY
+                },
+                searchText: '',
+                selectedIndex: 0
+            });
+            // 清除预览连接线，但保留 connectingFrom 用于创建连接
+            setConnectingToPos(null);
+            return;
+        }
+
         clearConnecting();
         setIsPanning(false);
 
@@ -571,10 +746,25 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     // Root 节点不参与框选
                     if (node.id === ROOT_NODE_ID) return false;
 
-                    // 检查节点中心点是否在框选矩形内
-                    const nodeX = node.position.x;
-                    const nodeY = node.position.y;
-                    return nodeX >= minX && nodeX <= maxX && nodeY >= minY && nodeY <= maxY;
+                    // 从 DOM 获取节点的实际尺寸
+                    const nodeElement = canvasRef.current?.querySelector(`[data-node-id="${node.id}"]`);
+                    if (!nodeElement) {
+                        // 如果找不到元素，回退到中心点检查
+                        return node.position.x >= minX && node.position.x <= maxX &&
+                               node.position.y >= minY && node.position.y <= maxY;
+                    }
+
+                    const rect = nodeElement.getBoundingClientRect();
+                    const canvasRect = canvasRef.current!.getBoundingClientRect();
+
+                    // 将 DOM 坐标转换为画布坐标
+                    const nodeLeft = (rect.left - canvasRect.left - canvasOffset.x) / canvasScale;
+                    const nodeRight = (rect.right - canvasRect.left - canvasOffset.x) / canvasScale;
+                    const nodeTop = (rect.top - canvasRect.top - canvasOffset.y) / canvasScale;
+                    const nodeBottom = (rect.bottom - canvasRect.top - canvasOffset.y) / canvasScale;
+
+                    // 检查矩形是否重叠
+                    return nodeRight > minX && nodeLeft < maxX && nodeBottom > minY && nodeTop < maxY;
                 })
                 .map((node: BehaviorTreeNode) => node.id);
 
@@ -591,6 +781,79 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
         // 清理框选状态
         clearBoxSelect();
+    };
+
+    const handleQuickCreateNode = (template: NodeTemplate) => {
+        if (!connectingFrom) {
+            return;
+        }
+
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) {
+            return;
+        }
+
+        const position = {
+            x: (quickCreateMenu.position.x - rect.left - canvasOffset.x) / canvasScale,
+            y: (quickCreateMenu.position.y - rect.top - canvasOffset.y) / canvasScale
+        };
+
+        const newNode: BehaviorTreeNode = {
+            id: `node_${generateUniqueId()}`,
+            template,
+            data: { ...template.defaultConfig },
+            position,
+            children: []
+        };
+
+        const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === connectingFrom);
+        if (fromNode) {
+            if (connectingFromProperty) {
+                // 属性连接
+                setConnections([
+                    ...connections,
+                    {
+                        from: connectingFrom,
+                        fromProperty: connectingFromProperty,
+                        to: newNode.id,
+                        connectionType: 'property'
+                    }
+                ]);
+                setNodes([...nodes, newNode]);
+            } else {
+                // 节点连接：需要同时更新 connections 和父节点的 children
+                setConnections([
+                    ...connections,
+                    {
+                        from: connectingFrom,
+                        to: newNode.id,
+                        connectionType: 'node'
+                    }
+                ]);
+
+                // 更新父节点的 children 数组
+                setNodes([
+                    ...nodes.map((node: BehaviorTreeNode) =>
+                        node.id === connectingFrom
+                            ? { ...node, children: [...node.children, newNode.id] }
+                            : node
+                    ),
+                    newNode
+                ]);
+            }
+        } else {
+            setNodes([...nodes, newNode]);
+        }
+
+        setQuickCreateMenu({
+            visible: false,
+            position: { x: 0, y: 0 },
+            searchText: '',
+            selectedIndex: 0
+        });
+        clearConnecting();
+
+        onNodeCreate?.(template, position);
     };
 
     // 画布缩放
@@ -628,6 +891,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             // 如果不是 Ctrl/Cmd，清空当前选择
             if (!e.ctrlKey && !e.metaKey) {
                 setSelectedNodeIds([]);
+                setSelectedConnection(null);
             }
         }
     };
@@ -635,6 +899,10 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     // 重置视图
     const handleResetView = () => {
         resetView();
+        // 强制更新连线位置
+        requestAnimationFrame(() => {
+            triggerForceUpdate();
+        });
     };
 
     // 从DOM获取引脚的实际位置（画布坐标系）
@@ -731,13 +999,22 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     };
 
     // 执行状态回调（直接操作DOM，不触发React重渲染）
-    const handleExecutionStatusUpdate = (statuses: ExecutionStatus[], logs: ExecutionLog[]): void => {
+    const handleExecutionStatusUpdate = (
+        statuses: ExecutionStatus[],
+        logs: ExecutionLog[],
+        runtimeBlackboardVars?: Record<string, any>
+    ): void => {
         const now = performance.now();
 
         // 节流日志更新：最多每100ms更新一次
         if (now - lastLogUpdateRef.current > 100) {
             setExecutionLogs([...logs]);
             lastLogUpdateRef.current = now;
+        }
+
+        // 同步运行时黑板变量到 store（无论运行还是暂停都同步）
+        if (runtimeBlackboardVars) {
+            setBlackboardVariables(runtimeBlackboardVars);
         }
 
         const cache = domCacheRef.current;
@@ -910,6 +1187,12 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     const handlePlay = () => {
         if (executionModeRef.current === 'running') return;
 
+        // 保存设计时的初始黑板变量值
+        const initialVars = JSON.parse(JSON.stringify(blackboardVariables || {}));
+        initialBlackboardVariablesRef.current = initialVars;
+        setInitialBlackboardVariables(initialVars);
+        setIsExecuting(true);
+
         executionModeRef.current = 'running';
         setExecutionMode('running');
         setExecutionHistory(['使用ECS系统执行行为树...']);
@@ -999,6 +1282,10 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
         if (executorRef.current) {
             executorRef.current.stop();
+
+            // 停止后，还原到运行前保存的初始黑板变量值
+            setBlackboardVariables(initialBlackboardVariablesRef.current);
+            setIsExecuting(false);
         }
     };
 
@@ -1026,6 +1313,23 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             }
         };
     }, []);
+
+    // 监听黑板变量变化，同步到执行器
+    useEffect(() => {
+        if (!executorRef.current || executionMode === 'idle') {
+            return;
+        }
+
+        // 获取执行器中的当前黑板变量
+        const executorVars = executorRef.current.getBlackboardVariables();
+
+        // 检查是否有变化
+        Object.entries(blackboardVariables).forEach(([key, value]) => {
+            if (executorVars[key] !== value) {
+                executorRef.current?.updateBlackboardVariable(key, value);
+            }
+        });
+    }, [blackboardVariables, executionMode]);
 
     return (
         <div style={{
@@ -1106,7 +1410,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     left: 0,
                     width: '10000px',
                     height: '10000px',
-                    pointerEvents: 'none',
+                    pointerEvents: 'auto',
                     zIndex: 0,
                     overflow: 'visible'
                 }}>
@@ -1162,15 +1466,23 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                             pathD = `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`;
                         }
 
+                        const isSelected = selectedConnection?.from === conn.from && selectedConnection?.to === conn.to;
+
                         return (
                             <path
                                 key={index}
                                 data-connection-id={`${conn.from}-${conn.to}`}
                                 data-connection-type={conn.connectionType || 'node'}
                                 d={pathD}
-                                stroke={color}
-                                strokeWidth={strokeWidth}
+                                stroke={isSelected ? '#FFD700' : color}
+                                strokeWidth={isSelected ? strokeWidth + 2 : strokeWidth}
                                 fill="none"
+                                style={{ cursor: 'pointer' }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedConnection({ from: conn.from, to: conn.to });
+                                    setSelectedNodeIds([]);
+                                }}
                             />
                         );
                     })}
@@ -1214,6 +1526,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                 strokeWidth="2"
                                 fill="none"
                                 strokeDasharray="5,5"
+                                style={{ pointerEvents: 'none' }}
                             />
                         );
                     })()}
@@ -1256,10 +1569,12 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     const posX = node.position.x + (isBeingDragged ? dragDelta.dx : 0);
                     const posY = node.position.y + (isBeingDragged ? dragDelta.dy : 0);
 
+                    const isUncommitted = uncommittedNodeIds.has(node.id);
                     const nodeClasses = [
                         'bt-node',
                         isSelected && 'selected',
-                        isRoot && 'root'
+                        isRoot && 'root',
+                        isUncommitted && 'uncommitted'
                     ].filter(Boolean).join(' ');
 
                     return (
@@ -1269,6 +1584,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         className={nodeClasses}
                         onClick={(e) => handleNodeClick(e, node)}
                         onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                        onMouseUp={(e) => handleNodeMouseUpForConnection(e, node.id)}
                         style={{
                             left: posX,
                             top: posY,
@@ -1279,27 +1595,58 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         }}
                     >
                         {isBlackboardVariable ? (
-                            <>
-                                <div className="bt-node-header blackboard">
-                                    <Database size={16} className="bt-node-header-icon" />
-                                    <div className="bt-node-header-title">
-                                        {node.data.variableName || 'Variable'}
-                                    </div>
-                                </div>
-                                <div className="bt-node-body">
-                                    <div className="bt-node-blackboard-value">
-                                        {JSON.stringify(blackboardVariables[node.data.variableName])}
-                                    </div>
-                                </div>
-                                <div
-                                    data-port="true"
-                                    data-node-id={node.id}
-                                    data-port-type="variable-output"
-                                    onMouseDown={(e) => handlePortMouseDown(e, node.id, '__value__')}
-                                    className="bt-node-port bt-node-port-variable-output"
-                                    title="Output"
-                                />
-                            </>
+                            (() => {
+                                const varName = node.data.variableName;
+                                const currentValue = blackboardVariables[varName];
+                                const initialValue = initialBlackboardVariables[varName];
+                                const isModified = isExecuting && JSON.stringify(currentValue) !== JSON.stringify(initialValue);
+
+                                return (
+                                    <>
+                                        <div className="bt-node-header blackboard">
+                                            <Database size={16} className="bt-node-header-icon" />
+                                            <div className="bt-node-header-title">
+                                                {varName || 'Variable'}
+                                            </div>
+                                            {isModified && (
+                                                <span style={{
+                                                    fontSize: '9px',
+                                                    color: '#ffbb00',
+                                                    backgroundColor: 'rgba(255, 187, 0, 0.2)',
+                                                    padding: '2px 4px',
+                                                    borderRadius: '2px',
+                                                    marginLeft: '4px'
+                                                }}>
+                                                    运行时
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="bt-node-body">
+                                            <div
+                                                className="bt-node-blackboard-value"
+                                                style={{
+                                                    backgroundColor: isModified ? 'rgba(255, 187, 0, 0.15)' : 'transparent',
+                                                    border: isModified ? '1px solid rgba(255, 187, 0, 0.3)' : 'none',
+                                                    borderRadius: '2px',
+                                                    padding: '2px 4px'
+                                                }}
+                                                title={isModified ? `初始值: ${JSON.stringify(initialValue)}\n当前值: ${JSON.stringify(currentValue)}` : undefined}
+                                            >
+                                                {JSON.stringify(currentValue)}
+                                            </div>
+                                        </div>
+                                        <div
+                                            data-port="true"
+                                            data-node-id={node.id}
+                                            data-port-type="variable-output"
+                                            onMouseDown={(e) => handlePortMouseDown(e, node.id, '__value__')}
+                                            onMouseUp={(e) => handlePortMouseUp(e, node.id, '__value__')}
+                                            className="bt-node-port bt-node-port-variable-output"
+                                            title="Output"
+                                        />
+                                    </>
+                                );
+                            })()
                         ) : (
                             <>
                                 {/* 标题栏 - 带渐变 */}
@@ -1317,16 +1664,45 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                         })()
                                     )}
                                     <div className="bt-node-header-title">
-                                        {isRoot ? 'ROOT' : node.template.displayName}
+                                        <div>{isRoot ? 'ROOT' : node.template.displayName}</div>
+                                        <div className="bt-node-id" title={node.id}>
+                                            #{node.id}
+                                        </div>
                                     </div>
+                                    {/* 未生效节点警告 */}
+                                    {isUncommitted && (
+                                        <div
+                                            className="bt-node-uncommitted-warning"
+                                            style={{
+                                                marginLeft: 'auto',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                cursor: 'help',
+                                                pointerEvents: 'auto',
+                                                position: 'relative'
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <AlertTriangle
+                                                size={14}
+                                                style={{
+                                                    color: '#ff5722',
+                                                    flexShrink: 0
+                                                }}
+                                            />
+                                            <div className="bt-node-uncommitted-tooltip">
+                                                未生效节点：运行时添加的节点，需重新运行才能生效
+                                            </div>
+                                        </div>
+                                    )}
                                     {/* 空节点警告图标 */}
-                                    {!isRoot && node.template.type === 'composite' && !nodes.some(n =>
+                                    {!isRoot && !isUncommitted && node.template.type === 'composite' && !nodes.some(n =>
                                         connections.some(c => c.from === node.id && c.to === n.id)
                                     ) && (
                                         <div
                                             className="bt-node-empty-warning-container"
                                             style={{
-                                                marginLeft: 'auto',
+                                                marginLeft: isUncommitted ? '4px' : 'auto',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 cursor: 'help',
@@ -1373,6 +1749,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                                         data-node-id={node.id}
                                                         data-property={prop.name}
                                                         data-port-type="property-input"
+                                                        onMouseDown={(e) => handlePortMouseDown(e, node.id, prop.name)}
                                                         onMouseUp={(e) => handlePortMouseUp(e, node.id, prop.name)}
                                                         className={`bt-node-port bt-node-port-property ${hasConnection ? 'connected' : ''}`}
                                                         title={`Input: ${prop.label}`}
@@ -1396,21 +1773,25 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                         data-port="true"
                                         data-node-id={node.id}
                                         data-port-type="node-input"
+                                        onMouseDown={(e) => handlePortMouseDown(e, node.id)}
                                         onMouseUp={(e) => handlePortMouseUp(e, node.id)}
                                         className="bt-node-port bt-node-port-input"
                                         title="Input"
                                     />
                                 )}
 
-                                {/* 输出端口（底部） */}
-                                <div
-                                    data-port="true"
-                                    data-node-id={node.id}
-                                    data-port-type="node-output"
-                                    onMouseDown={(e) => handlePortMouseDown(e, node.id)}
-                                    className="bt-node-port bt-node-port-output"
-                                    title="Output"
-                                />
+                                {/* 输出端口（底部）- 只有组合节点和装饰器节点才显示 */}
+                                {(node.template.type === 'composite' || node.template.type === 'decorator') && (
+                                    <div
+                                        data-port="true"
+                                        data-node-id={node.id}
+                                        data-port-type="node-output"
+                                        onMouseDown={(e) => handlePortMouseDown(e, node.id)}
+                                        onMouseUp={(e) => handlePortMouseUp(e, node.id)}
+                                        className="bt-node-port bt-node-port-output"
+                                        title="Output"
+                                    />
+                                )}
                             </>
                         )}
                     </div>
@@ -1612,8 +1993,13 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         gap: '4px'
                     }}
                     title="清空画布"
-                    onClick={() => {
-                        if (confirm('确定要清空画布吗？')) {
+                    onClick={async () => {
+                        const confirmed = await ask('确定要清空画布吗？此操作不可撤销。', {
+                            title: '清空画布',
+                            kind: 'warning'
+                        });
+
+                        if (confirmed) {
                             setNodes([
                                 {
                                     id: ROOT_NODE_ID,
@@ -1656,6 +2042,233 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                      executionMode === 'paused' ? 'Paused' : 'Step'}
                 </div>
             </div>
+
+            {/* 快速创建菜单 */}
+            {quickCreateMenu.visible && (() => {
+                const allTemplates = NodeTemplates.getAllTemplates();
+                const searchText = quickCreateMenu.searchText.toLowerCase();
+                const filteredTemplates = searchText
+                    ? allTemplates.filter((t: NodeTemplate) => {
+                        const className = t.className || '';
+                        return t.displayName.toLowerCase().includes(searchText) ||
+                               t.description.toLowerCase().includes(searchText) ||
+                               t.category.toLowerCase().includes(searchText) ||
+                               className.toLowerCase().includes(searchText);
+                      })
+                    : allTemplates;
+
+                return (
+                    <>
+                        <style>{`
+                            .quick-create-menu-list::-webkit-scrollbar {
+                                width: 8px;
+                            }
+                            .quick-create-menu-list::-webkit-scrollbar-track {
+                                background: #1e1e1e;
+                            }
+                            .quick-create-menu-list::-webkit-scrollbar-thumb {
+                                background: #3c3c3c;
+                                border-radius: 4px;
+                            }
+                            .quick-create-menu-list::-webkit-scrollbar-thumb:hover {
+                                background: #4c4c4c;
+                            }
+                        `}</style>
+                        <div
+                            style={{
+                                position: 'fixed',
+                                left: `${quickCreateMenu.position.x}px`,
+                                top: `${quickCreateMenu.position.y}px`,
+                                width: '300px',
+                                maxHeight: '400px',
+                                backgroundColor: '#2d2d2d',
+                                borderRadius: '6px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                                zIndex: 1000,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                overflow: 'hidden'
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                        <div style={{
+                            padding: '12px',
+                            borderBottom: '1px solid #3c3c3c',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}>
+                            <Search size={16} style={{ color: '#999', flexShrink: 0 }} />
+                            <input
+                                type="text"
+                                placeholder="搜索节点..."
+                                autoFocus
+                                value={quickCreateMenu.searchText}
+                                onChange={(e) => setQuickCreateMenu({
+                                    ...quickCreateMenu,
+                                    searchText: e.target.value,
+                                    selectedIndex: 0
+                                })}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Escape') {
+                                        setQuickCreateMenu({
+                                            visible: false,
+                                            position: { x: 0, y: 0 },
+                                            searchText: '',
+                                            selectedIndex: 0
+                                        });
+                                        clearConnecting();
+                                    } else if (e.key === 'ArrowDown') {
+                                        e.preventDefault();
+                                        setQuickCreateMenu({
+                                            ...quickCreateMenu,
+                                            selectedIndex: Math.min(quickCreateMenu.selectedIndex + 1, filteredTemplates.length - 1)
+                                        });
+                                    } else if (e.key === 'ArrowUp') {
+                                        e.preventDefault();
+                                        setQuickCreateMenu({
+                                            ...quickCreateMenu,
+                                            selectedIndex: Math.max(quickCreateMenu.selectedIndex - 1, 0)
+                                        });
+                                    } else if (e.key === 'Enter' && filteredTemplates.length > 0) {
+                                        e.preventDefault();
+                                        const selectedTemplate = filteredTemplates[quickCreateMenu.selectedIndex];
+                                        if (selectedTemplate) {
+                                            handleQuickCreateNode(selectedTemplate);
+                                        }
+                                    }
+                                }}
+                                style={{
+                                    flex: 1,
+                                    background: 'transparent',
+                                    border: 'none',
+                                    outline: 'none',
+                                    color: '#ccc',
+                                    fontSize: '14px',
+                                    padding: '4px'
+                                }}
+                            />
+                            <button
+                                onClick={() => {
+                                    setQuickCreateMenu({
+                                        visible: false,
+                                        position: { x: 0, y: 0 },
+                                        searchText: '',
+                                        selectedIndex: 0
+                                    });
+                                    clearConnecting();
+                                }}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#999',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div
+                            className="quick-create-menu-list"
+                            style={{
+                                flex: 1,
+                                overflowY: 'auto',
+                                padding: '8px'
+                            }}
+                        >
+                            {filteredTemplates.length === 0 ? (
+                                <div style={{
+                                    padding: '20px',
+                                    textAlign: 'center',
+                                    color: '#666',
+                                    fontSize: '12px'
+                                }}>
+                                    未找到匹配的节点
+                                </div>
+                            ) : (
+                                filteredTemplates.map((template: NodeTemplate, index: number) => {
+                                    const IconComponent = template.icon ? iconMap[template.icon] : null;
+                                    const className = template.className || '';
+                                    const isSelected = index === quickCreateMenu.selectedIndex;
+                                    return (
+                                        <div
+                                            key={index}
+                                            ref={isSelected ? selectedNodeRef : null}
+                                            onClick={() => handleQuickCreateNode(template)}
+                                            onMouseEnter={() => {
+                                                setQuickCreateMenu({
+                                                    ...quickCreateMenu,
+                                                    selectedIndex: index
+                                                });
+                                            }}
+                                            style={{
+                                                padding: '8px 12px',
+                                                marginBottom: '4px',
+                                                backgroundColor: isSelected ? '#0e639c' : '#1e1e1e',
+                                                borderLeft: `3px solid ${template.color || '#666'}`,
+                                                borderRadius: '3px',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s',
+                                                transform: isSelected ? 'translateX(2px)' : 'translateX(0)'
+                                            }}
+                                        >
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                marginBottom: '4px'
+                                            }}>
+                                                {IconComponent && (
+                                                    <IconComponent size={14} style={{ color: template.color || '#999', flexShrink: 0 }} />
+                                                )}
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{
+                                                        color: '#ccc',
+                                                        fontSize: '13px',
+                                                        fontWeight: '500',
+                                                        marginBottom: '2px'
+                                                    }}>
+                                                        {template.displayName}
+                                                    </div>
+                                                    {className && (
+                                                        <div style={{
+                                                            color: '#666',
+                                                            fontSize: '10px',
+                                                            fontFamily: 'Consolas, Monaco, monospace',
+                                                            opacity: 0.8
+                                                        }}>
+                                                            {className}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div style={{
+                                                fontSize: '11px',
+                                                color: '#999',
+                                                lineHeight: '1.4',
+                                                marginBottom: '2px'
+                                            }}>
+                                                {template.description}
+                                            </div>
+                                            <div style={{
+                                                fontSize: '10px',
+                                                color: '#666'
+                                            }}>
+                                                {template.category}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                        </div>
+                    </>
+                );
+            })()}
 
             {/* 状态栏 */}
             <div style={{

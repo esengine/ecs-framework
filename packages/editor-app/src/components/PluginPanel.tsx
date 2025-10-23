@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { EditorPluginManager, IEditorPluginMetadata, EditorPluginCategory } from '@esengine/editor-core';
+import * as LucideIcons from 'lucide-react';
 import { Package, CheckCircle, XCircle, Search, Grid, List, ChevronDown, ChevronRight } from 'lucide-react';
 import '../styles/PluginPanel.css';
 
@@ -8,11 +9,11 @@ interface PluginPanelProps {
 }
 
 const categoryIcons: Record<EditorPluginCategory, string> = {
-    [EditorPluginCategory.Tool]: '🔧',
-    [EditorPluginCategory.Window]: '🪟',
-    [EditorPluginCategory.Inspector]: '🔍',
-    [EditorPluginCategory.System]: '⚙️',
-    [EditorPluginCategory.ImportExport]: '📦'
+    [EditorPluginCategory.Tool]: 'Wrench',
+    [EditorPluginCategory.Window]: 'LayoutGrid',
+    [EditorPluginCategory.Inspector]: 'Search',
+    [EditorPluginCategory.System]: 'Settings',
+    [EditorPluginCategory.ImportExport]: 'Package'
 };
 
 const categoryNames: Record<EditorPluginCategory, string> = {
@@ -85,11 +86,13 @@ export function PluginPanel({ pluginManager }: PluginPanelProps) {
     const enabledCount = plugins.filter(p => p.enabled).length;
     const disabledCount = plugins.filter(p => !p.enabled).length;
 
-    const renderPluginCard = (plugin: IEditorPluginMetadata) => (
+    const renderPluginCard = (plugin: IEditorPluginMetadata) => {
+        const IconComponent = plugin.icon ? (LucideIcons as any)[plugin.icon] : null;
+        return (
         <div key={plugin.name} className={`plugin-card ${plugin.enabled ? 'enabled' : 'disabled'}`}>
             <div className="plugin-card-header">
                 <div className="plugin-card-icon">
-                    {plugin.icon || <Package size={24} />}
+                    {IconComponent ? <IconComponent size={24} /> : <Package size={24} />}
                 </div>
                 <div className="plugin-card-info">
                     <div className="plugin-card-title">{plugin.displayName}</div>
@@ -108,7 +111,11 @@ export function PluginPanel({ pluginManager }: PluginPanelProps) {
             )}
             <div className="plugin-card-footer">
                 <span className="plugin-card-category">
-                    {categoryIcons[plugin.category]} {categoryNames[plugin.category]}
+                    {(() => {
+                        const CategoryIcon = (LucideIcons as any)[categoryIcons[plugin.category]];
+                        return CategoryIcon ? <CategoryIcon size={14} style={{ marginRight: '4px' }} /> : null;
+                    })()}
+                    {categoryNames[plugin.category]}
                 </span>
                 {plugin.installedAt && (
                     <span className="plugin-card-installed">
@@ -117,12 +124,15 @@ export function PluginPanel({ pluginManager }: PluginPanelProps) {
                 )}
             </div>
         </div>
-    );
+        );
+    };
 
-    const renderPluginList = (plugin: IEditorPluginMetadata) => (
+    const renderPluginList = (plugin: IEditorPluginMetadata) => {
+        const IconComponent = plugin.icon ? (LucideIcons as any)[plugin.icon] : null;
+        return (
         <div key={plugin.name} className={`plugin-list-item ${plugin.enabled ? 'enabled' : 'disabled'}`}>
             <div className="plugin-list-icon">
-                {plugin.icon || <Package size={20} />}
+                {IconComponent ? <IconComponent size={20} /> : <Package size={20} />}
             </div>
             <div className="plugin-list-info">
                 <div className="plugin-list-name">
@@ -148,7 +158,8 @@ export function PluginPanel({ pluginManager }: PluginPanelProps) {
                 {plugin.enabled ? 'Disable' : 'Enable'}
             </button>
         </div>
-    );
+        );
+    };
 
     return (
         <div className="plugin-panel">
@@ -215,7 +226,12 @@ export function PluginPanel({ pluginManager }: PluginPanelProps) {
                                         <button className="plugin-category-toggle">
                                             {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                                         </button>
-                                        <span className="plugin-category-icon">{categoryIcons[cat]}</span>
+                                        <span className="plugin-category-icon">
+                                            {(() => {
+                                                const CategoryIcon = (LucideIcons as any)[categoryIcons[cat]];
+                                                return CategoryIcon ? <CategoryIcon size={16} /> : null;
+                                            })()}
+                                        </span>
                                         <span className="plugin-category-name">{categoryNames[cat]}</span>
                                         <span className="plugin-category-count">
                                             {categoryPlugins.length}

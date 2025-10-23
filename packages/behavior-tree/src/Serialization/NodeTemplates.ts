@@ -37,6 +37,7 @@ export interface NodeTemplate {
     icon?: string;
     description: string;
     color?: string;
+    className?: string;
     defaultConfig: Partial<NodeDataJSON>;
     properties: PropertyDefinition[];
 }

@@ -3,6 +3,8 @@ import { BehaviorTreeNode } from '../Components/BehaviorTreeNode';
 import { DecoratorNodeComponent } from '../Components/DecoratorNodeComponent';
 import { BlackboardComponent } from '../Components/BlackboardComponent';
 import { ActiveNode } from '../Components/ActiveNode';
+import { PropertyBindings } from '../Components/PropertyBindings';
+import { LogOutput } from '../Components/LogOutput';
 import { TaskStatus, NodeType, DecoratorType } from '../Types/TaskStatus';
 import { RepeaterNode } from '../Components/Decorators/RepeaterNode';
 import { ConditionalNode } from '../Components/Decorators/ConditionalNode';
@@ -142,6 +144,10 @@ export class DecoratorExecutionSystem extends EntitySystem {
     ): void {
         const repeater = decorator as RepeaterNode;
 
+        // 从 PropertyBindings 读取绑定的黑板变量值
+        const repeatCount = this.resolvePropertyValue(entity, 'repeatCount', repeater.repeatCount);
+        const endOnFailure = this.resolvePropertyValue(entity, 'endOnFailure', repeater.endOnFailure);
+
         // 如果子节点未激活，激活它
         if (!child.hasComponent(ActiveNode)) {
             child.addComponent(new ActiveNode());
@@ -156,7 +162,7 @@ export class DecoratorExecutionSystem extends EntitySystem {
         }
 
         // 子节点完成
-        if (childNode.status === TaskStatus.Failure && repeater.endOnFailure) {
+        if (childNode.status === TaskStatus.Failure && endOnFailure) {
             node.status = TaskStatus.Failure;
             repeater.reset();
             this.completeNode(entity);
@@ -166,8 +172,9 @@ export class DecoratorExecutionSystem extends EntitySystem {
         // 增加重复计数
         repeater.incrementRepeat();
 
-        // 检查是否继续重复
-        if (repeater.shouldContinueRepeat()) {
+        // 检查是否继续重复（使用解析后的值）
+        const shouldContinue = (repeatCount === -1) || (repeater.currentRepeatCount < repeatCount);
+        if (shouldContinue) {
             // 重置子节点并继续
             childNode.invalidate();
             child.addComponent(new ActiveNode());
@@ -316,25 +323,50 @@ export class DecoratorExecutionSystem extends EntitySystem {
     ): void {
         const cooldown = decorator as CooldownNode;
 
-        // 检查冷却
-        if (!cooldown.canExecute(Time.totalTime)) {
+        // 从 PropertyBindings 读取绑定的黑板变量值
+        const cooldownTime = this.resolvePropertyValue(entity, 'cooldownTime', cooldown.cooldownTime);
+
+        // 检查冷却（使用解析后的值）
+        // 如果从未执行过（lastExecutionTime === 0），允许执行
+        const timeSinceLastExecution = Time.totalTime - cooldown.lastExecutionTime;
+        const canExecute = (cooldown.lastExecutionTime === 0) || (timeSinceLastExecution >= cooldownTime);
+
+        // 添加调试日志
+        this.outputLog(
+            entity,
+            `[冷却检查] Time.totalTime=${Time.totalTime.toFixed(3)}, lastExecution=${cooldown.lastExecutionTime.toFixed(3)}, ` +
+            `cooldownTime=${cooldownTime}, timeSince=${timeSinceLastExecution.toFixed(3)}, canExecute=${canExecute}, childStatus=${childNode.status}`,
+            'info'
+        );
+
+        if (!canExecute) {
             node.status = TaskStatus.Failure;
             this.completeNode(entity);
             return;
         }
 
+        // 先检查子节点状态，再决定是否激活
+        if (childNode.status !== TaskStatus.Invalid && childNode.status !== TaskStatus.Running) {
+            // 子节点已经完成（Success 或 Failure）
+            node.status = childNode.status;
+            cooldown.recordExecution(Time.totalTime);
+            this.outputLog(
+                entity,
+                `[冷却记录] 记录执行时间: ${Time.totalTime.toFixed(3)}, 下次可执行时间: ${(Time.totalTime + cooldownTime).toFixed(3)}`,
+                'info'
+            );
+            this.completeNode(entity);
+            return;
+        }
+
+        // 子节点还没开始或正在执行
         if (!child.hasComponent(ActiveNode)) {
             child.addComponent(new ActiveNode());
             node.status = TaskStatus.Running;
             return;
         }
 
-        node.status = childNode.status;
-
-        if (childNode.status !== TaskStatus.Running) {
-            cooldown.recordExecution(Time.totalTime);
-            this.completeNode(entity);
-        }
+        node.status = TaskStatus.Running;
     }
 
     /**
@@ -349,9 +381,14 @@ export class DecoratorExecutionSystem extends EntitySystem {
     ): void {
         const timeout = decorator as TimeoutNode;
 
+        // 从 PropertyBindings 读取绑定的黑板变量值
+        const timeoutDuration = this.resolvePropertyValue(entity, 'timeoutDuration', timeout.timeoutDuration);
+
         timeout.recordStartTime(Time.totalTime);
 
-        if (timeout.isTimeout(Time.totalTime)) {
+        // 检查超时（使用解析后的值）
+        const isTimeout = timeout.startTime > 0 && (Time.totalTime - timeout.startTime >= timeoutDuration);
+        if (isTimeout) {
             node.status = TaskStatus.Failure;
             timeout.reset();
             // 移除子节点的活跃标记
@@ -403,6 +440,73 @@ export class DecoratorExecutionSystem extends EntitySystem {
         }
 
         return undefined;
+    }
+
+    /**
+     * 解析属性值
+     * 如果属性绑定到黑板变量，从黑板读取最新值
+     */
+    private resolvePropertyValue(entity: Entity, propertyName: string, defaultValue: any): any {
+        const bindings = entity.getComponent(PropertyBindings);
+        if (!bindings || !bindings.hasBinding(propertyName)) {
+            return defaultValue;
+        }
+
+        const blackboardKey = bindings.getBinding(propertyName)!;
+        const blackboard = this.findBlackboard(entity);
+
+        if (!blackboard || !blackboard.hasVariable(blackboardKey)) {
+            return defaultValue;
+        }
+
+        return blackboard.getValue(blackboardKey);
+    }
+
+    /**
+     * 查找根实体
+     */
+    private findRootEntity(entity: Entity): Entity | null {
+        let current: Entity | null = entity;
+        while (current) {
+            if (!current.parent) {
+                return current;
+            }
+            current = current.parent;
+        }
+        return null;
+    }
+
+    /**
+     * 统一的日志输出方法
+     * 同时输出到控制台和LogOutput组件，确保用户在UI中能看到
+     */
+    private outputLog(
+        entity: Entity,
+        message: string,
+        level: 'log' | 'info' | 'warn' | 'error' = 'info'
+    ): void {
+        switch (level) {
+            case 'info':
+                this.logger.info(message);
+                break;
+            case 'warn':
+                this.logger.warn(message);
+                break;
+            case 'error':
+                this.logger.error(message);
+                break;
+            default:
+                this.logger.info(message);
+                break;
+        }
+
+        const rootEntity = this.findRootEntity(entity);
+        if (rootEntity) {
+            const logOutput = rootEntity.getComponent(LogOutput);
+            if (logOutput) {
+                logOutput.addMessage(message, level);
+            }
+        }
     }
 
     protected override getLoggerName(): string {

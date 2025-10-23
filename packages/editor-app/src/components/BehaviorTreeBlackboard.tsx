@@ -9,6 +9,7 @@ interface BlackboardVariable {
 
 interface BehaviorTreeBlackboardProps {
     variables: Record<string, any>;
+    initialVariables?: Record<string, any>;
     onVariableChange: (key: string, value: any) => void;
     onVariableAdd: (key: string, value: any, type: BlackboardVariable['type']) => void;
     onVariableDelete: (key: string) => void;
@@ -22,11 +23,17 @@ interface BehaviorTreeBlackboardProps {
  */
 export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
     variables,
+    initialVariables,
     onVariableChange,
     onVariableAdd,
     onVariableDelete,
     onVariableRename
 }) => {
+    // 检查变量是否被运行时修改
+    const isModified = (key: string): boolean => {
+        if (!initialVariables) return false;
+        return JSON.stringify(variables[key]) !== JSON.stringify(initialVariables[key]);
+    };
     const [isAdding, setIsAdding] = useState(false);
     const [newKey, setNewKey] = useState('');
     const [newValue, setNewValue] = useState('');
@@ -405,13 +412,27 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
                                             fontWeight: 'bold',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap'
+                                            whiteSpace: 'nowrap',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
                                         }}>
                                             {varName} <span style={{
                                                 color: '#666',
                                                 fontWeight: 'normal',
                                                 fontSize: '10px'
                                             }}>({type})</span>
+                                            {isModified(key) && (
+                                                <span style={{
+                                                    fontSize: '9px',
+                                                    color: '#ffbb00',
+                                                    backgroundColor: 'rgba(255, 187, 0, 0.15)',
+                                                    padding: '1px 4px',
+                                                    borderRadius: '2px'
+                                                }} title="运行时修改的值，停止后会恢复">
+                                                    运行时
+                                                </span>
+                                            )}
                                         </div>
                                         <div style={{
                                             fontSize: '10px',
@@ -420,8 +441,11 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
                                             marginTop: '2px',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap'
-                                        }} title={displayValue}>
+                                            whiteSpace: 'nowrap',
+                                            backgroundColor: isModified(key) ? 'rgba(255, 187, 0, 0.1)' : 'transparent',
+                                            padding: '1px 3px',
+                                            borderRadius: '2px'
+                                        }} title={isModified(key) ? `初始值: ${JSON.stringify(initialVariables?.[key])}\n当前值: ${displayValue}` : displayValue}>
                                             {truncatedValue}
                                         </div>
                                     </div>

@@ -1,9 +1,10 @@
-import { World, Entity, Scene, createLogger } from '@esengine/ecs-framework';
+import { World, Entity, Scene, createLogger, Time } from '@esengine/ecs-framework';
 import {
     BehaviorTreeNode as BehaviorTreeNodeComponent,
     BlackboardComponent,
     ActiveNode,
     PropertyBindings,
+    LogOutput,
     RootExecutionSystem,
     LeafExecutionSystem,
     DecoratorExecutionSystem,
@@ -56,7 +57,11 @@ export interface ExecutionLog {
     nodeId?: string;
 }
 
-export type ExecutionCallback = (statuses: ExecutionStatus[], logs: ExecutionLog[]) => void;
+export type ExecutionCallback = (
+    statuses: ExecutionStatus[],
+    logs: ExecutionLog[],
+    blackboardVariables?: Record<string, any>
+) => void;
 
 /**
  * 真实的行为树执行器
@@ -69,6 +74,7 @@ export class BehaviorTreeExecutor {
     private rootEntity: Entity | null = null;
     private entityMap: Map<string, Entity> = new Map();
     private blackboardVariables: Record<string, any> = {};
+    private initialBlackboardVariables: Record<string, any> = {};
     private callback: ExecutionCallback | null = null;
     private isRunning = false;
     private isPaused = false;
@@ -132,6 +138,9 @@ export class BehaviorTreeExecutor {
         if (this.rootEntity) {
             // 将黑板组件添加到根实体
             this.rootEntity.addComponent(blackboardComp);
+
+            // 添加LogOutput组件，用于收集日志
+            this.rootEntity.addComponent(new LogOutput());
 
             if (this.debugMode) {
                 this.logDebugTreeStructure();
@@ -211,7 +220,9 @@ export class BehaviorTreeExecutor {
         nodeMap: Map<string, BehaviorTreeNode>,
         parent: Entity | null
     ): Entity {
-        const entity = this.scene.createEntity(node.template.displayName || 'Node');
+        const displayName = node.template.displayName || 'Node';
+        const entityName = `${displayName}#${node.id}`;
+        const entity = this.scene.createEntity(entityName);
         this.entityMap.set(node.id, entity);
 
         if (parent) {
@@ -426,7 +437,16 @@ export class BehaviorTreeExecutor {
         this.lastStatuses.clear();
         this.tickCount = 0;
 
+        // 保存黑板变量的初始值（深拷贝）
+        this.initialBlackboardVariables = JSON.parse(JSON.stringify(this.blackboardVariables));
+
         this.addLog('开始执行行为树', 'info');
+
+        // 打印树结构用于调试
+        this.addLog('=== 行为树结构 ===', 'info');
+        this.logEntityStructure(this.rootEntity, 0);
+        this.addLog('===================', 'info');
+
         this.rootEntity.addComponent(new ActiveNode());
     }
 
@@ -453,7 +473,34 @@ export class BehaviorTreeExecutor {
 
         if (this.rootEntity) {
             this.deactivateAllNodes(this.rootEntity);
+
+            // 恢复黑板变量到初始值
+            this.restoreBlackboardVariables();
         }
+    }
+
+    /**
+     * 恢复黑板变量到初始值
+     */
+    private restoreBlackboardVariables(): void {
+        if (!this.rootEntity) {
+            return;
+        }
+
+        const blackboard = this.rootEntity.getComponent(BlackboardComponent);
+        if (!blackboard) {
+            return;
+        }
+
+        // 恢复所有变量到初始值
+        Object.entries(this.initialBlackboardVariables).forEach(([key, value]) => {
+            blackboard.setValue(key, value, true);
+        });
+
+        // 同步到 blackboardVariables
+        this.blackboardVariables = JSON.parse(JSON.stringify(this.initialBlackboardVariables));
+
+        this.addLog('已恢复黑板变量到初始值', 'info');
     }
 
     /**
@@ -477,6 +524,9 @@ export class BehaviorTreeExecutor {
         if (!this.isRunning || this.isPaused) {
             return;
         }
+
+        // 更新全局时间信息
+        Time.update(deltaTime);
 
         this.tickCount++;
 
@@ -532,7 +582,27 @@ export class BehaviorTreeExecutor {
             });
         });
 
-        this.callback(statuses, this.executionLogs);
+        // 收集LogOutput组件中的日志
+        if (this.rootEntity) {
+            const logOutput = this.rootEntity.getComponent(LogOutput);
+            if (logOutput && logOutput.messages.length > 0) {
+                // 将LogOutput中的日志转换为ExecutionLog格式并添加到日志列表
+                logOutput.messages.forEach((msg) => {
+                    this.addLog(
+                        msg.message,
+                        msg.level === 'error' ? 'error' :
+                        msg.level === 'warn' ? 'warning' : 'info'
+                    );
+                });
+                // 清空已处理的日志
+                logOutput.clear();
+            }
+        }
+
+        // 获取当前黑板变量
+        const currentBlackboardVars = this.getBlackboardVariables();
+
+        this.callback(statuses, this.executionLogs, currentBlackboardVars);
     }
 
     /**
@@ -603,6 +673,31 @@ export class BehaviorTreeExecutor {
     }
 
     /**
+     * 更新黑板变量
+     */
+    updateBlackboardVariable(key: string, value: any): void {
+        if (!this.rootEntity) {
+            logger.warn('无法更新黑板变量：未构建行为树');
+            return;
+        }
+
+        const blackboard = this.rootEntity.getComponent(BlackboardComponent);
+        if (!blackboard) {
+            logger.warn('无法更新黑板变量：未找到黑板组件');
+            return;
+        }
+
+        if (!blackboard.hasVariable(key)) {
+            logger.warn(`无法更新黑板变量：变量 "${key}" 不存在`);
+            return;
+        }
+
+        blackboard.setValue(key, value);
+        this.blackboardVariables[key] = value;
+        logger.info(`黑板变量已更新: ${key} = ${JSON.stringify(value)}`);
+    }
+
+    /**
      * 记录树结构的 debug 信息
      */
     private logDebugTreeStructure(): void {
@@ -620,32 +715,33 @@ export class BehaviorTreeExecutor {
         const indent = '  '.repeat(depth);
         const nodeId = Array.from(this.entityMap.entries()).find(([_, e]) => e === entity)?.[0] || 'unknown';
         const btNode = entity.getComponent(BehaviorTreeNodeComponent);
-        const activeNode = entity.hasComponent(ActiveNode);
 
-        let componentsList = [];
-        if (btNode) {
-            componentsList.push(`BehaviorTreeNode(type=${btNode.nodeType}, status=${btNode.status})`);
-        }
-        if (activeNode) {
-            componentsList.push('ActiveNode');
-        }
-
+        // 获取节点的具体类型组件
         const allComponents = entity.components.map(c => c.constructor.name);
-        const otherComponents = allComponents.filter(name =>
-            name !== 'BehaviorTreeNode' && name !== 'ActiveNode'
-        );
-        componentsList.push(...otherComponents);
+        const nodeTypeComponent = allComponents.find(name =>
+            name !== 'BehaviorTreeNode' && name !== 'ActiveNode' &&
+            name !== 'BlackboardComponent' && name !== 'LogOutput' &&
+            name !== 'PropertyBindings'
+        ) || 'Unknown';
+
+        // 构建节点显示名称
+        let nodeName = entity.name;
+        if (nodeTypeComponent !== 'Unknown') {
+            nodeName = `${nodeName} [${nodeTypeComponent}]`;
+        }
 
         this.addLog(
-            `${indent}[${entity.name}] (id=${nodeId}) - ${componentsList.join(', ')}`,
+            `${indent}└─ ${nodeName} (id: ${nodeId})`,
             'info'
         );
 
         if (entity.children.length > 0) {
-            this.addLog(`${indent}  子节点数: ${entity.children.length}`, 'info');
+            this.addLog(`${indent}   子节点数: ${entity.children.length}`, 'info');
             entity.children.forEach((child: Entity) => {
                 this.logEntityStructure(child, depth + 1);
             });
+        } else if (btNode && (btNode.nodeType === NodeType.Decorator || btNode.nodeType === NodeType.Composite)) {
+            this.addLog(`${indent}   ⚠ 警告: 此节点应该有子节点`, 'warning');
         }
     }
 
