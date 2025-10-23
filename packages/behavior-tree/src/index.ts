@@ -60,6 +60,9 @@ export * from './Systems/LeafExecutionSystem';
 export * from './Systems/DecoratorExecutionSystem';
 export * from './Systems/CompositeExecutionSystem';
 
+// 服务
+export * from './Services/GlobalBlackboardService';
+
 // 插件
 export * from './BehaviorTreePlugin';
 

@@ -33,7 +33,7 @@
   padding: 0 16px;
   height: 28px;
   line-height: 28px;
-  cursor: pointer;
+  cursor: default;
   transition: all 0.1s ease;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   position: relative;
@@ -174,7 +174,16 @@
 .flexlayout__tabset_content {
   background: #1e1e1e;
   overflow: auto;
-  cursor: default;
+}
+
+.flexlayout__tabset_content * {
+  cursor: default !important;
+}
+
+.flexlayout__tabset_content button,
+.flexlayout__tabset_content a,
+.flexlayout__tabset_content [role="button"] {
+  cursor: pointer !important;
 }
 
 .flexlayout__tab_toolbar {

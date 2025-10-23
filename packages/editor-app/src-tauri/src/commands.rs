@@ -93,3 +93,36 @@ pub async fn write_behavior_tree_file(file_path: String, content: String) -> Res
         .map_err(|e| format!("Failed to write file {}: {}", file_path, e))
 }
 
+#[tauri::command]
+pub async fn read_global_blackboard(project_path: String) -> Result<String, String> {
+    use std::fs;
+    use std::path::Path;
+
+    let config_path = Path::new(&project_path).join(".ecs").join("global-blackboard.json");
+
+    if !config_path.exists() {
+        return Ok(String::from(r#"{"version":"1.0","variables":[]}"#));
+    }
+
+    fs::read_to_string(&config_path)
+        .map_err(|e| format!("Failed to read global blackboard: {}", e))
+}
+
+#[tauri::command]
+pub async fn write_global_blackboard(project_path: String, content: String) -> Result<(), String> {
+    use std::fs;
+    use std::path::Path;
+
+    let ecs_dir = Path::new(&project_path).join(".ecs");
+    let config_path = ecs_dir.join("global-blackboard.json");
+
+    // 创建 .ecs 目录（如果不存在）
+    if !ecs_dir.exists() {
+        fs::create_dir_all(&ecs_dir)
+            .map_err(|e| format!("Failed to create .ecs directory: {}", e))?;
+    }
+
+    fs::write(&config_path, content)
+        .map_err(|e| format!("Failed to write global blackboard: {}", e))
+}
+

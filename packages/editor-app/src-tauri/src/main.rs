@@ -301,6 +301,106 @@ async fn write_behavior_tree_file(file_path: String, content: String) -> Result<
         .map_err(|e| format!("Failed to write file {}: {}", file_path, e))
 }
 
+#[tauri::command]
+async fn read_global_blackboard(project_path: String) -> Result<String, String> {
+    use std::fs;
+    use std::path::Path;
+
+    let config_path = Path::new(&project_path).join(".ecs").join("global-blackboard.json");
+
+    if !config_path.exists() {
+        return Ok(String::from(r#"{"version":"1.0","variables":[]}"#));
+    }
+
+    fs::read_to_string(&config_path)
+        .map_err(|e| format!("Failed to read global blackboard: {}", e))
+}
+
+#[tauri::command]
+async fn write_global_blackboard(project_path: String, content: String) -> Result<(), String> {
+    use std::fs;
+    use std::path::Path;
+
+    let ecs_dir = Path::new(&project_path).join(".ecs");
+    let config_path = ecs_dir.join("global-blackboard.json");
+
+    // 创建 .ecs 目录（如果不存在）
+    if !ecs_dir.exists() {
+        fs::create_dir_all(&ecs_dir)
+            .map_err(|e| format!("Failed to create .ecs directory: {}", e))?;
+    }
+
+    fs::write(&config_path, content)
+        .map_err(|e| format!("Failed to write global blackboard: {}", e))
+}
+
+#[tauri::command]
+fn open_file_with_default_app(file_path: String) -> Result<(), String> {
+    use std::process::Command;
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("cmd")
+            .args(["/C", "start", "", &file_path])
+            .spawn()
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(&file_path)
+            .spawn()
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(&file_path)
+            .spawn()
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+fn show_in_folder(file_path: String) -> Result<(), String> {
+    use std::process::Command;
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .args(["/select,", &file_path])
+            .spawn()
+            .map_err(|e| format!("Failed to show in folder: {}", e))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .args(["-R", &file_path])
+            .spawn()
+            .map_err(|e| format!("Failed to show in folder: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        use std::path::Path;
+        let path = Path::new(&file_path);
+        let parent = path.parent()
+            .ok_or_else(|| "Failed to get parent directory".to_string())?;
+
+        Command::new("xdg-open")
+            .arg(parent)
+            .spawn()
+            .map_err(|e| format!("Failed to show in folder: {}", e))?;
+    }
+
+    Ok(())
+}
+
 fn main() {
     let project_paths: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
     let project_paths_clone = Arc::clone(&project_paths);
@@ -385,7 +485,11 @@ fn main() {
             stop_profiler_server,
             get_profiler_status,
             read_behavior_tree_file,
-            write_behavior_tree_file
+            write_behavior_tree_file,
+            read_global_blackboard,
+            write_global_blackboard,
+            open_file_with_default_app,
+            show_in_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

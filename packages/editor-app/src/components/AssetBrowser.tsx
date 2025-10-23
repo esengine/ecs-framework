@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { Folder, File, FileCode, FileJson, FileImage, FileText, FolderOpen, Copy, Trash2, Edit3 } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
 import { MessageHub } from '@esengine/editor-core';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { FileTree } from './FileTree';
 import { ResizablePanel } from './ResizablePanel';
+import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import '../styles/AssetBrowser.css';
 
 interface AssetItem {
@@ -26,6 +28,10 @@ export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorT
   const [assets, setAssets] = useState<AssetItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    position: { x: number; y: number };
+    asset: AssetItem;
+  } | null>(null);
 
   const translations = {
     en: {
@@ -124,7 +130,7 @@ export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorT
     setSelectedPath(asset.path);
   };
 
-  const handleAssetDoubleClick = (asset: AssetItem) => {
+  const handleAssetDoubleClick = async (asset: AssetItem) => {
     if (asset.type === 'folder') {
       setCurrentPath(asset.path);
       loadAssets(asset.path);
@@ -133,8 +139,86 @@ export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorT
         onOpenScene(asset.path);
       } else if (asset.extension === 'btree' && onOpenBehaviorTree) {
         onOpenBehaviorTree(asset.path);
+      } else {
+        // 其他文件使用系统默认程序打开
+        try {
+          await TauriAPI.openFileWithSystemApp(asset.path);
+        } catch (error) {
+          console.error('Failed to open file:', error);
+        }
       }
     }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, asset: AssetItem) => {
+    e.preventDefault();
+    setContextMenu({
+      position: { x: e.clientX, y: e.clientY },
+      asset
+    });
+  };
+
+  const getContextMenuItems = (asset: AssetItem): ContextMenuItem[] => {
+    const items: ContextMenuItem[] = [];
+
+    // 打开
+    if (asset.type === 'file') {
+      items.push({
+        label: locale === 'zh' ? '打开' : 'Open',
+        icon: <File size={16} />,
+        onClick: () => handleAssetDoubleClick(asset)
+      });
+    }
+
+    // 在文件管理器中显示
+    items.push({
+      label: locale === 'zh' ? '在文件管理器中显示' : 'Show in Explorer',
+      icon: <FolderOpen size={16} />,
+      onClick: async () => {
+        try {
+          await TauriAPI.showInFolder(asset.path);
+        } catch (error) {
+          console.error('Failed to show in folder:', error);
+        }
+      }
+    });
+
+    items.push({ label: '', separator: true, onClick: () => {} });
+
+    // 复制路径
+    items.push({
+      label: locale === 'zh' ? '复制路径' : 'Copy Path',
+      icon: <Copy size={16} />,
+      onClick: () => {
+        navigator.clipboard.writeText(asset.path);
+      }
+    });
+
+    items.push({ label: '', separator: true, onClick: () => {} });
+
+    // 重命名
+    items.push({
+      label: locale === 'zh' ? '重命名' : 'Rename',
+      icon: <Edit3 size={16} />,
+      onClick: () => {
+        // TODO: 实现重命名功能
+        console.log('Rename:', asset.path);
+      },
+      disabled: true
+    });
+
+    // 删除
+    items.push({
+      label: locale === 'zh' ? '删除' : 'Delete',
+      icon: <Trash2 size={16} />,
+      onClick: () => {
+        // TODO: 实现删除功能
+        console.log('Delete:', asset.path);
+      },
+      disabled: true
+    });
+
+    return items;
   };
 
   const getBreadcrumbs = () => {
@@ -162,67 +246,29 @@ export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorT
 
   const getFileIcon = (asset: AssetItem) => {
     if (asset.type === 'folder') {
-      return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="asset-icon" style={{ color: '#ffa726' }}>
-          <path d="M3 7V17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17V9C21 7.89543 20.1046 7 19 7H12L10 5H5C3.89543 5 3 5.89543 3 7Z" strokeWidth="2" strokeLinejoin="round"/>
-        </svg>
-      );
+      return <Folder className="asset-icon" style={{ color: '#ffa726' }} size={20} />;
     }
 
     const ext = asset.extension?.toLowerCase();
     switch (ext) {
       case 'ecs':
-        return (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="asset-icon" style={{ color: '#66bb6a' }}>
-            <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" strokeWidth="2"/>
-            <path d="M14 2V8H20" strokeWidth="2"/>
-            <circle cx="12" cy="14" r="3" strokeWidth="2"/>
-          </svg>
-        );
+        return <File className="asset-icon" style={{ color: '#66bb6a' }} size={20} />;
       case 'btree':
-        return (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="asset-icon" style={{ color: '#ab47bc' }}>
-            <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" strokeWidth="2"/>
-            <path d="M14 2V8H20" strokeWidth="2"/>
-            <path d="M12 10V14M10 12H14M12 14L10 16M12 14L14 16" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        );
+        return <FileText className="asset-icon" style={{ color: '#ab47bc' }} size={20} />;
       case 'ts':
       case 'tsx':
       case 'js':
       case 'jsx':
-        return (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="asset-icon" style={{ color: '#42a5f5' }}>
-            <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" strokeWidth="2"/>
-            <path d="M14 2V8H20" strokeWidth="2"/>
-            <path d="M12 18L12 14M12 10L12 12" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        );
+        return <FileCode className="asset-icon" style={{ color: '#42a5f5' }} size={20} />;
       case 'json':
-        return (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="asset-icon" style={{ color: '#ffa726' }}>
-            <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" strokeWidth="2"/>
-            <path d="M14 2V8H20" strokeWidth="2"/>
-          </svg>
-        );
+        return <FileJson className="asset-icon" style={{ color: '#ffa726' }} size={20} />;
       case 'png':
       case 'jpg':
       case 'jpeg':
       case 'gif':
-        return (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="asset-icon" style={{ color: '#ec407a' }}>
-            <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
-            <path d="M21 15L16 10L5 21" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        );
+        return <FileImage className="asset-icon" style={{ color: '#ec407a' }} size={20} />;
       default:
-        return (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="asset-icon">
-            <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" strokeWidth="2"/>
-            <path d="M14 2V8H20" strokeWidth="2"/>
-          </svg>
-        );
+        return <File className="asset-icon" size={20} />;
     }
   };
 
@@ -305,6 +351,7 @@ export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorT
                       className={`asset-item ${selectedPath === asset.path ? 'selected' : ''}`}
                       onClick={() => handleAssetClick(asset)}
                       onDoubleClick={() => handleAssetDoubleClick(asset)}
+                      onContextMenu={(e) => handleContextMenu(e, asset)}
                     >
                       {getFileIcon(asset)}
                       <div className="asset-name" title={asset.name}>
@@ -321,6 +368,13 @@ export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorT
           }
         />
       </div>
+      {contextMenu && (
+        <ContextMenu
+          items={getContextMenuItems(contextMenu.asset)}
+          position={contextMenu.position}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 }

@@ -1,19 +1,29 @@
 import { useState } from 'react';
-import { Clipboard, Edit2, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Clipboard, Edit2, Trash2, ChevronDown, ChevronRight, Globe, Save, Folder } from 'lucide-react';
+import type { BlackboardValueType } from '@esengine/behavior-tree';
+
+type SimpleBlackboardType = 'number' | 'string' | 'boolean' | 'object';
 
 interface BlackboardVariable {
     key: string;
     value: any;
-    type: 'number' | 'string' | 'boolean' | 'object';
+    type: SimpleBlackboardType;
 }
 
 interface BehaviorTreeBlackboardProps {
     variables: Record<string, any>;
     initialVariables?: Record<string, any>;
+    globalVariables?: Record<string, any>;
     onVariableChange: (key: string, value: any) => void;
-    onVariableAdd: (key: string, value: any, type: BlackboardVariable['type']) => void;
+    onVariableAdd: (key: string, value: any, type: SimpleBlackboardType) => void;
     onVariableDelete: (key: string) => void;
     onVariableRename?: (oldKey: string, newKey: string) => void;
+    onGlobalVariableChange?: (key: string, value: any) => void;
+    onGlobalVariableAdd?: (key: string, value: any, type: BlackboardValueType) => void;
+    onGlobalVariableDelete?: (key: string) => void;
+    projectPath?: string;
+    hasUnsavedGlobalChanges?: boolean;
+    onSaveGlobal?: () => void;
 }
 
 /**
@@ -24,16 +34,25 @@ interface BehaviorTreeBlackboardProps {
 export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
     variables,
     initialVariables,
+    globalVariables,
     onVariableChange,
     onVariableAdd,
     onVariableDelete,
-    onVariableRename
+    onVariableRename,
+    onGlobalVariableChange,
+    onGlobalVariableAdd,
+    onGlobalVariableDelete,
+    projectPath,
+    hasUnsavedGlobalChanges,
+    onSaveGlobal
 }) => {
-    // 检查变量是否被运行时修改
+    const [viewMode, setViewMode] = useState<'local' | 'global'>('local');
+
     const isModified = (key: string): boolean => {
         if (!initialVariables) return false;
         return JSON.stringify(variables[key]) !== JSON.stringify(initialVariables[key]);
     };
+
     const [isAdding, setIsAdding] = useState(false);
     const [newKey, setNewKey] = useState('');
     const [newValue, setNewValue] = useState('');
@@ -60,7 +79,13 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
             }
         }
 
-        onVariableAdd(newKey, parsedValue, newType);
+        if (viewMode === 'global' && onGlobalVariableAdd) {
+            const globalType = newType as BlackboardValueType;
+            onGlobalVariableAdd(newKey, parsedValue, globalType);
+        } else {
+            onVariableAdd(newKey, parsedValue, newType);
+        }
+
         setNewKey('');
         setNewValue('');
         setIsAdding(false);
@@ -91,10 +116,18 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
             }
         }
 
-        if (newKey !== key && onVariableRename) {
-            onVariableRename(key, newKey);
+        if (viewMode === 'global' && onGlobalVariableChange) {
+            if (newKey !== key && onGlobalVariableDelete) {
+                onGlobalVariableDelete(key);
+            }
+            onGlobalVariableChange(newKey, parsedValue);
+        } else {
+            if (newKey !== key && onVariableRename) {
+                onVariableRename(key, newKey);
+            }
+            onVariableChange(newKey, parsedValue);
         }
-        onVariableChange(newKey, parsedValue);
+
         setEditingKey(null);
     };
 
@@ -117,7 +150,10 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
         return 'string';
     };
 
-    const variableEntries = Object.entries(variables);
+    const currentVariables = viewMode === 'global' ? (globalVariables || {}) : variables;
+    const variableEntries = Object.entries(currentVariables);
+
+    const currentOnDelete = viewMode === 'global' ? onGlobalVariableDelete : onVariableDelete;
 
     const groupedVariables: Record<string, Array<{ fullKey: string; varName: string; value: any }>> = variableEntries.reduce((groups, [key, value]) => {
         const parts = key.split('.');
@@ -166,37 +202,148 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
 
             {/* 标题栏 */}
             <div style={{
-                padding: '12px 15px',
                 backgroundColor: '#2d2d2d',
-                borderBottom: '1px solid #333',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
+                borderBottom: '1px solid #333'
             }}>
                 <div style={{
-                    fontSize: '14px',
-                    fontWeight: 'bold',
+                    padding: '10px 12px',
                     display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
+                    <div style={{
+                        fontSize: '13px',
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        color: '#ccc'
+                    }}>
+                        <Clipboard size={14} />
+                        <span>Blackboard</span>
+                    </div>
+                    <div style={{
+                        display: 'flex',
+                        backgroundColor: '#1e1e1e',
+                        borderRadius: '3px',
+                        overflow: 'hidden'
+                    }}>
+                        <button
+                            onClick={() => setViewMode('local')}
+                            style={{
+                                padding: '3px 8px',
+                                backgroundColor: viewMode === 'local' ? '#0e639c' : 'transparent',
+                                border: 'none',
+                                color: viewMode === 'local' ? '#fff' : '#888',
+                                cursor: 'pointer',
+                                fontSize: '10px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px'
+                            }}
+                        >
+                            <Clipboard size={11} />
+                            Local
+                        </button>
+                        <button
+                            onClick={() => setViewMode('global')}
+                            style={{
+                                padding: '3px 8px',
+                                backgroundColor: viewMode === 'global' ? '#0e639c' : 'transparent',
+                                border: 'none',
+                                color: viewMode === 'global' ? '#fff' : '#888',
+                                cursor: 'pointer',
+                                fontSize: '10px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px'
+                            }}
+                        >
+                            <Globe size={11} />
+                            Global
+                        </button>
+                    </div>
+                </div>
+
+                {/* 工具栏 */}
+                <div style={{
+                    padding: '8px 12px',
+                    backgroundColor: '#252525',
+                    display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
                     gap: '8px'
                 }}>
-                    <Clipboard size={16} />
-                    <span>Blackboard</span>
+                    <div style={{
+                        flex: 1,
+                        fontSize: '10px',
+                        color: '#888',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        minWidth: 0,
+                        overflow: 'hidden'
+                    }}>
+                        {viewMode === 'global' && projectPath ? (
+                            <>
+                                <Folder size={10} style={{ flexShrink: 0 }} />
+                                <span style={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                }}>.ecs/global-blackboard.json</span>
+                            </>
+                        ) : (
+                            <span>
+                                {viewMode === 'local' ? '当前行为树的本地变量' : '所有行为树共享的全局变量'}
+                            </span>
+                        )}
+                    </div>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        flexShrink: 0
+                    }}>
+                        {viewMode === 'global' && onSaveGlobal && (
+                            <button
+                                onClick={hasUnsavedGlobalChanges ? onSaveGlobal : undefined}
+                                disabled={!hasUnsavedGlobalChanges}
+                                style={{
+                                    padding: '4px 6px',
+                                    backgroundColor: hasUnsavedGlobalChanges ? '#ff9800' : '#4caf50',
+                                    border: 'none',
+                                    borderRadius: '3px',
+                                    color: '#fff',
+                                    cursor: hasUnsavedGlobalChanges ? 'pointer' : 'not-allowed',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    opacity: hasUnsavedGlobalChanges ? 1 : 0.7
+                                }}
+                                title={hasUnsavedGlobalChanges ? '点击保存全局配置' : '全局配置已保存'}
+                            >
+                                <Save size={12} />
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setIsAdding(true)}
+                            style={{
+                                padding: '4px 6px',
+                                backgroundColor: '#0e639c',
+                                border: 'none',
+                                borderRadius: '3px',
+                                color: '#fff',
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                                display: 'flex',
+                                alignItems: 'center'
+                            }}
+                            title="添加变量"
+                        >
+                            +
+                        </button>
+                    </div>
                 </div>
-                <button
-                    onClick={() => setIsAdding(true)}
-                    style={{
-                        padding: '4px 10px',
-                        backgroundColor: '#0e639c',
-                        border: 'none',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                    }}
-                >
-                    + Add
-                </button>
             </div>
 
             {/* 变量列表 */}
@@ -422,7 +569,7 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
                                                 fontWeight: 'normal',
                                                 fontSize: '10px'
                                             }}>({type})</span>
-                                            {isModified(key) && (
+                                            {viewMode === 'local' && isModified(key) && (
                                                 <span style={{
                                                     fontSize: '9px',
                                                     color: '#ffbb00',
@@ -442,10 +589,10 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             whiteSpace: 'nowrap',
-                                            backgroundColor: isModified(key) ? 'rgba(255, 187, 0, 0.1)' : 'transparent',
+                                            backgroundColor: (viewMode === 'local' && isModified(key)) ? 'rgba(255, 187, 0, 0.1)' : 'transparent',
                                             padding: '1px 3px',
                                             borderRadius: '2px'
-                                        }} title={isModified(key) ? `初始值: ${JSON.stringify(initialVariables?.[key])}\n当前值: ${displayValue}` : displayValue}>
+                                        }} title={(viewMode === 'local' && isModified(key)) ? `初始值: ${JSON.stringify(initialVariables?.[key])}\n当前值: ${displayValue}` : displayValue}>
                                             {truncatedValue}
                                         </div>
                                     </div>
@@ -471,7 +618,7 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
                                             <Edit2 size={12} />
                                         </button>
                                         <button
-                                            onClick={() => onVariableDelete(key)}
+                                            onClick={() => currentOnDelete && currentOnDelete(key)}
                                             style={{
                                                 padding: '2px',
                                                 backgroundColor: 'transparent',
@@ -617,9 +764,14 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
                 borderTop: '1px solid #333',
                 fontSize: '11px',
                 color: '#666',
-                backgroundColor: '#2d2d2d'
+                backgroundColor: '#2d2d2d',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
             }}>
-                {variableEntries.length} variable{variableEntries.length !== 1 ? 's' : ''}
+                <span>
+                    {viewMode === 'local' ? 'Local' : 'Global'}: {variableEntries.length} variable{variableEntries.length !== 1 ? 's' : ''}
+                </span>
             </div>
         </div>
     );

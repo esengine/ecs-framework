@@ -113,6 +113,22 @@ export class TauriAPI {
   static async pathExists(path: string): Promise<boolean> {
     return await invoke<boolean>('path_exists', { path });
   }
+
+  /**
+   * 使用系统默认程序打开文件
+   * @param path 文件路径
+   */
+  static async openFileWithSystemApp(path: string): Promise<void> {
+    await invoke('open_file_with_default_app', { filePath: path });
+  }
+
+  /**
+   * 在文件管理器中显示文件
+   * @param path 文件路径
+   */
+  static async showInFolder(path: string): Promise<void> {
+    await invoke('show_in_folder', { filePath: path });
+  }
 }
 
 export interface DirectoryEntry {

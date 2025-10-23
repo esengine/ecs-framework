@@ -8,7 +8,8 @@ import { BehaviorTreeNodePalette } from './BehaviorTreeNodePalette';
 import { BehaviorTreeNodeProperties } from './BehaviorTreeNodeProperties';
 import { BehaviorTreeBlackboard } from './BehaviorTreeBlackboard';
 import { useBehaviorTreeStore } from '../stores/behaviorTreeStore';
-import type { NodeTemplate } from '@esengine/behavior-tree';
+import type { NodeTemplate, BlackboardValueType } from '@esengine/behavior-tree';
+import { GlobalBlackboardService, GlobalBlackboardConfig } from '@esengine/behavior-tree';
 import { createLogger } from '@esengine/ecs-framework';
 import '../styles/BehaviorTreeWindow.css';
 
@@ -16,6 +17,7 @@ interface BehaviorTreeWindowProps {
     isOpen: boolean;
     onClose: () => void;
     filePath?: string | null;
+    projectPath?: string | null;
 }
 
 /**
@@ -26,7 +28,8 @@ const logger = createLogger('BehaviorTreeWindow');
 export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     isOpen,
     onClose,
-    filePath
+    filePath,
+    projectPath: propProjectPath
 }) => {
     const { t } = useTranslation();
     const {
@@ -49,6 +52,51 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
 
     const [rightPanelTab, setRightPanelTab] = useState<'properties' | 'blackboard'>('blackboard');
     const [isFullscreen, setIsFullscreen] = useState(false);
+
+    const [globalVariables, setGlobalVariables] = useState<Record<string, any>>({});
+    const [projectPath, setProjectPath] = useState<string>('');
+    const [hasUnsavedGlobalChanges, setHasUnsavedGlobalChanges] = useState(false);
+
+    // 初始化项目路径和加载全局配置
+    useEffect(() => {
+        const initProject = async () => {
+            // 优先使用从 App.tsx 传递过来的项目路径
+            if (propProjectPath) {
+                setProjectPath(propProjectPath);
+                localStorage.setItem('ecs-project-path', propProjectPath);
+                await loadGlobalBlackboard(propProjectPath);
+                return;
+            }
+
+            // 回退到 localStorage
+            const savedPath = localStorage.getItem('ecs-project-path');
+            if (savedPath) {
+                setProjectPath(savedPath);
+                await loadGlobalBlackboard(savedPath);
+            } else {
+                logger.warn('未设置项目路径，全局黑板功能将不可用');
+            }
+        };
+
+        initProject();
+    }, [propProjectPath]);
+
+    // 实时更新全局变量显示
+    useEffect(() => {
+        const updateGlobalVariables = () => {
+            const globalBlackboard = GlobalBlackboardService.getInstance();
+            const allVars = globalBlackboard.getAllVariables();
+            const varsObject: Record<string, any> = {};
+            allVars.forEach(v => {
+                varsObject[v.name] = v.value;
+            });
+            setGlobalVariables(varsObject);
+        };
+
+        updateGlobalVariables();
+        const interval = setInterval(updateGlobalVariables, 100);
+        return () => clearInterval(interval);
+    }, []);
 
     // 监听节点列表变化，如果选中的节点被删除，清除选中状态
     useEffect(() => {
@@ -83,6 +131,79 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
         setBlackboardVariables(newVars);
     };
 
+
+    const loadGlobalBlackboard = async (path: string) => {
+        try {
+            const json = await invoke<string>('read_global_blackboard', { projectPath: path });
+            const config: GlobalBlackboardConfig = JSON.parse(json);
+            GlobalBlackboardService.getInstance().importConfig(config);
+
+            const allVars = GlobalBlackboardService.getInstance().getAllVariables();
+            const varsObject: Record<string, any> = {};
+            allVars.forEach(v => {
+                varsObject[v.name] = v.value;
+            });
+            setGlobalVariables(varsObject);
+            setHasUnsavedGlobalChanges(false);
+            logger.info('全局黑板配置已加载');
+        } catch (error) {
+            logger.error('加载全局黑板配置失败', error);
+        }
+    };
+
+    const saveGlobalBlackboard = async () => {
+        if (!projectPath) {
+            logger.error('未设置项目路径，无法保存全局黑板配置');
+            return;
+        }
+
+        try {
+            const globalBlackboard = GlobalBlackboardService.getInstance();
+            const json = globalBlackboard.toJSON();
+            await invoke('write_global_blackboard', { projectPath, content: json });
+            setHasUnsavedGlobalChanges(false);
+            logger.info('全局黑板配置已保存到', `${projectPath}/.ecs/global-blackboard.json`);
+        } catch (error) {
+            logger.error('保存全局黑板配置失败', error);
+        }
+    };
+
+    const handleGlobalVariableChange = (key: string, value: any) => {
+        const globalBlackboard = GlobalBlackboardService.getInstance();
+        globalBlackboard.setValue(key, value, true);
+        const allVars = globalBlackboard.getAllVariables();
+        const varsObject: Record<string, any> = {};
+        allVars.forEach(v => {
+            varsObject[v.name] = v.value;
+        });
+        setGlobalVariables(varsObject);
+        setHasUnsavedGlobalChanges(true);
+    };
+
+    const handleGlobalVariableAdd = (key: string, value: any, type: BlackboardValueType) => {
+        const globalBlackboard = GlobalBlackboardService.getInstance();
+        globalBlackboard.defineVariable(key, type, value);
+        const allVars = globalBlackboard.getAllVariables();
+        const varsObject: Record<string, any> = {};
+        allVars.forEach(v => {
+            varsObject[v.name] = v.value;
+        });
+        setGlobalVariables(varsObject);
+        setHasUnsavedGlobalChanges(true);
+    };
+
+    const handleGlobalVariableDelete = (key: string) => {
+        const globalBlackboard = GlobalBlackboardService.getInstance();
+        globalBlackboard.removeVariable(key);
+        const allVars = globalBlackboard.getAllVariables();
+        const varsObject: Record<string, any> = {};
+        allVars.forEach(v => {
+            varsObject[v.name] = v.value;
+        });
+        setGlobalVariables(varsObject);
+        setHasUnsavedGlobalChanges(true);
+    };
+
     const handleSave = async () => {
         try {
             // 检查是否正在运行
@@ -112,6 +233,11 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                 );
                 await invoke('write_behavior_tree_file', { filePath, content: json });
                 logger.info('行为树已保存', filePath);
+
+                // 自动保存全局黑板配置
+                if (hasUnsavedGlobalChanges) {
+                    await saveGlobalBlackboard();
+                }
             }
         } catch (error) {
             logger.error('保存失败', error);
@@ -377,10 +503,17 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                                 <BehaviorTreeBlackboard
                                     variables={blackboardVariables}
                                     initialVariables={isExecuting ? initialBlackboardVariables : undefined}
+                                    globalVariables={globalVariables}
                                     onVariableChange={handleVariableChange}
                                     onVariableAdd={handleVariableAdd}
                                     onVariableDelete={handleVariableDelete}
                                     onVariableRename={handleVariableRename}
+                                    onGlobalVariableChange={handleGlobalVariableChange}
+                                    onGlobalVariableAdd={handleGlobalVariableAdd}
+                                    onGlobalVariableDelete={handleGlobalVariableDelete}
+                                    projectPath={projectPath}
+                                    hasUnsavedGlobalChanges={hasUnsavedGlobalChanges}
+                                    onSaveGlobal={saveGlobalBlackboard}
                                 />
                             )}
                         </div>

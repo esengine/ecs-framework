@@ -593,7 +593,7 @@ function App() {
       console.log('[App] Loading plugin panels:', pluginPanels);
       setPanels([...corePanels, ...pluginPanels]);
     }
-  }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode, handleOpenSceneByPath]);
+  }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode, handleOpenSceneByPath, handleOpenBehaviorTree]);
 
 
   if (!initialized) {
@@ -719,6 +719,7 @@ function App() {
             setBehaviorTreeFilePath(null);
           }}
           filePath={behaviorTreeFilePath}
+          projectPath={currentProjectPath}
         />
       )}
 

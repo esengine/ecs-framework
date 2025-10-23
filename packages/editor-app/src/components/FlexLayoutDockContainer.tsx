@@ -17,9 +17,15 @@ interface FlexLayoutDockContainerProps {
 
 export function FlexLayoutDockContainer({ panels, onPanelClose }: FlexLayoutDockContainerProps) {
   const createDefaultLayout = useCallback((): IJsonModel => {
-    const leftPanels = panels.filter(p => p.id.includes('hierarchy') || p.id.includes('asset'));
+    const leftPanels = panels.filter(p => p.id.includes('hierarchy'));
     const rightPanels = panels.filter(p => p.id.includes('inspector'));
-    const bottomPanels = panels.filter(p => p.id.includes('console'));
+    const bottomPanels = panels.filter(p => p.id.includes('console') || p.id.includes('asset'))
+      .sort((a, b) => {
+        // 控制台排在前面
+        if (a.id.includes('console')) return -1;
+        if (b.id.includes('console')) return 1;
+        return 0;
+      });
     const centerPanels = panels.filter(p =>
       !leftPanels.includes(p) && !rightPanels.includes(p) && !bottomPanels.includes(p)
     );

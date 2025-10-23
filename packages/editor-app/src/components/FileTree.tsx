@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
+import { Folder, ChevronRight, ChevronDown } from 'lucide-react';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import '../styles/FileTree.css';
 
 interface TreeNode {
   name: string;
   path: string;
-  type: 'file' | 'folder';
-  extension?: string;
+  type: 'folder';
   children?: TreeNode[];
   expanded?: boolean;
   loaded?: boolean;
@@ -34,8 +34,20 @@ export function FileTree({ rootPath, onSelectFile, selectedPath }: FileTreeProps
     setLoading(true);
     try {
       const entries = await TauriAPI.listDirectory(path);
-      const nodes = entriesToNodes(entries);
-      setTree(nodes);
+      const children = entriesToNodes(entries);
+
+      // 创建根节点
+      const rootName = path.split(/[/\\]/).filter(p => p).pop() || 'Project';
+      const rootNode: TreeNode = {
+        name: rootName,
+        path: path,
+        type: 'folder',
+        children: children,
+        expanded: true,
+        loaded: true
+      };
+
+      setTree([rootNode]);
     } catch (error) {
       console.error('Failed to load directory:', error);
       setTree([]);
@@ -45,17 +57,17 @@ export function FileTree({ rootPath, onSelectFile, selectedPath }: FileTreeProps
   };
 
   const entriesToNodes = (entries: DirectoryEntry[]): TreeNode[] => {
-    return entries.map(entry => ({
-      name: entry.name,
-      path: entry.path,
-      type: entry.is_dir ? 'folder' : 'file',
-      extension: !entry.is_dir && entry.name.includes('.')
-        ? entry.name.split('.').pop()
-        : undefined,
-      children: entry.is_dir ? [] : undefined,
-      expanded: false,
-      loaded: false
-    }));
+    // 只显示文件夹，过滤掉文件
+    return entries
+      .filter(entry => entry.is_dir)
+      .map(entry => ({
+        name: entry.name,
+        path: entry.path,
+        type: 'folder' as const,
+        children: [],
+        expanded: false,
+        loaded: false
+      }));
   };
 
   const loadChildren = async (node: TreeNode): Promise<TreeNode[]> => {
@@ -72,7 +84,7 @@ export function FileTree({ rootPath, onSelectFile, selectedPath }: FileTreeProps
     const updateTree = async (nodes: TreeNode[]): Promise<TreeNode[]> => {
       const newNodes: TreeNode[] = [];
       for (const node of nodes) {
-        if (node.path === nodePath && node.type === 'folder') {
+        if (node.path === nodePath) {
           if (!node.loaded) {
             const children = await loadChildren(node);
             newNodes.push({
@@ -105,28 +117,7 @@ export function FileTree({ rootPath, onSelectFile, selectedPath }: FileTreeProps
 
   const handleNodeClick = (node: TreeNode) => {
     onSelectFile?.(node.path);
-    if (node.type === 'folder') {
-      toggleNode(node.path);
-    }
-  };
-
-  const getFileIcon = (extension?: string) => {
-    switch (extension?.toLowerCase()) {
-      case 'ts':
-      case 'tsx':
-      case 'js':
-      case 'jsx':
-        return '📄';
-      case 'json':
-        return '📋';
-      case 'png':
-      case 'jpg':
-      case 'jpeg':
-      case 'gif':
-        return '🖼️';
-      default:
-        return '📄';
-    }
+    toggleNode(node.path);
   };
 
   const renderNode = (node: TreeNode, level: number = 0) => {
@@ -140,17 +131,15 @@ export function FileTree({ rootPath, onSelectFile, selectedPath }: FileTreeProps
           style={{ paddingLeft: `${indent}px` }}
           onClick={() => handleNodeClick(node)}
         >
-          {node.type === 'folder' && (
-            <span className="tree-arrow">
-              {node.expanded ? '▼' : '▶'}
-            </span>
-          )}
+          <span className="tree-arrow">
+            {node.expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </span>
           <span className="tree-icon">
-            {node.type === 'folder' ? '📁' : getFileIcon(node.extension)}
+            <Folder size={16} />
           </span>
           <span className="tree-label">{node.name}</span>
         </div>
-        {node.type === 'folder' && node.expanded && node.children && (
+        {node.expanded && node.children && (
           <div className="tree-children">
             {node.children.map(child => renderNode(child, level + 1))}
           </div>
@@ -164,7 +153,7 @@ export function FileTree({ rootPath, onSelectFile, selectedPath }: FileTreeProps
   }
 
   if (!rootPath || tree.length === 0) {
-    return <div className="file-tree empty">No files</div>;
+    return <div className="file-tree empty">No folders</div>;
   }
 
   return (
