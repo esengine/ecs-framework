@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Core, Scene } from '@esengine/ecs-framework';
 import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, PropertyMetadataService, LogService, SettingsRegistry, SceneManagerService } from '@esengine/editor-core';
+import { GlobalBlackboardService } from '@esengine/behavior-tree';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
 import { ProfilerPlugin } from './plugins/ProfilerPlugin';
 import { EditorAppearancePlugin } from './plugins/EditorAppearancePlugin';
@@ -36,6 +37,9 @@ const localeService = new LocaleService();
 localeService.registerTranslations('en', en);
 localeService.registerTranslations('zh', zh);
 Core.services.registerInstance(LocaleService, localeService);
+
+// 注册全局黑板服务
+Core.services.registerSingleton(GlobalBlackboardService);
 
 function App() {
   const initRef = useRef(false);

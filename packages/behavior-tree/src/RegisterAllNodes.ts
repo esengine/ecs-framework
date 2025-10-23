@@ -24,6 +24,7 @@ import './Components/Composites/ParallelNode';
 import './Components/Composites/ParallelSelectorNode';
 import './Components/Composites/RandomSequenceNode';
 import './Components/Composites/RandomSelectorNode';
+import './Components/Composites/SubTreeNode';
 
 // Decorators
 import './Components/Decorators/InverterNode';

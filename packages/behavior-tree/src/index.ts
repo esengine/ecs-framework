@@ -42,6 +42,7 @@ export * from './Components/Composites/ParallelNode';
 export * from './Components/Composites/ParallelSelectorNode';
 export * from './Components/Composites/RandomSequenceNode';
 export * from './Components/Composites/RandomSelectorNode';
+export * from './Components/Composites/SubTreeNode';
 
 // 装饰器节点
 export * from './Components/Decorators/InverterNode';
@@ -59,9 +60,13 @@ export * from './Systems/RootExecutionSystem';
 export * from './Systems/LeafExecutionSystem';
 export * from './Systems/DecoratorExecutionSystem';
 export * from './Systems/CompositeExecutionSystem';
+export * from './Systems/SubTreeExecutionSystem';
 
 // 服务
 export * from './Services/GlobalBlackboardService';
+export * from './Services/WorkspaceService';
+export * from './Services/IAssetLoader';
+export * from './Services/FileSystemAssetLoader';
 
 // 插件
 export * from './BehaviorTreePlugin';

@@ -1,6 +1,14 @@
 import { useState } from 'react';
-import { Clipboard, Edit2, Trash2, ChevronDown, ChevronRight, Globe, Save, Folder } from 'lucide-react';
+import { Clipboard, Edit2, Trash2, ChevronDown, ChevronRight, Globe, Save, Folder, FileCode } from 'lucide-react';
+import { save } from '@tauri-apps/plugin-dialog';
+import { invoke } from '@tauri-apps/api/core';
+import { Core } from '@esengine/ecs-framework';
 import type { BlackboardValueType } from '@esengine/behavior-tree';
+import { GlobalBlackboardService } from '@esengine/behavior-tree';
+import { GlobalBlackboardTypeGenerator } from '../generators/GlobalBlackboardTypeGenerator';
+import { createLogger } from '@esengine/ecs-framework';
+
+const logger = createLogger('BehaviorTreeBlackboard');
 
 type SimpleBlackboardType = 'number' | 'string' | 'boolean' | 'object';
 
@@ -51,6 +59,33 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
     const isModified = (key: string): boolean => {
         if (!initialVariables) return false;
         return JSON.stringify(variables[key]) !== JSON.stringify(initialVariables[key]);
+    };
+
+    const handleExportTypeScript = async () => {
+        try {
+            const globalBlackboard = Core.services.resolve(GlobalBlackboardService);
+            const config = globalBlackboard.exportConfig();
+
+            const tsCode = GlobalBlackboardTypeGenerator.generate(config);
+
+            const outputPath = await save({
+                filters: [{
+                    name: 'TypeScript',
+                    extensions: ['ts']
+                }],
+                defaultPath: 'GlobalBlackboard.ts'
+            });
+
+            if (outputPath) {
+                await invoke('write_file_content', {
+                    path: outputPath,
+                    content: tsCode
+                });
+                logger.info('TypeScript 类型定义已导出', outputPath);
+            }
+        } catch (error) {
+            logger.error('导出 TypeScript 失败', error);
+        }
     };
 
     const [isAdding, setIsAdding] = useState(false);
@@ -306,24 +341,42 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
                         flexShrink: 0
                     }}>
                         {viewMode === 'global' && onSaveGlobal && (
-                            <button
-                                onClick={hasUnsavedGlobalChanges ? onSaveGlobal : undefined}
-                                disabled={!hasUnsavedGlobalChanges}
-                                style={{
-                                    padding: '4px 6px',
-                                    backgroundColor: hasUnsavedGlobalChanges ? '#ff9800' : '#4caf50',
-                                    border: 'none',
-                                    borderRadius: '3px',
-                                    color: '#fff',
-                                    cursor: hasUnsavedGlobalChanges ? 'pointer' : 'not-allowed',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    opacity: hasUnsavedGlobalChanges ? 1 : 0.7
-                                }}
-                                title={hasUnsavedGlobalChanges ? '点击保存全局配置' : '全局配置已保存'}
-                            >
-                                <Save size={12} />
-                            </button>
+                            <>
+                                <button
+                                    onClick={hasUnsavedGlobalChanges ? onSaveGlobal : undefined}
+                                    disabled={!hasUnsavedGlobalChanges}
+                                    style={{
+                                        padding: '4px 6px',
+                                        backgroundColor: hasUnsavedGlobalChanges ? '#ff9800' : '#4caf50',
+                                        border: 'none',
+                                        borderRadius: '3px',
+                                        color: '#fff',
+                                        cursor: hasUnsavedGlobalChanges ? 'pointer' : 'not-allowed',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        opacity: hasUnsavedGlobalChanges ? 1 : 0.7
+                                    }}
+                                    title={hasUnsavedGlobalChanges ? '点击保存全局配置' : '全局配置已保存'}
+                                >
+                                    <Save size={12} />
+                                </button>
+                                <button
+                                    onClick={handleExportTypeScript}
+                                    style={{
+                                        padding: '4px 6px',
+                                        backgroundColor: '#9c27b0',
+                                        border: 'none',
+                                        borderRadius: '3px',
+                                        color: '#fff',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center'
+                                    }}
+                                    title="导出为 TypeScript 类型定义"
+                                >
+                                    <FileCode size={12} />
+                                </button>
+                            </>
                         )}
                         <button
                             onClick={() => setIsAdding(true)}

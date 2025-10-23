@@ -16,7 +16,7 @@ export interface NodeDataJSON {
  */
 export interface PropertyDefinition {
     name: string;
-    type: 'string' | 'number' | 'boolean' | 'select' | 'blackboard' | 'code' | 'variable';
+    type: 'string' | 'number' | 'boolean' | 'select' | 'blackboard' | 'code' | 'variable' | 'asset';
     label: string;
     description?: string;
     defaultValue?: any;

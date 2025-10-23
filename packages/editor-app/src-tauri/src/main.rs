@@ -147,6 +147,8 @@ struct DirectoryEntry {
     name: String,
     path: String,
     is_dir: bool,
+    size: Option<u64>,
+    modified: Option<u64>,
 }
 
 #[tauri::command]
@@ -172,10 +174,36 @@ fn list_directory(path: String) -> Result<Vec<DirectoryEntry>, String> {
                     Ok(entry) => {
                         let entry_path = entry.path();
                         if let Some(name) = entry_path.file_name() {
+                            let is_dir = entry_path.is_dir();
+
+                            // 获取文件元数据
+                            let (size, modified) = match fs::metadata(&entry_path) {
+                                Ok(metadata) => {
+                                    let size = if is_dir {
+                                        None
+                                    } else {
+                                        Some(metadata.len())
+                                    };
+
+                                    let modified = metadata.modified()
+                                        .ok()
+                                        .and_then(|time| {
+                                            time.duration_since(std::time::UNIX_EPOCH)
+                                                .ok()
+                                                .map(|d| d.as_secs())
+                                        });
+
+                                    (size, modified)
+                                }
+                                Err(_) => (None, None),
+                            };
+
                             entries.push(DirectoryEntry {
                                 name: name.to_string_lossy().to_string(),
                                 path: entry_path.to_string_lossy().to_string(),
-                                is_dir: entry_path.is_dir(),
+                                is_dir,
+                                size,
+                                modified,
                             });
                         }
                     }

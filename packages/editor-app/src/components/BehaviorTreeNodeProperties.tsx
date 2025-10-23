@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NodeTemplate, PropertyDefinition } from '@esengine/behavior-tree';
 import {
     List, GitBranch, Layers, Shuffle,
     RotateCcw, Repeat, CheckCircle, XCircle, CheckCheck, HelpCircle, Snowflake, Timer,
     Clock, FileText, Edit, Calculator, Code,
-    Equal, Dices, Settings, Database,
+    Equal, Dices, Settings, Database, FolderOpen,
     LucideIcon
 } from 'lucide-react';
+import { AssetPickerDialog } from './AssetPickerDialog';
 
 const iconMap: Record<string, LucideIcon> = {
     List, GitBranch, Layers, Shuffle,
@@ -22,6 +23,7 @@ interface BehaviorTreeNodePropertiesProps {
         data: Record<string, any>;
     };
     onPropertyChange?: (propertyName: string, value: any) => void;
+    projectPath?: string | null;
 }
 
 /**
@@ -31,9 +33,12 @@ interface BehaviorTreeNodePropertiesProps {
  */
 export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProps> = ({
     selectedNode,
-    onPropertyChange
+    onPropertyChange,
+    projectPath
 }) => {
     const { t } = useTranslation();
+    const [assetPickerOpen, setAssetPickerOpen] = useState(false);
+    const [assetPickerProperty, setAssetPickerProperty] = useState<string | null>(null);
 
     if (!selectedNode) {
         return (
@@ -194,6 +199,62 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
                     </div>
                 );
 
+            case 'asset':
+                return (
+                    <div>
+                        <div style={{ display: 'flex', gap: '5px' }}>
+                            <input
+                                type="text"
+                                value={value || ''}
+                                onChange={(e) => handleChange(prop.name, e.target.value)}
+                                placeholder={prop.description || '资产ID'}
+                                style={{
+                                    flex: 1,
+                                    padding: '6px',
+                                    backgroundColor: '#3c3c3c',
+                                    border: '1px solid #555',
+                                    borderRadius: '3px',
+                                    color: '#cccccc',
+                                    fontSize: '13px'
+                                }}
+                            />
+                            <button
+                                onClick={() => {
+                                    setAssetPickerProperty(prop.name);
+                                    setAssetPickerOpen(true);
+                                }}
+                                disabled={!projectPath}
+                                title={!projectPath ? '请先打开项目' : '浏览资产'}
+                                style={{
+                                    padding: '6px 12px',
+                                    backgroundColor: projectPath ? '#0e639c' : '#555',
+                                    border: 'none',
+                                    borderRadius: '3px',
+                                    color: '#fff',
+                                    cursor: projectPath ? 'pointer' : 'not-allowed',
+                                    fontSize: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }}
+                            >
+                                <FolderOpen size={14} />
+                                浏览
+                            </button>
+                        </div>
+                        {!projectPath && (
+                            <div style={{
+                                marginTop: '5px',
+                                fontSize: '11px',
+                                color: '#f48771',
+                                lineHeight: '1.4'
+                            }}>
+                                ⚠️ 请先在编辑器中打开项目，才能使用资产浏览器
+                            </div>
+                        )}
+                    </div>
+                );
+
             default:
                 return null;
         }
@@ -321,6 +382,25 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
                     {t('behaviorTree.reset')}
                 </button>
             </div>
+
+            {/* 资产选择器对话框 */}
+            {assetPickerOpen && projectPath && assetPickerProperty && (
+                <AssetPickerDialog
+                    projectPath={projectPath}
+                    fileExtension="btree"
+                    locale={t('locale') === 'zh' ? 'zh' : 'en'}
+                    onSelect={(assetId) => {
+                        // AssetPickerDialog 现在直接返回 assetId（不含扩展名，相对于项目根目录或资产基础目录）
+                        handleChange(assetPickerProperty, assetId);
+                        setAssetPickerOpen(false);
+                        setAssetPickerProperty(null);
+                    }}
+                    onClose={() => {
+                        setAssetPickerOpen(false);
+                        setAssetPickerProperty(null);
+                    }}
+                />
+            )}
         </div>
     );
 };

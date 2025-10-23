@@ -1,4 +1,4 @@
-import { Component, ECSComponent } from '@esengine/ecs-framework';
+import { Component, ECSComponent, Core } from '@esengine/ecs-framework';
 import { Serializable, Serialize } from '@esengine/ecs-framework';
 import { BlackboardValueType } from '../Types/TaskStatus';
 import { GlobalBlackboardService } from '../Services/GlobalBlackboardService';
@@ -65,7 +65,7 @@ export class BlackboardComponent extends Component {
         }
 
         if (this.useGlobalBlackboard) {
-            return GlobalBlackboardService.getInstance().getValue<T>(name);
+            return Core.services.resolve(GlobalBlackboardService).getValue<T>(name);
         }
 
         return undefined;
@@ -95,7 +95,7 @@ export class BlackboardComponent extends Component {
         }
 
         if (this.useGlobalBlackboard) {
-            return GlobalBlackboardService.getInstance().setValue(name, value, force);
+            return Core.services.resolve(GlobalBlackboardService).setValue(name, value, force);
         }
 
         return false;
@@ -128,7 +128,7 @@ export class BlackboardComponent extends Component {
         }
 
         if (this.useGlobalBlackboard) {
-            return GlobalBlackboardService.getInstance().hasVariable(name);
+            return Core.services.resolve(GlobalBlackboardService).hasVariable(name);
         }
 
         return false;
@@ -183,7 +183,7 @@ export class BlackboardComponent extends Component {
         const locals = Array.from(this.variables.values());
 
         if (this.useGlobalBlackboard) {
-            const globals = GlobalBlackboardService.getInstance().getAllVariables();
+            const globals = Core.services.resolve(GlobalBlackboardService).getAllVariables();
             const localNames = new Set(this.variables.keys());
             const filteredGlobals = globals.filter(v => !localNames.has(v.name));
             return [...locals, ...filteredGlobals];
@@ -196,6 +196,6 @@ export class BlackboardComponent extends Component {
      * 获取全局 Blackboard 服务的引用
      */
     static getGlobalBlackboard(): GlobalBlackboardService {
-        return GlobalBlackboardService.getInstance();
+        return Core.services.resolve(GlobalBlackboardService);
     }
 }

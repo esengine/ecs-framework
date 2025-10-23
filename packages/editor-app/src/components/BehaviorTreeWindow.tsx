@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { TreePine, X, Settings, Clipboard, Save, FolderOpen, Maximize2, Minimize2, Download } from 'lucide-react';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
+import { Core } from '@esengine/ecs-framework';
 import { BehaviorTreeEditor } from './BehaviorTreeEditor';
 import { BehaviorTreeNodePalette } from './BehaviorTreeNodePalette';
 import { BehaviorTreeNodeProperties } from './BehaviorTreeNodeProperties';
@@ -87,7 +88,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     // 实时更新全局变量显示
     useEffect(() => {
         const updateGlobalVariables = () => {
-            const globalBlackboard = GlobalBlackboardService.getInstance();
+            const globalBlackboard = Core.services.resolve(GlobalBlackboardService);
             const allVars = globalBlackboard.getAllVariables();
             const varsObject: Record<string, any> = {};
             allVars.forEach(v => {
@@ -139,9 +140,9 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
         try {
             const json = await invoke<string>('read_global_blackboard', { projectPath: path });
             const config: GlobalBlackboardConfig = JSON.parse(json);
-            GlobalBlackboardService.getInstance().importConfig(config);
+            Core.services.resolve(GlobalBlackboardService).importConfig(config);
 
-            const allVars = GlobalBlackboardService.getInstance().getAllVariables();
+            const allVars = Core.services.resolve(GlobalBlackboardService).getAllVariables();
             const varsObject: Record<string, any> = {};
             allVars.forEach(v => {
                 varsObject[v.name] = v.value;
@@ -161,7 +162,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
         }
 
         try {
-            const globalBlackboard = GlobalBlackboardService.getInstance();
+            const globalBlackboard = Core.services.resolve(GlobalBlackboardService);
             const json = globalBlackboard.toJSON();
             await invoke('write_global_blackboard', { projectPath, content: json });
             setHasUnsavedGlobalChanges(false);
@@ -172,7 +173,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     };
 
     const handleGlobalVariableChange = (key: string, value: any) => {
-        const globalBlackboard = GlobalBlackboardService.getInstance();
+        const globalBlackboard = Core.services.resolve(GlobalBlackboardService);
         globalBlackboard.setValue(key, value, true);
         const allVars = globalBlackboard.getAllVariables();
         const varsObject: Record<string, any> = {};
@@ -184,7 +185,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     };
 
     const handleGlobalVariableAdd = (key: string, value: any, type: BlackboardValueType) => {
-        const globalBlackboard = GlobalBlackboardService.getInstance();
+        const globalBlackboard = Core.services.resolve(GlobalBlackboardService);
         globalBlackboard.defineVariable(key, type, value);
         const allVars = globalBlackboard.getAllVariables();
         const varsObject: Record<string, any> = {};
@@ -196,7 +197,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     };
 
     const handleGlobalVariableDelete = (key: string) => {
-        const globalBlackboard = GlobalBlackboardService.getInstance();
+        const globalBlackboard = Core.services.resolve(GlobalBlackboardService);
         globalBlackboard.removeVariable(key);
         const allVars = globalBlackboard.getAllVariables();
         const varsObject: Record<string, any> = {};
@@ -445,6 +446,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                             {rightPanelTab === 'properties' ? (
                                 <BehaviorTreeNodeProperties
                                     selectedNode={selectedNode}
+                                    projectPath={projectPath}
                                     onPropertyChange={(propertyName, value) => {
                                         if (selectedNode) {
                                             // 如果是黑板变量节点的值修改

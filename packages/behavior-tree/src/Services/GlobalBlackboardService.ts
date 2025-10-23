@@ -1,3 +1,4 @@
+import { IService } from '@esengine/ecs-framework';
 import { BlackboardValueType } from '../Types/TaskStatus';
 import { BlackboardVariable } from '../Components/BlackboardComponent';
 
@@ -13,22 +14,21 @@ export interface GlobalBlackboardConfig {
  * 全局黑板服务
  *
  * 提供所有行为树共享的全局变量存储
+ *
+ * 使用方式：
+ * ```typescript
+ * // 注册服务（在 BehaviorTreePlugin.install 中自动完成）
+ * core.services.registerSingleton(GlobalBlackboardService);
+ *
+ * // 获取服务
+ * const blackboard = core.services.resolve(GlobalBlackboardService);
+ * ```
  */
-export class GlobalBlackboardService {
-    private static instance: GlobalBlackboardService;
-
+export class GlobalBlackboardService implements IService {
     private variables: Map<string, BlackboardVariable> = new Map();
 
-    private constructor() {}
-
-    /**
-     * 获取全局黑板单例
-     */
-    static getInstance(): GlobalBlackboardService {
-        if (!GlobalBlackboardService.instance) {
-            GlobalBlackboardService.instance = new GlobalBlackboardService();
-        }
-        return GlobalBlackboardService.instance;
+    dispose(): void {
+        this.variables.clear();
     }
 
     /**

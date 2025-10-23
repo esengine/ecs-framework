@@ -4,6 +4,8 @@ import { WorldManager } from '@esengine/ecs-framework';
 import { LeafExecutionSystem } from './Systems/LeafExecutionSystem';
 import { DecoratorExecutionSystem } from './Systems/DecoratorExecutionSystem';
 import { CompositeExecutionSystem } from './Systems/CompositeExecutionSystem';
+import { SubTreeExecutionSystem } from './Systems/SubTreeExecutionSystem';
+import { GlobalBlackboardService } from './Services/GlobalBlackboardService';
 
 /**
  * 行为树插件
@@ -26,11 +28,17 @@ export class BehaviorTreePlugin implements IPlugin {
     readonly version = '1.0.0';
 
     private worldManager: WorldManager | null = null;
+    private services: ServiceContainer | null = null;
 
     /**
      * 安装插件
      */
     async install(core: Core, services: ServiceContainer): Promise<void> {
+        this.services = services;
+
+        // 注册全局黑板服务
+        services.registerSingleton(GlobalBlackboardService);
+
         this.worldManager = services.resolve(WorldManager);
     }
 
@@ -38,7 +46,13 @@ export class BehaviorTreePlugin implements IPlugin {
      * 卸载插件
      */
     async uninstall(): Promise<void> {
+        // 注销全局黑板服务
+        if (this.services) {
+            this.services.unregister(GlobalBlackboardService);
+        }
+
         this.worldManager = null;
+        this.services = null;
     }
 
     /**
@@ -48,6 +62,7 @@ export class BehaviorTreePlugin implements IPlugin {
      * - LeafExecutionSystem (updateOrder: 100)
      * - DecoratorExecutionSystem (updateOrder: 200)
      * - CompositeExecutionSystem (updateOrder: 300)
+     * - SubTreeExecutionSystem (updateOrder: 300)
      *
      * @param scene 目标场景
      *
@@ -61,6 +76,7 @@ export class BehaviorTreePlugin implements IPlugin {
         scene.addSystem(new LeafExecutionSystem());
         scene.addSystem(new DecoratorExecutionSystem());
         scene.addSystem(new CompositeExecutionSystem());
+        scene.addSystem(new SubTreeExecutionSystem());
     }
 
     /**
