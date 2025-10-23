@@ -74,5 +74,11 @@ export * from './BehaviorTreeBuilder';
 export * from './Serialization/BehaviorTreePersistence';
 export * from './Serialization/NodeTemplates';
 
+// 资产系统（运行时）
+export * from './Serialization/BehaviorTreeAsset';
+export * from './Serialization/BehaviorTreeAssetSerializer';
+export * from './Serialization/BehaviorTreeAssetLoader';
+export * from './Serialization/EditorFormatConverter';
+
 // 装饰器（扩展支持）
 export * from './Decorators/BehaviorNodeDecorator';

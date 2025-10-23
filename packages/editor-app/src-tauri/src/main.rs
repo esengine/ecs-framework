@@ -302,6 +302,15 @@ async fn write_behavior_tree_file(file_path: String, content: String) -> Result<
 }
 
 #[tauri::command]
+async fn write_binary_file(file_path: String, content: Vec<u8>) -> Result<(), String> {
+    use std::fs;
+
+    // 写入二进制文件
+    fs::write(&file_path, content)
+        .map_err(|e| format!("Failed to write binary file {}: {}", file_path, e))
+}
+
+#[tauri::command]
 async fn read_global_blackboard(project_path: String) -> Result<String, String> {
     use std::fs;
     use std::path::Path;
@@ -486,6 +495,7 @@ fn main() {
             get_profiler_status,
             read_behavior_tree_file,
             write_behavior_tree_file,
+            write_binary_file,
             read_global_blackboard,
             write_global_blackboard,
             open_file_with_default_app,

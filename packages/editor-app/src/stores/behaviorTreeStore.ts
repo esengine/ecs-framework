@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { NodeTemplate } from '@esengine/behavior-tree';
+import { NodeTemplate, EditorFormatConverter, BehaviorTreeAssetSerializer } from '@esengine/behavior-tree';
 
 interface BehaviorTreeNode {
     id: string;
@@ -111,6 +111,13 @@ interface BehaviorTreeState {
     // 数据导出/导入
     exportToJSON: (metadata: { name: string; description: string }, blackboard: Record<string, any>) => string;
     importFromJSON: (json: string) => { blackboard: Record<string, any> };
+
+    // 运行时资产导出
+    exportToRuntimeAsset: (
+        metadata: { name: string; description: string },
+        blackboard: Record<string, any>,
+        format: 'json' | 'binary'
+    ) => string | Uint8Array;
 }
 
 const ROOT_NODE_ID = 'root-node';
@@ -326,6 +333,38 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
             canvasScale: data.canvasState?.scale || 1
         });
         return { blackboard };
+    },
+
+    exportToRuntimeAsset: (
+        metadata: { name: string; description: string },
+        blackboard: Record<string, any>,
+        format: 'json' | 'binary'
+    ) => {
+        const state = get();
+
+        // 构建编辑器格式数据
+        const editorFormat = {
+            version: '1.0.0',
+            metadata: {
+                name: metadata.name,
+                description: metadata.description,
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString()
+            },
+            nodes: state.nodes,
+            connections: state.connections,
+            blackboard: blackboard
+        };
+
+        // 转换为资产格式
+        const asset = EditorFormatConverter.toAsset(editorFormat, metadata);
+
+        // 序列化为指定格式
+        return BehaviorTreeAssetSerializer.serialize(asset, {
+            format,
+            pretty: format === 'json',
+            validate: true
+        });
     }
 }));
 

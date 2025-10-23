@@ -1,0 +1,229 @@
+.export-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+}
+
+.export-dialog {
+    background: #1e1e1e;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #3a3a3a;
+}
+
+.export-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid #3a3a3a;
+    background: #252525;
+}
+
+.export-dialog-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.export-dialog-close {
+    background: transparent;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.export-dialog-close:hover {
+    background: #3a3a3a;
+    color: #fff;
+}
+
+.export-dialog-content {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.export-dialog-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: rgba(66, 153, 225, 0.1);
+    border: 1px solid rgba(66, 153, 225, 0.3);
+    border-radius: 8px;
+    color: #4299e1;
+    font-size: 14px;
+    margin-bottom: 24px;
+}
+
+.export-format-options {
+    display: flex;
+    gap: 16px;
+}
+
+.export-format-option {
+    flex: 1;
+    padding: 20px;
+    border: 2px solid #3a3a3a;
+    border-radius: 12px;
+    background: #252525;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.export-format-option:hover {
+    border-color: #4a4a4a;
+    background: #2a2a2a;
+}
+
+.export-format-option.selected {
+    border-color: #4299e1;
+    background: rgba(66, 153, 225, 0.1);
+}
+
+.export-format-icon {
+    color: #4299e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: rgba(66, 153, 225, 0.1);
+    border-radius: 12px;
+    margin: 0 auto;
+}
+
+.export-format-option.selected .export-format-icon {
+    background: rgba(66, 153, 225, 0.2);
+}
+
+.export-format-info {
+    text-align: center;
+}
+
+.export-format-info h4 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.export-format-desc {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: #999;
+    line-height: 1.5;
+}
+
+.export-format-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.feature-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #3a3a3a;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #999;
+}
+
+.feature-tag.recommended {
+    background: rgba(72, 187, 120, 0.2);
+    color: #48bb78;
+    font-weight: 500;
+}
+
+.export-format-option.selected .feature-tag {
+    background: rgba(66, 153, 225, 0.15);
+    color: #4299e1;
+}
+
+.export-format-option.selected .feature-tag.recommended {
+    background: rgba(72, 187, 120, 0.2);
+    color: #48bb78;
+}
+
+.export-format-extension {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: #4299e1;
+    padding: 6px 12px;
+    background: rgba(66, 153, 225, 0.1);
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.export-dialog-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid #3a3a3a;
+    background: #252525;
+}
+
+.export-dialog-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.export-dialog-btn-cancel {
+    background: transparent;
+    color: #999;
+    border: 1px solid #3a3a3a;
+}
+
+.export-dialog-btn-cancel:hover {
+    background: #2a2a2a;
+    border-color: #4a4a4a;
+    color: #fff;
+}
+
+.export-dialog-btn-primary {
+    background: #4299e1;
+    color: #ffffff;
+}
+
+.export-dialog-btn-primary:hover {
+    background: #3182ce;
+}
+
+.export-dialog-btn-primary:active {
+    background: #2c5282;
+}

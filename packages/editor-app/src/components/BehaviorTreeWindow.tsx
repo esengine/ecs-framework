@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TreePine, X, Settings, Clipboard, Save, FolderOpen, Maximize2, Minimize2 } from 'lucide-react';
+import { TreePine, X, Settings, Clipboard, Save, FolderOpen, Maximize2, Minimize2, Download } from 'lucide-react';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import { BehaviorTreeEditor } from './BehaviorTreeEditor';
 import { BehaviorTreeNodePalette } from './BehaviorTreeNodePalette';
 import { BehaviorTreeNodeProperties } from './BehaviorTreeNodeProperties';
 import { BehaviorTreeBlackboard } from './BehaviorTreeBlackboard';
+import { ExportRuntimeDialog } from './ExportRuntimeDialog';
 import { useBehaviorTreeStore } from '../stores/behaviorTreeStore';
 import type { NodeTemplate, BlackboardValueType } from '@esengine/behavior-tree';
 import { GlobalBlackboardService, GlobalBlackboardConfig } from '@esengine/behavior-tree';
@@ -36,6 +37,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
         nodes,
         updateNodes,
         exportToJSON,
+        exportToRuntimeAsset,
         importFromJSON,
         blackboardVariables,
         setBlackboardVariables,
@@ -52,6 +54,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
 
     const [rightPanelTab, setRightPanelTab] = useState<'properties' | 'blackboard'>('blackboard');
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
 
     const [globalVariables, setGlobalVariables] = useState<Record<string, any>>({});
     const [projectPath, setProjectPath] = useState<string>('');
@@ -264,6 +267,44 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
         }
     };
 
+    const handleExportRuntime = () => {
+        setIsExportDialogOpen(true);
+    };
+
+    const handleDoExport = async (format: 'json' | 'binary') => {
+        try {
+            const extension = format === 'binary' ? 'bin' : 'json';
+            const defaultPath = format === 'binary' ? 'behavior-tree.btree.bin' : 'behavior-tree.btree.json';
+
+            const filePath = await save({
+                filters: [{
+                    name: 'Runtime Behavior Tree',
+                    extensions: [extension]
+                }],
+                defaultPath
+            });
+
+            if (filePath) {
+                const varsToSave = isExecuting ? initialBlackboardVariables : blackboardVariables;
+                const data = exportToRuntimeAsset(
+                    { name: 'behavior-tree', description: 'Runtime behavior tree asset' },
+                    varsToSave,
+                    format
+                );
+
+                if (format === 'binary') {
+                    await invoke('write_binary_file', { filePath, content: Array.from(data as Uint8Array) });
+                } else {
+                    await invoke('write_behavior_tree_file', { filePath, content: data as string });
+                }
+
+                logger.info(`运行时资产已导出 (${format})`, filePath);
+            }
+        } catch (error) {
+            logger.error('导出失败', error);
+        }
+    };
+
 
     useEffect(() => {
         if (filePath && isOpen) {
@@ -294,6 +335,9 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                         </button>
                         <button onClick={handleLoad} className="behavior-tree-toolbar-btn" title="打开">
                             <FolderOpen size={16} />
+                        </button>
+                        <button onClick={handleExportRuntime} className="behavior-tree-toolbar-btn" title="导出运行时资产">
+                            <Download size={16} />
                         </button>
                         <button
                             onClick={() => setIsFullscreen(!isFullscreen)}
@@ -520,6 +564,12 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                     </div>
                 </div>
             </div>
+
+            <ExportRuntimeDialog
+                isOpen={isExportDialogOpen}
+                onClose={() => setIsExportDialogOpen(false)}
+                onExport={handleDoExport}
+            />
         </div>
     );
 };
