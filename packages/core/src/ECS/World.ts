@@ -102,8 +102,6 @@ export class World {
         
         this.name = this._config.name!;
         this._createdAt = Date.now();
-        
-        logger.info(`创建World: ${this.name}`);
     }
 
     // ===== Scene管理 =====
@@ -132,11 +130,10 @@ export class World {
         }
 
         this._scenes.set(sceneId, scene);
-        
+
         // 初始化Scene
         scene.initialize();
-        
-        logger.info(`在World '${this.name}' 中创建Scene: ${sceneId}`);
+
         return scene;
     }
 

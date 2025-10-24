@@ -69,6 +69,12 @@
   opacity: 0.5;
 }
 
+.menu-item-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .menu-shortcut {
   margin-left: 24px;
   color: var(--color-text-secondary, #858585);

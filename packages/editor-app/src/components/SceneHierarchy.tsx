@@ -125,7 +125,7 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
         });
 
         // 请求第一个实体的详情以获取场景名称
-        if (!remoteSceneName && data.entities.length > 0) {
+        if (!remoteSceneName && data.entities.length > 0 && data.entities[0]) {
           profilerService.requestEntityDetails(data.entities[0].id);
         }
       } else if (!connected) {

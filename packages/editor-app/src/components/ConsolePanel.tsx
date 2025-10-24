@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { LogService, LogEntry } from '@esengine/editor-core';
 import { LogLevel } from '@esengine/ecs-framework';
 import { Trash2, AlertCircle, Info, AlertTriangle, XCircle, Bug, Search, Maximize2, ChevronRight, ChevronDown, Wifi } from 'lucide-react';
@@ -8,6 +8,137 @@ import '../styles/ConsolePanel.css';
 interface ConsolePanelProps {
     logService: LogService;
 }
+
+interface ParsedLogData {
+    isJSON: boolean;
+    jsonStr?: string;
+    extracted?: { prefix: string; json: string; suffix: string } | null;
+}
+
+const LogEntryItem = memo(({
+    log,
+    isExpanded,
+    onToggleExpand,
+    onOpenJsonViewer,
+    parsedData
+}: {
+    log: LogEntry;
+    isExpanded: boolean;
+    onToggleExpand: (id: number) => void;
+    onOpenJsonViewer: (jsonStr: string) => void;
+    parsedData: ParsedLogData;
+}) => {
+    const getLevelIcon = (level: LogLevel) => {
+        switch (level) {
+            case LogLevel.Debug:
+                return <Bug size={14} />;
+            case LogLevel.Info:
+                return <Info size={14} />;
+            case LogLevel.Warn:
+                return <AlertTriangle size={14} />;
+            case LogLevel.Error:
+            case LogLevel.Fatal:
+                return <XCircle size={14} />;
+            default:
+                return <AlertCircle size={14} />;
+        }
+    };
+
+    const getLevelClass = (level: LogLevel): string => {
+        switch (level) {
+            case LogLevel.Debug:
+                return 'log-entry-debug';
+            case LogLevel.Info:
+                return 'log-entry-info';
+            case LogLevel.Warn:
+                return 'log-entry-warn';
+            case LogLevel.Error:
+            case LogLevel.Fatal:
+                return 'log-entry-error';
+            default:
+                return '';
+        }
+    };
+
+    const formatTime = (date: Date): string => {
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const seconds = date.getSeconds().toString().padStart(2, '0');
+        const ms = date.getMilliseconds().toString().padStart(3, '0');
+        return `${hours}:${minutes}:${seconds}.${ms}`;
+    };
+
+    const formatMessage = (message: string, isExpanded: boolean, parsedData: ParsedLogData): JSX.Element => {
+        const MAX_PREVIEW_LENGTH = 200;
+        const { isJSON, jsonStr, extracted } = parsedData;
+        const shouldTruncate = message.length > MAX_PREVIEW_LENGTH && !isExpanded;
+
+        return (
+            <div className="log-message-container">
+                <div className="log-message-text">
+                    {shouldTruncate ? (
+                        <>
+                            {extracted && extracted.prefix && <span>{extracted.prefix} </span>}
+                            <span className="log-message-preview">
+                                {message.substring(0, MAX_PREVIEW_LENGTH)}...
+                            </span>
+                        </>
+                    ) : (
+                        <span>{message}</span>
+                    )}
+                </div>
+                {isJSON && jsonStr && (
+                    <button
+                        className="log-open-json-btn"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenJsonViewer(jsonStr);
+                        }}
+                        title="Open in JSON Viewer"
+                    >
+                        <Maximize2 size={12} />
+                    </button>
+                )}
+            </div>
+        );
+    };
+
+    const shouldShowExpander = log.message.length > 200;
+
+    return (
+        <div
+            className={`log-entry ${getLevelClass(log.level)} ${log.source === 'remote' ? 'log-entry-remote' : ''} ${isExpanded ? 'log-entry-expanded' : ''}`}
+        >
+            {shouldShowExpander && (
+                <div
+                    className="log-entry-expander"
+                    onClick={() => onToggleExpand(log.id)}
+                >
+                    {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </div>
+            )}
+            <div className="log-entry-icon">
+                {getLevelIcon(log.level)}
+            </div>
+            <div className="log-entry-time">
+                {formatTime(log.timestamp)}
+            </div>
+            <div className={`log-entry-source ${log.source === 'remote' ? 'source-remote' : ''}`}>
+                [{log.source === 'remote' ? '🌐 Remote' : log.source}]
+            </div>
+            {log.clientId && (
+                <div className="log-entry-client" title={`Client: ${log.clientId}`}>
+                    {log.clientId}
+                </div>
+            )}
+            <div className="log-entry-message">
+                {formatMessage(log.message, isExpanded, parsedData)}
+            </div>
+        </div>
+    );
+});
+
+LogEntryItem.displayName = 'LogEntryItem';
 
 export function ConsolePanel({ logService }: ConsolePanelProps) {
     const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -64,54 +195,139 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
         setLevelFilter(newFilter);
     };
 
-    const filteredLogs = logs.filter(log => {
-        if (!levelFilter.has(log.level)) return false;
-        if (showRemoteOnly && log.source !== 'remote') return false;
-        if (filter && !log.message.toLowerCase().includes(filter.toLowerCase())) {
-            return false;
-        }
-        return true;
-    });
+    // 使用ref保存缓存，避免每次都重新计算
+    const parsedLogsCacheRef = useRef<Map<number, ParsedLogData>>(new Map());
 
-    const getLevelIcon = (level: LogLevel) => {
-        switch (level) {
-            case LogLevel.Debug:
-                return <Bug size={14} />;
-            case LogLevel.Info:
-                return <Info size={14} />;
-            case LogLevel.Warn:
-                return <AlertTriangle size={14} />;
-            case LogLevel.Error:
-            case LogLevel.Fatal:
-                return <XCircle size={14} />;
-            default:
-                return <AlertCircle size={14} />;
-        }
-    };
+    const extractJSON = useMemo(() => {
+        return (message: string): { prefix: string; json: string; suffix: string } | null => {
+            // 快速路径：如果消息太短，直接返回
+            if (message.length < 2) return null;
 
-    const getLevelClass = (level: LogLevel): string => {
-        switch (level) {
-            case LogLevel.Debug:
-                return 'log-entry-debug';
-            case LogLevel.Info:
-                return 'log-entry-info';
-            case LogLevel.Warn:
-                return 'log-entry-warn';
-            case LogLevel.Error:
-            case LogLevel.Fatal:
-                return 'log-entry-error';
-            default:
-                return '';
-        }
-    };
+            const jsonStartChars = ['{', '['];
+            let startIndex = -1;
 
-    const formatTime = (date: Date): string => {
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        const seconds = date.getSeconds().toString().padStart(2, '0');
-        const ms = date.getMilliseconds().toString().padStart(3, '0');
-        return `${hours}:${minutes}:${seconds}.${ms}`;
-    };
+            for (const char of jsonStartChars) {
+                const index = message.indexOf(char);
+                if (index !== -1 && (startIndex === -1 || index < startIndex)) {
+                    startIndex = index;
+                }
+            }
+
+            if (startIndex === -1) return null;
+
+            // 使用栈匹配算法，更高效地找到JSON边界
+            const startChar = message[startIndex];
+            const endChar = startChar === '{' ? '}' : ']';
+            let depth = 0;
+            let inString = false;
+            let escape = false;
+
+            for (let i = startIndex; i < message.length; i++) {
+                const char = message[i];
+
+                if (escape) {
+                    escape = false;
+                    continue;
+                }
+
+                if (char === '\\') {
+                    escape = true;
+                    continue;
+                }
+
+                if (char === '"') {
+                    inString = !inString;
+                    continue;
+                }
+
+                if (inString) continue;
+
+                if (char === startChar) {
+                    depth++;
+                } else if (char === endChar) {
+                    depth--;
+                    if (depth === 0) {
+                        // 找到匹配的结束符
+                        const possibleJson = message.substring(startIndex, i + 1);
+                        try {
+                            JSON.parse(possibleJson);
+                            return {
+                                prefix: message.substring(0, startIndex).trim(),
+                                json: possibleJson,
+                                suffix: message.substring(i + 1).trim()
+                            };
+                        } catch {
+                            return null;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        };
+    }, []);
+
+    const parsedLogsCache = useMemo(() => {
+        const cache = parsedLogsCacheRef.current;
+
+        // 只处理新增的日志
+        for (const log of logs) {
+            // 如果已经缓存过，跳过
+            if (cache.has(log.id)) continue;
+
+            try {
+                JSON.parse(log.message);
+                cache.set(log.id, {
+                    isJSON: true,
+                    jsonStr: log.message,
+                    extracted: null
+                });
+            } catch {
+                const extracted = extractJSON(log.message);
+                if (extracted) {
+                    try {
+                        JSON.parse(extracted.json);
+                        cache.set(log.id, {
+                            isJSON: true,
+                            jsonStr: extracted.json,
+                            extracted
+                        });
+                    } catch {
+                        cache.set(log.id, {
+                            isJSON: false,
+                            extracted
+                        });
+                    }
+                } else {
+                    cache.set(log.id, {
+                        isJSON: false,
+                        extracted: null
+                    });
+                }
+            }
+        }
+
+        // 清理不再需要的缓存（日志被删除）
+        const logIds = new Set(logs.map(log => log.id));
+        for (const cachedId of cache.keys()) {
+            if (!logIds.has(cachedId)) {
+                cache.delete(cachedId);
+            }
+        }
+
+        return cache;
+    }, [logs, extractJSON]);
+
+    const filteredLogs = useMemo(() => {
+        return logs.filter(log => {
+            if (!levelFilter.has(log.level)) return false;
+            if (showRemoteOnly && log.source !== 'remote') return false;
+            if (filter && !log.message.toLowerCase().includes(filter.toLowerCase())) {
+                return false;
+            }
+            return true;
+        });
+    }, [logs, levelFilter, showRemoteOnly, filter]);
 
     const toggleLogExpand = (logId: number) => {
         const newExpanded = new Set(expandedLogs);
@@ -123,54 +339,6 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
         setExpandedLogs(newExpanded);
     };
 
-    const extractJSON = (message: string): { prefix: string; json: string; suffix: string } | null => {
-        const jsonStartChars = ['{', '['];
-        let startIndex = -1;
-
-        for (const char of jsonStartChars) {
-            const index = message.indexOf(char);
-            if (index !== -1 && (startIndex === -1 || index < startIndex)) {
-                startIndex = index;
-            }
-        }
-
-        if (startIndex === -1) return null;
-
-        for (let endIndex = message.length; endIndex > startIndex; endIndex--) {
-            const possibleJson = message.substring(startIndex, endIndex);
-            try {
-                JSON.parse(possibleJson);
-                return {
-                    prefix: message.substring(0, startIndex).trim(),
-                    json: possibleJson,
-                    suffix: message.substring(endIndex).trim()
-                };
-            } catch {
-                continue;
-            }
-        }
-
-        return null;
-    };
-
-    const tryParseJSON = (message: string): { isJSON: boolean; parsed?: any; jsonStr?: string } => {
-        try {
-            const parsed = JSON.parse(message);
-            return { isJSON: true, parsed, jsonStr: message };
-        } catch {
-            const extracted = extractJSON(message);
-            if (extracted) {
-                try {
-                    const parsed = JSON.parse(extracted.json);
-                    return { isJSON: true, parsed, jsonStr: extracted.json };
-                } catch {
-                    return { isJSON: false };
-                }
-            }
-            return { isJSON: false };
-        }
-    };
-
     const openJsonViewer = (jsonStr: string) => {
         try {
             const parsed = JSON.parse(jsonStr);
@@ -178,43 +346,6 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
         } catch {
             console.error('Failed to parse JSON:', jsonStr);
         }
-    };
-
-    const formatMessage = (message: string, isExpanded: boolean): JSX.Element => {
-        const MAX_PREVIEW_LENGTH = 200;
-        const { isJSON, jsonStr } = tryParseJSON(message);
-        const extracted = extractJSON(message);
-
-        const shouldTruncate = message.length > MAX_PREVIEW_LENGTH && !isExpanded;
-
-        return (
-            <div className="log-message-container">
-                <div className="log-message-text">
-                    {shouldTruncate ? (
-                        <>
-                            {extracted && extracted.prefix && <span>{extracted.prefix} </span>}
-                            <span className="log-message-preview">
-                                {message.substring(0, MAX_PREVIEW_LENGTH)}...
-                            </span>
-                        </>
-                    ) : (
-                        <span>{message}</span>
-                    )}
-                </div>
-                {isJSON && jsonStr && (
-                    <button
-                        className="log-open-json-btn"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            openJsonViewer(jsonStr);
-                        }}
-                        title="Open in JSON Viewer"
-                    >
-                        <Maximize2 size={12} />
-                    </button>
-                )}
-            </div>
-        );
     };
 
     const levelCounts = {
@@ -301,43 +432,16 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
                         <p>No logs to display</p>
                     </div>
                 ) : (
-                    filteredLogs.map(log => {
-                        const isExpanded = expandedLogs.has(log.id);
-                        const shouldShowExpander = log.message.length > 200;
-
-                        return (
-                            <div
-                                key={log.id}
-                                className={`log-entry ${getLevelClass(log.level)} ${log.source === 'remote' ? 'log-entry-remote' : ''} ${isExpanded ? 'log-entry-expanded' : ''}`}
-                            >
-                                {shouldShowExpander && (
-                                    <div
-                                        className="log-entry-expander"
-                                        onClick={() => toggleLogExpand(log.id)}
-                                    >
-                                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                    </div>
-                                )}
-                                <div className="log-entry-icon">
-                                    {getLevelIcon(log.level)}
-                                </div>
-                                <div className="log-entry-time">
-                                    {formatTime(log.timestamp)}
-                                </div>
-                                <div className={`log-entry-source ${log.source === 'remote' ? 'source-remote' : ''}`}>
-                                    [{log.source === 'remote' ? '🌐 Remote' : log.source}]
-                                </div>
-                                {log.clientId && (
-                                    <div className="log-entry-client" title={`Client: ${log.clientId}`}>
-                                        {log.clientId}
-                                    </div>
-                                )}
-                                <div className="log-entry-message">
-                                    {formatMessage(log.message, isExpanded)}
-                                </div>
-                            </div>
-                        );
-                    })
+                    filteredLogs.map(log => (
+                        <LogEntryItem
+                            key={log.id}
+                            log={log}
+                            isExpanded={expandedLogs.has(log.id)}
+                            onToggleExpand={toggleLogExpand}
+                            onOpenJsonViewer={openJsonViewer}
+                            parsedData={parsedLogsCache.get(log.id) || { isJSON: false }}
+                        />
+                    ))
                 )}
             </div>
             {jsonViewerData && (
