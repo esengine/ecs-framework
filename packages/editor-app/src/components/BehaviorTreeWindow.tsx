@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TreePine, X, Settings, Clipboard, Save, FolderOpen, Maximize2, Minimize2, Download } from 'lucide-react';
-import { save, open } from '@tauri-apps/plugin-dialog';
+import { save, open, ask, message } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import { Core } from '@esengine/ecs-framework';
 import { BehaviorTreeEditor } from './BehaviorTreeEditor';
 import { BehaviorTreeNodePalette } from './BehaviorTreeNodePalette';
 import { BehaviorTreeNodeProperties } from './BehaviorTreeNodeProperties';
 import { BehaviorTreeBlackboard } from './BehaviorTreeBlackboard';
-import { ExportRuntimeDialog } from './ExportRuntimeDialog';
+import { ExportRuntimeDialog, type ExportOptions } from './ExportRuntimeDialog';
 import { useBehaviorTreeStore } from '../stores/behaviorTreeStore';
 import type { NodeTemplate, BlackboardValueType } from '@esengine/behavior-tree';
-import { GlobalBlackboardService, GlobalBlackboardConfig } from '@esengine/behavior-tree';
+import { GlobalBlackboardService, GlobalBlackboardConfig, EditorFormatConverter, BehaviorTreeAssetSerializer } from '@esengine/behavior-tree';
 import { createLogger } from '@esengine/ecs-framework';
 import '../styles/BehaviorTreeWindow.css';
 
@@ -44,7 +44,8 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
         setBlackboardVariables,
         updateBlackboardVariable,
         initialBlackboardVariables,
-        isExecuting
+        isExecuting,
+        reset
     } = useBehaviorTreeStore();
 
     const [selectedNode, setSelectedNode] = useState<{
@@ -60,6 +61,11 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     const [globalVariables, setGlobalVariables] = useState<Record<string, any>>({});
     const [projectPath, setProjectPath] = useState<string>('');
     const [hasUnsavedGlobalChanges, setHasUnsavedGlobalChanges] = useState(false);
+    const [availableBTreeFiles, setAvailableBTreeFiles] = useState<string[]>([]);
+    const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const isInitialMount = useRef(true);
+    const initialStateSnapshot = useRef<{ nodes: number; variables: number }>({ nodes: 0, variables: 0 });
 
     // 初始化项目路径和加载全局配置
     useEffect(() => {
@@ -84,6 +90,25 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
 
         initProject();
     }, [propProjectPath]);
+
+    // 加载可用的 btree 文件
+    useEffect(() => {
+        const loadAvailableFiles = async () => {
+            if (projectPath) {
+                try {
+                    const files = await invoke<string[]>('scan_behavior_trees', { projectPath });
+                    setAvailableBTreeFiles(files);
+                } catch (error) {
+                    logger.error('加载行为树文件列表失败', error);
+                    setAvailableBTreeFiles([]);
+                }
+            } else {
+                setAvailableBTreeFiles([]);
+            }
+        };
+
+        loadAvailableFiles();
+    }, [projectPath]);
 
     // 实时更新全局变量显示
     useEffect(() => {
@@ -220,23 +245,33 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                 }
             }
 
-            const filePath = await save({
-                filters: [{
-                    name: 'Behavior Tree',
-                    extensions: ['btree']
-                }],
-                defaultPath: 'behavior-tree.btree'
-            });
+            let saveFilePath = currentFilePath;
 
-            if (filePath) {
+            // 如果没有当前文件路径，弹出保存对话框
+            if (!saveFilePath) {
+                saveFilePath = await save({
+                    filters: [{
+                        name: 'Behavior Tree',
+                        extensions: ['btree']
+                    }],
+                    defaultPath: 'behavior-tree.btree'
+                });
+            }
+
+            if (saveFilePath) {
                 // 使用初始黑板变量（设计时的值）而不是运行时的值
                 const varsToSave = isExecuting ? initialBlackboardVariables : blackboardVariables;
                 const json = exportToJSON(
                     { name: 'behavior-tree', description: '' },
                     varsToSave
                 );
-                await invoke('write_behavior_tree_file', { filePath, content: json });
-                logger.info('行为树已保存', filePath);
+                await invoke('write_behavior_tree_file', { filePath: saveFilePath, content: json });
+                logger.info('行为树已保存', saveFilePath);
+
+                // 更新当前文件路径和清除未保存标记
+                setCurrentFilePath(saveFilePath);
+                setHasUnsavedChanges(false);
+                isInitialMount.current = true;
 
                 // 自动保存全局黑板配置
                 if (hasUnsavedGlobalChanges) {
@@ -261,6 +296,9 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
             if (selected) {
                 const json = await invoke<string>('read_behavior_tree_file', { filePath: selected as string });
                 importFromJSON(json);
+                setCurrentFilePath(selected as string);
+                setHasUnsavedChanges(false);
+                isInitialMount.current = true;
                 logger.info('行为树已加载', selected);
             }
         } catch (error) {
@@ -272,46 +310,252 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
         setIsExportDialogOpen(true);
     };
 
-    const handleDoExport = async (format: 'json' | 'binary') => {
-        try {
-            const extension = format === 'binary' ? 'bin' : 'json';
-            const defaultPath = format === 'binary' ? 'behavior-tree.btree.bin' : 'behavior-tree.btree.json';
+    const handleClose = async () => {
+        // 检查是否有未保存的更改
+        if (hasUnsavedChanges || hasUnsavedGlobalChanges) {
+            const messages = [];
+            if (hasUnsavedChanges) {
+                messages.push('• 行为树有未保存的更改');
+            }
+            if (hasUnsavedGlobalChanges) {
+                messages.push('• 全局变量有未保存的更改');
+            }
 
-            const filePath = await save({
-                filters: [{
-                    name: 'Runtime Behavior Tree',
-                    extensions: [extension]
-                }],
-                defaultPath
-            });
+            // 询问是否保存
+            const shouldSave = await ask(
+                `检测到未保存的更改：\n\n${messages.join('\n')}\n\n是否要保存更改？`,
+                {
+                    title: '保存确认',
+                    kind: 'warning',
+                    okLabel: '保存',
+                    cancelLabel: '不保存'
+                }
+            );
 
-            if (filePath) {
-                const varsToSave = isExecuting ? initialBlackboardVariables : blackboardVariables;
-                const data = exportToRuntimeAsset(
-                    { name: 'behavior-tree', description: 'Runtime behavior tree asset' },
-                    varsToSave,
-                    format
+            if (shouldSave) {
+                // 用户选择保存
+                await handleSave();
+                if (hasUnsavedGlobalChanges) {
+                    await saveGlobalBlackboard();
+                }
+                // 清空状态
+                reset();
+                setCurrentFilePath(null);
+                setHasUnsavedChanges(false);
+                isInitialMount.current = true;
+                onClose();
+            } else {
+                // 用户选择不保存，再次确认
+                const confirmDiscard = await ask(
+                    '确定要放弃所有未保存的更改吗？',
+                    {
+                        title: '确认关闭',
+                        kind: 'warning',
+                        okLabel: '确定',
+                        cancelLabel: '取消'
+                    }
                 );
 
-                if (format === 'binary') {
-                    await invoke('write_binary_file', { filePath, content: Array.from(data as Uint8Array) });
-                } else {
-                    await invoke('write_behavior_tree_file', { filePath, content: data as string });
+                if (confirmDiscard) {
+                    // 清空状态
+                    reset();
+                    setCurrentFilePath(null);
+                    setHasUnsavedChanges(false);
+                    isInitialMount.current = true;
+                    onClose();
                 }
-
-                logger.info(`运行时资产已导出 (${format})`, filePath);
+                // 如果用户选择取消，则什么都不做（窗口保持打开）
             }
+        } else {
+            // 没有未保存的更改，直接关闭
+            reset();
+            setCurrentFilePath(null);
+            setHasUnsavedChanges(false);
+            isInitialMount.current = true;
+            onClose();
+        }
+    };
+
+    const handleDoExport = async (options: ExportOptions) => {
+        if (options.mode === 'workspace') {
+            await handleExportWorkspace(options);
+        } else {
+            const fileName = options.selectedFiles[0];
+            if (!fileName) {
+                logger.error('没有可导出的文件');
+                return;
+            }
+            const format = options.fileFormats.get(fileName) || 'binary';
+            await handleExportSingle(fileName, format, options.assetOutputPath, options.typeOutputPath);
+        }
+    };
+
+    const handleExportSingle = async (fileName: string, format: 'json' | 'binary', outputPath: string, typeOutputPath: string) => {
+        try {
+            const extension = format === 'binary' ? 'bin' : 'json';
+            const filePath = `${outputPath}/${fileName}.btree.${extension}`;
+
+            const varsToSave = isExecuting ? initialBlackboardVariables : blackboardVariables;
+            const data = exportToRuntimeAsset(
+                { name: fileName, description: 'Runtime behavior tree asset' },
+                varsToSave,
+                format
+            );
+
+            await invoke('create_directory', { path: outputPath });
+
+            if (format === 'binary') {
+                await invoke('write_binary_file', { filePath, content: Array.from(data as Uint8Array) });
+            } else {
+                await invoke('write_file_content', { path: filePath, content: data as string });
+            }
+
+            logger.info(`运行时资产已导出 (${format})`, filePath);
+
+            // 生成 TypeScript 类型定义
+            await generateTypeScriptTypes(fileName, typeOutputPath);
         } catch (error) {
             logger.error('导出失败', error);
         }
     };
 
+    const generateTypeScriptTypes = async (assetId: string, outputPath: string): Promise<void> => {
+        try {
+            const sourceFilePath = `${projectPath}/.ecs/behaviors/${assetId}.btree`;
+            const editorJson = await invoke<string>('read_file_content', { path: sourceFilePath });
 
+            const editorFormat = JSON.parse(editorJson);
+            const blackboard = editorFormat.blackboard || {};
+
+            const blackboardVars = new Map<string, string>();
+            Object.entries(blackboard).forEach(([key, value]) => {
+                const type = typeof value === 'number' ? 'number' :
+                            typeof value === 'string' ? 'string' :
+                            typeof value === 'boolean' ? 'boolean' : 'any';
+                blackboardVars.set(key, type);
+            });
+
+            let tsCode = `// 自动生成的行为树黑板变量类型定义\n`;
+            tsCode += `// 行为树: ${assetId}\n\n`;
+            tsCode += `export interface ${assetId}Blackboard {\n`;
+
+            Array.from(blackboardVars.entries())
+                .sort(([a], [b]) => a.localeCompare(b))
+                .forEach(([key, type]) => {
+                    tsCode += `  ${key}: ${type};\n`;
+                });
+
+            tsCode += '}\n';
+
+            const tsFilePath = `${outputPath}/${assetId}.d.ts`;
+            await invoke('create_directory', { path: outputPath });
+            await invoke('write_file_content', {
+                path: tsFilePath,
+                content: tsCode
+            });
+
+            logger.info(`TypeScript 类型定义已生成: ${assetId}.d.ts`);
+        } catch (error) {
+            logger.error(`生成 TypeScript 类型定义失败: ${assetId}`, error);
+        }
+    };
+
+    const handleExportWorkspace = async (options: ExportOptions) => {
+        if (!projectPath) {
+            logger.error('未设置项目路径');
+            return;
+        }
+
+        try {
+            const assetOutputDir = options.assetOutputPath;
+
+            if (options.selectedFiles.length === 0) {
+                logger.warn('没有选择要导出的文件');
+                return;
+            }
+
+            logger.info(`开始导出 ${options.selectedFiles.length} 个文件...`);
+
+            for (const assetId of options.selectedFiles) {
+                try {
+                    const format = options.fileFormats.get(assetId) || 'binary';
+                    const extension = format === 'binary' ? 'bin' : 'json';
+
+                    const sourceFilePath = `${projectPath}/.ecs/behaviors/${assetId}.btree`;
+                    const editorJson = await invoke<string>('read_file_content', { path: sourceFilePath });
+
+                    const editorFormat = JSON.parse(editorJson);
+
+                    const asset = EditorFormatConverter.toAsset(editorFormat, {
+                        name: assetId,
+                        description: editorFormat.metadata?.description || ''
+                    });
+
+                    const data = BehaviorTreeAssetSerializer.serialize(asset, {
+                        format,
+                        pretty: format === 'json',
+                        validate: true
+                    });
+
+                    const outputFilePath = `${assetOutputDir}/${assetId}.btree.${extension}`;
+
+                    const outputDir2 = outputFilePath.substring(0, outputFilePath.lastIndexOf('/'));
+                    await invoke('create_directory', { path: outputDir2 });
+
+                    if (format === 'binary') {
+                        await invoke('write_binary_file', {
+                            filePath: outputFilePath,
+                            content: Array.from(data as Uint8Array)
+                        });
+                    } else {
+                        await invoke('write_file_content', {
+                            path: outputFilePath,
+                            content: data as string
+                        });
+                    }
+
+                    logger.info(`导出成功: ${assetId} (${format})`);
+
+                    // 为当前文件生成 TypeScript 类型定义
+                    await generateTypeScriptTypes(assetId, options.typeOutputPath);
+                } catch (error) {
+                    logger.error(`导出失败: ${assetId}`, error);
+                }
+            }
+
+            // 导出全局变量的 TypeScript 类型定义
+            try {
+                const globalBlackboard = Core.services.resolve(GlobalBlackboardService);
+                const { GlobalBlackboardTypeGenerator } = await import('../generators/GlobalBlackboardTypeGenerator');
+                const config = globalBlackboard.exportConfig();
+                const tsCode = GlobalBlackboardTypeGenerator.generate(config);
+                const globalTsFilePath = `${options.typeOutputPath}/GlobalBlackboard.ts`;
+
+                await invoke('write_file_content', {
+                    path: globalTsFilePath,
+                    content: tsCode
+                });
+
+                logger.info('全局变量类型定义已生成:', globalTsFilePath);
+            } catch (error) {
+                logger.error('导出全局变量类型定义失败', error);
+            }
+
+            logger.info(`工作区导出完成: ${assetOutputDir}`);
+        } catch (error) {
+            logger.error('工作区导出失败', error);
+        }
+    };
+
+    // 监听 filePath prop 变化，自动加载文件
     useEffect(() => {
         if (filePath && isOpen) {
             invoke<string>('read_behavior_tree_file', { filePath })
                 .then((json: string) => {
                     importFromJSON(json);
+                    setCurrentFilePath(filePath);
+                    setHasUnsavedChanges(false);
+                    isInitialMount.current = true;
                     logger.info('自动加载行为树文件', filePath);
                 })
                 .catch((error: any) => {
@@ -319,6 +563,41 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                 });
         }
     }, [filePath, isOpen, importFromJSON]);
+
+    // 监听窗口打开，重置状态
+    useEffect(() => {
+        if (isOpen) {
+            // 如果没有传入文件路径，说明是新建空窗口，清空所有状态
+            if (!filePath) {
+                reset();
+                setCurrentFilePath(null);
+            }
+            isInitialMount.current = true;
+            setHasUnsavedChanges(false);
+            initialStateSnapshot.current = {
+                nodes: nodes.length,
+                variables: Object.keys(blackboardVariables).length
+            };
+        }
+    }, [isOpen]);
+
+    // 监听节点和黑板变量变化，标记为未保存
+    useEffect(() => {
+        // 跳过首次渲染
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
+        // 检查是否有实际变化
+        const currentNodes = nodes.length;
+        const currentVariables = Object.keys(blackboardVariables).length;
+
+        if (currentNodes !== initialStateSnapshot.current.nodes ||
+            currentVariables !== initialStateSnapshot.current.variables) {
+            setHasUnsavedChanges(true);
+        }
+    }, [nodes, blackboardVariables]);
 
     if (!isOpen) return null;
 
@@ -328,7 +607,12 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                 <div className="behavior-tree-header">
                     <div className="behavior-tree-title">
                         <TreePine size={20} />
-                        <span>{t('behaviorTree.title')}</span>
+                        <span>
+                            {currentFilePath
+                                ? `${currentFilePath.split(/[\\/]/).pop()?.replace('.btree', '')}${hasUnsavedChanges ? ' *' : ''}`
+                                : t('behaviorTree.title')
+                            }
+                        </span>
                     </div>
                     <div className="behavior-tree-toolbar">
                         <button onClick={handleSave} className="behavior-tree-toolbar-btn" title="保存">
@@ -347,7 +631,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                         >
                             {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                         </button>
-                        <button onClick={onClose} className="behavior-tree-toolbar-btn" title={t('behaviorTree.close')}>
+                        <button onClick={handleClose} className="behavior-tree-toolbar-btn" title={t('behaviorTree.close')}>
                             <X size={16} />
                         </button>
                     </div>
@@ -421,6 +705,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                                 // Node created successfully
                             }}
                             blackboardVariables={blackboardVariables}
+                            projectPath={projectPath}
                         />
                     </div>
 
@@ -571,6 +856,10 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                 isOpen={isExportDialogOpen}
                 onClose={() => setIsExportDialogOpen(false)}
                 onExport={handleDoExport}
+                hasProject={!!projectPath}
+                availableFiles={availableBTreeFiles}
+                currentFileName={currentFilePath ? currentFilePath.split(/[\\/]/).pop()?.replace('.btree', '') : undefined}
+                projectPath={projectPath}
             />
         </div>
     );

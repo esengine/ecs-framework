@@ -5,7 +5,7 @@ import {
     List, GitBranch, Layers, Shuffle,
     RotateCcw, Repeat, CheckCircle, XCircle, CheckCheck, HelpCircle, Snowflake, Timer,
     Clock, FileText, Edit, Calculator, Code,
-    Equal, Dices, Settings, Database, FolderOpen,
+    Equal, Dices, Settings, Database, FolderOpen, TreePine,
     LucideIcon
 } from 'lucide-react';
 import { AssetPickerDialog } from './AssetPickerDialog';
@@ -14,7 +14,7 @@ const iconMap: Record<string, LucideIcon> = {
     List, GitBranch, Layers, Shuffle,
     RotateCcw, Repeat, CheckCircle, XCircle, CheckCheck, HelpCircle, Snowflake, Timer,
     Clock, FileText, Edit, Calculator, Code,
-    Equal, Dices, Settings, Database
+    Equal, Dices, Settings, Database, TreePine
 };
 
 interface BehaviorTreeNodePropertiesProps {
@@ -388,9 +388,10 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
                 <AssetPickerDialog
                     projectPath={projectPath}
                     fileExtension="btree"
+                    assetBasePath=".ecs/behaviors"
                     locale={t('locale') === 'zh' ? 'zh' : 'en'}
                     onSelect={(assetId) => {
-                        // AssetPickerDialog 现在直接返回 assetId（不含扩展名，相对于项目根目录或资产基础目录）
+                        // AssetPickerDialog 返回 assetId（不含扩展名，相对于 .ecs/behaviors 的路径）
                         handleChange(assetPickerProperty, assetId);
                         setAssetPickerOpen(false);
                         setAssetPickerProperty(null);

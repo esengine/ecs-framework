@@ -7,6 +7,7 @@ import { TaskStatus, NodeType, CompositeType, AbortType } from '../Types/TaskSta
 import { SequenceNode } from '../Components/Composites/SequenceNode';
 import { SelectorNode } from '../Components/Composites/SelectorNode';
 import { RootNode } from '../Components/Composites/RootNode';
+import { SubTreeNode } from '../Components/Composites/SubTreeNode';
 import { BlackboardCompareCondition, CompareOperator } from '../Components/Conditions/BlackboardCompareCondition';
 import { BlackboardExistsCondition } from '../Components/Conditions/BlackboardExistsCondition';
 import { RandomProbabilityCondition } from '../Components/Conditions/RandomProbabilityCondition';
@@ -22,7 +23,7 @@ import { ExecuteCondition } from '../Components/Conditions/ExecuteCondition';
  */
 export class CompositeExecutionSystem extends EntitySystem {
     constructor() {
-        super(Matcher.empty().all(BehaviorTreeNode, ActiveNode));
+        super(Matcher.empty().all(BehaviorTreeNode, ActiveNode).exclude(RootNode, SubTreeNode));
         this.updateOrder = 300;
     }
 
@@ -32,11 +33,6 @@ export class CompositeExecutionSystem extends EntitySystem {
 
             // 只处理复合节点
             if (node.nodeType !== NodeType.Composite) {
-                continue;
-            }
-
-            // 排除根节点（由 RootExecutionSystem 专门处理）
-            if (entity.hasComponent(RootNode)) {
                 continue;
             }
 
@@ -132,7 +128,9 @@ export class CompositeExecutionSystem extends EntitySystem {
 
         // 如果子节点还没开始执行，激活它
         if (childNode.status === TaskStatus.Invalid) {
-            currentChild.addComponent(new ActiveNode());
+            if (!currentChild.hasComponent(ActiveNode)) {
+                currentChild.addComponent(new ActiveNode());
+            }
             node.status = TaskStatus.Running;
             return;
         }
@@ -188,7 +186,9 @@ export class CompositeExecutionSystem extends EntitySystem {
 
         // 如果子节点还没开始执行，激活它
         if (childNode.status === TaskStatus.Invalid) {
-            currentChild.addComponent(new ActiveNode());
+            if (!currentChild.hasComponent(ActiveNode)) {
+                currentChild.addComponent(new ActiveNode());
+            }
             node.status = TaskStatus.Running;
             return;
         }
@@ -322,7 +322,9 @@ export class CompositeExecutionSystem extends EntitySystem {
 
         // 如果子节点还没开始执行，激活它
         if (childNode.status === TaskStatus.Invalid) {
-            currentChild.addComponent(new ActiveNode());
+            if (!currentChild.hasComponent(ActiveNode)) {
+                currentChild.addComponent(new ActiveNode());
+            }
             node.status = TaskStatus.Running;
             return;
         }
@@ -376,7 +378,9 @@ export class CompositeExecutionSystem extends EntitySystem {
 
         // 如果子节点还没开始执行，激活它
         if (childNode.status === TaskStatus.Invalid) {
-            currentChild.addComponent(new ActiveNode());
+            if (!currentChild.hasComponent(ActiveNode)) {
+                currentChild.addComponent(new ActiveNode());
+            }
             node.status = TaskStatus.Running;
             return;
         }

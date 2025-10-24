@@ -65,6 +65,23 @@
     flex: 1;
 }
 
+.export-dialog-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.export-dialog-content::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+.export-dialog-content::-webkit-scrollbar-thumb {
+    background: #424242;
+    border-radius: 5px;
+}
+
+.export-dialog-content::-webkit-scrollbar-thumb:hover {
+    background: #4e4e4e;
+}
+
 .export-dialog-info {
     display: flex;
     align-items: center;
@@ -226,4 +243,129 @@
 
 .export-dialog-btn-primary:active {
     background: #2c5282;
+}
+
+.export-mode-tabs {
+    display: flex;
+    border-bottom: 1px solid #3a3a3a;
+    margin: -24px -24px 20px -24px;
+    padding: 0 24px;
+}
+
+.export-mode-tab {
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    color: #999;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.export-mode-tab:hover {
+    color: #ccc;
+}
+
+.export-mode-tab.active {
+    color: #4299e1;
+    border-bottom-color: #4299e1;
+}
+
+.export-section {
+    margin-bottom: 20px;
+}
+
+.export-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    color: #ccc;
+    font-weight: 500;
+}
+
+.export-file-list {
+    max-height: 300px;
+    overflow-y: auto;
+    background: #252525;
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    padding: 8px;
+}
+
+.export-file-list::-webkit-scrollbar {
+    width: 10px;
+}
+
+.export-file-list::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+.export-file-list::-webkit-scrollbar-thumb {
+    background: #424242;
+    border-radius: 5px;
+}
+
+.export-file-list::-webkit-scrollbar-thumb:hover {
+    background: #4e4e4e;
+}
+
+.export-file-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+    margin-bottom: 4px;
+}
+
+.export-file-item:last-child {
+    margin-bottom: 0;
+}
+
+.export-file-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.export-file-item.selected {
+    background: rgba(66, 153, 225, 0.1);
+}
+
+.export-file-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.export-file-name {
+    flex: 1;
+    font-size: 12px;
+    color: #ccc;
+    font-family: 'Consolas', 'Monaco', monospace;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.export-file-format {
+    padding: 4px 8px;
+    background: #2d2d2d;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    color: #ccc;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.export-file-format:hover {
+    border-color: #4a4a4a;
+}
+
+.export-file-format:focus {
+    border-color: #4299e1;
 }

@@ -21,6 +21,8 @@ import { BlackboardComponent } from '../Components/BlackboardComponent';
  */
 export class SubTreeExecutionSystem extends EntitySystem {
     private assetLoader?: IAssetLoader;
+    private assetLoaderInitialized = false;
+    private hasLoggedMissingAssetLoader = false;
     private loadingAssets: Map<string, Promise<Entity>> = new Map();
 
     constructor() {
@@ -29,11 +31,8 @@ export class SubTreeExecutionSystem extends EntitySystem {
     }
 
     protected override onInitialize(): void {
-        try {
-            this.assetLoader = Core.services.resolve(FileSystemAssetLoader);
-        } catch (error) {
-            this.logger.warn('未找到 AssetLoader 服务，SubTree 节点将无法工作');
-        }
+        // 延迟初始化 AssetLoader，不在这里尝试获取
+        // 只在第一次真正需要处理 SubTree 节点时才获取
     }
 
     protected override process(entities: readonly Entity[]): void {
@@ -73,6 +72,36 @@ export class SubTreeExecutionSystem extends EntitySystem {
     }
 
     /**
+     * 延迟初始化 AssetLoader
+     */
+    private ensureAssetLoaderInitialized(): boolean {
+        if (!this.assetLoaderInitialized) {
+            try {
+                this.assetLoader = Core.services.resolve(FileSystemAssetLoader);
+                this.assetLoaderInitialized = true;
+                this.logger.debug('AssetLoader 已初始化');
+            } catch (error) {
+                this.assetLoaderInitialized = true;
+                this.assetLoader = undefined;
+
+                // 只在第一次失败时记录警告，避免重复日志
+                if (!this.hasLoggedMissingAssetLoader) {
+                    this.logger.warn(
+                        'AssetLoader 未配置。SubTree 节点需要 AssetLoader 来加载子树资产。\n' +
+                        '如果您在编辑器中，请确保已打开项目并配置了项目路径。\n' +
+                        '如果您在运行时环境，请确保已正确注册 FileSystemAssetLoader 服务。'
+                    );
+                    this.hasLoggedMissingAssetLoader = true;
+                }
+
+                return false;
+            }
+        }
+
+        return this.assetLoader !== undefined;
+    }
+
+    /**
      * 加载并实例化子树（异步后台加载）
      */
     private loadAndInstantiateSubTree(
@@ -80,8 +109,9 @@ export class SubTreeExecutionSystem extends EntitySystem {
         subTree: SubTreeNode,
         node: BehaviorTreeNode
     ): void {
-        if (!this.assetLoader) {
-            this.logger.error('AssetLoader 未配置，无法加载子树');
+        // 延迟初始化 AssetLoader
+        if (!this.ensureAssetLoaderInitialized()) {
+            this.logger.debug('AssetLoader 不可用，SubTree 节点执行失败');
             node.status = TaskStatus.Failure;
             this.completeNode(parentEntity);
             return;

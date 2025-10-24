@@ -129,6 +129,23 @@ export class TauriAPI {
   static async showInFolder(path: string): Promise<void> {
     await invoke('show_in_folder', { filePath: path });
   }
+
+  /**
+   * 打开行为树文件选择对话框
+   * @returns 用户选择的文件路径，取消则返回 null
+   */
+  static async openBehaviorTreeDialog(): Promise<string | null> {
+    return await invoke<string | null>('open_behavior_tree_dialog');
+  }
+
+  /**
+   * 扫描项目中的所有行为树文件
+   * @param projectPath 项目路径
+   * @returns 行为树资产ID列表（相对于 .ecs/behaviors 的路径，不含扩展名）
+   */
+  static async scanBehaviorTrees(projectPath: string): Promise<string[]> {
+    return await invoke<string[]>('scan_behavior_trees', { projectPath });
+  }
 }
 
 export interface DirectoryEntry {

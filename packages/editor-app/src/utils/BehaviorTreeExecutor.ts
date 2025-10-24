@@ -1,4 +1,4 @@
-import { World, Entity, Scene, createLogger, Time } from '@esengine/ecs-framework';
+import { World, Entity, Scene, createLogger, Time, Core } from '@esengine/ecs-framework';
 import {
     BehaviorTreeNode as BehaviorTreeNodeComponent,
     BlackboardComponent,
@@ -9,6 +9,8 @@ import {
     LeafExecutionSystem,
     DecoratorExecutionSystem,
     CompositeExecutionSystem,
+    SubTreeExecutionSystem,
+    FileSystemAssetLoader,
     CompositeNodeComponent,
     TaskStatus,
     NodeType,
@@ -28,6 +30,7 @@ import {
     ParallelSelectorNode,
     RandomSequenceNode,
     RandomSelectorNode,
+    SubTreeNode,
     InverterNode,
     RepeaterNode,
     UntilSuccessNode,
@@ -41,6 +44,7 @@ import {
     CompareOperator
 } from '@esengine/behavior-tree';
 import type { BehaviorTreeNode } from '../stores/behaviorTreeStore';
+import { TauriAPI } from '../api/tauri';
 
 const logger = createLogger('BehaviorTreeExecutor');
 
@@ -84,16 +88,26 @@ export class BehaviorTreeExecutor {
     private tickCount = 0;
     // 存储节点ID -> 属性绑定信息的映射
     private propertyBindingsMap: Map<string, Map<string, string>> = new Map();
+    // 标记是否已添加 SubTreeExecutionSystem
+    private hasSubTreeSystem = false;
 
     constructor() {
         this.world = new World({ name: 'BehaviorTreeWorld' });
         this.scene = this.world.createScene('BehaviorTreeScene');
 
-        // 注册执行系统
+        // 只注册基础执行系统
         this.scene.addSystem(new RootExecutionSystem());
         this.scene.addSystem(new LeafExecutionSystem());
         this.scene.addSystem(new DecoratorExecutionSystem());
         this.scene.addSystem(new CompositeExecutionSystem());
+        // SubTreeExecutionSystem 按需添加
+    }
+
+    /**
+     * 检测是否有 SubTree 节点
+     */
+    private detectSubTreeNodes(nodes: BehaviorTreeNode[]): boolean {
+        return nodes.some(node => node.template.displayName === '子树');
     }
 
     /**
@@ -104,7 +118,8 @@ export class BehaviorTreeExecutor {
         rootNodeId: string,
         blackboard: Record<string, any>,
         connections: Array<{ from: string; to: string; fromProperty?: string; toProperty?: string; connectionType: 'node' | 'property' }>,
-        callback: ExecutionCallback
+        callback: ExecutionCallback,
+        projectPath?: string | null
     ): void {
         this.cleanup();
         this.blackboardVariables = { ...blackboard };
@@ -112,6 +127,41 @@ export class BehaviorTreeExecutor {
 
         const nodeMap = new Map<string, BehaviorTreeNode>();
         nodes.forEach(node => nodeMap.set(node.id, node));
+
+        // 检测是否有 SubTree 节点
+        const hasSubTreeNode = this.detectSubTreeNodes(nodes);
+
+        if (hasSubTreeNode) {
+            // 按需添加 SubTreeExecutionSystem
+            if (!this.hasSubTreeSystem) {
+                this.scene.addSystem(new SubTreeExecutionSystem());
+                this.hasSubTreeSystem = true;
+                logger.debug('检测到 SubTree 节点，已添加 SubTreeExecutionSystem');
+            }
+
+            // 配置资产加载器以支持 SubTree 节点
+            if (projectPath) {
+                const assetLoader = new FileSystemAssetLoader({
+                    basePath: `${projectPath}/.ecs/behaviors`,
+                    format: 'json',
+                    extension: '.btree',
+                    enableCache: true,
+                    readFile: async (path: string) => {
+                        const content = await TauriAPI.readFileContent(path);
+                        return content;
+                    }
+                });
+
+                Core.services.registerInstance(FileSystemAssetLoader, assetLoader);
+                logger.info(`已配置资产加载器: ${projectPath}/.ecs/behaviors`);
+            } else {
+                logger.warn(
+                    '检测到 SubTree 节点，但未提供项目路径。\n' +
+                    'SubTree 节点需要项目路径来加载子树资产。\n' +
+                    '请在编辑器中打开项目，或确保运行时环境已正确配置资产路径。'
+                );
+            }
+        }
 
         const rootNode = nodeMap.get(rootNodeId);
         if (!rootNode) {
@@ -381,6 +431,12 @@ export class BehaviorTreeExecutor {
             entity.addComponent(composite);
         } else if (displayName === '随机选择') {
             const composite = new RandomSelectorNode();
+            entity.addComponent(composite);
+        } else if (displayName === '子树') {
+            const composite = new SubTreeNode();
+            composite.assetId = node.data.assetId ?? '';
+            composite.inheritParentBlackboard = node.data.inheritParentBlackboard ?? true;
+            composite.propagateFailure = node.data.propagateFailure ?? true;
             entity.addComponent(composite);
         }
     }

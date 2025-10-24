@@ -98,6 +98,68 @@ async fn open_scene_dialog(app: AppHandle) -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
+async fn open_behavior_tree_dialog(app: AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let file = app.dialog()
+        .file()
+        .set_title("Select Behavior Tree")
+        .add_filter("Behavior Tree Files", &["btree"])
+        .blocking_pick_file();
+
+    Ok(file.map(|path| path.to_string()))
+}
+
+#[tauri::command]
+fn scan_behavior_trees(project_path: String) -> Result<Vec<String>, String> {
+    use std::path::Path;
+    use std::fs;
+
+    let behaviors_path = Path::new(&project_path).join(".ecs").join("behaviors");
+
+    if !behaviors_path.exists() {
+        fs::create_dir_all(&behaviors_path)
+            .map_err(|e| format!("Failed to create behaviors directory: {}", e))?;
+        return Ok(Vec::new());
+    }
+
+    let mut btree_files = Vec::new();
+    scan_directory_recursive(&behaviors_path, &behaviors_path, &mut btree_files)?;
+
+    Ok(btree_files)
+}
+
+fn scan_directory_recursive(
+    base_path: &std::path::Path,
+    current_path: &std::path::Path,
+    results: &mut Vec<String>
+) -> Result<(), String> {
+    use std::fs;
+
+    let entries = fs::read_dir(current_path)
+        .map_err(|e| format!("Failed to read directory: {}", e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            scan_directory_recursive(base_path, &path, results)?;
+        } else if path.extension().and_then(|s| s.to_str()) == Some("btree") {
+            if let Ok(relative) = path.strip_prefix(base_path) {
+                let relative_str = relative.to_string_lossy()
+                    .replace('\\', "/")
+                    .trim_end_matches(".btree")
+                    .to_string();
+                results.push(relative_str);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 fn scan_directory(path: String, pattern: String) -> Result<Vec<String>, String> {
     use glob::glob;
     use std::path::Path;
@@ -513,7 +575,9 @@ fn main() {
             open_project_dialog,
             save_scene_dialog,
             open_scene_dialog,
+            open_behavior_tree_dialog,
             scan_directory,
+            scan_behavior_trees,
             read_file_content,
             list_directory,
             set_project_base_path,

@@ -22,6 +22,7 @@ interface BehaviorTreeEditorProps {
     onNodeSelect?: (node: BehaviorTreeNode) => void;
     onNodeCreate?: (template: NodeTemplate, position: { x: number; y: number }) => void;
     blackboardVariables?: Record<string, any>;
+    projectPath?: string | null;
 }
 
 /**
@@ -50,7 +51,8 @@ const iconMap: Record<string, LucideIcon> = {
     Equal,
     Dices,
     Settings,
-    Database
+    Database,
+    TreePine
 };
 
 /**
@@ -73,14 +75,15 @@ const ROOT_NODE_ID = 'root-node';
 export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     onNodeSelect,
     onNodeCreate,
-    blackboardVariables = {}
+    blackboardVariables = {},
+    projectPath = null
 }) => {
     // 创建固定的 Root 节点
     const rootNodeTemplate: NodeTemplate = {
         type: NodeType.Composite,
         displayName: '根节点',
         category: '根节点',
-        icon: '🌳',
+        icon: 'TreePine',
         description: '行为树根节点',
         color: '#FFD700',
         defaultConfig: {
@@ -141,7 +144,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         isExecuting
     } = useBehaviorTreeStore();
 
-    // 初始化根节点
+    // 初始化根节点（仅在首次挂载时检查）
     useEffect(() => {
         if (nodes.length === 0) {
             setNodes([{
@@ -1208,7 +1211,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             ROOT_NODE_ID,
             blackboardVariables || {},
             connections,
-            handleExecutionStatusUpdate
+            handleExecutionStatusUpdate,
+            projectPath
         );
 
         executorRef.current.start();

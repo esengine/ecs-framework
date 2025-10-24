@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { NodeTemplate, EditorFormatConverter, BehaviorTreeAssetSerializer } from '@esengine/behavior-tree';
+import { NodeTemplate, EditorFormatConverter, BehaviorTreeAssetSerializer, NodeType } from '@esengine/behavior-tree';
 
 interface BehaviorTreeNode {
     id: string;
@@ -118,12 +118,38 @@ interface BehaviorTreeState {
         blackboard: Record<string, any>,
         format: 'json' | 'binary'
     ) => string | Uint8Array;
+
+    // 重置所有状态
+    reset: () => void;
 }
 
 const ROOT_NODE_ID = 'root-node';
 
+// 创建根节点模板
+const createRootNodeTemplate = (): NodeTemplate => ({
+    type: NodeType.Composite,
+    displayName: '根节点',
+    category: '根节点',
+    icon: 'TreePine',
+    description: '行为树根节点',
+    color: '#FFD700',
+    defaultConfig: {
+        nodeType: 'root'
+    },
+    properties: []
+});
+
+// 创建初始根节点
+const createInitialRootNode = (): BehaviorTreeNode => ({
+    id: ROOT_NODE_ID,
+    template: createRootNodeTemplate(),
+    data: { nodeType: 'root' },
+    position: { x: 400, y: 100 },
+    children: []
+});
+
 export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
-    nodes: [],
+    nodes: [createInitialRootNode()],
     connections: [],
     selectedNodeIds: [],
     draggingNodeId: null,
@@ -365,7 +391,31 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
             pretty: format === 'json',
             validate: true
         });
-    }
+    },
+
+    reset: () => set({
+        nodes: [createInitialRootNode()],
+        connections: [],
+        selectedNodeIds: [],
+        draggingNodeId: null,
+        dragStartPositions: new Map(),
+        isDraggingNode: false,
+        blackboardVariables: {},
+        initialBlackboardVariables: {},
+        isExecuting: false,
+        canvasOffset: { x: 0, y: 0 },
+        canvasScale: 1,
+        isPanning: false,
+        panStart: { x: 0, y: 0 },
+        connectingFrom: null,
+        connectingFromProperty: null,
+        connectingToPos: null,
+        isBoxSelecting: false,
+        boxSelectStart: null,
+        boxSelectEnd: null,
+        dragDelta: { dx: 0, dy: 0 },
+        forceUpdateCounter: 0
+    })
 }));
 
 export type { BehaviorTreeNode, Connection };
