@@ -14,11 +14,11 @@ export enum LogLevel {
  * 日志接口
  */
 export interface ILogger {
-    debug(message: string, ...args: unknown[]): void;
-    info(message: string, ...args: unknown[]): void;
-    warn(message: string, ...args: unknown[]): void;
-    error(message: string, ...args: unknown[]): void;
-    fatal(message: string, ...args: unknown[]): void;
+    debug(...args: unknown[]): void;
+    info(...args: unknown[]): void;
+    warn(...args: unknown[]): void;
+    error(...args: unknown[]): void;
+    fatal(...args: unknown[]): void;
 }
 
 /**
