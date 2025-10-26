@@ -8,13 +8,23 @@ import { ILogger, LoggerColorConfig } from "./Types";
 export class LoggerManager {
     private static _instance: LoggerManager;
     private _loggers = new Map<string, ILogger>();
-    private _defaultLogger: ILogger;
+    private _defaultLogger?: ILogger;
     private _defaultLevel = LogLevel.Info;
+    private _loggerFactory?: (name?: string) => ILogger;
 
-    private constructor() {
-        this._defaultLogger = new ConsoleLogger({
-            level: this._defaultLevel,
-        });
+    private get defaultLogger(): ILogger {
+        if (!this._defaultLogger) {
+            this._defaultLogger = this.createDefaultLogger();
+        }
+        return this._defaultLogger;
+    }
+
+    // 新增: 创建默认 logger 的逻辑
+    private createDefaultLogger(): ILogger {
+        if (this._loggerFactory) {
+            return this._loggerFactory();
+        }
+        return new ConsoleLogger({ level: this._defaultLevel });
     }
 
     /**
@@ -35,14 +45,13 @@ export class LoggerManager {
      */
     public getLogger(name?: string): ILogger {
         if (!name) {
-            return this._defaultLogger;
+            return this.defaultLogger;
         }
 
         if (!this._loggers.has(name)) {
-            const logger = new ConsoleLogger({
-                prefix: name,
-                level: this._defaultLevel,
-            });
+            const logger = this._loggerFactory
+                ? this._loggerFactory(name)
+                : new ConsoleLogger({ prefix: name, level: this._defaultLevel });
             this._loggers.set(name, logger);
         }
 
@@ -117,6 +126,24 @@ export class LoggerManager {
             }
         }
     }
+
+    /**
+     * 设置日志器工厂方法
+     * @param factory 日志器工厂方法
+     */
+    public setLoggerFactory(factory: (name?: string) => ILogger): void {
+        if (this._defaultLogger || this._loggers.size > 0) {
+            console.warn(
+                '[LoggerManager] setLoggerFactory 应该在导入 ECS 模块之前调用。' +
+                '已创建的 logger 引用不会被更新。'
+            );
+        }
+
+        this._loggerFactory = factory;
+        // 清空已创建的 logger, 下次获取时使用新工厂方法
+        this._defaultLogger = undefined;
+        this._loggers.clear();
+    }
 }
 
 /**
@@ -154,4 +181,13 @@ export function resetLoggerColors(): void {
  */
 export function setGlobalLogLevel(level: LogLevel): void {
     LoggerManager.getInstance().setGlobalLevel(level);
+}
+
+/**
+ * 设置日志器工厂方法 
+ * 如果希望框架中所有的日志均使用 LoggerFactory 创建，则必须在导入任何模块之前调用!
+ * @param factory 日志器工厂方法
+ */
+export function setLoggerFactory(factory: (name?: string) => ILogger): void {
+    LoggerManager.getInstance().setLoggerFactory(factory);
 }
