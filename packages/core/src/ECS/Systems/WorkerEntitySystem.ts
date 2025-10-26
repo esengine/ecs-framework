@@ -6,6 +6,7 @@ import { createLogger } from '../../Utils/Logger';
 import type { IComponent } from '../../Types';
 import { PlatformManager } from '../../Platform/PlatformManager';
 import type { IPlatformAdapter, PlatformWorker } from '../../Platform/IPlatformAdapter';
+import { getSystemInstanceTypeName } from '../Decorators';
 
 /**
  * Worker处理函数类型
@@ -853,7 +854,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
     }
 
     protected override getLoggerName(): string {
-        return this.constructor.name;
+        return getSystemInstanceTypeName(this);
     }
 }
 
