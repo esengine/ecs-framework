@@ -847,10 +847,10 @@ export abstract class EntitySystem<
 
     /**
      * 获取Logger名称
-     * 子类可以重写此方法来自定义logger名称
+     * 默认返回类的构造函数名称, 子类可以重写此方法来自定义logger名称
      */
     protected getLoggerName(): string {
-        return 'EntitySystem';
+        return this.constructor.name;
     }
 
     /**

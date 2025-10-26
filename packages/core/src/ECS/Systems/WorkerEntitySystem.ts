@@ -853,7 +853,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
     }
 
     protected override getLoggerName(): string {
-        return 'WorkerEntitySystem';
+        return this.constructor.name;
     }
 }
 
