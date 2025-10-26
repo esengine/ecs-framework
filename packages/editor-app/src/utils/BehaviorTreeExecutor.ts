@@ -675,8 +675,11 @@ export class BehaviorTreeExecutor {
             this.addLog(`[${nodeName}] 开始执行`, 'info', nodeId);
         } else if (newStatus === 'success') {
             // 检查是否是空的复合节点
+            // 排除动态加载子节点的节点（如 SubTreeNode），它们的子节点是运行时动态加载的
             const btNode = entity.getComponent(BehaviorTreeNodeComponent);
-            if (btNode && btNode.nodeType === NodeType.Composite && entity.children.length === 0) {
+            const hasDynamicChildren = entity.hasComponent(SubTreeNode);
+            if (btNode && btNode.nodeType === NodeType.Composite &&
+                entity.children.length === 0 && !hasDynamicChildren) {
                 this.addLog(`[${nodeName}] 执行成功（空节点，无子节点）`, 'warning', nodeId);
             } else {
                 this.addLog(`[${nodeName}] 执行成功`, 'success', nodeId);
@@ -791,13 +794,29 @@ export class BehaviorTreeExecutor {
             'info'
         );
 
+        // 检查是否是 SubTreeNode，如果是则显示子树内部结构
+        const subTreeNode = entity.getComponent(SubTreeNode);
+        if (subTreeNode) {
+            const subTreeRoot = subTreeNode.getSubTreeRoot();
+            if (subTreeRoot) {
+                this.addLog(`${indent}   [SubTree] 资产ID: ${subTreeNode.assetId}`, 'info');
+                this.addLog(`${indent}   [SubTree] 内部结构:`, 'info');
+                this.logEntityStructure(subTreeRoot, depth + 1);
+            } else {
+                this.addLog(`${indent}   [SubTree] 资产ID: ${subTreeNode.assetId} (未加载)`, 'info');
+            }
+        }
+
         if (entity.children.length > 0) {
             this.addLog(`${indent}   子节点数: ${entity.children.length}`, 'info');
             entity.children.forEach((child: Entity) => {
                 this.logEntityStructure(child, depth + 1);
             });
         } else if (btNode && (btNode.nodeType === NodeType.Decorator || btNode.nodeType === NodeType.Composite)) {
-            this.addLog(`${indent}   ⚠ 警告: 此节点应该有子节点`, 'warning');
+            // SubTreeNode 是特殊情况，不需要静态子节点
+            if (!subTreeNode) {
+                this.addLog(`${indent}   ⚠ 警告: 此节点应该有子节点`, 'warning');
+            }
         }
     }
 

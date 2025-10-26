@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Core, Scene } from '@esengine/ecs-framework';
+import * as ECSFramework from '@esengine/ecs-framework';
 import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, PropertyMetadataService, LogService, SettingsRegistry, SceneManagerService } from '@esengine/editor-core';
 import { GlobalBlackboardService } from '@esengine/behavior-tree';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
@@ -19,6 +20,7 @@ import { AboutDialog } from './components/AboutDialog';
 import { ErrorDialog } from './components/ErrorDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { BehaviorTreeWindow } from './components/BehaviorTreeWindow';
+import { ToastProvider } from './components/Toast';
 import { Viewport } from './components/Viewport';
 import { MenuBar } from './components/MenuBar';
 import { FlexLayoutDockContainer, FlexDockPanel } from './components/FlexLayoutDockContainer';
@@ -145,7 +147,7 @@ function App() {
       initRef.current = true;
 
       try {
-        (window as any).__ECS_FRAMEWORK__ = await import('@esengine/ecs-framework');
+        (window as any).__ECS_FRAMEWORK__ = ECSFramework;
 
         const editorScene = new Scene();
         Core.setScene(editorScene);
@@ -738,4 +740,12 @@ function App() {
   );
 }
 
-export default App;
+function AppWithToast() {
+  return (
+    <ToastProvider>
+      <App />
+    </ToastProvider>
+  );
+}
+
+export default AppWithToast;

@@ -8,6 +8,9 @@ import { BehaviorNode, BehaviorProperty } from '../../Decorators/BehaviorNodeDec
  *
  * 允许将其他行为树嵌入到当前树中，实现行为树的复用和模块化。
  *
+ * 注意：SubTreeNode 是一个特殊的叶子节点，它不会执行编辑器中静态连接的子节点，
+ * 只会执行从 assetId 动态加载的外部行为树文件。
+ *
  * @example
  * ```typescript
  * const subTree = entity.addComponent(SubTreeNode);
@@ -20,8 +23,9 @@ import { BehaviorNode, BehaviorProperty } from '../../Decorators/BehaviorNodeDec
     category: '组合',
     type: NodeType.Composite,
     icon: 'GitBranch',
-    description: '引用其他行为树作为子树',
-    color: '#FF9800'
+    description: '引用并执行外部行为树文件（不支持静态子节点）',
+    color: '#FF9800',
+    requiresChildren: false
 })
 @ECSComponent('SubTreeNode')
 @Serializable({ version: 1 })
@@ -66,6 +70,20 @@ export class SubTreeNode extends CompositeNodeComponent {
     })
     @Serialize()
     propagateFailure: boolean = true;
+
+    /**
+     * 是否在行为树启动时预加载子树
+     *
+     * - true: 在根节点开始执行前预加载此子树，确保执行时子树已就绪
+     * - false: 运行时异步加载，执行到此节点时才开始加载（可能会有延迟）
+     */
+    @BehaviorProperty({
+        label: '预加载',
+        type: 'boolean',
+        description: '在行为树启动时预加载子树，避免运行时加载延迟'
+    })
+    @Serialize()
+    preload: boolean = true;
 
     /**
      * 子树的根实体（运行时）
@@ -126,6 +144,15 @@ export class SubTreeNode extends CompositeNodeComponent {
      */
     reset(): void {
         this.subTreeRoot = undefined;
+        this.subTreeCompleted = false;
+        this.subTreeResult = TaskStatus.Invalid;
+    }
+
+    /**
+     * 重置完成状态（用于复用预加载的子树）
+     * 保留子树根引用，只重置完成标记
+     */
+    resetCompletionState(): void {
         this.subTreeCompleted = false;
         this.subTreeResult = TaskStatus.Invalid;
     }

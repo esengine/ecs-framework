@@ -20,6 +20,7 @@ export * from './Components/DecoratorNodeComponent';
 export * from './Components/ActiveNode';
 export * from './Components/PropertyBindings';
 export * from './Components/LogOutput';
+export * from './Components/AssetMetadata';
 
 // 动作组件
 export * from './Components/Actions/WaitAction';
@@ -67,6 +68,8 @@ export * from './Services/GlobalBlackboardService';
 export * from './Services/WorkspaceService';
 export * from './Services/IAssetLoader';
 export * from './Services/FileSystemAssetLoader';
+export * from './Services/AssetLoadingManager';
+export * from './Services/AssetLoadingTypes';
 
 // 插件
 export * from './BehaviorTreePlugin';

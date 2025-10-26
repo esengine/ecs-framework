@@ -56,6 +56,12 @@ export interface InstantiateOptions {
      * 黑板变量覆盖（用于运行时动态设置初始值）
      */
     blackboardOverrides?: Record<string, any>;
+
+    /**
+     * 是否作为子树实例化
+     * 如果为 true，根节点不会添加 RootNode 组件，避免触发预加载逻辑
+     */
+    asSubTree?: boolean;
 }
 
 /**
@@ -107,7 +113,8 @@ export class BehaviorTreeAssetLoader {
             nodeMap,
             entityMap,
             scene,
-            options.namePrefix
+            options.namePrefix,
+            options.asSubTree
         );
 
         // 添加黑板
@@ -131,7 +138,9 @@ export class BehaviorTreeAssetLoader {
         nodeMap: Map<string, BehaviorTreeNodeData>,
         entityMap: Map<string, Entity>,
         scene: IScene,
-        namePrefix?: string
+        namePrefix?: string,
+        asSubTree?: boolean,
+        isRootOfSubTree: boolean = true
     ): Entity {
         const entityName = namePrefix ? `${namePrefix}_${nodeData.name}` : nodeData.name;
         const entity = scene.createEntity(entityName);
@@ -144,8 +153,8 @@ export class BehaviorTreeAssetLoader {
         btNode.nodeType = nodeData.nodeType;
         btNode.nodeName = nodeData.name;
 
-        // 添加节点特定组件
-        this.addNodeComponents(entity, nodeData);
+        // 添加节点特定组件（如果是子树的根节点，跳过 RootNode）
+        this.addNodeComponents(entity, nodeData, asSubTree && isRootOfSubTree);
 
         // 递归创建子节点
         for (const childId of nodeData.children) {
@@ -160,7 +169,9 @@ export class BehaviorTreeAssetLoader {
                 nodeMap,
                 entityMap,
                 scene,
-                namePrefix
+                namePrefix,
+                asSubTree,
+                false  // 子节点不是根节点
             );
             entity.addChild(childEntity);
         }
@@ -170,13 +181,24 @@ export class BehaviorTreeAssetLoader {
 
     /**
      * 添加节点特定组件
+     * @param skipRootNode 是否跳过添加 RootNode 组件（用于子树）
      */
-    private static addNodeComponents(entity: Entity, nodeData: BehaviorTreeNodeData): void {
+    private static addNodeComponents(entity: Entity, nodeData: BehaviorTreeNodeData, skipRootNode: boolean = false): void {
         const { nodeType, data, name } = nodeData;
+
+        logger.debug(`addNodeComponents: name=${name}, data.nodeType=${data.nodeType}, skipRootNode=${skipRootNode}`);
 
         // 根据节点类型和名称添加对应组件
         if (data.nodeType === 'root' || name === '根节点' || name === 'Root') {
-            entity.addComponent(new RootNode());
+            if (!skipRootNode) {
+                logger.debug(`添加 RootNode 组件: ${name}`);
+                entity.addComponent(new RootNode());
+            } else {
+                // 子树的根节点，使用第一个子节点的类型（通常是 SequenceNode）
+                logger.debug(`跳过为子树根节点添加 RootNode: ${name}`);
+                // 添加一个默认的 SequenceNode 作为子树的根
+                this.addCompositeComponent(entity, '序列', data);
+            }
         }
         // 组合节点
         else if (nodeType === NodeType.Composite) {

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { NodeTemplate, EditorFormatConverter, BehaviorTreeAssetSerializer, NodeType } from '@esengine/behavior-tree';
+import { NodeTemplate, NodeTemplates, EditorFormatConverter, BehaviorTreeAssetSerializer, NodeType } from '@esengine/behavior-tree';
 
 interface BehaviorTreeNode {
     id: string;
@@ -351,8 +351,37 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     importFromJSON: (json: string) => {
         const data = JSON.parse(json);
         const blackboard = data.blackboard || {};
+
+        // 重新关联最新模板：根据 className 从模板库查找
+        const loadedNodes: BehaviorTreeNode[] = (data.nodes || []).map((node: any) => {
+            // 如果是根节点，使用根节点模板
+            if (node.id === ROOT_NODE_ID) {
+                return {
+                    ...node,
+                    template: createRootNodeTemplate()
+                };
+            }
+
+            // 查找最新模板
+            const className = node.template?.className;
+            if (className) {
+                const allTemplates = NodeTemplates.getAllTemplates();
+                const latestTemplate = allTemplates.find(t => t.className === className);
+
+                if (latestTemplate) {
+                    return {
+                        ...node,
+                        template: latestTemplate  // 使用最新模板
+                    };
+                }
+            }
+
+            // 如果找不到，保留旧模板（兼容性）
+            return node;
+        });
+
         set({
-            nodes: data.nodes || [],
+            nodes: loadedNodes,
             connections: data.connections || [],
             blackboardVariables: blackboard,
             canvasOffset: data.canvasState?.offset || { x: 0, y: 0 },

@@ -38,6 +38,7 @@ export interface NodeTemplate {
     description: string;
     color?: string;
     className?: string;
+    requiresChildren?: boolean;
     defaultConfig: Partial<NodeDataJSON>;
     properties: PropertyDefinition[];
 }

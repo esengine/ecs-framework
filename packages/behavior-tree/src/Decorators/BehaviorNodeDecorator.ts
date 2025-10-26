@@ -12,6 +12,13 @@ export interface BehaviorNodeMetadata {
     description: string;
     color?: string;
     className?: string;
+    /**
+     * 是否需要子节点
+     * - true: 节点需要子节点（如 SequenceNode、DecoratorNode）
+     * - false: 节点不需要子节点（如 ActionNode、SubTreeNode）
+     * - undefined: 根据节点类型自动判断
+     */
+    requiresChildren?: boolean;
 }
 
 /**
@@ -166,6 +173,7 @@ export function getRegisteredNodeTemplates(): NodeTemplate[] {
             description: metadata.description,
             color: metadata.color,
             className: metadata.className,
+            requiresChildren: metadata.requiresChildren,
             defaultConfig,
             properties
         };

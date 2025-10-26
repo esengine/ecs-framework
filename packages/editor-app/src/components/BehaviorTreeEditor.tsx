@@ -13,6 +13,7 @@ import { ask } from '@tauri-apps/plugin-dialog';
 import { useBehaviorTreeStore, BehaviorTreeNode, Connection } from '../stores/behaviorTreeStore';
 import { BehaviorTreeExecutor, ExecutionStatus, ExecutionLog } from '../utils/BehaviorTreeExecutor';
 import { BehaviorTreeExecutionPanel } from './BehaviorTreeExecutionPanel';
+import { useToast } from './Toast';
 import '../styles/BehaviorTreeNode.css';
 
 type NodeExecutionStatus = 'idle' | 'running' | 'success' | 'failure';
@@ -66,6 +67,58 @@ function generateUniqueId(): string {
 }
 
 /**
+ * 推断 JavaScript 值的类型
+ */
+function inferValueType(value: any): string {
+    if (value === null || value === undefined) {
+        return 'any';
+    }
+    const jsType = typeof value;
+    if (jsType === 'object') {
+        if (Array.isArray(value)) {
+            return 'array';
+        }
+        return 'object';
+    }
+    return jsType;
+}
+
+/**
+ * 检查两个类型是否兼容
+ * @param sourceType 源类型（黑板变量的实际类型）
+ * @param targetType 目标类型（节点属性期望的类型）
+ * @returns 是否兼容
+ */
+function areTypesCompatible(sourceType: string, targetType: string): boolean {
+    // 完全匹配
+    if (sourceType === targetType) {
+        return true;
+    }
+
+    // any 类型兼容一切
+    if (targetType === 'any' || targetType === 'blackboard' || targetType === 'variable') {
+        return true;
+    }
+
+    // number 可以转换为 string
+    if (sourceType === 'number' && targetType === 'string') {
+        return true;
+    }
+
+    // boolean 可以转换为 string
+    if (sourceType === 'boolean' && targetType === 'string') {
+        return true;
+    }
+
+    // string 可以转换为 select（下拉选择）
+    if (sourceType === 'string' && targetType === 'select') {
+        return true;
+    }
+
+    return false;
+}
+
+/**
  * 行为树编辑器主组件
  *
  * 提供可视化的行为树编辑画布
@@ -78,6 +131,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     blackboardVariables = {},
     projectPath = null
 }) => {
+    const { showToast } = useToast();
+
     // 创建固定的 Root 节点
     const rootNodeTemplate: NodeTemplate = {
         type: NodeType.Composite,
@@ -603,7 +658,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
         // 禁止连接到自己
         if (connectingFrom === nodeId) {
-            alert('不能将节点连接到自己');
+            showToast('不能将节点连接到自己', 'warning');
             clearConnecting();
             return;
         }
@@ -643,9 +698,43 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             );
 
             if (existingConnection) {
-                alert('该连接已存在');
+                showToast('该连接已存在', 'warning');
                 clearConnecting();
                 return;
+            }
+
+            // 类型兼容性检查
+            const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === actualFrom);
+            const toNode = nodes.find((n: BehaviorTreeNode) => n.id === actualTo);
+
+            if (fromNode && toNode && actualFromProperty && actualToProperty) {
+                const isFromBlackboard = fromNode.data.nodeType === 'blackboard-variable';
+
+                if (isFromBlackboard) {
+                    // 从黑板变量连接到节点属性
+                    const variableName = fromNode.data.variableName;
+                    const variableValue = blackboardVariables[variableName];
+                    const sourceType = inferValueType(variableValue);
+
+                    // 获取目标属性的期望类型
+                    const targetProperty = toNode.template.properties.find(
+                        (p: PropertyDefinition) => p.name === actualToProperty
+                    );
+
+                    if (targetProperty) {
+                        const targetType = targetProperty.type;
+
+                        if (!areTypesCompatible(sourceType, targetType)) {
+                            showToast(
+                                `类型不兼容: 黑板变量 "${variableName}" (${sourceType}) 无法连接到属性 "${targetProperty.label}" (${targetType})`,
+                                'error',
+                                5000
+                            );
+                            clearConnecting();
+                            return;
+                        }
+                    }
+                }
             }
 
             setConnections([...connections, {
@@ -661,7 +750,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             if (actualFrom === ROOT_NODE_ID) {
                 const rootNode = nodes.find((n: BehaviorTreeNode) => n.id === ROOT_NODE_ID);
                 if (rootNode && rootNode.children.length > 0) {
-                    alert('根节点只能连接一个子节点');
+                    showToast('根节点只能连接一个子节点', 'warning');
                     clearConnecting();
                     return;
                 }
@@ -675,7 +764,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             );
 
             if (existingConnection) {
-                alert('该连接已存在');
+                showToast('该连接已存在', 'warning');
                 clearConnecting();
                 return;
             }
@@ -1700,7 +1789,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                         </div>
                                     )}
                                     {/* 空节点警告图标 */}
-                                    {!isRoot && !isUncommitted && node.template.type === 'composite' && !nodes.some(n =>
+                                    {!isRoot && !isUncommitted && node.template.type === 'composite' &&
+                                     (node.template.requiresChildren === undefined || node.template.requiresChildren === true) &&
+                                     !nodes.some(n =>
                                         connections.some(c => c.from === node.id && c.to === n.id)
                                     ) && (
                                         <div
@@ -1784,8 +1875,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                     />
                                 )}
 
-                                {/* 输出端口（底部）- 只有组合节点和装饰器节点才显示 */}
-                                {(node.template.type === 'composite' || node.template.type === 'decorator') && (
+                                {/* 输出端口（底部）- 只有组合节点和装饰器节点才显示，但不需要子节点的节点除外 */}
+                                {(node.template.type === 'composite' || node.template.type === 'decorator') &&
+                                 (node.template.requiresChildren === undefined || node.template.requiresChildren === true) && (
                                     <div
                                         data-port="true"
                                         data-node-id={node.id}

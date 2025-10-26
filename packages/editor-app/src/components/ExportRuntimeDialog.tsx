@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, FileJson, Binary, Info, File, FolderTree, FolderOpen, Code } from 'lucide-react';
+import { open } from '@tauri-apps/plugin-dialog';
 import '../styles/ExportRuntimeDialog.css';
 
 interface ExportRuntimeDialogProps {
@@ -41,6 +42,21 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
     const [isExporting, setIsExporting] = useState(false);
     const [exportProgress, setExportProgress] = useState(0);
     const [exportMessage, setExportMessage] = useState('');
+
+    // 从 localStorage 加载上次的路径
+    useEffect(() => {
+        if (isOpen && projectPath) {
+            const savedAssetPath = localStorage.getItem('export-asset-path');
+            const savedTypePath = localStorage.getItem('export-type-path');
+
+            if (savedAssetPath) {
+                setAssetOutputPath(savedAssetPath);
+            }
+            if (savedTypePath) {
+                setTypeOutputPath(savedTypePath);
+            }
+        }
+    }, [isOpen, projectPath]);
 
     useEffect(() => {
         if (isOpen) {
@@ -97,15 +113,16 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
 
     const handleBrowseAssetPath = async () => {
         try {
-            const { open } = await import('@tauri-apps/plugin-dialog');
             const selected = await open({
                 directory: true,
                 multiple: false,
                 title: '选择资产输出目录',
-                defaultPath: projectPath
+                defaultPath: assetOutputPath || projectPath
             });
             if (selected) {
-                setAssetOutputPath(selected as string);
+                const path = selected as string;
+                setAssetOutputPath(path);
+                localStorage.setItem('export-asset-path', path);
             }
         } catch (error) {
             console.error('Failed to browse asset path:', error);
@@ -114,15 +131,16 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
 
     const handleBrowseTypePath = async () => {
         try {
-            const { open } = await import('@tauri-apps/plugin-dialog');
             const selected = await open({
                 directory: true,
                 multiple: false,
                 title: '选择类型定义输出目录',
-                defaultPath: projectPath
+                defaultPath: typeOutputPath || projectPath
             });
             if (selected) {
-                setTypeOutputPath(selected as string);
+                const path = selected as string;
+                setTypeOutputPath(path);
+                localStorage.setItem('export-type-path', path);
             }
         } catch (error) {
             console.error('Failed to browse type path:', error);
@@ -149,6 +167,10 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
             setExportMessage('错误：没有可导出的当前文件');
             return;
         }
+
+        // 保存路径到 localStorage
+        localStorage.setItem('export-asset-path', assetOutputPath);
+        localStorage.setItem('export-type-path', typeOutputPath);
 
         setIsExporting(true);
         setExportProgress(0);

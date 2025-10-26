@@ -2,6 +2,7 @@ import { encode, decode } from '@msgpack/msgpack';
 import { createLogger } from '@esengine/ecs-framework';
 import type { BehaviorTreeAsset } from './BehaviorTreeAsset';
 import { BehaviorTreeAssetValidator } from './BehaviorTreeAsset';
+import { EditorFormatConverter, type EditorFormat } from './EditorFormatConverter';
 
 const logger = createLogger('BehaviorTreeAssetSerializer');
 
@@ -179,9 +180,24 @@ export class BehaviorTreeAssetSerializer {
      */
     private static deserializeFromJSON(json: string): BehaviorTreeAsset {
         try {
-            const asset = JSON.parse(json) as BehaviorTreeAsset;
-            logger.info(`已从JSON反序列化: ${asset.nodes.length} 个节点`);
-            return asset;
+            const data = JSON.parse(json);
+
+            // 检测是否是编辑器格式（EditorFormat）
+            // 编辑器格式有 nodes/connections/blackboard，但没有 rootNodeId
+            // 运行时资产格式有 rootNodeId
+            const isEditorFormat = !data.rootNodeId && data.nodes && data.connections;
+
+            if (isEditorFormat) {
+                logger.info('检测到编辑器格式，正在转换为运行时资产格式...');
+                const editorData = data as EditorFormat;
+                const asset = EditorFormatConverter.toAsset(editorData);
+                logger.info(`已从编辑器格式转换: ${asset.nodes.length} 个节点`);
+                return asset;
+            } else {
+                const asset = data as BehaviorTreeAsset;
+                logger.info(`已从运行时资产格式反序列化: ${asset.nodes.length} 个节点`);
+                return asset;
+            }
         } catch (error) {
             throw new Error(`JSON解析失败: ${error}`);
         }
