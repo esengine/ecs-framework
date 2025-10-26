@@ -214,4 +214,11 @@ describe('EntitySystem', () => {
         });
     });
 
+    describe('日志器命名', () => {
+        it('应该使用类名作为日志器名称', () => {
+            const loggerName = (system as any).getLoggerName();
+            expect(loggerName).toBe('ConcreteEntitySystem');
+        });
+    });
+
 });

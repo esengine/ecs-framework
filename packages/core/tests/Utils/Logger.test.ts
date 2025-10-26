@@ -153,24 +153,125 @@ describe('Logger', () => {
         });
     });
 
+    describe('LoggerManager - 自定义工厂', () => {
+        let manager: LoggerManager;
+
+        beforeEach(() => {
+            manager = LoggerManager.getInstance();
+        });
+
+        afterEach(() => {
+            // 重置工厂，恢复默认 ConsoleLogger
+            (manager as any)._loggerFactory = undefined;
+            (manager as any)._defaultLogger = undefined;
+            (manager as any)._loggers.clear();
+        });
+
+        it('应该支持设置自定义日志器工厂', () => {
+            const mockLogger = {
+                debug: jest.fn(),
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+                fatal: jest.fn()
+            };
+
+            manager.setLoggerFactory(() => mockLogger);
+            const logger = manager.getLogger('CustomLogger');
+
+            expect(logger).toBe(mockLogger);
+        });
+
+        it('应该将日志器名称传递给工厂方法', () => {
+            const factorySpy = jest.fn(() => ({
+                debug: jest.fn(),
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+                fatal: jest.fn()
+            }));
+
+            manager.setLoggerFactory(factorySpy);
+            manager.getLogger('TestLogger');
+
+            expect(factorySpy).toHaveBeenCalledWith('TestLogger');
+        });
+
+        it('应该在设置工厂后清空已创建的日志器', () => {
+            const logger1 = manager.getLogger('TestLogger');
+
+            manager.setLoggerFactory(() => ({
+                debug: jest.fn(),
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+                fatal: jest.fn()
+            }));
+
+            const logger2 = manager.getLogger('TestLogger');
+            expect(logger2).not.toBe(logger1);
+        });
+
+        it('应该延迟创建默认日志器直到首次使用', () => {
+            const factorySpy = jest.fn(() => ({
+                debug: jest.fn(),
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+                fatal: jest.fn()
+            }));
+
+            manager.setLoggerFactory(factorySpy);
+            // 此时不应该调用工厂
+            expect(factorySpy).not.toHaveBeenCalled();
+
+            // 获取默认日志器时才调用
+            manager.getLogger();
+            expect(factorySpy).toHaveBeenCalled();
+        });
+
+        it('应该在已创建日志器后设置工厂时发出警告', () => {
+            const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+            // 先创建一个日志器
+            manager.getLogger('ExistingLogger');
+
+            // 再设置工厂
+            manager.setLoggerFactory(() => ({
+                debug: jest.fn(),
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+                fatal: jest.fn()
+            }));
+
+            expect(warnSpy).toHaveBeenCalledWith(
+                expect.stringContaining('setLoggerFactory 应该在导入 ECS 模块之前调用')
+            );
+
+            warnSpy.mockRestore();
+        });
+    });
+
     describe('全局颜色配置', () => {
         let consoleSpy: jest.SpyInstance;
-        
+
         beforeEach(() => {
             consoleSpy = jest.spyOn(console, 'info').mockImplementation();
         });
-        
+
         afterEach(() => {
             consoleSpy.mockRestore();
             resetLoggerColors();
         });
 
         it('应该支持全局设置颜色配置', () => {
+            const logger = createLogger('TestLogger');
+
             setLoggerColors({
                 info: Colors.MAGENTA
             });
 
-            const logger = createLogger('TestLogger');
             logger.info('测试消息');
 
             const call = consoleSpy.mock.calls[0][0];
@@ -179,13 +280,14 @@ describe('Logger', () => {
         });
 
         it('应该支持重置颜色配置为默认值', () => {
+            const logger = createLogger('TestLogger');
+
             setLoggerColors({
                 info: Colors.MAGENTA
             });
 
             resetLoggerColors();
 
-            const logger = createLogger('TestLogger');
             logger.info('测试消息');
 
             const call = consoleSpy.mock.calls[0][0];

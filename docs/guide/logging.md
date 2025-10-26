@@ -238,6 +238,50 @@ class HierarchicalLoggingExample {
 }
 ```
 
+### 集成第三方日志库
+
+通过 `setLoggerFactory` 可以将业务代码中的日志器替换为第三方日志库（如 winston、pino、nestjs Logger 等）。
+
+**说明**: 目前框架内部日志仍使用 ConsoleLogger，自定义日志器仅影响业务代码（如 EntitySystem）。
+
+#### 基本用法
+
+```typescript
+import { setLoggerFactory } from '@esengine/ecs-framework';
+
+setLoggerFactory((name?: string) => {
+  // 返回实现 ILogger 接口的日志器实例
+  return yourLogger;
+});
+```
+
+#### 使用示例
+
+```typescript
+// 集成 Winston
+setLoggerFactory((name?: string) => winston.createLogger({ /* ... */ }));
+
+// 集成 Pino
+setLoggerFactory((name?: string) => pino({ name }));
+
+// 集成 NestJS Logger
+setLoggerFactory((name?: string) => new Logger(name));
+```
+
+#### EntitySystem 中的使用
+
+EntitySystem 会自动使用类名创建日志器:
+
+```typescript
+class PlayerMovementSystem extends EntitySystem {
+  // this.logger 自动使用 'PlayerMovementSystem' 作为名称
+
+  protected process(entities: readonly Entity[]): void {
+    this.logger.info(`处理 ${entities.length} 个玩家实体`);
+  }
+}
+```
+
 ### 自定义输出
 
 ```typescript
