@@ -12,6 +12,8 @@ export class LoggerManager {
     private _defaultLevel = LogLevel.Info;
     private _loggerFactory?: (name?: string) => ILogger;
 
+    private constructor() {}
+
     private get defaultLogger(): ILogger {
         if (!this._defaultLogger) {
             this._defaultLogger = this.createDefaultLogger();
@@ -185,7 +187,6 @@ export function setGlobalLogLevel(level: LogLevel): void {
 
 /**
  * 设置日志器工厂方法 
- * 如果希望框架中所有的日志均使用 LoggerFactory 创建，则必须在导入任何模块之前调用!
  * @param factory 日志器工厂方法
  */
 export function setLoggerFactory(factory: (name?: string) => ILogger): void {
