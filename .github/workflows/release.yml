@@ -10,6 +10,7 @@ on:
         options:
           - core
           - behavior-tree
+          - editor-core
       version_type:
         description: '版本更新类型'
         required: true
@@ -51,7 +52,7 @@ jobs:
         run: npm ci
 
       - name: Build core package (if needed)
-        if: ${{ github.event.inputs.package == 'behavior-tree' }}
+        if: ${{ github.event.inputs.package == 'behavior-tree' || github.event.inputs.package == 'editor-core' }}
         run: |
           cd packages/core
           npm run build
