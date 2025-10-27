@@ -73,7 +73,8 @@ jobs:
           path: |
             packages/core/bin
             packages/editor-core/dist
-          key: ${{ runner.os }}-ts-build-${{ hashFiles('packages/core/src/**', 'packages/editor-core/src/**') }}
+            packages/behavior-tree/bin
+          key: ${{ runner.os }}-ts-build-${{ hashFiles('packages/core/src/**', 'packages/editor-core/src/**', 'packages/behavior-tree/src/**') }}
           restore-keys: |
             ${{ runner.os }}-ts-build-
 
@@ -83,6 +84,11 @@ jobs:
       - name: Build editor-core package
         run: |
           cd packages/editor-core
+          npm run build
+
+      - name: Build behavior-tree package
+        run: |
+          cd packages/behavior-tree
           npm run build
 
       - name: Build Tauri app
