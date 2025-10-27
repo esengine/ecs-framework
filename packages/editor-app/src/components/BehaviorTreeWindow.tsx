@@ -604,14 +604,14 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                 includeHelpers: true
             });
 
-            const tsFilePath = `${outputPath}/${assetId}.d.ts`;
+            const tsFilePath = `${outputPath}/${assetId}.ts`;
             await invoke('create_directory', { path: outputPath });
             await invoke('write_file_content', {
                 path: tsFilePath,
                 content: tsCode
             });
 
-            logger.info(`TypeScript 类型定义已生成: ${assetId}.d.ts`);
+            logger.info(`TypeScript 类型定义已生成: ${assetId}.ts`);
         } catch (error) {
             logger.error(`生成 TypeScript 类型定义失败: ${assetId}`, error);
         }
