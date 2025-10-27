@@ -66,7 +66,7 @@ jobs:
         run: |
           cd packages/${{ github.event.inputs.package }}
           if [ "${{ github.event.inputs.version_type }}" = "custom" ]; then
-            npm version ${{ github.event.inputs.custom_version }} --no-git-tag-version
+            npm version ${{ github.event.inputs.custom_version }} --no-git-tag-version --allow-same-version
           else
             npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
           fi
