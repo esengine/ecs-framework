@@ -85,7 +85,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd packages/${{ github.event.inputs.package }}/dist
-          npm publish
+          npm publish --access public
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
