@@ -83,6 +83,7 @@ function generatePackageJson() {
         bugs: sourcePackage.bugs,
         homepage: sourcePackage.homepage,
         peerDependencies: sourcePackage.peerDependencies,
+        publishConfig: sourcePackage.publishConfig,
         engines: {
             node: '>=16.0.0'
         },
