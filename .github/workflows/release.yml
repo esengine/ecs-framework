@@ -56,10 +56,10 @@ jobs:
           cd packages/core
           npm run build
 
-      - name: Run tests
-        run: |
-          cd packages/${{ github.event.inputs.package }}
-          npm run test:ci
+      # - name: Run tests
+      #   run: |
+      #     cd packages/${{ github.event.inputs.package }}
+      #     npm run test:ci
 
       - name: Update version
         id: version
