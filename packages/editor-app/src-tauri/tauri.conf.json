@@ -46,7 +46,8 @@
         "decorations": true,
         "transparent": false,
         "center": true,
-        "skipTaskbar": false
+        "skipTaskbar": false,
+        "dragDropEnabled": false
       }
     ],
     "security": {
@@ -72,8 +73,22 @@
             "updater:default",
             "updater:allow-check",
             "updater:allow-download",
-            "updater:allow-install"
-          ]
+            "updater:allow-install",
+            "fs:default",
+            "fs:allow-read-text-file",
+            "fs:allow-write-text-file",
+            "fs:allow-read-dir",
+            "fs:allow-exists"
+          ],
+          "scope": {
+            "allow": [
+              "$HOME/**",
+              "$APPDATA/**",
+              "$DESKTOP/**",
+              "$DOCUMENT/**",
+              "$DOWNLOAD/**"
+            ]
+          }
         }
       ]
     }
@@ -81,6 +96,9 @@
   "plugins": {
     "shell": {
       "open": true
+    },
+    "fs": {
+      "requireLiteralLeadingDot": false
     },
     "updater": {
       "active": true,

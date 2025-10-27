@@ -649,20 +649,47 @@ export class Entity {
 
     /**
      * 获取所有指定类型的组件
-     * 
+     *
      * @param type - 组件类型
      * @returns 组件实例数组
      */
     public getComponents<T extends Component>(type: ComponentType<T>): T[] {
         const result: T[] = [];
-        
+
         for (const component of this.components) {
             if (component instanceof type) {
                 result.push(component as T);
             }
         }
-        
+
         return result;
+    }
+
+    /**
+     * 获取指定基类的组件（支持继承查找）
+     *
+     * 与 getComponent() 不同，此方法使用 instanceof 检查，支持子类查找。
+     * 性能比位掩码查询稍慢，但支持继承层次结构。
+     *
+     * @param baseType - 组件基类类型
+     * @returns 第一个匹配的组件实例，如果不存在则返回 null
+     *
+     * @example
+     * ```typescript
+     * // 查找 CompositeNodeComponent 或其子类
+     * const composite = entity.getComponentByType(CompositeNodeComponent);
+     * if (composite) {
+     *     // composite 可能是 SequenceNode, SelectorNode 等
+     * }
+     * ```
+     */
+    public getComponentByType<T extends Component>(baseType: ComponentType<T>): T | null {
+        for (const component of this.components) {
+            if (component instanceof baseType) {
+                return component as T;
+            }
+        }
+        return null;
     }
 
     /**

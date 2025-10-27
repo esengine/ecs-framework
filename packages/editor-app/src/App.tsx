@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Core, Scene } from '@esengine/ecs-framework';
+import * as ECSFramework from '@esengine/ecs-framework';
 import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, PropertyMetadataService, LogService, SettingsRegistry, SceneManagerService } from '@esengine/editor-core';
+import { GlobalBlackboardService } from '@esengine/behavior-tree';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
 import { ProfilerPlugin } from './plugins/ProfilerPlugin';
 import { EditorAppearancePlugin } from './plugins/EditorAppearancePlugin';
+import { BehaviorTreePlugin } from './plugins/BehaviorTreePlugin';
 import { StartupPage } from './components/StartupPage';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { EntityInspector } from './components/EntityInspector';
@@ -16,9 +19,11 @@ import { SettingsWindow } from './components/SettingsWindow';
 import { AboutDialog } from './components/AboutDialog';
 import { ErrorDialog } from './components/ErrorDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
+import { BehaviorTreeWindow } from './components/BehaviorTreeWindow';
+import { ToastProvider } from './components/Toast';
 import { Viewport } from './components/Viewport';
 import { MenuBar } from './components/MenuBar';
-import { DockContainer, DockablePanel } from './components/DockContainer';
+import { FlexLayoutDockContainer, FlexDockPanel } from './components/FlexLayoutDockContainer';
 import { TauriAPI } from './api/tauri';
 import { TauriFileAPI } from './adapters/TauriFileAPI';
 import { SettingsService } from './services/SettingsService';
@@ -34,6 +39,9 @@ const localeService = new LocaleService();
 localeService.registerTranslations('en', en);
 localeService.registerTranslations('zh', zh);
 Core.services.registerInstance(LocaleService, localeService);
+
+// 注册全局黑板服务
+Core.services.registerSingleton(GlobalBlackboardService);
 
 function App() {
   const initRef = useRef(false);
@@ -51,12 +59,14 @@ function App() {
   const [sceneManager, setSceneManager] = useState<SceneManagerService | null>(null);
   const { t, locale, changeLocale } = useLocale();
   const [status, setStatus] = useState(t('header.status.initializing'));
-  const [panels, setPanels] = useState<DockablePanel[]>([]);
+  const [panels, setPanels] = useState<FlexDockPanel[]>([]);
   const [showPluginManager, setShowPluginManager] = useState(false);
   const [showProfiler, setShowProfiler] = useState(false);
   const [showPortManager, setShowPortManager] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showBehaviorTreeEditor, setShowBehaviorTreeEditor] = useState(false);
+  const [behaviorTreeFilePath, setBehaviorTreeFilePath] = useState<string | null>(null);
   const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
   const [isRemoteConnected, setIsRemoteConnected] = useState(false);
   const [isProfilerMode, setIsProfilerMode] = useState(false);
@@ -137,7 +147,7 @@ function App() {
       initRef.current = true;
 
       try {
-        (window as any).__ECS_FRAMEWORK__ = await import('@esengine/ecs-framework');
+        (window as any).__ECS_FRAMEWORK__ = ECSFramework;
 
         const editorScene = new Scene();
         Core.setScene(editorScene);
@@ -180,12 +190,15 @@ function App() {
         await pluginMgr.installEditor(new SceneInspectorPlugin());
         await pluginMgr.installEditor(new ProfilerPlugin());
         await pluginMgr.installEditor(new EditorAppearancePlugin());
+        await pluginMgr.installEditor(new BehaviorTreePlugin());
 
         messageHub.subscribe('ui:openWindow', (data: any) => {
           if (data.windowId === 'profiler') {
             setShowProfiler(true);
           } else if (data.windowId === 'pluginManager') {
             setShowPluginManager(true);
+          } else if (data.windowId === 'behavior-tree-editor') {
+            setShowBehaviorTreeEditor(true);
           }
         });
 
@@ -420,6 +433,11 @@ function App() {
     }
   }, [sceneManager, locale]);
 
+  const handleOpenBehaviorTree = useCallback((btreePath: string) => {
+    setBehaviorTreeFilePath(btreePath);
+    setShowBehaviorTreeEditor(true);
+  }, []);
+
   const handleSaveScene = async () => {
     if (!sceneManager) {
       console.error('SceneManagerService not available');
@@ -498,28 +516,25 @@ function App() {
 
   useEffect(() => {
     if (projectLoaded && entityStore && messageHub && logService && uiRegistry && pluginManager) {
-      let corePanels: DockablePanel[];
+      let corePanels: FlexDockPanel[];
 
       if (isProfilerMode) {
         corePanels = [
           {
             id: 'scene-hierarchy',
             title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
-            position: 'left',
             content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />,
             closable: false
           },
           {
             id: 'inspector',
             title: locale === 'zh' ? '检视器' : 'Inspector',
-            position: 'right',
             content: <EntityInspector entityStore={entityStore} messageHub={messageHub} />,
             closable: false
           },
           {
             id: 'console',
             title: locale === 'zh' ? '控制台' : 'Console',
-            position: 'bottom',
             content: <ConsolePanel logService={logService} />,
             closable: false
           }
@@ -529,35 +544,24 @@ function App() {
           {
             id: 'scene-hierarchy',
             title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
-            position: 'left',
             content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />,
             closable: false
           },
           {
             id: 'inspector',
             title: locale === 'zh' ? '检视器' : 'Inspector',
-            position: 'right',
             content: <EntityInspector entityStore={entityStore} messageHub={messageHub} />,
-            closable: false
-          },
-          {
-            id: 'viewport',
-            title: locale === 'zh' ? '视口' : 'Viewport',
-            position: 'center',
-            content: <Viewport locale={locale} />,
             closable: false
           },
           {
             id: 'assets',
             title: locale === 'zh' ? '资产' : 'Assets',
-            position: 'bottom',
-            content: <AssetBrowser projectPath={currentProjectPath} locale={locale} onOpenScene={handleOpenSceneByPath} />,
+            content: <AssetBrowser projectPath={currentProjectPath} locale={locale} onOpenScene={handleOpenSceneByPath} onOpenBehaviorTree={handleOpenBehaviorTree} />,
             closable: false
           },
           {
             id: 'console',
             title: locale === 'zh' ? '控制台' : 'Console',
-            position: 'bottom',
             content: <ConsolePanel logService={logService} />,
             closable: false
           }
@@ -568,7 +572,7 @@ function App() {
         .filter(p => p.enabled)
         .map(p => p.name);
 
-      const pluginPanels: DockablePanel[] = uiRegistry.getAllPanels()
+      const pluginPanels: FlexDockPanel[] = uiRegistry.getAllPanels()
         .filter(panelDesc => {
           if (!panelDesc.component) {
             return false;
@@ -587,7 +591,6 @@ function App() {
           return {
             id: panelDesc.id,
             title: (panelDesc as any).titleZh && locale === 'zh' ? (panelDesc as any).titleZh : panelDesc.title,
-            position: panelDesc.position as any,
             content: <Component />,
             closable: panelDesc.closable ?? true
           };
@@ -596,15 +599,8 @@ function App() {
       console.log('[App] Loading plugin panels:', pluginPanels);
       setPanels([...corePanels, ...pluginPanels]);
     }
-  }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode, handleOpenSceneByPath]);
+  }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode, handleOpenSceneByPath, handleOpenBehaviorTree]);
 
-  const handlePanelMove = (panelId: string, newPosition: any) => {
-    setPanels(prevPanels =>
-      prevPanels.map(panel =>
-        panel.id === panelId ? { ...panel, position: newPosition } : panel
-      )
-    );
-  };
 
   if (!initialized) {
     return (
@@ -689,7 +685,7 @@ function App() {
       </div>
 
       <div className="editor-content">
-        <DockContainer panels={panels} onPanelMove={handlePanelMove} />
+        <FlexLayoutDockContainer panels={panels} />
       </div>
 
       <div className="editor-footer">
@@ -721,6 +717,18 @@ function App() {
         <AboutDialog onClose={() => setShowAbout(false)} locale={locale} />
       )}
 
+      {showBehaviorTreeEditor && (
+        <BehaviorTreeWindow
+          isOpen={showBehaviorTreeEditor}
+          onClose={() => {
+            setShowBehaviorTreeEditor(false);
+            setBehaviorTreeFilePath(null);
+          }}
+          filePath={behaviorTreeFilePath}
+          projectPath={currentProjectPath}
+        />
+      )}
+
       {errorDialog && (
         <ErrorDialog
           title={errorDialog.title}
@@ -732,4 +740,12 @@ function App() {
   );
 }
 
-export default App;
+function AppWithToast() {
+  return (
+    <ToastProvider>
+      <App />
+    </ToastProvider>
+  );
+}
+
+export default AppWithToast;

@@ -117,7 +117,6 @@ export class WorldManager implements IService {
         const world = new World(worldConfig);
         this._worlds.set(worldId, world);
 
-        logger.info(`创建World: ${worldId}`, { config: worldConfig });
         return world;
     }
 

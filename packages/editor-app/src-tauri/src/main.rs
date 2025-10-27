@@ -98,6 +98,68 @@ async fn open_scene_dialog(app: AppHandle) -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
+async fn open_behavior_tree_dialog(app: AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let file = app.dialog()
+        .file()
+        .set_title("Select Behavior Tree")
+        .add_filter("Behavior Tree Files", &["btree"])
+        .blocking_pick_file();
+
+    Ok(file.map(|path| path.to_string()))
+}
+
+#[tauri::command]
+fn scan_behavior_trees(project_path: String) -> Result<Vec<String>, String> {
+    use std::path::Path;
+    use std::fs;
+
+    let behaviors_path = Path::new(&project_path).join(".ecs").join("behaviors");
+
+    if !behaviors_path.exists() {
+        fs::create_dir_all(&behaviors_path)
+            .map_err(|e| format!("Failed to create behaviors directory: {}", e))?;
+        return Ok(Vec::new());
+    }
+
+    let mut btree_files = Vec::new();
+    scan_directory_recursive(&behaviors_path, &behaviors_path, &mut btree_files)?;
+
+    Ok(btree_files)
+}
+
+fn scan_directory_recursive(
+    base_path: &std::path::Path,
+    current_path: &std::path::Path,
+    results: &mut Vec<String>
+) -> Result<(), String> {
+    use std::fs;
+
+    let entries = fs::read_dir(current_path)
+        .map_err(|e| format!("Failed to read directory: {}", e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            scan_directory_recursive(base_path, &path, results)?;
+        } else if path.extension().and_then(|s| s.to_str()) == Some("btree") {
+            if let Ok(relative) = path.strip_prefix(base_path) {
+                let relative_str = relative.to_string_lossy()
+                    .replace('\\', "/")
+                    .trim_end_matches(".btree")
+                    .to_string();
+                results.push(relative_str);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 fn scan_directory(path: String, pattern: String) -> Result<Vec<String>, String> {
     use glob::glob;
     use std::path::Path;
@@ -147,6 +209,8 @@ struct DirectoryEntry {
     name: String,
     path: String,
     is_dir: bool,
+    size: Option<u64>,
+    modified: Option<u64>,
 }
 
 #[tauri::command]
@@ -172,10 +236,36 @@ fn list_directory(path: String) -> Result<Vec<DirectoryEntry>, String> {
                     Ok(entry) => {
                         let entry_path = entry.path();
                         if let Some(name) = entry_path.file_name() {
+                            let is_dir = entry_path.is_dir();
+
+                            // 获取文件元数据
+                            let (size, modified) = match fs::metadata(&entry_path) {
+                                Ok(metadata) => {
+                                    let size = if is_dir {
+                                        None
+                                    } else {
+                                        Some(metadata.len())
+                                    };
+
+                                    let modified = metadata.modified()
+                                        .ok()
+                                        .and_then(|time| {
+                                            time.duration_since(std::time::UNIX_EPOCH)
+                                                .ok()
+                                                .map(|d| d.as_secs())
+                                        });
+
+                                    (size, modified)
+                                }
+                                Err(_) => (None, None),
+                            };
+
                             entries.push(DirectoryEntry {
                                 name: name.to_string_lossy().to_string(),
                                 path: entry_path.to_string_lossy().to_string(),
-                                is_dir: entry_path.is_dir(),
+                                is_dir,
+                                size,
+                                modified,
                             });
                         }
                     }
@@ -283,6 +373,133 @@ async fn get_profiler_status(
     Ok(server_lock.is_some())
 }
 
+#[tauri::command]
+async fn read_behavior_tree_file(file_path: String) -> Result<String, String> {
+    use std::fs;
+
+    // 使用 Rust 标准库直接读取文件，绕过 Tauri 的 scope 限制
+    fs::read_to_string(&file_path)
+        .map_err(|e| format!("Failed to read file {}: {}", file_path, e))
+}
+
+#[tauri::command]
+async fn write_behavior_tree_file(file_path: String, content: String) -> Result<(), String> {
+    use std::fs;
+
+    // 使用 Rust 标准库直接写入文件
+    fs::write(&file_path, content)
+        .map_err(|e| format!("Failed to write file {}: {}", file_path, e))
+}
+
+#[tauri::command]
+async fn write_binary_file(file_path: String, content: Vec<u8>) -> Result<(), String> {
+    use std::fs;
+
+    // 写入二进制文件
+    fs::write(&file_path, content)
+        .map_err(|e| format!("Failed to write binary file {}: {}", file_path, e))
+}
+
+#[tauri::command]
+async fn read_global_blackboard(project_path: String) -> Result<String, String> {
+    use std::fs;
+    use std::path::Path;
+
+    let config_path = Path::new(&project_path).join(".ecs").join("global-blackboard.json");
+
+    if !config_path.exists() {
+        return Ok(String::from(r#"{"version":"1.0","variables":[]}"#));
+    }
+
+    fs::read_to_string(&config_path)
+        .map_err(|e| format!("Failed to read global blackboard: {}", e))
+}
+
+#[tauri::command]
+async fn write_global_blackboard(project_path: String, content: String) -> Result<(), String> {
+    use std::fs;
+    use std::path::Path;
+
+    let ecs_dir = Path::new(&project_path).join(".ecs");
+    let config_path = ecs_dir.join("global-blackboard.json");
+
+    // 创建 .ecs 目录（如果不存在）
+    if !ecs_dir.exists() {
+        fs::create_dir_all(&ecs_dir)
+            .map_err(|e| format!("Failed to create .ecs directory: {}", e))?;
+    }
+
+    fs::write(&config_path, content)
+        .map_err(|e| format!("Failed to write global blackboard: {}", e))
+}
+
+#[tauri::command]
+fn open_file_with_default_app(file_path: String) -> Result<(), String> {
+    use std::process::Command;
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("cmd")
+            .args(["/C", "start", "", &file_path])
+            .spawn()
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(&file_path)
+            .spawn()
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(&file_path)
+            .spawn()
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+fn show_in_folder(file_path: String) -> Result<(), String> {
+    use std::process::Command;
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .args(["/select,", &file_path])
+            .spawn()
+            .map_err(|e| format!("Failed to show in folder: {}", e))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .args(["-R", &file_path])
+            .spawn()
+            .map_err(|e| format!("Failed to show in folder: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        use std::path::Path;
+        let path = Path::new(&file_path);
+        let parent = path.parent()
+            .ok_or_else(|| "Failed to get parent directory".to_string())?;
+
+        Command::new("xdg-open")
+            .arg(parent)
+            .spawn()
+            .map_err(|e| format!("Failed to show in folder: {}", e))?;
+    }
+
+    Ok(())
+}
+
 fn main() {
     let project_paths: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
     let project_paths_clone = Arc::clone(&project_paths);
@@ -294,6 +511,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .register_uri_scheme_protocol("project", move |_app, request| {
             let project_paths = Arc::clone(&project_paths_clone);
@@ -357,14 +575,23 @@ fn main() {
             open_project_dialog,
             save_scene_dialog,
             open_scene_dialog,
+            open_behavior_tree_dialog,
             scan_directory,
+            scan_behavior_trees,
             read_file_content,
             list_directory,
             set_project_base_path,
             toggle_devtools,
             start_profiler_server,
             stop_profiler_server,
-            get_profiler_status
+            get_profiler_status,
+            read_behavior_tree_file,
+            write_behavior_tree_file,
+            write_binary_file,
+            read_global_blackboard,
+            write_global_blackboard,
+            open_file_with_default_app,
+            show_in_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
