@@ -10,9 +10,18 @@ on:
         options:
           - core
           - behavior-tree
-      version:
-        description: '版本号 (例如: 2.2.9 或 1.0.1)'
+      version_type:
+        description: '版本更新类型'
         required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - custom
+      custom_version:
+        description: '自定义版本号 (仅当选择 custom 时使用，例如: 2.2.9)'
+        required: false
         type: string
 
 permissions:
@@ -53,9 +62,17 @@ jobs:
           npm run test:ci
 
       - name: Update version
+        id: version
         run: |
           cd packages/${{ github.event.inputs.package }}
-          npm version ${{ github.event.inputs.version }} --no-git-tag-version
+          if [ "${{ github.event.inputs.version_type }}" = "custom" ]; then
+            npm version ${{ github.event.inputs.custom_version }} --no-git-tag-version
+          else
+            npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+          fi
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "发布版本: $NEW_VERSION"
 
       - name: Build package
         run: |
@@ -73,18 +90,18 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore(${{ github.event.inputs.package }}): release v${{ github.event.inputs.version }}"
-          branch: release/${{ github.event.inputs.package }}-v${{ github.event.inputs.version }}
+          commit-message: "chore(${{ github.event.inputs.package }}): release v${{ steps.version.outputs.new_version }}"
+          branch: release/${{ github.event.inputs.package }}-v${{ steps.version.outputs.new_version }}
           delete-branch: true
-          title: "chore(${{ github.event.inputs.package }}): Release v${{ github.event.inputs.version }}"
+          title: "chore(${{ github.event.inputs.package }}): Release v${{ steps.version.outputs.new_version }}"
           body: |
-            ## 🚀 Release v${{ github.event.inputs.version }}
+            ## 🚀 Release v${{ steps.version.outputs.new_version }}
 
             此 PR 更新 `@esengine/${{ github.event.inputs.package }}` 包的版本号
 
             ### 变更
-            - ✅ 已发布到 npm: [@esengine/${{ github.event.inputs.package }}@${{ github.event.inputs.version }}](https://www.npmjs.com/package/@esengine/${{ github.event.inputs.package }}/v/${{ github.event.inputs.version }})
-            - ✅ 更新 `packages/${{ github.event.inputs.package }}/package.json` → `${{ github.event.inputs.version }}`
+            - ✅ 已发布到 npm: [@esengine/${{ github.event.inputs.package }}@${{ steps.version.outputs.new_version }}](https://www.npmjs.com/package/@esengine/${{ github.event.inputs.package }}/v/${{ steps.version.outputs.new_version }})
+            - ✅ 更新 `packages/${{ github.event.inputs.package }}/package.json` → `${{ steps.version.outputs.new_version }}`
 
             ---
             *此 PR 由发布工作流自动创建*
