@@ -11,7 +11,7 @@ import { ComponentType, ComponentRegistry } from '../Core/ComponentStorage';
 import { EntitySerializer, SerializedEntity } from './EntitySerializer';
 import { getComponentTypeName } from '../Decorators';
 import { getSerializationMetadata } from './SerializationDecorators';
-import { encode, decode } from '@msgpack/msgpack';
+import { BinarySerializer } from '../../Utils/BinarySerializer';
 
 /**
  * 场景序列化格式
@@ -200,14 +200,12 @@ export class SceneSerializer {
             };
         }
 
-        // 根据格式返回数据
         if (opts.format === 'json') {
             return opts.pretty
                 ? JSON.stringify(serializedScene, null, 2)
                 : JSON.stringify(serializedScene);
         } else {
-            // 二进制格式（使用 MessagePack）
-            return encode(serializedScene);
+            return BinarySerializer.encode(serializedScene);
         }
     }
 
@@ -229,15 +227,12 @@ export class SceneSerializer {
             ...options
         };
 
-        // 解析数据
         let serializedScene: SerializedScene;
         try {
             if (typeof saveData === 'string') {
-                // JSON格式
                 serializedScene = JSON.parse(saveData);
             } else {
-                // 二进制格式（MessagePack）
-                serializedScene = decode(saveData) as SerializedScene;
+                serializedScene = BinarySerializer.decode(saveData) as SerializedScene;
             }
         } catch (error) {
             throw new Error(`Failed to parse save data: ${error}`);

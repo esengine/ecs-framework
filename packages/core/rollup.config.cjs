@@ -17,7 +17,17 @@ const banner = `/**
 
 const external = [];
 
-const commonPlugins = [
+const modernPlugins = [
+  resolve({
+    browser: true,
+    preferBuiltins: false
+  }),
+  commonjs({
+    include: /node_modules/
+  })
+];
+
+const legacyPlugins = [
   resolve({
     browser: true,
     preferBuiltins: false
@@ -44,7 +54,7 @@ module.exports = [
       exports: 'named'
     },
     plugins: [
-      ...commonPlugins,
+      ...modernPlugins,
       terser({
         format: {
           comments: /^!/
@@ -65,7 +75,7 @@ module.exports = [
       unknownGlobalSideEffects: false
     }
   },
-  
+
   // CommonJS构建
   {
     input: 'bin/index.js',
@@ -77,7 +87,7 @@ module.exports = [
       exports: 'named'
     },
     plugins: [
-      ...commonPlugins,
+      ...modernPlugins,
       terser({
         format: {
           comments: /^!/
@@ -96,7 +106,7 @@ module.exports = [
     }
   },
 
-  // UMD构建 - 用于CDN和浏览器直接使用
+  // UMD构建
   {
     input: 'bin/index.js',
     output: {
@@ -108,7 +118,7 @@ module.exports = [
       exports: 'named'
     },
     plugins: [
-      ...commonPlugins,
+      ...legacyPlugins,
       terser({
         format: {
           comments: /^!/

@@ -11,7 +11,7 @@ import { Component } from '../Component';
 import { ComponentSerializer, SerializedComponent } from './ComponentSerializer';
 import { SerializedEntity } from './EntitySerializer';
 import { ComponentType } from '../Core/ComponentStorage';
-import { encode, decode } from '@msgpack/msgpack';
+import { BinarySerializer } from '../../Utils/BinarySerializer';
 
 /**
  * 变更操作类型
@@ -147,8 +147,8 @@ export interface IncrementalSerializationOptions {
 
     /**
      * 序列化格式
-     * - 'json': JSON格式（可读性好，方便调试）
-     * - 'binary': MessagePack二进制格式（体积小，性能高）
+     * - 'json': JSON格式
+     * - 'binary': 二进制格式
      * 默认 'json'
      */
     format?: IncrementalSerializationFormat;
@@ -639,7 +639,7 @@ export class IncrementalSerializer {
         };
 
         if (opts.format === 'binary') {
-            return encode(incremental);
+            return BinarySerializer.encode(incremental);
         } else {
             return opts.pretty
                 ? JSON.stringify(incremental, null, 2)
@@ -664,11 +664,9 @@ export class IncrementalSerializer {
      */
     public static deserializeIncremental(data: string | Uint8Array): IncrementalSnapshot {
         if (typeof data === 'string') {
-            // JSON格式
             return JSON.parse(data);
         } else {
-            // 二进制格式（MessagePack）
-            return decode(data) as IncrementalSnapshot;
+            return BinarySerializer.decode(data) as IncrementalSnapshot;
         }
     }
 
