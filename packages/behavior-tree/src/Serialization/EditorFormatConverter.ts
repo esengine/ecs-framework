@@ -67,13 +67,11 @@ export class EditorFormatConverter {
     static toAsset(editorData: EditorFormat, metadata?: Partial<AssetMetadata>): BehaviorTreeAsset {
         logger.info('开始转换编辑器格式到资产格式');
 
-        // 查找根节点
         const rootNode = this.findRootNode(editorData.nodes);
         if (!rootNode) {
             throw new Error('未找到根节点');
         }
 
-        // 转换元数据
         const assetMetadata: AssetMetadata = {
             name: metadata?.name || editorData.metadata?.name || 'Untitled Behavior Tree',
             description: metadata?.description || editorData.metadata?.description,
@@ -82,13 +80,10 @@ export class EditorFormatConverter {
             modifiedAt: metadata?.modifiedAt || new Date().toISOString()
         };
 
-        // 转换节点
         const nodes = this.convertNodes(editorData.nodes);
 
-        // 转换黑板
         const blackboard = this.convertBlackboard(editorData.blackboard);
 
-        // 转换属性绑定
         const propertyBindings = this.convertPropertyBindings(
             editorData.connections,
             editorData.nodes,
@@ -130,11 +125,13 @@ export class EditorFormatConverter {
      * 转换单个节点
      */
     private static convertNode(editorNode: EditorNode): BehaviorTreeNodeData {
-        // 复制data，去除编辑器特有的字段
         const data = { ...editorNode.data };
 
-        // 移除可能存在的UI相关字段
-        delete data.nodeType; // 这个信息已经在nodeType字段中
+        delete data.nodeType;
+
+        if (editorNode.template.className) {
+            data.className = editorNode.template.className;
+        }
 
         return {
             id: editorNode.id,
@@ -152,7 +149,6 @@ export class EditorFormatConverter {
         const variables: BlackboardVariableDefinition[] = [];
 
         for (const [name, value] of Object.entries(blackboard)) {
-            // 推断类型
             const type = this.inferBlackboardType(value);
 
             variables.push({
@@ -191,7 +187,6 @@ export class EditorFormatConverter {
         const bindings: PropertyBinding[] = [];
         const blackboardVarNames = new Set(blackboard.map(v => v.name));
 
-        // 只处理属性类型的连接
         const propertyConnections = connections.filter(conn => conn.connectionType === 'property');
 
         for (const conn of propertyConnections) {
@@ -205,7 +200,6 @@ export class EditorFormatConverter {
 
             let variableName: string | undefined;
 
-            // 检查 from 节点是否是黑板变量节点
             if (fromNode.data.nodeType === 'blackboard-variable') {
                 variableName = fromNode.data.variableName;
             } else if (conn.fromProperty) {
@@ -241,22 +235,18 @@ export class EditorFormatConverter {
     static fromAsset(asset: BehaviorTreeAsset): EditorFormat {
         logger.info('开始转换资产格式到编辑器格式');
 
-        // 转换节点
         const nodes = this.convertNodesFromAsset(asset.nodes);
 
-        // 转换黑板
         const blackboard: Record<string, any> = {};
         for (const variable of asset.blackboard) {
             blackboard[variable.name] = variable.defaultValue;
         }
 
-        // 转换属性绑定为连接
         const connections = this.convertPropertyBindingsToConnections(
             asset.propertyBindings || [],
             asset.nodes
         );
 
-        // 添加节点连接（基于children关系）
         const nodeConnections = this.buildNodeConnections(asset.nodes);
         connections.push(...nodeConnections);
 
@@ -287,19 +277,24 @@ export class EditorFormatConverter {
      */
     private static convertNodesFromAsset(assetNodes: BehaviorTreeNodeData[]): EditorNode[] {
         return assetNodes.map((node, index) => {
-            // 简单的自动布局：按索引计算位置
             const position = {
                 x: 100 + (index % 5) * 250,
                 y: 100 + Math.floor(index / 5) * 150
             };
 
+            const template: any = {
+                displayName: node.name,
+                category: this.inferCategory(node.nodeType),
+                type: node.nodeType
+            };
+
+            if (node.data.className) {
+                template.className = node.data.className;
+            }
+
             return {
                 id: node.id,
-                template: {
-                    displayName: node.name,
-                    category: this.inferCategory(node.nodeType),
-                    type: node.nodeType
-                },
+                template,
                 data: { ...node.data },
                 position,
                 children: node.children
@@ -335,10 +330,8 @@ export class EditorFormatConverter {
         const connections: EditorConnection[] = [];
 
         for (const binding of bindings) {
-            // 需要找到代表这个黑板变量的节点（如果有的话）
-            // 这里简化处理，在实际使用中可能需要更复杂的逻辑
             connections.push({
-                from: 'blackboard', // 占位符，实际使用时需要更复杂的处理
+                from: 'blackboard',
                 to: binding.nodeId,
                 toProperty: binding.propertyName,
                 connectionType: 'property'

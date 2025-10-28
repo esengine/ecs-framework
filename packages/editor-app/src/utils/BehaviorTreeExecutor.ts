@@ -1,4 +1,4 @@
-import { World, Entity, Scene, createLogger, Time, Core } from '@esengine/ecs-framework';
+import { World, Entity, Scene, createLogger, Time, Core, ComponentRegistry, Component } from '@esengine/ecs-framework';
 import {
     BehaviorTreeNode as BehaviorTreeNodeComponent,
     BlackboardComponent,
@@ -324,17 +324,19 @@ export class BehaviorTreeExecutor {
     private addNodeComponents(entity: Entity, node: BehaviorTreeNode): void {
         const category = node.template.category;
         const data = node.data;
+        const nodeType = node.template.type;
 
         if (category === '根节点' || data.nodeType === 'root') {
             // 根节点使用专门的 RootNode 组件
             entity.addComponent(new RootNode());
-        } else if (category === '动作') {
+        } else if (nodeType === NodeType.Action) {
+            // 根据节点类型而不是 category 来判断，这样可以支持自定义 category
             this.addActionComponent(entity, node);
-        } else if (category === '条件') {
+        } else if (nodeType === NodeType.Condition) {
             this.addConditionComponent(entity, node);
-        } else if (category === '组合') {
+        } else if (nodeType === NodeType.Composite) {
             this.addCompositeComponent(entity, node);
-        } else if (category === '装饰器') {
+        } else if (nodeType === NodeType.Decorator) {
             this.addDecoratorComponent(entity, node);
         }
     }
@@ -369,6 +371,21 @@ export class BehaviorTreeExecutor {
             const action = new ExecuteAction();
             action.actionCode = node.data.actionCode ?? 'return TaskStatus.Success;';
             entity.addComponent(action);
+        } else {
+            const ComponentClass = node.template.componentClass ||
+                                  (node.template.className ? ComponentRegistry.getComponentType(node.template.className) : null);
+
+            if (ComponentClass) {
+                try {
+                    const component = new (ComponentClass as any)();
+                    Object.assign(component, node.data);
+                    entity.addComponent(component as Component);
+                } catch (error) {
+                    logger.error(`创建动作组件失败: ${node.template.className}, error: ${error}`);
+                }
+            } else {
+                logger.warn(`未找到动作组件类: ${node.template.className}`);
+            }
         }
     }
 
@@ -400,6 +417,21 @@ export class BehaviorTreeExecutor {
             condition.conditionCode = node.data.conditionCode ?? '';
             condition.invertResult = node.data.invertResult ?? false;
             entity.addComponent(condition);
+        } else {
+            const ComponentClass = node.template.componentClass ||
+                                  (node.template.className ? ComponentRegistry.getComponentType(node.template.className) : null);
+
+            if (ComponentClass) {
+                try {
+                    const component = new (ComponentClass as any)();
+                    Object.assign(component, node.data);
+                    entity.addComponent(component as Component);
+                } catch (error) {
+                    logger.error(`创建条件组件失败: ${node.template.className}, error: ${error}`);
+                }
+            } else {
+                logger.warn(`未找到条件组件类: ${node.template.className}`);
+            }
         }
     }
 

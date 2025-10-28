@@ -32,6 +32,7 @@ interface MenuBarProps {
   onOpenSettings?: () => void;
   onToggleDevtools?: () => void;
   onOpenAbout?: () => void;
+  onCreatePlugin?: () => void;
 }
 
 export function MenuBar({
@@ -51,7 +52,8 @@ export function MenuBar({
   onOpenPortManager,
   onOpenSettings,
   onToggleDevtools,
-  onOpenAbout
+  onOpenAbout,
+  onCreatePlugin
 }: MenuBarProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [pluginMenuItems, setPluginMenuItems] = useState<PluginMenuItem[]>([]);
@@ -144,6 +146,7 @@ export function MenuBar({
         viewport: 'Viewport',
         pluginManager: 'Plugin Manager',
         tools: 'Tools',
+        createPlugin: 'Create Plugin',
         portManager: 'Port Manager',
         settings: 'Settings',
         help: 'Help',
@@ -177,6 +180,7 @@ export function MenuBar({
         viewport: '视口',
         pluginManager: '插件管理器',
         tools: '工具',
+        createPlugin: '创建插件',
         portManager: '端口管理器',
         settings: '设置',
         help: '帮助',
@@ -226,6 +230,8 @@ export function MenuBar({
       { label: t('devtools'), onClick: onToggleDevtools }
     ],
     tools: [
+      { label: t('createPlugin'), onClick: onCreatePlugin },
+      { separator: true },
       { label: t('portManager'), onClick: onOpenPortManager },
       { separator: true },
       { label: t('settings'), onClick: onOpenSettings }

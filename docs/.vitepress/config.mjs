@@ -82,6 +82,21 @@ export default defineConfig({
                 { text: 'WorldManager', link: '/guide/world-manager' }
               ]
             },
+            {
+              text: '行为树系统 (Behavior Tree)',
+              link: '/guide/behavior-tree/',
+              items: [
+                { text: '快速开始', link: '/guide/behavior-tree/getting-started' },
+                { text: '核心概念', link: '/guide/behavior-tree/core-concepts' },
+                { text: '编辑器指南', link: '/guide/behavior-tree/editor-guide' },
+                { text: '编辑器工作流', link: '/guide/behavior-tree/editor-workflow' },
+                { text: '自定义动作组件', link: '/guide/behavior-tree/custom-actions' },
+                { text: 'Cocos Creator集成', link: '/guide/behavior-tree/cocos-integration' },
+                { text: 'Laya引擎集成', link: '/guide/behavior-tree/laya-integration' },
+                { text: '高级用法', link: '/guide/behavior-tree/advanced-usage' },
+                { text: '最佳实践', link: '/guide/behavior-tree/best-practices' }
+              ]
+            },
             { text: '序列化系统 (Serialization)', link: '/guide/serialization' },
             { text: '事件系统 (Event)', link: '/guide/event-system' },
             { text: '时间和定时器 (Time)', link: '/guide/time-and-timers' },

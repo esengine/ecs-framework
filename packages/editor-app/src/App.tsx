@@ -20,6 +20,7 @@ import { AboutDialog } from './components/AboutDialog';
 import { ErrorDialog } from './components/ErrorDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { BehaviorTreeWindow } from './components/BehaviorTreeWindow';
+import { PluginGeneratorWindow } from './components/PluginGeneratorWindow';
 import { ToastProvider } from './components/Toast';
 import { Viewport } from './components/Viewport';
 import { MenuBar } from './components/MenuBar';
@@ -27,6 +28,7 @@ import { FlexLayoutDockContainer, FlexDockPanel } from './components/FlexLayoutD
 import { TauriAPI } from './api/tauri';
 import { TauriFileAPI } from './adapters/TauriFileAPI';
 import { SettingsService } from './services/SettingsService';
+import { PluginLoader } from './services/PluginLoader';
 import { checkForUpdatesOnStartup } from './utils/updater';
 import { useLocale } from './hooks/useLocale';
 import { en, zh } from './locales';
@@ -45,6 +47,7 @@ Core.services.registerSingleton(GlobalBlackboardService);
 
 function App() {
   const initRef = useRef(false);
+  const pluginLoaderRef = useRef<PluginLoader>(new PluginLoader());
   const [initialized, setInitialized] = useState(false);
   const [projectLoaded, setProjectLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,6 +70,7 @@ function App() {
   const [showAbout, setShowAbout] = useState(false);
   const [showBehaviorTreeEditor, setShowBehaviorTreeEditor] = useState(false);
   const [behaviorTreeFilePath, setBehaviorTreeFilePath] = useState<string | null>(null);
+  const [showPluginGenerator, setShowPluginGenerator] = useState(false);
   const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
   const [isRemoteConnected, setIsRemoteConnected] = useState(false);
   const [isProfilerMode, setIsProfilerMode] = useState(false);
@@ -274,6 +278,12 @@ function App() {
 
       setCurrentProjectPath(projectPath);
       setProjectLoaded(true);
+
+      if (pluginManager) {
+        setLoadingMessage(locale === 'zh' ? '加载项目插件...' : 'Loading project plugins...');
+        await pluginLoaderRef.current.loadProjectPlugins(projectPath, pluginManager);
+      }
+
       setIsLoading(false);
     } catch (error) {
       console.error('Failed to open project:', error);
@@ -486,7 +496,10 @@ function App() {
     }
   };
 
-  const handleCloseProject = () => {
+  const handleCloseProject = async () => {
+    if (pluginManager) {
+      await pluginLoaderRef.current.unloadProjectPlugins(pluginManager);
+    }
     setProjectLoaded(false);
     setCurrentProjectPath(null);
     setIsProfilerMode(false);
@@ -512,6 +525,10 @@ function App() {
 
   const handleOpenAbout = () => {
     setShowAbout(true);
+  };
+
+  const handleCreatePlugin = () => {
+    setShowPluginGenerator(true);
   };
 
   useEffect(() => {
@@ -675,6 +692,7 @@ function App() {
           onOpenSettings={() => setShowSettings(true)}
           onToggleDevtools={handleToggleDevtools}
           onOpenAbout={handleOpenAbout}
+          onCreatePlugin={handleCreatePlugin}
         />
         <div className="header-right">
           <button onClick={handleLocaleChange} className="toolbar-btn locale-btn" title={locale === 'en' ? '切换到中文' : 'Switch to English'}>
@@ -726,6 +744,14 @@ function App() {
           }}
           filePath={behaviorTreeFilePath}
           projectPath={currentProjectPath}
+        />
+      )}
+
+      {showPluginGenerator && (
+        <PluginGeneratorWindow
+          onClose={() => setShowPluginGenerator(false)}
+          projectPath={currentProjectPath}
+          locale={locale}
         />
       )}
 

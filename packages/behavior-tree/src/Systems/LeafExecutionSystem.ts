@@ -67,7 +67,10 @@ export class LeafExecutionSystem extends EntitySystem {
         } else if (entity.hasComponent(ExecuteAction)) {
             status = this.executeCustomAction(entity);
         } else {
-            this.outputLog(entity, `动作节点没有找到任何已知的动作组件`, 'warn');
+            status = this.executeGenericAction(entity);
+            if (status === TaskStatus.Failure) {
+                this.outputLog(entity, `动作节点没有找到任何已知的动作组件`, 'warn');
+            }
         }
 
         node.status = status;
@@ -296,6 +299,41 @@ export class LeafExecutionSystem extends EntitySystem {
 
         const blackboard = this.findBlackboard(entity);
         return func(entity, blackboard, Time.deltaTime);
+    }
+
+    /**
+     * 执行通用动作组件
+     * 查找实体上具有 execute 方法的自定义组件并执行
+     */
+    private executeGenericAction(entity: Entity): TaskStatus {
+        for (const component of entity.components) {
+            if (component instanceof BehaviorTreeNode ||
+                component instanceof ActiveNode ||
+                component instanceof BlackboardComponent ||
+                component instanceof PropertyBindings ||
+                component instanceof LogOutput) {
+                continue;
+            }
+
+            if (typeof (component as any).execute === 'function') {
+                try {
+                    const blackboard = this.findBlackboard(entity);
+                    const status = (component as any).execute(entity, blackboard);
+
+                    if (typeof status === 'number' &&
+                        (status === TaskStatus.Success ||
+                         status === TaskStatus.Failure ||
+                         status === TaskStatus.Running)) {
+                        return status;
+                    }
+                } catch (error) {
+                    this.outputLog(entity, `执行动作组件时发生错误: ${error}`, 'error');
+                    return TaskStatus.Failure;
+                }
+            }
+        }
+
+        return TaskStatus.Failure;
     }
 
     /**

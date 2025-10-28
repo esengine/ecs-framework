@@ -13,18 +13,34 @@ export enum TaskStatus {
 }
 
 /**
- * 节点类型
+ * 内置节点类型常量
  */
-export enum NodeType {
+export const NodeType = {
     /** 复合节点 - 有多个子节点 */
-    Composite = 'composite',
+    Composite: 'composite',
     /** 装饰器节点 - 有一个子节点 */
-    Decorator = 'decorator',
+    Decorator: 'decorator',
     /** 动作节点 - 叶子节点 */
-    Action = 'action',
+    Action: 'action',
     /** 条件节点 - 叶子节点 */
-    Condition = 'condition'
-}
+    Condition: 'condition'
+} as const;
+
+/**
+ * 节点类型（支持自定义扩展）
+ *
+ * 使用内置类型或自定义字符串
+ *
+ * @example
+ * ```typescript
+ * // 使用内置类型
+ * type: NodeType.Action
+ *
+ * // 使用自定义类型
+ * type: 'custom-behavior'
+ * ```
+ */
+export type NodeType = typeof NodeType[keyof typeof NodeType] | string;
 
 /**
  * 复合节点类型

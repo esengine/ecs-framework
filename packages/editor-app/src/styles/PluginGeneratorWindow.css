@@ -1,0 +1,208 @@
+.plugin-generator-window {
+    background: var(--color-bg-elevated);
+    border-radius: 8px;
+    padding: 0;
+    width: 600px;
+    max-width: 90vw;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.plugin-generator-window .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--color-border-default);
+}
+
+.plugin-generator-window .modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.plugin-generator-window .close-btn {
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.plugin-generator-window .close-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+
+.plugin-generator-window .modal-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.plugin-generator-window .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.plugin-generator-window .form-group label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+}
+
+.plugin-generator-window .form-group input[type="text"] {
+    padding: 10px 12px;
+    background: var(--color-bg-base);
+    border: 1px solid var(--color-border-default);
+    border-radius: 6px;
+    color: var(--color-text-primary);
+    font-size: 14px;
+    font-family: var(--font-family-mono);
+    transition: all 0.2s;
+}
+
+.plugin-generator-window .form-group input[type="text"]:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background: var(--color-bg-elevated);
+}
+
+.plugin-generator-window .form-group input[type="text"]:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.plugin-generator-window .path-input-group {
+    display: flex;
+    gap: 8px;
+}
+
+.plugin-generator-window .path-input-group input {
+    flex: 1;
+}
+
+.plugin-generator-window .select-path-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: var(--color-bg-overlay);
+    border: 1px solid var(--color-border-default);
+    border-radius: 6px;
+    color: var(--color-text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.plugin-generator-window .select-path-btn:hover:not(:disabled) {
+    background: var(--color-bg-hover);
+    border-color: var(--color-primary);
+}
+
+.plugin-generator-window .select-path-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.plugin-generator-window .checkbox-group {
+    flex-direction: row;
+}
+
+.plugin-generator-window .checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.plugin-generator-window .checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.plugin-generator-window .checkbox-group input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+}
+
+.plugin-generator-window .checkbox-group span {
+    font-weight: normal;
+}
+
+.plugin-generator-window .error-message {
+    padding: 12px;
+    background: rgba(206, 145, 120, 0.1);
+    border: 1px solid rgba(206, 145, 120, 0.3);
+    border-radius: 6px;
+    color: #CE9178;
+    font-size: 14px;
+}
+
+.plugin-generator-window .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--color-border-default);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.plugin-generator-window .btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.plugin-generator-window .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.plugin-generator-window .btn-primary {
+    background: var(--color-primary);
+    color: white;
+}
+
+.plugin-generator-window .btn-primary:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+}
+
+.plugin-generator-window .btn-secondary {
+    background: var(--color-bg-overlay);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-default);
+}
+
+.plugin-generator-window .btn-secondary:hover:not(:disabled) {
+    background: var(--color-bg-hover);
+    border-color: var(--color-primary);
+}

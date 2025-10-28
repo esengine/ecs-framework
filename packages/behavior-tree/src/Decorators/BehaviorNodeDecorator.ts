@@ -1,5 +1,6 @@
 import { NodeTemplate, PropertyDefinition } from '../Serialization/NodeTemplates';
 import { NodeType } from '../Types/TaskStatus';
+import { getComponentTypeName } from '@esengine/ecs-framework';
 
 /**
  * 行为树节点元数据
@@ -80,7 +81,7 @@ export function BehaviorNode(metadata: BehaviorNodeMetadata) {
     return function <T extends { new (...args: any[]): any }>(constructor: T) {
         const metadataWithClassName = {
             ...metadata,
-            className: constructor.name
+            className: getComponentTypeName(constructor as any)
         };
         NodeClassRegistry.registerNodeClass(constructor, metadataWithClassName);
         return constructor;
@@ -129,14 +130,12 @@ export const NodeProperty = BehaviorProperty;
  */
 export function getRegisteredNodeTemplates(): NodeTemplate[] {
     return NodeClassRegistry.getAllNodeClasses().map(({ metadata, constructor }) => {
-        // 从类的 __nodeProperties 收集属性定义
         const propertyDefs = constructor.__nodeProperties || [];
 
         const defaultConfig: any = {
             nodeType: metadata.type.toLowerCase()
         };
 
-        // 从类的默认值中提取配置，并补充 defaultValue
         const instance = new constructor();
         const properties: PropertyDefinition[] = propertyDefs.map((prop: PropertyDefinition) => {
             const defaultValue = instance[prop.name];
@@ -149,7 +148,6 @@ export function getRegisteredNodeTemplates(): NodeTemplate[] {
             };
         });
 
-        // 添加子类型字段
         switch (metadata.type) {
             case NodeType.Composite:
                 defaultConfig.compositeType = metadata.displayName;
@@ -173,6 +171,7 @@ export function getRegisteredNodeTemplates(): NodeTemplate[] {
             description: metadata.description,
             color: metadata.color,
             className: metadata.className,
+            componentClass: constructor,
             requiresChildren: metadata.requiresChildren,
             defaultConfig,
             properties

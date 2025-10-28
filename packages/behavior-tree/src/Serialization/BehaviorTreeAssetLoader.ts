@@ -1,4 +1,4 @@
-import { Entity, IScene, createLogger } from '@esengine/ecs-framework';
+import { Entity, IScene, createLogger, ComponentRegistry, Component } from '@esengine/ecs-framework';
 import type { BehaviorTreeAsset, BehaviorTreeNodeData, BlackboardVariableDefinition, PropertyBinding } from './BehaviorTreeAsset';
 import { BehaviorTreeNode } from '../Components/BehaviorTreeNode';
 import { BlackboardComponent } from '../Components/BlackboardComponent';
@@ -306,6 +306,19 @@ export class BehaviorTreeAssetLoader {
         } else if (nameLower.includes('execute') || nameLower.includes('自定义')) {
             const action = entity.addComponent(new ExecuteAction());
             action.actionCode = data.actionCode ?? 'return TaskStatus.Success;';
+        } else if (data.className) {
+            const ComponentClass = ComponentRegistry.getComponentType(data.className);
+            if (ComponentClass) {
+                try {
+                    const component = new (ComponentClass as any)();
+                    Object.assign(component, data);
+                    entity.addComponent(component as Component);
+                } catch (error) {
+                    logger.error(`创建动作组件失败: ${data.className}, error: ${error}`);
+                }
+            } else {
+                logger.warn(`未找到动作组件类: ${data.className}`);
+            }
         } else {
             logger.warn(`未知的动作类型: ${name}`);
         }
@@ -335,6 +348,19 @@ export class BehaviorTreeAssetLoader {
             const condition = entity.addComponent(new ExecuteCondition());
             condition.conditionCode = data.conditionCode ?? '';
             condition.invertResult = data.invertResult ?? false;
+        } else if (data.className) {
+            const ComponentClass = ComponentRegistry.getComponentType(data.className);
+            if (ComponentClass) {
+                try {
+                    const component = new (ComponentClass as any)();
+                    Object.assign(component, data);
+                    entity.addComponent(component as Component);
+                } catch (error) {
+                    logger.error(`创建条件组件失败: ${data.className}, error: ${error}`);
+                }
+            } else {
+                logger.warn(`未找到条件组件类: ${data.className}`);
+            }
         } else {
             logger.warn(`未知的条件类型: ${name}`);
         }
