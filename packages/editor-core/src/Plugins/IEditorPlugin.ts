@@ -121,6 +121,16 @@ export interface IEditorPlugin extends IPlugin {
      * 文件保存后回调
      */
     onAfterSave?(filePath: string): void | Promise<void>;
+
+    /**
+     * 设置插件语言
+     */
+    setLocale?(locale: string): void;
+
+    /**
+     * 获取行为树节点模板
+     */
+    getNodeTemplates?(): any[];
 }
 
 /**

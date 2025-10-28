@@ -1,5 +1,4 @@
-import { encode, decode } from '@msgpack/msgpack';
-import { createLogger } from '@esengine/ecs-framework';
+import { createLogger, BinarySerializer } from '@esengine/ecs-framework';
 import type { BehaviorTreeAsset } from './BehaviorTreeAsset';
 import { BehaviorTreeAssetValidator } from './BehaviorTreeAsset';
 import { EditorFormatConverter, type EditorFormat } from './EditorFormatConverter';
@@ -49,7 +48,7 @@ export interface DeserializationOptions {
 /**
  * 行为树资产序列化器
  *
- * 支持JSON和二进制（MessagePack）两种格式
+ * 支持JSON和二进制两种格式
  */
 export class BehaviorTreeAssetSerializer {
     /**
@@ -110,11 +109,11 @@ export class BehaviorTreeAssetSerializer {
     }
 
     /**
-     * 序列化为二进制格式（MessagePack）
+     * 序列化为二进制格式
      */
     private static serializeToBinary(asset: BehaviorTreeAsset): Uint8Array {
         try {
-            const binary = encode(asset);
+            const binary = BinarySerializer.encode(asset);
             logger.info(`已序列化为二进制: ${binary.length} 字节`);
             return binary;
         } catch (error) {
@@ -208,7 +207,7 @@ export class BehaviorTreeAssetSerializer {
      */
     private static deserializeFromBinary(binary: Uint8Array): BehaviorTreeAsset {
         try {
-            const asset = decode(binary) as BehaviorTreeAsset;
+            const asset = BinarySerializer.decode(binary) as BehaviorTreeAsset;
             logger.info(`已从二进制反序列化: ${asset.nodes.length} 个节点`);
             return asset;
         } catch (error) {
@@ -251,7 +250,7 @@ export class BehaviorTreeAssetSerializer {
             if (format === 'json') {
                 asset = JSON.parse(data as string);
             } else {
-                asset = decode(data as Uint8Array) as BehaviorTreeAsset;
+                asset = BinarySerializer.decode(data as Uint8Array) as BehaviorTreeAsset;
             }
 
             const size = typeof data === 'string' ? data.length : data.length;

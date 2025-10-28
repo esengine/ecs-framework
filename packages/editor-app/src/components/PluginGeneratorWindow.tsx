@@ -7,9 +7,10 @@ interface PluginGeneratorWindowProps {
     onClose: () => void;
     projectPath: string | null;
     locale: string;
+    onSuccess?: () => Promise<void>;
 }
 
-export function PluginGeneratorWindow({ onClose, projectPath, locale }: PluginGeneratorWindowProps) {
+export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess }: PluginGeneratorWindowProps) {
     const [pluginName, setPluginName] = useState('');
     const [pluginVersion, setPluginVersion] = useState('1.0.0');
     const [outputPath, setOutputPath] = useState(projectPath ? `${projectPath}/plugins` : '');
@@ -107,10 +108,22 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale }: PluginGe
             });
 
             if (!response.ok) {
-                throw new Error('Failed to generate plugin');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate plugin');
             }
 
+            const result = await response.json();
+
             alert(t('success'));
+
+            if (result.path) {
+                await TauriAPI.showInFolder(result.path);
+            }
+
+            if (onSuccess) {
+                await onSuccess();
+            }
+
             onClose();
         } catch (error) {
             console.error('Failed to generate plugin:', error);
@@ -121,8 +134,8 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale }: PluginGe
     };
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content plugin-generator-window" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay">
+            <div className="modal-content plugin-generator-window">
                 <div className="modal-header">
                     <h2>{t('title')}</h2>
                     <button className="close-btn" onClick={onClose}>

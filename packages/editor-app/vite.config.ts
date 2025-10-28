@@ -7,6 +7,7 @@ const host = process.env.TAURI_DEV_HOST;
 
 const userProjectPathMap = new Map<string, string>();
 const editorPackageMapping = new Map<string, string>();
+const editorPackageVersions = new Map<string, string>();
 
 function loadEditorPackages() {
   const packagesDir = path.resolve(__dirname, '..');
@@ -31,6 +32,9 @@ function loadEditorPackages() {
             if (fs.existsSync(entryPath)) {
               editorPackageMapping.set(packageJson.name, entryPath);
             }
+          }
+          if (packageJson.version) {
+            editorPackageVersions.set(packageJson.name, packageJson.version);
           }
         }
       } catch (e) {
@@ -174,6 +178,10 @@ const userProjectPlugin = () => ({
               fs.mkdirSync(path.join(pluginPath, 'src', 'nodes'), { recursive: true });
             }
 
+            const coreVersion = editorPackageVersions.get('@esengine/ecs-framework') || '2.2.8';
+            const editorCoreVersion = editorPackageVersions.get('@esengine/editor-core') || '1.0.0';
+            const behaviorTreeVersion = editorPackageVersions.get('@esengine/behavior-tree') || '1.0.0';
+
             const packageJson = {
               name: pluginName,
               version: pluginVersion,
@@ -196,11 +204,11 @@ const userProjectPlugin = () => ({
                 watch: 'tsc --watch'
               },
               peerDependencies: {
-                '@esengine/ecs-framework': '^2.2.8',
-                '@esengine/editor-core': '^1.0.0'
+                '@esengine/ecs-framework': `^${coreVersion}`,
+                '@esengine/editor-core': `^${editorCoreVersion}`
               },
               dependencies: {
-                '@esengine/behavior-tree': '^1.0.0'
+                '@esengine/behavior-tree': `^${behaviorTreeVersion}`
               },
               devDependencies: {
                 'typescript': '^5.8.3'
@@ -258,13 +266,24 @@ import { EditorPluginCategory } from '@esengine/editor-core';
 import type { Core, ServiceContainer } from '@esengine/ecs-framework';
 import { getRegisteredNodeTemplates } from '@esengine/behavior-tree';
 import type { NodeTemplate } from '@esengine/behavior-tree';
+import { t, setLocale } from './locales';
 
 export class ${pluginName.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('')}Plugin implements IEditorPlugin {
     readonly name = '${pluginName}';
     readonly version = '${pluginVersion}';
-    readonly displayName = '${pluginName}';
     readonly category = EditorPluginCategory.Tool;
-    readonly description = 'Behavior tree plugin for ${pluginName}';
+
+    get displayName(): string {
+        return t('plugin.name');
+    }
+
+    get description(): string {
+        return t('plugin.description');
+    }
+
+    setLocale(locale: string): void {
+        setLocale(locale);
+    }
 
     async install(core: Core, services: ServiceContainer): Promise<void> {
         console.log('[${pluginName}] Plugin installed');
@@ -275,7 +294,17 @@ export class ${pluginName.split('-').map(s => s.charAt(0).toUpperCase() + s.slic
     }
 
     getNodeTemplates(): NodeTemplate[] {
-        return getRegisteredNodeTemplates();
+        const templates = getRegisteredNodeTemplates();
+        return templates.map(template => ({
+            ...template,
+            displayName: t(template.displayName),
+            description: t(template.description),
+            properties: template.properties?.map(prop => ({
+                ...prop,
+                label: t(prop.label),
+                description: prop.description ? t(prop.description) : undefined
+            }))
+        }));
     }
 }
 
@@ -283,25 +312,61 @@ export const ${pluginName.replace(/-/g, '')}Plugin = new ${pluginName.split('-')
 `;
             fs.writeFileSync(path.join(pluginPath, 'src', 'plugin.ts'), pluginTs);
 
+            const localesDir = path.join(pluginPath, 'src', 'locales');
+            if (!fs.existsSync(localesDir)) {
+              fs.mkdirSync(localesDir, { recursive: true });
+            }
+
+            const localesIndexTs = `export const translations = {
+    zh: {
+        'plugin.name': '${pluginName}',
+        'plugin.description': '${pluginName} 行为树插件',
+        'ExampleAction.name': '示例动作',
+        'ExampleAction.description': '这是一个示例动作节点',
+        'ExampleAction.message.label': '消息内容',
+        'ExampleAction.message.description': '要打印的消息'
+    },
+    en: {
+        'plugin.name': '${pluginName}',
+        'plugin.description': 'Behavior tree plugin for ${pluginName}',
+        'ExampleAction.name': 'Example Action',
+        'ExampleAction.description': 'This is an example action node',
+        'ExampleAction.message.label': 'Message',
+        'ExampleAction.message.description': 'The message to print'
+    }
+};
+
+let currentLocale = 'zh';
+
+export function setLocale(locale: string) {
+    currentLocale = locale;
+}
+
+export function t(key: string): string {
+    return translations[currentLocale]?.[key] || translations['en']?.[key] || key;
+}
+`;
+            fs.writeFileSync(path.join(localesDir, 'index.ts'), localesIndexTs);
+
             if (includeExample) {
               const exampleActionTs = `import { Component, Entity, ECSComponent, Serialize } from '@esengine/ecs-framework';
 import { BehaviorNode, BehaviorProperty, NodeType, TaskStatus, BlackboardComponent } from '@esengine/behavior-tree';
 
 @ECSComponent('ExampleAction')
 @BehaviorNode({
-    displayName: '示例动作',
+    displayName: 'ExampleAction.name',
     category: '自定义',
     type: NodeType.Action,
     icon: 'Star',
-    description: '这是一个示例动作节点',
+    description: 'ExampleAction.description',
     color: '#FF9800'
 })
 export class ExampleAction extends Component {
     @Serialize()
     @BehaviorProperty({
-        label: '消息内容',
+        label: 'ExampleAction.message.label',
         type: 'string',
-        description: '要打印的消息'
+        description: 'ExampleAction.message.description'
     })
     message: string = 'Hello from example action!';
 
@@ -339,6 +404,74 @@ import { EditorPluginManager } from '@esengine/editor-core';
 // 在编辑器启动时注册插件
 const pluginManager = Core.services.resolve(EditorPluginManager);
 await pluginManager.installEditor(${pluginName.replace(/-/g, '')}Plugin);
+\`\`\`
+
+## 多语言支持
+
+本插件内置中英文多语言支持，使用简单的 i18n key 方式。
+
+### 设置语言
+
+\`\`\`typescript
+// 设置为中文
+${pluginName.replace(/-/g, '')}Plugin.setLocale('zh');
+
+// 设置为英文
+${pluginName.replace(/-/g, '')}Plugin.setLocale('en');
+\`\`\`
+
+### 翻译文件结构
+
+在 \`src/locales/index.ts\` 中，使用扁平化的 key-value 结构：
+
+\`\`\`typescript
+export const translations = {
+    zh: {
+        'plugin.name': '插件名称',
+        'plugin.description': '插件描述',
+        'NodeName.name': '节点显示名',
+        'NodeName.description': '节点描述',
+        'NodeName.property.label': '属性标签',
+        'NodeName.property.description': '属性描述'
+    },
+    en: {
+        'plugin.name': 'Plugin Name',
+        // ...
+    }
+};
+\`\`\`
+
+### 在代码中使用
+
+\`\`\`typescript
+import { t } from '../locales';
+
+@BehaviorNode({
+    displayName: t('YourNode.name'),
+    description: t('YourNode.description')
+})
+export class YourNode extends Component {
+    @BehaviorProperty({
+        label: t('YourNode.propertyName.label')
+    })
+    propertyName: string = '';
+}
+\`\`\`
+
+## 目录结构
+
+\`\`\`
+${pluginName}/
+├── src/
+│   ├── locales/           # 多语言文件
+│   │   └── index.ts
+│   ├── nodes/             # 行为树节点
+│   │   └── ExampleAction.ts
+│   ├── plugin.ts          # 插件主类
+│   └── index.ts           # 导出入口
+├── package.json
+├── tsconfig.json
+└── README.md
 \`\`\`
 `;
             fs.writeFileSync(path.join(pluginPath, 'README.md'), readme);

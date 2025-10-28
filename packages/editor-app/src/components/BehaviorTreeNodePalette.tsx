@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NodeTemplates, NodeTemplate } from '@esengine/behavior-tree';
+import { Core } from '@esengine/ecs-framework';
+import { EditorPluginManager, MessageHub } from '@esengine/editor-core';
 import { NodeIcon } from './NodeIcon';
 
 interface BehaviorTreeNodePaletteProps {
@@ -15,7 +17,70 @@ export const BehaviorTreeNodePalette: React.FC<BehaviorTreeNodePaletteProps> = (
     onNodeSelect
 }) => {
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
-    const allTemplates = NodeTemplates.getAllTemplates();
+    const [allTemplates, setAllTemplates] = useState<NodeTemplate[]>([]);
+
+    // 获取所有节点模板（包括插件提供的）
+    const loadAllTemplates = () => {
+        console.log('[BehaviorTreeNodePalette] 开始加载节点模板');
+        try {
+            const pluginManager = Core.services.resolve(EditorPluginManager);
+            const allPlugins = pluginManager.getAllEditorPlugins();
+            console.log('[BehaviorTreeNodePalette] 找到插件数量:', allPlugins.length);
+
+            // 合并所有插件的节点模板
+            const templates: NodeTemplate[] = [];
+            for (const plugin of allPlugins) {
+                if (plugin.getNodeTemplates) {
+                    console.log('[BehaviorTreeNodePalette] 从插件获取模板:', plugin.name);
+                    const pluginTemplates = plugin.getNodeTemplates();
+                    console.log('[BehaviorTreeNodePalette] 插件提供的模板数量:', pluginTemplates.length);
+                    if (pluginTemplates.length > 0) {
+                        console.log('[BehaviorTreeNodePalette] 第一个模板:', pluginTemplates[0].displayName);
+                    }
+                    templates.push(...pluginTemplates);
+                }
+            }
+
+            // 如果没有插件提供模板，回退到装饰器注册的模板
+            if (templates.length === 0) {
+                console.log('[BehaviorTreeNodePalette] 没有插件提供模板，使用默认模板');
+                templates.push(...NodeTemplates.getAllTemplates());
+            }
+
+            console.log('[BehaviorTreeNodePalette] 总共加载了', templates.length, '个模板');
+            setAllTemplates(templates);
+        } catch (error) {
+            console.error('[BehaviorTreeNodePalette] 加载模板失败:', error);
+            // 如果无法访问插件管理器，使用默认模板
+            setAllTemplates(NodeTemplates.getAllTemplates());
+        }
+    };
+
+    // 初始加载
+    useEffect(() => {
+        loadAllTemplates();
+    }, []);
+
+    // 监听语言变化事件
+    useEffect(() => {
+        try {
+            const messageHub = Core.services.resolve(MessageHub);
+            console.log('[BehaviorTreeNodePalette] 订阅 locale:changed 事件');
+            const unsubscribe = messageHub.subscribe('locale:changed', (data: any) => {
+                console.log('[BehaviorTreeNodePalette] 收到 locale:changed 事件:', data);
+                // 语言变化时重新加载模板
+                loadAllTemplates();
+            });
+
+            return () => {
+                console.log('[BehaviorTreeNodePalette] 取消订阅 locale:changed 事件');
+                unsubscribe();
+            };
+        } catch (error) {
+            console.error('[BehaviorTreeNodePalette] 订阅事件失败:', error);
+            // 如果无法访问 MessageHub，忽略
+        }
+    }, []);
 
     // 按类别分组（排除根节点类别）
     const categories = ['all', ...new Set(allTemplates

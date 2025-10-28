@@ -179,9 +179,29 @@ export class EditorPluginManager extends PluginManager {
 
     /**
      * 获取所有插件元数据
+     *
+     * 实时从插件实例获取 displayName 和 description，以支持多语言切换
      */
     public getAllPluginMetadata(): IEditorPluginMetadata[] {
-        return Array.from(this.pluginMetadata.values());
+        const metadataList: IEditorPluginMetadata[] = [];
+
+        for (const [name, metadata] of this.pluginMetadata.entries()) {
+            const plugin = this.editorPlugins.get(name);
+
+            // 如果插件实例存在，使用实时的 displayName 和 description
+            if (plugin) {
+                metadataList.push({
+                    ...metadata,
+                    displayName: plugin.displayName,
+                    description: plugin.description
+                });
+            } else {
+                // 回退到缓存的元数据
+                metadataList.push(metadata);
+            }
+        }
+
+        return metadataList;
     }
 
     /**

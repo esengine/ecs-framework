@@ -513,6 +513,21 @@ function App() {
   const handleLocaleChange = () => {
     const newLocale = locale === 'en' ? 'zh' : 'en';
     changeLocale(newLocale);
+
+    // 通知所有已加载的插件更新语言
+    if (pluginManager) {
+      const allPlugins = pluginManager.getAllEditorPlugins();
+      allPlugins.forEach(plugin => {
+        if (plugin.setLocale) {
+          plugin.setLocale(newLocale);
+        }
+      });
+
+      // 通过 MessageHub 通知需要重新获取节点模板
+      if (messageHub) {
+        messageHub.publish('locale:changed', { locale: newLocale });
+      }
+    }
   };
 
   const handleToggleDevtools = async () => {
@@ -716,6 +731,21 @@ function App() {
         <PluginManagerWindow
           pluginManager={pluginManager}
           onClose={() => setShowPluginManager(false)}
+          locale={locale}
+          onOpen={() => {
+            // 同步所有插件的语言状态
+            const allPlugins = pluginManager.getAllEditorPlugins();
+            allPlugins.forEach(plugin => {
+              if (plugin.setLocale) {
+                plugin.setLocale(locale);
+              }
+            });
+          }}
+          onRefresh={async () => {
+            if (currentProjectPath && pluginManager) {
+              await pluginLoaderRef.current.loadProjectPlugins(currentProjectPath, pluginManager);
+            }
+          }}
         />
       )}
 
@@ -752,6 +782,11 @@ function App() {
           onClose={() => setShowPluginGenerator(false)}
           projectPath={currentProjectPath}
           locale={locale}
+          onSuccess={async () => {
+            if (currentProjectPath && pluginManager) {
+              await pluginLoaderRef.current.loadProjectPlugins(currentProjectPath, pluginManager);
+            }
+          }}
         />
       )}
 

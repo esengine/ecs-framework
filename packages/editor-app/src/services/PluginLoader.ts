@@ -59,8 +59,12 @@ export class PluginLoader {
             const packageJson: PluginPackageJson = JSON.parse(packageJsonContent);
 
             if (this.loadedPluginNames.has(packageJson.name)) {
-                console.log(`[PluginLoader] Plugin ${packageJson.name} already loaded`);
-                return;
+                try {
+                    await pluginManager.uninstallEditor(packageJson.name);
+                    this.loadedPluginNames.delete(packageJson.name);
+                } catch (error) {
+                    console.error(`[PluginLoader] Failed to uninstall existing plugin ${packageJson.name}:`, error);
+                }
             }
 
             let entryPoint = 'src/index.ts';
@@ -89,7 +93,9 @@ export class PluginLoader {
             // 移除开头的 ./
             entryPoint = entryPoint.replace(/^\.\//, '');
 
-            const moduleUrl = `/@user-project/plugins/${pluginDirName}/${entryPoint}`;
+            // 添加时间戳参数强制重新加载模块（避免缓存）
+            const timestamp = Date.now();
+            const moduleUrl = `/@user-project/plugins/${pluginDirName}/${entryPoint}?t=${timestamp}`;
 
             console.log(`[PluginLoader] Loading plugin from: ${moduleUrl}`);
 

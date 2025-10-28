@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { EditorPluginManager, IEditorPluginMetadata, EditorPluginCategory } from '@esengine/editor-core';
 import * as LucideIcons from 'lucide-react';
-import { Package, CheckCircle, XCircle, Search, Grid, List, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { Package, CheckCircle, XCircle, Search, Grid, List, ChevronDown, ChevronRight, X, RefreshCw } from 'lucide-react';
 import '../styles/PluginManagerWindow.css';
 
 interface PluginManagerWindowProps {
     pluginManager: EditorPluginManager;
     onClose: () => void;
+    onRefresh?: () => Promise<void>;
+    onOpen?: () => void;
+    locale: string;
 }
 
 const categoryIcons: Record<EditorPluginCategory, string> = {
@@ -17,30 +20,105 @@ const categoryIcons: Record<EditorPluginCategory, string> = {
     [EditorPluginCategory.ImportExport]: 'Package'
 };
 
-const categoryNames: Record<EditorPluginCategory, string> = {
-    [EditorPluginCategory.Tool]: 'Tools',
-    [EditorPluginCategory.Window]: 'Windows',
-    [EditorPluginCategory.Inspector]: 'Inspectors',
-    [EditorPluginCategory.System]: 'System',
-    [EditorPluginCategory.ImportExport]: 'Import/Export'
-};
+export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen, locale }: PluginManagerWindowProps) {
+    const t = (key: string) => {
+        const translations: Record<string, Record<string, string>> = {
+            zh: {
+                title: '插件管理器',
+                searchPlaceholder: '搜索插件...',
+                enabled: '已启用',
+                disabled: '已禁用',
+                enable: '启用',
+                disable: '禁用',
+                enablePlugin: '启用插件',
+                disablePlugin: '禁用插件',
+                refresh: '刷新',
+                refreshPluginList: '刷新插件列表',
+                close: '关闭',
+                listView: '列表视图',
+                gridView: '网格视图',
+                noPlugins: '未安装插件',
+                installed: '安装于',
+                categoryTools: '工具',
+                categoryWindows: '窗口',
+                categoryInspectors: '检查器',
+                categorySystem: '系统',
+                categoryImportExport: '导入/导出'
+            },
+            en: {
+                title: 'Plugin Manager',
+                searchPlaceholder: 'Search plugins...',
+                enabled: 'Enabled',
+                disabled: 'Disabled',
+                enable: 'Enable',
+                disable: 'Disable',
+                enablePlugin: 'Enable plugin',
+                disablePlugin: 'Disable plugin',
+                refresh: 'Refresh',
+                refreshPluginList: 'Refresh plugin list',
+                close: 'Close',
+                listView: 'List view',
+                gridView: 'Grid view',
+                noPlugins: 'No plugins installed',
+                installed: 'Installed',
+                categoryTools: 'Tools',
+                categoryWindows: 'Windows',
+                categoryInspectors: 'Inspectors',
+                categorySystem: 'System',
+                categoryImportExport: 'Import/Export'
+            }
+        };
+        return translations[locale]?.[key] || translations.en?.[key] || key;
+    };
 
-export function PluginManagerWindow({ pluginManager, onClose }: PluginManagerWindowProps) {
+    const getCategoryName = (category: EditorPluginCategory): string => {
+        const categoryKeys: Record<EditorPluginCategory, string> = {
+            [EditorPluginCategory.Tool]: 'categoryTools',
+            [EditorPluginCategory.Window]: 'categoryWindows',
+            [EditorPluginCategory.Inspector]: 'categoryInspectors',
+            [EditorPluginCategory.System]: 'categorySystem',
+            [EditorPluginCategory.ImportExport]: 'categoryImportExport'
+        };
+        return t(categoryKeys[category]);
+    };
     const [plugins, setPlugins] = useState<IEditorPluginMetadata[]>([]);
     const [filter, setFilter] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [expandedCategories, setExpandedCategories] = useState<Set<EditorPluginCategory>>(
         new Set(Object.values(EditorPluginCategory))
     );
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const updatePluginList = () => {
+        const allPlugins = pluginManager.getAllPluginMetadata();
+        setPlugins(allPlugins);
+    };
 
     useEffect(() => {
-        const updatePlugins = () => {
-            const allPlugins = pluginManager.getAllPluginMetadata();
-            setPlugins(allPlugins);
-        };
-
-        updatePlugins();
+        if (onOpen) {
+            onOpen();
+        }
+        updatePluginList();
     }, [pluginManager]);
+
+    // 监听 locale 变化，重新获取插件列表（以刷新插件的 displayName 和 description）
+    useEffect(() => {
+        updatePluginList();
+    }, [locale]);
+
+    const handleRefresh = async () => {
+        if (!onRefresh || isRefreshing) return;
+
+        setIsRefreshing(true);
+        try {
+            await onRefresh();
+            updatePluginList();
+        } catch (error) {
+            console.error('Failed to refresh plugins:', error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
 
     const togglePlugin = async (name: string, enabled: boolean) => {
         try {
@@ -102,7 +180,7 @@ export function PluginManagerWindow({ pluginManager, onClose }: PluginManagerWin
                     <button
                         className={`plugin-toggle ${plugin.enabled ? 'enabled' : 'disabled'}`}
                         onClick={() => togglePlugin(plugin.name, plugin.enabled)}
-                        title={plugin.enabled ? 'Disable plugin' : 'Enable plugin'}
+                        title={plugin.enabled ? t('disablePlugin') : t('enablePlugin')}
                     >
                         {plugin.enabled ? <CheckCircle size={18} /> : <XCircle size={18} />}
                     </button>
@@ -116,11 +194,11 @@ export function PluginManagerWindow({ pluginManager, onClose }: PluginManagerWin
                             const CategoryIcon = (LucideIcons as any)[categoryIcons[plugin.category]];
                             return CategoryIcon ? <CategoryIcon size={14} style={{ marginRight: '4px' }} /> : null;
                         })()}
-                        {categoryNames[plugin.category]}
+                        {getCategoryName(plugin.category)}
                     </span>
                     {plugin.installedAt && (
                         <span className="plugin-card-installed">
-                            Installed: {new Date(plugin.installedAt).toLocaleDateString()}
+                            {t('installed')}: {new Date(plugin.installedAt).toLocaleDateString()}
                         </span>
                     )}
                 </div>
@@ -146,17 +224,17 @@ export function PluginManagerWindow({ pluginManager, onClose }: PluginManagerWin
                 </div>
                 <div className="plugin-list-status">
                     {plugin.enabled ? (
-                        <span className="status-badge enabled">Enabled</span>
+                        <span className="status-badge enabled">{t('enabled')}</span>
                     ) : (
-                        <span className="status-badge disabled">Disabled</span>
+                        <span className="status-badge disabled">{t('disabled')}</span>
                     )}
                 </div>
                 <button
                     className="plugin-list-toggle"
                     onClick={() => togglePlugin(plugin.name, plugin.enabled)}
-                    title={plugin.enabled ? 'Disable plugin' : 'Enable plugin'}
+                    title={plugin.enabled ? t('disablePlugin') : t('enablePlugin')}
                 >
-                    {plugin.enabled ? 'Disable' : 'Enable'}
+                    {plugin.enabled ? t('disable') : t('enable')}
                 </button>
             </div>
         );
@@ -168,9 +246,9 @@ export function PluginManagerWindow({ pluginManager, onClose }: PluginManagerWin
                 <div className="plugin-manager-header">
                     <div className="plugin-manager-title">
                         <Package size={20} />
-                        <h2>Plugin Manager</h2>
+                        <h2>{t('title')}</h2>
                     </div>
-                    <button className="plugin-manager-close" onClick={onClose} title="Close">
+                    <button className="plugin-manager-close" onClick={onClose} title={t('close')}>
                         <X size={20} />
                     </button>
                 </div>
@@ -181,7 +259,7 @@ export function PluginManagerWindow({ pluginManager, onClose }: PluginManagerWin
                             <Search size={14} />
                             <input
                                 type="text"
-                                placeholder="Search plugins..."
+                                placeholder={t('searchPlaceholder')}
                                 value={filter}
                                 onChange={(e) => setFilter(e.target.value)}
                             />
@@ -191,25 +269,49 @@ export function PluginManagerWindow({ pluginManager, onClose }: PluginManagerWin
                         <div className="plugin-stats">
                             <span className="stat-item enabled">
                                 <CheckCircle size={14} />
-                                {enabledCount} enabled
+                                {enabledCount} {t('enabled')}
                             </span>
                             <span className="stat-item disabled">
                                 <XCircle size={14} />
-                                {disabledCount} disabled
+                                {disabledCount} {t('disabled')}
                             </span>
                         </div>
+                        {onRefresh && (
+                            <button
+                                className="plugin-refresh-btn"
+                                onClick={handleRefresh}
+                                disabled={isRefreshing}
+                                title={t('refreshPluginList')}
+                                style={{
+                                    padding: '6px 12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    backgroundColor: '#0e639c',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    color: '#fff',
+                                    cursor: isRefreshing ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    opacity: isRefreshing ? 0.6 : 1
+                                }}
+                            >
+                                <RefreshCw size={14} className={isRefreshing ? 'spinning' : ''} />
+                                {t('refresh')}
+                            </button>
+                        )}
                         <div className="plugin-view-mode">
                             <button
                                 className={viewMode === 'list' ? 'active' : ''}
                                 onClick={() => setViewMode('list')}
-                                title="List view"
+                                title={t('listView')}
                             >
                                 <List size={14} />
                             </button>
                             <button
                                 className={viewMode === 'grid' ? 'active' : ''}
                                 onClick={() => setViewMode('grid')}
-                                title="Grid view"
+                                title={t('gridView')}
                             >
                                 <Grid size={14} />
                             </button>
@@ -221,7 +323,7 @@ export function PluginManagerWindow({ pluginManager, onClose }: PluginManagerWin
                     {plugins.length === 0 ? (
                         <div className="plugin-empty">
                             <Package size={48} />
-                            <p>No plugins installed</p>
+                            <p>{t('noPlugins')}</p>
                         </div>
                     ) : (
                         <div className="plugin-categories">
@@ -244,7 +346,7 @@ export function PluginManagerWindow({ pluginManager, onClose }: PluginManagerWin
                                                     return CategoryIcon ? <CategoryIcon size={16} /> : null;
                                                 })()}
                                             </span>
-                                            <span className="plugin-category-name">{categoryNames[cat]}</span>
+                                            <span className="plugin-category-name">{getCategoryName(cat)}</span>
                                             <span className="plugin-category-count">
                                                 {categoryPlugins.length}
                                             </span>
