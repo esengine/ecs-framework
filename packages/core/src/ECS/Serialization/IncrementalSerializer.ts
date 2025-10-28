@@ -673,36 +673,6 @@ export class IncrementalSerializer {
     }
 
     /**
-     * 计算增量快照的大小（字节）
-     *
-     * @param incremental 增量快照
-     * @param format 序列化格式，默认为 'json'
-     * @returns 字节数
-     */
-    public static getIncrementalSize(
-        incremental: IncrementalSnapshot,
-        format: IncrementalSerializationFormat = 'json'
-    ): number {
-        const data = this.serializeIncremental(incremental, { format });
-
-        if (typeof data === 'string') {
-            // JSON格式：计算UTF-8编码后的字节数
-            // 使用 Blob 来计算浏览器和 Node.js 环境兼容的字节数
-            if (typeof Blob !== 'undefined') {
-                return new Blob([data]).size;
-            } else if (typeof Buffer !== 'undefined') {
-                return Buffer.byteLength(data, 'utf8');
-            } else {
-                // 回退方案：粗略估算（不精确，但可用）
-                return new TextEncoder().encode(data).length;
-            }
-        } else {
-            // 二进制格式：直接返回Buffer长度
-            return data.length;
-        }
-    }
-
-    /**
      * 获取增量快照的统计信息
      *
      * @param incremental 增量快照

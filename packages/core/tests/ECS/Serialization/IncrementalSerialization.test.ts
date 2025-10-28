@@ -671,17 +671,6 @@ describe('Incremental Serialization System', () => {
     });
 
     describe('Statistics and Utilities', () => {
-        it('应该计算增量快照大小', () => {
-            scene.createIncrementalSnapshot();
-            const entity = scene.createEntity('Entity');
-            entity.addComponent(new PositionComponent(10, 20));
-
-            const incremental = scene.serializeIncremental();
-            const size = IncrementalSerializer.getIncrementalSize(incremental);
-
-            expect(size).toBeGreaterThan(0);
-        });
-
         it('应该提供增量快照统计信息', () => {
             const entity1 = scene.createEntity('Entity1');
             entity1.addComponent(new PositionComponent(10, 20));
