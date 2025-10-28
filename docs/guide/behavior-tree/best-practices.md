@@ -546,6 +546,5 @@ describe('EnemyAI', () => {
 
 ## 下一步
 
-- 查看[节点参考](./node-reference.md)了解所有内置节点
-- 学习[自定义节点](./custom-nodes.md)扩展行为树功能
+- 学习[自定义动作](./custom-actions.md)扩展行为树功能
 - 探索[高级用法](./advanced-usage.md)了解更多技巧

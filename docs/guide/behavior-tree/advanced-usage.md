@@ -591,6 +591,5 @@ const fsm = BehaviorTreeBuilder.create(scene, 'StateMachine')
 
 ## 下一步
 
-- 查看[自定义节点](./custom-nodes.md)学习如何创建自定义行为节点
+- 查看[自定义动作](./custom-actions.md)学习如何创建自定义行为节点
 - 阅读[最佳实践](./best-practices.md)了解行为树设计技巧
-- 查看[节点参考](./node-reference.md)了解所有内置节点

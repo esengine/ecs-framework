@@ -53,7 +53,7 @@
 ### 编辑器使用
 
 - **[编辑器使用指南](./editor-guide.md)** - 可视化创建行为树
-- **[节点参考](./node-reference.md)** - 所有内置节点的详细说明
+- **[编辑器工作流](./editor-workflow.md)** - 完整的开发流程
 
 ### 引擎集成
 
@@ -63,12 +63,8 @@
 ### 高级主题
 
 - **[高级用法](./advanced-usage.md)** - 子树、异步加载、性能优化
-- **[自定义节点](./custom-nodes.md)** - 创建自定义行为节点
+- **[自定义动作](./custom-actions.md)** - 创建自定义行为节点
 - **[最佳实践](./best-practices.md)** - 行为树设计模式和技巧
-
-### API参考
-
-- **[API 文档](../../api/behavior-tree/README.md)** - 完整的API参考
 
 ## 快速示例
 
