@@ -6,7 +6,7 @@ import {
     Repeat, CheckCircle, XCircle, CheckCheck, HelpCircle, Snowflake, Timer,
     Clock, FileText, Edit, Calculator, Code,
     Equal, Dices, Settings,
-    Database, AlertTriangle, Search, X,
+    Database, AlertTriangle, AlertCircle, Search, X,
     LucideIcon
 } from 'lucide-react';
 import { ask } from '@tauri-apps/plugin-dialog';
@@ -199,6 +199,17 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         isExecuting
     } = useBehaviorTreeStore();
 
+    // 右键菜单状态
+    const [contextMenu, setContextMenu] = useState<{
+        visible: boolean;
+        position: { x: number; y: number };
+        nodeId: string | null;
+    }>({
+        visible: false,
+        position: { x: 0, y: 0 },
+        nodeId: null
+    });
+
     // 初始化根节点（仅在首次挂载时检查）
     useEffect(() => {
         if (nodes.length === 0) {
@@ -212,6 +223,20 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         }
     }, []);
 
+    // 初始化executor用于检查执行器是否存在
+    useEffect(() => {
+        if (!executorRef.current) {
+            executorRef.current = new BehaviorTreeExecutor();
+        }
+
+        return () => {
+            if (executorRef.current) {
+                executorRef.current.destroy();
+                executorRef.current = null;
+            }
+        };
+    }, []);
+
     // 组件挂载和连线变化时强制更新，确保连线能正确渲染
     useEffect(() => {
         if (nodes.length > 0 || connections.length > 0) {
@@ -223,6 +248,20 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         }
     }, [nodes.length, connections.length]);
 
+    // 点击其他地方关闭右键菜单
+    useEffect(() => {
+        const handleClick = () => {
+            if (contextMenu.visible) {
+                setContextMenu({ ...contextMenu, visible: false });
+            }
+        };
+
+        if (contextMenu.visible) {
+            document.addEventListener('click', handleClick);
+            return () => document.removeEventListener('click', handleClick);
+        }
+    }, [contextMenu.visible]);
+
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const canvasRef = useRef<HTMLDivElement>(null);
@@ -233,11 +272,15 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         position: { x: number; y: number };
         searchText: string;
         selectedIndex: number;
+        mode: 'create' | 'replace';
+        replaceNodeId: string | null;
     }>({
         visible: false,
         position: { x: 0, y: 0 },
         searchText: '',
-        selectedIndex: 0
+        selectedIndex: 0,
+        mode: 'create',
+        replaceNodeId: null
     });
     const selectedNodeRef = useRef<HTMLDivElement>(null);
 
@@ -485,6 +528,83 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         onNodeSelect?.(node);
     };
 
+    const handleNodeContextMenu = (e: React.MouseEvent, node: BehaviorTreeNode) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // 不允许对Root节点右键
+        if (node.id === ROOT_NODE_ID) {
+            return;
+        }
+
+        setContextMenu({
+            visible: true,
+            position: { x: e.clientX, y: e.clientY },
+            nodeId: node.id
+        });
+    };
+
+    const handleReplaceNode = (newTemplate: NodeTemplate) => {
+        const nodeToReplace = nodes.find(n => n.id === quickCreateMenu.replaceNodeId);
+        if (!nodeToReplace) return;
+
+        // 如果行为树正在执行，先停止
+        if (executionMode !== 'idle') {
+            handleStop();
+        }
+
+        // 合并数据：新模板的默认配置 + 保留旧节点中同名属性的值
+        const newData = { ...newTemplate.defaultConfig };
+
+        // 获取新模板的属性名列表
+        const newPropertyNames = new Set(newTemplate.properties.map(p => p.name));
+
+        // 遍历旧节点的 data，保留新模板中也存在的属性
+        for (const [key, value] of Object.entries(nodeToReplace.data)) {
+            // 跳过节点类型相关的字段
+            if (key === 'nodeType' || key === 'compositeType' || key === 'decoratorType' ||
+                key === 'actionType' || key === 'conditionType') {
+                continue;
+            }
+
+            // 如果新模板也有这个属性，保留旧值（包括绑定信息）
+            if (newPropertyNames.has(key)) {
+                newData[key] = value;
+            }
+        }
+
+        // 创建新节点，保留原节点的位置和连接
+        const newNode: BehaviorTreeNode = {
+            id: nodeToReplace.id,
+            template: newTemplate,
+            data: newData,
+            position: nodeToReplace.position,
+            children: nodeToReplace.children
+        };
+
+        // 替换节点
+        setNodes(nodes.map(n => n.id === newNode.id ? newNode : n));
+
+        // 删除所有指向该节点的属性连接，让用户重新连接
+        const updatedConnections = connections.filter(conn =>
+            !(conn.connectionType === 'property' && conn.to === newNode.id)
+        );
+        setConnections(updatedConnections);
+
+        // 关闭快速创建菜单
+        setQuickCreateMenu({
+            visible: false,
+            position: { x: 0, y: 0 },
+            searchText: '',
+            selectedIndex: 0,
+            mode: 'create',
+            replaceNodeId: null
+        });
+
+        // 显示提示
+        showToast?.(`已将节点替换为 ${newTemplate.displayName}`, 'success');
+    };
+
     const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
         // 只允许左键拖动节点
         if (e.button !== 0) return;
@@ -703,9 +823,33 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 return;
             }
 
+            // 检查目标属性是否允许多个连接
+            const toNode = nodes.find((n: BehaviorTreeNode) => n.id === actualTo);
+            if (toNode && actualToProperty) {
+                const targetProperty = toNode.template.properties.find(
+                    (p: PropertyDefinition) => p.name === actualToProperty
+                );
+
+                // 如果属性不允许多个连接（默认行为）
+                if (!targetProperty?.allowMultipleConnections) {
+                    // 检查是否已有连接到该属性
+                    const existingPropertyConnection = connections.find(
+                        (conn: Connection) =>
+                            conn.connectionType === 'property' &&
+                            conn.to === actualTo &&
+                            conn.toProperty === actualToProperty
+                    );
+
+                    if (existingPropertyConnection) {
+                        showToast('该属性已有连接，请先删除现有连接', 'warning');
+                        clearConnecting();
+                        return;
+                    }
+                }
+            }
+
             // 类型兼容性检查
             const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === actualFrom);
-            const toNode = nodes.find((n: BehaviorTreeNode) => n.id === actualTo);
 
             if (fromNode && toNode && actualFromProperty && actualToProperty) {
                 const isFromBlackboard = fromNode.data.nodeType === 'blackboard-variable';
@@ -814,7 +958,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     y: e.clientY
                 },
                 searchText: '',
-                selectedIndex: 0
+                selectedIndex: 0,
+                mode: 'create',
+                replaceNodeId: null
             });
             // 清除预览连接线，但保留 connectingFrom 用于创建连接
             setConnectingToPos(null);
@@ -876,6 +1022,13 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     };
 
     const handleQuickCreateNode = (template: NodeTemplate) => {
+        // 如果是替换模式，直接调用替换函数
+        if (quickCreateMenu.mode === 'replace') {
+            handleReplaceNode(template);
+            return;
+        }
+
+        // 创建模式：需要连接
         if (!connectingFrom) {
             return;
         }
@@ -941,7 +1094,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             visible: false,
             position: { x: 0, y: 0 },
             searchText: '',
-            selectedIndex: 0
+            selectedIndex: 0,
+            mode: 'create',
+            replaceNodeId: null
         });
         clearConnecting();
 
@@ -1676,6 +1831,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         data-node-id={node.id}
                         className={nodeClasses}
                         onClick={(e) => handleNodeClick(e, node)}
+                        onContextMenu={(e) => handleNodeContextMenu(e, node)}
                         onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
                         onMouseUp={(e) => handleNodeMouseUpForConnection(e, node.id)}
                         style={{
@@ -1762,12 +1918,38 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                             #{node.id}
                                         </div>
                                     </div>
+                                    {/* 缺失执行器警告 */}
+                                    {!isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className) && (
+                                        <div
+                                            className="bt-node-missing-executor-warning"
+                                            style={{
+                                                marginLeft: 'auto',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                cursor: 'help',
+                                                pointerEvents: 'auto',
+                                                position: 'relative'
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <AlertCircle
+                                                size={14}
+                                                style={{
+                                                    color: '#f44336',
+                                                    flexShrink: 0
+                                                }}
+                                            />
+                                            <div className="bt-node-missing-executor-tooltip">
+                                                缺失执行器：找不到节点对应的执行器 "{node.template.className}"
+                                            </div>
+                                        </div>
+                                    )}
                                     {/* 未生效节点警告 */}
                                     {isUncommitted && (
                                         <div
                                             className="bt-node-uncommitted-warning"
                                             style={{
-                                                marginLeft: 'auto',
+                                                marginLeft: !isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className) ? '4px' : 'auto',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 cursor: 'help',
@@ -1847,9 +2029,14 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                                         onMouseDown={(e) => handlePortMouseDown(e, node.id, prop.name)}
                                                         onMouseUp={(e) => handlePortMouseUp(e, node.id, prop.name)}
                                                         className={`bt-node-port bt-node-port-property ${hasConnection ? 'connected' : ''}`}
-                                                        title={`Input: ${prop.label}`}
+                                                        title={prop.description || prop.name}
                                                     />
-                                                    <span className="bt-node-property-label">{prop.label}:</span>
+                                                    <span
+                                                        className="bt-node-property-label"
+                                                        title={prop.description}
+                                                    >
+                                                        {prop.name}:
+                                                    </span>
                                                     {propValue !== undefined && (
                                                         <span className="bt-node-property-value">
                                                             {String(propValue)}
@@ -2212,7 +2399,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                             visible: false,
                                             position: { x: 0, y: 0 },
                                             searchText: '',
-                                            selectedIndex: 0
+                                            selectedIndex: 0,
+                                            mode: 'create',
+                                            replaceNodeId: null
                                         });
                                         clearConnecting();
                                     } else if (e.key === 'ArrowDown') {
@@ -2251,7 +2440,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                         visible: false,
                                         position: { x: 0, y: 0 },
                                         searchText: '',
-                                        selectedIndex: 0
+                                        selectedIndex: 0,
+                                        mode: 'create',
+                                        replaceNodeId: null
                                     });
                                     clearConnecting();
                                 }}
@@ -2407,6 +2598,50 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     onSpeedChange={handleSpeedChange}
                 />
             </div>
+
+            {/* 右键菜单 */}
+            {contextMenu.visible && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        left: contextMenu.position.x,
+                        top: contextMenu.position.y,
+                        backgroundColor: '#2d2d30',
+                        border: '1px solid #454545',
+                        borderRadius: '4px',
+                        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
+                        zIndex: 10000,
+                        minWidth: '150px',
+                        padding: '4px 0'
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div
+                        onClick={() => {
+                            setQuickCreateMenu({
+                                visible: true,
+                                position: contextMenu.position,
+                                searchText: '',
+                                selectedIndex: 0,
+                                mode: 'replace',
+                                replaceNodeId: contextMenu.nodeId
+                            });
+                            setContextMenu({ ...contextMenu, visible: false });
+                        }}
+                        style={{
+                            padding: '8px 16px',
+                            cursor: 'pointer',
+                            color: '#cccccc',
+                            fontSize: '13px',
+                            transition: 'background-color 0.15s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#094771'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                        替换节点
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

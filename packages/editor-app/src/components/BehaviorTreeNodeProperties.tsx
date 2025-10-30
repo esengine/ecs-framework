@@ -318,29 +318,23 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
                 ) : (
                     template.properties.map((prop, index) => (
                         <div key={index} style={{ marginBottom: '20px' }}>
-                            <label style={{
-                                display: 'block',
-                                marginBottom: '8px',
-                                fontSize: '13px',
-                                fontWeight: 'bold',
-                                color: '#cccccc'
-                            }}>
+                            <label
+                                style={{
+                                    display: 'block',
+                                    marginBottom: '8px',
+                                    fontSize: '13px',
+                                    fontWeight: 'bold',
+                                    color: '#cccccc',
+                                    cursor: prop.description ? 'help' : 'default'
+                                }}
+                                title={prop.description}
+                            >
                                 {prop.label}
                                 {prop.required && (
                                     <span style={{ color: '#f48771', marginLeft: '4px' }}>*</span>
                                 )}
                             </label>
                             {renderProperty(prop)}
-                            {prop.description && prop.type !== 'boolean' && (
-                                <div style={{
-                                    marginTop: '5px',
-                                    fontSize: '11px',
-                                    color: '#666',
-                                    lineHeight: '1.4'
-                                }}>
-                                    {prop.description}
-                                </div>
-                            )}
                         </div>
                     ))
                 )}

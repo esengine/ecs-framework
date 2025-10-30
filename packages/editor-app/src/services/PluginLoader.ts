@@ -1,5 +1,6 @@
-import { EditorPluginManager } from '@esengine/editor-core';
+import { EditorPluginManager, LocaleService, MessageHub } from '@esengine/editor-core';
 import type { IEditorPlugin } from '@esengine/editor-core';
+import { Core } from '@esengine/ecs-framework';
 import { TauriAPI } from '../api/tauri';
 
 interface PluginPackageJson {
@@ -118,6 +119,28 @@ export class PluginLoader {
 
             await pluginManager.installEditor(pluginInstance);
             this.loadedPluginNames.add(packageJson.name);
+
+            // 同步插件的语言设置
+            try {
+                const localeService = Core.services.resolve(LocaleService);
+                const currentLocale = localeService.getCurrentLocale();
+                if (pluginInstance.setLocale) {
+                    pluginInstance.setLocale(currentLocale);
+                    console.log(`[PluginLoader] Set locale for plugin ${packageJson.name}: ${currentLocale}`);
+                }
+            } catch (error) {
+                console.warn(`[PluginLoader] Failed to set locale for plugin ${packageJson.name}:`, error);
+            }
+
+            // 通知节点面板重新加载模板
+            try {
+                const messageHub = Core.services.resolve(MessageHub);
+                const localeService = Core.services.resolve(LocaleService);
+                messageHub.publish('locale:changed', { locale: localeService.getCurrentLocale() });
+                console.log(`[PluginLoader] Published locale:changed event for plugin ${packageJson.name}`);
+            } catch (error) {
+                console.warn(`[PluginLoader] Failed to publish locale:changed event:`, error);
+            }
 
             console.log(`[PluginLoader] Successfully loaded plugin: ${packageJson.name}`);
         } catch (error) {

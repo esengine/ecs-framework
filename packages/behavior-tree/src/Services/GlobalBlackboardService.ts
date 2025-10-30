@@ -1,6 +1,5 @@
 import { IService } from '@esengine/ecs-framework';
-import { BlackboardValueType } from '../Types/TaskStatus';
-import { BlackboardVariable } from '../Components/BlackboardComponent';
+import { BlackboardValueType, BlackboardVariable } from '../Types/TaskStatus';
 
 /**
  * 全局黑板配置

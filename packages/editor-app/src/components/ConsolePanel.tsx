@@ -140,6 +140,8 @@ const LogEntryItem = memo(({
 
 LogEntryItem.displayName = 'LogEntryItem';
 
+const MAX_LOGS = 1000;
+
 export function ConsolePanel({ logService }: ConsolePanelProps) {
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [filter, setFilter] = useState('');
@@ -157,10 +159,16 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
     const logContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        setLogs(logService.getLogs());
+        setLogs(logService.getLogs().slice(-MAX_LOGS));
 
         const unsubscribe = logService.subscribe((entry) => {
-            setLogs(prev => [...prev, entry]);
+            setLogs(prev => {
+                const newLogs = [...prev, entry];
+                if (newLogs.length > MAX_LOGS) {
+                    return newLogs.slice(-MAX_LOGS);
+                }
+                return newLogs;
+            });
         });
 
         return unsubscribe;
@@ -348,14 +356,16 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
         }
     };
 
-    const levelCounts = {
+    const levelCounts = useMemo(() => ({
         [LogLevel.Debug]: logs.filter(l => l.level === LogLevel.Debug).length,
         [LogLevel.Info]: logs.filter(l => l.level === LogLevel.Info).length,
         [LogLevel.Warn]: logs.filter(l => l.level === LogLevel.Warn).length,
         [LogLevel.Error]: logs.filter(l => l.level === LogLevel.Error || l.level === LogLevel.Fatal).length
-    };
+    }), [logs]);
 
-    const remoteLogCount = logs.filter(l => l.source === 'remote').length;
+    const remoteLogCount = useMemo(() =>
+        logs.filter(l => l.source === 'remote').length
+    , [logs]);
 
     return (
         <div className="console-panel">

@@ -112,28 +112,23 @@ export class Main extends Component {
 import { _decorator, Component, Node } from 'cc';
 import { Core, Entity } from '@esengine/ecs-framework';
 import {
-    BehaviorTreeAssetSerializer,
-    BehaviorTreeAssetLoader,
+    BehaviorTreeBuilder,
     BehaviorTreeStarter,
-    BlackboardComponent
+    BehaviorTreeRuntimeComponent
 } from '@esengine/behavior-tree';
-import { resources } from 'cc';
 
 const { ccclass, property } = _decorator;
 
 @ccclass('EnemyAIComponent')
 export class EnemyAIComponent extends Component {
-    @property
-    behaviorTreeAsset: string = 'behaviors/enemy-ai.btree';
-
     private aiEntity: Entity | null = null;
 
     async start() {
-        // 加载行为树资产
-        await this.loadBehaviorTree();
+        // 创建行为树
+        await this.createBehaviorTree();
     }
 
-    private async loadBehaviorTree() {
+    private async createBehaviorTree() {
         try {
             // 获取Core管理的场景
             const scene = Core.scene;
@@ -142,41 +137,32 @@ export class EnemyAIComponent extends Component {
                 return;
             }
 
-            // 从 resources 加载JSON资产
-            resources.load(this.behaviorTreeAsset, (err, jsonAsset: any) => {
-                if (err) {
-                    console.error('加载行为树失败:', err);
-                    return;
-                }
+            // 使用Builder API创建行为树
+            const tree = BehaviorTreeBuilder.create('EnemyAI')
+                .defineBlackboardVariable('cocosNode', this.node)
+                .defineBlackboardVariable('health', 100)
+                .defineBlackboardVariable('playerNode', null)
+                .defineBlackboardVariable('detectionRange', 10)
+                .defineBlackboardVariable('attackRange', 2)
+                .selector('MainBehavior')
+                    .sequence('Combat')
+                        .blackboardExists('playerNode')
+                        .blackboardCompare('health', 30, 'greater')
+                        .log('攻击玩家', 'AttackPlayer')
+                    .end()
+                    .sequence('Flee')
+                        .blackboardCompare('health', 30, 'lessOrEqual')
+                        .log('逃跑', 'RunAway')
+                    .end()
+                    .log('巡逻', 'Patrol')
+                .end()
+                .build();
 
-                // 获取JSON字符串
-                const jsonString = jsonAsset.json ? JSON.stringify(jsonAsset.json) : jsonAsset.text;
+            // 创建AI实体并启动
+            this.aiEntity = scene.createEntity(`AI_${this.node.name}`);
+            BehaviorTreeStarter.start(this.aiEntity, tree);
 
-                // 反序列化
-                const btAsset = BehaviorTreeAssetSerializer.deserialize(jsonString);
-
-                // 实例化
-                this.aiEntity = BehaviorTreeAssetLoader.instantiate(
-                    btAsset,
-                    scene,
-                    {
-                        namePrefix: this.node.name
-                    }
-                );
-
-                // 设置黑板初始值
-                const blackboard = this.aiEntity.getComponent(BlackboardComponent);
-                if (blackboard) {
-                    // 可以在这里设置引用到 Cocos 节点
-                    blackboard.setValue('cocosNode', this.node);
-                    blackboard.setValue('position', this.node.position.clone());
-                }
-
-                // 启动 AI
-                BehaviorTreeStarter.start(this.aiEntity);
-
-                console.log('敌人 AI 已启动');
-            });
+            console.log('敌人 AI 已启动');
         } catch (error) {
             console.error('初始化行为树失败:', error);
         }
@@ -194,19 +180,50 @@ export class EnemyAIComponent extends Component {
 
 ## 与 Cocos 节点交互
 
-### 在编辑器ExecuteAction节点中编写代码
+### 创建自定义执行器
 
-在行为树编辑器中，可以使用 `Execute Action` 节点，并编写代码：
+要实现与Cocos节点的交互，需要创建自定义执行器：
 
-```javascript
-// 获取 Cocos 节点
-const cocosNode = blackboard.getValue('cocosNode');
+```typescript
+import {
+    INodeExecutor,
+    NodeExecutionContext,
+    NodeExecutorMetadata
+} from '@esengine/behavior-tree';
+import { TaskStatus, NodeType } from '@esengine/behavior-tree';
+import { Animation } from 'cc';
 
-// 播放攻击动画
-const animation = cocosNode.getComponent('Animation');
-animation.play('attack');
+@NodeExecutorMetadata({
+    implementationType: 'PlayAnimation',
+    nodeType: NodeType.Action,
+    displayName: '播放动画',
+    description: '播放Cocos节点上的动画',
+    category: 'Cocos',
+    configSchema: {
+        animationName: {
+            type: 'string',
+            default: 'attack'
+        }
+    }
+})
+export class PlayAnimationAction implements INodeExecutor {
+    execute(context: NodeExecutionContext): TaskStatus {
+        const cocosNode = context.runtime.getBlackboardValue('cocosNode');
+        const animationName = context.nodeData.config.animationName;
 
-return TaskStatus.Success;
+        if (!cocosNode) {
+            return TaskStatus.Failure;
+        }
+
+        const animation = cocosNode.getComponent(Animation);
+        if (animation) {
+            animation.play(animationName);
+            return TaskStatus.Success;
+        }
+
+        return TaskStatus.Failure;
+    }
+}
 ```
 
 
@@ -250,7 +267,7 @@ RootSelector
 
 ```typescript
 import { _decorator, Component, Node, Vec3 } from 'cc';
-import { BlackboardComponent } from '@esengine/behavior-tree';
+import { BehaviorTreeRuntimeComponent } from '@esengine/behavior-tree';
 
 const { ccclass, property } = _decorator;
 
@@ -262,18 +279,18 @@ export class PlayerDetector extends Component {
     @property
     detectionRange: number = 10;
 
-    private blackboard: BlackboardComponent | null = null;
+    private runtime: BehaviorTreeRuntimeComponent | null = null;
 
     start() {
         // 假设AI组件在同一节点上
         const aiComponent = this.node.getComponent('EnemyAIComponent') as any;
         if (aiComponent && aiComponent.aiEntity) {
-            this.blackboard = aiComponent.aiEntity.getComponent(BlackboardComponent);
+            this.runtime = aiComponent.aiEntity.getComponent(BehaviorTreeRuntimeComponent);
         }
     }
 
     update(deltaTime: number) {
-        if (!this.blackboard || !this.player) {
+        if (!this.runtime || !this.player) {
             return;
         }
 
@@ -281,9 +298,9 @@ export class PlayerDetector extends Component {
         const distance = Vec3.distance(this.node.position, this.player.position);
 
         // 更新黑板
-        this.blackboard.setValue('playerNode', this.player);
-        this.blackboard.setValue('playerInRange', distance <= this.detectionRange);
-        this.blackboard.setValue('distanceToPlayer', distance);
+        this.runtime.setBlackboardValue('playerNode', this.player);
+        this.runtime.setBlackboardValue('playerInRange', distance <= this.detectionRange);
+        this.runtime.setBlackboardValue('distanceToPlayer', distance);
     }
 }
 ```
@@ -291,52 +308,37 @@ export class PlayerDetector extends Component {
 
 ## 资源管理
 
-### 预加载行为树资产
+### 行为树资产复用
 
-在游戏启动时预加载所有行为树资产：
+为了节省内存，行为树定义（BehaviorTreeData）应该被共享：
 
 ```typescript
-import { resources } from 'cc';
+import { BehaviorTreeData, BehaviorTreeBuilder } from '@esengine/behavior-tree';
 
-async function preloadBehaviorTrees() {
-    const assets = [
-        'behaviors/enemy-ai',
-        'behaviors/boss-ai',
-        'behaviors/patrol'
-    ];
+class BehaviorTreeLibrary {
+    private static trees: Map<string, BehaviorTreeData> = new Map();
 
-    for (const path of assets) {
-        await new Promise((resolve, reject) => {
-            resources.preload(path, (err) => {
-                if (err) reject(err);
-                else resolve(null);
-            });
-        });
+    static registerTree(name: string, tree: BehaviorTreeData) {
+        this.trees.set(name, tree);
     }
 
-    console.log('行为树资产预加载完成');
+    static getTree(name: string): BehaviorTreeData | undefined {
+        return this.trees.get(name);
+    }
 }
-```
 
-### 使用 AssetManager
+// 初始化时注册所有行为树
+const enemyAI = BehaviorTreeBuilder.create('EnemyAI')
+    // 定义节点...
+    .build();
 
-对于动态加载，可以使用 Cocos 的 AssetManager：
+BehaviorTreeLibrary.registerTree('enemy-ai', enemyAI);
 
-```typescript
-import { assetManager } from 'cc';
-
-assetManager.loadBundle('behaviors', (err, bundle) => {
-    if (err) {
-        console.error('加载 bundle 失败:', err);
-        return;
-    }
-
-    bundle.load('enemy-ai', (err, asset) => {
-        if (!err) {
-            // 使用资产
-        }
-    });
-});
+// 使用时
+const tree = BehaviorTreeLibrary.getTree('enemy-ai');
+if (tree) {
+    BehaviorTreeStarter.start(entity, tree);
+}
 ```
 
 ## 调试
@@ -347,7 +349,7 @@ assetManager.loadBundle('behaviors', (err, bundle) => {
 
 ```typescript
 import { _decorator, Component, Label } from 'cc';
-import { BlackboardComponent } from '@esengine/behavior-tree';
+import { BehaviorTreeRuntimeComponent } from '@esengine/behavior-tree';
 
 const { ccclass, property } = _decorator;
 
@@ -356,24 +358,24 @@ export class AIDebugger extends Component {
     @property(Label)
     debugLabel: Label = null;
 
-    private blackboard: BlackboardComponent | null = null;
+    private runtime: BehaviorTreeRuntimeComponent | null = null;
 
     start() {
         const aiComponent = this.node.getComponent('EnemyAIComponent') as any;
         if (aiComponent && aiComponent.aiEntity) {
-            this.blackboard = aiComponent.aiEntity.getComponent(BlackboardComponent);
+            this.runtime = aiComponent.aiEntity.getComponent(BehaviorTreeRuntimeComponent);
         }
     }
 
     update() {
-        if (!this.blackboard || !this.debugLabel) {
+        if (!this.runtime || !this.debugLabel) {
             return;
         }
 
-        const health = this.blackboard.getValue('health');
-        const state = this.blackboard.getValue('currentState');
+        const health = this.runtime.getBlackboardValue('health');
+        const playerNode = this.runtime.getBlackboardValue('playerNode');
 
-        this.debugLabel.string = `Health: ${health}\nState: ${state}`;
+        this.debugLabel.string = `Health: ${health}\nHas Target: ${playerNode ? 'Yes' : 'No'}`;
     }
 }
 ```
@@ -381,95 +383,100 @@ export class AIDebugger extends Component {
 
 ## 性能优化
 
-### 1. 使用对象池
+### 1. 限制行为树数量
 
-为 AI 实体使用对象池：
+合理控制同时运行的行为树数量：
 
 ```typescript
-class AIEntityPool {
-    private pool: Entity[] = [];
-    private scene: Scene;
+class AIManager {
+    private activeAIs: Entity[] = [];
+    private maxAIs: number = 20;
 
-    constructor(scene: Scene) {
-        this.scene = scene;
-    }
-
-    acquire(behaviorTreeAsset: any): Entity {
-        if (this.pool.length > 0) {
-            const entity = this.pool.pop()!;
-            BehaviorTreeStarter.restart(entity);
-            return entity;
+    addAI(entity: Entity, tree: BehaviorTreeData) {
+        if (this.activeAIs.length >= this.maxAIs) {
+            // 移除最远的AI
+            const furthest = this.findFurthestAI();
+            if (furthest) {
+                BehaviorTreeStarter.stop(furthest);
+                this.activeAIs = this.activeAIs.filter(e => e !== furthest);
+            }
         }
 
-        return BehaviorTreeAssetLoader.instantiate(behaviorTreeAsset, this.scene);
+        BehaviorTreeStarter.start(entity, tree);
+        this.activeAIs.push(entity);
     }
 
-    release(entity: Entity) {
+    removeAI(entity: Entity) {
         BehaviorTreeStarter.stop(entity);
-        this.pool.push(entity);
+        this.activeAIs = this.activeAIs.filter(e => e !== entity);
+    }
+
+    private findFurthestAI(): Entity | null {
+        // 根据距离找到最远的AI
+        // 实现细节略
+        return this.activeAIs[0];
     }
 }
 ```
 
-### 2. 限制更新频率
+### 2. 使用冷却装饰器
 
-对于远离相机的敌人，可以在行为树内部使用节流机制：
+对于不需要每帧更新的AI，使用冷却装饰器：
 
 ```typescript
-// 在行为树的Action节点中实现节流
-function throttledAction(entity, blackboard, deltaTime) {
-    let lastUpdate = blackboard?.getValue('lastUpdateTime') || 0;
-    const currentTime = Date.now();
+const tree = BehaviorTreeBuilder.create('ThrottledAI')
+    .cooldown(0.2, 'ThrottleRoot')  // 每0.2秒执行一次
+        .selector('MainBehavior')
+            // AI逻辑...
+        .end()
+    .end()
+    .build();
+```
 
-    // 根据距离决定更新间隔
-    const distance = getDistanceToCamera();
-    const updateInterval = distance < 10 ? 0 : 200;  // 远处敌人200ms更新一次
+### 3. 缓存计算结果
 
-    if (currentTime - lastUpdate < updateInterval) {
-        return TaskStatus.Running;
+在自定义执行器中缓存昂贵的计算：
+
+```typescript
+export class CachedFindTarget implements INodeExecutor {
+    execute(context: NodeExecutionContext): TaskStatus {
+        const { state, runtime, totalTime } = context;
+        const cacheTime = state.lastFindTime || 0;
+
+        if (totalTime - cacheTime < 1.0) {
+            const cached = runtime.getBlackboardValue('target');
+            return cached ? TaskStatus.Success : TaskStatus.Failure;
+        }
+
+        const target = findNearestTarget();
+        runtime.setBlackboardValue('target', target);
+        state.lastFindTime = totalTime;
+
+        return target ? TaskStatus.Success : TaskStatus.Failure;
     }
-
-    blackboard?.setValue('lastUpdateTime', currentTime);
-
-    // 执行实际逻辑
-    performAILogic();
-    return TaskStatus.Success;
 }
 ```
 
-### 3. 使用二进制格式
+## 多平台注意事项
 
-在构建时将 JSON 转换为二进制格式以减小包体：
+### 性能考虑
 
-```bash
-# 在构建脚本中
-node scripts/convert-bt-to-binary.js
-```
+不同平台的性能差异：
 
-## 多平台发布
+- **Web平台**: 受浏览器性能限制，建议减少同时运行的AI数量
+- **原生平台**: 性能较好，可以运行更多AI
+- **小游戏平台**: 内存受限，注意控制行为树数量和复杂度
 
-### Web 平台
-
-在 Web 平台，确保资源路径正确：
+### 平台适配
 
 ```typescript
-// 使用相对路径
-const assetPath = 'behaviors/enemy-ai';
-```
+import { sys } from 'cc';
 
-### 原生平台
+// 根据平台调整AI数量
+const maxAIs = sys.isNative ? 50 : (sys.isBrowser ? 20 : 30);
 
-原生平台可以使用二进制格式以获得更好的性能：
-
-```typescript
-// 检测平台
-if (sys.isNative) {
-    // 加载二进制格式
-    assetPath = 'behaviors/enemy-ai.btree.bin';
-} else {
-    // 加载 JSON 格式
-    assetPath = 'behaviors/enemy-ai.btree.json';
-}
+// 根据平台调整更新频率
+const updateInterval = sys.isNative ? 0.016 : 0.05;
 ```
 
 ## 常见问题
@@ -493,7 +500,7 @@ if (sys.isNative) {
 检查：
 1. 变量名拼写是否正确
 2. 是否在正确的时机更新变量
-3. 使用 `BlackboardComponent.getValue()` 和 `setValue()` 方法
+3. 使用 `BehaviorTreeRuntimeComponent.getBlackboardValue()` 和 `setBlackboardValue()` 方法
 
 ## 下一步
 

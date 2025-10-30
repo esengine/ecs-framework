@@ -1,7 +1,7 @@
 import type { Core, ServiceContainer } from '@esengine/ecs-framework';
 import { IEditorPlugin, EditorPluginCategory, PanelPosition, MessageHub } from '@esengine/editor-core';
 import type { MenuItem, ToolbarItem, PanelDescriptor, ISerializer } from '@esengine/editor-core';
-import { BehaviorTreePersistence } from '@esengine/behavior-tree';
+import { BehaviorTreeData } from '@esengine/behavior-tree';
 
 /**
  * 行为树编辑器插件
@@ -112,18 +112,15 @@ export class BehaviorTreePlugin implements IEditorPlugin {
     getSerializers(): ISerializer[] {
         return [
             {
-                serialize: (data: any) => {
-                    // 使用行为树持久化工具
-                    const result = BehaviorTreePersistence.serialize(data.entity, data.pretty ?? true);
-                    if (typeof result === 'string') {
-                        const encoder = new TextEncoder();
-                        return encoder.encode(result);
-                    }
-                    return result;
+                serialize: (data: BehaviorTreeData) => {
+                    const json = this.serializeBehaviorTreeData(data);
+                    const encoder = new TextEncoder();
+                    return encoder.encode(json);
                 },
                 deserialize: (data: Uint8Array) => {
-                    // 返回原始数据，让上层决定如何反序列化到场景
-                    return data;
+                    const decoder = new TextDecoder();
+                    const json = decoder.decode(data);
+                    return this.deserializeBehaviorTreeData(json);
                 },
                 getSupportedType: () => 'behavior-tree'
             }
@@ -143,10 +140,9 @@ export class BehaviorTreePlugin implements IEditorPlugin {
     }
 
     async onBeforeSave(filePath: string, data: any): Promise<void> {
-        // 验证行为树数据
         if (filePath.endsWith('.behavior-tree.json')) {
             console.log('[BehaviorTreePlugin] Validating behavior tree before save');
-            const isValid = BehaviorTreePersistence.validate(JSON.stringify(data));
+            const isValid = this.validateBehaviorTreeData(data);
             if (!isValid) {
                 throw new Error('Invalid behavior tree data');
             }
@@ -159,25 +155,83 @@ export class BehaviorTreePlugin implements IEditorPlugin {
         }
     }
 
-    // 私有方法
-
     private createNewBehaviorTree(): void {
         console.log('[BehaviorTreePlugin] Creating new behavior tree');
-        // TODO: 实现创建新行为树的逻辑
     }
 
     private openBehaviorTree(): void {
         console.log('[BehaviorTreePlugin] Opening behavior tree');
-        // TODO: 实现打开行为树的逻辑
     }
 
     private saveBehaviorTree(): void {
         console.log('[BehaviorTreePlugin] Saving behavior tree');
-        // TODO: 实现保存行为树的逻辑
     }
 
     private validateBehaviorTree(): void {
         console.log('[BehaviorTreePlugin] Validating behavior tree');
-        // TODO: 实现验证行为树的逻辑
+    }
+
+    private serializeBehaviorTreeData(treeData: BehaviorTreeData): string {
+        const serializable = {
+            id: treeData.id,
+            name: treeData.name,
+            rootNodeId: treeData.rootNodeId,
+            nodes: Array.from(treeData.nodes.entries()).map(([, node]) => ({
+                ...node
+            })),
+            blackboardVariables: treeData.blackboardVariables
+                ? Array.from(treeData.blackboardVariables.entries()).map(([key, value]) => ({
+                    key,
+                    value
+                }))
+                : []
+        };
+        return JSON.stringify(serializable, null, 2);
+    }
+
+    private deserializeBehaviorTreeData(json: string): BehaviorTreeData {
+        const parsed = JSON.parse(json);
+        const treeData: BehaviorTreeData = {
+            id: parsed.id,
+            name: parsed.name,
+            rootNodeId: parsed.rootNodeId,
+            nodes: new Map(),
+            blackboardVariables: new Map()
+        };
+
+        if (parsed.nodes) {
+            for (const node of parsed.nodes) {
+                treeData.nodes.set(node.id, node);
+            }
+        }
+
+        if (parsed.blackboardVariables) {
+            for (const variable of parsed.blackboardVariables) {
+                treeData.blackboardVariables!.set(variable.key, variable.value);
+            }
+        }
+
+        return treeData;
+    }
+
+    private validateBehaviorTreeData(data: any): boolean {
+        if (!data || typeof data !== 'object') {
+            return false;
+        }
+
+        if (!data.id || !data.name || !data.rootNodeId) {
+            return false;
+        }
+
+        if (!data.nodes || !Array.isArray(data.nodes)) {
+            return false;
+        }
+
+        const rootNode = data.nodes.find((n: any) => n.id === data.rootNodeId);
+        if (!rootNode) {
+            return false;
+        }
+
+        return true;
     }
 }
