@@ -109,14 +109,30 @@ export class Scene implements IScene {
     private _didSceneBegin: boolean = false;
 
     /**
+     * 系统列表缓存
+     */
+    private _cachedSystems: EntitySystem[] | null = null;
+
+    /**
+     * 系统顺序脏标记
+     *
+     * 当系统增删或 updateOrder 改变时标记为 true，下次访问 systems 时重新构建缓存
+     */
+    private _systemsOrderDirty: boolean = true;
+
+    /**
      * 获取场景中所有已注册的EntitySystem
      *
-     * 按updateOrder排序。
+     * 按updateOrder排序。使用缓存机制，仅在系统变化时重新排序。
      *
      * @returns 系统列表
      */
     public get systems(): EntitySystem[] {
-        // 从ServiceContainer获取所有EntitySystem实例
+        if (!this._systemsOrderDirty && this._cachedSystems) {
+            return this._cachedSystems;
+        }
+
+        // 重新构建系统列表
         const services = this._services.getAll();
         const systems: EntitySystem[] = [];
 
@@ -128,6 +144,10 @@ export class Scene implements IScene {
 
         // 按updateOrder排序
         systems.sort((a, b) => a.updateOrder - b.updateOrder);
+
+        // 缓存结果
+        this._cachedSystems = systems;
+        this._systemsOrderDirty = false;
 
         return systems;
     }
@@ -150,6 +170,14 @@ export class Scene implements IScene {
         return this._services.tryResolve(systemType) as T | null;
     }
 
+    /**
+     * 标记系统顺序为脏
+     *
+     * 当系统列表或顺序发生变化时调用，使缓存失效
+     */
+    public markSystemsOrderDirty(): void {
+        this._systemsOrderDirty = true;
+    }
 
     /**
      * 获取场景的服务容器
@@ -265,6 +293,10 @@ export class Scene implements IScene {
 
         // 清空服务容器（会调用所有服务的dispose方法，包括所有EntitySystem）
         this._services.clear();
+
+        // 清空系统缓存
+        this._cachedSystems = null;
+        this._systemsOrderDirty = true;
 
         // 调用卸载方法
         this.unload();
@@ -599,6 +631,9 @@ export class Scene implements IScene {
 
         this._services.registerInstance(constructor, system);
 
+        // 标记系统列表已变化
+        this.markSystemsOrderDirty();
+
         injectProperties(system, this._services);
 
         system.initialize();
@@ -671,6 +706,9 @@ export class Scene implements IScene {
 
         // 从ServiceContainer移除
         this._services.unregister(constructor);
+
+        // 标记系统列表已变化
+        this.markSystemsOrderDirty();
 
         // 重置System状态
         processor.reset();

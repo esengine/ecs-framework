@@ -222,7 +222,9 @@ export abstract class EntitySystem<
      * @param order 更新时序
      */
     public setUpdateOrder(order: number): void {
+        if (this._updateOrder === order) return;
         this._updateOrder = order;
+        this._scene?.markSystemsOrderDirty();
     }
 
     /**
