@@ -42,11 +42,13 @@ export class LogAction implements INodeExecutor {
     }
 
     private replaceBlackboardVariables(message: string, runtime: NodeExecutionContext['runtime']): string {
-        if (!message.includes('{')) {
+        if (!message.includes('{') || !message.includes('}')) {
             return message;
         }
 
-        return message.replace(/\{([^}]+)\}/g, (_, key) => {
+        // 使用限制长度的正则表达式避免 ReDoS 攻击
+        // 限制占位符名称最多100个字符，只允许字母、数字、下划线和点号
+        return message.replace(/\{([\w.]{1,100})\}/g, (_, key) => {
             const value = runtime.getBlackboardValue(key.trim());
             return value !== undefined ? String(value) : `{${key}}`;
         });
