@@ -1,547 +1,357 @@
-import { Entity, IScene } from '@esengine/ecs-framework';
-import { BehaviorTreeNode } from './Components/BehaviorTreeNode';
-import { CompositeNodeComponent } from './Components/CompositeNodeComponent';
-import { DecoratorNodeComponent } from './Components/DecoratorNodeComponent';
-import { BlackboardComponent } from './Components/BlackboardComponent';
-import { NodeType, CompositeType, DecoratorType, BlackboardValueType } from './Types/TaskStatus';
-
-// 导入动作组件
-import { WaitAction } from './Components/Actions/WaitAction';
-import { LogAction } from './Components/Actions/LogAction';
-import { SetBlackboardValueAction } from './Components/Actions/SetBlackboardValueAction';
-import { ModifyBlackboardValueAction, ModifyOperation } from './Components/Actions/ModifyBlackboardValueAction';
-import { ExecuteAction, CustomActionFunction } from './Components/Actions/ExecuteAction';
-
-// 导入条件组件
-import { BlackboardCompareCondition, CompareOperator } from './Components/Conditions/BlackboardCompareCondition';
-import { BlackboardExistsCondition } from './Components/Conditions/BlackboardExistsCondition';
-import { RandomProbabilityCondition } from './Components/Conditions/RandomProbabilityCondition';
-import { ExecuteCondition, CustomConditionFunction } from './Components/Conditions/ExecuteCondition';
-
-// 导入装饰器组件
-import { RepeaterNode } from './Components/Decorators/RepeaterNode';
-import { InverterNode } from './Components/Decorators/InverterNode';
-import { UntilSuccessNode } from './Components/Decorators/UntilSuccessNode';
-import { UntilFailNode } from './Components/Decorators/UntilFailNode';
-import { AlwaysSucceedNode } from './Components/Decorators/AlwaysSucceedNode';
-import { AlwaysFailNode } from './Components/Decorators/AlwaysFailNode';
-import { ConditionalNode } from './Components/Decorators/ConditionalNode';
-import { CooldownNode } from './Components/Decorators/CooldownNode';
-import { TimeoutNode } from './Components/Decorators/TimeoutNode';
+import { BehaviorTreeData, BehaviorNodeData } from './Runtime/BehaviorTreeData';
+import { NodeType } from './Types/TaskStatus';
 
 /**
  * 行为树构建器
  *
- * 提供流式 API 来构建行为树结构
- *
- * @example
- * ```typescript
- * const aiRoot = BehaviorTreeBuilder.create(scene, 'AI')
- *     .blackboard()
- *         .defineVariable('health', BlackboardValueType.Number, 100)
- *         .defineVariable('target', BlackboardValueType.Object, null)
- *     .endBlackboard()
- *     .selector('MainSelector')
- *         .sequence('AttackSequence')
- *             .condition((entity, blackboard) => {
- *                 return blackboard?.getValue('health') > 50;
- *             })
- *             .action('Attack', (entity) => TaskStatus.Success)
- *         .end()
- *         .action('Flee', (entity) => TaskStatus.Success)
- *     .end()
- *     .build();
- * ```
+ * 提供流式API构建行为树数据结构
  */
 export class BehaviorTreeBuilder {
-    private scene: IScene;
-    private currentEntity: Entity;
-    private entityStack: Entity[] = [];
-    private blackboardEntity?: Entity;
+    private treeData: BehaviorTreeData;
+    private nodeStack: string[] = [];
+    private nodeIdCounter: number = 0;
 
-    private constructor(scene: IScene, rootName: string) {
-        this.scene = scene;
-        this.currentEntity = scene.createEntity(rootName);
+    private constructor(treeName: string) {
+        this.treeData = {
+            id: `tree_${Date.now()}`,
+            name: treeName,
+            rootNodeId: '',
+            nodes: new Map(),
+            blackboardVariables: new Map()
+        };
     }
 
     /**
-     * 创建行为树构建器
-     *
-     * @param scene 场景实例
-     * @param rootName 根节点名称
-     * @returns 构建器实例
+     * 创建构建器
      */
-    static create(scene: IScene, rootName: string = 'BehaviorTreeRoot'): BehaviorTreeBuilder {
-        return new BehaviorTreeBuilder(scene, rootName);
-    }
-
-    /**
-     * 添加黑板组件到根节点
-     */
-    blackboard(): BehaviorTreeBuilder {
-        this.blackboardEntity = this.currentEntity;
-        this.currentEntity.addComponent(new BlackboardComponent());
-        return this;
+    static create(treeName: string = 'BehaviorTree'): BehaviorTreeBuilder {
+        return new BehaviorTreeBuilder(treeName);
     }
 
     /**
      * 定义黑板变量
      */
-    defineVariable(
-        name: string,
-        type: BlackboardValueType,
-        initialValue: any,
-        options?: { readonly?: boolean; description?: string }
-    ): BehaviorTreeBuilder {
-        if (!this.blackboardEntity) {
-            throw new Error('Must call blackboard() first');
+    defineBlackboardVariable(key: string, initialValue: any): BehaviorTreeBuilder {
+        if (!this.treeData.blackboardVariables) {
+            this.treeData.blackboardVariables = new Map();
         }
-
-        const blackboard = this.blackboardEntity.getComponent(BlackboardComponent);
-        if (blackboard) {
-            blackboard.defineVariable(name, type, initialValue, options);
-        }
-
+        this.treeData.blackboardVariables.set(key, initialValue);
         return this;
     }
 
     /**
-     * 结束黑板定义
+     * 添加序列节点
      */
-    endBlackboard(): BehaviorTreeBuilder {
-        this.blackboardEntity = undefined;
-        return this;
+    sequence(name?: string): BehaviorTreeBuilder {
+        return this.addCompositeNode('Sequence', name || 'Sequence');
     }
 
     /**
-     * 创建序列节点
+     * 添加选择器节点
      */
-    sequence(name: string = 'Sequence'): BehaviorTreeBuilder {
-        return this.composite(name, CompositeType.Sequence);
+    selector(name?: string): BehaviorTreeBuilder {
+        return this.addCompositeNode('Selector', name || 'Selector');
     }
 
     /**
-     * 创建选择器节点
+     * 添加并行节点
      */
-    selector(name: string = 'Selector'): BehaviorTreeBuilder {
-        return this.composite(name, CompositeType.Selector);
+    parallel(name?: string, config?: { successPolicy?: string; failurePolicy?: string }): BehaviorTreeBuilder {
+        return this.addCompositeNode('Parallel', name || 'Parallel', config);
     }
 
     /**
-     * 创建并行节点
+     * 添加并行选择器节点
      */
-    parallel(name: string = 'Parallel'): BehaviorTreeBuilder {
-        return this.composite(name, CompositeType.Parallel);
+    parallelSelector(name?: string, config?: { failurePolicy?: string }): BehaviorTreeBuilder {
+        return this.addCompositeNode('ParallelSelector', name || 'ParallelSelector', config);
     }
 
     /**
-     * 创建并行选择器节点
+     * 添加随机序列节点
      */
-    parallelSelector(name: string = 'ParallelSelector'): BehaviorTreeBuilder {
-        return this.composite(name, CompositeType.ParallelSelector);
+    randomSequence(name?: string): BehaviorTreeBuilder {
+        return this.addCompositeNode('RandomSequence', name || 'RandomSequence');
     }
 
     /**
-     * 创建随机序列节点
+     * 添加随机选择器节点
      */
-    randomSequence(name: string = 'RandomSequence'): BehaviorTreeBuilder {
-        return this.composite(name, CompositeType.RandomSequence);
+    randomSelector(name?: string): BehaviorTreeBuilder {
+        return this.addCompositeNode('RandomSelector', name || 'RandomSelector');
     }
 
     /**
-     * 创建随机选择器节点
+     * 添加反转装饰器
      */
-    randomSelector(name: string = 'RandomSelector'): BehaviorTreeBuilder {
-        return this.composite(name, CompositeType.RandomSelector);
+    inverter(name?: string): BehaviorTreeBuilder {
+        return this.addDecoratorNode('Inverter', name || 'Inverter');
     }
 
     /**
-     * 创建复合节点
+     * 添加重复装饰器
      */
-    private composite(name: string, type: CompositeType): BehaviorTreeBuilder {
-        this.entityStack.push(this.currentEntity);
-
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Composite;
-        node.nodeName = name;
-
-        const composite = entity.addComponent(new CompositeNodeComponent());
-        composite.compositeType = type;
-
-        this.currentEntity = entity;
-        return this;
+    repeater(repeatCount: number, name?: string): BehaviorTreeBuilder {
+        return this.addDecoratorNode('Repeater', name || 'Repeater', { repeatCount });
     }
 
     /**
-     * 创建反转装饰器
+     * 添加总是成功装饰器
      */
-    inverter(name: string = 'Inverter'): BehaviorTreeBuilder {
-        this.entityStack.push(this.currentEntity);
-
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Decorator;
-        node.nodeName = name;
-
-        entity.addComponent(new InverterNode());
-
-        this.currentEntity = entity;
-        return this;
+    alwaysSucceed(name?: string): BehaviorTreeBuilder {
+        return this.addDecoratorNode('AlwaysSucceed', name || 'AlwaysSucceed');
     }
 
     /**
-     * 创建重复装饰器
+     * 添加总是失败装饰器
      */
-    repeater(name: string = 'Repeater', count: number = -1, endOnFailure: boolean = false): BehaviorTreeBuilder {
-        this.entityStack.push(this.currentEntity);
-
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Decorator;
-        node.nodeName = name;
-
-        const decorator = entity.addComponent(new RepeaterNode());
-        decorator.repeatCount = count;
-        decorator.endOnFailure = endOnFailure;
-
-        this.currentEntity = entity;
-        return this;
+    alwaysFail(name?: string): BehaviorTreeBuilder {
+        return this.addDecoratorNode('AlwaysFail', name || 'AlwaysFail');
     }
 
     /**
-     * 创建直到成功装饰器
+     * 添加直到成功装饰器
      */
-    untilSuccess(name: string = 'UntilSuccess'): BehaviorTreeBuilder {
-        this.entityStack.push(this.currentEntity);
-
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Decorator;
-        node.nodeName = name;
-
-        entity.addComponent(new UntilSuccessNode());
-
-        this.currentEntity = entity;
-        return this;
+    untilSuccess(name?: string): BehaviorTreeBuilder {
+        return this.addDecoratorNode('UntilSuccess', name || 'UntilSuccess');
     }
 
     /**
-     * 创建直到失败装饰器
+     * 添加直到失败装饰器
      */
-    untilFail(name: string = 'UntilFail'): BehaviorTreeBuilder {
-        this.entityStack.push(this.currentEntity);
-
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Decorator;
-        node.nodeName = name;
-
-        entity.addComponent(new UntilFailNode());
-
-        this.currentEntity = entity;
-        return this;
+    untilFail(name?: string): BehaviorTreeBuilder {
+        return this.addDecoratorNode('UntilFail', name || 'UntilFail');
     }
 
     /**
-     * 创建总是成功装饰器
+     * 添加条件装饰器
      */
-    alwaysSucceed(name: string = 'AlwaysSucceed'): BehaviorTreeBuilder {
-        this.entityStack.push(this.currentEntity);
-
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Decorator;
-        node.nodeName = name;
-
-        entity.addComponent(new AlwaysSucceedNode());
-
-        this.currentEntity = entity;
-        return this;
+    conditional(blackboardKey: string, expectedValue: any, operator?: string, name?: string): BehaviorTreeBuilder {
+        return this.addDecoratorNode('Conditional', name || 'Conditional', {
+            blackboardKey,
+            expectedValue,
+            operator: operator || 'equals'
+        });
     }
 
     /**
-     * 创建总是失败装饰器
+     * 添加冷却装饰器
      */
-    alwaysFail(name: string = 'AlwaysFail'): BehaviorTreeBuilder {
-        this.entityStack.push(this.currentEntity);
-
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Decorator;
-        node.nodeName = name;
-
-        entity.addComponent(new AlwaysFailNode());
-
-        this.currentEntity = entity;
-        return this;
+    cooldown(cooldownTime: number, name?: string): BehaviorTreeBuilder {
+        return this.addDecoratorNode('Cooldown', name || 'Cooldown', { cooldownTime });
     }
 
     /**
-     * 创建条件装饰器
+     * 添加超时装饰器
      */
-    conditional(name: string, conditionCode: string): BehaviorTreeBuilder {
-        this.entityStack.push(this.currentEntity);
-
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Decorator;
-        node.nodeName = name;
-
-        const decorator = entity.addComponent(new ConditionalNode());
-        decorator.conditionCode = conditionCode;
-
-        this.currentEntity = entity;
-        return this;
+    timeout(timeout: number, name?: string): BehaviorTreeBuilder {
+        return this.addDecoratorNode('Timeout', name || 'Timeout', { timeout });
     }
 
     /**
-     * 创建冷却装饰器
+     * 添加等待动作
      */
-    cooldown(name: string = 'Cooldown', cooldownTime: number = 1.0): BehaviorTreeBuilder {
-        this.entityStack.push(this.currentEntity);
-
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Decorator;
-        node.nodeName = name;
-
-        const decorator = entity.addComponent(new CooldownNode());
-        decorator.cooldownTime = cooldownTime;
-
-        this.currentEntity = entity;
-        return this;
+    wait(duration: number, name?: string): BehaviorTreeBuilder {
+        return this.addActionNode('Wait', name || 'Wait', { duration });
     }
 
     /**
-     * 创建超时装饰器
+     * 添加日志动作
      */
-    timeout(name: string = 'Timeout', timeoutDuration: number = 5.0): BehaviorTreeBuilder {
-        this.entityStack.push(this.currentEntity);
-
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Decorator;
-        node.nodeName = name;
-
-        const decorator = entity.addComponent(new TimeoutNode());
-        decorator.timeoutDuration = timeoutDuration;
-
-        this.currentEntity = entity;
-        return this;
+    log(message: string, name?: string): BehaviorTreeBuilder {
+        return this.addActionNode('Log', name || 'Log', { message });
     }
 
     /**
-     * 创建等待动作
+     * 添加设置黑板值动作
      */
-    wait(waitTime: number, name: string = 'Wait'): BehaviorTreeBuilder {
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Action;
-        node.nodeName = name;
-
-        const action = entity.addComponent(new WaitAction());
-        action.waitTime = waitTime;
-
-        return this;
+    setBlackboardValue(key: string, value: any, name?: string): BehaviorTreeBuilder {
+        return this.addActionNode('SetBlackboardValue', name || 'SetBlackboardValue', { key, value });
     }
 
     /**
-     * 创建日志动作
+     * 添加修改黑板值动作
      */
-    log(message: string, level: 'log' | 'info' | 'warn' | 'error' = 'log', name: string = 'Log'): BehaviorTreeBuilder {
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Action;
-        node.nodeName = name;
-
-        const action = entity.addComponent(new LogAction());
-        action.message = message;
-        action.level = level;
-
-        return this;
+    modifyBlackboardValue(key: string, operation: string, value: number, name?: string): BehaviorTreeBuilder {
+        return this.addActionNode('ModifyBlackboardValue', name || 'ModifyBlackboardValue', {
+            key,
+            operation,
+            value
+        });
     }
 
     /**
-     * 创建设置黑板值动作
+     * 添加执行动作
      */
-    setBlackboardValue(variableName: string, value: any, name: string = 'SetValue'): BehaviorTreeBuilder {
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Action;
-        node.nodeName = name;
-
-        const action = entity.addComponent(new SetBlackboardValueAction());
-        action.variableName = variableName;
-        action.value = value;
-
-        return this;
+    executeAction(actionName: string, name?: string): BehaviorTreeBuilder {
+        return this.addActionNode('ExecuteAction', name || 'ExecuteAction', { actionName });
     }
 
     /**
-     * 创建修改黑板值动作
+     * 添加黑板比较条件
      */
-    modifyBlackboardValue(
-        variableName: string,
-        operation: ModifyOperation,
-        operand: any,
-        name: string = 'ModifyValue'
-    ): BehaviorTreeBuilder {
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Action;
-        node.nodeName = name;
-
-        const action = entity.addComponent(new ModifyBlackboardValueAction());
-        action.variableName = variableName;
-        action.operation = operation;
-        action.operand = operand;
-
-        return this;
+    blackboardCompare(key: string, compareValue: any, operator?: string, name?: string): BehaviorTreeBuilder {
+        return this.addConditionNode('BlackboardCompare', name || 'BlackboardCompare', {
+            key,
+            compareValue,
+            operator: operator || 'equals'
+        });
     }
 
     /**
-     * 创建自定义动作
+     * 添加黑板存在检查条件
      */
-    action(name: string, func: CustomActionFunction): BehaviorTreeBuilder {
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Action;
-        node.nodeName = name;
-
-        const action = entity.addComponent(new ExecuteAction());
-        action.setFunction(func);
-
-        return this;
+    blackboardExists(key: string, name?: string): BehaviorTreeBuilder {
+        return this.addConditionNode('BlackboardExists', name || 'BlackboardExists', { key });
     }
 
     /**
-     * 创建黑板比较条件
+     * 添加随机概率条件
      */
-    compareBlackboardValue(
-        variableName: string,
-        operator: CompareOperator,
-        compareValue: any,
-        name: string = 'Compare'
-    ): BehaviorTreeBuilder {
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Condition;
-        node.nodeName = name;
-
-        const condition = entity.addComponent(new BlackboardCompareCondition());
-        condition.variableName = variableName;
-        condition.operator = operator;
-        condition.compareValue = compareValue;
-
-        return this;
+    randomProbability(probability: number, name?: string): BehaviorTreeBuilder {
+        return this.addConditionNode('RandomProbability', name || 'RandomProbability', { probability });
     }
 
     /**
-     * 创建黑板变量存在条件
+     * 添加执行条件
      */
-    checkBlackboardExists(variableName: string, checkNotNull: boolean = false, name: string = 'Exists'): BehaviorTreeBuilder {
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Condition;
-        node.nodeName = name;
-
-        const condition = entity.addComponent(new BlackboardExistsCondition());
-        condition.variableName = variableName;
-        condition.checkNotNull = checkNotNull;
-
-        return this;
-    }
-
-    /**
-     * 创建随机概率条件
-     */
-    randomProbability(probability: number, name: string = 'Random'): BehaviorTreeBuilder {
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Condition;
-        node.nodeName = name;
-
-        const condition = entity.addComponent(new RandomProbabilityCondition());
-        condition.probability = probability;
-
-        return this;
-    }
-
-    /**
-     * 创建自定义条件
-     */
-    condition(func: CustomConditionFunction, name: string = 'Condition'): BehaviorTreeBuilder {
-        const entity = this.scene.createEntity(name);
-        this.currentEntity.addChild(entity);
-
-        const node = entity.addComponent(new BehaviorTreeNode());
-        node.nodeType = NodeType.Condition;
-        node.nodeName = name;
-
-        const condition = entity.addComponent(new ExecuteCondition());
-        condition.setFunction(func);
-
-        return this;
+    executeCondition(conditionName: string, name?: string): BehaviorTreeBuilder {
+        return this.addConditionNode('ExecuteCondition', name || 'ExecuteCondition', { conditionName });
     }
 
     /**
      * 结束当前节点，返回父节点
      */
     end(): BehaviorTreeBuilder {
-        if (this.entityStack.length === 0) {
-            throw new Error('No parent node to return to');
+        if (this.nodeStack.length > 0) {
+            this.nodeStack.pop();
         }
-
-        this.currentEntity = this.entityStack.pop()!;
         return this;
     }
 
     /**
-     * 构建并返回根节点实体
+     * 构建行为树数据
      */
-    build(): Entity {
-        // 确保返回到根节点
-        while (this.entityStack.length > 0) {
-            this.currentEntity = this.entityStack.pop()!;
+    build(): BehaviorTreeData {
+        if (!this.treeData.rootNodeId) {
+            throw new Error('No root node defined. Add at least one node to the tree.');
+        }
+        return this.treeData;
+    }
+
+    private addCompositeNode(implementationType: string, name: string, config: Record<string, any> = {}): BehaviorTreeBuilder {
+        const nodeId = this.generateNodeId();
+        const node: BehaviorNodeData = {
+            id: nodeId,
+            name,
+            nodeType: NodeType.Composite,
+            implementationType,
+            children: [],
+            config
+        };
+
+        this.treeData.nodes.set(nodeId, node);
+
+        if (!this.treeData.rootNodeId) {
+            this.treeData.rootNodeId = nodeId;
         }
 
-        return this.currentEntity;
+        if (this.nodeStack.length > 0) {
+            const parentId = this.nodeStack[this.nodeStack.length - 1]!;
+            const parentNode = this.treeData.nodes.get(parentId);
+            if (parentNode && parentNode.children) {
+                parentNode.children.push(nodeId);
+            }
+        }
+
+        this.nodeStack.push(nodeId);
+        return this;
+    }
+
+    private addDecoratorNode(implementationType: string, name: string, config: Record<string, any> = {}): BehaviorTreeBuilder {
+        const nodeId = this.generateNodeId();
+        const node: BehaviorNodeData = {
+            id: nodeId,
+            name,
+            nodeType: NodeType.Decorator,
+            implementationType,
+            children: [],
+            config
+        };
+
+        this.treeData.nodes.set(nodeId, node);
+
+        if (!this.treeData.rootNodeId) {
+            this.treeData.rootNodeId = nodeId;
+        }
+
+        if (this.nodeStack.length > 0) {
+            const parentId = this.nodeStack[this.nodeStack.length - 1]!;
+            const parentNode = this.treeData.nodes.get(parentId);
+            if (parentNode && parentNode.children) {
+                parentNode.children.push(nodeId);
+            }
+        }
+
+        this.nodeStack.push(nodeId);
+        return this;
+    }
+
+    private addActionNode(implementationType: string, name: string, config: Record<string, any> = {}): BehaviorTreeBuilder {
+        const nodeId = this.generateNodeId();
+        const node: BehaviorNodeData = {
+            id: nodeId,
+            name,
+            nodeType: NodeType.Action,
+            implementationType,
+            config
+        };
+
+        this.treeData.nodes.set(nodeId, node);
+
+        if (!this.treeData.rootNodeId) {
+            this.treeData.rootNodeId = nodeId;
+        }
+
+        if (this.nodeStack.length > 0) {
+            const parentId = this.nodeStack[this.nodeStack.length - 1]!;
+            const parentNode = this.treeData.nodes.get(parentId);
+            if (parentNode && parentNode.children) {
+                parentNode.children.push(nodeId);
+            }
+        }
+
+        return this;
+    }
+
+    private addConditionNode(implementationType: string, name: string, config: Record<string, any> = {}): BehaviorTreeBuilder {
+        const nodeId = this.generateNodeId();
+        const node: BehaviorNodeData = {
+            id: nodeId,
+            name,
+            nodeType: NodeType.Condition,
+            implementationType,
+            config
+        };
+
+        this.treeData.nodes.set(nodeId, node);
+
+        if (!this.treeData.rootNodeId) {
+            this.treeData.rootNodeId = nodeId;
+        }
+
+        if (this.nodeStack.length > 0) {
+            const parentId = this.nodeStack[this.nodeStack.length - 1]!;
+            const parentNode = this.treeData.nodes.get(parentId);
+            if (parentNode && parentNode.children) {
+                parentNode.children.push(nodeId);
+            }
+        }
+
+        return this;
+    }
+
+    private generateNodeId(): string {
+        return `node_${this.nodeIdCounter++}`;
     }
 }

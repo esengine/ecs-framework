@@ -112,3 +112,14 @@ export enum BlackboardValueType {
     Object = 'object',
     Array = 'array'
 }
+
+/**
+ * 黑板变量定义
+ */
+export interface BlackboardVariable {
+    name: string;
+    type: BlackboardValueType;
+    value: any;
+    readonly?: boolean;
+    description?: string;
+}

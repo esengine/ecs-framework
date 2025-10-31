@@ -55,10 +55,13 @@ npm run tauri:dev
 3. 在节点中通过变量名引用黑板变量
 
 支持的变量类型：
-- Number：数字
 - String：字符串
+- Number：数字
 - Boolean：布尔值
+- Vector2：二维向量
+- Vector3：三维向量
 - Object：对象引用
+- Array：数组
 
 ## 导出运行时资产
 
@@ -77,24 +80,30 @@ npm run tauri:dev
 
 ### 加载运行时资产
 
-`deserialize`方法会自动识别数据格式（JSON或二进制）：
+编辑器导出的文件是编辑器格式，包含UI布局信息。当前版本中，从编辑器导出的资产可以使用Builder API在代码中重新构建，或者等待资产加载系统的完善。
+
+推荐使用Builder API创建行为树：
 
 ```typescript
-import { BehaviorTreeAssetSerializer, BehaviorTreeAssetLoader } from '@esengine/behavior-tree';
+import { BehaviorTreeBuilder, BehaviorTreeStarter } from '@esengine/behavior-tree';
+import { Core, Scene } from '@esengine/ecs-framework';
 
-// 加载二进制格式
-const binaryData = await loadFile('enemy-ai.btree.bin'); // Uint8Array
-const asset = BehaviorTreeAssetSerializer.deserialize(binaryData);
-const aiEntity = BehaviorTreeAssetLoader.instantiate(asset, scene);
-```
+// 使用Builder创建行为树
+const tree = BehaviorTreeBuilder.create('EnemyAI')
+    .defineBlackboardVariable('health', 100)
+    .defineBlackboardVariable('target', null)
+    .selector('MainBehavior')
+        .sequence('AttackBranch')
+            .blackboardCompare('health', 50, 'greater')
+            .log('攻击玩家', 'Attack')
+        .end()
+        .log('逃离战斗', 'Flee')
+    .end()
+    .build();
 
-```typescript
-import { BehaviorTreeAssetSerializer, BehaviorTreeAssetLoader } from '@esengine/behavior-tree';
-
-// 加载JSON格式
-const jsonString = await loadFile('enemy-ai.btree.json'); // string
-const asset = BehaviorTreeAssetSerializer.deserialize(jsonString);
-const aiEntity = BehaviorTreeAssetLoader.instantiate(asset, scene);
+// 启动行为树
+const entity = scene.createEntity('Enemy');
+BehaviorTreeStarter.start(entity, tree);
 ```
 
 ## 支持的操作
@@ -107,4 +116,4 @@ const aiEntity = BehaviorTreeAssetLoader.instantiate(asset, scene);
 ## 下一步
 
 - 查看[编辑器工作流](./editor-workflow.md)了解完整的开发流程
-- 查看[自定义动作](./custom-actions.md)学习如何扩展节点
+- 查看[自定义节点执行器](./custom-actions.md)学习如何扩展节点

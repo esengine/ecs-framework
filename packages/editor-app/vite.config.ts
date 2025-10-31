@@ -264,7 +264,7 @@ export default pluginInstance;
             const pluginTs = `import type { IEditorPlugin } from '@esengine/editor-core';
 import { EditorPluginCategory } from '@esengine/editor-core';
 import type { Core, ServiceContainer } from '@esengine/ecs-framework';
-import { getRegisteredNodeTemplates } from '@esengine/behavior-tree';
+import { NodeTemplates } from '@esengine/behavior-tree';
 import type { NodeTemplate } from '@esengine/behavior-tree';
 import { t, setLocale } from './locales';
 
@@ -294,7 +294,7 @@ export class ${pluginName.split('-').map(s => s.charAt(0).toUpperCase() + s.slic
     }
 
     getNodeTemplates(): NodeTemplate[] {
-        const templates = getRegisteredNodeTemplates();
+        const templates = NodeTemplates.getAllTemplates();
         return templates.map(template => ({
             ...template,
             displayName: t(template.displayName),
@@ -317,7 +317,9 @@ export const ${pluginName.replace(/-/g, '')}Plugin = new ${pluginName.split('-')
               fs.mkdirSync(localesDir, { recursive: true });
             }
 
-            const localesIndexTs = `export const translations = {
+            const localesIndexTs = `export type LocaleKey = 'zh' | 'en';
+
+export const translations: Record<LocaleKey, Record<string, string>> = {
     zh: {
         'plugin.name': '${pluginName}',
         'plugin.description': '${pluginName} 行为树插件',
@@ -336,10 +338,10 @@ export const ${pluginName.replace(/-/g, '')}Plugin = new ${pluginName.split('-')
     }
 };
 
-let currentLocale = 'zh';
+let currentLocale: LocaleKey = 'zh';
 
 export function setLocale(locale: string) {
-    currentLocale = locale;
+    currentLocale = (locale === 'en' ? 'en' : 'zh') as LocaleKey;
 }
 
 export function t(key: string): string {
@@ -349,29 +351,31 @@ export function t(key: string): string {
             fs.writeFileSync(path.join(localesDir, 'index.ts'), localesIndexTs);
 
             if (includeExample) {
-              const exampleActionTs = `import { Component, Entity, ECSComponent, Serialize } from '@esengine/ecs-framework';
-import { BehaviorNode, BehaviorProperty, NodeType, TaskStatus, BlackboardComponent } from '@esengine/behavior-tree';
+              const exampleActionTs = `import { TaskStatus, NodeType } from '@esengine/behavior-tree';
+import { INodeExecutor, NodeExecutionContext, BindingHelper, NodeExecutorMetadata } from '@esengine/behavior-tree';
 
-@ECSComponent('ExampleAction')
-@BehaviorNode({
+/**
+ * 示例动作执行器
+ */
+@NodeExecutorMetadata({
+    implementationType: 'ExampleAction',
+    nodeType: NodeType.Action,
     displayName: 'ExampleAction.name',
-    category: '自定义',
-    type: NodeType.Action,
-    icon: 'Star',
     description: 'ExampleAction.description',
-    color: '#FF9800'
+    category: '自定义',
+    configSchema: {
+        message: {
+            type: 'string',
+            default: 'Hello from example action!',
+            description: 'ExampleAction.message.description',
+            supportBinding: true
+        }
+    }
 })
-export class ExampleAction extends Component {
-    @Serialize()
-    @BehaviorProperty({
-        label: 'ExampleAction.message.label',
-        type: 'string',
-        description: 'ExampleAction.message.description'
-    })
-    message: string = 'Hello from example action!';
-
-    execute(entity: Entity, blackboard?: BlackboardComponent): TaskStatus {
-        console.log(this.message);
+export class ExampleAction implements INodeExecutor {
+    execute(context: NodeExecutionContext): TaskStatus {
+        const message = BindingHelper.getValue<string>(context, 'message', '');
+        console.log('[ExampleAction]', message);
         return TaskStatus.Success;
     }
 }
@@ -444,17 +448,30 @@ export const translations = {
 ### 在代码中使用
 
 \`\`\`typescript
-import { t } from '../locales';
+import { TaskStatus, NodeType } from '@esengine/behavior-tree';
+import { INodeExecutor, NodeExecutionContext, BindingHelper, NodeExecutorMetadata } from '@esengine/behavior-tree';
 
-@BehaviorNode({
-    displayName: t('YourNode.name'),
-    description: t('YourNode.description')
+@NodeExecutorMetadata({
+    implementationType: 'YourNode',
+    nodeType: NodeType.Action,
+    displayName: 'YourNode.name',
+    description: 'YourNode.description',
+    category: '自定义',
+    configSchema: {
+        propertyName: {
+            type: 'string',
+            default: '',
+            description: 'YourNode.propertyName.description',
+            supportBinding: true
+        }
+    }
 })
-export class YourNode extends Component {
-    @BehaviorProperty({
-        label: t('YourNode.propertyName.label')
-    })
-    propertyName: string = '';
+export class YourNode implements INodeExecutor {
+    execute(context: NodeExecutionContext): TaskStatus {
+        const propertyName = BindingHelper.getValue<string>(context, 'propertyName', '');
+        // 执行逻辑
+        return TaskStatus.Success;
+    }
 }
 \`\`\`
 

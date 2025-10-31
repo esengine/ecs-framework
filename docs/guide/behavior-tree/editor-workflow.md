@@ -55,17 +55,19 @@ Root: Selector
 └── Idle (Action)
 ```
 
-## 在游戏中加载
+## 在游戏中使用
 
-### 加载JSON资产
+### 使用Builder API创建
+
+推荐使用Builder API在代码中创建行为树：
 
 ```typescript
 import { Core, Scene } from '@esengine/ecs-framework';
 import {
     BehaviorTreePlugin,
-    BehaviorTreeAssetSerializer,
-    BehaviorTreeAssetLoader,
-    BehaviorTreeStarter
+    BehaviorTreeBuilder,
+    BehaviorTreeStarter,
+    BehaviorTreeRuntimeComponent
 } from '@esengine/behavior-tree';
 
 // 初始化
@@ -77,18 +79,28 @@ const scene = new Scene();
 plugin.setupScene(scene);
 Core.setScene(scene);
 
-// 加载行为树
-const jsonString = await loadJsonFromFile('enemy-ai.btree.json');
-const asset = BehaviorTreeAssetSerializer.deserialize(jsonString);
-const aiEntity = BehaviorTreeAssetLoader.instantiate(asset, scene);
+// 使用Builder创建行为树
+const tree = BehaviorTreeBuilder.create('EnemyAI')
+    .defineBlackboardVariable('health', 100)
+    .defineBlackboardVariable('target', null)
+    .defineBlackboardVariable('moveSpeed', 5.0)
+    .selector('MainBehavior')
+        .sequence('AttackBranch')
+            .blackboardExists('target')
+            .blackboardCompare('health', 30, 'greater')
+            .log('攻击目标', 'Attack')
+        .end()
+        .log('巡逻', 'Patrol')
+    .end()
+    .build();
 
-// 设置黑板初始值
-const blackboard = aiEntity.getComponent(BlackboardComponent);
-blackboard?.setValue('health', 100);
-blackboard?.setValue('moveSpeed', 5.0);
+// 创建实体并启动行为树
+const entity = scene.createEntity('Enemy');
+BehaviorTreeStarter.start(entity, tree);
 
-// 启动AI
-BehaviorTreeStarter.start(aiEntity);
+// 访问和修改黑板
+const runtime = entity.getComponent(BehaviorTreeRuntimeComponent);
+runtime?.setBlackboardValue('target', someTarget);
 
 // 游戏循环
 setInterval(() => {
@@ -96,103 +108,104 @@ setInterval(() => {
 }, 16);
 ```
 
-## 实现自定义动作
+## 实现自定义执行器
 
-编辑器中的ExecuteAction节点需要在代码中提供实际逻辑。有两种方式：
-
-### 方式1：通过事件系统（推荐）
-
-在Action节点中触发事件，在游戏代码中监听：
+要扩展行为树的功能，需要创建自定义执行器（详见[自定义节点执行器](./custom-actions.md)）：
 
 ```typescript
-// 在编辑器的ExecuteAction节点中
-entity.scene?.eventSystem.emit('ai:attack', {
-    attacker: entity,
-    target: blackboard?.getValue('target')
-});
-return TaskStatus.Success;
-```
+import {
+    INodeExecutor,
+    NodeExecutionContext,
+    BindingHelper,
+    NodeExecutorMetadata
+} from '@esengine/behavior-tree';
+import { TaskStatus, NodeType } from '@esengine/behavior-tree';
 
-```typescript
-// 在游戏代码中监听
-Core.scene.eventSystem.on('ai:attack', (data) => {
-    const { attacker, target } = data;
-    // 执行实际的攻击逻辑
-    performAttack(attacker, target);
-});
-```
-
-### 方式2：创建自定义组件
-
-创建专用的Action组件（详见[自定义动作](./custom-actions.md)）：
-
-```typescript
-import { Component, ECSComponent, Entity } from '@esengine/ecs-framework';
-import { BehaviorNode, BehaviorProperty, NodeType, TaskStatus } from '@esengine/behavior-tree';
-
-@BehaviorNode({
+@NodeExecutorMetadata({
+    implementationType: 'AttackAction',
+    nodeType: NodeType.Action,
     displayName: '攻击目标',
+    description: '对目标造成伤害',
     category: '战斗',
-    type: NodeType.Action,
-    description: '对目标造成伤害'
+    configSchema: {
+        damage: {
+            type: 'number',
+            default: 10,
+            supportBinding: true
+        }
+    }
 })
-@ECSComponent('AttackAction')
-export class AttackAction extends Component {
-    @BehaviorProperty({
-        label: '伤害值',
-        type: 'number'
-    })
-    damage: number = 10;
+export class AttackAction implements INodeExecutor {
+    execute(context: NodeExecutionContext): TaskStatus {
+        const damage = BindingHelper.getValue<number>(context, 'damage', 10);
+        const target = context.runtime.getBlackboardValue('target');
 
-    execute(entity: Entity, blackboard?: BlackboardComponent): TaskStatus {
-        const target = blackboard?.getValue('target');
-        if (!target) return TaskStatus.Failure;
+        if (!target) {
+            return TaskStatus.Failure;
+        }
 
         // 执行攻击逻辑
-        performAttack(entity, target, this.damage);
+        performAttack(context.entity, target, damage);
         return TaskStatus.Success;
+    }
+
+    reset(context: NodeExecutionContext): void {
+        // 清理状态
     }
 }
 ```
 
 ## 调试技巧
 
-### 1. 使用日志
+### 1. 使用日志节点
 
-在编辑器中添加Log节点输出调试信息：
+在行为树中添加Log节点输出调试信息：
 
 ```typescript
-.log('进入战斗分支', 'info')
-.action('Attack', (entity, blackboard) => {
-    console.log('目标:', blackboard?.getValue('target'));
-    return TaskStatus.Success;
-})
+const tree = BehaviorTreeBuilder.create('DebugAI')
+    .log('开始战斗序列', 'StartCombat')
+    .sequence('Combat')
+        .blackboardCompare('health', 0, 'greater')
+        .log('执行攻击', 'Attack')
+    .end()
+    .build();
 ```
 
-### 2. 监控黑板
+### 2. 监控黑板状态
 
 ```typescript
-const blackboard = aiEntity.getComponent(BlackboardComponent);
-console.log('黑板状态:', blackboard?.getAllVariables());
+const runtime = entity.getComponent(BehaviorTreeRuntimeComponent);
+console.log('黑板变量:', runtime?.getAllBlackboardVariables());
+console.log('活动节点:', Array.from(runtime?.activeNodeIds || []));
 ```
 
-### 3. 检查节点状态
+### 3. 在自定义执行器中调试
 
 ```typescript
-const node = aiEntity.getComponent(BehaviorTreeNode);
-console.log('节点状态:', node?.status);
+export class DebugAction implements INodeExecutor {
+    execute(context: NodeExecutionContext): TaskStatus {
+        const { nodeData, runtime, state } = context;
+
+        console.group(`[${nodeData.name}]`);
+        console.log('配置:', nodeData.config);
+        console.log('状态:', state);
+        console.log('黑板:', runtime.getAllBlackboardVariables());
+        console.groupEnd();
+
+        return TaskStatus.Success;
+    }
+}
 ```
 
 ## 完整示例
 
 ```typescript
-import { Core, Scene, Entity } from '@esengine/ecs-framework';
+import { Core, Scene } from '@esengine/ecs-framework';
 import {
     BehaviorTreePlugin,
     BehaviorTreeBuilder,
     BehaviorTreeStarter,
-    BlackboardValueType,
-    TaskStatus
+    BehaviorTreeRuntimeComponent
 } from '@esengine/behavior-tree';
 
 // 初始化
@@ -204,28 +217,28 @@ const scene = new Scene();
 plugin.setupScene(scene);
 Core.setScene(scene);
 
-// 直接用代码构建（不用编辑器）
-const aiEntity = BehaviorTreeBuilder.create(scene, 'EnemyAI')
-    .blackboard()
-        .defineVariable('health', BlackboardValueType.Number, 100)
-        .defineVariable('hasTarget', BlackboardValueType.Boolean, false)
-    .endBlackboard()
+// 使用Builder API构建行为树
+const tree = BehaviorTreeBuilder.create('EnemyAI')
+    .defineBlackboardVariable('health', 100)
+    .defineBlackboardVariable('hasTarget', false)
     .selector('Root')
         .sequence('Combat')
-            .condition((e, bb) => bb?.getValue('hasTarget') === true, 'CheckTarget')
-            .action('Attack', (e, bb) => {
-                console.log('攻击！');
-                return TaskStatus.Success;
-            })
+            .blackboardCompare('hasTarget', true, 'equals')
+            .log('攻击玩家', 'Attack')
         .end()
-        .action('Idle', () => {
-            console.log('空闲');
-            return TaskStatus.Success;
-        })
+        .log('空闲', 'Idle')
     .end()
     .build();
 
-BehaviorTreeStarter.start(aiEntity);
+// 创建实体并启动
+const entity = scene.createEntity('Enemy');
+BehaviorTreeStarter.start(entity, tree);
+
+// 模拟发现目标
+setTimeout(() => {
+    const runtime = entity.getComponent(BehaviorTreeRuntimeComponent);
+    runtime?.setBlackboardValue('hasTarget', true);
+}, 2000);
 
 // 游戏循环
 setInterval(() => {
@@ -235,6 +248,6 @@ setInterval(() => {
 
 ## 下一步
 
-- 查看[自定义动作](./custom-actions.md)学习如何创建专用的Action组件
-- 查看[高级用法](./advanced-usage.md)了解子树、异步操作等高级特性
+- 查看[自定义节点执行器](./custom-actions.md)学习如何创建自定义节点
+- 查看[高级用法](./advanced-usage.md)了解性能优化等高级特性
 - 查看[最佳实践](./best-practices.md)优化你的AI设计

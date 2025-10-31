@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { NodeTemplates, NodeTemplate } from '@esengine/behavior-tree';
 import { Core } from '@esengine/ecs-framework';
 import { EditorPluginManager, MessageHub } from '@esengine/editor-core';
@@ -7,6 +7,20 @@ import { NodeIcon } from './NodeIcon';
 interface BehaviorTreeNodePaletteProps {
     onNodeSelect?: (template: NodeTemplate) => void;
 }
+
+/**
+ * 获取节点类型对应的颜色
+ */
+const getTypeColor = (type: string): string => {
+    switch (type) {
+        case 'composite': return '#1976d2';
+        case 'action': return '#388e3c';
+        case 'condition': return '#d32f2f';
+        case 'decorator': return '#fb8c00';
+        case 'blackboard': return '#8e24aa';
+        default: return '#7b1fa2';
+    }
+};
 
 /**
  * 行为树节点面板
@@ -83,14 +97,18 @@ export const BehaviorTreeNodePalette: React.FC<BehaviorTreeNodePaletteProps> = (
     }, []);
 
     // 按类别分组（排除根节点类别）
-    const categories = ['all', ...new Set(allTemplates
-        .filter(t => t.category !== '根节点')
-        .map(t => t.category))];
+    const categories = useMemo(() =>
+        ['all', ...new Set(allTemplates
+            .filter(t => t.category !== '根节点')
+            .map(t => t.category))]
+    , [allTemplates]);
 
-    const filteredTemplates = (selectedCategory === 'all'
-        ? allTemplates
-        : allTemplates.filter(t => t.category === selectedCategory))
-        .filter(t => t.category !== '根节点');
+    const filteredTemplates = useMemo(() =>
+        (selectedCategory === 'all'
+            ? allTemplates
+            : allTemplates.filter(t => t.category === selectedCategory))
+            .filter(t => t.category !== '根节点')
+    , [allTemplates, selectedCategory]);
 
     const handleNodeClick = (template: NodeTemplate) => {
         onNodeSelect?.(template);
@@ -105,17 +123,6 @@ export const BehaviorTreeNodePalette: React.FC<BehaviorTreeNodePaletteProps> = (
         const dragImage = e.currentTarget as HTMLElement;
         if (dragImage) {
             e.dataTransfer.setDragImage(dragImage, 50, 25);
-        }
-    };
-
-    const getTypeColor = (type: string): string => {
-        switch (type) {
-            case 'composite': return '#1976d2';
-            case 'action': return '#388e3c';
-            case 'condition': return '#d32f2f';
-            case 'decorator': return '#fb8c00';
-            case 'blackboard': return '#8e24aa';
-            default: return '#7b1fa2';
         }
     };
 

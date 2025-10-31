@@ -1,5 +1,5 @@
 import { NodeType } from '../Types/TaskStatus';
-import { getRegisteredNodeTemplates } from '../Decorators/BehaviorNodeDecorator';
+import { NodeMetadataRegistry, ConfigFieldDefinition } from '../Runtime/NodeMetadata';
 
 /**
  * 节点数据JSON格式
@@ -8,6 +8,8 @@ export interface NodeDataJSON {
     nodeType: string;
     compositeType?: string;
     decoratorType?: string;
+    actionType?: string;
+    conditionType?: string;
     [key: string]: any;
 }
 
@@ -118,6 +120,12 @@ export interface PropertyDefinition {
         /** 最大长度（字符串） */
         maxLength?: number;
     };
+
+    /**
+     * 是否允许多个连接
+     * 默认 false，只允许一个黑板变量连接
+     */
+    allowMultipleConnections?: boolean;
 }
 
 /**
@@ -138,16 +146,15 @@ export interface NodeTemplate {
 }
 
 /**
- * 编辑器节点模板库
- *
- * 使用装饰器系统管理所有节点
+ * 节点模板库
  */
 export class NodeTemplates {
     /**
-     * 获取所有节点模板（通过装饰器注册）
+     * 获取所有节点模板
      */
     static getAllTemplates(): NodeTemplate[] {
-        return getRegisteredNodeTemplates();
+        const allMetadata = NodeMetadataRegistry.getAllMetadata();
+        return allMetadata.map(metadata => this.convertMetadataToTemplate(metadata));
     }
 
     /**
@@ -171,5 +178,189 @@ export class NodeTemplates {
                     return false;
             }
         });
+    }
+
+    /**
+     * 将NodeMetadata转换为NodeTemplate
+     */
+    private static convertMetadataToTemplate(metadata: any): NodeTemplate {
+        const properties = this.convertConfigSchemaToProperties(metadata.configSchema || {});
+
+        const defaultConfig: Partial<NodeDataJSON> = {
+            nodeType: this.nodeTypeToString(metadata.nodeType)
+        };
+
+        switch (metadata.nodeType) {
+            case NodeType.Composite:
+                defaultConfig.compositeType = metadata.implementationType;
+                break;
+            case NodeType.Decorator:
+                defaultConfig.decoratorType = metadata.implementationType;
+                break;
+            case NodeType.Action:
+                defaultConfig.actionType = metadata.implementationType;
+                break;
+            case NodeType.Condition:
+                defaultConfig.conditionType = metadata.implementationType;
+                break;
+        }
+
+        if (metadata.configSchema) {
+            for (const [key, field] of Object.entries(metadata.configSchema)) {
+                const fieldDef = field as ConfigFieldDefinition;
+                if (fieldDef.default !== undefined) {
+                    defaultConfig[key] = fieldDef.default;
+                }
+            }
+        }
+
+        // 根据节点类型生成默认颜色和图标
+        const { icon, color } = this.getIconAndColorByType(metadata.nodeType, metadata.category || '');
+
+        return {
+            type: metadata.nodeType,
+            displayName: metadata.displayName,
+            category: metadata.category || this.getCategoryByNodeType(metadata.nodeType),
+            description: metadata.description || '',
+            className: metadata.implementationType,
+            icon,
+            color,
+            defaultConfig,
+            properties
+        };
+    }
+
+    /**
+     * 将ConfigSchema转换为PropertyDefinition数组
+     */
+    private static convertConfigSchemaToProperties(
+        configSchema: Record<string, ConfigFieldDefinition>
+    ): PropertyDefinition[] {
+        const properties: PropertyDefinition[] = [];
+
+        for (const [name, field] of Object.entries(configSchema)) {
+            const property: PropertyDefinition = {
+                name,
+                type: this.mapFieldTypeToPropertyType(field),
+                label: name
+            };
+
+            if (field.description !== undefined) {
+                property.description = field.description;
+            }
+
+            if (field.default !== undefined) {
+                property.defaultValue = field.default;
+            }
+
+            if (field.min !== undefined) {
+                property.min = field.min;
+            }
+
+            if (field.max !== undefined) {
+                property.max = field.max;
+            }
+
+            if (field.allowMultipleConnections !== undefined) {
+                property.allowMultipleConnections = field.allowMultipleConnections;
+            }
+
+            if (field.options) {
+                property.options = field.options.map(opt => ({
+                    label: opt,
+                    value: opt
+                }));
+            }
+
+            if (field.supportBinding) {
+                property.renderConfig = {
+                    component: 'BindableInput',
+                    props: {
+                        supportBinding: true
+                    }
+                };
+            }
+
+            properties.push(property);
+        }
+
+        return properties;
+    }
+
+    /**
+     * 映射字段类型到属性类型
+     */
+    private static mapFieldTypeToPropertyType(field: ConfigFieldDefinition): PropertyType {
+        if (field.options && field.options.length > 0) {
+            return PropertyType.Select;
+        }
+
+        switch (field.type) {
+            case 'string':
+                return PropertyType.String;
+            case 'number':
+                return PropertyType.Number;
+            case 'boolean':
+                return PropertyType.Boolean;
+            case 'array':
+            case 'object':
+            default:
+                return PropertyType.String;
+        }
+    }
+
+    /**
+     * NodeType转字符串
+     */
+    private static nodeTypeToString(nodeType: NodeType): string {
+        switch (nodeType) {
+            case NodeType.Composite:
+                return 'composite';
+            case NodeType.Decorator:
+                return 'decorator';
+            case NodeType.Action:
+                return 'action';
+            case NodeType.Condition:
+                return 'condition';
+            default:
+                return 'unknown';
+        }
+    }
+
+    /**
+     * 根据NodeType获取默认分类
+     */
+    private static getCategoryByNodeType(nodeType: NodeType): string {
+        switch (nodeType) {
+            case NodeType.Composite:
+                return '组合';
+            case NodeType.Decorator:
+                return '装饰器';
+            case NodeType.Action:
+                return '动作';
+            case NodeType.Condition:
+                return '条件';
+            default:
+                return '其他';
+        }
+    }
+
+    /**
+     * 根据节点类型获取默认图标和颜色
+     */
+    private static getIconAndColorByType(nodeType: NodeType, _category: string): { icon: string; color: string } {
+        // 根据节点类型设置默认值
+        switch (nodeType) {
+            case NodeType.Composite:
+                return { icon: 'GitBranch', color: '#1976d2' }; // 蓝色
+            case NodeType.Decorator:
+                return { icon: 'Settings', color: '#fb8c00' }; // 橙色
+            case NodeType.Action:
+                return { icon: 'Play', color: '#388e3c' }; // 绿色
+            case NodeType.Condition:
+                return { icon: 'HelpCircle', color: '#d32f2f' }; // 红色
+            default:
+                return { icon: 'Circle', color: '#757575' }; // 灰色
+        }
     }
 }

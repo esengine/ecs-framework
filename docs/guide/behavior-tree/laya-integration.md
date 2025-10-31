@@ -87,22 +87,19 @@ new Main();
 ```typescript
 import { Core, Entity } from '@esengine/ecs-framework';
 import {
-    BehaviorTreeAssetSerializer,
-    BehaviorTreeAssetLoader,
+    BehaviorTreeBuilder,
     BehaviorTreeStarter,
-    BlackboardComponent
+    BehaviorTreeRuntimeComponent
 } from '@esengine/behavior-tree';
 
 export class EnemyAI extends Laya.Script {
-    behaviorTreePath: string = "resources/behaviors/enemy.btree";
-
     private aiEntity: Entity;
 
     onEnable() {
-        this.loadBehaviorTree();
+        this.createBehaviorTree();
     }
 
-    private async loadBehaviorTree() {
+    private createBehaviorTree() {
         // 获取Core管理的场景
         const scene = Core.scene;
         if (!scene) {
@@ -110,30 +107,25 @@ export class EnemyAI extends Laya.Script {
             return;
         }
 
-        // 加载JSON资产
-        const jsonData = await Laya.loader.load(this.behaviorTreePath, Laya.Loader.JSON);
+        const sprite = this.owner as Laya.Sprite;
 
-        // 转换为JSON字符串
-        const jsonString = typeof jsonData === 'string' ? jsonData : JSON.stringify(jsonData);
+        // 使用Builder API创建行为树
+        const tree = BehaviorTreeBuilder.create('EnemyAI')
+            .defineBlackboardVariable('layaSprite', sprite)
+            .defineBlackboardVariable('health', 100)
+            .defineBlackboardVariable('position', { x: sprite.x, y: sprite.y })
+            .selector('MainBehavior')
+                .sequence('Combat')
+                    .blackboardCompare('health', 30, 'greater')
+                    .log('攻击', 'Attack')
+                .end()
+                .log('巡逻', 'Patrol')
+            .end()
+            .build();
 
-        // 反序列化
-        const asset = BehaviorTreeAssetSerializer.deserialize(jsonString);
-
-        // 实例化
-        this.aiEntity = BehaviorTreeAssetLoader.instantiate(asset, scene, {
-            namePrefix: (this.owner as Laya.Sprite).name
-        });
-
-        // 设置黑板变量
-        const blackboard = this.aiEntity.getComponent(BlackboardComponent);
-        blackboard?.setValue('layaSprite', this.owner);
-        blackboard?.setValue('position', {
-            x: (this.owner as Laya.Sprite).x,
-            y: (this.owner as Laya.Sprite).y
-        });
-
-        // 启动AI
-        BehaviorTreeStarter.start(this.aiEntity);
+        // 创建AI实体并启动
+        this.aiEntity = scene.createEntity(`AI_${sprite.name}`);
+        BehaviorTreeStarter.start(this.aiEntity, tree);
     }
 
     onDisable() {
@@ -148,19 +140,65 @@ export class EnemyAI extends Laya.Script {
 
 ## 与Laya节点交互
 
-在BehaviorTreeBuilder的action方法中，可以直接操作Laya节点。下面的完整示例展示了如何实现。
+要实现与Laya节点的交互，需要创建自定义执行器。下面展示一个完整示例。
 
 ## 完整示例
 
-创建一个完整的敌人AI系统：
+创建一个使用自定义执行器的敌人AI系统：
 
 ```typescript
-import { BehaviorTreeBuilder, BehaviorTreeStarter, BlackboardValueType, TaskStatus } from '@esengine/behavior-tree';
+import {
+    BehaviorTreeBuilder,
+    BehaviorTreeStarter,
+    INodeExecutor,
+    NodeExecutionContext,
+    NodeExecutorMetadata,
+    BehaviorTreeRuntimeComponent
+} from '@esengine/behavior-tree';
+import { TaskStatus, NodeType } from '@esengine/behavior-tree';
 import { Core, Entity } from '@esengine/ecs-framework';
+
+// 自定义移动执行器
+@NodeExecutorMetadata({
+    implementationType: 'MoveToTarget',
+    nodeType: NodeType.Action,
+    displayName: '移动到目标',
+    category: 'Laya',
+    configSchema: {
+        speed: {
+            type: 'number',
+            default: 50,
+            supportBinding: true
+        }
+    }
+})
+export class MoveToTargetAction implements INodeExecutor {
+    execute(context: NodeExecutionContext): TaskStatus {
+        const sprite = context.runtime.getBlackboardValue('layaSprite');
+        const targetPos = context.runtime.getBlackboardValue('targetPosition');
+        const speed = context.nodeData.config.speed;
+
+        if (!sprite || !targetPos) {
+            return TaskStatus.Failure;
+        }
+
+        const dx = targetPos.x - sprite.x;
+        const dy = targetPos.y - sprite.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 10) {
+            return TaskStatus.Success;
+        }
+
+        sprite.x += (dx / distance) * speed * context.deltaTime;
+        sprite.y += (dy / distance) * speed * context.deltaTime;
+
+        return TaskStatus.Running;
+    }
+}
 
 export class SimpleEnemyAI extends Laya.Script {
     public player: Laya.Sprite;
-    public patrolPoints: Array<{x: number, y: number}> = [];
 
     private aiEntity: Entity;
 
@@ -177,68 +215,40 @@ export class SimpleEnemyAI extends Laya.Script {
 
         const sprite = this.owner as Laya.Sprite;
 
-        this.aiEntity = BehaviorTreeBuilder.create(scene, 'EnemyAI')
-            .blackboard()
-                .defineVariable('sprite', BlackboardValueType.Object, sprite)
-                .defineVariable('health', BlackboardValueType.Number, 100)
-                .defineVariable('player', BlackboardValueType.Object, this.player)
-                .defineVariable('patrolIndex', BlackboardValueType.Number, 0)
-            .endBlackboard()
-            .selector()
-                // 攻击玩家
-                .sequence()
-                    .condition((e, bb) => {
-                        const player = bb?.getValue('player');
-                        if (!player) return false;
-
-                        const dx = player.x - sprite.x;
-                        const dy = player.y - sprite.y;
-                        const distance = Math.sqrt(dx * dx + dy * dy);
-                        return distance < 200;  // 检测范围
-                    }, 'CheckPlayerInRange')
-                    .action('Attack', (e, bb) => {
-                        console.log('攻击玩家');
-                        // 攻击逻辑
-                        return TaskStatus.Success;
-                    })
+        const tree = BehaviorTreeBuilder.create('EnemyAI')
+            .defineBlackboardVariable('layaSprite', sprite)
+            .defineBlackboardVariable('health', 100)
+            .defineBlackboardVariable('player', this.player)
+            .defineBlackboardVariable('targetPosition', { x: 0, y: 0 })
+            .selector('MainBehavior')
+                .sequence('Attack')
+                    .blackboardExists('player')
+                    .log('攻击玩家', 'DoAttack')
                 .end()
-                // 巡逻
-                .sequence()
-                    .action('Patrol', (e, bb, dt) => {
-                        const index = bb?.getValue('patrolIndex') || 0;
-                        const point = this.patrolPoints[index];
-
-                        const dx = point.x - sprite.x;
-                        const dy = point.y - sprite.y;
-                        const distance = Math.sqrt(dx * dx + dy * dy);
-
-                        if (distance < 10) {
-                            // 到达路点
-                            const nextIndex = (index + 1) % this.patrolPoints.length;
-                            bb?.setValue('patrolIndex', nextIndex);
-                            return TaskStatus.Success;
-                        }
-
-                        // 移动
-                        const speed = 50;
-                        sprite.x += (dx / distance) * speed * dt;
-                        sprite.y += (dy / distance) * speed * dt;
-
-                        return TaskStatus.Running;
-                    })
-                    .wait(2.0)
-                .end()
+                .log('巡逻', 'Patrol')
             .end()
             .build();
 
-        BehaviorTreeStarter.start(this.aiEntity);
+        this.aiEntity = scene.createEntity(`AI_${sprite.name}`);
+        BehaviorTreeStarter.start(this.aiEntity, tree);
+
+        // 可以在帧更新中修改黑板
+        Laya.timer.frameLoop(1, this, () => {
+            const runtime = this.aiEntity?.getComponent(BehaviorTreeRuntimeComponent);
+            if (runtime && this.player) {
+                runtime.setBlackboardValue('targetPosition', {
+                    x: this.player.x,
+                    y: this.player.y
+                });
+            }
+        });
     }
 
     onDisable() {
-        // 停止AI
         if (this.aiEntity) {
             BehaviorTreeStarter.stop(this.aiEntity);
         }
+        Laya.timer.clearAll(this);
     }
 }
 ```
@@ -246,36 +256,37 @@ export class SimpleEnemyAI extends Laya.Script {
 
 ## 性能优化
 
-### 使用对象池
+### 使用冷却装饰器
+
+对于不需要每帧更新的AI，使用冷却装饰器：
 
 ```typescript
-class AIPool {
-    private pool: Entity[] = [];
-
-    get(asset: any, scene: Scene): Entity {
-        return this.pool.pop() ||
-            BehaviorTreeAssetLoader.instantiate(asset, scene);
-    }
-
-    release(entity: Entity) {
-        BehaviorTreeStarter.stop(entity);
-        this.pool.push(entity);
-    }
-}
+const tree = BehaviorTreeBuilder.create('ThrottledAI')
+    .cooldown(0.2, 'ThrottleRoot')  // 每0.2秒执行一次
+        .selector('MainBehavior')
+            // AI逻辑...
+        .end()
+    .end()
+    .build();
 ```
 
-### 降低更新频率
+### 限制同时运行的AI数量
 
 ```typescript
-private updateInterval: number = 0.1;  // 每0.1秒更新
-private timer: number = 0;
+class AIManager {
+    private activeAIs: Entity[] = [];
+    private maxAIs: number = 20;
 
-onUpdate() {
-    this.timer += Laya.timer.delta / 1000;
+    addAI(entity: Entity, tree: BehaviorTreeData) {
+        if (this.activeAIs.length >= this.maxAIs) {
+            const furthest = this.activeAIs.shift();
+            if (furthest) {
+                BehaviorTreeStarter.stop(furthest);
+            }
+        }
 
-    if (this.timer >= this.updateInterval) {
-        this.scene?.update();
-        this.timer = 0;
+        BehaviorTreeStarter.start(entity, tree);
+        this.activeAIs.push(entity);
     }
 }
 ```

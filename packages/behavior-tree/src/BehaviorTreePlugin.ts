@@ -1,11 +1,9 @@
 import type { Core } from '@esengine/ecs-framework';
 import type { ServiceContainer, IPlugin, IScene } from '@esengine/ecs-framework';
 import { WorldManager } from '@esengine/ecs-framework';
-import { LeafExecutionSystem } from './Systems/LeafExecutionSystem';
-import { DecoratorExecutionSystem } from './Systems/DecoratorExecutionSystem';
-import { CompositeExecutionSystem } from './Systems/CompositeExecutionSystem';
-import { SubTreeExecutionSystem } from './Systems/SubTreeExecutionSystem';
+import { BehaviorTreeExecutionSystem } from './Runtime/BehaviorTreeExecutionSystem';
 import { GlobalBlackboardService } from './Services/GlobalBlackboardService';
+import { BehaviorTreeAssetManager } from './Runtime/BehaviorTreeAssetManager';
 
 /**
  * 行为树插件
@@ -33,11 +31,12 @@ export class BehaviorTreePlugin implements IPlugin {
     /**
      * 安装插件
      */
-    async install(core: Core, services: ServiceContainer): Promise<void> {
+    async install(_core: Core, services: ServiceContainer): Promise<void> {
         this.services = services;
 
-        // 注册全局黑板服务
+        // 注册全局服务
         services.registerSingleton(GlobalBlackboardService);
+        services.registerSingleton(BehaviorTreeAssetManager);
 
         this.worldManager = services.resolve(WorldManager);
     }
@@ -46,9 +45,9 @@ export class BehaviorTreePlugin implements IPlugin {
      * 卸载插件
      */
     async uninstall(): Promise<void> {
-        // 注销全局黑板服务
         if (this.services) {
             this.services.unregister(GlobalBlackboardService);
+            this.services.unregister(BehaviorTreeAssetManager);
         }
 
         this.worldManager = null;
@@ -58,11 +57,7 @@ export class BehaviorTreePlugin implements IPlugin {
     /**
      * 为场景设置行为树系统
      *
-     * 向场景添加所有必需的行为树系统：
-     * - LeafExecutionSystem (updateOrder: 100)
-     * - DecoratorExecutionSystem (updateOrder: 200)
-     * - CompositeExecutionSystem (updateOrder: 300)
-     * - SubTreeExecutionSystem (updateOrder: 300)
+     * 向场景添加行为树执行系统
      *
      * @param scene 目标场景
      *
@@ -73,10 +68,7 @@ export class BehaviorTreePlugin implements IPlugin {
      * ```
      */
     public setupScene(scene: IScene): void {
-        scene.addSystem(new LeafExecutionSystem());
-        scene.addSystem(new DecoratorExecutionSystem());
-        scene.addSystem(new CompositeExecutionSystem());
-        scene.addSystem(new SubTreeExecutionSystem());
+        scene.addSystem(new BehaviorTreeExecutionSystem());
     }
 
     /**
