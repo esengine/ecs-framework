@@ -1,11 +1,12 @@
-import {Component} from "../../Component";
-import {BitMask64Utils, BitMask64Data} from "../../Utils/BigIntCompatibility";
-import {createLogger} from "../../../Utils/Logger";
-import {getComponentTypeName} from "../../Decorators";
+import { Component } from '../../Component';
+import { BitMask64Utils, BitMask64Data } from '../../Utils/BigIntCompatibility';
+import { createLogger } from '../../../Utils/Logger';
+import { getComponentTypeName } from '../../Decorators';
 
 /**
  * 组件类型定义
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ComponentType<T extends Component = Component> = new (...args: any[]) => T;
 
 /**
@@ -13,7 +14,7 @@ export type ComponentType<T extends Component = Component> = new (...args: any[]
  * 管理组件类型的位掩码分配
  */
 export class ComponentRegistry {
-    protected static readonly _logger = createLogger("ComponentStorage");
+    protected static readonly _logger = createLogger('ComponentStorage');
     private static componentTypes = new Map<ComponentType, number>();
     private static bitIndexToType = new Map<number, ComponentType>();
     private static componentNameToType = new Map<string, ComponentType>();
@@ -175,7 +176,7 @@ export class ComponentRegistry {
      */
     public static createComponentMask(componentNames: string[]): BitMask64Data {
         const sortedNames = [...componentNames].sort();
-        const cacheKey = `multi:${sortedNames.join(",")}`;
+        const cacheKey = `multi:${sortedNames.join(',')}`;
 
         if (this.maskCache.has(cacheKey)) {
             return this.maskCache.get(cacheKey)!;

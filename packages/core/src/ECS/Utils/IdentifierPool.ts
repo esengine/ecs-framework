@@ -117,8 +117,8 @@ export class IdentifierPool {
             if (this._nextAvailableIndex > IdentifierPool.MAX_INDEX) {
                 throw new Error(
                     `实体索引已达到框架设计限制 (${IdentifierPool.MAX_INDEX})。` +
-                    "这意味着您已经分配了超过65535个不同的实体索引。" +
-                    "这是16位索引设计的限制，考虑优化实体回收策略或升级到64位ID设计。"
+                    '这意味着您已经分配了超过65535个不同的实体索引。' +
+                    '这是16位索引设计的限制，考虑优化实体回收策略或升级到64位ID设计。'
                 );
             }
 

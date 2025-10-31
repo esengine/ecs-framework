@@ -1,5 +1,5 @@
-import {Entity} from "../Entity";
-import {Component} from "../Component";
+import { Entity } from '../Entity';
+import { Component } from '../Component';
 
 /**
  * 高性能实体列表管理器

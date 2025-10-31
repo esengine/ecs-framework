@@ -1,8 +1,8 @@
-import {Timer} from "./Timer";
-import {ITimer} from "./ITimer";
-import type {IService} from "../../Core/ServiceContainer";
-import type {IUpdatable} from "../../Types/IUpdatable";
-import {Updatable} from "../../Core/DI";
+import { Timer } from './Timer';
+import { ITimer } from './ITimer';
+import type { IService } from '../../Core/ServiceContainer';
+import type { IUpdatable } from '../../Types/IUpdatable';
+import { Updatable } from '../../Core/DI';
 
 /**
  * 定时器管理器

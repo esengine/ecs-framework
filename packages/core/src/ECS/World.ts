@@ -1,8 +1,8 @@
-import {IScene} from "./IScene";
-import {Scene} from "./Scene";
-import {createLogger} from "../Utils/Logger";
+import { IScene } from './IScene';
+import { Scene } from './Scene';
+import { createLogger } from '../Utils/Logger';
 
-const logger = createLogger("World");
+const logger = createLogger('World');
 
 /**
  * 全局系统接口
@@ -93,7 +93,7 @@ export class World {
 
     constructor(config: IWorldConfig = {}) {
         this._config = {
-            name: "World",
+            name: 'World',
             debug: false,
             maxScenes: 10,
             autoCleanup: true,
@@ -122,10 +122,10 @@ export class World {
         const scene = sceneInstance || (new Scene() as unknown as T);
 
         // 设置Scene的标识
-        if ("id" in scene) {
+        if ('id' in scene) {
             (scene as any).id = sceneId;
         }
-        if ("name" in scene && !scene.name) {
+        if ('name' in scene && !scene.name) {
             scene.name = sceneId;
         }
 
@@ -407,7 +407,7 @@ export class World {
             activeSceneCount: this._activeScenes.size,
             globalSystemCount: this._globalSystems.length,
             createdAt: this._createdAt,
-            config: {...this._config},
+            config: { ...this._config },
             scenes: Array.from(this._scenes.keys()).map((sceneId) => ({
                 id: sceneId,
                 isActive: this._activeScenes.has(sceneId),

@@ -4,12 +4,12 @@
  * 负责组件的序列化和反序列化操作
  */
 
-import {Component} from "../Component";
-import {ComponentType} from "../Core/ComponentStorage";
-import {getComponentTypeName} from "../Decorators";
+import { Component } from '../Component';
+import { ComponentType } from '../Core/ComponentStorage';
+import { getComponentTypeName } from '../Decorators';
 import {
     getSerializationMetadata
-} from "./SerializationDecorators";
+} from './SerializationDecorators';
 
 /**
  * 可序列化的值类型
@@ -22,9 +22,9 @@ export type SerializableValue =
     | undefined
     | SerializableValue[]
     | { [key: string]: SerializableValue }
-    | { __type: "Date"; value: string }
-    | { __type: "Map"; value: Array<[SerializableValue, SerializableValue]> }
-    | { __type: "Set"; value: SerializableValue[] };
+    | { __type: 'Date'; value: string }
+    | { __type: 'Map'; value: Array<[SerializableValue, SerializableValue]> }
+    | { __type: 'Set'; value: SerializableValue[] };
 
 /**
  * 序列化后的组件数据
@@ -70,7 +70,7 @@ export class ComponentSerializer {
 
         // 序列化标记的字段
         for (const [fieldName, options] of metadata.fields) {
-            const fieldKey = typeof fieldName === "symbol" ? fieldName.toString() : fieldName;
+            const fieldKey = typeof fieldName === 'symbol' ? fieldName.toString() : fieldName;
             const value = (component as unknown as Record<string | symbol, SerializableValue>)[fieldName];
 
             // 跳过忽略的字段
@@ -125,7 +125,7 @@ export class ComponentSerializer {
 
         // 反序列化字段
         for (const [fieldName, options] of metadata.fields) {
-            const fieldKey = typeof fieldName === "symbol" ? fieldName.toString() : fieldName;
+            const fieldKey = typeof fieldName === 'symbol' ? fieldName.toString() : fieldName;
             const key = options.alias || fieldKey;
             const serializedValue = serializedData.data[key];
 
@@ -198,14 +198,14 @@ export class ComponentSerializer {
 
         // 基本类型
         const type = typeof value;
-        if (type === "string" || type === "number" || type === "boolean") {
+        if (type === 'string' || type === 'number' || type === 'boolean') {
             return value;
         }
 
         // 日期
         if (value instanceof Date) {
             return {
-                __type: "Date",
+                __type: 'Date',
                 value: value.toISOString()
             };
         }
@@ -218,7 +218,7 @@ export class ComponentSerializer {
         // Map (如果没有使用@SerializeMap装饰器)
         if (value instanceof Map) {
             return {
-                __type: "Map",
+                __type: 'Map',
                 value: Array.from(value.entries())
             };
         }
@@ -226,13 +226,13 @@ export class ComponentSerializer {
         // Set
         if (value instanceof Set) {
             return {
-                __type: "Set",
+                __type: 'Set',
                 value: Array.from(value)
             };
         }
 
         // 普通对象
-        if (type === "object" && typeof value === "object" && !Array.isArray(value)) {
+        if (type === 'object' && typeof value === 'object' && !Array.isArray(value)) {
             const result: Record<string, SerializableValue> = {};
             const obj = value as Record<string, SerializableValue>;
             for (const key in obj) {
@@ -257,20 +257,20 @@ export class ComponentSerializer {
 
         // 基本类型直接返回
         const type = typeof value;
-        if (type === "string" || type === "number" || type === "boolean") {
+        if (type === 'string' || type === 'number' || type === 'boolean') {
             return value;
         }
 
         // 处理特殊类型标记
-        if (type === "object" && typeof value === "object" && "__type" in value) {
+        if (type === 'object' && typeof value === 'object' && '__type' in value) {
             const typedValue = value as { __type: string; value: SerializableValue };
             switch (typedValue.__type) {
-                case "Date":
-                    return {__type: "Date", value: typeof typedValue.value === "string" ? typedValue.value : String(typedValue.value)};
-                case "Map":
-                    return {__type: "Map", value: typedValue.value as Array<[SerializableValue, SerializableValue]>};
-                case "Set":
-                    return {__type: "Set", value: typedValue.value as SerializableValue[]};
+                case 'Date':
+                    return { __type: 'Date', value: typeof typedValue.value === 'string' ? typedValue.value : String(typedValue.value) };
+                case 'Map':
+                    return { __type: 'Map', value: typedValue.value as Array<[SerializableValue, SerializableValue]> };
+                case 'Set':
+                    return { __type: 'Set', value: typedValue.value as SerializableValue[] };
             }
         }
 
@@ -280,7 +280,7 @@ export class ComponentSerializer {
         }
 
         // 普通对象
-        if (type === "object" && typeof value === "object" && !Array.isArray(value)) {
+        if (type === 'object' && typeof value === 'object' && !Array.isArray(value)) {
             const result: Record<string, SerializableValue> = {};
             const obj = value as Record<string, SerializableValue>;
             for (const key in obj) {
@@ -325,7 +325,7 @@ export class ComponentSerializer {
 
         if (!metadata) {
             return {
-                type: "unknown",
+                type: 'unknown',
                 version: 0,
                 fields: [],
                 ignoredFields: [],
@@ -333,7 +333,7 @@ export class ComponentSerializer {
             };
         }
 
-        const componentType = typeof component === "function"
+        const componentType = typeof component === 'function'
             ? component
             : (component.constructor as ComponentType);
 
@@ -341,10 +341,10 @@ export class ComponentSerializer {
             type: metadata.options.typeId || getComponentTypeName(componentType),
             version: metadata.options.version,
             fields: Array.from(metadata.fields.keys()).map((k) =>
-                typeof k === "symbol" ? k.toString() : k
+                typeof k === 'symbol' ? k.toString() : k
             ),
             ignoredFields: Array.from(metadata.ignoredFields).map((k) =>
-                typeof k === "symbol" ? k.toString() : k
+                typeof k === 'symbol' ? k.toString() : k
             ),
             isSerializable: true
         };

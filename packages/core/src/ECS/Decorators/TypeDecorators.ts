@@ -1,16 +1,16 @@
-import type {Component} from "../Component";
-import type {EntitySystem} from "../Systems";
-import {ComponentType} from "../../Types";
+import type { Component } from '../Component';
+import type { EntitySystem } from '../Systems';
+import { ComponentType } from '../../Types';
 
 /**
  * 存储组件类型名称的Symbol键
  */
-export const COMPONENT_TYPE_NAME = Symbol("ComponentTypeName");
+export const COMPONENT_TYPE_NAME = Symbol('ComponentTypeName');
 
 /**
  * 存储系统类型名称的Symbol键
  */
-export const SYSTEM_TYPE_NAME = Symbol("SystemTypeName");
+export const SYSTEM_TYPE_NAME = Symbol('SystemTypeName');
 
 /**
  * 组件类型装饰器
@@ -28,8 +28,8 @@ export const SYSTEM_TYPE_NAME = Symbol("SystemTypeName");
  */
 export function ECSComponent(typeName: string) {
     return function <T extends new (...args: any[]) => Component>(target: T): T {
-        if (!typeName || typeof typeName !== "string") {
-            throw new Error("ECSComponent装饰器必须提供有效的类型名称");
+        if (!typeName || typeof typeName !== 'string') {
+            throw new Error('ECSComponent装饰器必须提供有效的类型名称');
         }
 
         // 在构造函数上存储类型名称
@@ -82,8 +82,8 @@ export interface SystemMetadata {
  */
 export function ECSSystem(typeName: string, metadata?: SystemMetadata) {
     return function <T extends new (...args: any[]) => EntitySystem>(target: T): T {
-        if (!typeName || typeof typeName !== "string") {
-            throw new Error("ECSSystem装饰器必须提供有效的类型名称");
+        if (!typeName || typeof typeName !== 'string') {
+            throw new Error('ECSSystem装饰器必须提供有效的类型名称');
         }
 
         // 在构造函数上存储类型名称
@@ -121,7 +121,7 @@ export function getComponentTypeName(
     }
 
     // 回退到constructor.name
-    return componentType.name || "UnknownComponent";
+    return componentType.name || 'UnknownComponent';
 }
 
 /**
@@ -140,7 +140,7 @@ export function getSystemTypeName<T extends EntitySystem>(
     }
 
     // 回退到constructor.name
-    return systemType.name || "UnknownSystem";
+    return systemType.name || 'UnknownSystem';
 }
 
 /**

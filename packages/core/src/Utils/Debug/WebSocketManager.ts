@@ -80,9 +80,10 @@ export class WebSocketManager {
         }
 
         try {
-            const message = typeof data === "string" ? data : JSON.stringify(data);
+            const message = typeof data === 'string' ? data : JSON.stringify(data);
             this.ws.send(message);
-        } catch (error) {
+        } catch (_error) {
+            // 发送失败时静默忽略，WebSocket 断开会触发 error 事件
         }
     }
 
@@ -130,7 +131,8 @@ export class WebSocketManager {
             if (this.messageHandler) {
                 this.messageHandler(message);
             }
-        } catch (error) {
+        } catch (_error) {
+            // 解析失败时静默忽略，避免非 JSON 消息导致错误
         }
     }
 

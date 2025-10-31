@@ -1,20 +1,20 @@
-import {Entity} from "../Entity";
-import {QueryCondition, QueryConditionType} from "./QueryTypes";
-import {BitMask64Utils} from "../Utils/BigIntCompatibility";
-import {createLogger} from "../../Utils/Logger";
+import { Entity } from '../Entity';
+import { QueryCondition, QueryConditionType } from './QueryTypes';
+import { BitMask64Utils } from '../Utils/BigIntCompatibility';
+import { createLogger } from '../../Utils/Logger';
 
-const logger = createLogger("ReactiveQuery");
+const logger = createLogger('ReactiveQuery');
 
 /**
  * 响应式查询变化类型
  */
 export enum ReactiveQueryChangeType {
     /** 实体添加到查询结果 */
-    ADDED = "added",
+    ADDED = 'added',
     /** 实体从查询结果移除 */
-    REMOVED = "removed",
+    REMOVED = 'removed',
     /** 查询结果批量更新 */
-    BATCH_UPDATE = "batch_update"
+    BATCH_UPDATE = 'batch_update'
 }
 
 /**
@@ -138,7 +138,7 @@ export class ReactiveQuery {
         const componentsStr = this._condition.componentTypes
             .map((t) => t.name)
             .sort()
-            .join(",");
+            .join(',');
         return `${typeStr}:${componentsStr}`;
     }
 
@@ -153,8 +153,8 @@ export class ReactiveQuery {
             throw new Error(`Cannot subscribe to disposed ReactiveQuery ${this._id}`);
         }
 
-        if (typeof listener !== "function") {
-            throw new TypeError("Listener must be a function");
+        if (typeof listener !== 'function') {
+            throw new TypeError('Listener must be a function');
         }
 
         this._listeners.push(listener);
@@ -239,7 +239,7 @@ export class ReactiveQuery {
 
         // 通知监听器
         if (this._config.enableBatchMode) {
-            this.addToBatch("added", entity);
+            this.addToBatch('added', entity);
         } else {
             this.notifyListeners({
                 type: ReactiveQueryChangeType.ADDED,
@@ -276,7 +276,7 @@ export class ReactiveQuery {
 
         // 通知监听器
         if (this._config.enableBatchMode) {
-            this.addToBatch("removed", entity);
+            this.addToBatch('removed', entity);
         } else {
             this.notifyListeners({
                 type: ReactiveQueryChangeType.REMOVED,
@@ -337,8 +337,8 @@ export class ReactiveQuery {
     /**
      * 添加到批量变化缓存
      */
-    private addToBatch(type: "added" | "removed", entity: Entity): void {
-        if (type === "added") {
+    private addToBatch(type: 'added' | 'removed', entity: Entity): void {
+        if (type === 'added') {
             this._batchChanges.added.push(entity);
         } else {
             this._batchChanges.removed.push(entity);

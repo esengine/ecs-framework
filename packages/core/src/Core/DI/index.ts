@@ -17,6 +17,6 @@ export {
     createInstance,
     injectProperties,
     registerInjectable
-} from "./Decorators";
+} from './Decorators';
 
-export type {InjectableMetadata, UpdatableMetadata} from "./Decorators";
+export type { InjectableMetadata, UpdatableMetadata } from './Decorators';

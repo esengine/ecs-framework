@@ -1,4 +1,4 @@
-import {SegmentPart, BitMask64Data, BitMask64Utils} from "./BigIntCompatibility";
+import { SegmentPart, BitMask64Data, BitMask64Utils } from './BigIntCompatibility';
 
 /**
  * 位集合类，用于高效的位操作
@@ -13,11 +13,11 @@ export class Bits {
      * @param initialValue 初始值，可以是BitMask64Data对象、数字或字符串
      */
     constructor(initialValue?: BitMask64Data | number | string) {
-        if (initialValue && typeof initialValue === "object") {
+        if (initialValue && typeof initialValue === 'object') {
             this._value = BitMask64Utils.clone(initialValue);
-        } else if (typeof initialValue === "number") {
+        } else if (typeof initialValue === 'number') {
             this._value = BitMask64Utils.fromNumber(initialValue);
-        } else if (typeof initialValue === "string") {
+        } else if (typeof initialValue === 'string') {
             const num = parseInt(initialValue, 10);
             this._value = BitMask64Utils.fromNumber(num);
         } else {
@@ -33,7 +33,7 @@ export class Bits {
      */
     public set(index: number): void {
         if (index < 0) {
-            throw new Error("Bit index cannot be negative");
+            throw new Error('Bit index cannot be negative');
         }
 
         BitMask64Utils.setBit(this._value, index);
@@ -46,7 +46,7 @@ export class Bits {
      */
     public clear(index: number): void {
         if (index < 0) {
-            throw new Error("Bit index cannot be negative");
+            throw new Error('Bit index cannot be negative');
         }
 
         BitMask64Utils.clearBit(this._value, index);
@@ -207,9 +207,9 @@ export class Bits {
      * @param value 新值，可以是BitMask64Data对象、数字或字符串
      */
     public setValue(value: BitMask64Data | number | string): void {
-        if (typeof value === "object") {
+        if (typeof value === 'object') {
             BitMask64Utils.copy(value, this._value);
-        } else if (typeof value === "number") {
+        } else if (typeof value === 'number') {
             this._value = BitMask64Utils.fromNumber(value);
         } else {
             const num = parseInt(value, 10);
@@ -228,7 +228,7 @@ export class Bits {
                 bits.push(i.toString());
             }
         }
-        return `Bits[${bits.join(", ")}]`;
+        return `Bits[${bits.join(', ')}]`;
     }
 
     /**
@@ -240,11 +240,11 @@ export class Bits {
         if(maxBits == 0){
             maxBits = 64 + (this._value.segments ? this._value.segments.length * 64 : 0);
         }
-        let result = "";
+        let result = '';
         for (let i = maxBits - 1; i >= 0; i--) {
-            result += this.get(i) ? "1" : "0";
+            result += this.get(i) ? '1' : '0';
             if (i % 8 === 0 && i > 0) {
-                result += " ";
+                result += ' ';
             }
         }
         return result;
@@ -264,17 +264,17 @@ export class Bits {
      * @returns 新的位集合对象
      */
     public static fromBinaryString(binaryString: string): Bits {
-        const cleanString = binaryString.replace(/\s/g, "");
+        const cleanString = binaryString.replace(/\s/g, '');
         let data: BitMask64Data;
         if (cleanString.length <= 32) {
             const num = parseInt(cleanString, 2);
-            data = {base: [num >>> 0, 0]};
+            data = { base: [num >>> 0, 0] };
         } else {
             const loBits = cleanString.substring(cleanString.length - 32);
             const hiBits = cleanString.substring(0, cleanString.length - 32);
             const lo = parseInt(loBits, 2);
             const hi = parseInt(hiBits, 2);
-            data = {base: [lo >>> 0, hi >>> 0]};
+            data = { base: [lo >>> 0, hi >>> 0] };
         }
         return new Bits(data);
     }
@@ -285,17 +285,17 @@ export class Bits {
      * @returns 新的位集合对象
      */
     public static fromHexString(hexString: string): Bits {
-        const cleanString = hexString.replace(/^0x/i, "");
+        const cleanString = hexString.replace(/^0x/i, '');
         let data: BitMask64Data;
         if (cleanString.length <= 8) {
             const num = parseInt(cleanString, 16);
-            data = {base: [num >>> 0, 0]};
+            data = { base: [num >>> 0, 0] };
         } else {
             const loBits = cleanString.substring(cleanString.length - 8);
             const hiBits = cleanString.substring(0, cleanString.length - 8);
             const lo = parseInt(loBits, 16);
             const hi = parseInt(hiBits, 16);
-            data = {base: [lo >>> 0, hi >>> 0]};
+            data = { base: [lo >>> 0, hi >>> 0] };
         }
         return new Bits(data);
     }

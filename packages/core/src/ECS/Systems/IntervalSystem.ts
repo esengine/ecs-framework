@@ -1,6 +1,6 @@
-import {EntitySystem} from "./EntitySystem";
-import {Matcher} from "../Utils/Matcher";
-import {Time} from "../../Utils/Time";
+import { EntitySystem } from './EntitySystem';
+import { Matcher } from '../Utils/Matcher';
+import { Time } from '../../Utils/Time';
 
 /**
  * 间隔系统抽象类

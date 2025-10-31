@@ -1,7 +1,7 @@
-import {Entity} from "../Entity";
-import {ComponentType, ComponentRegistry} from "./ComponentStorage";
-import {BitMask64Data, BitMask64Utils} from "../Utils";
-import {BitMaskHashMap} from "../Utils/BitMaskHashMap";
+import { Entity } from '../Entity';
+import { ComponentType, ComponentRegistry } from './ComponentStorage';
+import { BitMask64Data, BitMask64Utils } from '../Utils';
+import { BitMaskHashMap } from '../Utils/BitMaskHashMap';
 
 /**
  * 原型标识符
@@ -126,18 +126,18 @@ export class ArchetypeSystem {
      * @param operation 查询操作类型：'AND'（包含所有）或 'OR'（包含任意）
      * @returns 匹配的原型列表及实体总数
      */
-    public queryArchetypes(componentTypes: ComponentType[], operation: "AND" | "OR" = "AND"): ArchetypeQueryResult {
+    public queryArchetypes(componentTypes: ComponentType[], operation: 'AND' | 'OR' = 'AND'): ArchetypeQueryResult {
 
         const matchingArchetypes: Archetype[] = [];
         let totalEntities = 0;
 
-        if (operation === "AND") {
+        if (operation === 'AND') {
             if (componentTypes.length === 0) {
                 for (const archetype of this._allArchetypes) {
                     matchingArchetypes.push(archetype);
                     totalEntities += archetype.entities.size;
                 }
-                return {archetypes: matchingArchetypes, totalEntities};
+                return { archetypes: matchingArchetypes, totalEntities };
             }
 
             if (componentTypes.length === 1) {
@@ -148,7 +148,7 @@ export class ArchetypeSystem {
                         totalEntities += archetype.entities.size;
                     }
                 }
-                return {archetypes: matchingArchetypes, totalEntities};
+                return { archetypes: matchingArchetypes, totalEntities };
             }
 
             let smallestSet: Set<Archetype> | undefined;
@@ -157,7 +157,7 @@ export class ArchetypeSystem {
             for (const componentType of componentTypes) {
                 const archetypes = this._componentToArchetypes.get(componentType);
                 if (!archetypes || archetypes.size === 0) {
-                    return {archetypes: [], totalEntities: 0};
+                    return { archetypes: [], totalEntities: 0 };
                 }
                 if (archetypes.size < smallestSize) {
                     smallestSize = archetypes.size;

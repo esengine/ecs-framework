@@ -6,75 +6,75 @@
  */
 export enum ECSEventType {
     // 实体相关事件
-    ENTITY_CREATED = "entity:created",
-    ENTITY_DESTROYED = "entity:destroyed",
-    ENTITY_ENABLED = "entity:enabled",
-    ENTITY_DISABLED = "entity:disabled",
-    ENTITY_TAG_ADDED = "entity:tag:added",
-    ENTITY_TAG_REMOVED = "entity:tag:removed",
-    ENTITY_NAME_CHANGED = "entity:name:changed",
+    ENTITY_CREATED = 'entity:created',
+    ENTITY_DESTROYED = 'entity:destroyed',
+    ENTITY_ENABLED = 'entity:enabled',
+    ENTITY_DISABLED = 'entity:disabled',
+    ENTITY_TAG_ADDED = 'entity:tag:added',
+    ENTITY_TAG_REMOVED = 'entity:tag:removed',
+    ENTITY_NAME_CHANGED = 'entity:name:changed',
 
     // 组件相关事件
-    COMPONENT_ADDED = "component:added",
-    COMPONENT_REMOVED = "component:removed",
-    COMPONENT_MODIFIED = "component:modified",
-    COMPONENT_ENABLED = "component:enabled",
-    COMPONENT_DISABLED = "component:disabled",
+    COMPONENT_ADDED = 'component:added',
+    COMPONENT_REMOVED = 'component:removed',
+    COMPONENT_MODIFIED = 'component:modified',
+    COMPONENT_ENABLED = 'component:enabled',
+    COMPONENT_DISABLED = 'component:disabled',
 
     // 系统相关事件
-    SYSTEM_ADDED = "system:added",
-    SYSTEM_REMOVED = "system:removed",
-    SYSTEM_ENABLED = "system:enabled",
-    SYSTEM_DISABLED = "system:disabled",
-    SYSTEM_PROCESSING_START = "system:processing:start",
-    SYSTEM_PROCESSING_END = "system:processing:end",
-    SYSTEM_ERROR = "system:error",
+    SYSTEM_ADDED = 'system:added',
+    SYSTEM_REMOVED = 'system:removed',
+    SYSTEM_ENABLED = 'system:enabled',
+    SYSTEM_DISABLED = 'system:disabled',
+    SYSTEM_PROCESSING_START = 'system:processing:start',
+    SYSTEM_PROCESSING_END = 'system:processing:end',
+    SYSTEM_ERROR = 'system:error',
 
     // 场景相关事件
-    SCENE_CREATED = "scene:created",
-    SCENE_DESTROYED = "scene:destroyed",
-    SCENE_ACTIVATED = "scene:activated",
-    SCENE_DEACTIVATED = "scene:deactivated",
-    SCENE_PAUSED = "scene:paused",
-    SCENE_RESUMED = "scene:resumed",
+    SCENE_CREATED = 'scene:created',
+    SCENE_DESTROYED = 'scene:destroyed',
+    SCENE_ACTIVATED = 'scene:activated',
+    SCENE_DEACTIVATED = 'scene:deactivated',
+    SCENE_PAUSED = 'scene:paused',
+    SCENE_RESUMED = 'scene:resumed',
 
     // 查询相关事件
-    QUERY_EXECUTED = "query:executed",
-    QUERY_CACHE_HIT = "query:cache:hit",
-    QUERY_CACHE_MISS = "query:cache:miss",
-    QUERY_OPTIMIZED = "query:optimized",
+    QUERY_EXECUTED = 'query:executed',
+    QUERY_CACHE_HIT = 'query:cache:hit',
+    QUERY_CACHE_MISS = 'query:cache:miss',
+    QUERY_OPTIMIZED = 'query:optimized',
 
     // 性能相关事件
-    PERFORMANCE_WARNING = "performance:warning",
-    PERFORMANCE_CRITICAL = "performance:critical",
-    MEMORY_USAGE_HIGH = "memory:usage:high",
-    FRAME_RATE_DROP = "frame:rate:drop",
+    PERFORMANCE_WARNING = 'performance:warning',
+    PERFORMANCE_CRITICAL = 'performance:critical',
+    MEMORY_USAGE_HIGH = 'memory:usage:high',
+    FRAME_RATE_DROP = 'frame:rate:drop',
 
     // 索引相关事件
-    INDEX_CREATED = "index:created",
-    INDEX_UPDATED = "index:updated",
-    INDEX_OPTIMIZED = "index:optimized",
+    INDEX_CREATED = 'index:created',
+    INDEX_UPDATED = 'index:updated',
+    INDEX_OPTIMIZED = 'index:optimized',
 
     // Archetype相关事件
-    ARCHETYPE_CREATED = "archetype:created",
-    ARCHETYPE_ENTITY_ADDED = "archetype:entity:added",
-    ARCHETYPE_ENTITY_REMOVED = "archetype:entity:removed",
+    ARCHETYPE_CREATED = 'archetype:created',
+    ARCHETYPE_ENTITY_ADDED = 'archetype:entity:added',
+    ARCHETYPE_ENTITY_REMOVED = 'archetype:entity:removed',
 
     // 脏标记相关事件
-    DIRTY_MARK_ADDED = "dirty:mark:added",
-    DIRTY_BATCH_PROCESSED = "dirty:batch:processed",
+    DIRTY_MARK_ADDED = 'dirty:mark:added',
+    DIRTY_BATCH_PROCESSED = 'dirty:batch:processed',
 
     // 错误和警告事件
-    ERROR_OCCURRED = "error:occurred",
-    WARNING_ISSUED = "warning:issued",
+    ERROR_OCCURRED = 'error:occurred',
+    WARNING_ISSUED = 'warning:issued',
 
     // 生命周期事件
-    FRAMEWORK_INITIALIZED = "framework:initialized",
-    FRAMEWORK_SHUTDOWN = "framework:shutdown",
+    FRAMEWORK_INITIALIZED = 'framework:initialized',
+    FRAMEWORK_SHUTDOWN = 'framework:shutdown',
 
     // 调试相关事件
-    DEBUG_INFO = "debug:info",
-    DEBUG_STATS_UPDATED = "debug:stats:updated"
+    DEBUG_INFO = 'debug:info',
+    DEBUG_STATS_UPDATED = 'debug:stats:updated'
 }
 
 /**

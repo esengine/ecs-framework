@@ -1,4 +1,4 @@
-import {Component} from "../Component";
+import { Component } from '../Component';
 
 /**
  * 组件对象池，用于复用组件实例以减少内存分配
@@ -183,7 +183,7 @@ export class ComponentPoolManager {
     acquireComponent<T extends Component>(componentName: string): T | null {
         const pool = this.pools.get(componentName);
 
-        this.trackUsage(componentName, "create");
+        this.trackUsage(componentName, 'create');
 
         return pool ? (pool.acquire() as T) : null;
     }
@@ -194,7 +194,7 @@ export class ComponentPoolManager {
     releaseComponent<T extends Component>(componentName: string, component: T): void {
         const pool = this.pools.get(componentName);
 
-        this.trackUsage(componentName, "release");
+        this.trackUsage(componentName, 'release');
 
         if (pool) {
             pool.release(component);
@@ -204,7 +204,7 @@ export class ComponentPoolManager {
     /**
      * 追踪使用情况
      */
-    private trackUsage(componentName: string, action: "create" | "release"): void {
+    private trackUsage(componentName: string, action: 'create' | 'release'): void {
         let tracker = this.usageTracker.get(componentName);
 
         if (!tracker) {
@@ -216,7 +216,7 @@ export class ComponentPoolManager {
             this.usageTracker.set(componentName, tracker);
         }
 
-        if (action === "create") {
+        if (action === 'create') {
             tracker.createCount++;
         } else {
             tracker.releaseCount++;
@@ -289,12 +289,12 @@ export class ComponentPoolManager {
      */
     getGlobalStats(): Array<{
         componentName: string;
-        poolStats: ReturnType<ComponentPool<Component>["getStats"]>;
+        poolStats: ReturnType<ComponentPool<Component>['getStats']>;
         usage: ComponentUsageTracker | undefined;
     }> {
         const stats: Array<{
             componentName: string;
-            poolStats: ReturnType<ComponentPool<Component>["getStats"]>;
+            poolStats: ReturnType<ComponentPool<Component>['getStats']>;
             usage: ComponentUsageTracker | undefined;
         }> = [];
 

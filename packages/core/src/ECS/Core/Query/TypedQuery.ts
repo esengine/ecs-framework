@@ -4,9 +4,9 @@
  * 提供完整的TypeScript类型推断，在编译时确保类型安全
  */
 
-import type {Entity} from "../../Entity";
-import type {ComponentConstructor} from "../../../Types/TypeHelpers";
-import {Matcher, type QueryCondition} from "../../Utils/Matcher";
+import type { Entity } from '../../Entity';
+import type { ComponentConstructor } from '../../../Types/TypeHelpers';
+import { Matcher, type QueryCondition } from '../../Utils/Matcher';
 
 /**
  * 类型安全的查询结果
@@ -326,8 +326,8 @@ export class TypedQueryBuilder<
             all: [...this._all] as ComponentConstructor[],
             any: [...this._any] as ComponentConstructor[],
             none: [...this._none] as ComponentConstructor[],
-            ...(this._tag !== undefined && {tag: this._tag}),
-            ...(this._name !== undefined && {name: this._name})
+            ...(this._tag !== undefined && { tag: this._tag }),
+            ...(this._name !== undefined && { name: this._name })
         };
     }
 

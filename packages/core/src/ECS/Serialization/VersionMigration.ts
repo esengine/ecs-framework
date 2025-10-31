@@ -4,8 +4,8 @@
  * 提供组件和场景数据的版本迁移支持
  */
 
-import {SerializedComponent} from "./ComponentSerializer";
-import {SerializedScene} from "./SceneSerializer";
+import { SerializedComponent } from './ComponentSerializer';
+import { SerializedScene } from './SceneSerializer';
 
 /**
  * 组件迁移函数
@@ -127,7 +127,7 @@ export class VersionMigrationManager {
             return component;
         }
 
-        const migratedData = {...component};
+        const migratedData = { ...component };
         let version = currentVersion;
 
         // 执行迁移链
@@ -163,7 +163,7 @@ export class VersionMigrationManager {
             return scene; // 版本相同，无需迁移
         }
 
-        let migratedScene = {...scene};
+        let migratedScene = { ...scene };
         let version = currentVersion;
 
         // 执行场景级迁移
@@ -191,7 +191,7 @@ export class VersionMigrationManager {
      * 迁移场景中所有组件的版本
      */
     private static migrateSceneComponents(scene: SerializedScene): SerializedScene {
-        const migratedScene = {...scene};
+        const migratedScene = { ...scene };
 
         migratedScene.entities = scene.entities.map((entity) => ({
             ...entity,

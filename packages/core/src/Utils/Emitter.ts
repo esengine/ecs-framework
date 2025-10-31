@@ -31,7 +31,7 @@ export class Emitter<T, TContext = unknown> {
      * @param handler 监听函数
      * @param context 监听上下文
      */
-    public addObserver(eventType: T, handler: Function, context: TContext) {
+    public addObserver(eventType: T, handler: EventHandler, context: TContext) {
         let list = this._messageTable.get(eventType);
         if (!list) {
             list = [];
@@ -48,7 +48,7 @@ export class Emitter<T, TContext = unknown> {
      * @param eventType 事件类型
      * @param handler 事件函数
      */
-    public removeObserver(eventType: T, handler: Function) {
+    public removeObserver(eventType: T, handler: EventHandler) {
         const messageData = this._messageTable.get(eventType);
         if (messageData) {
             const index = messageData.findIndex((data) => data.func == handler);
@@ -76,7 +76,7 @@ export class Emitter<T, TContext = unknown> {
      * @param eventType 事件类型
      * @param handler 事件函数
      */
-    public hasObserver(eventType: T, handler: Function): boolean {
+    public hasObserver(eventType: T, handler: EventHandler): boolean {
         const list = this._messageTable.get(eventType);
         return list ? list.some((observer) => observer.func === handler) : false;
     }

@@ -1,20 +1,20 @@
-import {IECSDebugConfig, IECSDebugData} from "../../Types";
-import {EntityDataCollector} from "./EntityDataCollector";
-import {SystemDataCollector} from "./SystemDataCollector";
-import {PerformanceDataCollector} from "./PerformanceDataCollector";
-import {ComponentDataCollector} from "./ComponentDataCollector";
-import {SceneDataCollector} from "./SceneDataCollector";
-import {WebSocketManager} from "./WebSocketManager";
-import {Component} from "../../ECS/Component";
-import {ComponentPoolManager} from "../../ECS/Core/ComponentPool";
-import {Pool} from "../../Utils/Pool";
-import {getComponentInstanceTypeName, getSystemInstanceTypeName} from "../../ECS/Decorators";
-import type {IService} from "../../Core/ServiceContainer";
-import type {IUpdatable} from "../../Types/IUpdatable";
-import {SceneManager} from "../../ECS/SceneManager";
-import {PerformanceMonitor} from "../PerformanceMonitor";
-import {Injectable, Inject, Updatable} from "../../Core/DI/Decorators";
-import {DebugConfigService} from "./DebugConfigService";
+import { IECSDebugConfig, IECSDebugData } from '../../Types';
+import { EntityDataCollector } from './EntityDataCollector';
+import { SystemDataCollector } from './SystemDataCollector';
+import { PerformanceDataCollector } from './PerformanceDataCollector';
+import { ComponentDataCollector } from './ComponentDataCollector';
+import { SceneDataCollector } from './SceneDataCollector';
+import { WebSocketManager } from './WebSocketManager';
+import { Component } from '../../ECS/Component';
+import { ComponentPoolManager } from '../../ECS/Core/ComponentPool';
+import { Pool } from '../../Utils/Pool';
+import { getComponentInstanceTypeName, getSystemInstanceTypeName } from '../../ECS/Decorators';
+import type { IService } from '../../Core/ServiceContainer';
+import type { IUpdatable } from '../../Types/IUpdatable';
+import { SceneManager } from '../../ECS/SceneManager';
+import { PerformanceMonitor } from '../PerformanceMonitor';
+import { Injectable, Inject, Updatable } from '../../Core/DI/Decorators';
+import { DebugConfigService } from './DebugConfigService';
 
 /**
  * 调试管理器
@@ -106,27 +106,27 @@ export class DebugManager implements IService, IUpdatable {
      */
     private interceptConsole(): void {
         console.log = (...args: unknown[]) => {
-            this.sendLog("info", this.formatLogMessage(args));
+            this.sendLog('info', this.formatLogMessage(args));
             this.originalConsole.log(...args);
         };
 
         console.debug = (...args: unknown[]) => {
-            this.sendLog("debug", this.formatLogMessage(args));
+            this.sendLog('debug', this.formatLogMessage(args));
             this.originalConsole.debug(...args);
         };
 
         console.info = (...args: unknown[]) => {
-            this.sendLog("info", this.formatLogMessage(args));
+            this.sendLog('info', this.formatLogMessage(args));
             this.originalConsole.info(...args);
         };
 
         console.warn = (...args: unknown[]) => {
-            this.sendLog("warn", this.formatLogMessage(args));
+            this.sendLog('warn', this.formatLogMessage(args));
             this.originalConsole.warn(...args);
         };
 
         console.error = (...args: unknown[]) => {
-            this.sendLog("error", this.formatLogMessage(args));
+            this.sendLog('error', this.formatLogMessage(args));
             this.originalConsole.error(...args);
         };
     }
@@ -136,11 +136,11 @@ export class DebugManager implements IService, IUpdatable {
      */
     private formatLogMessage(args: unknown[]): string {
         return args.map((arg) => {
-            if (typeof arg === "string") return arg;
+            if (typeof arg === 'string') return arg;
             if (arg instanceof Error) return `${arg.name}: ${arg.message}`;
-            if (arg === null) return "null";
-            if (arg === undefined) return "undefined";
-            if (typeof arg === "object") {
+            if (arg === null) return 'null';
+            if (arg === undefined) return 'undefined';
+            if (typeof arg === 'object') {
                 try {
                     return this.safeStringify(arg, 6);
                 } catch {
@@ -148,7 +148,7 @@ export class DebugManager implements IService, IUpdatable {
                 }
             }
             return String(arg);
-        }).join(" ");
+        }).join(' ');
     }
 
     /**
@@ -160,14 +160,14 @@ export class DebugManager implements IService, IUpdatable {
         const stringify = (value: any, depth: number): any => {
             if (value === null) return null;
             if (value === undefined) return undefined;
-            if (typeof value !== "object") return value;
+            if (typeof value !== 'object') return value;
 
             if (depth >= maxDepth) {
-                return "[Max Depth Reached]";
+                return '[Max Depth Reached]';
             }
 
             if (seen.has(value)) {
-                return "[Circular]";
+                return '[Circular]';
             }
 
             seen.add(value);
@@ -201,7 +201,7 @@ export class DebugManager implements IService, IUpdatable {
 
         try {
             this.webSocketManager.send({
-                type: "log",
+                type: 'log',
                 data: {
                     level,
                     message,
@@ -263,35 +263,35 @@ export class DebugManager implements IService, IUpdatable {
     private handleMessage(message: any): void {
         try {
             switch (message.type) {
-                case "capture_memory_snapshot":
+                case 'capture_memory_snapshot':
                     this.handleMemorySnapshotRequest();
                     break;
 
-                case "config_update":
+                case 'config_update':
                     if (message.config) {
-                        this.updateConfig({...this.config, ...message.config});
+                        this.updateConfig({ ...this.config, ...message.config });
                     }
                     break;
 
-                case "expand_lazy_object":
+                case 'expand_lazy_object':
                     this.handleExpandLazyObjectRequest(message);
                     break;
 
-                case "get_component_properties":
+                case 'get_component_properties':
                     this.handleGetComponentPropertiesRequest(message);
                     break;
 
-                case "get_raw_entity_list":
+                case 'get_raw_entity_list':
                     this.handleGetRawEntityListRequest(message);
                     break;
 
-                case "get_entity_details":
+                case 'get_entity_details':
                     this.handleGetEntityDetailsRequest(message);
                     break;
 
-                case "ping":
+                case 'ping':
                     this.webSocketManager.send({
-                        type: "pong",
+                        type: 'pong',
                         timestamp: Date.now()
                     });
                     break;
@@ -304,7 +304,7 @@ export class DebugManager implements IService, IUpdatable {
             // console.error('[ECS Debug] 处理消息失败:', error);
             if (message.requestId) {
                 this.webSocketManager.send({
-                    type: "error_response",
+                    type: 'error_response',
                     requestId: message.requestId,
                     error: error instanceof Error ? error.message : String(error)
                 });
@@ -317,13 +317,13 @@ export class DebugManager implements IService, IUpdatable {
      */
     private handleExpandLazyObjectRequest(message: any): void {
         try {
-            const {entityId, componentIndex, propertyPath, requestId} = message;
+            const { entityId, componentIndex, propertyPath, requestId } = message;
 
             if (entityId === undefined || componentIndex === undefined || !propertyPath) {
                 this.webSocketManager.send({
-                    type: "expand_lazy_object_response",
+                    type: 'expand_lazy_object_response',
                     requestId,
-                    error: "缺少必要参数"
+                    error: '缺少必要参数'
                 });
                 return;
             }
@@ -332,13 +332,13 @@ export class DebugManager implements IService, IUpdatable {
             const expandedData = this.entityCollector.expandLazyObject(entityId, componentIndex, propertyPath, scene);
 
             this.webSocketManager.send({
-                type: "expand_lazy_object_response",
+                type: 'expand_lazy_object_response',
                 requestId,
                 data: expandedData
             });
         } catch (error) {
             this.webSocketManager.send({
-                type: "expand_lazy_object_response",
+                type: 'expand_lazy_object_response',
                 requestId: message.requestId,
                 error: error instanceof Error ? error.message : String(error)
             });
@@ -350,13 +350,13 @@ export class DebugManager implements IService, IUpdatable {
      */
     private handleGetComponentPropertiesRequest(message: any): void {
         try {
-            const {entityId, componentIndex, requestId} = message;
+            const { entityId, componentIndex, requestId } = message;
 
             if (entityId === undefined || componentIndex === undefined) {
                 this.webSocketManager.send({
-                    type: "get_component_properties_response",
+                    type: 'get_component_properties_response',
                     requestId,
-                    error: "缺少必要参数"
+                    error: '缺少必要参数'
                 });
                 return;
             }
@@ -365,13 +365,13 @@ export class DebugManager implements IService, IUpdatable {
             const properties = this.entityCollector.getComponentProperties(entityId, componentIndex, scene);
 
             this.webSocketManager.send({
-                type: "get_component_properties_response",
+                type: 'get_component_properties_response',
                 requestId,
                 data: properties
             });
         } catch (error) {
             this.webSocketManager.send({
-                type: "get_component_properties_response",
+                type: 'get_component_properties_response',
                 requestId: message.requestId,
                 error: error instanceof Error ? error.message : String(error)
             });
@@ -383,19 +383,19 @@ export class DebugManager implements IService, IUpdatable {
      */
     private handleGetRawEntityListRequest(message: any): void {
         try {
-            const {requestId} = message;
+            const { requestId } = message;
 
             const scene = this.sceneManager.currentScene;
             const rawEntityList = this.entityCollector.getRawEntityList(scene);
 
             this.webSocketManager.send({
-                type: "get_raw_entity_list_response",
+                type: 'get_raw_entity_list_response',
                 requestId,
                 data: rawEntityList
             });
         } catch (error) {
             this.webSocketManager.send({
-                type: "get_raw_entity_list_response",
+                type: 'get_raw_entity_list_response',
                 requestId: message.requestId,
                 error: error instanceof Error ? error.message : String(error)
             });
@@ -407,13 +407,13 @@ export class DebugManager implements IService, IUpdatable {
      */
     private handleGetEntityDetailsRequest(message: any): void {
         try {
-            const {entityId, requestId} = message;
+            const { entityId, requestId } = message;
 
             if (entityId === undefined) {
                 this.webSocketManager.send({
-                    type: "get_entity_details_response",
+                    type: 'get_entity_details_response',
                     requestId,
-                    error: "缺少实体ID参数"
+                    error: '缺少实体ID参数'
                 });
                 return;
             }
@@ -422,13 +422,13 @@ export class DebugManager implements IService, IUpdatable {
             const entityDetails = this.entityCollector.getEntityDetails(entityId, scene);
 
             this.webSocketManager.send({
-                type: "get_entity_details_response",
+                type: 'get_entity_details_response',
                 requestId,
                 data: entityDetails
             });
         } catch (error) {
             this.webSocketManager.send({
-                type: "get_entity_details_response",
+                type: 'get_entity_details_response',
                 requestId: message.requestId,
                 error: error instanceof Error ? error.message : String(error)
             });
@@ -443,13 +443,13 @@ export class DebugManager implements IService, IUpdatable {
         try {
             const memorySnapshot = this.captureMemorySnapshot();
             this.webSocketManager.send({
-                type: "memory_snapshot_response",
+                type: 'memory_snapshot_response',
                 data: memorySnapshot
             });
         } catch (error) {
             this.webSocketManager.send({
-                type: "memory_snapshot_error",
-                error: error instanceof Error ? error.message : "内存快照捕获失败"
+                type: 'memory_snapshot_error',
+                error: error instanceof Error ? error.message : '内存快照捕获失败'
             });
         }
     }
@@ -466,7 +466,7 @@ export class DebugManager implements IService, IUpdatable {
 
         // 使用专门的内存计算方法收集实体数据
         const entityData = this.entityCollector.collectEntityDataWithMemory(scene);
-        const componentMemoryStats = scene?.entities ? this.collectComponentMemoryStats(scene.entities) : {totalMemory: 0, componentTypes: 0, totalInstances: 0, breakdown: []};
+        const componentMemoryStats = scene?.entities ? this.collectComponentMemoryStats(scene.entities) : { totalMemory: 0, componentTypes: 0, totalInstances: 0, breakdown: [] };
         const systemMemoryStats = this.collectSystemMemoryStats();
         const poolMemoryStats = this.collectPoolMemoryStats();
         const performanceStats = this.collectPerformanceStats();
@@ -476,7 +476,7 @@ export class DebugManager implements IService, IUpdatable {
 
         return {
             timestamp,
-            version: "2.0",
+            version: '2.0',
             summary: {
                 totalEntities: entityData.totalEntities,
                 totalMemoryUsage: baseMemoryInfo.usedMemory,
@@ -716,7 +716,7 @@ export class DebugManager implements IService, IUpdatable {
     }
 
     private calculateQuickSystemSize(system: unknown): number {
-        if (!system || typeof system !== "object") return 64;
+        if (!system || typeof system !== 'object') return 64;
 
         let size = 128;
 
@@ -724,20 +724,20 @@ export class DebugManager implements IService, IUpdatable {
             const keys = Object.keys(system);
             for (let i = 0; i < Math.min(keys.length, 15); i++) {
                 const key = keys[i];
-                if (!key || key === "entities" || key === "scene" || key === "constructor") continue;
+                if (!key || key === 'entities' || key === 'scene' || key === 'constructor') continue;
 
                 const value = (system as Record<string, unknown>)[key];
                 size += key.length * 2;
 
-                if (typeof value === "string") {
+                if (typeof value === 'string') {
                     size += Math.min(value.length * 2, 100);
-                } else if (typeof value === "number") {
+                } else if (typeof value === 'number') {
                     size += 8;
-                } else if (typeof value === "boolean") {
+                } else if (typeof value === 'boolean') {
                     size += 4;
                 } else if (Array.isArray(value)) {
                     size += 40 + Math.min(value.length * 8, 200);
-                } else if (typeof value === "object" && value !== null) {
+                } else if (typeof value === 'object' && value !== null) {
                     size += 64;
                 }
             }
@@ -844,7 +844,7 @@ export class DebugManager implements IService, IUpdatable {
         } {
         try {
             if (!this.performanceMonitor) {
-                return {enabled: false};
+                return { enabled: false };
             }
 
             const stats = this.performanceMonitor.getAllSystemStats();
@@ -865,7 +865,7 @@ export class DebugManager implements IService, IUpdatable {
                 }).sort((a, b) => b.averageTime - a.averageTime).slice(0, 5)
             };
         } catch (error: unknown) {
-            return {enabled: false, error: error instanceof Error ? error.message : String(error)};
+            return { enabled: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
 
@@ -879,10 +879,10 @@ export class DebugManager implements IService, IUpdatable {
 
         const debugData: IECSDebugData = {
             timestamp: currentTime,
-            frameworkVersion: "1.0.0", // 可以从package.json读取
+            frameworkVersion: '1.0.0', // 可以从package.json读取
             isRunning: this.isRunning,
             frameworkLoaded: true,
-            currentScene: scene?.name || "Unknown"
+            currentScene: scene?.name || 'Unknown'
         };
 
         // 根据配置收集各种数据
@@ -933,7 +933,7 @@ export class DebugManager implements IService, IUpdatable {
             const debugData = this.getDebugData();
             // 包装成调试面板期望的消息格式
             const message = {
-                type: "debug_data",
+                type: 'debug_data',
                 data: debugData
             };
             this.webSocketManager.send(message);

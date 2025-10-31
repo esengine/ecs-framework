@@ -1,14 +1,14 @@
-import {Entity} from "../Entity";
-import {Component} from "../Component";
-import {ComponentRegistry, ComponentType} from "./ComponentStorage";
-import {BitMask64Utils, BitMask64Data} from "../Utils/BigIntCompatibility";
-import {createLogger} from "../../Utils/Logger";
-import {getComponentTypeName} from "../Decorators";
-import {Archetype, ArchetypeSystem} from "./ArchetypeSystem";
-import {ReactiveQuery, ReactiveQueryConfig} from "./ReactiveQuery";
-import {QueryCondition, QueryConditionType, QueryResult} from "./QueryTypes";
+import { Entity } from '../Entity';
+import { Component } from '../Component';
+import { ComponentRegistry, ComponentType } from './ComponentStorage';
+import { BitMask64Utils, BitMask64Data } from '../Utils/BigIntCompatibility';
+import { createLogger } from '../../Utils/Logger';
+import { getComponentTypeName } from '../Decorators';
+import { Archetype, ArchetypeSystem } from './ArchetypeSystem';
+import { ReactiveQuery, ReactiveQueryConfig } from './ReactiveQuery';
+import { QueryCondition, QueryConditionType, QueryResult } from './QueryTypes';
 
-export {QueryCondition, QueryConditionType, QueryResult};
+export { QueryCondition, QueryConditionType, QueryResult };
 
 /**
  * 实体索引结构
@@ -43,7 +43,7 @@ interface QueryCacheEntry {
  * ```
  */
 export class QuerySystem {
-    private _logger = createLogger("QuerySystem");
+    private _logger = createLogger('QuerySystem');
     private entities: Entity[] = [];
     private entityIndex: EntityIndex;
 
@@ -550,7 +550,7 @@ export class QuerySystem {
         const startTime = performance.now();
         this.queryStats.totalQueries++;
 
-        const cacheKey = this.generateCacheKey("component", [componentType]);
+        const cacheKey = this.generateCacheKey('component', [componentType]);
 
         // 检查缓存
         const cached = this.getFromCache(cacheKey);
@@ -627,7 +627,7 @@ export class QuerySystem {
         // 如果还是太满，移除最少使用的条目
         if (this.queryCache.size >= this.cacheMaxSize) {
             let minHitCount = Infinity;
-            let oldestKey = "";
+            let oldestKey = '';
             let oldestTimestamp = Infinity;
 
             // 单次遍历找到最少使用或最旧的条目
@@ -682,7 +682,7 @@ export class QuerySystem {
         const sortKey = componentTypes.map((t) => {
             const name = getComponentTypeName(t);
             return name;
-        }).sort().join(",");
+        }).sort().join(',');
 
         const fullKey = `${prefix}:${sortKey}`;
 
@@ -729,7 +729,7 @@ export class QuerySystem {
         config?: ReactiveQueryConfig
     ): ReactiveQuery {
         if (!componentTypes || componentTypes.length === 0) {
-            throw new Error("组件类型列表不能为空");
+            throw new Error('组件类型列表不能为空');
         }
 
         const mask = this.createComponentMask(componentTypes);
@@ -747,7 +747,7 @@ export class QuerySystem {
         );
         query.initializeWith(initialEntities);
 
-        const cacheKey = this.generateCacheKey("all", componentTypes);
+        const cacheKey = this.generateCacheKey('all', componentTypes);
         this._reactiveQueries.set(cacheKey, query);
 
         for (const type of componentTypes) {
@@ -812,7 +812,7 @@ export class QuerySystem {
         // 生成缓存键
         const cacheKey = componentTypes.map((t) => {
             return getComponentTypeName(t);
-        }).sort().join(",");
+        }).sort().join(',');
 
         // 检查缓存
         const cached = this.componentMaskCache.get(cacheKey);
@@ -895,7 +895,11 @@ export class QuerySystem {
             cacheHitRate: string;
         };
         optimizationStats: {
-            archetypeSystem: any;
+            archetypeSystem: Array<{
+                id: BitMask64Data;
+                componentTypes: string[];
+                entityCount: number;
+            }>;
         };
         cacheStats: {
             size: number;
@@ -912,7 +916,7 @@ export class QuerySystem {
             queryStats: {
                 ...this.queryStats,
                 cacheHitRate: this.queryStats.totalQueries > 0 ?
-                    (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + "%" : "0%"
+                    (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + '%' : '0%'
             },
             optimizationStats: {
                 archetypeSystem: this.archetypeSystem.getAllArchetypes().map((a) => ({
@@ -924,7 +928,7 @@ export class QuerySystem {
             cacheStats: {
                 size: this._reactiveQueries.size,
                 hitRate: this.queryStats.totalQueries > 0 ?
-                    (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + "%" : "0%"
+                    (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + '%' : '0%'
             }
         };
     }
@@ -1022,7 +1026,7 @@ export class QuerySystem {
     ): Entity[] {
         switch (queryType) {
             case QueryConditionType.ALL: {
-                const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, "AND");
+                const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'AND');
                 const entities: Entity[] = [];
                 for (const archetype of archetypeResult.archetypes) {
                     for (const entity of archetype.entities) {
@@ -1032,7 +1036,7 @@ export class QuerySystem {
                 return entities;
             }
             case QueryConditionType.ANY: {
-                const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, "OR");
+                const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'OR');
                 const entities: Entity[] = [];
                 for (const archetype of archetypeResult.archetypes) {
                     for (const entity of archetype.entities) {
@@ -1172,7 +1176,7 @@ export class QuerySystem {
  * ```
  */
 export class QueryBuilder {
-    private _logger = createLogger("QueryBuilder");
+    private _logger = createLogger('QueryBuilder');
     private conditions: QueryCondition[] = [];
     private querySystem: QuerySystem;
 

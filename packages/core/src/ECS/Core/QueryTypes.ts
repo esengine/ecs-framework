@@ -1,17 +1,17 @@
-import {ComponentType} from "./ComponentStorage";
-import {BitMask64Data} from "../Utils/BigIntCompatibility";
-import {Entity} from "../Entity";
+import { ComponentType } from './ComponentStorage';
+import { BitMask64Data } from '../Utils/BigIntCompatibility';
+import { Entity } from '../Entity';
 
 /**
  * 查询条件类型
  */
 export enum QueryConditionType {
     /** 必须包含所有指定组件 */
-    ALL = "all",
+    ALL = 'all',
     /** 必须包含任意一个指定组件 */
-    ANY = "any",
+    ANY = 'any',
     /** 不能包含任何指定组件 */
-    NONE = "none"
+    NONE = 'none'
 }
 
 /**

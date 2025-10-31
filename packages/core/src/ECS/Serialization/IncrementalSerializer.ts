@@ -5,31 +5,31 @@
  * 适用于网络同步、大场景存档、时间回溯等场景
  */
 
-import type {IScene} from "../IScene";
-import {Entity} from "../Entity";
-import {ComponentSerializer, SerializedComponent} from "./ComponentSerializer";
-import {SerializedEntity} from "./EntitySerializer";
-import {ComponentType} from "../Core/ComponentStorage";
-import {BinarySerializer} from "../../Utils/BinarySerializer";
+import type { IScene } from '../IScene';
+import { Entity } from '../Entity';
+import { ComponentSerializer, SerializedComponent } from './ComponentSerializer';
+import { SerializedEntity } from './EntitySerializer';
+import { ComponentType } from '../Core/ComponentStorage';
+import { BinarySerializer } from '../../Utils/BinarySerializer';
 
 /**
  * 变更操作类型
  */
 export enum ChangeOperation {
     /** 添加新实体 */
-    EntityAdded = "entity_added",
+    EntityAdded = 'entity_added',
     /** 删除实体 */
-    EntityRemoved = "entity_removed",
+    EntityRemoved = 'entity_removed',
     /** 实体属性更新 */
-    EntityUpdated = "entity_updated",
+    EntityUpdated = 'entity_updated',
     /** 添加组件 */
-    ComponentAdded = "component_added",
+    ComponentAdded = 'component_added',
     /** 删除组件 */
-    ComponentRemoved = "component_removed",
+    ComponentRemoved = 'component_removed',
     /** 组件数据更新 */
-    ComponentUpdated = "component_updated",
+    ComponentUpdated = 'component_updated',
     /** 场景数据更新 */
-    SceneDataUpdated = "scene_data_updated"
+    SceneDataUpdated = 'scene_data_updated'
 }
 
 /**
@@ -120,7 +120,7 @@ interface SceneSnapshot {
 /**
  * 增量序列化格式
  */
-export type IncrementalSerializationFormat = "json" | "binary";
+export type IncrementalSerializationFormat = 'json' | 'binary';
 
 /**
  * 增量序列化选项
@@ -203,7 +203,7 @@ export class IncrementalSerializer {
                 active: entity.active,
                 enabled: entity.enabled,
                 updateOrder: entity.updateOrder,
-                ...(entity.parent && {parentId: entity.parent.id})
+                ...(entity.parent && { parentId: entity.parent.id })
             });
 
             // 快照组件
@@ -285,7 +285,7 @@ export class IncrementalSerializer {
                         active: entity.active,
                         enabled: entity.enabled,
                         updateOrder: entity.updateOrder,
-                        ...(entity.parent && {parentId: entity.parent.id}),
+                        ...(entity.parent && { parentId: entity.parent.id }),
                         components: [],
                         children: []
                     }
@@ -324,7 +324,7 @@ export class IncrementalSerializer {
                             active: entity.active,
                             enabled: entity.enabled,
                             updateOrder: entity.updateOrder,
-                            ...(entity.parent && {parentId: entity.parent.id})
+                            ...(entity.parent && { parentId: entity.parent.id })
                         }
                     });
                 }
@@ -511,7 +511,7 @@ export class IncrementalSerializer {
     private static applyEntityAdded(scene: IScene, change: EntityChange): void {
         if (!change.entityData) return;
 
-        const entity = new Entity(change.entityName || "Entity", change.entityId);
+        const entity = new Entity(change.entityName || 'Entity', change.entityId);
         entity.tag = change.entityData.tag || 0;
         entity.active = change.entityData.active ?? true;
         entity.enabled = change.entityData.enabled ?? true;
@@ -632,12 +632,12 @@ export class IncrementalSerializer {
         options?: { format?: IncrementalSerializationFormat; pretty?: boolean }
     ): string | Uint8Array {
         const opts = {
-            format: "json" as IncrementalSerializationFormat,
+            format: 'json' as IncrementalSerializationFormat,
             pretty: false,
             ...options
         };
 
-        if (opts.format === "binary") {
+        if (opts.format === 'binary') {
             return BinarySerializer.encode(incremental);
         } else {
             return opts.pretty
@@ -662,7 +662,7 @@ export class IncrementalSerializer {
      * ```
      */
     public static deserializeIncremental(data: string | Uint8Array): IncrementalSnapshot {
-        if (typeof data === "string") {
+        if (typeof data === 'string') {
             return JSON.parse(data);
         } else {
             return BinarySerializer.decode(data) as IncrementalSnapshot;

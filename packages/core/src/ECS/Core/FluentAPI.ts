@@ -8,4 +8,4 @@ export {
     createECSAPI,
     initializeECS,
     ECS
-} from "./FluentAPI/index";
+} from './FluentAPI/index';

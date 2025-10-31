@@ -1,7 +1,7 @@
-import {createLogger} from "../Utils/Logger";
-import {isUpdatable as checkUpdatable, getUpdatableMetadata} from "./DI";
+import { createLogger } from '../Utils/Logger';
+import { isUpdatable as checkUpdatable, getUpdatableMetadata } from './DI';
 
-const logger = createLogger("ServiceContainer");
+const logger = createLogger('ServiceContainer');
 
 /**
  * 服务基础接口
@@ -19,8 +19,9 @@ export interface IService {
  * 服务类型
  *
  * 支持任意构造函数签名，以便与依赖注入装饰器配合使用
- * 使用 any[] 以允许任意参数类型的构造函数
+ * 使用 any[] 以允许任意参数类型的构造函数，这是类型系统的必要妥协
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ServiceType<T extends IService> = new (...args: any[]) => T;
 
 /**
@@ -30,12 +31,12 @@ export enum ServiceLifetime {
     /**
      * 单例模式 - 整个应用生命周期内只有一个实例
      */
-    Singleton = "singleton",
+    Singleton = 'singleton',
 
     /**
      * 瞬时模式 - 每次请求都创建新实例
      */
-    Transient = "transient"
+    Transient = 'transient'
 }
 
 /**
@@ -139,7 +140,7 @@ export class ServiceContainer {
 
         this._services.set(type as ServiceType<IService>, {
             type: type as ServiceType<IService>,
-            ...(factory && {factory: factory as (container: ServiceContainer) => IService}),
+            ...(factory && { factory: factory as (container: ServiceContainer) => IService }),
             lifetime: ServiceLifetime.Singleton
         });
 
@@ -171,7 +172,7 @@ export class ServiceContainer {
 
         this._services.set(type as ServiceType<IService>, {
             type: type as ServiceType<IService>,
-            ...(factory && {factory: factory as (container: ServiceContainer) => IService}),
+            ...(factory && { factory: factory as (container: ServiceContainer) => IService }),
             lifetime: ServiceLifetime.Transient
         });
 
@@ -208,7 +209,7 @@ export class ServiceContainer {
         if (checkUpdatable(type)) {
             const metadata = getUpdatableMetadata(type);
             const priority = metadata?.priority ?? 0;
-            this._updatableServices.push({instance, priority});
+            this._updatableServices.push({ instance, priority });
 
             // 按优先级排序（数值越小越先执行）
             this._updatableServices.sort((a, b) => a.priority - b.priority);
@@ -240,7 +241,7 @@ export class ServiceContainer {
 
         // 检测循环依赖
         if (this._resolving.has(type as ServiceType<IService>)) {
-            const chain = Array.from(this._resolving).map((t) => t.name).join(" -> ");
+            const chain = Array.from(this._resolving).map((t) => t.name).join(' -> ');
             throw new Error(`Circular dependency detected: ${chain} -> ${type.name}`);
         }
 
@@ -272,7 +273,7 @@ export class ServiceContainer {
                 if (checkUpdatable(registration.type)) {
                     const metadata = getUpdatableMetadata(registration.type);
                     const priority = metadata?.priority ?? 0;
-                    this._updatableServices.push({instance, priority});
+                    this._updatableServices.push({ instance, priority });
 
                     // 按优先级排序（数值越小越先执行）
                     this._updatableServices.sort((a, b) => a.priority - b.priority);
@@ -363,7 +364,7 @@ export class ServiceContainer {
 
         this._services.clear();
         this._updatableServices = [];
-        logger.debug("Cleared all services");
+        logger.debug('Cleared all services');
     }
 
     /**
@@ -391,7 +392,7 @@ export class ServiceContainer {
      * ```
      */
     public updateAll(deltaTime?: number): void {
-        for (const {instance} of this._updatableServices) {
+        for (const { instance } of this._updatableServices) {
             (instance as IService & { update: (deltaTime?: number) => void }).update(deltaTime);
         }
     }

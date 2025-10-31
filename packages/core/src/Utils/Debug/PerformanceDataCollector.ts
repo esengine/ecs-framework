@@ -1,5 +1,5 @@
-import {IPerformanceDebugData} from "../../Types";
-import {Time} from "../Time";
+import { IPerformanceDebugData } from '../../Types';
+import { Time } from '../Time';
 
 /**
  * 性能数据收集器
@@ -61,7 +61,7 @@ export class PerformanceDataCollector {
     private getECSPerformanceData(performanceMonitor: any): { totalExecutionTime: number; systemBreakdown: Array<any> } {
         // 检查性能监视器是否存在
         if (!performanceMonitor) {
-            return {totalExecutionTime: 0, systemBreakdown: []};
+            return { totalExecutionTime: 0, systemBreakdown: [] };
         }
 
         if (!performanceMonitor.enabled) {
@@ -71,7 +71,7 @@ export class PerformanceDataCollector {
             } catch (error) {
                 // 如果无法启用，返回默认值
             }
-            return {totalExecutionTime: 0, systemBreakdown: []};
+            return { totalExecutionTime: 0, systemBreakdown: [] };
         }
 
         try {
@@ -81,7 +81,7 @@ export class PerformanceDataCollector {
             const stats = performanceMonitor.getAllSystemStats();
 
             if (stats.size === 0) {
-                return {totalExecutionTime: 0, systemBreakdown: []};
+                return { totalExecutionTime: 0, systemBreakdown: [] };
             }
 
             // 计算各系统的执行时间
@@ -112,7 +112,7 @@ export class PerformanceDataCollector {
                 systemBreakdown: systemBreakdown
             };
         } catch (error) {
-            return {totalExecutionTime: 0, systemBreakdown: []};
+            return { totalExecutionTime: 0, systemBreakdown: [] };
         }
     }
 
@@ -202,7 +202,7 @@ export class PerformanceDataCollector {
     private updateGCCount(): number {
         try {
             // 尝试使用PerformanceObserver来检测GC
-            if (typeof PerformanceObserver !== "undefined") {
+            if (typeof PerformanceObserver !== 'undefined') {
                 // 这是一个简化的GC检测方法
                 // 实际的GC检测需要更复杂的逻辑
                 return this.gcCollections;

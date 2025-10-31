@@ -1,13 +1,43 @@
-import {Component} from "../Component";
-import {ComponentType} from "./ComponentStorage";
-import {createLogger} from "../../Utils/Logger";
+import { Component } from '../Component';
+import { ComponentType } from './ComponentStorage';
+import { createLogger } from '../../Utils/Logger';
+
+/**
+ * 装饰器目标类型，用于存储元数据
+ */
+interface DecoratorTarget {
+    constructor: ComponentTypeWithMetadata;
+}
+
+/**
+ * 带有元数据的组件类型
+ */
+interface ComponentTypeWithMetadata {
+    __enableSoA?: boolean;
+    __highPrecisionFields?: Set<string>;
+    __float64Fields?: Set<string>;
+    __float32Fields?: Set<string>;
+    __int32Fields?: Set<string>;
+    __uint32Fields?: Set<string>;
+    __int16Fields?: Set<string>;
+    __uint16Fields?: Set<string>;
+    __int8Fields?: Set<string>;
+    __uint8Fields?: Set<string>;
+    __uint8ClampedFields?: Set<string>;
+    __serializeMapFields?: Set<string>;
+    __serializeSetFields?: Set<string>;
+    __serializeArrayFields?: Set<string>;
+    __deepCopyFields?: Set<string>;
+    __autoTypedFields?: Map<string, Record<string, unknown>>;
+    __bigIntFields?: Set<string>;
+}
 
 /**
  * 启用SoA优化装饰器
  * 默认关闭SoA，只有在大规模批量操作场景下才建议开启
  */
 export function EnableSoA<T extends ComponentType>(target: T): T {
-    (target as any).__enableSoA = true;
+    (target as unknown as { __enableSoA: boolean }).__enableSoA = true;
     return target;
 }
 
@@ -16,7 +46,7 @@ export function EnableSoA<T extends ComponentType>(target: T): T {
  * 高精度数值装饰器
  * 标记字段需要保持完整精度，存储为复杂对象而非TypedArray
  */
-export function HighPrecision(target: any, propertyKey: string | symbol): void {
+export function HighPrecision(target: DecoratorTarget, propertyKey: string | symbol): void {
     const key = String(propertyKey);
     if (!target.constructor.__highPrecisionFields) {
         target.constructor.__highPrecisionFields = new Set();
@@ -28,7 +58,7 @@ export function HighPrecision(target: any, propertyKey: string | symbol): void {
  * 64位浮点数装饰器
  * 标记字段使用Float64Array存储（更高精度但更多内存）
  */
-export function Float64(target: any, propertyKey: string | symbol): void {
+export function Float64(target: DecoratorTarget, propertyKey: string | symbol): void {
     const key = String(propertyKey);
     if (!target.constructor.__float64Fields) {
         target.constructor.__float64Fields = new Set();
@@ -40,7 +70,7 @@ export function Float64(target: any, propertyKey: string | symbol): void {
  * 32位浮点数装饰器
  * 标记字段使用Float32Array存储（默认类型，平衡性能和精度）
  */
-export function Float32(target: any, propertyKey: string | symbol): void {
+export function Float32(target: DecoratorTarget, propertyKey: string | symbol): void {
     const key = String(propertyKey);
     if (!target.constructor.__float32Fields) {
         target.constructor.__float32Fields = new Set();
@@ -52,7 +82,7 @@ export function Float32(target: any, propertyKey: string | symbol): void {
  * 32位整数装饰器
  * 标记字段使用Int32Array存储（适用于整数值）
  */
-export function Int32(target: any, propertyKey: string | symbol): void {
+export function Int32(target: DecoratorTarget, propertyKey: string | symbol): void {
     const key = String(propertyKey);
     if (!target.constructor.__int32Fields) {
         target.constructor.__int32Fields = new Set();
@@ -64,7 +94,7 @@ export function Int32(target: any, propertyKey: string | symbol): void {
  * 32位无符号整数装饰器
  * 标记字段使用Uint32Array存储（适用于无符号整数，如ID、标志位等）
  */
-export function Uint32(target: any, propertyKey: string | symbol): void {
+export function Uint32(target: DecoratorTarget, propertyKey: string | symbol): void {
     const key = String(propertyKey);
     if (!target.constructor.__uint32Fields) {
         target.constructor.__uint32Fields = new Set();
@@ -76,7 +106,7 @@ export function Uint32(target: any, propertyKey: string | symbol): void {
  * 16位整数装饰器
  * 标记字段使用Int16Array存储（适用于小范围整数）
  */
-export function Int16(target: any, propertyKey: string | symbol): void {
+export function Int16(target: DecoratorTarget, propertyKey: string | symbol): void {
     const key = String(propertyKey);
     if (!target.constructor.__int16Fields) {
         target.constructor.__int16Fields = new Set();
@@ -88,7 +118,7 @@ export function Int16(target: any, propertyKey: string | symbol): void {
  * 16位无符号整数装饰器
  * 标记字段使用Uint16Array存储（适用于小范围无符号整数）
  */
-export function Uint16(target: any, propertyKey: string | symbol): void {
+export function Uint16(target: DecoratorTarget, propertyKey: string | symbol): void {
     const key = String(propertyKey);
     if (!target.constructor.__uint16Fields) {
         target.constructor.__uint16Fields = new Set();
@@ -100,7 +130,7 @@ export function Uint16(target: any, propertyKey: string | symbol): void {
  * 8位整数装饰器
  * 标记字段使用Int8Array存储（适用于很小的整数值）
  */
-export function Int8(target: any, propertyKey: string | symbol): void {
+export function Int8(target: DecoratorTarget, propertyKey: string | symbol): void {
     const key = String(propertyKey);
     if (!target.constructor.__int8Fields) {
         target.constructor.__int8Fields = new Set();
@@ -112,7 +142,7 @@ export function Int8(target: any, propertyKey: string | symbol): void {
  * 8位无符号整数装饰器
  * 标记字段使用Uint8Array存储（适用于字节值、布尔标志等）
  */
-export function Uint8(target: any, propertyKey: string | symbol): void {
+export function Uint8(target: DecoratorTarget, propertyKey: string | symbol): void {
     const key = String(propertyKey);
     if (!target.constructor.__uint8Fields) {
         target.constructor.__uint8Fields = new Set();
@@ -124,7 +154,7 @@ export function Uint8(target: any, propertyKey: string | symbol): void {
  * 8位夹紧整数装饰器
  * 标记字段使用Uint8ClampedArray存储（适用于颜色值等需要夹紧的数据）
  */
-export function Uint8Clamped(target: any, propertyKey: string | symbol): void {
+export function Uint8Clamped(target: DecoratorTarget, propertyKey: string | symbol): void {
     const key = String(propertyKey);
     if (!target.constructor.__uint8ClampedFields) {
         target.constructor.__uint8ClampedFields = new Set();
@@ -137,7 +167,7 @@ export function Uint8Clamped(target: any, propertyKey: string | symbol): void {
  * 序列化Map装饰器
  * 标记Map字段需要序列化/反序列化存储
  */
-export function SerializeMap(target: any, propertyKey: string | symbol): void {
+export function SerializeMap(target: DecoratorTarget, propertyKey: string | symbol): void {
     const key = String(propertyKey);
     if (!target.constructor.__serializeMapFields) {
         target.constructor.__serializeMapFields = new Set();
@@ -149,7 +179,7 @@ export function SerializeMap(target: any, propertyKey: string | symbol): void {
  * 序列化Set装饰器
  * 标记Set字段需要序列化/反序列化存储
  */
-export function SerializeSet(target: any, propertyKey: string | symbol): void {
+export function SerializeSet(target: DecoratorTarget, propertyKey: string | symbol): void {
     const key = String(propertyKey);
     if (!target.constructor.__serializeSetFields) {
         target.constructor.__serializeSetFields = new Set();
@@ -161,7 +191,7 @@ export function SerializeSet(target: any, propertyKey: string | symbol): void {
  * 序列化Array装饰器
  * 标记Array字段需要序列化/反序列化存储
  */
-export function SerializeArray(target: any, propertyKey: string | symbol): void {
+export function SerializeArray(target: DecoratorTarget, propertyKey: string | symbol): void {
     const key = String(propertyKey);
     if (!target.constructor.__serializeArrayFields) {
         target.constructor.__serializeArrayFields = new Set();
@@ -173,7 +203,7 @@ export function SerializeArray(target: any, propertyKey: string | symbol): void 
  * 深拷贝装饰器
  * 标记字段需要深拷贝处理（适用于嵌套对象）
  */
-export function DeepCopy(target: any, propertyKey: string | symbol): void {
+export function DeepCopy(target: DecoratorTarget, propertyKey: string | symbol): void {
     const key = String(propertyKey);
     if (!target.constructor.__deepCopyFields) {
         target.constructor.__deepCopyFields = new Set();
@@ -197,7 +227,7 @@ export function AutoTyped(options?: {
     precision?: boolean;
     signed?: boolean;
 }) {
-    return function (target: any, propertyKey: string | symbol): void {
+    return function (target: DecoratorTarget, propertyKey: string | symbol): void {
         const key = String(propertyKey);
         if (!target.constructor.__autoTypedFields) {
             target.constructor.__autoTypedFields = new Map();
@@ -214,6 +244,7 @@ export class TypeInference {
     /**
      * 根据数值范围推断最优的TypedArray类型
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public static inferOptimalType(value: any, options: {
         minValue?: number;
         maxValue?: number;
@@ -222,23 +253,23 @@ export class TypeInference {
     } = {}): string {
         const type = typeof value;
 
-        if (type === "boolean") {
-            return "uint8"; // 布尔值使用最小的无符号整数
+        if (type === 'boolean') {
+            return 'uint8'; // 布尔值使用最小的无符号整数
         }
 
-        if (type !== "number") {
-            return "float32"; // 非数值类型默认使用Float32
+        if (type !== 'number') {
+            return 'float32'; // 非数值类型默认使用Float32
         }
 
-        const {minValue, maxValue, precision, signed} = options;
+        const { minValue, maxValue, precision, signed } = options;
 
         // 如果显式要求精度，使用浮点数
         if (precision === true) {
             // 检查是否需要双精度
             if (Math.abs(value) > 3.4028235e+38 || (minValue !== undefined && Math.abs(minValue) > 3.4028235e+38) || (maxValue !== undefined && Math.abs(maxValue) > 3.4028235e+38)) {
-                return "float64";
+                return 'float64';
             }
-            return "float32";
+            return 'float32';
         }
 
         // 如果显式禁用精度，或者是整数值，尝试使用整数数组
@@ -251,48 +282,48 @@ export class TypeInference {
             if (needsSigned) {
                 // 有符号整数
                 if (actualMin >= -128 && actualMax <= 127) {
-                    return "int8";
+                    return 'int8';
                 } else if (actualMin >= -32768 && actualMax <= 32767) {
-                    return "int16";
+                    return 'int16';
                 } else if (actualMin >= -2147483648 && actualMax <= 2147483647) {
-                    return "int32";
+                    return 'int32';
                 } else {
-                    return "float64"; // 超出int32范围，使用双精度浮点
+                    return 'float64'; // 超出int32范围，使用双精度浮点
                 }
             } else {
                 // 无符号整数
                 if (actualMax <= 255) {
-                    return "uint8";
+                    return 'uint8';
                 } else if (actualMax <= 65535) {
-                    return "uint16";
+                    return 'uint16';
                 } else if (actualMax <= 4294967295) {
-                    return "uint32";
+                    return 'uint32';
                 } else {
-                    return "float64"; // 超出uint32范围，使用双精度浮点
+                    return 'float64'; // 超出uint32范围，使用双精度浮点
                 }
             }
         }
 
         // 默认情况：检查是否为小数
         if (!Number.isInteger(value)) {
-            return "float32";
+            return 'float32';
         }
 
         // 整数值，但没有指定范围，根据值的大小选择
         if (value >= 0 && value <= 255) {
-            return "uint8";
+            return 'uint8';
         } else if (value >= -128 && value <= 127) {
-            return "int8";
+            return 'int8';
         } else if (value >= 0 && value <= 65535) {
-            return "uint16";
+            return 'uint16';
         } else if (value >= -32768 && value <= 32767) {
-            return "int16";
+            return 'int16';
         } else if (value >= 0 && value <= 4294967295) {
-            return "uint32";
+            return 'uint32';
         } else if (value >= -2147483648 && value <= 2147483647) {
-            return "int32";
+            return 'int32';
         } else {
-            return "float64";
+            return 'float64';
         }
     }
 
@@ -301,15 +332,15 @@ export class TypeInference {
      */
     public static getTypedArrayConstructor(typeName: string): typeof Float32Array | typeof Float64Array | typeof Int32Array | typeof Uint32Array | typeof Int16Array | typeof Uint16Array | typeof Int8Array | typeof Uint8Array | typeof Uint8ClampedArray {
         switch (typeName) {
-            case "float32": return Float32Array;
-            case "float64": return Float64Array;
-            case "int32": return Int32Array;
-            case "uint32": return Uint32Array;
-            case "int16": return Int16Array;
-            case "uint16": return Uint16Array;
-            case "int8": return Int8Array;
-            case "uint8": return Uint8Array;
-            case "uint8clamped": return Uint8ClampedArray;
+            case 'float32': return Float32Array;
+            case 'float64': return Float64Array;
+            case 'int32': return Int32Array;
+            case 'uint32': return Uint32Array;
+            case 'int16': return Int16Array;
+            case 'uint16': return Uint16Array;
+            case 'int8': return Int8Array;
+            case 'uint8': return Uint8Array;
+            case 'uint8clamped': return Uint8ClampedArray;
             default: return Float32Array;
         }
     }
@@ -334,11 +365,11 @@ export type SupportedTypedArray =
  * 使用Structure of Arrays存储模式，在大规模批量操作时提供优异性能
  */
 export class SoAStorage<T extends Component> {
-    private static readonly _logger = createLogger("SoAStorage");
+    private static readonly _logger = createLogger('SoAStorage');
     private fields = new Map<string, SupportedTypedArray>();
     private stringFields = new Map<string, string[]>(); // 专门存储字符串
     private serializedFields = new Map<string, string[]>(); // 序列化存储Map/Set/Array
-    private complexFields = new Map<number, Map<string, any>>(); // 存储复杂对象
+    private complexFields = new Map<number, Map<string, unknown>>(); // 存储复杂对象
     private entityToIndex = new Map<number, number>();
     private indexToEntity: number[] = [];
     private freeIndices: number[] = [];
@@ -353,28 +384,28 @@ export class SoAStorage<T extends Component> {
 
     private initializeFields(componentType: ComponentType<T>): void {
         const instance = new componentType();
-        const highPrecisionFields = (componentType as any).__highPrecisionFields || new Set();
-        const float64Fields = (componentType as any).__float64Fields || new Set();
-        const float32Fields = (componentType as any).__float32Fields || new Set();
-        const int32Fields = (componentType as any).__int32Fields || new Set();
-        const uint32Fields = (componentType as any).__uint32Fields || new Set();
-        const int16Fields = (componentType as any).__int16Fields || new Set();
-        const uint16Fields = (componentType as any).__uint16Fields || new Set();
-        const int8Fields = (componentType as any).__int8Fields || new Set();
-        const uint8Fields = (componentType as any).__uint8Fields || new Set();
-        const uint8ClampedFields = (componentType as any).__uint8ClampedFields || new Set();
-        const autoTypedFields = (componentType as any).__autoTypedFields || new Map();
-        const serializeMapFields = (componentType as any).__serializeMapFields || new Set();
-        const serializeSetFields = (componentType as any).__serializeSetFields || new Set();
-        const serializeArrayFields = (componentType as any).__serializeArrayFields || new Set();
-        // const deepCopyFields = (componentType as any).__deepCopyFields || new Set(); // 未使用，但保留供future使用
+        const highPrecisionFields = (componentType as unknown as ComponentTypeWithMetadata).__highPrecisionFields || new Set();
+        const float64Fields = (componentType as unknown as ComponentTypeWithMetadata).__float64Fields || new Set();
+        const float32Fields = (componentType as unknown as ComponentTypeWithMetadata).__float32Fields || new Set();
+        const int32Fields = (componentType as unknown as ComponentTypeWithMetadata).__int32Fields || new Set();
+        const uint32Fields = (componentType as unknown as ComponentTypeWithMetadata).__uint32Fields || new Set();
+        const int16Fields = (componentType as unknown as ComponentTypeWithMetadata).__int16Fields || new Set();
+        const uint16Fields = (componentType as unknown as ComponentTypeWithMetadata).__uint16Fields || new Set();
+        const int8Fields = (componentType as unknown as ComponentTypeWithMetadata).__int8Fields || new Set();
+        const uint8Fields = (componentType as unknown as ComponentTypeWithMetadata).__uint8Fields || new Set();
+        const uint8ClampedFields = (componentType as unknown as ComponentTypeWithMetadata).__uint8ClampedFields || new Set();
+        const autoTypedFields = (componentType as unknown as ComponentTypeWithMetadata).__autoTypedFields || new Map();
+        const serializeMapFields = (componentType as unknown as ComponentTypeWithMetadata).__serializeMapFields || new Set();
+        const serializeSetFields = (componentType as unknown as ComponentTypeWithMetadata).__serializeSetFields || new Set();
+        const serializeArrayFields = (componentType as unknown as ComponentTypeWithMetadata).__serializeArrayFields || new Set();
+        // const deepCopyFields = (componentType as unknown as ComponentTypeWithMetadata).__deepCopyFields || new Set(); // 未使用，但保留供future使用
 
         for (const key in instance) {
-            if (Object.prototype.hasOwnProperty.call(instance, key) && key !== "id") {
+            if (Object.prototype.hasOwnProperty.call(instance, key) && key !== 'id') {
                 const value = (instance as any)[key];
                 const type = typeof value;
 
-                if (type === "number") {
+                if (type === 'number') {
                     if (highPrecisionFields.has(key)) {
                         // 标记为高精度，作为复杂对象处理
                         // 不添加到fields，会在updateComponentAtIndex中自动添加到complexFields
@@ -416,7 +447,7 @@ export class SoAStorage<T extends Component> {
                         // 默认使用Float32Array
                         this.fields.set(key, new Float32Array(this._capacity));
                     }
-                } else if (type === "boolean") {
+                } else if (type === 'boolean') {
                     // 布尔值默认使用Uint8Array存储为0/1（更节省内存）
                     if (uint8Fields.has(key) || (!float32Fields.has(key) && !float64Fields.has(key))) {
                         this.fields.set(key, new Uint8Array(this._capacity));
@@ -424,10 +455,10 @@ export class SoAStorage<T extends Component> {
                         // 兼容性：如果显式指定浮点类型则使用原有方式
                         this.fields.set(key, new Float32Array(this._capacity));
                     }
-                } else if (type === "string") {
+                } else if (type === 'string') {
                     // 字符串专门处理
                     this.stringFields.set(key, new Array(this._capacity));
-                } else if (type === "object" && value !== null) {
+                } else if (type === 'object' && value !== null) {
                     // 处理集合类型
                     if (serializeMapFields.has(key) || serializeSetFields.has(key) || serializeArrayFields.has(key)) {
                         // 序列化存储
@@ -473,11 +504,11 @@ export class SoAStorage<T extends Component> {
 
         // 处理所有字段
         for (const key in component) {
-            if (Object.prototype.hasOwnProperty.call(component, key) && key !== "id") {
+            if (Object.prototype.hasOwnProperty.call(component, key) && key !== 'id') {
                 const value = (component as any)[key];
                 const type = typeof value;
 
-                if (type === "number") {
+                if (type === 'number') {
                     if (highPrecisionFields.has(key) || !this.fields.has(key)) {
                         // 标记为高精度或未在TypedArray中的数值作为复杂对象存储
                         complexFieldMap.set(key, value);
@@ -486,7 +517,7 @@ export class SoAStorage<T extends Component> {
                         const array = this.fields.get(key)!;
                         array[index] = value;
                     }
-                } else if (type === "boolean" && this.fields.has(key)) {
+                } else if (type === 'boolean' && this.fields.has(key)) {
                     // 布尔值存储到TypedArray
                     const array = this.fields.get(key)!;
                     array[index] = value ? 1 : 0;
@@ -536,7 +567,7 @@ export class SoAStorage<T extends Component> {
             }
         } catch (error) {
             SoAStorage._logger.warn(`SoA序列化字段 ${key} 失败:`, error);
-            return "{}";
+            return '{}';
         }
     }
 
@@ -569,7 +600,7 @@ export class SoAStorage<T extends Component> {
      * 深拷贝对象
      */
     private deepClone(obj: any): any {
-        if (obj === null || typeof obj !== "object") {
+        if (obj === null || typeof obj !== 'object') {
             return obj;
         }
 
@@ -624,7 +655,7 @@ export class SoAStorage<T extends Component> {
             const value = array[index];
             const fieldType = this.getFieldType(fieldName);
 
-            if (fieldType === "boolean") {
+            if (fieldType === 'boolean') {
                 component[fieldName] = value === 1;
             } else {
                 component[fieldName] = value;
@@ -854,35 +885,35 @@ export class SoAStorage<T extends Component> {
 
             if (array instanceof Float32Array) {
                 bytesPerElement = 4;
-                typeName = "float32";
+                typeName = 'float32';
             } else if (array instanceof Float64Array) {
                 bytesPerElement = 8;
-                typeName = "float64";
+                typeName = 'float64';
             } else if (array instanceof Int32Array) {
                 bytesPerElement = 4;
-                typeName = "int32";
+                typeName = 'int32';
             } else if (array instanceof Uint32Array) {
                 bytesPerElement = 4;
-                typeName = "uint32";
+                typeName = 'uint32';
             } else if (array instanceof Int16Array) {
                 bytesPerElement = 2;
-                typeName = "int16";
+                typeName = 'int16';
             } else if (array instanceof Uint16Array) {
                 bytesPerElement = 2;
-                typeName = "uint16";
+                typeName = 'uint16';
             } else if (array instanceof Int8Array) {
                 bytesPerElement = 1;
-                typeName = "int8";
+                typeName = 'int8';
             } else if (array instanceof Uint8Array) {
                 bytesPerElement = 1;
-                typeName = "uint8";
+                typeName = 'uint8';
             } else if (array instanceof Uint8ClampedArray) {
                 bytesPerElement = 1;
-                typeName = "uint8clamped";
+                typeName = 'uint8clamped';
             } else {
                 // 默认回退
                 bytesPerElement = 4;
-                typeName = "unknown";
+                typeName = 'unknown';
             }
 
             const memory = array.length * bytesPerElement;

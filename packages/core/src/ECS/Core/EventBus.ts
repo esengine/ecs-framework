@@ -8,25 +8,25 @@ import {
     ISystemEventData,
     ISceneEventData,
     IPerformanceEventData
-} from "../../Types";
-import {createLogger} from "../../Utils/Logger";
+} from '../../Types';
+import { createLogger } from '../../Utils/Logger';
 import {
     TypeSafeEventSystem,
     EventListenerConfig,
     EventStats
-} from "./EventSystem";
+} from './EventSystem';
 import {
     ECSEventType,
     EventPriority,
     EventTypeValidator
-} from "../CoreEvents";
+} from '../CoreEvents';
 
 /**
  * 增强的事件总线实现
  * 基于TypeSafeEventSystem，提供类型安全的事件发布订阅机制
  */
 export class EventBus implements IEventBus {
-    private static readonly _logger = createLogger("EventBus");
+    private static readonly _logger = createLogger('EventBus');
     private eventSystem: TypeSafeEventSystem;
     private eventIdCounter = 0;
     private isDebugMode = false;
@@ -112,7 +112,7 @@ export class EventBus implements IEventBus {
         handler: (data: T) => void,
         config: IEventListenerConfig = {}
     ): string {
-        return this.on(eventType, handler, {...config, once: true});
+        return this.on(eventType, handler, { ...config, once: true });
     }
 
     /**
@@ -127,7 +127,7 @@ export class EventBus implements IEventBus {
         handler: (data: T) => Promise<void>,
         config: IEventListenerConfig = {}
     ): string {
-        return this.on(eventType, handler as any, {...config, async: true});
+        return this.on(eventType, handler as (data: T) => void, { ...config, async: true });
     }
 
     /**
@@ -187,7 +187,7 @@ export class EventBus implements IEventBus {
      */
     public clear(): void {
         if (this.isDebugMode) {
-            EventBus._logger.info("清空所有监听器");
+            EventBus._logger.info('清空所有监听器');
         }
 
         this.eventSystem.clear();
@@ -399,7 +399,7 @@ export class EventBus implements IEventBus {
             return {
                 timestamp: Date.now(),
                 eventId: `${eventType}_${++this.eventIdCounter}`,
-                source: "EventBus"
+                source: 'EventBus'
             } as T & IEventData;
         }
 
@@ -413,7 +413,7 @@ export class EventBus implements IEventBus {
             enhanced.eventId = `${eventType}_${++this.eventIdCounter}`;
         }
         if (!enhanced.source) {
-            enhanced.source = "EventBus";
+            enhanced.source = 'EventBus';
         }
 
         return enhanced;

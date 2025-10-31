@@ -46,4 +46,4 @@ export {
 
     // 类型定义
     SupportedTypedArray
-} from "./SoAStorage";
+} from './SoAStorage';

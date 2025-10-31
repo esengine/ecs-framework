@@ -1,7 +1,7 @@
-import {IComponentDebugData} from "../../Types";
-import {ComponentPoolManager} from "../../ECS/Core/ComponentPool";
-import {getComponentInstanceTypeName} from "../../ECS/Decorators";
-import {IScene} from "../../ECS/IScene";
+import { IComponentDebugData } from '../../Types';
+import { ComponentPoolManager } from '../../ECS/Core/ComponentPool';
+import { getComponentInstanceTypeName } from '../../ECS/Decorators';
+import { IScene } from '../../ECS/IScene';
 
 /**
  * 组件数据收集器
@@ -38,7 +38,7 @@ export class ComponentDataCollector {
             if (entity.components) {
                 entity.components.forEach((component: any) => {
                     const typeName = getComponentInstanceTypeName(component);
-                    const stats = componentStats.get(typeName) || {count: 0, entities: 0};
+                    const stats = componentStats.get(typeName) || { count: 0, entities: 0 };
                     stats.count++;
                     totalInstances++;
                     componentStats.set(typeName, stats);
@@ -122,13 +122,13 @@ export class ComponentDataCollector {
     }
 
     private calculateQuickObjectSize(obj: any): number {
-        if (!obj || typeof obj !== "object") return 8;
+        if (!obj || typeof obj !== 'object') return 8;
 
         let size = 32;
         const visited = new WeakSet();
 
         const calculate = (item: any, depth: number = 0): number => {
-            if (!item || typeof item !== "object" || visited.has(item) || depth > 3) {
+            if (!item || typeof item !== 'object' || visited.has(item) || depth > 3) {
                 return 0;
             }
             visited.add(item);
@@ -139,18 +139,18 @@ export class ComponentDataCollector {
                 const keys = Object.keys(item);
                 for (let i = 0; i < Math.min(keys.length, 20); i++) {
                     const key = keys[i];
-                    if (!key || key === "entity" || key === "_entity" || key === "constructor") continue;
+                    if (!key || key === 'entity' || key === '_entity' || key === 'constructor') continue;
 
                     const value = item[key];
                     itemSize += key.length * 2;
 
-                    if (typeof value === "string") {
+                    if (typeof value === 'string') {
                         itemSize += Math.min(value.length * 2, 200);
-                    } else if (typeof value === "number") {
+                    } else if (typeof value === 'number') {
                         itemSize += 8;
-                    } else if (typeof value === "boolean") {
+                    } else if (typeof value === 'boolean') {
                         itemSize += 4;
-                    } else if (typeof value === "object" && value !== null) {
+                    } else if (typeof value === 'object' && value !== null) {
                         itemSize += calculate(value, depth + 1);
                     }
                 }
@@ -206,16 +206,16 @@ export class ComponentDataCollector {
         const type = typeof obj;
 
         switch (type) {
-            case "boolean":
+            case 'boolean':
                 size = 4;
                 break;
-            case "number":
+            case 'number':
                 size = 8;
                 break;
-            case "string":
+            case 'string':
                 size = 24 + Math.min(obj.length * 2, 1000);
                 break;
-            case "object":
+            case 'object':
                 visited.add(obj);
 
                 if (Array.isArray(obj)) {
@@ -235,12 +235,12 @@ export class ComponentDataCollector {
                             const key = ownKeys[i];
                             if (!key) continue;
 
-                            if (key === "constructor" ||
-                                key === "__proto__" ||
-                                key === "entity" ||
-                                key === "_entity" ||
-                                key.startsWith("_cc_") ||
-                                key.startsWith("__")) {
+                            if (key === 'constructor' ||
+                                key === '__proto__' ||
+                                key === 'entity' ||
+                                key === '_entity' ||
+                                key.startsWith('_cc_') ||
+                                key.startsWith('__')) {
                                 continue;
                             }
 

@@ -4,14 +4,14 @@
  * 提供组件级别的序列化支持，包括字段级装饰器和类级装饰器
  */
 
-import {Component} from "../Component";
+import { Component } from '../Component';
 
 /**
  * 序列化元数据的Symbol键
  */
-export const SERIALIZABLE_METADATA = Symbol("SerializableMetadata");
-export const SERIALIZE_FIELD = Symbol("SerializeField");
-export const SERIALIZE_OPTIONS = Symbol("SerializeOptions");
+export const SERIALIZABLE_METADATA = Symbol('SerializableMetadata');
+export const SERIALIZE_FIELD = Symbol('SerializeField');
+export const SERIALIZE_OPTIONS = Symbol('SerializeOptions');
 
 /**
  * 可序列化配置选项
@@ -76,8 +76,8 @@ export interface SerializationMetadata {
  */
 export function Serializable(options: SerializableOptions) {
     return function <T extends new (...args: any[]) => Component>(target: T): T {
-        if (!options || typeof options.version !== "number") {
-            throw new Error("Serializable装饰器必须提供有效的版本号");
+        if (!options || typeof options.version !== 'number') {
+            throw new Error('Serializable装饰器必须提供有效的版本号');
         }
 
         // 初始化或获取现有元数据
@@ -121,7 +121,7 @@ export function Serialize(options?: FieldSerializeOptions) {
         let metadata: SerializationMetadata = constructor[SERIALIZABLE_METADATA];
         if (!metadata) {
             metadata = {
-                options: {version: 1}, // 默认版本
+                options: { version: 1 }, // 默认版本
                 fields: new Map(),
                 ignoredFields: new Set()
             };
@@ -212,7 +212,7 @@ export function IgnoreSerialization() {
         let metadata: SerializationMetadata = constructor[SERIALIZABLE_METADATA];
         if (!metadata) {
             metadata = {
-                options: {version: 1},
+                options: { version: 1 },
                 fields: new Map(),
                 ignoredFields: new Set()
             };
@@ -236,7 +236,7 @@ export function getSerializationMetadata(componentClass: any): SerializationMeta
     }
 
     // 如果是实例，获取其构造函数
-    const constructor = typeof componentClass === "function"
+    const constructor = typeof componentClass === 'function'
         ? componentClass
         : componentClass.constructor;
 

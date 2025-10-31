@@ -1,4 +1,4 @@
-import {IPoolable, PoolStats} from "./IPoolable";
+import { IPoolable, PoolStats } from './IPoolable';
 
 type Constructor<T = unknown> = new (...args: unknown[]) => T;
 
@@ -48,11 +48,11 @@ export class Pool<T extends IPoolable> {
         maxSize: number = 100,
         estimatedObjectSize: number = 1024
     ): Pool<T> {
-        let pool = this._pools.get(type);
+        let pool = this._pools.get(type) as Pool<T> | undefined;
 
         if (!pool) {
             pool = new Pool<T>(() => new type(), maxSize, estimatedObjectSize);
-            this._pools.set(type, pool);
+            this._pools.set(type, pool as Pool<IPoolable>);
         }
 
         return pool;
@@ -104,7 +104,7 @@ export class Pool<T extends IPoolable> {
      * @returns 统计信息对象
      */
     public getStats(): Readonly<PoolStats> {
-        return {...this._stats};
+        return { ...this._stats };
     }
 
     /**
@@ -243,11 +243,11 @@ export class Pool<T extends IPoolable> {
      */
     public static getGlobalStatsString(): string {
         const stats = this.getAllPoolStats();
-        const lines: string[] = ["=== Object Pool Global Statistics ===", ""];
+        const lines: string[] = ['=== Object Pool Global Statistics ===', ''];
 
         if (Object.keys(stats).length === 0) {
-            lines.push("No pools registered");
-            return lines.join("\n");
+            lines.push('No pools registered');
+            return lines.join('\n');
         }
 
         for (const [typeName, stat] of Object.entries(stats)) {
@@ -257,10 +257,10 @@ export class Pool<T extends IPoolable> {
             lines.push(`  Total Created: ${stat.totalCreated}`);
             lines.push(`  Total Obtained: ${stat.totalObtained}`);
             lines.push(`  Memory: ${(stat.estimatedMemoryUsage / 1024).toFixed(1)} KB`);
-            lines.push("");
+            lines.push('');
         }
 
-        return lines.join("\n");
+        return lines.join('\n');
     }
 
     /**

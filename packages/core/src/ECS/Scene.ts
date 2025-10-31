@@ -1,22 +1,22 @@
-import {Entity} from "./Entity";
-import {EntityList} from "./Utils/EntityList";
-import {IdentifierPool} from "./Utils/IdentifierPool";
-import {EntitySystem} from "./Systems/EntitySystem";
-import {ComponentStorageManager, ComponentRegistry} from "./Core/ComponentStorage";
-import {QuerySystem} from "./Core/QuerySystem";
-import {TypeSafeEventSystem} from "./Core/EventSystem";
-import {EventBus} from "./Core/EventBus";
-import {ReferenceTracker} from "./Core/ReferenceTracker";
-import {IScene, ISceneConfig} from "./IScene";
-import {getComponentInstanceTypeName, getSystemInstanceTypeName, getSystemMetadata} from "./Decorators";
-import {TypedQueryBuilder} from "./Core/Query/TypedQuery";
-import {SceneSerializer, SceneSerializationOptions, SceneDeserializationOptions} from "./Serialization/SceneSerializer";
-import {IncrementalSerializer, IncrementalSnapshot, IncrementalSerializationOptions} from "./Serialization/IncrementalSerializer";
-import {ComponentPoolManager} from "./Core/ComponentPool";
-import {PerformanceMonitor} from "../Utils/PerformanceMonitor";
-import {ServiceContainer, type ServiceType} from "../Core/ServiceContainer";
-import {createInstance, isInjectable, injectProperties} from "../Core/DI";
-import {createLogger} from "../Utils/Logger";
+import { Entity } from './Entity';
+import { EntityList } from './Utils/EntityList';
+import { IdentifierPool } from './Utils/IdentifierPool';
+import { EntitySystem } from './Systems/EntitySystem';
+import { ComponentStorageManager, ComponentRegistry } from './Core/ComponentStorage';
+import { QuerySystem } from './Core/QuerySystem';
+import { TypeSafeEventSystem } from './Core/EventSystem';
+import { EventBus } from './Core/EventBus';
+import { ReferenceTracker } from './Core/ReferenceTracker';
+import { IScene, ISceneConfig } from './IScene';
+import { getComponentInstanceTypeName, getSystemInstanceTypeName, getSystemMetadata } from './Decorators';
+import { TypedQueryBuilder } from './Core/Query/TypedQuery';
+import { SceneSerializer, SceneSerializationOptions, SceneDeserializationOptions } from './Serialization/SceneSerializer';
+import { IncrementalSerializer, IncrementalSnapshot, IncrementalSerializationOptions } from './Serialization/IncrementalSerializer';
+import { ComponentPoolManager } from './Core/ComponentPool';
+import { PerformanceMonitor } from '../Utils/PerformanceMonitor';
+import { ServiceContainer, type ServiceType } from '../Core/ServiceContainer';
+import { createInstance, isInjectable, injectProperties } from '../Core/DI';
+import { createLogger } from '../Utils/Logger';
 
 /**
  * 游戏场景默认实现类
@@ -30,7 +30,7 @@ export class Scene implements IScene {
      *
      * 用于标识和调试的友好名称。
      */
-    public name: string = "";
+    public name: string = '';
 
     /**
      * 场景自定义数据
@@ -207,7 +207,7 @@ export class Scene implements IScene {
         this.eventSystem = new TypeSafeEventSystem();
         this.referenceTracker = new ReferenceTracker();
         this._services = new ServiceContainer();
-        this.logger = createLogger("Scene");
+        this.logger = createLogger('Scene');
 
         if (config?.name) {
             this.name = config.name;
@@ -219,7 +219,7 @@ export class Scene implements IScene {
 
         if (Entity.eventBus) {
             Entity.eventBus.onComponentAdded((data: unknown) => {
-                this.eventSystem.emitSync("component:added", data);
+                this.eventSystem.emitSync('component:added', data);
             });
         }
     }
@@ -340,7 +340,7 @@ export class Scene implements IScene {
     public createEntity(name: string) {
         const entity = new Entity(name, this.identifierPool.checkOut());
 
-        this.eventSystem.emitSync("entity:created", {entityName: name, entity, scene: this});
+        this.eventSystem.emitSync('entity:created', { entityName: name, entity, scene: this });
 
         return this.addEntity(entity);
     }
@@ -373,7 +373,7 @@ export class Scene implements IScene {
         }
 
         // 触发实体添加事件
-        this.eventSystem.emitSync("entity:added", {entity, scene: this});
+        this.eventSystem.emitSync('entity:added', { entity, scene: this });
 
         return entity;
     }
@@ -384,7 +384,7 @@ export class Scene implements IScene {
      * @param namePrefix 实体名称前缀
      * @returns 创建的实体列表
      */
-    public createEntities(count: number, namePrefix: string = "Entity"): Entity[] {
+    public createEntities(count: number, namePrefix: string = 'Entity'): Entity[] {
         const entities: Entity[] = [];
 
         // 批量创建实体对象，不立即添加到系统
@@ -403,7 +403,7 @@ export class Scene implements IScene {
         this.querySystem.addEntitiesUnchecked(entities);
 
         // 批量触发事件（可选，减少事件开销）
-        this.eventSystem.emitSync("entities:batch_added", {entities, scene: this, count});
+        this.eventSystem.emitSync('entities:batch_added', { entities, scene: this, count });
 
         return entities;
     }
@@ -583,7 +583,7 @@ export class Scene implements IScene {
         let system: T;
         let constructor: any;
 
-        if (typeof systemTypeOrInstance === "function") {
+        if (typeof systemTypeOrInstance === 'function') {
             constructor = systemTypeOrInstance;
 
             if (this._services.isRegistered(constructor)) {
@@ -609,7 +609,7 @@ export class Scene implements IScene {
                 } else {
                     this.logger.warn(
                         `Attempting to register a different instance of ${constructor.name}, ` +
-                        "but type is already registered. Returning existing instance."
+                        'but type is already registered. Returning existing instance.'
                     );
                     return existingSystem as T;
                 }
@@ -907,7 +907,7 @@ export class Scene implements IScene {
      */
     public serializeIncremental(options?: IncrementalSerializationOptions): IncrementalSnapshot {
         if (!this._incrementalBaseSnapshot) {
-            throw new Error("必须先调用 createIncrementalSnapshot() 创建基础快照");
+            throw new Error('必须先调用 createIncrementalSnapshot() 创建基础快照');
         }
 
         return IncrementalSerializer.computeIncremental(
@@ -941,7 +941,7 @@ export class Scene implements IScene {
         incremental: IncrementalSnapshot | string | Uint8Array,
         componentRegistry?: Map<string, any>
     ): void {
-        const isSerializedData = typeof incremental === "string" ||
+        const isSerializedData = typeof incremental === 'string' ||
             incremental instanceof Uint8Array;
 
         const snapshot = isSerializedData

@@ -25,7 +25,7 @@ export interface BitMask64Data {
 
 export class BitMask64Utils {
     /** 零掩码常量，所有位都为0 */
-    public static readonly ZERO: Readonly<BitMask64Data> = {base: [0, 0]};
+    public static readonly ZERO: Readonly<BitMask64Data> = { base: [0, 0] };
 
     /**
      * 根据位索引创建64位掩码
@@ -37,7 +37,7 @@ export class BitMask64Utils {
         if (bitIndex < 0) {
             throw new Error(`Bit index ${bitIndex} out of range [0, ∞)`);
         }
-        const mask: BitMask64Data = {base: [0, 0]};
+        const mask: BitMask64Data = { base: [0, 0] };
         BitMask64Utils.setBit(mask, bitIndex);
         return mask;
     }
@@ -48,7 +48,7 @@ export class BitMask64Utils {
      * @returns 低32位为输入值、高32位为0的掩码
      */
     public static fromNumber(value: number): BitMask64Data {
-        return {base: [value >>> 0, 0]};
+        return { base: [value >>> 0, 0] };
     }
 
     /**
@@ -382,7 +382,7 @@ export class BitMask64Utils {
     public static clone(mask: BitMask64Data): BitMask64Data {
         return {
             base: mask.base.slice() as BitMask64Segment,
-            ...(mask.segments && {segments: mask.segments.map((seg) => [...seg] as BitMask64Segment)})
+            ...(mask.segments && { segments: mask.segments.map((seg) => [...seg] as BitMask64Segment) })
         };
     }
 
@@ -396,7 +396,7 @@ export class BitMask64Utils {
     public static toString(mask: BitMask64Data, radix: 2 | 16 = 2, printHead: boolean = false): string {
         if(radix != 2 && radix != 16) radix = 2;
         const totalLength = mask.segments?.length ?? 0;
-        let result: string = "";
+        let result: string = '';
         if(printHead){
             let paddingLength = 0;
             if(radix === 2){
@@ -405,38 +405,38 @@ export class BitMask64Utils {
                 paddingLength = 16 + 2 + 1;
             }
             for (let i = 0; i <= totalLength; i++) {
-                const title = i === 0 ? "0 (Base):" : `${i} (${64 * i}):`;
+                const title = i === 0 ? '0 (Base):' : `${i} (${64 * i}):`;
                 result += title.toString().padEnd(paddingLength);
             }
-            result += "\n";
+            result += '\n';
         }
 
         for (let i = -1; i < totalLength; i++) {
-            let segResult = "";
+            let segResult = '';
             const bitMaskData = i == -1 ? mask.base : mask.segments![i]!;
             const hi = bitMaskData[SegmentPart.HIGH];
             const lo = bitMaskData[SegmentPart.LOW];
             if(radix == 2){
-                const hiBits = hi.toString(2).padStart(32, "0");
-                const loBits = lo.toString(2).padStart(32, "0");
-                segResult = hiBits + "_" + loBits; //高低位之间使用_隔离
+                const hiBits = hi.toString(2).padStart(32, '0');
+                const loBits = lo.toString(2).padStart(32, '0');
+                segResult = hiBits + '_' + loBits; //高低位之间使用_隔离
             }else{
-                let hiBits = hi ? hi.toString(16).toUpperCase() : "";
+                let hiBits = hi ? hi.toString(16).toUpperCase() : '';
                 if(printHead){
                     // 存在标头，则输出高位之前需要补齐位数
-                    hiBits = hiBits.padStart(8, "0");
+                    hiBits = hiBits.padStart(8, '0');
                 }
                 let loBits = lo.toString(16).toUpperCase();
                 if(hiBits){
                     // 存在高位 则输出低位之前需要补齐位数
-                    loBits = loBits.padStart(8, "0");
+                    loBits = loBits.padStart(8, '0');
                 }
-                segResult = "0x" + hiBits + loBits;
+                segResult = '0x' + hiBits + loBits;
             }
             if(i === -1)
                 result += segResult;
             else
-                result += " " + segResult; // 不同段之间使用空格隔离
+                result += ' ' + segResult; // 不同段之间使用空格隔离
         }
         return result;
     }

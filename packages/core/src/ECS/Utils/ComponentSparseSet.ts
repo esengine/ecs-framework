@@ -1,9 +1,9 @@
-import {Entity} from "../Entity";
-import {ComponentType, ComponentRegistry} from "../Core/ComponentStorage";
-import {BitMask64Utils, BitMask64Data} from "./BigIntCompatibility";
-import {SparseSet} from "./SparseSet";
-import {Pool} from "../../Utils/Pool/Pool";
-import {IPoolable} from "../../Utils/Pool/IPoolable";
+import { Entity } from '../Entity';
+import { ComponentType, ComponentRegistry } from '../Core/ComponentStorage';
+import { BitMask64Utils, BitMask64Data } from './BigIntCompatibility';
+import { SparseSet } from './SparseSet';
+import { Pool } from '../../Utils/Pool/Pool';
+import { IPoolable } from '../../Utils/Pool/IPoolable';
 
 /**
  * 可池化的实体集合

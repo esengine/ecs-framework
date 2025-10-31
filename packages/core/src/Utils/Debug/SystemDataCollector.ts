@@ -1,6 +1,6 @@
-import {ISystemDebugData} from "../../Types";
-import {getSystemInstanceTypeName} from "../../ECS/Decorators";
-import {IScene} from "../../ECS/IScene";
+import { ISystemDebugData } from '../../Types';
+import { getSystemInstanceTypeName } from '../../ECS/Decorators';
+import { IScene } from '../../ECS/IScene';
 
 /**
  * 系统数据收集器

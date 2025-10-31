@@ -4,8 +4,8 @@
  * 提供 @Injectable、@Inject 和 @Updatable 装饰器，用于标记可注入的类和依赖注入点
  */
 
-import type {ServiceContainer} from "../ServiceContainer";
-import type {IService, ServiceType} from "../ServiceContainer";
+import type { ServiceContainer } from '../ServiceContainer';
+import type { IService, ServiceType } from '../ServiceContainer';
 
 /**
  * 依赖注入元数据存储
@@ -82,7 +82,7 @@ export function Injectable(): ClassDecorator {
         injectableMetadata.set(target as Constructor, {
             injectable: true,
             dependencies: [],
-            ...(existing?.properties && {properties: existing.properties})
+            ...(existing?.properties && { properties: existing.properties })
         });
     } as ClassDecorator;
 }
@@ -120,7 +120,7 @@ export function Updatable(priority: number = 0): ClassDecorator {
     return function (target: Constructor): void {
         // 验证类原型上是否有update方法
         const prototype = (target as Constructor & { prototype: { update?: unknown } }).prototype;
-        if (!prototype || typeof prototype.update !== "function") {
+        if (!prototype || typeof prototype.update !== 'function') {
             throw new Error(
                 `@Updatable() decorator requires class ${target.name} to implement IUpdatable interface with update() method. ` +
                 "Please add 'implements IUpdatable' and define update(deltaTime?: number): void method."
@@ -228,6 +228,7 @@ export function getInjectMetadata(target: Constructor): Map<number, ServiceType<
  * const instance = createInstance(MySystem, container);
  * ```
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createInstance<T>(
     constructor: new (...args: any[]) => T,
     container: ServiceContainer
@@ -246,10 +247,10 @@ export function createInstance<T>(
 
         if (serviceType) {
             // 如果有显式的@Inject标记，使用标记的类型
-            if (typeof serviceType === "string" || typeof serviceType === "symbol") {
+            if (typeof serviceType === 'string' || typeof serviceType === 'symbol') {
                 // 字符串或Symbol类型的服务标识
                 throw new Error(
-                    "String and Symbol service identifiers are not yet supported in constructor injection. " +
+                    'String and Symbol service identifiers are not yet supported in constructor injection. ' +
                     `Please use class types for ${constructor.name} parameter ${i}`
                 );
             } else {
@@ -338,7 +339,7 @@ export function registerInjectable<T extends IService>(
     if (!isInjectable(serviceType)) {
         throw new Error(
             `${serviceType.name} is not marked as @Injectable(). ` +
-            "Please add @Injectable() decorator to the class."
+            'Please add @Injectable() decorator to the class.'
         );
     }
 

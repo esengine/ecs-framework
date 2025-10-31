@@ -1,12 +1,12 @@
-import {Component} from "../Component";
-import {BitMask64Utils, BitMask64Data} from "../Utils/BigIntCompatibility";
-import {SoAStorage, SupportedTypedArray} from "./SoAStorage";
-import {createLogger} from "../../Utils/Logger";
-import {getComponentTypeName} from "../Decorators";
-import {ComponentRegistry, ComponentType} from "./ComponentStorage/ComponentRegistry";
+import { Component } from '../Component';
+import { BitMask64Utils, BitMask64Data } from '../Utils/BigIntCompatibility';
+import { SoAStorage, SupportedTypedArray } from './SoAStorage';
+import { createLogger } from '../../Utils/Logger';
+import { getComponentTypeName } from '../Decorators';
+import { ComponentRegistry, ComponentType } from './ComponentStorage/ComponentRegistry';
 
 // 导出核心类型
-export {ComponentRegistry, ComponentType};
+export { ComponentRegistry, ComponentType };
 
 
 /**
@@ -171,7 +171,7 @@ export class ComponentStorage<T extends Component> {
  * 管理所有组件类型的存储器
  */
 export class ComponentStorageManager {
-    private static readonly _logger = createLogger("ComponentStorage");
+    private static readonly _logger = createLogger('ComponentStorage');
     private storages = new Map<ComponentType, ComponentStorage<Component> | SoAStorage<Component>>();
 
     /**

@@ -1,10 +1,10 @@
-import {IScene} from "./IScene";
-import {ECSFluentAPI, createECSAPI} from "./Core/FluentAPI";
-import {Time} from "../Utils/Time";
-import {createLogger} from "../Utils/Logger";
-import type {IService} from "../Core/ServiceContainer";
-import {World} from "./World";
-import {PerformanceMonitor} from "../Utils/PerformanceMonitor";
+import { IScene } from './IScene';
+import { ECSFluentAPI, createECSAPI } from './Core/FluentAPI';
+import { Time } from '../Utils/Time';
+import { createLogger } from '../Utils/Logger';
+import type { IService } from '../Core/ServiceContainer';
+import { World } from './World';
+import { PerformanceMonitor } from '../Utils/PerformanceMonitor';
 
 /**
  * 单场景管理器
@@ -67,7 +67,7 @@ export class SceneManager implements IService {
     /**
      * 日志器
      */
-    private _logger = createLogger("SceneManager");
+    private _logger = createLogger('SceneManager');
 
     /**
      * 场景切换回调函数
@@ -82,10 +82,10 @@ export class SceneManager implements IService {
     /**
      * 默认场景ID
      */
-    private static readonly DEFAULT_SCENE_ID = "__main__";
+    private static readonly DEFAULT_SCENE_ID = '__main__';
 
     constructor(performanceMonitor?: PerformanceMonitor) {
-        this._defaultWorld = new World({name: "__default__"});
+        this._defaultWorld = new World({ name: '__default__' });
         this._defaultWorld.start();
         this._performanceMonitor = performanceMonitor || null;
     }
@@ -238,13 +238,13 @@ export class SceneManager implements IService {
      * 通常在应用程序关闭时调用。
      */
     public destroy(): void {
-        this._logger.info("SceneManager destroying");
+        this._logger.info('SceneManager destroying');
 
         this._defaultWorld.destroy();
         this._nextScene = null;
         this._ecsAPI = null;
 
-        this._logger.info("SceneManager destroyed");
+        this._logger.info('SceneManager destroyed');
     }
 
     /**

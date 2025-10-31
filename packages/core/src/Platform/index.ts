@@ -9,17 +9,17 @@ export type {
     WorkerCreationOptions,
     PlatformConfig,
     PlatformDetectionResult
-} from "./IPlatformAdapter";
+} from './IPlatformAdapter';
 
 // 平台检测器
-export {PlatformDetector} from "./PlatformDetector";
+export { PlatformDetector } from './PlatformDetector';
 
 // 平台管理器
-export {PlatformManager} from "./PlatformManager";
+export { PlatformManager } from './PlatformManager';
 
 // 内部导入用于便利函数
-import {PlatformManager} from "./PlatformManager";
-import type {IPlatformAdapter} from "./IPlatformAdapter";
+import { PlatformManager } from './PlatformManager';
+import type { IPlatformAdapter } from './IPlatformAdapter';
 
 // 便利函数
 export function registerPlatformAdapter(adapter: IPlatformAdapter) {
@@ -38,7 +38,7 @@ export function getFullPlatformConfig() {
     return PlatformManager.getInstance().getFullPlatformConfig();
 }
 
-export function supportsFeature(feature: "worker" | "shared-array-buffer" | "transferable-objects" | "module-worker") {
+export function supportsFeature(feature: 'worker' | 'shared-array-buffer' | 'transferable-objects' | 'module-worker') {
     return PlatformManager.getInstance().supportsFeature(feature);
 }
 

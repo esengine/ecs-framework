@@ -1,6 +1,6 @@
-import {ConsoleLogger} from "./ConsoleLogger";
-import {LogLevel} from "./Constants";
-import {ILogger, LoggerColorConfig} from "./Types";
+import { ConsoleLogger } from './ConsoleLogger';
+import { LogLevel } from './Constants';
+import { ILogger, LoggerColorConfig } from './Types';
 
 /**
  * 日志管理器
@@ -26,7 +26,7 @@ export class LoggerManager {
         if (this._loggerFactory) {
             return this._loggerFactory();
         }
-        return new ConsoleLogger({level: this._defaultLevel});
+        return new ConsoleLogger({ level: this._defaultLevel });
     }
 
     /**
@@ -53,7 +53,7 @@ export class LoggerManager {
         if (!this._loggers.has(name)) {
             const logger = this._loggerFactory
                 ? this._loggerFactory(name)
-                : new ConsoleLogger({prefix: name, level: this._defaultLevel});
+                : new ConsoleLogger({ prefix: name, level: this._defaultLevel });
             this._loggers.set(name, logger);
         }
 
@@ -136,8 +136,8 @@ export class LoggerManager {
     public setLoggerFactory(factory: (name?: string) => ILogger): void {
         if (this._defaultLogger || this._loggers.size > 0) {
             console.warn(
-                "[LoggerManager] setLoggerFactory 应该在导入 ECS 模块之前调用。" +
-                "已创建的 logger 引用不会被更新。"
+                '[LoggerManager] setLoggerFactory 应该在导入 ECS 模块之前调用。' +
+                '已创建的 logger 引用不会被更新。'
             );
         }
 

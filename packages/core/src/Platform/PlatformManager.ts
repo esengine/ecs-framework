@@ -1,5 +1,5 @@
-import type {IPlatformAdapter} from "./IPlatformAdapter";
-import {createLogger, type ILogger} from "../Utils/Logger";
+import type { IPlatformAdapter } from './IPlatformAdapter';
+import { createLogger, type ILogger } from '../Utils/Logger';
 
 /**
  * 平台管理器
@@ -11,7 +11,7 @@ export class PlatformManager {
     private readonly logger: ILogger;
 
     private constructor() {
-        this.logger = createLogger("PlatformManager");
+        this.logger = createLogger('PlatformManager');
     }
 
     /**
@@ -29,7 +29,7 @@ export class PlatformManager {
      */
     public getAdapter(): IPlatformAdapter {
         if (!this.adapter) {
-            throw new Error("平台适配器未注册，请调用 registerAdapter() 注册适配器");
+            throw new Error('平台适配器未注册，请调用 registerAdapter() 注册适配器');
         }
         return this.adapter;
     }
@@ -70,19 +70,19 @@ export class PlatformManager {
     /**
      * 检查当前平台是否支持特定功能
      */
-    public supportsFeature(feature: "worker" | "shared-array-buffer" | "transferable-objects" | "module-worker"): boolean {
+    public supportsFeature(feature: 'worker' | 'shared-array-buffer' | 'transferable-objects' | 'module-worker'): boolean {
         if (!this.adapter) return false;
 
         const config = this.adapter.getPlatformConfig();
 
         switch (feature) {
-            case "worker":
+            case 'worker':
                 return this.adapter.isWorkerSupported();
-            case "shared-array-buffer":
+            case 'shared-array-buffer':
                 return this.adapter.isSharedArrayBufferSupported();
-            case "transferable-objects":
+            case 'transferable-objects':
                 return config.supportsTransferableObjects;
-            case "module-worker":
+            case 'module-worker':
                 return config.supportsModuleWorker;
             default:
                 return false;
@@ -123,11 +123,11 @@ export class PlatformManager {
      */
     public async getFullPlatformConfig(): Promise<any> {
         if (!this.adapter) {
-            throw new Error("平台适配器未注册");
+            throw new Error('平台适配器未注册');
         }
 
         // 如果适配器支持异步获取配置，使用异步方法
-        if (typeof this.adapter.getPlatformConfigAsync === "function") {
+        if (typeof this.adapter.getPlatformConfigAsync === 'function') {
             return await this.adapter.getPlatformConfigAsync();
         }
 

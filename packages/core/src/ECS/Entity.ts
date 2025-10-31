@@ -1,10 +1,10 @@
-import {Component} from "./Component";
-import {ComponentRegistry, ComponentType} from "./Core/ComponentStorage";
-import {EventBus} from "./Core/EventBus";
-import {BitMask64Utils, BitMask64Data} from "./Utils/BigIntCompatibility";
-import {createLogger} from "../Utils/Logger";
-import {getComponentInstanceTypeName, getComponentTypeName} from "./Decorators";
-import type {IScene} from "./IScene";
+import { Component } from './Component';
+import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
+import { EventBus } from './Core/EventBus';
+import { BitMask64Utils, BitMask64Data } from './Utils/BigIntCompatibility';
+import { createLogger } from '../Utils/Logger';
+import { getComponentInstanceTypeName, getComponentTypeName } from './Decorators';
+import type { IScene } from './IScene';
 
 /**
  * 实体比较器
@@ -58,7 +58,7 @@ export class Entity {
     /**
      * Entity专用日志器
      */
-    private static _logger = createLogger("Entity");
+    private static _logger = createLogger('Entity');
 
     /**
      * 实体比较器实例
@@ -402,11 +402,11 @@ export class Entity {
         const componentType = component.constructor as ComponentType<T>;
 
         if (!this.scene) {
-            throw new Error("Entity must be added to Scene before adding components. Use scene.createEntity() instead of new Entity()");
+            throw new Error('Entity must be added to Scene before adding components. Use scene.createEntity() instead of new Entity()');
         }
 
         if (!this.scene.componentStorageManager) {
-            throw new Error("Scene does not have componentStorageManager");
+            throw new Error('Scene does not have componentStorageManager');
         }
 
         if (this.hasComponent(componentType)) {
@@ -426,7 +426,7 @@ export class Entity {
         if (Entity.eventBus) {
             Entity.eventBus.emitComponentAdded({
                 timestamp: Date.now(),
-                source: "Entity",
+                source: 'Entity',
                 entityId: this.id,
                 entityName: this.name,
                 entityTag: this.tag?.toString(),
@@ -561,7 +561,7 @@ export class Entity {
         if (Entity.eventBus) {
             Entity.eventBus.emitComponentRemoved({
                 timestamp: Date.now(),
-                source: "Entity",
+                source: 'Entity',
                 entityId: this.id,
                 entityName: this.name,
                 entityTag: this.tag?.toString(),
@@ -705,7 +705,7 @@ export class Entity {
      */
     public addChild(child: Entity): Entity {
         if (child === this) {
-            throw new Error("Entity cannot be its own child");
+            throw new Error('Entity cannot be its own child');
         }
 
         if (child._parent === this) {
@@ -882,13 +882,13 @@ export class Entity {
      */
     private onActiveChanged(): void {
         for (const component of this.components) {
-            if ("onActiveChanged" in component && typeof component.onActiveChanged === "function") {
+            if ('onActiveChanged' in component && typeof component.onActiveChanged === 'function') {
                 (component as any).onActiveChanged();
             }
         }
 
         if (this.scene && this.scene.eventSystem) {
-            this.scene.eventSystem.emitSync("entity:activeChanged", {
+            this.scene.eventSystem.emitSync('entity:activeChanged', {
                 entity: this,
                 active: this._active,
                 activeInHierarchy: this.activeInHierarchy

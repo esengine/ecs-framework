@@ -1,6 +1,6 @@
-import {EntitySystem} from "./EntitySystem";
-import {Entity} from "../Entity";
-import {Matcher} from "../Utils/Matcher";
+import { EntitySystem } from './EntitySystem';
+import { Entity } from '../Entity';
+import { Matcher } from '../Utils/Matcher';
 
 /**
  * 被动实体系统

@@ -1,5 +1,5 @@
-import {Colors, LogLevel} from "./Constants";
-import {ILogger, LoggerColorConfig, LoggerConfig} from "./Types";
+import { Colors, LogLevel } from './Constants';
+import { ILogger, LoggerColorConfig, LoggerConfig } from './Types';
 
 
 /**
@@ -12,7 +12,7 @@ export class ConsoleLogger implements ILogger {
         this._config = {
             level: LogLevel.Info,
             enableTimestamp: true,
-            enableColors: typeof window === "undefined",
+            enableColors: typeof window === 'undefined',
             ...config
         };
     }

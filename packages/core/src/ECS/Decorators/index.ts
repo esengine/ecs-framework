@@ -8,15 +8,15 @@ export {
     getSystemMetadata,
     COMPONENT_TYPE_NAME,
     SYSTEM_TYPE_NAME
-} from "./TypeDecorators";
+} from './TypeDecorators';
 
-export type {SystemMetadata} from "./TypeDecorators";
+export type { SystemMetadata } from './TypeDecorators';
 
 export {
     EntityRef,
     getEntityRefMetadata,
     hasEntityRef,
     ENTITY_REF_METADATA
-} from "./EntityRefDecorator";
+} from './EntityRefDecorator';
 
-export type {EntityRefMetadata} from "./EntityRefDecorator";
+export type { EntityRefMetadata } from './EntityRefDecorator';

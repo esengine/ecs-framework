@@ -1,8 +1,8 @@
-import {IEntityDebugData} from "../../Types";
-import {Entity} from "../../ECS/Entity";
-import {Component} from "../../ECS/Component";
-import {getComponentInstanceTypeName} from "../../ECS/Decorators";
-import {IScene} from "../../ECS/IScene";
+import { IEntityDebugData } from '../../Types';
+import { Entity } from '../../ECS/Entity';
+import { Component } from '../../ECS/Component';
+import { getComponentInstanceTypeName } from '../../ECS/Decorators';
+import { IScene } from '../../ECS/IScene';
 
 /**
  * 实体数据收集器
@@ -129,7 +129,7 @@ export class EntityDataCollector {
         } catch (error) {
             return {
                 error: `获取实体详情失败: ${error instanceof Error ? error.message : String(error)}`,
-                scene: "获取失败",
+                scene: '获取失败',
                 components: [],
                 componentCount: 0,
                 componentTypes: []
@@ -138,29 +138,29 @@ export class EntityDataCollector {
     }
 
     private getSceneInfo(scene: any): { name: string; type: string } {
-        let sceneName = "当前场景";
-        let sceneType = "Scene";
+        let sceneName = '当前场景';
+        let sceneType = 'Scene';
 
         try {
-            if (scene.name && typeof scene.name === "string" && scene.name.trim()) {
+            if (scene.name && typeof scene.name === 'string' && scene.name.trim()) {
                 sceneName = scene.name.trim();
             } else if (scene.constructor && scene.constructor.name) {
                 sceneName = scene.constructor.name;
                 sceneType = scene.constructor.name;
-            } else if (scene._name && typeof scene._name === "string" && scene._name.trim()) {
+            } else if (scene._name && typeof scene._name === 'string' && scene._name.trim()) {
                 sceneName = scene._name.trim();
             } else {
                 const sceneClassName = Object.getPrototypeOf(scene)?.constructor?.name;
-                if (sceneClassName && sceneClassName !== "Object") {
+                if (sceneClassName && sceneClassName !== 'Object') {
                     sceneName = sceneClassName;
                     sceneType = sceneClassName;
                 }
             }
         } catch (error) {
-            sceneName = "场景名获取失败";
+            sceneName = '场景名获取失败';
         }
 
-        return {name: sceneName, type: sceneType};
+        return { name: sceneName, type: sceneType };
     }
 
 
@@ -213,11 +213,11 @@ export class EntityDataCollector {
         distribution: Array<{ signature: string; count: number; memory: number }>;
         topEntities: Array<{ id: string; name: string; componentCount: number; memory: number }>;
     } {
-        if (scene && scene.archetypeSystem && typeof scene.archetypeSystem.getAllArchetypes === "function") {
+        if (scene && scene.archetypeSystem && typeof scene.archetypeSystem.getAllArchetypes === 'function') {
             return this.extractArchetypeStatistics(scene.archetypeSystem);
         }
 
-        const entityContainer = {entities: scene.entities?.buffer || []};
+        const entityContainer = { entities: scene.entities?.buffer || [] };
         return {
             distribution: this.getArchetypeDistributionFast(entityContainer),
             topEntities: this.getTopEntitiesByComponentsFast(entityContainer)
@@ -230,13 +230,13 @@ export class EntityDataCollector {
         if (entityContainer && entityContainer.entities) {
             entityContainer.entities.forEach((entity: any) => {
                 const componentTypes = entity.components?.map((comp: any) => getComponentInstanceTypeName(comp)) || [];
-                const signature = componentTypes.length > 0 ? componentTypes.sort().join(", ") : "无组件";
+                const signature = componentTypes.length > 0 ? componentTypes.sort().join(', ') : '无组件';
 
                 const existing = distribution.get(signature);
                 if (existing) {
                     existing.count++;
                 } else {
-                    distribution.set(signature, {count: 1, componentTypes});
+                    distribution.set(signature, { count: 1, componentTypes });
                 }
             });
         }
@@ -271,11 +271,11 @@ export class EntityDataCollector {
         distribution: Array<{ signature: string; count: number; memory: number }>;
         topEntities: Array<{ id: string; name: string; componentCount: number; memory: number }>;
     } {
-        if (scene && scene.archetypeSystem && typeof scene.archetypeSystem.getAllArchetypes === "function") {
+        if (scene && scene.archetypeSystem && typeof scene.archetypeSystem.getAllArchetypes === 'function') {
             return this.extractArchetypeStatisticsWithMemory(scene.archetypeSystem);
         }
 
-        const entityContainer = {entities: scene.entities?.buffer || []};
+        const entityContainer = { entities: scene.entities?.buffer || [] };
         return {
             distribution: this.getArchetypeDistributionWithMemory(entityContainer),
             topEntities: this.getTopEntitiesByComponentsWithMemory(entityContainer)
@@ -292,7 +292,7 @@ export class EntityDataCollector {
         const topEntities: Array<{ id: string; name: string; componentCount: number; memory: number }> = [];
 
         archetypes.forEach((archetype: any) => {
-            const signature = archetype.componentTypes?.map((type: any) => type.name).join(",") || "Unknown";
+            const signature = archetype.componentTypes?.map((type: any) => type.name).join(',') || 'Unknown';
             const entityCount = archetype.entities?.length || 0;
 
             distribution.push({
@@ -316,7 +316,7 @@ export class EntityDataCollector {
         distribution.sort((a, b) => b.count - a.count);
         topEntities.sort((a, b) => b.componentCount - a.componentCount);
 
-        return {distribution, topEntities};
+        return { distribution, topEntities };
     }
 
 
@@ -329,7 +329,7 @@ export class EntityDataCollector {
         const topEntities: Array<{ id: string; name: string; componentCount: number; memory: number }> = [];
 
         archetypes.forEach((archetype: any) => {
-            const signature = archetype.componentTypes?.map((type: any) => type.name).join(",") || "Unknown";
+            const signature = archetype.componentTypes?.map((type: any) => type.name).join(',') || 'Unknown';
             const entityCount = archetype.entities?.length || 0;
 
             let actualMemory = 0;
@@ -365,7 +365,7 @@ export class EntityDataCollector {
         distribution.sort((a, b) => b.count - a.count);
         topEntities.sort((a, b) => b.componentCount - a.componentCount);
 
-        return {distribution, topEntities};
+        return { distribution, topEntities };
     }
 
 
@@ -375,7 +375,7 @@ export class EntityDataCollector {
         if (entityContainer && entityContainer.entities) {
             entityContainer.entities.forEach((entity: any) => {
                 const componentTypes = entity.components?.map((comp: any) => getComponentInstanceTypeName(comp)) || [];
-                const signature = componentTypes.length > 0 ? componentTypes.sort().join(", ") : "无组件";
+                const signature = componentTypes.length > 0 ? componentTypes.sort().join(', ') : '无组件';
 
                 const existing = distribution.get(signature);
                 let memory = this.estimateEntityMemoryUsage(entity);
@@ -388,7 +388,7 @@ export class EntityDataCollector {
                     existing.count++;
                     existing.memory += memory;
                 } else {
-                    distribution.set(signature, {count: 1, memory, componentTypes});
+                    distribution.set(signature, { count: 1, memory, componentTypes });
                 }
             });
         }
@@ -453,14 +453,14 @@ export class EntityDataCollector {
         try {
             let totalSize = 0;
 
-            const entitySize = this.calculateObjectSize(entity, ["components", "children", "parent"]);
+            const entitySize = this.calculateObjectSize(entity, ['components', 'children', 'parent']);
             if (!isNaN(entitySize) && entitySize > 0) {
                 totalSize += entitySize;
             }
 
             if (entity.components && Array.isArray(entity.components)) {
                 entity.components.forEach((component: any) => {
-                    const componentSize = this.calculateObjectSize(component, ["entity"]);
+                    const componentSize = this.calculateObjectSize(component, ['entity']);
                     if (!isNaN(componentSize) && componentSize > 0) {
                         totalSize += componentSize;
                     }
@@ -474,13 +474,13 @@ export class EntityDataCollector {
     }
 
     public calculateObjectSize(obj: any, excludeKeys: string[] = []): number {
-        if (!obj || typeof obj !== "object") return 0;
+        if (!obj || typeof obj !== 'object') return 0;
 
         const visited = new WeakSet();
         const maxDepth = 2;
 
         const calculate = (item: any, depth: number = 0): number => {
-            if (!item || typeof item !== "object" || depth >= maxDepth) {
+            if (!item || typeof item !== 'object' || depth >= maxDepth) {
                 return 0;
             }
 
@@ -496,25 +496,25 @@ export class EntityDataCollector {
                 for (let i = 0; i < maxKeys; i++) {
                     const key = keys[i];
                     if (!key || excludeKeys.includes(key) ||
-                        key === "constructor" ||
-                        key === "__proto__" ||
-                        key.startsWith("_cc_") ||
-                        key.startsWith("__")) {
+                        key === 'constructor' ||
+                        key === '__proto__' ||
+                        key.startsWith('_cc_') ||
+                        key.startsWith('__')) {
                         continue;
                     }
 
                     const value = item[key];
                     itemSize += key.length * 2;
 
-                    if (typeof value === "string") {
+                    if (typeof value === 'string') {
                         itemSize += Math.min(value.length * 2, 200);
-                    } else if (typeof value === "number") {
+                    } else if (typeof value === 'number') {
                         itemSize += 8;
-                    } else if (typeof value === "boolean") {
+                    } else if (typeof value === 'boolean') {
                         itemSize += 4;
                     } else if (Array.isArray(value)) {
                         itemSize += 40 + Math.min(value.length * 8, 160);
-                    } else if (typeof value === "object" && value !== null) {
+                    } else if (typeof value === 'object' && value !== null) {
                         itemSize += calculate(value, depth + 1);
                     }
                 }
@@ -595,7 +595,7 @@ export class EntityDataCollector {
         }
 
         // 优先使用Entity的getDebugInfo方法
-        if (typeof entity.getDebugInfo === "function") {
+        if (typeof entity.getDebugInfo === 'function') {
             const debugInfo = entity.getDebugInfo();
             node = {
                 ...node,
@@ -670,7 +670,7 @@ export class EntityDataCollector {
             sceneType: sceneInfo.type,
             componentCount: entity.components.length,
             componentTypes: entity.components.map((component: Component) => getComponentInstanceTypeName(component)),
-            componentMask: entity.componentMask?.toString() || "0",
+            componentMask: entity.componentMask?.toString() || '0',
             parentId: entity.parent?.id || null,
             childCount: entity.children?.length || 0,
             childIds: entity.children.map((child: Entity) => child.id) || [],
@@ -694,7 +694,7 @@ export class EntityDataCollector {
             try {
                 const propertyKeys = Object.keys(component);
                 propertyKeys.forEach((propertyKey) => {
-                    if (!propertyKey.startsWith("_") && propertyKey !== "entity" && propertyKey !== "constructor") {
+                    if (!propertyKey.startsWith('_') && propertyKey !== 'entity' && propertyKey !== 'constructor') {
                         const propertyValue = (component as any)[propertyKey];
                         if (propertyValue !== undefined && propertyValue !== null) {
                             properties[propertyKey] = this.formatPropertyValue(propertyValue);
@@ -704,12 +704,12 @@ export class EntityDataCollector {
 
                 // 如果没有找到任何属性，添加一些调试信息
                 if (Object.keys(properties).length === 0) {
-                    properties["_info"] = "该组件没有公开属性";
-                    properties["_componentId"] = getComponentInstanceTypeName(component);
+                    properties['_info'] = '该组件没有公开属性';
+                    properties['_componentId'] = getComponentInstanceTypeName(component);
                 }
             } catch (error) {
-                properties["_error"] = "属性提取失败";
-                properties["_componentId"] = getComponentInstanceTypeName(component);
+                properties['_error'] = '属性提取失败';
+                properties['_componentId'] = getComponentInstanceTypeName(component);
             }
 
             return {
@@ -740,7 +740,7 @@ export class EntityDataCollector {
 
             const propertyKeys = Object.keys(component);
             propertyKeys.forEach((propertyKey) => {
-                if (!propertyKey.startsWith("_") && propertyKey !== "entity") {
+                if (!propertyKey.startsWith('_') && propertyKey !== 'entity') {
                     const propertyValue = (component as any)[propertyKey];
                     if (propertyValue !== undefined && propertyValue !== null) {
                         properties[propertyKey] = this.formatPropertyValue(propertyValue);
@@ -750,7 +750,7 @@ export class EntityDataCollector {
 
             return properties;
         } catch (error) {
-            return {_error: "属性提取失败"};
+            return { _error: '属性提取失败' };
         }
     }
 
@@ -762,8 +762,8 @@ export class EntityDataCollector {
             return value;
         }
 
-        if (typeof value !== "object") {
-            if (typeof value === "string" && value.length > 200) {
+        if (typeof value !== 'object') {
+            if (typeof value === 'string' && value.length > 200) {
                 return `[长字符串: ${value.length}字符] ${value.substring(0, 100)}...`;
             }
             return value;
@@ -812,7 +812,7 @@ export class EntityDataCollector {
                     break;
                 }
 
-                if (key.startsWith("_") || key.startsWith("$") || typeof obj[key] === "function") {
+                if (key.startsWith('_') || key.startsWith('$') || typeof obj[key] === 'function') {
                     continue;
                 }
 
@@ -839,7 +839,7 @@ export class EntityDataCollector {
      */
     private createLazyLoadPlaceholder(obj: any): any {
         try {
-            const typeName = obj.constructor?.name || "Object";
+            const typeName = obj.constructor?.name || 'Object';
             const summary = this.getObjectSummary(obj, typeName);
 
             return {
@@ -851,7 +851,7 @@ export class EntityDataCollector {
         } catch (error) {
             return {
                 _isLazyObject: true,
-                _typeName: "Unknown",
+                _typeName: 'Unknown',
                 _summary: `无法分析的对象: ${error instanceof Error ? error.message : String(error)}`,
                 _objectId: Math.random().toString(36).substr(2, 9)
             };
@@ -863,28 +863,28 @@ export class EntityDataCollector {
      */
     private getObjectSummary(obj: any, typeName: string): string {
         try {
-            if (typeName.toLowerCase().includes("vec") || typeName.toLowerCase().includes("vector")) {
+            if (typeName.toLowerCase().includes('vec') || typeName.toLowerCase().includes('vector')) {
                 if (obj.x !== undefined && obj.y !== undefined) {
-                    const z = obj.z !== undefined ? obj.z : "";
-                    return `${typeName}(${obj.x}, ${obj.y}${z ? ", " + z : ""})`;
+                    const z = obj.z !== undefined ? obj.z : '';
+                    return `${typeName}(${obj.x}, ${obj.y}${z ? ', ' + z : ''})`;
                 }
             }
 
-            if (typeName.toLowerCase().includes("color")) {
+            if (typeName.toLowerCase().includes('color')) {
                 if (obj.r !== undefined && obj.g !== undefined && obj.b !== undefined) {
                     const a = obj.a !== undefined ? obj.a : 1;
                     return `${typeName}(${obj.r}, ${obj.g}, ${obj.b}, ${a})`;
                 }
             }
 
-            if (typeName.toLowerCase().includes("node")) {
-                const name = obj.name || obj._name || "未命名";
+            if (typeName.toLowerCase().includes('node')) {
+                const name = obj.name || obj._name || '未命名';
                 return `${typeName}: ${name}`;
             }
 
-            if (typeName.toLowerCase().includes("component")) {
-                const nodeName = obj.node?.name || obj.node?._name || "";
-                return `${typeName}${nodeName ? ` on ${nodeName}` : ""}`;
+            if (typeName.toLowerCase().includes('component')) {
+                const nodeName = obj.node?.name || obj.node?._name || '';
+                return `${typeName}${nodeName ? ` on ${nodeName}` : ''}`;
             }
 
             const keys = Object.keys(obj);
@@ -955,16 +955,16 @@ export class EntityDataCollector {
     private getObjectByPath(root: any, path: string): any {
         if (!path) return root;
 
-        const parts = path.split(".");
+        const parts = path.split('.');
         let current = root;
 
         for (const part of parts) {
             if (current === null || current === undefined) return null;
 
             // 处理数组索引
-            if (part.includes("[") && part.includes("]")) {
-                const arrayName = part.substring(0, part.indexOf("["));
-                const index = parseInt(part.substring(part.indexOf("[") + 1, part.indexOf("]")));
+            if (part.includes('[') && part.includes(']')) {
+                const arrayName = part.substring(0, part.indexOf('['));
+                const index = parseInt(part.substring(part.indexOf('[') + 1, part.indexOf(']')));
 
                 if (arrayName) {
                     current = current[arrayName];

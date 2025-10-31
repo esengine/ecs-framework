@@ -1,15 +1,15 @@
-import {Entity} from "./Entity";
-import {EntityList} from "./Utils/EntityList";
-import {IdentifierPool} from "./Utils/IdentifierPool";
-import {EntitySystem} from "./Systems/EntitySystem";
-import {ComponentStorageManager} from "./Core/ComponentStorage";
-import {QuerySystem} from "./Core/QuerySystem";
-import {TypeSafeEventSystem} from "./Core/EventSystem";
-import type {ReferenceTracker} from "./Core/ReferenceTracker";
-import type {ServiceContainer, ServiceType} from "../Core/ServiceContainer";
-import type {TypedQueryBuilder} from "./Core/Query/TypedQuery";
-import type {SceneSerializationOptions, SceneDeserializationOptions} from "./Serialization/SceneSerializer";
-import type {IncrementalSnapshot, IncrementalSerializationOptions} from "./Serialization/IncrementalSerializer";
+import { Entity } from './Entity';
+import { EntityList } from './Utils/EntityList';
+import { IdentifierPool } from './Utils/IdentifierPool';
+import { EntitySystem } from './Systems/EntitySystem';
+import { ComponentStorageManager } from './Core/ComponentStorage';
+import { QuerySystem } from './Core/QuerySystem';
+import { TypeSafeEventSystem } from './Core/EventSystem';
+import type { ReferenceTracker } from './Core/ReferenceTracker';
+import type { ServiceContainer, ServiceType } from '../Core/ServiceContainer';
+import type { TypedQueryBuilder } from './Core/Query/TypedQuery';
+import type { SceneSerializationOptions, SceneDeserializationOptions } from './Serialization/SceneSerializer';
+import type { IncrementalSnapshot, IncrementalSerializationOptions } from './Serialization/IncrementalSerializer';
 
 /**
  * 场景接口定义

@@ -1,14 +1,14 @@
-import {createLogger} from "../../Utils/Logger";
+import { createLogger } from '../../Utils/Logger';
 
 /**
  * 事件处理器函数类型
  */
-export type EventHandler<T = any> = (event: T) => void;
+export type EventHandler<T = unknown> = (event: T) => void;
 
 /**
  * 异步事件处理器函数类型
  */
-export type AsyncEventHandler<T = any> = (event: T) => Promise<void>;
+export type AsyncEventHandler<T = unknown> = (event: T) => Promise<void>;
 
 /**
  * 事件监听器配置
@@ -21,13 +21,13 @@ export interface EventListenerConfig {
     /** 是否异步执行 */
     async?: boolean;
     /** 执行上下文 */
-    context?: any;
+    context?: unknown;
 }
 
 /**
  * 内部事件监听器
  */
-interface InternalEventListener<T = any> {
+interface InternalEventListener<T = unknown> {
     handler: EventHandler<T> | AsyncEventHandler<T>;
     config: EventListenerConfig;
     id: string;
@@ -68,11 +68,11 @@ export interface EventBatchConfig {
  * 支持同步/异步事件、优先级、批处理等功能
  */
 export class TypeSafeEventSystem {
-    private static readonly _logger = createLogger("EventSystem");
+    private static readonly _logger = createLogger('EventSystem');
     private listeners = new Map<string, InternalEventListener[]>();
     private stats = new Map<string, EventStats>();
-    private batchQueue = new Map<string, any[]>();
-    private batchTimers = new Map<string, number>();
+    private batchQueue = new Map<string, unknown[]>();
+    private batchTimers = new Map<string, ReturnType<typeof setTimeout>>();
     private batchConfigs = new Map<string, EventBatchConfig>();
     private nextListenerId = 0;
     private isEnabled = true;
@@ -105,7 +105,7 @@ export class TypeSafeEventSystem {
         handler: EventHandler<T>,
         config: EventListenerConfig = {}
     ): string {
-        return this.addListener(eventType, handler, {...config, once: true});
+        return this.addListener(eventType, handler, { ...config, once: true });
     }
 
     /**
@@ -120,7 +120,7 @@ export class TypeSafeEventSystem {
         handler: AsyncEventHandler<T>,
         config: EventListenerConfig = {}
     ): string {
-        return this.addListener(eventType, handler, {...config, async: true});
+        return this.addListener(eventType, handler, { ...config, async: true });
     }
 
     /**
@@ -340,7 +340,7 @@ export class TypeSafeEventSystem {
         // 检查监听器数量限制
         if (listeners.length >= this.maxListeners) {
             TypeSafeEventSystem._logger.warn(`事件类型 ${eventType} 的监听器数量超过最大限制 (${this.maxListeners})`);
-            return "";
+            return '';
         }
 
         const listenerId = `listener_${this.nextListenerId++}`;
@@ -353,7 +353,7 @@ export class TypeSafeEventSystem {
             id: listenerId
         };
 
-        listeners.push(listener);
+        listeners.push(listener as InternalEventListener);
 
         // 初始化统计信息
         if (!this.stats.has(eventType)) {
@@ -488,7 +488,7 @@ export class TypeSafeEventSystem {
                 this.flushBatch(eventType);
             }, config.delay);
 
-            this.batchTimers.set(eventType, timer as any);
+            this.batchTimers.set(eventType, timer);
         }
     }
 

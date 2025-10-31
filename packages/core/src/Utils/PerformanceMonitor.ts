@@ -46,12 +46,12 @@ export interface PerformanceStats {
  * 性能警告类型
  */
 export enum PerformanceWarningType {
-    HIGH_EXECUTION_TIME = "high_execution_time",
-    HIGH_MEMORY_USAGE = "high_memory_usage",
-    HIGH_CPU_USAGE = "high_cpu_usage",
-    FREQUENT_GC = "frequent_gc",
-    LOW_FPS = "low_fps",
-    HIGH_ENTITY_COUNT = "high_entity_count"
+    HIGH_EXECUTION_TIME = 'high_execution_time',
+    HIGH_MEMORY_USAGE = 'high_memory_usage',
+    HIGH_CPU_USAGE = 'high_cpu_usage',
+    FREQUENT_GC = 'frequent_gc',
+    LOW_FPS = 'low_fps',
+    HIGH_ENTITY_COUNT = 'high_entity_count'
 }
 
 /**
@@ -61,7 +61,7 @@ export interface PerformanceWarning {
     type: PerformanceWarningType;
     systemName: string;
     message: string;
-    severity: "low" | "medium" | "high" | "critical";
+    severity: 'low' | 'medium' | 'high' | 'critical';
     timestamp: number;
     value: number;
     threshold: number;
@@ -99,7 +99,7 @@ export interface PerformanceThresholds {
     };
 }
 
-import type {IService} from "../Core/ServiceContainer";
+import type { IService } from '../Core/ServiceContainer';
 
 /**
  * 高性能监控器
@@ -276,12 +276,12 @@ export class PerformanceMonitor implements IService {
      */
     public getPerformanceReport(): string {
         if (!this._isEnabled) {
-            return "Performance monitoring is disabled.";
+            return 'Performance monitoring is disabled.';
         }
 
         const lines: string[] = [];
-        lines.push("=== ECS Performance Report ===");
-        lines.push("");
+        lines.push('=== ECS Performance Report ===');
+        lines.push('');
 
         // 按平均执行时间排序
         const sortedSystems = Array.from(this._systemStats.entries())
@@ -300,7 +300,7 @@ export class PerformanceMonitor implements IService {
                 lines.push(`  Per Entity: ${data.averageTimePerEntity.toFixed(4)}ms`);
             }
 
-            lines.push("");
+            lines.push('');
         }
 
         // 总体统计
@@ -310,7 +310,7 @@ export class PerformanceMonitor implements IService {
         lines.push(`Total Frame Time: ${totalCurrentTime.toFixed(2)}ms`);
         lines.push(`Systems Count: ${this._systemData.size}`);
 
-        return lines.join("\n");
+        return lines.join('\n');
     }
 
     /**

@@ -1,5 +1,5 @@
-import type {Core} from "../Core";
-import type {ServiceContainer} from "./ServiceContainer";
+import type { Core } from '../Core';
+import type { ServiceContainer } from './ServiceContainer';
 
 /**
  * 插件状态
@@ -8,17 +8,17 @@ export enum PluginState {
     /**
      * 未安装
      */
-    NotInstalled = "not_installed",
+    NotInstalled = 'not_installed',
 
     /**
      * 已安装
      */
-    Installed = "installed",
+    Installed = 'installed',
 
     /**
      * 安装失败
      */
-    Failed = "failed"
+    Failed = 'failed'
 }
 
 /**

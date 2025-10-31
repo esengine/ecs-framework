@@ -1,5 +1,5 @@
-import {ComponentType} from "../Core/ComponentStorage";
-import {getComponentTypeName} from "../Decorators";
+import { ComponentType } from '../Core/ComponentStorage';
+import { getComponentTypeName } from '../Decorators';
 
 /**
  * 查询条件类型
@@ -209,9 +209,9 @@ export class Matcher {
             all: [...this.condition.all],
             any: [...this.condition.any],
             none: [...this.condition.none],
-            ...(this.condition.tag !== undefined && {tag: this.condition.tag}),
-            ...(this.condition.name !== undefined && {name: this.condition.name}),
-            ...(this.condition.component !== undefined && {component: this.condition.component})
+            ...(this.condition.tag !== undefined && { tag: this.condition.tag }),
+            ...(this.condition.name !== undefined && { name: this.condition.name }),
+            ...(this.condition.component !== undefined && { component: this.condition.component })
         };
     }
 
@@ -267,15 +267,15 @@ export class Matcher {
         const parts: string[] = [];
 
         if (this.condition.all.length > 0) {
-            parts.push(`all(${this.condition.all.map((t) => getComponentTypeName(t)).join(", ")})`);
+            parts.push(`all(${this.condition.all.map((t) => getComponentTypeName(t)).join(', ')})`);
         }
 
         if (this.condition.any.length > 0) {
-            parts.push(`any(${this.condition.any.map((t) => getComponentTypeName(t)).join(", ")})`);
+            parts.push(`any(${this.condition.any.map((t) => getComponentTypeName(t)).join(', ')})`);
         }
 
         if (this.condition.none.length > 0) {
-            parts.push(`none(${this.condition.none.map((t) => getComponentTypeName(t)).join(", ")})`);
+            parts.push(`none(${this.condition.none.map((t) => getComponentTypeName(t)).join(', ')})`);
         }
 
         if (this.condition.tag !== undefined) {
@@ -290,7 +290,7 @@ export class Matcher {
             parts.push(`component(${getComponentTypeName(this.condition.component)})`);
         }
 
-        return `Matcher[${parts.join(" & ")}]`;
+        return `Matcher[${parts.join(' & ')}]`;
     }
 
 }

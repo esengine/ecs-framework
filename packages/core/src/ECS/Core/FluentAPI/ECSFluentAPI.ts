@@ -1,13 +1,13 @@
-import {Entity} from "../../Entity";
-import {Component} from "../../Component";
-import {IScene} from "../../IScene";
-import {ComponentType} from "../ComponentStorage";
-import {QuerySystem, QueryBuilder} from "../QuerySystem";
-import {TypeSafeEventSystem} from "../EventSystem";
-import {EntityBuilder} from "./EntityBuilder";
-import {SceneBuilder} from "./SceneBuilder";
-import {ComponentBuilder} from "./ComponentBuilder";
-import {EntityBatchOperator} from "./EntityBatchOperator";
+import { Entity } from '../../Entity';
+import { Component } from '../../Component';
+import { IScene } from '../../IScene';
+import { ComponentType } from '../ComponentStorage';
+import { QuerySystem, QueryBuilder } from '../QuerySystem';
+import { TypeSafeEventSystem } from '../EventSystem';
+import { EntityBuilder } from './EntityBuilder';
+import { SceneBuilder } from './SceneBuilder';
+import { ComponentBuilder } from './ComponentBuilder';
+import { EntityBatchOperator } from './EntityBatchOperator';
 
 /**
  * ECS流式API主入口

@@ -1,15 +1,15 @@
-import {Entity} from "../Entity";
-import {PerformanceMonitor} from "../../Utils/PerformanceMonitor";
-import {Matcher, type QueryCondition} from "../Utils/Matcher";
-import type {Scene} from "../Scene";
-import type {ISystemBase} from "../../Types";
-import type {QuerySystem} from "../Core/QuerySystem";
-import {getSystemInstanceTypeName} from "../Decorators";
-import {createLogger} from "../../Utils/Logger";
-import type {EventListenerConfig, TypeSafeEventSystem, EventHandler} from "../Core/EventSystem";
-import type {ComponentConstructor, ComponentInstance} from "../../Types/TypeHelpers";
-import type {IService} from "../../Core/ServiceContainer";
-import type {ComponentType} from "../Core/ComponentStorage";
+import { Entity } from '../Entity';
+import { PerformanceMonitor } from '../../Utils/PerformanceMonitor';
+import { Matcher, type QueryCondition } from '../Utils/Matcher';
+import type { Scene } from '../Scene';
+import type { ISystemBase } from '../../Types';
+import type { QuerySystem } from '../Core/QuerySystem';
+import { getSystemInstanceTypeName } from '../Decorators';
+import { createLogger } from '../../Utils/Logger';
+import type { EventListenerConfig, TypeSafeEventSystem, EventHandler } from '../Core/EventSystem';
+import type { ComponentConstructor, ComponentInstance } from '../../Types/TypeHelpers';
+import type { IService } from '../../Core/ServiceContainer';
+import type { ComponentType } from '../Core/ComponentStorage';
 
 /**
  * 事件监听器记录
@@ -699,7 +699,7 @@ export abstract class EntitySystem<
     public toString(): string {
         const entityCount = this.entities.length;
         const perfData = this.getPerformanceData();
-        const perfInfo = perfData ? ` (${perfData.executionTime.toFixed(2)}ms)` : "";
+        const perfInfo = perfData ? ` (${perfData.executionTime.toFixed(2)}ms)` : '';
 
         return `${this._systemName}[${entityCount} entities]${perfInfo}`;
     }
@@ -812,7 +812,7 @@ export abstract class EntitySystem<
             this._eventListeners.push({
                 eventSystem: this.scene.eventSystem,
                 eventType,
-                handler,
+                handler: handler as EventHandler,
                 listenerRef
             });
         }

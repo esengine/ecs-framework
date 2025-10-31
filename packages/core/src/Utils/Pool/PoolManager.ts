@@ -1,13 +1,13 @@
-import {IPoolable, PoolStats} from "./IPoolable";
-import {Pool} from "./Pool";
-import type {IService} from "../../Core/ServiceContainer";
+import { IPoolable, PoolStats } from './IPoolable';
+import { Pool } from './Pool';
+import type { IService } from '../../Core/ServiceContainer';
 
 /**
  * 池管理器
  * 统一管理所有对象池
  */
 export class PoolManager implements IService {
-    private pools = new Map<string, Pool<any>>();
+    private pools = new Map<string, Pool<IPoolable>>();
     private autoCompactInterval = 60000; // 60秒
     private lastCompactTime = 0;
 
@@ -30,7 +30,7 @@ export class PoolManager implements IService {
      * @returns 池实例
      */
     public getPool<T extends IPoolable>(name: string): Pool<T> | null {
-        return this.pools.get(name) || null;
+        return (this.pools.get(name) as Pool<T> | undefined) || null;
     }
 
     /**
@@ -173,18 +173,18 @@ export class PoolManager implements IService {
      * @returns 格式化字符串
      */
     public getStatsString(): string {
-        const lines: string[] = ["=== Pool Manager Statistics ===", ""];
+        const lines: string[] = ['=== Pool Manager Statistics ===', ''];
 
         if (this.pools.size === 0) {
-            lines.push("No pools registered");
-            return lines.join("\n");
+            lines.push('No pools registered');
+            return lines.join('\n');
         }
 
         const globalStats = this.getGlobalStats();
         lines.push(`Total Pools: ${this.pools.size}`);
         lines.push(`Global Hit Rate: ${(globalStats.hitRate * 100).toFixed(1)}%`);
         lines.push(`Global Memory Usage: ${(globalStats.estimatedMemoryUsage / 1024).toFixed(1)} KB`);
-        lines.push("");
+        lines.push('');
 
         for (const [name, pool] of this.pools) {
             const stats = pool.getStats();
@@ -192,10 +192,10 @@ export class PoolManager implements IService {
             lines.push(`  Size: ${stats.size}/${stats.maxSize}`);
             lines.push(`  Hit Rate: ${(stats.hitRate * 100).toFixed(1)}%`);
             lines.push(`  Memory: ${(stats.estimatedMemoryUsage / 1024).toFixed(1)} KB`);
-            lines.push("");
+            lines.push('');
         }
 
-        return lines.join("\n");
+        return lines.join('\n');
     }
 
     /**

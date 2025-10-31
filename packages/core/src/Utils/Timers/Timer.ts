@@ -1,5 +1,5 @@
-import {ITimer} from "./ITimer";
-import {Time} from "../Time";
+import { ITimer } from './ITimer';
+import { Time } from '../Time';
 
 /**
  * 私有类隐藏ITimer的实现

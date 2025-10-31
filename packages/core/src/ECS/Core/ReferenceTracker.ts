@@ -1,6 +1,6 @@
-import {Component} from "../Component";
-import type {Entity} from "../Entity";
-import type {IScene} from "../IScene";
+import { Component } from '../Component';
+import type { Entity } from '../Entity';
+import type { IScene } from '../IScene';
 
 /**
  * WeakRef 接口定义
@@ -40,14 +40,21 @@ interface IWeakRefConstructor {
 }
 
 /**
+ * 包含 WeakRef 的全局对象类型
+ */
+interface GlobalWithWeakRef {
+    WeakRef?: IWeakRefConstructor;
+}
+
+/**
  * WeakRef 实现
  *
  * 优先使用原生 WeakRef，不支持时降级到 Polyfill
  */
 const WeakRefImpl: IWeakRefConstructor = (
-    (typeof globalThis !== "undefined" && (globalThis as any).WeakRef) ||
-    (typeof global !== "undefined" && (global as any).WeakRef) ||
-    (typeof window !== "undefined" && (window as any).WeakRef) ||
+    (typeof globalThis !== 'undefined' && (globalThis as GlobalWithWeakRef).WeakRef) ||
+    (typeof global !== 'undefined' && (global as unknown as GlobalWithWeakRef).WeakRef) ||
+    (typeof window !== 'undefined' && (window as unknown as GlobalWithWeakRef).WeakRef) ||
     WeakRefPolyfill
 ) as IWeakRefConstructor;
 
@@ -174,6 +181,8 @@ export class ReferenceTracker {
         for (const record of validRecords) {
             const component = record.component.deref();
             if (component) {
+                // 使用 any 进行动态属性访问，因为无法静态验证所有可能的组件属性
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (component as any)[record.propertyKey] = null;
             }
         }
@@ -287,7 +296,7 @@ export class ReferenceTracker {
      * 获取调试信息
      */
     public getDebugInfo(): object {
-        const info: Record<string, any> = {};
+        const info: Record<string, unknown> = {};
 
         for (const [entityId, records] of this._references.entries()) {
             const validRecords = [];

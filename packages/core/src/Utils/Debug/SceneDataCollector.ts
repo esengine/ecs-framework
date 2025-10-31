@@ -1,5 +1,5 @@
-import {ISceneDebugData} from "../../Types";
-import {IScene} from "../../ECS/IScene";
+import { ISceneDebugData } from '../../Types';
+import { IScene } from '../../ECS/IScene';
 
 /**
  * 场景数据收集器
@@ -14,7 +14,7 @@ export class SceneDataCollector {
     public collectSceneData(scene?: IScene | null): ISceneDebugData {
         if (!scene) {
             return {
-                currentSceneName: "No Scene",
+                currentSceneName: 'No Scene',
                 isInitialized: false,
                 sceneRunTime: 0,
                 sceneEntityCount: 0,
@@ -31,7 +31,7 @@ export class SceneDataCollector {
         const entityProcessors = (scene as any).entityProcessors;
 
         return {
-            currentSceneName: (scene as any).name || "Unnamed Scene",
+            currentSceneName: (scene as any).name || 'Unnamed Scene',
             isInitialized: (scene as any)._didSceneBegin || false,
             sceneRunTime: runTime,
             sceneEntityCount: entityList?.buffer?.length || 0,

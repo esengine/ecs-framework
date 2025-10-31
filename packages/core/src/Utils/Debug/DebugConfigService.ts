@@ -1,6 +1,6 @@
-import {IECSDebugConfig} from "../../Types";
-import {Injectable} from "../../Core/DI/Decorators";
-import type {IService} from "../../Core/ServiceContainer";
+import { IECSDebugConfig } from '../../Types';
+import { Injectable } from '../../Core/DI/Decorators';
+import type { IService } from '../../Core/ServiceContainer';
 
 /**
  * 调试配置服务
@@ -14,7 +14,7 @@ export class DebugConfigService implements IService {
     constructor() {
         this._config = {
             enabled: false,
-            websocketUrl: "",
+            websocketUrl: '',
             debugFrameRate: 30,
             autoReconnect: true,
             channels: {

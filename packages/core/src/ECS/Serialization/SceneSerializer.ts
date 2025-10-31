@@ -4,23 +4,23 @@
  * 负责整个场景的序列化和反序列化，包括实体、组件等
  */
 
-import type {IScene} from "../IScene";
-import {Entity} from "../Entity";
-import {ComponentType, ComponentRegistry} from "../Core/ComponentStorage";
-import {EntitySerializer, SerializedEntity} from "./EntitySerializer";
-import {getComponentTypeName} from "../Decorators";
-import {getSerializationMetadata} from "./SerializationDecorators";
-import {BinarySerializer} from "../../Utils/BinarySerializer";
+import type { IScene } from '../IScene';
+import { Entity } from '../Entity';
+import { ComponentType, ComponentRegistry } from '../Core/ComponentStorage';
+import { EntitySerializer, SerializedEntity } from './EntitySerializer';
+import { getComponentTypeName } from '../Decorators';
+import { getSerializationMetadata } from './SerializationDecorators';
+import { BinarySerializer } from '../../Utils/BinarySerializer';
 
 /**
  * 场景序列化格式
  */
-export type SerializationFormat = "json" | "binary";
+export type SerializationFormat = 'json' | 'binary';
 
 /**
  * 场景序列化策略
  */
-export type DeserializationStrategy = "merge" | "replace";
+export type DeserializationStrategy = 'merge' | 'replace';
 
 /**
  * 版本迁移函数
@@ -158,7 +158,7 @@ export class SceneSerializer {
     public static serialize(scene: IScene, options?: SceneSerializationOptions): string | Uint8Array {
         const opts: SceneSerializationOptions = {
             systems: false,
-            format: "json",
+            format: 'json',
             pretty: true,
             includeMetadata: true,
             ...options
@@ -199,7 +199,7 @@ export class SceneSerializer {
             };
         }
 
-        if (opts.format === "json") {
+        if (opts.format === 'json') {
             return opts.pretty
                 ? JSON.stringify(serializedScene, null, 2)
                 : JSON.stringify(serializedScene);
@@ -221,14 +221,14 @@ export class SceneSerializer {
         options?: SceneDeserializationOptions
     ): void {
         const opts: SceneDeserializationOptions = {
-            strategy: "replace",
+            strategy: 'replace',
             preserveIds: false,
             ...options
         };
 
         let serializedScene: SerializedScene;
         try {
-            if (typeof saveData === "string") {
+            if (typeof saveData === 'string') {
                 serializedScene = JSON.parse(saveData);
             } else {
                 serializedScene = BinarySerializer.decode(saveData) as SerializedScene;
@@ -250,7 +250,7 @@ export class SceneSerializer {
         const componentRegistry = opts.componentRegistry || this.getGlobalComponentRegistry();
 
         // 根据策略处理场景
-        if (opts.strategy === "replace") {
+        if (opts.strategy === 'replace') {
             // 清空场景
             scene.destroyAllEntities();
         }
@@ -342,23 +342,23 @@ export class SceneSerializer {
 
         // 基本类型
         const type = typeof value;
-        if (type === "string" || type === "number" || type === "boolean") {
+        if (type === 'string' || type === 'number' || type === 'boolean') {
             return value;
         }
 
         // Date
         if (value instanceof Date) {
-            return {__type: "Date", value: value.toISOString()};
+            return { __type: 'Date', value: value.toISOString() };
         }
 
         // Map
         if (value instanceof Map) {
-            return {__type: "Map", value: Array.from(value.entries())};
+            return { __type: 'Map', value: Array.from(value.entries()) };
         }
 
         // Set
         if (value instanceof Set) {
-            return {__type: "Set", value: Array.from(value)};
+            return { __type: 'Set', value: Array.from(value) };
         }
 
         // 数组
@@ -367,7 +367,7 @@ export class SceneSerializer {
         }
 
         // 普通对象
-        if (type === "object") {
+        if (type === 'object') {
             const result: Record<string, any> = {};
             for (const key in value) {
                 if (Object.prototype.hasOwnProperty.call(value, key)) {
@@ -391,18 +391,18 @@ export class SceneSerializer {
 
         // 基本类型
         const type = typeof value;
-        if (type === "string" || type === "number" || type === "boolean") {
+        if (type === 'string' || type === 'number' || type === 'boolean') {
             return value;
         }
 
         // 处理特殊类型标记
-        if (type === "object" && value.__type) {
+        if (type === 'object' && value.__type) {
             switch (value.__type) {
-                case "Date":
+                case 'Date':
                     return new Date(value.value);
-                case "Map":
+                case 'Map':
                     return new Map(value.value);
-                case "Set":
+                case 'Set':
                     return new Set(value.value);
             }
         }
@@ -413,7 +413,7 @@ export class SceneSerializer {
         }
 
         // 普通对象
-        if (type === "object") {
+        if (type === 'object') {
             const result: Record<string, any> = {};
             for (const key in value) {
                 if (Object.prototype.hasOwnProperty.call(value, key)) {
@@ -499,21 +499,21 @@ export class SceneSerializer {
             const data = JSON.parse(saveData);
 
             if (!data.version) {
-                errors.push("Missing version field");
+                errors.push('Missing version field');
             }
 
             if (!data.entities || !Array.isArray(data.entities)) {
-                errors.push("Missing or invalid entities field");
+                errors.push('Missing or invalid entities field');
             }
 
             if (!data.componentTypeRegistry || !Array.isArray(data.componentTypeRegistry)) {
-                errors.push("Missing or invalid componentTypeRegistry field");
+                errors.push('Missing or invalid componentTypeRegistry field');
             }
 
             return {
                 valid: errors.length === 0,
                 version: data.version,
-                ...(errors.length > 0 && {errors})
+                ...(errors.length > 0 && { errors })
             };
         } catch (error) {
             return {
@@ -542,7 +542,7 @@ export class SceneSerializer {
             return {
                 name: data.name,
                 version: data.version,
-                ...(data.timestamp !== undefined && {timestamp: data.timestamp}),
+                ...(data.timestamp !== undefined && { timestamp: data.timestamp }),
                 entityCount: data.metadata?.entityCount || data.entities.length,
                 componentTypeCount: data.componentTypeRegistry.length
             };

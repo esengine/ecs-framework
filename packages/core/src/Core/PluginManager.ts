@@ -1,10 +1,10 @@
-import {IPlugin, IPluginMetadata, PluginState} from "./Plugin";
-import type {IService} from "./ServiceContainer";
-import type {Core} from "../Core";
-import type {ServiceContainer} from "./ServiceContainer";
-import {createLogger} from "../Utils/Logger";
+import { IPlugin, IPluginMetadata, PluginState } from './Plugin';
+import type { IService } from './ServiceContainer';
+import type { Core } from '../Core';
+import type { ServiceContainer } from './ServiceContainer';
+import { createLogger } from '../Utils/Logger';
 
-const logger = createLogger("PluginManager");
+const logger = createLogger('PluginManager');
 
 /**
  * 插件管理器
@@ -57,7 +57,7 @@ export class PluginManager implements IService {
     public initialize(core: Core, services: ServiceContainer): void {
         this._core = core;
         this._services = services;
-        logger.info("PluginManager initialized");
+        logger.info('PluginManager initialized');
     }
 
     /**
@@ -70,7 +70,7 @@ export class PluginManager implements IService {
      */
     public async install(plugin: IPlugin): Promise<void> {
         if (!this._core || !this._services) {
-            throw new Error("PluginManager not initialized. Call initialize() first.");
+            throw new Error('PluginManager not initialized. Call initialize() first.');
         }
 
         // 检查是否已安装
@@ -213,7 +213,7 @@ export class PluginManager implements IService {
 
         if (missingDeps.length > 0) {
             throw new Error(
-                `Plugin ${plugin.name} has unmet dependencies: ${missingDeps.join(", ")}`
+                `Plugin ${plugin.name} has unmet dependencies: ${missingDeps.join(', ')}`
             );
         }
     }
@@ -235,7 +235,7 @@ export class PluginManager implements IService {
 
         if (dependents.length > 0) {
             throw new Error(
-                `Cannot uninstall plugin ${name}: it is required by ${dependents.join(", ")}`
+                `Cannot uninstall plugin ${name}: it is required by ${dependents.join(', ')}`
             );
         }
     }
@@ -261,6 +261,6 @@ export class PluginManager implements IService {
         this._core = null;
         this._services = null;
 
-        logger.info("PluginManager disposed");
+        logger.info('PluginManager disposed');
     }
 }

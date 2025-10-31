@@ -1,7 +1,7 @@
-import {Entity} from "../../Entity";
-import {Scene} from "../../Scene";
-import {EntitySystem} from "../../Systems/EntitySystem";
-import {EntityBuilder} from "./EntityBuilder";
+import { Entity } from '../../Entity';
+import { Scene } from '../../Scene';
+import { EntitySystem } from '../../Systems/EntitySystem';
+import { EntityBuilder } from './EntityBuilder';
 
 /**
  * 场景构建器 - 提供流式API创建和配置场景

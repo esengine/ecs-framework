@@ -1,4 +1,4 @@
-import type {LogLevel} from "./Constants";
+import type { LogLevel } from './Constants';
 
 /**
  * 日志接口
