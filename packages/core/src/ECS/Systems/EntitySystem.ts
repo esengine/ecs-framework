@@ -1,14 +1,15 @@
-import { Entity } from '../Entity';
-import { PerformanceMonitor } from '../../Utils/PerformanceMonitor';
-import { Matcher, type QueryCondition } from '../Utils/Matcher';
-import type { Scene } from '../Scene';
-import type { ISystemBase } from '../../Types';
-import type { QuerySystem } from '../Core/QuerySystem';
-import { getSystemInstanceTypeName } from '../Decorators';
-import { createLogger } from '../../Utils/Logger';
-import type { EventListenerConfig, TypeSafeEventSystem, EventHandler } from '../Core/EventSystem';
-import type { ComponentConstructor, ComponentInstance } from '../../Types/TypeHelpers';
-import type { IService } from '../../Core/ServiceContainer';
+import {Entity} from "../Entity";
+import {PerformanceMonitor} from "../../Utils/PerformanceMonitor";
+import {Matcher, type QueryCondition} from "../Utils/Matcher";
+import type {Scene} from "../Scene";
+import type {ISystemBase} from "../../Types";
+import type {QuerySystem} from "../Core/QuerySystem";
+import {getSystemInstanceTypeName} from "../Decorators";
+import {createLogger} from "../../Utils/Logger";
+import type {EventListenerConfig, TypeSafeEventSystem, EventHandler} from "../Core/EventSystem";
+import type {ComponentConstructor, ComponentInstance} from "../../Types/TypeHelpers";
+import type {IService} from "../../Core/ServiceContainer";
+import type {ComponentType} from "../Core/ComponentStorage";
 
 /**
  * 事件监听器记录
@@ -251,7 +252,7 @@ export abstract class EntitySystem<
 
     /**
      * 系统初始化回调
-     * 
+     *
      * 子类可以重写此方法进行初始化操作。
      */
     protected onInitialize(): void {
@@ -259,8 +260,11 @@ export abstract class EntitySystem<
     }
 
     /**
-     * 清除实体缓存（内部使用）
-     * 当Scene中的实体发生变化时调用
+     * 清除实体缓存
+     *
+     * 当 Scene 中的实体发生变化时调用，使系统的实体缓存失效。
+     *
+     * @internal 框架内部使用，不应在外部代码中直接调用
      */
     public clearEntityCache(): void {
         this._entityCache.invalidate();
@@ -299,7 +303,7 @@ export abstract class EntitySystem<
 
         // 空条件返回所有实体
         if (this._matcher.isEmpty()) {
-            currentEntities = querySystem.getAllEntities();
+            currentEntities = querySystem.queryAllEntities();
         } else if (this.isSingleCondition(condition)) {
             // 单一条件优化查询
             currentEntities = this.executeSingleConditionQuery(condition, querySystem);
@@ -403,7 +407,7 @@ export abstract class EntitySystem<
         // 6. 应用none条件 (差集)
         if (condition.none.length > 0) {
             if (!resultIds) {
-                resultIds = this.extractEntityIds(querySystem.getAllEntities());
+                resultIds = this.extractEntityIds(querySystem.queryAllEntities());
             }
 
             const noneResult = querySystem.queryAny(...condition.none);
@@ -411,16 +415,23 @@ export abstract class EntitySystem<
             resultIds = this.differenceIdSets(resultIds, noneIds);
         }
 
-        return resultIds ? this.idSetToEntityArray(resultIds, querySystem.getAllEntities()) : [];
+        return resultIds ? this.idSetToEntityArray(resultIds, querySystem.queryAllEntities()) : [];
     }
 
     /**
      * 提取实体ID集合
+     *
+     * 使用位运算 | 0 强制转换为 32 位整数，帮助 JavaScript 引擎的 JIT 编译器
+     * 进行整数优化，在大规模实体集合操作时可以提供微小的性能提升。
+     *
+     * @param entities 实体数组
+     * @returns 包含所有实体ID的集合
      */
     private extractEntityIds(entities: readonly Entity[]): Set<number> {
         const len = entities.length;
         const idSet = new Set<number>();
 
+        // 使用位运算 | 0 进行整数优化（JIT 友好）
         for (let i = 0; i < len; i = (i + 1) | 0) {
             idSet.add(entities[i]!.id | 0);
         }
@@ -482,6 +493,12 @@ export abstract class EntitySystem<
 
     /**
      * 重建实体ID映射
+     *
+     * 重新构建从实体ID到实体引用的映射表。使用位运算优化性能。
+     *
+     * @param allEntities 所有实体的数组
+     * @param version QuerySystem 的版本号，用于缓存失效判断
+     * @returns 重建后的实体ID映射表
      */
     private rebuildEntityIdMap(allEntities: readonly Entity[], version: number): Map<number, Entity> {
         let entityMap = this._entityIdMap;
@@ -493,6 +510,7 @@ export abstract class EntitySystem<
         }
 
         const len = allEntities.length;
+        // 使用位运算 | 0 进行整数优化（JIT 友好）
         for (let i = 0; i < len; i = (i + 1) | 0) {
             const entity = allEntities[i]!;
             entityMap.set(entity.id | 0, entity);
@@ -506,6 +524,12 @@ export abstract class EntitySystem<
 
     /**
      * 从ID集合构建Entity数组
+     *
+     * 将实体ID集合转换为实体引用数组。跳过无效的实体ID（已被删除的实体）。
+     *
+     * @param idSet 实体ID集合
+     * @param allEntities 所有实体的数组（用于构建映射表）
+     * @returns 实体引用数组
      */
     private idSetToEntityArray(idSet: Set<number>, allEntities: readonly Entity[]): readonly Entity[] {
         const entityMap = this.getEntityIdMap(allEntities);
@@ -518,10 +542,12 @@ export abstract class EntitySystem<
             const entity = entityMap.get(id);
             if (entity !== undefined) {
                 result[index] = entity;
+                // 使用位运算 | 0 进行整数优化（JIT 友好）
                 index = (index + 1) | 0;
             }
         }
 
+        // 如果有无效ID，调整数组长度
         if (index < size) {
             result.length = index;
         }
@@ -531,7 +557,7 @@ export abstract class EntitySystem<
 
     /**
      * 执行复合查询
-     * 
+     *
      * 使用基于ID集合的单次扫描算法进行复杂查询
      */
     private executeComplexQuery(condition: QueryCondition, querySystem: QuerySystem): readonly Entity[] {
@@ -590,7 +616,7 @@ export abstract class EntitySystem<
 
     /**
      * 在系统处理开始前调用
-     * 
+     *
      * 子类可以重写此方法进行预处理操作。
      */
     protected onBegin(): void {
@@ -599,9 +625,9 @@ export abstract class EntitySystem<
 
     /**
      * 处理实体列表
-     * 
+     *
      * 系统的核心逻辑，子类必须实现此方法来定义具体的处理逻辑。
-     * 
+     *
      * @param entities 要处理的实体列表
      */
     protected process(_entities: readonly Entity[]): void {
@@ -610,9 +636,9 @@ export abstract class EntitySystem<
 
     /**
      * 后期处理实体列表
-     * 
+     *
      * 在主要处理逻辑之后执行，子类可以重写此方法。
-     * 
+     *
      * @param entities 要处理的实体列表
      */
     protected lateProcess(_entities: readonly Entity[]): void {
@@ -621,7 +647,7 @@ export abstract class EntitySystem<
 
     /**
      * 系统处理完毕后调用
-     * 
+     *
      * 子类可以重写此方法进行后处理操作。
      */
     protected onEnd(): void {
@@ -630,10 +656,10 @@ export abstract class EntitySystem<
 
     /**
      * 检查系统是否需要处理
-     * 
+     *
      * 在启用系统时有用，但仅偶尔需要处理。
      * 这只影响处理，不影响事件或订阅列表。
-     * 
+     *
      * @returns 如果系统应该处理，则为true，如果不处理则为false
      */
     protected onCheckProcessing(): boolean {
@@ -667,13 +693,13 @@ export abstract class EntitySystem<
 
     /**
      * 获取系统信息的字符串表示
-     * 
+     *
      * @returns 系统信息字符串
      */
     public toString(): string {
         const entityCount = this.entities.length;
         const perfData = this.getPerformanceData();
-        const perfInfo = perfData ? ` (${perfData.executionTime.toFixed(2)}ms)` : '';
+        const perfInfo = perfData ? ` (${perfData.executionTime.toFixed(2)}ms)` : "";
 
         return `${this._systemName}[${entityCount} entities]${perfInfo}`;
     }
@@ -711,9 +737,9 @@ export abstract class EntitySystem<
 
     /**
      * 当实体被添加到系统时调用
-     * 
+     *
      * 子类可以重写此方法来处理实体添加事件。
-     * 
+     *
      * @param entity 被添加的实体
      */
     protected onAdded(_entity: Entity): void {
@@ -803,7 +829,7 @@ export abstract class EntitySystem<
         handler: EventHandler<T>
     ): void {
         const listenerIndex = this._eventListeners.findIndex(
-            listener => listener.eventType === eventType && listener.handler === handler
+            (listener) => listener.eventType === eventType && listener.handler === handler
         );
 
         if (listenerIndex >= 0) {
@@ -891,7 +917,7 @@ export abstract class EntitySystem<
         entity: Entity,
         componentType: T
     ): ComponentInstance<T> {
-        const component = entity.getComponent(componentType as any);
+        const component = entity.getComponent(componentType as ComponentType);
         if (!component) {
             throw new Error(
                 `Component ${componentType.name} not found on entity ${entity.name} in ${this.systemName}`
@@ -929,7 +955,7 @@ export abstract class EntitySystem<
     ): { [K in keyof T]: ComponentInstance<T[K]> } {
         return components.map((type) =>
             this.requireComponent(entity, type)
-        ) as any;
+        ) as { [K in keyof T]: ComponentInstance<T[K]> };
     }
 
     /**

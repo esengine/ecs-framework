@@ -1,20 +1,20 @@
-import { Component } from './Component';
-import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
-import { EventBus } from './Core/EventBus';
-import { BitMask64Utils, BitMask64Data } from './Utils/BigIntCompatibility';
-import { createLogger } from '../Utils/Logger';
-import { getComponentInstanceTypeName, getComponentTypeName } from './Decorators';
-import type { IScene } from './IScene';
+import {Component} from "./Component";
+import {ComponentRegistry, ComponentType} from "./Core/ComponentStorage";
+import {EventBus} from "./Core/EventBus";
+import {BitMask64Utils, BitMask64Data} from "./Utils/BigIntCompatibility";
+import {createLogger} from "../Utils/Logger";
+import {getComponentInstanceTypeName, getComponentTypeName} from "./Decorators";
+import type {IScene} from "./IScene";
 
 /**
  * 实体比较器
- * 
+ *
  * 用于比较两个实体的优先级，首先按更新顺序比较，然后按ID比较。
  */
 export class EntityComparer {
     /**
      * 比较两个实体
-     * 
+     *
      * @param self - 第一个实体
      * @param other - 第二个实体
      * @returns 比较结果，负数表示self优先级更高，正数表示other优先级更高，0表示相等
@@ -28,28 +28,27 @@ export class EntityComparer {
 }
 
 
-
 /**
  * 游戏实体类
- * 
+ *
  * ECS架构中的实体（Entity），作为组件的容器。
  * 实体本身不包含游戏逻辑，所有功能都通过组件来实现。
  * 支持父子关系，可以构建实体层次结构。
- * 
+ *
  * @example
  * ```typescript
  * // 创建实体
  * const entity = new Entity("Player", 1);
- * 
+ *
  * // 添加组件
  * const healthComponent = entity.addComponent(new HealthComponent(100));
- * 
+ *
  * // 获取组件
  * const health = entity.getComponent(HealthComponent);
- * 
+ *
  * // 添加位置组件
  * entity.addComponent(new PositionComponent(100, 200));
- * 
+ *
  * // 添加子实体
  * const weapon = new Entity("Weapon", 2);
  * entity.addChild(weapon);
@@ -59,13 +58,13 @@ export class Entity {
     /**
      * Entity专用日志器
      */
-    private static _logger = createLogger('Entity');
-    
+    private static _logger = createLogger("Entity");
+
     /**
      * 实体比较器实例
      */
     public static entityComparer: EntityComparer = new EntityComparer();
-    
+
     /**
      * 全局事件总线实例
      * 用于发射组件相关事件
@@ -84,17 +83,17 @@ export class Entity {
             entity.scene.clearSystemEntityCaches();
         }
     }
-    
+
     /**
      * 实体名称
      */
     public name: string;
-    
+
     /**
      * 实体唯一标识符
      */
     public readonly id: number;
-    
+
     /**
      * 所属场景引用
      */
@@ -103,7 +102,16 @@ export class Entity {
     /**
      * 销毁状态标志
      */
-    public _isDestroyed: boolean = false;
+    private _destroyed: boolean = false;
+
+    /**
+     * 设置销毁状态（仅供框架内部使用）
+     *
+     * @internal 此方法仅用于批量销毁优化，不应在外部调用
+     */
+    public setDestroyed(value: boolean): void {
+        this._destroyed = value;
+    }
 
     /**
      * 父实体引用
@@ -161,7 +169,7 @@ export class Entity {
      * @returns 如果实体已被销毁则返回true
      */
     public get isDestroyed(): boolean {
-        return this._isDestroyed;
+        return this._destroyed;
     }
 
     /**
@@ -218,7 +226,7 @@ export class Entity {
 
     /**
      * 获取子实体数组的只读副本
-     * 
+     *
      * @returns 子实体数组的副本
      */
     public get children(): readonly Entity[] {
@@ -227,7 +235,7 @@ export class Entity {
 
     /**
      * 获取子实体数量
-     * 
+     *
      * @returns 子实体的数量
      */
     public get childCount(): number {
@@ -236,7 +244,7 @@ export class Entity {
 
     /**
      * 获取活跃状态
-     * 
+     *
      * @returns 如果实体处于活跃状态则返回true
      */
     public get active(): boolean {
@@ -245,9 +253,9 @@ export class Entity {
 
     /**
      * 设置活跃状态
-     * 
+     *
      * 设置实体的活跃状态，会影响子实体的有效活跃状态。
-     * 
+     *
      * @param value - 新的活跃状态
      */
     public set active(value: boolean) {
@@ -259,9 +267,9 @@ export class Entity {
 
     /**
      * 获取实体的有效活跃状态
-     * 
+     *
      * 考虑父实体的活跃状态，只有当实体本身和所有父实体都处于活跃状态时才返回true。
-     * 
+     *
      * @returns 有效的活跃状态
      */
     public get activeInHierarchy(): boolean {
@@ -272,7 +280,7 @@ export class Entity {
 
     /**
      * 获取实体标签
-     * 
+     *
      * @returns 实体的数字标签
      */
     public get tag(): number {
@@ -281,7 +289,7 @@ export class Entity {
 
     /**
      * 设置实体标签
-     * 
+     *
      * @param value - 新的标签值
      */
     public set tag(value: number) {
@@ -290,7 +298,7 @@ export class Entity {
 
     /**
      * 获取启用状态
-     * 
+     *
      * @returns 如果实体已启用则返回true
      */
     public get enabled(): boolean {
@@ -299,7 +307,7 @@ export class Entity {
 
     /**
      * 设置启用状态
-     * 
+     *
      * @param value - 新的启用状态
      */
     public set enabled(value: boolean) {
@@ -308,7 +316,7 @@ export class Entity {
 
     /**
      * 获取更新顺序
-     * 
+     *
      * @returns 实体的更新顺序值
      */
     public get updateOrder(): number {
@@ -317,7 +325,7 @@ export class Entity {
 
     /**
      * 设置更新顺序
-     * 
+     *
      * @param value - 新的更新顺序值
      */
     public set updateOrder(value: number) {
@@ -326,7 +334,7 @@ export class Entity {
 
     /**
      * 获取组件位掩码
-     * 
+     *
      * @returns 实体的组件位掩码
      */
     public get componentMask(): BitMask64Data {
@@ -394,11 +402,11 @@ export class Entity {
         const componentType = component.constructor as ComponentType<T>;
 
         if (!this.scene) {
-            throw new Error(`Entity must be added to Scene before adding components. Use scene.createEntity() instead of new Entity()`);
+            throw new Error("Entity must be added to Scene before adding components. Use scene.createEntity() instead of new Entity()");
         }
 
         if (!this.scene.componentStorageManager) {
-            throw new Error(`Scene does not have componentStorageManager`);
+            throw new Error("Scene does not have componentStorageManager");
         }
 
         if (this.hasComponent(componentType)) {
@@ -418,7 +426,7 @@ export class Entity {
         if (Entity.eventBus) {
             Entity.eventBus.emitComponentAdded({
                 timestamp: Date.now(),
-                source: 'Entity',
+                source: "Entity",
                 entityId: this.id,
                 entityName: this.name,
                 entityTag: this.tag?.toString(),
@@ -465,8 +473,6 @@ export class Entity {
     }
 
 
-
-
     /**
      * 检查实体是否拥有指定类型的组件
      *
@@ -485,7 +491,7 @@ export class Entity {
         if (!ComponentRegistry.isRegistered(type)) {
             return false;
         }
-        
+
         const mask = ComponentRegistry.getBitMask(type);
         return BitMask64Utils.hasAny(this._componentMask, mask);
     }
@@ -555,7 +561,7 @@ export class Entity {
         if (Entity.eventBus) {
             Entity.eventBus.emitComponentRemoved({
                 timestamp: Date.now(),
-                source: 'Entity',
+                source: "Entity",
                 entityId: this.id,
                 entityName: this.name,
                 entityTag: this.tag?.toString(),
@@ -570,7 +576,7 @@ export class Entity {
 
     /**
      * 移除指定类型的组件
-     * 
+     *
      * @param type - 组件类型
      * @returns 被移除的组件实例或null
      */
@@ -611,13 +617,13 @@ export class Entity {
 
     /**
      * 批量添加组件
-     * 
+     *
      * @param components - 要添加的组件数组
      * @returns 添加的组件数组
      */
     public addComponents<T extends Component>(components: T[]): T[] {
         const addedComponents: T[] = [];
-        
+
         for (const component of components) {
             try {
                 addedComponents.push(this.addComponent(component));
@@ -625,26 +631,25 @@ export class Entity {
                 Entity._logger.warn(`添加组件失败 ${getComponentInstanceTypeName(component)}:`, error);
             }
         }
-        
+
         return addedComponents;
     }
 
     /**
      * 批量移除组件类型
-     * 
+     *
      * @param componentTypes - 要移除的组件类型数组
      * @returns 被移除的组件数组
      */
     public removeComponentsByTypes<T extends Component>(componentTypes: ComponentType<T>[]): (T | null)[] {
         const removedComponents: (T | null)[] = [];
-        
+
         for (const componentType of componentTypes) {
             removedComponents.push(this.removeComponentByType(componentType));
         }
-        
+
         return removedComponents;
     }
-
 
 
     /**
@@ -694,7 +699,7 @@ export class Entity {
 
     /**
      * 添加子实体
-     * 
+     *
      * @param child - 要添加的子实体
      * @returns 添加的子实体
      */
@@ -724,7 +729,7 @@ export class Entity {
 
     /**
      * 移除子实体
-     * 
+     *
      * @param child - 要移除的子实体
      * @returns 是否成功移除
      */
@@ -745,7 +750,7 @@ export class Entity {
      */
     public removeAllChildren(): void {
         const childrenToRemove = [...this._children];
-        
+
         for (const child of childrenToRemove) {
             this.removeChild(child);
         }
@@ -753,7 +758,7 @@ export class Entity {
 
     /**
      * 根据名称查找子实体
-     * 
+     *
      * @param name - 子实体名称
      * @param recursive - 是否递归查找
      * @returns 找到的子实体或null
@@ -779,7 +784,7 @@ export class Entity {
 
     /**
      * 根据标签查找子实体
-     * 
+     *
      * @param tag - 标签
      * @param recursive - 是否递归查找
      * @returns 找到的子实体数组
@@ -804,7 +809,7 @@ export class Entity {
 
     /**
      * 获取根实体
-     * 
+     *
      * @returns 层次结构的根实体
      */
     public getRoot(): Entity {
@@ -817,7 +822,7 @@ export class Entity {
 
     /**
      * 检查是否是指定实体的祖先
-     * 
+     *
      * @param entity - 要检查的实体
      * @returns 如果是祖先则返回true
      */
@@ -834,7 +839,7 @@ export class Entity {
 
     /**
      * 检查是否是指定实体的后代
-     * 
+     *
      * @param entity - 要检查的实体
      * @returns 如果是后代则返回true
      */
@@ -844,7 +849,7 @@ export class Entity {
 
     /**
      * 获取层次深度
-     * 
+     *
      * @returns 在层次结构中的深度（根实体为0）
      */
     public getDepth(): number {
@@ -859,7 +864,7 @@ export class Entity {
 
     /**
      * 遍历所有子实体（深度优先）
-     * 
+     *
      * @param callback - 对每个子实体执行的回调函数
      * @param recursive - 是否递归遍历
      */
@@ -877,14 +882,14 @@ export class Entity {
      */
     private onActiveChanged(): void {
         for (const component of this.components) {
-            if ('onActiveChanged' in component && typeof component.onActiveChanged === 'function') {
+            if ("onActiveChanged" in component && typeof component.onActiveChanged === "function") {
                 (component as any).onActiveChanged();
             }
         }
 
         if (this.scene && this.scene.eventSystem) {
-            this.scene.eventSystem.emitSync('entity:activeChanged', { 
-                entity: this, 
+            this.scene.eventSystem.emitSync("entity:activeChanged", {
+                entity: this,
                 active: this._active,
                 activeInHierarchy: this.activeInHierarchy
             });
@@ -898,11 +903,11 @@ export class Entity {
      * 移除所有组件、子实体并标记为已销毁
      */
     public destroy(): void {
-        if (this._isDestroyed) {
+        if (this._destroyed) {
             return;
         }
 
-        this._isDestroyed = true;
+        this._destroyed = true;
 
         if (this.scene && this.scene.referenceTracker) {
             this.scene.referenceTracker.clearReferencesTo(this.id);
@@ -949,7 +954,7 @@ export class Entity {
         collectChildren(this);
 
         for (const entity of toDestroy) {
-            entity._isDestroyed = true;
+            entity.setDestroyed(true);
         }
 
         for (const entity of toDestroy) {
@@ -970,7 +975,7 @@ export class Entity {
 
     /**
      * 比较实体
-     * 
+     *
      * @param other - 另一个实体
      * @returns 比较结果
      */
@@ -980,7 +985,7 @@ export class Entity {
 
     /**
      * 获取实体的字符串表示
-     * 
+     *
      * @returns 实体的字符串描述
      */
     public toString(): string {
@@ -989,7 +994,7 @@ export class Entity {
 
     /**
      * 获取实体的调试信息（包含组件缓存信息）
-     * 
+     *
      * @returns 包含实体详细信息的对象
      */
     public getDebugInfo(): {
@@ -1007,20 +1012,20 @@ export class Entity {
         childIds: number[];
         depth: number;
         cacheBuilt: boolean;
-    } {
+        } {
         return {
             name: this.name,
             id: this.id,
             enabled: this._enabled,
             active: this._active,
             activeInHierarchy: this.activeInHierarchy,
-            destroyed: this._isDestroyed,
+            destroyed: this._destroyed,
             componentCount: this.components.length,
-            componentTypes: this.components.map(c => getComponentInstanceTypeName(c)),
+            componentTypes: this.components.map((c) => getComponentInstanceTypeName(c)),
             componentMask: BitMask64Utils.toString(this._componentMask, 2), // 二进制表示
             parentId: this._parent?.id || null,
             childCount: this._children.length,
-            childIds: this._children.map(c => c.id),
+            childIds: this._children.map((c) => c.id),
             depth: this.getDepth(),
             cacheBuilt: this._componentCache !== null
         };

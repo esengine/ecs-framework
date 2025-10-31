@@ -64,12 +64,12 @@ export interface WorkerCreationOptions {
     /**
      * Worker类型
      */
-    type?: 'classic' | 'module';
+    type?: "classic" | "module";
 
     /**
      * 凭据模式
      */
-    credentials?: 'omit' | 'same-origin' | 'include';
+    credentials?: "omit" | "same-origin" | "include";
 
     /**
      * Worker名称（用于调试）
@@ -104,7 +104,7 @@ export interface PlatformWorker {
     /**
      * Worker状态
      */
-    readonly state: 'running' | 'terminated';
+    readonly state: "running" | "terminated";
 }
 
 /**
@@ -179,7 +179,7 @@ export interface PlatformDetectionResult {
     /**
      * 平台类型
      */
-    platform: 'browser' | 'wechat-minigame' | 'bytedance-minigame' | 'alipay-minigame' | 'baidu-minigame' | 'nodejs' | 'unknown';
+    platform: "browser" | "wechat-minigame" | "bytedance-minigame" | "alipay-minigame" | "baidu-minigame" | "nodejs" | "unknown";
 
     /**
      * 是否确定检测结果

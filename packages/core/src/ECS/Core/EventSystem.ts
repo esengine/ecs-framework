@@ -1,4 +1,4 @@
-import { createLogger } from '../../Utils/Logger';
+import {createLogger} from "../../Utils/Logger";
 
 /**
  * 事件处理器函数类型
@@ -68,7 +68,7 @@ export interface EventBatchConfig {
  * 支持同步/异步事件、优先级、批处理等功能
  */
 export class TypeSafeEventSystem {
-    private static readonly _logger = createLogger('EventSystem');
+    private static readonly _logger = createLogger("EventSystem");
     private listeners = new Map<string, InternalEventListener[]>();
     private stats = new Map<string, EventStats>();
     private batchQueue = new Map<string, any[]>();
@@ -105,7 +105,7 @@ export class TypeSafeEventSystem {
         handler: EventHandler<T>,
         config: EventListenerConfig = {}
     ): string {
-        return this.addListener(eventType, handler, { ...config, once: true });
+        return this.addListener(eventType, handler, {...config, once: true});
     }
 
     /**
@@ -120,7 +120,7 @@ export class TypeSafeEventSystem {
         handler: AsyncEventHandler<T>,
         config: EventListenerConfig = {}
     ): string {
-        return this.addListener(eventType, handler, { ...config, async: true });
+        return this.addListener(eventType, handler, {...config, async: true});
     }
 
     /**
@@ -133,7 +133,7 @@ export class TypeSafeEventSystem {
         const listeners = this.listeners.get(eventType);
         if (!listeners) return false;
 
-        const index = listeners.findIndex(l => l.id === listenerId);
+        const index = listeners.findIndex((l) => l.id === listenerId);
         if (index === -1) return false;
 
         listeners.splice(index, 1);
@@ -340,7 +340,7 @@ export class TypeSafeEventSystem {
         // 检查监听器数量限制
         if (listeners.length >= this.maxListeners) {
             TypeSafeEventSystem._logger.warn(`事件类型 ${eventType} 的监听器数量超过最大限制 (${this.maxListeners})`);
-            return '';
+            return "";
         }
 
         const listenerId = `listener_${this.nextListenerId++}`;
@@ -379,8 +379,8 @@ export class TypeSafeEventSystem {
         const sortedListeners = this.sortListenersByPriority(listeners);
 
         // 分离同步和异步监听器
-        const syncListeners = sortedListeners.filter(l => !l.config.async);
-        const asyncListeners = sortedListeners.filter(l => l.config.async);
+        const syncListeners = sortedListeners.filter((l) => !l.config.async);
+        const asyncListeners = sortedListeners.filter((l) => l.config.async);
 
         // 执行同步监听器
         for (const listener of syncListeners) {
@@ -447,7 +447,7 @@ export class TypeSafeEventSystem {
         if (!listeners) return;
 
         for (const id of listenerIds) {
-            const index = listeners.findIndex(l => l.id === id);
+            const index = listeners.findIndex((l) => l.id === id);
             if (index !== -1) {
                 listeners.splice(index, 1);
             }
@@ -578,4 +578,3 @@ export class TypeSafeEventSystem {
  */
 export const GlobalEventSystem = new TypeSafeEventSystem();
 
- 

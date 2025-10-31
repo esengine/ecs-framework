@@ -1,6 +1,6 @@
-import { Entity } from '../../Entity';
-import { Component } from '../../Component';
-import { ComponentType } from '../ComponentStorage';
+import {Entity} from "../../Entity";
+import {Component} from "../../Component";
+import {ComponentType} from "../ComponentStorage";
 
 /**
  * 实体批量操作器

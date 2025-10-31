@@ -1,13 +1,13 @@
-import { Entity } from '../../Entity';
-import { Component } from '../../Component';
-import { IScene } from '../../IScene';
-import { ComponentType } from '../ComponentStorage';
-import { QuerySystem, QueryBuilder } from '../QuerySystem';
-import { TypeSafeEventSystem } from '../EventSystem';
-import { EntityBuilder } from './EntityBuilder';
-import { SceneBuilder } from './SceneBuilder';
-import { ComponentBuilder } from './ComponentBuilder';
-import { EntityBatchOperator } from './EntityBatchOperator';
+import {Entity} from "../../Entity";
+import {Component} from "../../Component";
+import {IScene} from "../../IScene";
+import {ComponentType} from "../ComponentStorage";
+import {QuerySystem, QueryBuilder} from "../QuerySystem";
+import {TypeSafeEventSystem} from "../EventSystem";
+import {EntityBuilder} from "./EntityBuilder";
+import {SceneBuilder} from "./SceneBuilder";
+import {ComponentBuilder} from "./ComponentBuilder";
+import {EntityBatchOperator} from "./EntityBatchOperator";
 
 /**
  * ECS流式API主入口
@@ -47,7 +47,7 @@ export class ECSFluentAPI {
      * @returns 组件构建器
      */
     public createComponent<T extends Component>(
-        componentClass: new (...args: unknown[]) => T, 
+        componentClass: new (...args: unknown[]) => T,
         ...args: unknown[]
     ): ComponentBuilder<T> {
         return new ComponentBuilder(componentClass, ...args);
@@ -164,7 +164,7 @@ export class ECSFluentAPI {
         componentStats: Map<string, unknown>;
         queryStats: unknown;
         eventStats: Map<string, unknown>;
-    } {
+        } {
         return {
             entityCount: this.scene.entities.count,
             systemCount: this.scene.systems.length,
@@ -183,8 +183,8 @@ export class ECSFluentAPI {
  * @returns ECS流式API实例
  */
 export function createECSAPI(
-    scene: IScene, 
-    querySystem: QuerySystem, 
+    scene: IScene,
+    querySystem: QuerySystem,
     eventSystem: TypeSafeEventSystem
 ): ECSFluentAPI {
     return new ECSFluentAPI(scene, querySystem, eventSystem);
@@ -202,8 +202,8 @@ export let ECS: ECSFluentAPI;
  * @param eventSystem 事件系统
  */
 export function initializeECS(
-    scene: IScene, 
-    querySystem: QuerySystem, 
+    scene: IScene,
+    querySystem: QuerySystem,
     eventSystem: TypeSafeEventSystem
 ): void {
     ECS = createECSAPI(scene, querySystem, eventSystem);

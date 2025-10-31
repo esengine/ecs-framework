@@ -1,4 +1,4 @@
-import { Component } from '../../Component';
+import {Component} from "../../Component";
 
 /**
  * 组件构建器 - 提供流式API创建组件

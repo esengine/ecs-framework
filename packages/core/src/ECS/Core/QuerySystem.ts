@@ -1,14 +1,14 @@
-import { Entity } from '../Entity';
-import { Component } from '../Component';
-import { ComponentRegistry, ComponentType } from './ComponentStorage';
-import { BitMask64Utils, BitMask64Data } from '../Utils/BigIntCompatibility';
-import { createLogger } from '../../Utils/Logger';
-import { getComponentTypeName } from '../Decorators';
-import { Archetype, ArchetypeSystem } from './ArchetypeSystem';
-import { ReactiveQuery, ReactiveQueryConfig } from './ReactiveQuery';
-import { QueryCondition, QueryConditionType, QueryResult } from './QueryTypes';
+import {Entity} from "../Entity";
+import {Component} from "../Component";
+import {ComponentRegistry, ComponentType} from "./ComponentStorage";
+import {BitMask64Utils, BitMask64Data} from "../Utils/BigIntCompatibility";
+import {createLogger} from "../../Utils/Logger";
+import {getComponentTypeName} from "../Decorators";
+import {Archetype, ArchetypeSystem} from "./ArchetypeSystem";
+import {ReactiveQuery, ReactiveQueryConfig} from "./ReactiveQuery";
+import {QueryCondition, QueryConditionType, QueryResult} from "./QueryTypes";
 
-export { QueryCondition, QueryConditionType, QueryResult };
+export {QueryCondition, QueryConditionType, QueryResult};
 
 /**
  * 实体索引结构
@@ -30,20 +30,20 @@ interface QueryCacheEntry {
 
 /**
  * 高性能实体查询系统
- * 
+ *
  * 提供快速的实体查询功能，支持按组件类型、标签、名称等多种方式查询实体。
- * 
+ *
  * @example
  * ```typescript
  * // 查询所有包含Position和Velocity组件的实体
  * const movingEntities = querySystem.queryAll(PositionComponent, VelocityComponent);
- * 
+ *
  * // 查询特定标签的实体
  * const playerEntities = querySystem.queryByTag(PLAYER_TAG);
  * ```
  */
 export class QuerySystem {
-    private _logger = createLogger('QuerySystem');
+    private _logger = createLogger("QuerySystem");
     private entities: Entity[] = [];
     private entityIndex: EntityIndex;
 
@@ -92,10 +92,10 @@ export class QuerySystem {
 
     /**
      * 添加单个实体到查询系统
-     * 
+     *
      * 将新实体添加到查询系统中，并自动更新相关索引。
      * 为了提高批量添加性能，可以延迟缓存清理。
-     * 
+     *
      * @param entity 要添加的实体
      * @param deferCacheClear 是否延迟缓存清理（用于批量操作）
      */
@@ -121,17 +121,17 @@ export class QuerySystem {
 
     /**
      * 批量添加实体
-     * 
+     *
      * 高效地批量添加多个实体，减少缓存清理次数。
      * 使用Set来避免O(n)的重复检查。
-     * 
+     *
      * @param entities 要添加的实体列表
      */
     public addEntities(entities: Entity[]): void {
         if (entities.length === 0) return;
 
         // 使用Set来快速检查重复
-        const existingIds = new Set(this.entities.map(e => e.id));
+        const existingIds = new Set(this.entities.map((e) => e.id));
         let addedCount = 0;
 
         for (const entity of entities) {
@@ -155,10 +155,10 @@ export class QuerySystem {
 
     /**
      * 批量添加实体（无重复检查版本）
-     * 
+     *
      * 假设所有实体都是新的，跳过重复检查以获得最大性能。
      * 仅在确保没有重复实体时使用。
-     * 
+     *
      * @param entities 要添加的实体列表
      */
     public addEntitiesUnchecked(entities: Entity[]): void {
@@ -437,13 +437,13 @@ export class QuerySystem {
 
     /**
      * 按标签查询实体
-     * 
+     *
      * 返回具有指定标签的所有实体。
      * 标签查询使用专用索引，具有很高的查询性能。
-     * 
+     *
      * @param tag 要查询的标签值
      * @returns 查询结果，包含匹配的实体和性能信息
-     * 
+     *
      * @example
      * ```typescript
      * // 查询所有玩家实体
@@ -485,13 +485,13 @@ export class QuerySystem {
 
     /**
      * 按名称查询实体
-     * 
+     *
      * 返回具有指定名称的所有实体。
      * 名称查询使用专用索引，适用于查找特定的命名实体。
-     * 
+     *
      * @param name 要查询的实体名称
      * @returns 查询结果，包含匹配的实体和性能信息
-     * 
+     *
      * @example
      * ```typescript
      * // 查找名为"Player"的实体
@@ -533,13 +533,13 @@ export class QuerySystem {
 
     /**
      * 按单个组件类型查询实体
-     * 
+     *
      * 返回包含指定组件类型的所有实体。
      * 这是最基础的查询方法，具有最高的查询性能。
-     * 
+     *
      * @param componentType 要查询的组件类型
      * @returns 查询结果，包含匹配的实体和性能信息
-     * 
+     *
      * @example
      * ```typescript
      * // 查询所有具有位置组件的实体
@@ -550,7 +550,7 @@ export class QuerySystem {
         const startTime = performance.now();
         this.queryStats.totalQueries++;
 
-        const cacheKey = this.generateCacheKey('component', [componentType]);
+        const cacheKey = this.generateCacheKey("component", [componentType]);
 
         // 检查缓存
         const cached = this.getFromCache(cacheKey);
@@ -627,7 +627,7 @@ export class QuerySystem {
         // 如果还是太满，移除最少使用的条目
         if (this.queryCache.size >= this.cacheMaxSize) {
             let minHitCount = Infinity;
-            let oldestKey = '';
+            let oldestKey = "";
             let oldestTimestamp = Infinity;
 
             // 单次遍历找到最少使用或最旧的条目
@@ -679,10 +679,10 @@ export class QuerySystem {
         }
 
         // 多组件查询：使用排序后的类型名称创建键
-        const sortKey = componentTypes.map(t => {
+        const sortKey = componentTypes.map((t) => {
             const name = getComponentTypeName(t);
             return name;
-        }).sort().join(',');
+        }).sort().join(",");
 
         const fullKey = `${prefix}:${sortKey}`;
 
@@ -729,7 +729,7 @@ export class QuerySystem {
         config?: ReactiveQueryConfig
     ): ReactiveQuery {
         if (!componentTypes || componentTypes.length === 0) {
-            throw new Error('组件类型列表不能为空');
+            throw new Error("组件类型列表不能为空");
         }
 
         const mask = this.createComponentMask(componentTypes);
@@ -747,7 +747,7 @@ export class QuerySystem {
         );
         query.initializeWith(initialEntities);
 
-        const cacheKey = this.generateCacheKey('all', componentTypes);
+        const cacheKey = this.generateCacheKey("all", componentTypes);
         this._reactiveQueries.set(cacheKey, query);
 
         for (const type of componentTypes) {
@@ -810,9 +810,9 @@ export class QuerySystem {
      */
     private createComponentMask(componentTypes: ComponentType[]): BitMask64Data {
         // 生成缓存键
-        const cacheKey = componentTypes.map(t => {
+        const cacheKey = componentTypes.map((t) => {
             return getComponentTypeName(t);
-        }).sort().join(',');
+        }).sort().join(",");
 
         // 检查缓存
         const cached = this.componentMaskCache.get(cacheKey);
@@ -821,7 +821,7 @@ export class QuerySystem {
         }
 
         // 使用ComponentRegistry而不是ComponentTypeManager,确保bitIndex一致
-        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
+        const mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         for (const type of componentTypes) {
             // 确保组件已注册
             if (!ComponentRegistry.isRegistered(type)) {
@@ -842,20 +842,40 @@ export class QuerySystem {
     public get version(): number {
         return this._version;
     }
-    
+
     /**
-     * 获取所有实体
+     * 查询所有实体
+     *
+     * 返回场景中的所有实体，不进行任何过滤。
+     *
+     * @returns 所有实体的只读数组
+     *
+     * @example
+     * ```typescript
+     * const allEntities = scene.querySystem.queryAllEntities();
+     * console.log(`场景中共有 ${allEntities.length} 个实体`);
+     * ```
      */
-    public getAllEntities(): readonly Entity[] {
+    public queryAllEntities(): readonly Entity[] {
         return this.entities;
     }
-    
+
+    /**
+     * 获取所有实体
+     *
+     * @deprecated 使用 queryAllEntities() 代替，以保持命名一致性
+     * @see {@link queryAllEntities}
+     */
+    public getAllEntities(): readonly Entity[] {
+        return this.queryAllEntities();
+    }
+
     /**
      * 获取系统统计信息
-     * 
+     *
      * 返回查询系统的详细统计信息，包括实体数量、索引状态、
      * 查询性能统计等，用于性能监控和调试。
-     * 
+     *
      * @returns 系统统计信息对象
      */
     public getStats(): {
@@ -881,7 +901,7 @@ export class QuerySystem {
             size: number;
             hitRate: string;
         };
-    } {
+        } {
         return {
             entityCount: this.entities.length,
             indexStats: {
@@ -892,19 +912,19 @@ export class QuerySystem {
             queryStats: {
                 ...this.queryStats,
                 cacheHitRate: this.queryStats.totalQueries > 0 ?
-                    (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + '%' : '0%'
+                    (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + "%" : "0%"
             },
             optimizationStats: {
-                archetypeSystem: this.archetypeSystem.getAllArchetypes().map(a => ({
+                archetypeSystem: this.archetypeSystem.getAllArchetypes().map((a) => ({
                     id: a.id,
-                    componentTypes: a.componentTypes.map(t => getComponentTypeName(t)),
+                    componentTypes: a.componentTypes.map((t) => getComponentTypeName(t)),
                     entityCount: a.entities.size
                 }))
             },
             cacheStats: {
                 size: this._reactiveQueries.size,
                 hitRate: this.queryStats.totalQueries > 0 ?
-                    (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + '%' : '0%'
+                    (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + "%" : "0%"
             }
         };
     }
@@ -1002,7 +1022,7 @@ export class QuerySystem {
     ): Entity[] {
         switch (queryType) {
             case QueryConditionType.ALL: {
-                const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'AND');
+                const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, "AND");
                 const entities: Entity[] = [];
                 for (const archetype of archetypeResult.archetypes) {
                     for (const entity of archetype.entities) {
@@ -1012,7 +1032,7 @@ export class QuerySystem {
                 return entities;
             }
             case QueryConditionType.ANY: {
-                const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'OR');
+                const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, "OR");
                 const entities: Entity[] = [];
                 for (const archetype of archetypeResult.archetypes) {
                     for (const entity of archetype.entities) {
@@ -1023,7 +1043,7 @@ export class QuerySystem {
             }
             case QueryConditionType.NONE: {
                 const mask = this.createComponentMask(componentTypes);
-                return this.entities.filter(entity =>
+                return this.entities.filter((entity) =>
                     BitMask64Utils.hasNone(entity.componentMask, mask)
                 );
             }
@@ -1139,10 +1159,10 @@ export class QuerySystem {
 
 /**
  * 查询构建器
- * 
+ *
  * 提供链式API来构建复杂的实体查询条件。
  * 支持组合多种查询条件，创建灵活的查询表达式。
- * 
+ *
  * @example
  * ```typescript
  * const result = new QueryBuilder(querySystem)
@@ -1152,7 +1172,7 @@ export class QuerySystem {
  * ```
  */
 export class QueryBuilder {
-    private _logger = createLogger('QueryBuilder');
+    private _logger = createLogger("QueryBuilder");
     private conditions: QueryCondition[] = [];
     private querySystem: QuerySystem;
 
@@ -1162,7 +1182,7 @@ export class QueryBuilder {
 
     /**
      * 添加"必须包含所有组件"条件
-     * 
+     *
      * @param componentTypes 必须包含的组件类型
      * @returns 查询构建器实例，支持链式调用
      */
@@ -1177,7 +1197,7 @@ export class QueryBuilder {
 
     /**
      * 添加"必须包含任意组件"条件
-     * 
+     *
      * @param componentTypes 必须包含其中任意一个的组件类型
      * @returns 查询构建器实例，支持链式调用
      */
@@ -1192,7 +1212,7 @@ export class QueryBuilder {
 
     /**
      * 添加"不能包含任何组件"条件
-     * 
+     *
      * @param componentTypes 不能包含的组件类型
      * @returns 查询构建器实例，支持链式调用
      */
@@ -1207,9 +1227,9 @@ export class QueryBuilder {
 
     /**
      * 执行查询并返回结果
-     * 
+     *
      * 根据已添加的查询条件执行实体查询。
-     * 
+     *
      * @returns 查询结果，包含匹配的实体和性能信息
      */
     public execute(): QueryResult {
@@ -1241,7 +1261,7 @@ export class QueryBuilder {
      * 创建组件掩码
      */
     private createComponentMask(componentTypes: ComponentType[]): BitMask64Data {
-        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
+        const mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         for (const type of componentTypes) {
             try {
                 const bitMask = ComponentRegistry.getBitMask(type);
@@ -1255,13 +1275,13 @@ export class QueryBuilder {
 
     /**
      * 重置查询构建器
-     * 
+     *
      * 清除所有已添加的查询条件，重新开始构建查询。
-     * 
+     *
      * @returns 查询构建器实例，支持链式调用
      */
     public reset(): QueryBuilder {
         this.conditions = [];
         return this;
     }
-} 
+}

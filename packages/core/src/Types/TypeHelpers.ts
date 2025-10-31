@@ -4,8 +4,8 @@
  * 提供高级类型推断和类型安全的工具类型
  */
 
-import type { IComponent } from './index';
-import { Component } from '../ECS/Component';
+import type {IComponent} from "./index";
+import {Component} from "../ECS/Component";
 
 /**
  * 组件类型提取器
@@ -240,7 +240,7 @@ export interface TypedQueryCondition<
 export function isComponentType<T extends IComponent>(
     value: any
 ): value is ComponentConstructor<T> {
-    return typeof value === 'function' && value.prototype instanceof Component;
+    return typeof value === "function" && value.prototype instanceof Component;
 }
 
 /**

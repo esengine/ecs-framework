@@ -1,13 +1,12 @@
-import { Component } from '../Component';
-import { BitMask64Utils, BitMask64Data } from '../Utils/BigIntCompatibility';
-import { SoAStorage, SupportedTypedArray } from './SoAStorage';
-import { createLogger } from '../../Utils/Logger';
-import { getComponentTypeName } from '../Decorators';
-import { ComponentRegistry, ComponentType } from './ComponentStorage/ComponentRegistry';
+import {Component} from "../Component";
+import {BitMask64Utils, BitMask64Data} from "../Utils/BigIntCompatibility";
+import {SoAStorage, SupportedTypedArray} from "./SoAStorage";
+import {createLogger} from "../../Utils/Logger";
+import {getComponentTypeName} from "../Decorators";
+import {ComponentRegistry, ComponentType} from "./ComponentStorage/ComponentRegistry";
 
 // 导出核心类型
-export { ComponentRegistry, ComponentType };
-
+export {ComponentRegistry, ComponentType};
 
 
 /**
@@ -21,7 +20,7 @@ export class ComponentStorage<T extends Component> {
 
     constructor(componentType: ComponentType<T>) {
         this.componentType = componentType;
-        
+
         // 确保组件类型已注册
         if (!ComponentRegistry.isRegistered(componentType)) {
             ComponentRegistry.register(componentType);
@@ -152,7 +151,7 @@ export class ComponentStorage<T extends Component> {
         usedSlots: number;
         freeSlots: number;
         fragmentation: number;
-    } {
+        } {
         const totalSlots = this.dense.length;
         const usedSlots = this.dense.length;
         const freeSlots = 0; // 永远无空洞
@@ -172,7 +171,7 @@ export class ComponentStorage<T extends Component> {
  * 管理所有组件类型的存储器
  */
 export class ComponentStorageManager {
-    private static readonly _logger = createLogger('ComponentStorage');
+    private static readonly _logger = createLogger("ComponentStorage");
     private storages = new Map<Function, ComponentStorage<Component> | SoAStorage<Component>>();
 
     /**
@@ -342,15 +341,15 @@ export class ComponentStorageManager {
      * @returns 组件位掩码
      */
     public getComponentMask(entityId: number): BitMask64Data {
-        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
-        
+        const mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
+
         for (const [componentType, storage] of this.storages.entries()) {
             if (storage.hasComponent(entityId)) {
                 const componentMask = ComponentRegistry.getBitMask(componentType as ComponentType);
                 BitMask64Utils.orInPlace(mask, componentMask);
             }
         }
-        
+
         return mask;
     }
 
@@ -360,12 +359,12 @@ export class ComponentStorageManager {
      */
     public getAllStats(): Map<string, { totalSlots: number; usedSlots: number; freeSlots: number; fragmentation: number }> {
         const stats = new Map<string, { totalSlots: number; usedSlots: number; freeSlots: number; fragmentation: number }>();
-        
+
         for (const [componentType, storage] of this.storages.entries()) {
             const typeName = getComponentTypeName(componentType as ComponentType);
             stats.set(typeName, storage.getStats());
         }
-        
+
         return stats;
     }
 

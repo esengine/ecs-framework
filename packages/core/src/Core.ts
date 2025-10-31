@@ -1,20 +1,20 @@
-import { TimerManager } from './Utils/Timers/TimerManager';
-import { ITimer } from './Utils/Timers/ITimer';
-import { Timer } from './Utils/Timers/Timer';
-import { Time } from './Utils/Time';
-import { PerformanceMonitor } from './Utils/PerformanceMonitor';
-import { PoolManager } from './Utils/Pool/PoolManager';
-import { DebugManager } from './Utils/Debug';
-import { ICoreConfig, IECSDebugConfig } from './Types';
-import { createLogger } from './Utils/Logger';
-import { SceneManager } from './ECS/SceneManager';
-import { IScene } from './ECS/IScene';
-import { ServiceContainer } from './Core/ServiceContainer';
-import { PluginManager } from './Core/PluginManager';
-import { IPlugin } from './Core/Plugin';
-import { WorldManager } from './ECS/WorldManager';
-import { DebugConfigService } from './Utils/Debug/DebugConfigService';
-import { createInstance } from './Core/DI/Decorators';
+import {TimerManager} from "./Utils/Timers/TimerManager";
+import {ITimer} from "./Utils/Timers/ITimer";
+import {Timer} from "./Utils/Timers/Timer";
+import {Time} from "./Utils/Time";
+import {PerformanceMonitor} from "./Utils/PerformanceMonitor";
+import {PoolManager} from "./Utils/Pool/PoolManager";
+import {DebugManager} from "./Utils/Debug";
+import {ICoreConfig, IECSDebugConfig} from "./Types";
+import {createLogger} from "./Utils/Logger";
+import {SceneManager} from "./ECS/SceneManager";
+import {IScene} from "./ECS/IScene";
+import {ServiceContainer} from "./Core/ServiceContainer";
+import {PluginManager} from "./Core/PluginManager";
+import {IPlugin} from "./Core/Plugin";
+import {WorldManager} from "./ECS/WorldManager";
+import {DebugConfigService} from "./Utils/Debug/DebugConfigService";
+import {createInstance} from "./Core/DI/Decorators";
 
 /**
  * 游戏引擎核心类
@@ -67,7 +67,7 @@ export class Core {
     /**
      * Core专用日志器
      */
-    private static _logger = createLogger('Core');
+    private static _logger = createLogger("Core");
 
     /**
      * 实体系统启用状态
@@ -246,7 +246,7 @@ export class Core {
      */
     public static get services(): ServiceContainer {
         if (!this._instance) {
-            throw new Error('Core实例未创建，请先调用Core.create()');
+            throw new Error("Core实例未创建，请先调用Core.create()");
         }
         return this._instance._serviceContainer;
     }
@@ -270,7 +270,7 @@ export class Core {
      */
     public static get worldManager(): WorldManager {
         if (!this._instance) {
-            throw new Error('Core实例未创建，请先调用Core.create()');
+            throw new Error("Core实例未创建，请先调用Core.create()");
         }
         return this._instance._worldManager;
     }
@@ -302,12 +302,12 @@ export class Core {
     public static create(config: ICoreConfig | boolean = true): Core {
         if (this._instance == null) {
             // 向后兼容：如果传入boolean，转换为配置对象
-            const coreConfig: ICoreConfig = typeof config === 'boolean'
-                ? { debug: config, enableEntitySystems: true }
+            const coreConfig: ICoreConfig = typeof config === "boolean"
+                ? {debug: config, enableEntitySystems: true}
                 : config;
             this._instance = new Core(coreConfig);
         } else {
-            this._logger.warn('Core实例已创建，返回现有实例');
+            this._logger.warn("Core实例已创建，返回现有实例");
         }
         return this._instance;
     }
@@ -457,10 +457,10 @@ export class Core {
      */
     public static schedule<TContext = unknown>(timeInSeconds: number, repeats: boolean = false, context?: TContext, onTime?: (timer: ITimer<TContext>) => void): Timer<TContext> {
         if (!this._instance) {
-            throw new Error('Core实例未创建，请先调用Core.create()');
+            throw new Error("Core实例未创建，请先调用Core.create()");
         }
         if (!onTime) {
-            throw new Error('onTime callback is required');
+            throw new Error("onTime callback is required");
         }
         return this._instance._timerManager.schedule(timeInSeconds, repeats, context as TContext, onTime);
     }
@@ -549,7 +549,7 @@ export class Core {
      */
     public static async installPlugin(plugin: IPlugin): Promise<void> {
         if (!this._instance) {
-            throw new Error('Core实例未创建，请先调用Core.create()');
+            throw new Error("Core实例未创建，请先调用Core.create()");
         }
 
         await this._instance._pluginManager.install(plugin);
@@ -568,7 +568,7 @@ export class Core {
      */
     public static async uninstallPlugin(name: string): Promise<void> {
         if (!this._instance) {
-            throw new Error('Core实例未创建，请先调用Core.create()');
+            throw new Error("Core实例未创建，请先调用Core.create()");
         }
 
         await this._instance._pluginManager.uninstall(name);
@@ -624,7 +624,7 @@ export class Core {
      */
     protected initialize() {
         // 核心系统初始化
-        Core._logger.info('Core initialized', {
+        Core._logger.info("Core initialized", {
             debug: this.debug,
             entitySystemsEnabled: Core.entitySystemsEnabled,
             debugEnabled: this._config.debugConfig?.enabled || false
@@ -640,20 +640,20 @@ export class Core {
         if (Core.paused) return;
 
         // 开始性能监控
-        const frameStartTime = this._performanceMonitor.startMonitoring('Core.update');
+        const frameStartTime = this._performanceMonitor.startMonitoring("Core.update");
 
         // 更新时间系统
         Time.update(deltaTime);
 
         // 更新FPS监控（如果性能监控器支持）
-        if ('updateFPS' in this._performanceMonitor && typeof this._performanceMonitor.updateFPS === 'function') {
+        if ("updateFPS" in this._performanceMonitor && typeof this._performanceMonitor.updateFPS === "function") {
             this._performanceMonitor.updateFPS(Time.deltaTime);
         }
 
         // 更新所有可更新的服务
-        const servicesStartTime = this._performanceMonitor.startMonitoring('Services.update');
+        const servicesStartTime = this._performanceMonitor.startMonitoring("Services.update");
         this._serviceContainer.updateAll(deltaTime);
-        this._performanceMonitor.endMonitoring('Services.update', servicesStartTime, this._serviceContainer.getUpdatableCount());
+        this._performanceMonitor.endMonitoring("Services.update", servicesStartTime, this._serviceContainer.getUpdatableCount());
 
         // 更新对象池管理器
         this._poolManager.update();
@@ -665,7 +665,7 @@ export class Core {
         this._worldManager.updateAll();
 
         // 结束性能监控
-        this._performanceMonitor.endMonitoring('Core.update', frameStartTime);
+        this._performanceMonitor.endMonitoring("Core.update", frameStartTime);
     }
 
     /**
@@ -684,7 +684,7 @@ export class Core {
         // 清理所有服务
         this._instance._serviceContainer.clear();
 
-        Core._logger.info('Core destroyed');
+        Core._logger.info("Core destroyed");
 
         // 清空实例引用，允许重新创建Core实例
         this._instance = null;

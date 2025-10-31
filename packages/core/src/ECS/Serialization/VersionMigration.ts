@@ -4,8 +4,8 @@
  * 提供组件和场景数据的版本迁移支持
  */
 
-import { SerializedComponent } from './ComponentSerializer';
-import { SerializedScene } from './SceneSerializer';
+import {SerializedComponent} from "./ComponentSerializer";
+import {SerializedScene} from "./SceneSerializer";
 
 /**
  * 组件迁移函数
@@ -127,7 +127,7 @@ export class VersionMigrationManager {
             return component;
         }
 
-        let migratedData = { ...component };
+        const migratedData = {...component};
         let version = currentVersion;
 
         // 执行迁移链
@@ -163,7 +163,7 @@ export class VersionMigrationManager {
             return scene; // 版本相同，无需迁移
         }
 
-        let migratedScene = { ...scene };
+        let migratedScene = {...scene};
         let version = currentVersion;
 
         // 执行场景级迁移
@@ -191,14 +191,14 @@ export class VersionMigrationManager {
      * 迁移场景中所有组件的版本
      */
     private static migrateSceneComponents(scene: SerializedScene): SerializedScene {
-        const migratedScene = { ...scene };
+        const migratedScene = {...scene};
 
-        migratedScene.entities = scene.entities.map(entity => ({
+        migratedScene.entities = scene.entities.map((entity) => ({
             ...entity,
-            components: entity.components.map(component => {
+            components: entity.components.map((component) => {
                 // 查找组件的目标版本
                 const typeInfo = scene.componentTypeRegistry.find(
-                    t => t.typeName === component.type
+                    (t) => t.typeName === component.type
                 );
 
                 if (typeInfo && typeInfo.version !== component.version) {
@@ -220,10 +220,10 @@ export class VersionMigrationManager {
         entities: any[],
         typeRegistry: Array<{ typeName: string; version: number }>
     ): any[] {
-        return entities.map(entity => ({
+        return entities.map((entity) => ({
             ...entity,
             components: entity.components.map((component: SerializedComponent) => {
-                const typeInfo = typeRegistry.find(t => t.typeName === component.type);
+                const typeInfo = typeRegistry.find((t) => t.typeName === component.type);
 
                 if (typeInfo && typeInfo.version !== component.version) {
                     return this.migrateComponent(component, typeInfo.version);

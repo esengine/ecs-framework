@@ -33,7 +33,7 @@ export class WebSocketManager {
         return new Promise((resolve, reject) => {
             try {
                 this.ws = new WebSocket(this.url);
-                
+
                 this.ws.onopen = (event) => {
                     this.handleOpen(event);
                     resolve();
@@ -80,7 +80,7 @@ export class WebSocketManager {
         }
 
         try {
-            const message = typeof data === 'string' ? data : JSON.stringify(data);
+            const message = typeof data === "string" ? data : JSON.stringify(data);
             this.ws.send(message);
         } catch (error) {
         }
@@ -112,7 +112,7 @@ export class WebSocketManager {
         this.reconnectAttempts++;
 
         this.reconnectTimer = setTimeout(() => {
-            this.connect().catch(_error => {
+            this.connect().catch((_error) => {
                 if (this.reconnectAttempts < this.maxReconnectAttempts) {
                     this.scheduleReconnect();
                 }
@@ -137,7 +137,7 @@ export class WebSocketManager {
     private handleOpen(event: Event): void {
         this.isConnected = true;
         this.reconnectAttempts = 0;
-        
+
         if (this.onOpen) {
             this.onOpen(event);
         }
@@ -145,11 +145,11 @@ export class WebSocketManager {
 
     private handleClose(event: CloseEvent): void {
         this.isConnected = false;
-        
+
         if (this.onClose) {
             this.onClose(event);
         }
-        
+
         if (this.autoReconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
             this.scheduleReconnect();
         }
@@ -166,4 +166,4 @@ export class WebSocketManager {
             this.onError(error);
         }
     }
-} 
+}

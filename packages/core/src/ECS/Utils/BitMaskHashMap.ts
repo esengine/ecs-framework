@@ -1,4 +1,4 @@
-import { BitMask64Data } from "./BigIntCompatibility";
+import {BitMask64Data} from "./BigIntCompatibility";
 
 // FlatHashMapFast.ts
 

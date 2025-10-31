@@ -1,19 +1,19 @@
-import type { Entity } from '../Entity';
-import type { Component } from '../Component';
-import { getSceneByEntityId } from '../Core/ReferenceTracker';
-import { createLogger } from '../../Utils/Logger';
+import type {Entity} from "../Entity";
+import type {Component} from "../Component";
+import {getSceneByEntityId} from "../Core/ReferenceTracker";
+import {createLogger} from "../../Utils/Logger";
 
-const logger = createLogger('EntityRefDecorator');
+const logger = createLogger("EntityRefDecorator");
 
 /**
  * EntityRef元数据的Symbol键
  */
-export const ENTITY_REF_METADATA = Symbol('EntityRefMetadata');
+export const ENTITY_REF_METADATA = Symbol("EntityRefMetadata");
 
 /**
  * EntityRef值存储的Symbol键
  */
-const ENTITY_REF_VALUES = Symbol('EntityRefValues');
+const ENTITY_REF_VALUES = Symbol("EntityRefValues");
 
 /**
  * EntityRef元数据
@@ -66,7 +66,7 @@ export function EntityRef(): PropertyDecorator {
             constructor[ENTITY_REF_METADATA] = metadata;
         }
 
-        const propKeyString = typeof propertyKey === 'symbol' ? propertyKey.toString() : propertyKey;
+        const propKeyString = typeof propertyKey === "symbol" ? propertyKey.toString() : propertyKey;
         metadata.properties.add(propKeyString);
 
         Object.defineProperty(target, propertyKey, {
@@ -97,7 +97,7 @@ export function EntityRef(): PropertyDecorator {
 
                 if (newValue) {
                     if (newValue.scene !== scene) {
-                        logger.error(`Cannot reference Entity from different Scene. Entity: ${newValue.name}, Scene: ${newValue.scene?.name || 'null'}`);
+                        logger.error(`Cannot reference Entity from different Scene. Entity: ${newValue.name}, Scene: ${newValue.scene?.name || "null"}`);
                         return;
                     }
 
@@ -129,7 +129,7 @@ export function getEntityRefMetadata(component: any): EntityRefMetadata | null {
         return null;
     }
 
-    const constructor = typeof component === 'function'
+    const constructor = typeof component === "function"
         ? component
         : component.constructor;
 

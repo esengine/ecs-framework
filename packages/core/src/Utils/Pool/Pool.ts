@@ -1,12 +1,14 @@
-import { IPoolable, PoolStats } from './IPoolable';
+import {IPoolable, PoolStats} from "./IPoolable";
+
+type Constructor<T = unknown> = new (...args: unknown[]) => T;
 
 /**
  * 高性能通用对象池
  * 支持任意类型的对象池化，包含详细的统计信息
  */
 export class Pool<T extends IPoolable> {
-    private static _pools = new Map<Function, Pool<any>>();
-    
+    private static _pools = new Map<Constructor, Pool<IPoolable>>();
+
     private _objects: T[] = [];
     private _createFn: () => T;
     private _maxSize: number;
@@ -42,17 +44,17 @@ export class Pool<T extends IPoolable> {
      * @returns 对象池实例
      */
     public static getPool<T extends IPoolable>(
-        type: new (...args: unknown[]) => T, 
+        type: new (...args: unknown[]) => T,
         maxSize: number = 100,
         estimatedObjectSize: number = 1024
     ): Pool<T> {
         let pool = this._pools.get(type);
-        
+
         if (!pool) {
             pool = new Pool<T>(() => new type(), maxSize, estimatedObjectSize);
             this._pools.set(type, pool);
         }
-        
+
         return pool;
     }
 
@@ -62,7 +64,7 @@ export class Pool<T extends IPoolable> {
      */
     public obtain(): T {
         this._stats.totalObtained++;
-        
+
         if (this._objects.length > 0) {
             const obj = this._objects.pop()!;
             this._stats.size--;
@@ -70,7 +72,7 @@ export class Pool<T extends IPoolable> {
             this._updateMemoryUsage();
             return obj;
         }
-        
+
         // 池中没有可用对象，创建新对象
         this._stats.totalCreated++;
         this._updateHitRate();
@@ -83,9 +85,9 @@ export class Pool<T extends IPoolable> {
      */
     public release(obj: T): void {
         if (!obj) return;
-        
+
         this._stats.totalReleased++;
-        
+
         // 如果池未满，将对象放回池中
         if (this._stats.size < this._maxSize) {
             // 重置对象状态
@@ -102,7 +104,7 @@ export class Pool<T extends IPoolable> {
      * @returns 统计信息对象
      */
     public getStats(): Readonly<PoolStats> {
-        return { ...this._stats };
+        return {...this._stats};
     }
 
     /**
@@ -113,7 +115,7 @@ export class Pool<T extends IPoolable> {
         for (const obj of this._objects) {
             obj.reset();
         }
-        
+
         this._objects.length = 0;
         this._stats.size = 0;
         this._updateMemoryUsage();
@@ -125,7 +127,7 @@ export class Pool<T extends IPoolable> {
      */
     public compact(targetSize?: number): void {
         const target = targetSize ?? Math.floor(this._objects.length / 2);
-        
+
         while (this._objects.length > target) {
             const obj = this._objects.pop();
             if (obj) {
@@ -133,7 +135,7 @@ export class Pool<T extends IPoolable> {
                 this._stats.size--;
             }
         }
-        
+
         this._updateMemoryUsage();
     }
 
@@ -143,7 +145,7 @@ export class Pool<T extends IPoolable> {
      */
     public prewarm(count: number): void {
         const actualCount = Math.min(count, this._maxSize - this._objects.length);
-        
+
         for (let i = 0; i < actualCount; i++) {
             const obj = this._createFn();
             obj.reset();
@@ -151,7 +153,7 @@ export class Pool<T extends IPoolable> {
             this._stats.totalCreated++;
             this._stats.size++;
         }
-        
+
         this._updateMemoryUsage();
     }
 
@@ -162,7 +164,7 @@ export class Pool<T extends IPoolable> {
     public setMaxSize(maxSize: number): void {
         this._maxSize = maxSize;
         this._stats.maxSize = maxSize;
-        
+
         // 如果当前池大小超过新的最大值，进行压缩
         if (this._objects.length > maxSize) {
             this.compact(maxSize);
@@ -197,7 +199,7 @@ export class Pool<T extends IPoolable> {
      * 获取所有已注册的池类型
      * @returns 所有池类型的数组
      */
-    public static getAllPoolTypes(): Function[] {
+    public static getAllPoolTypes(): Constructor[] {
         return Array.from(this._pools.keys());
     }
 
@@ -207,12 +209,12 @@ export class Pool<T extends IPoolable> {
      */
     public static getAllPoolStats(): Record<string, PoolStats> {
         const stats: Record<string, PoolStats> = {};
-        
+
         for (const [type, pool] of this._pools) {
             const typeName = type.name || type.toString();
             stats[typeName] = pool.getStats();
         }
-        
+
         return stats;
     }
 
@@ -241,13 +243,13 @@ export class Pool<T extends IPoolable> {
      */
     public static getGlobalStatsString(): string {
         const stats = this.getAllPoolStats();
-        const lines: string[] = ['=== Object Pool Global Statistics ===', ''];
-        
+        const lines: string[] = ["=== Object Pool Global Statistics ===", ""];
+
         if (Object.keys(stats).length === 0) {
-            lines.push('No pools registered');
-            return lines.join('\n');
+            lines.push("No pools registered");
+            return lines.join("\n");
         }
-        
+
         for (const [typeName, stat] of Object.entries(stats)) {
             lines.push(`${typeName}:`);
             lines.push(`  Size: ${stat.size}/${stat.maxSize}`);
@@ -255,10 +257,10 @@ export class Pool<T extends IPoolable> {
             lines.push(`  Total Created: ${stat.totalCreated}`);
             lines.push(`  Total Obtained: ${stat.totalObtained}`);
             lines.push(`  Memory: ${(stat.estimatedMemoryUsage / 1024).toFixed(1)} KB`);
-            lines.push('');
+            lines.push("");
         }
-        
-        return lines.join('\n');
+
+        return lines.join("\n");
     }
 
     /**

@@ -1,7 +1,7 @@
-import { Entity } from '../Entity';
-import { ComponentType, ComponentRegistry } from './ComponentStorage';
-import { BitMask64Data, BitMask64Utils } from "../Utils";
-import { BitMaskHashMap } from "../Utils/BitMaskHashMap";
+import {Entity} from "../Entity";
+import {ComponentType, ComponentRegistry} from "./ComponentStorage";
+import {BitMask64Data, BitMask64Utils} from "../Utils";
+import {BitMaskHashMap} from "../Utils/BitMaskHashMap";
 
 /**
  * 原型标识符
@@ -32,7 +32,7 @@ export interface ArchetypeQueryResult {
 
 /**
  * Archetype系统
- * 
+ *
  * 根据实体的组件组合将实体分组到不同的原型中，提供高效的查询性能。
  */
 export class ArchetypeSystem {
@@ -50,7 +50,7 @@ export class ArchetypeSystem {
 
     /** 所有原型 */
     private _allArchetypes: Archetype[] = [];
-    
+
     /**
      * 添加实体到原型系统
      */
@@ -66,7 +66,7 @@ export class ArchetypeSystem {
         archetype.entities.add(entity);
         this._entityToArchetype.set(entity, archetype);
     }
-    
+
     /**
      * 从原型系统中移除实体
      */
@@ -118,7 +118,7 @@ export class ArchetypeSystem {
         this._entityToArchetype.set(entity, newArchetype);
 
     }
-    
+
     /**
      * 查询包含指定组件组合的原型
      *
@@ -126,18 +126,18 @@ export class ArchetypeSystem {
      * @param operation 查询操作类型：'AND'（包含所有）或 'OR'（包含任意）
      * @returns 匹配的原型列表及实体总数
      */
-    public queryArchetypes(componentTypes: ComponentType[], operation: 'AND' | 'OR' = 'AND'): ArchetypeQueryResult {
+    public queryArchetypes(componentTypes: ComponentType[], operation: "AND" | "OR" = "AND"): ArchetypeQueryResult {
 
         const matchingArchetypes: Archetype[] = [];
         let totalEntities = 0;
 
-        if (operation === 'AND') {
+        if (operation === "AND") {
             if (componentTypes.length === 0) {
                 for (const archetype of this._allArchetypes) {
                     matchingArchetypes.push(archetype);
                     totalEntities += archetype.entities.size;
                 }
-                return { archetypes: matchingArchetypes, totalEntities };
+                return {archetypes: matchingArchetypes, totalEntities};
             }
 
             if (componentTypes.length === 1) {
@@ -148,7 +148,7 @@ export class ArchetypeSystem {
                         totalEntities += archetype.entities.size;
                     }
                 }
-                return { archetypes: matchingArchetypes, totalEntities };
+                return {archetypes: matchingArchetypes, totalEntities};
             }
 
             let smallestSet: Set<Archetype> | undefined;
@@ -157,7 +157,7 @@ export class ArchetypeSystem {
             for (const componentType of componentTypes) {
                 const archetypes = this._componentToArchetypes.get(componentType);
                 if (!archetypes || archetypes.size === 0) {
-                    return { archetypes: [], totalEntities: 0 };
+                    return {archetypes: [], totalEntities: 0};
                 }
                 if (archetypes.size < smallestSize) {
                     smallestSize = archetypes.size;
@@ -198,14 +198,14 @@ export class ArchetypeSystem {
             totalEntities
         };
     }
-    
+
     /**
      * 获取实体所属的原型
      */
     public getEntityArchetype(entity: Entity): Archetype | undefined {
         return this._entityToArchetype.get(entity);
     }
-    
+
     /**
      * 获取所有原型
      */
@@ -247,7 +247,7 @@ export class ArchetypeSystem {
      */
     private updateAllArchetypeArrays(): void {
         this._allArchetypes = [];
-        for (let archetype of this._archetypes.values()) {
+        for (const archetype of this._archetypes.values()) {
             this._allArchetypes.push(archetype);
         }
     }
@@ -258,18 +258,18 @@ export class ArchetypeSystem {
     private getEntityComponentTypes(entity: Entity): ComponentType[] {
         let componentTypes = this._entityComponentTypesCache.get(entity);
         if (!componentTypes) {
-            componentTypes = entity.components.map(component => component.constructor as ComponentType);
+            componentTypes = entity.components.map((component) => component.constructor as ComponentType);
             this._entityComponentTypesCache.set(entity, componentTypes);
         }
         return componentTypes;
     }
-    
+
     /**
      * 生成原型ID
      * 使用ComponentRegistry确保与Entity.componentMask使用相同的bitIndex
      */
     private generateArchetypeId(componentTypes: ComponentType[]): ArchetypeId {
-        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
+        const mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         for (const type of componentTypes) {
             if (!ComponentRegistry.isRegistered(type)) {
                 ComponentRegistry.register(type);
@@ -279,7 +279,7 @@ export class ArchetypeSystem {
         }
         return mask;
     }
-    
+
     /**
      * 创建新原型
      */

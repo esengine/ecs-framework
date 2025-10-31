@@ -4,10 +4,10 @@
  * 负责实体的序列化和反序列化操作
  */
 
-import { Entity } from '../Entity';
-import { ComponentType } from '../Core/ComponentStorage';
-import { ComponentSerializer, SerializedComponent } from './ComponentSerializer';
-import { IScene } from '../IScene';
+import {Entity} from "../Entity";
+import {ComponentType} from "../Core/ComponentStorage";
+import {ComponentSerializer, SerializedComponent} from "./ComponentSerializer";
+import {IScene} from "../IScene";
 
 /**
  * 序列化后的实体数据

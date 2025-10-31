@@ -1,6 +1,6 @@
-import { Component } from '../Component';
-import type { Entity } from '../Entity';
-import type { IScene } from '../IScene';
+import {Component} from "../Component";
+import type {Entity} from "../Entity";
+import type {IScene} from "../IScene";
 
 /**
  * WeakRef 接口定义
@@ -45,9 +45,9 @@ interface IWeakRefConstructor {
  * 优先使用原生 WeakRef，不支持时降级到 Polyfill
  */
 const WeakRefImpl: IWeakRefConstructor = (
-    (typeof globalThis !== 'undefined' && (globalThis as any).WeakRef) ||
-    (typeof global !== 'undefined' && (global as any).WeakRef) ||
-    (typeof window !== 'undefined' && (window as any).WeakRef) ||
+    (typeof globalThis !== "undefined" && (globalThis as any).WeakRef) ||
+    (typeof global !== "undefined" && (global as any).WeakRef) ||
+    (typeof window !== "undefined" && (window as any).WeakRef) ||
     WeakRefPolyfill
 ) as IWeakRefConstructor;
 

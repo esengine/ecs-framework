@@ -1,5 +1,5 @@
-import { ComponentType } from '../Core/ComponentStorage';
-import { getComponentTypeName } from '../Decorators';
+import {ComponentType} from "../Core/ComponentStorage";
+import {getComponentTypeName} from "../Decorators";
 
 /**
  * 查询条件类型
@@ -15,15 +15,15 @@ export interface QueryCondition {
 
 /**
  * 实体匹配条件描述符
- * 
+ *
  * 用于描述实体查询条件，不执行实际查询
- * 
+ *
  * @example
  * ```typescript
  * const matcher = Matcher.all(Position, Velocity)
  *   .any(Health, Shield)
  *   .none(Dead);
- * 
+ *
  * // 获取查询条件
  * const condition = matcher.getCondition();
  * ```
@@ -209,9 +209,9 @@ export class Matcher {
             all: [...this.condition.all],
             any: [...this.condition.any],
             none: [...this.condition.none],
-            ...(this.condition.tag !== undefined && { tag: this.condition.tag }),
-            ...(this.condition.name !== undefined && { name: this.condition.name }),
-            ...(this.condition.component !== undefined && { component: this.condition.component })
+            ...(this.condition.tag !== undefined && {tag: this.condition.tag}),
+            ...(this.condition.name !== undefined && {name: this.condition.name}),
+            ...(this.condition.component !== undefined && {component: this.condition.component})
         };
     }
 
@@ -219,8 +219,8 @@ export class Matcher {
      * 检查是否为空条件
      */
     public isEmpty(): boolean {
-        return this.condition.all.length === 0 && 
-               this.condition.any.length === 0 && 
+        return this.condition.all.length === 0 &&
+               this.condition.any.length === 0 &&
                this.condition.none.length === 0 &&
                this.condition.tag === undefined &&
                this.condition.name === undefined &&
@@ -265,32 +265,32 @@ export class Matcher {
      */
     public toString(): string {
         const parts: string[] = [];
-        
+
         if (this.condition.all.length > 0) {
-            parts.push(`all(${this.condition.all.map(t => getComponentTypeName(t)).join(', ')})`);
+            parts.push(`all(${this.condition.all.map((t) => getComponentTypeName(t)).join(", ")})`);
         }
-        
+
         if (this.condition.any.length > 0) {
-            parts.push(`any(${this.condition.any.map(t => getComponentTypeName(t)).join(', ')})`);
+            parts.push(`any(${this.condition.any.map((t) => getComponentTypeName(t)).join(", ")})`);
         }
-        
+
         if (this.condition.none.length > 0) {
-            parts.push(`none(${this.condition.none.map(t => getComponentTypeName(t)).join(', ')})`);
+            parts.push(`none(${this.condition.none.map((t) => getComponentTypeName(t)).join(", ")})`);
         }
-        
+
         if (this.condition.tag !== undefined) {
             parts.push(`tag(${this.condition.tag})`);
         }
-        
+
         if (this.condition.name !== undefined) {
             parts.push(`name(${this.condition.name})`);
         }
-        
+
         if (this.condition.component !== undefined) {
             parts.push(`component(${getComponentTypeName(this.condition.component)})`);
         }
-        
-        return `Matcher[${parts.join(' & ')}]`;
+
+        return `Matcher[${parts.join(" & ")}]`;
     }
 
 }

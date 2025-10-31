@@ -1,22 +1,22 @@
-import { Entity } from './Entity';
-import { EntityList } from './Utils/EntityList';
-import { IdentifierPool } from './Utils/IdentifierPool';
-import { EntitySystem } from './Systems/EntitySystem';
-import { ComponentStorageManager, ComponentRegistry } from './Core/ComponentStorage';
-import { QuerySystem } from './Core/QuerySystem';
-import { TypeSafeEventSystem } from './Core/EventSystem';
-import { EventBus } from './Core/EventBus';
-import { ReferenceTracker } from './Core/ReferenceTracker';
-import { IScene, ISceneConfig } from './IScene';
-import { getComponentInstanceTypeName, getSystemInstanceTypeName, getSystemMetadata } from "./Decorators";
-import { TypedQueryBuilder } from './Core/Query/TypedQuery';
-import { SceneSerializer, SceneSerializationOptions, SceneDeserializationOptions } from './Serialization/SceneSerializer';
-import { IncrementalSerializer, IncrementalSnapshot, IncrementalSerializationOptions } from './Serialization/IncrementalSerializer';
-import { ComponentPoolManager } from './Core/ComponentPool';
-import { PerformanceMonitor } from '../Utils/PerformanceMonitor';
-import { ServiceContainer, type ServiceType } from '../Core/ServiceContainer';
-import { createInstance, isInjectable, injectProperties } from '../Core/DI';
-import { createLogger } from '../Utils/Logger';
+import {Entity} from "./Entity";
+import {EntityList} from "./Utils/EntityList";
+import {IdentifierPool} from "./Utils/IdentifierPool";
+import {EntitySystem} from "./Systems/EntitySystem";
+import {ComponentStorageManager, ComponentRegistry} from "./Core/ComponentStorage";
+import {QuerySystem} from "./Core/QuerySystem";
+import {TypeSafeEventSystem} from "./Core/EventSystem";
+import {EventBus} from "./Core/EventBus";
+import {ReferenceTracker} from "./Core/ReferenceTracker";
+import {IScene, ISceneConfig} from "./IScene";
+import {getComponentInstanceTypeName, getSystemInstanceTypeName, getSystemMetadata} from "./Decorators";
+import {TypedQueryBuilder} from "./Core/Query/TypedQuery";
+import {SceneSerializer, SceneSerializationOptions, SceneDeserializationOptions} from "./Serialization/SceneSerializer";
+import {IncrementalSerializer, IncrementalSnapshot, IncrementalSerializationOptions} from "./Serialization/IncrementalSerializer";
+import {ComponentPoolManager} from "./Core/ComponentPool";
+import {PerformanceMonitor} from "../Utils/PerformanceMonitor";
+import {ServiceContainer, type ServiceType} from "../Core/ServiceContainer";
+import {createInstance, isInjectable, injectProperties} from "../Core/DI";
+import {createLogger} from "../Utils/Logger";
 
 /**
  * 游戏场景默认实现类
@@ -45,25 +45,25 @@ export class Scene implements IScene {
      * 管理场景内所有实体的生命周期。
      */
     public readonly entities: EntityList;
-    
+
 
     /**
      * 实体ID池
-     * 
+     *
      * 用于分配和回收实体的唯一标识符。
      */
     public readonly identifierPool: IdentifierPool;
 
     /**
      * 组件存储管理器
-     * 
+     *
      * 高性能的组件存储和查询系统。
      */
     public readonly componentStorageManager: ComponentStorageManager;
 
     /**
      * 查询系统
-     * 
+     *
      * 基于位掩码的高性能实体查询系统。
      */
     public readonly querySystem: QuerySystem;
@@ -207,7 +207,7 @@ export class Scene implements IScene {
         this.eventSystem = new TypeSafeEventSystem();
         this.referenceTracker = new ReferenceTracker();
         this._services = new ServiceContainer();
-        this.logger = createLogger('Scene');
+        this.logger = createLogger("Scene");
 
         if (config?.name) {
             this.name = config.name;
@@ -219,7 +219,7 @@ export class Scene implements IScene {
 
         if (Entity.eventBus) {
             Entity.eventBus.onComponentAdded((data: unknown) => {
-                this.eventSystem.emitSync('component:added', data);
+                this.eventSystem.emitSync("component:added", data);
             });
         }
     }
@@ -239,7 +239,7 @@ export class Scene implements IScene {
 
     /**
      * 初始化场景
-     * 
+     *
      * 在场景创建时调用，子类可以重写此方法来设置初始实体和组件。
      */
     public initialize(): void {
@@ -247,7 +247,7 @@ export class Scene implements IScene {
 
     /**
      * 场景开始运行时的回调
-     * 
+     *
      * 在场景开始运行时调用，可以在此方法中执行场景启动逻辑。
      */
     public onStart(): void {
@@ -255,7 +255,7 @@ export class Scene implements IScene {
 
     /**
      * 场景卸载时的回调
-     * 
+     *
      * 在场景被销毁时调用，可以在此方法中执行清理工作。
      */
     public unload(): void {
@@ -338,10 +338,10 @@ export class Scene implements IScene {
      * @param name 实体名称
      */
     public createEntity(name: string) {
-        let entity = new Entity(name, this.identifierPool.checkOut());
-        
-        this.eventSystem.emitSync('entity:created', { entityName: name, entity, scene: this });
-        
+        const entity = new Entity(name, this.identifierPool.checkOut());
+
+        this.eventSystem.emitSync("entity:created", {entityName: name, entity, scene: this});
+
         return this.addEntity(entity);
     }
 
@@ -373,7 +373,7 @@ export class Scene implements IScene {
         }
 
         // 触发实体添加事件
-        this.eventSystem.emitSync('entity:added', { entity, scene: this });
+        this.eventSystem.emitSync("entity:added", {entity, scene: this});
 
         return entity;
     }
@@ -386,25 +386,25 @@ export class Scene implements IScene {
      */
     public createEntities(count: number, namePrefix: string = "Entity"): Entity[] {
         const entities: Entity[] = [];
-        
+
         // 批量创建实体对象，不立即添加到系统
         for (let i = 0; i < count; i++) {
             const entity = new Entity(`${namePrefix}_${i}`, this.identifierPool.checkOut());
             entity.scene = this;
             entities.push(entity);
         }
-        
+
         // 批量添加到实体列表
         for (const entity of entities) {
             this.entities.add(entity);
         }
-        
+
         // 批量添加到查询系统（无重复检查，性能最优）
         this.querySystem.addEntitiesUnchecked(entities);
-        
+
         // 批量触发事件（可选，减少事件开销）
-        this.eventSystem.emitSync('entities:batch_added', { entities, scene: this, count });
-        
+        this.eventSystem.emitSync("entities:batch_added", {entities, scene: this, count});
+
         return entities;
     }
 
@@ -416,7 +416,7 @@ export class Scene implements IScene {
         if (entities.length === 0) return;
 
         for (const entity of entities) {
-            entity._isDestroyed = true;
+            entity.setDestroyed(true);
         }
 
         for (const entity of entities) {
@@ -583,7 +583,7 @@ export class Scene implements IScene {
         let system: T;
         let constructor: any;
 
-        if (typeof systemTypeOrInstance === 'function') {
+        if (typeof systemTypeOrInstance === "function") {
             constructor = systemTypeOrInstance;
 
             if (this._services.isRegistered(constructor)) {
@@ -609,7 +609,7 @@ export class Scene implements IScene {
                 } else {
                     this.logger.warn(
                         `Attempting to register a different instance of ${constructor.name}, ` +
-                        `but type is already registered. Returning existing instance.`
+                        "but type is already registered. Returning existing instance."
                     );
                     return existingSystem as T;
                 }
@@ -750,7 +750,7 @@ export class Scene implements IScene {
         entityCount: number;
         processorCount: number;
         componentStorageStats: Map<string, any>;
-    } {
+        } {
         return {
             entityCount: this.entities.count,
             processorCount: this.systems.length,
@@ -779,20 +779,20 @@ export class Scene implements IScene {
             entityCount: number;
         }>;
         componentStats: Map<string, any>;
-    } {
+        } {
         const systems = this.systems;
         return {
             name: this.name || this.constructor.name,
             entityCount: this.entities.count,
             processorCount: systems.length,
             isRunning: this._didSceneBegin,
-            entities: this.entities.buffer.map(entity => ({
+            entities: this.entities.buffer.map((entity) => ({
                 name: entity.name,
                 id: entity.id,
                 componentCount: entity.components.length,
-                componentTypes: entity.components.map(c => getComponentInstanceTypeName(c))
+                componentTypes: entity.components.map((c) => getComponentInstanceTypeName(c))
             })),
-            processors: systems.map(processor => ({
+            processors: systems.map((processor) => ({
                 name: getSystemInstanceTypeName(processor),
                 updateOrder: processor.updateOrder,
                 entityCount: (processor as any)._entities?.length || 0
@@ -907,7 +907,7 @@ export class Scene implements IScene {
      */
     public serializeIncremental(options?: IncrementalSerializationOptions): IncrementalSnapshot {
         if (!this._incrementalBaseSnapshot) {
-            throw new Error('必须先调用 createIncrementalSnapshot() 创建基础快照');
+            throw new Error("必须先调用 createIncrementalSnapshot() 创建基础快照");
         }
 
         return IncrementalSerializer.computeIncremental(
@@ -941,7 +941,7 @@ export class Scene implements IScene {
         incremental: IncrementalSnapshot | string | Uint8Array,
         componentRegistry?: Map<string, any>
     ): void {
-        const isSerializedData = typeof incremental === 'string' ||
+        const isSerializedData = typeof incremental === "string" ||
             incremental instanceof Uint8Array;
 
         const snapshot = isSerializedData

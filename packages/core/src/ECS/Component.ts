@@ -1,4 +1,4 @@
-import type { IComponent } from '../Types';
+import type {IComponent} from "../Types";
 
 /**
  * 游戏组件基类
@@ -36,7 +36,16 @@ export abstract class Component implements IComponent {
      *
      * 用于为每个组件分配唯一的ID。
      */
-    public static _idGenerator: number = 0;
+    private static _nextId: number = 0;
+
+    /**
+     * 获取下一个组件ID（只读）
+     *
+     * @returns 下一个将要分配的组件ID
+     */
+    public static get nextComponentId(): number {
+        return Component._nextId;
+    }
 
     /**
      * 组件唯一标识符
@@ -58,7 +67,7 @@ export abstract class Component implements IComponent {
      * 自动分配唯一ID给组件。
      */
     constructor() {
-        this.id = Component._idGenerator++;
+        this.id = Component._nextId++;
     }
 
     /**

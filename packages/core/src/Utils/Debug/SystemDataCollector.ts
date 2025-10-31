@@ -1,6 +1,6 @@
-import { ISystemDebugData } from '../../Types';
-import { getSystemInstanceTypeName } from '../../ECS/Decorators';
-import { IScene } from '../../ECS/IScene';
+import {ISystemDebugData} from "../../Types";
+import {getSystemInstanceTypeName} from "../../ECS/Decorators";
+import {IScene} from "../../ECS/IScene";
 
 /**
  * 系统数据收集器
@@ -28,11 +28,11 @@ export class SystemDataCollector {
         }
 
         const systems = entityProcessors.processors || [];
-        
+
         // 获取性能监控数据
         let systemStats: Map<string, any> = new Map();
         let systemData: Map<string, any> = new Map();
-        
+
         if (performanceMonitor) {
             try {
                 systemStats = performanceMonitor.getAllSystemStats();
@@ -41,14 +41,14 @@ export class SystemDataCollector {
                 // 忽略错误，使用空的Map
             }
         }
-        
+
         return {
             totalSystems: systems.length,
             systemsInfo: systems.map((system: any) => {
                 const systemName = system.systemName || getSystemInstanceTypeName(system);
                 const stats = systemStats.get(systemName);
                 const data = systemData.get(systemName);
-                
+
                 return {
                     name: systemName,
                     type: getSystemInstanceTypeName(system),

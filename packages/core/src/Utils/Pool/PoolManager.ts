@@ -1,6 +1,6 @@
-import { IPoolable, PoolStats } from './IPoolable';
-import { Pool } from './Pool';
-import type { IService } from '../../Core/ServiceContainer';
+import {IPoolable, PoolStats} from "./IPoolable";
+import {Pool} from "./Pool";
+import type {IService} from "../../Core/ServiceContainer";
 
 /**
  * 池管理器
@@ -38,7 +38,7 @@ export class PoolManager implements IService {
      */
     public update(): void {
         const now = Date.now();
-        
+
         if (now - this.lastCompactTime > this.autoCompactInterval) {
             this.compactAllPools();
             this.lastCompactTime = now;
@@ -60,12 +60,12 @@ export class PoolManager implements IService {
         estimatedObjectSize: number = 1024
     ): Pool<T> {
         let pool = this.pools.get(name) as Pool<T>;
-        
+
         if (!pool) {
             pool = new Pool(createFn, maxSize, estimatedObjectSize);
             this.pools.set(name, pool);
         }
-        
+
         return pool;
     }
 
@@ -125,11 +125,11 @@ export class PoolManager implements IService {
      */
     public getAllStats(): Map<string, PoolStats> {
         const stats = new Map<string, PoolStats>();
-        
+
         for (const [name, pool] of this.pools) {
             stats.set(name, pool.getStats());
         }
-        
+
         return stats;
     }
 
@@ -144,7 +144,7 @@ export class PoolManager implements IService {
         let totalObtained = 0;
         let totalReleased = 0;
         let totalMemoryUsage = 0;
-        
+
         for (const pool of this.pools.values()) {
             const stats = pool.getStats();
             totalSize += stats.size;
@@ -154,9 +154,9 @@ export class PoolManager implements IService {
             totalReleased += stats.totalReleased;
             totalMemoryUsage += stats.estimatedMemoryUsage;
         }
-        
+
         const hitRate = totalObtained === 0 ? 0 : (totalObtained - totalCreated) / totalObtained;
-        
+
         return {
             size: totalSize,
             maxSize: totalMaxSize,
@@ -173,29 +173,29 @@ export class PoolManager implements IService {
      * @returns 格式化字符串
      */
     public getStatsString(): string {
-        const lines: string[] = ['=== Pool Manager Statistics ===', ''];
-        
+        const lines: string[] = ["=== Pool Manager Statistics ===", ""];
+
         if (this.pools.size === 0) {
-            lines.push('No pools registered');
-            return lines.join('\n');
+            lines.push("No pools registered");
+            return lines.join("\n");
         }
-        
+
         const globalStats = this.getGlobalStats();
         lines.push(`Total Pools: ${this.pools.size}`);
         lines.push(`Global Hit Rate: ${(globalStats.hitRate * 100).toFixed(1)}%`);
         lines.push(`Global Memory Usage: ${(globalStats.estimatedMemoryUsage / 1024).toFixed(1)} KB`);
-        lines.push('');
-        
+        lines.push("");
+
         for (const [name, pool] of this.pools) {
             const stats = pool.getStats();
             lines.push(`${name}:`);
             lines.push(`  Size: ${stats.size}/${stats.maxSize}`);
             lines.push(`  Hit Rate: ${(stats.hitRate * 100).toFixed(1)}%`);
             lines.push(`  Memory: ${(stats.estimatedMemoryUsage / 1024).toFixed(1)} KB`);
-            lines.push('');
+            lines.push("");
         }
-        
-        return lines.join('\n');
+
+        return lines.join("\n");
     }
 
     /**

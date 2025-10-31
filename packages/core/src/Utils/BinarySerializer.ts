@@ -1,4 +1,4 @@
-import { strToU8, strFromU8, zlibSync, unzlibSync } from 'fflate';
+import {strToU8, strFromU8, zlibSync, unzlibSync} from "fflate";
 
 /**
  * 二进制序列化器

@@ -4,10 +4,10 @@
  * 提供类型安全的组件操作工具函数，无需修改Entity类
  */
 
-import { Entity } from './Entity';
-import type { Component } from './Component';
-import type { ComponentType } from './Core/ComponentStorage';
-import type { ComponentConstructor, ComponentInstance } from '../Types/TypeHelpers';
+import {Entity} from "./Entity";
+import type {Component} from "./Component";
+import type {ComponentType} from "./Core/ComponentStorage";
+import type {ComponentConstructor, ComponentInstance} from "../Types/TypeHelpers";
 
 /**
  * 获取组件，如果不存在则抛出错误

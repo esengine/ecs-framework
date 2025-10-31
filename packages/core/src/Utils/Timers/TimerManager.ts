@@ -1,8 +1,8 @@
-import { Timer } from './Timer';
-import { ITimer } from './ITimer';
-import type { IService } from '../../Core/ServiceContainer';
-import type { IUpdatable } from '../../Types/IUpdatable';
-import { Updatable } from '../../Core/DI';
+import {Timer} from "./Timer";
+import {ITimer} from "./ITimer";
+import type {IService} from "../../Core/ServiceContainer";
+import type {IUpdatable} from "../../Types/IUpdatable";
+import {Updatable} from "../../Core/DI";
 
 /**
  * 定时器管理器
@@ -30,7 +30,7 @@ export class TimerManager implements IService, IUpdatable {
      * @param onTime
      */
     public schedule<TContext = unknown>(timeInSeconds: number, repeats: boolean, context: TContext, onTime: (timer: ITimer<TContext>)=>void): Timer<TContext> {
-        let timer = new Timer<TContext>();
+        const timer = new Timer<TContext>();
         timer.initialize(timeInSeconds, repeats, context, onTime);
         this._timers.push(timer as Timer<unknown>);
 

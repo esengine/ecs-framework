@@ -1,10 +1,10 @@
-import { Entity } from '../Entity';
-import { EntitySystem } from './EntitySystem';
-import { Matcher } from '../Utils/Matcher';
-import { Time } from '../../Utils/Time';
-import { PlatformManager } from '../../Platform/PlatformManager';
-import type { IPlatformAdapter, PlatformWorker } from '../../Platform/IPlatformAdapter';
-import { getSystemInstanceTypeName } from '../Decorators';
+import {Entity} from "../Entity";
+import {EntitySystem} from "./EntitySystem";
+import {Matcher} from "../Utils/Matcher";
+import {Time} from "../../Utils/Time";
+import {PlatformManager} from "../../Platform/PlatformManager";
+import type {IPlatformAdapter, PlatformWorker} from "../../Platform/IPlatformAdapter";
+import {getSystemInstanceTypeName} from "../Decorators";
 
 /**
  * Worker处理函数类型
@@ -188,7 +188,7 @@ export type SharedArrayBufferProcessFunction = (
  * ```
  */
 export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem {
-    protected config: Required<Omit<WorkerSystemConfig, 'systemConfig' | 'entitiesPerWorker'>> & {
+    protected config: Required<Omit<WorkerSystemConfig, "systemConfig" | "entitiesPerWorker">> & {
         systemConfig?: any;
         entitiesPerWorker?: number;
     };
@@ -197,7 +197,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
     protected sharedBuffer: SharedArrayBuffer | null = null;
     protected sharedFloatArray: Float32Array | null = null;
     private platformAdapter: IPlatformAdapter;
-    private hasLoggedSyncMode = false; 
+    private hasLoggedSyncMode = false;
 
     constructor(matcher?: Matcher, config: WorkerSystemConfig = {}) {
         super(matcher);
@@ -219,7 +219,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
             enableWorker: config.enableWorker ?? true,
             workerCount: validatedWorkerCount,
             systemConfig: config.systemConfig,
-            ...(config.entitiesPerWorker !== undefined && { entitiesPerWorker: config.entitiesPerWorker }),
+            ...(config.entitiesPerWorker !== undefined && {entitiesPerWorker: config.entitiesPerWorker}),
             useSharedArrayBuffer: config.useSharedArrayBuffer ?? this.isSharedArrayBufferSupported(),
             entityDataSize: config.entityDataSize ?? this.getDefaultEntityDataSize(),
             maxEntities: config.maxEntities ?? 10000
@@ -305,7 +305,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
             // 在WorkerEntitySystem中处理平台相关逻辑
             const workers: PlatformWorker[] = [];
             const platformConfig = this.platformAdapter.getPlatformConfig();
-            const fullScript = (platformConfig.workerScriptPrefix || '') + script;
+            const fullScript = (platformConfig.workerScriptPrefix || "") + script;
 
             for (let i = 0; i < this.config.workerCount; i++) {
                 try {
@@ -336,7 +336,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         // 提取函数体部分（去掉方法签名）
         const functionBodyMatch = methodStr.match(/\{([\s\S]*)\}/);
         if (!functionBodyMatch) {
-            throw new Error('无法解析workerProcess方法');
+            throw new Error("无法解析workerProcess方法");
         }
 
         const functionBody = functionBodyMatch[1];
@@ -344,13 +344,13 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
 
         // 获取SharedArrayBuffer处理函数的字符串
         const sharedProcessMethod = this.getSharedArrayBufferProcessFunction?.() || null;
-        let sharedProcessFunctionBody = '';
+        let sharedProcessFunctionBody = "";
 
         if (sharedProcessMethod) {
             const sharedMethodStr = sharedProcessMethod.toString();
             const sharedFunctionBodyMatch = sharedMethodStr.match(/\{([\s\S]*)\}/);
             if (sharedFunctionBodyMatch) {
-                sharedProcessFunctionBody = sharedFunctionBodyMatch[1] ?? '';
+                sharedProcessFunctionBody = sharedFunctionBodyMatch[1] ?? "";
             }
         }
 
@@ -414,7 +414,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
                         ${sharedProcessFunctionBody}
                     };
                     userProcessFunction(sharedFloatArray, startIndex, endIndex, deltaTime, systemConfig);
-                ` : ``}
+                ` : ""}
             }
         `;
     }
@@ -465,7 +465,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
      */
     private async processWithSharedArrayBuffer(entities: readonly Entity[]): Promise<void> {
         if (!this.sharedFloatArray) {
-            throw new Error('SharedArrayBuffer not initialized');
+            throw new Error("SharedArrayBuffer not initialized");
         }
 
         // 1. 将实体数据写入SharedArrayBuffer
@@ -494,7 +494,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         const deltaTime = Time.deltaTime;
 
         // 3. Worker执行阶段
-        const promises = batches.map(batch =>
+        const promises = batches.map((batch) =>
             this.workerPool!.execute({
                 entities: batch,
                 deltaTime,
@@ -525,7 +525,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
      */
     private processSynchronously(entities: readonly Entity[]): void {
         // 1. 数据提取阶段
-        const entityData = entities.map(entity => this.extractEntityData(entity));
+        const entityData = entities.map((entity) => this.extractEntityData(entity));
 
         // 2. 主线程处理阶段
         const deltaTime = Time.deltaTime;
@@ -533,8 +533,8 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
 
         // 3. 结果应用阶段
         // 处理Promise返回值
-        if (results && typeof (results as any).then === 'function') {
-            (results as Promise<TEntityData[]>).then(finalResults => {
+        if (results && typeof (results as any).then === "function") {
+            (results as Promise<TEntityData[]>).then((finalResults) => {
                 entities.forEach((entity, index) => {
                     this.applyResult(entity, finalResults[index]!);
                 });
@@ -721,7 +721,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
      * 更新Worker配置
      */
     public updateConfig(newConfig: Partial<WorkerSystemConfig>): void {
-        const oldConfig = { ...this.config };
+        const oldConfig = {...this.config};
 
         // 如果更新了workerCount，需要验证并调整
         if (newConfig.workerCount !== undefined) {
@@ -812,22 +812,22 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         isProcessing: boolean;
         sharedArrayBufferSupported: boolean;
         sharedArrayBufferEnabled: boolean;
-        currentMode: 'shared-buffer' | 'worker' | 'sync';
-    } {
-        let currentMode: 'shared-buffer' | 'worker' | 'sync' = 'sync';
+        currentMode: "shared-buffer" | "worker" | "sync";
+        } {
+        let currentMode: "shared-buffer" | "worker" | "sync" = "sync";
 
         if (this.config.enableWorker && this.workerPool) {
             if (this.config.useSharedArrayBuffer && this.sharedFloatArray && this.isSharedArrayBufferSupported()) {
-                currentMode = 'shared-buffer';
+                currentMode = "shared-buffer";
             } else {
-                currentMode = 'worker';
+                currentMode = "worker";
             }
         }
 
         return {
             enabled: this.config.enableWorker,
             workerCount: this.config.workerCount,
-            ...(this.config.entitiesPerWorker !== undefined && { entitiesPerWorker: this.config.entitiesPerWorker }),
+            ...(this.config.entitiesPerWorker !== undefined && {entitiesPerWorker: this.config.entitiesPerWorker}),
             maxSystemWorkerCount: this.getMaxSystemWorkerCount(),
             isProcessing: this.isProcessing,
             sharedArrayBufferSupported: this.isSharedArrayBufferSupported(),
@@ -890,7 +890,7 @@ class PlatformWorkerPool {
         return new Promise((resolve, reject) => {
             const task = {
                 id: `shared-task-${++this.taskCounter}`,
-                data: { ...data, type: 'shared' },
+                data: {...data, type: "shared"},
                 resolve: () => resolve(), // SharedArrayBuffer不需要返回数据
                 reject
             };

@@ -1,7 +1,7 @@
-import { Entity } from '../../Entity';
-import { Component } from '../../Component';
-import { IScene } from '../../IScene';
-import { ComponentType, ComponentStorageManager } from '../ComponentStorage';
+import {Entity} from "../../Entity";
+import {Component} from "../../Component";
+import {IScene} from "../../IScene";
+import {ComponentType, ComponentStorageManager} from "../ComponentStorage";
 
 /**
  * 实体构建器 - 提供流式API创建和配置实体
@@ -92,7 +92,7 @@ export class EntityBuilder {
      * @returns 实体构建器
      */
     public configure<T extends Component>(
-        componentType: ComponentType<T>, 
+        componentType: ComponentType<T>,
         configurator: (component: T) => void
     ): EntityBuilder {
         const component = this.entity.getComponent(componentType);

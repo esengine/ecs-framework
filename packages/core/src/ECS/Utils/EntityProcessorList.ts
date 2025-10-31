@@ -1,13 +1,13 @@
-import { EntitySystem } from '../Systems/EntitySystem';
-import { createLogger } from '../../Utils/Logger';
-import { getSystemInstanceTypeName } from '../Decorators';
+import {EntitySystem} from "../Systems/EntitySystem";
+import {createLogger} from "../../Utils/Logger";
+import {getSystemInstanceTypeName} from "../Decorators";
 
 /**
  * 实体处理器列表管理器
  * 管理场景中的所有实体系统
  */
 export class EntityProcessorList {
-    private static readonly _logger = createLogger('EntityProcessorList');
+    private static readonly _logger = createLogger("EntityProcessorList");
     private _processors: EntitySystem[] = [];
     private _isDirty = false;
 
@@ -53,7 +53,7 @@ export class EntityProcessorList {
 
     /**
      * 开始处理
-     * 
+     *
      * 对所有处理器进行排序以确保正确的执行顺序。
      */
     public begin(): void {

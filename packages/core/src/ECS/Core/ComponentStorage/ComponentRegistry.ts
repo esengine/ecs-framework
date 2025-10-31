@@ -1,7 +1,7 @@
-import { Component } from '../../Component';
-import { BitMask64Utils, BitMask64Data } from '../../Utils/BigIntCompatibility';
-import { createLogger } from '../../../Utils/Logger';
-import { getComponentTypeName } from '../../Decorators';
+import {Component} from "../../Component";
+import {BitMask64Utils, BitMask64Data} from "../../Utils/BigIntCompatibility";
+import {createLogger} from "../../../Utils/Logger";
+import {getComponentTypeName} from "../../Decorators";
 
 /**
  * 组件类型定义
@@ -13,10 +13,10 @@ export type ComponentType<T extends Component = Component> = new (...args: any[]
  * 管理组件类型的位掩码分配
  */
 export class ComponentRegistry {
-    protected static readonly _logger = createLogger('ComponentStorage');
-    private static componentTypes = new Map<Function, number>();
-    private static bitIndexToType = new Map<number, Function>();
-    private static componentNameToType = new Map<string, Function>();
+    protected static readonly _logger = createLogger("ComponentStorage");
+    private static componentTypes = new Map<ComponentType, number>();
+    private static bitIndexToType = new Map<number, ComponentType>();
+    private static componentNameToType = new Map<string, ComponentType>();
     private static componentNameToId = new Map<string, number>();
     private static maskCache = new Map<string, BitMask64Data>();
     private static nextBitIndex = 0;
@@ -153,7 +153,7 @@ export class ComponentRegistry {
      */
     public static createSingleComponentMask(componentName: string): BitMask64Data {
         const cacheKey = `single:${componentName}`;
-        
+
         if (this.maskCache.has(cacheKey)) {
             return this.maskCache.get(cacheKey)!;
         }
@@ -175,13 +175,13 @@ export class ComponentRegistry {
      */
     public static createComponentMask(componentNames: string[]): BitMask64Data {
         const sortedNames = [...componentNames].sort();
-        const cacheKey = `multi:${sortedNames.join(',')}`;
-        
+        const cacheKey = `multi:${sortedNames.join(",")}`;
+
         if (this.maskCache.has(cacheKey)) {
             return this.maskCache.get(cacheKey)!;
         }
 
-        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
+        const mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         for (const name of componentNames) {
             const componentId = this.getComponentId(name);
             if (componentId !== undefined) {

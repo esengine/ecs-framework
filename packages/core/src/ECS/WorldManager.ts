@@ -1,8 +1,8 @@
-import { World, IWorldConfig } from './World';
-import { createLogger } from '../Utils/Logger';
-import type { IService } from '../Core/ServiceContainer';
+import {World, IWorldConfig} from "./World";
+import {createLogger} from "../Utils/Logger";
+import type {IService} from "../Core/ServiceContainer";
 
-const logger = createLogger('WorldManager');
+const logger = createLogger("WorldManager");
 
 /**
  * WorldManager配置接口
@@ -12,17 +12,17 @@ export interface IWorldManagerConfig {
      * 最大World数量
      */
     maxWorlds?: number;
-    
+
     /**
      * 是否自动清理空World
      */
     autoCleanup?: boolean;
-    
+
     /**
      * 清理间隔（毫秒）
      */
     cleanupInterval?: number;
-    
+
     /**
      * 是否启用调试模式
      */
@@ -81,7 +81,7 @@ export class WorldManager implements IService {
         // 默认启动运行状态
         this._isRunning = true;
 
-        logger.info('WorldManager已初始化', {
+        logger.info("WorldManager已初始化", {
             maxWorlds: this._config.maxWorlds,
             autoCleanup: this._config.autoCleanup,
             cleanupInterval: this._config.cleanupInterval
@@ -96,8 +96,8 @@ export class WorldManager implements IService {
      * 创建新World
      */
     public createWorld(worldId: string, config?: IWorldConfig): World {
-        if (!worldId || typeof worldId !== 'string' || worldId.trim() === '') {
-            throw new Error('World ID不能为空');
+        if (!worldId || typeof worldId !== "string" || worldId.trim() === "") {
+            throw new Error("World ID不能为空");
         }
 
         if (this._worlds.has(worldId)) {
@@ -110,9 +110,9 @@ export class WorldManager implements IService {
 
         const worldConfig: IWorldConfig = {
             name: worldId,
-            ...(this._config.debug !== undefined && { debug: this._config.debug }),
-            ...(config?.maxScenes !== undefined && { maxScenes: config.maxScenes }),
-            ...(config?.autoCleanup !== undefined && { autoCleanup: config.autoCleanup })
+            ...(this._config.debug !== undefined && {debug: this._config.debug}),
+            ...(config?.maxScenes !== undefined && {maxScenes: config.maxScenes}),
+            ...(config?.autoCleanup !== undefined && {autoCleanup: config.autoCleanup})
         };
 
         const world = new World(worldConfig);
@@ -242,12 +242,12 @@ export class WorldManager implements IService {
      */
     public startAll(): void {
         this._isRunning = true;
-        
+
         for (const worldId of this._worlds.keys()) {
             this.setWorldActive(worldId, true);
         }
-        
-        logger.info('启动所有World');
+
+        logger.info("启动所有World");
     }
 
     /**
@@ -255,12 +255,12 @@ export class WorldManager implements IService {
      */
     public stopAll(): void {
         this._isRunning = false;
-        
+
         for (const worldId of this._activeWorlds) {
             this.setWorldActive(worldId, false);
         }
-        
-        logger.info('停止所有World');
+
+        logger.info("停止所有World");
     }
 
     /**
@@ -302,7 +302,7 @@ export class WorldManager implements IService {
             totalSystems: 0,
             memoryUsage: 0,
             isRunning: this._isRunning,
-            config: { ...this._config },
+            config: {...this._config},
             worlds: [] as any[]
         };
 
@@ -367,7 +367,7 @@ export class WorldManager implements IService {
      * 销毁WorldManager
      */
     public destroy(): void {
-        logger.info('正在销毁WorldManager...');
+        logger.info("正在销毁WorldManager...");
 
         // 停止清理定时器
         this.stopCleanupTimer();
@@ -385,7 +385,7 @@ export class WorldManager implements IService {
         this._activeWorlds.clear();
         this._isRunning = false;
 
-        logger.info('WorldManager已销毁');
+        logger.info("WorldManager已销毁");
     }
 
     /**
@@ -420,7 +420,7 @@ export class WorldManager implements IService {
         if (this._cleanupTimer) {
             clearInterval(this._cleanupTimer);
             this._cleanupTimer = null;
-            logger.debug('停止World清理定时器');
+            logger.debug("停止World清理定时器");
         }
     }
 
@@ -432,7 +432,7 @@ export class WorldManager implements IService {
         // 1. World未激活
         // 2. 没有Scene或所有Scene都是空的
         // 3. 创建时间超过10分钟
-        
+
         if (world.isActive) {
             return false;
         }
@@ -444,7 +444,7 @@ export class WorldManager implements IService {
 
         // 检查是否所有Scene都是空的
         const allScenes = world.getAllScenes();
-        const hasEntities = allScenes.some(scene => 
+        const hasEntities = allScenes.some((scene) =>
             scene.entities && scene.entities.count > 0
         );
 
@@ -483,6 +483,6 @@ export class WorldManager implements IService {
      * 获取配置
      */
     public get config(): IWorldManagerConfig {
-        return { ...this._config };
+        return {...this._config};
     }
 }

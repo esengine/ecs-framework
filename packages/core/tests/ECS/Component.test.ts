@@ -27,7 +27,6 @@ describe('Component - 组件基类测试', () => {
     let scene: Scene;
 
     beforeEach(() => {
-        Component._idGenerator = 0;
         component = new TestComponent();
         scene = new Scene();
         entity = scene.createEntity('TestEntity');
@@ -51,7 +50,7 @@ describe('Component - 组件基类测试', () => {
         });
 
         test('组件ID应该递增分配', () => {
-            const startId = Component._idGenerator;
+            const startId = Component.nextComponentId;
             const component1 = new TestComponent();
             const component2 = new TestComponent();
 

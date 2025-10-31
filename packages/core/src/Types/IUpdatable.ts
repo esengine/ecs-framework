@@ -16,5 +16,5 @@ export interface IUpdatable {
  * 检查对象是否实现了IUpdatable接口
  */
 export function isUpdatable(obj: any): obj is IUpdatable {
-    return obj && typeof obj.update === 'function';
+    return obj && typeof obj.update === "function";
 }

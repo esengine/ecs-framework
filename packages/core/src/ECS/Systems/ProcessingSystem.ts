@@ -1,6 +1,6 @@
-import { EntitySystem } from './EntitySystem';
-import { Entity } from '../Entity';
-import { Matcher } from '../Utils/Matcher';
+import {EntitySystem} from "./EntitySystem";
+import {Entity} from "../Entity";
+import {Matcher} from "../Utils/Matcher";
 
 /**
  * 处理系统抽象类
@@ -8,7 +8,7 @@ import { Matcher } from '../Utils/Matcher';
  * 子类需要实现processSystem方法，用于实现具体的处理逻辑
  */
 export abstract class ProcessingSystem extends EntitySystem {
-    
+
     constructor(matcher?: Matcher) {
         super(matcher);
     }

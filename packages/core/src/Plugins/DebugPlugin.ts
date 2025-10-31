@@ -1,15 +1,15 @@
-import type { Core } from '../Core';
-import type { ServiceContainer } from '../Core/ServiceContainer';
-import { IPlugin } from '../Core/Plugin';
-import { createLogger } from '../Utils/Logger';
-import type { IScene } from '../ECS/IScene';
-import type { Entity } from '../ECS/Entity';
-import type { EntitySystem } from '../ECS/Systems/EntitySystem';
-import { WorldManager } from '../ECS/WorldManager';
-import { Injectable } from '../Core/DI/Decorators';
-import type { IService } from '../Core/ServiceContainer';
+import type {Core} from "../Core";
+import type {ServiceContainer} from "../Core/ServiceContainer";
+import {IPlugin} from "../Core/Plugin";
+import {createLogger} from "../Utils/Logger";
+import type {IScene} from "../ECS/IScene";
+import type {Entity} from "../ECS/Entity";
+import type {EntitySystem} from "../ECS/Systems/EntitySystem";
+import {WorldManager} from "../ECS/WorldManager";
+import {Injectable} from "../Core/DI/Decorators";
+import type {IService} from "../Core/ServiceContainer";
 
-const logger = createLogger('DebugPlugin');
+const logger = createLogger("DebugPlugin");
 
 /**
  * ECS 调试插件统计信息
@@ -91,8 +91,8 @@ export interface ComponentDebugInfo {
  */
 @Injectable()
 export class DebugPlugin implements IPlugin, IService {
-    readonly name = '@esengine/debug-plugin';
-    readonly version = '1.0.0';
+    readonly name = "@esengine/debug-plugin";
+    readonly version = "1.0.0";
 
     private worldManager: WorldManager | null = null;
     private updateInterval: number;
@@ -115,7 +115,7 @@ export class DebugPlugin implements IPlugin, IService {
     async install(_core: Core, services: ServiceContainer): Promise<void> {
         this.worldManager = services.resolve(WorldManager);
 
-        logger.info('ECS Debug Plugin installed');
+        logger.info("ECS Debug Plugin installed");
 
         if (this.autoStart) {
             this.start();
@@ -129,7 +129,7 @@ export class DebugPlugin implements IPlugin, IService {
         this.stop();
         this.worldManager = null;
 
-        logger.info('ECS Debug Plugin uninstalled');
+        logger.info("ECS Debug Plugin uninstalled");
     }
 
     /**
@@ -145,11 +145,11 @@ export class DebugPlugin implements IPlugin, IService {
      */
     public start(): void {
         if (this.updateTimer) {
-            logger.warn('Debug monitoring already started');
+            logger.warn("Debug monitoring already started");
             return;
         }
 
-        logger.info('Starting debug monitoring');
+        logger.info("Starting debug monitoring");
 
         this.updateTimer = setInterval(() => {
             this.logStats();
@@ -163,7 +163,7 @@ export class DebugPlugin implements IPlugin, IService {
         if (this.updateTimer) {
             clearInterval(this.updateTimer);
             this.updateTimer = null;
-            logger.info('Debug monitoring stopped');
+            logger.info("Debug monitoring stopped");
         }
     }
 
@@ -172,7 +172,7 @@ export class DebugPlugin implements IPlugin, IService {
      */
     public getStats(): ECSDebugStats {
         if (!this.worldManager) {
-            throw new Error('Plugin not installed');
+            throw new Error("Plugin not installed");
         }
 
         const scenes: SceneDebugInfo[] = [];
@@ -208,8 +208,8 @@ export class DebugPlugin implements IPlugin, IService {
         return {
             name: scene.name,
             entityCount: entities.length,
-            systems: systems.map(sys => this.getSystemInfo(sys)),
-            entities: entities.map(entity => this.getEntityInfo(entity))
+            systems: systems.map((sys) => this.getSystemInfo(sys)),
+            entities: entities.map((entity) => this.getEntityInfo(entity))
         };
     }
 
@@ -230,7 +230,7 @@ export class DebugPlugin implements IPlugin, IService {
             enabled: system.enabled,
             updateOrder: system.updateOrder,
             entityCount: system.entities.length,
-            ...(performance !== undefined && { performance })
+            ...(performance !== undefined && {performance})
         };
     }
 
@@ -246,7 +246,7 @@ export class DebugPlugin implements IPlugin, IService {
             enabled: entity.enabled,
             tag: entity.tag,
             componentCount: components.length,
-            components: components.map(comp => this.getComponentInfo(comp))
+            components: components.map((comp) => this.getComponentInfo(comp))
         };
     }
 
@@ -258,15 +258,15 @@ export class DebugPlugin implements IPlugin, IService {
         const data: any = {};
 
         for (const key of Object.keys(component)) {
-            if (!key.startsWith('_')) {
+            if (!key.startsWith("_")) {
                 const value = component[key];
-                if (typeof value !== 'function') {
+                if (typeof value !== "function") {
                     data[key] = value;
                 }
             }
         }
 
-        return { type, data };
+        return {type, data};
     }
 
     /**
@@ -281,7 +281,7 @@ export class DebugPlugin implements IPlugin, IService {
         hasComponent?: string;
     }): EntityDebugInfo[] {
         if (!this.worldManager) {
-            throw new Error('Plugin not installed');
+            throw new Error("Plugin not installed");
         }
 
         const results: EntityDebugInfo[] = [];
@@ -304,7 +304,7 @@ export class DebugPlugin implements IPlugin, IService {
 
                     if (filter.hasComponent) {
                         const hasComp = entity.components.some(
-                            c => c.constructor.name === filter.hasComponent
+                            (c) => c.constructor.name === filter.hasComponent
                         );
                         if (!hasComp) {
                             continue;
@@ -325,7 +325,7 @@ export class DebugPlugin implements IPlugin, IService {
     private logStats(): void {
         const stats = this.getStats();
 
-        logger.info('=== ECS Debug Stats ===');
+        logger.info("=== ECS Debug Stats ===");
         logger.info(`Total Entities: ${stats.totalEntities}`);
         logger.info(`Total Systems: ${stats.totalSystems}`);
         logger.info(`Scenes: ${stats.scenes.length}`);
@@ -338,14 +338,14 @@ export class DebugPlugin implements IPlugin, IService {
             for (const system of scene.systems) {
                 const perfStr = system.performance
                     ? ` | Avg: ${system.performance.avgExecutionTime.toFixed(2)}ms, Max: ${system.performance.maxExecutionTime.toFixed(2)}ms`
-                    : '';
+                    : "";
                 logger.info(
-                    `    - ${system.name} (${system.enabled ? 'enabled' : 'disabled'}) | Entities: ${system.entityCount}${perfStr}`
+                    `    - ${system.name} (${system.enabled ? "enabled" : "disabled"}) | Entities: ${system.entityCount}${perfStr}`
                 );
             }
         }
 
-        logger.info('========================\n');
+        logger.info("========================\n");
     }
 
     /**

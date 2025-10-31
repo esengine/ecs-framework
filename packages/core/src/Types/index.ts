@@ -2,11 +2,11 @@
  * 框架核心类型定义
  */
 
-import type { IWorldManagerConfig } from '../ECS';
+import type {IWorldManagerConfig} from "../ECS";
 
 // 导出TypeScript类型增强工具
-export * from './TypeHelpers';
-export * from './IUpdatable';
+export * from "./TypeHelpers";
+export * from "./IUpdatable";
 
 /**
  * 组件接口
@@ -28,7 +28,7 @@ export interface IComponent {
 
 /**
  * 系统基础接口
- * 
+ *
  * 为现有的EntitySystem类提供类型定义
  */
 export interface ISystemBase {
@@ -38,7 +38,7 @@ export interface ISystemBase {
     updateOrder: number;
     /** 系统启用状态 */
     enabled: boolean;
-    
+
     /** 系统初始化 */
     initialize(): void;
     /** 更新系统（主要处理阶段） */
@@ -49,7 +49,7 @@ export interface ISystemBase {
 
 /**
  * 组件类型定义
- * 
+ *
  * 用于类型安全的组件操作
  * 支持任意构造函数签名，提供更好的类型安全性
  */
@@ -66,14 +66,14 @@ export interface IEventBus {
      * @param data 事件数据
      */
     emit<T>(eventType: string, data: T): void;
-    
+
     /**
      * 异步发射事件
      * @param eventType 事件类型
      * @param data 事件数据
      */
     emitAsync<T>(eventType: string, data: T): Promise<void>;
-    
+
     /**
      * 监听事件
      * @param eventType 事件类型
@@ -82,7 +82,7 @@ export interface IEventBus {
      * @returns 监听器ID
      */
     on<T>(eventType: string, handler: (data: T) => void, config?: IEventListenerConfig): string;
-    
+
     /**
      * 监听事件（一次性）
      * @param eventType 事件类型
@@ -91,7 +91,7 @@ export interface IEventBus {
      * @returns 监听器ID
      */
     once<T>(eventType: string, handler: (data: T) => void, config?: IEventListenerConfig): string;
-    
+
     /**
      * 异步监听事件
      * @param eventType 事件类型
@@ -100,32 +100,32 @@ export interface IEventBus {
      * @returns 监听器ID
      */
     onAsync<T>(eventType: string, handler: (data: T) => Promise<void>, config?: IEventListenerConfig): string;
-    
+
     /**
      * 移除事件监听器
      * @param eventType 事件类型
      * @param listenerId 监听器ID
      */
     off(eventType: string, listenerId: string): boolean;
-    
+
     /**
      * 移除指定事件类型的所有监听器
      * @param eventType 事件类型
      */
     offAll(eventType: string): void;
-    
+
     /**
      * 检查是否有指定事件的监听器
      * @param eventType 事件类型
      */
     hasListeners(eventType: string): boolean;
-    
+
     /**
      * 获取事件统计信息
      * @param eventType 事件类型（可选）
      */
     getStats(eventType?: string): IEventStats | Map<string, IEventStats>;
-    
+
     /**
      * 清空所有监听器
      */
@@ -499,4 +499,4 @@ export interface ISceneDebugData {
     sceneMemory: number;
     /** 场景启动时间 */
     sceneUptime: number;
-} 
+}
