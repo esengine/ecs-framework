@@ -1,6 +1,6 @@
 {
   "name": "@esengine/behavior-tree",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "完全ECS化的行为树系统，基于组件和实体的行为树实现",
   "main": "bin/index.js",
   "types": "bin/index.d.ts",
