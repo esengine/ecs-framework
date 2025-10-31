@@ -8,10 +8,23 @@ import { Component } from '../Component';
 import { ComponentType } from '../Core/ComponentStorage';
 import { getComponentTypeName } from '../Decorators';
 import {
-    getSerializationMetadata,
-    isSerializable,
-    SerializationMetadata
+    getSerializationMetadata
 } from './SerializationDecorators';
+
+/**
+ * 可序列化的值类型
+ */
+export type SerializableValue =
+    | string
+    | number
+    | boolean
+    | null
+    | undefined
+    | SerializableValue[]
+    | { [key: string]: SerializableValue }
+    | { __type: 'Date'; value: string }
+    | { __type: 'Map'; value: Array<[SerializableValue, SerializableValue]> }
+    | { __type: 'Set'; value: SerializableValue[] };
 
 /**
  * 序列化后的组件数据
@@ -30,7 +43,7 @@ export interface SerializedComponent {
     /**
      * 组件数据
      */
-    data: Record<string, any>;
+    data: Record<string, SerializableValue>;
 }
 
 /**
@@ -53,12 +66,12 @@ export class ComponentSerializer {
 
         const componentType = component.constructor as ComponentType;
         const typeName = metadata.options.typeId || getComponentTypeName(componentType);
-        const data: Record<string, any> = {};
+        const data: Record<string, SerializableValue> = {};
 
         // 序列化标记的字段
         for (const [fieldName, options] of metadata.fields) {
             const fieldKey = typeof fieldName === 'symbol' ? fieldName.toString() : fieldName;
-            const value = (component as any)[fieldName];
+            const value = (component as unknown as Record<string | symbol, SerializableValue>)[fieldName];
 
             // 跳过忽略的字段
             if (metadata.ignoredFields.has(fieldName)) {
@@ -125,7 +138,7 @@ export class ComponentSerializer {
                 ? options.deserializer(serializedValue)
                 : this.deserializeValue(serializedValue);
 
-            (component as any)[fieldName] = value;
+            (component as unknown as Record<string | symbol, SerializableValue>)[fieldName] = value;
         }
 
         return component;
@@ -178,7 +191,7 @@ export class ComponentSerializer {
      *
      * 处理基本类型、数组、对象等的序列化
      */
-    private static serializeValue(value: any): any {
+    private static serializeValue(value: SerializableValue): SerializableValue {
         if (value === null || value === undefined) {
             return value;
         }
@@ -219,11 +232,12 @@ export class ComponentSerializer {
         }
 
         // 普通对象
-        if (type === 'object') {
-            const result: Record<string, any> = {};
-            for (const key in value) {
-                if (value.hasOwnProperty(key)) {
-                    result[key] = this.serializeValue(value[key]);
+        if (type === 'object' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            const result: Record<string, SerializableValue> = {};
+            const obj = value as Record<string, SerializableValue>;
+            for (const key in obj) {
+                if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                    result[key] = this.serializeValue(obj[key]);
                 }
             }
             return result;
@@ -236,7 +250,7 @@ export class ComponentSerializer {
     /**
      * 默认值反序列化
      */
-    private static deserializeValue(value: any): any {
+    private static deserializeValue(value: SerializableValue): SerializableValue {
         if (value === null || value === undefined) {
             return value;
         }
@@ -248,14 +262,15 @@ export class ComponentSerializer {
         }
 
         // 处理特殊类型标记
-        if (type === 'object' && value.__type) {
-            switch (value.__type) {
+        if (type === 'object' && typeof value === 'object' && value !== null && '__type' in value) {
+            const typedValue = value as { __type: string; value: SerializableValue };
+            switch (typedValue.__type) {
                 case 'Date':
-                    return new Date(value.value);
+                    return { __type: 'Date', value: typeof typedValue.value === 'string' ? typedValue.value : String(typedValue.value) };
                 case 'Map':
-                    return new Map(value.value);
+                    return { __type: 'Map', value: typedValue.value as Array<[SerializableValue, SerializableValue]> };
                 case 'Set':
-                    return new Set(value.value);
+                    return { __type: 'Set', value: typedValue.value as SerializableValue[] };
             }
         }
 
@@ -265,11 +280,12 @@ export class ComponentSerializer {
         }
 
         // 普通对象
-        if (type === 'object') {
-            const result: Record<string, any> = {};
-            for (const key in value) {
-                if (value.hasOwnProperty(key)) {
-                    result[key] = this.deserializeValue(value[key]);
+        if (type === 'object' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            const result: Record<string, SerializableValue> = {};
+            const obj = value as Record<string, SerializableValue>;
+            for (const key in obj) {
+                if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                    result[key] = this.deserializeValue(obj[key]);
                 }
             }
             return result;

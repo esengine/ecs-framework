@@ -5,7 +5,7 @@ import { Time } from './Utils/Time';
 import { PerformanceMonitor } from './Utils/PerformanceMonitor';
 import { PoolManager } from './Utils/Pool/PoolManager';
 import { DebugManager } from './Utils/Debug';
-import { ICoreConfig, IECSDebugConfig, IUpdatable, isUpdatable } from './Types';
+import { ICoreConfig, IECSDebugConfig } from './Types';
 import { createLogger } from './Utils/Logger';
 import { SceneManager } from './ECS/SceneManager';
 import { IScene } from './ECS/IScene';
@@ -502,7 +502,7 @@ export class Core {
 
         if (this._instance._debugManager) {
             this._instance._debugManager.stop();
-            this._instance._debugManager = undefined;
+            delete this._instance._debugManager;
         }
 
         // 更新Core配置

@@ -139,8 +139,8 @@ export class ComponentDataCollector {
                 const keys = Object.keys(item);
                 for (let i = 0; i < Math.min(keys.length, 20); i++) {
                     const key = keys[i];
-                    if (key === 'entity' || key === '_entity' || key === 'constructor') continue;
-                    
+                    if (!key || key === 'entity' || key === '_entity' || key === 'constructor') continue;
+
                     const value = item[key];
                     itemSize += key.length * 2;
                     
@@ -233,19 +233,20 @@ export class ComponentDataCollector {
                         
                         for (let i = 0; i < maxProps; i++) {
                             const key = ownKeys[i];
-                            
-                            if (key === 'constructor' || 
+                            if (!key) continue;
+
+                            if (key === 'constructor' ||
                                 key === '__proto__' ||
-                                key === 'entity' || 
+                                key === 'entity' ||
                                 key === '_entity' ||
                                 key.startsWith('_cc_') ||
                                 key.startsWith('__')) {
                                 continue;
                             }
-                            
+
                             try {
                                 size += 16 + (key.length * 2);
-                                
+
                                 const value = obj[key];
                                 if (value !== undefined && value !== null) {
                                     size += this.estimateObjectSize(value, visited, depth + 1);

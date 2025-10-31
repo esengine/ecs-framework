@@ -19,6 +19,7 @@ export interface IService {
  * 服务类型
  *
  * 支持任意构造函数签名，以便与依赖注入装饰器配合使用
+ * 使用 any[] 以允许任意参数类型的构造函数
  */
 export type ServiceType<T extends IService> = new (...args: any[]) => T;
 
@@ -108,7 +109,7 @@ export class ServiceContainer {
      * 自动收集所有使用@Updatable装饰器标记的服务，供Core统一更新
      * 按优先级排序（数值越小越先执行）
      */
-    private _updatableServices: Array<{ instance: any; priority: number }> = [];
+    private _updatableServices: Array<{ instance: IService; priority: number }> = [];
 
     /**
      * 注册单例服务
@@ -138,7 +139,7 @@ export class ServiceContainer {
 
         this._services.set(type as ServiceType<IService>, {
             type: type as ServiceType<IService>,
-            factory: factory as ((container: ServiceContainer) => IService) | undefined,
+            ...(factory && { factory: factory as (container: ServiceContainer) => IService }),
             lifetime: ServiceLifetime.Singleton
         });
 
@@ -170,7 +171,7 @@ export class ServiceContainer {
 
         this._services.set(type as ServiceType<IService>, {
             type: type as ServiceType<IService>,
-            factory: factory as ((container: ServiceContainer) => IService) | undefined,
+            ...(factory && { factory: factory as (container: ServiceContainer) => IService }),
             lifetime: ServiceLifetime.Transient
         });
 
@@ -191,7 +192,7 @@ export class ServiceContainer {
      * container.registerInstance(Config, config);
      * ```
      */
-    public registerInstance<T extends IService>(type: new (...args: any[]) => T, instance: T): void {
+    public registerInstance<T extends IService>(type: ServiceType<T>, instance: T): void {
         if (this._services.has(type as ServiceType<IService>)) {
             logger.warn(`Service ${type.name} is already registered`);
             return;
@@ -391,7 +392,7 @@ export class ServiceContainer {
      */
     public updateAll(deltaTime?: number): void {
         for (const { instance } of this._updatableServices) {
-            instance.update(deltaTime);
+            (instance as IService & { update: (deltaTime?: number) => void }).update(deltaTime);
         }
     }
 

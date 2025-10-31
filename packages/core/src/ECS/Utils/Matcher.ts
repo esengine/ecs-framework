@@ -209,9 +209,9 @@ export class Matcher {
             all: [...this.condition.all],
             any: [...this.condition.any],
             none: [...this.condition.none],
-            tag: this.condition.tag,
-            name: this.condition.name,
-            component: this.condition.component
+            ...(this.condition.tag !== undefined && { tag: this.condition.tag }),
+            ...(this.condition.name !== undefined && { name: this.condition.name }),
+            ...(this.condition.component !== undefined && { component: this.condition.component })
         };
     }
 

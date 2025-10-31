@@ -65,7 +65,7 @@ interface EventListenerRecord {
  * ```
  */
 export abstract class EntitySystem<
-    TComponents extends readonly ComponentConstructor[] = []
+    _TComponents extends readonly ComponentConstructor[] = []
 > implements ISystemBase, IService {
     private _updateOrder: number;
     private _enabled: boolean;
@@ -83,7 +83,6 @@ export abstract class EntitySystem<
      */
     private _entityIdMap: Map<number, Entity> | null;
     private _entityIdMapVersion: number;
-    private _entityIdMapSize: number;
 
     /**
      * 统一的实体缓存管理器
@@ -158,7 +157,6 @@ export abstract class EntitySystem<
 
         this._entityIdMap = null;
         this._entityIdMapVersion = -1;
-        this._entityIdMapSize = 0;
 
         // 初始化logger
         this.logger = createLogger(this.getLoggerName());
@@ -281,7 +279,6 @@ export abstract class EntitySystem<
         // 清理实体ID映射缓存
         this._entityIdMap = null;
         this._entityIdMapVersion = -1;
-        this._entityIdMapSize = 0;
 
         // 清理所有事件监听器
         // 调用框架销毁方法
@@ -425,7 +422,7 @@ export abstract class EntitySystem<
         const idSet = new Set<number>();
 
         for (let i = 0; i < len; i = (i + 1) | 0) {
-            idSet.add(entities[i].id | 0);
+            idSet.add(entities[i]!.id | 0);
         }
         return idSet;
     }
@@ -497,13 +494,12 @@ export abstract class EntitySystem<
 
         const len = allEntities.length;
         for (let i = 0; i < len; i = (i + 1) | 0) {
-            const entity = allEntities[i];
+            const entity = allEntities[i]!;
             entityMap.set(entity.id | 0, entity);
         }
 
         this._entityIdMap = entityMap;
         this._entityIdMapVersion = version;
-        this._entityIdMapSize = len;
 
         return entityMap;
     }
@@ -608,7 +604,7 @@ export abstract class EntitySystem<
      * 
      * @param entities 要处理的实体列表
      */
-    protected process(entities: readonly Entity[]): void {
+    protected process(_entities: readonly Entity[]): void {
         // 子类必须实现此方法
     }
 
@@ -720,7 +716,7 @@ export abstract class EntitySystem<
      * 
      * @param entity 被添加的实体
      */
-    protected onAdded(entity: Entity): void {
+    protected onAdded(_entity: Entity): void {
         // 子类可以重写此方法
     }
 
@@ -731,7 +727,7 @@ export abstract class EntitySystem<
      *
      * @param entity 被移除的实体
      */
-    protected onRemoved(entity: Entity): void {
+    protected onRemoved(_entity: Entity): void {
         // 子类可以重写此方法
     }
 
@@ -812,6 +808,7 @@ export abstract class EntitySystem<
 
         if (listenerIndex >= 0) {
             const listener = this._eventListeners[listenerIndex];
+            if (!listener) return;
 
             // 从事件系统中移除
             listener.eventSystem.off(eventType, listener.listenerRef);
@@ -958,7 +955,7 @@ export abstract class EntitySystem<
         processor: (entity: Entity, index: number) => void
     ): void {
         for (let i = 0; i < entities.length; i++) {
-            processor(entities[i], i);
+            processor(entities[i]!, i);
         }
     }
 
@@ -1031,7 +1028,7 @@ export abstract class EntitySystem<
         predicate: (entity: Entity, index: number) => boolean
     ): Entity | undefined {
         for (let i = 0; i < entities.length; i++) {
-            if (predicate(entities[i], i)) {
+            if (predicate(entities[i]!, i)) {
                 return entities[i];
             }
         }
@@ -1060,7 +1057,7 @@ export abstract class EntitySystem<
         predicate: (entity: Entity, index: number) => boolean
     ): boolean {
         for (let i = 0; i < entities.length; i++) {
-            if (predicate(entities[i], i)) {
+            if (predicate(entities[i]!, i)) {
                 return true;
             }
         }
@@ -1089,7 +1086,7 @@ export abstract class EntitySystem<
         predicate: (entity: Entity, index: number) => boolean
     ): boolean {
         for (let i = 0; i < entities.length; i++) {
-            if (!predicate(entities[i], i)) {
+            if (!predicate(entities[i]!, i)) {
                 return false;
             }
         }

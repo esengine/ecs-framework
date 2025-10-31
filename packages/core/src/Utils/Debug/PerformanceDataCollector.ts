@@ -7,7 +7,6 @@ import { Time } from '../Time';
 export class PerformanceDataCollector {
     private frameTimeHistory: number[] = [];
     private maxHistoryLength: number = 60;
-    private lastGCCount: number = 0;
     private gcCollections: number = 0;
     private lastMemoryCheck: number = 0;
 

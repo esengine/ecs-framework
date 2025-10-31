@@ -507,10 +507,10 @@ describe('ComponentStorageManager - 组件存储管理器测试', () => {
             expect(allStats.has('PositionComponent')).toBe(true);
             
             const testStats = allStats.get('TestComponent');
-            expect(testStats.usedSlots).toBe(2);
-            
+            expect(testStats?.usedSlots).toBe(2);
+
             const positionStats = allStats.get('PositionComponent');
-            expect(positionStats.usedSlots).toBe(1);
+            expect(positionStats?.usedSlots).toBe(1);
         });
 
         test('应该能够清空所有存储器', () => {
@@ -591,7 +591,7 @@ describe('ComponentStorageManager - 组件存储管理器测试', () => {
             expect(manager.hasComponent(2, TestComponent)).toBe(true);
             
             const stats = manager.getAllStats();
-            expect(stats.get('TestComponent').usedSlots).toBeLessThan(entityCount);
+            expect(stats.get('TestComponent')?.usedSlots).toBeLessThan(entityCount);
         });
     });
 });

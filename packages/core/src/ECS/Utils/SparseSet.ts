@@ -75,7 +75,7 @@ export class SparseSet<T> {
         
         // 如果不是最后一个元素，则与最后一个元素交换
         if (index !== lastIndex) {
-            const lastItem = this._dense[lastIndex];
+            const lastItem = this._dense[lastIndex]!;
             this._dense[index] = lastItem;
             this._sparse.set(lastItem, index);
         }
@@ -140,7 +140,7 @@ export class SparseSet<T> {
      */
     public forEach(callback: (item: T, index: number) => void): void {
         for (let i = 0; i < this._dense.length; i++) {
-            callback(this._dense[i], i);
+            callback(this._dense[i]!, i);
         }
     }
     
@@ -153,7 +153,7 @@ export class SparseSet<T> {
     public map<U>(callback: (item: T, index: number) => U): U[] {
         const result: U[] = [];
         for (let i = 0; i < this._dense.length; i++) {
-            result.push(callback(this._dense[i], i));
+            result.push(callback(this._dense[i]!, i));
         }
         return result;
     }
@@ -167,8 +167,8 @@ export class SparseSet<T> {
     public filter(predicate: (item: T, index: number) => boolean): T[] {
         const result: T[] = [];
         for (let i = 0; i < this._dense.length; i++) {
-            if (predicate(this._dense[i], i)) {
-                result.push(this._dense[i]);
+            if (predicate(this._dense[i]!, i)) {
+                result.push(this._dense[i]!);
             }
         }
         return result;
@@ -182,7 +182,7 @@ export class SparseSet<T> {
      */
     public find(predicate: (item: T, index: number) => boolean): T | undefined {
         for (let i = 0; i < this._dense.length; i++) {
-            if (predicate(this._dense[i], i)) {
+            if (predicate(this._dense[i]!, i)) {
                 return this._dense[i];
             }
         }
@@ -197,7 +197,7 @@ export class SparseSet<T> {
      */
     public some(predicate: (item: T, index: number) => boolean): boolean {
         for (let i = 0; i < this._dense.length; i++) {
-            if (predicate(this._dense[i], i)) {
+            if (predicate(this._dense[i]!, i)) {
                 return true;
             }
         }
@@ -212,7 +212,7 @@ export class SparseSet<T> {
      */
     public every(predicate: (item: T, index: number) => boolean): boolean {
         for (let i = 0; i < this._dense.length; i++) {
-            if (!predicate(this._dense[i], i)) {
+            if (!predicate(this._dense[i]!, i)) {
                 return false;
             }
         }
@@ -291,7 +291,7 @@ export class SparseSet<T> {
         
         // 检查映射关系的正确性
         for (let i = 0; i < this._dense.length; i++) {
-            const item = this._dense[i];
+            const item = this._dense[i]!;
             const mappedIndex = this._sparse.get(item);
             if (mappedIndex !== i) {
                 return false;

@@ -66,9 +66,6 @@ export class QuerySystem {
         dirtyChecks: 0
     };
 
-    private resultArrayPool: Entity[][] = [];
-    private poolMaxSize = 50;
-
     constructor() {
         this.entityIndex = {
             byTag: new Map(),
@@ -76,20 +73,6 @@ export class QuerySystem {
         };
 
         this.archetypeSystem = new ArchetypeSystem();
-    }
-
-    private acquireResultArray(): Entity[] {
-        if (this.resultArrayPool.length > 0) {
-            return this.resultArrayPool.pop()!;
-        }
-        return [];
-    }
-
-    private releaseResultArray(array: Entity[]): void {
-        if (this.resultArrayPool.length < this.poolMaxSize) {
-            array.length = 0;
-            this.resultArrayPool.push(array);
-        }
     }
 
     /**
@@ -377,30 +360,6 @@ export class QuerySystem {
             fromCache: true
         };
     }
-
-    /**
-     * 多组件查询算法
-     * 
-     * 针对多组件查询场景的高效算法实现。
-     * 通过选择最小的组件集合作为起点，减少需要检查的实体数量。
-     * 
-     * @param componentTypes 组件类型列表
-     * @returns 匹配的实体列表
-     */
-    private queryMultipleComponents(componentTypes: ComponentType[]): Entity[] {
-        const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'AND');
-        const result: Entity[] = [];
-
-        for (const archetype of archetypeResult.archetypes) {
-            for (const entity of archetype.entities) {
-                result.push(entity);
-            }
-        }
-
-        return result;
-    }
-
-
 
     /**
      * 查询包含任意指定组件的实体
@@ -715,7 +674,7 @@ export class QuerySystem {
     private generateCacheKey(prefix: string, componentTypes: ComponentType[]): string {
         // 快速路径：单组件查询
         if (componentTypes.length === 1) {
-            const name = getComponentTypeName(componentTypes[0]);
+            const name = getComponentTypeName(componentTypes[0]!);
             return `${prefix}:${name}`;
         }
 
@@ -1258,7 +1217,7 @@ export class QueryBuilder {
 
         // 简化实现：目前只支持单一条件
         if (this.conditions.length === 1) {
-            const condition = this.conditions[0];
+            const condition = this.conditions[0]!;
             switch (condition.type) {
                 case QueryConditionType.ALL:
                     return this.querySystem.queryAll(...condition.componentTypes);

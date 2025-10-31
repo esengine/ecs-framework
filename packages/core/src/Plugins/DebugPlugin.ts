@@ -2,15 +2,12 @@ import type { Core } from '../Core';
 import type { ServiceContainer } from '../Core/ServiceContainer';
 import { IPlugin } from '../Core/Plugin';
 import { createLogger } from '../Utils/Logger';
-import type { Scene } from '../ECS/Scene';
 import type { IScene } from '../ECS/IScene';
 import type { Entity } from '../ECS/Entity';
-import type { Component } from '../ECS/Component';
 import type { EntitySystem } from '../ECS/Systems/EntitySystem';
 import { WorldManager } from '../ECS/WorldManager';
-import { Injectable, Inject } from '../Core/DI/Decorators';
+import { Injectable } from '../Core/DI/Decorators';
 import type { IService } from '../Core/ServiceContainer';
-import type { PerformanceData } from '../Utils/PerformanceMonitor';
 
 const logger = createLogger('DebugPlugin');
 
@@ -115,7 +112,7 @@ export class DebugPlugin implements IPlugin, IService {
     /**
      * 安装插件
      */
-    async install(core: Core, services: ServiceContainer): Promise<void> {
+    async install(_core: Core, services: ServiceContainer): Promise<void> {
         this.worldManager = services.resolve(WorldManager);
 
         logger.info('ECS Debug Plugin installed');
@@ -222,16 +219,18 @@ export class DebugPlugin implements IPlugin, IService {
     private getSystemInfo(system: EntitySystem): SystemDebugInfo {
         const perfStats = system.getPerformanceStats();
 
+        const performance = perfStats ? {
+            avgExecutionTime: perfStats.averageTime,
+            maxExecutionTime: perfStats.maxTime,
+            totalCalls: perfStats.executionCount
+        } : undefined;
+
         return {
             name: system.constructor.name,
             enabled: system.enabled,
             updateOrder: system.updateOrder,
             entityCount: system.entities.length,
-            performance: perfStats ? {
-                avgExecutionTime: perfStats.averageTime,
-                maxExecutionTime: perfStats.maxTime,
-                totalCalls: perfStats.executionCount
-            } : undefined
+            ...(performance !== undefined && { performance })
         };
     }
 

@@ -63,7 +63,7 @@ export class VersionMigrationManager {
     public static registerComponentMigration(
         componentType: string,
         fromVersion: number,
-        toVersion: number,
+        _toVersion: number,
         migration: ComponentMigrationFunction
     ): void {
         if (!this.componentMigrations.has(componentType)) {
@@ -98,7 +98,7 @@ export class VersionMigrationManager {
      */
     public static registerSceneMigration(
         fromVersion: number,
-        toVersion: number,
+        _toVersion: number,
         migration: SceneMigrationFunction
     ): void {
         this.sceneMigrations.set(fromVersion, migration);

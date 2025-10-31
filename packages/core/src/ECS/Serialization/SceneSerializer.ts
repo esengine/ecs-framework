@@ -6,7 +6,6 @@
 
 import type { IScene } from '../IScene';
 import { Entity } from '../Entity';
-import { Component } from '../Component';
 import { ComponentType, ComponentRegistry } from '../Core/ComponentStorage';
 import { EntitySerializer, SerializedEntity } from './EntitySerializer';
 import { getComponentTypeName } from '../Decorators';
@@ -514,7 +513,7 @@ export class SceneSerializer {
             return {
                 valid: errors.length === 0,
                 version: data.version,
-                errors: errors.length > 0 ? errors : undefined
+                ...(errors.length > 0 && { errors })
             };
         } catch (error) {
             return {
@@ -543,7 +542,7 @@ export class SceneSerializer {
             return {
                 name: data.name,
                 version: data.version,
-                timestamp: data.timestamp,
+                ...(data.timestamp !== undefined && { timestamp: data.timestamp }),
                 entityCount: data.metadata?.entityCount || data.entities.length,
                 componentTypeCount: data.componentTypeRegistry.length
             };

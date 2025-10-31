@@ -99,7 +99,7 @@ export class PlatformDetector {
             platform,
             confident,
             features,
-            adapterClass
+            ...(adapterClass && { adapterClass })
         };
     }
 
@@ -195,11 +195,11 @@ export class PlatformDetector {
         const info: Record<string, any> = {};
 
         // 基础检测
-        info.userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown';
-        info.platform = typeof navigator !== 'undefined' ? navigator.platform : 'unknown';
+        info['userAgent'] = typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown';
+        info['platform'] = typeof navigator !== 'undefined' ? navigator.platform : 'unknown';
 
         // 全局对象检测
-        info.globalObjects = {
+        info['globalObjects'] = {
             window: typeof window !== 'undefined',
             document: typeof document !== 'undefined',
             navigator: typeof navigator !== 'undefined',
@@ -210,7 +210,7 @@ export class PlatformDetector {
         };
 
         // Worker相关检测
-        info.workerSupport = {
+        info['workerSupport'] = {
             Worker: typeof Worker !== 'undefined',
             SharedWorker: typeof SharedWorker !== 'undefined',
             ServiceWorker: typeof navigator !== 'undefined' && 'serviceWorker' in navigator,
@@ -219,13 +219,13 @@ export class PlatformDetector {
         };
 
         // 性能相关检测
-        info.performance = {
+        info['performance'] = {
             performanceNow: typeof performance !== 'undefined' && typeof performance.now === 'function',
             hardwareConcurrency: typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : undefined
         };
 
         // 其他API检测
-        info.apiSupport = {
+        info['apiSupport'] = {
             Blob: typeof Blob !== 'undefined',
             URL: typeof URL !== 'undefined',
             createObjectURL: typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function',

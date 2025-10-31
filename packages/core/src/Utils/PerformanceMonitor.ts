@@ -108,37 +108,8 @@ import type { IService } from '../Core/ServiceContainer';
 export class PerformanceMonitor implements IService {
     private _systemData = new Map<string, PerformanceData>();
     private _systemStats = new Map<string, PerformanceStats>();
-    private _warnings: PerformanceWarning[] = [];
     private _isEnabled = false;
     private _maxRecentSamples = 60; // 保留最近60帧的数据
-    private _maxWarnings = 100; // 最大警告数量
-
-    // 性能阈值配置
-    private _thresholds: PerformanceThresholds = {
-        executionTime: { warning: 16.67, critical: 33.33 }, // 60fps和30fps对应的帧时间
-        memoryUsage: { warning: 100, critical: 200 }, // MB
-        cpuUsage: { warning: 70, critical: 90 }, // 百分比
-        fps: { warning: 45, critical: 30 },
-        entityCount: { warning: 1000, critical: 5000 }
-    };
-
-    // FPS监控
-    private _fpsHistory: number[] = [];
-    private _lastFrameTime = 0;
-    private _frameCount = 0;
-    private _fpsUpdateInterval = 1000; // 1秒更新一次FPS
-    private _lastFpsUpdate = 0;
-    private _currentFps = 60;
-
-    // 内存监控
-    private _memoryCheckInterval = 5000; // 5秒检查一次内存
-    private _lastMemoryCheck = 0;
-    private _memoryHistory: number[] = [];
-
-    // GC监控
-    private _gcCount = 0;
-    private _lastGcCheck = 0;
-    private _gcCheckInterval = 1000;
 
     constructor() {}
 
@@ -168,7 +139,7 @@ export class PerformanceMonitor implements IService {
      * @param systemName 系统名称
      * @returns 开始时间戳
      */
-    public startMonitoring(systemName: string): number {
+    public startMonitoring(_systemName: string): number {
         if (!this._isEnabled) {
             return 0;
         }
@@ -397,9 +368,6 @@ export class PerformanceMonitor implements IService {
     public dispose(): void {
         this._systemData.clear();
         this._systemStats.clear();
-        this._warnings = [];
-        this._fpsHistory = [];
-        this._memoryHistory = [];
         this._isEnabled = false;
     }
 } 

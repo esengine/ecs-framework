@@ -1,9 +1,6 @@
 import { Component } from '../Component';
 import type { Entity } from '../Entity';
 import type { IScene } from '../IScene';
-import { createLogger } from '../../Utils/Logger';
-
-const logger = createLogger('ReferenceTracker');
 
 /**
  * WeakRef 接口定义
@@ -97,11 +94,6 @@ export class ReferenceTracker {
      * Entity ID -> 引用该Entity的所有组件记录
      */
     private _references: Map<number, Set<EntityRefRecord>> = new Map();
-
-    /**
-     * 当前Scene的引用
-     */
-    private _scene: IWeakRef<IScene> | null = null;
 
     /**
      * 注册Entity引用
@@ -270,15 +262,6 @@ export class ReferenceTracker {
         for (const entityId of entitiesToDelete) {
             this._references.delete(entityId);
         }
-    }
-
-    /**
-     * 设置Scene引用
-     *
-     * @param scene Scene实例
-     */
-    public setScene(scene: IScene): void {
-        this._scene = new WeakRefImpl(scene);
     }
 
     /**

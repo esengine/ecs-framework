@@ -73,8 +73,8 @@ export class BitMaskHashMap<T> {
 
         // 查找是否存在 secondaryHash
         for (let i = 0; i < bucket.length; i++) {
-            if (bucket[i][0] === secondary) {
-                bucket[i][1] = value;
+            if (bucket[i]![0] === secondary) {
+                bucket[i]![1] = value;
                 return this;
             }
         }
@@ -90,8 +90,8 @@ export class BitMaskHashMap<T> {
         const bucket = this.buckets.get(primary);
         if (!bucket) return undefined;
         for (let i = 0; i < bucket.length; i++) {
-            if (bucket[i][0] === secondary) {
-                return bucket[i][1];
+            if (bucket[i]![0] === secondary) {
+                return bucket[i]![1];
             }
         }
         return undefined;
@@ -106,7 +106,7 @@ export class BitMaskHashMap<T> {
         const bucket = this.buckets.get(primary);
         if (!bucket) return false;
         for (let i = 0; i < bucket.length; i++) {
-            if (bucket[i][0] === secondary) {
+            if (bucket[i]![0] === secondary) {
                 bucket.splice(i, 1);
                 this._size--;
                 if (bucket.length === 0) {
@@ -125,7 +125,7 @@ export class BitMaskHashMap<T> {
 
     *entries(): IterableIterator<[BitMask64Data, T]> {
         for (const [_, bucket] of this.buckets) {
-            for (const [secondary, value] of bucket) {
+            for (const [_secondary, value] of bucket) {
                 // 无法还原原始 key（只存二级 hash），所以 entries 返回不了 key
                 yield [undefined as any, value];
             }

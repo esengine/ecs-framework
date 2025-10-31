@@ -5,7 +5,7 @@
  */
 
 import type { Entity } from '../../Entity';
-import type { ComponentConstructor, ComponentInstance, ComponentTypeMap } from '../../../Types/TypeHelpers';
+import type { ComponentConstructor } from '../../../Types/TypeHelpers';
 import { Matcher, type QueryCondition } from '../../Utils/Matcher';
 
 /**
@@ -179,8 +179,12 @@ export class TypedQueryBuilder<
         this._all = (all || []) as TAll;
         this._any = (any || []) as TAny;
         this._none = (none || []) as TNone;
-        this._tag = tag;
-        this._name = name;
+        if (tag !== undefined) {
+            this._tag = tag;
+        }
+        if (name !== undefined) {
+            this._name = name;
+        }
     }
 
     /**
@@ -322,8 +326,8 @@ export class TypedQueryBuilder<
             all: [...this._all] as ComponentConstructor[],
             any: [...this._any] as ComponentConstructor[],
             none: [...this._none] as ComponentConstructor[],
-            tag: this._tag,
-            name: this._name
+            ...(this._tag !== undefined && { tag: this._tag }),
+            ...(this._name !== undefined && { name: this._name })
         };
     }
 
