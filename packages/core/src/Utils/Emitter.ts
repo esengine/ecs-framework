@@ -1,13 +1,15 @@
+type EventHandler = (...args: unknown[]) => void;
+
 /**
  * 用于包装事件的一个小类
  */
 export class FuncPack<TContext = unknown> {
     /** 函数 */
-    public func: Function;
+    public func: EventHandler;
     /** 上下文 */
     public context: TContext;
 
-    constructor(func: Function, context: TContext) {
+    constructor(func: EventHandler, context: TContext) {
         this.func = func;
         this.context = context;
     }

@@ -102,7 +102,7 @@ export class ComponentRegistry {
      * @param componentName 组件名称
      * @returns 组件类型构造函数
      */
-    public static getComponentType(componentName: string): Function | null {
+    public static getComponentType(componentName: string): ComponentType | null {
         return this.componentNameToType.get(componentName) || null;
     }
 
@@ -110,7 +110,7 @@ export class ComponentRegistry {
      * 获取所有已注册的组件类型
      * @returns 组件类型映射
      */
-    public static getAllRegisteredTypes(): Map<Function, number> {
+    public static getAllRegisteredTypes(): Map<ComponentType, number> {
         return new Map(this.componentTypes);
     }
 
@@ -118,7 +118,7 @@ export class ComponentRegistry {
      * 获取所有组件名称到类型的映射
      * @returns 名称到类型的映射
      */
-    public static getAllComponentNames(): Map<string, Function> {
+    public static getAllComponentNames(): Map<string, ComponentType> {
         return new Map(this.componentNameToType);
     }
 

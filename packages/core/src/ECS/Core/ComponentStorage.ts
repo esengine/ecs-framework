@@ -172,7 +172,7 @@ export class ComponentStorage<T extends Component> {
  */
 export class ComponentStorageManager {
     private static readonly _logger = createLogger("ComponentStorage");
-    private storages = new Map<Function, ComponentStorage<Component> | SoAStorage<Component>>();
+    private storages = new Map<ComponentType, ComponentStorage<Component> | SoAStorage<Component>>();
 
     /**
      * 检查组件类型是否启用SoA存储
