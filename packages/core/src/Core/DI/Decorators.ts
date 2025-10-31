@@ -8,19 +8,13 @@ import type { ServiceContainer } from '../ServiceContainer';
 import type { IService, ServiceType } from '../ServiceContainer';
 
 /**
- * 依赖注入元数据键
- */
-const INJECTABLE_METADATA_KEY = Symbol('injectable');
-const INJECT_METADATA_KEY = Symbol('inject');
-const INJECT_PARAMS_METADATA_KEY = Symbol('inject:params');
-const UPDATABLE_METADATA_KEY = Symbol('updatable');
-
-/**
  * 依赖注入元数据存储
  */
-const injectableMetadata = new WeakMap<any, InjectableMetadata>();
-const injectMetadata = new WeakMap<any, Map<number, ServiceType<any> | string | symbol>>();
-const updatableMetadata = new WeakMap<any, UpdatableMetadata>();
+type Constructor = abstract new (...args: unknown[]) => unknown;
+
+const injectableMetadata = new WeakMap<Constructor, InjectableMetadata>();
+const injectMetadata = new WeakMap<Constructor, Map<number, ServiceType<IService> | string | symbol>>();
+const updatableMetadata = new WeakMap<Constructor, UpdatableMetadata>();
 
 /**
  * 可注入元数据接口
@@ -34,13 +28,13 @@ export interface InjectableMetadata {
     /**
      * 依赖列表
      */
-    dependencies: Array<ServiceType<any> | string | symbol>;
+    dependencies: Array<ServiceType<IService> | string | symbol>;
 
     /**
      * 属性注入映射
      * key: 属性名, value: 服务类型
      */
-    properties?: Map<string | symbol, ServiceType<any>>;
+    properties?: Map<string | symbol, ServiceType<IService>>;
 }
 
 /**
@@ -82,17 +76,15 @@ export interface UpdatableMetadata {
  * ```
  */
 export function Injectable(): ClassDecorator {
-    return function <T extends Function>(target: T): T {
-        const existing = injectableMetadata.get(target);
+    return function (target: Function): void {
+        const existing = injectableMetadata.get(target as Constructor);
 
-        injectableMetadata.set(target, {
+        injectableMetadata.set(target as Constructor, {
             injectable: true,
             dependencies: [],
-            properties: existing?.properties
+            ...(existing?.properties && { properties: existing.properties })
         });
-
-        return target;
-    };
+    } as ClassDecorator;
 }
 
 /**
@@ -125,9 +117,9 @@ export function Injectable(): ClassDecorator {
  * ```
  */
 export function Updatable(priority: number = 0): ClassDecorator {
-    return function <T extends Function>(target: T): T {
+    return function (target: Function): void {
         // 验证类原型上是否有update方法
-        const prototype = (target as any).prototype;
+        const prototype = (target as Constructor & { prototype: { update?: unknown } }).prototype;
         if (!prototype || typeof prototype.update !== 'function') {
             throw new Error(
                 `@Updatable() decorator requires class ${target.name} to implement IUpdatable interface with update() method. ` +
@@ -136,13 +128,11 @@ export function Updatable(priority: number = 0): ClassDecorator {
         }
 
         // 标记为可更新
-        updatableMetadata.set(target, {
+        updatableMetadata.set(target as Constructor, {
             updatable: true,
             priority
         });
-
-        return target;
-    };
+    } as ClassDecorator;
 }
 
 /**
@@ -152,13 +142,13 @@ export function Updatable(priority: number = 0): ClassDecorator {
  *
  * @param serviceType 服务类型标识符
  */
-export function Inject(serviceType: ServiceType<any> | string | symbol): ParameterDecorator {
-    return function (target: Object, propertyKey: string | symbol | undefined, parameterIndex: number) {
+export function Inject(serviceType: ServiceType<IService> | string | symbol): ParameterDecorator {
+    return function (target: object, _propertyKey: string | symbol | undefined, parameterIndex: number) {
         // 获取或创建注入元数据
-        let params = injectMetadata.get(target);
+        let params = injectMetadata.get(target as Constructor);
         if (!params) {
             params = new Map();
-            injectMetadata.set(target, params);
+            injectMetadata.set(target as Constructor, params);
         }
 
         // 记录参数索引和服务类型的映射
@@ -175,16 +165,16 @@ export function Inject(serviceType: ServiceType<any> | string | symbol): Paramet
  *
  * @param serviceType 服务类型
  */
-export function InjectProperty(serviceType: ServiceType<any>): PropertyDecorator {
-    return function (target: any, propertyKey: string | symbol) {
-        let metadata = injectableMetadata.get(target.constructor);
+export function InjectProperty(serviceType: ServiceType<IService>): PropertyDecorator {
+    return function (target: object, propertyKey: string | symbol) {
+        let metadata = injectableMetadata.get((target as { constructor: Constructor }).constructor);
 
         if (!metadata) {
             metadata = {
                 injectable: true,
                 dependencies: []
             };
-            injectableMetadata.set(target.constructor, metadata);
+            injectableMetadata.set((target as { constructor: Constructor }).constructor, metadata);
         }
 
         if (!metadata.properties) {
@@ -201,7 +191,7 @@ export function InjectProperty(serviceType: ServiceType<any>): PropertyDecorator
  * @param target 目标类
  * @returns 是否可注入
  */
-export function isInjectable(target: any): boolean {
+export function isInjectable(target: Constructor): boolean {
     const metadata = injectableMetadata.get(target);
     return metadata?.injectable ?? false;
 }
@@ -212,7 +202,7 @@ export function isInjectable(target: any): boolean {
  * @param target 目标类
  * @returns 依赖注入元数据
  */
-export function getInjectableMetadata(target: any): InjectableMetadata | undefined {
+export function getInjectableMetadata(target: Constructor): InjectableMetadata | undefined {
     return injectableMetadata.get(target);
 }
 
@@ -222,7 +212,7 @@ export function getInjectableMetadata(target: any): InjectableMetadata | undefin
  * @param target 目标类
  * @returns 参数索引到服务类型的映射
  */
-export function getInjectMetadata(target: any): Map<number, ServiceType<any> | string | symbol> {
+export function getInjectMetadata(target: Constructor): Map<number, ServiceType<IService> | string | symbol> {
     return injectMetadata.get(target) || new Map();
 }
 
@@ -243,10 +233,10 @@ export function createInstance<T>(
     container: ServiceContainer
 ): T {
     // 获取参数注入元数据
-    const injectParams = getInjectMetadata(constructor);
+    const injectParams = getInjectMetadata(constructor as Constructor);
 
     // 解析依赖
-    const dependencies: any[] = [];
+    const dependencies: unknown[] = [];
 
     // 获取构造函数参数数量
     const paramCount = constructor.length;
@@ -264,7 +254,7 @@ export function createInstance<T>(
                 );
             } else {
                 // 类类型
-                dependencies.push(container.resolve(serviceType as ServiceType<any>));
+                dependencies.push(container.resolve(serviceType as ServiceType<IService>));
             }
         } else {
             // 没有@Inject标记，传入undefined
@@ -282,8 +272,8 @@ export function createInstance<T>(
  * @param instance 目标实例
  * @param container 服务容器
  */
-export function injectProperties<T>(instance: T, container: ServiceContainer): void {
-    const constructor = (instance as any).constructor;
+export function injectProperties<T extends object>(instance: T, container: ServiceContainer): void {
+    const constructor = (instance as { constructor: Constructor }).constructor;
     const metadata = getInjectableMetadata(constructor);
 
     if (!metadata?.properties || metadata.properties.size === 0) {
@@ -294,7 +284,7 @@ export function injectProperties<T>(instance: T, container: ServiceContainer): v
         const service = container.resolve(serviceType);
 
         if (service !== null) {
-            (instance as any)[propertyKey] = service;
+            (instance as Record<string | symbol, unknown>)[propertyKey] = service;
         }
     }
 }
@@ -305,7 +295,7 @@ export function injectProperties<T>(instance: T, container: ServiceContainer): v
  * @param target 目标类
  * @returns 是否可更新
  */
-export function isUpdatable(target: any): boolean {
+export function isUpdatable(target: Constructor): boolean {
     const metadata = updatableMetadata.get(target);
     return metadata?.updatable ?? false;
 }
@@ -316,7 +306,7 @@ export function isUpdatable(target: any): boolean {
  * @param target 目标类
  * @returns 可更新元数据
  */
-export function getUpdatableMetadata(target: any): UpdatableMetadata | undefined {
+export function getUpdatableMetadata(target: Constructor): UpdatableMetadata | undefined {
     return updatableMetadata.get(target);
 }
 

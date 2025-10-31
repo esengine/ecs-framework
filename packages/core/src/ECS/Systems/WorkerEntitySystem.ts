@@ -2,8 +2,6 @@ import { Entity } from '../Entity';
 import { EntitySystem } from './EntitySystem';
 import { Matcher } from '../Utils/Matcher';
 import { Time } from '../../Utils/Time';
-import { createLogger } from '../../Utils/Logger';
-import type { IComponent } from '../../Types';
 import { PlatformManager } from '../../Platform/PlatformManager';
 import type { IPlatformAdapter, PlatformWorker } from '../../Platform/IPlatformAdapter';
 import { getSystemInstanceTypeName } from '../Decorators';
@@ -221,7 +219,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
             enableWorker: config.enableWorker ?? true,
             workerCount: validatedWorkerCount,
             systemConfig: config.systemConfig,
-            entitiesPerWorker: config.entitiesPerWorker,
+            ...(config.entitiesPerWorker !== undefined && { entitiesPerWorker: config.entitiesPerWorker }),
             useSharedArrayBuffer: config.useSharedArrayBuffer ?? this.isSharedArrayBufferSupported(),
             entityDataSize: config.entityDataSize ?? this.getDefaultEntityDataSize(),
             maxEntities: config.maxEntities ?? 10000
@@ -321,10 +319,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
                 }
             }
 
-            this.workerPool = new PlatformWorkerPool(
-                workers,
-                this.sharedBuffer // 传递SharedArrayBuffer给Worker池
-            );
+            this.workerPool = new PlatformWorkerPool(workers);
         } catch (error) {
             this.logger.error(`${this.systemName}: Worker池初始化失败`, error);
             this.config.enableWorker = false;
@@ -355,7 +350,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
             const sharedMethodStr = sharedProcessMethod.toString();
             const sharedFunctionBodyMatch = sharedMethodStr.match(/\{([\s\S]*)\}/);
             if (sharedFunctionBodyMatch) {
-                sharedProcessFunctionBody = sharedFunctionBodyMatch[1];
+                sharedProcessFunctionBody = sharedFunctionBodyMatch[1] ?? '';
             }
         }
 
@@ -491,7 +486,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         // 1. 数据提取阶段
         const entityData: TEntityData[] = [];
         for (let i = 0; i < entities.length; i++) {
-            entityData[i] = this.extractEntityData(entities[i]);
+            entityData[i] = this.extractEntityData(entities[i]!);
         }
 
         // 2. 分批处理
@@ -541,12 +536,12 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         if (results && typeof (results as any).then === 'function') {
             (results as Promise<TEntityData[]>).then(finalResults => {
                 entities.forEach((entity, index) => {
-                    this.applyResult(entity, finalResults[index]);
+                    this.applyResult(entity, finalResults[index]!);
                 });
             });
         } else {
             entities.forEach((entity, index) => {
-                this.applyResult(entity, (results as TEntityData[])[index]);
+                this.applyResult(entity, (results as TEntityData[])[index]!);
             });
         }
     }
@@ -595,7 +590,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         if (!this.sharedFloatArray) return;
 
         for (let i = 0; i < entities.length && i < this.config.maxEntities; i++) {
-            const entity = entities[i];
+            const entity = entities[i]!;
             const data = this.extractEntityData(entity);
             const offset = i * this.config.entityDataSize; // 使用配置的数据大小
 
@@ -670,7 +665,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         if (!this.sharedFloatArray) return;
 
         for (let i = 0; i < entities.length && i < this.config.maxEntities; i++) {
-            const entity = entities[i];
+            const entity = entities[i]!;
             const offset = i * this.config.entityDataSize; // 使用配置的数据大小
 
             // 从SharedArrayBuffer读取数据
@@ -832,7 +827,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         return {
             enabled: this.config.enableWorker,
             workerCount: this.config.workerCount,
-            entitiesPerWorker: this.config.entitiesPerWorker,
+            ...(this.config.entitiesPerWorker !== undefined && { entitiesPerWorker: this.config.entitiesPerWorker }),
             maxSystemWorkerCount: this.getMaxSystemWorkerCount(),
             isProcessing: this.isProcessing,
             sharedArrayBufferSupported: this.isSharedArrayBufferSupported(),
@@ -871,31 +866,20 @@ class PlatformWorkerPool {
     }> = [];
     private busyWorkers = new Set<number>();
     private taskCounter = 0;
-    private sharedBuffer: SharedArrayBuffer | null = null;
-    private readonly logger = createLogger('PlatformWorkerPool');
 
     constructor(
-        workers: PlatformWorker[],
-        sharedBuffer: SharedArrayBuffer | null = null
+        workers: PlatformWorker[]
     ) {
-        this.sharedBuffer = sharedBuffer;
         this.workers = workers;
 
         // 为每个Worker设置消息处理器
         for (let i = 0; i < workers.length; i++) {
             const worker = workers[i];
+            if (!worker) continue;
 
             // 设置消息处理器
             worker.onMessage((event) => this.handleWorkerMessage(i, event.data));
             worker.onError((error) => this.handleWorkerError(i, error));
-
-            // 如果有SharedArrayBuffer，发送给Worker
-            if (sharedBuffer) {
-                worker.postMessage({
-                    type: 'init',
-                    sharedBuffer: sharedBuffer
-                });
-            }
         }
     }
 
@@ -946,14 +930,15 @@ class PlatformWorkerPool {
             if (!this.busyWorkers.has(i) && this.taskQueue.length > 0) {
                 const task = this.taskQueue.shift()!;
                 this.busyWorkers.add(i);
+                const worker = this.workers[i]!;
 
-                this.workers[i].postMessage({
+                worker.postMessage({
                     id: task.id,
                     ...task.data
                 });
 
                 // 存储任务信息以便后续处理
-                (this.workers[i] as any)._currentTask = task;
+                (worker as any)._currentTask = task;
             }
         }
     }

@@ -17,7 +17,7 @@ export abstract class ProcessingSystem extends EntitySystem {
      * 处理实体，每帧调用processSystem方法进行处理
      * @param entities 实体数组，未被使用
      */
-    protected override process(entities: Entity[]): void {
+    protected override process(_entities: Entity[]): void {
         // 调用子类实现的processSystem方法进行实体处理
         this.processSystem();
     }

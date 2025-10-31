@@ -141,7 +141,7 @@ export class ArchetypeSystem {
             }
 
             if (componentTypes.length === 1) {
-                const archetypes = this._componentToArchetypes.get(componentTypes[0]);
+                const archetypes = this._componentToArchetypes.get(componentTypes[0]!);
                 if (archetypes) {
                     for (const archetype of archetypes) {
                         matchingArchetypes.push(archetype);

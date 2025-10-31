@@ -7,11 +7,6 @@
 // 设置测试超时时间（毫秒）
 jest.setTimeout(10000);
 
-// 模拟控制台方法以减少测试输出噪音
-const originalConsoleLog = console.log;
-const originalConsoleWarn = console.warn;
-const originalConsoleError = console.error;
-
 // 在测试环境中可以选择性地静默某些日志
 beforeAll(() => {
   // 在测试开始前确保 WorldManager 使用无定时器配置

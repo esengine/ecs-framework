@@ -49,24 +49,24 @@ describe('DI - 依赖注入装饰器测试', () => {
 
     describe('@Injectable 装饰器', () => {
         test('应该正确标记类为可注入', () => {
-            expect(isInjectable(SimpleService)).toBe(true);
-            expect(isInjectable(DependentService)).toBe(true);
+            expect(isInjectable(SimpleService as any)).toBe(true);
+            expect(isInjectable(DependentService as any)).toBe(true);
         });
 
         test('未标记的类不应该是可注入的', () => {
-            expect(isInjectable(NonInjectableService)).toBe(false);
+            expect(isInjectable(NonInjectableService as any)).toBe(false);
         });
     });
 
     describe('@Inject 装饰器', () => {
         test('应该记录参数注入元数据', () => {
-            const metadata = getInjectMetadata(DependentService);
+            const metadata = getInjectMetadata(DependentService as any);
             expect(metadata.size).toBe(1);
             expect(metadata.get(0)).toBe(SimpleService);
         });
 
         test('应该记录多个参数的注入元数据', () => {
-            const metadata = getInjectMetadata(MultiDependencyService);
+            const metadata = getInjectMetadata(MultiDependencyService as any);
             expect(metadata.size).toBe(2);
             expect(metadata.get(0)).toBe(SimpleService);
             expect(metadata.get(1)).toBe(DependentService);

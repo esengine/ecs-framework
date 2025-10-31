@@ -6,7 +6,6 @@ export class WebSocketManager {
     private isConnected: boolean = false;
     private reconnectAttempts: number = 0;
     private maxReconnectAttempts: number = 5;
-    private reconnectInterval: number = 2000;
     private url: string;
     private autoReconnect: boolean;
     private reconnectTimer?: ReturnType<typeof setTimeout>;
@@ -67,7 +66,7 @@ export class WebSocketManager {
         if (this.ws) {
             this.autoReconnect = false; // 主动断开时不自动重连
             this.ws.close();
-            this.ws = undefined;
+            delete (this as any).ws;
         }
         this.isConnected = false;
     }
@@ -102,13 +101,6 @@ export class WebSocketManager {
     }
 
     /**
-     * 设置重连间隔
-     */
-    public setReconnectInterval(interval: number): void {
-        this.reconnectInterval = interval;
-    }
-
-    /**
      * 计划重连
      */
     private scheduleReconnect(): void {
@@ -120,7 +112,7 @@ export class WebSocketManager {
         this.reconnectAttempts++;
 
         this.reconnectTimer = setTimeout(() => {
-            this.connect().catch(error => {
+            this.connect().catch(_error => {
                 if (this.reconnectAttempts < this.maxReconnectAttempts) {
                     this.scheduleReconnect();
                 }

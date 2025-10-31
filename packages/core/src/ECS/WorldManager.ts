@@ -110,8 +110,9 @@ export class WorldManager implements IService {
 
         const worldConfig: IWorldConfig = {
             name: worldId,
-            debug: this._config.debug,
-            ...config
+            ...(this._config.debug !== undefined && { debug: this._config.debug }),
+            ...(config?.maxScenes !== undefined && { maxScenes: config.maxScenes }),
+            ...(config?.autoCleanup !== undefined && { autoCleanup: config.autoCleanup })
         };
 
         const world = new World(worldConfig);

@@ -463,7 +463,7 @@ export class SoAStorage<T extends Component> {
     }
     
     private updateComponentAtIndex(index: number, component: T): void {
-        const entityId = this.indexToEntity[index];
+        const entityId = this.indexToEntity[index]!;
         const complexFieldMap = new Map<string, any>();
         const highPrecisionFields = (this.type as any).__highPrecisionFields || new Set();
         const serializeMapFields = (this.type as any).__serializeMapFields || new Set();
@@ -802,8 +802,11 @@ export class SoAStorage<T extends Component> {
         const newIndexToEntity: number[] = [];
 
         for (let newIndex = 0; newIndex < activeEntries.length; newIndex++) {
-            const [entityId, oldIndex] = activeEntries[newIndex];
-            
+            const entry = activeEntries[newIndex];
+            if (!entry) continue;
+
+            const [entityId, oldIndex] = entry;
+
             newEntityToIndex.set(entityId, newIndex);
             newIndexToEntity[newIndex] = entityId;
 
@@ -811,17 +814,26 @@ export class SoAStorage<T extends Component> {
             if (newIndex !== oldIndex) {
                 // 移动数值字段
                 for (const [, array] of this.fields.entries()) {
-                    array[newIndex] = array[oldIndex];
+                    const value = array[oldIndex];
+                    if (value !== undefined) {
+                        array[newIndex] = value;
+                    }
                 }
-                
+
                 // 移动字符串字段
                 for (const [, stringArray] of this.stringFields.entries()) {
-                    stringArray[newIndex] = stringArray[oldIndex];
+                    const value = stringArray[oldIndex];
+                    if (value !== undefined) {
+                        stringArray[newIndex] = value;
+                    }
                 }
-                
+
                 // 移动序列化字段
                 for (const [, serializedArray] of this.serializedFields.entries()) {
-                    serializedArray[newIndex] = serializedArray[oldIndex];
+                    const value = serializedArray[oldIndex];
+                    if (value !== undefined) {
+                        serializedArray[newIndex] = value;
+                    }
                 }
             }
         }

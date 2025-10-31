@@ -143,7 +143,7 @@ export class LoggerManager {
 
         this._loggerFactory = factory;
         // 清空已创建的 logger, 下次获取时使用新工厂方法
-        this._defaultLogger = undefined;
+        delete (this as any)._defaultLogger;
         this._loggers.clear();
     }
 }

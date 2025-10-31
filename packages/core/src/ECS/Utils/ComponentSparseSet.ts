@@ -11,7 +11,7 @@ import { IPoolable } from '../../Utils/Pool/IPoolable';
  * 实现IPoolable接口，支持对象池复用以减少内存分配开销。
  */
 class PoolableEntitySet extends Set<Entity> implements IPoolable {
-    constructor(...args: unknown[]) {
+    constructor(..._args: unknown[]) {
         super();
     }
     
@@ -135,7 +135,7 @@ export class ComponentSparseSet {
         const lastIndex = this._componentMasks.length - 1;
         if (entityIndex !== lastIndex) {
             // 将最后一个位掩码移动到当前位置
-            this._componentMasks[entityIndex] = this._componentMasks[lastIndex];
+            this._componentMasks[entityIndex] = this._componentMasks[lastIndex]!;
         }
         this._componentMasks.pop();
     }
@@ -165,7 +165,7 @@ export class ComponentSparseSet {
         }
         
         if (componentTypes.length === 1) {
-            return this.queryByComponent(componentTypes[0]);
+            return this.queryByComponent(componentTypes[0]!);
         }
         
         // 构建目标位掩码
@@ -182,7 +182,7 @@ export class ComponentSparseSet {
         
         // 遍历所有实体，检查位掩码匹配
         this._entities.forEach((entity, index) => {
-            const entityMask = this._componentMasks[index];
+            const entityMask = this._componentMasks[index]!;
             if (BitMask64Utils.hasAll(entityMask, targetMask)) {
                 result.add(entity);
             }
@@ -205,7 +205,7 @@ export class ComponentSparseSet {
         }
         
         if (componentTypes.length === 1) {
-            return this.queryByComponent(componentTypes[0]);
+            return this.queryByComponent(componentTypes[0]!);
         }
         
         // 构建目标位掩码
@@ -225,7 +225,7 @@ export class ComponentSparseSet {
         
         // 遍历所有实体，检查位掩码匹配
         this._entities.forEach((entity, index) => {
-            const entityMask = this._componentMasks[index];
+            const entityMask = this._componentMasks[index]!;
             if (BitMask64Utils.hasAny(entityMask, targetMask)) {
                 result.add(entity);
             }
@@ -251,9 +251,9 @@ export class ComponentSparseSet {
             return false;
         }
         
-        const entityMask = this._componentMasks[entityIndex];
+        const entityMask = this._componentMasks[entityIndex]!;
         const componentMask = ComponentRegistry.getBitMask(componentType);
-        
+
         return BitMask64Utils.hasAny(entityMask, componentMask);
     }
     
@@ -301,7 +301,7 @@ export class ComponentSparseSet {
      */
     public forEach(callback: (entity: Entity, mask: BitMask64Data, index: number) => void): void {
         this._entities.forEach((entity, index) => {
-            callback(entity, this._componentMasks[index], index);
+            callback(entity, this._componentMasks[index]!, index);
         });
     }
     

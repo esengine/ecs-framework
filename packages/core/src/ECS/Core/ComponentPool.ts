@@ -9,7 +9,6 @@ export class ComponentPool<T extends Component> {
     private resetFn?: (component: T) => void;
     private maxSize: number;
     private minSize: number;
-    private growthFactor: number;
 
     private stats = {
         totalCreated: 0,
@@ -21,14 +20,14 @@ export class ComponentPool<T extends Component> {
         createFn: () => T,
         resetFn?: (component: T) => void,
         maxSize: number = 1000,
-        minSize: number = 10,
-        growthFactor: number = 1.5
+        minSize: number = 10
     ) {
         this.createFn = createFn;
-        this.resetFn = resetFn;
+        if (resetFn) {
+            this.resetFn = resetFn;
+        }
         this.maxSize = maxSize;
         this.minSize = Math.max(1, minSize);
-        this.growthFactor = Math.max(1.1, growthFactor);
     }
 
     /**
@@ -144,7 +143,7 @@ interface ComponentUsageTracker {
  */
 export class ComponentPoolManager {
     private static instance: ComponentPoolManager;
-    private pools = new Map<string, ComponentPool<any>>();
+    private pools = new Map<string, ComponentPool<Component>>();
     private usageTracker = new Map<string, ComponentUsageTracker>();
 
     private autoCleanupInterval = 60000;
@@ -169,7 +168,7 @@ export class ComponentPoolManager {
         maxSize?: number,
         minSize?: number
     ): void {
-        this.pools.set(componentName, new ComponentPool(createFn, resetFn, maxSize, minSize));
+        this.pools.set(componentName, new ComponentPool(createFn, resetFn, maxSize, minSize) as unknown as ComponentPool<Component>);
 
         this.usageTracker.set(componentName, {
             createCount: 0,
@@ -186,7 +185,7 @@ export class ComponentPoolManager {
 
         this.trackUsage(componentName, 'create');
 
-        return pool ? pool.acquire() : null;
+        return pool ? (pool.acquire() as T) : null;
     }
 
     /**
@@ -288,8 +287,16 @@ export class ComponentPoolManager {
     /**
      * 获取全局统计信息
      */
-    getGlobalStats() {
-        const stats: any[] = [];
+    getGlobalStats(): Array<{
+        componentName: string;
+        poolStats: ReturnType<ComponentPool<Component>['getStats']>;
+        usage: ComponentUsageTracker | undefined;
+    }> {
+        const stats: Array<{
+            componentName: string;
+            poolStats: ReturnType<ComponentPool<Component>['getStats']>;
+            usage: ComponentUsageTracker | undefined;
+        }> = [];
 
         for (const [name, pool] of this.pools.entries()) {
             stats.push({

@@ -53,7 +53,7 @@ export class ComponentStorage<T extends Component> {
      */
     public getComponent(entityId: number): T | null {
         const index = this.entityToIndex.get(entityId);
-        return index !== undefined ? this.dense[index] : null;
+        return index !== undefined ? this.dense[index]! : null;
     }
 
     /**
@@ -76,17 +76,17 @@ export class ComponentStorage<T extends Component> {
             return null;
         }
 
-        const component = this.dense[index];
+        const component = this.dense[index]!;
         const lastIndex = this.dense.length - 1;
 
         if (index !== lastIndex) {
             // 将末尾元素交换到要删除的位置
-            const lastComponent = this.dense[lastIndex];
-            const lastEntityId = this.entityIds[lastIndex];
-            
+            const lastComponent = this.dense[lastIndex]!;
+            const lastEntityId = this.entityIds[lastIndex]!;
+
             this.dense[index] = lastComponent;
             this.entityIds[index] = lastEntityId;
-            
+
             // 更新被交换元素的映射
             this.entityToIndex.set(lastEntityId, index);
         }
@@ -105,7 +105,7 @@ export class ComponentStorage<T extends Component> {
      */
     public forEach(callback: (component: T, entityId: number, index: number) => void): void {
         for (let i = 0; i < this.dense.length; i++) {
-            callback(this.dense[i], this.entityIds[i], i);
+            callback(this.dense[i]!, this.entityIds[i]!, i);
         }
     }
 
@@ -173,7 +173,7 @@ export class ComponentStorage<T extends Component> {
  */
 export class ComponentStorageManager {
     private static readonly _logger = createLogger('ComponentStorage');
-    private storages = new Map<Function, ComponentStorage<any> | SoAStorage<any>>();
+    private storages = new Map<Function, ComponentStorage<Component> | SoAStorage<Component>>();
 
     /**
      * 检查组件类型是否启用SoA存储
@@ -262,11 +262,11 @@ export class ComponentStorageManager {
      */
     public getStorage<T extends Component>(componentType: ComponentType<T>): ComponentStorage<T> | SoAStorage<T> {
         let storage = this.storages.get(componentType);
-        
+
         if (!storage) {
             // 检查是否启用SoA优化
-            const enableSoA = (componentType as any).__enableSoA;
-            
+            const enableSoA = (componentType as unknown as { __enableSoA?: boolean }).__enableSoA;
+
             if (enableSoA) {
                 // 使用SoA优化存储
                 storage = new SoAStorage(componentType);
@@ -275,11 +275,11 @@ export class ComponentStorageManager {
                 // 默认使用原始存储
                 storage = new ComponentStorage(componentType);
             }
-            
+
             this.storages.set(componentType, storage);
         }
-        
-        return storage;
+
+        return storage as ComponentStorage<T> | SoAStorage<T>;
     }
 
     /**
@@ -301,7 +301,7 @@ export class ComponentStorageManager {
      */
     public getComponent<T extends Component>(entityId: number, componentType: ComponentType<T>): T | null {
         const storage = this.storages.get(componentType);
-        return storage ? storage.getComponent(entityId) : null;
+        return storage ? (storage as ComponentStorage<T> | SoAStorage<T>).getComponent(entityId) : null;
     }
 
     /**
@@ -323,7 +323,7 @@ export class ComponentStorageManager {
      */
     public removeComponent<T extends Component>(entityId: number, componentType: ComponentType<T>): T | null {
         const storage = this.storages.get(componentType);
-        return storage ? storage.removeComponent(entityId) : null;
+        return storage ? (storage as ComponentStorage<T> | SoAStorage<T>).removeComponent(entityId) : null;
     }
 
     /**
@@ -358,8 +358,8 @@ export class ComponentStorageManager {
     /**
      * 获取所有存储器的统计信息
      */
-    public getAllStats(): Map<string, any> {
-        const stats = new Map<string, any>();
+    public getAllStats(): Map<string, { totalSlots: number; usedSlots: number; freeSlots: number; fragmentation: number }> {
+        const stats = new Map<string, { totalSlots: number; usedSlots: number; freeSlots: number; fragmentation: number }>();
         
         for (const [componentType, storage] of this.storages.entries()) {
             const typeName = getComponentTypeName(componentType as ComponentType);

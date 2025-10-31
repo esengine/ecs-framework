@@ -1,7 +1,7 @@
 import { IEntityDebugData } from '../../Types';
 import { Entity } from '../../ECS/Entity';
 import { Component } from '../../ECS/Component';
-import { getComponentInstanceTypeName, getSystemInstanceTypeName } from '../../ECS/Decorators';
+import { getComponentInstanceTypeName } from '../../ECS/Decorators';
 import { IScene } from '../../ECS/IScene';
 
 /**
@@ -369,21 +369,6 @@ export class EntityDataCollector {
     }
 
 
-    private getArchetypeDistribution(entityContainer: any): Array<{ signature: string; count: number; memory: number }> {
-        const distribution = new Map<string, number>();
-
-        if (entityContainer && entityContainer.entities) {
-            entityContainer.entities.forEach((entity: any) => {
-                const signature = entity.componentMask?.toString() || '0';
-                const existing = distribution.get(signature);
-                distribution.set(signature, (existing || 0) + 1);
-            });
-        }
-
-        return Array.from(distribution.entries())
-            .map(([signature, count]) => ({ signature, count, memory: 0 }))
-            .sort((a, b) => b.count - a.count);
-    }
 
     private getArchetypeDistributionWithMemory(entityContainer: any): Array<{ signature: string; count: number; memory: number }> {
         const distribution = new Map<string, { count: number; memory: number; componentTypes: string[] }>();
@@ -416,22 +401,6 @@ export class EntityDataCollector {
                 memory: isNaN(data.memory) ? 0 : data.memory
             }))
             .sort((a, b) => b.count - a.count);
-    }
-
-
-    private getTopEntitiesByComponents(entityContainer: any): Array<{ id: string; name: string; componentCount: number; memory: number }> {
-        if (!entityContainer || !entityContainer.entities) {
-            return [];
-        }
-
-        return entityContainer.entities
-            .map((entity: any) => ({
-                id: entity.id.toString(),
-                name: entity.name || `Entity_${entity.id}`,
-                componentCount: entity.components?.length || 0,
-                memory: 0
-            }))
-            .sort((a: any, b: any) => b.componentCount - a.componentCount);
     }
 
 
@@ -527,14 +496,14 @@ export class EntityDataCollector {
                 
                 for (let i = 0; i < maxKeys; i++) {
                     const key = keys[i];
-                    if (excludeKeys.includes(key) || 
-                        key === 'constructor' || 
+                    if (!key || excludeKeys.includes(key) ||
+                        key === 'constructor' ||
                         key === '__proto__' ||
                         key.startsWith('_cc_') ||
                         key.startsWith('__')) {
                         continue;
                     }
-                    
+
                     const value = item[key];
                     itemSize += key.length * 2;
                     
@@ -736,12 +705,12 @@ export class EntityDataCollector {
                 
                 // 如果没有找到任何属性，添加一些调试信息
                 if (Object.keys(properties).length === 0) {
-                    properties._info = '该组件没有公开属性';
-                    properties._componentId = getComponentInstanceTypeName(component);
+                    properties['_info'] = '该组件没有公开属性';
+                    properties['_componentId'] = getComponentInstanceTypeName(component);
                 }
             } catch (error) {
-                properties._error = '属性提取失败';
-                properties._componentId = getComponentInstanceTypeName(component);
+                properties['_error'] = '属性提取失败';
+                properties['_componentId'] = getComponentInstanceTypeName(component);
             }
             
             return {

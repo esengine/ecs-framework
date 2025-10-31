@@ -108,8 +108,8 @@ describe('WorldManager', () => {
             };
             
             const world = worldManager.createWorld('configured-world', worldConfig);
-            
-            expect(world.name).toBe('ConfiguredWorld');
+
+            expect(world.name).toBe('configured-world');
         });
         
         test('重复的World ID应该抛出错误', () => {

@@ -5,7 +5,6 @@
  */
 
 import { Entity } from '../Entity';
-import { Component } from '../Component';
 import { ComponentType } from '../Core/ComponentStorage';
 import { ComponentSerializer, SerializedComponent } from './ComponentSerializer';
 import { IScene } from '../IScene';

@@ -15,8 +15,8 @@ export class TimerManager implements IService, IUpdatable {
 
     public update() {
         for (let i = this._timers.length - 1; i >= 0; i --){
-            if (this._timers[i].tick()){
-                this._timers[i].unload();
+            if (this._timers[i]!.tick()){
+                this._timers[i]!.unload();
                 this._timers.splice(i, 1);
             }
         }
