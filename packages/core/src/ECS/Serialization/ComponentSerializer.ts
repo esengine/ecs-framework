@@ -232,7 +232,7 @@ export class ComponentSerializer {
         }
 
         // 普通对象
-        if (type === 'object' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        if (type === 'object' && typeof value === 'object' && !Array.isArray(value)) {
             const result: Record<string, SerializableValue> = {};
             const obj = value as Record<string, SerializableValue>;
             for (const key in obj) {
@@ -262,7 +262,7 @@ export class ComponentSerializer {
         }
 
         // 处理特殊类型标记
-        if (type === 'object' && typeof value === 'object' && value !== null && '__type' in value) {
+        if (type === 'object' && typeof value === 'object' && '__type' in value) {
             const typedValue = value as { __type: string; value: SerializableValue };
             switch (typedValue.__type) {
                 case 'Date':
@@ -280,7 +280,7 @@ export class ComponentSerializer {
         }
 
         // 普通对象
-        if (type === 'object' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        if (type === 'object' && typeof value === 'object' && !Array.isArray(value)) {
             const result: Record<string, SerializableValue> = {};
             const obj = value as Record<string, SerializableValue>;
             for (const key in obj) {
