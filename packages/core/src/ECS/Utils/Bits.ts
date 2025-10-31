@@ -265,16 +265,16 @@ export class Bits {
      */
     public static fromBinaryString(binaryString: string): Bits {
         const cleanString = binaryString.replace(/\s/g, '');
-        let data: BitMask64Data = { base: undefined!, segments: undefined};
+        let data: BitMask64Data;
         if (cleanString.length <= 32) {
             const num = parseInt(cleanString, 2);
-            data.base = [num >>> 0, 0];
+            data = { base: [num >>> 0, 0] };
         } else {
             const loBits = cleanString.substring(cleanString.length - 32);
             const hiBits = cleanString.substring(0, cleanString.length - 32);
             const lo = parseInt(loBits, 2);
             const hi = parseInt(hiBits, 2);
-            data.base = [lo >>> 0, hi >>> 0];
+            data = { base: [lo >>> 0, hi >>> 0] };
         }
         return new Bits(data);
     }
@@ -286,16 +286,16 @@ export class Bits {
      */
     public static fromHexString(hexString: string): Bits {
         const cleanString = hexString.replace(/^0x/i, '');
-        let data: BitMask64Data = { base: undefined!, segments: undefined};
+        let data: BitMask64Data;
         if (cleanString.length <= 8) {
             const num = parseInt(cleanString, 16);
-            data.base = [num >>> 0, 0];
+            data = { base: [num >>> 0, 0] };
         } else {
             const loBits = cleanString.substring(cleanString.length - 8);
             const hiBits = cleanString.substring(0, cleanString.length - 8);
             const lo = parseInt(loBits, 16);
             const hi = parseInt(hiBits, 16);
-            data.base = [lo >>> 0, hi >>> 0];
+            data = { base: [lo >>> 0, hi >>> 0] };
         }
         return new Bits(data);
     }

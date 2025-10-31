@@ -15,11 +15,10 @@ import {
     EventListenerConfig, 
     EventStats 
 } from './EventSystem';
-import { 
-    ECSEventType, 
-    EventPriority, 
-    EVENT_TYPES,
-    EventTypeValidator 
+import {
+    ECSEventType,
+    EventPriority,
+    EventTypeValidator
 } from '../CoreEvents';
 
 /**

@@ -17,7 +17,7 @@ export abstract class PassiveSystem extends EntitySystem {
      * 不进行任何处理
      * @param entities 实体数组，未被使用
      */
-    protected override process(entities: Entity[]): void {
+    protected override process(_entities: Entity[]): void {
         // 被动系统不进行任何处理
     }
 }

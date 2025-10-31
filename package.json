@@ -63,6 +63,7 @@
     "copy:worker-demo": "node scripts/update-worker-demo.js",
     "format": "prettier --write \"packages/**/src/**/*.{ts,tsx,js,jsx}\"",
     "format:check": "prettier --check \"packages/**/src/**/*.{ts,tsx,js,jsx}\"",
+    "type-check": "lerna run type-check",
     "lint": "eslint \"packages/**/src/**/*.{ts,tsx,js,jsx}\"",
     "lint:fix": "eslint \"packages/**/src/**/*.{ts,tsx,js,jsx}\" --fix"
   },

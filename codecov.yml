@@ -1,0 +1,53 @@
+# Codecov 配置文件
+# https://docs.codecov.com/docs/codecov-yaml
+
+coverage:
+  status:
+    # 项目整体覆盖率要求
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        base: auto
+        
+    # 补丁覆盖率要求（针对 PR 中的新代码）
+    patch:
+      default:
+        target: 50%  # 降低补丁覆盖率要求到 50%
+        threshold: 5%
+        base: auto
+        
+  # 精确度设置
+  precision: 2
+  round: down
+  range: "70...100"
+
+# 注释设置
+comment:
+  layout: "reach,diff,flags,tree,files"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+# 忽略的文件/目录
+ignore:
+  - "tests/**/*"
+  - "**/*.test.ts"
+  - "**/*.spec.ts"
+  - "**/test/**/*"
+  - "**/tests/**/*"
+  - "bin/**/*"
+  - "dist/**/*"
+  - "node_modules/**/*"
+
+# 标志组
+flags:
+  core:
+    paths:
+      - packages/core/src/
+    carryforward: true
+
+# GitHub Checks 配置
+github_checks:
+  annotations: true

@@ -86,8 +86,8 @@ export class EntityList {
         const idsToRecycle: number[] = [];
         
         for (let i = this.buffer.length - 1; i >= 0; i--) {
-            idsToRecycle.push(this.buffer[i].id);
-            this.buffer[i].destroy();
+            idsToRecycle.push(this.buffer[i]!.id);
+            this.buffer[i]!.destroy();
         }
         
         // 批量回收ID
@@ -142,7 +142,7 @@ export class EntityList {
      */
     public findEntity(name: string): Entity | null {
         const entities = this._nameToEntities.get(name);
-        return entities && entities.length > 0 ? entities[0] : null;
+        return entities && entities.length > 0 ? entities[0]! : null;
     }
 
     /**

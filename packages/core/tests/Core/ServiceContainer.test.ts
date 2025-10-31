@@ -17,7 +17,9 @@ class DependentService {
     public testService?: TestService;
 
     constructor(...args: unknown[]) {
-        this.testService = args[0] as TestService | undefined;
+        if (args[0] !== undefined) {
+            this.testService = args[0] as TestService;
+        }
     }
 
     dispose() {

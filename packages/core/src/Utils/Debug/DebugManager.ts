@@ -235,7 +235,7 @@ export class DebugManager implements IService, IUpdatable {
         }
     }
 
-    public update(deltaTime?: number): void {
+    public update(_deltaTime?: number): void {
         if (!this.isRunning || !this.config.enabled) return;
 
         this.frameCounter++;
@@ -728,7 +728,7 @@ export class DebugManager implements IService, IUpdatable {
             const keys = Object.keys(system);
             for (let i = 0; i < Math.min(keys.length, 15); i++) {
                 const key = keys[i];
-                if (key === 'entities' || key === 'scene' || key === 'constructor') continue;
+                if (!key || key === 'entities' || key === 'scene' || key === 'constructor') continue;
 
                 const value = (system as Record<string, unknown>)[key];
                 size += key.length * 2;

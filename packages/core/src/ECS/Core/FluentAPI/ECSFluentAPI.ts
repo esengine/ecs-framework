@@ -77,7 +77,7 @@ export class ECSFluentAPI {
      */
     public findFirst(...componentTypes: ComponentType[]): Entity | null {
         const result = this.querySystem.queryAll(...componentTypes);
-        return result.entities.length > 0 ? result.entities[0] : null;
+        return result.entities.length > 0 ? result.entities[0]! : null;
     }
 
     /**

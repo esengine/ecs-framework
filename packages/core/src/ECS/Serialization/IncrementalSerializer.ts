@@ -7,7 +7,6 @@
 
 import type { IScene } from '../IScene';
 import { Entity } from '../Entity';
-import { Component } from '../Component';
 import { ComponentSerializer, SerializedComponent } from './ComponentSerializer';
 import { SerializedEntity } from './EntitySerializer';
 import { ComponentType } from '../Core/ComponentStorage';
@@ -204,7 +203,7 @@ export class IncrementalSerializer {
                 active: entity.active,
                 enabled: entity.enabled,
                 updateOrder: entity.updateOrder,
-                parentId: entity.parent?.id
+                ...(entity.parent && { parentId: entity.parent.id })
             });
 
             // 快照组件
@@ -286,7 +285,7 @@ export class IncrementalSerializer {
                         active: entity.active,
                         enabled: entity.enabled,
                         updateOrder: entity.updateOrder,
-                        parentId: entity.parent?.id,
+                        ...(entity.parent && { parentId: entity.parent.id }),
                         components: [],
                         children: []
                     }
@@ -325,7 +324,7 @@ export class IncrementalSerializer {
                             active: entity.active,
                             enabled: entity.enabled,
                             updateOrder: entity.updateOrder,
-                            parentId: entity.parent?.id
+                            ...(entity.parent && { parentId: entity.parent.id })
                         }
                     });
                 }

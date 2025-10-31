@@ -16,7 +16,6 @@ import { ComponentPoolManager } from './Core/ComponentPool';
 import { PerformanceMonitor } from '../Utils/PerformanceMonitor';
 import { ServiceContainer, type ServiceType } from '../Core/ServiceContainer';
 import { createInstance, isInjectable, injectProperties } from '../Core/DI';
-import { isUpdatable, getUpdatableMetadata } from '../Core/DI/Decorators';
 import { createLogger } from '../Utils/Logger';
 
 /**

@@ -25,7 +25,7 @@ export interface BitMask64Data {
 
 export class BitMask64Utils {
     /** 零掩码常量，所有位都为0 */
-    public static readonly ZERO: Readonly<BitMask64Data> = { base: [0, 0], segments: undefined };
+    public static readonly ZERO: Readonly<BitMask64Data> = { base: [0, 0] };
 
     /**
      * 根据位索引创建64位掩码
@@ -37,7 +37,7 @@ export class BitMask64Utils {
         if (bitIndex < 0) {
             throw new Error(`Bit index ${bitIndex} out of range [0, ∞)`);
         }
-        const mask: BitMask64Data = { base: [0, 0], segments: undefined };
+        const mask: BitMask64Data = { base: [0, 0] };
         BitMask64Utils.setBit(mask, bitIndex);
         return mask;
     }
@@ -48,7 +48,7 @@ export class BitMask64Utils {
      * @returns 低32位为输入值、高32位为0的掩码
      */
     public static fromNumber(value: number): BitMask64Data {
-        return { base: [value >>> 0, 0], segments: undefined};
+        return { base: [value >>> 0, 0] };
     }
 
     /**
@@ -66,7 +66,10 @@ export class BitMask64Utils {
         // 基础区段就包含指定的位,或任意一个参数不含扩展区段，直接短路
         if(baseHasAny || !bitsSegments || !maskSegments) return baseHasAny;
         // 额外检查扩展区域是否包含指定的位 - 如果bitsSegments[index]不存在，会被转为NaN，NaN的位运算始终返回0
-        return maskSegments.some((seg, index) => (seg[SegmentPart.LOW] & bitsSegments[index][SegmentPart.LOW]) !== 0 || (seg[SegmentPart.HIGH] & bitsSegments[index][SegmentPart.HIGH]) !== 0)
+        return maskSegments.some((seg, index) => {
+            const bitsSeg = bitsSegments[index];
+            return bitsSeg && ((seg[SegmentPart.LOW] & bitsSeg[SegmentPart.LOW]) !== 0 || (seg[SegmentPart.HIGH] & bitsSeg[SegmentPart.HIGH]) !== 0);
+        })
     }
 
     /**
@@ -89,7 +92,9 @@ export class BitMask64Utils {
         // 对mask/bits中都存在的区段，进行hasAll判断
         if(maskSegments){
             for (let i = 0; i < Math.min(maskSegmentsLength,bitsSegments.length); i++) {
-                if((maskSegments[i][SegmentPart.LOW] & bitsSegments[i][SegmentPart.LOW]) !== bitsSegments[i][SegmentPart.LOW] || (maskSegments[i][SegmentPart.HIGH] & bitsSegments[i][SegmentPart.HIGH]) !== bitsSegments[i][SegmentPart.HIGH]){
+                const maskSeg = maskSegments[i]!;
+                const bitsSeg = bitsSegments[i]!;
+                if((maskSeg[SegmentPart.LOW] & bitsSeg[SegmentPart.LOW]) !== bitsSeg[SegmentPart.LOW] || (maskSeg[SegmentPart.HIGH] & bitsSeg[SegmentPart.HIGH]) !== bitsSeg[SegmentPart.HIGH]){
                     // 存在不匹配的位，直接短路
                     return false;
                 }
@@ -97,7 +102,8 @@ export class BitMask64Utils {
         }
         // 对mask中不存在，但bits中存在的区段，进行isZero判断
         for (let i = maskSegmentsLength; i < bitsSegments.length; i++) {
-            if(bitsSegments[i][SegmentPart.LOW] !== 0 || bitsSegments[i][SegmentPart.HIGH] !== 0){
+            const bitsSeg = bitsSegments[i]!;
+            if(bitsSeg[SegmentPart.LOW] !== 0 || bitsSeg[SegmentPart.HIGH] !== 0){
                 // 存在不为0的区段，直接短路
                 return false;
             }
@@ -120,7 +126,11 @@ export class BitMask64Utils {
         //不含扩展区域，或基础区域就包含指定的位，或bits不含拓展区段，直接短路。
         if(!maskSegments || !baseHasNone || !bitsSegments) return baseHasNone;
         // 额外检查扩展区域是否都包含指定的位 - 此时bitsSegments存在,如果bitsSegments[index]不存在，会被转为NaN，NaN的位运算始终返回0
-        return maskSegments.every((seg, index) => (seg[SegmentPart.LOW] & bitsSegments[index][SegmentPart.LOW]) === 0 && (seg[SegmentPart.HIGH] & bitsSegments[index][SegmentPart.HIGH]) === 0);
+        return maskSegments.every((seg, index) => {
+            const bitsSeg = bitsSegments[index];
+            if (!bitsSeg) return true;
+            return (seg[SegmentPart.LOW] & bitsSeg[SegmentPart.LOW]) === 0 && (seg[SegmentPart.HIGH] & bitsSeg[SegmentPart.HIGH]) === 0;
+        });
     }
 
     /**
@@ -160,7 +170,7 @@ export class BitMask64Utils {
             }else if(!aSeg && bSeg){
                 //aSeg不存在，则必须要求bSeg全为0
                 if(bSeg[SegmentPart.LOW] !== 0 || bSeg[SegmentPart.HIGH] !== 0) return false;
-            }else{
+            }else if(aSeg && bSeg){
                 //理想状态：aSeg/bSeg都存在
                 if(aSeg[SegmentPart.LOW] !== bSeg[SegmentPart.LOW] || aSeg[SegmentPart.HIGH] !== bSeg[SegmentPart.HIGH]) return false;
             }
@@ -248,8 +258,10 @@ export class BitMask64Utils {
 
             // 对每个段执行或操作
             for (let i = 0; i < otherSegments.length; i++) {
-                targetSegments[i][SegmentPart.LOW] |= otherSegments[i][SegmentPart.LOW];
-                targetSegments[i][SegmentPart.HIGH] |= otherSegments[i][SegmentPart.HIGH];
+                const targetSeg = targetSegments[i]!;
+                const otherSeg = otherSegments[i]!;
+                targetSeg[SegmentPart.LOW] |= otherSeg[SegmentPart.LOW];
+                targetSeg[SegmentPart.HIGH] |= otherSeg[SegmentPart.HIGH];
             }
         }
     }
@@ -277,8 +289,10 @@ export class BitMask64Utils {
 
             // 对每个段执行与操作
             for (let i = 0; i < otherSegments.length; i++) {
-                targetSegments[i][SegmentPart.LOW] &= otherSegments[i][SegmentPart.LOW];
-                targetSegments[i][SegmentPart.HIGH] &= otherSegments[i][SegmentPart.HIGH];
+                const targetSeg = targetSegments[i]!;
+                const otherSeg = otherSegments[i]!;
+                targetSeg[SegmentPart.LOW] &= otherSeg[SegmentPart.LOW];
+                targetSeg[SegmentPart.HIGH] &= otherSeg[SegmentPart.HIGH];
             }
         }
     }
@@ -305,8 +319,10 @@ export class BitMask64Utils {
 
         // 对每个段执行异或操作
         for (let i = 0; i < otherSegments.length; i++) {
-            targetSegments[i][SegmentPart.LOW] ^= otherSegments[i][SegmentPart.LOW];
-            targetSegments[i][SegmentPart.HIGH] ^= otherSegments[i][SegmentPart.HIGH];
+            const targetSeg = targetSegments[i]!;
+            const otherSeg = otherSegments[i]!;
+            targetSeg[SegmentPart.LOW] ^= otherSeg[SegmentPart.LOW];
+            targetSeg[SegmentPart.HIGH] ^= otherSeg[SegmentPart.HIGH];
         }
     }
 
@@ -317,10 +333,12 @@ export class BitMask64Utils {
     public static clear(mask: BitMask64Data): void {
         mask.base[SegmentPart.LOW] = 0;
         mask.base[SegmentPart.HIGH] = 0;
-        for (let i = 0; i < (mask.segments?.length ?? 0); i++) {
-            const seg = mask.segments![i];
-            seg[SegmentPart.LOW] = 0;
-            seg[SegmentPart.HIGH] = 0;
+        if (mask.segments) {
+            for (let i = 0; i < mask.segments.length; i++) {
+                const seg = mask.segments[i]!;
+                seg[SegmentPart.LOW] = 0;
+                seg[SegmentPart.HIGH] = 0;
+            }
         }
     }
 
@@ -346,9 +364,11 @@ export class BitMask64Utils {
             target.segments.push([0,0]);
         }
         // 逐个重写
-        for (let i = 0; i < length; i++) {
-            const targetSeg = target.segments![i];
-            const sourSeg = source.segments![i];
+        const targetSegments = target.segments;
+        const sourceSegments = source.segments;
+        for (let i = 0; i < sourceSegments.length; i++) {
+            const targetSeg = targetSegments[i]!;
+            const sourSeg = sourceSegments[i]!;
             targetSeg[SegmentPart.LOW] = sourSeg[SegmentPart.LOW];
             targetSeg[SegmentPart.HIGH] = sourSeg[SegmentPart.HIGH];
         }
@@ -362,7 +382,7 @@ export class BitMask64Utils {
     public static clone(mask: BitMask64Data): BitMask64Data {
         return {
             base: mask.base.slice() as BitMask64Segment,
-            segments: mask.segments ? mask.segments.map(seg => [...seg]) : undefined
+            ...(mask.segments && { segments: mask.segments.map(seg => [...seg] as BitMask64Segment) })
         };
     }
 
@@ -393,7 +413,7 @@ export class BitMask64Utils {
 
         for (let i = -1; i < totalLength; i++) {
             let segResult = '';
-            const bitMaskData = i == -1 ? mask.base : mask.segments![i];
+            const bitMaskData = i == -1 ? mask.base : mask.segments![i]!;
             let hi = bitMaskData[SegmentPart.HIGH];
             let lo = bitMaskData[SegmentPart.LOW];
             if(radix == 2){
@@ -429,7 +449,7 @@ export class BitMask64Utils {
     public static popCount(mask: BitMask64Data): number {
         let count = 0;
         for (let i = -1; i < (mask.segments?.length ?? 0); i++) {
-            const bitMaskData = i == -1 ? mask.base : mask.segments![i];
+            const bitMaskData = i == -1 ? mask.base : mask.segments![i]!;
             let lo = bitMaskData[SegmentPart.LOW];
             let hi = bitMaskData[SegmentPart.HIGH];
             while (lo) {
@@ -470,7 +490,7 @@ export class BitMask64Utils {
                     segments.push([0, 0]);
                 }
             }
-            return  segments[targetSegIndex];
+            return  segments[targetSegIndex] ?? null;
         }
     }
 }
