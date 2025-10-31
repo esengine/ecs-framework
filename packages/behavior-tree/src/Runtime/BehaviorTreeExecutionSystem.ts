@@ -1,9 +1,9 @@
-import { EntitySystem, Matcher, Entity, Time, Core } from '@esengine/ecs-framework';
+import { EntitySystem, Matcher, Entity, Time, Core, ECSSystem } from '@esengine/ecs-framework';
 import { BehaviorTreeRuntimeComponent } from './BehaviorTreeRuntimeComponent';
 import { BehaviorTreeAssetManager } from './BehaviorTreeAssetManager';
-import { NodeExecutorRegistry, NodeExecutionContext, INodeExecutor } from './NodeExecutor';
+import { NodeExecutorRegistry, NodeExecutionContext } from './NodeExecutor';
 import { BehaviorTreeData, BehaviorNodeData } from './BehaviorTreeData';
-import { TaskStatus, NodeType } from '../Types/TaskStatus';
+import { TaskStatus } from '../Types/TaskStatus';
 import { NodeMetadataRegistry } from './NodeMetadata';
 import './Executors';
 
@@ -12,6 +12,7 @@ import './Executors';
  *
  * 统一处理所有行为树的执行
  */
+@ECSSystem('BehaviorTreeExecution')
 export class BehaviorTreeExecutionSystem extends EntitySystem {
     private assetManager: BehaviorTreeAssetManager;
     private executorRegistry: NodeExecutorRegistry;
@@ -105,7 +106,24 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
         treeData: BehaviorTreeData
     ): TaskStatus {
         const state = runtime.getNodeState(nodeData.id);
+
+        if (runtime.shouldAbort(nodeData.id)) {
+            runtime.clearAbortRequest(nodeData.id);
+            state.isAborted = true;
+
+            const executor = this.executorRegistry.get(nodeData.implementationType);
+            if (executor && executor.reset) {
+                const context = this.createContext(entity, runtime, nodeData, treeData);
+                executor.reset(context);
+            }
+
+            runtime.activeNodeIds.delete(nodeData.id);
+            state.status = TaskStatus.Failure;
+            return TaskStatus.Failure;
+        }
+
         runtime.activeNodeIds.add(nodeData.id);
+        state.isAborted = false;
 
         const executor = this.executorRegistry.get(nodeData.implementationType);
         if (!executor) {
@@ -114,23 +132,7 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
             return TaskStatus.Failure;
         }
 
-        const context: NodeExecutionContext = {
-            entity,
-            nodeData,
-            state,
-            runtime,
-            treeData,
-            deltaTime: Time.deltaTime,
-            totalTime: Time.totalTime,
-            executeChild: (childId: string) => {
-                const childData = treeData.nodes.get(childId);
-                if (!childData) {
-                    this.logger.warn(`未找到子节点: ${childId}`);
-                    return TaskStatus.Failure;
-                }
-                return this.executeNode(entity, runtime, childData, treeData);
-            }
-        };
+        const context = this.createContext(entity, runtime, nodeData, treeData);
 
         try {
             const status = executor.execute(context);
@@ -151,6 +153,34 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
             runtime.activeNodeIds.delete(nodeData.id);
             return TaskStatus.Failure;
         }
+    }
+
+    /**
+     * 创建执行上下文
+     */
+    private createContext(
+        entity: Entity,
+        runtime: BehaviorTreeRuntimeComponent,
+        nodeData: BehaviorNodeData,
+        treeData: BehaviorTreeData
+    ): NodeExecutionContext {
+        return {
+            entity,
+            nodeData,
+            state: runtime.getNodeState(nodeData.id),
+            runtime,
+            treeData,
+            deltaTime: Time.deltaTime,
+            totalTime: Time.totalTime,
+            executeChild: (childId: string) => {
+                const childData = treeData.nodes.get(childId);
+                if (!childData) {
+                    this.logger.warn(`未找到子节点: ${childId}`);
+                    return TaskStatus.Failure;
+                }
+                return this.executeNode(entity, runtime, childData, treeData);
+            }
+        };
     }
 
     /**
@@ -175,7 +205,7 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
                 continue;
             }
 
-            const childId = nodeData.children[index];
+            const childId = nodeData.children[index]!;
             const childData = treeData.nodes.get(childId);
 
             if (!childData) {

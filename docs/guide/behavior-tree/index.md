@@ -49,10 +49,15 @@
 - **[编辑器使用指南](./editor-guide.md)** - 可视化创建行为树
 - **[编辑器工作流](./editor-workflow.md)** - 完整的开发流程
 
+### 资源管理
+
+- **[资产管理](./asset-management.md)** - 加载、管理和复用行为树资产、使用子树
+
 ### 引擎集成
 
 - **[Cocos Creator 集成](./cocos-integration.md)** - 在 Cocos Creator 中使用行为树
 - **[Laya 引擎集成](./laya-integration.md)** - 在 Laya 中使用行为树
+- **[Node.js 服务端使用](./nodejs-usage.md)** - 在服务器、聊天机器人等场景中使用行为树
 
 ### 高级主题
 
@@ -178,9 +183,12 @@ export class AttackAction implements INodeExecutor {
 
 1. 阅读[快速开始](./getting-started.md)了解基础用法
 2. 学习[核心概念](./core-concepts.md)理解行为树原理
-3. 尝试[编辑器使用指南](./editor-guide.md)可视化创建行为树
-4. 根据你的引擎查看集成教程([Cocos](./cocos-integration.md) 或 [Laya](./laya-integration.md))
-5. 探索[高级用法](./advanced-usage.md)提升技能
+3. 学习[资产管理](./asset-management.md)了解如何加载和复用行为树、使用子树
+4. 根据你的场景查看集成教程:
+   - 客户端游戏：[Cocos Creator](./cocos-integration.md) 或 [Laya](./laya-integration.md)
+   - 服务端应用：[Node.js 服务端使用](./nodejs-usage.md)
+5. 尝试[编辑器使用指南](./editor-guide.md)可视化创建行为树
+6. 探索[高级用法](./advanced-usage.md)和[自定义节点执行器](./custom-actions.md)提升技能
 
 ## 获取帮助
 

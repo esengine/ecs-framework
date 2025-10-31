@@ -308,36 +308,209 @@ export class PlayerDetector extends Component {
 
 ## 资源管理
 
-### 行为树资产复用
+### 使用 BehaviorTreeAssetManager
 
-为了节省内存，行为树定义（BehaviorTreeData）应该被共享：
+框架提供了 `BehaviorTreeAssetManager` 来统一管理行为树资产，避免重复创建：
 
 ```typescript
-import { BehaviorTreeData, BehaviorTreeBuilder } from '@esengine/behavior-tree';
+import { Core } from '@esengine/ecs-framework';
+import {
+    BehaviorTreeAssetManager,
+    BehaviorTreeBuilder,
+    BehaviorTreeStarter
+} from '@esengine/behavior-tree';
 
-class BehaviorTreeLibrary {
-    private static trees: Map<string, BehaviorTreeData> = new Map();
+// 获取资产管理器（插件已自动注册）
+const assetManager = Core.services.resolve(BehaviorTreeAssetManager);
 
-    static registerTree(name: string, tree: BehaviorTreeData) {
-        this.trees.set(name, tree);
-    }
-
-    static getTree(name: string): BehaviorTreeData | undefined {
-        return this.trees.get(name);
-    }
-}
-
-// 初始化时注册所有行为树
+// 创建并注册行为树（只创建一次）
 const enemyAI = BehaviorTreeBuilder.create('EnemyAI')
-    // 定义节点...
+    .defineBlackboardVariable('health', 100)
+    .selector('MainBehavior')
+        .log('攻击')
+    .end()
     .build();
 
-BehaviorTreeLibrary.registerTree('enemy-ai', enemyAI);
+assetManager.loadAsset(enemyAI);
 
-// 使用时
-const tree = BehaviorTreeLibrary.getTree('enemy-ai');
-if (tree) {
-    BehaviorTreeStarter.start(entity, tree);
+// 为多个敌人实体使用同一份资产
+for (let i = 0; i < 10; i++) {
+    const enemy = scene.createEntity(`Enemy${i}`);
+    const tree = assetManager.getAsset('EnemyAI')!;
+    BehaviorTreeStarter.start(enemy, tree);  // 10个敌人共享1份数据
+}
+```
+
+### 从 Cocos Creator 资源加载
+
+#### 1. 将行为树 JSON 放入 resources 目录
+
+```
+assets/
+└── resources/
+    └── behaviors/
+        ├── enemy-ai.btree.json
+        └── boss-ai.btree.json
+```
+
+#### 2. 创建资源加载器
+
+创建 `assets/scripts/BehaviorTreeLoader.ts`：
+
+```typescript
+import { resources, JsonAsset } from 'cc';
+import { Core } from '@esengine/ecs-framework';
+import {
+    BehaviorTreeAssetManager,
+    BehaviorTreeAssetSerializer,
+    BehaviorTreeData
+} from '@esengine/behavior-tree';
+
+export class BehaviorTreeLoader {
+    private assetManager: BehaviorTreeAssetManager;
+
+    constructor() {
+        this.assetManager = Core.services.resolve(BehaviorTreeAssetManager);
+    }
+
+    /**
+     * 从 resources 目录加载行为树
+     * @param path 相对于 resources 的路径，不带扩展名
+     * @example await loader.load('behaviors/enemy-ai')
+     */
+    async load(path: string): Promise<BehaviorTreeData | null> {
+        return new Promise((resolve, reject) => {
+            resources.load(path, JsonAsset, (err, jsonAsset) => {
+                if (err) {
+                    console.error(`加载行为树失败: ${path}`, err);
+                    reject(err);
+                    return;
+                }
+
+                try {
+                    // 反序列化 JSON 为 BehaviorTreeData
+                    const jsonStr = JSON.stringify(jsonAsset.json);
+                    const treeData = BehaviorTreeAssetSerializer.deserialize(jsonStr);
+
+                    // 加载到资产管理器
+                    this.assetManager.loadAsset(treeData);
+
+                    console.log(`行为树已加载: ${treeData.name}`);
+                    resolve(treeData);
+                } catch (error) {
+                    console.error(`解析行为树失败: ${path}`, error);
+                    reject(error);
+                }
+            });
+        });
+    }
+
+    /**
+     * 预加载所有行为树
+     */
+    async preloadAll(paths: string[]): Promise<void> {
+        const promises = paths.map(path => this.load(path));
+        await Promise.all(promises);
+        console.log(`已预加载 ${paths.length} 个行为树`);
+    }
+}
+```
+
+#### 3. 在游戏启动时预加载
+
+修改 `Main.ts`：
+
+```typescript
+import { _decorator, Component } from 'cc';
+import { Core, Scene } from '@esengine/ecs-framework';
+import { BehaviorTreePlugin } from '@esengine/behavior-tree';
+import { BehaviorTreeLoader } from './BehaviorTreeLoader';
+
+const { ccclass } = _decorator;
+
+@ccclass('Main')
+export class Main extends Component {
+    private loader: BehaviorTreeLoader | null = null;
+
+    async onLoad() {
+        // 初始化 ECS Core
+        Core.create();
+
+        // 安装行为树插件
+        const behaviorTreePlugin = new BehaviorTreePlugin();
+        await Core.installPlugin(behaviorTreePlugin);
+
+        // 创建场景
+        const scene = new Scene();
+        behaviorTreePlugin.setupScene(scene);
+        Core.setScene(scene);
+
+        // 创建加载器并预加载所有行为树
+        this.loader = new BehaviorTreeLoader();
+        await this.loader.preloadAll([
+            'behaviors/enemy-ai',
+            'behaviors/boss-ai',
+            'behaviors/patrol',  // 子树
+            'behaviors/chase'    // 子树
+        ]);
+
+        console.log('游戏初始化完成');
+    }
+
+    update(deltaTime: number) {
+        Core.update(deltaTime);
+    }
+
+    onDestroy() {
+        Core.destroy();
+    }
+}
+```
+
+#### 4. 在敌人组件中使用
+
+```typescript
+import { _decorator, Component } from 'cc';
+import { Core, Entity } from '@esengine/ecs-framework';
+import {
+    BehaviorTreeAssetManager,
+    BehaviorTreeStarter
+} from '@esengine/behavior-tree';
+
+const { ccclass, property } = _decorator;
+
+@ccclass('EnemyAIComponent')
+export class EnemyAIComponent extends Component {
+    @property
+    aiType: string = 'enemy-ai';  // 在编辑器中配置使用哪个AI
+
+    private aiEntity: Entity | null = null;
+
+    start() {
+        const scene = Core.scene;
+        if (!scene) return;
+
+        // 从资产管理器获取已加载的行为树
+        const assetManager = Core.services.resolve(BehaviorTreeAssetManager);
+        const tree = assetManager.getAsset(this.aiType);
+
+        if (tree) {
+            this.aiEntity = scene.createEntity(`AI_${this.node.name}`);
+            BehaviorTreeStarter.start(this.aiEntity, tree);
+
+            // 设置黑板变量
+            const runtime = this.aiEntity.getComponent(BehaviorTreeRuntimeComponent);
+            runtime?.setBlackboardValue('cocosNode', this.node);
+        } else {
+            console.error(`找不到行为树资产: ${this.aiType}`);
+        }
+    }
+
+    onDestroy() {
+        if (this.aiEntity) {
+            BehaviorTreeStarter.stop(this.aiEntity);
+        }
+    }
 }
 ```
 
@@ -504,5 +677,7 @@ const updateInterval = sys.isNative ? 0.016 : 0.05;
 
 ## 下一步
 
-- 查看[高级用法](./advanced-usage.md)了解子树和异步加载
-- 学习[最佳实践](./best-practices.md)优化你的 AI
+- 查看[资产管理](./asset-management.md)了解如何加载和管理行为树资产、使用子树
+- 学习[高级用法](./advanced-usage.md)了解性能优化和调试技巧
+- 阅读[最佳实践](./best-practices.md)优化你的 AI
+- 学习[自定义节点执行器](./custom-actions.md)创建自定义行为

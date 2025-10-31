@@ -1,4 +1,4 @@
-import { TaskStatus, NodeType } from '../Types/TaskStatus';
+import { TaskStatus, NodeType, AbortType } from '../Types/TaskStatus';
 
 /**
  * 行为树节点定义（纯数据结构）
@@ -26,6 +26,9 @@ export interface BehaviorNodeData {
 
     /** 属性到黑板变量的绑定映射 */
     bindings?: Record<string, string>;
+
+    /** 中止类型（条件装饰器使用） */
+    abortType?: AbortType;
 }
 
 /**
@@ -74,6 +77,15 @@ export interface NodeRuntimeState {
 
     /** 洗牌后的索引（随机节点使用） */
     shuffledIndices?: number[];
+
+    /** 是否被中止 */
+    isAborted?: boolean;
+
+    /** 上次条件评估结果（条件装饰器使用） */
+    lastConditionResult?: boolean;
+
+    /** 正在观察的黑板键（条件装饰器使用） */
+    observedKeys?: string[];
 }
 
 /**

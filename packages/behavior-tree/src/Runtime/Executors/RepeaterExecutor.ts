@@ -37,7 +37,7 @@ export class RepeaterExecutor implements INodeExecutor {
             return TaskStatus.Success;
         }
 
-        const childId = nodeData.children[0];
+        const childId = nodeData.children[0]!;
 
         if (!state.repeatCount) {
             state.repeatCount = 0;
@@ -68,9 +68,9 @@ export class RepeaterExecutor implements INodeExecutor {
     }
 
     reset(context: NodeExecutionContext): void {
-        context.state.repeatCount = 0;
+        delete context.state.repeatCount;
         if (context.nodeData.children && context.nodeData.children.length > 0) {
-            context.runtime.resetNodeState(context.nodeData.children[0]);
+            context.runtime.resetNodeState(context.nodeData.children[0]!);
         }
     }
 }

@@ -23,6 +23,14 @@ export interface BlackboardVariableDefinition {
 }
 
 /**
+ * 行为树节点配置数据
+ */
+export interface BehaviorNodeConfigData {
+    className?: string;
+    [key: string]: any;
+}
+
+/**
  * 行为树节点数据（运行时格式）
  */
 export interface BehaviorTreeNodeData {
@@ -31,7 +39,7 @@ export interface BehaviorTreeNodeData {
     nodeType: NodeType;
 
     // 节点类型特定数据
-    data: Record<string, any>;
+    data: BehaviorNodeConfigData;
 
     // 子节点ID列表
     children: string[];
@@ -216,11 +224,19 @@ export class BehaviorTreeAssetValidator {
             }
         }
 
-        return {
-            valid: errors.length === 0,
-            errors: errors.length > 0 ? errors : undefined,
-            warnings: warnings.length > 0 ? warnings : undefined
+        const result: AssetValidationResult = {
+            valid: errors.length === 0
         };
+
+        if (errors.length > 0) {
+            result.errors = errors;
+        }
+
+        if (warnings.length > 0) {
+            result.warnings = warnings;
+        }
+
+        return result;
     }
 
     /**

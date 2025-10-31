@@ -7,15 +7,26 @@ const logger = createLogger('EditorFormatConverter');
 /**
  * 编辑器节点格式
  */
+export interface EditorNodeTemplate {
+    displayName: string;
+    category: string;
+    type: NodeType;
+    className?: string;
+    [key: string]: any;
+}
+
+export interface EditorNodeData {
+    nodeType?: string;
+    className?: string;
+    variableName?: string;
+    name?: string;
+    [key: string]: any;
+}
+
 export interface EditorNode {
     id: string;
-    template: {
-        displayName: string;
-        category: string;
-        type: NodeType;
-        [key: string]: any;
-    };
-    data: Record<string, any>;
+    template: EditorNodeTemplate;
+    data: EditorNodeData;
     position: { x: number; y: number };
     children: string[];
 }
@@ -74,11 +85,23 @@ export class EditorFormatConverter {
 
         const assetMetadata: AssetMetadata = {
             name: metadata?.name || editorData.metadata?.name || 'Untitled Behavior Tree',
-            description: metadata?.description || editorData.metadata?.description,
-            version: metadata?.version || editorData.version || '1.0.0',
-            createdAt: metadata?.createdAt || editorData.metadata?.createdAt,
-            modifiedAt: metadata?.modifiedAt || new Date().toISOString()
+            version: metadata?.version || editorData.version || '1.0.0'
         };
+
+        const description = metadata?.description || editorData.metadata?.description;
+        if (description) {
+            assetMetadata.description = description;
+        }
+
+        const createdAt = metadata?.createdAt || editorData.metadata?.createdAt;
+        if (createdAt) {
+            assetMetadata.createdAt = createdAt;
+        }
+
+        const modifiedAt = metadata?.modifiedAt || new Date().toISOString();
+        if (modifiedAt) {
+            assetMetadata.modifiedAt = modifiedAt;
+        }
 
         const nodes = this.convertNodes(editorData.nodes);
 
@@ -95,9 +118,12 @@ export class EditorFormatConverter {
             metadata: assetMetadata,
             rootNodeId: rootNode.id,
             nodes,
-            blackboard,
-            propertyBindings: propertyBindings.length > 0 ? propertyBindings : undefined
+            blackboard
         };
+
+        if (propertyBindings.length > 0) {
+            asset.propertyBindings = propertyBindings;
+        }
 
         logger.info(`转换完成: ${nodes.length}个节点, ${blackboard.length}个黑板变量, ${propertyBindings.length}个属性绑定`);
 
@@ -243,21 +269,31 @@ export class EditorFormatConverter {
         }
 
         const connections = this.convertPropertyBindingsToConnections(
-            asset.propertyBindings || [],
-            asset.nodes
+            asset.propertyBindings || []
         );
 
         const nodeConnections = this.buildNodeConnections(asset.nodes);
         connections.push(...nodeConnections);
 
+        const metadata: { name: string; description?: string; createdAt?: string; modifiedAt?: string } = {
+            name: asset.metadata.name
+        };
+
+        if (asset.metadata.description) {
+            metadata.description = asset.metadata.description;
+        }
+
+        if (asset.metadata.createdAt) {
+            metadata.createdAt = asset.metadata.createdAt;
+        }
+
+        if (asset.metadata.modifiedAt) {
+            metadata.modifiedAt = asset.metadata.modifiedAt;
+        }
+
         const editorData: EditorFormat = {
             version: asset.metadata.version,
-            metadata: {
-                name: asset.metadata.name,
-                description: asset.metadata.description,
-                createdAt: asset.metadata.createdAt,
-                modifiedAt: asset.metadata.modifiedAt
-            },
+            metadata,
             nodes,
             connections,
             blackboard,
@@ -324,8 +360,7 @@ export class EditorFormatConverter {
      * 将属性绑定转换为连接
      */
     private static convertPropertyBindingsToConnections(
-        bindings: PropertyBinding[],
-        nodes: BehaviorTreeNodeData[]
+        bindings: PropertyBinding[]
     ): EditorConnection[] {
         const connections: EditorConnection[] = [];
 

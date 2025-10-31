@@ -27,8 +27,8 @@ export class RandomSequenceExecutor implements INodeExecutor {
         }
 
         while (state.currentChildIndex < state.shuffledIndices.length) {
-            const shuffledIndex = state.shuffledIndices[state.currentChildIndex];
-            const childId = nodeData.children[shuffledIndex];
+            const shuffledIndex = state.shuffledIndices[state.currentChildIndex]!;
+            const childId = nodeData.children[shuffledIndex]!;
             const status = context.executeChild(childId);
 
             if (status === TaskStatus.Running) {
@@ -37,7 +37,7 @@ export class RandomSequenceExecutor implements INodeExecutor {
 
             if (status === TaskStatus.Failure) {
                 state.currentChildIndex = 0;
-                state.shuffledIndices = undefined;
+                delete state.shuffledIndices;
                 return TaskStatus.Failure;
             }
 
@@ -45,7 +45,7 @@ export class RandomSequenceExecutor implements INodeExecutor {
         }
 
         state.currentChildIndex = 0;
-        state.shuffledIndices = undefined;
+        delete state.shuffledIndices;
         return TaskStatus.Success;
     }
 
@@ -53,13 +53,15 @@ export class RandomSequenceExecutor implements INodeExecutor {
         const indices = Array.from({ length }, (_, i) => i);
         for (let i = indices.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [indices[i], indices[j]] = [indices[j], indices[i]];
+            const temp = indices[i]!;
+            indices[i] = indices[j]!;
+            indices[j] = temp;
         }
         return indices;
     }
 
     reset(context: NodeExecutionContext): void {
         context.state.currentChildIndex = 0;
-        context.state.shuffledIndices = undefined;
+        delete context.state.shuffledIndices;
     }
 }

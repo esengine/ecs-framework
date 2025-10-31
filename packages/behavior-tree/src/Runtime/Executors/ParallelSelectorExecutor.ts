@@ -70,6 +70,7 @@ export class ParallelSelectorExecutor implements INodeExecutor {
 
         for (const childId of nodeData.children) {
             runtime.activeNodeIds.delete(childId);
+            runtime.resetNodeState(childId);
         }
     }
 

@@ -332,9 +332,10 @@ BehaviorTreeStarter.restart(entity);
 现在你已经创建了第一个行为树,接下来可以:
 
 1. 学习[核心概念](./core-concepts.md)深入理解行为树原理
-2. 查看[自定义节点执行器](./custom-actions.md)学习如何创建自定义节点
-3. 尝试[编辑器使用指南](./editor-guide.md)可视化创建行为树
-4. 查看[高级用法](./advanced-usage.md)了解更多功能
+2. 学习[资产管理](./asset-management.md)了解如何加载和复用行为树、使用子树
+3. 查看[自定义节点执行器](./custom-actions.md)学习如何创建自定义节点
+4. 根据你的场景查看集成教程：[Cocos Creator](./cocos-integration.md) 或 [Node.js](./nodejs-usage.md)
+5. 查看[高级用法](./advanced-usage.md)了解更多功能
 
 ## 常见问题
 

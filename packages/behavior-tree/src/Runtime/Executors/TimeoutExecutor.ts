@@ -39,25 +39,25 @@ export class TimeoutExecutor implements INodeExecutor {
 
         const elapsedTime = totalTime - state.startTime;
         if (elapsedTime >= timeout) {
-            state.startTime = undefined;
+            delete state.startTime;
             return TaskStatus.Failure;
         }
 
-        const childId = nodeData.children[0];
+        const childId = nodeData.children[0]!;
         const status = context.executeChild(childId);
 
         if (status === TaskStatus.Running) {
             return TaskStatus.Running;
         }
 
-        state.startTime = undefined;
+        delete state.startTime;
         return status;
     }
 
     reset(context: NodeExecutionContext): void {
-        context.state.startTime = undefined;
+        delete context.state.startTime;
         if (context.nodeData.children && context.nodeData.children.length > 0) {
-            context.runtime.resetNodeState(context.nodeData.children[0]);
+            context.runtime.resetNodeState(context.nodeData.children[0]!);
         }
     }
 }

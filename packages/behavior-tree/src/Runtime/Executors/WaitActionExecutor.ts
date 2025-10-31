@@ -9,7 +9,7 @@ import { INodeExecutor, NodeExecutionContext } from '../NodeExecutor';
 export class WaitActionExecutor implements INodeExecutor {
     execute(context: NodeExecutionContext): TaskStatus {
         const { state, nodeData, totalTime } = context;
-        const duration = nodeData.config.duration as number || 1.0;
+        const duration = nodeData.config['duration'] as number || 1.0;
 
         if (!state.startTime) {
             state.startTime = totalTime;
@@ -24,6 +24,6 @@ export class WaitActionExecutor implements INodeExecutor {
     }
 
     reset(context: NodeExecutionContext): void {
-        context.state.startTime = undefined;
+        delete context.state.startTime;
     }
 }

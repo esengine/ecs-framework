@@ -41,6 +41,6 @@ export class WaitAction implements INodeExecutor {
     }
 
     reset(context: NodeExecutionContext): void {
-        context.state.startTime = undefined;
+        delete context.state.startTime;
     }
 }

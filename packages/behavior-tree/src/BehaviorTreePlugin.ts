@@ -31,7 +31,7 @@ export class BehaviorTreePlugin implements IPlugin {
     /**
      * 安装插件
      */
-    async install(core: Core, services: ServiceContainer): Promise<void> {
+    async install(_core: Core, services: ServiceContainer): Promise<void> {
         this.services = services;
 
         // 注册全局服务

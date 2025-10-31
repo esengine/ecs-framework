@@ -8,6 +8,8 @@ export interface NodeDataJSON {
     nodeType: string;
     compositeType?: string;
     decoratorType?: string;
+    actionType?: string;
+    conditionType?: string;
     [key: string]: any;
 }
 
@@ -240,13 +242,28 @@ export class NodeTemplates {
             const property: PropertyDefinition = {
                 name,
                 type: this.mapFieldTypeToPropertyType(field),
-                label: name,
-                description: field.description,
-                defaultValue: field.default,
-                min: field.min,
-                max: field.max,
-                allowMultipleConnections: field.allowMultipleConnections
+                label: name
             };
+
+            if (field.description !== undefined) {
+                property.description = field.description;
+            }
+
+            if (field.default !== undefined) {
+                property.defaultValue = field.default;
+            }
+
+            if (field.min !== undefined) {
+                property.min = field.min;
+            }
+
+            if (field.max !== undefined) {
+                property.max = field.max;
+            }
+
+            if (field.allowMultipleConnections !== undefined) {
+                property.allowMultipleConnections = field.allowMultipleConnections;
+            }
 
             if (field.options) {
                 property.options = field.options.map(opt => ({
@@ -331,7 +348,7 @@ export class NodeTemplates {
     /**
      * 根据节点类型获取默认图标和颜色
      */
-    private static getIconAndColorByType(nodeType: NodeType, category: string): { icon: string; color: string } {
+    private static getIconAndColorByType(nodeType: NodeType, _category: string): { icon: string; color: string } {
         // 根据节点类型设置默认值
         switch (nodeType) {
             case NodeType.Composite:

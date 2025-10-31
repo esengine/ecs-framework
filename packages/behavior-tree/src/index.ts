@@ -24,7 +24,6 @@ export * from './Serialization/BehaviorTreeAssetSerializer';
 
 // 服务
 export * from './Services/GlobalBlackboardService';
-export * from './Services/WorkspaceService';
 
 // 插件
 export * from './BehaviorTreePlugin';

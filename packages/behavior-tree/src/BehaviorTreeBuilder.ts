@@ -257,7 +257,7 @@ export class BehaviorTreeBuilder {
         }
 
         if (this.nodeStack.length > 0) {
-            const parentId = this.nodeStack[this.nodeStack.length - 1];
+            const parentId = this.nodeStack[this.nodeStack.length - 1]!;
             const parentNode = this.treeData.nodes.get(parentId);
             if (parentNode && parentNode.children) {
                 parentNode.children.push(nodeId);
@@ -286,7 +286,7 @@ export class BehaviorTreeBuilder {
         }
 
         if (this.nodeStack.length > 0) {
-            const parentId = this.nodeStack[this.nodeStack.length - 1];
+            const parentId = this.nodeStack[this.nodeStack.length - 1]!;
             const parentNode = this.treeData.nodes.get(parentId);
             if (parentNode && parentNode.children) {
                 parentNode.children.push(nodeId);
@@ -314,7 +314,7 @@ export class BehaviorTreeBuilder {
         }
 
         if (this.nodeStack.length > 0) {
-            const parentId = this.nodeStack[this.nodeStack.length - 1];
+            const parentId = this.nodeStack[this.nodeStack.length - 1]!;
             const parentNode = this.treeData.nodes.get(parentId);
             if (parentNode && parentNode.children) {
                 parentNode.children.push(nodeId);
@@ -341,7 +341,7 @@ export class BehaviorTreeBuilder {
         }
 
         if (this.nodeStack.length > 0) {
-            const parentId = this.nodeStack[this.nodeStack.length - 1];
+            const parentId = this.nodeStack[this.nodeStack.length - 1]!;
             const parentNode = this.treeData.nodes.get(parentId);
             if (parentNode && parentNode.children) {
                 parentNode.children.push(nodeId);

@@ -40,7 +40,7 @@ export class CooldownExecutor implements INodeExecutor {
             }
         }
 
-        const childId = nodeData.children[0];
+        const childId = nodeData.children[0]!;
         const status = context.executeChild(childId);
 
         if (status === TaskStatus.Running) {
@@ -56,9 +56,9 @@ export class CooldownExecutor implements INodeExecutor {
     }
 
     reset(context: NodeExecutionContext): void {
-        context.state.lastExecutionTime = undefined;
+        delete context.state.lastExecutionTime;
         if (context.nodeData.children && context.nodeData.children.length > 0) {
-            context.runtime.resetNodeState(context.nodeData.children[0]);
+            context.runtime.resetNodeState(context.nodeData.children[0]!);
         }
     }
 }

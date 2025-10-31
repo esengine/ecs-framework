@@ -4,6 +4,20 @@ import { NodeRuntimeState, createDefaultRuntimeState } from './BehaviorTreeData'
 import { TaskStatus } from '../Types/TaskStatus';
 
 /**
+ * 黑板变化监听器
+ */
+export type BlackboardChangeListener = (key: string, newValue: any, oldValue: any) => void;
+
+/**
+ * 黑板观察者信息
+ */
+interface BlackboardObserver {
+    nodeId: string;
+    keys: Set<string>;
+    callback: BlackboardChangeListener;
+}
+
+/**
  * 行为树运行时组件
  *
  * 挂载到游戏Entity上，引用共享的BehaviorTreeData
@@ -45,6 +59,12 @@ export class BehaviorTreeRuntimeComponent extends Component {
     private blackboard: Map<string, any> = new Map();
 
     /**
+     * 黑板观察者列表
+     */
+    @IgnoreSerialization()
+    private blackboardObservers: Map<string, BlackboardObserver[]> = new Map();
+
+    /**
      * 当前激活的节点ID列表（用于调试）
      */
     @IgnoreSerialization()
@@ -55,6 +75,12 @@ export class BehaviorTreeRuntimeComponent extends Component {
      */
     @IgnoreSerialization()
     needsReset: boolean = false;
+
+    /**
+     * 需要中止的节点ID列表
+     */
+    @IgnoreSerialization()
+    nodesToAbort: Set<string> = new Set();
 
     /**
      * 获取节点运行时状态
@@ -73,11 +99,14 @@ export class BehaviorTreeRuntimeComponent extends Component {
         const state = this.getNodeState(nodeId);
         state.status = TaskStatus.Invalid;
         state.currentChildIndex = 0;
-        state.startTime = undefined;
-        state.lastExecutionTime = undefined;
-        state.repeatCount = undefined;
-        state.cachedResult = undefined;
-        state.shuffledIndices = undefined;
+        delete state.startTime;
+        delete state.lastExecutionTime;
+        delete state.repeatCount;
+        delete state.cachedResult;
+        delete state.shuffledIndices;
+        delete state.isAborted;
+        delete state.lastConditionResult;
+        delete state.observedKeys;
     }
 
     /**
@@ -99,7 +128,12 @@ export class BehaviorTreeRuntimeComponent extends Component {
      * 设置黑板值
      */
     setBlackboardValue(key: string, value: any): void {
+        const oldValue = this.blackboard.get(key);
         this.blackboard.set(key, value);
+
+        if (oldValue !== value) {
+            this.notifyBlackboardChange(key, value, oldValue);
+        }
     }
 
     /**
@@ -157,5 +191,79 @@ export class BehaviorTreeRuntimeComponent extends Component {
      */
     resume(): void {
         this.isRunning = true;
+    }
+
+    /**
+     * 注册黑板观察者
+     */
+    observeBlackboard(nodeId: string, keys: string[], callback: BlackboardChangeListener): void {
+        const observer: BlackboardObserver = {
+            nodeId,
+            keys: new Set(keys),
+            callback
+        };
+
+        for (const key of keys) {
+            if (!this.blackboardObservers.has(key)) {
+                this.blackboardObservers.set(key, []);
+            }
+            this.blackboardObservers.get(key)!.push(observer);
+        }
+    }
+
+    /**
+     * 取消注册黑板观察者
+     */
+    unobserveBlackboard(nodeId: string): void {
+        for (const observers of this.blackboardObservers.values()) {
+            const index = observers.findIndex(o => o.nodeId === nodeId);
+            if (index !== -1) {
+                observers.splice(index, 1);
+            }
+        }
+    }
+
+    /**
+     * 通知黑板变化
+     */
+    private notifyBlackboardChange(key: string, newValue: any, oldValue: any): void {
+        const observers = this.blackboardObservers.get(key);
+        if (!observers) return;
+
+        for (const observer of observers) {
+            try {
+                observer.callback(key, newValue, oldValue);
+            } catch (error) {
+                console.error(`黑板观察者回调错误 (节点: ${observer.nodeId}):`, error);
+            }
+        }
+    }
+
+    /**
+     * 请求中止节点
+     */
+    requestAbort(nodeId: string): void {
+        this.nodesToAbort.add(nodeId);
+    }
+
+    /**
+     * 检查节点是否需要中止
+     */
+    shouldAbort(nodeId: string): boolean {
+        return this.nodesToAbort.has(nodeId);
+    }
+
+    /**
+     * 清除中止请求
+     */
+    clearAbortRequest(nodeId: string): void {
+        this.nodesToAbort.delete(nodeId);
+    }
+
+    /**
+     * 清除所有中止请求
+     */
+    clearAllAbortRequests(): void {
+        this.nodesToAbort.clear();
     }
 }

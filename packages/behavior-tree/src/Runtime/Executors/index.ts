@@ -14,12 +14,15 @@ export { UntilFailExecutor } from './UntilFailExecutor';
 export { ConditionalExecutor } from './ConditionalExecutor';
 export { CooldownExecutor } from './CooldownExecutor';
 export { TimeoutExecutor } from './TimeoutExecutor';
+export { ServiceDecorator, ServiceRegistry } from './ServiceDecorator';
+export type { IServiceExecutor } from './ServiceDecorator';
 
 export { WaitAction } from './WaitAction';
 export { LogAction } from './LogAction';
 export { SetBlackboardValue } from './SetBlackboardValue';
 export { ModifyBlackboardValue } from './ModifyBlackboardValue';
 export { ExecuteAction } from './ExecuteAction';
+export { SubTreeExecutor } from './SubTreeExecutor';
 
 export { BlackboardCompare } from './BlackboardCompare';
 export { BlackboardExists } from './BlackboardExists';

@@ -42,13 +42,18 @@ export class GlobalBlackboardService implements IService {
             description?: string;
         }
     ): void {
-        this.variables.set(name, {
+        const variable: BlackboardVariable = {
             name,
             type,
             value: initialValue,
-            readonly: options?.readonly ?? false,
-            description: options?.description
-        });
+            readonly: options?.readonly ?? false
+        };
+
+        if (options?.description !== undefined) {
+            variable.description = options.description;
+        }
+
+        this.variables.set(name, variable);
     }
 
     /**

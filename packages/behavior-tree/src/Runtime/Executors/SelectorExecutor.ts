@@ -23,7 +23,7 @@ export class SelectorExecutor implements INodeExecutor {
         }
 
         while (state.currentChildIndex < nodeData.children.length) {
-            const childId = nodeData.children[state.currentChildIndex];
+            const childId = nodeData.children[state.currentChildIndex]!;
             const status = context.executeChild(childId);
 
             if (status === TaskStatus.Running) {
