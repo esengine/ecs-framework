@@ -142,8 +142,8 @@ export interface IEventListenerConfig {
     priority?: number;
     /** 是否异步执行 */
     async?: boolean;
-    /** 执行上下文 */
-    context?: unknown;
+    /** 事件处理函数的 this 绑定对象 */
+    thisArg?: object;
 }
 
 /**
