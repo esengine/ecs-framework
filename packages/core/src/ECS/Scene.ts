@@ -2,7 +2,7 @@ import { Entity } from './Entity';
 import { EntityList } from './Utils/EntityList';
 import { IdentifierPool } from './Utils/IdentifierPool';
 import { EntitySystem } from './Systems/EntitySystem';
-import { ComponentStorageManager, ComponentRegistry } from './Core/ComponentStorage';
+import { ComponentStorageManager, ComponentRegistry, ComponentType } from './Core/ComponentStorage';
 import { QuerySystem } from './Core/QuerySystem';
 import { TypeSafeEventSystem } from './Core/EventSystem';
 import { EventBus } from './Core/EventBus';
@@ -22,7 +22,7 @@ import {
 } from './Serialization/IncrementalSerializer';
 import { ComponentPoolManager } from './Core/ComponentPool';
 import { PerformanceMonitor } from '../Utils/PerformanceMonitor';
-import { ServiceContainer, type ServiceType } from '../Core/ServiceContainer';
+import { ServiceContainer, type ServiceType, type IService } from '../Core/ServiceContainer';
 import { createInstance, isInjectable, injectProperties } from '../Core/DI';
 import { createLogger } from '../Utils/Logger';
 
@@ -45,6 +45,7 @@ export class Scene implements IScene {
      *
      * 用于存储场景级别的配置和状态数据。
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public readonly sceneData: Map<string, any> = new Map();
 
     /**
@@ -127,6 +128,20 @@ export class Scene implements IScene {
     private _systemsOrderDirty: boolean = true;
 
     /**
+     * 系统错误计数器
+     *
+     * 跟踪每个系统的错误次数，用于自动禁用频繁出错的系统
+     */
+    private _systemErrorCount: Map<EntitySystem, number> = new Map();
+
+    /**
+     * 最大允许错误次数
+     *
+     * 系统错误次数超过此阈值后将被自动禁用
+     */
+    private _maxErrorCount: number = 10;
+
+    /**
      * 获取场景中所有已注册的EntitySystem
      *
      * 按updateOrder排序。使用缓存机制，仅在系统变化时重新排序。
@@ -138,24 +153,35 @@ export class Scene implements IScene {
             return this._cachedSystems;
         }
 
-        // 重新构建系统列表
-        const services = this._services.getAll();
-        const systems: EntitySystem[] = [];
-
-        for (const service of services) {
-            if (service instanceof EntitySystem) {
-                systems.push(service);
-            }
-        }
-
-        // 按updateOrder排序
-        systems.sort((a, b) => a.updateOrder - b.updateOrder);
-
-        // 缓存结果
-        this._cachedSystems = systems;
+        this._cachedSystems = this._rebuildSystemsCache();
         this._systemsOrderDirty = false;
 
-        return systems;
+        return this._cachedSystems;
+    }
+
+    /**
+     * 重新构建系统缓存
+     *
+     * 从服务容器中提取所有EntitySystem并排序
+     */
+    private _rebuildSystemsCache(): EntitySystem[] {
+        const allServices = this._services.getAll();
+        const systems = this._filterEntitySystems(allServices);
+        return this._sortSystemsByUpdateOrder(systems);
+    }
+
+    /**
+     * 从服务列表中过滤出EntitySystem实例
+     */
+    private _filterEntitySystems(services: IService[]): EntitySystem[] {
+        return services.filter((service): service is EntitySystem => service instanceof EntitySystem);
+    }
+
+    /**
+     * 按updateOrder排序系统
+     */
+    private _sortSystemsByUpdateOrder(systems: EntitySystem[]): EntitySystem[] {
+        return systems.sort((a, b) => a.updateOrder - b.updateOrder);
     }
 
     /**
@@ -312,27 +338,52 @@ export class Scene implements IScene {
 
         this.entities.updateLists();
 
-        // 更新所有EntitySystem
         const systems = this.systems;
+
         for (const system of systems) {
             if (system.enabled) {
                 try {
                     system.update();
                 } catch (error) {
-                    this.logger.error(`Error in system ${system.constructor.name}.update():`, error);
+                    this._handleSystemError(system, 'update', error);
                 }
             }
         }
 
-        // LateUpdate
         for (const system of systems) {
             if (system.enabled) {
                 try {
                     system.lateUpdate();
                 } catch (error) {
-                    this.logger.error(`Error in system ${system.constructor.name}.lateUpdate():`, error);
+                    this._handleSystemError(system, 'lateUpdate', error);
                 }
             }
+        }
+    }
+
+    /**
+     * 处理系统执行错误
+     *
+     * 记录错误信息并跟踪错误次数。当系统错误次数超过阈值时自动禁用该系统。
+     *
+     * @param system 出错的系统
+     * @param phase 错误发生的阶段（update 或 lateUpdate）
+     * @param error 错误对象
+     */
+    private _handleSystemError(system: EntitySystem, phase: 'update' | 'lateUpdate', error: unknown): void {
+        const errorCount = (this._systemErrorCount.get(system) || 0) + 1;
+        this._systemErrorCount.set(system, errorCount);
+
+        this.logger.error(
+            `Error in system ${system.constructor.name}.${phase}() [${errorCount}/${this._maxErrorCount}]:`,
+            error
+        );
+
+        if (errorCount >= this._maxErrorCount) {
+            system.enabled = false;
+            this.logger.error(
+                `System ${system.constructor.name} has been disabled due to excessive errors (${errorCount} errors)`
+            );
         }
     }
 
@@ -508,7 +559,7 @@ export class Scene implements IScene {
      * }
      * ```
      */
-    public queryAll(...componentTypes: any[]): { entities: readonly Entity[] } {
+    public queryAll(...componentTypes: ComponentType[]): { entities: readonly Entity[] } {
         return this.querySystem.queryAll(...componentTypes);
     }
 
@@ -518,7 +569,7 @@ export class Scene implements IScene {
      * @param componentTypes - 组件类型数组
      * @returns 查询结果
      */
-    public queryAny(...componentTypes: any[]): { entities: readonly Entity[] } {
+    public queryAny(...componentTypes: ComponentType[]): { entities: readonly Entity[] } {
         return this.querySystem.queryAny(...componentTypes);
     }
 
@@ -528,7 +579,7 @@ export class Scene implements IScene {
      * @param componentTypes - 组件类型数组
      * @returns 查询结果
      */
-    public queryNone(...componentTypes: any[]): { entities: readonly Entity[] } {
+    public queryNone(...componentTypes: ComponentType[]): { entities: readonly Entity[] } {
         return this.querySystem.queryNone(...componentTypes);
     }
 
@@ -585,7 +636,7 @@ export class Scene implements IScene {
      */
     public addEntityProcessor<T extends EntitySystem>(systemTypeOrInstance: ServiceType<T> | T): T {
         let system: T;
-        let constructor: any;
+        let constructor: ServiceType<T>;
 
         if (typeof systemTypeOrInstance === 'function') {
             constructor = systemTypeOrInstance;
@@ -599,11 +650,11 @@ export class Scene implements IScene {
             if (isInjectable(constructor)) {
                 system = createInstance(constructor, this._services) as T;
             } else {
-                system = new (constructor as any)() as T;
+                system = new constructor() as T;
             }
         } else {
             system = systemTypeOrInstance;
-            constructor = system.constructor;
+            constructor = system.constructor as ServiceType<T>;
 
             if (this._services.isRegistered(constructor)) {
                 const existingSystem = this._services.resolve(constructor);
@@ -705,7 +756,7 @@ export class Scene implements IScene {
      * @param processor 要删除的处理器
      */
     public removeEntityProcessor(processor: EntitySystem): void {
-        const constructor = processor.constructor as any;
+        const constructor = processor.constructor as ServiceType<EntitySystem>;
 
         // 从ServiceContainer移除
         this._services.unregister(constructor);
@@ -744,7 +795,7 @@ export class Scene implements IScene {
      * ```
      */
     public getEntityProcessor<T extends EntitySystem>(type: new (...args: unknown[]) => T): T | null {
-        return this._services.tryResolve(type as any) as T | null;
+        return this._services.tryResolve(type as ServiceType<T>) as T | null;
     }
 
     /**
@@ -753,8 +804,8 @@ export class Scene implements IScene {
     public getStats(): {
         entityCount: number;
         processorCount: number;
-        componentStorageStats: Map<string, any>;
-    } {
+        componentStorageStats: Map<string, { totalSlots: number; usedSlots: number; freeSlots: number; fragmentation: number }>;
+        } {
         return {
             entityCount: this.entities.count,
             processorCount: this.systems.length,
@@ -781,8 +832,8 @@ export class Scene implements IScene {
             updateOrder: number;
             entityCount: number;
         }>;
-        componentStats: Map<string, any>;
-    } {
+        componentStats: Map<string, { totalSlots: number; usedSlots: number; freeSlots: number; fragmentation: number }>;
+        } {
         const systems = this.systems;
         return {
             name: this.name || this.constructor.name,
@@ -798,7 +849,7 @@ export class Scene implements IScene {
             processors: systems.map((processor) => ({
                 name: getSystemInstanceTypeName(processor),
                 updateOrder: processor.updateOrder,
-                entityCount: (processor as any)._entities?.length || 0
+                entityCount: processor.entities.length
             })),
             componentStats: this.componentStorageManager.getAllStats()
         };
@@ -858,7 +909,7 @@ export class Scene implements IScene {
     // ==================== 增量序列化 API ====================
 
     /** 增量序列化的基础快照 */
-    private _incrementalBaseSnapshot?: any;
+    private _incrementalBaseSnapshot?: unknown;
 
     /**
      * 创建增量序列化的基础快照
@@ -913,7 +964,7 @@ export class Scene implements IScene {
             throw new Error('必须先调用 createIncrementalSnapshot() 创建基础快照');
         }
 
-        return IncrementalSerializer.computeIncremental(this, this._incrementalBaseSnapshot, options);
+        return IncrementalSerializer.computeIncremental(this, this._incrementalBaseSnapshot as Parameters<typeof IncrementalSerializer.computeIncremental>[1], options);
     }
 
     /**
@@ -938,7 +989,7 @@ export class Scene implements IScene {
      */
     public applyIncremental(
         incremental: IncrementalSnapshot | string | Uint8Array,
-        componentRegistry?: Map<string, any>
+        componentRegistry?: Map<string, ComponentType>
     ): void {
         const isSerializedData = typeof incremental === 'string' || incremental instanceof Uint8Array;
 
@@ -946,7 +997,7 @@ export class Scene implements IScene {
             ? IncrementalSerializer.deserializeIncremental(incremental as string | Uint8Array)
             : (incremental as IncrementalSnapshot);
 
-        const registry = componentRegistry || (ComponentRegistry.getAllComponentNames() as Map<string, any>);
+        const registry = componentRegistry || (ComponentRegistry.getAllComponentNames() as Map<string, ComponentType>);
 
         IncrementalSerializer.applyIncremental(this, snapshot, registry);
     }

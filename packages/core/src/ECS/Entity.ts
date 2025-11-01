@@ -7,6 +7,13 @@ import { getComponentInstanceTypeName, getComponentTypeName } from './Decorators
 import type { IScene } from './IScene';
 
 /**
+ * 组件活跃状态变化接口
+ */
+interface IActiveChangeable {
+    onActiveChanged(): void;
+}
+
+/**
  * 实体比较器
  *
  * 用于比较两个实体的优先级，首先按更新顺序比较，然后按ID比较。
@@ -68,19 +75,6 @@ export class Entity {
      * 用于发射组件相关事件
      */
     public static eventBus: EventBus | null = null;
-
-    /**
-     * 通知Scene中的QuerySystem实体组件发生变动
-     *
-     * @param entity 发生组件变动的实体
-     */
-    private static notifyQuerySystems(entity: Entity): void {
-        // 只通知Scene中的QuerySystem
-        if (entity.scene && entity.scene.querySystem) {
-            entity.scene.querySystem.updateEntity(entity);
-            entity.scene.clearSystemEntityCaches();
-        }
-    }
 
     /**
      * 实体名称
@@ -352,7 +346,11 @@ export class Entity {
      * const health = entity.createComponent(Health, 100);
      * ```
      */
-    public createComponent<T extends Component>(componentType: ComponentType<T>, ...args: any[]): T {
+    public createComponent<T extends Component>(
+        componentType: ComponentType<T>,
+        ...args: ConstructorParameters<ComponentType<T>>
+    ): T {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         const component = new componentType(...args);
         return this.addComponent(component);
     }
@@ -378,6 +376,16 @@ export class Entity {
         this._componentCache = null;
 
         return component;
+    }
+
+    /**
+     * 通知Scene中的QuerySystem实体组件发生变动
+     */
+    private notifyQuerySystems(): void {
+        if (this.scene && this.scene.querySystem) {
+            this.scene.querySystem.updateEntity(this);
+            this.scene.clearSystemEntityCaches();
+        }
     }
 
     /**
@@ -432,8 +440,7 @@ export class Entity {
             });
         }
 
-        // 通知所有相关的QuerySystem组件已变动
-        Entity.notifyQuerySystems(this);
+        this.notifyQuerySystems();
 
         return component;
     }
@@ -507,9 +514,13 @@ export class Entity {
      * position.x = 100;
      * ```
      */
-    public getOrCreateComponent<T extends Component>(type: ComponentType<T>, ...args: any[]): T {
+    public getOrCreateComponent<T extends Component>(
+        type: ComponentType<T>,
+        ...args: ConstructorParameters<ComponentType<T>>
+    ): T {
         let component = this.getComponent(type);
         if (!component) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             component = this.createComponent(type, ...args);
         }
         return component;
@@ -562,8 +573,7 @@ export class Entity {
             });
         }
 
-        // 通知所有相关的QuerySystem组件已变动
-        Entity.notifyQuerySystems(this);
+        this.notifyQuerySystems();
     }
 
     /**
@@ -603,8 +613,7 @@ export class Entity {
             component.onRemovedFromEntity();
         }
 
-        // 通知所有相关的QuerySystem组件已全部移除
-        Entity.notifyQuerySystems(this);
+        this.notifyQuerySystems();
     }
 
     /**
@@ -804,11 +813,10 @@ export class Entity {
      * @returns 层次结构的根实体
      */
     public getRoot(): Entity {
-        let root: Entity = this;
-        while (root._parent) {
-            root = root._parent;
+        if (!this._parent) {
+            return this;
         }
-        return root;
+        return this._parent.getRoot();
     }
 
     /**
@@ -874,7 +882,7 @@ export class Entity {
     private onActiveChanged(): void {
         for (const component of this.components) {
             if ('onActiveChanged' in component && typeof component.onActiveChanged === 'function') {
-                (component as any).onActiveChanged();
+                (component as IActiveChangeable).onActiveChanged();
             }
         }
 
@@ -1002,7 +1010,7 @@ export class Entity {
         childIds: number[];
         depth: number;
         cacheBuilt: boolean;
-    } {
+        } {
         return {
             name: this.name,
             id: this.id,
