@@ -9,14 +9,15 @@ import { createLogger } from '../../Utils/Logger';
 import type { EventListenerConfig, TypeSafeEventSystem, EventHandler } from '../Core/EventSystem';
 import type { ComponentConstructor, ComponentInstance } from '../../Types/TypeHelpers';
 import type { IService } from '../../Core/ServiceContainer';
+import { EntityCache } from './EntityCache';
 
 /**
  * 事件监听器记录
+ * 只存储引用信息，用于系统销毁时自动清理
  */
 interface EventListenerRecord {
     eventSystem: TypeSafeEventSystem;
     eventType: string;
-    handler: EventHandler;
     listenerRef: string;
 }
 
@@ -63,9 +64,7 @@ interface EventListenerRecord {
  * }
  * ```
  */
-export abstract class EntitySystem<_TComponents extends readonly ComponentConstructor[] = []>
-    implements ISystemBase, IService
-{
+export abstract class EntitySystem implements ISystemBase, IService {
     private _updateOrder: number;
     private _enabled: boolean;
     private _performanceMonitor: PerformanceMonitor | null;
@@ -85,30 +84,24 @@ export abstract class EntitySystem<_TComponents extends readonly ComponentConstr
     /**
      * 统一的实体缓存管理器
      */
-    private _entityCache: {
-        frame: readonly Entity[] | null;
-        persistent: readonly Entity[] | null;
-        tracked: Set<Entity>;
-        invalidate(): void;
-        clearFrame(): void;
-        clearAll(): void;
-    };
+    private _entityCache: EntityCache;
 
     /**
      * 获取系统处理的实体列表
      */
     public get entities(): readonly Entity[] {
         // 如果在update周期内，优先使用帧缓存
-        if (this._entityCache.frame !== null) {
-            return this._entityCache.frame;
+        const frameCache = this._entityCache.getFrame();
+        if (frameCache !== null) {
+            return frameCache;
         }
 
         // 否则使用持久缓存
-        if (this._entityCache.persistent === null) {
-            this._entityCache.persistent = this.queryEntities();
+        if (!this._entityCache.hasPersistent()) {
+            this._entityCache.setPersistent(this.queryEntities());
         }
 
-        return this._entityCache.persistent;
+        return this._entityCache.getPersistent()!;
     }
 
     /**
@@ -159,22 +152,7 @@ export abstract class EntitySystem<_TComponents extends readonly ComponentConstr
         // 初始化logger
         this.logger = createLogger(this.getLoggerName());
 
-        this._entityCache = {
-            frame: null,
-            persistent: null,
-            tracked: new Set<Entity>(),
-            invalidate() {
-                this.persistent = null;
-            },
-            clearFrame() {
-                this.frame = null;
-            },
-            clearAll() {
-                this.frame = null;
-                this.persistent = null;
-                this.tracked.clear();
-            }
-        };
+        this._entityCache = new EntityCache();
     }
 
     /**
@@ -521,7 +499,7 @@ export abstract class EntitySystem<_TComponents extends readonly ComponentConstr
         const entityMap = this.getEntityIdMap(allEntities);
 
         const size = idSet.size;
-        const result = new Array(size);
+        const result = new Array<Entity>(size);
         let index = 0;
 
         for (const id of idSet) {
@@ -564,10 +542,11 @@ export abstract class EntitySystem<_TComponents extends readonly ComponentConstr
             this.onBegin();
             // 查询实体并存储到帧缓存中
             // 响应式查询会自动维护最新的实体列表，updateEntityTracking会在检测到变化时invalidate
-            this._entityCache.frame = this.queryEntities();
-            entityCount = this._entityCache.frame.length;
+            const queriedEntities = this.queryEntities();
+            this._entityCache.setFrame(queriedEntities);
+            entityCount = queriedEntities.length;
 
-            this.process(this._entityCache.frame);
+            this.process(queriedEntities);
         } finally {
             monitor.endMonitoring(this._systemName, startTime, entityCount);
         }
@@ -587,7 +566,7 @@ export abstract class EntitySystem<_TComponents extends readonly ComponentConstr
 
         try {
             // 使用缓存的实体列表，避免重复查询
-            const entities = this._entityCache.frame || [];
+            const entities = this._entityCache.getFrame() || [];
             entityCount = entities.length;
             this.lateProcess(entities);
             this.onEnd();
@@ -697,17 +676,17 @@ export abstract class EntitySystem<_TComponents extends readonly ComponentConstr
 
         // 检查新增的实体
         for (const entity of currentEntities) {
-            if (!this._entityCache.tracked.has(entity)) {
-                this._entityCache.tracked.add(entity);
+            if (!this._entityCache.isTracked(entity)) {
+                this._entityCache.addTracked(entity);
                 this.onAdded(entity);
                 hasChanged = true;
             }
         }
 
         // 检查移除的实体
-        for (const entity of this._entityCache.tracked) {
+        for (const entity of this._entityCache.getTracked()) {
             if (!currentSet.has(entity)) {
-                this._entityCache.tracked.delete(entity);
+                this._entityCache.removeTracked(entity);
                 this.onRemoved(entity);
                 hasChanged = true;
             }
@@ -778,15 +757,16 @@ export abstract class EntitySystem<_TComponents extends readonly ComponentConstr
      * @param eventType 事件类型
      * @param handler 事件处理函数
      * @param config 监听器配置
+     * @returns 监听器引用ID，可用于手动移除监听器
      */
-    protected addEventListener<T = any>(
+    protected addEventListener<T>(
         eventType: string,
         handler: EventHandler<T>,
         config?: EventListenerConfig
-    ): void {
+    ): string | null {
         if (!this.scene?.eventSystem) {
             this.logger.warn(`${this.systemName}: 无法添加事件监听器，scene.eventSystem 不可用`);
-            return;
+            return null;
         }
 
         const listenerRef = this.scene.eventSystem.on(eventType, handler, config);
@@ -796,21 +776,22 @@ export abstract class EntitySystem<_TComponents extends readonly ComponentConstr
             this._eventListeners.push({
                 eventSystem: this.scene.eventSystem,
                 eventType,
-                handler,
                 listenerRef
             });
         }
+
+        return listenerRef;
     }
 
     /**
      * 移除特定的事件监听器
      *
      * @param eventType 事件类型
-     * @param handler 事件处理函数
+     * @param listenerRef 监听器引用ID（由 addEventListener 返回）
      */
-    protected removeEventListener<T = any>(eventType: string, handler: EventHandler<T>): void {
+    protected removeEventListener(eventType: string, listenerRef: string): void {
         const listenerIndex = this._eventListeners.findIndex(
-            (listener) => listener.eventType === eventType && listener.handler === handler
+            (listener) => listener.eventType === eventType && listener.listenerRef === listenerRef
         );
 
         if (listenerIndex >= 0) {
@@ -895,7 +876,7 @@ export abstract class EntitySystem<_TComponents extends readonly ComponentConstr
      * ```
      */
     protected requireComponent<T extends ComponentConstructor>(entity: Entity, componentType: T): ComponentInstance<T> {
-        const component = entity.getComponent(componentType as any);
+        const component = entity.getComponent(componentType);
         if (!component) {
             throw new Error(`Component ${componentType.name} not found on entity ${entity.name} in ${this.systemName}`);
         }
@@ -929,7 +910,9 @@ export abstract class EntitySystem<_TComponents extends readonly ComponentConstr
         entity: Entity,
         ...components: T
     ): { [K in keyof T]: ComponentInstance<T[K]> } {
-        return components.map((type) => this.requireComponent(entity, type)) as any;
+        return components.map((type) => this.requireComponent(entity, type)) as {
+            [K in keyof T]: ComponentInstance<T[K]>;
+        };
     }
 
     /**

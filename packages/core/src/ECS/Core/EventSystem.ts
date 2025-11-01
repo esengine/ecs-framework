@@ -3,12 +3,12 @@ import { createLogger } from '../../Utils/Logger';
 /**
  * 事件处理器函数类型
  */
-export type EventHandler<T = any> = (event: T) => void;
+export type EventHandler<T> = (event: T) => void;
 
 /**
  * 异步事件处理器函数类型
  */
-export type AsyncEventHandler<T = any> = (event: T) => Promise<void>;
+export type AsyncEventHandler<T> = (event: T) => Promise<void>;
 
 /**
  * 事件监听器配置
@@ -20,15 +20,20 @@ export interface EventListenerConfig {
     priority?: number;
     /** 是否异步执行 */
     async?: boolean;
-    /** 执行上下文 */
-    context?: any;
+    /** 事件处理函数的 this 绑定对象 */
+    thisArg?: object;
 }
 
 /**
  * 内部事件监听器
+ *
+ * 注意：handler 使用 any 是必要的类型擦除
+ * 原因：需要在同一数组中存储处理不同事件类型（T）的监听器
+ * 类型安全保证：公共 API (on<T>/emit<T>) 在编译时保证类型匹配
  */
-interface InternalEventListener<T = any> {
-    handler: EventHandler<T> | AsyncEventHandler<T>;
+interface InternalEventListener {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    handler: EventHandler<any> | AsyncEventHandler<any>;
     config: EventListenerConfig;
     id: string;
 }
@@ -71,8 +76,9 @@ export class TypeSafeEventSystem {
     private static readonly _logger = createLogger('EventSystem');
     private listeners = new Map<string, InternalEventListener[]>();
     private stats = new Map<string, EventStats>();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private batchQueue = new Map<string, any[]>();
-    private batchTimers = new Map<string, number>();
+    private batchTimers = new Map<string, ReturnType<typeof setTimeout>>();
     private batchConfigs = new Map<string, EventBatchConfig>();
     private nextListenerId = 0;
     private isEnabled = true;
@@ -81,13 +87,13 @@ export class TypeSafeEventSystem {
     /**
      * 添加事件监听器
      * @param eventType 事件类型
-     * @param handler 事件处理器
+     * @param handler 事件处理器（同步或异步，根据 config.async 决定）
      * @param config 监听器配置
      * @returns 监听器ID（用于移除）
      */
     public on<T>(
         eventType: string,
-        handler: EventHandler<T>,
+        handler: EventHandler<T> | AsyncEventHandler<T>,
         config: EventListenerConfig = {}
     ): string {
         return this.addListener(eventType, handler, config);
@@ -100,11 +106,7 @@ export class TypeSafeEventSystem {
      * @param config 监听器配置
      * @returns 监听器ID
      */
-    public once<T>(
-        eventType: string,
-        handler: EventHandler<T>,
-        config: EventListenerConfig = {}
-    ): string {
+    public once<T>(eventType: string, handler: EventHandler<T>, config: EventListenerConfig = {}): string {
         return this.addListener(eventType, handler, { ...config, once: true });
     }
 
@@ -115,11 +117,7 @@ export class TypeSafeEventSystem {
      * @param config 监听器配置
      * @returns 监听器ID
      */
-    public onAsync<T>(
-        eventType: string,
-        handler: AsyncEventHandler<T>,
-        config: EventListenerConfig = {}
-    ): string {
+    public onAsync<T>(eventType: string, handler: AsyncEventHandler<T>, config: EventListenerConfig = {}): string {
         return this.addListener(eventType, handler, { ...config, async: true });
     }
 
@@ -133,7 +131,7 @@ export class TypeSafeEventSystem {
         const listeners = this.listeners.get(eventType);
         if (!listeners) return false;
 
-        const index = listeners.findIndex(l => l.id === listenerId);
+        const index = listeners.findIndex((l) => l.id === listenerId);
         if (index === -1) return false;
 
         listeners.splice(index, 1);
@@ -197,8 +195,8 @@ export class TypeSafeEventSystem {
             if (listener.config.async) continue; // 跳过异步监听器
 
             try {
-                if (listener.config.context) {
-                    (listener.handler as EventHandler<T>).call(listener.config.context, event);
+                if (listener.config.thisArg) {
+                    (listener.handler as EventHandler<T>).call(listener.config.thisArg, event);
                 } else {
                     (listener.handler as EventHandler<T>)(event);
                 }
@@ -344,7 +342,7 @@ export class TypeSafeEventSystem {
         }
 
         const listenerId = `listener_${this.nextListenerId++}`;
-        const listener: InternalEventListener<T> = {
+        const listener: InternalEventListener = {
             handler,
             config: {
                 priority: 0,
@@ -379,14 +377,14 @@ export class TypeSafeEventSystem {
         const sortedListeners = this.sortListenersByPriority(listeners);
 
         // 分离同步和异步监听器
-        const syncListeners = sortedListeners.filter(l => !l.config.async);
-        const asyncListeners = sortedListeners.filter(l => l.config.async);
+        const syncListeners = sortedListeners.filter((l) => !l.config.async);
+        const asyncListeners = sortedListeners.filter((l) => l.config.async);
 
         // 执行同步监听器
         for (const listener of syncListeners) {
             try {
-                if (listener.config.context) {
-                    (listener.handler as EventHandler<T>).call(listener.config.context, event);
+                if (listener.config.thisArg) {
+                    (listener.handler as EventHandler<T>).call(listener.config.thisArg, event);
                 } else {
                     (listener.handler as EventHandler<T>)(event);
                 }
@@ -402,8 +400,8 @@ export class TypeSafeEventSystem {
         // 执行异步监听器
         const asyncPromises = asyncListeners.map(async (listener) => {
             try {
-                if (listener.config.context) {
-                    await (listener.handler as AsyncEventHandler<T>).call(listener.config.context, event);
+                if (listener.config.thisArg) {
+                    await (listener.handler as AsyncEventHandler<T>).call(listener.config.thisArg, event);
                 } else {
                     await (listener.handler as AsyncEventHandler<T>)(event);
                 }
@@ -431,7 +429,7 @@ export class TypeSafeEventSystem {
      * @param listeners 监听器数组
      * @returns 排序后的监听器数组
      */
-    private sortListenersByPriority<T>(listeners: InternalEventListener<T>[]): InternalEventListener<T>[] {
+    private sortListenersByPriority(listeners: InternalEventListener[]): InternalEventListener[] {
         return listeners.slice().sort((a, b) => (b.config.priority || 0) - (a.config.priority || 0));
     }
 
@@ -447,7 +445,7 @@ export class TypeSafeEventSystem {
         if (!listeners) return;
 
         for (const id of listenerIds) {
-            const index = listeners.findIndex(l => l.id === id);
+            const index = listeners.findIndex((l) => l.id === id);
             if (index !== -1) {
                 listeners.splice(index, 1);
             }
@@ -488,7 +486,7 @@ export class TypeSafeEventSystem {
                 this.flushBatch(eventType);
             }, config.delay);
 
-            this.batchTimers.set(eventType, timer as any);
+            this.batchTimers.set(eventType, timer);
         }
     }
 
@@ -577,5 +575,3 @@ export class TypeSafeEventSystem {
  * 全局事件系统实例
  */
 export const GlobalEventSystem = new TypeSafeEventSystem();
-
- 

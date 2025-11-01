@@ -50,17 +50,19 @@ class ConcreteEntitySystem extends EntitySystem {
         const handler = (event: any) => {
             this.eventHandlerCallCount++;
         };
-        this.addEventListener('manual_event', handler);
-        this.removeEventListener('manual_event', handler);
+        const listenerRef = this.addEventListener('manual_event', handler);
+        if (listenerRef) {
+            this.removeEventListener('manual_event', listenerRef);
+        }
     }
 
     // 公开测试方法
-    public testAddEventListener(eventType: string, handler: (event: any) => void): void {
-        this.addEventListener(eventType, handler);
+    public testAddEventListener(eventType: string, handler: (event: any) => void): string | null {
+        return this.addEventListener(eventType, handler);
     }
 
-    public testRemoveEventListener(eventType: string, handler: (event: any) => void): void {
-        this.removeEventListener(eventType, handler);
+    public testRemoveEventListener(eventType: string, listenerRef: string): void {
+        this.removeEventListener(eventType, listenerRef);
     }
 }
 
@@ -118,14 +120,16 @@ describe('EntitySystem', () => {
             const handler = jest.fn();
 
             // 添加监听器
-            system.testAddEventListener('manual_remove_event', handler);
+            const listenerRef = system.testAddEventListener('manual_remove_event', handler);
 
             // 发射事件验证监听器工作
             scene.eventSystem.emitSync('manual_remove_event', {});
             expect(handler).toHaveBeenCalledTimes(1);
 
             // 移除监听器
-            system.testRemoveEventListener('manual_remove_event', handler);
+            if (listenerRef) {
+                system.testRemoveEventListener('manual_remove_event', listenerRef);
+            }
 
             // 再次发射事件
             scene.eventSystem.emitSync('manual_remove_event', {});
@@ -205,11 +209,11 @@ describe('EntitySystem', () => {
         });
 
         it('当移除不存在的监听器时，应该安全处理', () => {
-            const nonExistentHandler = () => {};
+            const nonExistentListenerRef = 'non_existent_listener_ref';
 
             // 应该不会抛出错误
             expect(() => {
-                system.testRemoveEventListener('non_existent_event', nonExistentHandler);
+                system.testRemoveEventListener('non_existent_event', nonExistentListenerRef);
             }).not.toThrow();
         });
     });
