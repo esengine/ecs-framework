@@ -641,10 +641,10 @@ export class EntityDataCollector {
                     componentTypes: baseDebugInfo.componentTypes || componentDetails.map((comp) => comp.typeName),
                     cachePerformance: componentCacheStats
                         ? {
-                              hitRate: componentCacheStats.cacheStats.hitRate,
-                              size: componentCacheStats.cacheStats.size,
-                              maxSize: componentCacheStats.cacheStats.maxSize
-                          }
+                            hitRate: componentCacheStats.cacheStats.hitRate,
+                            size: componentCacheStats.cacheStats.size,
+                            maxSize: componentCacheStats.cacheStats.maxSize
+                        }
                         : null
                 };
             });

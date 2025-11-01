@@ -55,4 +55,4 @@ export abstract class IntervalSystem extends EntitySystem {
     protected getIntervalDelta(): number {
         return this.interval + this.intervalRemainder;
     }
-} 
+}

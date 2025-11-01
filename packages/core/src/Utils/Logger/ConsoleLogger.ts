@@ -1,5 +1,5 @@
-import { Colors, LogLevel } from "./Constants";
-import { ILogger, LoggerColorConfig, LoggerConfig } from "./Types";
+import { Colors, LogLevel } from './Constants';
+import { ILogger, LoggerColorConfig, LoggerConfig } from './Types';
 
 
 /**
@@ -138,7 +138,7 @@ export class ConsoleLogger implements ILogger {
      */
     private outputToConsole(level: LogLevel, message: string, ...args: unknown[]): void {
         const colors = this._config.enableColors ? this.getColors() : null;
-        
+
         switch (level) {
             case LogLevel.Debug:
                 if (colors) {

@@ -153,7 +153,7 @@ export class ComponentRegistry {
      */
     public static createSingleComponentMask(componentName: string): BitMask64Data {
         const cacheKey = `single:${componentName}`;
-        
+
         if (this.maskCache.has(cacheKey)) {
             return this.maskCache.get(cacheKey)!;
         }
@@ -176,12 +176,12 @@ export class ComponentRegistry {
     public static createComponentMask(componentNames: string[]): BitMask64Data {
         const sortedNames = [...componentNames].sort();
         const cacheKey = `multi:${sortedNames.join(',')}`;
-        
+
         if (this.maskCache.has(cacheKey)) {
             return this.maskCache.get(cacheKey)!;
         }
 
-        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
+        const mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         for (const name of componentNames) {
             const componentId = this.getComponentId(name);
             if (componentId !== undefined) {

@@ -98,7 +98,7 @@ export class PlatformManager {
         platformSupportsSharedArrayBuffer: boolean;
         platformMaxWorkerCount: number;
         platformLimitations: any;
-    } {
+        } {
         if (!this.adapter) {
             return {
                 platformSupportsWorker: false,

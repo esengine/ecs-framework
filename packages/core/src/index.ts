@@ -36,13 +36,13 @@ export { ITimer } from './Utils/Timers/ITimer';
 export { Timer } from './Utils/Timers/Timer';
 
 // 日志系统
-export { 
-    LoggerManager, 
-    ConsoleLogger, 
-    Logger, 
-    createLogger, 
+export {
+    LoggerManager,
+    ConsoleLogger,
+    Logger,
+    createLogger,
     setGlobalLogLevel,
-    LogLevel 
+    LogLevel
 } from './Utils/Logger';
 export type { ILogger, LoggerConfig } from './Utils/Logger';
 
@@ -64,4 +64,4 @@ export * from './Types';
 export { ComponentPool, ComponentPoolManager } from './ECS/Core/Storage';
 
 // 平台适配
-export * from './Platform'; 
+export * from './Platform';

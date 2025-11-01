@@ -23,7 +23,7 @@ export const Colors = {
     MAGENTA: '\x1b[35m',
     CYAN: '\x1b[36m',
     WHITE: '\x1b[37m',
-    
+
     // 亮色版本
     BRIGHT_BLACK: '\x1b[90m',
     BRIGHT_RED: '\x1b[91m',
@@ -33,7 +33,7 @@ export const Colors = {
     BRIGHT_MAGENTA: '\x1b[95m',
     BRIGHT_CYAN: '\x1b[96m',
     BRIGHT_WHITE: '\x1b[97m',
-    
+
     // 特殊
     RESET: '\x1b[0m',
     BOLD: '\x1b[1m',

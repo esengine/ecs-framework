@@ -15,7 +15,7 @@ export class EntityBuilder {
         this.scene = scene;
         this.storageManager = storageManager;
         const id = scene.identifierPool.checkOut();
-        this.entity = new Entity("", id);
+        this.entity = new Entity('', id);
         this.entity.scene = this.scene as any;
     }
 
@@ -92,7 +92,7 @@ export class EntityBuilder {
      * @returns 实体构建器
      */
     public configure<T extends Component>(
-        componentType: ComponentType<T>, 
+        componentType: ComponentType<T>,
         configurator: (component: T) => void
     ): EntityBuilder {
         const component = this.entity.getComponent(componentType);

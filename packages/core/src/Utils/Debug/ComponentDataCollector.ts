@@ -47,18 +47,18 @@ export class ComponentDataCollector {
         });
 
         // 获取池利用率信息
-        let poolUtilizations = new Map<string, number>();
-        let poolSizes = new Map<string, number>();
-        
+        const poolUtilizations = new Map<string, number>();
+        const poolSizes = new Map<string, number>();
+
         try {
             const poolManager = ComponentPoolManager.getInstance();
             const poolStats = poolManager.getPoolStats();
             const utilizations = poolManager.getPoolUtilization();
-            
+
             for (const [typeName, stats] of poolStats.entries()) {
                 poolSizes.set(typeName, stats.maxSize);
             }
-            
+
             for (const [typeName, util] of utilizations.entries()) {
                 poolUtilizations.set(typeName, util.utilization);
             }
@@ -74,7 +74,7 @@ export class ComponentDataCollector {
                 const poolUtilization = poolUtilizations.get(typeName) || 0;
                 // 使用预估的基础内存大小，避免每帧计算
                 const memoryPerInstance = this.getEstimatedComponentSize(typeName, scene);
-                
+
                 return {
                     typeName,
                     instanceCount: stats.count,
@@ -97,12 +97,12 @@ export class ComponentDataCollector {
         }
 
         if (!scene) return 64;
-        
+
         const entityList = (scene as any).entities;
         if (!entityList?.buffer) return 64;
-        
+
         let calculatedSize = 64;
-        
+
         try {
             for (const entity of entityList.buffer) {
                 if (entity.components) {
@@ -116,25 +116,25 @@ export class ComponentDataCollector {
         } catch (error) {
             calculatedSize = 64;
         }
-        
+
         ComponentDataCollector.componentSizeCache.set(typeName, calculatedSize);
         return calculatedSize;
     }
 
     private calculateQuickObjectSize(obj: any): number {
         if (!obj || typeof obj !== 'object') return 8;
-        
+
         let size = 32;
         const visited = new WeakSet();
-        
+
         const calculate = (item: any, depth: number = 0): number => {
             if (!item || typeof item !== 'object' || visited.has(item) || depth > 3) {
                 return 0;
             }
             visited.add(item);
-            
+
             let itemSize = 0;
-            
+
             try {
                 const keys = Object.keys(item);
                 for (let i = 0; i < Math.min(keys.length, 20); i++) {
@@ -143,7 +143,7 @@ export class ComponentDataCollector {
 
                     const value = item[key];
                     itemSize += key.length * 2;
-                    
+
                     if (typeof value === 'string') {
                         itemSize += Math.min(value.length * 2, 200);
                     } else if (typeof value === 'number') {
@@ -157,10 +157,10 @@ export class ComponentDataCollector {
             } catch (error) {
                 return 32;
             }
-            
+
             return itemSize;
         };
-        
+
         size += calculate(obj);
         return Math.max(size, 32);
     }
@@ -176,7 +176,7 @@ export class ComponentDataCollector {
 
         const entityList = (scene as any).entities;
         if (!entityList?.buffer) return this.getEstimatedComponentSize(typeName, scene);
-        
+
         try {
             // 找到第一个包含此组件的实体，分析组件大小
             for (const entity of entityList.buffer) {
@@ -190,7 +190,7 @@ export class ComponentDataCollector {
         } catch (error) {
             // 忽略错误，使用估算值
         }
-        
+
         return this.getEstimatedComponentSize(typeName, scene);
     }
 
@@ -201,10 +201,10 @@ export class ComponentDataCollector {
     private estimateObjectSize(obj: any, visited = new WeakSet(), depth = 0): number {
         if (obj === null || obj === undefined || depth > 10) return 0;
         if (visited.has(obj)) return 0;
-        
+
         let size = 0;
         const type = typeof obj;
-        
+
         switch (type) {
             case 'boolean':
                 size = 4;
@@ -217,7 +217,7 @@ export class ComponentDataCollector {
                 break;
             case 'object':
                 visited.add(obj);
-                
+
                 if (Array.isArray(obj)) {
                     size = 40 + (obj.length * 8);
                     const maxElements = Math.min(obj.length, 50);
@@ -226,11 +226,11 @@ export class ComponentDataCollector {
                     }
                 } else {
                     size = 32;
-                    
+
                     try {
                         const ownKeys = Object.getOwnPropertyNames(obj);
                         const maxProps = Math.min(ownKeys.length, 30);
-                        
+
                         for (let i = 0; i < maxProps; i++) {
                             const key = ownKeys[i];
                             if (!key) continue;
@@ -263,11 +263,11 @@ export class ComponentDataCollector {
             default:
                 size = 8;
         }
-        
+
         return Math.ceil(size / 8) * 8;
     }
 
     public static clearCache(): void {
         ComponentDataCollector.componentSizeCache.clear();
     }
-} 
+}

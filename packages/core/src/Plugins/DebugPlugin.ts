@@ -208,8 +208,8 @@ export class DebugPlugin implements IPlugin, IService {
         return {
             name: scene.name,
             entityCount: entities.length,
-            systems: systems.map(sys => this.getSystemInfo(sys)),
-            entities: entities.map(entity => this.getEntityInfo(entity))
+            systems: systems.map((sys) => this.getSystemInfo(sys)),
+            entities: entities.map((entity) => this.getEntityInfo(entity))
         };
     }
 
@@ -246,7 +246,7 @@ export class DebugPlugin implements IPlugin, IService {
             enabled: entity.enabled,
             tag: entity.tag,
             componentCount: components.length,
-            components: components.map(comp => this.getComponentInfo(comp))
+            components: components.map((comp) => this.getComponentInfo(comp))
         };
     }
 
@@ -304,7 +304,7 @@ export class DebugPlugin implements IPlugin, IService {
 
                     if (filter.hasComponent) {
                         const hasComp = entity.components.some(
-                            c => c.constructor.name === filter.hasComponent
+                            (c) => c.constructor.name === filter.hasComponent
                         );
                         if (!hasComp) {
                             continue;

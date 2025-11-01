@@ -13,22 +13,22 @@ export interface IGlobalSystem {
      * 系统名称
      */
     readonly name: string;
-    
+
     /**
      * 初始化系统
      */
     initialize?(): void;
-    
+
     /**
      * 更新系统
      */
     update(deltaTime?: number): void;
-    
+
     /**
      * 重置系统
      */
     reset?(): void;
-    
+
     /**
      * 销毁系统
      */
@@ -43,17 +43,17 @@ export interface IWorldConfig {
      * World名称
      */
     name?: string;
-    
+
     /**
      * 是否启用调试模式
      */
     debug?: boolean;
-    
+
     /**
      * 最大Scene数量限制
      */
     maxScenes?: number;
-    
+
     /**
      * 是否自动清理空Scene
      */
@@ -62,22 +62,22 @@ export interface IWorldConfig {
 
 /**
  * World类 - ECS世界管理器
- * 
+ *
  * World是Scene的容器，每个World可以管理多个Scene。
  * 这种设计允许创建独立的游戏世界，如：
  * - 游戏房间（每个房间一个World）
  * - 不同的游戏模式
  * - 独立的模拟环境
- * 
+ *
  * @example
  * ```typescript
  * // 创建游戏房间的World
  * const roomWorld = new World({ name: 'Room_001' });
- * 
+ *
  * // 在World中创建Scene
  * const gameScene = roomWorld.createScene('game', new Scene());
  * const uiScene = roomWorld.createScene('ui', new Scene());
- * 
+ *
  * // 更新整个World
  * roomWorld.update(deltaTime);
  * ```
@@ -99,7 +99,7 @@ export class World {
             autoCleanup: true,
             ...config
         };
-        
+
         this.name = this._config.name!;
         this._createdAt = Date.now();
     }
@@ -120,7 +120,7 @@ export class World {
 
         // 如果没有提供Scene实例，创建默认Scene
         const scene = sceneInstance || (new Scene() as unknown as T);
-        
+
         // 设置Scene的标识
         if ('id' in scene) {
             (scene as any).id = sceneId;
@@ -154,7 +154,7 @@ export class World {
         // 清理Scene资源
         scene.end();
         this._scenes.delete(sceneId);
-        
+
         logger.info(`从World '${this.name}' 中移除Scene: ${sceneId}`);
         return true;
     }
@@ -244,7 +244,7 @@ export class World {
         if (system.initialize) {
             system.initialize();
         }
-        
+
         logger.debug(`在World '${this.name}' 中添加全局System: ${system.name}`);
         return system;
     }
@@ -262,7 +262,7 @@ export class World {
         if (system.reset) {
             system.reset();
         }
-        
+
         logger.debug(`从World '${this.name}' 中移除全局System: ${system.name}`);
         return true;
     }
@@ -290,14 +290,14 @@ export class World {
         }
 
         this._isActive = true;
-        
+
         // 启动所有全局System
         for (const system of this._globalSystems) {
             if (system.initialize) {
                 system.initialize();
             }
         }
-        
+
         logger.info(`启动World: ${this.name}`);
     }
 
@@ -408,7 +408,7 @@ export class World {
             globalSystemCount: this._globalSystems.length,
             createdAt: this._createdAt,
             config: { ...this._config },
-            scenes: Array.from(this._scenes.keys()).map(sceneId => ({
+            scenes: Array.from(this._scenes.keys()).map((sceneId) => ({
                 id: sceneId,
                 isActive: this._activeScenes.has(sceneId),
                 name: this._scenes.get(sceneId)?.name || sceneId
@@ -454,8 +454,8 @@ export class World {
         const cleanupThreshold = 5 * 60 * 1000; // 5分钟
 
         for (const [sceneId, scene] of this._scenes) {
-            if (!this._activeScenes.has(sceneId) && 
-                scene.entities && 
+            if (!this._activeScenes.has(sceneId) &&
+                scene.entities &&
                 scene.entities.count === 0 &&
                 (currentTime - this._createdAt) > cleanupThreshold) {
                 return true;
@@ -472,15 +472,15 @@ export class World {
         const sceneIds = Array.from(this._scenes.keys());
         const currentTime = Date.now();
         const cleanupThreshold = 5 * 60 * 1000; // 5分钟
-        
+
         for (const sceneId of sceneIds) {
             const scene = this._scenes.get(sceneId);
-            if (scene && 
-                !this._activeScenes.has(sceneId) && 
-                scene.entities && 
+            if (scene &&
+                !this._activeScenes.has(sceneId) &&
+                scene.entities &&
                 scene.entities.count === 0 &&
                 (currentTime - this._createdAt) > cleanupThreshold) {
-                
+
                 this.removeScene(sceneId);
                 logger.debug(`自动清理空Scene: ${sceneId} from World ${this.name}`);
             }

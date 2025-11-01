@@ -183,7 +183,7 @@ export class PerformanceMonitor implements IService {
      */
     private updateStats(systemName: string, executionTime: number): void {
         let stats = this._systemStats.get(systemName);
-        
+
         if (!stats) {
             stats = {
                 totalTime: 0,
@@ -231,7 +231,7 @@ export class PerformanceMonitor implements IService {
         // 计算百分位数
         const sortedTimes = [...stats.recentTimes].sort((a, b) => a - b);
         const len = sortedTimes.length;
-        
+
         stats.percentile95 = sortedTimes[Math.floor(len * 0.95)] || 0;
         stats.percentile99 = sortedTimes[Math.floor(len * 0.99)] || 0;
     }
@@ -276,12 +276,12 @@ export class PerformanceMonitor implements IService {
      */
     public getPerformanceReport(): string {
         if (!this._isEnabled) {
-            return "Performance monitoring is disabled.";
+            return 'Performance monitoring is disabled.';
         }
 
         const lines: string[] = [];
-        lines.push("=== ECS Performance Report ===");
-        lines.push("");
+        lines.push('=== ECS Performance Report ===');
+        lines.push('');
 
         // 按平均执行时间排序
         const sortedSystems = Array.from(this._systemStats.entries())
@@ -289,24 +289,24 @@ export class PerformanceMonitor implements IService {
 
         for (const [systemName, stats] of sortedSystems) {
             const data = this._systemData.get(systemName);
-            
+
             lines.push(`System: ${systemName}`);
             lines.push(`  Current: ${data?.executionTime.toFixed(2)}ms (${data?.entityCount} entities)`);
             lines.push(`  Average: ${stats.averageTime.toFixed(2)}ms`);
             lines.push(`  Min/Max: ${stats.minTime.toFixed(2)}ms / ${stats.maxTime.toFixed(2)}ms`);
             lines.push(`  Total: ${stats.totalTime.toFixed(2)}ms (${stats.executionCount} calls)`);
-            
+
             if (data?.averageTimePerEntity && data.averageTimePerEntity > 0) {
                 lines.push(`  Per Entity: ${data.averageTimePerEntity.toFixed(4)}ms`);
             }
-            
-            lines.push("");
+
+            lines.push('');
         }
 
         // 总体统计
         const totalCurrentTime = Array.from(this._systemData.values())
             .reduce((sum, data) => sum + data.executionTime, 0);
-        
+
         lines.push(`Total Frame Time: ${totalCurrentTime.toFixed(2)}ms`);
         lines.push(`Systems Count: ${this._systemData.size}`);
 
@@ -337,13 +337,13 @@ export class PerformanceMonitor implements IService {
      */
     public getPerformanceWarnings(thresholdMs: number = 16.67): string[] {
         const warnings: string[] = [];
-        
+
         for (const [systemName, data] of this._systemData.entries()) {
             if (data.executionTime > thresholdMs) {
                 warnings.push(`${systemName}: ${data.executionTime.toFixed(2)}ms (>${thresholdMs}ms)`);
             }
         }
-        
+
         return warnings;
     }
 
@@ -370,4 +370,4 @@ export class PerformanceMonitor implements IService {
         this._systemStats.clear();
         this._isEnabled = false;
     }
-} 
+}

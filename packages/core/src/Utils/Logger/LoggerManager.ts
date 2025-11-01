@@ -1,6 +1,6 @@
-import { ConsoleLogger } from "./ConsoleLogger";
-import { LogLevel } from "./Constants";
-import { ILogger, LoggerColorConfig } from "./Types";
+import { ConsoleLogger } from './ConsoleLogger';
+import { LogLevel } from './Constants';
+import { ILogger, LoggerColorConfig } from './Types';
 
 /**
  * 日志管理器
@@ -186,7 +186,7 @@ export function setGlobalLogLevel(level: LogLevel): void {
 }
 
 /**
- * 设置日志器工厂方法 
+ * 设置日志器工厂方法
  * @param factory 日志器工厂方法
  */
 export function setLoggerFactory(factory: (name?: string) => ILogger): void {

@@ -345,12 +345,12 @@ export class SoAStorage<T extends Component> {
     private _size = 0;
     private _capacity = 1000;
     public readonly type: ComponentType<T>;
-    
+
     constructor(componentType: ComponentType<T>) {
         this.type = componentType;
         this.initializeFields(componentType);
     }
-    
+
     private initializeFields(componentType: ComponentType<T>): void {
         const instance = new componentType();
         const highPrecisionFields = (componentType as any).__highPrecisionFields || new Set();
@@ -368,12 +368,12 @@ export class SoAStorage<T extends Component> {
         const serializeSetFields = (componentType as any).__serializeSetFields || new Set();
         const serializeArrayFields = (componentType as any).__serializeArrayFields || new Set();
         // const deepCopyFields = (componentType as any).__deepCopyFields || new Set(); // 未使用，但保留供future使用
-        
+
         for (const key in instance) {
             if (instance.hasOwnProperty(key) && key !== 'id') {
                 const value = (instance as any)[key];
                 const type = typeof value;
-                
+
                 if (type === 'number') {
                     if (highPrecisionFields.has(key)) {
                         // 标记为高精度，作为复杂对象处理
@@ -438,14 +438,14 @@ export class SoAStorage<T extends Component> {
             }
         }
     }
-    
+
     public addComponent(entityId: number, component: T): void {
         if (this.entityToIndex.has(entityId)) {
             const index = this.entityToIndex.get(entityId)!;
             this.updateComponentAtIndex(index, component);
             return;
         }
-        
+
         let index: number;
         if (this.freeIndices.length > 0) {
             index = this.freeIndices.pop()!;
@@ -455,13 +455,13 @@ export class SoAStorage<T extends Component> {
                 this.resize(this._capacity * 2);
             }
         }
-        
+
         this.entityToIndex.set(entityId, index);
         this.indexToEntity[index] = entityId;
         this.updateComponentAtIndex(index, component);
         this._size++;
     }
-    
+
     private updateComponentAtIndex(index: number, component: T): void {
         const entityId = this.indexToEntity[index]!;
         const complexFieldMap = new Map<string, any>();
@@ -470,13 +470,13 @@ export class SoAStorage<T extends Component> {
         const serializeSetFields = (this.type as any).__serializeSetFields || new Set();
         const serializeArrayFields = (this.type as any).__serializeArrayFields || new Set();
         const deepCopyFields = (this.type as any).__deepCopyFields || new Set();
-        
+
         // 处理所有字段
         for (const key in component) {
             if (component.hasOwnProperty(key) && key !== 'id') {
                 const value = (component as any)[key];
                 const type = typeof value;
-                
+
                 if (type === 'number') {
                     if (highPrecisionFields.has(key) || !this.fields.has(key)) {
                         // 标记为高精度或未在TypedArray中的数值作为复杂对象存储
@@ -487,7 +487,7 @@ export class SoAStorage<T extends Component> {
                         array[index] = value;
                     }
                 } else if (type === 'boolean' && this.fields.has(key)) {
-                    // 布尔值存储到TypedArray  
+                    // 布尔值存储到TypedArray
                     const array = this.fields.get(key)!;
                     array[index] = value ? 1 : 0;
                 } else if (this.stringFields.has(key)) {
@@ -509,13 +509,13 @@ export class SoAStorage<T extends Component> {
                 }
             }
         }
-        
+
         // 存储复杂字段
         if (complexFieldMap.size > 0) {
             this.complexFields.set(entityId, complexFieldMap);
         }
     }
-    
+
     /**
      * 序列化值为JSON字符串
      */
@@ -539,14 +539,14 @@ export class SoAStorage<T extends Component> {
             return '{}';
         }
     }
-    
+
     /**
      * 反序列化JSON字符串为值
      */
     private deserializeValue(serialized: string, key: string, mapFields: Set<string>, setFields: Set<string>, arrayFields: Set<string>): any {
         try {
             const parsed = JSON.parse(serialized);
-            
+
             if (mapFields.has(key)) {
                 // 恢复Map
                 return new Map(parsed);
@@ -564,7 +564,7 @@ export class SoAStorage<T extends Component> {
             return null;
         }
     }
-    
+
     /**
      * 深拷贝对象
      */
@@ -572,15 +572,15 @@ export class SoAStorage<T extends Component> {
         if (obj === null || typeof obj !== 'object') {
             return obj;
         }
-        
+
         if (obj instanceof Date) {
             return new Date(obj.getTime());
         }
-        
+
         if (obj instanceof Array) {
-            return obj.map(item => this.deepClone(item));
+            return obj.map((item) => this.deepClone(item));
         }
-        
+
         if (obj instanceof Map) {
             const cloned = new Map();
             for (const [key, value] of obj.entries()) {
@@ -588,7 +588,7 @@ export class SoAStorage<T extends Component> {
             }
             return cloned;
         }
-        
+
         if (obj instanceof Set) {
             const cloned = new Set();
             for (const value of obj.values()) {
@@ -596,7 +596,7 @@ export class SoAStorage<T extends Component> {
             }
             return cloned;
         }
-        
+
         // 普通对象
         const cloned: any = {};
         for (const key in obj) {
@@ -606,36 +606,36 @@ export class SoAStorage<T extends Component> {
         }
         return cloned;
     }
-    
+
     public getComponent(entityId: number): T | null {
         const index = this.entityToIndex.get(entityId);
         if (index === undefined) {
             return null;
         }
-        
+
         // 创建真正的组件实例以保持兼容性
         const component = new this.type() as any;
         const serializeMapFields = (this.type as any).__serializeMapFields || new Set();
         const serializeSetFields = (this.type as any).__serializeSetFields || new Set();
         const serializeArrayFields = (this.type as any).__serializeArrayFields || new Set();
-        
+
         // 恢复数值字段
         for (const [fieldName, array] of this.fields.entries()) {
             const value = array[index];
             const fieldType = this.getFieldType(fieldName);
-            
+
             if (fieldType === 'boolean') {
                 component[fieldName] = value === 1;
             } else {
                 component[fieldName] = value;
             }
         }
-        
+
         // 恢复字符串字段
         for (const [fieldName, stringArray] of this.stringFields.entries()) {
             component[fieldName] = stringArray[index];
         }
-        
+
         // 恢复序列化字段
         for (const [fieldName, serializedArray] of this.serializedFields.entries()) {
             const serialized = serializedArray[index];
@@ -643,7 +643,7 @@ export class SoAStorage<T extends Component> {
                 component[fieldName] = this.deserializeValue(serialized, fieldName, serializeMapFields, serializeSetFields, serializeArrayFields);
             }
         }
-        
+
         // 恢复复杂字段
         const complexFieldMap = this.complexFields.get(entityId);
         if (complexFieldMap) {
@@ -651,39 +651,39 @@ export class SoAStorage<T extends Component> {
                 component[fieldName] = value;
             }
         }
-        
+
         return component as T;
     }
-    
+
     private getFieldType(fieldName: string): string {
         // 通过创建临时实例检查字段类型
         const tempInstance = new this.type();
         const value = (tempInstance as any)[fieldName];
         return typeof value;
     }
-    
+
     public hasComponent(entityId: number): boolean {
         return this.entityToIndex.has(entityId);
     }
-    
+
     public removeComponent(entityId: number): T | null {
         const index = this.entityToIndex.get(entityId);
         if (index === undefined) {
             return null;
         }
-        
+
         // 获取组件副本以便返回
         const component = this.getComponent(entityId);
-        
+
         // 清理复杂字段
         this.complexFields.delete(entityId);
-        
+
         this.entityToIndex.delete(entityId);
         this.freeIndices.push(index);
         this._size--;
         return component;
     }
-    
+
     private resize(newCapacity: number): void {
         // 调整数值字段的TypedArray
         for (const [fieldName, oldArray] of this.fields.entries()) {
@@ -716,7 +716,7 @@ export class SoAStorage<T extends Component> {
             newArray.set(oldArray);
             this.fields.set(fieldName, newArray);
         }
-        
+
         // 调整字符串字段的数组
         for (const [fieldName, oldArray] of this.stringFields.entries()) {
             const newArray = new Array(newCapacity);
@@ -725,7 +725,7 @@ export class SoAStorage<T extends Component> {
             }
             this.stringFields.set(fieldName, newArray);
         }
-        
+
         // 调整序列化字段的数组
         for (const [fieldName, oldArray] of this.serializedFields.entries()) {
             const newArray = new Array(newCapacity);
@@ -734,14 +734,14 @@ export class SoAStorage<T extends Component> {
             }
             this.serializedFields.set(fieldName, newArray);
         }
-        
+
         this._capacity = newCapacity;
     }
-    
+
     public getActiveIndices(): number[] {
         return Array.from(this.entityToIndex.values());
     }
-    
+
     public getFieldArray(fieldName: string): SupportedTypedArray | null {
         return this.fields.get(fieldName) || null;
     }
@@ -749,38 +749,38 @@ export class SoAStorage<T extends Component> {
     public getTypedFieldArray<K extends keyof T>(fieldName: K): SupportedTypedArray | null {
         return this.fields.get(String(fieldName)) || null;
     }
-    
+
     public getEntityIndex(entityId: number): number | undefined {
         return this.entityToIndex.get(entityId);
     }
-    
+
     public getEntityIdByIndex(index: number): number | undefined {
         return this.indexToEntity[index];
     }
-    
+
     public size(): number {
         return this._size;
     }
-    
+
     public clear(): void {
         this.entityToIndex.clear();
         this.indexToEntity = [];
         this.freeIndices = [];
         this.complexFields.clear();
         this._size = 0;
-        
+
         // 重置数值字段数组
         for (const array of this.fields.values()) {
             array.fill(0);
         }
-        
+
         // 重置字符串字段数组
         for (const stringArray of this.stringFields.values()) {
             for (let i = 0; i < stringArray.length; i++) {
                 stringArray[i] = undefined as any;
             }
         }
-        
+
         // 重置序列化字段数组
         for (const serializedArray of this.serializedFields.values()) {
             for (let i = 0; i < serializedArray.length; i++) {
@@ -884,7 +884,7 @@ export class SoAStorage<T extends Component> {
                 bytesPerElement = 4;
                 typeName = 'unknown';
             }
-            
+
             const memory = array.length * bytesPerElement;
             totalMemory += memory;
 

@@ -13,14 +13,14 @@ export enum ECSEventType {
     ENTITY_TAG_ADDED = 'entity:tag:added',
     ENTITY_TAG_REMOVED = 'entity:tag:removed',
     ENTITY_NAME_CHANGED = 'entity:name:changed',
-    
+
     // 组件相关事件
     COMPONENT_ADDED = 'component:added',
     COMPONENT_REMOVED = 'component:removed',
     COMPONENT_MODIFIED = 'component:modified',
     COMPONENT_ENABLED = 'component:enabled',
     COMPONENT_DISABLED = 'component:disabled',
-    
+
     // 系统相关事件
     SYSTEM_ADDED = 'system:added',
     SYSTEM_REMOVED = 'system:removed',
@@ -29,7 +29,7 @@ export enum ECSEventType {
     SYSTEM_PROCESSING_START = 'system:processing:start',
     SYSTEM_PROCESSING_END = 'system:processing:end',
     SYSTEM_ERROR = 'system:error',
-    
+
     // 场景相关事件
     SCENE_CREATED = 'scene:created',
     SCENE_DESTROYED = 'scene:destroyed',
@@ -37,41 +37,41 @@ export enum ECSEventType {
     SCENE_DEACTIVATED = 'scene:deactivated',
     SCENE_PAUSED = 'scene:paused',
     SCENE_RESUMED = 'scene:resumed',
-    
+
     // 查询相关事件
     QUERY_EXECUTED = 'query:executed',
     QUERY_CACHE_HIT = 'query:cache:hit',
     QUERY_CACHE_MISS = 'query:cache:miss',
     QUERY_OPTIMIZED = 'query:optimized',
-    
+
     // 性能相关事件
     PERFORMANCE_WARNING = 'performance:warning',
     PERFORMANCE_CRITICAL = 'performance:critical',
     MEMORY_USAGE_HIGH = 'memory:usage:high',
     FRAME_RATE_DROP = 'frame:rate:drop',
-    
+
     // 索引相关事件
     INDEX_CREATED = 'index:created',
     INDEX_UPDATED = 'index:updated',
     INDEX_OPTIMIZED = 'index:optimized',
-    
+
     // Archetype相关事件
     ARCHETYPE_CREATED = 'archetype:created',
     ARCHETYPE_ENTITY_ADDED = 'archetype:entity:added',
     ARCHETYPE_ENTITY_REMOVED = 'archetype:entity:removed',
-    
+
     // 脏标记相关事件
     DIRTY_MARK_ADDED = 'dirty:mark:added',
     DIRTY_BATCH_PROCESSED = 'dirty:batch:processed',
-    
+
     // 错误和警告事件
     ERROR_OCCURRED = 'error:occurred',
     WARNING_ISSUED = 'warning:issued',
-    
+
     // 生命周期事件
     FRAMEWORK_INITIALIZED = 'framework:initialized',
     FRAMEWORK_SHUTDOWN = 'framework:shutdown',
-    
+
     // 调试相关事件
     DEBUG_INFO = 'debug:info',
     DEBUG_STATS_UPDATED = 'debug:stats:updated'
@@ -105,7 +105,7 @@ export const EVENT_TYPES = {
         TAG_REMOVED: ECSEventType.ENTITY_TAG_REMOVED,
         NAME_CHANGED: ECSEventType.ENTITY_NAME_CHANGED
     },
-    
+
     // 组件事件
     COMPONENT: {
         ADDED: ECSEventType.COMPONENT_ADDED,
@@ -114,7 +114,7 @@ export const EVENT_TYPES = {
         ENABLED: ECSEventType.COMPONENT_ENABLED,
         DISABLED: ECSEventType.COMPONENT_DISABLED
     },
-    
+
     // 系统事件
     SYSTEM: {
         ADDED: ECSEventType.SYSTEM_ADDED,
@@ -125,7 +125,7 @@ export const EVENT_TYPES = {
         PROCESSING_END: ECSEventType.SYSTEM_PROCESSING_END,
         ERROR: ECSEventType.SYSTEM_ERROR
     },
-    
+
     // 性能事件
     PERFORMANCE: {
         WARNING: ECSEventType.PERFORMANCE_WARNING,
@@ -147,7 +147,7 @@ export class EventTypeValidator {
         ...Object.values(EVENT_TYPES.SYSTEM),
         ...Object.values(EVENT_TYPES.PERFORMANCE)
     ]);
-    
+
     /**
      * 验证事件类型是否有效
      * @param eventType 事件类型
@@ -156,7 +156,7 @@ export class EventTypeValidator {
     public static isValid(eventType: string): boolean {
         return this.validTypes.has(eventType);
     }
-    
+
     /**
      * 获取所有有效的事件类型
      * @returns 事件类型数组
@@ -164,7 +164,7 @@ export class EventTypeValidator {
     public static getAllValidTypes(): string[] {
         return Array.from(this.validTypes);
     }
-    
+
     /**
      * 添加自定义事件类型
      * @param eventType 事件类型
@@ -172,7 +172,7 @@ export class EventTypeValidator {
     public static addCustomType(eventType: string): void {
         this.validTypes.add(eventType);
     }
-    
+
     /**
      * 移除自定义事件类型
      * @param eventType 事件类型

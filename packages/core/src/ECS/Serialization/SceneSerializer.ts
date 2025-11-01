@@ -363,7 +363,7 @@ export class SceneSerializer {
 
         // 数组
         if (Array.isArray(value)) {
-            return value.map(item => this.serializeValue(item));
+            return value.map((item) => this.serializeValue(item));
         }
 
         // 普通对象
@@ -409,7 +409,7 @@ export class SceneSerializer {
 
         // 数组
         if (Array.isArray(value)) {
-            return value.map(item => this.deserializeValue(item));
+            return value.map((item) => this.deserializeValue(item));
         }
 
         // 普通对象
@@ -437,8 +437,8 @@ export class SceneSerializer {
             const componentTypeSet = new Set(options.components);
 
             // 只返回拥有指定组件的实体
-            return entities.filter(entity => {
-                return Array.from(entity.components).some(component =>
+            return entities.filter((entity) => {
+                return Array.from(entity.components).some((component) =>
                     componentTypeSet.has(component.constructor as ComponentType)
                 );
             });

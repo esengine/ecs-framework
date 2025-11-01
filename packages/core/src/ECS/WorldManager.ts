@@ -12,17 +12,17 @@ export interface IWorldManagerConfig {
      * 最大World数量
      */
     maxWorlds?: number;
-    
+
     /**
      * 是否自动清理空World
      */
     autoCleanup?: boolean;
-    
+
     /**
      * 清理间隔（毫秒）
      */
     cleanupInterval?: number;
-    
+
     /**
      * 是否启用调试模式
      */
@@ -242,11 +242,11 @@ export class WorldManager implements IService {
      */
     public startAll(): void {
         this._isRunning = true;
-        
+
         for (const worldId of this._worlds.keys()) {
             this.setWorldActive(worldId, true);
         }
-        
+
         logger.info('启动所有World');
     }
 
@@ -255,11 +255,11 @@ export class WorldManager implements IService {
      */
     public stopAll(): void {
         this._isRunning = false;
-        
+
         for (const worldId of this._activeWorlds) {
             this.setWorldActive(worldId, false);
         }
-        
+
         logger.info('停止所有World');
     }
 
@@ -432,7 +432,7 @@ export class WorldManager implements IService {
         // 1. World未激活
         // 2. 没有Scene或所有Scene都是空的
         // 3. 创建时间超过10分钟
-        
+
         if (world.isActive) {
             return false;
         }
@@ -444,7 +444,7 @@ export class WorldManager implements IService {
 
         // 检查是否所有Scene都是空的
         const allScenes = world.getAllScenes();
-        const hasEntities = allScenes.some(scene => 
+        const hasEntities = allScenes.some((scene) =>
             scene.entities && scene.entities.count > 0
         );
 

@@ -69,7 +69,7 @@ export class BitMask64Utils {
         return maskSegments.some((seg, index) => {
             const bitsSeg = bitsSegments[index];
             return bitsSeg && ((seg[SegmentPart.LOW] & bitsSeg[SegmentPart.LOW]) !== 0 || (seg[SegmentPart.HIGH] & bitsSeg[SegmentPart.HIGH]) !== 0);
-        })
+        });
     }
 
     /**
@@ -145,7 +145,7 @@ export class BitMask64Utils {
             return baseIsZero;
         }
         // 额外检查扩展区域是否都为0
-        return mask.segments.every(seg => seg[SegmentPart.LOW] === 0 && seg[SegmentPart.HIGH] === 0);
+        return mask.segments.every((seg) => seg[SegmentPart.LOW] === 0 && seg[SegmentPart.HIGH] === 0);
     }
 
     /**
@@ -155,7 +155,7 @@ export class BitMask64Utils {
      * @returns 如果两个掩码完全相等则返回true
      */
     public static equals(a: BitMask64Data, b: BitMask64Data): boolean {
-        let baseEquals = a.base[SegmentPart.LOW] === b.base[SegmentPart.LOW] && a.base[SegmentPart.HIGH] === b.base[SegmentPart.HIGH];
+        const baseEquals = a.base[SegmentPart.LOW] === b.base[SegmentPart.LOW] && a.base[SegmentPart.HIGH] === b.base[SegmentPart.HIGH];
         // base不相等，或ab都没有扩展区域位，直接返回base比较结果
         if(!baseEquals || (!a.segments && !b.segments)) return baseEquals;
         // 不能假设a，b的segments都存在或长度相同.
@@ -355,7 +355,7 @@ export class BitMask64Utils {
         if(!source.segments || source.segments.length == 0) return;
         // 没有拓展段,则直接复制数组
         if(!target.segments){
-            target.segments = source.segments.map(seg => [...seg]);
+            target.segments = source.segments.map((seg) => [...seg]);
             return;
         }
         // source有扩展段，target扩展段不足，则补充长度
@@ -382,7 +382,7 @@ export class BitMask64Utils {
     public static clone(mask: BitMask64Data): BitMask64Data {
         return {
             base: mask.base.slice() as BitMask64Segment,
-            ...(mask.segments && { segments: mask.segments.map(seg => [...seg] as BitMask64Segment) })
+            ...(mask.segments && { segments: mask.segments.map((seg) => [...seg] as BitMask64Segment) })
         };
     }
 
@@ -414,8 +414,8 @@ export class BitMask64Utils {
         for (let i = -1; i < totalLength; i++) {
             let segResult = '';
             const bitMaskData = i == -1 ? mask.base : mask.segments![i]!;
-            let hi = bitMaskData[SegmentPart.HIGH];
-            let lo = bitMaskData[SegmentPart.LOW];
+            const hi = bitMaskData[SegmentPart.HIGH];
+            const lo = bitMaskData[SegmentPart.LOW];
             if(radix == 2){
                 const hiBits = hi.toString(2).padStart(32, '0');
                 const loBits = lo.toString(2).padStart(32, '0');

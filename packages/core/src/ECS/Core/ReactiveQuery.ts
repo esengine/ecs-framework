@@ -136,7 +136,7 @@ export class ReactiveQuery {
     private generateQueryId(): string {
         const typeStr = this._condition.type;
         const componentsStr = this._condition.componentTypes
-            .map(t => t.name)
+            .map((t) => t.name)
             .sort()
             .join(',');
         return `${typeStr}:${componentsStr}`;

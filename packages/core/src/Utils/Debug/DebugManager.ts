@@ -135,7 +135,7 @@ export class DebugManager implements IService, IUpdatable {
      * 格式化日志消息
      */
     private formatLogMessage(args: unknown[]): string {
-        return args.map(arg => {
+        return args.map((arg) => {
             if (typeof arg === 'string') return arg;
             if (arg instanceof Error) return `${arg.name}: ${arg.message}`;
             if (arg === null) return 'null';
@@ -173,7 +173,7 @@ export class DebugManager implements IService, IUpdatable {
             seen.add(value);
 
             if (Array.isArray(value)) {
-                const result = value.map(item => stringify(item, depth + 1));
+                const result = value.map((item) => stringify(item, depth + 1));
                 seen.delete(value);
                 return result;
             }
@@ -436,9 +436,6 @@ export class DebugManager implements IService, IUpdatable {
     }
 
 
-
-
-
     /**
      * 处理内存快照请求
      */
@@ -519,7 +516,7 @@ export class DebugManager implements IService, IUpdatable {
             jsHeapSizeLimit: number;
         } | null;
         detailedMemory?: unknown;
-    } {
+        } {
         const memoryInfo = {
             totalMemory: 0,
             usedMemory: 0,
@@ -573,7 +570,6 @@ export class DebugManager implements IService, IUpdatable {
 
         return memoryInfo;
     }
-
 
 
     /**
@@ -672,7 +668,7 @@ export class DebugManager implements IService, IUpdatable {
             enabled: boolean;
             updateOrder: number;
         }>;
-    } {
+        } {
         const scene = this.sceneManager.currentScene;
         let totalSystemMemory = 0;
         const systemBreakdown: Array<{
@@ -766,7 +762,7 @@ export class DebugManager implements IService, IUpdatable {
             utilization: number;
             hitRate?: number;
         }>;
-    } {
+        } {
         let totalPoolMemory = 0;
         const poolBreakdown: Array<{
             typeName: string;
@@ -845,7 +841,7 @@ export class DebugManager implements IService, IUpdatable {
             samples: number;
         }>;
         error?: string;
-    } {
+        } {
         try {
             if (!this.performanceMonitor) {
                 return { enabled: false };
@@ -959,4 +955,4 @@ export class DebugManager implements IService, IUpdatable {
         console.warn = this.originalConsole.warn;
         console.error = this.originalConsole.error;
     }
-} 
+}

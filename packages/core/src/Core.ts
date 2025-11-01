@@ -329,8 +329,8 @@ export class Core {
      */
     public static setScene<T extends IScene>(scene: T): T {
         if (!this._instance) {
-            Core._logger.warn("Core实例未创建，请先调用Core.create()");
-            throw new Error("Core实例未创建");
+            Core._logger.warn('Core实例未创建，请先调用Core.create()');
+            throw new Error('Core实例未创建');
         }
 
         return this._instance._sceneManager.setScene(scene);
@@ -387,7 +387,7 @@ export class Core {
      */
     public static loadScene<T extends IScene>(scene: T): void {
         if (!this._instance) {
-            Core._logger.warn("Core实例未创建，请先调用Core.create()");
+            Core._logger.warn('Core实例未创建，请先调用Core.create()');
             return;
         }
 
@@ -422,7 +422,7 @@ export class Core {
      */
     public static update(deltaTime: number): void {
         if (!this._instance) {
-            Core._logger.warn("Core实例未创建，请先调用Core.create()");
+            Core._logger.warn('Core实例未创建，请先调用Core.create()');
             return;
         }
 
@@ -472,7 +472,7 @@ export class Core {
      */
     public static enableDebug(config: IECSDebugConfig): void {
         if (!this._instance) {
-            Core._logger.warn("Core实例未创建，请先调用Core.create()");
+            Core._logger.warn('Core实例未创建，请先调用Core.create()');
             return;
         }
 
