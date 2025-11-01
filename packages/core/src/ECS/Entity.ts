@@ -1,6 +1,5 @@
 import { Component } from './Component';
 import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
-import { EventBus } from './Core/EventBus';
 import { BitMask64Utils, BitMask64Data } from './Utils/BigIntCompatibility';
 import { createLogger } from '../Utils/Logger';
 import { getComponentInstanceTypeName, getComponentTypeName } from './Decorators';
@@ -69,12 +68,6 @@ export class Entity {
      * 实体比较器实例
      */
     public static entityComparer: EntityComparer = new EntityComparer();
-
-    /**
-     * 全局事件总线实例
-     * 用于发射组件相关事件
-     */
-    public static eventBus: EventBus | null = null;
 
     /**
      * 实体名称
@@ -428,8 +421,8 @@ export class Entity {
         }
         component.onAddedToEntity();
 
-        if (Entity.eventBus) {
-            Entity.eventBus.emitComponentAdded({
+        if (this.scene && this.scene.eventSystem) {
+            this.scene.eventSystem.emitSync('component:added', {
                 timestamp: Date.now(),
                 source: 'Entity',
                 entityId: this.id,
@@ -561,8 +554,8 @@ export class Entity {
 
         component.entityId = null;
 
-        if (Entity.eventBus) {
-            Entity.eventBus.emitComponentRemoved({
+        if (this.scene && this.scene.eventSystem) {
+            this.scene.eventSystem.emitSync('component:removed', {
                 timestamp: Date.now(),
                 source: 'Entity',
                 entityId: this.id,
