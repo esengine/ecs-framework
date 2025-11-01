@@ -50,12 +50,12 @@ export interface IScene {
      * 标识符池
      */
     readonly identifierPool: IdentifierPool;
-    
+
     /**
      * 组件存储管理器
      */
     readonly componentStorageManager: ComponentStorageManager;
-    
+
     /**
      * 查询系统
      */

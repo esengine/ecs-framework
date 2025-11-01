@@ -696,22 +696,22 @@ export class IncrementalSerializer {
             componentChanges: incremental.componentChanges.length,
             sceneDataChanges: incremental.sceneDataChanges.length,
             addedEntities: incremental.entityChanges.filter(
-                c => c.operation === ChangeOperation.EntityAdded
+                (c) => c.operation === ChangeOperation.EntityAdded
             ).length,
             removedEntities: incremental.entityChanges.filter(
-                c => c.operation === ChangeOperation.EntityRemoved
+                (c) => c.operation === ChangeOperation.EntityRemoved
             ).length,
             updatedEntities: incremental.entityChanges.filter(
-                c => c.operation === ChangeOperation.EntityUpdated
+                (c) => c.operation === ChangeOperation.EntityUpdated
             ).length,
             addedComponents: incremental.componentChanges.filter(
-                c => c.operation === ChangeOperation.ComponentAdded
+                (c) => c.operation === ChangeOperation.ComponentAdded
             ).length,
             removedComponents: incremental.componentChanges.filter(
-                c => c.operation === ChangeOperation.ComponentRemoved
+                (c) => c.operation === ChangeOperation.ComponentRemoved
             ).length,
             updatedComponents: incremental.componentChanges.filter(
-                c => c.operation === ChangeOperation.ComponentUpdated
+                (c) => c.operation === ChangeOperation.ComponentUpdated
             ).length
         };
     }

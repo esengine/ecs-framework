@@ -197,7 +197,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
     protected sharedBuffer: SharedArrayBuffer | null = null;
     protected sharedFloatArray: Float32Array | null = null;
     private platformAdapter: IPlatformAdapter;
-    private hasLoggedSyncMode = false; 
+    private hasLoggedSyncMode = false;
 
     constructor(matcher?: Matcher, config: WorkerSystemConfig = {}) {
         super(matcher);
@@ -414,7 +414,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
                         ${sharedProcessFunctionBody}
                     };
                     userProcessFunction(sharedFloatArray, startIndex, endIndex, deltaTime, systemConfig);
-                ` : ``}
+                ` : ''}
             }
         `;
     }
@@ -494,7 +494,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         const deltaTime = Time.deltaTime;
 
         // 3. Worker执行阶段
-        const promises = batches.map(batch =>
+        const promises = batches.map((batch) =>
             this.workerPool!.execute({
                 entities: batch,
                 deltaTime,
@@ -525,7 +525,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
      */
     private processSynchronously(entities: readonly Entity[]): void {
         // 1. 数据提取阶段
-        const entityData = entities.map(entity => this.extractEntityData(entity));
+        const entityData = entities.map((entity) => this.extractEntityData(entity));
 
         // 2. 主线程处理阶段
         const deltaTime = Time.deltaTime;
@@ -534,7 +534,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         // 3. 结果应用阶段
         // 处理Promise返回值
         if (results && typeof (results as any).then === 'function') {
-            (results as Promise<TEntityData[]>).then(finalResults => {
+            (results as Promise<TEntityData[]>).then((finalResults) => {
                 entities.forEach((entity, index) => {
                     this.applyResult(entity, finalResults[index]!);
                 });
@@ -813,7 +813,7 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
         sharedArrayBufferSupported: boolean;
         sharedArrayBufferEnabled: boolean;
         currentMode: 'shared-buffer' | 'worker' | 'sync';
-    } {
+        } {
         let currentMode: 'shared-buffer' | 'worker' | 'sync' = 'sync';
 
         if (this.config.enableWorker && this.workerPool) {

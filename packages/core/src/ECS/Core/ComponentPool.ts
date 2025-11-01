@@ -356,4 +356,4 @@ export class ComponentPoolManager {
 
         return maxSize > 0 ? (used / maxSize * 100) : 0;
     }
-} 
+}

@@ -156,10 +156,10 @@ export class Bits {
         if (maxBits > 64) {
             maxBits = 64;
         }
-        
+
         const result = new Bits();
         BitMask64Utils.copy(this._value, result._value);
-        
+
         if (maxBits <= 32) {
             const mask = (1 << maxBits) - 1;
             result._value.base[SegmentPart.LOW] = (~result._value.base[SegmentPart.LOW]) & mask;
@@ -174,7 +174,7 @@ export class Bits {
                 result._value.base[SegmentPart.HIGH] = ~result._value.base[SegmentPart.HIGH];
             }
         }
-        
+
         return result;
     }
 
@@ -317,7 +317,7 @@ export class Bits {
         if (BitMask64Utils.isZero(this._value)) {
             return -1;
         }
-        
+
         if (this._value.base[SegmentPart.HIGH] !== 0) {
             for (let i = 31; i >= 0; i--) {
                 if ((this._value.base[SegmentPart.HIGH] & (1 << i)) !== 0) {
@@ -325,13 +325,13 @@ export class Bits {
                 }
             }
         }
-        
+
         for (let i = 31; i >= 0; i--) {
             if ((this._value.base[SegmentPart.LOW] & (1 << i)) !== 0) {
                 return i;
             }
         }
-        
+
         return -1;
     }
 
@@ -343,19 +343,19 @@ export class Bits {
         if (BitMask64Utils.isZero(this._value)) {
             return -1;
         }
-        
+
         for (let i = 0; i < 32; i++) {
             if ((this._value.base[SegmentPart.LOW] & (1 << i)) !== 0) {
                 return i;
             }
         }
-        
+
         for (let i = 0; i < 32; i++) {
             if ((this._value.base[SegmentPart.HIGH] & (1 << i)) !== 0) {
                 return i + 32;
             }
         }
-        
+
         return -1;
     }
 }

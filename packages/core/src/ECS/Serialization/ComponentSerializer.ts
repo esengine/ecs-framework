@@ -212,7 +212,7 @@ export class ComponentSerializer {
 
         // 数组
         if (Array.isArray(value)) {
-            return value.map(item => this.serializeValue(item));
+            return value.map((item) => this.serializeValue(item));
         }
 
         // Map (如果没有使用@SerializeMap装饰器)
@@ -276,7 +276,7 @@ export class ComponentSerializer {
 
         // 数组
         if (Array.isArray(value)) {
-            return value.map(item => this.deserializeValue(item));
+            return value.map((item) => this.deserializeValue(item));
         }
 
         // 普通对象
@@ -340,10 +340,10 @@ export class ComponentSerializer {
         return {
             type: metadata.options.typeId || getComponentTypeName(componentType),
             version: metadata.options.version,
-            fields: Array.from(metadata.fields.keys()).map(k =>
+            fields: Array.from(metadata.fields.keys()).map((k) =>
                 typeof k === 'symbol' ? k.toString() : k
             ),
-            ignoredFields: Array.from(metadata.ignoredFields).map(k =>
+            ignoredFields: Array.from(metadata.ignoredFields).map((k) =>
                 typeof k === 'symbol' ? k.toString() : k
             ),
             isSerializable: true

@@ -9,7 +9,6 @@ import { ComponentRegistry, ComponentType } from './ComponentStorage/ComponentRe
 export { ComponentRegistry, ComponentType };
 
 
-
 /**
  * 高性能组件存储器
  */
@@ -21,7 +20,7 @@ export class ComponentStorage<T extends Component> {
 
     constructor(componentType: ComponentType<T>) {
         this.componentType = componentType;
-        
+
         // 确保组件类型已注册
         if (!ComponentRegistry.isRegistered(componentType)) {
             ComponentRegistry.register(componentType);
@@ -152,7 +151,7 @@ export class ComponentStorage<T extends Component> {
         usedSlots: number;
         freeSlots: number;
         fragmentation: number;
-    } {
+        } {
         const totalSlots = this.dense.length;
         const usedSlots = this.dense.length;
         const freeSlots = 0; // 永远无空洞
@@ -342,15 +341,15 @@ export class ComponentStorageManager {
      * @returns 组件位掩码
      */
     public getComponentMask(entityId: number): BitMask64Data {
-        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
-        
+        const mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
+
         for (const [componentType, storage] of this.storages.entries()) {
             if (storage.hasComponent(entityId)) {
                 const componentMask = ComponentRegistry.getBitMask(componentType as ComponentType);
                 BitMask64Utils.orInPlace(mask, componentMask);
             }
         }
-        
+
         return mask;
     }
 
@@ -360,12 +359,12 @@ export class ComponentStorageManager {
      */
     public getAllStats(): Map<string, { totalSlots: number; usedSlots: number; freeSlots: number; fragmentation: number }> {
         const stats = new Map<string, { totalSlots: number; usedSlots: number; freeSlots: number; fragmentation: number }>();
-        
+
         for (const [componentType, storage] of this.storages.entries()) {
             const typeName = getComponentTypeName(componentType as ComponentType);
             stats.set(typeName, storage.getStats());
         }
-        
+
         return stats;
     }
 

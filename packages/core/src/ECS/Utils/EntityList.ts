@@ -45,7 +45,7 @@ export class EntityList {
 
         this.buffer.push(entity);
         this._idToEntity.set(entity.id, entity);
-        
+
         // 更新名称索引
         this.updateNameIndex(entity, true);
     }
@@ -67,10 +67,10 @@ export class EntityList {
         if (index !== -1) {
             this.buffer.splice(index, 1);
             this._idToEntity.delete(entity.id);
-            
+
             // 更新名称索引
             this.updateNameIndex(entity, false);
-            
+
             // 回收实体ID到ID池
             if (this._scene && this._scene.identifierPool) {
                 this._scene.identifierPool.checkIn(entity.id);
@@ -84,19 +84,19 @@ export class EntityList {
     public removeAllEntities(): void {
         // 收集所有实体ID用于回收
         const idsToRecycle: number[] = [];
-        
+
         for (let i = this.buffer.length - 1; i >= 0; i--) {
             idsToRecycle.push(this.buffer[i]!.id);
             this.buffer[i]!.destroy();
         }
-        
+
         // 批量回收ID
         if (this._scene && this._scene.identifierPool) {
             for (const id of idsToRecycle) {
                 this._scene.identifierPool.checkIn(id);
             }
         }
-        
+
         this.buffer.length = 0;
         this._idToEntity.clear();
         this._nameToEntities.clear();
@@ -170,13 +170,13 @@ export class EntityList {
      */
     public findEntitiesByTag(tag: number): Entity[] {
         const result: Entity[] = [];
-        
+
         for (const entity of this.buffer) {
             if (entity.tag === tag) {
                 result.push(entity);
             }
         }
-        
+
         return result;
     }
 
@@ -187,13 +187,13 @@ export class EntityList {
      */
     public findEntitiesWithComponent<T extends Component>(componentType: new (...args: any[]) => T): Entity[] {
         const result: Entity[] = [];
-        
+
         for (const entity of this.buffer) {
             if (entity.hasComponent(componentType)) {
                 result.push(entity);
             }
         }
-        
+
         return result;
     }
 
@@ -243,7 +243,7 @@ export class EntityList {
                 const index = entities.indexOf(entity);
                 if (index !== -1) {
                     entities.splice(index, 1);
-                    
+
                     // 如果数组为空，删除映射
                     if (entities.length === 0) {
                         this._nameToEntities.delete(entity.name);
@@ -263,7 +263,7 @@ export class EntityList {
         pendingAdd: number;
         pendingRemove: number;
         nameIndexSize: number;
-    } {
+        } {
         let activeCount = 0;
         for (const entity of this.buffer) {
             if (entity.enabled && !entity.isDestroyed) {

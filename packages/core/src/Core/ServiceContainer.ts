@@ -240,7 +240,7 @@ export class ServiceContainer {
 
         // 检测循环依赖
         if (this._resolving.has(type as ServiceType<IService>)) {
-            const chain = Array.from(this._resolving).map(t => t.name).join(' -> ');
+            const chain = Array.from(this._resolving).map((t) => t.name).join(' -> ');
             throw new Error(`Circular dependency detected: ${chain} -> ${type.name}`);
         }
 
@@ -337,7 +337,7 @@ export class ServiceContainer {
         // 如果有单例实例，调用 dispose
         if (registration.instance) {
             // 从可更新列表中移除
-            const index = this._updatableServices.findIndex(item => item.instance === registration.instance);
+            const index = this._updatableServices.findIndex((item) => item.instance === registration.instance);
             if (index !== -1) {
                 this._updatableServices.splice(index, 1);
             }

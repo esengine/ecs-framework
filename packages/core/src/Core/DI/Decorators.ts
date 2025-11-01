@@ -123,7 +123,7 @@ export function Updatable(priority: number = 0): ClassDecorator {
         if (!prototype || typeof prototype.update !== 'function') {
             throw new Error(
                 `@Updatable() decorator requires class ${target.name} to implement IUpdatable interface with update() method. ` +
-                `Please add 'implements IUpdatable' and define update(deltaTime?: number): void method.`
+                'Please add \'implements IUpdatable\' and define update(deltaTime?: number): void method.'
             );
         }
 
@@ -249,7 +249,7 @@ export function createInstance<T>(
             if (typeof serviceType === 'string' || typeof serviceType === 'symbol') {
                 // 字符串或Symbol类型的服务标识
                 throw new Error(
-                    `String and Symbol service identifiers are not yet supported in constructor injection. ` +
+                    'String and Symbol service identifiers are not yet supported in constructor injection. ' +
                     `Please use class types for ${constructor.name} parameter ${i}`
                 );
             } else {
@@ -338,7 +338,7 @@ export function registerInjectable<T extends IService>(
     if (!isInjectable(serviceType)) {
         throw new Error(
             `${serviceType.name} is not marked as @Injectable(). ` +
-            `Please add @Injectable() decorator to the class.`
+            'Please add @Injectable() decorator to the class.'
         );
     }
 

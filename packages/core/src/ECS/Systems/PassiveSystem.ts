@@ -8,7 +8,7 @@ import { Matcher } from '../Utils/Matcher';
  * 被动的实体系统不会对实体进行任何修改，只会被动地接收实体的变化事件
  */
 export abstract class PassiveSystem extends EntitySystem {
-    
+
     constructor(matcher?: Matcher) {
         super(matcher);
     }

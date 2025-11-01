@@ -882,7 +882,7 @@ export class QuerySystem {
             size: number;
             hitRate: string;
         };
-    } {
+        } {
         return {
             entityCount: this._entities.length,
             indexStats: {

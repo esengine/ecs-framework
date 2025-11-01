@@ -154,7 +154,7 @@ export class EntityCache {
         trackedCount: number;
         frameEntityCount: number;
         persistentEntityCount: number;
-    } {
+        } {
         return {
             hasFrame: this._frameCache !== null,
             hasPersistent: this._persistentCache !== null,

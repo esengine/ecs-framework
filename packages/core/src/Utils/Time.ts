@@ -7,27 +7,27 @@ export class Time {
      * 上一帧到当前帧的时间间隔（秒）
      */
     public static deltaTime: number = 0;
-    
+
     /**
      * 未缩放的帧时间间隔（秒）
      */
     public static unscaledDeltaTime: number = 0;
-    
+
     /**
      * 游戏开始以来的总时间（秒）
      */
     public static totalTime: number = 0;
-    
+
     /**
      * 未缩放的总时间（秒）
      */
     public static unscaledTotalTime: number = 0;
-    
+
     /**
      * 时间缩放比例
      */
     public static timeScale: number = 1;
-    
+
     /**
      * 当前帧数
      */
@@ -70,4 +70,4 @@ export class Time {
     public static checkEvery(interval: number, lastTime: number): boolean {
         return this.totalTime - lastTime >= interval;
     }
-} 
+}
