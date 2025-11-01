@@ -20,7 +20,6 @@ interface EventListenerRecord {
     listenerRef: string;
 }
 
-
 /**
  * 实体系统的基类
  *
@@ -64,9 +63,9 @@ interface EventListenerRecord {
  * }
  * ```
  */
-export abstract class EntitySystem<
-    _TComponents extends readonly ComponentConstructor[] = []
-> implements ISystemBase, IService {
+export abstract class EntitySystem<_TComponents extends readonly ComponentConstructor[] = []>
+    implements ISystemBase, IService
+{
     private _updateOrder: number;
     private _enabled: boolean;
     private _performanceMonitor: PerformanceMonitor | null;
@@ -76,7 +75,6 @@ export abstract class EntitySystem<
     private _eventListeners: EventListenerRecord[];
     private _scene: Scene | null;
     protected logger: ReturnType<typeof createLogger>;
-
 
     /**
      * 实体ID映射缓存
@@ -161,7 +159,6 @@ export abstract class EntitySystem<
         // 初始化logger
         this.logger = createLogger(this.getLoggerName());
 
-
         this._entityCache = {
             frame: null,
             persistent: null,
@@ -203,7 +200,9 @@ export abstract class EntitySystem<
      */
     private getPerformanceMonitor(): PerformanceMonitor {
         if (!this._performanceMonitor) {
-            throw new Error(`${this._systemName}: PerformanceMonitor未注入，请确保在Core.create()之后再添加System到Scene`);
+            throw new Error(
+                `${this._systemName}: PerformanceMonitor未注入，请确保在Core.create()之后再添加System到Scene`
+            );
         }
         return this._performanceMonitor;
     }
@@ -251,7 +250,7 @@ export abstract class EntitySystem<
 
     /**
      * 系统初始化回调
-     * 
+     *
      * 子类可以重写此方法进行初始化操作。
      */
     protected onInitialize(): void {
@@ -316,16 +315,28 @@ export abstract class EntitySystem<
 
     /**
      * 检查是否为单一条件查询
+     *
+     * 使用位运算优化多条件检测。将每种查询条件映射到不同的位：
+     * - all: 第0位 (1)
+     * - any: 第1位 (2)
+     * - none: 第2位 (4)
+     * - tag: 第3位 (8)
+     * - name: 第4位 (16)
+     * - component: 第5位 (32)
      */
     private isSingleCondition(condition: QueryCondition): boolean {
+        // 使用位OR运算合并所有条件标记
         const flags =
-            ((condition.all.length > 0) ? 1 : 0) |
-            ((condition.any.length > 0) ? 2 : 0) |
-            ((condition.none.length > 0) ? 4 : 0) |
-            ((condition.tag !== undefined) ? 8 : 0) |
-            ((condition.name !== undefined) ? 16 : 0) |
-            ((condition.component !== undefined) ? 32 : 0);
+            (condition.all.length > 0 ? 1 : 0) |
+            (condition.any.length > 0 ? 2 : 0) |
+            (condition.none.length > 0 ? 4 : 0) |
+            (condition.tag !== undefined ? 8 : 0) |
+            (condition.name !== undefined ? 16 : 0) |
+            (condition.component !== undefined ? 32 : 0);
 
+        // 位运算技巧：如果只有一个位被设置，则 flags & (flags - 1) == 0
+        // 例如：flags=4 (100), flags-1=3 (011), 4&3=0
+        // 但如果 flags=6 (110), flags-1=5 (101), 6&5=4≠0
         return flags !== 0 && (flags & (flags - 1)) === 0;
     }
 
@@ -472,8 +483,7 @@ export abstract class EntitySystem<
      */
     private getEntityIdMap(allEntities: readonly Entity[]): Map<number, Entity> {
         const currentVersion = this.scene?.querySystem?.version ?? 0;
-        if (this._entityIdMap !== null &&
-            this._entityIdMapVersion === currentVersion) {
+        if (this._entityIdMap !== null && this._entityIdMapVersion === currentVersion) {
             return this._entityIdMap;
         }
 
@@ -531,7 +541,7 @@ export abstract class EntitySystem<
 
     /**
      * 执行复合查询
-     * 
+     *
      * 使用基于ID集合的单次扫描算法进行复杂查询
      */
     private executeComplexQuery(condition: QueryCondition, querySystem: QuerySystem): readonly Entity[] {
@@ -590,7 +600,7 @@ export abstract class EntitySystem<
 
     /**
      * 在系统处理开始前调用
-     * 
+     *
      * 子类可以重写此方法进行预处理操作。
      */
     protected onBegin(): void {
@@ -599,9 +609,9 @@ export abstract class EntitySystem<
 
     /**
      * 处理实体列表
-     * 
+     *
      * 系统的核心逻辑，子类必须实现此方法来定义具体的处理逻辑。
-     * 
+     *
      * @param entities 要处理的实体列表
      */
     protected process(_entities: readonly Entity[]): void {
@@ -610,9 +620,9 @@ export abstract class EntitySystem<
 
     /**
      * 后期处理实体列表
-     * 
+     *
      * 在主要处理逻辑之后执行，子类可以重写此方法。
-     * 
+     *
      * @param entities 要处理的实体列表
      */
     protected lateProcess(_entities: readonly Entity[]): void {
@@ -621,7 +631,7 @@ export abstract class EntitySystem<
 
     /**
      * 系统处理完毕后调用
-     * 
+     *
      * 子类可以重写此方法进行后处理操作。
      */
     protected onEnd(): void {
@@ -630,10 +640,10 @@ export abstract class EntitySystem<
 
     /**
      * 检查系统是否需要处理
-     * 
+     *
      * 在启用系统时有用，但仅偶尔需要处理。
      * 这只影响处理，不影响事件或订阅列表。
-     * 
+     *
      * @returns 如果系统应该处理，则为true，如果不处理则为false
      */
     protected onCheckProcessing(): boolean {
@@ -667,7 +677,7 @@ export abstract class EntitySystem<
 
     /**
      * 获取系统信息的字符串表示
-     * 
+     *
      * @returns 系统信息字符串
      */
     public toString(): string {
@@ -711,9 +721,9 @@ export abstract class EntitySystem<
 
     /**
      * 当实体被添加到系统时调用
-     * 
+     *
      * 子类可以重写此方法来处理实体添加事件。
-     * 
+     *
      * @param entity 被添加的实体
      */
     protected onAdded(_entity: Entity): void {
@@ -798,12 +808,9 @@ export abstract class EntitySystem<
      * @param eventType 事件类型
      * @param handler 事件处理函数
      */
-    protected removeEventListener<T = any>(
-        eventType: string,
-        handler: EventHandler<T>
-    ): void {
+    protected removeEventListener<T = any>(eventType: string, handler: EventHandler<T>): void {
         const listenerIndex = this._eventListeners.findIndex(
-            listener => listener.eventType === eventType && listener.handler === handler
+            (listener) => listener.eventType === eventType && listener.handler === handler
         );
 
         if (listenerIndex >= 0) {
@@ -887,15 +894,10 @@ export abstract class EntitySystem<
      * }
      * ```
      */
-    protected requireComponent<T extends ComponentConstructor>(
-        entity: Entity,
-        componentType: T
-    ): ComponentInstance<T> {
+    protected requireComponent<T extends ComponentConstructor>(entity: Entity, componentType: T): ComponentInstance<T> {
         const component = entity.getComponent(componentType as any);
         if (!component) {
-            throw new Error(
-                `Component ${componentType.name} not found on entity ${entity.name} in ${this.systemName}`
-            );
+            throw new Error(`Component ${componentType.name} not found on entity ${entity.name} in ${this.systemName}`);
         }
         return component as ComponentInstance<T>;
     }
@@ -927,9 +929,7 @@ export abstract class EntitySystem<
         entity: Entity,
         ...components: T
     ): { [K in keyof T]: ComponentInstance<T[K]> } {
-        return components.map((type) =>
-            this.requireComponent(entity, type)
-        ) as any;
+        return components.map((type) => this.requireComponent(entity, type)) as any;
     }
 
     /**
@@ -950,10 +950,7 @@ export abstract class EntitySystem<
      * }
      * ```
      */
-    protected forEach(
-        entities: readonly Entity[],
-        processor: (entity: Entity, index: number) => void
-    ): void {
+    protected forEach(entities: readonly Entity[], processor: (entity: Entity, index: number) => void): void {
         for (let i = 0; i < entities.length; i++) {
             processor(entities[i]!, i);
         }
@@ -1000,10 +997,7 @@ export abstract class EntitySystem<
      * }
      * ```
      */
-    protected mapEntities<R>(
-        entities: readonly Entity[],
-        mapper: (entity: Entity, index: number) => R
-    ): R[] {
+    protected mapEntities<R>(entities: readonly Entity[], mapper: (entity: Entity, index: number) => R): R[] {
         return Array.from(entities).map(mapper);
     }
 
@@ -1052,10 +1046,7 @@ export abstract class EntitySystem<
      * }
      * ```
      */
-    protected someEntity(
-        entities: readonly Entity[],
-        predicate: (entity: Entity, index: number) => boolean
-    ): boolean {
+    protected someEntity(entities: readonly Entity[], predicate: (entity: Entity, index: number) => boolean): boolean {
         for (let i = 0; i < entities.length; i++) {
             if (predicate(entities[i]!, i)) {
                 return true;
@@ -1081,10 +1072,7 @@ export abstract class EntitySystem<
      * }
      * ```
      */
-    protected everyEntity(
-        entities: readonly Entity[],
-        predicate: (entity: Entity, index: number) => boolean
-    ): boolean {
+    protected everyEntity(entities: readonly Entity[], predicate: (entity: Entity, index: number) => boolean): boolean {
         for (let i = 0; i < entities.length; i++) {
             if (!predicate(entities[i]!, i)) {
                 return false;

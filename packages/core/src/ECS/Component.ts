@@ -36,7 +36,7 @@ export abstract class Component implements IComponent {
      *
      * 用于为每个组件分配唯一的ID。
      */
-    public static _idGenerator: number = 0;
+    private static idGenerator: number = 0;
 
     /**
      * 组件唯一标识符
@@ -58,7 +58,7 @@ export abstract class Component implements IComponent {
      * 自动分配唯一ID给组件。
      */
     constructor() {
-        this.id = Component._idGenerator++;
+        this.id = Component.idGenerator++;
     }
 
     /**

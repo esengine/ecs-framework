@@ -39,7 +39,7 @@ export class EntityDataCollector {
         }
 
         const archetypeData = this.collectArchetypeData(scene);
-        
+
         return {
             totalEntities: stats.totalEntities,
             activeEntities: stats.activeEntities,
@@ -51,7 +51,6 @@ export class EntityDataCollector {
             entityDetailsMap: {}
         };
     }
-
 
     /**
      * 获取原始实体列表
@@ -92,7 +91,6 @@ export class EntityDataCollector {
         }));
     }
 
-
     /**
      * 获取实体详细信息
      * @param entityId 实体ID
@@ -108,9 +106,9 @@ export class EntityDataCollector {
             const entity = entityList.buffer.find((e: any) => e.id === entityId);
             if (!entity) return null;
 
-            const baseDebugInfo = entity.getDebugInfo ?
-                entity.getDebugInfo() :
-                this.buildFallbackEntityInfo(entity, scene);
+            const baseDebugInfo = entity.getDebugInfo
+                ? entity.getDebugInfo()
+                : this.buildFallbackEntityInfo(entity, scene);
 
             const componentDetails = this.extractComponentDetails(entity.components);
 
@@ -140,7 +138,7 @@ export class EntityDataCollector {
     private getSceneInfo(scene: any): { name: string; type: string } {
         let sceneName = '当前场景';
         let sceneType = 'Scene';
-        
+
         try {
             if (scene.name && typeof scene.name === 'string' && scene.name.trim()) {
                 sceneName = scene.name.trim();
@@ -159,10 +157,9 @@ export class EntityDataCollector {
         } catch (error) {
             sceneName = '场景名获取失败';
         }
-        
+
         return { name: sceneName, type: sceneType };
     }
-
 
     /**
      * 收集实体数据（包含内存信息）
@@ -182,20 +179,20 @@ export class EntityDataCollector {
         try {
             stats = entityList.getStats ? entityList.getStats() : this.calculateFallbackEntityStats(entityList);
         } catch (error) {
-        return {
-            totalEntities: 0,
-            activeEntities: 0,
-            pendingAdd: 0,
-            pendingRemove: 0,
-            entitiesPerArchetype: [],
-            topEntitiesByComponents: [],
-            entityHierarchy: [],
-            entityDetailsMap: {}
-        };
-    }
+            return {
+                totalEntities: 0,
+                activeEntities: 0,
+                pendingAdd: 0,
+                pendingRemove: 0,
+                entitiesPerArchetype: [],
+                topEntitiesByComponents: [],
+                entityHierarchy: [],
+                entityDetailsMap: {}
+            };
+        }
 
         const archetypeData = this.collectArchetypeDataWithMemory(scene);
-        
+
         return {
             totalEntities: stats.totalEntities,
             activeEntities: stats.activeEntities,
@@ -207,7 +204,6 @@ export class EntityDataCollector {
             entityDetailsMap: this.buildEntityDetailsMap(entityList, scene)
         };
     }
-
 
     private collectArchetypeData(scene: any): {
         distribution: Array<{ signature: string; count: number; memory: number }>;
@@ -224,7 +220,9 @@ export class EntityDataCollector {
         };
     }
 
-    private getArchetypeDistributionFast(entityContainer: any): Array<{ signature: string; count: number; memory: number }> {
+    private getArchetypeDistributionFast(
+        entityContainer: any
+    ): Array<{ signature: string; count: number; memory: number }> {
         const distribution = new Map<string, { count: number; componentTypes: string[] }>();
 
         if (entityContainer && entityContainer.entities) {
@@ -251,7 +249,9 @@ export class EntityDataCollector {
             .slice(0, 20);
     }
 
-    private getTopEntitiesByComponentsFast(entityContainer: any): Array<{ id: string; name: string; componentCount: number; memory: number }> {
+    private getTopEntitiesByComponentsFast(
+        entityContainer: any
+    ): Array<{ id: string; name: string; componentCount: number; memory: number }> {
         if (!entityContainer || !entityContainer.entities) {
             return [];
         }
@@ -265,7 +265,6 @@ export class EntityDataCollector {
             }))
             .sort((a: any, b: any) => b.componentCount - a.componentCount);
     }
-
 
     private collectArchetypeDataWithMemory(scene: any): {
         distribution: Array<{ signature: string; count: number; memory: number }>;
@@ -282,7 +281,6 @@ export class EntityDataCollector {
         };
     }
 
-
     private extractArchetypeStatistics(archetypeSystem: any): {
         distribution: Array<{ signature: string; count: number; memory: number }>;
         topEntities: Array<{ id: string; name: string; componentCount: number; memory: number }>;
@@ -294,7 +292,7 @@ export class EntityDataCollector {
         archetypes.forEach((archetype: any) => {
             const signature = archetype.componentTypes?.map((type: any) => type.name).join(',') || 'Unknown';
             const entityCount = archetype.entities?.length || 0;
-            
+
             distribution.push({
                 signature,
                 count: entityCount,
@@ -319,7 +317,6 @@ export class EntityDataCollector {
         return { distribution, topEntities };
     }
 
-
     private extractArchetypeStatisticsWithMemory(archetypeSystem: any): {
         distribution: Array<{ signature: string; count: number; memory: number }>;
         topEntities: Array<{ id: string; name: string; componentCount: number; memory: number }>;
@@ -336,11 +333,11 @@ export class EntityDataCollector {
             if (archetype.entities && archetype.entities.length > 0) {
                 const sampleSize = Math.min(5, archetype.entities.length);
                 let sampleMemory = 0;
-                
+
                 for (let i = 0; i < sampleSize; i++) {
                     sampleMemory += this.estimateEntityMemoryUsage(archetype.entities[i]);
                 }
-                
+
                 actualMemory = (sampleMemory / sampleSize) * entityCount;
             }
 
@@ -368,9 +365,9 @@ export class EntityDataCollector {
         return { distribution, topEntities };
     }
 
-
-
-    private getArchetypeDistributionWithMemory(entityContainer: any): Array<{ signature: string; count: number; memory: number }> {
+    private getArchetypeDistributionWithMemory(
+        entityContainer: any
+    ): Array<{ signature: string; count: number; memory: number }> {
         const distribution = new Map<string, { count: number; memory: number; componentTypes: string[] }>();
 
         if (entityContainer && entityContainer.entities) {
@@ -403,8 +400,9 @@ export class EntityDataCollector {
             .sort((a, b) => b.count - a.count);
     }
 
-
-    private getTopEntitiesByComponentsWithMemory(entityContainer: any): Array<{ id: string; name: string; componentCount: number; memory: number }> {
+    private getTopEntitiesByComponentsWithMemory(
+        entityContainer: any
+    ): Array<{ id: string; name: string; componentCount: number; memory: number }> {
         if (!entityContainer || !entityContainer.entities) {
             return [];
         }
@@ -419,7 +417,6 @@ export class EntityDataCollector {
             .sort((a: any, b: any) => b.componentCount - a.componentCount);
     }
 
-
     private getEmptyEntityDebugData(): IEntityDebugData {
         return {
             totalEntities: 0,
@@ -433,20 +430,20 @@ export class EntityDataCollector {
         };
     }
 
-
     private calculateFallbackEntityStats(entityList: any): any {
         const allEntities = entityList.buffer || [];
-        const activeEntities = allEntities.filter((entity: any) =>
-            entity.enabled && !entity._isDestroyed
-        );
+        const activeEntities = allEntities.filter((entity: any) => entity.enabled && !entity.isDestroyed);
 
         return {
             totalEntities: allEntities.length,
             activeEntities: activeEntities.length,
             pendingAdd: 0,
             pendingRemove: 0,
-            averageComponentsPerEntity: activeEntities.length > 0 ?
-                allEntities.reduce((sum: number, e: any) => sum + (e.components?.length || 0), 0) / activeEntities.length : 0
+            averageComponentsPerEntity:
+                activeEntities.length > 0
+                    ? allEntities.reduce((sum: number, e: any) => sum + (e.components?.length || 0), 0) /
+                      activeEntities.length
+                    : 0
         };
     }
 
@@ -476,37 +473,40 @@ export class EntityDataCollector {
 
     public calculateObjectSize(obj: any, excludeKeys: string[] = []): number {
         if (!obj || typeof obj !== 'object') return 0;
-        
+
         const visited = new WeakSet();
         const maxDepth = 2;
-        
+
         const calculate = (item: any, depth: number = 0): number => {
             if (!item || typeof item !== 'object' || depth >= maxDepth) {
                 return 0;
             }
-            
+
             if (visited.has(item)) return 0;
             visited.add(item);
-            
+
             let itemSize = 32;
-            
+
             try {
                 const keys = Object.keys(item);
                 const maxKeys = Math.min(keys.length, 20);
-                
+
                 for (let i = 0; i < maxKeys; i++) {
                     const key = keys[i];
-                    if (!key || excludeKeys.includes(key) ||
+                    if (
+                        !key ||
+                        excludeKeys.includes(key) ||
                         key === 'constructor' ||
                         key === '__proto__' ||
                         key.startsWith('_cc_') ||
-                        key.startsWith('__')) {
+                        key.startsWith('__')
+                    ) {
                         continue;
                     }
 
                     const value = item[key];
                     itemSize += key.length * 2;
-                    
+
                     if (typeof value === 'string') {
                         itemSize += Math.min(value.length * 2, 200);
                     } else if (typeof value === 'number') {
@@ -522,10 +522,10 @@ export class EntityDataCollector {
             } catch (error) {
                 return 64;
             }
-            
+
             return itemSize;
         };
-        
+
         try {
             const size = calculate(obj);
             return Math.max(size, 32);
@@ -533,7 +533,6 @@ export class EntityDataCollector {
             return 64;
         }
     }
-
 
     private buildEntityHierarchyTree(entityList: { buffer?: Entity[] }): Array<{
         id: number;
@@ -552,7 +551,6 @@ export class EntityDataCollector {
         if (!entityList?.buffer) return [];
 
         const rootEntities: any[] = [];
-
 
         entityList.buffer.forEach((entity: Entity) => {
             if (!entity.parent) {
@@ -626,12 +624,13 @@ export class EntityDataCollector {
             const batch = entities.slice(i, i + batchSize);
 
             batch.forEach((entity: Entity) => {
-                const baseDebugInfo = entity.getDebugInfo ?
-                    entity.getDebugInfo() :
-                    this.buildFallbackEntityInfo(entity, scene);
+                const baseDebugInfo = entity.getDebugInfo
+                    ? entity.getDebugInfo()
+                    : this.buildFallbackEntityInfo(entity, scene);
 
-                const componentCacheStats = (entity as any).getComponentCacheStats ? 
-                    (entity as any).getComponentCacheStats() : null;
+                const componentCacheStats = (entity as any).getComponentCacheStats
+                    ? (entity as any).getComponentCacheStats()
+                    : null;
 
                 const componentDetails = this.extractComponentDetails(entity.components);
 
@@ -639,13 +638,14 @@ export class EntityDataCollector {
                     ...baseDebugInfo,
                     parentName: entity.parent?.name || null,
                     components: componentDetails,
-                    componentTypes: baseDebugInfo.componentTypes || 
-                        componentDetails.map((comp) => comp.typeName),
-                    cachePerformance: componentCacheStats ? {
-                        hitRate: componentCacheStats.cacheStats.hitRate,
-                        size: componentCacheStats.cacheStats.size,
-                        maxSize: componentCacheStats.cacheStats.maxSize
-                    } : null
+                    componentTypes: baseDebugInfo.componentTypes || componentDetails.map((comp) => comp.typeName),
+                    cachePerformance: componentCacheStats
+                        ? {
+                              hitRate: componentCacheStats.cacheStats.hitRate,
+                              size: componentCacheStats.cacheStats.size,
+                              maxSize: componentCacheStats.cacheStats.maxSize
+                          }
+                        : null
                 };
             });
         }
@@ -658,7 +658,7 @@ export class EntityDataCollector {
      */
     private buildFallbackEntityInfo(entity: Entity, scene?: IScene | null): any {
         const sceneInfo = this.getSceneInfo(scene);
-        
+
         return {
             name: entity.name || `Entity_${entity.id}`,
             id: entity.id,
@@ -691,10 +691,10 @@ export class EntityDataCollector {
         return components.map((component: Component) => {
             const typeName = getComponentInstanceTypeName(component);
             const properties: Record<string, any> = {};
-            
+
             try {
                 const propertyKeys = Object.keys(component);
-                propertyKeys.forEach(propertyKey => {
+                propertyKeys.forEach((propertyKey) => {
                     if (!propertyKey.startsWith('_') && propertyKey !== 'entity' && propertyKey !== 'constructor') {
                         const propertyValue = (component as any)[propertyKey];
                         if (propertyValue !== undefined && propertyValue !== null) {
@@ -702,7 +702,7 @@ export class EntityDataCollector {
                         }
                     }
                 });
-                
+
                 // 如果没有找到任何属性，添加一些调试信息
                 if (Object.keys(properties).length === 0) {
                     properties['_info'] = '该组件没有公开属性';
@@ -712,7 +712,7 @@ export class EntityDataCollector {
                 properties['_error'] = '属性提取失败';
                 properties['_componentId'] = getComponentInstanceTypeName(component);
             }
-            
+
             return {
                 typeName: typeName,
                 properties: properties
@@ -726,7 +726,11 @@ export class EntityDataCollector {
      * @param componentIndex 组件索引
      * @param scene 场景实例
      */
-    public getComponentProperties(entityId: number, componentIndex: number, scene?: IScene | null): Record<string, any> {
+    public getComponentProperties(
+        entityId: number,
+        componentIndex: number,
+        scene?: IScene | null
+    ): Record<string, any> {
         try {
             if (!scene) return {};
 
@@ -739,20 +743,20 @@ export class EntityDataCollector {
             const component = entity.components[componentIndex];
             const properties: Record<string, any> = {};
 
-                const propertyKeys = Object.keys(component);
-                propertyKeys.forEach(propertyKey => {
-                    if (!propertyKey.startsWith('_') && propertyKey !== 'entity') {
-                        const propertyValue = (component as any)[propertyKey];
-                        if (propertyValue !== undefined && propertyValue !== null) {
+            const propertyKeys = Object.keys(component);
+            propertyKeys.forEach((propertyKey) => {
+                if (!propertyKey.startsWith('_') && propertyKey !== 'entity') {
+                    const propertyValue = (component as any)[propertyKey];
+                    if (propertyValue !== undefined && propertyValue !== null) {
                         properties[propertyKey] = this.formatPropertyValue(propertyValue);
                     }
-                    }
-                });
+                }
+            });
 
             return properties;
-            } catch (error) {
+        } catch (error) {
             return { _error: '属性提取失败' };
-            }
+        }
     }
 
     /**
@@ -786,7 +790,7 @@ export class EntityDataCollector {
                 if (obj.length === 0) return [];
 
                 if (obj.length > 10) {
-                    const sample = obj.slice(0, 3).map(item => this.formatPropertyValue(item, 1));
+                    const sample = obj.slice(0, 3).map((item) => this.formatPropertyValue(item, 1));
                     return {
                         _isLazyArray: true,
                         _arrayLength: obj.length,
@@ -795,7 +799,7 @@ export class EntityDataCollector {
                     };
                 }
 
-                return obj.map(item => this.formatPropertyValue(item, 1));
+                return obj.map((item) => this.formatPropertyValue(item, 1));
             }
 
             const keys = Object.keys(obj);
@@ -842,8 +846,8 @@ export class EntityDataCollector {
         try {
             const typeName = obj.constructor?.name || 'Object';
             const summary = this.getObjectSummary(obj, typeName);
-        
-        return {
+
+            return {
                 _isLazyObject: true,
                 _typeName: typeName,
                 _summary: summary,
@@ -922,7 +926,12 @@ export class EntityDataCollector {
      * @param propertyPath 属性路径
      * @param scene 场景实例
      */
-    public expandLazyObject(entityId: number, componentIndex: number, propertyPath: string, scene?: IScene | null): any {
+    public expandLazyObject(
+        entityId: number,
+        componentIndex: number,
+        propertyPath: string,
+        scene?: IScene | null
+    ): any {
         try {
             if (!scene) return null;
 
@@ -983,4 +992,4 @@ export class EntityDataCollector {
 
         return current;
     }
-} 
+}

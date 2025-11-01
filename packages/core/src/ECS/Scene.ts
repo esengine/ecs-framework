@@ -8,10 +8,18 @@ import { TypeSafeEventSystem } from './Core/EventSystem';
 import { EventBus } from './Core/EventBus';
 import { ReferenceTracker } from './Core/ReferenceTracker';
 import { IScene, ISceneConfig } from './IScene';
-import { getComponentInstanceTypeName, getSystemInstanceTypeName, getSystemMetadata } from "./Decorators";
+import { getComponentInstanceTypeName, getSystemInstanceTypeName, getSystemMetadata } from './Decorators';
 import { TypedQueryBuilder } from './Core/Query/TypedQuery';
-import { SceneSerializer, SceneSerializationOptions, SceneDeserializationOptions } from './Serialization/SceneSerializer';
-import { IncrementalSerializer, IncrementalSnapshot, IncrementalSerializationOptions } from './Serialization/IncrementalSerializer';
+import {
+    SceneSerializer,
+    SceneSerializationOptions,
+    SceneDeserializationOptions
+} from './Serialization/SceneSerializer';
+import {
+    IncrementalSerializer,
+    IncrementalSnapshot,
+    IncrementalSerializationOptions
+} from './Serialization/IncrementalSerializer';
 import { ComponentPoolManager } from './Core/ComponentPool';
 import { PerformanceMonitor } from '../Utils/PerformanceMonitor';
 import { ServiceContainer, type ServiceType } from '../Core/ServiceContainer';
@@ -30,7 +38,7 @@ export class Scene implements IScene {
      *
      * 用于标识和调试的友好名称。
      */
-    public name: string = "";
+    public name: string = '';
 
     /**
      * 场景自定义数据
@@ -45,25 +53,24 @@ export class Scene implements IScene {
      * 管理场景内所有实体的生命周期。
      */
     public readonly entities: EntityList;
-    
 
     /**
      * 实体ID池
-     * 
+     *
      * 用于分配和回收实体的唯一标识符。
      */
     public readonly identifierPool: IdentifierPool;
 
     /**
      * 组件存储管理器
-     * 
+     *
      * 高性能的组件存储和查询系统。
      */
     public readonly componentStorageManager: ComponentStorageManager;
 
     /**
      * 查询系统
-     * 
+     *
      * 基于位掩码的高性能实体查询系统。
      */
     public readonly querySystem: QuerySystem;
@@ -231,35 +238,31 @@ export class Scene implements IScene {
      */
     private get performanceMonitor(): PerformanceMonitor {
         if (!this._performanceMonitor) {
-            this._performanceMonitor = this._services.tryResolve(PerformanceMonitor)
-                ?? new PerformanceMonitor();
+            this._performanceMonitor = this._services.tryResolve(PerformanceMonitor) ?? new PerformanceMonitor();
         }
         return this._performanceMonitor;
     }
 
     /**
      * 初始化场景
-     * 
+     *
      * 在场景创建时调用，子类可以重写此方法来设置初始实体和组件。
      */
-    public initialize(): void {
-    }
+    public initialize(): void {}
 
     /**
      * 场景开始运行时的回调
-     * 
+     *
      * 在场景开始运行时调用，可以在此方法中执行场景启动逻辑。
      */
-    public onStart(): void {
-    }
+    public onStart(): void {}
 
     /**
      * 场景卸载时的回调
-     * 
+     *
      * 在场景被销毁时调用，可以在此方法中执行清理工作。
      */
-    public unload(): void {
-    }
+    public unload(): void {}
 
     /**
      * 开始场景，启动实体处理器等
@@ -338,10 +341,10 @@ export class Scene implements IScene {
      * @param name 实体名称
      */
     public createEntity(name: string) {
-        let entity = new Entity(name, this.identifierPool.checkOut());
-        
+        const entity = new Entity(name, this.identifierPool.checkOut());
+
         this.eventSystem.emitSync('entity:created', { entityName: name, entity, scene: this });
-        
+
         return this.addEntity(entity);
     }
 
@@ -384,30 +387,29 @@ export class Scene implements IScene {
      * @param namePrefix 实体名称前缀
      * @returns 创建的实体列表
      */
-    public createEntities(count: number, namePrefix: string = "Entity"): Entity[] {
+    public createEntities(count: number, namePrefix: string = 'Entity'): Entity[] {
         const entities: Entity[] = [];
-        
+
         // 批量创建实体对象，不立即添加到系统
         for (let i = 0; i < count; i++) {
             const entity = new Entity(`${namePrefix}_${i}`, this.identifierPool.checkOut());
             entity.scene = this;
             entities.push(entity);
         }
-        
+
         // 批量添加到实体列表
         for (const entity of entities) {
             this.entities.add(entity);
         }
-        
+
         // 批量添加到查询系统（无重复检查，性能最优）
         this.querySystem.addEntitiesUnchecked(entities);
-        
+
         // 批量触发事件（可选，减少事件开销）
         this.eventSystem.emitSync('entities:batch_added', { entities, scene: this, count });
-        
+
         return entities;
     }
-
 
     /**
      * 批量销毁实体
@@ -416,7 +418,7 @@ export class Scene implements IScene {
         if (entities.length === 0) return;
 
         for (const entity of entities) {
-            entity._isDestroyed = true;
+            entity.setDestroyedState(true);
         }
 
         for (const entity of entities) {
@@ -473,7 +475,9 @@ export class Scene implements IScene {
 
     /**
      * 根据名称查找实体（别名方法）
+     *
      * @param name 实体名称
+     * @deprecated 请使用 findEntity() 代替此方法
      */
     public getEntityByName(name: string): Entity | null {
         return this.findEntity(name);
@@ -481,7 +485,9 @@ export class Scene implements IScene {
 
     /**
      * 根据标签查找实体（别名方法）
+     *
      * @param tag 实体标签
+     * @deprecated 请使用 findEntitiesByTag() 代替此方法
      */
     public getEntitiesByTag(tag: number): Entity[] {
         return this.findEntitiesByTag(tag);
@@ -577,9 +583,7 @@ export class Scene implements IScene {
      * scene.addEntityProcessor(system);
      * ```
      */
-    public addEntityProcessor<T extends EntitySystem>(
-        systemTypeOrInstance: ServiceType<T> | T
-    ): T {
+    public addEntityProcessor<T extends EntitySystem>(systemTypeOrInstance: ServiceType<T> | T): T {
         let system: T;
         let constructor: any;
 
@@ -609,7 +613,7 @@ export class Scene implements IScene {
                 } else {
                     this.logger.warn(
                         `Attempting to register a different instance of ${constructor.name}, ` +
-                        `but type is already registered. Returning existing instance.`
+                            'but type is already registered. Returning existing instance.'
                     );
                     return existingSystem as T;
                 }
@@ -758,7 +762,6 @@ export class Scene implements IScene {
         };
     }
 
-
     /**
      * 获取场景的调试信息
      */
@@ -786,13 +789,13 @@ export class Scene implements IScene {
             entityCount: this.entities.count,
             processorCount: systems.length,
             isRunning: this._didSceneBegin,
-            entities: this.entities.buffer.map(entity => ({
+            entities: this.entities.buffer.map((entity) => ({
                 name: entity.name,
                 id: entity.id,
                 componentCount: entity.components.length,
-                componentTypes: entity.components.map(c => getComponentInstanceTypeName(c))
+                componentTypes: entity.components.map((c) => getComponentInstanceTypeName(c))
             })),
-            processors: systems.map(processor => ({
+            processors: systems.map((processor) => ({
                 name: getSystemInstanceTypeName(processor),
                 updateOrder: processor.updateOrder,
                 entityCount: (processor as any)._entities?.length || 0
@@ -910,11 +913,7 @@ export class Scene implements IScene {
             throw new Error('必须先调用 createIncrementalSnapshot() 创建基础快照');
         }
 
-        return IncrementalSerializer.computeIncremental(
-            this,
-            this._incrementalBaseSnapshot,
-            options
-        );
+        return IncrementalSerializer.computeIncremental(this, this._incrementalBaseSnapshot, options);
     }
 
     /**
@@ -941,14 +940,13 @@ export class Scene implements IScene {
         incremental: IncrementalSnapshot | string | Uint8Array,
         componentRegistry?: Map<string, any>
     ): void {
-        const isSerializedData = typeof incremental === 'string' ||
-            incremental instanceof Uint8Array;
+        const isSerializedData = typeof incremental === 'string' || incremental instanceof Uint8Array;
 
         const snapshot = isSerializedData
             ? IncrementalSerializer.deserializeIncremental(incremental as string | Uint8Array)
-            : incremental as IncrementalSnapshot;
+            : (incremental as IncrementalSnapshot);
 
-        const registry = componentRegistry || ComponentRegistry.getAllComponentNames() as Map<string, any>;
+        const registry = componentRegistry || (ComponentRegistry.getAllComponentNames() as Map<string, any>);
 
         IncrementalSerializer.applyIncremental(this, snapshot, registry);
     }
