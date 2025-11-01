@@ -30,34 +30,34 @@ interface QueryCacheEntry {
 
 /**
  * 高性能实体查询系统
- * 
+ *
  * 提供快速的实体查询功能，支持按组件类型、标签、名称等多种方式查询实体。
- * 
+ *
  * @example
  * ```typescript
  * // 查询所有包含Position和Velocity组件的实体
  * const movingEntities = querySystem.queryAll(PositionComponent, VelocityComponent);
- * 
+ *
  * // 查询特定标签的实体
  * const playerEntities = querySystem.queryByTag(PLAYER_TAG);
  * ```
  */
 export class QuerySystem {
-    private _logger = createLogger('QuerySystem');
-    private entities: Entity[] = [];
-    private entityIndex: EntityIndex;
+    private readonly _logger = createLogger('QuerySystem');
+    private _entities: Entity[] = [];
+    private _entityIndex: EntityIndex;
 
     private _version = 0;
 
-    private queryCache = new Map<string, QueryCacheEntry>();
-    private cacheMaxSize = 1000;
-    private cacheTimeout = 5000;
+    private _queryCache = new Map<string, QueryCacheEntry>();
+    private _cacheMaxSize = 1000;
+    private _cacheTimeout = 5000;
 
-    private componentMaskCache = new Map<string, BitMask64Data>();
+    private _componentMaskCache = new Map<string, BitMask64Data>();
 
-    private archetypeSystem: ArchetypeSystem;
+    private _archetypeSystem: ArchetypeSystem;
 
-    private queryStats = {
+    private _queryStats = {
         totalQueries: 0,
         cacheHits: 0,
         indexHits: 0,
@@ -67,12 +67,12 @@ export class QuerySystem {
     };
 
     constructor() {
-        this.entityIndex = {
+        this._entityIndex = {
             byTag: new Map(),
             byName: new Map()
         };
 
-        this.archetypeSystem = new ArchetypeSystem();
+        this._archetypeSystem = new ArchetypeSystem();
     }
 
     /**
@@ -84,7 +84,7 @@ export class QuerySystem {
      * @param entities 新的实体列表
      */
     public setEntities(entities: Entity[]): void {
-        this.entities = entities;
+        this._entities = entities;
         this.clearQueryCache();
         this.clearReactiveQueries();
         this.rebuildIndexes();
@@ -92,19 +92,19 @@ export class QuerySystem {
 
     /**
      * 添加单个实体到查询系统
-     * 
+     *
      * 将新实体添加到查询系统中，并自动更新相关索引。
      * 为了提高批量添加性能，可以延迟缓存清理。
-     * 
+     *
      * @param entity 要添加的实体
      * @param deferCacheClear 是否延迟缓存清理（用于批量操作）
      */
     public addEntity(entity: Entity, deferCacheClear: boolean = false): void {
-        if (!this.entities.includes(entity)) {
-            this.entities.push(entity);
+        if (!this._entities.includes(entity)) {
+            this._entities.push(entity);
             this.addEntityToIndexes(entity);
 
-            this.archetypeSystem.addEntity(entity);
+            this._archetypeSystem.addEntity(entity);
 
             // 通知响应式查询
             this.notifyReactiveQueriesEntityAdded(entity);
@@ -121,26 +121,26 @@ export class QuerySystem {
 
     /**
      * 批量添加实体
-     * 
+     *
      * 高效地批量添加多个实体，减少缓存清理次数。
      * 使用Set来避免O(n)的重复检查。
-     * 
+     *
      * @param entities 要添加的实体列表
      */
     public addEntities(entities: Entity[]): void {
         if (entities.length === 0) return;
 
         // 使用Set来快速检查重复
-        const existingIds = new Set(this.entities.map(e => e.id));
+        const existingIds = new Set(this._entities.map((e) => e.id));
         let addedCount = 0;
 
         for (const entity of entities) {
             if (!existingIds.has(entity.id)) {
-                this.entities.push(entity);
+                this._entities.push(entity);
                 this.addEntityToIndexes(entity);
 
                 // 更新索引管理器
-                this.archetypeSystem.addEntity(entity);
+                this._archetypeSystem.addEntity(entity);
 
                 existingIds.add(entity.id);
                 addedCount++;
@@ -155,10 +155,10 @@ export class QuerySystem {
 
     /**
      * 批量添加实体（无重复检查版本）
-     * 
+     *
      * 假设所有实体都是新的，跳过重复检查以获得最大性能。
      * 仅在确保没有重复实体时使用。
-     * 
+     *
      * @param entities 要添加的实体列表
      */
     public addEntitiesUnchecked(entities: Entity[]): void {
@@ -166,7 +166,7 @@ export class QuerySystem {
 
         // 避免调用栈溢出，分批添加
         for (const entity of entities) {
-            this.entities.push(entity);
+            this._entities.push(entity);
         }
 
         // 批量更新索引
@@ -174,7 +174,7 @@ export class QuerySystem {
             this.addEntityToIndexes(entity);
 
             // 更新索引管理器
-            this.archetypeSystem.addEntity(entity);
+            this._archetypeSystem.addEntity(entity);
         }
 
         // 清理缓存
@@ -189,17 +189,17 @@ export class QuerySystem {
      * @param entity 要移除的实体
      */
     public removeEntity(entity: Entity): void {
-        const index = this.entities.indexOf(entity);
+        const index = this._entities.indexOf(entity);
         if (index !== -1) {
             const componentTypes: ComponentType[] = [];
             for (const component of entity.components) {
                 componentTypes.push(component.constructor as ComponentType);
             }
 
-            this.entities.splice(index, 1);
+            this._entities.splice(index, 1);
             this.removeEntityFromIndexes(entity);
 
-            this.archetypeSystem.removeEntity(entity);
+            this._archetypeSystem.removeEntity(entity);
 
             if (componentTypes.length > 0) {
                 this.notifyReactiveQueriesEntityRemoved(entity, componentTypes);
@@ -222,7 +222,7 @@ export class QuerySystem {
      */
     public updateEntity(entity: Entity): void {
         // 检查实体是否在查询系统中
-        if (!this.entities.includes(entity)) {
+        if (!this._entities.includes(entity)) {
             // 如果实体不在系统中，直接添加
             this.addEntity(entity);
             return;
@@ -232,7 +232,7 @@ export class QuerySystem {
         this.removeEntityFromIndexes(entity);
 
         // 更新ArchetypeSystem中的实体状态
-        this.archetypeSystem.updateEntity(entity);
+        this._archetypeSystem.updateEntity(entity);
         // 重新添加实体到索引（基于新的组件状态）
         this.addEntityToIndexes(entity);
 
@@ -253,28 +253,27 @@ export class QuerySystem {
         // 标签索引
         const tag = entity.tag;
         if (tag !== undefined) {
-            const tagSet = this.entityIndex.byTag.get(tag) || this.createAndSetTagIndex(tag);
+            const tagSet = this._entityIndex.byTag.get(tag) || this.createAndSetTagIndex(tag);
             tagSet.add(entity);
         }
 
         // 名称索引
         const name = entity.name;
         if (name) {
-            const nameSet = this.entityIndex.byName.get(name) || this.createAndSetNameIndex(name);
+            const nameSet = this._entityIndex.byName.get(name) || this.createAndSetNameIndex(name);
             nameSet.add(entity);
         }
     }
 
-
     private createAndSetTagIndex(tag: number): Set<Entity> {
         const set = new Set<Entity>();
-        this.entityIndex.byTag.set(tag, set);
+        this._entityIndex.byTag.set(tag, set);
         return set;
     }
 
     private createAndSetNameIndex(name: string): Set<Entity> {
         const set = new Set<Entity>();
-        this.entityIndex.byName.set(name, set);
+        this._entityIndex.byName.set(name, set);
         return set;
     }
 
@@ -284,22 +283,22 @@ export class QuerySystem {
     private removeEntityFromIndexes(entity: Entity): void {
         // 从标签索引移除
         if (entity.tag !== undefined) {
-            const tagSet = this.entityIndex.byTag.get(entity.tag);
+            const tagSet = this._entityIndex.byTag.get(entity.tag);
             if (tagSet) {
                 tagSet.delete(entity);
                 if (tagSet.size === 0) {
-                    this.entityIndex.byTag.delete(entity.tag);
+                    this._entityIndex.byTag.delete(entity.tag);
                 }
             }
         }
 
         // 从名称索引移除
         if (entity.name) {
-            const nameSet = this.entityIndex.byName.get(entity.name);
+            const nameSet = this._entityIndex.byName.get(entity.name);
             if (nameSet) {
                 nameSet.delete(entity);
                 if (nameSet.size === 0) {
-                    this.entityIndex.byName.delete(entity.name);
+                    this._entityIndex.byName.delete(entity.name);
                 }
             }
         }
@@ -312,15 +311,15 @@ export class QuerySystem {
      * 通常在大量实体变更后调用以确保索引一致性。
      */
     private rebuildIndexes(): void {
-        this.entityIndex.byTag.clear();
-        this.entityIndex.byName.clear();
+        this._entityIndex.byTag.clear();
+        this._entityIndex.byName.clear();
 
         // 清理ArchetypeSystem和ComponentIndexManager
-        this.archetypeSystem.clear();
+        this._archetypeSystem.clear();
 
-        for (const entity of this.entities) {
+        for (const entity of this._entities) {
             this.addEntityToIndexes(entity);
-            this.archetypeSystem.addEntity(entity);
+            this._archetypeSystem.addEntity(entity);
         }
     }
 
@@ -342,7 +341,7 @@ export class QuerySystem {
      */
     public queryAll(...componentTypes: ComponentType[]): QueryResult {
         const startTime = performance.now();
-        this.queryStats.totalQueries++;
+        this._queryStats.totalQueries++;
 
         // 使用内部响应式查询作为智能缓存
         const reactiveQuery = this.getOrCreateReactiveQuery(QueryConditionType.ALL, componentTypes);
@@ -351,7 +350,7 @@ export class QuerySystem {
         const entities = reactiveQuery.getEntities();
 
         // 统计为缓存命中(响应式查询本质上是永不过期的智能缓存)
-        this.queryStats.cacheHits++;
+        this._queryStats.cacheHits++;
 
         return {
             entities,
@@ -379,7 +378,7 @@ export class QuerySystem {
      */
     public queryAny(...componentTypes: ComponentType[]): QueryResult {
         const startTime = performance.now();
-        this.queryStats.totalQueries++;
+        this._queryStats.totalQueries++;
 
         // 使用内部响应式查询作为智能缓存
         const reactiveQuery = this.getOrCreateReactiveQuery(QueryConditionType.ANY, componentTypes);
@@ -388,7 +387,7 @@ export class QuerySystem {
         const entities = reactiveQuery.getEntities();
 
         // 统计为缓存命中(响应式查询本质上是永不过期的智能缓存)
-        this.queryStats.cacheHits++;
+        this._queryStats.cacheHits++;
 
         return {
             entities,
@@ -416,7 +415,7 @@ export class QuerySystem {
      */
     public queryNone(...componentTypes: ComponentType[]): QueryResult {
         const startTime = performance.now();
-        this.queryStats.totalQueries++;
+        this._queryStats.totalQueries++;
 
         // 使用内部响应式查询作为智能缓存
         const reactiveQuery = this.getOrCreateReactiveQuery(QueryConditionType.NONE, componentTypes);
@@ -425,7 +424,7 @@ export class QuerySystem {
         const entities = reactiveQuery.getEntities();
 
         // 统计为缓存命中(响应式查询本质上是永不过期的智能缓存)
-        this.queryStats.cacheHits++;
+        this._queryStats.cacheHits++;
 
         return {
             entities,
@@ -437,13 +436,13 @@ export class QuerySystem {
 
     /**
      * 按标签查询实体
-     * 
+     *
      * 返回具有指定标签的所有实体。
      * 标签查询使用专用索引，具有很高的查询性能。
-     * 
+     *
      * @param tag 要查询的标签值
      * @returns 查询结果，包含匹配的实体和性能信息
-     * 
+     *
      * @example
      * ```typescript
      * // 查询所有玩家实体
@@ -452,14 +451,14 @@ export class QuerySystem {
      */
     public queryByTag(tag: number): QueryResult {
         const startTime = performance.now();
-        this.queryStats.totalQueries++;
+        this._queryStats.totalQueries++;
 
         const cacheKey = `tag:${tag}`;
 
         // 检查缓存
         const cached = this.getFromCache(cacheKey);
         if (cached) {
-            this.queryStats.cacheHits++;
+            this._queryStats.cacheHits++;
             return {
                 entities: cached,
                 count: cached.length,
@@ -469,8 +468,8 @@ export class QuerySystem {
         }
 
         // 使用索引查询
-        this.queryStats.indexHits++;
-        const entities = Array.from(this.entityIndex.byTag.get(tag) || []);
+        this._queryStats.indexHits++;
+        const entities = Array.from(this._entityIndex.byTag.get(tag) || []);
 
         // 缓存结果
         this.addToCache(cacheKey, entities);
@@ -485,13 +484,13 @@ export class QuerySystem {
 
     /**
      * 按名称查询实体
-     * 
+     *
      * 返回具有指定名称的所有实体。
      * 名称查询使用专用索引，适用于查找特定的命名实体。
-     * 
+     *
      * @param name 要查询的实体名称
      * @returns 查询结果，包含匹配的实体和性能信息
-     * 
+     *
      * @example
      * ```typescript
      * // 查找名为"Player"的实体
@@ -500,14 +499,14 @@ export class QuerySystem {
      */
     public queryByName(name: string): QueryResult {
         const startTime = performance.now();
-        this.queryStats.totalQueries++;
+        this._queryStats.totalQueries++;
 
         const cacheKey = `name:${name}`;
 
         // 检查缓存
         const cached = this.getFromCache(cacheKey);
         if (cached) {
-            this.queryStats.cacheHits++;
+            this._queryStats.cacheHits++;
             return {
                 entities: cached,
                 count: cached.length,
@@ -517,8 +516,8 @@ export class QuerySystem {
         }
 
         // 使用索引查询
-        this.queryStats.indexHits++;
-        const entities = Array.from(this.entityIndex.byName.get(name) || []);
+        this._queryStats.indexHits++;
+        const entities = Array.from(this._entityIndex.byName.get(name) || []);
 
         // 缓存结果
         this.addToCache(cacheKey, entities);
@@ -533,13 +532,13 @@ export class QuerySystem {
 
     /**
      * 按单个组件类型查询实体
-     * 
+     *
      * 返回包含指定组件类型的所有实体。
      * 这是最基础的查询方法，具有最高的查询性能。
-     * 
+     *
      * @param componentType 要查询的组件类型
      * @returns 查询结果，包含匹配的实体和性能信息
-     * 
+     *
      * @example
      * ```typescript
      * // 查询所有具有位置组件的实体
@@ -548,14 +547,14 @@ export class QuerySystem {
      */
     public queryByComponent<T extends Component>(componentType: ComponentType<T>): QueryResult {
         const startTime = performance.now();
-        this.queryStats.totalQueries++;
+        this._queryStats.totalQueries++;
 
         const cacheKey = this.generateCacheKey('component', [componentType]);
 
         // 检查缓存
         const cached = this.getFromCache(cacheKey);
         if (cached) {
-            this.queryStats.cacheHits++;
+            this._queryStats.cacheHits++;
             return {
                 entities: cached,
                 count: cached.length,
@@ -564,8 +563,8 @@ export class QuerySystem {
             };
         }
 
-        this.queryStats.indexHits++;
-        const entities = this.archetypeSystem.getEntitiesByComponent(componentType);
+        this._queryStats.indexHits++;
+        const entities = this._archetypeSystem.getEntitiesByComponent(componentType);
 
         // 缓存结果
         this.addToCache(cacheKey, entities);
@@ -582,12 +581,12 @@ export class QuerySystem {
      * 从缓存获取查询结果
      */
     private getFromCache(cacheKey: string): readonly Entity[] | null {
-        const entry = this.queryCache.get(cacheKey);
+        const entry = this._queryCache.get(cacheKey);
         if (!entry) return null;
 
         // 检查缓存是否过期或版本过期
-        if (Date.now() - entry.timestamp > this.cacheTimeout || entry.version !== this._version) {
-            this.queryCache.delete(cacheKey);
+        if (Date.now() - entry.timestamp > this._cacheTimeout || entry.version !== this._version) {
+            this._queryCache.delete(cacheKey);
             return null;
         }
 
@@ -600,11 +599,11 @@ export class QuerySystem {
      */
     private addToCache(cacheKey: string, entities: Entity[]): void {
         // 如果缓存已满，清理最少使用的条目
-        if (this.queryCache.size >= this.cacheMaxSize) {
+        if (this._queryCache.size >= this._cacheMaxSize) {
             this.cleanupCache();
         }
 
-        this.queryCache.set(cacheKey, {
+        this._queryCache.set(cacheKey, {
             entities: entities, // 直接使用引用，通过版本号控制失效
             timestamp: Date.now(),
             hitCount: 0,
@@ -618,22 +617,24 @@ export class QuerySystem {
     private cleanupCache(): void {
         // 移除过期的缓存条目
         const now = Date.now();
-        for (const [key, entry] of this.queryCache.entries()) {
-            if (now - entry.timestamp > this.cacheTimeout) {
-                this.queryCache.delete(key);
+        for (const [key, entry] of this._queryCache.entries()) {
+            if (now - entry.timestamp > this._cacheTimeout) {
+                this._queryCache.delete(key);
             }
         }
 
         // 如果还是太满，移除最少使用的条目
-        if (this.queryCache.size >= this.cacheMaxSize) {
+        if (this._queryCache.size >= this._cacheMaxSize) {
             let minHitCount = Infinity;
             let oldestKey = '';
             let oldestTimestamp = Infinity;
 
             // 单次遍历找到最少使用或最旧的条目
-            for (const [key, entry] of this.queryCache.entries()) {
-                if (entry.hitCount < minHitCount ||
-                    (entry.hitCount === minHitCount && entry.timestamp < oldestTimestamp)) {
+            for (const [key, entry] of this._queryCache.entries()) {
+                if (
+                    entry.hitCount < minHitCount ||
+                    (entry.hitCount === minHitCount && entry.timestamp < oldestTimestamp)
+                ) {
                     minHitCount = entry.hitCount;
                     oldestKey = key;
                     oldestTimestamp = entry.timestamp;
@@ -641,7 +642,7 @@ export class QuerySystem {
             }
 
             if (oldestKey) {
-                this.queryCache.delete(oldestKey);
+                this._queryCache.delete(oldestKey);
             }
         }
     }
@@ -650,8 +651,8 @@ export class QuerySystem {
      * 清除所有查询缓存
      */
     private clearQueryCache(): void {
-        this.queryCache.clear();
-        this.componentMaskCache.clear();
+        this._queryCache.clear();
+        this._componentMaskCache.clear();
     }
 
     /**
@@ -679,10 +680,13 @@ export class QuerySystem {
         }
 
         // 多组件查询：使用排序后的类型名称创建键
-        const sortKey = componentTypes.map(t => {
-            const name = getComponentTypeName(t);
-            return name;
-        }).sort().join(',');
+        const sortKey = componentTypes
+            .map((t) => {
+                const name = getComponentTypeName(t);
+                return name;
+            })
+            .sort()
+            .join(',');
 
         const fullKey = `${prefix}:${sortKey}`;
 
@@ -724,10 +728,7 @@ export class QuerySystem {
      * });
      * ```
      */
-    public createReactiveQuery(
-        componentTypes: ComponentType[],
-        config?: ReactiveQueryConfig
-    ): ReactiveQuery {
+    public createReactiveQuery(componentTypes: ComponentType[], config?: ReactiveQueryConfig): ReactiveQuery {
         if (!componentTypes || componentTypes.length === 0) {
             throw new Error('组件类型列表不能为空');
         }
@@ -741,10 +742,7 @@ export class QuerySystem {
 
         const query = new ReactiveQuery(condition, config);
 
-        const initialEntities = this.executeTraditionalQuery(
-            QueryConditionType.ALL,
-            componentTypes
-        );
+        const initialEntities = this.executeTraditionalQuery(QueryConditionType.ALL, componentTypes);
         query.initializeWith(initialEntities);
 
         const cacheKey = this.generateCacheKey('all', componentTypes);
@@ -810,18 +808,21 @@ export class QuerySystem {
      */
     private createComponentMask(componentTypes: ComponentType[]): BitMask64Data {
         // 生成缓存键
-        const cacheKey = componentTypes.map(t => {
-            return getComponentTypeName(t);
-        }).sort().join(',');
+        const cacheKey = componentTypes
+            .map((t) => {
+                return getComponentTypeName(t);
+            })
+            .sort()
+            .join(',');
 
         // 检查缓存
-        const cached = this.componentMaskCache.get(cacheKey);
+        const cached = this._componentMaskCache.get(cacheKey);
         if (cached) {
             return cached;
         }
 
         // 使用ComponentRegistry而不是ComponentTypeManager,确保bitIndex一致
-        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
+        const mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         for (const type of componentTypes) {
             // 确保组件已注册
             if (!ComponentRegistry.isRegistered(type)) {
@@ -832,7 +833,7 @@ export class QuerySystem {
         }
 
         // 缓存结果
-        this.componentMaskCache.set(cacheKey, mask);
+        this._componentMaskCache.set(cacheKey, mask);
         return mask;
     }
 
@@ -842,20 +843,20 @@ export class QuerySystem {
     public get version(): number {
         return this._version;
     }
-    
+
     /**
      * 获取所有实体
      */
     public getAllEntities(): readonly Entity[] {
-        return this.entities;
+        return this._entities;
     }
-    
+
     /**
      * 获取系统统计信息
-     * 
+     *
      * 返回查询系统的详细统计信息，包括实体数量、索引状态、
      * 查询性能统计等，用于性能监控和调试。
-     * 
+     *
      * @returns 系统统计信息对象
      */
     public getStats(): {
@@ -883,28 +884,32 @@ export class QuerySystem {
         };
     } {
         return {
-            entityCount: this.entities.length,
+            entityCount: this._entities.length,
             indexStats: {
-                componentIndexSize: this.archetypeSystem.getAllArchetypes().length,
-                tagIndexSize: this.entityIndex.byTag.size,
-                nameIndexSize: this.entityIndex.byName.size
+                componentIndexSize: this._archetypeSystem.getAllArchetypes().length,
+                tagIndexSize: this._entityIndex.byTag.size,
+                nameIndexSize: this._entityIndex.byName.size
             },
             queryStats: {
-                ...this.queryStats,
-                cacheHitRate: this.queryStats.totalQueries > 0 ?
-                    (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + '%' : '0%'
+                ...this._queryStats,
+                cacheHitRate:
+                    this._queryStats.totalQueries > 0
+                        ? ((this._queryStats.cacheHits / this._queryStats.totalQueries) * 100).toFixed(2) + '%'
+                        : '0%'
             },
             optimizationStats: {
-                archetypeSystem: this.archetypeSystem.getAllArchetypes().map(a => ({
+                archetypeSystem: this._archetypeSystem.getAllArchetypes().map((a) => ({
                     id: a.id,
-                    componentTypes: a.componentTypes.map(t => getComponentTypeName(t)),
+                    componentTypes: a.componentTypes.map((t) => getComponentTypeName(t)),
                     entityCount: a.entities.size
                 }))
             },
             cacheStats: {
                 size: this._reactiveQueries.size,
-                hitRate: this.queryStats.totalQueries > 0 ?
-                    (this.queryStats.cacheHits / this.queryStats.totalQueries * 100).toFixed(2) + '%' : '0%'
+                hitRate:
+                    this._queryStats.totalQueries > 0
+                        ? ((this._queryStats.cacheHits / this._queryStats.totalQueries) * 100).toFixed(2) + '%'
+                        : '0%'
             }
         };
     }
@@ -915,7 +920,7 @@ export class QuerySystem {
      * @param entity 要查询的实体
      */
     public getEntityArchetype(entity: Entity): Archetype | undefined {
-        return this.archetypeSystem.getEntityArchetype(entity);
+        return this._archetypeSystem.getEntityArchetype(entity);
     }
 
     // ============================================================
@@ -941,10 +946,7 @@ export class QuerySystem {
      * @param componentTypes 组件类型列表
      * @returns 响应式查询实例
      */
-    private getOrCreateReactiveQuery(
-        queryType: QueryConditionType,
-        componentTypes: ComponentType[]
-    ): ReactiveQuery {
+    private getOrCreateReactiveQuery(queryType: QueryConditionType, componentTypes: ComponentType[]): ReactiveQuery {
         // 生成缓存键(与传统缓存键格式一致)
         const cacheKey = this.generateCacheKey(queryType, componentTypes);
 
@@ -996,13 +998,10 @@ export class QuerySystem {
      * @param componentTypes 组件类型列表
      * @returns 匹配的实体列表
      */
-    private executeTraditionalQuery(
-        queryType: QueryConditionType,
-        componentTypes: ComponentType[]
-    ): Entity[] {
+    private executeTraditionalQuery(queryType: QueryConditionType, componentTypes: ComponentType[]): Entity[] {
         switch (queryType) {
             case QueryConditionType.ALL: {
-                const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'AND');
+                const archetypeResult = this._archetypeSystem.queryArchetypes(componentTypes, 'AND');
                 const entities: Entity[] = [];
                 for (const archetype of archetypeResult.archetypes) {
                     for (const entity of archetype.entities) {
@@ -1012,7 +1011,7 @@ export class QuerySystem {
                 return entities;
             }
             case QueryConditionType.ANY: {
-                const archetypeResult = this.archetypeSystem.queryArchetypes(componentTypes, 'OR');
+                const archetypeResult = this._archetypeSystem.queryArchetypes(componentTypes, 'OR');
                 const entities: Entity[] = [];
                 for (const archetype of archetypeResult.archetypes) {
                     for (const entity of archetype.entities) {
@@ -1023,9 +1022,7 @@ export class QuerySystem {
             }
             case QueryConditionType.NONE: {
                 const mask = this.createComponentMask(componentTypes);
-                return this.entities.filter(entity =>
-                    BitMask64Utils.hasNone(entity.componentMask, mask)
-                );
+                return this._entities.filter((entity) => BitMask64Utils.hasNone(entity.componentMask, mask));
             }
             default:
                 return [];
@@ -1139,10 +1136,10 @@ export class QuerySystem {
 
 /**
  * 查询构建器
- * 
+ *
  * 提供链式API来构建复杂的实体查询条件。
  * 支持组合多种查询条件，创建灵活的查询表达式。
- * 
+ *
  * @example
  * ```typescript
  * const result = new QueryBuilder(querySystem)
@@ -1162,7 +1159,7 @@ export class QueryBuilder {
 
     /**
      * 添加"必须包含所有组件"条件
-     * 
+     *
      * @param componentTypes 必须包含的组件类型
      * @returns 查询构建器实例，支持链式调用
      */
@@ -1177,7 +1174,7 @@ export class QueryBuilder {
 
     /**
      * 添加"必须包含任意组件"条件
-     * 
+     *
      * @param componentTypes 必须包含其中任意一个的组件类型
      * @returns 查询构建器实例，支持链式调用
      */
@@ -1192,7 +1189,7 @@ export class QueryBuilder {
 
     /**
      * 添加"不能包含任何组件"条件
-     * 
+     *
      * @param componentTypes 不能包含的组件类型
      * @returns 查询构建器实例，支持链式调用
      */
@@ -1207,9 +1204,9 @@ export class QueryBuilder {
 
     /**
      * 执行查询并返回结果
-     * 
+     *
      * 根据已添加的查询条件执行实体查询。
-     * 
+     *
      * @returns 查询结果，包含匹配的实体和性能信息
      */
     public execute(): QueryResult {
@@ -1241,7 +1238,7 @@ export class QueryBuilder {
      * 创建组件掩码
      */
     private createComponentMask(componentTypes: ComponentType[]): BitMask64Data {
-        let mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
+        const mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         for (const type of componentTypes) {
             try {
                 const bitMask = ComponentRegistry.getBitMask(type);
@@ -1255,13 +1252,13 @@ export class QueryBuilder {
 
     /**
      * 重置查询构建器
-     * 
+     *
      * 清除所有已添加的查询条件，重新开始构建查询。
-     * 
+     *
      * @returns 查询构建器实例，支持链式调用
      */
     public reset(): QueryBuilder {
         this.conditions = [];
         return this;
     }
-} 
+}
