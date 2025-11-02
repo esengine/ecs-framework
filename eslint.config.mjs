@@ -18,7 +18,13 @@ export default [
         rules: {
             'semi': ['error', 'always'],
             'quotes': ['error', 'single', { avoidEscape: true }],
-            'indent': ['error', 4, { SwitchCase: 1 }],
+            'indent': ['error', 4, {
+                SwitchCase: 1,
+                ignoredNodes: [
+                    'PropertyDefinition[decorators.length > 0]',
+                    'TSTypeParameterInstantiation'
+                ]
+            }],
             'no-trailing-spaces': 'error',
             'eol-last': ['error', 'always'],
             'comma-dangle': ['error', 'never'],
