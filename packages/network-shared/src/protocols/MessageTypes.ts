@@ -266,7 +266,7 @@ export interface IErrorMessage extends INetworkMessage {
 /**
  * 消息类型联合
  */
-export type NetworkMessage = 
+export type NetworkMessage =
   | IConnectMessage
   | IConnectResponseMessage
   | IHeartbeatMessage

@@ -207,24 +207,24 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     updateNodePosition: (nodeId: string, position: { x: number; y: number }) => set((state: BehaviorTreeState) => ({
         nodes: state.nodes.map((n: BehaviorTreeNode) =>
             n.id === nodeId ? { ...n, position } : n
-        ),
+        )
     })),
 
     updateNodesPosition: (updates: Map<string, { x: number; y: number }>) => set((state: BehaviorTreeState) => ({
         nodes: state.nodes.map((node: BehaviorTreeNode) => {
             const newPos = updates.get(node.id);
             return newPos ? { ...node, position: newPos } : node;
-        }),
+        })
     })),
 
     setConnections: (connections: Connection[]) => set({ connections }),
 
     addConnection: (connection: Connection) => set((state: BehaviorTreeState) => ({
-        connections: [...state.connections, connection],
+        connections: [...state.connections, connection]
     })),
 
     removeConnections: (filter: (conn: Connection) => boolean) => set((state: BehaviorTreeState) => ({
-        connections: state.connections.filter(filter),
+        connections: state.connections.filter(filter)
     })),
 
     setSelectedNodeIds: (nodeIds: string[]) => set({ selectedNodeIds: nodeIds }),
@@ -232,14 +232,14 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     toggleNodeSelection: (nodeId: string) => set((state: BehaviorTreeState) => ({
         selectedNodeIds: state.selectedNodeIds.includes(nodeId)
             ? state.selectedNodeIds.filter((id: string) => id !== nodeId)
-            : [...state.selectedNodeIds, nodeId],
+            : [...state.selectedNodeIds, nodeId]
     })),
 
     clearSelection: () => set({ selectedNodeIds: [] }),
 
     startDragging: (nodeId: string, startPositions: Map<string, { x: number; y: number }>) => set({
         draggingNodeId: nodeId,
-        dragStartPositions: startPositions,
+        dragStartPositions: startPositions
     }),
 
     stopDragging: () => set({ draggingNodeId: null }),
@@ -267,7 +267,7 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     clearConnecting: () => set({
         connectingFrom: null,
         connectingFromProperty: null,
-        connectingToPos: null,
+        connectingToPos: null
     }),
 
     // 框选 Actions
@@ -280,7 +280,7 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     clearBoxSelect: () => set({
         isBoxSelecting: false,
         boxSelectStart: null,
-        boxSelectEnd: null,
+        boxSelectEnd: null
     }),
 
     // 拖动偏移 Actions
@@ -306,9 +306,9 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     // 自动排序子节点（按X坐标从左到右）
     sortChildrenByPosition: () => set((state: BehaviorTreeState) => {
         const nodeMap = new Map<string, BehaviorTreeNode>();
-        state.nodes.forEach(node => nodeMap.set(node.id, node));
+        state.nodes.forEach((node) => nodeMap.set(node.id, node));
 
-        const sortedNodes = state.nodes.map(node => {
+        const sortedNodes = state.nodes.map((node) => {
             if (node.children.length <= 1) {
                 return node;
             }
@@ -366,7 +366,7 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
             const className = node.template?.className;
             if (className) {
                 const allTemplates = NodeTemplates.getAllTemplates();
-                const latestTemplate = allTemplates.find(t => t.className === className);
+                const latestTemplate = allTemplates.find((t) => t.className === className);
 
                 if (latestTemplate) {
                     return {

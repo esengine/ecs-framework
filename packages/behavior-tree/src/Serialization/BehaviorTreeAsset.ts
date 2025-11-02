@@ -131,7 +131,7 @@ export class BehaviorTreeAssetValidator {
             errors.push('Missing or invalid nodes array');
         } else {
             const nodeIds = new Set<string>();
-            const rootNode = asset.nodes.find(n => n.id === asset.rootNodeId);
+            const rootNode = asset.nodes.find((n) => n.id === asset.rootNodeId);
 
             if (!rootNode) {
                 errors.push(`Root node '${asset.rootNodeId}' not found in nodes array`);
@@ -157,7 +157,7 @@ export class BehaviorTreeAssetValidator {
                 // 检查子节点引用
                 if (node.children) {
                     for (const childId of node.children) {
-                        if (!asset.nodes.find(n => n.id === childId)) {
+                        if (!asset.nodes.find((n) => n.id === childId)) {
                             errors.push(`Node ${node.id} references non-existent child: ${childId}`);
                         }
                     }
@@ -167,7 +167,7 @@ export class BehaviorTreeAssetValidator {
             // 检查是否有孤立节点
             const referencedNodes = new Set<string>([asset.rootNodeId]);
             const collectReferencedNodes = (nodeId: string) => {
-                const node = asset.nodes.find(n => n.id === nodeId);
+                const node = asset.nodes.find((n) => n.id === nodeId);
                 if (node && node.children) {
                     for (const childId of node.children) {
                         referencedNodes.add(childId);
@@ -206,8 +206,8 @@ export class BehaviorTreeAssetValidator {
 
         // 检查属性绑定
         if (asset.propertyBindings && Array.isArray(asset.propertyBindings)) {
-            const nodeIds = new Set(asset.nodes.map(n => n.id));
-            const varNames = new Set(asset.blackboard?.map(v => v.name) || []);
+            const nodeIds = new Set(asset.nodes.map((n) => n.id));
+            const varNames = new Set(asset.blackboard?.map((v) => v.name) || []);
 
             for (const binding of asset.propertyBindings) {
                 if (!nodeIds.has(binding.nodeId)) {
@@ -276,7 +276,7 @@ export class BehaviorTreeAssetValidator {
 
         // 计算最大深度
         const getDepth = (nodeId: string, currentDepth: number = 0): number => {
-            const node = asset.nodes.find(n => n.id === nodeId);
+            const node = asset.nodes.find((n) => n.id === nodeId);
             if (!node || !node.children || node.children.length === 0) {
                 return currentDepth;
             }

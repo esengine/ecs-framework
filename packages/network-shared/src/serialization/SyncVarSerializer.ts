@@ -107,19 +107,19 @@ export class SyncVarSerializer {
     public serializeSyncBatch(batch: SyncBatch): SerializationResult {
         try {
             const startTime = performance.now();
-            
+
             // 准备序列化数据
             let dataToSerialize: any = batch;
-            
+
             // 应用差量同步
             if (this.config.enableDeltaSync) {
                 dataToSerialize = this.applyDeltaCompression(batch);
             }
-            
+
             // 基础JSON序列化
             const jsonString = JSON.stringify(dataToSerialize, this.replacer.bind(this));
             const originalSize = new TextEncoder().encode(jsonString).length;
-            
+
             // 检查消息大小限制
             if (originalSize > this.config.maxMessageSize) {
                 return {
@@ -130,10 +130,10 @@ export class SyncVarSerializer {
                     compressionRatio: 0
                 };
             }
-            
+
             let finalData: ArrayBuffer | string = jsonString;
             let compressedSize = originalSize;
-            
+
             // 应用压缩
             if (this.config.enableCompression && originalSize > 256) {
                 const compressionResult = this.compress(jsonString);
@@ -142,9 +142,9 @@ export class SyncVarSerializer {
                     compressedSize = compressionResult.data.byteLength;
                 }
             }
-            
+
             const compressionRatio = originalSize > 0 ? compressedSize / originalSize : 1;
-            
+
             return {
                 success: true,
                 data: finalData,
@@ -152,7 +152,7 @@ export class SyncVarSerializer {
                 compressedSize,
                 compressionRatio
             };
-            
+
         } catch (error) {
             return {
                 success: false,
@@ -170,7 +170,7 @@ export class SyncVarSerializer {
     public deserializeSyncBatch(data: ArrayBuffer | string): DeserializationResult<SyncBatch> {
         try {
             let jsonString: string;
-            
+
             // 解压缩
             if (data instanceof ArrayBuffer) {
                 const decompressResult = this.decompress(data);
@@ -185,10 +185,10 @@ export class SyncVarSerializer {
             } else {
                 jsonString = data;
             }
-            
+
             // JSON反序列化
             const parsedData = JSON.parse(jsonString, this.reviver.bind(this));
-            
+
             // 类型检查
             if (this.config.enableTypeChecking) {
                 const typeCheckResult = this.validateSyncBatchType(parsedData);
@@ -200,19 +200,19 @@ export class SyncVarSerializer {
                     };
                 }
             }
-            
+
             // 应用差量还原
             let finalData = parsedData;
             if (this.config.enableDeltaSync && this.isDeltaData(parsedData)) {
                 finalData = this.applyDeltaRestore(parsedData);
             }
-            
+
             return {
                 success: true,
                 data: finalData as SyncBatch,
                 isValidType: true
             };
-            
+
         } catch (error) {
             return {
                 success: false,
@@ -227,7 +227,7 @@ export class SyncVarSerializer {
      */
     public createSyncMessage(batch: SyncBatch, senderId: string): INetworkMessage {
         const serializedData = this.serializeSyncBatch(batch);
-        
+
         return {
             type: MessageType.SYNC_BATCH,
             messageId: this.generateMessageId(),
@@ -250,7 +250,7 @@ export class SyncVarSerializer {
                 isValidType: false
             };
         }
-        
+
         return this.deserializeSyncBatch(message.data);
     }
 
@@ -293,7 +293,7 @@ export class SyncVarSerializer {
     private applyDeltaCompression(batch: SyncBatch): DeltaData | SyncBatch {
         const key = batch.instanceId;
         const lastRecord = this.deltaHistory.get(key);
-        
+
         if (!lastRecord) {
             // 第一次同步，存储完整数据
             this.deltaHistory.set(key, {
@@ -302,18 +302,18 @@ export class SyncVarSerializer {
             });
             return batch;
         }
-        
+
         // 计算差量
         const changes: { [key: string]: any } = {};
         const deletions: string[] = [];
-        
+
         // 检查变化的属性
         for (const [prop, value] of Object.entries(batch.changes)) {
             if (!lastRecord.data.changes || lastRecord.data.changes[prop] !== value) {
                 changes[prop] = value;
             }
         }
-        
+
         // 检查删除的属性
         if (lastRecord.data.changes) {
             for (const prop of Object.keys(lastRecord.data.changes)) {
@@ -322,7 +322,7 @@ export class SyncVarSerializer {
                 }
             }
         }
-        
+
         // 如果没有变化，返回空的差量数据
         if (Object.keys(changes).length === 0 && deletions.length === 0) {
             return {
@@ -332,14 +332,14 @@ export class SyncVarSerializer {
                 deletions: []
             };
         }
-        
+
         // 更新历史记录
         const currentVersion = ++this.versionCounter;
         this.deltaHistory.set(key, {
             version: currentVersion,
             data: { ...batch }
         });
-        
+
         return {
             baseVersion: lastRecord.version,
             currentVersion,
@@ -370,7 +370,7 @@ export class SyncVarSerializer {
      * 检查是否为差量数据
      */
     private isDeltaData(data: any): data is DeltaData {
-        return data && 
+        return data &&
                typeof data.baseVersion === 'number' &&
                typeof data.currentVersion === 'number' &&
                typeof data.changes === 'object' &&
@@ -386,7 +386,7 @@ export class SyncVarSerializer {
             const compressed = this.lzCompress(data);
             const encoder = new TextEncoder();
             const bytes = encoder.encode(compressed);
-            
+
             return {
                 success: true,
                 data: bytes.buffer
@@ -404,7 +404,7 @@ export class SyncVarSerializer {
             const decoder = new TextDecoder();
             const compressedString = decoder.decode(data);
             const decompressed = this.lzDecompress(compressedString);
-            
+
             return {
                 success: true,
                 data: decompressed
@@ -422,20 +422,20 @@ export class SyncVarSerializer {
         if (value instanceof Date) {
             return { __type: 'Date', value: value.toISOString() };
         }
-        
+
         if (value instanceof Map) {
             return { __type: 'Map', value: Array.from(value.entries()) };
         }
-        
+
         if (value instanceof Set) {
             return { __type: 'Set', value: Array.from(value) };
         }
-        
+
         // 处理BigInt
         if (typeof value === 'bigint') {
             return { __type: 'BigInt', value: value.toString() };
         }
-        
+
         return value;
     }
 
@@ -455,7 +455,7 @@ export class SyncVarSerializer {
                     return BigInt(value.value);
             }
         }
-        
+
         return value;
     }
 
@@ -464,28 +464,28 @@ export class SyncVarSerializer {
      */
     private validateSyncBatchType(data: any): { isValid: boolean; errors: string[] } {
         const errors: string[] = [];
-        
+
         if (!data || typeof data !== 'object') {
             errors.push('数据不是对象');
             return { isValid: false, errors };
         }
-        
+
         if (typeof data.instanceId !== 'string') {
             errors.push('instanceId必须是字符串');
         }
-        
+
         if (typeof data.instanceType !== 'string') {
             errors.push('instanceType必须是字符串');
         }
-        
+
         if (!data.changes || typeof data.changes !== 'object') {
             errors.push('changes必须是对象');
         }
-        
+
         if (typeof data.timestamp !== 'number') {
             errors.push('timestamp必须是数字');
         }
-        
+
         return { isValid: errors.length === 0, errors };
     }
 
@@ -505,7 +505,7 @@ export class SyncVarSerializer {
         if (priorities.length === 0) {
             return 5; // 默认优先级
         }
-        
+
         // 使用最高优先级
         return Math.max(...priorities);
     }
@@ -515,22 +515,22 @@ export class SyncVarSerializer {
      */
     private lzCompress(input: string): string {
         if (!input) return '';
-        
+
         const dictionary: { [key: string]: number } = {};
         let dictSize = 256;
-        
+
         // 初始化字典
         for (let i = 0; i < 256; i++) {
             dictionary[String.fromCharCode(i)] = i;
         }
-        
+
         let w = '';
         const result: number[] = [];
-        
+
         for (let i = 0; i < input.length; i++) {
             const c = input.charAt(i);
             const wc = w + c;
-            
+
             if (dictionary[wc] !== undefined) {
                 w = wc;
             } else {
@@ -539,11 +539,11 @@ export class SyncVarSerializer {
                 w = c;
             }
         }
-        
+
         if (w) {
             result.push(dictionary[w]);
         }
-        
+
         // 将结果编码为Base64以确保字符串安全
         return this.arrayToBase64(result);
     }
@@ -553,25 +553,25 @@ export class SyncVarSerializer {
      */
     private lzDecompress(compressed: string): string {
         if (!compressed) return '';
-        
+
         const data = this.base64ToArray(compressed);
         if (data.length === 0) return '';
-        
+
         const dictionary: { [key: number]: string } = {};
         let dictSize = 256;
-        
+
         // 初始化字典
         for (let i = 0; i < 256; i++) {
             dictionary[i] = String.fromCharCode(i);
         }
-        
+
         let w = String.fromCharCode(data[0]);
         const result = [w];
-        
+
         for (let i = 1; i < data.length; i++) {
             const k = data[i];
             let entry: string;
-            
+
             if (dictionary[k] !== undefined) {
                 entry = dictionary[k];
             } else if (k === dictSize) {
@@ -579,12 +579,12 @@ export class SyncVarSerializer {
             } else {
                 throw new Error('解压缩错误：无效的压缩数据');
             }
-            
+
             result.push(entry);
             dictionary[dictSize++] = w + entry.charAt(0);
             w = entry;
         }
-        
+
         return result.join('');
     }
 
@@ -602,7 +602,7 @@ export class SyncVarSerializer {
                 bytes.push(255, num - 255);
             }
         }
-        
+
         // 转换为字符串然后编码为Base64
         const binaryString = String.fromCharCode(...bytes);
         return btoa(binaryString);
@@ -615,11 +615,11 @@ export class SyncVarSerializer {
         try {
             const binaryString = atob(base64);
             const bytes: number[] = [];
-            
+
             for (let i = 0; i < binaryString.length; i++) {
                 bytes.push(binaryString.charCodeAt(i));
             }
-            
+
             // 还原原始数字数组
             const result: number[] = [];
             for (let i = 0; i < bytes.length; i++) {
@@ -630,7 +630,7 @@ export class SyncVarSerializer {
                     result.push(bytes[i]);
                 }
             }
-            
+
             return result;
         } catch (error) {
             throw new Error('Base64解码失败');

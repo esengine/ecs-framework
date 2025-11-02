@@ -66,7 +66,7 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
                 setSelectAll(true);
 
                 const newFormats = new Map<string, 'json' | 'binary'>();
-                availableFiles.forEach(file => {
+                availableFiles.forEach((file) => {
                     newFormats.set(file, 'binary');
                 });
                 setFileFormats(newFormats);

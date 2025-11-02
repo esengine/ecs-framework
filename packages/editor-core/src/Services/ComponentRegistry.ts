@@ -17,36 +17,36 @@ export interface ComponentTypeInfo {
  */
 @Injectable()
 export class ComponentRegistry implements IService {
-  private components: Map<string, ComponentTypeInfo> = new Map();
+    private components: Map<string, ComponentTypeInfo> = new Map();
 
-  public dispose(): void {
-    this.components.clear();
-  }
+    public dispose(): void {
+        this.components.clear();
+    }
 
-  public register(info: ComponentTypeInfo): void {
-    this.components.set(info.name, info);
-  }
+    public register(info: ComponentTypeInfo): void {
+        this.components.set(info.name, info);
+    }
 
-  public unregister(name: string): void {
-    this.components.delete(name);
-  }
+    public unregister(name: string): void {
+        this.components.delete(name);
+    }
 
-  public getComponent(name: string): ComponentTypeInfo | undefined {
-    return this.components.get(name);
-  }
+    public getComponent(name: string): ComponentTypeInfo | undefined {
+        return this.components.get(name);
+    }
 
-  public getAllComponents(): ComponentTypeInfo[] {
-    return Array.from(this.components.values());
-  }
+    public getAllComponents(): ComponentTypeInfo[] {
+        return Array.from(this.components.values());
+    }
 
-  public getComponentsByCategory(category: string): ComponentTypeInfo[] {
-    return this.getAllComponents().filter(c => c.category === category);
-  }
+    public getComponentsByCategory(category: string): ComponentTypeInfo[] {
+        return this.getAllComponents().filter((c) => c.category === category);
+    }
 
-  public createInstance(name: string, ...args: any[]): Component | null {
-    const info = this.components.get(name);
-    if (!info || !info.type) return null;
+    public createInstance(name: string, ...args: any[]): Component | null {
+        const info = this.components.get(name);
+        if (!info || !info.type) return null;
 
-    return new info.type(...args);
-  }
+        return new info.type(...args);
+    }
 }

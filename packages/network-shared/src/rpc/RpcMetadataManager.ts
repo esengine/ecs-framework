@@ -19,16 +19,16 @@ export interface RpcMetadataManagerEvents {
  */
 export class RpcMetadataManager extends EventEmitter {
     private logger = createLogger('RpcMetadataManager');
-    
+
     /** 方法注册表 */
     private registry: RpcMethodRegistry = new Map();
-    
+
     /** 类到方法的映射 */
     private classMethods = new Map<string, Set<string>>();
-    
+
     /** 方法名到类的映射 */
     private methodToClass = new Map<string, string>();
-    
+
     /** 实例缓存 */
     private instances = new Map<string, object>();
 
@@ -37,15 +37,15 @@ export class RpcMetadataManager extends EventEmitter {
      */
     public registerClass(instance: object): void {
         const className = instance.constructor.name;
-        
+
         try {
             const rpcMethods = getRpcMethods(instance.constructor as Function);
-            
+
             if (rpcMethods.length === 0) {
                 this.logger.warn(`类 ${className} 没有RPC方法`);
                 return;
             }
-            
+
             // 验证所有方法定义
             for (const metadata of rpcMethods) {
                 const validation = RpcMethodValidator.validateMethodDefinition(metadata);
@@ -53,44 +53,44 @@ export class RpcMetadataManager extends EventEmitter {
                     throw new Error(`${className}.${metadata.methodName}: ${validation.error}`);
                 }
             }
-            
+
             // 注册方法
             const methodNames = new Set<string>();
-            
+
             for (const metadata of rpcMethods) {
                 const fullMethodName = `${className}.${metadata.methodName}`;
-                
+
                 // 检查方法是否已存在
                 if (this.registry.has(fullMethodName)) {
                     throw new Error(`RPC方法已存在: ${fullMethodName}`);
                 }
-                
+
                 // 获取实际方法处理器
                 const handler = (instance as Record<string, unknown>)[metadata.methodName];
                 if (typeof handler !== 'function') {
                     throw new Error(`方法不存在或不是函数: ${fullMethodName}`);
                 }
-                
+
                 // 注册方法
                 this.registry.set(fullMethodName, {
                     metadata,
                     handler: handler.bind(instance)
                 });
-                
+
                 methodNames.add(metadata.methodName);
                 this.methodToClass.set(fullMethodName, className);
-                
+
                 this.logger.debug(`已注册RPC方法: ${fullMethodName}`);
                 this.emit('methodRegistered', metadata);
             }
-            
+
             // 更新类映射
             this.classMethods.set(className, methodNames);
             this.instances.set(className, instance);
-            
+
             this.logger.info(`已注册RPC类: ${className}，方法数: ${methodNames.size}`);
             this.emit('classRegistered', className, methodNames.size);
-            
+
         } catch (error) {
             this.logger.error(`注册RPC类失败: ${className}`, error);
             throw error;
@@ -101,16 +101,16 @@ export class RpcMetadataManager extends EventEmitter {
      * 注销RPC类
      */
     public unregisterClass(classNameOrInstance: string | object): void {
-        const className = typeof classNameOrInstance === 'string' 
-            ? classNameOrInstance 
+        const className = typeof classNameOrInstance === 'string'
+            ? classNameOrInstance
             : classNameOrInstance.constructor.name;
-        
+
         const methodNames = this.classMethods.get(className);
         if (!methodNames) {
             this.logger.warn(`RPC类未注册: ${className}`);
             return;
         }
-        
+
         // 移除所有方法
         for (const methodName of methodNames) {
             const fullMethodName = `${className}.${methodName}`;
@@ -118,11 +118,11 @@ export class RpcMetadataManager extends EventEmitter {
             this.methodToClass.delete(fullMethodName);
             this.emit('methodUnregistered', fullMethodName);
         }
-        
+
         // 清理映射
         this.classMethods.delete(className);
         this.instances.delete(className);
-        
+
         this.logger.info(`已注销RPC类: ${className}`);
         this.emit('classUnregistered', className);
     }
@@ -155,13 +155,13 @@ export class RpcMetadataManager extends EventEmitter {
      */
     public getServerRpcMethods(): RpcMethodMetadata[] {
         const methods: RpcMethodMetadata[] = [];
-        
+
         for (const [, entry] of this.registry) {
             if (entry.metadata.isServerRpc) {
                 methods.push(entry.metadata);
             }
         }
-        
+
         return methods;
     }
 
@@ -170,13 +170,13 @@ export class RpcMetadataManager extends EventEmitter {
      */
     public getClientRpcMethods(): RpcMethodMetadata[] {
         const methods: RpcMethodMetadata[] = [];
-        
+
         for (const [, entry] of this.registry) {
             if (!entry.metadata.isServerRpc) {
                 methods.push(entry.metadata);
             }
         }
-        
+
         return methods;
     }
 
@@ -188,9 +188,9 @@ export class RpcMetadataManager extends EventEmitter {
         if (!methodNames) {
             return [];
         }
-        
+
         const methods: RpcMethodMetadata[] = [];
-        
+
         for (const methodName of methodNames) {
             const fullMethodName = `${className}.${methodName}`;
             const entry = this.registry.get(fullMethodName);
@@ -198,7 +198,7 @@ export class RpcMetadataManager extends EventEmitter {
                 methods.push(entry.metadata);
             }
         }
-        
+
         return methods;
     }
 
@@ -238,10 +238,10 @@ export class RpcMetadataManager extends EventEmitter {
         serverRpcMethods: number;
         clientRpcMethods: number;
         registeredClasses: number;
-    } {
+        } {
         let serverRpcCount = 0;
         let clientRpcCount = 0;
-        
+
         for (const [, entry] of this.registry) {
             if (entry.metadata.isServerRpc) {
                 serverRpcCount++;
@@ -249,7 +249,7 @@ export class RpcMetadataManager extends EventEmitter {
                 clientRpcCount++;
             }
         }
-        
+
         return {
             totalMethods: this.registry.size,
             serverRpcMethods: serverRpcCount,
@@ -273,7 +273,7 @@ export class RpcMetadataManager extends EventEmitter {
                 error: `RPC方法不存在: ${methodName}`
             };
         }
-        
+
         return RpcMethodValidator.validateCall(metadata, args, callerId);
     }
 
@@ -287,33 +287,33 @@ export class RpcMetadataManager extends EventEmitter {
         target?: string;
     }): RpcMethodMetadata[] {
         const results: RpcMethodMetadata[] = [];
-        
+
         for (const [methodName, entry] of this.registry) {
             const metadata = entry.metadata;
-            
+
             // 类名过滤
             if (query.className && metadata.className !== query.className) {
                 continue;
             }
-            
+
             // RPC类型过滤
             if (query.isServerRpc !== undefined && metadata.isServerRpc !== query.isServerRpc) {
                 continue;
             }
-            
+
             // 认证要求过滤
             if (query.requireAuth !== undefined && metadata.options.requireAuth !== query.requireAuth) {
                 continue;
             }
-            
+
             // 目标过滤
             if (query.target && metadata.options.target !== query.target) {
                 continue;
             }
-            
+
             results.push(metadata);
         }
-        
+
         return results;
     }
 
@@ -322,16 +322,16 @@ export class RpcMetadataManager extends EventEmitter {
      */
     public clear(): void {
         const classNames = Array.from(this.classMethods.keys());
-        
+
         for (const className of classNames) {
             this.unregisterClass(className);
         }
-        
+
         this.registry.clear();
         this.classMethods.clear();
         this.methodToClass.clear();
         this.instances.clear();
-        
+
         this.logger.info('已清空所有RPC注册');
     }
 

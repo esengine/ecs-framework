@@ -162,7 +162,7 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
         setLogs(logService.getLogs().slice(-MAX_LOGS));
 
         const unsubscribe = logService.subscribe((entry) => {
-            setLogs(prev => {
+            setLogs((prev) => {
                 const newLogs = [...prev, entry];
                 if (newLogs.length > MAX_LOGS) {
                     return newLogs.slice(-MAX_LOGS);
@@ -316,7 +316,7 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
         }
 
         // 清理不再需要的缓存（日志被删除）
-        const logIds = new Set(logs.map(log => log.id));
+        const logIds = new Set(logs.map((log) => log.id));
         for (const cachedId of cache.keys()) {
             if (!logIds.has(cachedId)) {
                 cache.delete(cachedId);
@@ -327,7 +327,7 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
     }, [logs, extractJSON]);
 
     const filteredLogs = useMemo(() => {
-        return logs.filter(log => {
+        return logs.filter((log) => {
             if (!levelFilter.has(log.level)) return false;
             if (showRemoteOnly && log.source !== 'remote') return false;
             if (filter && !log.message.toLowerCase().includes(filter.toLowerCase())) {
@@ -357,14 +357,14 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
     };
 
     const levelCounts = useMemo(() => ({
-        [LogLevel.Debug]: logs.filter(l => l.level === LogLevel.Debug).length,
-        [LogLevel.Info]: logs.filter(l => l.level === LogLevel.Info).length,
-        [LogLevel.Warn]: logs.filter(l => l.level === LogLevel.Warn).length,
-        [LogLevel.Error]: logs.filter(l => l.level === LogLevel.Error || l.level === LogLevel.Fatal).length
+        [LogLevel.Debug]: logs.filter((l) => l.level === LogLevel.Debug).length,
+        [LogLevel.Info]: logs.filter((l) => l.level === LogLevel.Info).length,
+        [LogLevel.Warn]: logs.filter((l) => l.level === LogLevel.Warn).length,
+        [LogLevel.Error]: logs.filter((l) => l.level === LogLevel.Error || l.level === LogLevel.Fatal).length
     }), [logs]);
 
     const remoteLogCount = useMemo(() =>
-        logs.filter(l => l.source === 'remote').length
+        logs.filter((l) => l.source === 'remote').length
     , [logs]);
 
     return (
@@ -442,7 +442,7 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
                         <p>No logs to display</p>
                     </div>
                 ) : (
-                    filteredLogs.map(log => (
+                    filteredLogs.map((log) => (
                         <LogEntryItem
                             key={log.id}
                             log={log}

@@ -59,7 +59,7 @@ class SnowflakeIdGenerator {
     private static readonly WORKER_ID_BITS = 5;
     private static readonly DATACENTER_ID_BITS = 5;
     private static readonly SEQUENCE_BITS = 12;
-    
+
     private readonly workerId: number;
     private readonly datacenterId: number;
     private sequence = 0;
@@ -107,16 +107,16 @@ export class MessageManager {
     private logger = createLogger('MessageManager');
     private config: MessageManagerConfig;
     private stats: MessageStats;
-    
+
     // ID生成器
     private sequentialId = 0;
     private snowflakeGenerator: SnowflakeIdGenerator;
-    
+
     // 消息去重和排序
     private recentMessageIds: Set<string> = new Set();
     private pendingMessages: Map<string, INetworkMessage> = new Map();
     private messageSequence: Map<string, number> = new Map();
-    
+
     // 清理定时器
     private cleanupTimer?: NodeJS.Timeout;
 
@@ -201,7 +201,7 @@ export class MessageManager {
      */
     validateMessage(message: INetworkMessage, senderId?: string): MessageValidationResult {
         this.stats.totalValidated++;
-        
+
         const errors: string[] = [];
         const warnings: string[] = [];
 
@@ -233,12 +233,12 @@ export class MessageManager {
         if (this.config.enableTimestampValidation && message.timestamp) {
             const now = Date.now();
             const drift = Math.abs(now - message.timestamp);
-            
+
             if (drift > this.config.maxTimestampDrift) {
                 errors.push(`时间戳偏移过大: ${drift}ms > ${this.config.maxTimestampDrift}ms`);
                 this.stats.timestampErrors++;
             }
-            
+
             if (message.timestamp > now + 10000) { // 未来10秒以上
                 warnings.push('消息时间戳来自未来');
             }
@@ -255,7 +255,7 @@ export class MessageManager {
         }
 
         const isValid = errors.length === 0;
-        
+
         if (isValid) {
             this.stats.validMessages++;
         } else {
@@ -279,11 +279,11 @@ export class MessageManager {
 
         const senderId = message.senderId;
         const currentSequence = this.messageSequence.get(senderId) || 0;
-        
+
         // 检查消息是否按顺序到达
         const messageTimestamp = message.timestamp;
         const expectedSequence = currentSequence + 1;
-        
+
         // 简单的时间戳排序逻辑
         if (messageTimestamp >= expectedSequence) {
             // 消息按顺序到达
@@ -293,13 +293,13 @@ export class MessageManager {
             // 消息乱序，暂存
             this.pendingMessages.set(message.messageId, message);
             this.stats.outOfOrderMessages++;
-            
+
             // 检查是否超出最大待处理数量
             if (this.pendingMessages.size > this.config.maxPendingMessages) {
                 this.logger.warn('待处理消息数量过多，清理旧消息');
                 this.cleanupOldPendingMessages();
             }
-            
+
             return [];
         }
     }
@@ -332,18 +332,18 @@ export class MessageManager {
     updateConfig(newConfig: Partial<MessageManagerConfig>): void {
         const oldConfig = { ...this.config };
         Object.assign(this.config, newConfig);
-        
+
         // 如果去重配置改变，清理相关数据
         if (!this.config.enableMessageDeduplication && oldConfig.enableMessageDeduplication) {
             this.recentMessageIds.clear();
         }
-        
+
         // 如果排序配置改变，清理相关数据
         if (!this.config.enableMessageOrdering && oldConfig.enableMessageOrdering) {
             this.pendingMessages.clear();
             this.messageSequence.clear();
         }
-        
+
         this.logger.info('消息管理器配置已更新:', newConfig);
     }
 
@@ -355,7 +355,7 @@ export class MessageManager {
             clearInterval(this.cleanupTimer);
             this.cleanupTimer = undefined;
         }
-        
+
         this.recentMessageIds.clear();
         this.pendingMessages.clear();
         this.messageSequence.clear();
@@ -378,20 +378,20 @@ export class MessageManager {
     private flushPendingMessages(senderId: string): INetworkMessage[] {
         const flushedMessages: INetworkMessage[] = [];
         const messagesToRemove: string[] = [];
-        
+
         for (const [messageId, message] of this.pendingMessages) {
             if (message.senderId === senderId) {
                 flushedMessages.push(message);
                 messagesToRemove.push(messageId);
             }
         }
-        
+
         // 移除已处理的消息
-        messagesToRemove.forEach(id => this.pendingMessages.delete(id));
-        
+        messagesToRemove.forEach((id) => this.pendingMessages.delete(id));
+
         // 按时间戳排序
         flushedMessages.sort((a, b) => a.timestamp - b.timestamp);
-        
+
         return flushedMessages;
     }
 
@@ -401,15 +401,15 @@ export class MessageManager {
     private cleanupOldPendingMessages(): void {
         const now = Date.now();
         const messagesToRemove: string[] = [];
-        
+
         for (const [messageId, message] of this.pendingMessages) {
             if (now - message.timestamp > this.config.orderingWindowMs) {
                 messagesToRemove.push(messageId);
             }
         }
-        
-        messagesToRemove.forEach(id => this.pendingMessages.delete(id));
-        
+
+        messagesToRemove.forEach((id) => this.pendingMessages.delete(id));
+
         if (messagesToRemove.length > 0) {
             this.logger.debug(`清理了 ${messagesToRemove.length} 个过期的待处理消息`);
         }
@@ -429,7 +429,7 @@ export class MessageManager {
      */
     private performCleanup(): void {
         const now = Date.now();
-        
+
         // 清理过期的消息ID（用于去重）
         if (this.config.enableMessageDeduplication) {
             // 由于Set没有时间戳，我们定期清理所有ID
@@ -439,7 +439,7 @@ export class MessageManager {
                 this.logger.debug('清理了过期的消息ID缓存');
             }
         }
-        
+
         // 清理过期的待处理消息
         if (this.config.enableMessageOrdering) {
             this.cleanupOldPendingMessages();
@@ -453,7 +453,7 @@ export class MessageManager {
         const totalProcessed = this.stats.validMessages + this.stats.invalidMessages;
         const validRate = totalProcessed > 0 ? (this.stats.validMessages / totalProcessed) * 100 : 0;
         const duplicateRate = totalProcessed > 0 ? (this.stats.duplicateMessages / totalProcessed) * 100 : 0;
-        
+
         return {
             stats: this.getStats(),
             validationRate: validRate,
@@ -483,7 +483,7 @@ export class MessageManager {
      * 批量验证消息
      */
     validateMessageBatch(messages: INetworkMessage[], senderId?: string): MessageValidationResult[] {
-        return messages.map(message => this.validateMessage(message, senderId));
+        return messages.map((message) => this.validateMessage(message, senderId));
     }
 
     /**

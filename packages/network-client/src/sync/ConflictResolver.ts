@@ -110,16 +110,16 @@ interface StrategyPerformance {
 export class ConflictResolver extends EventEmitter {
     private logger = createLogger('ConflictResolver');
     private config: ConflictResolverConfig;
-    
+
     /** 策略映射 */
     private strategyMap = new Map<string, ConflictResolutionStrategy>();
-    
+
     /** 自定义解决器 */
     private customResolvers = new Map<string, (conflict: ConflictInfo) => ResolutionResult>();
-    
+
     /** 性能统计 */
     private performance = new Map<ConflictResolutionStrategy, StrategyPerformance>();
-    
+
     /** 冲突历史 */
     private conflictHistory: Array<{
         conflict: ConflictInfo;
@@ -129,7 +129,7 @@ export class ConflictResolver extends EventEmitter {
 
     constructor(config: Partial<ConflictResolverConfig> = {}) {
         super();
-        
+
         this.config = {
             defaultStrategy: ConflictResolutionStrategy.ServerAuthority,
             conflictThreshold: 0.1,
@@ -147,7 +147,7 @@ export class ConflictResolver extends EventEmitter {
             performanceSampleRate: 0.1,
             ...config
         };
-        
+
         this.initializePerformanceTracking();
     }
 
@@ -163,11 +163,11 @@ export class ConflictResolver extends EventEmitter {
     ): ConflictInfo | null {
         const conflictType = this.determineConflictType(propertyKey, localValue, serverValue);
         const severity = this.calculateConflictSeverity(localValue, serverValue);
-        
+
         if (severity < this.config.conflictThreshold) {
             return null; // 差异太小，不算冲突
         }
-        
+
         return {
             instanceId,
             propertyKey,
@@ -184,59 +184,59 @@ export class ConflictResolver extends EventEmitter {
      */
     public resolveConflict(conflict: ConflictInfo): ResolutionResult {
         const startTime = performance.now();
-        
+
         // 选择解决策略
         const strategy = this.selectStrategy(conflict);
-        
+
         // 执行解决
         let result: ResolutionResult;
-        
+
         switch (strategy) {
             case ConflictResolutionStrategy.ServerAuthority:
                 result = this.resolveWithServerAuthority(conflict);
                 break;
-                
+
             case ConflictResolutionStrategy.ClientPrediction:
                 result = this.resolveWithClientPrediction(conflict);
                 break;
-                
+
             case ConflictResolutionStrategy.Interpolation:
                 result = this.resolveWithInterpolation(conflict);
                 break;
-                
+
             case ConflictResolutionStrategy.RollbackReplay:
                 result = this.resolveWithRollbackReplay(conflict);
                 break;
-                
+
             case ConflictResolutionStrategy.Custom:
                 result = this.resolveWithCustomLogic(conflict);
                 break;
-                
+
             default:
                 result = this.resolveWithServerAuthority(conflict);
         }
-        
+
         result.strategy = strategy;
-        
+
         // 记录性能
         const resolveTime = performance.now() - startTime;
         this.recordPerformance(strategy, result.success, resolveTime);
-        
+
         // 记录历史
         this.conflictHistory.push({
             conflict,
             result,
             timestamp: Date.now()
         });
-        
+
         // 清理旧历史
         if (this.conflictHistory.length > 1000) {
             this.conflictHistory.shift();
         }
-        
+
         // 发出事件
         this.emit('conflictResolved', conflict, result);
-        
+
         return result;
     }
 
@@ -310,15 +310,15 @@ export class ConflictResolver extends EventEmitter {
         if (propertyKey.includes('position') || propertyKey.includes('location')) {
             return ConflictType.Position;
         }
-        
+
         if (propertyKey.includes('state') || propertyKey.includes('status')) {
             return ConflictType.State;
         }
-        
+
         if (propertyKey.includes('time') || propertyKey.includes('timestamp')) {
             return ConflictType.Timing;
         }
-        
+
         return ConflictType.Property;
     }
 
@@ -331,12 +331,12 @@ export class ConflictResolver extends EventEmitter {
             const max = Math.max(Math.abs(localValue), Math.abs(serverValue), 1);
             return Math.min(diff / max, 1);
         }
-        
+
         if (typeof localValue === 'object' && typeof serverValue === 'object') {
             // 简化的对象比较
             return localValue === serverValue ? 0 : 1;
         }
-        
+
         return localValue === serverValue ? 0 : 1;
     }
 
@@ -349,12 +349,12 @@ export class ConflictResolver extends EventEmitter {
         if (propertyStrategy) {
             return propertyStrategy;
         }
-        
+
         // 自适应策略选择
         if (this.config.enableAdaptiveStrategy) {
             return this.selectAdaptiveStrategy(conflict);
         }
-        
+
         return this.config.defaultStrategy;
     }
 
@@ -363,27 +363,27 @@ export class ConflictResolver extends EventEmitter {
      */
     private selectAdaptiveStrategy(conflict: ConflictInfo): ConflictResolutionStrategy {
         const strategies = Array.from(this.performance.keys());
-        
+
         if (strategies.length === 0) {
             return this.config.defaultStrategy;
         }
-        
+
         // 根据冲突类型和性能选择最佳策略
         let bestStrategy = this.config.defaultStrategy;
         let bestScore = 0;
-        
+
         for (const strategy of strategies) {
             const perf = this.performance.get(strategy)!;
-            
+
             // 计算策略得分：成功率 * 用户满意度 / 平均时间
             const score = (perf.successRate * perf.userSatisfaction) / Math.max(perf.averageTime, 1);
-            
+
             if (score > bestScore) {
                 bestScore = score;
                 bestStrategy = strategy;
             }
         }
-        
+
         return bestStrategy;
     }
 
@@ -406,7 +406,7 @@ export class ConflictResolver extends EventEmitter {
     private resolveWithClientPrediction(conflict: ConflictInfo): ResolutionResult {
         // 如果冲突严重性较低，保持客户端值
         const keepClient = conflict.severity < 0.5;
-        
+
         return {
             success: true,
             finalValue: keepClient ? conflict.localValue : conflict.serverValue,
@@ -424,7 +424,7 @@ export class ConflictResolver extends EventEmitter {
             // 非数值类型，回退到服务端权威
             return this.resolveWithServerAuthority(conflict);
         }
-        
+
         // 检查差异是否足够大需要插值
         const diff = Math.abs(conflict.localValue - conflict.serverValue);
         if (diff < this.config.interpolation.threshold) {
@@ -436,7 +436,7 @@ export class ConflictResolver extends EventEmitter {
                 rollbackRequired: false
             };
         }
-        
+
         return {
             success: true,
             finalValue: conflict.serverValue,
@@ -453,7 +453,7 @@ export class ConflictResolver extends EventEmitter {
     private resolveWithRollbackReplay(conflict: ConflictInfo): ResolutionResult {
         // 检查是否满足回滚条件
         const shouldRollback = conflict.severity >= this.config.rollback.priorityThreshold;
-        
+
         return {
             success: true,
             finalValue: conflict.serverValue,
@@ -468,12 +468,12 @@ export class ConflictResolver extends EventEmitter {
      */
     private resolveWithCustomLogic(conflict: ConflictInfo): ResolutionResult {
         const customResolver = this.customResolvers.get(conflict.propertyKey);
-        
+
         if (!customResolver) {
             this.logger.warn(`未找到属性 ${conflict.propertyKey} 的自定义解决器，使用服务端权威`);
             return this.resolveWithServerAuthority(conflict);
         }
-        
+
         try {
             return customResolver(conflict);
         } catch (error) {
@@ -487,7 +487,7 @@ export class ConflictResolver extends EventEmitter {
      */
     private initializePerformanceTracking(): void {
         const strategies = Object.values(ConflictResolutionStrategy);
-        
+
         for (const strategy of strategies) {
             this.performance.set(strategy, {
                 strategy,
@@ -507,14 +507,14 @@ export class ConflictResolver extends EventEmitter {
         if (!perf) {
             return;
         }
-        
+
         // 更新统计（使用滑动平均）
         const alpha = 0.1; // 学习率
-        
+
         perf.conflictCount++;
         perf.successRate = perf.successRate * (1 - alpha) + (success ? 1 : 0) * alpha;
         perf.averageTime = perf.averageTime * (1 - alpha) + time * alpha;
-        
+
         // 用户满意度基于成功率和时间
         perf.userSatisfaction = Math.max(0, perf.successRate - (time / 100) * 0.1);
     }

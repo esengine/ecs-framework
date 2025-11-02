@@ -10,29 +10,29 @@ export enum MessageType {
   CONNECT = 'connect',
   DISCONNECT = 'disconnect',
   HEARTBEAT = 'heartbeat',
-  
+
   // 数据同步
   SYNC_VAR = 'sync_var',
   SYNC_BATCH = 'sync_batch',
   SYNC_SNAPSHOT = 'sync_snapshot',
-  
+
   // RPC调用
   RPC_CALL = 'rpc_call',
   RPC_RESPONSE = 'rpc_response',
-  
+
   // 实体管理
   ENTITY_CREATE = 'entity_create',
   ENTITY_DESTROY = 'entity_destroy',
   ENTITY_UPDATE = 'entity_update',
-  
+
   // 房间管理
   JOIN_ROOM = 'join_room',
   LEAVE_ROOM = 'leave_room',
   ROOM_STATE = 'room_state',
-  
+
   // 游戏事件
   GAME_EVENT = 'game_event',
-  
+
   // 系统消息
   ERROR = 'error',
   WARNING = 'warning',

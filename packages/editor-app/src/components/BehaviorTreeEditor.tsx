@@ -384,20 +384,20 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             // 重新运行时清空未提交节点列表
             setUncommittedNodeIds(new Set());
             // 记录当前所有节点ID
-            activeNodeIdsRef.current = new Set(nodes.map(n => n.id));
+            activeNodeIdsRef.current = new Set(nodes.map((n) => n.id));
         } else if (executionMode === 'running' || executionMode === 'paused') {
             // 检测新增的节点
-            const currentNodeIds = new Set(nodes.map(n => n.id));
+            const currentNodeIds = new Set(nodes.map((n) => n.id));
             const newNodeIds = new Set<string>();
 
-            currentNodeIds.forEach(id => {
+            currentNodeIds.forEach((id) => {
                 if (!activeNodeIdsRef.current.has(id)) {
                     newNodeIds.add(id);
                 }
             });
 
             if (newNodeIds.size > 0) {
-                setUncommittedNodeIds(prev => new Set([...prev, ...newNodeIds]));
+                setUncommittedNodeIds((prev) => new Set([...prev, ...newNodeIds]));
             }
         }
     }, [nodes, executionMode]);
@@ -545,7 +545,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     };
 
     const handleReplaceNode = (newTemplate: NodeTemplate) => {
-        const nodeToReplace = nodes.find(n => n.id === quickCreateMenu.replaceNodeId);
+        const nodeToReplace = nodes.find((n) => n.id === quickCreateMenu.replaceNodeId);
         if (!nodeToReplace) return;
 
         // 如果行为树正在执行，先停止
@@ -557,7 +557,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         const newData = { ...newTemplate.defaultConfig };
 
         // 获取新模板的属性名列表
-        const newPropertyNames = new Set(newTemplate.properties.map(p => p.name));
+        const newPropertyNames = new Set(newTemplate.properties.map((p) => p.name));
 
         // 遍历旧节点的 data，保留新模板中也存在的属性
         for (const [key, value] of Object.entries(nodeToReplace.data)) {
@@ -583,10 +583,10 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         };
 
         // 替换节点
-        setNodes(nodes.map(n => n.id === newNode.id ? newNode : n));
+        setNodes(nodes.map((n) => n.id === newNode.id ? newNode : n));
 
         // 删除所有指向该节点的属性连接，让用户重新连接
-        const updatedConnections = connections.filter(conn =>
+        const updatedConnections = connections.filter((conn) =>
             !(conn.connectionType === 'property' && conn.to === newNode.id)
         );
         setConnections(updatedConnections);
@@ -1268,7 +1268,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         const statusMap: Record<string, NodeExecutionStatus> = {};
 
         // 直接操作DOM来更新节点样式，避免重渲染
-        statuses.forEach(s => {
+        statuses.forEach((s) => {
             statusMap[s.nodeId] = s.status;
 
             // 检查状态是否真的变化了
@@ -1468,7 +1468,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         if (executionModeRef.current === 'running') {
             executionModeRef.current = 'paused';
             setExecutionMode('paused');
-            setExecutionHistory(prev => [...prev, '执行已暂停']);
+            setExecutionHistory((prev) => [...prev, '执行已暂停']);
 
             if (executorRef.current) {
                 executorRef.current.pause();
@@ -1481,7 +1481,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         } else if (executionModeRef.current === 'paused') {
             executionModeRef.current = 'running';
             setExecutionMode('running');
-            setExecutionHistory(prev => [...prev, '执行已恢复']);
+            setExecutionHistory((prev) => [...prev, '执行已恢复']);
             lastTickTimeRef.current = 0;
 
             if (executorRef.current) {
@@ -1500,7 +1500,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         lastTickTimeRef.current = 0;
 
         // 清除所有状态定时器
-        statusTimersRef.current.forEach(timer => clearTimeout(timer));
+        statusTimersRef.current.forEach((timer) => clearTimeout(timer));
         statusTimersRef.current.clear();
 
         // 清除DOM缓存
@@ -1508,7 +1508,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         cache.lastNodeStatus.clear();
 
         // 使用缓存来移除节点状态类
-        cache.nodes.forEach(node => {
+        cache.nodes.forEach((node) => {
             node.classList.remove('running', 'success', 'failure', 'executed');
         });
 
@@ -1643,706 +1643,706 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         cursor: isPanning ? 'grabbing' : (draggingNodeId ? 'grabbing' : (connectingFrom ? 'crosshair' : 'default'))
                     }}
                 >
-                {/* 内容容器 - 应用变换 */}
-                <div style={{
-                    width: '100%',
-                    height: '100%',
-                    transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${canvasScale})`,
-                    transformOrigin: '0 0',
-                    position: 'relative'
-                }}>
-                {/* SVG 连接线层 */}
-                <svg style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '10000px',
-                    height: '10000px',
-                    pointerEvents: 'auto',
-                    zIndex: 0,
-                    overflow: 'visible'
-                }}>
-                    {/* 已有的连接 */}
-                    {connections.map((conn: Connection, index: number) => {
-                        const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === conn.from);
-                        const toNode = nodes.find((n: BehaviorTreeNode) => n.id === conn.to);
-                        if (!fromNode || !toNode) return null;
-
-                        let x1, y1, x2, y2;
-                        let pathD: string;
-
-                        // 默认颜色和宽度（会被DOM操作动态更新）
-                        const color = conn.connectionType === 'property' ? '#9c27b0' : '#0e639c';
-                        const strokeWidth = 2;
-
-                        if (conn.connectionType === 'property') {
-                            // 属性连接：从DOM获取实际引脚位置
-                            const fromPos = getPortPosition(conn.from);
-                            const toPos = getPortPosition(conn.to, conn.toProperty);
-
-                            if (!fromPos || !toPos) {
-                                // 如果DOM还没渲染，跳过这条连接线
-                                return null;
-                            }
-
-                            x1 = fromPos.x;
-                            y1 = fromPos.y;
-                            x2 = toPos.x;
-                            y2 = toPos.y;
-
-                            // 使用水平贝塞尔曲线
-                            const controlX1 = x1 + (x2 - x1) * 0.5;
-                            const controlX2 = x1 + (x2 - x1) * 0.5;
-                            pathD = `M ${x1} ${y1} C ${controlX1} ${y1}, ${controlX2} ${y2}, ${x2} ${y2}`;
-                        } else {
-                            // 节点连接：也使用DOM获取端口位置
-                            const fromPos = getPortPosition(conn.from, undefined, 'output');
-                            const toPos = getPortPosition(conn.to, undefined, 'input');
-
-                            if (!fromPos || !toPos) {
-                                // 如果DOM还没渲染，跳过这条连接线
-                                return null;
-                            }
-
-                            x1 = fromPos.x;
-                            y1 = fromPos.y;
-                            x2 = toPos.x;
-                            y2 = toPos.y;
-
-                            // 使用垂直贝塞尔曲线
-                            const controlY = y1 + (y2 - y1) * 0.5;
-                            pathD = `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`;
-                        }
-
-                        const isSelected = selectedConnection?.from === conn.from && selectedConnection?.to === conn.to;
-
-                        return (
-                            <path
-                                key={index}
-                                data-connection-id={`${conn.from}-${conn.to}`}
-                                data-connection-type={conn.connectionType || 'node'}
-                                d={pathD}
-                                stroke={isSelected ? '#FFD700' : color}
-                                strokeWidth={isSelected ? strokeWidth + 2 : strokeWidth}
-                                fill="none"
-                                style={{ cursor: 'pointer' }}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedConnection({ from: conn.from, to: conn.to });
-                                    setSelectedNodeIds([]);
-                                }}
-                            />
-                        );
-                    })}
-                    {/* 正在拖拽的连接线 */}
-                    {connectingFrom && connectingToPos && (() => {
-                        const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === connectingFrom);
-                        if (!fromNode) return null;
-
-                        let x1, y1;
-                        let pathD: string;
-                        const x2 = connectingToPos.x;
-                        const y2 = connectingToPos.y;
-
-                        // 判断是否是属性连接
-                        const isPropertyConnection = !!connectingFromProperty;
-                        const fromIsBlackboard = fromNode.data.nodeType === 'blackboard-variable';
-                        const color = isPropertyConnection ? '#9c27b0' : '#0e639c';
-
-                        if (isPropertyConnection && fromIsBlackboard) {
-                            // 黑板变量节点的右侧输出引脚
-                            x1 = fromNode.position.x + 75;
-                            y1 = fromNode.position.y;
-
-                            // 使用水平贝塞尔曲线
-                            const controlX1 = x1 + (x2 - x1) * 0.5;
-                            const controlX2 = x1 + (x2 - x1) * 0.5;
-                            pathD = `M ${x1} ${y1} C ${controlX1} ${y1}, ${controlX2} ${y2}, ${x2} ${y2}`;
-                        } else {
-                            // 节点连接：从底部输出端口
-                            x1 = fromNode.position.x;
-                            y1 = fromNode.position.y + 30;
-
-                            const controlY = y1 + (y2 - y1) * 0.5;
-                            pathD = `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`;
-                        }
-
-                        return (
-                            <path
-                                d={pathD}
-                                stroke={color}
-                                strokeWidth="2"
-                                fill="none"
-                                strokeDasharray="5,5"
-                                style={{ pointerEvents: 'none' }}
-                            />
-                        );
-                    })()}
-                </svg>
-
-
-                {/* 框选矩形 */}
-                {isBoxSelecting && boxSelectStart && boxSelectEnd && (() => {
-                    const minX = Math.min(boxSelectStart.x, boxSelectEnd.x);
-                    const maxX = Math.max(boxSelectStart.x, boxSelectEnd.x);
-                    const minY = Math.min(boxSelectStart.y, boxSelectEnd.y);
-                    const maxY = Math.max(boxSelectStart.y, boxSelectEnd.y);
-                    const width = maxX - minX;
-                    const height = maxY - minY;
-
-                    return (
-                        <div style={{
+                    {/* 内容容器 - 应用变换 */}
+                    <div style={{
+                        width: '100%',
+                        height: '100%',
+                        transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${canvasScale})`,
+                        transformOrigin: '0 0',
+                        position: 'relative'
+                    }}>
+                        {/* SVG 连接线层 */}
+                        <svg style={{
                             position: 'absolute',
-                            left: `${minX}px`,
-                            top: `${minY}px`,
-                            width: `${width}px`,
-                            height: `${height}px`,
-                            backgroundColor: 'rgba(14, 99, 156, 0.15)',
-                            border: '2px solid rgba(14, 99, 156, 0.6)',
-                            borderRadius: '4px',
-                            pointerEvents: 'none',
-                            zIndex: 999
-                        }} />
-                    );
-                })()}
+                            top: 0,
+                            left: 0,
+                            width: '10000px',
+                            height: '10000px',
+                            pointerEvents: 'auto',
+                            zIndex: 0,
+                            overflow: 'visible'
+                        }}>
+                            {/* 已有的连接 */}
+                            {connections.map((conn: Connection, index: number) => {
+                                const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === conn.from);
+                                const toNode = nodes.find((n: BehaviorTreeNode) => n.id === conn.to);
+                                if (!fromNode || !toNode) return null;
 
-                {/* 节点列表 */}
-                {nodes.map((node: BehaviorTreeNode) => {
-                    const isRoot = node.id === ROOT_NODE_ID;
-                    const isBlackboardVariable = node.data.nodeType === 'blackboard-variable';
-                    const isSelected = selectedNodeIds.includes(node.id);
+                                let x1, y1, x2, y2;
+                                let pathD: string;
 
-                    // 如果节点正在拖动，使用临时位置
-                    const isBeingDragged = dragStartPositions.has(node.id);
-                    const posX = node.position.x + (isBeingDragged ? dragDelta.dx : 0);
-                    const posY = node.position.y + (isBeingDragged ? dragDelta.dy : 0);
+                                // 默认颜色和宽度（会被DOM操作动态更新）
+                                const color = conn.connectionType === 'property' ? '#9c27b0' : '#0e639c';
+                                const strokeWidth = 2;
 
-                    const isUncommitted = uncommittedNodeIds.has(node.id);
-                    const nodeClasses = [
-                        'bt-node',
-                        isSelected && 'selected',
-                        isRoot && 'root',
-                        isUncommitted && 'uncommitted'
-                    ].filter(Boolean).join(' ');
+                                if (conn.connectionType === 'property') {
+                                    // 属性连接：从DOM获取实际引脚位置
+                                    const fromPos = getPortPosition(conn.from);
+                                    const toPos = getPortPosition(conn.to, conn.toProperty);
 
-                    return (
-                    <div
-                        key={node.id}
-                        data-node-id={node.id}
-                        className={nodeClasses}
-                        onClick={(e) => handleNodeClick(e, node)}
-                        onContextMenu={(e) => handleNodeContextMenu(e, node)}
-                        onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                        onMouseUp={(e) => handleNodeMouseUpForConnection(e, node.id)}
-                        style={{
-                            left: posX,
-                            top: posY,
-                            transform: 'translate(-50%, -50%)',
-                            cursor: isRoot ? 'default' : (draggingNodeId === node.id ? 'grabbing' : 'grab'),
-                            transition: draggingNodeId === node.id ? 'none' : 'all 0.2s',
-                            zIndex: isRoot ? 50 : (draggingNodeId === node.id ? 100 : (isSelected ? 10 : 1))
-                        }}
-                    >
-                        {isBlackboardVariable ? (
-                            (() => {
-                                const varName = node.data.variableName;
-                                const currentValue = blackboardVariables[varName];
-                                const initialValue = initialBlackboardVariables[varName];
-                                const isModified = isExecuting && JSON.stringify(currentValue) !== JSON.stringify(initialValue);
+                                    if (!fromPos || !toPos) {
+                                        // 如果DOM还没渲染，跳过这条连接线
+                                        return null;
+                                    }
+
+                                    x1 = fromPos.x;
+                                    y1 = fromPos.y;
+                                    x2 = toPos.x;
+                                    y2 = toPos.y;
+
+                                    // 使用水平贝塞尔曲线
+                                    const controlX1 = x1 + (x2 - x1) * 0.5;
+                                    const controlX2 = x1 + (x2 - x1) * 0.5;
+                                    pathD = `M ${x1} ${y1} C ${controlX1} ${y1}, ${controlX2} ${y2}, ${x2} ${y2}`;
+                                } else {
+                                    // 节点连接：也使用DOM获取端口位置
+                                    const fromPos = getPortPosition(conn.from, undefined, 'output');
+                                    const toPos = getPortPosition(conn.to, undefined, 'input');
+
+                                    if (!fromPos || !toPos) {
+                                        // 如果DOM还没渲染，跳过这条连接线
+                                        return null;
+                                    }
+
+                                    x1 = fromPos.x;
+                                    y1 = fromPos.y;
+                                    x2 = toPos.x;
+                                    y2 = toPos.y;
+
+                                    // 使用垂直贝塞尔曲线
+                                    const controlY = y1 + (y2 - y1) * 0.5;
+                                    pathD = `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`;
+                                }
+
+                                const isSelected = selectedConnection?.from === conn.from && selectedConnection?.to === conn.to;
 
                                 return (
-                                    <>
-                                        <div className="bt-node-header blackboard">
-                                            <Database size={16} className="bt-node-header-icon" />
-                                            <div className="bt-node-header-title">
-                                                {varName || 'Variable'}
-                                            </div>
-                                            {isModified && (
-                                                <span style={{
-                                                    fontSize: '9px',
-                                                    color: '#ffbb00',
-                                                    backgroundColor: 'rgba(255, 187, 0, 0.2)',
-                                                    padding: '2px 4px',
-                                                    borderRadius: '2px',
-                                                    marginLeft: '4px'
-                                                }}>
-                                                    运行时
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="bt-node-body">
-                                            <div
-                                                className="bt-node-blackboard-value"
-                                                style={{
-                                                    backgroundColor: isModified ? 'rgba(255, 187, 0, 0.15)' : 'transparent',
-                                                    border: isModified ? '1px solid rgba(255, 187, 0, 0.3)' : 'none',
-                                                    borderRadius: '2px',
-                                                    padding: '2px 4px'
-                                                }}
-                                                title={isModified ? `初始值: ${JSON.stringify(initialValue)}\n当前值: ${JSON.stringify(currentValue)}` : undefined}
-                                            >
-                                                {JSON.stringify(currentValue)}
-                                            </div>
-                                        </div>
-                                        <div
-                                            data-port="true"
-                                            data-node-id={node.id}
-                                            data-port-type="variable-output"
-                                            onMouseDown={(e) => handlePortMouseDown(e, node.id, '__value__')}
-                                            onMouseUp={(e) => handlePortMouseUp(e, node.id, '__value__')}
-                                            className="bt-node-port bt-node-port-variable-output"
-                                            title="Output"
-                                        />
-                                    </>
+                                    <path
+                                        key={index}
+                                        data-connection-id={`${conn.from}-${conn.to}`}
+                                        data-connection-type={conn.connectionType || 'node'}
+                                        d={pathD}
+                                        stroke={isSelected ? '#FFD700' : color}
+                                        strokeWidth={isSelected ? strokeWidth + 2 : strokeWidth}
+                                        fill="none"
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedConnection({ from: conn.from, to: conn.to });
+                                            setSelectedNodeIds([]);
+                                        }}
+                                    />
                                 );
-                            })()
-                        ) : (
-                            <>
-                                {/* 标题栏 - 带渐变 */}
-                                <div className={`bt-node-header ${isRoot ? 'root' : (node.template.type || 'action')}`}>
-                                    {isRoot ? (
-                                        <TreePine size={16} className="bt-node-header-icon" />
-                                    ) : (
-                                        node.template.icon && (() => {
-                                            const IconComponent = iconMap[node.template.icon];
-                                            return IconComponent ? (
-                                                <IconComponent size={16} className="bt-node-header-icon" />
-                                            ) : (
-                                                <span className="bt-node-header-icon">{node.template.icon}</span>
-                                            );
-                                        })()
-                                    )}
-                                    <div className="bt-node-header-title">
-                                        <div>{isRoot ? 'ROOT' : node.template.displayName}</div>
-                                        <div className="bt-node-id" title={node.id}>
-                                            #{node.id}
-                                        </div>
-                                    </div>
-                                    {/* 缺失执行器警告 */}
-                                    {!isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className) && (
-                                        <div
-                                            className="bt-node-missing-executor-warning"
-                                            style={{
-                                                marginLeft: 'auto',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                cursor: 'help',
-                                                pointerEvents: 'auto',
-                                                position: 'relative'
-                                            }}
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <AlertCircle
-                                                size={14}
-                                                style={{
-                                                    color: '#f44336',
-                                                    flexShrink: 0
-                                                }}
-                                            />
-                                            <div className="bt-node-missing-executor-tooltip">
-                                                缺失执行器：找不到节点对应的执行器 "{node.template.className}"
-                                            </div>
-                                        </div>
-                                    )}
-                                    {/* 未生效节点警告 */}
-                                    {isUncommitted && (
-                                        <div
-                                            className="bt-node-uncommitted-warning"
-                                            style={{
-                                                marginLeft: !isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className) ? '4px' : 'auto',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                cursor: 'help',
-                                                pointerEvents: 'auto',
-                                                position: 'relative'
-                                            }}
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <AlertTriangle
-                                                size={14}
-                                                style={{
-                                                    color: '#ff5722',
-                                                    flexShrink: 0
-                                                }}
-                                            />
-                                            <div className="bt-node-uncommitted-tooltip">
-                                                未生效节点：运行时添加的节点，需重新运行才能生效
-                                            </div>
-                                        </div>
-                                    )}
-                                    {/* 空节点警告图标 */}
-                                    {!isRoot && !isUncommitted && node.template.type === 'composite' &&
-                                     (node.template.requiresChildren === undefined || node.template.requiresChildren === true) &&
-                                     !nodes.some(n =>
-                                        connections.some(c => c.from === node.id && c.to === n.id)
-                                    ) && (
-                                        <div
-                                            className="bt-node-empty-warning-container"
-                                            style={{
-                                                marginLeft: isUncommitted ? '4px' : 'auto',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                cursor: 'help',
-                                                pointerEvents: 'auto',
-                                                position: 'relative'
-                                            }}
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <AlertTriangle
-                                                size={14}
-                                                style={{
-                                                    color: '#ff9800',
-                                                    flexShrink: 0
-                                                }}
-                                            />
-                                            <div className="bt-node-empty-warning-tooltip">
-                                                空节点：没有子节点，执行时会直接跳过
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                            })}
+                            {/* 正在拖拽的连接线 */}
+                            {connectingFrom && connectingToPos && (() => {
+                                const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === connectingFrom);
+                                if (!fromNode) return null;
 
-                                {/* 节点主体 */}
-                                <div className="bt-node-body">
-                                    {!isRoot && (
-                                        <div className="bt-node-category">
-                                            {node.template.category}
-                                        </div>
-                                    )}
+                                let x1, y1;
+                                let pathD: string;
+                                const x2 = connectingToPos.x;
+                                const y2 = connectingToPos.y;
 
-                                {/* 属性列表 */}
-                                {node.template.properties.length > 0 && (
-                                    <div className="bt-node-properties">
-                                        {node.template.properties.map((prop: PropertyDefinition, idx: number) => {
-                                            const hasConnection = connections.some(
-                                                (conn: Connection) => conn.toProperty === prop.name && conn.to === node.id
-                                            );
-                                            const propValue = node.data[prop.name];
+                                // 判断是否是属性连接
+                                const isPropertyConnection = !!connectingFromProperty;
+                                const fromIsBlackboard = fromNode.data.nodeType === 'blackboard-variable';
+                                const color = isPropertyConnection ? '#9c27b0' : '#0e639c';
+
+                                if (isPropertyConnection && fromIsBlackboard) {
+                                    // 黑板变量节点的右侧输出引脚
+                                    x1 = fromNode.position.x + 75;
+                                    y1 = fromNode.position.y;
+
+                                    // 使用水平贝塞尔曲线
+                                    const controlX1 = x1 + (x2 - x1) * 0.5;
+                                    const controlX2 = x1 + (x2 - x1) * 0.5;
+                                    pathD = `M ${x1} ${y1} C ${controlX1} ${y1}, ${controlX2} ${y2}, ${x2} ${y2}`;
+                                } else {
+                                    // 节点连接：从底部输出端口
+                                    x1 = fromNode.position.x;
+                                    y1 = fromNode.position.y + 30;
+
+                                    const controlY = y1 + (y2 - y1) * 0.5;
+                                    pathD = `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`;
+                                }
+
+                                return (
+                                    <path
+                                        d={pathD}
+                                        stroke={color}
+                                        strokeWidth="2"
+                                        fill="none"
+                                        strokeDasharray="5,5"
+                                        style={{ pointerEvents: 'none' }}
+                                    />
+                                );
+                            })()}
+                        </svg>
+
+
+                        {/* 框选矩形 */}
+                        {isBoxSelecting && boxSelectStart && boxSelectEnd && (() => {
+                            const minX = Math.min(boxSelectStart.x, boxSelectEnd.x);
+                            const maxX = Math.max(boxSelectStart.x, boxSelectEnd.x);
+                            const minY = Math.min(boxSelectStart.y, boxSelectEnd.y);
+                            const maxY = Math.max(boxSelectStart.y, boxSelectEnd.y);
+                            const width = maxX - minX;
+                            const height = maxY - minY;
+
+                            return (
+                                <div style={{
+                                    position: 'absolute',
+                                    left: `${minX}px`,
+                                    top: `${minY}px`,
+                                    width: `${width}px`,
+                                    height: `${height}px`,
+                                    backgroundColor: 'rgba(14, 99, 156, 0.15)',
+                                    border: '2px solid rgba(14, 99, 156, 0.6)',
+                                    borderRadius: '4px',
+                                    pointerEvents: 'none',
+                                    zIndex: 999
+                                }} />
+                            );
+                        })()}
+
+                        {/* 节点列表 */}
+                        {nodes.map((node: BehaviorTreeNode) => {
+                            const isRoot = node.id === ROOT_NODE_ID;
+                            const isBlackboardVariable = node.data.nodeType === 'blackboard-variable';
+                            const isSelected = selectedNodeIds.includes(node.id);
+
+                            // 如果节点正在拖动，使用临时位置
+                            const isBeingDragged = dragStartPositions.has(node.id);
+                            const posX = node.position.x + (isBeingDragged ? dragDelta.dx : 0);
+                            const posY = node.position.y + (isBeingDragged ? dragDelta.dy : 0);
+
+                            const isUncommitted = uncommittedNodeIds.has(node.id);
+                            const nodeClasses = [
+                                'bt-node',
+                                isSelected && 'selected',
+                                isRoot && 'root',
+                                isUncommitted && 'uncommitted'
+                            ].filter(Boolean).join(' ');
+
+                            return (
+                                <div
+                                    key={node.id}
+                                    data-node-id={node.id}
+                                    className={nodeClasses}
+                                    onClick={(e) => handleNodeClick(e, node)}
+                                    onContextMenu={(e) => handleNodeContextMenu(e, node)}
+                                    onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                                    onMouseUp={(e) => handleNodeMouseUpForConnection(e, node.id)}
+                                    style={{
+                                        left: posX,
+                                        top: posY,
+                                        transform: 'translate(-50%, -50%)',
+                                        cursor: isRoot ? 'default' : (draggingNodeId === node.id ? 'grabbing' : 'grab'),
+                                        transition: draggingNodeId === node.id ? 'none' : 'all 0.2s',
+                                        zIndex: isRoot ? 50 : (draggingNodeId === node.id ? 100 : (isSelected ? 10 : 1))
+                                    }}
+                                >
+                                    {isBlackboardVariable ? (
+                                        (() => {
+                                            const varName = node.data.variableName;
+                                            const currentValue = blackboardVariables[varName];
+                                            const initialValue = initialBlackboardVariables[varName];
+                                            const isModified = isExecuting && JSON.stringify(currentValue) !== JSON.stringify(initialValue);
 
                                             return (
-                                                <div key={idx} className="bt-node-property">
+                                                <>
+                                                    <div className="bt-node-header blackboard">
+                                                        <Database size={16} className="bt-node-header-icon" />
+                                                        <div className="bt-node-header-title">
+                                                            {varName || 'Variable'}
+                                                        </div>
+                                                        {isModified && (
+                                                            <span style={{
+                                                                fontSize: '9px',
+                                                                color: '#ffbb00',
+                                                                backgroundColor: 'rgba(255, 187, 0, 0.2)',
+                                                                padding: '2px 4px',
+                                                                borderRadius: '2px',
+                                                                marginLeft: '4px'
+                                                            }}>
+                                                    运行时
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="bt-node-body">
+                                                        <div
+                                                            className="bt-node-blackboard-value"
+                                                            style={{
+                                                                backgroundColor: isModified ? 'rgba(255, 187, 0, 0.15)' : 'transparent',
+                                                                border: isModified ? '1px solid rgba(255, 187, 0, 0.3)' : 'none',
+                                                                borderRadius: '2px',
+                                                                padding: '2px 4px'
+                                                            }}
+                                                            title={isModified ? `初始值: ${JSON.stringify(initialValue)}\n当前值: ${JSON.stringify(currentValue)}` : undefined}
+                                                        >
+                                                            {JSON.stringify(currentValue)}
+                                                        </div>
+                                                    </div>
                                                     <div
                                                         data-port="true"
                                                         data-node-id={node.id}
-                                                        data-property={prop.name}
-                                                        data-port-type="property-input"
-                                                        onMouseDown={(e) => handlePortMouseDown(e, node.id, prop.name)}
-                                                        onMouseUp={(e) => handlePortMouseUp(e, node.id, prop.name)}
-                                                        className={`bt-node-port bt-node-port-property ${hasConnection ? 'connected' : ''}`}
-                                                        title={prop.description || prop.name}
+                                                        data-port-type="variable-output"
+                                                        onMouseDown={(e) => handlePortMouseDown(e, node.id, '__value__')}
+                                                        onMouseUp={(e) => handlePortMouseUp(e, node.id, '__value__')}
+                                                        className="bt-node-port bt-node-port-variable-output"
+                                                        title="Output"
                                                     />
-                                                    <span
-                                                        className="bt-node-property-label"
-                                                        title={prop.description}
-                                                    >
-                                                        {prop.name}:
-                                                    </span>
-                                                    {propValue !== undefined && (
-                                                        <span className="bt-node-property-value">
-                                                            {String(propValue)}
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                </>
                                             );
-                                        })}
-                                    </div>
-                                )}
-                                </div>
+                                        })()
+                                    ) : (
+                                        <>
+                                            {/* 标题栏 - 带渐变 */}
+                                            <div className={`bt-node-header ${isRoot ? 'root' : (node.template.type || 'action')}`}>
+                                                {isRoot ? (
+                                                    <TreePine size={16} className="bt-node-header-icon" />
+                                                ) : (
+                                                    node.template.icon && (() => {
+                                                        const IconComponent = iconMap[node.template.icon];
+                                                        return IconComponent ? (
+                                                            <IconComponent size={16} className="bt-node-header-icon" />
+                                                        ) : (
+                                                            <span className="bt-node-header-icon">{node.template.icon}</span>
+                                                        );
+                                                    })()
+                                                )}
+                                                <div className="bt-node-header-title">
+                                                    <div>{isRoot ? 'ROOT' : node.template.displayName}</div>
+                                                    <div className="bt-node-id" title={node.id}>
+                                            #{node.id}
+                                                    </div>
+                                                </div>
+                                                {/* 缺失执行器警告 */}
+                                                {!isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className) && (
+                                                    <div
+                                                        className="bt-node-missing-executor-warning"
+                                                        style={{
+                                                            marginLeft: 'auto',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            cursor: 'help',
+                                                            pointerEvents: 'auto',
+                                                            position: 'relative'
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <AlertCircle
+                                                            size={14}
+                                                            style={{
+                                                                color: '#f44336',
+                                                                flexShrink: 0
+                                                            }}
+                                                        />
+                                                        <div className="bt-node-missing-executor-tooltip">
+                                                缺失执行器：找不到节点对应的执行器 "{node.template.className}"
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {/* 未生效节点警告 */}
+                                                {isUncommitted && (
+                                                    <div
+                                                        className="bt-node-uncommitted-warning"
+                                                        style={{
+                                                            marginLeft: !isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className) ? '4px' : 'auto',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            cursor: 'help',
+                                                            pointerEvents: 'auto',
+                                                            position: 'relative'
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <AlertTriangle
+                                                            size={14}
+                                                            style={{
+                                                                color: '#ff5722',
+                                                                flexShrink: 0
+                                                            }}
+                                                        />
+                                                        <div className="bt-node-uncommitted-tooltip">
+                                                未生效节点：运行时添加的节点，需重新运行才能生效
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {/* 空节点警告图标 */}
+                                                {!isRoot && !isUncommitted && node.template.type === 'composite' &&
+                                     (node.template.requiresChildren === undefined || node.template.requiresChildren === true) &&
+                                     !nodes.some((n) =>
+                                         connections.some((c) => c.from === node.id && c.to === n.id)
+                                     ) && (
+                                                    <div
+                                                        className="bt-node-empty-warning-container"
+                                                        style={{
+                                                            marginLeft: isUncommitted ? '4px' : 'auto',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            cursor: 'help',
+                                                            pointerEvents: 'auto',
+                                                            position: 'relative'
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <AlertTriangle
+                                                            size={14}
+                                                            style={{
+                                                                color: '#ff9800',
+                                                                flexShrink: 0
+                                                            }}
+                                                        />
+                                                        <div className="bt-node-empty-warning-tooltip">
+                                                空节点：没有子节点，执行时会直接跳过
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
 
-                                {/* 输入端口（顶部）- Root 节点不显示 */}
-                                {!isRoot && (
-                                    <div
-                                        data-port="true"
-                                        data-node-id={node.id}
-                                        data-port-type="node-input"
-                                        onMouseDown={(e) => handlePortMouseDown(e, node.id)}
-                                        onMouseUp={(e) => handlePortMouseUp(e, node.id)}
-                                        className="bt-node-port bt-node-port-input"
-                                        title="Input"
-                                    />
-                                )}
+                                            {/* 节点主体 */}
+                                            <div className="bt-node-body">
+                                                {!isRoot && (
+                                                    <div className="bt-node-category">
+                                                        {node.template.category}
+                                                    </div>
+                                                )}
 
-                                {/* 输出端口（底部）- 只有组合节点和装饰器节点才显示，但不需要子节点的节点除外 */}
-                                {(node.template.type === 'composite' || node.template.type === 'decorator') &&
+                                                {/* 属性列表 */}
+                                                {node.template.properties.length > 0 && (
+                                                    <div className="bt-node-properties">
+                                                        {node.template.properties.map((prop: PropertyDefinition, idx: number) => {
+                                                            const hasConnection = connections.some(
+                                                                (conn: Connection) => conn.toProperty === prop.name && conn.to === node.id
+                                                            );
+                                                            const propValue = node.data[prop.name];
+
+                                                            return (
+                                                                <div key={idx} className="bt-node-property">
+                                                                    <div
+                                                                        data-port="true"
+                                                                        data-node-id={node.id}
+                                                                        data-property={prop.name}
+                                                                        data-port-type="property-input"
+                                                                        onMouseDown={(e) => handlePortMouseDown(e, node.id, prop.name)}
+                                                                        onMouseUp={(e) => handlePortMouseUp(e, node.id, prop.name)}
+                                                                        className={`bt-node-port bt-node-port-property ${hasConnection ? 'connected' : ''}`}
+                                                                        title={prop.description || prop.name}
+                                                                    />
+                                                                    <span
+                                                                        className="bt-node-property-label"
+                                                                        title={prop.description}
+                                                                    >
+                                                                        {prop.name}:
+                                                                    </span>
+                                                                    {propValue !== undefined && (
+                                                                        <span className="bt-node-property-value">
+                                                                            {String(propValue)}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* 输入端口（顶部）- Root 节点不显示 */}
+                                            {!isRoot && (
+                                                <div
+                                                    data-port="true"
+                                                    data-node-id={node.id}
+                                                    data-port-type="node-input"
+                                                    onMouseDown={(e) => handlePortMouseDown(e, node.id)}
+                                                    onMouseUp={(e) => handlePortMouseUp(e, node.id)}
+                                                    className="bt-node-port bt-node-port-input"
+                                                    title="Input"
+                                                />
+                                            )}
+
+                                            {/* 输出端口（底部）- 只有组合节点和装饰器节点才显示，但不需要子节点的节点除外 */}
+                                            {(node.template.type === 'composite' || node.template.type === 'decorator') &&
                                  (node.template.requiresChildren === undefined || node.template.requiresChildren === true) && (
-                                    <div
-                                        data-port="true"
-                                        data-node-id={node.id}
-                                        data-port-type="node-output"
-                                        onMouseDown={(e) => handlePortMouseDown(e, node.id)}
-                                        onMouseUp={(e) => handlePortMouseUp(e, node.id)}
-                                        className="bt-node-port bt-node-port-output"
-                                        title="Output"
-                                    />
-                                )}
-                            </>
-                        )}
+                                                <div
+                                                    data-port="true"
+                                                    data-node-id={node.id}
+                                                    data-port-type="node-output"
+                                                    onMouseDown={(e) => handlePortMouseDown(e, node.id)}
+                                                    onMouseUp={(e) => handlePortMouseUp(e, node.id)}
+                                                    className="bt-node-port bt-node-port-output"
+                                                    title="Output"
+                                                />
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            );
+                        })}
+
                     </div>
-                    );
-                })}
 
-                </div>
-
-            {/* 拖拽提示 - 相对于画布视口 */}
-            {isDragging && (
-                <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    padding: '20px 40px',
-                    backgroundColor: 'rgba(14, 99, 156, 0.2)',
-                    border: '2px dashed #0e639c',
-                    borderRadius: '8px',
-                    color: '#0e639c',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    pointerEvents: 'none',
-                    zIndex: 1000
-                }}>
+                    {/* 拖拽提示 - 相对于画布视口 */}
+                    {isDragging && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            padding: '20px 40px',
+                            backgroundColor: 'rgba(14, 99, 156, 0.2)',
+                            border: '2px dashed #0e639c',
+                            borderRadius: '8px',
+                            color: '#0e639c',
+                            fontSize: '16px',
+                            fontWeight: 'bold',
+                            pointerEvents: 'none',
+                            zIndex: 1000
+                        }}>
                     释放以创建节点
-                </div>
-            )}
+                        </div>
+                    )}
 
-            {/* 空状态提示 - 相对于画布视口 */}
-            {nodes.length === 1 && !isDragging && (
+                    {/* 空状态提示 - 相对于画布视口 */}
+                    {nodes.length === 1 && !isDragging && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            textAlign: 'center',
+                            color: '#666',
+                            fontSize: '14px',
+                            pointerEvents: 'none'
+                        }}>
+                            <div style={{ fontSize: '48px', marginBottom: '20px' }}>👇</div>
+                            <div style={{ marginBottom: '10px' }}>从左侧拖拽节点到 Root 下方开始创建行为树</div>
+                            <div style={{ fontSize: '12px', color: '#555' }}>
+                        先连接 Root 节点与第一个节点
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* 运行控制工具栏 */}
                 <div style={{
                     position: 'absolute',
-                    top: '50%',
+                    top: '10px',
                     left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    textAlign: 'center',
-                    color: '#666',
-                    fontSize: '14px',
-                    pointerEvents: 'none'
+                    transform: 'translateX(-50%)',
+                    display: 'flex',
+                    gap: '8px',
+                    backgroundColor: 'rgba(45, 45, 45, 0.95)',
+                    padding: '8px',
+                    borderRadius: '6px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    zIndex: 100
                 }}>
-                    <div style={{ fontSize: '48px', marginBottom: '20px' }}>👇</div>
-                    <div style={{ marginBottom: '10px' }}>从左侧拖拽节点到 Root 下方开始创建行为树</div>
-                    <div style={{ fontSize: '12px', color: '#555' }}>
-                        先连接 Root 节点与第一个节点
+                    <button
+                        onClick={handlePlay}
+                        disabled={executionMode === 'running'}
+                        style={{
+                            padding: '8px',
+                            backgroundColor: executionMode === 'running' ? '#2d2d2d' : '#4caf50',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: executionMode === 'running' ? '#666' : '#fff',
+                            cursor: executionMode === 'running' ? 'not-allowed' : 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                        title="运行 (Play)"
+                    >
+                        <Play size={16} />
+                    </button>
+                    <button
+                        onClick={handlePause}
+                        disabled={executionMode === 'idle'}
+                        style={{
+                            padding: '8px',
+                            backgroundColor: executionMode === 'idle' ? '#2d2d2d' : '#ff9800',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: executionMode === 'idle' ? '#666' : '#fff',
+                            cursor: executionMode === 'idle' ? 'not-allowed' : 'pointer',
+                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                        title={executionMode === 'paused' ? '继续' : '暂停'}
+                    >
+                        {executionMode === 'paused' ? <Play size={16} /> : <Pause size={16} />}
+                    </button>
+                    <button
+                        onClick={handleStop}
+                        disabled={executionMode === 'idle'}
+                        style={{
+                            padding: '8px',
+                            backgroundColor: executionMode === 'idle' ? '#2d2d2d' : '#f44336',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: executionMode === 'idle' ? '#666' : '#fff',
+                            cursor: executionMode === 'idle' ? 'not-allowed' : 'pointer',
+                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                        title="停止"
+                    >
+                        <Square size={16} />
+                    </button>
+                    <button
+                        onClick={handleStep}
+                        disabled={executionMode !== 'idle' && executionMode !== 'paused'}
+                        style={{
+                            padding: '8px',
+                            backgroundColor: (executionMode !== 'idle' && executionMode !== 'paused') ? '#2d2d2d' : '#2196f3',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: (executionMode !== 'idle' && executionMode !== 'paused') ? '#666' : '#fff',
+                            cursor: (executionMode !== 'idle' && executionMode !== 'paused') ? 'not-allowed' : 'pointer',
+                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                        title="单步执行"
+                    >
+                        <SkipForward size={16} />
+                    </button>
+                    <button
+                        onClick={handleReset}
+                        style={{
+                            padding: '8px',
+                            backgroundColor: '#9e9e9e',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                        title="重置"
+                    >
+                        <RotateCcw size={16} />
+                    </button>
+
+                    {/* 分隔符 */}
+                    <div style={{
+                        width: '1px',
+                        backgroundColor: '#666',
+                        margin: '4px 0'
+                    }} />
+
+                    {/* 编辑按钮 */}
+                    <button
+                        onClick={handleResetView}
+                        style={{
+                            padding: '8px 12px',
+                            backgroundColor: '#3c3c3c',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: '#cccccc',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                        }}
+                        title="重置视图 (滚轮缩放, Alt+拖动平移)"
+                    >
+                        <RotateCcw size={14} />
+                    View
+                    </button>
+                    <button
+                        style={{
+                            padding: '8px 12px',
+                            backgroundColor: '#3c3c3c',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: '#cccccc',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                        }}
+                        title="清空画布"
+                        onClick={async () => {
+                            const confirmed = await ask('确定要清空画布吗？此操作不可撤销。', {
+                                title: '清空画布',
+                                kind: 'warning'
+                            });
+
+                            if (confirmed) {
+                                setNodes([
+                                    {
+                                        id: ROOT_NODE_ID,
+                                        template: rootNodeTemplate,
+                                        data: { nodeType: 'root' },
+                                        position: { x: 400, y: 100 },
+                                        children: []
+                                    }
+                                ]);
+                                setConnections([]);
+                                setSelectedNodeIds([]);
+                            }
+                        }}
+                    >
+                        <Trash2 size={14} />
+                    清空
+                    </button>
+
+                    {/* 状态指示器 */}
+                    <div style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#1e1e1e',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        color: '#ccc',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                    }}>
+                        <span style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor:
+                            executionMode === 'running' ? '#4caf50' :
+                                executionMode === 'paused' ? '#ff9800' : '#666'
+                        }} />
+                        {executionMode === 'idle' ? 'Idle' :
+                            executionMode === 'running' ? 'Running' :
+                                executionMode === 'paused' ? 'Paused' : 'Step'}
                     </div>
                 </div>
-            )}
-            </div>
 
-            {/* 运行控制工具栏 */}
-            <div style={{
-                position: 'absolute',
-                top: '10px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                display: 'flex',
-                gap: '8px',
-                backgroundColor: 'rgba(45, 45, 45, 0.95)',
-                padding: '8px',
-                borderRadius: '6px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                zIndex: 100
-            }}>
-                <button
-                    onClick={handlePlay}
-                    disabled={executionMode === 'running'}
-                    style={{
-                        padding: '8px',
-                        backgroundColor: executionMode === 'running' ? '#2d2d2d' : '#4caf50',
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: executionMode === 'running' ? '#666' : '#fff',
-                        cursor: executionMode === 'running' ? 'not-allowed' : 'pointer',
-                        fontSize: '14px',
-                        fontWeight: 'bold',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}
-                    title="运行 (Play)"
-                >
-                    <Play size={16} />
-                </button>
-                <button
-                    onClick={handlePause}
-                    disabled={executionMode === 'idle'}
-                    style={{
-                        padding: '8px',
-                        backgroundColor: executionMode === 'idle' ? '#2d2d2d' : '#ff9800',
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: executionMode === 'idle' ? '#666' : '#fff',
-                        cursor: executionMode === 'idle' ? 'not-allowed' : 'pointer',
-                        fontSize: '14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}
-                    title={executionMode === 'paused' ? '继续' : '暂停'}
-                >
-                    {executionMode === 'paused' ? <Play size={16} /> : <Pause size={16} />}
-                </button>
-                <button
-                    onClick={handleStop}
-                    disabled={executionMode === 'idle'}
-                    style={{
-                        padding: '8px',
-                        backgroundColor: executionMode === 'idle' ? '#2d2d2d' : '#f44336',
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: executionMode === 'idle' ? '#666' : '#fff',
-                        cursor: executionMode === 'idle' ? 'not-allowed' : 'pointer',
-                        fontSize: '14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}
-                    title="停止"
-                >
-                    <Square size={16} />
-                </button>
-                <button
-                    onClick={handleStep}
-                    disabled={executionMode !== 'idle' && executionMode !== 'paused'}
-                    style={{
-                        padding: '8px',
-                        backgroundColor: (executionMode !== 'idle' && executionMode !== 'paused') ? '#2d2d2d' : '#2196f3',
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: (executionMode !== 'idle' && executionMode !== 'paused') ? '#666' : '#fff',
-                        cursor: (executionMode !== 'idle' && executionMode !== 'paused') ? 'not-allowed' : 'pointer',
-                        fontSize: '14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}
-                    title="单步执行"
-                >
-                    <SkipForward size={16} />
-                </button>
-                <button
-                    onClick={handleReset}
-                    style={{
-                        padding: '8px',
-                        backgroundColor: '#9e9e9e',
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}
-                    title="重置"
-                >
-                    <RotateCcw size={16} />
-                </button>
-
-                {/* 分隔符 */}
-                <div style={{
-                    width: '1px',
-                    backgroundColor: '#666',
-                    margin: '4px 0'
-                }} />
-
-                {/* 编辑按钮 */}
-                <button
-                    onClick={handleResetView}
-                    style={{
-                        padding: '8px 12px',
-                        backgroundColor: '#3c3c3c',
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: '#cccccc',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                    }}
-                    title="重置视图 (滚轮缩放, Alt+拖动平移)"
-                >
-                    <RotateCcw size={14} />
-                    View
-                </button>
-                <button
-                    style={{
-                        padding: '8px 12px',
-                        backgroundColor: '#3c3c3c',
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: '#cccccc',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                    }}
-                    title="清空画布"
-                    onClick={async () => {
-                        const confirmed = await ask('确定要清空画布吗？此操作不可撤销。', {
-                            title: '清空画布',
-                            kind: 'warning'
-                        });
-
-                        if (confirmed) {
-                            setNodes([
-                                {
-                                    id: ROOT_NODE_ID,
-                                    template: rootNodeTemplate,
-                                    data: { nodeType: 'root' },
-                                    position: { x: 400, y: 100 },
-                                    children: []
-                                }
-                            ]);
-                            setConnections([]);
-                            setSelectedNodeIds([]);
-                        }
-                    }}
-                >
-                    <Trash2 size={14} />
-                    清空
-                </button>
-
-                {/* 状态指示器 */}
-                <div style={{
-                    padding: '8px 12px',
-                    backgroundColor: '#1e1e1e',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    color: '#ccc',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                }}>
-                    <span style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor:
-                            executionMode === 'running' ? '#4caf50' :
-                            executionMode === 'paused' ? '#ff9800' : '#666'
-                    }} />
-                    {executionMode === 'idle' ? 'Idle' :
-                     executionMode === 'running' ? 'Running' :
-                     executionMode === 'paused' ? 'Paused' : 'Step'}
-                </div>
-            </div>
-
-            {/* 快速创建菜单 */}
-            {quickCreateMenu.visible && (() => {
-                const allTemplates = NodeTemplates.getAllTemplates();
-                const searchText = quickCreateMenu.searchText.toLowerCase();
-                const filteredTemplates = searchText
-                    ? allTemplates.filter((t: NodeTemplate) => {
-                        const className = t.className || '';
-                        return t.displayName.toLowerCase().includes(searchText) ||
+                {/* 快速创建菜单 */}
+                {quickCreateMenu.visible && (() => {
+                    const allTemplates = NodeTemplates.getAllTemplates();
+                    const searchText = quickCreateMenu.searchText.toLowerCase();
+                    const filteredTemplates = searchText
+                        ? allTemplates.filter((t: NodeTemplate) => {
+                            const className = t.className || '';
+                            return t.displayName.toLowerCase().includes(searchText) ||
                                t.description.toLowerCase().includes(searchText) ||
                                t.category.toLowerCase().includes(searchText) ||
                                className.toLowerCase().includes(searchText);
-                      })
-                    : allTemplates;
+                        })
+                        : allTemplates;
 
-                return (
-                    <>
-                        <style>{`
+                    return (
+                        <>
+                            <style>{`
                             .quick-create-menu-list::-webkit-scrollbar {
                                 width: 8px;
                             }
@@ -2357,232 +2357,232 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                 background: #4c4c4c;
                             }
                         `}</style>
-                        <div
-                            style={{
-                                position: 'fixed',
-                                left: `${quickCreateMenu.position.x}px`,
-                                top: `${quickCreateMenu.position.y}px`,
-                                width: '300px',
-                                maxHeight: '400px',
-                                backgroundColor: '#2d2d2d',
-                                borderRadius: '6px',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                                zIndex: 1000,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                overflow: 'hidden'
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            onMouseDown={(e) => e.stopPropagation()}
-                        >
-                        <div style={{
-                            padding: '12px',
-                            borderBottom: '1px solid #3c3c3c',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                        }}>
-                            <Search size={16} style={{ color: '#999', flexShrink: 0 }} />
-                            <input
-                                type="text"
-                                placeholder="搜索节点..."
-                                autoFocus
-                                value={quickCreateMenu.searchText}
-                                onChange={(e) => setQuickCreateMenu({
-                                    ...quickCreateMenu,
-                                    searchText: e.target.value,
-                                    selectedIndex: 0
-                                })}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Escape') {
-                                        setQuickCreateMenu({
-                                            visible: false,
-                                            position: { x: 0, y: 0 },
-                                            searchText: '',
-                                            selectedIndex: 0,
-                                            mode: 'create',
-                                            replaceNodeId: null
-                                        });
-                                        clearConnecting();
-                                    } else if (e.key === 'ArrowDown') {
-                                        e.preventDefault();
-                                        setQuickCreateMenu({
-                                            ...quickCreateMenu,
-                                            selectedIndex: Math.min(quickCreateMenu.selectedIndex + 1, filteredTemplates.length - 1)
-                                        });
-                                    } else if (e.key === 'ArrowUp') {
-                                        e.preventDefault();
-                                        setQuickCreateMenu({
-                                            ...quickCreateMenu,
-                                            selectedIndex: Math.max(quickCreateMenu.selectedIndex - 1, 0)
-                                        });
-                                    } else if (e.key === 'Enter' && filteredTemplates.length > 0) {
-                                        e.preventDefault();
-                                        const selectedTemplate = filteredTemplates[quickCreateMenu.selectedIndex];
-                                        if (selectedTemplate) {
-                                            handleQuickCreateNode(selectedTemplate);
-                                        }
-                                    }
-                                }}
+                            <div
                                 style={{
-                                    flex: 1,
-                                    background: 'transparent',
-                                    border: 'none',
-                                    outline: 'none',
-                                    color: '#ccc',
-                                    fontSize: '14px',
-                                    padding: '4px'
-                                }}
-                            />
-                            <button
-                                onClick={() => {
-                                    setQuickCreateMenu({
-                                        visible: false,
-                                        position: { x: 0, y: 0 },
-                                        searchText: '',
-                                        selectedIndex: 0,
-                                        mode: 'create',
-                                        replaceNodeId: null
-                                    });
-                                    clearConnecting();
-                                }}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: '#999',
-                                    cursor: 'pointer',
-                                    padding: '4px',
+                                    position: 'fixed',
+                                    left: `${quickCreateMenu.position.x}px`,
+                                    top: `${quickCreateMenu.position.y}px`,
+                                    width: '300px',
+                                    maxHeight: '400px',
+                                    backgroundColor: '#2d2d2d',
+                                    borderRadius: '6px',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                                    zIndex: 1000,
                                     display: 'flex',
-                                    alignItems: 'center'
+                                    flexDirection: 'column',
+                                    overflow: 'hidden'
                                 }}
+                                onClick={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
                             >
-                                <X size={16} />
-                            </button>
-                        </div>
-                        <div
-                            className="quick-create-menu-list"
-                            style={{
-                                flex: 1,
-                                overflowY: 'auto',
-                                padding: '8px'
-                            }}
-                        >
-                            {filteredTemplates.length === 0 ? (
                                 <div style={{
-                                    padding: '20px',
-                                    textAlign: 'center',
-                                    color: '#666',
-                                    fontSize: '12px'
+                                    padding: '12px',
+                                    borderBottom: '1px solid #3c3c3c',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
                                 }}>
-                                    未找到匹配的节点
-                                </div>
-                            ) : (
-                                filteredTemplates.map((template: NodeTemplate, index: number) => {
-                                    const IconComponent = template.icon ? iconMap[template.icon] : null;
-                                    const className = template.className || '';
-                                    const isSelected = index === quickCreateMenu.selectedIndex;
-                                    return (
-                                        <div
-                                            key={index}
-                                            ref={isSelected ? selectedNodeRef : null}
-                                            onClick={() => handleQuickCreateNode(template)}
-                                            onMouseEnter={() => {
+                                    <Search size={16} style={{ color: '#999', flexShrink: 0 }} />
+                                    <input
+                                        type="text"
+                                        placeholder="搜索节点..."
+                                        autoFocus
+                                        value={quickCreateMenu.searchText}
+                                        onChange={(e) => setQuickCreateMenu({
+                                            ...quickCreateMenu,
+                                            searchText: e.target.value,
+                                            selectedIndex: 0
+                                        })}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Escape') {
+                                                setQuickCreateMenu({
+                                                    visible: false,
+                                                    position: { x: 0, y: 0 },
+                                                    searchText: '',
+                                                    selectedIndex: 0,
+                                                    mode: 'create',
+                                                    replaceNodeId: null
+                                                });
+                                                clearConnecting();
+                                            } else if (e.key === 'ArrowDown') {
+                                                e.preventDefault();
                                                 setQuickCreateMenu({
                                                     ...quickCreateMenu,
-                                                    selectedIndex: index
+                                                    selectedIndex: Math.min(quickCreateMenu.selectedIndex + 1, filteredTemplates.length - 1)
                                                 });
-                                            }}
-                                            style={{
-                                                padding: '8px 12px',
-                                                marginBottom: '4px',
-                                                backgroundColor: isSelected ? '#0e639c' : '#1e1e1e',
-                                                borderLeft: `3px solid ${template.color || '#666'}`,
-                                                borderRadius: '3px',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.15s',
-                                                transform: isSelected ? 'translateX(2px)' : 'translateX(0)'
-                                            }}
-                                        >
-                                            <div style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                                marginBottom: '4px'
-                                            }}>
-                                                {IconComponent && (
-                                                    <IconComponent size={14} style={{ color: template.color || '#999', flexShrink: 0 }} />
-                                                )}
-                                                <div style={{ flex: 1 }}>
+                                            } else if (e.key === 'ArrowUp') {
+                                                e.preventDefault();
+                                                setQuickCreateMenu({
+                                                    ...quickCreateMenu,
+                                                    selectedIndex: Math.max(quickCreateMenu.selectedIndex - 1, 0)
+                                                });
+                                            } else if (e.key === 'Enter' && filteredTemplates.length > 0) {
+                                                e.preventDefault();
+                                                const selectedTemplate = filteredTemplates[quickCreateMenu.selectedIndex];
+                                                if (selectedTemplate) {
+                                                    handleQuickCreateNode(selectedTemplate);
+                                                }
+                                            }
+                                        }}
+                                        style={{
+                                            flex: 1,
+                                            background: 'transparent',
+                                            border: 'none',
+                                            outline: 'none',
+                                            color: '#ccc',
+                                            fontSize: '14px',
+                                            padding: '4px'
+                                        }}
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            setQuickCreateMenu({
+                                                visible: false,
+                                                position: { x: 0, y: 0 },
+                                                searchText: '',
+                                                selectedIndex: 0,
+                                                mode: 'create',
+                                                replaceNodeId: null
+                                            });
+                                            clearConnecting();
+                                        }}
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: '#999',
+                                            cursor: 'pointer',
+                                            padding: '4px',
+                                            display: 'flex',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                                <div
+                                    className="quick-create-menu-list"
+                                    style={{
+                                        flex: 1,
+                                        overflowY: 'auto',
+                                        padding: '8px'
+                                    }}
+                                >
+                                    {filteredTemplates.length === 0 ? (
+                                        <div style={{
+                                            padding: '20px',
+                                            textAlign: 'center',
+                                            color: '#666',
+                                            fontSize: '12px'
+                                        }}>
+                                    未找到匹配的节点
+                                        </div>
+                                    ) : (
+                                        filteredTemplates.map((template: NodeTemplate, index: number) => {
+                                            const IconComponent = template.icon ? iconMap[template.icon] : null;
+                                            const className = template.className || '';
+                                            const isSelected = index === quickCreateMenu.selectedIndex;
+                                            return (
+                                                <div
+                                                    key={index}
+                                                    ref={isSelected ? selectedNodeRef : null}
+                                                    onClick={() => handleQuickCreateNode(template)}
+                                                    onMouseEnter={() => {
+                                                        setQuickCreateMenu({
+                                                            ...quickCreateMenu,
+                                                            selectedIndex: index
+                                                        });
+                                                    }}
+                                                    style={{
+                                                        padding: '8px 12px',
+                                                        marginBottom: '4px',
+                                                        backgroundColor: isSelected ? '#0e639c' : '#1e1e1e',
+                                                        borderLeft: `3px solid ${template.color || '#666'}`,
+                                                        borderRadius: '3px',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.15s',
+                                                        transform: isSelected ? 'translateX(2px)' : 'translateX(0)'
+                                                    }}
+                                                >
                                                     <div style={{
-                                                        color: '#ccc',
-                                                        fontSize: '13px',
-                                                        fontWeight: '500',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        marginBottom: '4px'
+                                                    }}>
+                                                        {IconComponent && (
+                                                            <IconComponent size={14} style={{ color: template.color || '#999', flexShrink: 0 }} />
+                                                        )}
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{
+                                                                color: '#ccc',
+                                                                fontSize: '13px',
+                                                                fontWeight: '500',
+                                                                marginBottom: '2px'
+                                                            }}>
+                                                                {template.displayName}
+                                                            </div>
+                                                            {className && (
+                                                                <div style={{
+                                                                    color: '#666',
+                                                                    fontSize: '10px',
+                                                                    fontFamily: 'Consolas, Monaco, monospace',
+                                                                    opacity: 0.8
+                                                                }}>
+                                                                    {className}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: '11px',
+                                                        color: '#999',
+                                                        lineHeight: '1.4',
                                                         marginBottom: '2px'
                                                     }}>
-                                                        {template.displayName}
+                                                        {template.description}
                                                     </div>
-                                                    {className && (
-                                                        <div style={{
-                                                            color: '#666',
-                                                            fontSize: '10px',
-                                                            fontFamily: 'Consolas, Monaco, monospace',
-                                                            opacity: 0.8
-                                                        }}>
-                                                            {className}
-                                                        </div>
-                                                    )}
+                                                    <div style={{
+                                                        fontSize: '10px',
+                                                        color: '#666'
+                                                    }}>
+                                                        {template.category}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div style={{
-                                                fontSize: '11px',
-                                                color: '#999',
-                                                lineHeight: '1.4',
-                                                marginBottom: '2px'
-                                            }}>
-                                                {template.description}
-                                            </div>
-                                            <div style={{
-                                                fontSize: '10px',
-                                                color: '#666'
-                                            }}>
-                                                {template.category}
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-                        </div>
-                    </>
-                );
-            })()}
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        </>
+                    );
+                })()}
 
-            {/* 状态栏 */}
-            <div style={{
-                position: 'absolute',
-                bottom: '0',
-                left: '0',
-                right: '0',
-                padding: '8px 15px',
-                backgroundColor: 'rgba(45, 45, 45, 0.95)',
-                borderTop: '1px solid #333',
-                fontSize: '12px',
-                color: '#999',
-                display: 'flex',
-                justifyContent: 'space-between'
-            }}>
-                <div>节点数: {nodes.length}</div>
-                <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                    {executionMode === 'running' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <RotateCcw size={14} />
+                {/* 状态栏 */}
+                <div style={{
+                    position: 'absolute',
+                    bottom: '0',
+                    left: '0',
+                    right: '0',
+                    padding: '8px 15px',
+                    backgroundColor: 'rgba(45, 45, 45, 0.95)',
+                    borderTop: '1px solid #333',
+                    fontSize: '12px',
+                    color: '#999',
+                    display: 'flex',
+                    justifyContent: 'space-between'
+                }}>
+                    <div>节点数: {nodes.length}</div>
+                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                        {executionMode === 'running' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <RotateCcw size={14} />
                             Tick: {tickCount}
-                        </div>
-                    )}
-                    <div>{selectedNodeIds.length > 0 ? `已选择 ${selectedNodeIds.length} 个节点` : '未选择节点'}</div>
+                            </div>
+                        )}
+                        <div>{selectedNodeIds.length > 0 ? `已选择 ${selectedNodeIds.length} 个节点` : '未选择节点'}</div>
+                    </div>
                 </div>
             </div>
-        </div>
 
             {/* 执行面板 */}
             <div style={{

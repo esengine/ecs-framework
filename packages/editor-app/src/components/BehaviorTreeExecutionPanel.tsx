@@ -59,14 +59,14 @@ export const BehaviorTreeExecutionPanel: React.FC<BehaviorTreeExecutionPanelProp
     };
 
     const handleCopyLogs = () => {
-        const logsText = logs.map(log =>
+        const logsText = logs.map((log) =>
             `${formatTime(log.timestamp)} ${getLevelIcon(log.level)} ${log.message}`
         ).join('\n');
 
         navigator.clipboard.writeText(logsText).then(() => {
             setCopySuccess(true);
             setTimeout(() => setCopySuccess(false), 2000);
-        }).catch(err => {
+        }).catch((err) => {
             console.error('复制失败:', err);
         });
     };

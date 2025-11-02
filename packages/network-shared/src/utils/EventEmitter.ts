@@ -25,7 +25,7 @@ export class EventEmitter extends Emitter<string | symbol, void> {
 
     /**
      * 添加一次性事件监听器
-     * @param event 事件名称  
+     * @param event 事件名称
      * @param listener 监听函数
      */
     public once(event: string | symbol, listener: Function): this {

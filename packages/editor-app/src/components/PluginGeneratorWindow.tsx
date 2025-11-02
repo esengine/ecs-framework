@@ -97,7 +97,7 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess 
             const response = await fetch('/@plugin-generator', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     pluginName,
@@ -149,7 +149,7 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess 
                         <input
                             type="text"
                             value={pluginName}
-                            onChange={e => setPluginName(e.target.value)}
+                            onChange={(e) => setPluginName(e.target.value)}
                             placeholder={t('pluginNamePlaceholder')}
                             disabled={isGenerating}
                         />
@@ -160,7 +160,7 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess 
                         <input
                             type="text"
                             value={pluginVersion}
-                            onChange={e => setPluginVersion(e.target.value)}
+                            onChange={(e) => setPluginVersion(e.target.value)}
                             disabled={isGenerating}
                         />
                     </div>
@@ -171,7 +171,7 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess 
                             <input
                                 type="text"
                                 value={outputPath}
-                                onChange={e => setOutputPath(e.target.value)}
+                                onChange={(e) => setOutputPath(e.target.value)}
                                 disabled={isGenerating}
                             />
                             <button
@@ -190,7 +190,7 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess 
                             <input
                                 type="checkbox"
                                 checked={includeExample}
-                                onChange={e => setIncludeExample(e.target.checked)}
+                                onChange={(e) => setIncludeExample(e.target.checked)}
                                 disabled={isGenerating}
                             />
                             <span>{t('includeExample')}</span>

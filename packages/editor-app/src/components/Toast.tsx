@@ -37,7 +37,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
         const id = `toast-${Date.now()}-${Math.random()}`;
         const toast: Toast = { id, message, type, duration };
 
-        setToasts(prev => [...prev, toast]);
+        setToasts((prev) => [...prev, toast]);
 
         if (duration > 0) {
             setTimeout(() => {
@@ -47,7 +47,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     }, []);
 
     const hideToast = useCallback((id: string) => {
-        setToasts(prev => prev.filter(t => t.id !== id));
+        setToasts((prev) => prev.filter((t) => t.id !== id));
     }, []);
 
     const getIcon = (type: ToastType) => {
@@ -67,7 +67,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
         <ToastContext.Provider value={{ showToast, hideToast }}>
             {children}
             <div className="toast-container">
-                {toasts.map(toast => (
+                {toasts.map((toast) => (
                     <div key={toast.id} className={`toast toast-${toast.type}`}>
                         <div className="toast-icon">
                             {getIcon(toast.type)}

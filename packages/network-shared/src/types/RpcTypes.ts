@@ -183,7 +183,7 @@ export interface RpcStats {
 /**
  * RPC方法签名类型
  */
-export type RpcMethod<TArgs extends readonly unknown[] = readonly unknown[], TReturn = unknown> = 
+export type RpcMethod<TArgs extends readonly unknown[] = readonly unknown[], TReturn = unknown> =
     (...args: TArgs) => Promise<TReturn>;
 
 /**

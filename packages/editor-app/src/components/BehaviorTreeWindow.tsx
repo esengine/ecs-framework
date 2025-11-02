@@ -124,7 +124,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
             const globalBlackboard = Core.services.resolve(GlobalBlackboardService);
             const allVars = globalBlackboard.getAllVariables();
             const varsObject: Record<string, any> = {};
-            allVars.forEach(v => {
+            allVars.forEach((v) => {
                 varsObject[v.name] = v.value;
             });
             setGlobalVariables(varsObject);
@@ -276,7 +276,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
 
             const allVars = Core.services.resolve(GlobalBlackboardService).getAllVariables();
             const varsObject: Record<string, any> = {};
-            allVars.forEach(v => {
+            allVars.forEach((v) => {
                 varsObject[v.name] = v.value;
             });
             setGlobalVariables(varsObject);
@@ -309,7 +309,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
         globalBlackboard.setValue(key, value, true);
         const allVars = globalBlackboard.getAllVariables();
         const varsObject: Record<string, any> = {};
-        allVars.forEach(v => {
+        allVars.forEach((v) => {
             varsObject[v.name] = v.value;
         });
         setGlobalVariables(varsObject);
@@ -321,7 +321,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
         globalBlackboard.defineVariable(key, type, value);
         const allVars = globalBlackboard.getAllVariables();
         const varsObject: Record<string, any> = {};
-        allVars.forEach(v => {
+        allVars.forEach((v) => {
             varsObject[v.name] = v.value;
         });
         setGlobalVariables(varsObject);
@@ -333,7 +333,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
         globalBlackboard.removeVariable(key);
         const allVars = globalBlackboard.getAllVariables();
         const varsObject: Record<string, any> = {};
-        allVars.forEach(v => {
+        allVars.forEach((v) => {
             varsObject[v.name] = v.value;
         });
         setGlobalVariables(varsObject);
@@ -352,7 +352,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                 }
             }
 
-            let saveFilePath = currentFilePath;
+            const saveFilePath = currentFilePath;
 
             // 如果没有当前文件路径，打开自定义保存对话框
             if (!saveFilePath) {
@@ -788,7 +788,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                         <button
                             onClick={() => setIsFullscreen(!isFullscreen)}
                             className="behavior-tree-toolbar-btn"
-                            title={isFullscreen ? "退出全屏" : "全屏"}
+                            title={isFullscreen ? '退出全屏' : '全屏'}
                         >
                             {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                         </button>
@@ -827,7 +827,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                                     const varName = node.data.variableName || '';
                                     const varValue = blackboardVariables[varName];
                                     const varType = typeof varValue === 'number' ? 'number' :
-                                                   typeof varValue === 'boolean' ? 'boolean' : 'string';
+                                        typeof varValue === 'boolean' ? 'boolean' : 'string';
 
                                     data = {
                                         ...node.data,
@@ -915,7 +915,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                                             if (selectedNode.data.nodeType === 'blackboard-variable' && propertyName === 'variableName') {
                                                 const newVarValue = blackboardVariables[value];
                                                 const newVarType = typeof newVarValue === 'number' ? 'number' :
-                                                                  typeof newVarValue === 'boolean' ? 'boolean' : 'string';
+                                                    typeof newVarValue === 'boolean' ? 'boolean' : 'string';
 
                                                 updateNodes((nodes: any) => nodes.map((node: any) => {
                                                     if (node.id === selectedNode.id) {

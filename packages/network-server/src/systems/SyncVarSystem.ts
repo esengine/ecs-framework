@@ -1,11 +1,11 @@
 import { EntitySystem, createLogger } from '@esengine/ecs-framework';
-import { 
-    SyncVarManager, 
-    SyncBatch, 
+import {
+    SyncVarManager,
+    SyncBatch,
     SyncVarSerializer,
     NetworkScope,
     SyncMode,
-    AuthorityType 
+    AuthorityType
 } from '@esengine/network-shared';
 import { NetworkServer } from '../core/NetworkServer';
 import { ConnectionManager } from '../core/ConnectionManager';
@@ -74,13 +74,13 @@ export class SyncVarSystem extends EntitySystem {
     private serializer: SyncVarSerializer;
     private networkServer?: NetworkServer;
     private connectionManager?: ConnectionManager;
-    
+
     /** 客户端同步状态 */
     private clientStates = new Map<string, ClientSyncState>();
-    
+
     /** 待发送的批次队列 */
     private pendingBatches: SyncBatch[] = [];
-    
+
     /** 同步统计 */
     private stats: SyncSystemStats = {
         totalSyncs: 0,
@@ -91,16 +91,16 @@ export class SyncVarSystem extends EntitySystem {
         droppedSyncs: 0,
         scopeFiltered: 0
     };
-    
+
     /** 最后统计重置时间 */
     private lastStatsReset = Date.now();
-    
+
     /** 同步定时器 */
     private syncTimer: any = null;
 
     constructor(config: Partial<SyncVarSystemConfig> = {}) {
         super();
-        
+
         this.config = {
             syncRate: 60, // 60ms = ~16fps
             maxBatchSize: 50,
@@ -112,7 +112,7 @@ export class SyncVarSystem extends EntitySystem {
             batchTimeout: 16,
             ...config
         };
-        
+
         this.syncVarManager = SyncVarManager.getInstance();
         this.serializer = new SyncVarSerializer({
             enableCompression: true,
@@ -120,7 +120,7 @@ export class SyncVarSystem extends EntitySystem {
             enableBatching: this.config.enableBatching,
             batchTimeout: this.config.batchTimeout
         });
-        
+
         this.setupSyncVarManager();
     }
 
@@ -129,7 +129,7 @@ export class SyncVarSystem extends EntitySystem {
      */
     public override initialize(): void {
         super.initialize();
-        
+
         this.logger.info('SyncVar系统初始化');
         this.startSyncTimer();
     }
@@ -155,12 +155,12 @@ export class SyncVarSystem extends EntitySystem {
      */
     public setConnectionManager(manager: ConnectionManager): void {
         this.connectionManager = manager;
-        
+
         // 监听客户端连接事件
         manager.on('clientConnected', (clientId: string) => {
             this.addClient(clientId);
         });
-        
+
         manager.on('clientDisconnected', (clientId: string) => {
             this.removeClient(clientId);
         });
@@ -229,7 +229,7 @@ export class SyncVarSystem extends EntitySystem {
      */
     public updateConfig(newConfig: Partial<SyncVarSystemConfig>): void {
         Object.assign(this.config, newConfig);
-        
+
         if (newConfig.syncRate !== undefined) {
             this.restartSyncTimer();
         }
@@ -256,7 +256,7 @@ export class SyncVarSystem extends EntitySystem {
         this.syncVarManager.on('syncBatchReady', (batch: SyncBatch) => {
             this.enqueueBatch(batch);
         });
-        
+
         this.syncVarManager.on('syncError', (error: Error) => {
             this.logger.error('SyncVar同步错误:', error);
         });
@@ -279,10 +279,10 @@ export class SyncVarSystem extends EntitySystem {
                 range: 100
             }
         };
-        
+
         this.clientStates.set(clientId, clientState);
         this.stats.clientCount = this.clientStates.size;
-        
+
         this.logger.info(`客户端 ${clientId} 已添加到同步系统`);
     }
 
@@ -292,7 +292,7 @@ export class SyncVarSystem extends EntitySystem {
     private removeClient(clientId: string): void {
         this.clientStates.delete(clientId);
         this.stats.clientCount = this.clientStates.size;
-        
+
         this.logger.info(`客户端 ${clientId} 已从同步系统移除`);
     }
 
@@ -301,7 +301,7 @@ export class SyncVarSystem extends EntitySystem {
      */
     private enqueueBatch(batch: SyncBatch): void {
         this.pendingBatches.push(batch);
-        
+
         // 如果队列过长，移除最旧的批次
         if (this.pendingBatches.length > this.config.maxBatchSize * 2) {
             this.pendingBatches.shift();
@@ -316,10 +316,10 @@ export class SyncVarSystem extends EntitySystem {
         if (this.pendingBatches.length === 0 || this.clientStates.size === 0) {
             return;
         }
-        
+
         const now = Date.now();
         const batchesToProcess = this.pendingBatches.splice(0, this.config.maxBatchSize);
-        
+
         for (const batch of batchesToProcess) {
             this.distributeBatchToClients(batch);
         }
@@ -335,14 +335,14 @@ export class SyncVarSystem extends EntitySystem {
                 this.stats.scopeFiltered++;
                 continue;
             }
-            
+
             // 检查带宽限制
             if (this.config.enableBandwidthLimit && !this.checkBandwidthLimit(clientId, batch)) {
                 // 将批次添加到待发送队列
                 clientState.pendingBatches.push(batch);
                 continue;
             }
-            
+
             this.sendBatchToClient(clientId, batch);
         }
     }
@@ -355,12 +355,12 @@ export class SyncVarSystem extends EntitySystem {
         if (clientState.scope.customFilter) {
             return clientState.scope.customFilter(batch);
         }
-        
+
         // 检查权限和作用域
         for (const [prop, scope] of Object.entries(batch.scopes)) {
             const authority = batch.authorities[prop];
             const syncMode = batch.syncModes[prop];
-            
+
             // 检查权限
             if (authority === AuthorityType.Client) {
                 // 只有拥有权限的客户端才能看到
@@ -368,7 +368,7 @@ export class SyncVarSystem extends EntitySystem {
                     continue;
                 }
             }
-            
+
             // 检查同步模式
             switch (syncMode) {
                 case SyncMode.Owner:
@@ -376,20 +376,20 @@ export class SyncVarSystem extends EntitySystem {
                         continue;
                     }
                     break;
-                    
+
                 case SyncMode.Others:
                     if (batch.instanceId === clientState.clientId) {
                         continue;
                     }
                     break;
-                    
+
                 case SyncMode.Nearby:
                     if (!this.isNearby(batch, clientState)) {
                         continue;
                     }
                     break;
             }
-            
+
             // 检查网络作用域
             switch (scope) {
                 case NetworkScope.Owner:
@@ -397,7 +397,7 @@ export class SyncVarSystem extends EntitySystem {
                         continue;
                     }
                     break;
-                    
+
                 case NetworkScope.Nearby:
                     if (!this.isNearby(batch, clientState)) {
                         continue;
@@ -405,7 +405,7 @@ export class SyncVarSystem extends EntitySystem {
                     break;
             }
         }
-        
+
         return true;
     }
 
@@ -424,23 +424,23 @@ export class SyncVarSystem extends EntitySystem {
         if (!this.config.enableBandwidthLimit) {
             return true;
         }
-        
+
         const clientState = this.clientStates.get(clientId);
         if (!clientState) {
             return false;
         }
-        
+
         const now = Date.now();
-        
+
         // 重置带宽计数器
         if (now >= clientState.bandwidth.resetTime) {
             clientState.bandwidth.used = 0;
             clientState.bandwidth.resetTime = now + 1000;
         }
-        
+
         // 估算批次大小
         const estimatedSize = this.estimateBatchSize(batch);
-        
+
         return clientState.bandwidth.used + estimatedSize <= clientState.bandwidth.limit;
     }
 
@@ -460,11 +460,11 @@ export class SyncVarSystem extends EntitySystem {
         if (!this.networkServer || !this.connectionManager) {
             return;
         }
-        
+
         try {
             const message = this.serializer.createSyncMessage(batch, 'server');
             this.networkServer.sendToClient(clientId, message);
-            
+
             // 更新统计
             const clientState = this.clientStates.get(clientId);
             if (clientState) {
@@ -474,7 +474,7 @@ export class SyncVarSystem extends EntitySystem {
                 this.stats.totalBytes += estimatedSize;
                 this.stats.totalSyncs++;
             }
-            
+
         } catch (error) {
             this.logger.error(`向客户端 ${clientId} 发送同步数据失败:`, error);
         }
@@ -485,12 +485,12 @@ export class SyncVarSystem extends EntitySystem {
      */
     private updateClientStates(): void {
         const now = Date.now();
-        
+
         for (const [clientId, clientState] of this.clientStates) {
             // 处理待发送的批次
-            if (clientState.pendingBatches.length > 0 && 
+            if (clientState.pendingBatches.length > 0 &&
                 this.checkBandwidthLimit(clientId, clientState.pendingBatches[0])) {
-                
+
                 const batch = clientState.pendingBatches.shift()!;
                 this.sendBatchToClient(clientId, batch);
             }
@@ -503,7 +503,7 @@ export class SyncVarSystem extends EntitySystem {
     private updateStats(): void {
         const now = Date.now();
         const deltaTime = now - this.lastStatsReset;
-        
+
         if (deltaTime >= 1000) { // 每秒更新一次
             this.stats.syncsPerSecond = this.stats.totalSyncs / (deltaTime / 1000);
             this.lastStatsReset = now;
@@ -517,7 +517,7 @@ export class SyncVarSystem extends EntitySystem {
         if (this.syncTimer) {
             return;
         }
-        
+
         this.syncTimer = setInterval(() => {
             this.processScheduledSyncs();
         }, this.config.syncRate);

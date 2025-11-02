@@ -89,7 +89,7 @@ export class LogService implements IService {
      * 格式化消息
      */
     private formatMessage(args: unknown[]): string {
-        return args.map(arg => {
+        return args.map((arg) => {
             if (typeof arg === 'string') return arg;
             if (arg instanceof Error) return arg.message;
             try {

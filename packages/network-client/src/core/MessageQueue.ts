@@ -76,24 +76,24 @@ export class MessageQueue {
     private logger = createLogger('MessageQueue');
     private config: MessageQueueConfig;
     private stats: QueueStats;
-    
+
     // 队列存储
     private primaryQueue: QueuedMessage[] = [];
     private priorityQueues: Map<MessagePriority, QueuedMessage[]> = new Map();
     private retryQueue: QueuedMessage[] = [];
     private processingMap: Map<string, QueuedMessage> = new Map();
-    
+
     // 定时器
     private processingTimer?: ITimer;
     private retryTimer?: ITimer;
     private cleanupTimer?: ITimer;
-    
+
     // 事件处理器
     private eventHandlers: Partial<MessageQueueEvents> = {};
-    
+
     // 发送回调
     private sendCallback?: (message: INetworkMessage) => Promise<boolean>;
-    
+
     // 性能统计
     private processingTimes: number[] = [];
 
@@ -142,14 +142,14 @@ export class MessageQueue {
      */
     start(sendCallback: (message: INetworkMessage) => Promise<boolean>): void {
         this.sendCallback = sendCallback;
-        
+
         this.processingTimer = NetworkTimerManager.schedule(
             this.config.processingInterval / 1000,
             true, // 重复执行
             this,
             () => this.processQueue()
         );
-        
+
         if (this.config.maxRetries > 0) {
             this.retryTimer = NetworkTimerManager.schedule(
                 this.config.retryDelay / 1000,
@@ -158,14 +158,14 @@ export class MessageQueue {
                 () => this.processRetryQueue()
             );
         }
-        
+
         this.cleanupTimer = NetworkTimerManager.schedule(
             10, // 10秒
             true, // 重复执行
             this,
             () => this.cleanupExpiredMessages()
         );
-        
+
         this.logger.info('消息队列已启动');
     }
 
@@ -177,17 +177,17 @@ export class MessageQueue {
             this.processingTimer.stop();
             this.processingTimer = undefined;
         }
-        
+
         if (this.retryTimer) {
             this.retryTimer.stop();
             this.retryTimer = undefined;
         }
-        
+
         if (this.cleanupTimer) {
             this.cleanupTimer.stop();
             this.cleanupTimer = undefined;
         }
-        
+
         this.logger.info('消息队列已停止');
     }
 
@@ -213,7 +213,7 @@ export class MessageQueue {
         }
 
         const queuedMessage = this.createQueuedMessage(message, options);
-        
+
         // 根据配置选择队列策略
         if (this.config.enablePriority) {
             this.enqueueToPriorityQueue(queuedMessage);
@@ -222,9 +222,9 @@ export class MessageQueue {
         }
 
         this.updateQueueStats(queuedMessage);
-        
+
         this.eventHandlers.messageQueued?.(queuedMessage);
-        
+
         return true;
     }
 
@@ -233,17 +233,17 @@ export class MessageQueue {
      */
     clear(): number {
         const count = this.getTotalSize();
-        
+
         this.primaryQueue.length = 0;
         this.retryQueue.length = 0;
         this.processingMap.clear();
-        
+
         for (const queue of this.priorityQueues.values()) {
             queue.length = 0;
         }
-        
+
         this.stats.currentSize = 0;
-        
+
         this.logger.info(`已清空队列，清理了 ${count} 条消息`);
         return count;
     }
@@ -275,7 +275,7 @@ export class MessageQueue {
             reliableMessages: 0,
             expiredMessages: 0
         };
-        
+
         this.processingTimes.length = 0;
     }
 
@@ -331,7 +331,7 @@ export class MessageQueue {
     ): QueuedMessage {
         const priority = options.priority || this.getMessagePriority(message);
         const reliable = options.reliable ?? this.isReliableMessage(message);
-        
+
         return {
             id: `${message.messageId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             message,
@@ -370,7 +370,7 @@ export class MessageQueue {
                 }
             }
         }
-        
+
         return this.primaryQueue.shift();
     }
 
@@ -394,22 +394,22 @@ export class MessageQueue {
         }
 
         const startTime = Date.now();
-        
+
         try {
             // 将消息标记为处理中
             this.processingMap.set(message.id, message);
-            
+
             const success = await this.sendCallback(message.message);
-            
+
             const processingTime = Date.now() - startTime;
             this.updateProcessingTime(processingTime);
-            
+
             if (success) {
                 this.handleSuccessfulMessage(message);
             } else {
                 this.handleFailedMessage(message, new Error('发送失败'));
             }
-            
+
         } catch (error) {
             this.handleFailedMessage(message, error as Error);
         } finally {
@@ -443,17 +443,17 @@ export class MessageQueue {
         }
 
         message.retryCount++;
-        
+
         try {
             const success = await this.sendCallback(message.message);
-            
+
             if (success) {
                 this.handleSuccessfulMessage(message);
             } else {
                 // 重新加入重试队列
                 this.retryQueue.push(message);
             }
-            
+
         } catch (error) {
             // 重新加入重试队列
             this.retryQueue.push(message);
@@ -465,7 +465,7 @@ export class MessageQueue {
      */
     private handleSuccessfulMessage(message: QueuedMessage): void {
         this.stats.totalProcessed++;
-        
+
         if (message.callback) {
             try {
                 message.callback(true);
@@ -473,7 +473,7 @@ export class MessageQueue {
                 this.logger.error('消息回调执行失败:', error);
             }
         }
-        
+
         this.eventHandlers.messageProcessed?.(message, true);
     }
 
@@ -486,7 +486,7 @@ export class MessageQueue {
             this.retryQueue.push(message);
         } else {
             this.stats.totalFailed++;
-            
+
             if (message.callback) {
                 try {
                     message.callback(false, error);
@@ -494,10 +494,10 @@ export class MessageQueue {
                     this.logger.error('消息回调执行失败:', callbackError);
                 }
             }
-            
+
             this.eventHandlers.messageFailed?.(message, error);
         }
-        
+
         this.eventHandlers.messageProcessed?.(message, false);
     }
 
@@ -506,7 +506,7 @@ export class MessageQueue {
      */
     private handleExpiredMessage(message: QueuedMessage): void {
         this.stats.expiredMessages++;
-        
+
         if (message.callback) {
             try {
                 message.callback(false, new Error('消息已过期'));
@@ -514,7 +514,7 @@ export class MessageQueue {
                 this.logger.error('消息回调执行失败:', error);
             }
         }
-        
+
         this.eventHandlers.messageExpired?.(message);
     }
 
@@ -526,7 +526,7 @@ export class MessageQueue {
         let cleanedCount = 0;
 
         // 清理主队列
-        this.primaryQueue = this.primaryQueue.filter(msg => {
+        this.primaryQueue = this.primaryQueue.filter((msg) => {
             if (this.isMessageExpired(msg)) {
                 this.handleExpiredMessage(msg);
                 cleanedCount++;
@@ -537,7 +537,7 @@ export class MessageQueue {
 
         // 清理优先级队列
         for (const [priority, queue] of this.priorityQueues) {
-            this.priorityQueues.set(priority, queue.filter(msg => {
+            this.priorityQueues.set(priority, queue.filter((msg) => {
                 if (this.isMessageExpired(msg)) {
                     this.handleExpiredMessage(msg);
                     cleanedCount++;
@@ -548,7 +548,7 @@ export class MessageQueue {
         }
 
         // 清理重试队列
-        this.retryQueue = this.retryQueue.filter(msg => {
+        this.retryQueue = this.retryQueue.filter((msg) => {
             if (this.isMessageExpired(msg)) {
                 this.handleExpiredMessage(msg);
                 cleanedCount++;
@@ -569,7 +569,7 @@ export class MessageQueue {
         if (!message.timeoutMs) {
             return false;
         }
-        
+
         return Date.now() - message.timestamp > message.timeoutMs;
     }
 
@@ -597,7 +597,7 @@ export class MessageQueue {
         if (!this.config.enableReliableDelivery) {
             return false;
         }
-        
+
         // 某些消息类型默认需要可靠传输
         const reliableTypes = [
             MessageType.CONNECT,
@@ -605,7 +605,7 @@ export class MessageQueue {
             MessageType.ENTITY_CREATE,
             MessageType.ENTITY_DESTROY
         ];
-        
+
         return reliableTypes.includes(message.type) || message.reliable === true;
     }
 
@@ -614,11 +614,11 @@ export class MessageQueue {
      */
     private getTotalSize(): number {
         let size = this.primaryQueue.length + this.retryQueue.length + this.processingMap.size;
-        
+
         for (const queue of this.priorityQueues.values()) {
             size += queue.length;
         }
-        
+
         return size;
     }
 
@@ -629,7 +629,7 @@ export class MessageQueue {
         this.stats.totalQueued++;
         this.stats.currentSize = this.getTotalSize();
         this.stats.messagesByPriority[message.priority]++;
-        
+
         if (message.reliable) {
             this.stats.reliableMessages++;
         }
@@ -647,14 +647,14 @@ export class MessageQueue {
      */
     private updateProcessingTime(time: number): void {
         this.processingTimes.push(time);
-        
+
         // 保持最近1000个样本
         if (this.processingTimes.length > 1000) {
             this.processingTimes.shift();
         }
-        
+
         // 计算平均处理时间
-        this.stats.averageProcessingTime = 
+        this.stats.averageProcessingTime =
             this.processingTimes.reduce((sum, t) => sum + t, 0) / this.processingTimes.length;
     }
 

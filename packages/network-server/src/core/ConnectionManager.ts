@@ -3,7 +3,7 @@
  * 负责管理所有客户端连接的生命周期
  */
 import { createLogger, ITimer, Core } from '@esengine/ecs-framework';
-import { 
+import {
     ITransportClientInfo,
     ConnectionState,
     IConnectionStats,
@@ -100,7 +100,7 @@ export class ConnectionManager extends EventEmitter {
 
         this.sessions.set(clientInfo.id, session);
         this.logger.info(`添加客户端会话: ${clientInfo.id}`);
-        
+
         this.emit('sessionAdded', session);
         return session;
     }
@@ -116,10 +116,10 @@ export class ConnectionManager extends EventEmitter {
 
         session.state = ConnectionState.Disconnected;
         session.stats.disconnectTime = Date.now();
-        
+
         this.sessions.delete(clientId);
         this.logger.info(`移除客户端会话: ${clientId}, 原因: ${reason || '未知'}`);
-        
+
         this.emit('sessionRemoved', session, reason);
         return true;
     }
@@ -142,14 +142,14 @@ export class ConnectionManager extends EventEmitter {
      * 获取已认证的会话
      */
     getAuthenticatedSessions(): ClientSession[] {
-        return Array.from(this.sessions.values()).filter(session => session.authenticated);
+        return Array.from(this.sessions.values()).filter((session) => session.authenticated);
     }
 
     /**
      * 获取指定房间的会话
      */
     getSessionsByRoom(roomId: string): ClientSession[] {
-        return Array.from(this.sessions.values()).filter(session => session.roomId === roomId);
+        return Array.from(this.sessions.values()).filter((session) => session.roomId === roomId);
     }
 
     /**
@@ -176,12 +176,12 @@ export class ConnectionManager extends EventEmitter {
 
         const wasAuthenticated = session.authenticated;
         session.authenticated = authenticated;
-        
+
         if (wasAuthenticated !== authenticated) {
             this.emit('sessionAuthChanged', session, authenticated);
             this.logger.info(`客户端 ${clientId} 认证状态变更: ${authenticated}`);
         }
-        
+
         return true;
     }
 
@@ -196,12 +196,12 @@ export class ConnectionManager extends EventEmitter {
 
         const oldRoomId = session.roomId;
         session.roomId = roomId;
-        
+
         if (oldRoomId !== roomId) {
             this.emit('sessionRoomChanged', session, oldRoomId, roomId);
             this.logger.info(`客户端 ${clientId} 房间变更: ${oldRoomId} -> ${roomId}`);
         }
-        
+
         return true;
     }
 
@@ -249,7 +249,7 @@ export class ConnectionManager extends EventEmitter {
      */
     getTimeoutSessions(): ClientSession[] {
         const now = Date.now();
-        return Array.from(this.sessions.values()).filter(session => {
+        return Array.from(this.sessions.values()).filter((session) => {
             return (now - session.lastHeartbeat) > this.config.heartbeatTimeout;
         });
     }
@@ -259,7 +259,7 @@ export class ConnectionManager extends EventEmitter {
      */
     getIdleSessions(): ClientSession[] {
         const now = Date.now();
-        return Array.from(this.sessions.values()).filter(session => {
+        return Array.from(this.sessions.values()).filter((session) => {
             return (now - session.lastHeartbeat) > this.config.maxIdleTime;
         });
     }
@@ -271,7 +271,7 @@ export class ConnectionManager extends EventEmitter {
         const allSessions = this.getAllSessions();
         const authenticatedSessions = this.getAuthenticatedSessions();
         const timeoutSessions = this.getTimeoutSessions();
-        
+
         return {
             totalConnections: allSessions.length,
             authenticatedConnections: authenticatedSessions.length,
@@ -290,11 +290,11 @@ export class ConnectionManager extends EventEmitter {
      */
     private calculateAverageLatency(sessions: ClientSession[]): number {
         const validLatencies = sessions
-            .map(s => s.stats.latency)
-            .filter(latency => latency !== undefined) as number[];
-            
+            .map((s) => s.stats.latency)
+            .filter((latency) => latency !== undefined) as number[];
+
         if (validLatencies.length === 0) return 0;
-        
+
         return validLatencies.reduce((sum, latency) => sum + latency, 0) / validLatencies.length;
     }
 
@@ -303,12 +303,12 @@ export class ConnectionManager extends EventEmitter {
      */
     private getConnectionsByRoom(): Record<string, number> {
         const roomCounts: Record<string, number> = {};
-        
+
         for (const session of this.sessions.values()) {
             const roomId = session.roomId || 'lobby';
             roomCounts[roomId] = (roomCounts[roomId] || 0) + 1;
         }
-        
+
         return roomCounts;
     }
 
@@ -355,11 +355,11 @@ export class ConnectionManager extends EventEmitter {
      */
     private checkHeartbeats(): void {
         const timeoutSessions = this.getTimeoutSessions();
-        
+
         for (const session of timeoutSessions) {
             this.logger.warn(`客户端心跳超时: ${session.id}`);
             this.emit('heartbeatTimeout', session);
-            
+
             // 可以选择断开超时的连接
             // this.removeSession(session.id, '心跳超时');
         }
@@ -374,7 +374,7 @@ export class ConnectionManager extends EventEmitter {
      */
     private performCleanup(): void {
         const idleSessions = this.getIdleSessions();
-        
+
         for (const session of idleSessions) {
             this.logger.info(`清理空闲连接: ${session.id}`);
             this.removeSession(session.id, '空闲超时');
@@ -390,11 +390,11 @@ export class ConnectionManager extends EventEmitter {
      */
     kickRoomClients(roomId: string, reason?: string): number {
         const roomSessions = this.getSessionsByRoom(roomId);
-        
+
         for (const session of roomSessions) {
             this.removeSession(session.id, reason || '房间解散');
         }
-        
+
         this.logger.info(`踢出房间 ${roomId} 的 ${roomSessions.length} 个客户端`);
         return roomSessions.length;
     }
@@ -403,7 +403,7 @@ export class ConnectionManager extends EventEmitter {
      * 批量操作：向指定房间广播消息（这里只返回会话列表）
      */
     getRoomSessionsForBroadcast(roomId: string, excludeClientId?: string): ClientSession[] {
-        return this.getSessionsByRoom(roomId).filter(session => 
+        return this.getSessionsByRoom(roomId).filter((session) =>
             session.id !== excludeClientId && session.authenticated
         );
     }

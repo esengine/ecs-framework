@@ -118,7 +118,7 @@ export class BehaviorTreeExecutor {
         blackboard: Record<string, any>,
         connections: Array<{ from: string; to: string; fromProperty?: string; toProperty?: string; connectionType: 'node' | 'property' }>
     ): BehaviorTreeData {
-        const rootNode = nodes.find(n => n.id === rootNodeId);
+        const rootNode = nodes.find((n) => n.id === rootNodeId);
         if (!rootNode) {
             throw new Error('未找到根节点');
         }
@@ -163,7 +163,7 @@ export class BehaviorTreeExecutor {
         for (const conn of connections) {
             if (conn.connectionType === 'property' && conn.toProperty) {
                 const targetNodeData = treeData.nodes.get(conn.to);
-                const sourceNode = nodes.find(n => n.id === conn.from);
+                const sourceNode = nodes.find((n) => n.id === conn.from);
 
                 if (targetNodeData && sourceNode) {
                     // 检查源节点是否是黑板变量节点

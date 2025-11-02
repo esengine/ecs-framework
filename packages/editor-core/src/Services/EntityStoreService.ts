@@ -12,67 +12,67 @@ export interface EntityTreeNode {
  */
 @Injectable()
 export class EntityStoreService implements IService {
-  private entities: Map<number, Entity> = new Map();
-  private selectedEntity: Entity | null = null;
-  private rootEntities: Set<number> = new Set();
+    private entities: Map<number, Entity> = new Map();
+    private selectedEntity: Entity | null = null;
+    private rootEntities: Set<number> = new Set();
 
-  constructor(private messageHub: MessageHub) {}
+    constructor(private messageHub: MessageHub) {}
 
-  public dispose(): void {
-    this.entities.clear();
-    this.rootEntities.clear();
-    this.selectedEntity = null;
-  }
-
-  public addEntity(entity: Entity, parent?: Entity): void {
-    this.entities.set(entity.id, entity);
-
-    if (!parent) {
-      this.rootEntities.add(entity.id);
+    public dispose(): void {
+        this.entities.clear();
+        this.rootEntities.clear();
+        this.selectedEntity = null;
     }
 
-    this.messageHub.publish('entity:added', { entity, parent });
-  }
+    public addEntity(entity: Entity, parent?: Entity): void {
+        this.entities.set(entity.id, entity);
 
-  public removeEntity(entity: Entity): void {
-    this.entities.delete(entity.id);
-    this.rootEntities.delete(entity.id);
+        if (!parent) {
+            this.rootEntities.add(entity.id);
+        }
 
-    if (this.selectedEntity?.id === entity.id) {
-      this.selectedEntity = null;
-      this.messageHub.publish('entity:selected', { entity: null });
+        this.messageHub.publish('entity:added', { entity, parent });
     }
 
-    this.messageHub.publish('entity:removed', { entity });
-  }
+    public removeEntity(entity: Entity): void {
+        this.entities.delete(entity.id);
+        this.rootEntities.delete(entity.id);
 
-  public selectEntity(entity: Entity | null): void {
-    this.selectedEntity = entity;
-    this.messageHub.publish('entity:selected', { entity });
-  }
+        if (this.selectedEntity?.id === entity.id) {
+            this.selectedEntity = null;
+            this.messageHub.publish('entity:selected', { entity: null });
+        }
 
-  public getSelectedEntity(): Entity | null {
-    return this.selectedEntity;
-  }
+        this.messageHub.publish('entity:removed', { entity });
+    }
 
-  public getAllEntities(): Entity[] {
-    return Array.from(this.entities.values());
-  }
+    public selectEntity(entity: Entity | null): void {
+        this.selectedEntity = entity;
+        this.messageHub.publish('entity:selected', { entity });
+    }
 
-  public getRootEntities(): Entity[] {
-    return Array.from(this.rootEntities)
-      .map(id => this.entities.get(id))
-      .filter((e): e is Entity => e !== undefined);
-  }
+    public getSelectedEntity(): Entity | null {
+        return this.selectedEntity;
+    }
 
-  public getEntity(id: number): Entity | undefined {
-    return this.entities.get(id);
-  }
+    public getAllEntities(): Entity[] {
+        return Array.from(this.entities.values());
+    }
 
-  public clear(): void {
-    this.entities.clear();
-    this.rootEntities.clear();
-    this.selectedEntity = null;
-    this.messageHub.publish('entities:cleared', {});
-  }
+    public getRootEntities(): Entity[] {
+        return Array.from(this.rootEntities)
+            .map((id) => this.entities.get(id))
+            .filter((e): e is Entity => e !== undefined);
+    }
+
+    public getEntity(id: number): Entity | undefined {
+        return this.entities.get(id);
+    }
+
+    public clear(): void {
+        this.entities.clear();
+        this.rootEntities.clear();
+        this.selectedEntity = null;
+        this.messageHub.publish('entities:cleared', {});
+    }
 }

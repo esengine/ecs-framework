@@ -19,7 +19,7 @@ export interface ServerRpcOptions extends RpcOptions {
 }
 
 /**
- * 客户端RPC装饰器选项  
+ * 客户端RPC装饰器选项
  */
 export interface ClientRpcOptions extends RpcOptions {
     /** 广播到多个客户端时的聚合策略 */
@@ -38,11 +38,11 @@ export function ServerRpc(options: ServerRpcOptions = {}): MethodDecorator {
     return function (target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
         const className = target.constructor.name;
         const methodName = String(propertyKey);
-        
+
         // 获取参数类型和返回值类型
         const paramTypes = Reflect.getMetadata('design:paramtypes', target, propertyKey) || [];
         const returnType = Reflect.getMetadata('design:returntype', target, propertyKey);
-        
+
         const metadata: RpcMethodMetadata = {
             methodName,
             className,
@@ -59,15 +59,15 @@ export function ServerRpc(options: ServerRpcOptions = {}): MethodDecorator {
             paramTypes: paramTypes.map((type: unknown) => type?.constructor?.name || 'unknown'),
             returnType: returnType?.name || 'unknown'
         };
-        
+
         // 存储元数据
         Reflect.defineMetadata(RPC_METADATA_KEY, metadata, target, propertyKey);
-        
+
         // 添加到方法列表
         const existingMethods = Reflect.getMetadata(RPC_METHODS_KEY, target.constructor) || [];
         existingMethods.push(methodName);
         Reflect.defineMetadata(RPC_METHODS_KEY, existingMethods, target.constructor);
-        
+
         // 包装原方法以添加验证和日志
         const originalMethod = descriptor.value;
         descriptor.value = async function (...args: unknown[]) {
@@ -80,7 +80,7 @@ export function ServerRpc(options: ServerRpcOptions = {}): MethodDecorator {
                 throw error;
             }
         };
-        
+
         return descriptor;
     };
 }
@@ -93,11 +93,11 @@ export function ClientRpc(options: ClientRpcOptions = {}): MethodDecorator {
     return function (target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
         const className = target.constructor.name;
         const methodName = String(propertyKey);
-        
+
         // 获取参数类型和返回值类型
         const paramTypes = Reflect.getMetadata('design:paramtypes', target, propertyKey) || [];
         const returnType = Reflect.getMetadata('design:returntype', target, propertyKey);
-        
+
         const metadata: RpcMethodMetadata = {
             methodName,
             className,
@@ -114,15 +114,15 @@ export function ClientRpc(options: ClientRpcOptions = {}): MethodDecorator {
             paramTypes: paramTypes.map((type: unknown) => type?.constructor?.name || 'unknown'),
             returnType: returnType?.name || 'unknown'
         };
-        
+
         // 存储元数据
         Reflect.defineMetadata(RPC_METADATA_KEY, metadata, target, propertyKey);
-        
+
         // 添加到方法列表
         const existingMethods = Reflect.getMetadata(RPC_METHODS_KEY, target.constructor) || [];
         existingMethods.push(methodName);
         Reflect.defineMetadata(RPC_METHODS_KEY, existingMethods, target.constructor);
-        
+
         // 包装原方法以添加调用逻辑
         const originalMethod = descriptor.value;
         descriptor.value = async function (...args: unknown[]) {
@@ -130,7 +130,7 @@ export function ClientRpc(options: ClientRpcOptions = {}): MethodDecorator {
             // 目前保持原方法以支持本地测试
             return originalMethod.apply(this, args);
         };
-        
+
         return descriptor;
     };
 }
@@ -141,7 +141,7 @@ export function ClientRpc(options: ClientRpcOptions = {}): MethodDecorator {
 export function getRpcMethods(target: Function): RpcMethodMetadata[] {
     const methodNames = Reflect.getMetadata(RPC_METHODS_KEY, target) || [];
     const prototype = target.prototype;
-    
+
     return methodNames.map((methodName: string) => {
         const metadata = Reflect.getMetadata(RPC_METADATA_KEY, prototype, methodName);
         if (!metadata) {
@@ -155,7 +155,7 @@ export function getRpcMethods(target: Function): RpcMethodMetadata[] {
  * 获取特定方法的RPC元数据
  */
 export function getRpcMethodMetadata(
-    target: object, 
+    target: object,
     methodName: string | symbol
 ): RpcMethodMetadata | undefined {
     return Reflect.getMetadata(RPC_METADATA_KEY, target, methodName);
@@ -203,7 +203,7 @@ export class RpcMethodValidator {
                 error: `参数数量不匹配，期望 ${metadata.paramTypes.length} 个，实际 ${args.length} 个`
             };
         }
-        
+
         // 权限检查
         if (metadata.options.requireAuth && !callerId) {
             return {
@@ -211,10 +211,10 @@ export class RpcMethodValidator {
                 error: '该方法需要身份验证'
             };
         }
-        
+
         return { valid: true };
     }
-    
+
     /**
      * 验证RPC方法定义
      */
@@ -226,7 +226,7 @@ export class RpcMethodValidator {
                 error: '方法名无效'
             };
         }
-        
+
         // 超时时间检查
         if (metadata.options.timeout && metadata.options.timeout <= 0) {
             return {
@@ -234,16 +234,16 @@ export class RpcMethodValidator {
                 error: '超时时间必须大于0'
             };
         }
-        
+
         // 优先级检查
-        if (metadata.options.priority !== undefined && 
+        if (metadata.options.priority !== undefined &&
             (metadata.options.priority < 0 || metadata.options.priority > 10)) {
             return {
                 valid: false,
                 error: '优先级必须在0-10之间'
             };
         }
-        
+
         return { valid: true };
     }
 }

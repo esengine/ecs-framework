@@ -14,27 +14,27 @@ export interface ICompressionAlgorithm {
     readonly version: string;
     /** 是否支持异步压缩 */
     readonly supportsAsync: boolean;
-    
+
     /**
      * 同步压缩
      */
     compress(data: ArrayBuffer): ArrayBuffer;
-    
+
     /**
      * 同步解压缩
      */
     decompress(data: ArrayBuffer): ArrayBuffer;
-    
+
     /**
      * 异步压缩（可选）
      */
     compressAsync?(data: ArrayBuffer): Promise<ArrayBuffer>;
-    
+
     /**
      * 异步解压缩（可选）
      */
     decompressAsync?(data: ArrayBuffer): Promise<ArrayBuffer>;
-    
+
     /**
      * 估算压缩后大小（可选）
      */
@@ -124,15 +124,15 @@ export class NoCompressionAlgorithm implements ICompressionAlgorithm {
     readonly name = 'none';
     readonly version = '1.0.0';
     readonly supportsAsync = false;
-    
+
     compress(data: ArrayBuffer): ArrayBuffer {
         return data.slice(0);
     }
-    
+
     decompress(data: ArrayBuffer): ArrayBuffer {
         return data.slice(0);
     }
-    
+
     estimateCompressedSize(data: ArrayBuffer): number {
         return data.byteLength;
     }
@@ -145,39 +145,39 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
     readonly name = 'lz-string';
     readonly version = '1.0.0';
     readonly supportsAsync = false;
-    
+
     compress(data: ArrayBuffer): ArrayBuffer {
         // 将ArrayBuffer转换为字符串
         const decoder = new TextDecoder();
         const input = decoder.decode(data);
-        
+
         if (!input) {
             return data.slice(0);
         }
-        
+
         // LZ压缩算法
         const dictionary: { [key: string]: number } = {};
         let dictSize = 256;
-        
+
         // 初始化字典
         for (let i = 0; i < 256; i++) {
             dictionary[String.fromCharCode(i)] = i;
         }
-        
+
         let w = '';
         const result: number[] = [];
-        
+
         for (let i = 0; i < input.length; i++) {
             const c = input.charAt(i);
             const wc = w + c;
-            
+
             if (dictionary[wc] !== undefined) {
                 w = wc;
             } else {
                 result.push(dictionary[w]);
                 dictionary[wc] = dictSize++;
                 w = c;
-                
+
                 // 防止字典过大
                 if (dictSize >= 0xFFFF) {
                     dictSize = 256;
@@ -190,40 +190,40 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
                 }
             }
         }
-        
+
         if (w) {
             result.push(dictionary[w]);
         }
-        
+
         // 将结果转换为ArrayBuffer
         return this.numbersToArrayBuffer(result);
     }
-    
+
     decompress(data: ArrayBuffer): ArrayBuffer {
         if (data.byteLength === 0) {
             return data.slice(0);
         }
-        
+
         const numbers = this.arrayBufferToNumbers(data);
         if (numbers.length === 0) {
             return data.slice(0);
         }
-        
+
         const dictionary: { [key: number]: string } = {};
         let dictSize = 256;
-        
+
         // 初始化字典
         for (let i = 0; i < 256; i++) {
             dictionary[i] = String.fromCharCode(i);
         }
-        
+
         let w = String.fromCharCode(numbers[0]);
         const result = [w];
-        
+
         for (let i = 1; i < numbers.length; i++) {
             const k = numbers[i];
             let entry: string;
-            
+
             if (dictionary[k] !== undefined) {
                 entry = dictionary[k];
             } else if (k === dictSize) {
@@ -231,11 +231,11 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
             } else {
                 throw new Error('LZ解压缩错误：无效的压缩数据');
             }
-            
+
             result.push(entry);
             dictionary[dictSize++] = w + entry.charAt(0);
             w = entry;
-            
+
             // 防止字典过大
             if (dictSize >= 0xFFFF) {
                 dictSize = 256;
@@ -247,26 +247,26 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
                 }
             }
         }
-        
+
         // 将结果转换为ArrayBuffer
         const output = result.join('');
         const encoder = new TextEncoder();
         return encoder.encode(output).buffer;
     }
-    
+
     estimateCompressedSize(data: ArrayBuffer): number {
         // 简单估算：假设压缩率在30%-70%之间
         const size = data.byteLength;
         return Math.floor(size * 0.5); // 50%的估算压缩率
     }
-    
+
     /**
      * 将数字数组转换为ArrayBuffer
      */
     private numbersToArrayBuffer(numbers: number[]): ArrayBuffer {
         // 使用变长编码以节省空间
         const bytes: number[] = [];
-        
+
         for (const num of numbers) {
             if (num < 128) {
                 // 小于128，用1字节
@@ -282,20 +282,20 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
                 bytes.push((num >> 14) & 0x7F);
             }
         }
-        
+
         return new Uint8Array(bytes).buffer;
     }
-    
+
     /**
      * 将ArrayBuffer转换为数字数组
      */
     private arrayBufferToNumbers(buffer: ArrayBuffer): number[] {
         const bytes = new Uint8Array(buffer);
         const numbers: number[] = [];
-        
+
         for (let i = 0; i < bytes.length; i++) {
             const byte1 = bytes[i];
-            
+
             if ((byte1 & 0x80) === 0) {
                 // 单字节数字
                 numbers.push(byte1);
@@ -303,11 +303,11 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
                 // 多字节数字
                 let num = byte1 & 0x7F;
                 i++;
-                
+
                 if (i < bytes.length) {
                     const byte2 = bytes[i];
                     num |= (byte2 & 0x7F) << 7;
-                    
+
                     if ((byte2 & 0x80) !== 0) {
                         // 三字节数字
                         i++;
@@ -317,11 +317,11 @@ export class LZCompressionAlgorithm implements ICompressionAlgorithm {
                         }
                     }
                 }
-                
+
                 numbers.push(num);
             }
         }
-        
+
         return numbers;
     }
 }
@@ -372,10 +372,10 @@ export class MessageCompressor {
         if (this.algorithms.has(algorithm.name)) {
             this.logger.warn(`压缩算法 '${algorithm.name}' 已存在，将被覆盖`);
         }
-        
+
         this.algorithms.set(algorithm.name, algorithm);
         this.stats.algorithmUsage[algorithm.name] = 0;
-        
+
         this.logger.info(`注册压缩算法: ${algorithm.name} v${algorithm.version}`);
     }
 
@@ -387,13 +387,13 @@ export class MessageCompressor {
             this.logger.warn('无法注销默认的无压缩算法');
             return false;
         }
-        
+
         const removed = this.algorithms.delete(algorithmName);
         if (removed) {
             delete this.stats.algorithmUsage[algorithmName];
             this.logger.info(`注销压缩算法: ${algorithmName}`);
         }
-        
+
         return removed;
     }
 
@@ -415,21 +415,21 @@ export class MessageCompressor {
      * 压缩数据
      */
     public async compress(
-        data: ArrayBuffer | string, 
+        data: ArrayBuffer | string,
         algorithmName?: string
     ): Promise<CompressionResult> {
         const startTime = performance.now();
-        
+
         // 转换输入数据
-        const inputBuffer = typeof data === 'string' 
-            ? new TextEncoder().encode(data).buffer 
+        const inputBuffer = typeof data === 'string'
+            ? new TextEncoder().encode(data).buffer
             : data;
         const originalSize = inputBuffer.byteLength;
-        
+
         // 选择压缩算法
         const selectedAlgorithm = algorithmName || this.config.defaultAlgorithm;
         const algorithm = this.algorithms.get(selectedAlgorithm);
-        
+
         if (!algorithm) {
             throw new Error(`未找到压缩算法: ${selectedAlgorithm}`);
         }
@@ -459,9 +459,9 @@ export class MessageCompressor {
             // 更新统计信息
             if (this.config.enableStats) {
                 this.updateCompressionStats(
-                    selectedAlgorithm, 
-                    originalSize, 
-                    compressedSize, 
+                    selectedAlgorithm,
+                    originalSize,
+                    compressedSize,
                     compressionTime
                 );
             }
@@ -494,12 +494,12 @@ export class MessageCompressor {
      * 解压缩数据
      */
     public async decompress(
-        data: ArrayBuffer, 
+        data: ArrayBuffer,
         algorithmName: string
     ): Promise<DecompressionResult> {
         const startTime = performance.now();
         const compressedSize = data.byteLength;
-        
+
         const algorithm = this.algorithms.get(algorithmName);
         if (!algorithm) {
             throw new Error(`未找到解压缩算法: ${algorithmName}`);
@@ -549,12 +549,12 @@ export class MessageCompressor {
      * 估算压缩后大小
      */
     public estimateCompressedSize(
-        data: ArrayBuffer, 
+        data: ArrayBuffer,
         algorithmName?: string
     ): number {
         const selectedAlgorithm = algorithmName || this.config.defaultAlgorithm;
         const algorithm = this.algorithms.get(selectedAlgorithm);
-        
+
         if (!algorithm) {
             return data.byteLength;
         }
@@ -614,9 +614,9 @@ export class MessageCompressor {
      * 更新压缩统计信息
      */
     private updateCompressionStats(
-        algorithmName: string, 
-        originalSize: number, 
-        compressedSize: number, 
+        algorithmName: string,
+        originalSize: number,
+        compressedSize: number,
         compressionTime: number
     ): void {
         this.stats.totalCompressions++;
@@ -625,13 +625,13 @@ export class MessageCompressor {
         this.stats.algorithmUsage[algorithmName]++;
 
         // 更新平均压缩比
-        this.stats.averageCompressionRatio = this.stats.totalOriginalBytes > 0 
-            ? this.stats.totalCompressedBytes / this.stats.totalOriginalBytes 
+        this.stats.averageCompressionRatio = this.stats.totalOriginalBytes > 0
+            ? this.stats.totalCompressedBytes / this.stats.totalOriginalBytes
             : 1.0;
 
         // 更新平均压缩时间
-        this.stats.averageCompressionTime = 
-            (this.stats.averageCompressionTime * (this.stats.totalCompressions - 1) + compressionTime) 
+        this.stats.averageCompressionTime =
+            (this.stats.averageCompressionTime * (this.stats.totalCompressions - 1) + compressionTime)
             / this.stats.totalCompressions;
     }
 
@@ -642,8 +642,8 @@ export class MessageCompressor {
         this.stats.totalDecompressions++;
 
         // 更新平均解压缩时间
-        this.stats.averageDecompressionTime = 
-            (this.stats.averageDecompressionTime * (this.stats.totalDecompressions - 1) + decompressionTime) 
+        this.stats.averageDecompressionTime =
+            (this.stats.averageDecompressionTime * (this.stats.totalDecompressions - 1) + decompressionTime)
             / this.stats.totalDecompressions;
     }
 }

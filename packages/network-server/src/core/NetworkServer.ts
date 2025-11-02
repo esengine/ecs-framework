@@ -317,7 +317,7 @@ export class NetworkServer extends EventEmitter {
             this.transport.broadcast(serializedMessage.data, exclude);
 
             const clientCount = this.connectionManager.getAllSessions().length - (exclude?.length || 0);
-            
+
             // 更新统计
             this.stats.messages.sent += clientCount;
             this.stats.bandwidth.outbound += serializedMessage.size * clientCount;
@@ -367,7 +367,7 @@ export class NetworkServer extends EventEmitter {
      */
     getStats(): ServerStats {
         const currentStats = { ...this.stats };
-        
+
         if (this.stats.startTime) {
             currentStats.uptime = Date.now() - this.stats.startTime;
         }
@@ -493,7 +493,7 @@ export class NetworkServer extends EventEmitter {
 
             // 创建客户端会话
             const session = this.connectionManager.addSession(clientInfo);
-            
+
             this.logger.info(`客户端已连接: ${clientInfo.id} from ${clientInfo.remoteAddress}`);
 
         } catch (error) {
@@ -582,11 +582,11 @@ export class NetworkServer extends EventEmitter {
             case MessageType.CONNECT:
                 this.handleConnectMessage(session, message as IConnectMessage);
                 break;
-                
+
             case MessageType.HEARTBEAT:
                 this.handleHeartbeatMessage(session, message as IHeartbeatMessage);
                 break;
-                
+
             default:
                 // 其他消息类型由外部处理器处理
                 break;
@@ -613,7 +613,7 @@ export class NetworkServer extends EventEmitter {
         );
 
         this.sendToClient(session.id, response);
-        
+
         if (this.config.authentication.required) {
             // 设置认证超时
             Core.schedule(this.config.authentication.timeout / 1000, false, this, () => {
@@ -653,7 +653,7 @@ export class NetworkServer extends EventEmitter {
 
         const now = Date.now();
         const limit = this.rateLimitMap.get(address);
-        
+
         if (!limit) {
             this.rateLimitMap.set(address, {
                 count: 1,

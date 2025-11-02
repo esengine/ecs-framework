@@ -106,25 +106,25 @@ export interface RpcReliabilityManagerEvents {
 export class RpcReliabilityManager extends EventEmitter {
     private logger = createLogger('RpcReliabilityManager');
     private config: RpcReliabilityConfig;
-    
+
     /** 重复调用记录 */
     private duplicateRecords = new Map<string, DuplicateCallRecord>();
-    
+
     /** 活跃事务 */
     private transactions = new Map<string, TransactionInfo>();
-    
+
     /** 顺序执行队列（按发送者分组） */
     private orderedQueues = new Map<string, OrderedQueueItem[]>();
-    
+
     /** 正在处理的有序调用 */
     private processingOrdered = new Set<string>();
-    
+
     /** 清理定时器 */
     private cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
     constructor(config: Partial<RpcReliabilityConfig> = {}) {
         super();
-        
+
         this.config = {
             idempotency: {
                 enabled: true,
@@ -146,7 +146,7 @@ export class RpcReliabilityManager extends EventEmitter {
                 ...config.transaction
             }
         };
-        
+
         this.startCleanupTimer();
     }
 
@@ -161,18 +161,18 @@ export class RpcReliabilityManager extends EventEmitter {
         if (!this.config.idempotency.enabled) {
             return { isDuplicate: false, shouldProcess: true };
         }
-        
+
         const key = `${request.senderId}:${request.callId}`;
         const existing = this.duplicateRecords.get(key);
         const now = Date.now();
-        
+
         if (existing) {
             // 更新重复调用记录
             existing.lastCallTime = now;
             existing.callCount++;
-            
+
             this.emit('duplicateCallDetected', existing);
-            
+
             // 如果已有响应，直接返回
             if (existing.response) {
                 return {
@@ -181,7 +181,7 @@ export class RpcReliabilityManager extends EventEmitter {
                     shouldProcess: false
                 };
             }
-            
+
             // 如果在检查窗口内，认为是重复调用但还在处理中
             if (now - existing.firstCallTime < this.config.idempotency.checkWindowTime) {
                 return {
@@ -190,7 +190,7 @@ export class RpcReliabilityManager extends EventEmitter {
                 };
             }
         }
-        
+
         // 记录新的调用
         const record: DuplicateCallRecord = {
             callId: request.callId,
@@ -200,9 +200,9 @@ export class RpcReliabilityManager extends EventEmitter {
             lastCallTime: now,
             callCount: 1
         };
-        
+
         this.duplicateRecords.set(key, record);
-        
+
         return { isDuplicate: false, shouldProcess: true };
     }
 
@@ -213,10 +213,10 @@ export class RpcReliabilityManager extends EventEmitter {
         if (!this.config.idempotency.enabled) {
             return;
         }
-        
+
         const key = `${request.senderId}:${request.callId}`;
         const record = this.duplicateRecords.get(key);
-        
+
         if (record) {
             record.response = response;
         }
@@ -232,9 +232,9 @@ export class RpcReliabilityManager extends EventEmitter {
         if (!this.config.orderedExecution.enabled) {
             return handler();
         }
-        
+
         const senderId = request.senderId;
-        
+
         return new Promise<RpcCallResponse>((resolve, reject) => {
             const queueItem: OrderedQueueItem = {
                 request,
@@ -243,14 +243,14 @@ export class RpcReliabilityManager extends EventEmitter {
                 reject,
                 enqueuedAt: Date.now()
             };
-            
+
             // 获取或创建队列
             let queue = this.orderedQueues.get(senderId);
             if (!queue) {
                 queue = [];
                 this.orderedQueues.set(senderId, queue);
             }
-            
+
             // 检查队列大小
             if (queue.length >= this.config.orderedExecution.maxQueueSize) {
                 reject({
@@ -259,10 +259,10 @@ export class RpcReliabilityManager extends EventEmitter {
                 });
                 return;
             }
-            
+
             queue.push(queueItem);
             this.emit('orderedCallQueued', request.callId, queue.length);
-            
+
             // 如果没有正在处理的调用，开始处理
             if (!this.processingOrdered.has(senderId)) {
                 this.processOrderedQueue(senderId);
@@ -277,15 +277,15 @@ export class RpcReliabilityManager extends EventEmitter {
         if (!this.config.transaction.enabled) {
             throw new Error('事务功能未启用');
         }
-        
+
         if (this.transactions.has(transactionId)) {
             throw new Error(`事务已存在: ${transactionId}`);
         }
-        
+
         if (this.transactions.size >= this.config.transaction.maxTransactions) {
             throw new Error('超过最大事务数量限制');
         }
-        
+
         const transaction: TransactionInfo = {
             transactionId,
             calls: [],
@@ -293,10 +293,10 @@ export class RpcReliabilityManager extends EventEmitter {
             status: 'pending',
             rollbackActions: []
         };
-        
+
         this.transactions.set(transactionId, transaction);
         this.emit('transactionStarted', transactionId);
-        
+
         // 设置事务超时
         setTimeout(() => {
             if (this.transactions.has(transactionId)) {
@@ -317,13 +317,13 @@ export class RpcReliabilityManager extends EventEmitter {
         if (!transaction) {
             throw new Error(`事务不存在: ${transactionId}`);
         }
-        
+
         if (transaction.status !== 'pending') {
             throw new Error(`事务状态无效: ${transaction.status}`);
         }
-        
+
         transaction.calls.push(request);
-        
+
         if (rollbackAction) {
             transaction.rollbackActions.push(rollbackAction);
         }
@@ -337,14 +337,14 @@ export class RpcReliabilityManager extends EventEmitter {
         if (!transaction) {
             throw new Error(`事务不存在: ${transactionId}`);
         }
-        
+
         if (transaction.status !== 'pending') {
             throw new Error(`事务状态无效: ${transaction.status}`);
         }
-        
+
         transaction.status = 'committed';
         this.transactions.delete(transactionId);
-        
+
         this.emit('transactionCommitted', transactionId);
         this.logger.info(`事务已提交: ${transactionId}，包含 ${transaction.calls.length} 个调用`);
     }
@@ -357,13 +357,13 @@ export class RpcReliabilityManager extends EventEmitter {
         if (!transaction) {
             throw new Error(`事务不存在: ${transactionId}`);
         }
-        
+
         if (transaction.status !== 'pending') {
             return; // 已经处理过
         }
-        
+
         transaction.status = 'rolledback';
-        
+
         // 执行回滚操作
         for (const rollbackAction of transaction.rollbackActions.reverse()) {
             try {
@@ -372,9 +372,9 @@ export class RpcReliabilityManager extends EventEmitter {
                 this.logger.error(`回滚操作失败: ${transactionId}`, error);
             }
         }
-        
+
         this.transactions.delete(transactionId);
-        
+
         this.emit('transactionRolledback', transactionId, reason);
         this.logger.warn(`事务已回滚: ${transactionId}，原因: ${reason}`);
     }
@@ -394,12 +394,12 @@ export class RpcReliabilityManager extends EventEmitter {
         activeTransactions: number;
         totalQueuedCalls: number;
         processingQueues: number;
-    } {
+        } {
         let totalQueuedCalls = 0;
         for (const queue of this.orderedQueues.values()) {
             totalQueuedCalls += queue.length;
         }
-        
+
         return {
             duplicateRecords: this.duplicateRecords.size,
             activeTransactions: this.transactions.size,
@@ -432,15 +432,15 @@ export class RpcReliabilityManager extends EventEmitter {
             clearInterval(this.cleanupTimer);
             this.cleanupTimer = null;
         }
-        
+
         // 回滚所有活跃事务
         const transactionIds = Array.from(this.transactions.keys());
         for (const transactionId of transactionIds) {
-            this.rollbackTransaction(transactionId, '管理器销毁').catch(error => {
+            this.rollbackTransaction(transactionId, '管理器销毁').catch((error) => {
                 this.logger.error(`销毁时回滚事务失败: ${transactionId}`, error);
             });
         }
-        
+
         // 清理队列
         for (const queue of this.orderedQueues.values()) {
             for (const item of queue) {
@@ -450,12 +450,12 @@ export class RpcReliabilityManager extends EventEmitter {
                 });
             }
         }
-        
+
         this.duplicateRecords.clear();
         this.transactions.clear();
         this.orderedQueues.clear();
         this.processingOrdered.clear();
-        
+
         this.removeAllListeners();
     }
 
@@ -464,17 +464,17 @@ export class RpcReliabilityManager extends EventEmitter {
      */
     private async processOrderedQueue(senderId: string): Promise<void> {
         this.processingOrdered.add(senderId);
-        
+
         try {
             const queue = this.orderedQueues.get(senderId);
             if (!queue || queue.length === 0) {
                 return;
             }
-            
+
             while (queue.length > 0) {
                 const item = queue.shift()!;
                 const waitTime = Date.now() - item.enqueuedAt;
-                
+
                 // 检查等待时间是否超限
                 if (waitTime > this.config.orderedExecution.maxWaitTime) {
                     item.reject({
@@ -483,21 +483,21 @@ export class RpcReliabilityManager extends EventEmitter {
                     });
                     continue;
                 }
-                
+
                 try {
                     const response = await item.handler();
                     item.resolve(response);
-                    
+
                     this.emit('orderedCallProcessed', item.request.callId, waitTime);
-                    
+
                 } catch (error) {
                     item.reject(error as RpcError);
                 }
             }
-            
+
         } finally {
             this.processingOrdered.delete(senderId);
-            
+
             // 如果队列还有新的项目，继续处理
             const queue = this.orderedQueues.get(senderId);
             if (queue && queue.length > 0) {
@@ -520,7 +520,7 @@ export class RpcReliabilityManager extends EventEmitter {
      */
     private cleanup(): void {
         const now = Date.now();
-        
+
         // 清理过期的重复调用记录
         if (this.config.idempotency.enabled) {
             for (const [key, record] of this.duplicateRecords) {
@@ -528,20 +528,20 @@ export class RpcReliabilityManager extends EventEmitter {
                     this.duplicateRecords.delete(key);
                 }
             }
-            
+
             // 限制记录数量
             if (this.duplicateRecords.size > this.config.idempotency.maxRecords) {
                 const sortedRecords = Array.from(this.duplicateRecords.entries())
                     .sort(([,a], [,b]) => a.lastCallTime - b.lastCallTime);
-                
+
                 const keepCount = Math.floor(this.config.idempotency.maxRecords * 0.8);
-                
+
                 for (let i = 0; i < sortedRecords.length - keepCount; i++) {
                     this.duplicateRecords.delete(sortedRecords[i][0]);
                 }
             }
         }
-        
+
         // 清理空的有序队列
         for (const [senderId, queue] of this.orderedQueues) {
             if (queue.length === 0 && !this.processingOrdered.has(senderId)) {

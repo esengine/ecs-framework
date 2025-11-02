@@ -65,7 +65,7 @@ export function PluginPanel({ pluginManager }: PluginPanelProps) {
         setExpandedCategories(newExpanded);
     };
 
-    const filteredPlugins = plugins.filter(plugin => {
+    const filteredPlugins = plugins.filter((plugin) => {
         if (!filter) return true;
         const searchLower = filter.toLowerCase();
         return (
@@ -83,81 +83,81 @@ export function PluginPanel({ pluginManager }: PluginPanelProps) {
         return acc;
     }, {} as Record<EditorPluginCategory, IEditorPluginMetadata[]>);
 
-    const enabledCount = plugins.filter(p => p.enabled).length;
-    const disabledCount = plugins.filter(p => !p.enabled).length;
+    const enabledCount = plugins.filter((p) => p.enabled).length;
+    const disabledCount = plugins.filter((p) => !p.enabled).length;
 
     const renderPluginCard = (plugin: IEditorPluginMetadata) => {
         const IconComponent = plugin.icon ? (LucideIcons as any)[plugin.icon] : null;
         return (
-        <div key={plugin.name} className={`plugin-card ${plugin.enabled ? 'enabled' : 'disabled'}`}>
-            <div className="plugin-card-header">
-                <div className="plugin-card-icon">
-                    {IconComponent ? <IconComponent size={24} /> : <Package size={24} />}
+            <div key={plugin.name} className={`plugin-card ${plugin.enabled ? 'enabled' : 'disabled'}`}>
+                <div className="plugin-card-header">
+                    <div className="plugin-card-icon">
+                        {IconComponent ? <IconComponent size={24} /> : <Package size={24} />}
+                    </div>
+                    <div className="plugin-card-info">
+                        <div className="plugin-card-title">{plugin.displayName}</div>
+                        <div className="plugin-card-version">v{plugin.version}</div>
+                    </div>
+                    <button
+                        className={`plugin-toggle ${plugin.enabled ? 'enabled' : 'disabled'}`}
+                        onClick={() => togglePlugin(plugin.name, plugin.enabled)}
+                        title={plugin.enabled ? 'Disable plugin' : 'Enable plugin'}
+                    >
+                        {plugin.enabled ? <CheckCircle size={18} /> : <XCircle size={18} />}
+                    </button>
                 </div>
-                <div className="plugin-card-info">
-                    <div className="plugin-card-title">{plugin.displayName}</div>
-                    <div className="plugin-card-version">v{plugin.version}</div>
-                </div>
-                <button
-                    className={`plugin-toggle ${plugin.enabled ? 'enabled' : 'disabled'}`}
-                    onClick={() => togglePlugin(plugin.name, plugin.enabled)}
-                    title={plugin.enabled ? 'Disable plugin' : 'Enable plugin'}
-                >
-                    {plugin.enabled ? <CheckCircle size={18} /> : <XCircle size={18} />}
-                </button>
-            </div>
-            {plugin.description && (
-                <div className="plugin-card-description">{plugin.description}</div>
-            )}
-            <div className="plugin-card-footer">
-                <span className="plugin-card-category">
-                    {(() => {
-                        const CategoryIcon = (LucideIcons as any)[categoryIcons[plugin.category]];
-                        return CategoryIcon ? <CategoryIcon size={14} style={{ marginRight: '4px' }} /> : null;
-                    })()}
-                    {categoryNames[plugin.category]}
-                </span>
-                {plugin.installedAt && (
-                    <span className="plugin-card-installed">
-                        Installed: {new Date(plugin.installedAt).toLocaleDateString()}
-                    </span>
+                {plugin.description && (
+                    <div className="plugin-card-description">{plugin.description}</div>
                 )}
+                <div className="plugin-card-footer">
+                    <span className="plugin-card-category">
+                        {(() => {
+                            const CategoryIcon = (LucideIcons as any)[categoryIcons[plugin.category]];
+                            return CategoryIcon ? <CategoryIcon size={14} style={{ marginRight: '4px' }} /> : null;
+                        })()}
+                        {categoryNames[plugin.category]}
+                    </span>
+                    {plugin.installedAt && (
+                        <span className="plugin-card-installed">
+                        Installed: {new Date(plugin.installedAt).toLocaleDateString()}
+                        </span>
+                    )}
+                </div>
             </div>
-        </div>
         );
     };
 
     const renderPluginList = (plugin: IEditorPluginMetadata) => {
         const IconComponent = plugin.icon ? (LucideIcons as any)[plugin.icon] : null;
         return (
-        <div key={plugin.name} className={`plugin-list-item ${plugin.enabled ? 'enabled' : 'disabled'}`}>
-            <div className="plugin-list-icon">
-                {IconComponent ? <IconComponent size={20} /> : <Package size={20} />}
-            </div>
-            <div className="plugin-list-info">
-                <div className="plugin-list-name">
-                    {plugin.displayName}
-                    <span className="plugin-list-version">v{plugin.version}</span>
+            <div key={plugin.name} className={`plugin-list-item ${plugin.enabled ? 'enabled' : 'disabled'}`}>
+                <div className="plugin-list-icon">
+                    {IconComponent ? <IconComponent size={20} /> : <Package size={20} />}
                 </div>
-                {plugin.description && (
-                    <div className="plugin-list-description">{plugin.description}</div>
-                )}
+                <div className="plugin-list-info">
+                    <div className="plugin-list-name">
+                        {plugin.displayName}
+                        <span className="plugin-list-version">v{plugin.version}</span>
+                    </div>
+                    {plugin.description && (
+                        <div className="plugin-list-description">{plugin.description}</div>
+                    )}
+                </div>
+                <div className="plugin-list-status">
+                    {plugin.enabled ? (
+                        <span className="status-badge enabled">Enabled</span>
+                    ) : (
+                        <span className="status-badge disabled">Disabled</span>
+                    )}
+                </div>
+                <button
+                    className="plugin-list-toggle"
+                    onClick={() => togglePlugin(plugin.name, plugin.enabled)}
+                    title={plugin.enabled ? 'Disable plugin' : 'Enable plugin'}
+                >
+                    {plugin.enabled ? 'Disable' : 'Enable'}
+                </button>
             </div>
-            <div className="plugin-list-status">
-                {plugin.enabled ? (
-                    <span className="status-badge enabled">Enabled</span>
-                ) : (
-                    <span className="status-badge disabled">Disabled</span>
-                )}
-            </div>
-            <button
-                className="plugin-list-toggle"
-                onClick={() => togglePlugin(plugin.name, plugin.enabled)}
-                title={plugin.enabled ? 'Disable plugin' : 'Enable plugin'}
-            >
-                {plugin.enabled ? 'Disable' : 'Enable'}
-            </button>
-        </div>
         );
     };
 

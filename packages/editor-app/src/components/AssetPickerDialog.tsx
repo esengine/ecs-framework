@@ -86,7 +86,7 @@ export function AssetPickerDialog({ projectPath, fileExtension, onSelect, onClos
                         modified: entry.modified
                     };
                 })
-                .filter(item => item.isDir || item.extension === fileExtension)
+                .filter((item) => item.isDir || item.extension === fileExtension)
                 .sort((a, b) => {
                     if (a.isDir === b.isDir) return a.name.localeCompare(b.name);
                     return a.isDir ? -1 : 1;
@@ -102,7 +102,7 @@ export function AssetPickerDialog({ projectPath, fileExtension, onSelect, onClos
     };
 
     // 过滤搜索结果
-    const filteredAssets = assets.filter(item =>
+    const filteredAssets = assets.filter((item) =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -189,7 +189,7 @@ export function AssetPickerDialog({ projectPath, fileExtension, onSelect, onClos
         const currentPathNormalized = currentPath.replace(/\\/g, '/');
 
         const relative = currentPathNormalized.replace(basePathNormalized, '');
-        const parts = relative.split('/').filter(p => p);
+        const parts = relative.split('/').filter((p) => p);
 
         // 根路径名称（显示"行为树"或"Assets"）
         const rootName = assetBasePath

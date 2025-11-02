@@ -55,16 +55,16 @@ export class HeartbeatManager {
     private config: HeartbeatConfig;
     private status: HeartbeatStatus;
     private eventHandlers: Partial<HeartbeatEvents> = {};
-    
+
     // 定时器
     private heartbeatTimer?: number;
     private timeoutTimer?: number;
-    
+
     // 延迟测量
     private pendingPings: Map<number, number> = new Map();
     private latencyHistory: number[] = [];
     private sequence = 0;
-    
+
     // 统计信息
     private sentCount = 0;
     private receivedCount = 0;
@@ -119,10 +119,10 @@ export class HeartbeatManager {
         const now = Date.now();
         this.status.lastHeartbeat = now;
         this.receivedCount++;
-        
+
         // 重置丢失心跳计数
         this.status.missedHeartbeats = 0;
-        
+
         // 计算延迟
         if (this.config.enableLatencyMeasurement && message.sequence !== undefined) {
             const sentTime = this.pendingPings.get(message.sequence);
@@ -130,14 +130,14 @@ export class HeartbeatManager {
                 const latency = now - sentTime;
                 this.updateLatency(latency);
                 this.pendingPings.delete(message.sequence);
-                
+
                 this.eventHandlers.heartbeatReceived?.(latency);
             }
         }
-        
+
         // 更新健康状态
         this.updateHealthStatus(true);
-        
+
         // 停止超时定时器
         this.stopTimeoutTimer();
     }
@@ -148,10 +148,10 @@ export class HeartbeatManager {
     handleHeartbeatTimeout(): void {
         this.status.missedHeartbeats++;
         this.logger.warn(`心跳超时，丢失次数: ${this.status.missedHeartbeats}`);
-        
+
         // 触发超时事件
         this.eventHandlers.heartbeatTimeout?.(this.status.missedHeartbeats);
-        
+
         // 检查是否达到最大丢失次数
         if (this.status.missedHeartbeats >= this.config.maxMissedHeartbeats) {
             this.updateHealthStatus(false);
@@ -169,9 +169,9 @@ export class HeartbeatManager {
      * 获取统计信息
      */
     getStats() {
-        const packetLoss = this.sentCount > 0 ? 
+        const packetLoss = this.sentCount > 0 ?
             ((this.sentCount - this.receivedCount) / this.sentCount) * 100 : 0;
-            
+
         return {
             sentCount: this.sentCount,
             receivedCount: this.receivedCount,
@@ -211,7 +211,7 @@ export class HeartbeatManager {
     updateConfig(newConfig: Partial<HeartbeatConfig>): void {
         Object.assign(this.config, newConfig);
         this.logger.info('心跳配置已更新:', newConfig);
-        
+
         // 重启定时器以应用新配置
         if (this.heartbeatTimer) {
             this.stop();
@@ -270,7 +270,7 @@ export class HeartbeatManager {
 
         const now = Date.now();
         const sequence = this.config.enableLatencyMeasurement ? ++this.sequence : undefined;
-        
+
         const message: HeartbeatMessage = {
             type: MessageType.HEARTBEAT,
             clientTime: now,
@@ -280,21 +280,21 @@ export class HeartbeatManager {
         try {
             this.sendHeartbeat(message);
             this.sentCount++;
-            
+
             // 记录发送时间用于延迟计算
             if (sequence !== undefined) {
                 this.pendingPings.set(sequence, now);
-                
+
                 // 清理过期的pending pings
                 this.cleanupPendingPings();
             }
-            
+
             // 启动超时定时器
             this.stopTimeoutTimer();
             this.startTimeoutTimer();
-            
+
             this.eventHandlers.heartbeatSent?.(now);
-            
+
         } catch (error) {
             this.logger.error('发送心跳失败:', error);
         }
@@ -305,16 +305,16 @@ export class HeartbeatManager {
      */
     private updateLatency(latency: number): void {
         this.status.latency = latency;
-        
+
         // 保存延迟历史（最多100个样本）
         this.latencyHistory.push(latency);
         if (this.latencyHistory.length > 100) {
             this.latencyHistory.shift();
         }
-        
+
         // 计算平均延迟
         this.status.averageLatency = this.latencyHistory.reduce((sum, lat) => sum + lat, 0) / this.latencyHistory.length;
-        
+
         this.logger.debug(`延迟更新: ${latency}ms, 平均: ${this.status.averageLatency?.toFixed(1)}ms`);
     }
 
@@ -335,7 +335,7 @@ export class HeartbeatManager {
     private cleanupPendingPings(): void {
         const now = Date.now();
         const timeout = this.config.timeout * 2; // 清理超过2倍超时时间的记录
-        
+
         for (const [sequence, sentTime] of this.pendingPings) {
             if (now - sentTime > timeout) {
                 this.pendingPings.delete(sequence);
@@ -363,8 +363,8 @@ export class HeartbeatManager {
     isConnectionHealthy(): boolean {
         const now = Date.now();
         const timeSinceLastHeartbeat = now - this.status.lastHeartbeat;
-        
-        return this.status.isHealthy && 
+
+        return this.status.isHealthy &&
                timeSinceLastHeartbeat <= this.config.timeout &&
                this.status.missedHeartbeats < this.config.maxMissedHeartbeats;
     }

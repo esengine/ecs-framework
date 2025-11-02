@@ -167,7 +167,7 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
     };
 
     const toggleGroup = (groupName: string) => {
-        setCollapsedGroups(prev => {
+        setCollapsedGroups((prev) => {
             const newSet = new Set(prev);
             if (newSet.has(groupName)) {
                 newSet.delete(groupName);
@@ -416,7 +416,7 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
                     </div>
                 )}
 
-                {groupNames.map(groupName => {
+                {groupNames.map((groupName) => {
                     const isCollapsed = collapsedGroups.has(groupName);
                     const groupVars = groupedVariables[groupName];
 
@@ -451,246 +451,246 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
                             )}
 
                             {!isCollapsed && groupVars.map(({ fullKey: key, varName, value }) => {
-                    const type = getVariableType(value);
-                    const isEditing = editingKey === key;
+                                const type = getVariableType(value);
+                                const isEditing = editingKey === key;
 
-                    const handleDragStart = (e: React.DragEvent) => {
-                        const variableData = {
-                            variableName: key,
-                            variableValue: value,
-                            variableType: type
-                        };
-                        e.dataTransfer.setData('application/blackboard-variable', JSON.stringify(variableData));
-                        e.dataTransfer.effectAllowed = 'copy';
-                    };
+                                const handleDragStart = (e: React.DragEvent) => {
+                                    const variableData = {
+                                        variableName: key,
+                                        variableValue: value,
+                                        variableType: type
+                                    };
+                                    e.dataTransfer.setData('application/blackboard-variable', JSON.stringify(variableData));
+                                    e.dataTransfer.effectAllowed = 'copy';
+                                };
 
-                    const typeColor =
+                                const typeColor =
                         type === 'number' ? '#4ec9b0' :
-                        type === 'boolean' ? '#569cd6' :
-                        type === 'object' ? '#ce9178' : '#d4d4d4';
+                            type === 'boolean' ? '#569cd6' :
+                                type === 'object' ? '#ce9178' : '#d4d4d4';
 
-                    const displayValue = type === 'object' ?
-                        JSON.stringify(value) :
-                        String(value);
+                                const displayValue = type === 'object' ?
+                                    JSON.stringify(value) :
+                                    String(value);
 
-                    const truncatedValue = displayValue.length > 30 ?
-                        displayValue.substring(0, 30) + '...' :
-                        displayValue;
+                                const truncatedValue = displayValue.length > 30 ?
+                                    displayValue.substring(0, 30) + '...' :
+                                    displayValue;
 
-                    return (
-                        <div
-                            key={key}
-                            draggable={!isEditing}
-                            onDragStart={handleDragStart}
-                            style={{
-                                marginBottom: '6px',
-                                padding: '6px 8px',
-                                backgroundColor: '#2d2d2d',
-                                borderRadius: '3px',
-                                borderLeft: `3px solid ${typeColor}`,
-                                cursor: isEditing ? 'default' : 'grab'
-                            }}
-                        >
-                            {isEditing ? (
-                                <div>
-                                    <div style={{
-                                        fontSize: '10px',
-                                        color: '#666',
-                                        marginBottom: '4px'
-                                    }}>
-                                        Name
-                                    </div>
-                                    <input
-                                        type="text"
-                                        value={editingNewKey}
-                                        onChange={(e) => setEditingNewKey(e.target.value)}
+                                return (
+                                    <div
+                                        key={key}
+                                        draggable={!isEditing}
+                                        onDragStart={handleDragStart}
                                         style={{
-                                            width: '100%',
-                                            padding: '4px',
-                                            marginBottom: '4px',
-                                            backgroundColor: '#1e1e1e',
-                                            border: '1px solid #3c3c3c',
-                                            borderRadius: '2px',
-                                            color: '#9cdcfe',
-                                            fontSize: '11px',
-                                            fontFamily: 'monospace'
-                                        }}
-                                        placeholder="Variable name (e.g., player.health)"
-                                    />
-                                    <div style={{
-                                        fontSize: '10px',
-                                        color: '#666',
-                                        marginBottom: '4px'
-                                    }}>
-                                        Type
-                                    </div>
-                                    <select
-                                        value={editType}
-                                        onChange={(e) => setEditType(e.target.value as BlackboardVariable['type'])}
-                                        style={{
-                                            width: '100%',
-                                            padding: '4px',
-                                            marginBottom: '4px',
-                                            backgroundColor: '#1e1e1e',
-                                            border: '1px solid #3c3c3c',
-                                            borderRadius: '2px',
-                                            color: '#cccccc',
-                                            fontSize: '10px'
+                                            marginBottom: '6px',
+                                            padding: '6px 8px',
+                                            backgroundColor: '#2d2d2d',
+                                            borderRadius: '3px',
+                                            borderLeft: `3px solid ${typeColor}`,
+                                            cursor: isEditing ? 'default' : 'grab'
                                         }}
                                     >
-                                        <option value="string">String</option>
-                                        <option value="number">Number</option>
-                                        <option value="boolean">Boolean</option>
-                                        <option value="object">Object (JSON)</option>
-                                    </select>
-                                    <div style={{
-                                        fontSize: '10px',
-                                        color: '#666',
-                                        marginBottom: '4px'
-                                    }}>
+                                        {isEditing ? (
+                                            <div>
+                                                <div style={{
+                                                    fontSize: '10px',
+                                                    color: '#666',
+                                                    marginBottom: '4px'
+                                                }}>
+                                        Name
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={editingNewKey}
+                                                    onChange={(e) => setEditingNewKey(e.target.value)}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '4px',
+                                                        marginBottom: '4px',
+                                                        backgroundColor: '#1e1e1e',
+                                                        border: '1px solid #3c3c3c',
+                                                        borderRadius: '2px',
+                                                        color: '#9cdcfe',
+                                                        fontSize: '11px',
+                                                        fontFamily: 'monospace'
+                                                    }}
+                                                    placeholder="Variable name (e.g., player.health)"
+                                                />
+                                                <div style={{
+                                                    fontSize: '10px',
+                                                    color: '#666',
+                                                    marginBottom: '4px'
+                                                }}>
+                                        Type
+                                                </div>
+                                                <select
+                                                    value={editType}
+                                                    onChange={(e) => setEditType(e.target.value as BlackboardVariable['type'])}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '4px',
+                                                        marginBottom: '4px',
+                                                        backgroundColor: '#1e1e1e',
+                                                        border: '1px solid #3c3c3c',
+                                                        borderRadius: '2px',
+                                                        color: '#cccccc',
+                                                        fontSize: '10px'
+                                                    }}
+                                                >
+                                                    <option value="string">String</option>
+                                                    <option value="number">Number</option>
+                                                    <option value="boolean">Boolean</option>
+                                                    <option value="object">Object (JSON)</option>
+                                                </select>
+                                                <div style={{
+                                                    fontSize: '10px',
+                                                    color: '#666',
+                                                    marginBottom: '4px'
+                                                }}>
                                         Value
-                                    </div>
-                                    <textarea
-                                        value={editValue}
-                                        onChange={(e) => setEditValue(e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            minHeight: editType === 'object' ? '60px' : '24px',
-                                            padding: '4px',
-                                            backgroundColor: '#1e1e1e',
-                                            border: '1px solid #0e639c',
-                                            borderRadius: '2px',
-                                            color: '#cccccc',
-                                            fontSize: '11px',
-                                            fontFamily: 'monospace',
-                                            resize: 'vertical',
-                                            marginBottom: '4px'
-                                        }}
-                                    />
-                                    <div style={{ display: 'flex', gap: '4px' }}>
-                                        <button
-                                            onClick={() => handleSaveEdit(key)}
-                                            style={{
-                                                padding: '3px 8px',
-                                                backgroundColor: '#0e639c',
-                                                border: 'none',
-                                                borderRadius: '2px',
-                                                color: '#fff',
-                                                cursor: 'pointer',
-                                                fontSize: '10px'
-                                            }}
-                                        >
+                                                </div>
+                                                <textarea
+                                                    value={editValue}
+                                                    onChange={(e) => setEditValue(e.target.value)}
+                                                    style={{
+                                                        width: '100%',
+                                                        minHeight: editType === 'object' ? '60px' : '24px',
+                                                        padding: '4px',
+                                                        backgroundColor: '#1e1e1e',
+                                                        border: '1px solid #0e639c',
+                                                        borderRadius: '2px',
+                                                        color: '#cccccc',
+                                                        fontSize: '11px',
+                                                        fontFamily: 'monospace',
+                                                        resize: 'vertical',
+                                                        marginBottom: '4px'
+                                                    }}
+                                                />
+                                                <div style={{ display: 'flex', gap: '4px' }}>
+                                                    <button
+                                                        onClick={() => handleSaveEdit(key)}
+                                                        style={{
+                                                            padding: '3px 8px',
+                                                            backgroundColor: '#0e639c',
+                                                            border: 'none',
+                                                            borderRadius: '2px',
+                                                            color: '#fff',
+                                                            cursor: 'pointer',
+                                                            fontSize: '10px'
+                                                        }}
+                                                    >
                                             Save
-                                        </button>
-                                        <button
-                                            onClick={() => setEditingKey(null)}
-                                            style={{
-                                                padding: '3px 8px',
-                                                backgroundColor: '#3c3c3c',
-                                                border: 'none',
-                                                borderRadius: '2px',
-                                                color: '#ccc',
-                                                cursor: 'pointer',
-                                                fontSize: '10px'
-                                            }}
-                                        >
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setEditingKey(null)}
+                                                        style={{
+                                                            padding: '3px 8px',
+                                                            backgroundColor: '#3c3c3c',
+                                                            border: 'none',
+                                                            borderRadius: '2px',
+                                                            color: '#ccc',
+                                                            cursor: 'pointer',
+                                                            fontSize: '10px'
+                                                        }}
+                                                    >
                                             Cancel
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    gap: '8px'
-                                }}>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{
-                                            fontSize: '11px',
-                                            color: '#9cdcfe',
-                                            fontWeight: 'bold',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '4px'
-                                        }}>
-                                            {varName} <span style={{
-                                                color: '#666',
-                                                fontWeight: 'normal',
-                                                fontSize: '10px'
-                                            }}>({type})</span>
-                                            {viewMode === 'local' && isModified(key) && (
-                                                <span style={{
-                                                    fontSize: '9px',
-                                                    color: '#ffbb00',
-                                                    backgroundColor: 'rgba(255, 187, 0, 0.15)',
-                                                    padding: '1px 4px',
-                                                    borderRadius: '2px'
-                                                }} title="运行时修改的值，停止后会恢复">
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                gap: '8px'
+                                            }}>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{
+                                                        fontSize: '11px',
+                                                        color: '#9cdcfe',
+                                                        fontWeight: 'bold',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px'
+                                                    }}>
+                                                        {varName} <span style={{
+                                                            color: '#666',
+                                                            fontWeight: 'normal',
+                                                            fontSize: '10px'
+                                                        }}>({type})</span>
+                                                        {viewMode === 'local' && isModified(key) && (
+                                                            <span style={{
+                                                                fontSize: '9px',
+                                                                color: '#ffbb00',
+                                                                backgroundColor: 'rgba(255, 187, 0, 0.15)',
+                                                                padding: '1px 4px',
+                                                                borderRadius: '2px'
+                                                            }} title="运行时修改的值，停止后会恢复">
                                                     运行时
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div style={{
-                                            fontSize: '10px',
-                                            fontFamily: 'monospace',
-                                            color: typeColor,
-                                            marginTop: '2px',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap',
-                                            backgroundColor: (viewMode === 'local' && isModified(key)) ? 'rgba(255, 187, 0, 0.1)' : 'transparent',
-                                            padding: '1px 3px',
-                                            borderRadius: '2px'
-                                        }} title={(viewMode === 'local' && isModified(key)) ? `初始值: ${JSON.stringify(initialVariables?.[key])}\n当前值: ${displayValue}` : displayValue}>
-                                            {truncatedValue}
-                                        </div>
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: '10px',
+                                                        fontFamily: 'monospace',
+                                                        color: typeColor,
+                                                        marginTop: '2px',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                        backgroundColor: (viewMode === 'local' && isModified(key)) ? 'rgba(255, 187, 0, 0.1)' : 'transparent',
+                                                        padding: '1px 3px',
+                                                        borderRadius: '2px'
+                                                    }} title={(viewMode === 'local' && isModified(key)) ? `初始值: ${JSON.stringify(initialVariables?.[key])}\n当前值: ${displayValue}` : displayValue}>
+                                                        {truncatedValue}
+                                                    </div>
+                                                </div>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    gap: '2px',
+                                                    flexShrink: 0
+                                                }}>
+                                                    <button
+                                                        onClick={() => handleStartEdit(key, value)}
+                                                        style={{
+                                                            padding: '2px',
+                                                            backgroundColor: 'transparent',
+                                                            border: 'none',
+                                                            color: '#ccc',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}
+                                                        title="Edit"
+                                                    >
+                                                        <Edit2 size={12} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => currentOnDelete && currentOnDelete(key)}
+                                                        style={{
+                                                            padding: '2px',
+                                                            backgroundColor: 'transparent',
+                                                            border: 'none',
+                                                            color: '#f44336',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div style={{
-                                        display: 'flex',
-                                        gap: '2px',
-                                        flexShrink: 0
-                                    }}>
-                                        <button
-                                            onClick={() => handleStartEdit(key, value)}
-                                            style={{
-                                                padding: '2px',
-                                                backgroundColor: 'transparent',
-                                                border: 'none',
-                                                color: '#ccc',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center'
-                                            }}
-                                            title="Edit"
-                                        >
-                                            <Edit2 size={12} />
-                                        </button>
-                                        <button
-                                            onClick={() => currentOnDelete && currentOnDelete(key)}
-                                            style={{
-                                                padding: '2px',
-                                                backgroundColor: 'transparent',
-                                                border: 'none',
-                                                color: '#f44336',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center'
-                                            }}
-                                            title="Delete"
-                                        >
-                                            <Trash2 size={12} />
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    );
+                                );
                             })}
                         </div>
                     );
@@ -753,8 +753,8 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
                         <textarea
                             placeholder={
                                 newType === 'object' ? '{"key": "value"}' :
-                                newType === 'boolean' ? 'true or false' :
-                                newType === 'number' ? '0' : 'value'
+                                    newType === 'boolean' ? 'true or false' :
+                                        newType === 'number' ? '0' : 'value'
                             }
                             value={newValue}
                             onChange={(e) => setNewValue(e.target.value)}

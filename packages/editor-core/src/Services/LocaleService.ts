@@ -55,7 +55,7 @@ export class LocaleService implements IService {
         this.currentLocale = locale;
         this.saveLocale(locale);
 
-        this.changeListeners.forEach(listener => listener(locale));
+        this.changeListeners.forEach((listener) => listener(locale));
 
         logger.info(`Locale changed to: ${locale}`);
     }

@@ -99,15 +99,15 @@ export const BehaviorTreeNodePalette: React.FC<BehaviorTreeNodePaletteProps> = (
     // 按类别分组（排除根节点类别）
     const categories = useMemo(() =>
         ['all', ...new Set(allTemplates
-            .filter(t => t.category !== '根节点')
-            .map(t => t.category))]
+            .filter((t) => t.category !== '根节点')
+            .map((t) => t.category))]
     , [allTemplates]);
 
     const filteredTemplates = useMemo(() =>
         (selectedCategory === 'all'
             ? allTemplates
-            : allTemplates.filter(t => t.category === selectedCategory))
-            .filter(t => t.category !== '根节点')
+            : allTemplates.filter((t) => t.category === selectedCategory))
+            .filter((t) => t.category !== '根节点')
     , [allTemplates, selectedCategory]);
 
     const handleNodeClick = (template: NodeTemplate) => {
@@ -158,7 +158,7 @@ export const BehaviorTreeNodePalette: React.FC<BehaviorTreeNodePaletteProps> = (
                 flexWrap: 'wrap',
                 gap: '5px'
             }}>
-                {categories.map(category => (
+                {categories.map((category) => (
                     <button
                         key={category}
                         onClick={() => setSelectedCategory(category)}
@@ -245,22 +245,22 @@ export const BehaviorTreeNodePalette: React.FC<BehaviorTreeNodePaletteProps> = (
                                     )}
                                 </div>
                             </div>
-                        <div style={{
-                            fontSize: '12px',
-                            color: '#999',
-                            lineHeight: '1.4',
-                            pointerEvents: 'none'
-                        }}>
-                            {template.description}
-                        </div>
-                        <div style={{
-                            marginTop: '5px',
-                            fontSize: '11px',
-                            color: '#666',
-                            pointerEvents: 'none'
-                        }}>
-                            {template.category}
-                        </div>
+                            <div style={{
+                                fontSize: '12px',
+                                color: '#999',
+                                lineHeight: '1.4',
+                                pointerEvents: 'none'
+                            }}>
+                                {template.description}
+                            </div>
+                            <div style={{
+                                marginTop: '5px',
+                                fontSize: '11px',
+                                color: '#666',
+                                pointerEvents: 'none'
+                            }}>
+                                {template.category}
+                            </div>
                         </div>
                     );
                 })}

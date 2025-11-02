@@ -208,7 +208,7 @@ export class EditorPluginManager extends PluginManager {
      * 按类别获取插件
      */
     public getPluginsByCategory(category: EditorPluginCategory): IEditorPlugin[] {
-        return this.getAllEditorPlugins().filter(plugin => plugin.category === category);
+        return this.getAllEditorPlugins().filter((plugin) => plugin.category === category);
     }
 
     /**

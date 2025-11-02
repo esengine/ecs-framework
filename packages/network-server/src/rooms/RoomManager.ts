@@ -166,7 +166,7 @@ export class RoomManager extends EventEmitter {
 
             // 添加到房间列表
             this.rooms.set(roomId, room);
-            
+
             // 创建者自动加入房间
             const success = room.addPlayer(creatorSession, `Creator_${creatorSession.id.substr(-6)}`);
             if (!success) {
@@ -327,30 +327,30 @@ export class RoomManager extends EventEmitter {
 
         // 应用过滤条件
         if (options.state !== undefined) {
-            rooms = rooms.filter(room => room.getRoomInfo().state === options.state);
+            rooms = rooms.filter((room) => room.getRoomInfo().state === options.state);
         }
 
         if (options.hasPassword !== undefined) {
-            rooms = rooms.filter(room => {
+            rooms = rooms.filter((room) => {
                 const config = room.getConfig();
                 return options.hasPassword ? !!config.password : !config.password;
             });
         }
 
         if (options.minPlayers !== undefined) {
-            rooms = rooms.filter(room => room.getAllPlayers().length >= options.minPlayers!);
+            rooms = rooms.filter((room) => room.getAllPlayers().length >= options.minPlayers!);
         }
 
         if (options.maxPlayers !== undefined) {
-            rooms = rooms.filter(room => room.getAllPlayers().length <= options.maxPlayers!);
+            rooms = rooms.filter((room) => room.getAllPlayers().length <= options.maxPlayers!);
         }
 
         if (options.notFull) {
-            rooms = rooms.filter(room => !room.isFull());
+            rooms = rooms.filter((room) => !room.isFull());
         }
 
         if (options.publicOnly) {
-            rooms = rooms.filter(room => room.getConfig().isPublic);
+            rooms = rooms.filter((room) => room.getConfig().isPublic);
         }
 
         // 分页
@@ -369,7 +369,7 @@ export class RoomManager extends EventEmitter {
      * 获取房间信息列表
      */
     getRoomInfoList(options: RoomQueryOptions = {}): IRoomInfo[] {
-        return this.queryRooms(options).map(room => room.getRoomInfo());
+        return this.queryRooms(options).map((room) => room.getRoomInfo());
     }
 
     /**
@@ -455,7 +455,7 @@ export class RoomManager extends EventEmitter {
     private generateRoomId(): string {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let result = '';
-        
+
         for (let i = 0; i < this.config.roomIdLength; i++) {
             result += chars.charAt(Math.floor(Math.random() * chars.length));
         }
@@ -541,7 +541,7 @@ export class RoomManager extends EventEmitter {
             }
 
             // 清理长时间无活动的已结束房间
-            if (stats.state === RoomState.Finished && 
+            if (stats.state === RoomState.Finished &&
                 now - stats.createTime > 3600000) { // 1小时
                 roomsToDestroy.push(roomId);
                 continue;
@@ -564,16 +564,16 @@ export class RoomManager extends EventEmitter {
     getStatusSummary() {
         const stats = this.getStats();
         const rooms = Array.from(this.rooms.values());
-        
+
         return {
             stats,
             roomCount: rooms.length,
             playerCount: this.playerRoomMap.size,
-            publicRooms: rooms.filter(r => r.getConfig().isPublic).length,
-            privateRooms: rooms.filter(r => !r.getConfig().isPublic).length,
-            fullRooms: rooms.filter(r => r.isFull()).length,
-            emptyRooms: rooms.filter(r => r.isEmpty()).length,
-            averagePlayersPerRoom: rooms.length > 0 ? 
+            publicRooms: rooms.filter((r) => r.getConfig().isPublic).length,
+            privateRooms: rooms.filter((r) => !r.getConfig().isPublic).length,
+            fullRooms: rooms.filter((r) => r.isFull()).length,
+            emptyRooms: rooms.filter((r) => r.isEmpty()).length,
+            averagePlayersPerRoom: rooms.length > 0 ?
                 rooms.reduce((sum, r) => sum + r.getAllPlayers().length, 0) / rooms.length : 0
         };
     }
@@ -595,13 +595,13 @@ export class RoomManager extends EventEmitter {
      */
     destroyRoomsBatch(roomIds: string[], reason: string = '批量清理'): number {
         let destroyedCount = 0;
-        
+
         for (const roomId of roomIds) {
             if (this.destroyRoom(roomId, reason)) {
                 destroyedCount++;
             }
         }
-        
+
         return destroyedCount;
     }
 

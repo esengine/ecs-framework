@@ -57,27 +57,27 @@ export interface CustomScopeRule {
 export class NetworkScopeManager extends EventEmitter {
     private logger = createLogger('NetworkScopeManager');
     private config: ScopeConfig;
-    
+
     /** 客户端位置信息 */
     private clientPositions = new Map<string, ClientPosition>();
-    
+
     /** 客户端可视范围 */
     private clientRanges = new Map<string, number>();
-    
+
     /** 房间映射 */
     private clientRooms = new Map<string, string>();
     private roomClients = new Map<string, Set<string>>();
-    
+
     /** 自定义作用域规则 */
     private customRules: CustomScopeRule[] = [];
-    
+
     /** 作用域缓存 */
     private scopeCache = new Map<string, { result: ScopeQueryResult; timestamp: number }>();
     private cacheTimeout = 100; // 100ms缓存
 
     constructor(config: Partial<ScopeConfig> = {}) {
         super();
-        
+
         this.config = {
             defaultRange: 100,
             maxRange: 500,
@@ -93,11 +93,11 @@ export class NetworkScopeManager extends EventEmitter {
      */
     public addClient(clientId: string, position?: { x: number; y: number; z: number }): void {
         this.clientRanges.set(clientId, this.config.defaultRange);
-        
+
         if (position) {
             this.updateClientPosition(clientId, position.x, position.y, position.z);
         }
-        
+
         this.logger.debug(`客户端 ${clientId} 已添加到作用域管理器`);
     }
 
@@ -107,16 +107,16 @@ export class NetworkScopeManager extends EventEmitter {
     public removeClient(clientId: string): void {
         this.clientPositions.delete(clientId);
         this.clientRanges.delete(clientId);
-        
+
         // 从房间中移除
         const roomId = this.clientRooms.get(clientId);
         if (roomId) {
             this.leaveRoom(clientId, roomId);
         }
-        
+
         // 清理缓存
         this.clearClientCache(clientId);
-        
+
         this.logger.debug(`客户端 ${clientId} 已从作用域管理器移除`);
     }
 
@@ -131,12 +131,12 @@ export class NetworkScopeManager extends EventEmitter {
             z,
             lastUpdate: Date.now()
         };
-        
+
         this.clientPositions.set(clientId, clientPosition);
-        
+
         // 清理相关缓存
         this.clearClientCache(clientId);
-        
+
         this.emit('positionUpdated', clientId, clientPosition);
     }
 
@@ -146,10 +146,10 @@ export class NetworkScopeManager extends EventEmitter {
     public setClientRange(clientId: string, range: number): void {
         const clampedRange = Math.min(range, this.config.maxRange);
         this.clientRanges.set(clientId, clampedRange);
-        
+
         // 清理相关缓存
         this.clearClientCache(clientId);
-        
+
         this.logger.debug(`客户端 ${clientId} 可视范围设置为: ${clampedRange}`);
     }
 
@@ -162,15 +162,15 @@ export class NetworkScopeManager extends EventEmitter {
         if (oldRoom) {
             this.leaveRoom(clientId, oldRoom);
         }
-        
+
         // 加入新房间
         this.clientRooms.set(clientId, roomId);
-        
+
         if (!this.roomClients.has(roomId)) {
             this.roomClients.set(roomId, new Set());
         }
         this.roomClients.get(roomId)!.add(clientId);
-        
+
         this.logger.debug(`客户端 ${clientId} 已加入房间 ${roomId}`);
         this.emit('clientJoinedRoom', clientId, roomId);
     }
@@ -180,17 +180,17 @@ export class NetworkScopeManager extends EventEmitter {
      */
     public leaveRoom(clientId: string, roomId: string): void {
         this.clientRooms.delete(clientId);
-        
+
         const roomClientSet = this.roomClients.get(roomId);
         if (roomClientSet) {
             roomClientSet.delete(clientId);
-            
+
             // 如果房间为空，删除房间
             if (roomClientSet.size === 0) {
                 this.roomClients.delete(roomId);
             }
         }
-        
+
         this.logger.debug(`客户端 ${clientId} 已离开房间 ${roomId}`);
         this.emit('clientLeftRoom', clientId, roomId);
     }
@@ -201,7 +201,7 @@ export class NetworkScopeManager extends EventEmitter {
     public addCustomRule(rule: CustomScopeRule): void {
         this.customRules.push(rule);
         this.customRules.sort((a, b) => b.priority - a.priority);
-        
+
         this.logger.debug(`已添加自定义作用域规则: ${rule.name}`);
     }
 
@@ -209,7 +209,7 @@ export class NetworkScopeManager extends EventEmitter {
      * 移除自定义作用域规则
      */
     public removeCustomRule(ruleName: string): boolean {
-        const index = this.customRules.findIndex(rule => rule.name === ruleName);
+        const index = this.customRules.findIndex((rule) => rule.name === ruleName);
         if (index >= 0) {
             this.customRules.splice(index, 1);
             this.logger.debug(`已移除自定义作用域规则: ${ruleName}`);
@@ -229,14 +229,14 @@ export class NetworkScopeManager extends EventEmitter {
                 return false;
             }
         }
-        
+
         // 检查网络作用域
         for (const [prop, scope] of Object.entries(batch.scopes)) {
             if (!this.checkPropertyScope(scope, batch, clientId)) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -250,26 +250,26 @@ export class NetworkScopeManager extends EventEmitter {
     ): ScopeQueryResult {
         const cacheKey = `${position.x},${position.y},${position.z},${range},${excludeClientId || ''}`;
         const cached = this.scopeCache.get(cacheKey);
-        
+
         if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
             return cached.result;
         }
-        
+
         const clientsInRange: string[] = [];
         const distances = new Map<string, number>();
         const lodLevels = new Map<string, number>();
-        
+
         for (const [clientId, clientPosition] of this.clientPositions) {
             if (excludeClientId && clientId === excludeClientId) {
                 continue;
             }
-            
+
             const distance = this.calculateDistance(position, clientPosition);
-            
+
             if (distance <= range) {
                 clientsInRange.push(clientId);
                 distances.set(clientId, distance);
-                
+
                 // 计算LOD级别
                 if (this.config.enableLOD) {
                     const lodLevel = this.calculateLODLevel(distance);
@@ -277,19 +277,19 @@ export class NetworkScopeManager extends EventEmitter {
                 }
             }
         }
-        
+
         const result: ScopeQueryResult = {
             clientsInRange,
             distances,
             lodLevels
         };
-        
+
         // 缓存结果
         this.scopeCache.set(cacheKey, {
             result,
             timestamp: Date.now()
         });
-        
+
         return result;
     }
 
@@ -349,7 +349,7 @@ export class NetworkScopeManager extends EventEmitter {
         roomCount: number;
         cacheSize: number;
         customRuleCount: number;
-    } {
+        } {
         return {
             clientCount: this.clientPositions.size,
             roomCount: this.roomClients.size,
@@ -378,22 +378,22 @@ export class NetworkScopeManager extends EventEmitter {
         switch (scope) {
             case NetworkScope.Global:
                 return true;
-                
+
             case NetworkScope.Room:
                 const clientRoom = this.clientRooms.get(clientId);
                 // 这里需要知道batch来源的实体所在房间，简化实现
                 return true;
-                
+
             case NetworkScope.Owner:
                 return batch.instanceId === clientId;
-                
+
             case NetworkScope.Nearby:
                 return this.isClientNearby(batch, clientId);
-                
+
             case NetworkScope.Custom:
                 // 由自定义规则处理
                 return true;
-                
+
             default:
                 return false;
         }
@@ -407,9 +407,9 @@ export class NetworkScopeManager extends EventEmitter {
         if (!clientPosition) {
             return false;
         }
-        
+
         const clientRange = this.clientRanges.get(clientId) || this.config.defaultRange;
-        
+
         // 这里需要知道batch来源实体的位置，简化实现
         // 实际项目中应该从实体的Transform组件获取位置
         return true;
@@ -445,13 +445,13 @@ export class NetworkScopeManager extends EventEmitter {
      */
     private clearClientCache(clientId: string): void {
         const keysToDelete: string[] = [];
-        
+
         for (const key of this.scopeCache.keys()) {
             if (key.includes(clientId)) {
                 keysToDelete.push(key);
             }
         }
-        
+
         for (const key of keysToDelete) {
             this.scopeCache.delete(key);
         }
