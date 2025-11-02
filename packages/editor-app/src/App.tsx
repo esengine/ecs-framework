@@ -723,7 +723,7 @@ function App() {
             <div className="editor-footer">
                 <span>{t('footer.plugins')}: {pluginManager?.getAllEditorPlugins().length ?? 0}</span>
                 <span>{t('footer.entities')}: {entityStore?.getAllEntities().length ?? 0}</span>
-                <span>{t('footer.core')}: {initialized ? t('footer.active') : t('footer.inactive')}</span>
+                <span>{t('footer.core')}: {t('footer.active')}</span>
             </div>
 
             {showPluginManager && pluginManager && (

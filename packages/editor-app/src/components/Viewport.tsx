@@ -349,7 +349,7 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
         const viewHeight = zoom * 2;
         const maxViewSize = Math.max(viewWidth, viewHeight);
 
-        let baseGridStep = 1;
+        let baseGridStep;
         if (maxViewSize > 200) {
             baseGridStep = 100;
         } else if (maxViewSize > 100) {
