@@ -48,7 +48,7 @@ export function MenuBar({
     onCloseProject,
     onExit,
     onOpenPluginManager,
-    onOpenProfiler,
+    onOpenProfiler: _onOpenProfiler,
     onOpenPortManager,
     onOpenSettings,
     onToggleDevtools,

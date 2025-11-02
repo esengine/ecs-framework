@@ -252,7 +252,7 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
         animationFrameRef.current = requestAnimationFrame(render);
     };
 
-    const renderFrame = (gl: WebGLRenderingContext, time: number) => {
+    const renderFrame = (gl: WebGLRenderingContext, _time: number) => {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         let currentDrawCalls = 0;

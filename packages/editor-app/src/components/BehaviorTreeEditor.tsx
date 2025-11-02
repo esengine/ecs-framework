@@ -1513,7 +1513,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         });
 
         // 使用缓存来重置连线样式
-        cache.connections.forEach((path, connKey) => {
+        cache.connections.forEach((path, _connKey) => {
             const connectionType = path.getAttribute('data-connection-type');
             if (connectionType === 'property') {
                 path.setAttribute('stroke', '#9c27b0');
