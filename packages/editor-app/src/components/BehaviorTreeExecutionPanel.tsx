@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Play, Pause, Square, RotateCcw, Trash2, Copy } from 'lucide-react';
+import { Trash2, Copy } from 'lucide-react';
 
 interface ExecutionLog {
     timestamp: number;

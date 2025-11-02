@@ -1,8 +1,6 @@
 import {
-    getSyncVarMetadata,
     getDirtySyncVars,
     clearDirtyFlags,
-    SyncVarMetadata,
     hasSyncVars,
     SyncVarValue
 } from '../decorators/SyncVar';
