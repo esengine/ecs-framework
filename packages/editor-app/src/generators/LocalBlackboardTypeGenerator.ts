@@ -1,5 +1,3 @@
-import { BlackboardValueType } from '@esengine/behavior-tree';
-
 /**
  * 局部黑板变量信息
  */

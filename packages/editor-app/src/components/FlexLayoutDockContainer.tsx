@@ -1,4 +1,4 @@
-import { useRef, useCallback, ReactNode, useMemo } from 'react';
+import { useCallback, ReactNode, useMemo } from 'react';
 import { Layout, Model, TabNode, IJsonModel, Actions, IJsonTabSetNode, IJsonRowNode } from 'flexlayout-react';
 import 'flexlayout-react/style/light.css';
 import '../styles/FlexLayoutDock.css';

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Folder, File, Search, ArrowLeft, Grid, List, FileCode } from 'lucide-react';
+import { X, Folder, Search, ArrowLeft, Grid, List, FileCode } from 'lucide-react';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import '../styles/AssetPickerDialog.css';
 

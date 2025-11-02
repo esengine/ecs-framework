@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Entity, Core } from '@esengine/ecs-framework';
-import { EntityStoreService, MessageHub, ComponentRegistry } from '@esengine/editor-core';
+import { Entity } from '@esengine/ecs-framework';
+import { EntityStoreService, MessageHub } from '@esengine/editor-core';
 import { PropertyInspector } from './PropertyInspector';
 import { FileSearch, ChevronDown, ChevronRight, X, Settings } from 'lucide-react';
 import '../styles/EntityInspector.css';

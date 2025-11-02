@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TreePine, X, Settings, Clipboard, Save, FolderOpen, Maximize2, Minimize2, Download, FilePlus } from 'lucide-react';
-import { save, open, ask, message } from '@tauri-apps/plugin-dialog';
+import { open, ask, message } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import { Core } from '@esengine/ecs-framework';
 import { BehaviorTreeEditor } from './BehaviorTreeEditor';

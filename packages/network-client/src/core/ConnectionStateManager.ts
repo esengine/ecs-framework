@@ -3,7 +3,7 @@
  * 负责跟踪连接状态变化、状态变化通知和自动恢复逻辑
  */
 import { createLogger, ITimer } from '@esengine/ecs-framework';
-import { ConnectionState, IConnectionStats, EventEmitter } from '@esengine/network-shared';
+import { ConnectionState, EventEmitter } from '@esengine/network-shared';
 import { NetworkTimerManager } from '../utils';
 
 /**

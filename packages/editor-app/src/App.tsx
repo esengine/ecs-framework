@@ -22,7 +22,6 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { BehaviorTreeWindow } from './components/BehaviorTreeWindow';
 import { PluginGeneratorWindow } from './components/PluginGeneratorWindow';
 import { ToastProvider } from './components/Toast';
-import { Viewport } from './components/Viewport';
 import { MenuBar } from './components/MenuBar';
 import { FlexLayoutDockContainer, FlexDockPanel } from './components/FlexLayoutDockContainer';
 import { TauriAPI } from './api/tauri';

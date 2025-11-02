@@ -6,13 +6,11 @@ import { createLogger } from '@esengine/ecs-framework';
 import {
     IConnectionOptions,
     ConnectionState,
-    IConnectionStats,
     MessageType,
     INetworkMessage,
     IConnectMessage,
     IConnectResponseMessage,
     IHeartbeatMessage,
-    NetworkErrorType,
     EventEmitter
 } from '@esengine/network-shared';
 import { WebSocketClient } from '../transport/WebSocketClient';

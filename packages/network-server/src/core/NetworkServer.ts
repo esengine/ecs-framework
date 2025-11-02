@@ -10,7 +10,6 @@ import {
     IConnectMessage,
     IConnectResponseMessage,
     IHeartbeatMessage,
-    NetworkErrorType,
     EventEmitter
 } from '@esengine/network-shared';
 import { WebSocketTransport } from '../transport/WebSocketTransport';
