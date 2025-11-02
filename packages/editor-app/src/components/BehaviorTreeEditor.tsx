@@ -166,7 +166,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         boxSelectStart,
         boxSelectEnd,
         dragDelta,
-        forceUpdateCounter,
+        forceUpdateCounter: _forceUpdateCounter,
         setNodes,
         setConnections,
         setSelectedNodeIds,
@@ -286,11 +286,11 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
     // 运行状态
     const [executionMode, setExecutionMode] = useState<ExecutionMode>('idle');
-    const [executionHistory, setExecutionHistory] = useState<string[]>([]);
+    const [_executionHistory, setExecutionHistory] = useState<string[]>([]);
     const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
     const [executionSpeed, setExecutionSpeed] = useState<number>(1.0);
     const [tickCount, setTickCount] = useState(0);
-    const executionTimerRef = useRef<number | null>(null);
+    const _executionTimerRef = useRef<number | null>(null);
     const executionModeRef = useRef<ExecutionMode>('idle');
     const executorRef = useRef<BehaviorTreeExecutor | null>(null);
     const animationFrameRef = useRef<number | null>(null);
@@ -1223,7 +1223,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     };
 
     // 计算属性引脚的Y坐标偏移（从节点中心算起）
-    const getPropertyPinYOffset = (node: BehaviorTreeNode, propertyIndex: number): number => {
+    const _getPropertyPinYOffset = (node: BehaviorTreeNode, propertyIndex: number): number => {
         // 从节点顶部开始的距离：
         const paddingTop = 12;
         const titleArea = 18 + 6; // icon高度 + marginBottom

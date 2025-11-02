@@ -479,7 +479,7 @@ function App() {
         }
     };
 
-    const handleExportScene = async () => {
+    const _handleExportScene = async () => {
         if (!sceneManager) {
             console.error('SceneManagerService not available');
             return;
