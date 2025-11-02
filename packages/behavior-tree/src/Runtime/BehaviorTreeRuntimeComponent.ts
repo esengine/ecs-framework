@@ -216,7 +216,7 @@ export class BehaviorTreeRuntimeComponent extends Component {
      */
     unobserveBlackboard(nodeId: string): void {
         for (const observers of this.blackboardObservers.values()) {
-            const index = observers.findIndex(o => o.nodeId === nodeId);
+            const index = observers.findIndex((o) => o.nodeId === nodeId);
             if (index !== -1) {
                 observers.splice(index, 1);
             }

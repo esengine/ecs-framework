@@ -60,11 +60,11 @@ export class ReconnectionManager {
     private config: ReconnectionConfig;
     private state: ReconnectionState;
     private eventHandlers: Partial<ReconnectionEvents> = {};
-    
+
     private reconnectTimer?: ITimer;
     private reconnectCallback?: () => Promise<void>;
     private abortController?: AbortController;
-    
+
     // 策略相关
     private strategy: ReconnectionStrategy = ReconnectionStrategy.Exponential;
     private customDelayCalculator?: (attempt: number) => number;
@@ -133,7 +133,7 @@ export class ReconnectionManager {
         this.state.nextAttemptTime = Date.now() + delay;
 
         this.logger.info(`开始重连 (第 ${this.state.currentAttempt}/${this.config.maxAttempts} 次)，${delay}ms 后尝试`);
-        
+
         this.eventHandlers.reconnectStarted?.(this.state.currentAttempt);
 
         // 设置重连定时器
@@ -173,13 +173,13 @@ export class ReconnectionManager {
         }
 
         const duration = this.state.lastAttemptTime ? Date.now() - this.state.lastAttemptTime : 0;
-        
+
         this.logger.info(`重连成功 (第 ${this.state.currentAttempt} 次尝试，耗时 ${duration}ms)`);
-        
+
         this.state.isReconnecting = false;
         this.state.successfulReconnections++;
         this.state.nextAttemptTime = undefined;
-        
+
         // 是否重置重连计数
         if (this.config.resetAfterSuccess) {
             this.state.currentAttempt = 0;
@@ -198,7 +198,7 @@ export class ReconnectionManager {
         }
 
         this.logger.warn(`重连失败 (第 ${this.state.currentAttempt} 次尝试):`, error);
-        
+
         this.eventHandlers.reconnectFailed?.(this.state.currentAttempt, error);
 
         // 检查是否还有重连机会
@@ -230,7 +230,7 @@ export class ReconnectionManager {
             maxAttempts: this.config.maxAttempts,
             isReconnecting: this.state.isReconnecting,
             nextAttemptTime: this.state.nextAttemptTime,
-            successRate: this.state.totalAttempts > 0 ? 
+            successRate: this.state.totalAttempts > 0 ?
                 (this.state.successfulReconnections / this.state.totalAttempts) * 100 : 0
         };
     }
@@ -304,21 +304,21 @@ export class ReconnectionManager {
             case ReconnectionStrategy.Fixed:
                 delay = this.config.initialDelay;
                 break;
-                
+
             case ReconnectionStrategy.Linear:
                 delay = this.config.initialDelay * this.state.currentAttempt;
                 break;
-                
+
             case ReconnectionStrategy.Exponential:
                 delay = this.config.initialDelay * Math.pow(this.config.backoffFactor, this.state.currentAttempt - 1);
                 break;
-                
+
             case ReconnectionStrategy.Custom:
-                delay = this.customDelayCalculator ? 
-                    this.customDelayCalculator(this.state.currentAttempt) : 
+                delay = this.customDelayCalculator ?
+                    this.customDelayCalculator(this.state.currentAttempt) :
                     this.config.initialDelay;
                 break;
-                
+
             default:
                 delay = this.config.initialDelay;
         }
@@ -349,7 +349,7 @@ export class ReconnectionManager {
         try {
             await this.reconnectCallback();
             // 重连回调成功，等待实际连接建立再调用 onReconnectionSuccess
-            
+
         } catch (error) {
             this.onReconnectionFailure(error as Error);
         }

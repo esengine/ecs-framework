@@ -3,7 +3,7 @@
  * 负责跟踪连接状态变化、状态变化通知和自动恢复逻辑
  */
 import { createLogger, ITimer } from '@esengine/ecs-framework';
-import { ConnectionState, IConnectionStats, EventEmitter } from '@esengine/network-shared';
+import { ConnectionState, EventEmitter } from '@esengine/network-shared';
 import { NetworkTimerManager } from '../utils';
 
 /**
@@ -77,19 +77,19 @@ export class ConnectionStateManager extends EventEmitter {
     private previousState?: ConnectionState;
     private stateStartTime: number = Date.now();
     private stats: StateStats;
-    
+
     // 状态管理
     private stateHistory: StateHistoryEntry[] = [];
     private transitionRules: StateTransitionRule[] = [];
     private stateTimeouts: Map<ConnectionState, ITimer> = new Map();
-    
+
     // 恢复逻辑
     private recoveryAttempts = 0;
     private recoveryTimer?: ITimer;
-    
+
     // Timer管理器使用静态的NetworkTimerManager
     private recoveryCallback?: () => Promise<void>;
-    
+
     // 事件处理器
     private eventHandlers: Partial<ConnectionStateManagerEvents> = {};
 
@@ -272,7 +272,7 @@ export class ConnectionStateManager extends EventEmitter {
      * 移除状态转换规则
      */
     removeTransitionRule(from: ConnectionState, to: ConnectionState): boolean {
-        const index = this.transitionRules.findIndex(rule => rule.from === from && rule.to === to);
+        const index = this.transitionRules.findIndex((rule) => rule.from === from && rule.to === to);
         if (index >= 0) {
             this.transitionRules.splice(index, 1);
             return true;
@@ -285,7 +285,7 @@ export class ConnectionStateManager extends EventEmitter {
      */
     isValidTransition(from: ConnectionState, to: ConnectionState): boolean {
         // 检查自定义转换规则
-        const rule = this.transitionRules.find(r => r.from === from && r.to === to);
+        const rule = this.transitionRules.find((r) => r.from === from && r.to === to);
         if (rule) {
             return rule.condition ? rule.condition() : true;
         }
@@ -305,7 +305,7 @@ export class ConnectionStateManager extends EventEmitter {
      * 检查是否为连接中状态
      */
     isConnecting(): boolean {
-        return this.currentState === ConnectionState.Connecting || 
+        return this.currentState === ConnectionState.Connecting ||
                this.currentState === ConnectionState.Reconnecting;
     }
 
@@ -444,7 +444,7 @@ export class ConnectionStateManager extends EventEmitter {
         };
 
         this.stateHistory.push(entry);
-        
+
         // 限制历史记录数量
         if (this.stateHistory.length > 100) {
             this.stateHistory.shift();
@@ -458,7 +458,7 @@ export class ConnectionStateManager extends EventEmitter {
 
         // 计算平均持续时间
         const durations = this.stats.stateDurations[state];
-        this.stats.averageStateDurations[state] = 
+        this.stats.averageStateDurations[state] =
             durations.reduce((sum, d) => sum + d, 0) / durations.length;
     }
 
@@ -566,7 +566,7 @@ export class ConnectionStateManager extends EventEmitter {
         }
 
         this.recoveryAttempts++;
-        
+
         this.logger.info(`开始自动恢复 (第 ${this.recoveryAttempts} 次)`);
         this.eventHandlers.recoveryStarted?.(this.recoveryAttempts);
 
@@ -581,7 +581,7 @@ export class ConnectionStateManager extends EventEmitter {
                 } catch (error) {
                     this.logger.error(`自动恢复失败 (第 ${this.recoveryAttempts} 次):`, error);
                     this.eventHandlers.recoveryFailed?.(false);
-                    
+
                     // 继续尝试恢复
                     this.startRecovery();
                 }
@@ -595,7 +595,7 @@ export class ConnectionStateManager extends EventEmitter {
     private updateCurrentStats(): void {
         const now = Date.now();
         const currentDuration = now - this.stateStartTime;
-        
+
         if (this.currentState === ConnectionState.Connected) {
             this.stats.totalUptime += currentDuration - (this.stats.totalUptime > 0 ? 0 : currentDuration);
         }
@@ -612,7 +612,7 @@ export class ConnectionStateManager extends EventEmitter {
             [ConnectionState.Reconnecting]: '重连中',
             [ConnectionState.Failed]: '连接失败'
         };
-        
+
         return stateNames[state || this.currentState];
     }
 
@@ -620,11 +620,11 @@ export class ConnectionStateManager extends EventEmitter {
      * 获取连接质量评级
      */
     getConnectionQuality(): 'excellent' | 'good' | 'fair' | 'poor' {
-        const successRate = this.stats.connectionAttempts > 0 ? 
+        const successRate = this.stats.connectionAttempts > 0 ?
             this.stats.successfulConnections / this.stats.connectionAttempts : 0;
-        
+
         const averageConnectedTime = this.stats.averageStateDurations[ConnectionState.Connected];
-        
+
         if (successRate > 0.9 && averageConnectedTime > 60000) { // 成功率>90%且平均连接时间>1分钟
             return 'excellent';
         } else if (successRate > 0.7 && averageConnectedTime > 30000) {

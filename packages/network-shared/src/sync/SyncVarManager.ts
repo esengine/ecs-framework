@@ -1,8 +1,6 @@
-import { 
-    getSyncVarMetadata, 
-    getDirtySyncVars, 
-    clearDirtyFlags, 
-    SyncVarMetadata,
+import {
+    getDirtySyncVars,
+    clearDirtyFlags,
     hasSyncVars,
     SyncVarValue
 } from '../decorators/SyncVar';
@@ -68,19 +66,19 @@ export interface SyncVarManagerEvents {
  */
 export class SyncVarManager extends EventEmitter {
     private static instance: SyncVarManager | null = null;
-    
+
     /** 注册的实例映射 */
     private registeredInstances = new Map<string, object>();
-    
+
     /** 脏实例集合 */
     private dirtyInstances = new Set<string>();
-    
+
     /** 实例ID计数器 */
     private instanceIdCounter = 0;
-    
+
     /** 实例ID映射 */
     private instanceIdMap = new WeakMap<any, string>();
-    
+
     /** 统计信息 */
     private stats: SyncStats = {
         registeredInstances: 0,
@@ -91,19 +89,19 @@ export class SyncVarManager extends EventEmitter {
         syncsPerSecond: 0,
         lastSyncTime: 0
     };
-    
+
     /** 自动同步定时器 */
     private autoSyncTimer: ReturnType<typeof setInterval> | null = null;
-    
+
     /** 同步频率(毫秒) */
     private syncRate = 100;
-    
+
     /** 是否启用自动同步 */
     private autoSyncEnabled = true;
-    
+
     /** 最大批次大小 */
     private maxBatchSize = 100;
-    
+
     /** 立即同步请求队列 */
     private immediateSyncQueue = new Set<{ instanceId: string; propertyKey?: string | symbol }>();
 
@@ -137,14 +135,14 @@ export class SyncVarManager extends EventEmitter {
 
         // 生成新的实例ID
         const instanceId = `syncvar_${++this.instanceIdCounter}`;
-        
+
         // 注册实例
         this.registeredInstances.set(instanceId, instance);
         this.instanceIdMap.set(instance, instanceId);
-        
+
         // 更新统计
         this.stats.registeredInstances = this.registeredInstances.size;
-        
+
         this.emit('instanceRegistered', instanceId, instance);
         return instanceId;
     }
@@ -162,11 +160,11 @@ export class SyncVarManager extends EventEmitter {
         this.registeredInstances.delete(instanceId);
         this.instanceIdMap.delete(instance);
         this.dirtyInstances.delete(instanceId);
-        
+
         // 更新统计
         this.stats.registeredInstances = this.registeredInstances.size;
         this.stats.dirtyInstances = this.dirtyInstances.size;
-        
+
         this.emit('instanceUnregistered', instanceId);
         return true;
     }
@@ -197,7 +195,7 @@ export class SyncVarManager extends EventEmitter {
 
         this.markInstanceDirty(instance);
         this.immediateSyncQueue.add({ instanceId, propertyKey });
-        
+
         // 立即处理同步
         this.processImmediateSyncs();
     }
@@ -207,10 +205,10 @@ export class SyncVarManager extends EventEmitter {
      */
     public syncNow(): SyncBatch[] {
         const batches: SyncBatch[] = [];
-        
+
         // 处理立即同步请求
         this.processImmediateSyncs();
-        
+
         // 收集所有脏实例的数据
         for (const instanceId of this.dirtyInstances) {
             const batch = this.createSyncBatch(instanceId);
@@ -218,14 +216,14 @@ export class SyncVarManager extends EventEmitter {
                 batches.push(batch);
             }
         }
-        
+
         // 清理脏标记
         this.clearAllDirtyFlags();
-        
+
         // 更新统计
         this.stats.totalSyncs += batches.length;
         this.stats.lastSyncTime = Date.now();
-        
+
         return batches;
     }
 
@@ -369,7 +367,7 @@ export class SyncVarManager extends EventEmitter {
         }
 
         const batches: SyncBatch[] = [];
-        
+
         for (const request of this.immediateSyncQueue) {
             const batch = this.createSyncBatch(request.instanceId);
             if (batch && Object.keys(batch.changes).length > 0) {
@@ -413,7 +411,7 @@ export class SyncVarManager extends EventEmitter {
                 clearDirtyFlags(instance);
             }
         }
-        
+
         this.dirtyInstances.clear();
         this.stats.dirtyInstances = 0;
     }

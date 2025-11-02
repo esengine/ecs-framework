@@ -66,7 +66,7 @@ export class JSONSerializer {
     private logger = createLogger('JSONSerializer');
     private config: SerializerConfig;
     private stats: SerializationStats;
-    
+
     // 性能分析
     private serializationTimes: number[] = [];
     private deserializationTimes: number[] = [];
@@ -101,7 +101,7 @@ export class JSONSerializer {
      */
     serialize<T extends INetworkMessage>(message: T): SerializationResult {
         const startTime = performance.now();
-        
+
         try {
             // 类型检查
             if (this.config.enableTypeChecking) {
@@ -110,10 +110,10 @@ export class JSONSerializer {
 
             // 预处理消息
             const processedMessage = this.preprocessMessage(message);
-            
+
             // 序列化
             let serializedData: string;
-            
+
             // 使用自定义序列化器
             const customSerializer = this.findCustomSerializer(processedMessage);
             if (customSerializer) {
@@ -151,17 +151,17 @@ export class JSONSerializer {
      */
     deserialize<T extends INetworkMessage>(data: string | ArrayBuffer): DeserializationResult<T> {
         const startTime = performance.now();
-        
+
         try {
             // 转换数据格式
-            const jsonString = data instanceof ArrayBuffer ? new TextDecoder().decode(data) : 
-                              typeof data === 'string' ? data : String(data);
-            
+            const jsonString = data instanceof ArrayBuffer ? new TextDecoder().decode(data) :
+                typeof data === 'string' ? data : String(data);
+
             // 解析JSON
             const parsedData = JSON.parse(jsonString, this.createReviver());
-            
+
             // 类型检查
-            const validationResult = this.config.enableTypeChecking ? 
+            const validationResult = this.config.enableTypeChecking ?
                 this.validateParsedMessage(parsedData) : { isValid: true, errors: [] };
 
             // 后处理消息
@@ -183,7 +183,7 @@ export class JSONSerializer {
         } catch (error) {
             this.stats.errorCount++;
             this.logger.error('反序列化失败:', error);
-            
+
             return {
                 data: {} as T,
                 deserializationTime: performance.now() - startTime,
@@ -198,11 +198,11 @@ export class JSONSerializer {
      */
     serializeBatch<T extends INetworkMessage>(messages: T[]): SerializationResult {
         const startTime = performance.now();
-        
+
         try {
             const batchData = {
                 type: 'batch',
-                messages: messages.map(msg => {
+                messages: messages.map((msg) => {
                     if (this.config.enableTypeChecking) {
                         this.validateMessage(msg);
                     }
@@ -212,7 +212,7 @@ export class JSONSerializer {
             };
 
             const serializedData = JSON.stringify(batchData, this.createReplacer());
-            
+
             if (serializedData.length > this.config.maxMessageSize) {
                 throw new Error(`批量消息大小超过限制: ${serializedData.length} > ${this.config.maxMessageSize}`);
             }
@@ -240,7 +240,7 @@ export class JSONSerializer {
      */
     deserializeBatch<T extends INetworkMessage>(data: string | ArrayBuffer): DeserializationResult<T[]> {
         const result = this.deserialize<any>(data);
-        
+
         if (!result.isValid || !result.data.messages) {
             return {
                 data: [],
@@ -251,7 +251,7 @@ export class JSONSerializer {
         }
 
         const messages = result.data.messages.map((msg: any) => this.postprocessMessage(msg));
-        
+
         return {
             data: messages as T[],
             deserializationTime: result.deserializationTime,
@@ -280,7 +280,7 @@ export class JSONSerializer {
             errorCount: 0,
             compressionSavings: 0
         };
-        
+
         this.serializationTimes.length = 0;
         this.deserializationTimes.length = 0;
         this.messageSizes.length = 0;
@@ -394,7 +394,7 @@ export class JSONSerializer {
             }
             return result;
         }
-        
+
         return data;
     }
 
@@ -421,7 +421,7 @@ export class JSONSerializer {
             }
             return result;
         }
-        
+
         return data;
     }
 
@@ -477,10 +477,10 @@ export class JSONSerializer {
     private updateSerializationStats(size: number, time: number): void {
         this.stats.totalSerialized++;
         this.stats.totalBytes += size;
-        
+
         this.serializationTimes.push(time);
         this.messageSizes.push(size);
-        
+
         // 保持最近1000个样本
         if (this.serializationTimes.length > 1000) {
             this.serializationTimes.shift();
@@ -488,11 +488,11 @@ export class JSONSerializer {
         if (this.messageSizes.length > 1000) {
             this.messageSizes.shift();
         }
-        
+
         // 计算平均值
-        this.stats.averageSerializationTime = 
+        this.stats.averageSerializationTime =
             this.serializationTimes.reduce((sum, t) => sum + t, 0) / this.serializationTimes.length;
-        this.stats.averageMessageSize = 
+        this.stats.averageMessageSize =
             this.messageSizes.reduce((sum, s) => sum + s, 0) / this.messageSizes.length;
     }
 
@@ -501,16 +501,16 @@ export class JSONSerializer {
      */
     private updateDeserializationStats(time: number): void {
         this.stats.totalDeserialized++;
-        
+
         this.deserializationTimes.push(time);
-        
+
         // 保持最近1000个样本
         if (this.deserializationTimes.length > 1000) {
             this.deserializationTimes.shift();
         }
-        
+
         // 计算平均值
-        this.stats.averageDeserializationTime = 
+        this.stats.averageDeserializationTime =
             this.deserializationTimes.reduce((sum, t) => sum + t, 0) / this.deserializationTimes.length;
     }
 
@@ -536,10 +536,10 @@ export class JSONSerializer {
      */
     private calculatePercentiles(values: number[]) {
         if (values.length === 0) return {};
-        
+
         const sorted = [...values].sort((a, b) => a - b);
         const n = sorted.length;
-        
+
         return {
             p50: sorted[Math.floor(n * 0.5)],
             p90: sorted[Math.floor(n * 0.9)],

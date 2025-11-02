@@ -1,5 +1,3 @@
-import { BlackboardValueType } from '@esengine/behavior-tree';
-
 /**
  * 局部黑板变量信息
  */
@@ -243,7 +241,7 @@ export function is${this.toPascalCase(treeName)}Variable(
                 const escaped = value
                     .replace(/\\/g, '\\\\')
                     .replace(quoteStyle === 'single' ? /'/g : /"/g,
-                            quoteStyle === 'single' ? "\\'" : '\\"');
+                        quoteStyle === 'single' ? "\\'" : '\\"');
                 return `${quote}${escaped}${quote}`;
             case 'number':
             case 'boolean':
@@ -253,7 +251,7 @@ export function is${this.toPascalCase(treeName)}Variable(
                     if (value.length === 0) {
                         return '[]';
                     }
-                    const items = value.map(v => this.formatValue(v, quoteStyle)).join(', ');
+                    const items = value.map((v) => this.formatValue(v, quoteStyle)).join(', ');
                     return `[${items}]`;
                 }
                 // Vector2/Vector3
@@ -286,7 +284,7 @@ export function is${this.toPascalCase(treeName)}Variable(
     private static toPascalCase(str: string): string {
         return str
             .split(/[._-]/)
-            .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
             .join('');
     }
 }

@@ -144,7 +144,7 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
         setExpandedCategories(newExpanded);
     };
 
-    const filteredPlugins = plugins.filter(plugin => {
+    const filteredPlugins = plugins.filter((plugin) => {
         if (!filter) return true;
         const searchLower = filter.toLowerCase();
         return (
@@ -162,8 +162,8 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
         return acc;
     }, {} as Record<EditorPluginCategory, IEditorPluginMetadata[]>);
 
-    const enabledCount = plugins.filter(p => p.enabled).length;
-    const disabledCount = plugins.filter(p => !p.enabled).length;
+    const enabledCount = plugins.filter((p) => p.enabled).length;
+    const disabledCount = plugins.filter((p) => !p.enabled).length;
 
     const renderPluginCard = (plugin: IEditorPluginMetadata) => {
         const IconComponent = plugin.icon ? (LucideIcons as any)[plugin.icon] : null;

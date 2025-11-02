@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, FileJson, Binary, Info, File, FolderTree, FolderOpen, Code } from 'lucide-react';
+import { X, File, FolderTree, FolderOpen } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import '../styles/ExportRuntimeDialog.css';
 
@@ -66,7 +66,7 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
                 setSelectAll(true);
 
                 const newFormats = new Map<string, 'json' | 'binary'>();
-                availableFiles.forEach(file => {
+                availableFiles.forEach((file) => {
                     newFormats.set(file, 'binary');
                 });
                 setFileFormats(newFormats);

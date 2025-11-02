@@ -49,11 +49,11 @@ export class NodeMetadataRegistry {
     }
 
     static getByCategory(category: string): NodeMetadata[] {
-        return this.getAllMetadata().filter(m => m.category === category);
+        return this.getAllMetadata().filter((m) => m.category === category);
     }
 
     static getByNodeType(nodeType: NodeType): NodeMetadata[] {
-        return this.getAllMetadata().filter(m => m.nodeType === nodeType);
+        return this.getAllMetadata().filter((m) => m.nodeType === nodeType);
     }
 
     static getImplementationType(executorClass: Function): string | undefined {

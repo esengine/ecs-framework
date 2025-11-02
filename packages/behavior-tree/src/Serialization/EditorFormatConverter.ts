@@ -134,7 +134,7 @@ export class EditorFormatConverter {
      * 查找根节点
      */
     private static findRootNode(nodes: EditorNode[]): EditorNode | null {
-        return nodes.find(node =>
+        return nodes.find((node) =>
             node.template.category === '根节点' ||
             node.data.nodeType === 'root'
         ) || null;
@@ -144,7 +144,7 @@ export class EditorFormatConverter {
      * 转换节点列表
      */
     private static convertNodes(editorNodes: EditorNode[]): BehaviorTreeNodeData[] {
-        return editorNodes.map(node => this.convertNode(node));
+        return editorNodes.map((node) => this.convertNode(node));
     }
 
     /**
@@ -211,13 +211,13 @@ export class EditorFormatConverter {
         blackboard: BlackboardVariableDefinition[]
     ): PropertyBinding[] {
         const bindings: PropertyBinding[] = [];
-        const blackboardVarNames = new Set(blackboard.map(v => v.name));
+        const blackboardVarNames = new Set(blackboard.map((v) => v.name));
 
-        const propertyConnections = connections.filter(conn => conn.connectionType === 'property');
+        const propertyConnections = connections.filter((conn) => conn.connectionType === 'property');
 
         for (const conn of propertyConnections) {
-            const fromNode = nodes.find(n => n.id === conn.from);
-            const toNode = nodes.find(n => n.id === conn.to);
+            const fromNode = nodes.find((n) => n.id === conn.from);
+            const toNode = nodes.find((n) => n.id === conn.to);
 
             if (!fromNode || !toNode || !conn.toProperty) {
                 logger.warn(`跳过无效的属性连接: from=${conn.from}, to=${conn.to}`);

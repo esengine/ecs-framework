@@ -67,11 +67,11 @@ export class ErrorHandler {
     private config: ErrorHandlerConfig;
     private stats: ErrorStats;
     private eventHandlers: Partial<ErrorHandlerEvents> = {};
-    
+
     // 错误恢复状态
     private retryAttempts: Map<string, number> = new Map();
     private pendingRecoveries: Set<string> = new Set();
-    
+
     // 错误分类规则
     private severityRules: Map<NetworkErrorType, ErrorSeverity> = new Map();
     private recoveryRules: Map<NetworkErrorType, RecoveryStrategy> = new Map();
@@ -105,10 +105,10 @@ export class ErrorHandler {
     handleError(error: Error | INetworkError, context?: string): void {
         const networkError = this.normalizeError(error, context);
         const severity = this.classifyErrorSeverity(networkError);
-        
+
         // 更新统计
         this.updateStats(networkError, severity);
-        
+
         this.logger.error(`网络错误 [${severity}]: ${networkError.message}`, {
             type: networkError.type,
             code: networkError.code,
@@ -237,7 +237,7 @@ export class ErrorHandler {
      */
     private determineErrorType(error: Error): NetworkErrorType {
         const message = error.message.toLowerCase();
-        
+
         if (message.includes('timeout')) {
             return NetworkErrorType.TIMEOUT;
         } else if (message.includes('connection')) {
@@ -270,18 +270,18 @@ export class ErrorHandler {
             case NetworkErrorType.CONNECTION_FAILED:
             case NetworkErrorType.CONNECTION_LOST:
                 return ErrorSeverity.High;
-                
+
             case NetworkErrorType.AUTHENTICATION_FAILED:
             case NetworkErrorType.PERMISSION_DENIED:
                 return ErrorSeverity.Critical;
-                
+
             case NetworkErrorType.TIMEOUT:
             case NetworkErrorType.RATE_LIMITED:
                 return ErrorSeverity.Medium;
-                
+
             case NetworkErrorType.INVALID_MESSAGE:
                 return ErrorSeverity.Low;
-                
+
             default:
                 return ErrorSeverity.Medium;
         }
@@ -307,7 +307,7 @@ export class ErrorHandler {
         }
 
         const errorId = this.generateErrorId(error);
-        
+
         // 检查是否已经在恢复中
         if (this.pendingRecoveries.has(errorId)) {
             return;
@@ -339,8 +339,8 @@ export class ErrorHandler {
      * 执行恢复策略
      */
     private executeRecoveryStrategy(
-        error: INetworkError, 
-        strategy: RecoveryStrategy, 
+        error: INetworkError,
+        strategy: RecoveryStrategy,
         errorId: string
     ): void {
         try {
@@ -349,17 +349,17 @@ export class ErrorHandler {
                     // 这里应该重试导致错误的操作
                     // 具体实现需要外部提供重试回调
                     break;
-                    
+
                 case RecoveryStrategy.Reconnect:
                     // 这里应该触发重连
                     // 具体实现需要外部处理
                     break;
-                    
+
                 case RecoveryStrategy.Restart:
                     // 这里应该重启相关服务
                     // 具体实现需要外部处理
                     break;
-                    
+
                 case RecoveryStrategy.Escalate:
                     // 上报错误给上层处理
                     this.logger.error('错误需要上层处理:', error);
@@ -368,7 +368,7 @@ export class ErrorHandler {
 
             this.pendingRecoveries.delete(errorId);
             this.eventHandlers.errorRecovered?.(error, strategy);
-            
+
         } catch (recoveryError) {
             this.logger.error('错误恢复失败:', recoveryError);
             this.pendingRecoveries.delete(errorId);

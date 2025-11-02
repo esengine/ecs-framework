@@ -78,7 +78,7 @@ export class Room extends EventEmitter {
     constructor(config: RoomConfig) {
         super();
         this.config = { ...config };
-        
+
         this.stats = {
             id: config.id,
             playerCount: 0,
@@ -141,7 +141,7 @@ export class Room extends EventEmitter {
         }
 
         this.logger.info(`玩家加入房间: ${player.name} (${session.id}) -> 房间 ${this.config.id}`);
-        
+
         // 触发事件
         this.eventHandlers.playerJoined?.(player);
         this.emit('playerJoined', player);

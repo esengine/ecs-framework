@@ -70,7 +70,7 @@ export class UIRegistry implements IService {
      */
     public getChildMenus(parentId: string): MenuItem[] {
         return this.getAllMenus()
-            .filter(item => item.parentId === parentId)
+            .filter((item) => item.parentId === parentId)
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     }
 
@@ -128,7 +128,7 @@ export class UIRegistry implements IService {
      */
     public getToolbarItemsByGroup(groupId: string): ToolbarItem[] {
         return this.getAllToolbarItems()
-            .filter(item => item.groupId === groupId)
+            .filter((item) => item.groupId === groupId)
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     }
 
@@ -186,7 +186,7 @@ export class UIRegistry implements IService {
      */
     public getPanelsByPosition(position: string): PanelDescriptor[] {
         return this.getAllPanels()
-            .filter(panel => panel.position === position)
+            .filter((panel) => panel.position === position)
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     }
 

@@ -6,13 +6,11 @@ import { createLogger } from '@esengine/ecs-framework';
 import {
     IConnectionOptions,
     ConnectionState,
-    IConnectionStats,
     MessageType,
     INetworkMessage,
     IConnectMessage,
     IConnectResponseMessage,
     IHeartbeatMessage,
-    NetworkErrorType,
     EventEmitter
 } from '@esengine/network-shared';
 import { WebSocketClient } from '../transport/WebSocketClient';
@@ -207,7 +205,7 @@ export class NetworkClient extends EventEmitter {
         }
 
         this.setState(ClientState.Connecting);
-        
+
         try {
             // 合并连接选项
             const connectionOptions = { ...this.config.connection, ...options };
@@ -224,7 +222,7 @@ export class NetworkClient extends EventEmitter {
             this.stats.lastConnectTime = this.connectTime;
 
             this.logger.info(`已连接到服务器: ${url}`);
-            
+
             // 启动心跳
             if (this.config.features.enableHeartbeat) {
                 this.startHeartbeat();
@@ -293,7 +291,7 @@ export class NetworkClient extends EventEmitter {
             case ClientState.Authenticated:
                 // 已认证，直接发送
                 return this.sendImmediate(message);
-                
+
             case ClientState.Connected:
             case ClientState.Connecting:
                 // 已连接但未认证，缓存消息
@@ -305,7 +303,7 @@ export class NetworkClient extends EventEmitter {
                     this.logger.warn('未启用消息队列，消息被丢弃');
                     return false;
                 }
-                
+
             case ClientState.Reconnecting:
                 // 重连中，缓存消息
                 if (this.config.features.enableMessageQueue) {
@@ -316,7 +314,7 @@ export class NetworkClient extends EventEmitter {
                     this.logger.warn('重连中且未启用消息队列，消息被丢弃');
                     return false;
                 }
-                
+
             default:
                 this.logger.warn(`客户端状态 ${this.state}，无法发送消息`);
                 return false;
@@ -335,8 +333,8 @@ export class NetworkClient extends EventEmitter {
         try {
             const serializedMessage = this.serializer.serialize(message);
             // 确保发送的数据类型正确
-            const dataToSend = typeof serializedMessage.data === 'string' 
-                ? serializedMessage.data 
+            const dataToSend = typeof serializedMessage.data === 'string'
+                ? serializedMessage.data
                 : serializedMessage.data.toString();
             this.transport.send(dataToSend);
 
@@ -359,36 +357,36 @@ export class NetworkClient extends EventEmitter {
         if (!message) {
             return false;
         }
-        
+
         if (!message.messageId) {
             this.logger.warn('消息缺少messageId');
             return false;
         }
-        
+
         if (!message.type) {
             this.logger.warn('消息缺少type');
             return false;
         }
-        
+
         if (!message.timestamp) {
             this.logger.warn('消息缺少timestamp');
             return false;
         }
-        
+
         // 对于游戏消息，验证senderId
         if (message.type === MessageType.GAME_EVENT) {
             if (!message.senderId) {
                 this.logger.warn('游戏消息缺少senderId');
                 return false;
             }
-            
+
             // 检查senderId是否与当前clientId一致
             if (this.clientId && message.senderId !== this.clientId) {
                 this.logger.warn(`消息发送者ID不匹配: 期望 ${this.clientId}, 实际 ${message.senderId}`);
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -411,11 +409,11 @@ export class NetworkClient extends EventEmitter {
      */
     getStats(): ClientStats {
         const currentStats = { ...this.stats };
-        
+
         currentStats.connectionState = this.getConnectionState();
         currentStats.reconnectAttempts = this.reconnectionManager.getState().currentAttempt;
         currentStats.totalReconnects = this.reconnectionManager.getStats().successfulReconnections;
-        
+
         if (this.connectTime) {
             currentStats.uptime = Date.now() - this.connectTime;
         }
@@ -489,12 +487,12 @@ export class NetworkClient extends EventEmitter {
      */
     async destroy(): Promise<void> {
         await this.disconnect('客户端销毁');
-        
+
         // 清理组件
         this.reconnectionManager.reset();
         this.heartbeatManager.stop();
         this.messageQueue.length = 0;
-        
+
         this.removeAllListeners();
     }
 
@@ -509,10 +507,10 @@ export class NetworkClient extends EventEmitter {
         this.stats.state = newState;
 
         this.logger.debug(`客户端状态变化: ${oldState} -> ${newState}`);
-        
+
         // 状态变更的副作用处理
         this.handleStateTransition(oldState, newState);
-        
+
         this.eventHandlers.stateChanged?.(oldState, newState);
     }
 
@@ -528,7 +526,7 @@ export class NetworkClient extends EventEmitter {
                     this.processMessageQueue();
                 }
                 break;
-                
+
             case ClientState.Disconnected:
                 // 断开连接时清理资源
                 if (this.config.features.enableMessageQueue && this.messageQueue.length > 0) {
@@ -537,7 +535,7 @@ export class NetworkClient extends EventEmitter {
                 }
                 this.clientId = undefined;
                 break;
-                
+
             case ClientState.Connecting:
                 // 连接开始时重置统计
                 this.stats.connectionTime = Date.now();
@@ -620,7 +618,7 @@ export class NetworkClient extends EventEmitter {
             }
 
             const message = deserializationResult.data;
-            
+
             // 验证消息
             const validationResult = this.messageManager.validateMessage(message);
             if (!validationResult.isValid) {
@@ -653,7 +651,7 @@ export class NetworkClient extends EventEmitter {
             case ConnectionState.Connected:
                 this.reconnectionManager.onReconnectionSuccess();
                 break;
-                
+
             case ConnectionState.Disconnected:
             case ConnectionState.Failed:
                 if (this.config.features.enableReconnection) {
@@ -689,7 +687,7 @@ export class NetworkClient extends EventEmitter {
             case MessageType.CONNECT:
                 this.handleConnectResponse(message as IConnectResponseMessage);
                 break;
-                
+
             case MessageType.HEARTBEAT:
                 this.handleHeartbeatResponse(message as IHeartbeatMessage);
                 break;
@@ -724,12 +722,12 @@ export class NetworkClient extends EventEmitter {
     private handleConnectResponse(message: IConnectResponseMessage): void {
         if (message.data.success) {
             this.clientId = message.data.clientId;
-            
+
             if (this.config.authentication.autoAuthenticate) {
                 this.setState(ClientState.Authenticated);
                 this.eventHandlers.authenticated?.(this.clientId!);
             }
-            
+
             this.logger.info(`连接成功，客户端ID: ${this.clientId}`);
         } else {
             this.logger.error(`连接失败: ${message.data.error}`);
@@ -774,10 +772,10 @@ export class NetworkClient extends EventEmitter {
             const removed = this.messageQueue.shift();
             this.logger.warn(`消息队列已满 (${maxSize})，移除最旧消息:`, removed?.type);
         }
-        
+
         this.messageQueue.push(message);
         this.stats.messages.queued = this.messageQueue.length;
-        
+
         this.logger.debug(`消息已加入队列，当前队列长度: ${this.messageQueue.length}/${maxSize}`);
     }
 
@@ -796,16 +794,16 @@ export class NetworkClient extends EventEmitter {
 
         this.isProcessingQueue = true;
         const startQueueSize = this.messageQueue.length;
-        
+
         this.logger.info(`开始处理消息队列，共 ${startQueueSize} 条消息`);
-        
+
         try {
             let processedCount = 0;
             let failedCount = 0;
-            
+
             while (this.messageQueue.length > 0 && this.state === ClientState.Authenticated) {
                 const message = this.messageQueue.shift()!;
-                
+
                 // 使用sendImmediate避免递归调用
                 if (this.sendImmediate(message)) {
                     processedCount++;
@@ -817,15 +815,15 @@ export class NetworkClient extends EventEmitter {
                     this.logger.warn(`队列消息发送失败，剩余: ${this.messageQueue.length}`);
                     break;
                 }
-                
+
                 // 避免阻塞，每处理一定数量消息后暂停
                 if (processedCount % 10 === 0) {
-                    await new Promise(resolve => setTimeout(resolve, 1));
+                    await new Promise((resolve) => setTimeout(resolve, 1));
                 }
             }
-            
+
             this.logger.info(`消息队列处理完成: 成功 ${processedCount}, 失败 ${failedCount}, 剩余 ${this.messageQueue.length}`);
-            
+
         } finally {
             this.isProcessingQueue = false;
             this.stats.messages.queued = this.messageQueue.length;

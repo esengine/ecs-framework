@@ -11,7 +11,7 @@ export enum NetworkEventType {
     RECONNECTION_STARTED = 'network:reconnection:started',
     RECONNECTION_SUCCEEDED = 'network:reconnection:succeeded',
     RECONNECTION_FAILED = 'network:reconnection:failed',
-    
+
     // 网络身份相关事件
     IDENTITY_CREATED = 'network:identity:created',
     IDENTITY_DESTROYED = 'network:identity:destroyed',
@@ -21,14 +21,14 @@ export enum NetworkEventType {
     IDENTITY_SYNC_DISABLED = 'network:identity:sync:disabled',
     IDENTITY_PROPERTY_CHANGED = 'network:identity:property:changed',
     IDENTITY_VISIBLE_CHANGED = 'network:identity:visible:changed',
-    
+
     // 同步相关事件
     SYNC_STARTED = 'network:sync:started',
     SYNC_COMPLETED = 'network:sync:completed',
     SYNC_FAILED = 'network:sync:failed',
     SYNC_RATE_CHANGED = 'network:sync:rate:changed',
     SYNC_PRIORITY_CHANGED = 'network:sync:priority:changed',
-    
+
     // RPC相关事件
     RPC_CALL_SENT = 'network:rpc:call:sent',
     RPC_CALL_RECEIVED = 'network:rpc:call:received',
@@ -36,7 +36,7 @@ export enum NetworkEventType {
     RPC_RESPONSE_RECEIVED = 'network:rpc:response:received',
     RPC_ERROR = 'network:rpc:error',
     RPC_TIMEOUT = 'network:rpc:timeout',
-    
+
     // 消息相关事件
     MESSAGE_SENT = 'network:message:sent',
     MESSAGE_RECEIVED = 'network:message:received',
@@ -44,7 +44,7 @@ export enum NetworkEventType {
     MESSAGE_DROPPED = 'network:message:dropped',
     MESSAGE_RETRY = 'network:message:retry',
     MESSAGE_ACKNOWLEDGED = 'network:message:acknowledged',
-    
+
     // 房间相关事件
     ROOM_JOINED = 'network:room:joined',
     ROOM_LEFT = 'network:room:left',
@@ -52,26 +52,26 @@ export enum NetworkEventType {
     ROOM_DESTROYED = 'network:room:destroyed',
     ROOM_PLAYER_JOINED = 'network:room:player:joined',
     ROOM_PLAYER_LEFT = 'network:room:player:left',
-    
+
     // 客户端相关事件
     CLIENT_CONNECTED = 'network:client:connected',
     CLIENT_DISCONNECTED = 'network:client:disconnected',
     CLIENT_AUTHENTICATED = 'network:client:authenticated',
     CLIENT_KICKED = 'network:client:kicked',
     CLIENT_TIMEOUT = 'network:client:timeout',
-    
+
     // 服务器相关事件
     SERVER_STARTED = 'network:server:started',
     SERVER_STOPPED = 'network:server:stopped',
     SERVER_ERROR = 'network:server:error',
     SERVER_OVERLOADED = 'network:server:overloaded',
-    
+
     // 数据相关事件
     DATA_SYNCHRONIZED = 'network:data:synchronized',
     DATA_CONFLICT = 'network:data:conflict',
     DATA_CORRUPTED = 'network:data:corrupted',
     DATA_VALIDATED = 'network:data:validated',
-    
+
     // 性能相关事件
     BANDWIDTH_WARNING = 'network:bandwidth:warning',
     LATENCY_HIGH = 'network:latency:high',

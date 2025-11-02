@@ -34,8 +34,8 @@ export class PluginLoader {
             }
 
             const entries = await TauriAPI.listDirectory(pluginsPath);
-            const pluginDirs = entries.filter(entry => entry.is_dir && !entry.name.startsWith('.'));
-            console.log('[PluginLoader] Found plugin directories:', pluginDirs.map(d => d.name));
+            const pluginDirs = entries.filter((entry) => entry.is_dir && !entry.name.startsWith('.'));
+            console.log('[PluginLoader] Found plugin directories:', pluginDirs.map((d) => d.name));
 
             for (const entry of pluginDirs) {
                 const pluginPath = `${pluginsPath}/${entry.name}`;
@@ -101,14 +101,14 @@ export class PluginLoader {
             console.log(`[PluginLoader] Loading plugin from: ${moduleUrl}`);
 
             const module = await import(/* @vite-ignore */ moduleUrl);
-            console.log(`[PluginLoader] Module loaded successfully`);
+            console.log('[PluginLoader] Module loaded successfully');
 
             let pluginInstance: IEditorPlugin | null = null;
             try {
                 pluginInstance = this.findPluginInstance(module);
             } catch (findError) {
-                console.error(`[PluginLoader] Error finding plugin instance:`, findError);
-                console.error(`[PluginLoader] Module object:`, module);
+                console.error('[PluginLoader] Error finding plugin instance:', findError);
+                console.error('[PluginLoader] Module object:', module);
                 return;
             }
 
@@ -139,14 +139,14 @@ export class PluginLoader {
                 messageHub.publish('locale:changed', { locale: localeService.getCurrentLocale() });
                 console.log(`[PluginLoader] Published locale:changed event for plugin ${packageJson.name}`);
             } catch (error) {
-                console.warn(`[PluginLoader] Failed to publish locale:changed event:`, error);
+                console.warn('[PluginLoader] Failed to publish locale:changed event:', error);
             }
 
             console.log(`[PluginLoader] Successfully loaded plugin: ${packageJson.name}`);
         } catch (error) {
             console.error(`[PluginLoader] Failed to load plugin from ${pluginPath}:`, error);
             if (error instanceof Error) {
-                console.error(`[PluginLoader] Error stack:`, error.stack);
+                console.error('[PluginLoader] Error stack:', error.stack);
             }
         }
     }

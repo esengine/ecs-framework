@@ -3,9 +3,9 @@
  */
 import WebSocket, { WebSocketServer } from 'ws';
 import { createLogger, Core } from '@esengine/ecs-framework';
-import { 
-    ITransport, 
-    ITransportClientInfo, 
+import {
+    ITransport,
+    ITransportClientInfo,
     ITransportConfig,
     ConnectionState,
     EventEmitter
@@ -27,17 +27,17 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
      * 连接事件处理器
      */
     private connectHandlers: ((clientInfo: ITransportClientInfo) => void)[] = [];
-    
+
     /**
      * 断开连接事件处理器
      */
     private disconnectHandlers: ((clientId: string, reason?: string) => void)[] = [];
-    
+
     /**
      * 消息接收事件处理器
      */
     private messageHandlers: ((clientId: string, data: ArrayBuffer | string) => void)[] = [];
-    
+
     /**
      * 错误事件处理器
      */
@@ -141,7 +141,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
      */
     broadcast(data: ArrayBuffer | string, exclude?: string[]): void {
         const excludeSet = new Set(exclude || []);
-        
+
         for (const [clientId, ws] of this.clients) {
             if (excludeSet.has(clientId) || ws.readyState !== WebSocket.OPEN) {
                 continue;
@@ -272,9 +272,9 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
         this.setupClientEvents(ws, clientId);
 
         this.logger.info(`新客户端连接: ${clientId} from ${clientInfo.remoteAddress}`);
-        
+
         // 触发连接事件
-        this.connectHandlers.forEach(handler => {
+        this.connectHandlers.forEach((handler) => {
             try {
                 handler(clientInfo);
             } catch (error) {
@@ -332,11 +332,11 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
                 this.logger.debug(`忽略非应用消息 (${clientId}): ${typeof data} ${data instanceof ArrayBuffer ? data.byteLength : data.toString().length} bytes`);
                 return;
             }
-            
+
             const message = data instanceof ArrayBuffer ? data : new TextEncoder().encode(data.toString()).buffer;
-            
+
             // 触发消息事件
-            this.messageHandlers.forEach(handler => {
+            this.messageHandlers.forEach((handler) => {
                 try {
                     handler(clientId, message);
                 } catch (error) {
@@ -356,23 +356,23 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
     private isApplicationMessage(data: WebSocket.Data): boolean {
         try {
             // 转换为字符串进行检查
-            const jsonString = data instanceof ArrayBuffer 
-                ? new TextDecoder().decode(data) 
+            const jsonString = data instanceof ArrayBuffer
+                ? new TextDecoder().decode(data)
                 : data.toString();
-            
+
             // 基本长度检查 - 空消息或过短消息通常不是应用消息
             if (!jsonString || jsonString.length < 10) {
                 return false;
             }
-            
+
             // 尝试解析JSON
             const parsed = JSON.parse(jsonString);
-            
+
             // 检查是否有基本的消息结构
-            return parsed && 
-                   typeof parsed === 'object' && 
+            return parsed &&
+                   typeof parsed === 'object' &&
                    (parsed.type || parsed.messageId || parsed.data);
-                   
+
         } catch (error) {
             // JSON解析失败，可能是握手数据或其他非JSON消息
             return false;
@@ -390,7 +390,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
         this.logger.info(`客户端断开连接: ${clientId}, 原因: ${reason || '未知'}`);
 
         // 触发断开连接事件
-        this.disconnectHandlers.forEach(handler => {
+        this.disconnectHandlers.forEach((handler) => {
             try {
                 handler(clientId, reason);
             } catch (error) {
@@ -403,7 +403,7 @@ export class WebSocketTransport extends EventEmitter implements ITransport {
      * 处理错误
      */
     private handleError(error: Error): void {
-        this.errorHandlers.forEach(handler => {
+        this.errorHandlers.forEach((handler) => {
             try {
                 handler(error);
             } catch (handlerError) {

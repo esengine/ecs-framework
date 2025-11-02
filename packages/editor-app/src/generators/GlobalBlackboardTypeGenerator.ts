@@ -183,7 +183,7 @@ export const ${opts.constantsName} = {} as const;`;
         if (Object.keys(grouped).length === 1 && grouped[''] !== undefined) {
             // 无命名空间，扁平结构
             const entries = variables
-                .map(v => `    ${this.transformName(v.name, opts.constantCase)}: ${quote}${v.name}${quote}`)
+                .map((v) => `    ${this.transformName(v.name, opts.constantCase)}: ${quote}${v.name}${quote}`)
                 .join(',\n');
 
             return `/**
@@ -200,13 +200,13 @@ ${entries}
                     if (namespace === '') {
                         // 根级别变量
                         return vars
-                            .map(v => `    ${this.transformName(v.name, opts.constantCase)}: ${quote}${v.name}${quote}`)
+                            .map((v) => `    ${this.transformName(v.name, opts.constantCase)}: ${quote}${v.name}${quote}`)
                             .join(',\n');
                     } else {
                         // 命名空间变量
                         const nsName = this.toPascalCase(namespace);
                         const entries = vars
-                            .map(v => {
+                            .map((v) => {
                                 const shortName = v.name.substring(namespace.length + 1);
                                 return `        ${this.transformName(shortName, opts.constantCase)}: ${quote}${v.name}${quote}`;
                             })
@@ -238,7 +238,7 @@ export interface ${opts.interfaceName} {}`;
         }
 
         const properties = variables
-            .map(v => {
+            .map((v) => {
                 const tsType = this.mapBlackboardTypeToTS(v.type);
                 const comment = v.description ? `    /** ${v.description} */\n` : '';
                 return `${comment}    ${v.name}: ${tsType};`;
@@ -334,7 +334,7 @@ export const ${opts.defaultsName}: ${opts.interfaceName} = {};`;
         }
 
         const properties = variables
-            .map(v => {
+            .map((v) => {
                 const value = this.formatValue(v.value, v.type, opts);
                 return `    ${v.name}: ${value}`;
             })
@@ -407,7 +407,7 @@ ${properties}
     private static toPascalCase(str: string): string {
         return str
             .split(/[._-]/)
-            .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
             .join('');
     }
 
@@ -495,7 +495,7 @@ ${properties}
         const parts = str.split(/[._-]/);
         if (parts.length === 0) return str;
         return (parts[0] || '').toLowerCase() + parts.slice(1)
-            .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
             .join('');
     }
 }

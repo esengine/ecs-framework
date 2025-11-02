@@ -1,10 +1,10 @@
 import { EntitySystem, createLogger } from '@esengine/ecs-framework';
-import { 
-    SyncVarManager, 
-    SyncBatch, 
+import {
+    SyncVarManager,
+    SyncBatch,
     SyncVarSerializer,
     MessageType,
-    INetworkMessage 
+    INetworkMessage
 } from '@esengine/network-shared';
 import { NetworkClient } from '../core/NetworkClient';
 
@@ -91,23 +91,23 @@ export class ClientSyncSystem extends EntitySystem {
     private syncVarManager: SyncVarManager;
     private serializer: SyncVarSerializer;
     private networkClient?: NetworkClient;
-    
+
     /** 远程实体状态 */
     private remoteEntities = new Map<string, RemoteEntityState>();
-    
+
     /** 本地预测状态 */
     private predictions = new Map<string, PredictionState>();
-    
+
     /** 插值状态 */
     private interpolations = new Map<string, InterpolationState>();
-    
+
     /** 本地实体映射 */
     private localEntityMap = new Map<string, any>();
-    
+
     /** 时间同步 */
     private serverTimeOffset = 0;
     private lastServerTime = 0;
-    
+
     /** 统计信息 */
     private stats: ClientSyncStats = {
         remoteEntities: 0,
@@ -121,7 +121,7 @@ export class ClientSyncSystem extends EntitySystem {
 
     constructor(config: Partial<ClientSyncSystemConfig> = {}) {
         super();
-        
+
         this.config = {
             enablePrediction: true,
             enableInterpolation: true,
@@ -132,7 +132,7 @@ export class ClientSyncSystem extends EntitySystem {
             authorityThreshold: 0.1,
             ...config
         };
-        
+
         this.syncVarManager = SyncVarManager.getInstance();
         this.serializer = new SyncVarSerializer({
             enableCompression: true,
@@ -153,7 +153,7 @@ export class ClientSyncSystem extends EntitySystem {
      */
     protected override process(): void {
         const currentTime = this.getCurrentTime();
-        
+
         this.updateInterpolations(currentTime);
         this.updatePredictions(currentTime);
         this.cleanupOldData(currentTime);
@@ -165,7 +165,7 @@ export class ClientSyncSystem extends EntitySystem {
      */
     public setNetworkClient(client: NetworkClient): void {
         this.networkClient = client;
-        
+
         // 监听同步消息
         client.on('messageReceived', (message: INetworkMessage) => {
             if (message.type === MessageType.SYNC_BATCH) {
@@ -191,7 +191,7 @@ export class ClientSyncSystem extends EntitySystem {
             this.localEntityMap.delete(instanceId);
             this.syncVarManager.unregisterInstance(entity);
         }
-        
+
         this.remoteEntities.delete(instanceId);
         this.predictions.delete(instanceId);
         this.interpolations.delete(instanceId);
@@ -208,12 +208,12 @@ export class ClientSyncSystem extends EntitySystem {
             instanceType,
             ...properties
         };
-        
+
         this.localEntityMap.set(instanceId, entity);
-        
+
         // 注册到SyncVar管理器
         this.syncVarManager.registerInstance(entity);
-        
+
         this.logger.debug(`创建远程实体: ${instanceId} (${instanceType})`);
         return entity;
     }
@@ -236,12 +236,12 @@ export class ClientSyncSystem extends EntitySystem {
         if (!this.config.enablePrediction) {
             return;
         }
-        
+
         const entity = this.localEntityMap.get(instanceId);
         if (!entity) {
             return;
         }
-        
+
         let prediction = this.predictions.get(instanceId);
         if (!prediction) {
             prediction = {
@@ -253,13 +253,13 @@ export class ClientSyncSystem extends EntitySystem {
             };
             this.predictions.set(instanceId, prediction);
         }
-        
+
         // 记录输入
         prediction.pendingInputs.push({
             timestamp: this.getCurrentTime(),
             input
         });
-        
+
         // 应用本地预测
         this.applyPrediction(entity, prediction, input);
     }
@@ -325,12 +325,12 @@ export class ClientSyncSystem extends EntitySystem {
                 this.logger.warn('解析同步消息失败:', result.errors);
                 return;
             }
-            
+
             const batch = result.data;
             this.applySyncBatch(batch);
-            
+
             this.stats.totalUpdatesReceived++;
-            
+
         } catch (error) {
             this.logger.error('处理同步批次失败:', error);
         }
@@ -346,9 +346,9 @@ export class ClientSyncSystem extends EntitySystem {
             this.createRemoteEntity(batch.instanceId, batch.instanceType, batch.changes);
             return;
         }
-        
+
         const currentTime = this.getCurrentTime();
-        
+
         // 更新远程实体状态
         let remoteState = this.remoteEntities.get(batch.instanceId);
         if (!remoteState) {
@@ -362,27 +362,27 @@ export class ClientSyncSystem extends EntitySystem {
             };
             this.remoteEntities.set(batch.instanceId, remoteState);
         }
-        
+
         // 更新历史记录
         remoteState.history.push({
             timestamp: batch.timestamp,
             properties: { ...batch.changes }
         });
-        
+
         // 保持历史记录大小
         if (remoteState.history.length > this.config.maxRollbackFrames) {
             remoteState.history.shift();
         }
-        
+
         remoteState.lastUpdateTime = currentTime;
         remoteState.serverTime = batch.timestamp;
         Object.assign(remoteState.properties, batch.changes);
-        
+
         // 处理本地预测确认
         if (this.config.enablePrediction) {
             this.confirmPrediction(batch.instanceId, batch.changes, batch.timestamp);
         }
-        
+
         // 开始插值
         if (this.config.enableInterpolation) {
             this.startInterpolation(batch.instanceId, batch.changes);
@@ -400,36 +400,36 @@ export class ClientSyncSystem extends EntitySystem {
         if (!prediction) {
             return;
         }
-        
+
         // 检查预测准确性
         let hasCorrection = false;
         for (const [key, serverValue] of Object.entries(serverValues)) {
             const predictedValue = prediction.predictedValues[key];
-            if (predictedValue !== undefined && 
-                typeof predictedValue === 'number' && 
+            if (predictedValue !== undefined &&
+                typeof predictedValue === 'number' &&
                 typeof serverValue === 'number' &&
                 Math.abs(predictedValue - serverValue) > this.config.authorityThreshold) {
                 hasCorrection = true;
                 break;
             }
         }
-        
+
         if (hasCorrection) {
             this.stats.predictionCorrections++;
-            
+
             // 执行回滚和重放
             if (this.config.enableRollback) {
                 this.performRollbackAndReplay(instanceId, serverValues, serverTime);
             }
         }
-        
+
         // 更新确认值
         Object.assign(prediction.lastConfirmedValues, serverValues);
         prediction.confirmationTime = serverTime;
-        
+
         // 清理已确认的输入
         prediction.pendingInputs = prediction.pendingInputs.filter(
-            input => input.timestamp > serverTime
+            (input) => input.timestamp > serverTime
         );
     }
 
@@ -439,21 +439,21 @@ export class ClientSyncSystem extends EntitySystem {
     private performRollbackAndReplay(instanceId: string, serverValues: any, serverTime: number): void {
         const entity = this.localEntityMap.get(instanceId);
         const prediction = this.predictions.get(instanceId);
-        
+
         if (!entity || !prediction) {
             return;
         }
-        
+
         // 回滚到服务端状态
         this.applyValuesToEntity(entity, serverValues);
-        
+
         // 重放未确认的输入
         for (const input of prediction.pendingInputs) {
             if (input.timestamp > serverTime) {
                 this.applyPrediction(entity, prediction, input.input);
             }
         }
-        
+
         this.logger.debug(`执行回滚和重放: ${instanceId}`);
     }
 
@@ -465,13 +465,13 @@ export class ClientSyncSystem extends EntitySystem {
         if (!entity) {
             return;
         }
-        
+
         // 获取当前值
         const currentValues: { [key: string]: any } = {};
         for (const key of Object.keys(targetValues)) {
             currentValues[key] = entity[key];
         }
-        
+
         const interpolation: InterpolationState = {
             instanceId,
             fromValues: currentValues,
@@ -480,7 +480,7 @@ export class ClientSyncSystem extends EntitySystem {
             toTime: this.getCurrentTime() + this.config.interpolationWindow,
             currentValues: { ...currentValues }
         };
-        
+
         this.interpolations.set(instanceId, interpolation);
     }
 
@@ -494,27 +494,27 @@ export class ClientSyncSystem extends EntitySystem {
                 this.interpolations.delete(instanceId);
                 continue;
             }
-            
+
             const progress = Math.min(
-                (currentTime - interpolation.fromTime) / 
+                (currentTime - interpolation.fromTime) /
                 (interpolation.toTime - interpolation.fromTime),
                 1
             );
-            
+
             // 计算插值
             for (const [key, fromValue] of Object.entries(interpolation.fromValues)) {
                 const toValue = interpolation.toValues[key];
-                
+
                 if (typeof fromValue === 'number' && typeof toValue === 'number') {
                     interpolation.currentValues[key] = fromValue + (toValue - fromValue) * progress;
                 } else {
                     interpolation.currentValues[key] = progress < 0.5 ? fromValue : toValue;
                 }
             }
-            
+
             // 应用插值结果
             this.applyValuesToEntity(entity, interpolation.currentValues);
-            
+
             // 检查插值是否完成
             if (progress >= 1) {
                 this.interpolations.delete(instanceId);
@@ -529,11 +529,11 @@ export class ClientSyncSystem extends EntitySystem {
         for (const [instanceId, prediction] of this.predictions) {
             // 清理过期的输入
             prediction.pendingInputs = prediction.pendingInputs.filter(
-                input => currentTime - input.timestamp < 1000
+                (input) => currentTime - input.timestamp < 1000
             );
-            
+
             // 如果没有待处理的输入，移除预测状态
-            if (prediction.pendingInputs.length === 0 && 
+            if (prediction.pendingInputs.length === 0 &&
                 currentTime - prediction.confirmationTime > 1000) {
                 this.predictions.delete(instanceId);
             }
@@ -549,7 +549,7 @@ export class ClientSyncSystem extends EntitySystem {
         if (input.movement) {
             prediction.predictedValues.x = (entity.x || 0) + input.movement.x;
             prediction.predictedValues.y = (entity.y || 0) + input.movement.y;
-            
+
             this.applyValuesToEntity(entity, prediction.predictedValues);
         }
     }
@@ -568,17 +568,17 @@ export class ClientSyncSystem extends EntitySystem {
      */
     private cleanupOldData(currentTime: number): void {
         const maxAge = 5000; // 5秒
-        
+
         // 清理远程实体历史
         for (const [instanceId, remoteState] of this.remoteEntities) {
             if (currentTime - remoteState.lastUpdateTime > maxAge) {
                 this.remoteEntities.delete(instanceId);
                 continue;
             }
-            
+
             // 清理历史记录
             remoteState.history = remoteState.history.filter(
-                record => currentTime - record.timestamp < maxAge
+                (record) => currentTime - record.timestamp < maxAge
             );
         }
     }

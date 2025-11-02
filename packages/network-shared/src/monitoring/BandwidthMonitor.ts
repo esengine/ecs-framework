@@ -99,19 +99,19 @@ export interface BandwidthMonitorEvents {
 export class BandwidthMonitor extends EventEmitter {
     private logger = createLogger('BandwidthMonitor');
     private config: BandwidthMonitorConfig;
-    
+
     /** 带宽样本历史 */
     private samples: BandwidthSample[] = [];
-    
+
     /** 当前带宽限制 */
     private limits: BandwidthLimit;
-    
+
     /** 当前警告级别 */
     private currentWarningLevel = BandwidthWarningLevel.Normal;
-    
+
     /** 监控定时器 */
     private monitorTimer: ReturnType<typeof setInterval> | null = null;
-    
+
     /** 统计信息 */
     private stats: BandwidthStats = {
         currentUpload: 0,
@@ -127,10 +127,10 @@ export class BandwidthMonitor extends EventEmitter {
         latencyJitter: 0,
         utilization: 0
     };
-    
+
     /** 上次统计时间 */
     private lastStatsTime = Date.now();
-    
+
     /** 累计字节数 */
     private cumulativeBytesIn = 0;
     private cumulativeBytesOut = 0;
@@ -139,7 +139,7 @@ export class BandwidthMonitor extends EventEmitter {
 
     constructor(config: Partial<BandwidthMonitorConfig> = {}) {
         super();
-        
+
         this.config = {
             monitorInterval: 1000,
             sampleWindowSize: 60,
@@ -149,13 +149,13 @@ export class BandwidthMonitor extends EventEmitter {
             adaptiveFactor: 0.1,
             ...config
         };
-        
+
         this.limits = {
             uploadLimit: 1024 * 1024, // 1MB/s
             downloadLimit: 1024 * 1024, // 1MB/s
             enabled: false
         };
-        
+
         this.startMonitoring();
     }
 
@@ -167,7 +167,7 @@ export class BandwidthMonitor extends EventEmitter {
         this.cumulativeBytesOut += bytesOut;
         this.cumulativePacketsIn += packetsIn;
         this.cumulativePacketsOut += packetsOut;
-        
+
         this.stats.totalUpload += bytesOut;
         this.stats.totalDownload += bytesIn;
     }
@@ -178,9 +178,9 @@ export class BandwidthMonitor extends EventEmitter {
     public setBandwidthLimits(limits: Partial<BandwidthLimit>): void {
         const oldLimits = { ...this.limits };
         Object.assign(this.limits, limits);
-        
+
         this.logger.info(`带宽限制已更新: 上行=${this.limits.uploadLimit}B/s, 下行=${this.limits.downloadLimit}B/s`);
-        
+
         if (this.config.enableAdaptive) {
             this.emit('adaptiveAdjustment', oldLimits, this.limits);
         }
@@ -214,7 +214,7 @@ export class BandwidthMonitor extends EventEmitter {
         if (!this.limits.enabled) {
             return { upload: false, download: false };
         }
-        
+
         return {
             upload: this.stats.currentUpload > this.limits.uploadLimit,
             download: this.stats.currentDownload > this.limits.downloadLimit
@@ -228,9 +228,9 @@ export class BandwidthMonitor extends EventEmitter {
         if (!this.limits.enabled) {
             return Infinity;
         }
-        
+
         const uploadUtilization = this.stats.currentUpload / this.limits.uploadLimit;
-        
+
         if (uploadUtilization < this.config.warningThreshold) {
             return this.limits.uploadLimit * 0.1; // 10% of limit
         } else if (uploadUtilization < this.config.criticalThreshold) {
@@ -248,7 +248,7 @@ export class BandwidthMonitor extends EventEmitter {
             this.stats.currentUpload / this.limits.uploadLimit,
             this.stats.currentDownload / this.limits.downloadLimit
         );
-        
+
         if (utilization < this.config.warningThreshold) {
             return 0;
         } else if (utilization < this.config.criticalThreshold) {
@@ -276,7 +276,7 @@ export class BandwidthMonitor extends EventEmitter {
             latencyJitter: 0,
             utilization: 0
         };
-        
+
         this.samples.length = 0;
         this.cumulativeBytesIn = 0;
         this.cumulativeBytesOut = 0;
@@ -290,7 +290,7 @@ export class BandwidthMonitor extends EventEmitter {
      */
     public updateConfig(newConfig: Partial<BandwidthMonitorConfig>): void {
         Object.assign(this.config, newConfig);
-        
+
         if (newConfig.monitorInterval !== undefined) {
             this.restartMonitoring();
         }
@@ -312,7 +312,7 @@ export class BandwidthMonitor extends EventEmitter {
         if (this.monitorTimer) {
             return;
         }
-        
+
         this.monitorTimer = setInterval(() => {
             this.updateStats();
         }, this.config.monitorInterval);
@@ -342,16 +342,16 @@ export class BandwidthMonitor extends EventEmitter {
     private updateStats(): void {
         const now = Date.now();
         const deltaTime = (now - this.lastStatsTime) / 1000; // 转换为秒
-        
+
         if (deltaTime <= 0) {
             return;
         }
-        
+
         // 计算当前速率
         const currentUpload = this.cumulativeBytesOut / deltaTime;
         const currentDownload = this.cumulativeBytesIn / deltaTime;
         const currentPacketRate = (this.cumulativePacketsIn + this.cumulativePacketsOut) / deltaTime;
-        
+
         // 创建新样本
         const sample: BandwidthSample = {
             timestamp: now,
@@ -361,47 +361,47 @@ export class BandwidthMonitor extends EventEmitter {
             packetsOut: this.cumulativePacketsOut,
             latency: 0 // 需要从外部提供
         };
-        
+
         this.samples.push(sample);
-        
+
         // 限制样本数量
         if (this.samples.length > this.config.sampleWindowSize) {
             this.samples.shift();
         }
-        
+
         // 更新统计信息
         this.stats.currentUpload = currentUpload;
         this.stats.currentDownload = currentDownload;
         this.stats.currentPacketRate = currentPacketRate;
-        
+
         // 更新峰值
         this.stats.peakUpload = Math.max(this.stats.peakUpload, currentUpload);
         this.stats.peakDownload = Math.max(this.stats.peakDownload, currentDownload);
-        
+
         // 计算平均值
         this.calculateAverages();
-        
+
         // 计算利用率
         this.calculateUtilization();
-        
+
         // 检查限制
         this.checkLimits();
-        
+
         // 检查警告级别
         this.checkWarningLevel();
-        
+
         // 自适应调整
         if (this.config.enableAdaptive) {
             this.performAdaptiveAdjustment();
         }
-        
+
         // 重置累计值
         this.cumulativeBytesIn = 0;
         this.cumulativeBytesOut = 0;
         this.cumulativePacketsIn = 0;
         this.cumulativePacketsOut = 0;
         this.lastStatsTime = now;
-        
+
         // 发出事件
         this.emit('bandwidthChanged', this.stats);
     }
@@ -413,30 +413,30 @@ export class BandwidthMonitor extends EventEmitter {
         if (this.samples.length === 0) {
             return;
         }
-        
+
         let totalUpload = 0;
         let totalDownload = 0;
         let totalLatency = 0;
-        
+
         for (let i = 1; i < this.samples.length; i++) {
             const prev = this.samples[i - 1];
             const curr = this.samples[i];
             const deltaTime = (curr.timestamp - prev.timestamp) / 1000;
-            
+
             if (deltaTime > 0) {
                 totalUpload += (curr.bytesOut - prev.bytesOut) / deltaTime;
                 totalDownload += (curr.bytesIn - prev.bytesIn) / deltaTime;
                 totalLatency += curr.latency;
             }
         }
-        
+
         const sampleCount = this.samples.length - 1;
         if (sampleCount > 0) {
             this.stats.averageUpload = totalUpload / sampleCount;
             this.stats.averageDownload = totalDownload / sampleCount;
             this.stats.averageLatency = totalLatency / this.samples.length;
         }
-        
+
         // 计算延迟抖动
         this.calculateLatencyJitter();
     }
@@ -448,16 +448,16 @@ export class BandwidthMonitor extends EventEmitter {
         if (this.samples.length < 2) {
             return;
         }
-        
+
         let jitterSum = 0;
         let jitterCount = 0;
-        
+
         for (let i = 1; i < this.samples.length; i++) {
             const diff = Math.abs(this.samples[i].latency - this.samples[i - 1].latency);
             jitterSum += diff;
             jitterCount++;
         }
-        
+
         this.stats.latencyJitter = jitterCount > 0 ? jitterSum / jitterCount : 0;
     }
 
@@ -469,10 +469,10 @@ export class BandwidthMonitor extends EventEmitter {
             this.stats.utilization = 0;
             return;
         }
-        
+
         const uploadUtilization = this.stats.currentUpload / this.limits.uploadLimit;
         const downloadUtilization = this.stats.currentDownload / this.limits.downloadLimit;
-        
+
         this.stats.utilization = Math.max(uploadUtilization, downloadUtilization);
     }
 
@@ -483,11 +483,11 @@ export class BandwidthMonitor extends EventEmitter {
         if (!this.limits.enabled) {
             return;
         }
-        
+
         if (this.stats.currentUpload > this.limits.uploadLimit) {
             this.emit('limitExceeded', 'upload', this.stats.currentUpload, this.limits.uploadLimit);
         }
-        
+
         if (this.stats.currentDownload > this.limits.downloadLimit) {
             this.emit('limitExceeded', 'download', this.stats.currentDownload, this.limits.downloadLimit);
         }
@@ -498,13 +498,13 @@ export class BandwidthMonitor extends EventEmitter {
      */
     private checkWarningLevel(): void {
         let newLevel = BandwidthWarningLevel.Normal;
-        
+
         if (this.stats.utilization >= this.config.criticalThreshold) {
             newLevel = BandwidthWarningLevel.Critical;
         } else if (this.stats.utilization >= this.config.warningThreshold) {
             newLevel = BandwidthWarningLevel.Warning;
         }
-        
+
         if (newLevel !== this.currentWarningLevel) {
             this.currentWarningLevel = newLevel;
             this.emit('warningLevelChanged', newLevel, this.stats);
@@ -518,9 +518,9 @@ export class BandwidthMonitor extends EventEmitter {
         if (!this.limits.enabled || this.stats.utilization < this.config.warningThreshold) {
             return;
         }
-        
+
         const oldLimits = { ...this.limits };
-        
+
         // 根据当前利用率动态调整限制
         if (this.stats.utilization > this.config.criticalThreshold) {
             // 严重超载，降低限制
@@ -531,9 +531,9 @@ export class BandwidthMonitor extends EventEmitter {
             this.limits.uploadLimit *= (1 + this.config.adaptiveFactor * 0.5);
             this.limits.downloadLimit *= (1 + this.config.adaptiveFactor * 0.5);
         }
-        
+
         // 检查是否有变化
-        if (this.limits.uploadLimit !== oldLimits.uploadLimit || 
+        if (this.limits.uploadLimit !== oldLimits.uploadLimit ||
             this.limits.downloadLimit !== oldLimits.downloadLimit) {
             this.emit('adaptiveAdjustment', oldLimits, this.limits);
         }

@@ -2,11 +2,11 @@
  * WebSocket客户端传输层实现
  */
 import { createLogger, ITimer } from '@esengine/ecs-framework';
-import { 
-    IClientTransport, 
-    IConnectionOptions, 
-    ConnectionState, 
-    IConnectionStats 
+import {
+    IClientTransport,
+    IConnectionOptions,
+    ConnectionState,
+    IConnectionStats
 } from '@esengine/network-shared';
 import { NetworkTimerManager } from '../utils';
 
@@ -27,12 +27,12 @@ export class WebSocketClient implements IClientTransport {
      * 消息接收事件处理器
      */
     private messageHandlers: ((data: ArrayBuffer | string) => void)[] = [];
-    
+
     /**
      * 连接状态变化事件处理器
      */
     private stateChangeHandlers: ((state: ConnectionState) => void)[] = [];
-    
+
     /**
      * 错误事件处理器
      */
@@ -102,11 +102,11 @@ export class WebSocketClient implements IClientTransport {
         try {
             this.websocket.send(data);
             this.stats.messagesSent++;
-            
+
             // 估算字节数
             const bytes = typeof data === 'string' ? new Blob([data]).size : data.byteLength;
             this.stats.bytesSent += bytes;
-            
+
         } catch (error) {
             this.logger.error('发送消息失败:', error);
             this.handleError(error as Error);
@@ -192,7 +192,7 @@ export class WebSocketClient implements IClientTransport {
      * 设置WebSocket事件监听
      */
     private setupWebSocketEvents(
-        resolve: () => void, 
+        resolve: () => void,
         reject: (error: Error) => void
     ): void {
         if (!this.websocket) return;
@@ -221,7 +221,7 @@ export class WebSocketClient implements IClientTransport {
             const error = new Error(`WebSocket错误: ${event}`);
             this.logger.error('WebSocket错误:', error);
             this.handleError(error);
-            
+
             if (this.connectionState === ConnectionState.Connecting) {
                 reject(error);
             }
@@ -234,13 +234,13 @@ export class WebSocketClient implements IClientTransport {
     private handleMessage(data: any): void {
         try {
             this.stats.messagesReceived++;
-            
+
             // 估算字节数
             const bytes = typeof data === 'string' ? new Blob([data]).size : data.byteLength || 0;
             this.stats.bytesReceived += bytes;
 
             // 触发消息事件
-            this.messageHandlers.forEach(handler => {
+            this.messageHandlers.forEach((handler) => {
                 try {
                     handler(data);
                 } catch (error) {
@@ -265,7 +265,7 @@ export class WebSocketClient implements IClientTransport {
 
         // 根据关闭代码决定是否重连
         const shouldReconnect = this.shouldReconnect(code);
-        
+
         if (shouldReconnect && this.options.autoReconnect) {
             this.setConnectionState(ConnectionState.Reconnecting);
             this.scheduleReconnect();
@@ -309,8 +309,8 @@ export class WebSocketClient implements IClientTransport {
             () => {
                 this.reconnectAttempts++;
                 this.stats.reconnectCount++;
-                
-                this.connectInternal().catch(error => {
+
+                this.connectInternal().catch((error) => {
                     this.logger.error(`重连失败 (第 ${this.reconnectAttempts} 次):`, error);
                     this.scheduleReconnect();
                 });
@@ -341,7 +341,7 @@ export class WebSocketClient implements IClientTransport {
         this.logger.debug(`连接状态变化: ${oldState} -> ${state}`);
 
         // 触发状态变化事件
-        this.stateChangeHandlers.forEach(handler => {
+        this.stateChangeHandlers.forEach((handler) => {
             try {
                 handler(state);
             } catch (error) {
@@ -354,7 +354,7 @@ export class WebSocketClient implements IClientTransport {
      * 处理错误
      */
     private handleError(error: Error): void {
-        this.errorHandlers.forEach(handler => {
+        this.errorHandlers.forEach((handler) => {
             try {
                 handler(error);
             } catch (handlerError) {
@@ -378,10 +378,10 @@ export class WebSocketClient implements IClientTransport {
      * 手动触发重连
      */
     public reconnect(): void {
-        if (this.connectionState === ConnectionState.Disconnected || 
+        if (this.connectionState === ConnectionState.Disconnected ||
             this.connectionState === ConnectionState.Failed) {
             this.reconnectAttempts = 0;
-            this.connectInternal().catch(error => {
+            this.connectInternal().catch((error) => {
                 this.logger.error('手动重连失败:', error);
             });
         }

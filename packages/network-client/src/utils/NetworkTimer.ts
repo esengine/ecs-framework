@@ -78,16 +78,16 @@ export class NetworkTimerManager {
             context,
             onTime
         );
-        
+
         this.timers.add(timer as any);
-        
+
         // 如果是一次性定时器，完成后自动清理
         if (!repeats) {
             setTimeout(() => {
                 this.timers.delete(timer as any);
             }, timeInSeconds * 1000 + 100);
         }
-        
+
         return timer;
     }
 

@@ -154,14 +154,14 @@ export class NodeTemplates {
      */
     static getAllTemplates(): NodeTemplate[] {
         const allMetadata = NodeMetadataRegistry.getAllMetadata();
-        return allMetadata.map(metadata => this.convertMetadataToTemplate(metadata));
+        return allMetadata.map((metadata) => this.convertMetadataToTemplate(metadata));
     }
 
     /**
      * 根据类型和子类型获取模板
      */
     static getTemplate(type: NodeType, subType: string): NodeTemplate | undefined {
-        return this.getAllTemplates().find(t => {
+        return this.getAllTemplates().find((t) => {
             if (t.type !== type) return false;
             const config: any = t.defaultConfig;
 
@@ -266,7 +266,7 @@ export class NodeTemplates {
             }
 
             if (field.options) {
-                property.options = field.options.map(opt => ({
+                property.options = field.options.map((opt) => ({
                     label: opt,
                     value: opt
                 }));

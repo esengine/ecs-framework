@@ -89,19 +89,19 @@ export interface DeltaSyncStats {
 export class DeltaSync {
     private logger = createLogger('DeltaSync');
     private config: DeltaSyncConfig;
-    
+
     /** 版本历史 */
     private versionHistory = new Map<string, Map<number, VersionedData>>();
-    
+
     /** 版本计数器 */
     private versionCounters = new Map<string, number>();
-    
+
     /** 差量缓存 */
     private deltaCache = new Map<string, DeltaData>();
-    
+
     /** 待合并操作 */
     private pendingOperations = new Map<string, DeltaOperation[]>();
-    
+
     /** 统计信息 */
     private stats: DeltaSyncStats = {
         totalDeltas: 0,
@@ -111,7 +111,7 @@ export class DeltaSync {
         cacheHitRate: 0,
         mergedOperations: 0
     };
-    
+
     /** 合并定时器 */
     private mergeTimers = new Map<string, any>();
 
@@ -134,7 +134,7 @@ export class DeltaSync {
         if (!this.config.enabled) {
             return 0;
         }
-        
+
         const version = this.getNextVersion(instanceId);
         const versionedData: VersionedData = {
             version,
@@ -142,7 +142,7 @@ export class DeltaSync {
             data: this.deepClone(data),
             checksum: this.calculateChecksum(data)
         };
-        
+
         this.storeVersion(instanceId, versionedData);
         return version;
     }
@@ -154,14 +154,14 @@ export class DeltaSync {
         if (!this.config.enabled) {
             return null;
         }
-        
+
         const history = this.versionHistory.get(instanceId);
         if (!history || history.size === 0) {
             // 没有基线，记录第一个版本
             this.recordBaseline(instanceId, newData);
             return null;
         }
-        
+
         // 选择基线版本
         let baseVersionData: VersionedData;
         if (baseVersion !== undefined) {
@@ -185,16 +185,16 @@ export class DeltaSync {
             }
             baseVersionData = latestVersion;
         }
-        
+
         const targetVersion = this.getNextVersion(instanceId);
         const changes = this.computeChanges(baseVersionData.data, newData);
         const deletions = this.computeDeletions(baseVersionData.data, newData);
-        
+
         // 检查是否有变化
         if (Object.keys(changes).length === 0 && deletions.length === 0) {
             return null;
         }
-        
+
         const deltaData: DeltaData = {
             baseVersion: baseVersionData.version,
             targetVersion,
@@ -206,13 +206,13 @@ export class DeltaSync {
                 compressionRatio: 1
             }
         };
-        
+
         // 记录新版本
         this.recordBaseline(instanceId, newData);
-        
+
         // 更新统计
         this.updateStats(deltaData);
-        
+
         return deltaData;
     }
 
@@ -223,32 +223,32 @@ export class DeltaSync {
         if (!this.config.enabled) {
             return null;
         }
-        
+
         const history = this.versionHistory.get(instanceId);
         if (!history) {
             this.logger.error(`实例 ${instanceId} 没有版本历史`);
             return null;
         }
-        
+
         const baseData = history.get(delta.baseVersion);
         if (!baseData) {
             this.logger.error(`未找到基线版本 ${delta.baseVersion}`);
             return null;
         }
-        
+
         // 复制基线数据
         const result = this.deepClone(baseData.data);
-        
+
         // 应用变化
         for (const [key, value] of Object.entries(delta.changes)) {
             this.setNestedProperty(result, key, value);
         }
-        
+
         // 应用删除
         for (const key of delta.deletions) {
             this.deleteNestedProperty(result, key);
         }
-        
+
         // 记录结果版本
         const resultVersion: VersionedData = {
             version: delta.targetVersion,
@@ -256,9 +256,9 @@ export class DeltaSync {
             data: this.deepClone(result),
             checksum: this.calculateChecksum(result)
         };
-        
+
         this.storeVersion(instanceId, resultVersion);
-        
+
         return result;
     }
 
@@ -269,13 +269,13 @@ export class DeltaSync {
         if (!this.config.enableSmartMerging || operations.length <= 1) {
             return operations;
         }
-        
+
         const pathMap = new Map<string, DeltaOperation>();
-        
+
         // 按路径分组操作
         for (const op of operations) {
             const existing = pathMap.get(op.path);
-            
+
             if (!existing) {
                 pathMap.set(op.path, op);
             } else {
@@ -285,9 +285,9 @@ export class DeltaSync {
                 this.stats.mergedOperations++;
             }
         }
-        
+
         // 过滤掉NOOP操作
-        return Array.from(pathMap.values()).filter(op => op.type !== DeltaOperationType.NOOP);
+        return Array.from(pathMap.values()).filter((op) => op.type !== DeltaOperationType.NOOP);
     }
 
     /**
@@ -297,25 +297,25 @@ export class DeltaSync {
         if (!this.config.enableSmartMerging) {
             return;
         }
-        
+
         let operations = this.pendingOperations.get(instanceId);
         if (!operations) {
             operations = [];
             this.pendingOperations.set(instanceId, operations);
         }
-        
+
         operations.push(operation);
-        
+
         // 重置合并定时器
         const existingTimer = this.mergeTimers.get(instanceId);
         if (existingTimer) {
             clearTimeout(existingTimer);
         }
-        
+
         const timer = setTimeout(() => {
             this.flushPendingOperations(instanceId);
         }, this.config.mergeWindow);
-        
+
         this.mergeTimers.set(instanceId, timer);
     }
 
@@ -326,14 +326,14 @@ export class DeltaSync {
         if (delta.metadata.size < this.config.compressionThreshold) {
             return delta;
         }
-        
+
         // 简化的压缩实现
         const compressedChanges = this.compressObject(delta.changes);
         const compressedDeletions = delta.deletions; // 删除操作通常已经很紧凑
-        
+
         const originalSize = delta.metadata.size;
         const compressedSize = this.estimateSize(compressedChanges) + this.estimateSize(compressedDeletions);
-        
+
         return {
             ...delta,
             changes: compressedChanges,
@@ -351,34 +351,34 @@ export class DeltaSync {
      */
     public cleanup(): void {
         const now = Date.now();
-        
+
         for (const [instanceId, history] of this.versionHistory) {
             const versionsToDelete: number[] = [];
-            
+
             for (const [version, versionData] of history) {
                 // 检查超时
                 if (now - versionData.timestamp > this.config.versionTimeout) {
                     versionsToDelete.push(version);
                 }
             }
-            
+
             // 保留最新的几个版本
             const sortedVersions = Array.from(history.keys()).sort((a, b) => b - a);
             const toKeep = sortedVersions.slice(0, this.config.maxHistoryVersions);
-            
+
             for (const version of versionsToDelete) {
                 if (!toKeep.includes(version)) {
                     history.delete(version);
                 }
             }
-            
+
             // 如果实例没有版本了，删除实例
             if (history.size === 0) {
                 this.versionHistory.delete(instanceId);
                 this.versionCounters.delete(instanceId);
             }
         }
-        
+
         // 清理差量缓存
         this.deltaCache.clear();
     }
@@ -419,7 +419,7 @@ export class DeltaSync {
         for (const timer of this.mergeTimers.values()) {
             clearTimeout(timer);
         }
-        
+
         this.versionHistory.clear();
         this.versionCounters.clear();
         this.deltaCache.clear();
@@ -446,9 +446,9 @@ export class DeltaSync {
             history = new Map();
             this.versionHistory.set(instanceId, history);
         }
-        
+
         history.set(versionData.version, versionData);
-        
+
         // 限制历史版本数量
         if (history.size > this.config.maxHistoryVersions) {
             const oldestVersion = Math.min(...Array.from(history.keys()));
@@ -464,7 +464,7 @@ export class DeltaSync {
         if (!history || history.size === 0) {
             return undefined;
         }
-        
+
         const latestVersion = Math.max(...Array.from(history.keys()));
         return history.get(latestVersion);
     }
@@ -474,15 +474,15 @@ export class DeltaSync {
      */
     private computeChanges(oldData: any, newData: any): { [key: string]: any } {
         const changes: { [key: string]: any } = {};
-        
+
         for (const [key, newValue] of Object.entries(newData)) {
             const oldValue = oldData[key];
-            
+
             if (!this.deepEqual(oldValue, newValue)) {
                 changes[key] = newValue;
             }
         }
-        
+
         return changes;
     }
 
@@ -491,13 +491,13 @@ export class DeltaSync {
      */
     private computeDeletions(oldData: any, newData: any): string[] {
         const deletions: string[] = [];
-        
+
         for (const key of Object.keys(oldData)) {
             if (!(key in newData)) {
                 deletions.push(key);
             }
         }
-        
+
         return deletions;
     }
 
@@ -539,7 +539,7 @@ export class DeltaSync {
         }
 
         // 检查是否值回到了原始状态
-        if (op1.type === DeltaOperationType.MODIFY && 
+        if (op1.type === DeltaOperationType.MODIFY &&
             op2.type === DeltaOperationType.MODIFY &&
             this.deepEqual(op1.oldValue, op2.newValue)) {
             // 值回到原始状态 = 无操作
@@ -563,10 +563,10 @@ export class DeltaSync {
         if (!operations || operations.length === 0) {
             return;
         }
-        
+
         // 合并操作并发送
         this.mergeOperations(instanceId, operations);
-        
+
         // 清理待处理操作
         this.pendingOperations.delete(instanceId);
         this.mergeTimers.delete(instanceId);
@@ -582,7 +582,7 @@ export class DeltaSync {
 
         // 移除null和undefined值
         const compressed: any = Array.isArray(obj) ? [] : {};
-        
+
         for (const [key, value] of Object.entries(obj)) {
             if (value !== null && value !== undefined) {
                 if (typeof value === 'object') {
@@ -603,19 +603,19 @@ export class DeltaSync {
         if (obj === null || obj === undefined) {
             return 4; // "null"的长度
         }
-        
+
         if (typeof obj === 'string') {
             return obj.length * 2; // UTF-16字符估算
         }
-        
+
         if (typeof obj === 'number') {
             return 8; // 64位数字
         }
-        
+
         if (typeof obj === 'boolean') {
             return 4; // true/false
         }
-        
+
         if (Array.isArray(obj)) {
             let size = 2; // []
             for (const item of obj) {
@@ -623,7 +623,7 @@ export class DeltaSync {
             }
             return size;
         }
-        
+
         if (typeof obj === 'object') {
             let size = 2; // {}
             for (const [key, value] of Object.entries(obj)) {
@@ -632,7 +632,7 @@ export class DeltaSync {
             }
             return size;
         }
-        
+
         return JSON.stringify(obj).length;
     }
 
@@ -643,28 +643,28 @@ export class DeltaSync {
         if (obj === null || obj === undefined) {
             return obj;
         }
-        
+
         if (typeof obj !== 'object') {
             return obj;
         }
-        
+
         if (obj instanceof Date) {
             return new Date(obj.getTime());
         }
-        
+
         if (obj instanceof RegExp) {
             return new RegExp(obj);
         }
-        
+
         if (Array.isArray(obj)) {
-            return obj.map(item => this.deepClone(item));
+            return obj.map((item) => this.deepClone(item));
         }
-        
+
         const cloned: any = {};
         for (const [key, value] of Object.entries(obj)) {
             cloned[key] = this.deepClone(value);
         }
-        
+
         return cloned;
     }
 
@@ -675,27 +675,27 @@ export class DeltaSync {
         if (obj1 === obj2) {
             return true;
         }
-        
+
         if (obj1 === null || obj2 === null || obj1 === undefined || obj2 === undefined) {
             return obj1 === obj2;
         }
-        
+
         if (typeof obj1 !== typeof obj2) {
             return false;
         }
-        
+
         if (typeof obj1 !== 'object') {
             return obj1 === obj2;
         }
-        
+
         if (obj1 instanceof Date && obj2 instanceof Date) {
             return obj1.getTime() === obj2.getTime();
         }
-        
+
         if (Array.isArray(obj1) !== Array.isArray(obj2)) {
             return false;
         }
-        
+
         if (Array.isArray(obj1)) {
             if (obj1.length !== obj2.length) {
                 return false;
@@ -707,14 +707,14 @@ export class DeltaSync {
             }
             return true;
         }
-        
+
         const keys1 = Object.keys(obj1);
         const keys2 = Object.keys(obj2);
-        
+
         if (keys1.length !== keys2.length) {
             return false;
         }
-        
+
         for (const key of keys1) {
             if (!keys2.includes(key)) {
                 return false;
@@ -723,7 +723,7 @@ export class DeltaSync {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -733,7 +733,7 @@ export class DeltaSync {
     private setNestedProperty(obj: any, path: string, value: any): void {
         const keys = path.split('.');
         let current = obj;
-        
+
         for (let i = 0; i < keys.length - 1; i++) {
             const key = keys[i];
             if (!(key in current)) {
@@ -741,7 +741,7 @@ export class DeltaSync {
             }
             current = current[key];
         }
-        
+
         current[keys[keys.length - 1]] = value;
     }
 
@@ -751,7 +751,7 @@ export class DeltaSync {
     private deleteNestedProperty(obj: any, path: string): void {
         const keys = path.split('.');
         let current = obj;
-        
+
         for (let i = 0; i < keys.length - 1; i++) {
             const key = keys[i];
             if (!(key in current)) {
@@ -759,7 +759,7 @@ export class DeltaSync {
             }
             current = current[key];
         }
-        
+
         delete current[keys[keys.length - 1]];
     }
 
@@ -770,13 +770,13 @@ export class DeltaSync {
         // 简化的校验和实现
         const str = JSON.stringify(obj);
         let hash = 0;
-        
+
         for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
             hash = hash & hash; // 转换为32位整数
         }
-        
+
         return hash.toString(16);
     }
 
@@ -787,8 +787,8 @@ export class DeltaSync {
         this.stats.totalDeltas++;
         this.stats.totalSize += delta.metadata.size;
         this.stats.averageDeltaSize = this.stats.totalSize / this.stats.totalDeltas;
-        this.stats.compressionRatio = 
-            (this.stats.compressionRatio * (this.stats.totalDeltas - 1) + delta.metadata.compressionRatio) / 
+        this.stats.compressionRatio =
+            (this.stats.compressionRatio * (this.stats.totalDeltas - 1) + delta.metadata.compressionRatio) /
             this.stats.totalDeltas;
     }
 }
