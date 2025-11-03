@@ -89,10 +89,6 @@ export const BehaviorTreeNodeRenderer: React.FC<BehaviorTreeNodeRendererProps> =
             borderColor = '#ff0000';
         }
 
-        if (isDragging) {
-            opacity: 0.7;
-        }
-
         return {
             position: 'absolute' as const,
             left: position.x,

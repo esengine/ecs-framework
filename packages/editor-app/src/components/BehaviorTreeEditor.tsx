@@ -26,11 +26,13 @@ import { BehaviorTreeValidator } from '../infrastructure/validation/BehaviorTree
 import { useNodeOperations } from '../presentation/hooks/useNodeOperations';
 import { useConnectionOperations } from '../presentation/hooks/useConnectionOperations';
 import { useCommandHistory } from '../presentation/hooks/useCommandHistory';
+import { useNodeDrag } from '../presentation/hooks/useNodeDrag';
 import { useContextMenu } from '../application/hooks/useContextMenu';
 import { useQuickCreateMenu } from '../application/hooks/useQuickCreateMenu';
 import { EditorToolbar } from '../presentation/components/toolbar/EditorToolbar';
 import { QuickCreateMenu } from '../presentation/components/menu/QuickCreateMenu';
 import { NodeContextMenu } from '../presentation/components/menu/NodeContextMenu';
+import { BehaviorTreeNode as BehaviorTreeNodeComponent } from '../presentation/components/behavior-tree/nodes/BehaviorTreeNode';
 import '../styles/BehaviorTreeNode.css';
 
 type NodeExecutionStatus = 'idle' | 'running' | 'success' | 'failure';
@@ -216,7 +218,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     }, [contextMenu.visible, closeContextMenu]);
 
     const [isDragging, setIsDragging] = useState(false);
-    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const canvasRef = useRef<HTMLDivElement>(null);
 
     //  创建一个停止执行的 ref，稍后会被赋值
@@ -264,6 +265,34 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         onStop: () => stopExecutionRef.current?.(),
         onNodeCreate,
         showToast
+    });
+
+    // 节点拖拽
+    const {
+        handleNodeMouseDown,
+        handleNodeMouseMove,
+        handleNodeMouseUp,
+        dragOffset
+    } = useNodeDrag({
+        canvasRef,
+        canvasOffset,
+        canvasScale,
+        nodes,
+        selectedNodeIds,
+        draggingNodeId,
+        dragStartPositions,
+        isDraggingNode,
+        dragDelta,
+        nodeOperations,
+        setSelectedNodeIds,
+        startDragging,
+        stopDragging,
+        setIsDraggingNode,
+        setDragDelta,
+        setIsBoxSelecting,
+        setBoxSelectStart,
+        setBoxSelectEnd,
+        sortChildrenByPosition
     });
 
     // 缓存DOM元素引用和上一次的状态
@@ -475,126 +504,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         onNodeSelect?.(node);
     };
 
-    const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
-        // 只允许左键拖动节点
-        if (e.button !== 0) return;
-
-        // Root 节点不能拖动
-        if (nodeId === ROOT_NODE_ID) return;
-
-        // 检查是否点击的是端口
-        const target = e.target as HTMLElement;
-        if (target.getAttribute('data-port')) {
-            return;
-        }
-
-        e.stopPropagation();
-
-        // 阻止框选
-        setIsBoxSelecting(false);
-        setBoxSelectStart(null);
-        setBoxSelectEnd(null);
-        const node = nodes.find((n: BehaviorTreeNode) => n.id === nodeId);
-        if (!node) return;
-
-        const rect = canvasRef.current?.getBoundingClientRect();
-        if (!rect) return;
-
-        // 将鼠标坐标转换为画布坐标系
-        const canvasX = (e.clientX - rect.left - canvasOffset.x) / canvasScale;
-        const canvasY = (e.clientY - rect.top - canvasOffset.y) / canvasScale;
-
-        // 确定要拖动的节点列表
-        let nodesToDrag: string[];
-        if (selectedNodeIds.includes(nodeId)) {
-            // 如果拖动的节点已经在选中列表中，拖动所有选中的节点
-            nodesToDrag = selectedNodeIds;
-        } else {
-            // 如果拖动的节点不在选中列表中，只拖动这一个节点，并选中它
-            nodesToDrag = [nodeId];
-            setSelectedNodeIds([nodeId]);
-        }
-
-        // 记录所有要拖动节点的起始位置
-        const startPositions = new Map<string, { x: number; y: number }>();
-        nodesToDrag.forEach((id: string) => {
-            const n = nodes.find((node: BehaviorTreeNode) => node.id === id);
-            if (n) {
-                startPositions.set(id, { x: n.position.x, y: n.position.y });
-            }
-        });
-
-        // 使用 store 的 startDragging
-        startDragging(nodeId, startPositions);
-        setDragOffset({
-            x: canvasX - node.position.x,
-            y: canvasY - node.position.y
-        });
-    };
-
-    const handleNodeMouseMove = (e: React.MouseEvent) => {
-        if (!draggingNodeId) return;
-
-        // 标记正在拖动（只在第一次调用）
-        if (!isDraggingNode) {
-            setIsDraggingNode(true);
-        }
-
-        const rect = canvasRef.current?.getBoundingClientRect();
-        if (!rect) return;
-
-        // 将鼠标坐标转换为画布坐标系
-        const canvasX = (e.clientX - rect.left - canvasOffset.x) / canvasScale;
-        const canvasY = (e.clientY - rect.top - canvasOffset.y) / canvasScale;
-
-        const newX = canvasX - dragOffset.x;
-        const newY = canvasY - dragOffset.y;
-
-        // 计算拖动的节点的位移
-        const draggedNodeStartPos = dragStartPositions.get(draggingNodeId);
-        if (!draggedNodeStartPos) return;
-
-        const deltaX = newX - draggedNodeStartPos.x;
-        const deltaY = newY - draggedNodeStartPos.y;
-
-        // 只更新偏移量，所有节点会在同一次渲染中更新
-        setDragDelta({ dx: deltaX, dy: deltaY });
-    };
-
-    const handleNodeMouseUp = () => {
-        if (!draggingNodeId) return;
-
-        // 将临时位置同步到 zustand store
-        if (dragDelta.dx !== 0 || dragDelta.dy !== 0) {
-            const moves: Array<{ nodeId: string; position: Position }> = [];
-            dragStartPositions.forEach((startPos: { x: number; y: number }, nodeId: string) => {
-                moves.push({
-                    nodeId,
-                    position: new Position(
-                        startPos.x + dragDelta.dx,
-                        startPos.y + dragDelta.dy
-                    )
-                });
-            });
-            nodeOperations.moveNodes(moves);
-
-            // 拖动结束后，自动排序子节点
-            setTimeout(() => {
-                sortChildrenByPosition();
-            }, 0);
-        }
-
-        // 重置偏移量
-        setDragDelta({ dx: 0, dy: 0 });
-
-        // 停止拖动
-        stopDragging();
-
-        // 延迟清除拖动标志，确保 onClick 能够检测到拖动状态
-        setTimeout(() => {
-            setIsDraggingNode(false);
-        }, 10);
-    };
 
     const handlePortMouseDown = (e: React.MouseEvent, nodeId: string, propertyName?: string) => {
         e.stopPropagation();
@@ -1410,276 +1319,32 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
                         {/* 节点列表 */}
                         {nodes.map((node: BehaviorTreeNode) => {
-                            const isRoot = node.id === ROOT_NODE_ID;
-                            const isBlackboardVariable = node.data.nodeType === 'blackboard-variable';
                             const isSelected = selectedNodeIds.includes(node.id);
-
-                            // 如果节点正在拖动，使用临时位置
                             const isBeingDragged = dragStartPositions.has(node.id);
-                            const posX = node.position.x + (isBeingDragged ? dragDelta.dx : 0);
-                            const posY = node.position.y + (isBeingDragged ? dragDelta.dy : 0);
-
-                            const isUncommitted = uncommittedNodeIds.has(node.id);
-                            const nodeClasses = [
-                                'bt-node',
-                                isSelected && 'selected',
-                                isRoot && 'root',
-                                isUncommitted && 'uncommitted'
-                            ].filter(Boolean).join(' ');
 
                             return (
-                                <div
+                                <BehaviorTreeNodeComponent
                                     key={node.id}
-                                    data-node-id={node.id}
-                                    className={nodeClasses}
-                                    onClick={(e) => handleNodeClick(e, node)}
-                                    onContextMenu={(e) => handleNodeContextMenu(e, node)}
-                                    onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                                    onMouseUp={(e) => handleNodeMouseUpForConnection(e, node.id)}
-                                    style={{
-                                        left: posX,
-                                        top: posY,
-                                        transform: 'translate(-50%, -50%)',
-                                        cursor: isRoot ? 'default' : (draggingNodeId === node.id ? 'grabbing' : 'grab'),
-                                        transition: draggingNodeId === node.id ? 'none' : 'all 0.2s',
-                                        zIndex: isRoot ? 50 : (draggingNodeId === node.id ? 100 : (isSelected ? 10 : 1))
-                                    }}
-                                >
-                                    {isBlackboardVariable ? (
-                                        (() => {
-                                            const varName = node.data.variableName as string;
-                                            const currentValue = blackboardVariables[varName];
-                                            const initialValue = initialBlackboardVariables[varName];
-                                            const isModified = isExecuting && JSON.stringify(currentValue) !== JSON.stringify(initialValue);
-
-                                            return (
-                                                <>
-                                                    <div className="bt-node-header blackboard">
-                                                        <Database size={16} className="bt-node-header-icon" />
-                                                        <div className="bt-node-header-title">
-                                                            {varName || 'Variable'}
-                                                        </div>
-                                                        {isModified && (
-                                                            <span style={{
-                                                                fontSize: '9px',
-                                                                color: '#ffbb00',
-                                                                backgroundColor: 'rgba(255, 187, 0, 0.2)',
-                                                                padding: '2px 4px',
-                                                                borderRadius: '2px',
-                                                                marginLeft: '4px'
-                                                            }}>
-                                                    运行时
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="bt-node-body">
-                                                        <div
-                                                            className="bt-node-blackboard-value"
-                                                            style={{
-                                                                backgroundColor: isModified ? 'rgba(255, 187, 0, 0.15)' : 'transparent',
-                                                                border: isModified ? '1px solid rgba(255, 187, 0, 0.3)' : 'none',
-                                                                borderRadius: '2px',
-                                                                padding: '2px 4px'
-                                                            }}
-                                                            title={isModified ? `初始值: ${JSON.stringify(initialValue)}\n当前值: ${JSON.stringify(currentValue)}` : undefined}
-                                                        >
-                                                            {JSON.stringify(currentValue)}
-                                                        </div>
-                                                    </div>
-                                                    <div
-                                                        data-port="true"
-                                                        data-node-id={node.id}
-                                                        data-port-type="variable-output"
-                                                        onMouseDown={(e) => handlePortMouseDown(e, node.id, '__value__')}
-                                                        onMouseUp={(e) => handlePortMouseUp(e, node.id, '__value__')}
-                                                        className="bt-node-port bt-node-port-variable-output"
-                                                        title="Output"
-                                                    />
-                                                </>
-                                            );
-                                        })()
-                                    ) : (
-                                        <>
-                                            {/* 标题栏 - 带渐变 */}
-                                            <div className={`bt-node-header ${isRoot ? 'root' : (node.template.type || 'action')}`}>
-                                                {isRoot ? (
-                                                    <TreePine size={16} className="bt-node-header-icon" />
-                                                ) : (
-                                                    node.template.icon && (() => {
-                                                        const IconComponent = iconMap[node.template.icon];
-                                                        return IconComponent ? (
-                                                            <IconComponent size={16} className="bt-node-header-icon" />
-                                                        ) : (
-                                                            <span className="bt-node-header-icon">{node.template.icon}</span>
-                                                        );
-                                                    })()
-                                                )}
-                                                <div className="bt-node-header-title">
-                                                    <div>{isRoot ? 'ROOT' : node.template.displayName}</div>
-                                                    <div className="bt-node-id" title={node.id}>
-                                            #{node.id}
-                                                    </div>
-                                                </div>
-                                                {/* 缺失执行器警告 */}
-                                                {!isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className) && (
-                                                    <div
-                                                        className="bt-node-missing-executor-warning"
-                                                        style={{
-                                                            marginLeft: 'auto',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            cursor: 'help',
-                                                            pointerEvents: 'auto',
-                                                            position: 'relative'
-                                                        }}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <AlertCircle
-                                                            size={14}
-                                                            style={{
-                                                                color: '#f44336',
-                                                                flexShrink: 0
-                                                            }}
-                                                        />
-                                                        <div className="bt-node-missing-executor-tooltip">
-                                                缺失执行器：找不到节点对应的执行器 "{node.template.className}"
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {/* 未生效节点警告 */}
-                                                {isUncommitted && (
-                                                    <div
-                                                        className="bt-node-uncommitted-warning"
-                                                        style={{
-                                                            marginLeft: !isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className) ? '4px' : 'auto',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            cursor: 'help',
-                                                            pointerEvents: 'auto',
-                                                            position: 'relative'
-                                                        }}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <AlertTriangle
-                                                            size={14}
-                                                            style={{
-                                                                color: '#ff5722',
-                                                                flexShrink: 0
-                                                            }}
-                                                        />
-                                                        <div className="bt-node-uncommitted-tooltip">
-                                                未生效节点：运行时添加的节点，需重新运行才能生效
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {/* 空节点警告图标 */}
-                                                {!isRoot && !isUncommitted && node.template.type === 'composite' &&
-                                     (node.template.requiresChildren === undefined || node.template.requiresChildren === true) &&
-                                     !nodes.some((n) =>
-                                         connections.some((c) => c.from === node.id && c.to === n.id)
-                                     ) && (
-                                                    <div
-                                                        className="bt-node-empty-warning-container"
-                                                        style={{
-                                                            marginLeft: isUncommitted ? '4px' : 'auto',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            cursor: 'help',
-                                                            pointerEvents: 'auto',
-                                                            position: 'relative'
-                                                        }}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <AlertTriangle
-                                                            size={14}
-                                                            style={{
-                                                                color: '#ff9800',
-                                                                flexShrink: 0
-                                                            }}
-                                                        />
-                                                        <div className="bt-node-empty-warning-tooltip">
-                                                空节点：没有子节点，执行时会直接跳过
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* 节点主体 */}
-                                            <div className="bt-node-body">
-                                                {!isRoot && (
-                                                    <div className="bt-node-category">
-                                                        {node.template.category}
-                                                    </div>
-                                                )}
-
-                                                {/* 属性列表 */}
-                                                {node.template.properties.length > 0 && (
-                                                    <div className="bt-node-properties">
-                                                        {node.template.properties.map((prop: PropertyDefinition, idx: number) => {
-                                                            const hasConnection = connections.some(
-                                                                (conn: Connection) => conn.toProperty === prop.name && conn.to === node.id
-                                                            );
-                                                            const propValue = node.data[prop.name];
-
-                                                            return (
-                                                                <div key={idx} className="bt-node-property">
-                                                                    <div
-                                                                        data-port="true"
-                                                                        data-node-id={node.id}
-                                                                        data-property={prop.name}
-                                                                        data-port-type="property-input"
-                                                                        onMouseDown={(e) => handlePortMouseDown(e, node.id, prop.name)}
-                                                                        onMouseUp={(e) => handlePortMouseUp(e, node.id, prop.name)}
-                                                                        className={`bt-node-port bt-node-port-property ${hasConnection ? 'connected' : ''}`}
-                                                                        title={prop.description || prop.name}
-                                                                    />
-                                                                    <span
-                                                                        className="bt-node-property-label"
-                                                                        title={prop.description}
-                                                                    >
-                                                                        {prop.name}:
-                                                                    </span>
-                                                                    {propValue !== undefined && (
-                                                                        <span className="bt-node-property-value">
-                                                                            {String(propValue)}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* 输入端口（顶部）- Root 节点不显示 */}
-                                            {!isRoot && (
-                                                <div
-                                                    data-port="true"
-                                                    data-node-id={node.id}
-                                                    data-port-type="node-input"
-                                                    onMouseDown={(e) => handlePortMouseDown(e, node.id)}
-                                                    onMouseUp={(e) => handlePortMouseUp(e, node.id)}
-                                                    className="bt-node-port bt-node-port-input"
-                                                    title="Input"
-                                                />
-                                            )}
-
-                                            {/* 输出端口（底部）- 只有组合节点和装饰器节点才显示，但不需要子节点的节点除外 */}
-                                            {(node.template.type === 'composite' || node.template.type === 'decorator') &&
-                                 (node.template.requiresChildren === undefined || node.template.requiresChildren === true) && (
-                                                <div
-                                                    data-port="true"
-                                                    data-node-id={node.id}
-                                                    data-port-type="node-output"
-                                                    onMouseDown={(e) => handlePortMouseDown(e, node.id)}
-                                                    onMouseUp={(e) => handlePortMouseUp(e, node.id)}
-                                                    className="bt-node-port bt-node-port-output"
-                                                    title="Output"
-                                                />
-                                            )}
-                                        </>
-                                    )}
-                                </div>
+                                    node={node}
+                                    isSelected={isSelected}
+                                    isBeingDragged={isBeingDragged}
+                                    dragDelta={dragDelta}
+                                    uncommittedNodeIds={uncommittedNodeIds}
+                                    blackboardVariables={blackboardVariables}
+                                    initialBlackboardVariables={initialBlackboardVariables}
+                                    isExecuting={isExecuting}
+                                    connections={connections}
+                                    nodes={nodes}
+                                    executorRef={executorRef}
+                                    iconMap={iconMap}
+                                    draggingNodeId={draggingNodeId}
+                                    onNodeClick={handleNodeClick}
+                                    onContextMenu={handleNodeContextMenu}
+                                    onNodeMouseDown={handleNodeMouseDown}
+                                    onNodeMouseUpForConnection={handleNodeMouseUpForConnection}
+                                    onPortMouseDown={handlePortMouseDown}
+                                    onPortMouseUp={handlePortMouseUp}
+                                />
                             );
                         })}
 

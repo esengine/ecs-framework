@@ -6,13 +6,6 @@ import { Blackboard, BlackboardValue } from '../domain/models/Blackboard';
 import { Position } from '../domain/value-objects/Position';
 
 /**
- * 生成唯一ID
- */
-function generateUniqueId(): string {
-    return `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
-
-/**
  * 行为树 Store 状态接口
  */
 interface BehaviorTreeState {
