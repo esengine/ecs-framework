@@ -1,9 +1,10 @@
 import { create } from 'zustand';
-import { NodeTemplate, NodeTemplates, EditorFormatConverter, BehaviorTreeAssetSerializer, NodeType } from '@esengine/behavior-tree';
+import { NodeTemplate, NodeTemplates, EditorFormatConverter, BehaviorTreeAssetSerializer } from '@esengine/behavior-tree';
 import { Node } from '../domain/models/Node';
 import { Connection } from '../domain/models/Connection';
 import { Blackboard, BlackboardValue } from '../domain/models/Blackboard';
 import { Position } from '../domain/value-objects/Position';
+import { createRootNode, ROOT_NODE_ID } from '../domain/constants/RootNode';
 
 /**
  * 行为树 Store 状态接口
@@ -97,38 +98,12 @@ interface BehaviorTreeState {
     reset: () => void;
 }
 
-const ROOT_NODE_ID = 'root-node';
-
-/**
- * 创建根节点模板
- */
-const createRootNodeTemplate = (): NodeTemplate => ({
-    type: NodeType.Composite,
-    displayName: '根节点',
-    category: '根节点',
-    icon: 'TreePine',
-    description: '行为树根节点',
-    color: '#FFD700',
-    defaultConfig: {
-        nodeType: 'root'
-    },
-    properties: []
-});
-
-/**
- * 创建初始根节点
- */
-const createInitialRootNode = (): Node => {
-    const template = createRootNodeTemplate();
-    const position = new Position(400, 100);
-    return new Node(ROOT_NODE_ID, template, { nodeType: 'root' }, position, []);
-};
 
 /**
  * 行为树 Store
  */
 export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
-    nodes: [createInitialRootNode()],
+    nodes: [createRootNode()],
     connections: [],
     blackboard: new Blackboard(),
     blackboardVariables: {},
@@ -347,7 +322,7 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
 
         const loadedNodes: Node[] = (data.nodes || []).map((nodeObj: any) => {
             if (nodeObj.id === ROOT_NODE_ID) {
-                return createInitialRootNode();
+                return createRootNode();
             }
 
             const className = nodeObj.template?.className;
@@ -417,7 +392,7 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     },
 
     reset: () => set({
-        nodes: [createInitialRootNode()],
+        nodes: [createRootNode()],
         connections: [],
         blackboard: new Blackboard(),
         blackboardVariables: {},

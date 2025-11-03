@@ -300,7 +300,7 @@ export const BehaviorTreeNode: React.FC<BehaviorTreeNodeProps> = ({
                         />
                     )}
 
-                    {(node.template.type === 'composite' || node.template.type === 'decorator') &&
+                    {(isRoot || node.template.type === 'composite' || node.template.type === 'decorator') &&
                         (node.template.requiresChildren === undefined || node.template.requiresChildren === true) && (
                             <div
                                 data-port="true"
