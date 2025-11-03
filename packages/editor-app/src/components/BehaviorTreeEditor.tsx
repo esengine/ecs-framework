@@ -19,10 +19,17 @@ import '../styles/BehaviorTreeNode.css';
 type NodeExecutionStatus = 'idle' | 'running' | 'success' | 'failure';
 type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
 
+type BlackboardValue = string | number | boolean | null | undefined | Record<string, unknown> | unknown[];
+type BlackboardVariables = Record<string, BlackboardValue>;
+
+interface DraggedVariableData {
+    variableName: string;
+}
+
 interface BehaviorTreeEditorProps {
     onNodeSelect?: (node: BehaviorTreeNode) => void;
     onNodeCreate?: (template: NodeTemplate, position: { x: number; y: number }) => void;
-    blackboardVariables?: Record<string, any>;
+    blackboardVariables?: BlackboardVariables;
     projectPath?: string | null;
 }
 
@@ -64,58 +71,6 @@ function generateUniqueId(): string {
     const timestamp = Date.now().toString(36);
     const randomPart = Math.random().toString(36).substring(2, 8);
     return `${timestamp}${randomPart}`;
-}
-
-/**
- * 推断 JavaScript 值的类型
- */
-function inferValueType(value: any): string {
-    if (value === null || value === undefined) {
-        return 'any';
-    }
-    const jsType = typeof value;
-    if (jsType === 'object') {
-        if (Array.isArray(value)) {
-            return 'array';
-        }
-        return 'object';
-    }
-    return jsType;
-}
-
-/**
- * 检查两个类型是否兼容
- * @param sourceType 源类型（黑板变量的实际类型）
- * @param targetType 目标类型（节点属性期望的类型）
- * @returns 是否兼容
- */
-function areTypesCompatible(sourceType: string, targetType: string): boolean {
-    // 完全匹配
-    if (sourceType === targetType) {
-        return true;
-    }
-
-    // any 类型兼容一切
-    if (targetType === 'any' || targetType === 'blackboard' || targetType === 'variable') {
-        return true;
-    }
-
-    // number 可以转换为 string
-    if (sourceType === 'number' && targetType === 'string') {
-        return true;
-    }
-
-    // boolean 可以转换为 string
-    if (sourceType === 'boolean' && targetType === 'string') {
-        return true;
-    }
-
-    // string 可以转换为 select（下拉选择）
-    if (sourceType === 'string' && targetType === 'select') {
-        return true;
-    }
-
-    return false;
 }
 
 /**
@@ -166,7 +121,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         boxSelectStart,
         boxSelectEnd,
         dragDelta,
-        forceUpdateCounter: _forceUpdateCounter,
         setNodes,
         setConnections,
         setSelectedNodeIds,
@@ -286,11 +240,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
     // 运行状态
     const [executionMode, setExecutionMode] = useState<ExecutionMode>('idle');
-    const [_executionHistory, setExecutionHistory] = useState<string[]>([]);
     const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
     const [executionSpeed, setExecutionSpeed] = useState<number>(1.0);
     const [tickCount, setTickCount] = useState(0);
-    const _executionTimerRef = useRef<number | null>(null);
     const executionModeRef = useRef<ExecutionMode>('idle');
     const executorRef = useRef<BehaviorTreeExecutor | null>(null);
     const animationFrameRef = useRef<number | null>(null);
@@ -298,7 +250,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     const executionSpeedRef = useRef<number>(1.0);
     const statusTimersRef = useRef<Map<string, number>>(new Map());
     // 保存设计时的初始黑板变量值（用于保存和停止后还原）
-    const initialBlackboardVariablesRef = useRef<Record<string, any>>({});
+    const initialBlackboardVariablesRef = useRef<BlackboardVariables>({});
 
     // 跟踪运行时添加的节点（在运行中未生效的节点）
     const [uncommittedNodeIds, setUncommittedNodeIds] = useState<Set<string>>(new Set());
@@ -327,7 +279,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         connections: new Map(),
         lastNodeStatus: new Map()
     });
-    const lastLogUpdateRef = useRef<number>(0);
 
     // 键盘事件监听 - 删除选中节点
     useEffect(() => {
@@ -349,9 +300,22 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
                 // 优先删除选中的连线
                 if (selectedConnection) {
+                    // 删除连接
                     removeConnections((conn: Connection) =>
                         !(conn.from === selectedConnection.from && conn.to === selectedConnection.to)
                     );
+
+                    // 同步更新父节点的children数组，移除被删除的子节点引用
+                    setNodes(nodes.map((node: BehaviorTreeNode) => {
+                        if (node.id === selectedConnection.from) {
+                            return {
+                                ...node,
+                                children: node.children.filter((childId: string) => childId !== selectedConnection.to)
+                            };
+                        }
+                        return node;
+                    }));
+
                     setSelectedConnection(null);
                     return;
                 }
@@ -420,7 +384,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             // 检查是否是黑板变量
             const blackboardVariableData = e.dataTransfer.getData('application/blackboard-variable');
             if (blackboardVariableData) {
-                const variableData = JSON.parse(blackboardVariableData);
+                const variableData = JSON.parse(blackboardVariableData) as DraggedVariableData;
 
                 // 创建黑板变量节点
                 const variableTemplate: NodeTemplate = {
@@ -470,7 +434,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 return;
             }
 
-            const template: NodeTemplate = JSON.parse(templateData);
+            const template = JSON.parse(templateData) as NodeTemplate;
 
             const newNode: BehaviorTreeNode = {
                 id: `node_${generateUniqueId()}`,
@@ -848,39 +812,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 }
             }
 
-            // 类型兼容性检查
-            const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === actualFrom);
-
-            if (fromNode && toNode && actualFromProperty && actualToProperty) {
-                const isFromBlackboard = fromNode.data.nodeType === 'blackboard-variable';
-
-                if (isFromBlackboard) {
-                    // 从黑板变量连接到节点属性
-                    const variableName = fromNode.data.variableName;
-                    const variableValue = blackboardVariables[variableName];
-                    const sourceType = inferValueType(variableValue);
-
-                    // 获取目标属性的期望类型
-                    const targetProperty = toNode.template.properties.find(
-                        (p: PropertyDefinition) => p.name === actualToProperty
-                    );
-
-                    if (targetProperty) {
-                        const targetType = targetProperty.type;
-
-                        if (!areTypesCompatible(sourceType, targetType)) {
-                            showToast(
-                                `类型不兼容: 黑板变量 "${variableName}" (${sourceType}) 无法连接到属性 "${targetProperty.label}" (${targetType})`,
-                                'error',
-                                5000
-                            );
-                            clearConnecting();
-                            return;
-                        }
-                    }
-                }
-            }
-
             setConnections([...connections, {
                 from: actualFrom,
                 to: actualTo,
@@ -1195,69 +1126,14 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         return { x, y };
     };
 
-    // 估算节点的总高度
-    const estimateNodeHeight = (node: BehaviorTreeNode): number => {
-        const isBlackboard = node.data.nodeType === 'blackboard-variable';
-
-        if (isBlackboard) {
-            // 黑板变量节点结构简单
-            // padding: 12px * 2
-            // 标题 + 值显示区域
-            return 24 + 18 + 30; // 约72px
-        }
-
-        // 普通节点
-        const paddingVertical = 12 * 2; // padding top + bottom
-        const titleArea = 18 + 6; // icon + marginBottom
-        const categoryArea = 13;
-        const bottomPortSpace = 16; // 底部端口需要的空间
-
-        let propsArea = 0;
-        if (node.template.properties.length > 0) {
-            const propContainerHeader = 8 + 8 + 1; // marginTop + paddingTop + borderTop
-            const eachPropHeight = 22; // height 18px + marginBottom 4px
-            propsArea = propContainerHeader + (node.template.properties.length * eachPropHeight);
-        }
-
-        return paddingVertical + titleArea + categoryArea + propsArea + bottomPortSpace;
-    };
-
-    // 计算属性引脚的Y坐标偏移（从节点中心算起）
-    const _getPropertyPinYOffset = (node: BehaviorTreeNode, propertyIndex: number): number => {
-        // 从节点顶部开始的距离：
-        const paddingTop = 12;
-        const titleArea = 18 + 6; // icon高度 + marginBottom
-        const categoryArea = 13;
-        const propContainerMarginTop = 8;
-        const propContainerPaddingTop = 8;
-        const propContainerBorderTop = 1;
-        const eachPropHeight = 22; // height 18px + marginBottom 4px
-        const pinOffsetInRow = 9; // top 3px + 半个引脚 6px
-
-        const offsetFromTop = paddingTop + titleArea + categoryArea +
-                             propContainerMarginTop + propContainerPaddingTop + propContainerBorderTop +
-                             (propertyIndex * eachPropHeight) + pinOffsetInRow;
-
-        // 节点高度的一半
-        const nodeHalfHeight = estimateNodeHeight(node) / 2;
-
-        // 从节点中心到引脚的偏移 = 从顶部的距离 - 节点高度的一半
-        return offsetFromTop - nodeHalfHeight;
-    };
-
     // 执行状态回调（直接操作DOM，不触发React重渲染）
     const handleExecutionStatusUpdate = (
         statuses: ExecutionStatus[],
         logs: ExecutionLog[],
-        runtimeBlackboardVars?: Record<string, any>
+        runtimeBlackboardVars?: BlackboardVariables
     ): void => {
-        const now = performance.now();
-
-        // 节流日志更新：最多每100ms更新一次
-        if (now - lastLogUpdateRef.current > 100) {
-            setExecutionLogs([...logs]);
-            lastLogUpdateRef.current = now;
-        }
+        // 更新执行日志
+        setExecutionLogs([...logs]);
 
         // 同步运行时黑板变量到 store（无论运行还是暂停都同步）
         if (runtimeBlackboardVars) {
@@ -1442,7 +1318,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
         executionModeRef.current = 'running';
         setExecutionMode('running');
-        setExecutionHistory(['使用ECS系统执行行为树...']);
         setTickCount(0);
         lastTickTimeRef.current = 0;
 
@@ -1468,7 +1343,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         if (executionModeRef.current === 'running') {
             executionModeRef.current = 'paused';
             setExecutionMode('paused');
-            setExecutionHistory((prev) => [...prev, '执行已暂停']);
 
             if (executorRef.current) {
                 executorRef.current.pause();
@@ -1481,7 +1355,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         } else if (executionModeRef.current === 'paused') {
             executionModeRef.current = 'running';
             setExecutionMode('running');
-            setExecutionHistory((prev) => [...prev, '执行已恢复']);
             lastTickTimeRef.current = 0;
 
             if (executorRef.current) {
@@ -1495,7 +1368,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     const handleStop = () => {
         executionModeRef.current = 'idle';
         setExecutionMode('idle');
-        setExecutionHistory([]);
         setTickCount(0);
         lastTickTimeRef.current = 0;
 
@@ -1547,8 +1419,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         if (executorRef.current) {
             executorRef.current.cleanup();
         }
-
-        setExecutionHistory(['重置到初始状态']);
     };
 
     useEffect(() => {
@@ -1845,7 +1715,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                 >
                                     {isBlackboardVariable ? (
                                         (() => {
-                                            const varName = node.data.variableName;
+                                            const varName = node.data.variableName as string;
                                             const currentValue = blackboardVariables[varName];
                                             const initialValue = initialBlackboardVariables[varName];
                                             const isModified = isExecuting && JSON.stringify(currentValue) !== JSON.stringify(initialValue);
