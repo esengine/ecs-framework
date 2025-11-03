@@ -86,7 +86,7 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
             } else {
                 setUpdateStatus('latest');
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('Check update failed:', error);
             setUpdateStatus('error');
         } finally {

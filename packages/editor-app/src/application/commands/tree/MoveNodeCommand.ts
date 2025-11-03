@@ -23,7 +23,7 @@ export class MoveNodeCommand extends BaseCommand {
 
     execute(): void {
         const tree = this.state.getTree();
-        const newTree = tree.updateNode(this.nodeId, node =>
+        const newTree = tree.updateNode(this.nodeId, (node) =>
             node.moveToPosition(this.newPosition)
         );
         this.state.setTree(newTree);
@@ -31,7 +31,7 @@ export class MoveNodeCommand extends BaseCommand {
 
     undo(): void {
         const tree = this.state.getTree();
-        const newTree = tree.updateNode(this.nodeId, node =>
+        const newTree = tree.updateNode(this.nodeId, (node) =>
             node.moveToPosition(this.oldPosition)
         );
         this.state.setTree(newTree);

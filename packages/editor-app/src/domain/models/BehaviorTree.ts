@@ -19,7 +19,7 @@ export class BehaviorTree {
         blackboard: Blackboard = Blackboard.empty(),
         rootNodeId: string | null = null
     ) {
-        this._nodes = new Map(nodes.map(node => [node.id, node]));
+        this._nodes = new Map(nodes.map((node) => [node.id, node]));
         this._connections = [...connections];
         this._blackboard = blackboard;
         this._rootNodeId = rootNodeId;
@@ -99,9 +99,9 @@ export class BehaviorTree {
         }
 
         const node = this.getNode(nodeId);
-        const newNodes = Array.from(this.nodes.filter(n => n.id !== nodeId));
+        const newNodes = Array.from(this.nodes.filter((n) => n.id !== nodeId));
         const newConnections = this._connections.filter(
-            conn => conn.from !== nodeId && conn.to !== nodeId
+            (conn) => conn.from !== nodeId && conn.to !== nodeId
         );
 
         const newRootNodeId = node.isRoot() ? null : this._rootNodeId;
@@ -121,7 +121,7 @@ export class BehaviorTree {
         const node = this.getNode(nodeId);
         const updatedNode = updater(node);
 
-        const newNodes = Array.from(this.nodes.map(n => n.id === nodeId ? updatedNode : n));
+        const newNodes = Array.from(this.nodes.map((n) => n.id === nodeId ? updatedNode : n));
 
         return new BehaviorTree(
             newNodes,
@@ -162,7 +162,7 @@ export class BehaviorTree {
             }
 
             const updatedFromNode = fromNode.addChild(connection.to);
-            const newNodes = Array.from(this.nodes.map(n =>
+            const newNodes = Array.from(this.nodes.map((n) =>
                 n.id === connection.from ? updatedFromNode : n
             ));
 
@@ -186,18 +186,18 @@ export class BehaviorTree {
      * 移除连接
      */
     removeConnection(from: string, to: string, fromProperty?: string, toProperty?: string): BehaviorTree {
-        const connection = this._connections.find(c => c.matches(from, to, fromProperty, toProperty));
+        const connection = this._connections.find((c) => c.matches(from, to, fromProperty, toProperty));
 
         if (!connection) {
             throw new ValidationError(`连接不存在：${from} -> ${to}`);
         }
 
-        const newConnections = this._connections.filter(c => !c.matches(from, to, fromProperty, toProperty));
+        const newConnections = this._connections.filter((c) => !c.matches(from, to, fromProperty, toProperty));
 
         if (connection.isNodeConnection()) {
             const fromNode = this.getNode(from);
             const updatedFromNode = fromNode.removeChild(to);
-            const newNodes = Array.from(this.nodes.map(n =>
+            const newNodes = Array.from(this.nodes.map((n) =>
                 n.id === from ? updatedFromNode : n
             ));
 
@@ -221,7 +221,7 @@ export class BehaviorTree {
      * 检查是否存在连接
      */
     hasConnection(from: string, to: string): boolean {
-        return this._connections.some(c => c.from === from && c.to === to);
+        return this._connections.some((c) => c.from === from && c.to === to);
     }
 
     /**
@@ -244,8 +244,8 @@ export class BehaviorTree {
 
             visited.add(current);
 
-            const childConnections = this._connections.filter(c => c.from === current && c.isNodeConnection());
-            childConnections.forEach(conn => queue.push(conn.to));
+            const childConnections = this._connections.filter((c) => c.from === current && c.isNodeConnection());
+            childConnections.forEach((conn) => queue.push(conn.to));
         }
 
         return false;
@@ -268,7 +268,7 @@ export class BehaviorTree {
      */
     getChildren(nodeId: string): Node[] {
         const node = this.getNode(nodeId);
-        return node.children.map(childId => this.getNode(childId));
+        return node.children.map((childId) => this.getNode(childId));
     }
 
     /**
@@ -276,7 +276,7 @@ export class BehaviorTree {
      */
     getParent(nodeId: string): Node | null {
         const parentConnection = this._connections.find(
-            c => c.to === nodeId && c.isNodeConnection()
+            (c) => c.to === nodeId && c.isNodeConnection()
         );
 
         if (!parentConnection) {
@@ -290,7 +290,7 @@ export class BehaviorTree {
      * 验证树的完整性
      */
     private validateTree(): void {
-        const rootNodes = this.nodes.filter(n => n.isRoot());
+        const rootNodes = this.nodes.filter((n) => n.isRoot());
 
         if (rootNodes.length > 1) {
             throw new ValidationError('行为树只能有一个根节点');
@@ -300,7 +300,7 @@ export class BehaviorTree {
             throw new ValidationError('根节点ID不匹配');
         }
 
-        this._connections.forEach(conn => {
+        this._connections.forEach((conn) => {
             if (!this._nodes.has(conn.from)) {
                 throw new NodeNotFoundError(conn.from);
             }
@@ -318,10 +318,10 @@ export class BehaviorTree {
         connections: ReturnType<Connection['toObject']>[];
         blackboard: Record<string, unknown>;
         rootNodeId: string | null;
-    } {
+        } {
         return {
-            nodes: this.nodes.map(n => n.toObject()),
-            connections: this._connections.map(c => c.toObject()),
+            nodes: this.nodes.map((n) => n.toObject()),
+            connections: this._connections.map((c) => c.toObject()),
             blackboard: this._blackboard.toObject(),
             rootNodeId: this._rootNodeId
         };
@@ -337,8 +337,8 @@ export class BehaviorTree {
         rootNodeId: string | null;
     }): BehaviorTree {
         return new BehaviorTree(
-            obj.nodes.map(n => Node.fromObject(n)),
-            obj.connections.map(c => Connection.fromObject(c)),
+            obj.nodes.map((n) => Node.fromObject(n)),
+            obj.connections.map((c) => Connection.fromObject(c)),
             Blackboard.fromObject(obj.blackboard),
             obj.rootNodeId
         );

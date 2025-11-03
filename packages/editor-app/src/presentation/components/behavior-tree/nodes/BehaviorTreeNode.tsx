@@ -6,7 +6,7 @@ import {
     AlertCircle,
     LucideIcon
 } from 'lucide-react';
-import { NodeTemplate, PropertyDefinition } from '@esengine/behavior-tree';
+import { PropertyDefinition } from '@esengine/behavior-tree';
 import { BehaviorTreeNode as BehaviorTreeNodeType, Connection, ROOT_NODE_ID } from '../../../../stores/behaviorTreeStore';
 import { BehaviorTreeExecutor } from '../../../../utils/BehaviorTreeExecutor';
 import { BlackboardValue } from '../../../../domain/models/Blackboard';
@@ -217,30 +217,30 @@ export const BehaviorTreeNode: React.FC<BehaviorTreeNodeProps> = ({
                             !nodes.some((n) =>
                                 connections.some((c) => c.from === node.id && c.to === n.id)
                             ) && (
-                            <div
-                                className="bt-node-empty-warning-container"
-                                style={{
-                                    marginLeft: isUncommitted ? '4px' : 'auto',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    cursor: 'help',
-                                    pointerEvents: 'auto',
-                                    position: 'relative'
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <AlertTriangle
-                                    size={14}
+                                <div
+                                    className="bt-node-empty-warning-container"
                                     style={{
-                                        color: '#ff9800',
-                                        flexShrink: 0
+                                        marginLeft: isUncommitted ? '4px' : 'auto',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        cursor: 'help',
+                                        pointerEvents: 'auto',
+                                        position: 'relative'
                                     }}
-                                />
-                                <div className="bt-node-empty-warning-tooltip">
-                                    空节点：没有子节点，执行时会直接跳过
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <AlertTriangle
+                                        size={14}
+                                        style={{
+                                            color: '#ff9800',
+                                            flexShrink: 0
+                                        }}
+                                    />
+                                    <div className="bt-node-empty-warning-tooltip">
+                                        空节点：没有子节点，执行时会直接跳过
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
                     </div>
 
                     <div className="bt-node-body">
@@ -302,16 +302,16 @@ export const BehaviorTreeNode: React.FC<BehaviorTreeNodeProps> = ({
 
                     {(node.template.type === 'composite' || node.template.type === 'decorator') &&
                         (node.template.requiresChildren === undefined || node.template.requiresChildren === true) && (
-                        <div
-                            data-port="true"
-                            data-node-id={node.id}
-                            data-port-type="node-output"
-                            onMouseDown={(e) => onPortMouseDown(e, node.id)}
-                            onMouseUp={(e) => onPortMouseUp(e, node.id)}
-                            className="bt-node-port bt-node-port-output"
-                            title="Output"
-                        />
-                    )}
+                            <div
+                                data-port="true"
+                                data-node-id={node.id}
+                                data-port-type="node-output"
+                                onMouseDown={(e) => onPortMouseDown(e, node.id)}
+                                onMouseUp={(e) => onPortMouseUp(e, node.id)}
+                                className="bt-node-port bt-node-port-output"
+                                title="Output"
+                            />
+                        )}
                 </>
             )}
         </div>

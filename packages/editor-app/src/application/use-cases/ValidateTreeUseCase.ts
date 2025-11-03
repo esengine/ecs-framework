@@ -25,7 +25,7 @@ export class ValidateTreeUseCase {
         const result = this.execute();
 
         if (!result.isValid) {
-            const errorMessages = result.errors.map(e => e.message).join('\n');
+            const errorMessages = result.errors.map((e) => e.message).join('\n');
             throw new Error(`行为树验证失败:\n${errorMessages}`);
         }
     }

@@ -21,12 +21,12 @@ export class DeleteNodeUseCase {
         const tree = this.treeState.getTree();
 
         const relatedConnections = tree.connections.filter(
-            conn => conn.from === nodeId || conn.to === nodeId
+            (conn) => conn.from === nodeId || conn.to === nodeId
         );
 
         const commands: ICommand[] = [];
 
-        relatedConnections.forEach(conn => {
+        relatedConnections.forEach((conn) => {
             commands.push(
                 new RemoveConnectionCommand(
                     this.treeState,
@@ -53,10 +53,10 @@ export class DeleteNodeUseCase {
         const nodeIdSet = new Set(nodeIds);
 
         const relatedConnections = tree.connections.filter(
-            conn => nodeIdSet.has(conn.from) || nodeIdSet.has(conn.to)
+            (conn) => nodeIdSet.has(conn.from) || nodeIdSet.has(conn.to)
         );
 
-        relatedConnections.forEach(conn => {
+        relatedConnections.forEach((conn) => {
             commands.push(
                 new RemoveConnectionCommand(
                     this.treeState,
@@ -68,7 +68,7 @@ export class DeleteNodeUseCase {
             );
         });
 
-        nodeIds.forEach(nodeId => {
+        nodeIds.forEach((nodeId) => {
             commands.push(new DeleteNodeCommand(this.treeState, nodeId));
         });
 

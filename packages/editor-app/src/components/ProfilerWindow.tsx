@@ -6,20 +6,20 @@ import { SettingsService } from '../services/SettingsService';
 import '../styles/ProfilerWindow.css';
 
 interface SystemPerformanceData {
-  name: string;
-  executionTime: number;
-  entityCount: number;
-  averageTime: number;
-  minTime: number;
-  maxTime: number;
-  percentage: number;
-  level: number;
-  children?: SystemPerformanceData[];
-  isExpanded?: boolean;
+    name: string;
+    executionTime: number;
+    entityCount: number;
+    averageTime: number;
+    minTime: number;
+    maxTime: number;
+    percentage: number;
+    level: number;
+    children?: SystemPerformanceData[];
+    isExpanded?: boolean;
 }
 
 interface ProfilerWindowProps {
-  onClose: () => void;
+    onClose: () => void;
 }
 
 type DataSource = 'local' | 'remote';
@@ -96,23 +96,22 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
 
         if (servicesUpdate) {
             const servicesStats = statsMap.get('Services.update');
-      coreNode.children!.push({
-          name: 'Services.update',
-          executionTime: servicesUpdate.executionTime,
-          entityCount: 0,
-          averageTime: servicesStats?.averageTime || 0,
-          minTime: servicesStats?.minTime || 0,
-          maxTime: servicesStats?.maxTime || 0,
-          percentage: coreUpdate.executionTime > 0
-              ? (servicesUpdate.executionTime / coreUpdate.executionTime) * 100
-              : 0,
-          level: 1,
-          isExpanded: false
-      });
+            coreNode.children!.push({
+                name: 'Services.update',
+                executionTime: servicesUpdate.executionTime,
+                entityCount: 0,
+                averageTime: servicesStats?.averageTime || 0,
+                minTime: servicesStats?.minTime || 0,
+                maxTime: servicesStats?.maxTime || 0,
+                percentage: coreUpdate.executionTime > 0
+                    ? (servicesUpdate.executionTime / coreUpdate.executionTime) * 100
+                    : 0,
+                level: 1,
+                isExpanded: false
+            });
         }
 
         const sceneSystems: SystemPerformanceData[] = [];
-        let sceneSystemsTotal = 0;
 
         for (const [name, data] of flatSystems.entries()) {
             if (name !== 'Core.update' && name !== 'Services.update') {
@@ -129,7 +128,6 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
                         level: 1,
                         isExpanded: false
                     });
-                    sceneSystemsTotal += data.executionTime;
                 }
             }
         }
@@ -141,9 +139,9 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
         });
 
         sceneSystems.sort((a, b) => b.executionTime - a.executionTime);
-    coreNode.children!.push(...sceneSystems);
+        coreNode.children!.push(...sceneSystems);
 
-    return [coreNode];
+        return [coreNode];
     };
 
     // Subscribe to local performance data
@@ -328,7 +326,7 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
             );
         }
     } else if (viewMode === 'table') {
-    // For table view without search, flatten all
+        // For table view without search, flatten all
         const flatList: SystemPerformanceData[] = [];
         const flatten = (nodes: SystemPerformanceData[]) => {
             for (const node of nodes) {

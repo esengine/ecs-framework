@@ -109,7 +109,7 @@ export class Connection {
         fromProperty?: string;
         toProperty?: string;
         connectionType: ConnectionType;
-    } {
+        } {
         return {
             from: this._from,
             to: this._to,

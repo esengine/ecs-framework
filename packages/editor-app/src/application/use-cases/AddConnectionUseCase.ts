@@ -30,7 +30,7 @@ export class AddConnectionUseCase {
         const validationResult = this.validator.validateConnection(connection, tree);
 
         if (!validationResult.isValid) {
-            const errorMessages = validationResult.errors.map(e => e.message).join(', ');
+            const errorMessages = validationResult.errors.map((e) => e.message).join(', ');
             throw new Error(`连接验证失败: ${errorMessages}`);
         }
 

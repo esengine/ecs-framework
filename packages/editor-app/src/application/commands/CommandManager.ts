@@ -136,14 +136,14 @@ export class CommandManager {
      * 获取撤销栈的描述列表
      */
     getUndoHistory(): string[] {
-        return this.undoStack.map(cmd => cmd.getDescription());
+        return this.undoStack.map((cmd) => cmd.getDescription());
     }
 
     /**
      * 获取重做栈的描述列表
      */
     getRedoHistory(): string[] {
-        return this.redoStack.map(cmd => cmd.getDescription());
+        return this.redoStack.map((cmd) => cmd.getDescription());
     }
 
     /**

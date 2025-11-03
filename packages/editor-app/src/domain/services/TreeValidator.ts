@@ -20,20 +20,20 @@ export class TreeValidator implements IValidator {
             });
         }
 
-        const rootNodes = tree.nodes.filter(n => n.isRoot());
+        const rootNodes = tree.nodes.filter((n) => n.isRoot());
         if (rootNodes.length > 1) {
             errors.push({
                 message: '行为树只能有一个根节点',
-                nodeId: rootNodes.map(n => n.id).join(', ')
+                nodeId: rootNodes.map((n) => n.id).join(', ')
             });
         }
 
-        tree.nodes.forEach(node => {
+        tree.nodes.forEach((node) => {
             const nodeValidation = this.validateNode(node);
             errors.push(...nodeValidation.errors);
         });
 
-        tree.connections.forEach(connection => {
+        tree.connections.forEach((connection) => {
             const connValidation = this.validateConnection(connection, tree);
             errors.push(...connValidation.errors);
         });
@@ -183,7 +183,7 @@ export class TreeValidator implements IValidator {
             dfs(tree.rootNodeId);
         }
 
-        tree.nodes.forEach(node => {
+        tree.nodes.forEach((node) => {
             if (!visited.has(node.id) && !node.isRoot()) {
                 dfs(node.id);
             }

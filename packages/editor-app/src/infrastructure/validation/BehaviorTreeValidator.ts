@@ -69,8 +69,8 @@ export class BehaviorTreeValidator implements IValidator {
         const errors: ValidationError[] = [];
 
         // 验证连接的源节点和目标节点都存在
-        const fromNode = tree.nodes.find(n => n.id === connection.from);
-        const toNode = tree.nodes.find(n => n.id === connection.to);
+        const fromNode = tree.nodes.find((n) => n.id === connection.from);
+        const toNode = tree.nodes.find((n) => n.id === connection.to);
 
         if (!fromNode) {
             errors.push({
@@ -118,7 +118,7 @@ export class BehaviorTreeValidator implements IValidator {
             visited.add(nodeId);
             recursionStack.add(nodeId);
 
-            const node = tree.nodes.find(n => n.id === nodeId);
+            const node = tree.nodes.find((n) => n.id === nodeId);
             if (node) {
                 for (const childId of node.children) {
                     if (hasCycle(childId)) {

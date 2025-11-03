@@ -173,7 +173,7 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
         const remainingNodes = state.nodes
             .filter((n: Node) => !nodesToDelete.has(n.id))
             .map((n: Node) => {
-                const newChildren = Array.from(n.children).filter(childId => !nodesToDelete.has(childId));
+                const newChildren = Array.from(n.children).filter((childId) => !nodesToDelete.has(childId));
                 if (newChildren.length !== n.children.length) {
                     return new Node(n.id, n.template, n.data, n.position, newChildren);
                 }
@@ -283,7 +283,7 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
         };
     }),
 
-    setBlackboardVariables: (variables: Record<string, BlackboardValue>) => set((state: BehaviorTreeState) => {
+    setBlackboardVariables: (variables: Record<string, BlackboardValue>) => set(() => {
         const newBlackboard = Blackboard.fromObject(variables);
         return {
             blackboard: newBlackboard,
@@ -330,8 +330,8 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
                 createdAt: now,
                 modifiedAt: now
             },
-            nodes: state.nodes.map(n => n.toObject()),
-            connections: state.connections.map(c => c.toObject()),
+            nodes: state.nodes.map((n) => n.toObject()),
+            connections: state.connections.map((c) => c.toObject()),
             blackboard: state.blackboard.toObject(),
             canvasState: {
                 offset: state.canvasOffset,
@@ -402,8 +402,8 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
                 createdAt: new Date().toISOString(),
                 modifiedAt: new Date().toISOString()
             },
-            nodes: state.nodes.map(n => n.toObject()),
-            connections: state.connections.map(c => c.toObject()),
+            nodes: state.nodes.map((n) => n.toObject()),
+            connections: state.connections.map((c) => c.toObject()),
             blackboard: state.blackboard.toObject()
         };
 

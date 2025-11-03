@@ -122,7 +122,7 @@ export class Node {
             this._template,
             this._data,
             this._position,
-            this._children.filter(id => id !== childId)
+            this._children.filter((id) => id !== childId)
         );
     }
 
@@ -157,7 +157,7 @@ export class Node {
         data: Record<string, unknown>;
         position: { x: number; y: number };
         children: string[];
-    } {
+        } {
         return {
             id: this._id,
             template: this._template,

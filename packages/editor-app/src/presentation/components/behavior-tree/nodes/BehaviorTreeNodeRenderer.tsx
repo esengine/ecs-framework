@@ -73,7 +73,7 @@ export const BehaviorTreeNodeRenderer: React.FC<BehaviorTreeNodeRendererProps> =
 
     const nodeStyle = useMemo(() => {
         let borderColor = template.color || '#4a9eff';
-        let backgroundColor = '#2a2a2a';
+        const backgroundColor = '#2a2a2a';
         let boxShadow = 'none';
 
         if (isSelected) {

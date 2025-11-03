@@ -21,7 +21,7 @@ export class RemoveConnectionCommand extends BaseCommand {
     execute(): void {
         const tree = this.state.getTree();
 
-        const connection = tree.connections.find(c =>
+        const connection = tree.connections.find((c) =>
             c.matches(this.from, this.to, this.fromProperty, this.toProperty)
         );
 

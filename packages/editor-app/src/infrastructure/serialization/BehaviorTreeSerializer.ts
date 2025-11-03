@@ -87,7 +87,7 @@ export class BehaviorTreeSerializer implements ISerializer {
         format: SerializationFormat,
         options?: SerializationOptions
     ): string | Uint8Array {
-        const nodes = tree.nodes.map(node => ({
+        const nodes = tree.nodes.map((node) => ({
             id: node.id,
             template: node.template,
             data: node.data,
@@ -95,7 +95,7 @@ export class BehaviorTreeSerializer implements ISerializer {
             children: Array.from(node.children)
         }));
 
-        const connections = tree.connections.map(conn => conn.toObject());
+        const connections = tree.connections.map((conn) => conn.toObject());
         const blackboard = tree.blackboard.toObject();
 
         const finalOptions = { ...this.defaultOptions, ...options };

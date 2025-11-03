@@ -856,7 +856,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                                     data
                                 });
                             }}
-                            onNodeCreate={(template, position) => {
+                            onNodeCreate={(_template, _position) => {
                                 // Node created successfully
                             }}
                             blackboardVariables={blackboardVariables}

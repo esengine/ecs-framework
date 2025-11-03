@@ -87,7 +87,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     toggleNodeSelection: (nodeId: string) => {
         const { selectedNodeIds } = get();
         if (selectedNodeIds.includes(nodeId)) {
-            set({ selectedNodeIds: selectedNodeIds.filter(id => id !== nodeId) });
+            set({ selectedNodeIds: selectedNodeIds.filter((id) => id !== nodeId) });
         } else {
             set({ selectedNodeIds: [...selectedNodeIds, nodeId] });
         }

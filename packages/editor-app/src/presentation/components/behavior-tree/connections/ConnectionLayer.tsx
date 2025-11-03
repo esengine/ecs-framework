@@ -52,12 +52,12 @@ export const ConnectionLayer: React.FC<ConnectionLayerProps> = ({
     onConnectionContextMenu
 }) => {
     const nodeMap = useMemo(() => {
-        return new Map(nodes.map(node => [node.id, node]));
+        return new Map(nodes.map((node) => [node.id, node]));
     }, [nodes]);
 
     const connectionViewData = useMemo(() => {
         return connections
-            .map(connection => {
+            .map((connection) => {
                 const fromNode = nodeMap.get(connection.from);
                 const toNode = nodeMap.get(connection.to);
 

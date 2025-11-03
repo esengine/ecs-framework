@@ -20,7 +20,7 @@ export class UpdateNodeDataCommand extends BaseCommand {
 
     execute(): void {
         const tree = this.state.getTree();
-        const newTree = tree.updateNode(this.nodeId, node =>
+        const newTree = tree.updateNode(this.nodeId, (node) =>
             node.updateData(this.newData)
         );
         this.state.setTree(newTree);
@@ -28,7 +28,7 @@ export class UpdateNodeDataCommand extends BaseCommand {
 
     undo(): void {
         const tree = this.state.getTree();
-        const newTree = tree.updateNode(this.nodeId, node =>
+        const newTree = tree.updateNode(this.nodeId, (node) =>
             node.updateData(this.oldData)
         );
         this.state.setTree(newTree);
