@@ -29,6 +29,7 @@ import { useCommandHistory } from '../presentation/hooks/useCommandHistory';
 import { useNodeDrag } from '../presentation/hooks/useNodeDrag';
 import { usePortConnection } from '../presentation/hooks/usePortConnection';
 import { useKeyboardShortcuts } from '../presentation/hooks/useKeyboardShortcuts';
+import { useDropHandler } from '../presentation/hooks/useDropHandler';
 import { useContextMenu } from '../application/hooks/useContextMenu';
 import { useQuickCreateMenu } from '../application/hooks/useQuickCreateMenu';
 import { EditorToolbar } from '../presentation/components/toolbar/EditorToolbar';
@@ -41,10 +42,6 @@ type NodeExecutionStatus = 'idle' | 'running' | 'success' | 'failure';
 type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
 
 type BlackboardVariables = Record<string, BlackboardValue>;
-
-interface DraggedVariableData {
-    variableName: string;
-}
 
 interface BehaviorTreeEditorProps {
     onNodeSelect?: (node: BehaviorTreeNode) => void;
@@ -219,7 +216,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         }
     }, [contextMenu.visible, closeContextMenu]);
 
-    const [isDragging, setIsDragging] = useState(false);
     const canvasRef = useRef<HTMLDivElement>(null);
 
     //  创建一个停止执行的 ref，稍后会被赋值
@@ -329,6 +325,21 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         setSelectedConnection
     });
 
+    // 拖放处理
+    const {
+        isDragging,
+        handleDrop,
+        handleDragOver,
+        handleDragLeave,
+        handleDragEnter
+    } = useDropHandler({
+        canvasRef,
+        canvasOffset,
+        canvasScale,
+        nodeOperations,
+        onNodeCreate
+    });
+
     // 缓存DOM元素引用和上一次的状态
     const domCacheRef = useRef<{
         nodes: Map<string, Element>;
@@ -363,103 +374,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             }
         }
     }, [nodes, executionMode]);
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-
-        try {
-            const rect = canvasRef.current?.getBoundingClientRect();
-            if (!rect) return;
-
-            // 将鼠标坐标转换为画布坐标系
-            const position = {
-                x: (e.clientX - rect.left - canvasOffset.x) / canvasScale,
-                y: (e.clientY - rect.top - canvasOffset.y) / canvasScale
-            };
-
-            // 检查是否是黑板变量
-            const blackboardVariableData = e.dataTransfer.getData('application/blackboard-variable');
-            if (blackboardVariableData) {
-                const variableData = JSON.parse(blackboardVariableData) as DraggedVariableData;
-
-                // 创建黑板变量节点
-                const variableTemplate: NodeTemplate = {
-                    type: NodeType.Action,
-                    displayName: variableData.variableName,
-                    category: 'Blackboard Variable',
-                    icon: 'Database',
-                    description: `Blackboard variable: ${variableData.variableName}`,
-                    color: '#9c27b0',
-                    defaultConfig: {
-                        nodeType: 'blackboard-variable',
-                        variableName: variableData.variableName
-                    },
-                    properties: [
-                        {
-                            name: 'variableName',
-                            label: '变量名',
-                            type: 'variable',
-                            defaultValue: variableData.variableName,
-                            description: '黑板变量的名称',
-                            required: true
-                        }
-                    ]
-                };
-
-                nodeOperations.createNode(
-                    variableTemplate,
-                    new Position(position.x, position.y),
-                    {
-                        nodeType: 'blackboard-variable',
-                        variableName: variableData.variableName
-                    }
-                );
-                return;
-            }
-
-            // 处理普通节点
-            let templateData = e.dataTransfer.getData('application/behavior-tree-node');
-            if (!templateData) {
-                templateData = e.dataTransfer.getData('text/plain');
-            }
-            if (!templateData) {
-                return;
-            }
-
-            const template = JSON.parse(templateData) as NodeTemplate;
-
-            nodeOperations.createNode(
-                template,
-                new Position(position.x, position.y),
-                template.defaultConfig
-            );
-
-            onNodeCreate?.(template, position);
-        } catch (error) {
-            console.error('Failed to create node:', error);
-        }
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        e.dataTransfer.dropEffect = 'copy';
-        if (!isDragging) {
-            setIsDragging(true);
-        }
-    };
-
-    const handleDragLeave = (e: React.DragEvent) => {
-        if (e.currentTarget === e.target) {
-            setIsDragging(false);
-        }
-    };
-
-    const handleDragEnter = (e: React.DragEvent) => {
-        e.preventDefault();
-    };
 
     const handleNodeClick = (e: React.MouseEvent, node: BehaviorTreeNode) => {
         // 如果刚刚在拖动，不处理点击事件
