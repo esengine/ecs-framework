@@ -117,13 +117,19 @@ export function usePortConnection(params: UsePortConnectionParams) {
                 }
             }
 
-            connectionOperations.addConnection(
-                actualFrom,
-                actualTo,
-                'property',
-                actualFromProperty || undefined,
-                actualToProperty || undefined
-            );
+            try {
+                connectionOperations.addConnection(
+                    actualFrom,
+                    actualTo,
+                    'property',
+                    actualFromProperty || undefined,
+                    actualToProperty || undefined
+                );
+            } catch (error) {
+                showToast?.(error instanceof Error ? error.message : '添加连接失败', 'error');
+                clearConnecting();
+                return;
+            }
         } else {
             if (actualFrom === ROOT_NODE_ID) {
                 const rootNode = nodes.find((n: BehaviorTreeNode) => n.id === ROOT_NODE_ID);
@@ -146,11 +152,17 @@ export function usePortConnection(params: UsePortConnectionParams) {
                 return;
             }
 
-            connectionOperations.addConnection(actualFrom, actualTo, 'node');
+            try {
+                connectionOperations.addConnection(actualFrom, actualTo, 'node');
 
-            setTimeout(() => {
-                sortChildrenByPosition();
-            }, 0);
+                setTimeout(() => {
+                    sortChildrenByPosition();
+                }, 0);
+            } catch (error) {
+                showToast?.(error instanceof Error ? error.message : '添加连接失败', 'error');
+                clearConnecting();
+                return;
+            }
         }
 
         clearConnecting();

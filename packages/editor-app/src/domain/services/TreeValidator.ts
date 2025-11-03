@@ -53,7 +53,8 @@ export class TreeValidator implements IValidator {
     validateNode(node: Node): ValidationResult {
         const errors: IValidationError[] = [];
 
-        const maxChildren = node.nodeType.getMaxChildren();
+        // 使用模板定义的约束，undefined 表示无限制
+        const maxChildren = (node.template.maxChildren ?? Infinity) as number;
         const actualChildren = node.children.length;
 
         if (actualChildren > maxChildren) {

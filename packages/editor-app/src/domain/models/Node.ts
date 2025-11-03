@@ -84,7 +84,8 @@ export class Node {
      * @throws ValidationError 如果违反业务规则
      */
     addChild(childId: string): Node {
-        const maxChildren = this._nodeType.getMaxChildren();
+        // 使用模板定义的约束，undefined 表示无限制
+        const maxChildren = (this._template.maxChildren ?? Infinity) as number;
 
         if (maxChildren === 0) {
             throw ValidationError.leafNodeNoChildren();
@@ -130,7 +131,8 @@ export class Node {
      * 检查是否可以添加子节点
      */
     canAddChild(): boolean {
-        const maxChildren = this._nodeType.getMaxChildren();
+        // 使用模板定义的最大子节点数，undefined 表示无限制
+        const maxChildren = (this._template.maxChildren ?? Infinity) as number;
         return this._children.length < maxChildren;
     }
 

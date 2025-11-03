@@ -1,5 +1,5 @@
 import { NodeType } from '../Types/TaskStatus';
-import { NodeMetadataRegistry, ConfigFieldDefinition } from '../Runtime/NodeMetadata';
+import { NodeMetadataRegistry, ConfigFieldDefinition, NodeMetadata } from '../Runtime/NodeMetadata';
 
 /**
  * 节点数据JSON格式
@@ -48,7 +48,7 @@ export const PropertyType = {
  * type: 'curve-editor'
  * ```
  */
-export type PropertyType = typeof PropertyType[keyof typeof PropertyType] | string;
+export type PropertyType = (typeof PropertyType)[keyof typeof PropertyType] | string;
 
 /**
  * 属性定义（用于编辑器）
@@ -114,7 +114,7 @@ export interface PropertyDefinition {
         /** 验证失败的提示信息 */
         message?: string;
         /** 自定义验证函数 */
-        validator?: string;  // 函数字符串，编辑器会解析
+        validator?: string; // 函数字符串，编辑器会解析
         /** 最小长度（字符串） */
         minLength?: number;
         /** 最大长度（字符串） */
@@ -141,6 +141,8 @@ export interface NodeTemplate {
     className?: string;
     componentClass?: Function;
     requiresChildren?: boolean;
+    minChildren?: number;
+    maxChildren?: number;
     defaultConfig: Partial<NodeDataJSON>;
     properties: PropertyDefinition[];
 }
@@ -183,7 +185,7 @@ export class NodeTemplates {
     /**
      * 将NodeMetadata转换为NodeTemplate
      */
-    private static convertMetadataToTemplate(metadata: any): NodeTemplate {
+    private static convertMetadataToTemplate(metadata: NodeMetadata): NodeTemplate {
         const properties = this.convertConfigSchemaToProperties(metadata.configSchema || {});
 
         const defaultConfig: Partial<NodeDataJSON> = {
@@ -217,7 +219,10 @@ export class NodeTemplates {
         // 根据节点类型生成默认颜色和图标
         const { icon, color } = this.getIconAndColorByType(metadata.nodeType, metadata.category || '');
 
-        return {
+        // 应用子节点约束
+        const constraints = metadata.childrenConstraints || this.getDefaultConstraintsByNodeType(metadata.nodeType);
+
+        const template: NodeTemplate = {
             type: metadata.nodeType,
             displayName: metadata.displayName,
             category: metadata.category || this.getCategoryByNodeType(metadata.nodeType),
@@ -228,6 +233,35 @@ export class NodeTemplates {
             defaultConfig,
             properties
         };
+
+        if (constraints) {
+            if (constraints.min !== undefined) {
+                template.minChildren = constraints.min;
+                template.requiresChildren = constraints.min > 0;
+            }
+            if (constraints.max !== undefined) {
+                template.maxChildren = constraints.max;
+            }
+        }
+
+        return template;
+    }
+
+    /**
+     * 获取节点类型的默认约束
+     */
+    private static getDefaultConstraintsByNodeType(nodeType: NodeType): { min?: number; max?: number } | undefined {
+        switch (nodeType) {
+            case NodeType.Composite:
+                return { min: 1 };
+            case NodeType.Decorator:
+                return { min: 1, max: 1 };
+            case NodeType.Action:
+            case NodeType.Condition:
+                return { max: 0 };
+            default:
+                return undefined;
+        }
     }
 
     /**

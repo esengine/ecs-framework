@@ -15,6 +15,15 @@ export interface ConfigFieldDefinition {
 }
 
 /**
+ * 子节点约束配置
+ */
+export interface ChildrenConstraints {
+    min?: number;
+    max?: number;
+    required?: boolean;
+}
+
+/**
  * 节点元数据
  */
 export interface NodeMetadata {
@@ -24,6 +33,26 @@ export interface NodeMetadata {
     description?: string;
     category?: string;
     configSchema?: Record<string, ConfigFieldDefinition>;
+    childrenConstraints?: ChildrenConstraints;
+}
+
+/**
+ * 节点元数据默认值
+ */
+export class NodeMetadataDefaults {
+    static getDefaultConstraints(nodeType: NodeType): ChildrenConstraints | undefined {
+        switch (nodeType) {
+            case NodeType.Composite:
+                return { min: 1 };
+            case NodeType.Decorator:
+                return { min: 1, max: 1 };
+            case NodeType.Action:
+            case NodeType.Condition:
+                return { max: 0 };
+            default:
+                return undefined;
+        }
+    }
 }
 
 /**

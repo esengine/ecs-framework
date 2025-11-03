@@ -24,21 +24,24 @@ export class NodeType {
      * 是否为组合节点（可以有多个子节点）
      */
     isComposite(): boolean {
-        return ['sequence', 'selector', 'parallel'].includes(this._value);
+        return this._value === 'composite' ||
+               ['sequence', 'selector', 'parallel'].includes(this._value);
     }
 
     /**
      * 是否为装饰节点（只能有一个子节点）
      */
     isDecorator(): boolean {
-        return ['repeater', 'inverter', 'succeeder', 'failer', 'until-fail', 'until-success'].includes(this._value);
+        return this._value === 'decorator' ||
+               ['repeater', 'inverter', 'succeeder', 'failer', 'until-fail', 'until-success'].includes(this._value);
     }
 
     /**
      * 是否为叶子节点（不能有子节点）
      */
     isLeaf(): boolean {
-        return this._value.includes('action-') || this._value.includes('condition-');
+        return this._value === 'action' || this._value === 'condition' ||
+               this._value.includes('action-') || this._value.includes('condition-');
     }
 
     /**

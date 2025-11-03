@@ -26,6 +26,9 @@ import { NodeExecutorMetadata } from '../NodeMetadata';
             description: '失败策略',
             options: ['all', 'one']
         }
+    },
+    childrenConstraints: {
+        min: 2
     }
 })
 export class ParallelExecutor implements INodeExecutor {
