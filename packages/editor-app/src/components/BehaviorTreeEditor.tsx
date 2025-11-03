@@ -30,12 +30,14 @@ import { useNodeDrag } from '../presentation/hooks/useNodeDrag';
 import { usePortConnection } from '../presentation/hooks/usePortConnection';
 import { useKeyboardShortcuts } from '../presentation/hooks/useKeyboardShortcuts';
 import { useDropHandler } from '../presentation/hooks/useDropHandler';
+import { useCanvasMouseEvents } from '../presentation/hooks/useCanvasMouseEvents';
 import { useContextMenu } from '../application/hooks/useContextMenu';
 import { useQuickCreateMenu } from '../application/hooks/useQuickCreateMenu';
 import { EditorToolbar } from '../presentation/components/toolbar/EditorToolbar';
 import { QuickCreateMenu } from '../presentation/components/menu/QuickCreateMenu';
 import { NodeContextMenu } from '../presentation/components/menu/NodeContextMenu';
 import { BehaviorTreeNode as BehaviorTreeNodeComponent } from '../presentation/components/behavior-tree/nodes/BehaviorTreeNode';
+import { getPortPosition as getPortPositionUtil } from '../presentation/utils/portUtils';
 import '../styles/BehaviorTreeNode.css';
 
 type NodeExecutionStatus = 'idle' | 'running' | 'success' | 'failure';
@@ -340,6 +342,34 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         onNodeCreate
     });
 
+    // 画布鼠标事件
+    const {
+        handleCanvasMouseMove,
+        handleCanvasMouseUp,
+        handleCanvasMouseDown
+    } = useCanvasMouseEvents({
+        canvasRef,
+        canvasOffset,
+        canvasScale,
+        connectingFrom,
+        connectingToPos,
+        isBoxSelecting,
+        boxSelectStart,
+        boxSelectEnd,
+        nodes,
+        selectedNodeIds,
+        quickCreateMenu,
+        setConnectingToPos,
+        setIsBoxSelecting,
+        setBoxSelectStart,
+        setBoxSelectEnd,
+        setSelectedNodeIds,
+        setSelectedConnection,
+        setQuickCreateMenu,
+        clearConnecting,
+        clearBoxSelect
+    });
+
     // 缓存DOM元素引用和上一次的状态
     const domCacheRef = useRef<{
         nodes: Map<string, Element>;
@@ -397,129 +427,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         onNodeSelect?.(node);
     };
 
-    const handleCanvasMouseMove = (e: React.MouseEvent) => {
-        // 处理连接线拖拽（如果快速创建菜单显示了，不更新预览连接线）
-        if (connectingFrom && canvasRef.current && !quickCreateMenu.visible) {
-            const rect = canvasRef.current.getBoundingClientRect();
-            // 将鼠标坐标转换为画布坐标系
-            const canvasX = (e.clientX - rect.left - canvasOffset.x) / canvasScale;
-            const canvasY = (e.clientY - rect.top - canvasOffset.y) / canvasScale;
-            setConnectingToPos({
-                x: canvasX,
-                y: canvasY
-            });
-        }
-
-        // 处理框选
-        if (isBoxSelecting && boxSelectStart) {
-            const rect = canvasRef.current?.getBoundingClientRect();
-            if (!rect) return;
-
-            const canvasX = (e.clientX - rect.left - canvasOffset.x) / canvasScale;
-            const canvasY = (e.clientY - rect.top - canvasOffset.y) / canvasScale;
-            setBoxSelectEnd({ x: canvasX, y: canvasY });
-        }
-    };
-
-    const handleCanvasMouseUp = (e: React.MouseEvent) => {
-        // 如果快速创建菜单已经显示，不要清除连接状态
-        if (quickCreateMenu.visible) {
-            return;
-        }
-
-        // 如果正在连接，显示快速创建菜单
-        if (connectingFrom && connectingToPos) {
-            setQuickCreateMenu({
-                visible: true,
-                position: {
-                    x: e.clientX,
-                    y: e.clientY
-                },
-                searchText: '',
-                selectedIndex: 0,
-                mode: 'create',
-                replaceNodeId: null
-            });
-            // 清除预览连接线，但保留 connectingFrom 用于创建连接
-            setConnectingToPos(null);
-            return;
-        }
-
-        clearConnecting();
-
-        // 完成框选
-        if (isBoxSelecting && boxSelectStart && boxSelectEnd) {
-            // 计算框选矩形
-            const minX = Math.min(boxSelectStart.x, boxSelectEnd.x);
-            const maxX = Math.max(boxSelectStart.x, boxSelectEnd.x);
-            const minY = Math.min(boxSelectStart.y, boxSelectEnd.y);
-            const maxY = Math.max(boxSelectStart.y, boxSelectEnd.y);
-
-            // 检测哪些节点在框选区域内
-            const selectedInBox = nodes
-                .filter((node: BehaviorTreeNode) => {
-                    // Root 节点不参与框选
-                    if (node.id === ROOT_NODE_ID) return false;
-
-                    // 从 DOM 获取节点的实际尺寸
-                    const nodeElement = canvasRef.current?.querySelector(`[data-node-id="${node.id}"]`);
-                    if (!nodeElement) {
-                        // 如果找不到元素，回退到中心点检查
-                        return node.position.x >= minX && node.position.x <= maxX &&
-                               node.position.y >= minY && node.position.y <= maxY;
-                    }
-
-                    const rect = nodeElement.getBoundingClientRect();
-                    const canvasRect = canvasRef.current!.getBoundingClientRect();
-
-                    // 将 DOM 坐标转换为画布坐标
-                    const nodeLeft = (rect.left - canvasRect.left - canvasOffset.x) / canvasScale;
-                    const nodeRight = (rect.right - canvasRect.left - canvasOffset.x) / canvasScale;
-                    const nodeTop = (rect.top - canvasRect.top - canvasOffset.y) / canvasScale;
-                    const nodeBottom = (rect.bottom - canvasRect.top - canvasOffset.y) / canvasScale;
-
-                    // 检查矩形是否重叠
-                    return nodeRight > minX && nodeLeft < maxX && nodeBottom > minY && nodeTop < maxY;
-                })
-                .map((node: BehaviorTreeNode) => node.id);
-
-            // 根据是否按下 Ctrl/Cmd 决定是添加选择还是替换选择
-            if (e.ctrlKey || e.metaKey) {
-                // 添加到现有选择
-                const newSet = new Set([...selectedNodeIds, ...selectedInBox]);
-                setSelectedNodeIds(Array.from(newSet));
-            } else {
-                // 替换选择
-                setSelectedNodeIds(selectedInBox);
-            }
-        }
-
-        // 清理框选状态
-        clearBoxSelect();
-    };
-
-    // 画布框选
-    const handleCanvasMouseDown = (e: React.MouseEvent) => {
-        if (e.button === 0 && !e.altKey) {
-            // 左键：开始框选
-            const rect = canvasRef.current?.getBoundingClientRect();
-            if (!rect) return;
-
-            const canvasX = (e.clientX - rect.left - canvasOffset.x) / canvasScale;
-            const canvasY = (e.clientY - rect.top - canvasOffset.y) / canvasScale;
-
-            setIsBoxSelecting(true);
-            setBoxSelectStart({ x: canvasX, y: canvasY });
-            setBoxSelectEnd({ x: canvasX, y: canvasY });
-
-            // 如果不是 Ctrl/Cmd，清空当前选择
-            if (!e.ctrlKey && !e.metaKey) {
-                setSelectedNodeIds([]);
-                setSelectedConnection(null);
-            }
-        }
-    };
-
     // 重置视图
     const handleResetView = () => {
         resetView();
@@ -529,48 +436,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         });
     };
 
-    // 从DOM获取引脚的实际位置（画布坐标系）
-    // portType: 'input' | 'output' - 只用于节点连接，属性连接不需要指定
-    const getPortPosition = (nodeId: string, propertyName?: string, portType: 'input' | 'output' = 'output'): { x: number; y: number } | null => {
-        const canvas = canvasRef.current;
-        if (!canvas) return null;
-
-        let selector: string;
-        if (propertyName) {
-            // 属性引脚
-            selector = `[data-node-id="${nodeId}"][data-property="${propertyName}"]`;
-        } else {
-            // 节点的端口
-            const node = nodes.find((n: BehaviorTreeNode) => n.id === nodeId);
-            if (!node) return null;
-
-            // 黑板变量节点的右侧输出引脚
-            if (node.data.nodeType === 'blackboard-variable') {
-                selector = `[data-node-id="${nodeId}"][data-port-type="variable-output"]`;
-            } else {
-                // 普通节点的端口
-                if (portType === 'input') {
-                    // 顶部输入端口
-                    selector = `[data-node-id="${nodeId}"][data-port-type="node-input"]`;
-                } else {
-                    // 底部输出端口
-                    selector = `[data-node-id="${nodeId}"][data-port-type="node-output"]`;
-                }
-            }
-        }
-
-        const portElement = canvas.querySelector(selector) as HTMLElement;
-        if (!portElement) return null;
-
-        const rect = portElement.getBoundingClientRect();
-        const canvasRect = canvas.getBoundingClientRect();
-
-        // 计算画布坐标系中的位置（考虑缩放和平移）
-        const x = (rect.left + rect.width / 2 - canvasRect.left - canvasOffset.x) / canvasScale;
-        const y = (rect.top + rect.height / 2 - canvasRect.top - canvasOffset.y) / canvasScale;
-
-        return { x, y };
-    };
+    const getPortPosition = (nodeId: string, propertyName?: string, portType: 'input' | 'output' = 'output') =>
+        getPortPositionUtil(canvasRef, canvasOffset, canvasScale, nodes, nodeId, propertyName, portType);
 
     // 执行状态回调（直接操作DOM，不触发React重渲染）
     const handleExecutionStatusUpdate = (
