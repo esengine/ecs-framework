@@ -12,7 +12,11 @@ import { NodeExecutorMetadata } from '../NodeMetadata';
     nodeType: NodeType.Decorator,
     displayName: '反转',
     description: '反转子节点的执行结果',
-    category: 'Decorator'
+    category: 'Decorator',
+    childrenConstraints: {
+        min: 1,
+        max: 1
+    }
 })
 export class InverterExecutor implements INodeExecutor {
     execute(context: NodeExecutionContext): TaskStatus {

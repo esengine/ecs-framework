@@ -12,7 +12,10 @@ import { NodeExecutorMetadata } from '../NodeMetadata';
     nodeType: NodeType.Composite,
     displayName: '随机序列',
     description: '随机顺序执行子节点，全部成功才成功',
-    category: 'Composite'
+    category: 'Composite',
+    childrenConstraints: {
+        min: 1
+    }
 })
 export class RandomSequenceExecutor implements INodeExecutor {
     execute(context: NodeExecutionContext): TaskStatus {

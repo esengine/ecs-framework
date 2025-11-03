@@ -78,8 +78,7 @@ export class BehaviorTreeExecutor {
         rootNodeId: string,
         blackboard: Record<string, any>,
         connections: Array<{ from: string; to: string; fromProperty?: string; toProperty?: string; connectionType: 'node' | 'property' }>,
-        callback: ExecutionCallback,
-        projectPath?: string | null
+        callback: ExecutionCallback
     ): void {
         this.cleanup();
         this.callback = callback;
@@ -151,9 +150,9 @@ export class BehaviorTreeExecutor {
                 id: node.id,
                 name: node.template.displayName,
                 nodeType: this.convertNodeType(node.template.type),
-                implementationType: node.template.className || this.getImplementationType(node.template.displayName, node.template.type),
+                implementationType: node.template.className || this.getImplementationType(node.template.displayName),
                 config: { ...node.data },
-                children: node.children
+                children: Array.from(node.children)
             };
 
             treeData.nodes.set(node.id, nodeData);
@@ -206,7 +205,7 @@ export class BehaviorTreeExecutor {
     /**
      * 根据显示名称获取实现类型
      */
-    private getImplementationType(displayName: string, nodeType: string): string {
+    private getImplementationType(displayName: string): string {
         const typeMap: Record<string, string> = {
             '序列': 'Sequence',
             '选择': 'Selector',

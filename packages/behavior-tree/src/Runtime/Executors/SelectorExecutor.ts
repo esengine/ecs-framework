@@ -12,7 +12,10 @@ import { NodeExecutorMetadata } from '../NodeMetadata';
     nodeType: NodeType.Composite,
     displayName: '选择器',
     description: '按顺序执行子节点，任一成功则成功',
-    category: 'Composite'
+    category: 'Composite',
+    childrenConstraints: {
+        min: 1
+    }
 })
 export class SelectorExecutor implements INodeExecutor {
     execute(context: NodeExecutionContext): TaskStatus {

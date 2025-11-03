@@ -375,11 +375,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
     const saveToFile = async (filePath: string) => {
         try {
             // 使用初始黑板变量（设计时的值）而不是运行时的值
-            const varsToSave = isExecuting ? initialBlackboardVariables : blackboardVariables;
-            const json = exportToJSON(
-                { name: 'behavior-tree', description: '' },
-                varsToSave
-            );
+            const json = exportToJSON({ name: 'behavior-tree', description: '' });
             await invoke('write_behavior_tree_file', { filePath, content: json });
             logger.info('行为树已保存', filePath);
 
@@ -561,10 +557,8 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
             const extension = format === 'binary' ? 'bin' : 'json';
             const filePath = `${outputPath}/${fileName}.btree.${extension}`;
 
-            const varsToSave = isExecuting ? initialBlackboardVariables : blackboardVariables;
             const data = exportToRuntimeAsset(
                 { name: fileName, description: 'Runtime behavior tree asset' },
-                varsToSave,
                 format
             );
 
@@ -824,7 +818,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
 
                                 // 如果是黑板变量节点，动态生成属性
                                 if (node.data.nodeType === 'blackboard-variable') {
-                                    const varName = node.data.variableName || '';
+                                    const varName = (node.data.variableName as string) || '';
                                     const varValue = blackboardVariables[varName];
                                     const varType = typeof varValue === 'number' ? 'number' :
                                         typeof varValue === 'boolean' ? 'boolean' : 'string';
@@ -862,7 +856,7 @@ export const BehaviorTreeWindow: React.FC<BehaviorTreeWindowProps> = ({
                                     data
                                 });
                             }}
-                            onNodeCreate={(template, position) => {
+                            onNodeCreate={(_template, _position) => {
                                 // Node created successfully
                             }}
                             blackboardVariables={blackboardVariables}

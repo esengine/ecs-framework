@@ -75,15 +75,15 @@ function App() {
     const [isProfilerMode, setIsProfilerMode] = useState(false);
     const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
     const [confirmDialog, setConfirmDialog] = useState<{
-    title: string;
-    message: string;
-    confirmText: string;
-    cancelText: string;
-    onConfirm: () => void;
-        } | null>(null);
+        title: string;
+        message: string;
+        confirmText: string;
+        cancelText: string;
+        onConfirm: () => void;
+    } | null>(null);
 
     useEffect(() => {
-    // 禁用默认右键菜单
+        // 禁用默认右键菜单
         const handleContextMenu = (e: MouseEvent) => {
             e.preventDefault();
         };
@@ -267,7 +267,7 @@ function App() {
                     } else {
                         await sceneManagerService.newScene();
                     }
-                } catch (error) {
+                } catch {
                     await sceneManagerService.newScene();
                 }
             }
@@ -476,22 +476,6 @@ function App() {
         } catch (error) {
             console.error('Failed to save scene as:', error);
             setStatus(locale === 'zh' ? '另存场景失败' : 'Failed to save scene as');
-        }
-    };
-
-    const _handleExportScene = async () => {
-        if (!sceneManager) {
-            console.error('SceneManagerService not available');
-            return;
-        }
-
-        try {
-            await sceneManager.exportScene();
-            const sceneState = sceneManager.getSceneState();
-            setStatus(locale === 'zh' ? `已导出场景: ${sceneState.sceneName}` : `Scene exported: ${sceneState.sceneName}`);
-        } catch (error) {
-            console.error('Failed to export scene:', error);
-            setStatus(locale === 'zh' ? '导出场景失败' : 'Failed to export scene');
         }
     };
 

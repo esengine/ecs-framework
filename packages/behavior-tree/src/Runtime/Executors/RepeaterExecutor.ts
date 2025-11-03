@@ -25,6 +25,10 @@ import { NodeExecutorMetadata } from '../NodeMetadata';
             default: false,
             description: '子节点失败时是否结束'
         }
+    },
+    childrenConstraints: {
+        min: 1,
+        max: 1
     }
 })
 export class RepeaterExecutor implements INodeExecutor {
