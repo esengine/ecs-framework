@@ -24,6 +24,11 @@ interface ConnectionLayerProps {
     selectedConnection?: { from: string; to: string } | null;
 
     /**
+     * 获取端口位置的函数
+     */
+    getPortPosition: (nodeId: string, propertyName?: string, portType?: 'input' | 'output') => { x: number; y: number } | null;
+
+    /**
      * 连线点击事件
      */
     onConnectionClick?: (e: React.MouseEvent, fromId: string, toId: string) => void;
@@ -42,6 +47,7 @@ export const ConnectionLayer: React.FC<ConnectionLayerProps> = ({
     connections,
     nodes,
     selectedConnection,
+    getPortPosition,
     onConnectionClick,
     onConnectionContextMenu
 }) => {
@@ -93,6 +99,7 @@ export const ConnectionLayer: React.FC<ConnectionLayerProps> = ({
                         connectionData={viewData}
                         fromNode={fromNode}
                         toNode={toNode}
+                        getPortPosition={getPortPosition}
                         onClick={onConnectionClick}
                         onContextMenu={onConnectionContextMenu}
                     />

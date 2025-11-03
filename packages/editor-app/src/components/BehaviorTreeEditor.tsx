@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { useBehaviorTreeStore, BehaviorTreeNode, Connection, ROOT_NODE_ID } from '../stores/behaviorTreeStore';
+import { useUIStore } from '../application/state/UIStore';
 import { BehaviorTreeExecutor, ExecutionStatus, ExecutionLog } from '../utils/BehaviorTreeExecutor';
 import { BehaviorTreeExecutionPanel } from './BehaviorTreeExecutionPanel';
 import { useToast } from './Toast';
@@ -18,6 +19,9 @@ import { Node } from '../domain/models/Node';
 import { Connection as ConnectionModel } from '../domain/models/Connection';
 import { Position } from '../domain/value-objects/Position';
 import { BlackboardValue } from '../domain/models/Blackboard';
+import { BehaviorTreeCanvas } from '../presentation/components/behavior-tree/canvas/BehaviorTreeCanvas';
+import { ConnectionLayer } from '../presentation/components/behavior-tree/connections/ConnectionLayer';
+import { EditorConfig } from '../presentation/types';
 import '../styles/BehaviorTreeNode.css';
 
 type NodeExecutionStatus = 'idle' | 'running' | 'success' | 'failure';
@@ -89,6 +93,16 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 }) => {
     const { showToast } = useToast();
 
+    // 编辑器配置
+    const editorConfig: EditorConfig = {
+        enableSnapping: false,
+        gridSize: 20,
+        minZoom: 0.1,
+        maxZoom: 3,
+        showGrid: true,
+        showMinimap: false
+    };
+
     // 创建固定的 Root 节点
     const rootNodeTemplate: NodeTemplate = {
         type: NodeType.Composite,
@@ -103,39 +117,21 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         properties: []
     };
 
-    // 使用 zustand store
+    // 数据 store（行为树数据）
     const {
         nodes,
         connections,
-        selectedNodeIds,
-        draggingNodeId,
-        dragStartPositions,
-        isDraggingNode,
-        canvasOffset,
-        canvasScale,
-        isPanning,
-        panStart,
         connectingFrom,
         connectingFromProperty,
         connectingToPos,
         isBoxSelecting,
         boxSelectStart,
         boxSelectEnd,
-        dragDelta,
         setNodes,
         setConnections,
-        setSelectedNodeIds,
         updateNodesPosition,
         removeNodes,
         removeConnections,
-        startDragging,
-        stopDragging,
-        setIsDraggingNode,
-        setCanvasOffset,
-        setCanvasScale,
-        setIsPanning,
-        setPanStart,
-        resetView,
         setConnectingFrom,
         setConnectingFromProperty,
         setConnectingToPos,
@@ -144,7 +140,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         setBoxSelectStart,
         setBoxSelectEnd,
         clearBoxSelect,
-        setDragDelta,
         triggerForceUpdate,
         sortChildrenByPosition,
         setBlackboardVariables,
@@ -153,6 +148,24 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         initialBlackboardVariables,
         isExecuting
     } = useBehaviorTreeStore();
+
+    // UI store（选中、拖拽、画布状态）
+    const {
+        selectedNodeIds,
+        draggingNodeId,
+        dragStartPositions,
+        isDraggingNode,
+        canvasOffset,
+        canvasScale,
+        isPanning,
+        dragDelta,
+        setSelectedNodeIds,
+        startDragging,
+        stopDragging,
+        setIsDraggingNode,
+        resetView,
+        setDragDelta
+    } = useUIStore();
 
     // 右键菜单状态
     const [contextMenu, setContextMenu] = useState<{
@@ -700,14 +713,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             });
         }
 
-        // 处理画布平移
-        if (isPanning) {
-            setCanvasOffset({
-                x: e.clientX - panStart.x,
-                y: e.clientY - panStart.y
-            });
-        }
-
         // 处理框选
         if (isBoxSelecting && boxSelectStart) {
             const rect = canvasRef.current?.getBoundingClientRect();
@@ -887,7 +892,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         }
 
         clearConnecting();
-        setIsPanning(false);
 
         // 完成框选
         if (isBoxSelecting && boxSelectStart && boxSelectEnd) {
@@ -1017,27 +1021,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         onNodeCreate?.(template, { x: posX, y: posY });
     };
 
-    // 画布缩放
-    const handleWheel = (e: React.WheelEvent) => {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        const newScale = Math.max(0.1, Math.min(3, canvasScale * delta));
-        setCanvasScale(newScale);
-
-        // 强制更新连接线位置
-        requestAnimationFrame(() => {
-            triggerForceUpdate();
-        });
-    };
-
-    // 画布平移和框选
+    // 画布框选
     const handleCanvasMouseDown = (e: React.MouseEvent) => {
-        if (e.button === 1 || (e.button === 0 && e.altKey)) {
-            // 中键或 Alt+左键：平移
-            e.preventDefault();
-            setIsPanning(true);
-            setPanStart({ x: e.clientX - canvasOffset.x, y: e.clientY - canvasOffset.y });
-        } else if (e.button === 0 && !e.altKey) {
+        if (e.button === 0 && !e.altKey) {
             // 左键：开始框选
             const rect = canvasRef.current?.getBoundingClientRect();
             if (!rect) return;
@@ -1462,13 +1448,13 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 overflow: 'hidden'
             }}>
                 {/* 画布 */}
-                <div
+                <BehaviorTreeCanvas
                     ref={canvasRef}
+                    config={editorConfig}
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
                     onDragEnter={handleDragEnter}
                     onDragLeave={handleDragLeave}
-                    onWheel={handleWheel}
                     onMouseDown={handleCanvasMouseDown}
                     onMouseMove={(e) => {
                         handleNodeMouseMove(e);
@@ -1482,111 +1468,30 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         handleNodeMouseUp();
                         handleCanvasMouseUp(e);
                     }}
-                    style={{
-                        width: '100%',
-                        height: '100%',
-                        backgroundImage: `
-                            linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)
-                        `,
-                        backgroundSize: `${20 * canvasScale}px ${20 * canvasScale}px`,
-                        backgroundPosition: `${canvasOffset.x}px ${canvasOffset.y}px`,
-                        position: 'relative',
-                        overflow: 'hidden',
-                        cursor: isPanning ? 'grabbing' : (draggingNodeId ? 'grabbing' : (connectingFrom ? 'crosshair' : 'default'))
-                    }}
                 >
-                    {/* 内容容器 - 应用变换 */}
-                    <div style={{
-                        width: '100%',
-                        height: '100%',
-                        transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${canvasScale})`,
-                        transformOrigin: '0 0',
-                        position: 'relative'
-                    }}>
-                        {/* SVG 连接线层 */}
+                        {/* 连接线层 */}
+                        <ConnectionLayer
+                            connections={connections}
+                            nodes={nodes}
+                            selectedConnection={selectedConnection}
+                            getPortPosition={getPortPosition}
+                            onConnectionClick={(e, fromId, toId) => {
+                                setSelectedConnection({ from: fromId, to: toId });
+                                setSelectedNodeIds([]);
+                            }}
+                        />
+
+                        {/* 正在拖拽的连接线预览 */}
                         <svg style={{
                             position: 'absolute',
                             top: 0,
                             left: 0,
                             width: '10000px',
                             height: '10000px',
-                            pointerEvents: 'auto',
-                            zIndex: 0,
+                            pointerEvents: 'none',
+                            zIndex: 1,
                             overflow: 'visible'
                         }}>
-                            {/* 已有的连接 */}
-                            {connections.map((conn: Connection, index: number) => {
-                                const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === conn.from);
-                                const toNode = nodes.find((n: BehaviorTreeNode) => n.id === conn.to);
-                                if (!fromNode || !toNode) return null;
-
-                                let x1, y1, x2, y2;
-                                let pathD: string;
-
-                                // 默认颜色和宽度（会被DOM操作动态更新）
-                                const color = conn.connectionType === 'property' ? '#9c27b0' : '#0e639c';
-                                const strokeWidth = 2;
-
-                                if (conn.connectionType === 'property') {
-                                    // 属性连接：从DOM获取实际引脚位置
-                                    const fromPos = getPortPosition(conn.from);
-                                    const toPos = getPortPosition(conn.to, conn.toProperty);
-
-                                    if (!fromPos || !toPos) {
-                                        // 如果DOM还没渲染，跳过这条连接线
-                                        return null;
-                                    }
-
-                                    x1 = fromPos.x;
-                                    y1 = fromPos.y;
-                                    x2 = toPos.x;
-                                    y2 = toPos.y;
-
-                                    // 使用水平贝塞尔曲线
-                                    const controlX1 = x1 + (x2 - x1) * 0.5;
-                                    const controlX2 = x1 + (x2 - x1) * 0.5;
-                                    pathD = `M ${x1} ${y1} C ${controlX1} ${y1}, ${controlX2} ${y2}, ${x2} ${y2}`;
-                                } else {
-                                    // 节点连接：也使用DOM获取端口位置
-                                    const fromPos = getPortPosition(conn.from, undefined, 'output');
-                                    const toPos = getPortPosition(conn.to, undefined, 'input');
-
-                                    if (!fromPos || !toPos) {
-                                        // 如果DOM还没渲染，跳过这条连接线
-                                        return null;
-                                    }
-
-                                    x1 = fromPos.x;
-                                    y1 = fromPos.y;
-                                    x2 = toPos.x;
-                                    y2 = toPos.y;
-
-                                    // 使用垂直贝塞尔曲线
-                                    const controlY = y1 + (y2 - y1) * 0.5;
-                                    pathD = `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`;
-                                }
-
-                                const isSelected = selectedConnection?.from === conn.from && selectedConnection?.to === conn.to;
-
-                                return (
-                                    <path
-                                        key={index}
-                                        data-connection-id={`${conn.from}-${conn.to}`}
-                                        data-connection-type={conn.connectionType || 'node'}
-                                        d={pathD}
-                                        stroke={isSelected ? '#FFD700' : color}
-                                        strokeWidth={isSelected ? strokeWidth + 2 : strokeWidth}
-                                        fill="none"
-                                        style={{ cursor: 'pointer' }}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedConnection({ from: conn.from, to: conn.to });
-                                            setSelectedNodeIds([]);
-                                        }}
-                                    />
-                                );
-                            })}
                             {/* 正在拖拽的连接线 */}
                             {connectingFrom && connectingToPos && (() => {
                                 const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === connectingFrom);
@@ -1934,8 +1839,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                             );
                         })}
 
-                    </div>
-
                     {/* 拖拽提示 - 相对于画布视口 */}
                     {isDragging && (
                         <div style={{
@@ -1976,7 +1879,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                             </div>
                         </div>
                     )}
-                </div>
+                </BehaviorTreeCanvas>
 
                 {/* 运行控制工具栏 */}
                 <div style={{

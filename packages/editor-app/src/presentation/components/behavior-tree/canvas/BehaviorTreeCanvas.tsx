@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, forwardRef } from 'react';
 import { useCanvasInteraction } from '../../../hooks/useCanvasInteraction';
 import { EditorConfig } from '../../../types';
 
@@ -45,13 +45,38 @@ interface BehaviorTreeCanvasProps {
      * 鼠标抬起事件
      */
     onMouseUp?: (e: React.MouseEvent) => void;
+
+    /**
+     * 鼠标离开事件
+     */
+    onMouseLeave?: (e: React.MouseEvent) => void;
+
+    /**
+     * 拖放事件
+     */
+    onDrop?: (e: React.DragEvent) => void;
+
+    /**
+     * 拖动悬停事件
+     */
+    onDragOver?: (e: React.DragEvent) => void;
+
+    /**
+     * 拖动进入事件
+     */
+    onDragEnter?: (e: React.DragEvent) => void;
+
+    /**
+     * 拖动离开事件
+     */
+    onDragLeave?: (e: React.DragEvent) => void;
 }
 
 /**
  * 行为树画布组件
  * 负责画布的渲染、缩放、平移等基础功能
  */
-export const BehaviorTreeCanvas: React.FC<BehaviorTreeCanvasProps> = ({
+export const BehaviorTreeCanvas = forwardRef<HTMLDivElement, BehaviorTreeCanvasProps>(({
     config,
     children,
     onClick,
@@ -59,9 +84,16 @@ export const BehaviorTreeCanvas: React.FC<BehaviorTreeCanvasProps> = ({
     onContextMenu,
     onMouseMove,
     onMouseDown,
-    onMouseUp
-}) => {
-    const canvasRef = useRef<HTMLDivElement>(null);
+    onMouseUp,
+    onMouseLeave,
+    onDrop,
+    onDragOver,
+    onDragEnter,
+    onDragLeave
+}, forwardedRef) => {
+    const internalRef = useRef<HTMLDivElement>(null);
+    const canvasRef = forwardedRef || internalRef;
+
     const {
         canvasOffset,
         canvasScale,
@@ -121,6 +153,11 @@ export const BehaviorTreeCanvas: React.FC<BehaviorTreeCanvasProps> = ({
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
+            onMouseLeave={onMouseLeave}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onDragEnter={onDragEnter}
+            onDragLeave={onDragLeave}
         >
             {/* 网格背景 */}
             {config.showGrid && (
@@ -154,4 +191,6 @@ export const BehaviorTreeCanvas: React.FC<BehaviorTreeCanvasProps> = ({
             </div>
         </div>
     );
-};
+});
+
+BehaviorTreeCanvas.displayName = 'BehaviorTreeCanvas';

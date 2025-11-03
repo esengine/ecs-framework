@@ -22,6 +22,11 @@ interface ConnectionRendererProps {
     toNode: Node;
 
     /**
+     * 获取端口位置的函数
+     */
+    getPortPosition: (nodeId: string, propertyName?: string, portType?: 'input' | 'output') => { x: number; y: number } | null;
+
+    /**
      * 连线点击事件
      */
     onClick?: (e: React.MouseEvent, fromId: string, toId: string) => void;
@@ -40,31 +45,63 @@ export const ConnectionRenderer: React.FC<ConnectionRendererProps> = ({
     connectionData,
     fromNode,
     toNode,
+    getPortPosition,
     onClick,
     onContextMenu
 }) => {
     const { connection, isSelected } = connectionData;
 
     const pathData = useMemo(() => {
-        const fromPos = fromNode.position;
-        const toPos = toNode.position;
+        let fromPos, toPos;
 
-        const startX = fromPos.x + 180;
-        const startY = fromPos.y + 40;
-        const endX = toPos.x;
-        const endY = toPos.y + 40;
+        if (connection.connectionType === 'property') {
+            // 属性连接：从DOM获取实际引脚位置
+            fromPos = getPortPosition(connection.from);
+            toPos = getPortPosition(connection.to, connection.toProperty);
+        } else {
+            // 节点连接：使用DOM获取端口位置
+            fromPos = getPortPosition(connection.from, undefined, 'output');
+            toPos = getPortPosition(connection.to, undefined, 'input');
+        }
 
-        const controlPointOffset = Math.abs(endX - startX) * 0.5;
+        if (!fromPos || !toPos) {
+            // 如果DOM还没渲染，返回null
+            return null;
+        }
+
+        const x1 = fromPos.x;
+        const y1 = fromPos.y;
+        const x2 = toPos.x;
+        const y2 = toPos.y;
+
+        let pathD: string;
+
+        if (connection.connectionType === 'property') {
+            // 属性连接使用水平贝塞尔曲线
+            const controlX1 = x1 + (x2 - x1) * 0.5;
+            const controlX2 = x1 + (x2 - x1) * 0.5;
+            pathD = `M ${x1} ${y1} C ${controlX1} ${y1}, ${controlX2} ${y2}, ${x2} ${y2}`;
+        } else {
+            // 节点连接使用垂直贝塞尔曲线
+            const controlY = y1 + (y2 - y1) * 0.5;
+            pathD = `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`;
+        }
 
         return {
-            path: `M ${startX},${startY} C ${startX + controlPointOffset},${startY} ${endX - controlPointOffset},${endY} ${endX},${endY}`,
-            midX: (startX + endX) / 2,
-            midY: (startY + endY) / 2
+            path: pathD,
+            midX: (x1 + x2) / 2,
+            midY: (y1 + y2) / 2
         };
-    }, [fromNode.position, toNode.position]);
+    }, [connection, fromNode, toNode, getPortPosition]);
 
-    const strokeColor = isSelected ? '#ffa500' : '#4a9eff';
-    const strokeWidth = isSelected ? 3 : 2;
+    const color = connection.connectionType === 'property' ? '#9c27b0' : '#0e639c';
+    const strokeColor = isSelected ? '#FFD700' : color;
+    const strokeWidth = isSelected ? 4 : 2;
+
+    if (!pathData) {
+        // DOM还没渲染完成，跳过此连接
+        return null;
+    }
 
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
