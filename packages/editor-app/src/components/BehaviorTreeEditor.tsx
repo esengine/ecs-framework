@@ -27,6 +27,10 @@ import { BehaviorTreeValidator } from '../infrastructure/validation/BehaviorTree
 import { useNodeOperations } from '../presentation/hooks/useNodeOperations';
 import { useConnectionOperations } from '../presentation/hooks/useConnectionOperations';
 import { useCommandHistory } from '../presentation/hooks/useCommandHistory';
+import { useContextMenu } from '../application/hooks/useContextMenu';
+import { EditorToolbar } from '../presentation/components/toolbar/EditorToolbar';
+import { QuickCreateMenu } from '../presentation/components/menu/QuickCreateMenu';
+import { NodeContextMenu } from '../presentation/components/menu/NodeContextMenu';
 import '../styles/BehaviorTreeNode.css';
 
 type NodeExecutionStatus = 'idle' | 'running' | 'success' | 'failure';
@@ -169,16 +173,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     const nodeOperations = useNodeOperations(nodeFactory, validator, commandManager);
     const connectionOperations = useConnectionOperations(validator, commandManager);
 
-    // 右键菜单状态
-    const [contextMenu, setContextMenu] = useState<{
-        visible: boolean;
-        position: { x: number; y: number };
-        nodeId: string | null;
-    }>({
-        visible: false,
-        position: { x: 0, y: 0 },
-        nodeId: null
-    });
+    // 右键菜单
+    const { contextMenu, setContextMenu, handleNodeContextMenu, closeContextMenu } = useContextMenu();
 
     // 初始化executor用于检查执行器是否存在
     useEffect(() => {
@@ -209,7 +205,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     useEffect(() => {
         const handleClick = () => {
             if (contextMenu.visible) {
-                setContextMenu({ ...contextMenu, visible: false });
+                closeContextMenu();
             }
         };
 
@@ -217,7 +213,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             document.addEventListener('click', handleClick);
             return () => document.removeEventListener('click', handleClick);
         }
-    }, [contextMenu.visible]);
+    }, [contextMenu.visible, closeContextMenu]);
 
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -481,21 +477,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         onNodeSelect?.(node);
     };
 
-    const handleNodeContextMenu = (e: React.MouseEvent, node: BehaviorTreeNode) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        // 不允许对Root节点右键
-        if (node.id === ROOT_NODE_ID) {
-            return;
-        }
-
-        setContextMenu({
-            visible: true,
-            position: { x: e.clientX, y: e.clientY },
-            nodeId: node.id
-        });
-    };
 
     const handleReplaceNode = (newTemplate: NodeTemplate) => {
         const nodeToReplace = nodes.find((n) => n.id === quickCreateMenu.replaceNodeId);
@@ -1356,6 +1337,27 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         }
     };
 
+    const handleClearCanvas = async () => {
+        const confirmed = await ask('确定要清空画布吗？此操作不可撤销。', {
+            title: '清空画布',
+            kind: 'warning'
+        });
+
+        if (confirmed) {
+            setNodes([
+                new Node(
+                    ROOT_NODE_ID,
+                    rootNodeTemplate,
+                    { nodeType: 'root' },
+                    new Position(400, 100),
+                    []
+                )
+            ]);
+            setConnections([]);
+            setSelectedNodeIds([]);
+        }
+    };
+
     useEffect(() => {
         return () => {
             if (animationFrameRef.current) {
@@ -1848,482 +1850,50 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 </BehaviorTreeCanvas>
 
                 {/* 运行控制工具栏 */}
-                <div style={{
-                    position: 'absolute',
-                    top: '10px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    display: 'flex',
-                    gap: '8px',
-                    backgroundColor: 'rgba(45, 45, 45, 0.95)',
-                    padding: '8px',
-                    borderRadius: '6px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                    zIndex: 100
-                }}>
-                    <button
-                        onClick={handlePlay}
-                        disabled={executionMode === 'running'}
-                        style={{
-                            padding: '8px',
-                            backgroundColor: executionMode === 'running' ? '#2d2d2d' : '#4caf50',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: executionMode === 'running' ? '#666' : '#fff',
-                            cursor: executionMode === 'running' ? 'not-allowed' : 'pointer',
-                            fontSize: '14px',
-                            fontWeight: 'bold',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                        title="运行 (Play)"
-                    >
-                        <Play size={16} />
-                    </button>
-                    <button
-                        onClick={handlePause}
-                        disabled={executionMode === 'idle'}
-                        style={{
-                            padding: '8px',
-                            backgroundColor: executionMode === 'idle' ? '#2d2d2d' : '#ff9800',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: executionMode === 'idle' ? '#666' : '#fff',
-                            cursor: executionMode === 'idle' ? 'not-allowed' : 'pointer',
-                            fontSize: '14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                        title={executionMode === 'paused' ? '继续' : '暂停'}
-                    >
-                        {executionMode === 'paused' ? <Play size={16} /> : <Pause size={16} />}
-                    </button>
-                    <button
-                        onClick={handleStop}
-                        disabled={executionMode === 'idle'}
-                        style={{
-                            padding: '8px',
-                            backgroundColor: executionMode === 'idle' ? '#2d2d2d' : '#f44336',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: executionMode === 'idle' ? '#666' : '#fff',
-                            cursor: executionMode === 'idle' ? 'not-allowed' : 'pointer',
-                            fontSize: '14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                        title="停止"
-                    >
-                        <Square size={16} />
-                    </button>
-                    <button
-                        onClick={handleStep}
-                        disabled={executionMode !== 'idle' && executionMode !== 'paused'}
-                        style={{
-                            padding: '8px',
-                            backgroundColor: (executionMode !== 'idle' && executionMode !== 'paused') ? '#2d2d2d' : '#2196f3',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: (executionMode !== 'idle' && executionMode !== 'paused') ? '#666' : '#fff',
-                            cursor: (executionMode !== 'idle' && executionMode !== 'paused') ? 'not-allowed' : 'pointer',
-                            fontSize: '14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                        title="单步执行"
-                    >
-                        <SkipForward size={16} />
-                    </button>
-                    <button
-                        onClick={handleReset}
-                        style={{
-                            padding: '8px',
-                            backgroundColor: '#9e9e9e',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: '#fff',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                        title="重置"
-                    >
-                        <RotateCcw size={16} />
-                    </button>
-
-                    {/* 分隔符 */}
-                    <div style={{
-                        width: '1px',
-                        backgroundColor: '#666',
-                        margin: '4px 0'
-                    }} />
-
-                    {/* 编辑按钮 */}
-                    <button
-                        onClick={handleResetView}
-                        style={{
-                            padding: '8px 12px',
-                            backgroundColor: '#3c3c3c',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: '#cccccc',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                        }}
-                        title="重置视图 (滚轮缩放, Alt+拖动平移)"
-                    >
-                        <RotateCcw size={14} />
-                    View
-                    </button>
-                    <button
-                        style={{
-                            padding: '8px 12px',
-                            backgroundColor: '#3c3c3c',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: '#cccccc',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                        }}
-                        title="清空画布"
-                        onClick={async () => {
-                            const confirmed = await ask('确定要清空画布吗？此操作不可撤销。', {
-                                title: '清空画布',
-                                kind: 'warning'
-                            });
-
-                            if (confirmed) {
-                                setNodes([
-                                    new Node(
-                                        ROOT_NODE_ID,
-                                        rootNodeTemplate,
-                                        { nodeType: 'root' },
-                                        new Position(400, 100),
-                                        []
-                                    )
-                                ]);
-                                setConnections([]);
-                                setSelectedNodeIds([]);
-                            }
-                        }}
-                    >
-                        <Trash2 size={14} />
-                    清空
-                    </button>
-
-                    {/* 撤销/重做按钮 */}
-                    <div style={{
-                        width: '1px',
-                        height: '24px',
-                        backgroundColor: '#555',
-                        margin: '0 4px'
-                    }} />
-                    <button
-                        onClick={undo}
-                        disabled={!canUndo}
-                        style={{
-                            padding: '8px',
-                            backgroundColor: canUndo ? '#3c3c3c' : '#2d2d2d',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: canUndo ? '#cccccc' : '#666',
-                            cursor: canUndo ? 'pointer' : 'not-allowed',
-                            fontSize: '14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                        title="撤销 (Ctrl+Z)"
-                    >
-                        <Undo size={16} />
-                    </button>
-                    <button
-                        onClick={redo}
-                        disabled={!canRedo}
-                        style={{
-                            padding: '8px',
-                            backgroundColor: canRedo ? '#3c3c3c' : '#2d2d2d',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: canRedo ? '#cccccc' : '#666',
-                            cursor: canRedo ? 'pointer' : 'not-allowed',
-                            fontSize: '14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                        title="重做 (Ctrl+Shift+Z / Ctrl+Y)"
-                    >
-                        <Redo size={16} />
-                    </button>
-
-                    {/* 状态指示器 */}
-                    <div style={{
-                        padding: '8px 12px',
-                        backgroundColor: '#1e1e1e',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        color: '#ccc',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                    }}>
-                        <span style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            backgroundColor:
-                            executionMode === 'running' ? '#4caf50' :
-                                executionMode === 'paused' ? '#ff9800' : '#666'
-                        }} />
-                        {executionMode === 'idle' ? 'Idle' :
-                            executionMode === 'running' ? 'Running' :
-                                executionMode === 'paused' ? 'Paused' : 'Step'}
-                    </div>
-                </div>
+                <EditorToolbar
+                    executionMode={executionMode}
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    onPlay={handlePlay}
+                    onPause={handlePause}
+                    onStop={handleStop}
+                    onStep={handleStep}
+                    onReset={handleReset}
+                    onUndo={undo}
+                    onRedo={redo}
+                    onResetView={handleResetView}
+                    onClearCanvas={handleClearCanvas}
+                />
 
                 {/* 快速创建菜单 */}
-                {quickCreateMenu.visible && (() => {
-                    const allTemplates = NodeTemplates.getAllTemplates();
-                    const searchText = quickCreateMenu.searchText.toLowerCase();
-                    const filteredTemplates = searchText
-                        ? allTemplates.filter((t: NodeTemplate) => {
-                            const className = t.className || '';
-                            return t.displayName.toLowerCase().includes(searchText) ||
-                               t.description.toLowerCase().includes(searchText) ||
-                               t.category.toLowerCase().includes(searchText) ||
-                               className.toLowerCase().includes(searchText);
-                        })
-                        : allTemplates;
-
-                    return (
-                        <>
-                            <style>{`
-                            .quick-create-menu-list::-webkit-scrollbar {
-                                width: 8px;
-                            }
-                            .quick-create-menu-list::-webkit-scrollbar-track {
-                                background: #1e1e1e;
-                            }
-                            .quick-create-menu-list::-webkit-scrollbar-thumb {
-                                background: #3c3c3c;
-                                border-radius: 4px;
-                            }
-                            .quick-create-menu-list::-webkit-scrollbar-thumb:hover {
-                                background: #4c4c4c;
-                            }
-                        `}</style>
-                            <div
-                                style={{
-                                    position: 'fixed',
-                                    left: `${quickCreateMenu.position.x}px`,
-                                    top: `${quickCreateMenu.position.y}px`,
-                                    width: '300px',
-                                    maxHeight: '400px',
-                                    backgroundColor: '#2d2d2d',
-                                    borderRadius: '6px',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                                    zIndex: 1000,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    overflow: 'hidden'
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                onMouseDown={(e) => e.stopPropagation()}
-                            >
-                                <div style={{
-                                    padding: '12px',
-                                    borderBottom: '1px solid #3c3c3c',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px'
-                                }}>
-                                    <Search size={16} style={{ color: '#999', flexShrink: 0 }} />
-                                    <input
-                                        type="text"
-                                        placeholder="搜索节点..."
-                                        autoFocus
-                                        value={quickCreateMenu.searchText}
-                                        onChange={(e) => setQuickCreateMenu({
-                                            ...quickCreateMenu,
-                                            searchText: e.target.value,
-                                            selectedIndex: 0
-                                        })}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Escape') {
-                                                setQuickCreateMenu({
-                                                    visible: false,
-                                                    position: { x: 0, y: 0 },
-                                                    searchText: '',
-                                                    selectedIndex: 0,
-                                                    mode: 'create',
-                                                    replaceNodeId: null
-                                                });
-                                                clearConnecting();
-                                            } else if (e.key === 'ArrowDown') {
-                                                e.preventDefault();
-                                                setQuickCreateMenu({
-                                                    ...quickCreateMenu,
-                                                    selectedIndex: Math.min(quickCreateMenu.selectedIndex + 1, filteredTemplates.length - 1)
-                                                });
-                                            } else if (e.key === 'ArrowUp') {
-                                                e.preventDefault();
-                                                setQuickCreateMenu({
-                                                    ...quickCreateMenu,
-                                                    selectedIndex: Math.max(quickCreateMenu.selectedIndex - 1, 0)
-                                                });
-                                            } else if (e.key === 'Enter' && filteredTemplates.length > 0) {
-                                                e.preventDefault();
-                                                const selectedTemplate = filteredTemplates[quickCreateMenu.selectedIndex];
-                                                if (selectedTemplate) {
-                                                    handleQuickCreateNode(selectedTemplate);
-                                                }
-                                            }
-                                        }}
-                                        style={{
-                                            flex: 1,
-                                            background: 'transparent',
-                                            border: 'none',
-                                            outline: 'none',
-                                            color: '#ccc',
-                                            fontSize: '14px',
-                                            padding: '4px'
-                                        }}
-                                    />
-                                    <button
-                                        onClick={() => {
-                                            setQuickCreateMenu({
-                                                visible: false,
-                                                position: { x: 0, y: 0 },
-                                                searchText: '',
-                                                selectedIndex: 0,
-                                                mode: 'create',
-                                                replaceNodeId: null
-                                            });
-                                            clearConnecting();
-                                        }}
-                                        style={{
-                                            background: 'transparent',
-                                            border: 'none',
-                                            color: '#999',
-                                            cursor: 'pointer',
-                                            padding: '4px',
-                                            display: 'flex',
-                                            alignItems: 'center'
-                                        }}
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                </div>
-                                <div
-                                    className="quick-create-menu-list"
-                                    style={{
-                                        flex: 1,
-                                        overflowY: 'auto',
-                                        padding: '8px'
-                                    }}
-                                >
-                                    {filteredTemplates.length === 0 ? (
-                                        <div style={{
-                                            padding: '20px',
-                                            textAlign: 'center',
-                                            color: '#666',
-                                            fontSize: '12px'
-                                        }}>
-                                    未找到匹配的节点
-                                        </div>
-                                    ) : (
-                                        filteredTemplates.map((template: NodeTemplate, index: number) => {
-                                            const IconComponent = template.icon ? iconMap[template.icon] : null;
-                                            const className = template.className || '';
-                                            const isSelected = index === quickCreateMenu.selectedIndex;
-                                            return (
-                                                <div
-                                                    key={index}
-                                                    ref={isSelected ? selectedNodeRef : null}
-                                                    onClick={() => handleQuickCreateNode(template)}
-                                                    onMouseEnter={() => {
-                                                        setQuickCreateMenu({
-                                                            ...quickCreateMenu,
-                                                            selectedIndex: index
-                                                        });
-                                                    }}
-                                                    style={{
-                                                        padding: '8px 12px',
-                                                        marginBottom: '4px',
-                                                        backgroundColor: isSelected ? '#0e639c' : '#1e1e1e',
-                                                        borderLeft: `3px solid ${template.color || '#666'}`,
-                                                        borderRadius: '3px',
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.15s',
-                                                        transform: isSelected ? 'translateX(2px)' : 'translateX(0)'
-                                                    }}
-                                                >
-                                                    <div style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '8px',
-                                                        marginBottom: '4px'
-                                                    }}>
-                                                        {IconComponent && (
-                                                            <IconComponent size={14} style={{ color: template.color || '#999', flexShrink: 0 }} />
-                                                        )}
-                                                        <div style={{ flex: 1 }}>
-                                                            <div style={{
-                                                                color: '#ccc',
-                                                                fontSize: '13px',
-                                                                fontWeight: '500',
-                                                                marginBottom: '2px'
-                                                            }}>
-                                                                {template.displayName}
-                                                            </div>
-                                                            {className && (
-                                                                <div style={{
-                                                                    color: '#666',
-                                                                    fontSize: '10px',
-                                                                    fontFamily: 'Consolas, Monaco, monospace',
-                                                                    opacity: 0.8
-                                                                }}>
-                                                                    {className}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <div style={{
-                                                        fontSize: '11px',
-                                                        color: '#999',
-                                                        lineHeight: '1.4',
-                                                        marginBottom: '2px'
-                                                    }}>
-                                                        {template.description}
-                                                    </div>
-                                                    <div style={{
-                                                        fontSize: '10px',
-                                                        color: '#666'
-                                                    }}>
-                                                        {template.category}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
-                                    )}
-                                </div>
-                            </div>
-                        </>
-                    );
-                })()}
+                <QuickCreateMenu
+                    visible={quickCreateMenu.visible}
+                    position={quickCreateMenu.position}
+                    searchText={quickCreateMenu.searchText}
+                    selectedIndex={quickCreateMenu.selectedIndex}
+                    mode={quickCreateMenu.mode}
+                    iconMap={iconMap}
+                    onSearchChange={(text) => setQuickCreateMenu({
+                        ...quickCreateMenu,
+                        searchText: text
+                    })}
+                    onIndexChange={(index) => setQuickCreateMenu({
+                        ...quickCreateMenu,
+                        selectedIndex: index
+                    })}
+                    onNodeSelect={handleQuickCreateNode}
+                    onClose={() => {
+                        setQuickCreateMenu({
+                            visible: false,
+                            position: { x: 0, y: 0 },
+                            searchText: '',
+                            selectedIndex: 0,
+                            mode: 'create',
+                            replaceNodeId: null
+                        });
+                        clearConnecting();
+                    }}
+                />
 
                 {/* 状态栏 */}
                 <div style={{
@@ -2368,48 +1938,22 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             </div>
 
             {/* 右键菜单 */}
-            {contextMenu.visible && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        left: contextMenu.position.x,
-                        top: contextMenu.position.y,
-                        backgroundColor: '#2d2d30',
-                        border: '1px solid #454545',
-                        borderRadius: '4px',
-                        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
-                        zIndex: 10000,
-                        minWidth: '150px',
-                        padding: '4px 0'
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <div
-                        onClick={() => {
-                            setQuickCreateMenu({
-                                visible: true,
-                                position: contextMenu.position,
-                                searchText: '',
-                                selectedIndex: 0,
-                                mode: 'replace',
-                                replaceNodeId: contextMenu.nodeId
-                            });
-                            setContextMenu({ ...contextMenu, visible: false });
-                        }}
-                        style={{
-                            padding: '8px 16px',
-                            cursor: 'pointer',
-                            color: '#cccccc',
-                            fontSize: '13px',
-                            transition: 'background-color 0.15s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#094771'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                        替换节点
-                    </div>
-                </div>
-            )}
+            <NodeContextMenu
+                visible={contextMenu.visible}
+                position={contextMenu.position}
+                nodeId={contextMenu.nodeId}
+                onReplaceNode={() => {
+                    setQuickCreateMenu({
+                        visible: true,
+                        position: contextMenu.position,
+                        searchText: '',
+                        selectedIndex: 0,
+                        mode: 'replace',
+                        replaceNodeId: contextMenu.nodeId
+                    });
+                    setContextMenu({ ...contextMenu, visible: false });
+                }}
+            />
         </div>
     );
 };
