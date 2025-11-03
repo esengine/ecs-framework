@@ -27,6 +27,8 @@ import { useNodeOperations } from '../presentation/hooks/useNodeOperations';
 import { useConnectionOperations } from '../presentation/hooks/useConnectionOperations';
 import { useCommandHistory } from '../presentation/hooks/useCommandHistory';
 import { useNodeDrag } from '../presentation/hooks/useNodeDrag';
+import { usePortConnection } from '../presentation/hooks/usePortConnection';
+import { useKeyboardShortcuts } from '../presentation/hooks/useKeyboardShortcuts';
 import { useContextMenu } from '../application/hooks/useContextMenu';
 import { useQuickCreateMenu } from '../application/hooks/useQuickCreateMenu';
 import { EditorToolbar } from '../presentation/components/toolbar/EditorToolbar';
@@ -295,6 +297,38 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         sortChildrenByPosition
     });
 
+    // 端口连接
+    const {
+        handlePortMouseDown,
+        handlePortMouseUp,
+        handleNodeMouseUpForConnection
+    } = usePortConnection({
+        canvasRef,
+        canvasOffset,
+        canvasScale,
+        nodes,
+        connections,
+        connectingFrom,
+        connectingFromProperty,
+        connectionOperations,
+        setConnectingFrom,
+        setConnectingFromProperty,
+        clearConnecting,
+        sortChildrenByPosition,
+        showToast
+    });
+
+    // 键盘快捷键
+    useKeyboardShortcuts({
+        selectedNodeIds,
+        selectedConnection,
+        connections,
+        nodeOperations,
+        connectionOperations,
+        setSelectedNodeIds,
+        setSelectedConnection
+    });
+
     // 缓存DOM元素引用和上一次的状态
     const domCacheRef = useRef<{
         nodes: Map<string, Element>;
@@ -305,61 +339,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         connections: new Map(),
         lastNodeStatus: new Map()
     });
-
-    // 键盘事件监听 - 删除选中节点
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // 检查焦点是否在可编辑元素上
-            const activeElement = document.activeElement;
-            const isEditingText = activeElement instanceof HTMLInputElement ||
-                                 activeElement instanceof HTMLTextAreaElement ||
-                                 activeElement instanceof HTMLSelectElement ||
-                                 (activeElement as HTMLElement)?.isContentEditable;
-
-            // 如果正在编辑文本，不执行删除节点操作
-            if (isEditingText) {
-                return;
-            }
-
-            if (e.key === 'Delete' || e.key === 'Backspace') {
-                e.preventDefault();
-
-                // 优先删除选中的连线
-                if (selectedConnection) {
-                    // 删除连接
-                    const conn = connections.find(
-                        (c: Connection) => c.from === selectedConnection.from && c.to === selectedConnection.to
-                    );
-                    if (conn) {
-                        connectionOperations.removeConnection(
-                            conn.from,
-                            conn.to,
-                            conn.fromProperty,
-                            conn.toProperty
-                        );
-                    }
-
-                    setSelectedConnection(null);
-                    return;
-                }
-
-                // 删除选中的节点
-                if (selectedNodeIds.length > 0) {
-                    // 不能删除 Root 节点
-                    const nodesToDelete = selectedNodeIds.filter((id: string) => id !== ROOT_NODE_ID);
-                    if (nodesToDelete.length > 0) {
-                        // 删除节点（会自动删除相关连接）
-                        nodeOperations.deleteNodes(nodesToDelete);
-                        // 清空选择
-                        setSelectedNodeIds([]);
-                    }
-                }
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedNodeIds, selectedConnection, nodeOperations, connectionOperations, connections, setSelectedNodeIds]);
 
     // 监听节点变化，跟踪运行时添加的节点
     useEffect(() => {
@@ -504,21 +483,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         onNodeSelect?.(node);
     };
 
-
-    const handlePortMouseDown = (e: React.MouseEvent, nodeId: string, propertyName?: string) => {
-        e.stopPropagation();
-        const target = e.currentTarget as HTMLElement;
-        const portType = target.getAttribute('data-port-type');
-
-        setConnectingFrom(nodeId);
-        setConnectingFromProperty(propertyName || null);
-
-        // 存储起点引脚类型到 DOM 属性，供 mouseUp 使用
-        if (canvasRef.current) {
-            canvasRef.current.setAttribute('data-connecting-from-port-type', portType || '');
-        }
-    };
-
     const handleCanvasMouseMove = (e: React.MouseEvent) => {
         // 处理连接线拖拽（如果快速创建菜单显示了，不更新预览连接线）
         if (connectingFrom && canvasRef.current && !quickCreateMenu.visible) {
@@ -540,136 +504,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             const canvasX = (e.clientX - rect.left - canvasOffset.x) / canvasScale;
             const canvasY = (e.clientY - rect.top - canvasOffset.y) / canvasScale;
             setBoxSelectEnd({ x: canvasX, y: canvasY });
-        }
-    };
-
-    const handlePortMouseUp = (e: React.MouseEvent, nodeId: string, propertyName?: string) => {
-        e.stopPropagation();
-        if (!connectingFrom) {
-            clearConnecting();
-            return;
-        }
-
-        // 禁止连接到自己
-        if (connectingFrom === nodeId) {
-            showToast('不能将节点连接到自己', 'warning');
-            clearConnecting();
-            return;
-        }
-
-        const target = e.currentTarget as HTMLElement;
-        const toPortType = target.getAttribute('data-port-type');
-        const fromPortType = canvasRef.current?.getAttribute('data-connecting-from-port-type');
-
-        // 智能判断连接方向
-        let actualFrom = connectingFrom;
-        let actualTo = nodeId;
-        let actualFromProperty = connectingFromProperty;
-        let actualToProperty = propertyName;
-
-        // 判断是否需要反转方向
-        const needReverse =
-            (fromPortType === 'node-input' || fromPortType === 'property-input') &&
-            (toPortType === 'node-output' || toPortType === 'variable-output');
-
-        if (needReverse) {
-            // 反转连接方向
-            actualFrom = nodeId;
-            actualTo = connectingFrom;
-            actualFromProperty = propertyName || null;
-            actualToProperty = connectingFromProperty ?? undefined;
-        }
-
-        // 属性级别的连接
-        if (actualFromProperty || actualToProperty) {
-            // 检查是否已经存在相同的属性连接
-            const existingConnection = connections.find(
-                (conn: Connection) =>
-                    (conn.from === actualFrom && conn.to === actualTo &&
-                     conn.fromProperty === actualFromProperty && conn.toProperty === actualToProperty) ||
-                    (conn.from === actualTo && conn.to === actualFrom &&
-                     conn.fromProperty === actualToProperty && conn.toProperty === actualFromProperty)
-            );
-
-            if (existingConnection) {
-                showToast('该连接已存在', 'warning');
-                clearConnecting();
-                return;
-            }
-
-            // 检查目标属性是否允许多个连接
-            const toNode = nodes.find((n: BehaviorTreeNode) => n.id === actualTo);
-            if (toNode && actualToProperty) {
-                const targetProperty = toNode.template.properties.find(
-                    (p: PropertyDefinition) => p.name === actualToProperty
-                );
-
-                // 如果属性不允许多个连接（默认行为）
-                if (!targetProperty?.allowMultipleConnections) {
-                    // 检查是否已有连接到该属性
-                    const existingPropertyConnection = connections.find(
-                        (conn: Connection) =>
-                            conn.connectionType === 'property' &&
-                            conn.to === actualTo &&
-                            conn.toProperty === actualToProperty
-                    );
-
-                    if (existingPropertyConnection) {
-                        showToast('该属性已有连接，请先删除现有连接', 'warning');
-                        clearConnecting();
-                        return;
-                    }
-                }
-            }
-
-            connectionOperations.addConnection(
-                actualFrom,
-                actualTo,
-                'property',
-                actualFromProperty || undefined,
-                actualToProperty || undefined
-            );
-        } else {
-            // 节点级别的连接
-            // Root 节点只能有一个子节点
-            if (actualFrom === ROOT_NODE_ID) {
-                const rootNode = nodes.find((n: BehaviorTreeNode) => n.id === ROOT_NODE_ID);
-                if (rootNode && rootNode.children.length > 0) {
-                    showToast('根节点只能连接一个子节点', 'warning');
-                    clearConnecting();
-                    return;
-                }
-            }
-
-            // 检查是否已经存在相同的节点连接
-            const existingConnection = connections.find(
-                (conn: Connection) =>
-                    (conn.from === actualFrom && conn.to === actualTo && conn.connectionType === 'node') ||
-                    (conn.from === actualTo && conn.to === actualFrom && conn.connectionType === 'node')
-            );
-
-            if (existingConnection) {
-                showToast('该连接已存在', 'warning');
-                clearConnecting();
-                return;
-            }
-
-            connectionOperations.addConnection(actualFrom, actualTo, 'node');
-
-            // 创建连接后，自动排序子节点
-            setTimeout(() => {
-                sortChildrenByPosition();
-            }, 0);
-        }
-
-        clearConnecting();
-    };
-
-    const handleNodeMouseUpForConnection = (e: React.MouseEvent, nodeId: string) => {
-        // 如果正在连接，尝试自动连接到这个节点
-        if (connectingFrom && connectingFrom !== nodeId) {
-            // 直接调用 handlePortMouseUp 来完成连接
-            handlePortMouseUp(e, nodeId);
         }
     };
 
