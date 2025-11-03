@@ -31,6 +31,13 @@ export class Blackboard {
     }
 
     /**
+     * 设置变量值（别名方法）
+     */
+    setValue(key: string, value: BlackboardValue): void {
+        this._variables.set(key, value);
+    }
+
+    /**
      * 删除变量
      */
     delete(key: string): Blackboard {

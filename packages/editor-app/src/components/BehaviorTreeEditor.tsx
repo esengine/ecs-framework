@@ -10,16 +10,19 @@ import {
     LucideIcon
 } from 'lucide-react';
 import { ask } from '@tauri-apps/plugin-dialog';
-import { useBehaviorTreeStore, BehaviorTreeNode, Connection } from '../stores/behaviorTreeStore';
+import { useBehaviorTreeStore, BehaviorTreeNode, Connection, ROOT_NODE_ID } from '../stores/behaviorTreeStore';
 import { BehaviorTreeExecutor, ExecutionStatus, ExecutionLog } from '../utils/BehaviorTreeExecutor';
 import { BehaviorTreeExecutionPanel } from './BehaviorTreeExecutionPanel';
 import { useToast } from './Toast';
+import { Node } from '../domain/models/Node';
+import { Connection as ConnectionModel } from '../domain/models/Connection';
+import { Position } from '../domain/value-objects/Position';
+import { BlackboardValue } from '../domain/models/Blackboard';
 import '../styles/BehaviorTreeNode.css';
 
 type NodeExecutionStatus = 'idle' | 'running' | 'success' | 'failure';
 type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
 
-type BlackboardValue = string | number | boolean | null | undefined | Record<string, unknown> | unknown[];
 type BlackboardVariables = Record<string, BlackboardValue>;
 
 interface DraggedVariableData {
@@ -78,8 +81,6 @@ function generateUniqueId(): string {
  *
  * 提供可视化的行为树编辑画布
  */
-const ROOT_NODE_ID = 'root-node';
-
 export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     onNodeSelect,
     onNodeCreate,
@@ -163,19 +164,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         position: { x: 0, y: 0 },
         nodeId: null
     });
-
-    // 初始化根节点（仅在首次挂载时检查）
-    useEffect(() => {
-        if (nodes.length === 0) {
-            setNodes([{
-                id: ROOT_NODE_ID,
-                template: rootNodeTemplate,
-                data: { nodeType: 'root' },
-                position: { x: 400, y: 100 },
-                children: []
-            }]);
-        }
-    }, []);
 
     // 初始化executor用于检查执行器是否存在
     useEffect(() => {
@@ -308,10 +296,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     // 同步更新父节点的children数组，移除被删除的子节点引用
                     setNodes(nodes.map((node: BehaviorTreeNode) => {
                         if (node.id === selectedConnection.from) {
-                            return {
-                                ...node,
-                                children: node.children.filter((childId: string) => childId !== selectedConnection.to)
-                            };
+                            const newChildren = Array.from(node.children).filter((childId: string) => childId !== selectedConnection.to);
+                            return new Node(node.id, node.template, node.data, node.position, newChildren);
                         }
                         return node;
                     }));
@@ -410,16 +396,16 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     ]
                 };
 
-                const newNode: BehaviorTreeNode = {
-                    id: `var_${variableData.variableName}_${generateUniqueId()}`,
-                    template: variableTemplate,
-                    data: {
+                const newNode = new Node(
+                    `var_${variableData.variableName}_${generateUniqueId()}`,
+                    variableTemplate,
+                    {
                         nodeType: 'blackboard-variable',
                         variableName: variableData.variableName
                     },
-                    position,
-                    children: []
-                };
+                    new Position(position.x, position.y),
+                    []
+                );
 
                 setNodes([...nodes, newNode]);
                 return;
@@ -436,13 +422,13 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
             const template = JSON.parse(templateData) as NodeTemplate;
 
-            const newNode: BehaviorTreeNode = {
-                id: `node_${generateUniqueId()}`,
+            const newNode = new Node(
+                `node_${generateUniqueId()}`,
                 template,
-                data: { ...template.defaultConfig },
-                position,
-                children: []
-            };
+                { ...template.defaultConfig },
+                new Position(position.x, position.y),
+                []
+            );
 
             setNodes([...nodes, newNode]);
             onNodeCreate?.(template, position);
@@ -538,13 +524,13 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         }
 
         // 创建新节点，保留原节点的位置和连接
-        const newNode: BehaviorTreeNode = {
-            id: nodeToReplace.id,
-            template: newTemplate,
-            data: newData,
-            position: nodeToReplace.position,
-            children: nodeToReplace.children
-        };
+        const newNode = new Node(
+            nodeToReplace.id,
+            newTemplate,
+            newData,
+            nodeToReplace.position,
+            Array.from(nodeToReplace.children)
+        );
 
         // 替换节点
         setNodes(nodes.map((n) => n.id === newNode.id ? newNode : n));
@@ -614,7 +600,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         nodesToDrag.forEach((id: string) => {
             const n = nodes.find((node: BehaviorTreeNode) => node.id === id);
             if (n) {
-                startPositions.set(id, { ...n.position });
+                startPositions.set(id, { x: n.position.x, y: n.position.y });
             }
         });
 
@@ -812,13 +798,16 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 }
             }
 
-            setConnections([...connections, {
-                from: actualFrom,
-                to: actualTo,
-                fromProperty: actualFromProperty || undefined,
-                toProperty: actualToProperty || undefined,
-                connectionType: 'property'
-            }]);
+            setConnections([
+                ...connections,
+                new ConnectionModel(
+                    actualFrom,
+                    actualTo,
+                    'property',
+                    actualFromProperty || undefined,
+                    actualToProperty || undefined
+                )
+            ]);
         } else {
             // 节点级别的连接
             // Root 节点只能有一个子节点
@@ -844,16 +833,15 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 return;
             }
 
-            setConnections([...connections, {
-                from: actualFrom,
-                to: actualTo,
-                connectionType: 'node'
-            }]);
+            setConnections([
+                ...connections,
+                new ConnectionModel(actualFrom, actualTo, 'node')
+            ]);
 
             // 更新节点的 children
             setNodes(nodes.map((node: BehaviorTreeNode) =>
                 node.id === actualFrom
-                    ? { ...node, children: [...node.children, actualTo] }
+                    ? new Node(node.id, node.template, node.data, node.position, [...node.children, actualTo])
                     : node
             ));
 
@@ -969,18 +957,16 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             return;
         }
 
-        const position = {
-            x: (quickCreateMenu.position.x - rect.left - canvasOffset.x) / canvasScale,
-            y: (quickCreateMenu.position.y - rect.top - canvasOffset.y) / canvasScale
-        };
+        const posX = (quickCreateMenu.position.x - rect.left - canvasOffset.x) / canvasScale;
+        const posY = (quickCreateMenu.position.y - rect.top - canvasOffset.y) / canvasScale;
 
-        const newNode: BehaviorTreeNode = {
-            id: `node_${generateUniqueId()}`,
+        const newNode = new Node(
+            `node_${generateUniqueId()}`,
             template,
-            data: { ...template.defaultConfig },
-            position,
-            children: []
-        };
+            { ...template.defaultConfig },
+            new Position(posX, posY),
+            []
+        );
 
         const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === connectingFrom);
         if (fromNode) {
@@ -988,30 +974,27 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 // 属性连接
                 setConnections([
                     ...connections,
-                    {
-                        from: connectingFrom,
-                        fromProperty: connectingFromProperty,
-                        to: newNode.id,
-                        connectionType: 'property'
-                    }
+                    new ConnectionModel(
+                        connectingFrom,
+                        newNode.id,
+                        'property',
+                        connectingFromProperty,
+                        undefined
+                    )
                 ]);
                 setNodes([...nodes, newNode]);
             } else {
                 // 节点连接：需要同时更新 connections 和父节点的 children
                 setConnections([
                     ...connections,
-                    {
-                        from: connectingFrom,
-                        to: newNode.id,
-                        connectionType: 'node'
-                    }
+                    new ConnectionModel(connectingFrom, newNode.id, 'node')
                 ]);
 
                 // 更新父节点的 children 数组
                 setNodes([
                     ...nodes.map((node: BehaviorTreeNode) =>
                         node.id === connectingFrom
-                            ? { ...node, children: [...node.children, newNode.id] }
+                            ? new Node(node.id, node.template, node.data, node.position, [...node.children, newNode.id])
                             : node
                     ),
                     newNode
@@ -1031,7 +1014,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         });
         clearConnecting();
 
-        onNodeCreate?.(template, position);
+        onNodeCreate?.(template, { x: posX, y: posY });
     };
 
     // 画布缩放
@@ -2154,13 +2137,13 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
                             if (confirmed) {
                                 setNodes([
-                                    {
-                                        id: ROOT_NODE_ID,
-                                        template: rootNodeTemplate,
-                                        data: { nodeType: 'root' },
-                                        position: { x: 400, y: 100 },
-                                        children: []
-                                    }
+                                    new Node(
+                                        ROOT_NODE_ID,
+                                        rootNodeTemplate,
+                                        { nodeType: 'root' },
+                                        new Position(400, 100),
+                                        []
+                                    )
                                 ]);
                                 setConnections([]);
                                 setSelectedNodeIds([]);

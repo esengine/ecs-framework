@@ -153,7 +153,7 @@ export class BehaviorTreeExecutor {
                 nodeType: this.convertNodeType(node.template.type),
                 implementationType: node.template.className || this.getImplementationType(node.template.displayName, node.template.type),
                 config: { ...node.data },
-                children: node.children
+                children: Array.from(node.children)
             };
 
             treeData.nodes.set(node.id, nodeData);

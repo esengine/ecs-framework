@@ -1,66 +1,57 @@
 import { create } from 'zustand';
 import { NodeTemplate, NodeTemplates, EditorFormatConverter, BehaviorTreeAssetSerializer, NodeType } from '@esengine/behavior-tree';
+import { Node } from '../domain/models/Node';
+import { Connection } from '../domain/models/Connection';
+import { Blackboard, BlackboardValue } from '../domain/models/Blackboard';
+import { Position } from '../domain/value-objects/Position';
 
-interface BehaviorTreeNode {
-    id: string;
-    template: NodeTemplate;
-    data: Record<string, any>;
-    position: { x: number; y: number };
-    children: string[];
+/**
+ * 生成唯一ID
+ */
+function generateUniqueId(): string {
+    return `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-interface Connection {
-    from: string;
-    to: string;
-    fromProperty?: string;
-    toProperty?: string;
-    connectionType: 'node' | 'property';
-}
-
+/**
+ * 行为树 Store 状态接口
+ */
 interface BehaviorTreeState {
-    nodes: BehaviorTreeNode[];
+    nodes: Node[];
     connections: Connection[];
+    blackboard: Blackboard;
+    blackboardVariables: Record<string, BlackboardValue>;
+    initialBlackboardVariables: Record<string, BlackboardValue>;
     selectedNodeIds: string[];
     draggingNodeId: string | null;
     dragStartPositions: Map<string, { x: number; y: number }>;
     isDraggingNode: boolean;
 
-    // 黑板变量
-    blackboardVariables: Record<string, any>;
-    // 初始黑板变量（设计时的值，用于保存）
-    initialBlackboardVariables: Record<string, any>;
-    // 是否正在运行行为树
     isExecuting: boolean;
 
-    // 画布变换
     canvasOffset: { x: number; y: number };
     canvasScale: number;
     isPanning: boolean;
     panStart: { x: number; y: number };
 
-    // 连接状态
     connectingFrom: string | null;
     connectingFromProperty: string | null;
     connectingToPos: { x: number; y: number } | null;
 
-    // 框选状态
     isBoxSelecting: boolean;
     boxSelectStart: { x: number; y: number } | null;
     boxSelectEnd: { x: number; y: number } | null;
 
-    // 拖动偏移
     dragDelta: { dx: number; dy: number };
 
-    // 强制更新计数器
     forceUpdateCounter: number;
 
-    // Actions
-    setNodes: (nodes: BehaviorTreeNode[]) => void;
-    updateNodes: (updater: (nodes: BehaviorTreeNode[]) => BehaviorTreeNode[]) => void;
-    addNode: (node: BehaviorTreeNode) => void;
+    setNodes: (nodes: Node[]) => void;
+    updateNodes: (updater: (nodes: Node[]) => Node[]) => void;
+    addNode: (node: Node) => void;
     removeNodes: (nodeIds: string[]) => void;
     updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
     updateNodesPosition: (updates: Map<string, { x: number; y: number }>) => void;
+    updateNodeData: (nodeId: string, data: Record<string, unknown>) => void;
 
     setConnections: (connections: Connection[]) => void;
     addConnection: (connection: Connection) => void;
@@ -74,58 +65,50 @@ interface BehaviorTreeState {
     stopDragging: () => void;
     setIsDraggingNode: (isDragging: boolean) => void;
 
-    // 画布变换 Actions
     setCanvasOffset: (offset: { x: number; y: number }) => void;
     setCanvasScale: (scale: number) => void;
     setIsPanning: (isPanning: boolean) => void;
     setPanStart: (panStart: { x: number; y: number }) => void;
     resetView: () => void;
 
-    // 连接 Actions
     setConnectingFrom: (nodeId: string | null) => void;
     setConnectingFromProperty: (propertyName: string | null) => void;
     setConnectingToPos: (pos: { x: number; y: number } | null) => void;
     clearConnecting: () => void;
 
-    // 框选 Actions
     setIsBoxSelecting: (isSelecting: boolean) => void;
     setBoxSelectStart: (pos: { x: number; y: number } | null) => void;
     setBoxSelectEnd: (pos: { x: number; y: number } | null) => void;
     clearBoxSelect: () => void;
 
-    // 拖动偏移 Actions
     setDragDelta: (delta: { dx: number; dy: number }) => void;
 
-    // 强制更新
     triggerForceUpdate: () => void;
 
-    // 黑板变量 Actions
-    setBlackboardVariables: (variables: Record<string, any>) => void;
-    updateBlackboardVariable: (name: string, value: any) => void;
-    setInitialBlackboardVariables: (variables: Record<string, any>) => void;
+    setBlackboard: (blackboard: Blackboard) => void;
+    updateBlackboardVariable: (name: string, value: BlackboardValue) => void;
+    setBlackboardVariables: (variables: Record<string, BlackboardValue>) => void;
+    setInitialBlackboardVariables: (variables: Record<string, BlackboardValue>) => void;
     setIsExecuting: (isExecuting: boolean) => void;
 
-    // 自动排序子节点
     sortChildrenByPosition: () => void;
 
-    // 数据导出/导入
-    exportToJSON: (metadata: { name: string; description: string }, blackboard: Record<string, any>) => string;
-    importFromJSON: (json: string) => { blackboard: Record<string, any> };
+    exportToJSON: (metadata: { name: string; description: string }) => string;
+    importFromJSON: (json: string) => void;
 
-    // 运行时资产导出
     exportToRuntimeAsset: (
         metadata: { name: string; description: string },
-        blackboard: Record<string, any>,
         format: 'json' | 'binary'
     ) => string | Uint8Array;
 
-    // 重置所有状态
     reset: () => void;
 }
 
 const ROOT_NODE_ID = 'root-node';
 
-// 创建根节点模板
+/**
+ * 创建根节点模板
+ */
 const createRootNodeTemplate = (): NodeTemplate => ({
     type: NodeType.Composite,
     displayName: '根节点',
@@ -139,82 +122,91 @@ const createRootNodeTemplate = (): NodeTemplate => ({
     properties: []
 });
 
-// 创建初始根节点
-const createInitialRootNode = (): BehaviorTreeNode => ({
-    id: ROOT_NODE_ID,
-    template: createRootNodeTemplate(),
-    data: { nodeType: 'root' },
-    position: { x: 400, y: 100 },
-    children: []
-});
+/**
+ * 创建初始根节点
+ */
+const createInitialRootNode = (): Node => {
+    const template = createRootNodeTemplate();
+    const position = new Position(400, 100);
+    return new Node(ROOT_NODE_ID, template, { nodeType: 'root' }, position, []);
+};
 
+/**
+ * 行为树 Store
+ */
 export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     nodes: [createInitialRootNode()],
     connections: [],
+    blackboard: new Blackboard(),
+    blackboardVariables: {},
+    initialBlackboardVariables: {},
     selectedNodeIds: [],
     draggingNodeId: null,
     dragStartPositions: new Map(),
     isDraggingNode: false,
 
-    // 黑板变量初始值
-    blackboardVariables: {},
-    initialBlackboardVariables: {},
     isExecuting: false,
 
-    // 画布变换初始值
     canvasOffset: { x: 0, y: 0 },
     canvasScale: 1,
     isPanning: false,
     panStart: { x: 0, y: 0 },
 
-    // 连接状态初始值
     connectingFrom: null,
     connectingFromProperty: null,
     connectingToPos: null,
 
-    // 框选状态初始值
     isBoxSelecting: false,
     boxSelectStart: null,
     boxSelectEnd: null,
 
-    // 拖动偏移初始值
     dragDelta: { dx: 0, dy: 0 },
 
-    // 强制更新计数器初始值
     forceUpdateCounter: 0,
 
-    setNodes: (nodes: BehaviorTreeNode[]) => set({ nodes }),
+    setNodes: (nodes: Node[]) => set({ nodes }),
 
-    updateNodes: (updater: (nodes: BehaviorTreeNode[]) => BehaviorTreeNode[]) => set((state: BehaviorTreeState) => ({ nodes: updater(state.nodes) })),
+    updateNodes: (updater: (nodes: Node[]) => Node[]) => set((state: BehaviorTreeState) => ({
+        nodes: updater(state.nodes)
+    })),
 
-    addNode: (node: BehaviorTreeNode) => set((state: BehaviorTreeState) => ({ nodes: [...state.nodes, node] })),
+    addNode: (node: Node) => set((state: BehaviorTreeState) => ({
+        nodes: [...state.nodes, node]
+    })),
 
     removeNodes: (nodeIds: string[]) => set((state: BehaviorTreeState) => {
-        // 只删除指定的节点，不删除子节点
         const nodesToDelete = new Set<string>(nodeIds);
 
-        // 过滤掉删除的节点，并清理所有节点的 children 引用
         const remainingNodes = state.nodes
-            .filter((n: BehaviorTreeNode) => !nodesToDelete.has(n.id))
-            .map((n: BehaviorTreeNode) => ({
-                ...n,
-                children: n.children.filter((childId: string) => !nodesToDelete.has(childId))
-            }));
+            .filter((n: Node) => !nodesToDelete.has(n.id))
+            .map((n: Node) => {
+                const newChildren = Array.from(n.children).filter(childId => !nodesToDelete.has(childId));
+                if (newChildren.length !== n.children.length) {
+                    return new Node(n.id, n.template, n.data, n.position, newChildren);
+                }
+                return n;
+            });
 
         return { nodes: remainingNodes };
     }),
 
     updateNodePosition: (nodeId: string, position: { x: number; y: number }) => set((state: BehaviorTreeState) => ({
-        nodes: state.nodes.map((n: BehaviorTreeNode) =>
-            n.id === nodeId ? { ...n, position } : n
+        nodes: state.nodes.map((n: Node) =>
+            n.id === nodeId ? new Node(n.id, n.template, n.data, new Position(position.x, position.y), Array.from(n.children)) : n
         )
     })),
 
     updateNodesPosition: (updates: Map<string, { x: number; y: number }>) => set((state: BehaviorTreeState) => ({
-        nodes: state.nodes.map((node: BehaviorTreeNode) => {
+        nodes: state.nodes.map((node: Node) => {
             const newPos = updates.get(node.id);
-            return newPos ? { ...node, position: newPos } : node;
+            return newPos ? new Node(node.id, node.template, node.data, new Position(newPos.x, newPos.y), Array.from(node.children)) : node;
         })
+    })),
+
+    updateNodeData: (nodeId: string, data: Record<string, unknown>) => set((state: BehaviorTreeState) => ({
+        nodes: state.nodes.map((n: Node) =>
+            n.id === nodeId ? new Node(n.id, n.template, data, n.position, Array.from(n.children)) : n
+        )
     })),
 
     setConnections: (connections: Connection[]) => set({ connections }),
@@ -246,7 +238,6 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
 
     setIsDraggingNode: (isDragging: boolean) => set({ isDraggingNode: isDragging }),
 
-    // 画布变换 Actions
     setCanvasOffset: (offset: { x: number; y: number }) => set({ canvasOffset: offset }),
 
     setCanvasScale: (scale: number) => set({ canvasScale: scale }),
@@ -257,7 +248,6 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
 
     resetView: () => set({ canvasOffset: { x: 0, y: 0 }, canvasScale: 1 }),
 
-    // 连接 Actions
     setConnectingFrom: (nodeId: string | null) => set({ connectingFrom: nodeId }),
 
     setConnectingFromProperty: (propertyName: string | null) => set({ connectingFromProperty: propertyName }),
@@ -270,7 +260,6 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
         connectingToPos: null
     }),
 
-    // 框选 Actions
     setIsBoxSelecting: (isSelecting: boolean) => set({ isBoxSelecting: isSelecting }),
 
     setBoxSelectStart: (pos: { x: number; y: number } | null) => set({ boxSelectStart: pos }),
@@ -283,29 +272,40 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
         boxSelectEnd: null
     }),
 
-    // 拖动偏移 Actions
     setDragDelta: (delta: { dx: number; dy: number }) => set({ dragDelta: delta }),
 
-    // 强制更新
     triggerForceUpdate: () => set((state: BehaviorTreeState) => ({ forceUpdateCounter: state.forceUpdateCounter + 1 })),
 
-    // 黑板变量 Actions
-    setBlackboardVariables: (variables: Record<string, any>) => set({ blackboardVariables: variables }),
+    setBlackboard: (blackboard: Blackboard) => set({
+        blackboard,
+        blackboardVariables: blackboard.toObject()
+    }),
 
-    updateBlackboardVariable: (name: string, value: any) => set((state: BehaviorTreeState) => ({
-        blackboardVariables: {
-            ...state.blackboardVariables,
-            [name]: value
-        }
-    })),
+    updateBlackboardVariable: (name: string, value: BlackboardValue) => set((state: BehaviorTreeState) => {
+        const newBlackboard = Blackboard.fromObject(state.blackboard.toObject());
+        newBlackboard.setValue(name, value);
+        return {
+            blackboard: newBlackboard,
+            blackboardVariables: newBlackboard.toObject()
+        };
+    }),
 
-    setInitialBlackboardVariables: (variables: Record<string, any>) => set({ initialBlackboardVariables: variables }),
+    setBlackboardVariables: (variables: Record<string, BlackboardValue>) => set((state: BehaviorTreeState) => {
+        const newBlackboard = Blackboard.fromObject(variables);
+        return {
+            blackboard: newBlackboard,
+            blackboardVariables: variables
+        };
+    }),
+
+    setInitialBlackboardVariables: (variables: Record<string, BlackboardValue>) => set({
+        initialBlackboardVariables: variables
+    }),
 
     setIsExecuting: (isExecuting: boolean) => set({ isExecuting }),
 
-    // 自动排序子节点（按X坐标从左到右）
     sortChildrenByPosition: () => set((state: BehaviorTreeState) => {
-        const nodeMap = new Map<string, BehaviorTreeNode>();
+        const nodeMap = new Map<string, Node>();
         state.nodes.forEach((node) => nodeMap.set(node.id, node));
 
         const sortedNodes = state.nodes.map((node) => {
@@ -313,20 +313,20 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
                 return node;
             }
 
-            const sortedChildren = [...node.children].sort((a, b) => {
+            const sortedChildren = Array.from(node.children).sort((a, b) => {
                 const nodeA = nodeMap.get(a);
                 const nodeB = nodeMap.get(b);
                 if (!nodeA || !nodeB) return 0;
                 return nodeA.position.x - nodeB.position.x;
             });
 
-            return { ...node, children: sortedChildren };
+            return new Node(node.id, node.template, node.data, node.position, sortedChildren);
         });
 
         return { nodes: sortedNodes };
     }),
 
-    exportToJSON: (metadata: { name: string; description: string }, blackboard: Record<string, any>) => {
+    exportToJSON: (metadata: { name: string; description: string }) => {
         const state = get();
         const now = new Date().toISOString();
         const data = {
@@ -337,9 +337,9 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
                 createdAt: now,
                 modifiedAt: now
             },
-            nodes: state.nodes,
-            connections: state.connections,
-            blackboard: blackboard,
+            nodes: state.nodes.map(n => n.toObject()),
+            connections: state.connections.map(c => c.toObject()),
+            blackboard: state.blackboard.toObject(),
             canvasState: {
                 offset: state.canvasOffset,
                 scale: state.canvasScale
@@ -350,54 +350,57 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
 
     importFromJSON: (json: string) => {
         const data = JSON.parse(json);
-        const blackboard = data.blackboard || {};
+        const blackboardData = data.blackboard || {};
 
-        // 重新关联最新模板：根据 className 从模板库查找
-        const loadedNodes: BehaviorTreeNode[] = (data.nodes || []).map((node: any) => {
-            // 如果是根节点，使用根节点模板
-            if (node.id === ROOT_NODE_ID) {
-                return {
-                    ...node,
-                    template: createRootNodeTemplate()
-                };
+        const loadedNodes: Node[] = (data.nodes || []).map((nodeObj: any) => {
+            if (nodeObj.id === ROOT_NODE_ID) {
+                return createInitialRootNode();
             }
 
-            // 查找最新模板
-            const className = node.template?.className;
+            const className = nodeObj.template?.className;
+            let template = nodeObj.template;
+
             if (className) {
                 const allTemplates = NodeTemplates.getAllTemplates();
                 const latestTemplate = allTemplates.find((t) => t.className === className);
-
                 if (latestTemplate) {
-                    return {
-                        ...node,
-                        template: latestTemplate  // 使用最新模板
-                    };
+                    template = latestTemplate;
                 }
             }
 
-            // 如果找不到，保留旧模板（兼容性）
-            return node;
+            const position = new Position(nodeObj.position.x, nodeObj.position.y);
+            return new Node(nodeObj.id, template, nodeObj.data, position, nodeObj.children || []);
         });
+
+        const loadedConnections: Connection[] = (data.connections || []).map((connObj: any) => {
+            return new Connection(
+                connObj.from,
+                connObj.to,
+                connObj.connectionType || 'node',
+                connObj.fromProperty,
+                connObj.toProperty
+            );
+        });
+
+        const loadedBlackboard = Blackboard.fromObject(blackboardData);
 
         set({
             nodes: loadedNodes,
-            connections: data.connections || [],
-            blackboardVariables: blackboard,
+            connections: loadedConnections,
+            blackboard: loadedBlackboard,
+            blackboardVariables: blackboardData,
+            initialBlackboardVariables: blackboardData,
             canvasOffset: data.canvasState?.offset || { x: 0, y: 0 },
             canvasScale: data.canvasState?.scale || 1
         });
-        return { blackboard };
     },
 
     exportToRuntimeAsset: (
         metadata: { name: string; description: string },
-        blackboard: Record<string, any>,
         format: 'json' | 'binary'
     ) => {
         const state = get();
 
-        // 构建编辑器格式数据
         const editorFormat = {
             version: '1.0.0',
             metadata: {
@@ -406,15 +409,13 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
                 createdAt: new Date().toISOString(),
                 modifiedAt: new Date().toISOString()
             },
-            nodes: state.nodes,
-            connections: state.connections,
-            blackboard: blackboard
+            nodes: state.nodes.map(n => n.toObject()),
+            connections: state.connections.map(c => c.toObject()),
+            blackboard: state.blackboard.toObject()
         };
 
-        // 转换为资产格式
         const asset = EditorFormatConverter.toAsset(editorFormat, metadata);
 
-        // 序列化为指定格式
         return BehaviorTreeAssetSerializer.serialize(asset, {
             format,
             pretty: format === 'json',
@@ -425,12 +426,13 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     reset: () => set({
         nodes: [createInitialRootNode()],
         connections: [],
+        blackboard: new Blackboard(),
+        blackboardVariables: {},
+        initialBlackboardVariables: {},
         selectedNodeIds: [],
         draggingNodeId: null,
         dragStartPositions: new Map(),
         isDraggingNode: false,
-        blackboardVariables: {},
-        initialBlackboardVariables: {},
         isExecuting: false,
         canvasOffset: { x: 0, y: 0 },
         canvasScale: 1,
@@ -447,5 +449,6 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     })
 }));
 
-export type { BehaviorTreeNode, Connection };
 export { ROOT_NODE_ID };
+export type { Node as BehaviorTreeNode };
+export type { Connection };
