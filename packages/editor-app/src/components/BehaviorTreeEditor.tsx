@@ -1,13 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { NodeTemplate, PropertyDefinition, NodeType, NodeTemplates } from '@esengine/behavior-tree';
+import { NodeTemplate, PropertyDefinition, NodeType } from '@esengine/behavior-tree';
 import {
-    TreePine, Play, Pause, Square, SkipForward, RotateCcw, Trash2,
+    TreePine, RotateCcw,
     List, GitBranch, Layers, Shuffle,
     Repeat, CheckCircle, XCircle, CheckCheck, HelpCircle, Snowflake, Timer,
     Clock, FileText, Edit, Calculator, Code,
     Equal, Dices, Settings,
-    Database, AlertTriangle, AlertCircle, Search, X,
-    Undo, Redo,
+    Database, AlertTriangle, AlertCircle,
     LucideIcon
 } from 'lucide-react';
 import { ask } from '@tauri-apps/plugin-dialog';
@@ -28,6 +27,7 @@ import { useNodeOperations } from '../presentation/hooks/useNodeOperations';
 import { useConnectionOperations } from '../presentation/hooks/useConnectionOperations';
 import { useCommandHistory } from '../presentation/hooks/useCommandHistory';
 import { useContextMenu } from '../application/hooks/useContextMenu';
+import { useQuickCreateMenu } from '../application/hooks/useQuickCreateMenu';
 import { EditorToolbar } from '../presentation/components/toolbar/EditorToolbar';
 import { QuickCreateMenu } from '../presentation/components/menu/QuickCreateMenu';
 import { NodeContextMenu } from '../presentation/components/menu/NodeContextMenu';
@@ -219,23 +219,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const canvasRef = useRef<HTMLDivElement>(null);
 
-    // 快速创建菜单状态
-    const [quickCreateMenu, setQuickCreateMenu] = useState<{
-        visible: boolean;
-        position: { x: number; y: number };
-        searchText: string;
-        selectedIndex: number;
-        mode: 'create' | 'replace';
-        replaceNodeId: string | null;
-    }>({
-        visible: false,
-        position: { x: 0, y: 0 },
-        searchText: '',
-        selectedIndex: 0,
-        mode: 'create',
-        replaceNodeId: null
-    });
-    const selectedNodeRef = useRef<HTMLDivElement>(null);
+    //  创建一个停止执行的 ref，稍后会被赋值
+    const stopExecutionRef = useRef<(() => void) | null>(null);
 
     // 运行状态
     const [executionMode, setExecutionMode] = useState<ExecutionMode>('idle');
@@ -255,18 +240,31 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     const [uncommittedNodeIds, setUncommittedNodeIds] = useState<Set<string>>(new Set());
     const activeNodeIdsRef = useRef<Set<string>>(new Set());
 
-    // 自动滚动到选中的节点
-    useEffect(() => {
-        if (quickCreateMenu.visible && selectedNodeRef.current) {
-            selectedNodeRef.current.scrollIntoView({
-                block: 'nearest',
-                behavior: 'smooth'
-            });
-        }
-    }, [quickCreateMenu.selectedIndex, quickCreateMenu.visible]);
-
     // 选中的连线
     const [selectedConnection, setSelectedConnection] = useState<{from: string; to: string} | null>(null);
+
+    // 快速创建菜单
+    const {
+        quickCreateMenu,
+        setQuickCreateMenu,
+        handleQuickCreateNode
+    } = useQuickCreateMenu({
+        nodeOperations,
+        connectionOperations,
+        canvasRef,
+        canvasOffset,
+        canvasScale,
+        connectingFrom,
+        connectingFromProperty,
+        clearConnecting,
+        nodes,
+        setNodes,
+        connections,
+        executionMode,
+        onStop: () => stopExecutionRef.current?.(),
+        onNodeCreate,
+        showToast
+    });
 
     // 缓存DOM元素引用和上一次的状态
     const domCacheRef = useRef<{
@@ -475,75 +473,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             setSelectedNodeIds([node.id]);
         }
         onNodeSelect?.(node);
-    };
-
-
-    const handleReplaceNode = (newTemplate: NodeTemplate) => {
-        const nodeToReplace = nodes.find((n) => n.id === quickCreateMenu.replaceNodeId);
-        if (!nodeToReplace) return;
-
-        // 如果行为树正在执行，先停止
-        if (executionMode !== 'idle') {
-            handleStop();
-        }
-
-        // 合并数据：新模板的默认配置 + 保留旧节点中同名属性的值
-        const newData = { ...newTemplate.defaultConfig };
-
-        // 获取新模板的属性名列表
-        const newPropertyNames = new Set(newTemplate.properties.map((p) => p.name));
-
-        // 遍历旧节点的 data，保留新模板中也存在的属性
-        for (const [key, value] of Object.entries(nodeToReplace.data)) {
-            // 跳过节点类型相关的字段
-            if (key === 'nodeType' || key === 'compositeType' || key === 'decoratorType' ||
-                key === 'actionType' || key === 'conditionType') {
-                continue;
-            }
-
-            // 如果新模板也有这个属性，保留旧值（包括绑定信息）
-            if (newPropertyNames.has(key)) {
-                newData[key] = value;
-            }
-        }
-
-        // 创建新节点，保留原节点的位置和连接
-        const newNode = new Node(
-            nodeToReplace.id,
-            newTemplate,
-            newData,
-            nodeToReplace.position,
-            Array.from(nodeToReplace.children)
-        );
-
-        // 替换节点
-        setNodes(nodes.map((n) => n.id === newNode.id ? newNode : n));
-
-        // 删除所有指向该节点的属性连接，让用户重新连接
-        const propertyConnections = connections.filter((conn) =>
-            conn.connectionType === 'property' && conn.to === newNode.id
-        );
-        propertyConnections.forEach((conn) => {
-            connectionOperations.removeConnection(
-                conn.from,
-                conn.to,
-                conn.fromProperty,
-                conn.toProperty
-            );
-        });
-
-        // 关闭快速创建菜单
-        setQuickCreateMenu({
-            visible: false,
-            position: { x: 0, y: 0 },
-            searchText: '',
-            selectedIndex: 0,
-            mode: 'create',
-            replaceNodeId: null
-        });
-
-        // 显示提示
-        showToast?.(`已将节点替换为 ${newTemplate.displayName}`, 'success');
     };
 
     const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
@@ -912,62 +841,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         clearBoxSelect();
     };
 
-    const handleQuickCreateNode = (template: NodeTemplate) => {
-        // 如果是替换模式，直接调用替换函数
-        if (quickCreateMenu.mode === 'replace') {
-            handleReplaceNode(template);
-            return;
-        }
-
-        // 创建模式：需要连接
-        if (!connectingFrom) {
-            return;
-        }
-
-        const rect = canvasRef.current?.getBoundingClientRect();
-        if (!rect) {
-            return;
-        }
-
-        const posX = (quickCreateMenu.position.x - rect.left - canvasOffset.x) / canvasScale;
-        const posY = (quickCreateMenu.position.y - rect.top - canvasOffset.y) / canvasScale;
-
-        const newNode = nodeOperations.createNode(
-            template,
-            new Position(posX, posY),
-            template.defaultConfig
-        );
-
-        const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === connectingFrom);
-        if (fromNode) {
-            if (connectingFromProperty) {
-                // 属性连接
-                connectionOperations.addConnection(
-                    connectingFrom,
-                    newNode.id,
-                    'property',
-                    connectingFromProperty,
-                    undefined
-                );
-            } else {
-                // 节点连接
-                connectionOperations.addConnection(connectingFrom, newNode.id, 'node');
-            }
-        }
-
-        setQuickCreateMenu({
-            visible: false,
-            position: { x: 0, y: 0 },
-            searchText: '',
-            selectedIndex: 0,
-            mode: 'create',
-            replaceNodeId: null
-        });
-        clearConnecting();
-
-        onNodeCreate?.(template, { x: posX, y: posY });
-    };
-
     // 画布框选
     const handleCanvasMouseDown = (e: React.MouseEvent) => {
         if (e.button === 0 && !e.altKey) {
@@ -1324,6 +1197,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             setIsExecuting(false);
         }
     };
+
+    // 设置停止执行的 ref，供 useQuickCreateMenu Hook 使用
+    stopExecutionRef.current = handleStop;
 
     const handleStep = async () => {
         setExecutionMode('step');
