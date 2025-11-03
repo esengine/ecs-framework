@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { NodeTemplate, PropertyDefinition, NodeType, NodeTemplates } from '@esengine/behavior-tree';
 import {
     TreePine, Play, Pause, Square, SkipForward, RotateCcw, Trash2,
@@ -7,6 +7,7 @@ import {
     Clock, FileText, Edit, Calculator, Code,
     Equal, Dices, Settings,
     Database, AlertTriangle, AlertCircle, Search, X,
+    Undo, Redo,
     LucideIcon
 } from 'lucide-react';
 import { ask } from '@tauri-apps/plugin-dialog';
@@ -16,12 +17,16 @@ import { BehaviorTreeExecutor, ExecutionStatus, ExecutionLog } from '../utils/Be
 import { BehaviorTreeExecutionPanel } from './BehaviorTreeExecutionPanel';
 import { useToast } from './Toast';
 import { Node } from '../domain/models/Node';
-import { Connection as ConnectionModel } from '../domain/models/Connection';
 import { Position } from '../domain/value-objects/Position';
 import { BlackboardValue } from '../domain/models/Blackboard';
 import { BehaviorTreeCanvas } from '../presentation/components/behavior-tree/canvas/BehaviorTreeCanvas';
 import { ConnectionLayer } from '../presentation/components/behavior-tree/connections/ConnectionLayer';
 import { EditorConfig } from '../presentation/types';
+import { NodeFactory } from '../infrastructure/factories/NodeFactory';
+import { BehaviorTreeValidator } from '../infrastructure/validation/BehaviorTreeValidator';
+import { useNodeOperations } from '../presentation/hooks/useNodeOperations';
+import { useConnectionOperations } from '../presentation/hooks/useConnectionOperations';
+import { useCommandHistory } from '../presentation/hooks/useCommandHistory';
 import '../styles/BehaviorTreeNode.css';
 
 type NodeExecutionStatus = 'idle' | 'running' | 'success' | 'failure';
@@ -69,16 +74,6 @@ const iconMap: Record<string, LucideIcon> = {
     Database,
     TreePine
 };
-
-/**
- * 生成短位唯一ID
- * 使用时间戳和随机数组合，确保唯一性
- */
-function generateUniqueId(): string {
-    const timestamp = Date.now().toString(36);
-    const randomPart = Math.random().toString(36).substring(2, 8);
-    return `${timestamp}${randomPart}`;
-}
 
 /**
  * 行为树编辑器主组件
@@ -129,9 +124,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         boxSelectEnd,
         setNodes,
         setConnections,
-        updateNodesPosition,
-        removeNodes,
-        removeConnections,
         setConnectingFrom,
         setConnectingFromProperty,
         setConnectingToPos,
@@ -157,7 +149,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         isDraggingNode,
         canvasOffset,
         canvasScale,
-        isPanning,
         dragDelta,
         setSelectedNodeIds,
         startDragging,
@@ -166,6 +157,17 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         resetView,
         setDragDelta
     } = useUIStore();
+
+    // 依赖注入 - 基础设施
+    const nodeFactory = useMemo(() => new NodeFactory(), []);
+    const validator = useMemo(() => new BehaviorTreeValidator(), []);
+
+    // 命令历史管理（创建 CommandManager）
+    const { commandManager, canUndo, canRedo, undo, redo } = useCommandHistory();
+
+    // 应用层 hooks（使用统一的 commandManager）
+    const nodeOperations = useNodeOperations(nodeFactory, validator, commandManager);
+    const connectionOperations = useConnectionOperations(validator, commandManager);
 
     // 右键菜单状态
     const [contextMenu, setContextMenu] = useState<{
@@ -302,18 +304,17 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 // 优先删除选中的连线
                 if (selectedConnection) {
                     // 删除连接
-                    removeConnections((conn: Connection) =>
-                        !(conn.from === selectedConnection.from && conn.to === selectedConnection.to)
+                    const conn = connections.find(
+                        (c: Connection) => c.from === selectedConnection.from && c.to === selectedConnection.to
                     );
-
-                    // 同步更新父节点的children数组，移除被删除的子节点引用
-                    setNodes(nodes.map((node: BehaviorTreeNode) => {
-                        if (node.id === selectedConnection.from) {
-                            const newChildren = Array.from(node.children).filter((childId: string) => childId !== selectedConnection.to);
-                            return new Node(node.id, node.template, node.data, node.position, newChildren);
-                        }
-                        return node;
-                    }));
+                    if (conn) {
+                        connectionOperations.removeConnection(
+                            conn.from,
+                            conn.to,
+                            conn.fromProperty,
+                            conn.toProperty
+                        );
+                    }
 
                     setSelectedConnection(null);
                     return;
@@ -324,12 +325,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     // 不能删除 Root 节点
                     const nodesToDelete = selectedNodeIds.filter((id: string) => id !== ROOT_NODE_ID);
                     if (nodesToDelete.length > 0) {
-                        // 删除节点
-                        removeNodes(nodesToDelete);
-                        // 删除相关连接
-                        removeConnections((conn: Connection) =>
-                            !nodesToDelete.includes(conn.from) && !nodesToDelete.includes(conn.to)
-                        );
+                        // 删除节点（会自动删除相关连接）
+                        nodeOperations.deleteNodes(nodesToDelete);
                         // 清空选择
                         setSelectedNodeIds([]);
                     }
@@ -339,7 +336,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedNodeIds, selectedConnection, removeNodes, removeConnections, setSelectedNodeIds]);
+    }, [selectedNodeIds, selectedConnection, nodeOperations, connectionOperations, connections, setSelectedNodeIds]);
 
     // 监听节点变化，跟踪运行时添加的节点
     useEffect(() => {
@@ -409,18 +406,14 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     ]
                 };
 
-                const newNode = new Node(
-                    `var_${variableData.variableName}_${generateUniqueId()}`,
+                nodeOperations.createNode(
                     variableTemplate,
+                    new Position(position.x, position.y),
                     {
                         nodeType: 'blackboard-variable',
                         variableName: variableData.variableName
-                    },
-                    new Position(position.x, position.y),
-                    []
+                    }
                 );
-
-                setNodes([...nodes, newNode]);
                 return;
             }
 
@@ -435,15 +428,12 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
             const template = JSON.parse(templateData) as NodeTemplate;
 
-            const newNode = new Node(
-                `node_${generateUniqueId()}`,
+            nodeOperations.createNode(
                 template,
-                { ...template.defaultConfig },
                 new Position(position.x, position.y),
-                []
+                template.defaultConfig
             );
 
-            setNodes([...nodes, newNode]);
             onNodeCreate?.(template, position);
         } catch (error) {
             console.error('Failed to create node:', error);
@@ -549,10 +539,17 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         setNodes(nodes.map((n) => n.id === newNode.id ? newNode : n));
 
         // 删除所有指向该节点的属性连接，让用户重新连接
-        const updatedConnections = connections.filter((conn) =>
-            !(conn.connectionType === 'property' && conn.to === newNode.id)
+        const propertyConnections = connections.filter((conn) =>
+            conn.connectionType === 'property' && conn.to === newNode.id
         );
-        setConnections(updatedConnections);
+        propertyConnections.forEach((conn) => {
+            connectionOperations.removeConnection(
+                conn.from,
+                conn.to,
+                conn.fromProperty,
+                conn.toProperty
+            );
+        });
 
         // 关闭快速创建菜单
         setQuickCreateMenu({
@@ -659,14 +656,17 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
         // 将临时位置同步到 zustand store
         if (dragDelta.dx !== 0 || dragDelta.dy !== 0) {
-            const updates = new Map<string, { x: number; y: number }>();
+            const moves: Array<{ nodeId: string; position: Position }> = [];
             dragStartPositions.forEach((startPos: { x: number; y: number }, nodeId: string) => {
-                updates.set(nodeId, {
-                    x: startPos.x + dragDelta.dx,
-                    y: startPos.y + dragDelta.dy
+                moves.push({
+                    nodeId,
+                    position: new Position(
+                        startPos.x + dragDelta.dx,
+                        startPos.y + dragDelta.dy
+                    )
                 });
             });
-            updateNodesPosition(updates);
+            nodeOperations.moveNodes(moves);
 
             // 拖动结束后，自动排序子节点
             setTimeout(() => {
@@ -803,16 +803,13 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 }
             }
 
-            setConnections([
-                ...connections,
-                new ConnectionModel(
-                    actualFrom,
-                    actualTo,
-                    'property',
-                    actualFromProperty || undefined,
-                    actualToProperty || undefined
-                )
-            ]);
+            connectionOperations.addConnection(
+                actualFrom,
+                actualTo,
+                'property',
+                actualFromProperty || undefined,
+                actualToProperty || undefined
+            );
         } else {
             // 节点级别的连接
             // Root 节点只能有一个子节点
@@ -838,17 +835,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 return;
             }
 
-            setConnections([
-                ...connections,
-                new ConnectionModel(actualFrom, actualTo, 'node')
-            ]);
-
-            // 更新节点的 children
-            setNodes(nodes.map((node: BehaviorTreeNode) =>
-                node.id === actualFrom
-                    ? new Node(node.id, node.template, node.data, node.position, [...node.children, actualTo])
-                    : node
-            ));
+            connectionOperations.addConnection(actualFrom, actualTo, 'node');
 
             // 创建连接后，自动排序子节点
             setTimeout(() => {
@@ -964,48 +951,27 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         const posX = (quickCreateMenu.position.x - rect.left - canvasOffset.x) / canvasScale;
         const posY = (quickCreateMenu.position.y - rect.top - canvasOffset.y) / canvasScale;
 
-        const newNode = new Node(
-            `node_${generateUniqueId()}`,
+        const newNode = nodeOperations.createNode(
             template,
-            { ...template.defaultConfig },
             new Position(posX, posY),
-            []
+            template.defaultConfig
         );
 
         const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === connectingFrom);
         if (fromNode) {
             if (connectingFromProperty) {
                 // 属性连接
-                setConnections([
-                    ...connections,
-                    new ConnectionModel(
-                        connectingFrom,
-                        newNode.id,
-                        'property',
-                        connectingFromProperty,
-                        undefined
-                    )
-                ]);
-                setNodes([...nodes, newNode]);
+                connectionOperations.addConnection(
+                    connectingFrom,
+                    newNode.id,
+                    'property',
+                    connectingFromProperty,
+                    undefined
+                );
             } else {
-                // 节点连接：需要同时更新 connections 和父节点的 children
-                setConnections([
-                    ...connections,
-                    new ConnectionModel(connectingFrom, newNode.id, 'node')
-                ]);
-
-                // 更新父节点的 children 数组
-                setNodes([
-                    ...nodes.map((node: BehaviorTreeNode) =>
-                        node.id === connectingFrom
-                            ? new Node(node.id, node.template, node.data, node.position, [...node.children, newNode.id])
-                            : node
-                    ),
-                    newNode
-                ]);
+                // 节点连接
+                connectionOperations.addConnection(connectingFrom, newNode.id, 'node');
             }
-        } else {
-            setNodes([...nodes, newNode]);
         }
 
         setQuickCreateMenu({
@@ -2055,6 +2021,52 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     >
                         <Trash2 size={14} />
                     清空
+                    </button>
+
+                    {/* 撤销/重做按钮 */}
+                    <div style={{
+                        width: '1px',
+                        height: '24px',
+                        backgroundColor: '#555',
+                        margin: '0 4px'
+                    }} />
+                    <button
+                        onClick={undo}
+                        disabled={!canUndo}
+                        style={{
+                            padding: '8px',
+                            backgroundColor: canUndo ? '#3c3c3c' : '#2d2d2d',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: canUndo ? '#cccccc' : '#666',
+                            cursor: canUndo ? 'pointer' : 'not-allowed',
+                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                        title="撤销 (Ctrl+Z)"
+                    >
+                        <Undo size={16} />
+                    </button>
+                    <button
+                        onClick={redo}
+                        disabled={!canRedo}
+                        style={{
+                            padding: '8px',
+                            backgroundColor: canRedo ? '#3c3c3c' : '#2d2d2d',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: canRedo ? '#cccccc' : '#666',
+                            cursor: canRedo ? 'pointer' : 'not-allowed',
+                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                        title="重做 (Ctrl+Shift+Z / Ctrl+Y)"
+                    >
+                        <Redo size={16} />
                     </button>
 
                     {/* 状态指示器 */}
