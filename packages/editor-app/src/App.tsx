@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Core, Scene } from '@esengine/ecs-framework';
+import { Core, Scene, createLogger } from '@esengine/ecs-framework';
 import * as ECSFramework from '@esengine/ecs-framework';
 import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, PropertyMetadataService, LogService, SettingsRegistry, SceneManagerService, FileActionRegistry, PanelDescriptor } from '@esengine/editor-core';
 import { GlobalBlackboardService } from '@esengine/behavior-tree';
@@ -40,8 +40,9 @@ localeService.registerTranslations('en', en);
 localeService.registerTranslations('zh', zh);
 Core.services.registerInstance(LocaleService, localeService);
 
-// 注册全局黑板服务
 Core.services.registerSingleton(GlobalBlackboardService);
+
+const logger = createLogger('App');
 
 function App() {
     const initRef = useRef(false);
@@ -77,8 +78,11 @@ function App() {
         confirmText: string;
         cancelText: string;
         onConfirm: () => void;
-    } | null>(null);
+            } | null>(null);
     const [activeDynamicPanels, setActiveDynamicPanels] = useState<string[]>([]);
+    const [activePanelId, setActivePanelId] = useState<string | undefined>(undefined);
+    const [dynamicPanelTitles, setDynamicPanelTitles] = useState<Map<string, string>>(new Map());
+    const [isEditorFullscreen, setIsEditorFullscreen] = useState(false);
 
     useEffect(() => {
         // 禁用默认右键菜单
@@ -234,14 +238,34 @@ function App() {
         if (!messageHub) return;
 
         const unsubscribe = messageHub.subscribe('dynamic-panel:open', (data: any) => {
-            const { panelId } = data;
-            console.log('[App] Opening dynamic panel:', panelId);
-            setActiveDynamicPanels(prev => {
-                if (prev.includes(panelId)) {
-                    return prev;
-                }
-                return [...prev, panelId];
+            const { panelId, title } = data;
+            logger.info('Opening dynamic panel:', panelId, 'with title:', title);
+            setActiveDynamicPanels((prev) => {
+                const newPanels = prev.includes(panelId) ? prev : [...prev, panelId];
+                return newPanels;
             });
+            setActivePanelId(panelId);
+
+            // 更新动态面板标题
+            if (title) {
+                setDynamicPanelTitles((prev) => {
+                    const newTitles = new Map(prev);
+                    newTitles.set(panelId, title);
+                    return newTitles;
+                });
+            }
+        });
+
+        return () => unsubscribe?.();
+    }, [messageHub]);
+
+    useEffect(() => {
+        if (!messageHub) return;
+
+        const unsubscribe = messageHub.subscribe('editor:fullscreen', (data: any) => {
+            const { fullscreen } = data;
+            logger.info('Editor fullscreen state changed:', fullscreen);
+            setIsEditorFullscreen(fullscreen);
         });
 
         return () => unsubscribe?.();
@@ -632,16 +656,19 @@ function App() {
 
             // 添加激活的动态面板
             const dynamicPanels: FlexDockPanel[] = activeDynamicPanels
-                .filter(panelId => {
+                .filter((panelId) => {
                     const panelDesc = uiRegistry.getPanel(panelId);
                     return panelDesc && panelDesc.component;
                 })
-                .map(panelId => {
+                .map((panelId) => {
                     const panelDesc = uiRegistry.getPanel(panelId)!;
                     const Component = panelDesc.component;
+                    // 优先使用动态标题，否则使用默认标题
+                    const customTitle = dynamicPanelTitles.get(panelId);
+                    const defaultTitle = (panelDesc as any).titleZh && locale === 'zh' ? (panelDesc as any).titleZh : panelDesc.title;
                     return {
                         id: panelDesc.id,
-                        title: (panelDesc as any).titleZh && locale === 'zh' ? (panelDesc as any).titleZh : panelDesc.title,
+                        title: customTitle || defaultTitle,
                         content: <Component projectPath={currentProjectPath} />,
                         closable: panelDesc.closable ?? true
                     };
@@ -651,7 +678,7 @@ function App() {
             console.log('[App] Loading dynamic panels:', dynamicPanels);
             setPanels([...corePanels, ...pluginPanels, ...dynamicPanels]);
         }
-    }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode, handleOpenSceneByPath, activeDynamicPanels]);
+    }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode, handleOpenSceneByPath, activeDynamicPanels, dynamicPanelTitles]);
 
 
     if (!initialized) {
@@ -708,42 +735,44 @@ function App() {
 
     return (
         <div className="editor-container">
-            <div className={`editor-header ${isRemoteConnected ? 'remote-connected' : ''}`}>
-                <MenuBar
-                    locale={locale}
-                    uiRegistry={uiRegistry || undefined}
-                    messageHub={messageHub || undefined}
-                    pluginManager={pluginManager || undefined}
-                    onNewScene={handleNewScene}
-                    onOpenScene={handleOpenScene}
-                    onSaveScene={handleSaveScene}
-                    onSaveSceneAs={handleSaveSceneAs}
-                    onOpenProject={handleOpenProject}
-                    onCloseProject={handleCloseProject}
-                    onExit={handleExit}
-                    onOpenPluginManager={() => setShowPluginManager(true)}
-                    onOpenProfiler={() => setShowProfiler(true)}
-                    onOpenPortManager={() => setShowPortManager(true)}
-                    onOpenSettings={() => setShowSettings(true)}
-                    onToggleDevtools={handleToggleDevtools}
-                    onOpenAbout={handleOpenAbout}
-                    onCreatePlugin={handleCreatePlugin}
-                />
-                <div className="header-right">
-                    <button onClick={handleLocaleChange} className="toolbar-btn locale-btn" title={locale === 'en' ? '切换到中文' : 'Switch to English'}>
-                        <Globe size={14} />
-                    </button>
-                    <span className="status">{status}</span>
+            {!isEditorFullscreen && (
+                <div className={`editor-header ${isRemoteConnected ? 'remote-connected' : ''}`}>
+                    <MenuBar
+                        locale={locale}
+                        uiRegistry={uiRegistry || undefined}
+                        messageHub={messageHub || undefined}
+                        pluginManager={pluginManager || undefined}
+                        onNewScene={handleNewScene}
+                        onOpenScene={handleOpenScene}
+                        onSaveScene={handleSaveScene}
+                        onSaveSceneAs={handleSaveSceneAs}
+                        onOpenProject={handleOpenProject}
+                        onCloseProject={handleCloseProject}
+                        onExit={handleExit}
+                        onOpenPluginManager={() => setShowPluginManager(true)}
+                        onOpenProfiler={() => setShowProfiler(true)}
+                        onOpenPortManager={() => setShowPortManager(true)}
+                        onOpenSettings={() => setShowSettings(true)}
+                        onToggleDevtools={handleToggleDevtools}
+                        onOpenAbout={handleOpenAbout}
+                        onCreatePlugin={handleCreatePlugin}
+                    />
+                    <div className="header-right">
+                        <button onClick={handleLocaleChange} className="toolbar-btn locale-btn" title={locale === 'en' ? '切换到中文' : 'Switch to English'}>
+                            <Globe size={14} />
+                        </button>
+                        <span className="status">{status}</span>
+                    </div>
                 </div>
-            </div>
+            )}
 
             <div className="editor-content">
                 <FlexLayoutDockContainer
                     panels={panels}
+                    activePanelId={activePanelId}
                     onPanelClose={(panelId) => {
-                        console.log('[App] Panel closed:', panelId);
-                        // 从激活的动态面板列表中移除
-                        setActiveDynamicPanels(prev => prev.filter(id => id !== panelId));
+                        logger.info('Panel closed:', panelId);
+                        setActiveDynamicPanels((prev) => prev.filter((id) => id !== panelId));
                     }}
                 />
             </div>

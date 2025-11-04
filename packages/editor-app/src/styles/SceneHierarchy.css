@@ -150,8 +150,33 @@
 
 .hierarchy-content {
   flex: 1;
-  overflow-y: auto;
+  overflow: auto;
   padding: var(--spacing-xs) 0;
+}
+
+.hierarchy-content::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.hierarchy-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hierarchy-content::-webkit-scrollbar-thumb {
+  background: rgba(121, 121, 121, 0.4);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+.hierarchy-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 100, 100, 0.7);
+  background-clip: padding-box;
+}
+
+.hierarchy-content::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .empty-state {

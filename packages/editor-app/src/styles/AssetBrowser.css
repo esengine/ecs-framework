@@ -2,8 +2,10 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #1e1e1e;
-  border-top: 1px solid #333;
+  background: var(--color-bg-base);
+  border-top: 1px solid var(--color-border-default);
+  container-type: inline-size;
+  container-name: asset-browser;
 }
 
 .asset-browser-header {
@@ -21,31 +23,57 @@
 
 .view-mode-buttons {
   display: flex;
-  gap: 4px;
+  gap: 0;
+  margin-left: auto;
 }
 
 .view-mode-btn {
-  padding: 4px 8px;
+  padding: 6px 12px;
   background: transparent;
   border: 1px solid #3e3e3e;
-  border-radius: 3px;
   color: #cccccc;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: normal;
+  border-radius: 0;
 }
 
-.view-mode-btn:hover {
+.view-mode-btn:first-child {
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+  border-right: none;
+}
+
+.view-mode-btn:last-child {
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+}
+
+.view-mode-btn:hover:not(.active) {
   background: #2a2d2e;
-  border-color: #007acc;
 }
 
 .view-mode-btn.active {
   background: #0e639c;
   border-color: #0e639c;
   color: #ffffff;
+  font-weight: 500;
+}
+
+/* 响应式：小宽度时只显示图标 - 使用容器查询 */
+@container asset-browser (max-width: 400px) {
+  .view-mode-text {
+    display: none;
+  }
+
+  .view-mode-btn {
+    padding: 6px 8px;
+  }
 }
 
 .asset-browser-content {
@@ -154,14 +182,14 @@
 }
 
 /* 容器查询：根据容器宽度调整布局 */
-@container (max-width: 400px) {
+@container asset-list-container (max-width: 400px) {
   .asset-list {
     grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
     gap: 6px;
   }
 }
 
-@container (max-width: 250px) {
+@container asset-list-container (max-width: 250px) {
   .asset-list {
     grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
     gap: 4px;
@@ -169,7 +197,7 @@
   }
 }
 
-@container (max-width: 150px) {
+@container asset-list-container (max-width: 150px) {
   .asset-list {
     grid-template-columns: 1fr;
     gap: 2px;
@@ -199,7 +227,7 @@
 }
 
 /* 中等窄度优化 */
-@container (max-width: 250px) {
+@container asset-list-container (max-width: 250px) {
   .asset-item {
     padding: 8px 6px;
   }
@@ -251,6 +279,21 @@
 
 .asset-icon.folder {
   color: #dcb67a;
+}
+
+/* 系统文件夹特殊标记 */
+.asset-icon.system-folder {
+  filter: drop-shadow(0 0 3px rgba(66, 165, 245, 0.5));
+  animation: subtle-pulse 3s ease-in-out infinite;
+}
+
+@keyframes subtle-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px rgba(66, 165, 245, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 6px rgba(66, 165, 245, 0.7));
+  }
 }
 
 .asset-info {

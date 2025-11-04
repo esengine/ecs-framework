@@ -1,12 +1,22 @@
 import type { Core, ServiceContainer } from '@esengine/ecs-framework';
 import { IEditorPlugin, EditorPluginCategory, PanelPosition, MessageHub } from '@esengine/editor-core';
-import type { MenuItem, ToolbarItem, PanelDescriptor, ISerializer, FileActionHandler, FileCreationTemplate, FileContextMenuItem } from '@esengine/editor-core';
+import type {
+    MenuItem,
+    ToolbarItem,
+    PanelDescriptor,
+    ISerializer,
+    FileActionHandler,
+    FileCreationTemplate,
+    FileContextMenuItem
+} from '@esengine/editor-core';
 import { BehaviorTreeData } from '@esengine/behavior-tree';
 import { BehaviorTreeEditorPanel } from '../presentation/components/behavior-tree/panels';
 import { FileText } from 'lucide-react';
 import { TauriAPI } from '../api/tauri';
 import { createElement } from 'react';
 import { useBehaviorTreeStore } from '../stores/behaviorTreeStore';
+import { createRootNode } from '../domain/constants/RootNode';
+import { behaviorTreeFileService } from '../services/BehaviorTreeFileService';
 
 /**
  * 行为树编辑器插件
@@ -113,30 +123,43 @@ export class BehaviorTreePlugin implements IEditorPlugin {
                     console.log('[BehaviorTreePlugin] onDoubleClick called for:', filePath);
 
                     if (this.messageHub) {
-                        useBehaviorTreeStore.getState().setIsOpen(true);
+                        const store = useBehaviorTreeStore.getState();
+                        store.setIsOpen(true);
+                        store.setPendingFilePath(filePath); // 状态通道（同步，时序安全）
+
+                        // 提取文件名
+                        const fileName = filePath.split(/[\\/]/).pop()?.replace('.btree', '') || '行为树';
 
                         await this.messageHub.publish('dynamic-panel:open', {
-                            panelId: 'behavior-tree-editor'
+                            panelId: 'behavior-tree-editor',
+                            title: fileName
                         });
 
-                        await this.messageHub.publish('behavior-tree:open-file', {
-                            filePath: filePath
+                        // 消息通道（异步，用于其他监听者）
+                        await this.messageHub.publish('behavior-tree:load-file', {
+                            filePath
                         });
-                        console.log('[BehaviorTreePlugin] Panel opened and file loaded');
                     } else {
                         console.error('[BehaviorTreePlugin] MessageHub is not available!');
                     }
                 },
                 onOpen: async (filePath: string) => {
                     if (this.messageHub) {
-                        useBehaviorTreeStore.getState().setIsOpen(true);
+                        const store = useBehaviorTreeStore.getState();
+                        store.setIsOpen(true);
+                        store.setPendingFilePath(filePath); // 状态通道（同步，时序安全）
+
+                        // 提取文件名
+                        const fileName = filePath.split(/[\\/]/).pop()?.replace('.btree', '') || '行为树';
 
                         await this.messageHub.publish('dynamic-panel:open', {
-                            panelId: 'behavior-tree-editor'
+                            panelId: 'behavior-tree-editor',
+                            title: fileName
                         });
 
-                        await this.messageHub.publish('behavior-tree:open-file', {
-                            filePath: filePath
+                        // 消息通道（异步，用于其他监听者）
+                        await this.messageHub.publish('behavior-tree:load-file', {
+                            filePath
                         });
                     }
                 },
@@ -147,14 +170,21 @@ export class BehaviorTreePlugin implements IEditorPlugin {
                             icon: createElement(FileText, { size: 16 }),
                             onClick: async (filePath: string) => {
                                 if (this.messageHub) {
-                                    useBehaviorTreeStore.getState().setIsOpen(true);
+                                    const store = useBehaviorTreeStore.getState();
+                                    store.setIsOpen(true);
+                                    store.setPendingFilePath(filePath); // 状态通道（同步，时序安全）
+
+                                    // 提取文件名
+                                    const fileName = filePath.split(/[\\/]/).pop()?.replace('.btree', '') || '行为树';
 
                                     await this.messageHub.publish('dynamic-panel:open', {
-                                        panelId: 'behavior-tree-editor'
+                                        panelId: 'behavior-tree-editor',
+                                        title: fileName
                                     });
 
-                                    await this.messageHub.publish('behavior-tree:open-file', {
-                                        filePath: filePath
+                                    // 消息通道（异步，用于其他监听者）
+                                    await this.messageHub.publish('behavior-tree:load-file', {
+                                        filePath
                                     });
                                 }
                             }
@@ -173,14 +203,25 @@ export class BehaviorTreePlugin implements IEditorPlugin {
                 defaultFileName: 'NewBehaviorTree',
                 icon: createElement(FileText, { size: 16 }),
                 createContent: async (fileName: string) => {
-                    const emptyTree: BehaviorTreeData = {
-                        id: `tree_${Date.now()}`,
-                        name: fileName,
-                        rootNodeId: '',
-                        nodes: new Map(),
-                        blackboardVariables: new Map()
+                    const rootNode = createRootNode();
+                    const now = new Date().toISOString();
+                    const editorFormat = {
+                        version: '1.0.0',
+                        metadata: {
+                            name: fileName,
+                            description: '',
+                            createdAt: now,
+                            modifiedAt: now
+                        },
+                        nodes: [rootNode.toObject()],
+                        connections: [],
+                        blackboard: {},
+                        canvasState: {
+                            offset: { x: 0, y: 0 },
+                            scale: 1
+                        }
                     };
-                    return this.serializeBehaviorTreeData(emptyTree);
+                    return JSON.stringify(editorFormat, null, 2);
                 }
             }
         ];
@@ -196,9 +237,9 @@ export class BehaviorTreePlugin implements IEditorPlugin {
             })),
             blackboardVariables: treeData.blackboardVariables
                 ? Array.from(treeData.blackboardVariables.entries()).map(([key, value]) => ({
-                    key,
-                    value
-                }))
+                      key,
+                      value
+                  }))
                 : []
         };
         return JSON.stringify(serializable, null, 2);

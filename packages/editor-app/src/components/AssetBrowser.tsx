@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Folder, File, FileCode, FileJson, FileImage, FileText, FolderOpen, Copy, Trash2, Edit3, LayoutGrid, List } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Folder, File, FileCode, FileJson, FileImage, FileText, FolderOpen, Copy, Trash2, Edit3, LayoutGrid, List, ChevronsUp } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
 import { MessageHub, FileActionRegistry } from '@esengine/editor-core';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
-import { FileTree } from './FileTree';
+import { FileTree, FileTreeHandle } from './FileTree';
 import { ResizablePanel } from './ResizablePanel';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import '../styles/AssetBrowser.css';
@@ -26,6 +26,8 @@ interface AssetBrowserProps {
 export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserProps) {
     const messageHub = Core.services.resolve(MessageHub);
     const fileActionRegistry = Core.services.resolve(FileActionRegistry);
+    const detailViewFileTreeRef = useRef<FileTreeHandle>(null);
+    const treeOnlyViewFileTreeRef = useRef<FileTreeHandle>(null);
     const [currentPath, setCurrentPath] = useState<string | null>(null);
     const [selectedPath, setSelectedPath] = useState<string | null>(null);
     const [assets, setAssets] = useState<AssetItem[]>([]);
@@ -369,6 +371,11 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
 
     const getFileIcon = (asset: AssetItem) => {
         if (asset.type === 'folder') {
+            // 检查是否为框架专用文件夹
+            const folderName = asset.name.toLowerCase();
+            if (folderName === 'plugins' || folderName === '.ecs') {
+                return <Folder className="asset-icon system-folder" style={{ color: '#42a5f5' }} size={20} />;
+            }
             return <Folder className="asset-icon" style={{ color: '#ffa726' }} size={20} />;
         }
 
@@ -421,56 +428,60 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                     background: '#252526',
                     alignItems: 'center'
                 }}>
-                    <div style={{ display: 'flex', gap: '4px' }}>
+                    <div className="view-mode-buttons">
                         <button
+                            className={`view-mode-btn ${showDetailView ? 'active' : ''}`}
                             onClick={() => {
                                 setShowDetailView(true);
                                 localStorage.setItem('asset-browser-detail-view', 'true');
                             }}
-                            style={{
-                                padding: '6px 12px',
-                                background: showDetailView ? '#0e639c' : 'transparent',
-                                border: '1px solid #3e3e3e',
-                                borderRadius: '3px',
-                                color: showDetailView ? '#ffffff' : '#cccccc',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                transition: 'all 0.2s',
-                                fontSize: '12px',
-                                fontWeight: showDetailView ? '500' : 'normal'
-                            }}
                             title="显示详细视图（树形图 + 资产列表）"
                         >
                             <LayoutGrid size={14} />
-                            详细视图
+                            <span className="view-mode-text">详细视图</span>
                         </button>
                         <button
+                            className={`view-mode-btn ${!showDetailView ? 'active' : ''}`}
                             onClick={() => {
                                 setShowDetailView(false);
                                 localStorage.setItem('asset-browser-detail-view', 'false');
                             }}
-                            style={{
-                                padding: '6px 12px',
-                                background: !showDetailView ? '#0e639c' : 'transparent',
-                                border: '1px solid #3e3e3e',
-                                borderRadius: '3px',
-                                color: !showDetailView ? '#ffffff' : '#cccccc',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                transition: 'all 0.2s',
-                                fontSize: '12px',
-                                fontWeight: !showDetailView ? '500' : 'normal'
-                            }}
                             title="仅显示树形图（查看完整路径）"
                         >
                             <List size={14} />
-                            树形图
+                            <span className="view-mode-text">树形图</span>
                         </button>
                     </div>
+                    <button
+                        onClick={() => {
+                            if (showDetailView) {
+                                detailViewFileTreeRef.current?.collapseAll();
+                            } else {
+                                treeOnlyViewFileTreeRef.current?.collapseAll();
+                            }
+                        }}
+                        style={{
+                            padding: '6px 8px',
+                            background: 'transparent',
+                            border: '1px solid #3e3e3e',
+                            color: '#cccccc',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '3px'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#2a2d2e';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                        }}
+                        title="收起所有文件夹"
+                    >
+                        <ChevronsUp size={14} />
+                    </button>
                     <input
                         type="text"
                         className="asset-search"
@@ -498,6 +509,7 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                         leftOrTop={
                             <div className="asset-browser-tree">
                                 <FileTree
+                                    ref={detailViewFileTreeRef}
                                     rootPath={projectPath}
                                     onSelectFile={handleFolderSelect}
                                     selectedPath={currentPath}
@@ -575,6 +587,7 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                 ) : (
                     <div className="asset-browser-tree-only">
                         <FileTree
+                            ref={treeOnlyViewFileTreeRef}
                             rootPath={projectPath}
                             onSelectFile={handleFolderSelect}
                             selectedPath={currentPath}

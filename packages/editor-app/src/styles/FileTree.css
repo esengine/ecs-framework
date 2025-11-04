@@ -97,6 +97,21 @@
   font-size: var(--font-size-md);
 }
 
+/* 系统文件夹特殊标记 */
+.tree-icon .system-folder-icon {
+  filter: drop-shadow(0 0 2px rgba(66, 165, 245, 0.5));
+  animation: subtle-pulse-tree 3s ease-in-out infinite;
+}
+
+@keyframes subtle-pulse-tree {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px rgba(66, 165, 245, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 4px rgba(66, 165, 245, 0.7));
+  }
+}
+
 .tree-label {
   flex: 1;
   overflow: hidden;

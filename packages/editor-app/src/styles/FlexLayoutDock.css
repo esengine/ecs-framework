@@ -111,12 +111,22 @@
 
 .flexlayout__tab_button_trailing {
   margin-left: 8px;
-  opacity: 0;
+  opacity: 0.6;
   transition: opacity 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 3px;
 }
 
+.flexlayout__tab_button:hover .flexlayout__tab_button_trailing,
 .flexlayout__tab:hover .flexlayout__tab_button_trailing {
   opacity: 1;
+}
+
+.flexlayout__tab_button_trailing:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .flexlayout__tab_button_trailing svg {
@@ -131,6 +141,32 @@
 
 .flexlayout__tabset_tabbar_outer {
   background: #2d2d30;
+}
+
+/* 标签栏滚动条样式 */
+.flexlayout__tab_moveable::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.flexlayout__tab_moveable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.flexlayout__tab_moveable::-webkit-scrollbar-thumb {
+  background: rgba(121, 121, 121, 0.4);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+.flexlayout__tab_moveable::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 100, 100, 0.7);
+  background-clip: padding-box;
+}
+
+.flexlayout__tab_moveable::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .flexlayout__tabset-selected {
@@ -187,10 +223,12 @@
 }
 
 .flexlayout__tab_toolbar {
-  display: flex;
+  display: flex !important;
   align-items: center;
   gap: 4px;
   padding: 0 8px;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .flexlayout__tab_toolbar_button {
@@ -198,9 +236,14 @@
   border: none;
   color: #cccccc;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 4px;
   border-radius: 3px;
   transition: background-color 0.15s ease;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
 }
 
 .flexlayout__tab_toolbar_button:hover {
@@ -211,6 +254,13 @@
 .flexlayout__tab_toolbar_button svg {
   width: 14px;
   height: 14px;
+}
+
+/* 确保最小化和最大化按钮可见 */
+.flexlayout__tab_toolbar_button-min,
+.flexlayout__tab_toolbar_button-max {
+  display: flex !important;
+  visibility: visible !important;
 }
 
 .flexlayout__popup_menu {

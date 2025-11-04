@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Folder, ChevronRight, ChevronDown, File, Edit3, Trash2, FolderOpen, Copy, FileText, FolderPlus, ChevronsDown, ChevronsUp } from 'lucide-react';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { MessageHub, FileActionRegistry } from '@esengine/editor-core';
@@ -28,7 +28,11 @@ interface FileTreeProps {
   showFiles?: boolean;
 }
 
-export function FileTree({ rootPath, onSelectFile, selectedPath, messageHub, searchQuery, showFiles = true }: FileTreeProps) {
+export interface FileTreeHandle {
+  collapseAll: () => void;
+}
+
+export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, onSelectFile, selectedPath, messageHub, searchQuery, showFiles = true }, ref) => {
     const [tree, setTree] = useState<TreeNode[]>([]);
     const [loading, setLoading] = useState(false);
     const [internalSelectedPath, setInternalSelectedPath] = useState<string | null>(null);
@@ -47,6 +51,26 @@ export function FileTree({ rootPath, onSelectFile, selectedPath, messageHub, sea
     } | null>(null);
     const [filteredTree, setFilteredTree] = useState<TreeNode[]>([]);
     const fileActionRegistry = Core.services.resolve(FileActionRegistry);
+
+    const collapseAll = () => {
+        const collapseNode = (node: TreeNode): TreeNode => {
+            if (node.type === 'folder') {
+                return {
+                    ...node,
+                    expanded: false,
+                    children: node.children ? node.children.map(collapseNode) : node.children
+                };
+            }
+            return node;
+        };
+
+        const collapsedTree = tree.map(node => collapseNode(node));
+        setTree(collapsedTree);
+    };
+
+    useImperativeHandle(ref, () => ({
+        collapseAll
+    }));
 
     useEffect(() => {
         if (rootPath) {
@@ -214,8 +238,72 @@ export function FileTree({ rootPath, onSelectFile, selectedPath, messageHub, sea
     };
 
     const refreshTree = async () => {
-        if (rootPath) {
-            await loadRootDirectory(rootPath);
+        if (!rootPath) return;
+
+        // 保存当前展开状态
+        const expandedPaths = new Set<string>();
+        const collectExpandedPaths = (nodes: TreeNode[]) => {
+            for (const node of nodes) {
+                if (node.type === 'folder' && node.expanded) {
+                    expandedPaths.add(node.path);
+                    if (node.children) {
+                        collectExpandedPaths(node.children);
+                    }
+                }
+            }
+        };
+        collectExpandedPaths(tree);
+
+        // 重新加载根目录，获取最新的文件结构
+        try {
+            const entries = await TauriAPI.listDirectory(rootPath);
+            const children = entriesToNodes(entries);
+
+            const rootName = rootPath.split(/[/\\]/).filter((p) => p).pop() || 'Project';
+            let rootNode: TreeNode = {
+                name: rootName,
+                path: rootPath,
+                type: 'folder',
+                children: children,
+                expanded: true,
+                loaded: true
+            };
+
+            // 恢复展开状态
+            if (expandedPaths.size > 0) {
+                const restoreExpandedState = async (node: TreeNode): Promise<TreeNode> => {
+                    if (node.type === 'folder' && expandedPaths.has(node.path)) {
+                        let children = node.children || [];
+                        if (!node.loaded && node.children) {
+                            children = await loadChildren(node);
+                        }
+                        const restoredChildren = await Promise.all(
+                            children.map(child => restoreExpandedState(child))
+                        );
+                        return {
+                            ...node,
+                            expanded: true,
+                            loaded: true,
+                            children: restoredChildren
+                        };
+                    } else if (node.type === 'folder' && node.children) {
+                        const restoredChildren = await Promise.all(
+                            node.children.map(child => restoreExpandedState(child))
+                        );
+                        return {
+                            ...node,
+                            children: restoredChildren
+                        };
+                    }
+                    return node;
+                };
+
+                rootNode = await restoreExpandedState(rootNode);
+            }
+
+            setTree([rootNode]);
+        } catch (error) {
+            console.error('Failed to refresh directory:', error);
         }
     };
 
@@ -250,22 +338,6 @@ export function FileTree({ rootPath, onSelectFile, selectedPath, messageHub, sea
 
         const expandedTree = await Promise.all(tree.map(node => expandNode(node)));
         setTree(expandedTree);
-    };
-
-    const collapseAll = () => {
-        const collapseNode = (node: TreeNode): TreeNode => {
-            if (node.type === 'folder') {
-                return {
-                    ...node,
-                    expanded: false,
-                    children: node.children ? node.children.map(collapseNode) : node.children
-                };
-            }
-            return node;
-        };
-
-        const collapsedTree = tree.map(node => collapseNode(node));
-        setTree(collapsedTree);
     };
 
     const handleRename = async (node: TreeNode) => {
@@ -570,7 +642,11 @@ export function FileTree({ rootPath, onSelectFile, selectedPath, messageHub, sea
                     </span>
                     <span className="tree-icon">
                         {node.type === 'folder' ? (
-                            <Folder size={16} style={{ color: '#ffa726' }} />
+                            node.name.toLowerCase() === 'plugins' || node.name.toLowerCase() === '.ecs' ? (
+                                <Folder size={16} className="system-folder-icon" style={{ color: '#42a5f5' }} />
+                            ) : (
+                                <Folder size={16} style={{ color: '#ffa726' }} />
+                            )
                         ) : (
                             <File size={16} style={{ color: '#90caf9' }} />
                         )}
@@ -615,22 +691,6 @@ export function FileTree({ rootPath, onSelectFile, selectedPath, messageHub, sea
 
     return (
         <>
-            <div className="file-tree-toolbar">
-                <button
-                    className="file-tree-toolbar-btn"
-                    onClick={expandAll}
-                    title="展开全部文件夹"
-                >
-                    <ChevronsDown size={14} />
-                </button>
-                <button
-                    className="file-tree-toolbar-btn"
-                    onClick={collapseAll}
-                    title="收缩全部文件夹"
-                >
-                    <ChevronsUp size={14} />
-                </button>
-            </div>
             <div
                 className="file-tree"
                 onContextMenu={(e) => {
@@ -688,4 +748,4 @@ export function FileTree({ rootPath, onSelectFile, selectedPath, messageHub, sea
             )}
         </>
     );
-}
+});

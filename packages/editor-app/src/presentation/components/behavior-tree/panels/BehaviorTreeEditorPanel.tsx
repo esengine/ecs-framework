@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Save, FolderOpen, Download, Play, Pause, Square, SkipForward, Clipboard, ChevronRight, ChevronLeft, Copy } from 'lucide-react';
+import { Save, FolderOpen, Download, Play, Pause, Square, SkipForward, Clipboard, ChevronRight, ChevronLeft, Copy, Home, Maximize2, Minimize2 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { open, message } from '@tauri-apps/plugin-dialog';
 import { Core } from '@esengine/ecs-framework';
@@ -16,6 +16,7 @@ import { createLogger } from '@esengine/ecs-framework';
 import { LocalBlackboardTypeGenerator } from '../../../../generators/LocalBlackboardTypeGenerator';
 import { GlobalBlackboardTypeGenerator } from '../../../../generators/GlobalBlackboardTypeGenerator';
 import { useExecutionController } from '../../../hooks/useExecutionController';
+import { behaviorTreeFileService } from '../../../../services/BehaviorTreeFileService';
 import './BehaviorTreeEditorPanel.css';
 
 const logger = createLogger('BehaviorTreeEditorPanel');
@@ -31,11 +32,12 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
 
     const {
         isOpen,
+        pendingFilePath,
+        setPendingFilePath,
         nodes,
         connections,
         exportToJSON,
         exportToRuntimeAsset,
-        importFromJSON,
         blackboardVariables,
         setBlackboardVariables,
         updateBlackboardVariable,
@@ -45,8 +47,7 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
         setIsExecuting,
         saveNodesDataSnapshot,
         restoreNodesData,
-        setIsOpen,
-        reset
+        resetView
     } = useBehaviorTreeStore();
 
     const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
@@ -58,8 +59,10 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
     const [isBlackboardOpen, setIsBlackboardOpen] = useState(true);
     const [globalVariables, setGlobalVariables] = useState<Record<string, any>>({});
     const [hasUnsavedGlobalChanges, setHasUnsavedGlobalChanges] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const isInitialMount = useRef(true);
     const initialStateSnapshot = useRef<{ nodes: number; variables: number }>({ nodes: 0, variables: 0 });
+    const processingFileRef = useRef<string | null>(null);
 
     const {
         executionMode,
@@ -148,31 +151,37 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
         }
     }, [nodes, blackboardVariables]);
 
-    useEffect(() => {
-        const handleOpenFile = async (data: any) => {
-            if (data.filePath && data.filePath.endsWith('.btree')) {
-                try {
-                    const json = await invoke<string>('read_behavior_tree_file', { filePath: data.filePath });
-                    importFromJSON(json);
-                    setCurrentFilePath(data.filePath);
-                    setHasUnsavedChanges(false);
-                    isInitialMount.current = true;
-                    initialStateSnapshot.current = {
-                        nodes: nodes.length,
-                        variables: Object.keys(blackboardVariables).length
-                    };
-                    logger.info('行为树已加载', data.filePath);
-                    showToast(`已打开 ${data.filePath.split(/[\\/]/).pop()?.replace('.btree', '')}`, 'success');
-                } catch (error) {
-                    logger.error('加载行为树失败', error);
-                    showToast(`加载失败: ${error}`, 'error');
-                }
-            }
-        };
+    const loadFile = useCallback(async (filePath: string) => {
+        const result = await behaviorTreeFileService.loadFile(filePath);
 
-        const unsubscribe = messageHub?.subscribe('behavior-tree:open-file', handleOpenFile);
-        return () => unsubscribe?.();
-    }, [messageHub, importFromJSON, nodes.length, blackboardVariables]);
+        if (result.success && result.fileName) {
+            setCurrentFilePath(filePath);
+            setHasUnsavedChanges(false);
+            isInitialMount.current = true;
+            initialStateSnapshot.current = { nodes: 0, variables: 0 };
+            showToast(`已打开 ${result.fileName}`, 'success');
+        } else if (result.error) {
+            showToast(`加载失败: ${result.error}`, 'error');
+        }
+    }, [showToast]);
+
+    // 使用 useLayoutEffect 处理 pendingFilePath（同步执行，DOM 更新前）
+    // 这是文件加载的唯一入口，避免重复
+    useLayoutEffect(() => {
+        if (!pendingFilePath) return;
+
+        // 防止 React StrictMode 导致的重复执行
+        if (processingFileRef.current === pendingFilePath) {
+            return;
+        }
+
+        processingFileRef.current = pendingFilePath;
+
+        loadFile(pendingFilePath).then(() => {
+            setPendingFilePath(null);
+            processingFileRef.current = null;
+        });
+    }, [pendingFilePath, loadFile, setPendingFilePath]);
 
     const loadGlobalBlackboard = async (path: string) => {
         try {
@@ -223,15 +232,20 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
             });
 
             if (selected) {
-                const json = await invoke<string>('read_behavior_tree_file', { filePath: selected as string });
-                importFromJSON(json);
-                setCurrentFilePath(selected as string);
-                setHasUnsavedChanges(false);
-                isInitialMount.current = true;
-                logger.info('行为树已加载', selected);
+                const result = await behaviorTreeFileService.loadFile(selected as string);
+                if (result.success && result.fileName) {
+                    setCurrentFilePath(selected as string);
+                    setHasUnsavedChanges(false);
+                    isInitialMount.current = true;
+                    initialStateSnapshot.current = { nodes: 0, variables: 0 };
+                    showToast(`已打开 ${result.fileName}`, 'success');
+                } else if (result.error) {
+                    showToast(`加载失败: ${result.error}`, 'error');
+                }
             }
         } catch (error) {
             logger.error('加载失败', error);
+            showToast(`加载失败: ${error}`, 'error');
         }
     };
 
@@ -373,12 +387,12 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
 
     const handleCopyBehaviorTree = () => {
         const buildNodeTree = (nodeId: string, depth: number = 0): string => {
-            const node = nodes.find(n => n.id === nodeId);
+            const node = nodes.find((n) => n.id === nodeId);
             if (!node) return '';
 
             const indent = '  '.repeat(depth);
             const childrenText = node.children.length > 0
-                ? `\n${node.children.map(childId => buildNodeTree(childId, depth + 1)).join('\n')}`
+                ? `\n${node.children.map((childId) => buildNodeTree(childId, depth + 1)).join('\n')}`
                 : '';
 
             const propertiesText = Object.keys(node.data).length > 0
@@ -388,7 +402,7 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
             return `${indent}- ${node.template.displayName} (${node.template.type})${propertiesText}${childrenText}`;
         };
 
-        const rootNode = nodes.find(n => n.id === ROOT_NODE_ID);
+        const rootNode = nodes.find((n) => n.id === ROOT_NODE_ID);
         if (!rootNode) {
             showToast('未找到根节点', 'error');
             return;
@@ -408,26 +422,26 @@ ${buildNodeTree(ROOT_NODE_ID)}
 ${Object.entries(blackboardVariables).map(([key, value]) => `  - ${key}: ${JSON.stringify(value)}`).join('\n') || '  无'}
 
 全部节点详情:
-${nodes.filter(n => n.id !== ROOT_NODE_ID).map(node => {
-    const incoming = connections.filter(c => c.to === node.id);
-    const outgoing = connections.filter(c => c.from === node.id);
-    return `
+${nodes.filter((n) => n.id !== ROOT_NODE_ID).map((node) => {
+        const incoming = connections.filter((c) => c.to === node.id);
+        const outgoing = connections.filter((c) => c.from === node.id);
+        return `
 [${node.template.displayName}]
   类型: ${node.template.type}
   分类: ${node.template.category}
   类名: ${node.template.className || '无'}
   ID: ${node.id}
   子节点: ${node.children.length}个
-  输入连接: ${incoming.length}个${incoming.length > 0 ? '\n    ' + incoming.map(c => {
-        const fromNode = nodes.find(n => n.id === c.from);
-        return `← ${fromNode?.template.displayName || '未知'}`;
-    }).join('\n    ') : ''}
-  输出连接: ${outgoing.length}个${outgoing.length > 0 ? '\n    ' + outgoing.map(c => {
-        const toNode = nodes.find(n => n.id === c.to);
-        return `→ ${toNode?.template.displayName || '未知'}`;
-    }).join('\n    ') : ''}
+  输入连接: ${incoming.length}个${incoming.length > 0 ? '\n    ' + incoming.map((c) => {
+    const fromNode = nodes.find((n) => n.id === c.from);
+    return `← ${fromNode?.template.displayName || '未知'}`;
+}).join('\n    ') : ''}
+  输出连接: ${outgoing.length}个${outgoing.length > 0 ? '\n    ' + outgoing.map((c) => {
+    const toNode = nodes.find((n) => n.id === c.to);
+    return `→ ${toNode?.template.displayName || '未知'}`;
+}).join('\n    ') : ''}
   属性: ${JSON.stringify(node.data, null, 4)}`;
-}).join('\n')}
+    }).join('\n')}
         `.trim();
 
         navigator.clipboard.writeText(treeStructure).then(() => {
@@ -590,12 +604,20 @@ ${nodes.filter(n => n.id !== ROOT_NODE_ID).map(node => {
         setHasUnsavedGlobalChanges(true);
     };
 
+    const toggleFullscreen = () => {
+        const newFullscreenState = !isFullscreen;
+        setIsFullscreen(newFullscreenState);
+
+        // 通知主界面切换全屏状态
+        messageHub?.publish('editor:fullscreen', { fullscreen: newFullscreenState });
+    };
+
     if (!isOpen) {
         return null;
     }
 
     return (
-        <div className="behavior-tree-editor-panel">
+        <div className={`behavior-tree-editor-panel ${isFullscreen ? 'fullscreen' : ''}`}>
             <div className="behavior-tree-editor-toolbar">
                 {/* 文件操作 */}
                 <div className="toolbar-section">
@@ -654,6 +676,12 @@ ${nodes.filter(n => n.id !== ROOT_NODE_ID).map(node => {
 
                 {/* 视图控制 */}
                 <div className="toolbar-section">
+                    <button onClick={resetView} className="toolbar-btn" title="重置视图">
+                        <Home size={16} />
+                    </button>
+                    <button onClick={toggleFullscreen} className="toolbar-btn" title={isFullscreen ? '退出全屏' : '全屏编辑'}>
+                        {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                    </button>
                     <button onClick={() => setIsBlackboardOpen(!isBlackboardOpen)} className="toolbar-btn" title="黑板">
                         <Clipboard size={16} />
                     </button>

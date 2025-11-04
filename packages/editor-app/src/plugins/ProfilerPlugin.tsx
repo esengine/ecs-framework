@@ -134,7 +134,7 @@ export class ProfilerPlugin implements IEditorPlugin {
                 id: 'profiler-monitor',
                 title: 'Performance Monitor',
                 position: 'center' as any,
-                closable: true,
+                closable: false,
                 component: ProfilerDockPanel,
                 order: 200
             }

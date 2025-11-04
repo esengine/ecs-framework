@@ -5,6 +5,8 @@ import { Connection } from '../domain/models/Connection';
 import { Blackboard, BlackboardValue } from '../domain/models/Blackboard';
 import { Position } from '../domain/value-objects/Position';
 import { createRootNode, ROOT_NODE_ID } from '../domain/constants/RootNode';
+import { BehaviorTree } from '../domain/models/BehaviorTree';
+import { useBehaviorTreeDataStore } from '../application/state/BehaviorTreeDataStore';
 
 /**
  * 行为树 Store 状态接口
@@ -18,6 +20,7 @@ export interface NodeExecutionInfo {
 
 interface BehaviorTreeState {
     isOpen: boolean;
+    pendingFilePath: string | null;
     nodes: Node[];
     connections: Connection[];
     blackboard: Blackboard;
@@ -112,6 +115,7 @@ interface BehaviorTreeState {
     ) => string | Uint8Array;
 
     setIsOpen: (isOpen: boolean) => void;
+    setPendingFilePath: (filePath: string | null) => void;
     reset: () => void;
 }
 
@@ -121,6 +125,7 @@ interface BehaviorTreeState {
  */
 export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     isOpen: false,
+    pendingFilePath: null,
     nodes: [],
     connections: [],
     blackboard: new Blackboard(),
@@ -412,6 +417,10 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
 
         const loadedBlackboard = Blackboard.fromObject(blackboardData);
 
+        // 同步更新领域层数据存储，确保 Command 系统使用正确的数据
+        const newTree = new BehaviorTree(loadedNodes, loadedConnections, loadedBlackboard, ROOT_NODE_ID);
+        useBehaviorTreeDataStore.getState().setTree(newTree);
+
         set({
             isOpen: true,
             nodes: loadedNodes,
@@ -420,7 +429,13 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
             blackboardVariables: blackboardData,
             initialBlackboardVariables: blackboardData,
             canvasOffset: data.canvasState?.offset || { x: 0, y: 0 },
-            canvasScale: data.canvasState?.scale || 1
+            canvasScale: data.canvasState?.scale || 1,
+            // 只清理连线相关状态，避免切换文件时残留上一个文件的连线状态
+            connectingFrom: null,
+            connectingFromProperty: null,
+            connectingToPos: null,
+            // 清理选中状态
+            selectedNodeIds: []
         });
     },
 
@@ -453,6 +468,8 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
     },
 
     setIsOpen: (isOpen: boolean) => set({ isOpen }),
+
+    setPendingFilePath: (filePath: string | null) => set({ pendingFilePath: filePath }),
 
     reset: () => set({
         isOpen: false,

@@ -34,14 +34,14 @@
 
 .inspector-content {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: auto;
   padding: var(--spacing-md);
   min-height: 0;
 }
 
 .inspector-content::-webkit-scrollbar {
   width: 14px;
+  height: 14px;
 }
 
 .inspector-content::-webkit-scrollbar-track {
@@ -58,6 +58,10 @@
 .inspector-content::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 100, 100, 0.7);
   background-clip: padding-box;
+}
+
+.inspector-content::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .inspector-section {
