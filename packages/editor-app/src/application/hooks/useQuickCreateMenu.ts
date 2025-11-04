@@ -131,11 +131,6 @@ export function useQuickCreateMenu(params: UseQuickCreateMenuParams) {
             return;
         }
 
-        // 创建模式：需要连接
-        if (!connectingFrom) {
-            return;
-        }
-
         const rect = canvasRef.current?.getBoundingClientRect();
         if (!rect) {
             return;
@@ -150,20 +145,23 @@ export function useQuickCreateMenu(params: UseQuickCreateMenuParams) {
             template.defaultConfig
         );
 
-        const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === connectingFrom);
-        if (fromNode) {
-            if (connectingFromProperty) {
-                // 属性连接
-                connectionOperations.addConnection(
-                    connectingFrom,
-                    newNode.id,
-                    'property',
-                    connectingFromProperty,
-                    undefined
-                );
-            } else {
-                // 节点连接
-                connectionOperations.addConnection(connectingFrom, newNode.id, 'node');
+        // 如果有连接源，创建连接
+        if (connectingFrom) {
+            const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === connectingFrom);
+            if (fromNode) {
+                if (connectingFromProperty) {
+                    // 属性连接
+                    connectionOperations.addConnection(
+                        connectingFrom,
+                        newNode.id,
+                        'property',
+                        connectingFromProperty,
+                        undefined
+                    );
+                } else {
+                    // 节点连接
+                    connectionOperations.addConnection(connectingFrom, newNode.id, 'node');
+                }
             }
         }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ExecutionController, ExecutionMode } from '../../application/services/ExecutionController';
 import { BlackboardManager } from '../../application/services/BlackboardManager';
-import { BehaviorTreeNode, Connection } from '../../stores/behaviorTreeStore';
+import { BehaviorTreeNode, Connection, useBehaviorTreeStore } from '../../stores/behaviorTreeStore';
 import { ExecutionLog } from '../../utils/BehaviorTreeExecutor';
 import { BlackboardValue } from '../../domain/models/Blackboard';
 
@@ -17,6 +17,8 @@ interface UseExecutionControllerParams {
     onBlackboardUpdate: (variables: BlackboardVariables) => void;
     onInitialBlackboardSave: (variables: BlackboardVariables) => void;
     onExecutingChange: (isExecuting: boolean) => void;
+    onSaveNodesDataSnapshot: () => void;
+    onRestoreNodesData: () => void;
 }
 
 export function useExecutionController(params: UseExecutionControllerParams) {
@@ -28,7 +30,9 @@ export function useExecutionController(params: UseExecutionControllerParams) {
         connections,
         onBlackboardUpdate,
         onInitialBlackboardSave,
-        onExecutingChange
+        onExecutingChange,
+        onSaveNodesDataSnapshot,
+        onRestoreNodesData
     } = params;
 
     const [executionMode, setExecutionMode] = useState<ExecutionMode>('idle');
@@ -42,9 +46,13 @@ export function useExecutionController(params: UseExecutionControllerParams) {
             projectPath,
             onLogsUpdate: setExecutionLogs,
             onBlackboardUpdate,
-            onTickCountUpdate: setTickCount
+            onTickCountUpdate: setTickCount,
+            onExecutionStatusUpdate: (statuses, orders) => {
+                const store = useBehaviorTreeStore.getState();
+                store.updateNodeExecutionStatuses(statuses, orders);
+            }
         });
-    }, [rootNodeId, projectPath]);
+    }, [rootNodeId, projectPath, onBlackboardUpdate]);
 
     const blackboardManager = useMemo(() => new BlackboardManager(), []);
 
@@ -70,11 +78,18 @@ export function useExecutionController(params: UseExecutionControllerParams) {
         });
     }, [blackboardVariables, executionMode, controller]);
 
+    useEffect(() => {
+        if (executionMode === 'idle') return;
+
+        controller.updateNodes(nodes);
+    }, [nodes, executionMode, controller]);
+
     const handlePlay = async () => {
         try {
             blackboardManager.setInitialVariables(blackboardVariables);
             blackboardManager.setCurrentVariables(blackboardVariables);
             onInitialBlackboardSave(blackboardManager.getInitialVariables());
+            onSaveNodesDataSnapshot();
             onExecutingChange(true);
 
             setExecutionMode('running');
@@ -104,6 +119,8 @@ export function useExecutionController(params: UseExecutionControllerParams) {
 
             const restoredVars = blackboardManager.restoreInitialVariables();
             onBlackboardUpdate(restoredVars);
+            onRestoreNodesData();
+            useBehaviorTreeStore.getState().clearNodeExecutionStatuses();
             onExecutingChange(false);
         } catch (error) {
             console.error('Failed to stop execution:', error);

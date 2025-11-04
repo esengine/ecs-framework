@@ -16,6 +16,7 @@ export interface ExecutionStatus {
     nodeId: string;
     status: 'running' | 'success' | 'failure' | 'idle';
     message?: string;
+    executionOrder?: number;
 }
 
 export interface ExecutionLog {
@@ -47,9 +48,12 @@ export class BehaviorTreeExecutor {
     private isPaused = false;
     private executionLogs: ExecutionLog[] = [];
     private lastStatuses: Map<string, 'running' | 'success' | 'failure' | 'idle'> = new Map();
+    private persistentStatuses: Map<string, 'running' | 'success' | 'failure' | 'idle'> = new Map();
+    private executionOrders: Map<string, number> = new Map();
     private tickCount = 0;
     private nodeIdMap: Map<string, string> = new Map();
     private blackboardKeys: string[] = [];
+    private rootNodeId: string = '';
 
     private assetManager: BehaviorTreeAssetManager;
     private executionSystem: BehaviorTreeExecutionSystem;
@@ -84,6 +88,7 @@ export class BehaviorTreeExecutor {
         this.callback = callback;
 
         this.treeData = this.convertToTreeData(nodes, rootNodeId, blackboard, connections);
+        this.rootNodeId = this.treeData.rootNodeId;
 
         this.assetManager.loadAsset(this.treeData);
 
@@ -249,6 +254,7 @@ export class BehaviorTreeExecutor {
         this.isPaused = false;
         this.executionLogs = [];
         this.lastStatuses.clear();
+        this.persistentStatuses.clear();
         this.tickCount = 0;
 
         this.runtime.resetAllStates();
@@ -313,38 +319,102 @@ export class BehaviorTreeExecutor {
     private collectExecutionStatus(): void {
         if (!this.callback || !this.runtime || !this.treeData) return;
 
+        const rootState = this.runtime.getNodeState(this.rootNodeId);
+        let rootCurrentStatus: 'running' | 'success' | 'failure' | 'idle' = 'idle';
+
+        if (rootState) {
+            switch (rootState.status) {
+                case TaskStatus.Running:
+                    rootCurrentStatus = 'running';
+                    break;
+                case TaskStatus.Success:
+                    rootCurrentStatus = 'success';
+                    break;
+                case TaskStatus.Failure:
+                    rootCurrentStatus = 'failure';
+                    break;
+                default:
+                    rootCurrentStatus = 'idle';
+            }
+        }
+
+        const rootLastStatus = this.lastStatuses.get(this.rootNodeId);
+
+        if (rootLastStatus &&
+            (rootLastStatus === 'success' || rootLastStatus === 'failure') &&
+            rootCurrentStatus === 'running') {
+            this.persistentStatuses.clear();
+            this.executionOrders.clear();
+        }
+
         const statuses: ExecutionStatus[] = [];
 
         for (const [nodeId, nodeData] of this.treeData.nodes.entries()) {
             const state = this.runtime.getNodeState(nodeId);
 
-            let status: 'running' | 'success' | 'failure' | 'idle' = 'idle';
+            let currentStatus: 'running' | 'success' | 'failure' | 'idle' = 'idle';
 
             if (state) {
                 switch (state.status) {
                     case TaskStatus.Success:
-                        status = 'success';
+                        currentStatus = 'success';
                         break;
                     case TaskStatus.Failure:
-                        status = 'failure';
+                        currentStatus = 'failure';
                         break;
                     case TaskStatus.Running:
-                        status = 'running';
+                        currentStatus = 'running';
                         break;
                     default:
-                        status = 'idle';
+                        currentStatus = 'idle';
                 }
             }
 
+            const persistentStatus = this.persistentStatuses.get(nodeId) || 'idle';
             const lastStatus = this.lastStatuses.get(nodeId);
-            if (lastStatus !== status) {
-                this.onNodeStatusChanged(nodeId, nodeData.name, lastStatus || 'idle', status);
-                this.lastStatuses.set(nodeId, status);
+
+            let displayStatus: 'running' | 'success' | 'failure' | 'idle' = currentStatus;
+
+            if (currentStatus === 'running') {
+                displayStatus = 'running';
+                this.persistentStatuses.set(nodeId, 'running');
+            } else if (currentStatus === 'success') {
+                displayStatus = 'success';
+                this.persistentStatuses.set(nodeId, 'success');
+            } else if (currentStatus === 'failure') {
+                displayStatus = 'failure';
+                this.persistentStatuses.set(nodeId, 'failure');
+            } else if (currentStatus === 'idle') {
+                if (persistentStatus !== 'idle') {
+                    displayStatus = persistentStatus;
+                } else if (this.executionOrders.has(nodeId)) {
+                    displayStatus = 'success';
+                    this.persistentStatuses.set(nodeId, 'success');
+                } else {
+                    displayStatus = 'idle';
+                }
             }
+
+            // 检测状态变化
+            const hasStateChanged = lastStatus !== currentStatus;
+
+            // 从运行时状态读取执行顺序
+            if (state?.executionOrder !== undefined && !this.executionOrders.has(nodeId)) {
+                this.executionOrders.set(nodeId, state.executionOrder);
+                console.log(`[ExecutionOrder READ] ${nodeData.name} | ID: ${nodeId} | Order: ${state.executionOrder}`);
+            }
+
+            // 记录状态变化日志
+            if (hasStateChanged && currentStatus !== 'idle') {
+                this.onNodeStatusChanged(nodeId, nodeData.name, lastStatus || 'idle', currentStatus);
+            }
+
+            this.lastStatuses.set(nodeId, currentStatus);
 
             statuses.push({
                 nodeId,
-                status
+                status: displayStatus,
+                executionOrder: this.executionOrders.get(nodeId)
             });
         }
 
@@ -428,6 +498,7 @@ export class BehaviorTreeExecutor {
         this.stop();
         this.nodeIdMap.clear();
         this.lastStatuses.clear();
+        this.persistentStatuses.clear();
         this.blackboardKeys = [];
 
         if (this.entity) {

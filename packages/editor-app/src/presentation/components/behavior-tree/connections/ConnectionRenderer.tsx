@@ -97,6 +97,7 @@ export const ConnectionRenderer: React.FC<ConnectionRendererProps> = ({
     const color = connection.connectionType === 'property' ? '#9c27b0' : '#0e639c';
     const strokeColor = isSelected ? '#FFD700' : color;
     const strokeWidth = isSelected ? 4 : 2;
+    const markerId = `arrowhead-${connection.from}-${connection.to}`;
 
     if (!pathData) {
         // DOM还没渲染完成，跳过此连接
@@ -130,20 +131,10 @@ export const ConnectionRenderer: React.FC<ConnectionRendererProps> = ({
                 strokeWidth={20}
             />
 
-            {/* 实际显示的线条 */}
-            <path
-                d={pathData.path}
-                fill="none"
-                stroke={strokeColor}
-                strokeWidth={strokeWidth}
-                strokeLinecap="round"
-                markerEnd="url(#arrowhead)"
-            />
-
-            {/* 箭头标记 */}
+            {/* 箭头标记定义 */}
             <defs>
                 <marker
-                    id="arrowhead"
+                    id={markerId}
                     markerWidth="10"
                     markerHeight="10"
                     refX="9"
@@ -157,6 +148,16 @@ export const ConnectionRenderer: React.FC<ConnectionRendererProps> = ({
                     />
                 </marker>
             </defs>
+
+            {/* 实际显示的线条 */}
+            <path
+                d={pathData.path}
+                fill="none"
+                stroke={strokeColor}
+                strokeWidth={strokeWidth}
+                strokeLinecap="round"
+                markerEnd={`url(#${markerId})`}
+            />
 
             {/* 选中时显示的中点 */}
             {isSelected && (

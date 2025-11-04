@@ -18,16 +18,30 @@
   animation: gentle-glow 2s ease-in-out infinite;
 }
 
+.bt-node.running::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border: 2px solid #ffa726;
+  border-radius: 6px;
+  pointer-events: none;
+  animation: pulse-border 1.5s ease-in-out infinite;
+  z-index: -1;
+}
+
 .bt-node.success {
   box-shadow: 0 0 0 3px #4caf50, 0 4px 16px rgba(76, 175, 80, 0.6);
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, transparent 100%);
 }
 
 .bt-node.failure {
   box-shadow: 0 0 0 3px #f44336, 0 4px 16px rgba(244, 67, 54, 0.6);
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, transparent 100%);
 }
 
 .bt-node.executed {
-  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3), 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, transparent 100%);
 }
 
 .bt-node.root {
@@ -216,6 +230,35 @@
   }
   50% {
     box-shadow: 0 0 0 3px #ffa726, 0 6px 20px rgba(255, 167, 38, 0.8);
+  }
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes success-flash {
+  0% {
+    box-shadow: 0 0 0 8px rgba(76, 175, 80, 0.8), 0 6px 24px rgba(76, 175, 80, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 0 3px #4caf50, 0 4px 16px rgba(76, 175, 80, 0.6);
+  }
+}
+
+@keyframes failure-flash {
+  0% {
+    box-shadow: 0 0 0 8px rgba(244, 67, 54, 0.8), 0 6px 24px rgba(244, 67, 54, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 0 3px #f44336, 0 4px 16px rgba(244, 67, 54, 0.6);
   }
 }
 

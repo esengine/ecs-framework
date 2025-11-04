@@ -3,7 +3,6 @@ import { NodeTemplate } from '@esengine/behavior-tree';
 import { RotateCcw } from 'lucide-react';
 import { useBehaviorTreeStore, BehaviorTreeNode, ROOT_NODE_ID } from '../stores/behaviorTreeStore';
 import { useUIStore } from '../application/state/UIStore';
-import { BehaviorTreeExecutionPanel } from './BehaviorTreeExecutionPanel';
 import { useToast } from './Toast';
 import { BlackboardValue } from '../domain/models/Blackboard';
 import { BehaviorTreeCanvas } from '../presentation/components/behavior-tree/canvas/BehaviorTreeCanvas';
@@ -39,13 +38,15 @@ interface BehaviorTreeEditorProps {
     onNodeCreate?: (template: NodeTemplate, position: { x: number; y: number }) => void;
     blackboardVariables?: BlackboardVariables;
     projectPath?: string | null;
+    showToolbar?: boolean;
 }
 
 export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     onNodeSelect,
     onNodeCreate,
     blackboardVariables = {},
-    projectPath = null
+    projectPath = null,
+    showToolbar = true
 }) => {
     const { showToast } = useToast();
 
@@ -75,7 +76,11 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         setInitialBlackboardVariables,
         setIsExecuting,
         initialBlackboardVariables,
-        isExecuting
+        isExecuting,
+        saveNodesDataSnapshot,
+        restoreNodesData,
+        nodeExecutionStatuses,
+        nodeExecutionOrders
     } = useBehaviorTreeStore();
 
     // UI store（选中、拖拽、画布状态）
@@ -107,7 +112,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     const connectionOperations = useConnectionOperations(validator, commandManager);
 
     // 右键菜单
-    const { contextMenu, setContextMenu, handleNodeContextMenu, closeContextMenu } = useContextMenu();
+    const { contextMenu, setContextMenu, handleNodeContextMenu, handleCanvasContextMenu, closeContextMenu } = useContextMenu();
 
     // 组件挂载和连线变化时强制更新，确保连线能正确渲染
     useEffect(() => {
@@ -164,7 +169,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         initialBlackboardVariables,
         onBlackboardUpdate: setBlackboardVariables,
         onInitialBlackboardSave: setInitialBlackboardVariables,
-        onExecutingChange: setIsExecuting
+        onExecutingChange: setIsExecuting,
+        onSaveNodesDataSnapshot: saveNodesDataSnapshot,
+        onRestoreNodesData: restoreNodesData
     });
 
     executorRef.current = controller['executor'] || null;
@@ -296,7 +303,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         setSelectedConnection,
         setQuickCreateMenu,
         clearConnecting,
-        clearBoxSelect
+        clearBoxSelect,
+        showToast
     });
 
 
@@ -373,6 +381,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         handleNodeMouseUp();
                         handleCanvasMouseUp(e);
                     }}
+                    onContextMenu={handleCanvasContextMenu}
                 >
                     {/* 连接线层 */}
                     <ConnectionLayer
@@ -473,6 +482,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     {nodes.map((node: BehaviorTreeNode) => {
                         const isSelected = selectedNodeIds.includes(node.id);
                         const isBeingDragged = dragStartPositions.has(node.id);
+                        const executionStatus = nodeExecutionStatuses.get(node.id);
+                        const executionOrder = nodeExecutionOrders.get(node.id);
 
                         return (
                             <BehaviorTreeNodeComponent
@@ -485,6 +496,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                                 blackboardVariables={blackboardVariables}
                                 initialBlackboardVariables={initialBlackboardVariables}
                                 isExecuting={isExecuting}
+                                executionStatus={executionStatus}
+                                executionOrder={executionOrder}
                                 connections={connections}
                                 nodes={nodes}
                                 executorRef={executorRef}
@@ -543,20 +556,22 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 </BehaviorTreeCanvas>
 
                 {/* 运行控制工具栏 */}
-                <EditorToolbar
-                    executionMode={executionMode}
-                    canUndo={canUndo}
-                    canRedo={canRedo}
-                    onPlay={handlePlay}
-                    onPause={handlePause}
-                    onStop={handleStop}
-                    onStep={handleStep}
-                    onReset={handleReset}
-                    onUndo={undo}
-                    onRedo={redo}
-                    onResetView={handleResetView}
-                    onClearCanvas={handleClearCanvas}
-                />
+                {showToolbar && (
+                    <EditorToolbar
+                        executionMode={executionMode}
+                        canUndo={canUndo}
+                        canRedo={canRedo}
+                        onPlay={handlePlay}
+                        onPause={handlePause}
+                        onStop={handleStop}
+                        onStep={handleStep}
+                        onReset={handleReset}
+                        onUndo={undo}
+                        onRedo={redo}
+                        onResetView={handleResetView}
+                        onClearCanvas={handleClearCanvas}
+                    />
+                )}
 
                 {/* 快速创建菜单 */}
                 <QuickCreateMenu
@@ -566,14 +581,14 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     selectedIndex={quickCreateMenu.selectedIndex}
                     mode={quickCreateMenu.mode}
                     iconMap={ICON_MAP}
-                    onSearchChange={(text) => setQuickCreateMenu({
-                        ...quickCreateMenu,
+                    onSearchChange={(text) => setQuickCreateMenu(prev => ({
+                        ...prev,
                         searchText: text
-                    })}
-                    onIndexChange={(index) => setQuickCreateMenu({
-                        ...quickCreateMenu,
+                    }))}
+                    onIndexChange={(index) => setQuickCreateMenu(prev => ({
+                        ...prev,
                         selectedIndex: index
-                    })}
+                    }))}
                     onNodeSelect={handleQuickCreateNode}
                     onClose={() => {
                         setQuickCreateMenu({
@@ -615,21 +630,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 </div>
             </div>
 
-            {/* 执行面板 */}
-            <div style={{
-                height: '250px',
-                borderTop: '1px solid #333'
-            }}>
-                <BehaviorTreeExecutionPanel
-                    logs={executionLogs}
-                    onClearLogs={() => setExecutionLogs([])}
-                    isRunning={executionMode === 'running'}
-                    tickCount={tickCount}
-                    executionSpeed={executionSpeed}
-                    onSpeedChange={handleSpeedChange}
-                />
-            </div>
-
             {/* 右键菜单 */}
             <NodeContextMenu
                 visible={contextMenu.visible}
@@ -643,6 +643,23 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         selectedIndex: 0,
                         mode: 'replace',
                         replaceNodeId: contextMenu.nodeId
+                    });
+                    setContextMenu({ ...contextMenu, visible: false });
+                }}
+                onDeleteNode={() => {
+                    if (contextMenu.nodeId) {
+                        nodeOperations.deleteNode(contextMenu.nodeId);
+                        setContextMenu({ ...contextMenu, visible: false });
+                    }
+                }}
+                onCreateNode={() => {
+                    setQuickCreateMenu({
+                        visible: true,
+                        position: contextMenu.position,
+                        searchText: '',
+                        selectedIndex: 0,
+                        mode: 'create',
+                        replaceNodeId: null
                     });
                     setContextMenu({ ...contextMenu, visible: false });
                 }}

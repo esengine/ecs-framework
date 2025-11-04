@@ -63,6 +63,9 @@ export interface NodeRuntimeState {
     /** 当前执行的子节点索引（复合节点使用） */
     currentChildIndex: number;
 
+    /** 执行顺序号（用于调试和可视化） */
+    executionOrder?: number;
+
     /** 开始执行时间（某些节点需要） */
     startTime?: number;
 

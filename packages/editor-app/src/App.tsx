@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Core, Scene } from '@esengine/ecs-framework';
 import * as ECSFramework from '@esengine/ecs-framework';
-import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, PropertyMetadataService, LogService, SettingsRegistry, SceneManagerService } from '@esengine/editor-core';
+import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, PropertyMetadataService, LogService, SettingsRegistry, SceneManagerService, FileActionRegistry, PanelDescriptor } from '@esengine/editor-core';
 import { GlobalBlackboardService } from '@esengine/behavior-tree';
 import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
 import { ProfilerPlugin } from './plugins/ProfilerPlugin';
@@ -9,7 +9,7 @@ import { EditorAppearancePlugin } from './plugins/EditorAppearancePlugin';
 import { BehaviorTreePlugin } from './plugins/BehaviorTreePlugin';
 import { StartupPage } from './components/StartupPage';
 import { SceneHierarchy } from './components/SceneHierarchy';
-import { EntityInspector } from './components/EntityInspector';
+import { Inspector } from './components/Inspector';
 import { AssetBrowser } from './components/AssetBrowser';
 import { ConsolePanel } from './components/ConsolePanel';
 import { PluginManagerWindow } from './components/PluginManagerWindow';
@@ -19,7 +19,6 @@ import { SettingsWindow } from './components/SettingsWindow';
 import { AboutDialog } from './components/AboutDialog';
 import { ErrorDialog } from './components/ErrorDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
-import { BehaviorTreeWindow } from './components/BehaviorTreeWindow';
 import { PluginGeneratorWindow } from './components/PluginGeneratorWindow';
 import { ToastProvider } from './components/Toast';
 import { MenuBar } from './components/MenuBar';
@@ -67,8 +66,6 @@ function App() {
     const [showPortManager, setShowPortManager] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showAbout, setShowAbout] = useState(false);
-    const [showBehaviorTreeEditor, setShowBehaviorTreeEditor] = useState(false);
-    const [behaviorTreeFilePath, setBehaviorTreeFilePath] = useState<string | null>(null);
     const [showPluginGenerator, setShowPluginGenerator] = useState(false);
     const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
     const [isRemoteConnected, setIsRemoteConnected] = useState(false);
@@ -81,6 +78,7 @@ function App() {
         cancelText: string;
         onConfirm: () => void;
     } | null>(null);
+    const [activeDynamicPanels, setActiveDynamicPanels] = useState<string[]>([]);
 
     useEffect(() => {
         // 禁用默认右键菜单
@@ -167,6 +165,7 @@ function App() {
                 const logService = new LogService();
                 const settingsRegistry = new SettingsRegistry();
                 const sceneManagerService = new SceneManagerService(messageHub, fileAPI, projectService);
+                const fileActionRegistry = new FileActionRegistry();
 
                 // 监听远程日志事件
                 window.addEventListener('profiler:remote-log', ((event: CustomEvent) => {
@@ -185,6 +184,7 @@ function App() {
                 Core.services.registerInstance(LogService, logService);
                 Core.services.registerInstance(SettingsRegistry, settingsRegistry);
                 Core.services.registerInstance(SceneManagerService, sceneManagerService);
+                Core.services.registerInstance(FileActionRegistry, fileActionRegistry);
 
                 const pluginMgr = new EditorPluginManager();
                 pluginMgr.initialize(coreInstance, Core.services);
@@ -196,12 +196,14 @@ function App() {
                 await pluginMgr.installEditor(new BehaviorTreePlugin());
 
                 messageHub.subscribe('ui:openWindow', (data: any) => {
-                    if (data.windowId === 'profiler') {
+                    console.log('[App] Received ui:openWindow:', data);
+                    const { windowId, ...params } = data;
+
+                    // 内置窗口处理
+                    if (windowId === 'profiler') {
                         setShowProfiler(true);
-                    } else if (data.windowId === 'pluginManager') {
+                    } else if (windowId === 'pluginManager') {
                         setShowPluginManager(true);
-                    } else if (data.windowId === 'behavior-tree-editor') {
-                        setShowBehaviorTreeEditor(true);
                     }
                 });
 
@@ -227,6 +229,23 @@ function App() {
 
         initializeEditor();
     }, []);
+
+    useEffect(() => {
+        if (!messageHub) return;
+
+        const unsubscribe = messageHub.subscribe('dynamic-panel:open', (data: any) => {
+            const { panelId } = data;
+            console.log('[App] Opening dynamic panel:', panelId);
+            setActiveDynamicPanels(prev => {
+                if (prev.includes(panelId)) {
+                    return prev;
+                }
+                return [...prev, panelId];
+            });
+        });
+
+        return () => unsubscribe?.();
+    }, [messageHub]);
 
     const handleOpenRecentProject = async (projectPath: string) => {
         try {
@@ -442,10 +461,6 @@ function App() {
         }
     }, [sceneManager, locale]);
 
-    const handleOpenBehaviorTree = useCallback((btreePath: string) => {
-        setBehaviorTreeFilePath(btreePath);
-        setShowBehaviorTreeEditor(true);
-    }, []);
 
     const handleSaveScene = async () => {
         if (!sceneManager) {
@@ -544,7 +559,7 @@ function App() {
                     {
                         id: 'inspector',
                         title: locale === 'zh' ? '检视器' : 'Inspector',
-                        content: <EntityInspector entityStore={entityStore} messageHub={messageHub} />,
+                        content: <Inspector entityStore={entityStore} messageHub={messageHub} projectPath={currentProjectPath} />,
                         closable: false
                     },
                     {
@@ -565,13 +580,13 @@ function App() {
                     {
                         id: 'inspector',
                         title: locale === 'zh' ? '检视器' : 'Inspector',
-                        content: <EntityInspector entityStore={entityStore} messageHub={messageHub} />,
+                        content: <Inspector entityStore={entityStore} messageHub={messageHub} projectPath={currentProjectPath} />,
                         closable: false
                     },
                     {
                         id: 'assets',
                         title: locale === 'zh' ? '资产' : 'Assets',
-                        content: <AssetBrowser projectPath={currentProjectPath} locale={locale} onOpenScene={handleOpenSceneByPath} onOpenBehaviorTree={handleOpenBehaviorTree} />,
+                        content: <AssetBrowser projectPath={currentProjectPath} locale={locale} onOpenScene={handleOpenSceneByPath} />,
                         closable: false
                     },
                     {
@@ -592,6 +607,10 @@ function App() {
                     if (!panelDesc.component) {
                         return false;
                     }
+                    // 过滤掉动态面板
+                    if (panelDesc.isDynamic) {
+                        return false;
+                    }
                     return enabledPlugins.some((pluginName) => {
                         const plugin = pluginManager.getEditorPlugin(pluginName);
                         if (plugin && plugin.registerPanels) {
@@ -606,15 +625,33 @@ function App() {
                     return {
                         id: panelDesc.id,
                         title: (panelDesc as any).titleZh && locale === 'zh' ? (panelDesc as any).titleZh : panelDesc.title,
-                        content: <Component />,
+                        content: <Component projectPath={currentProjectPath} />,
+                        closable: panelDesc.closable ?? true
+                    };
+                });
+
+            // 添加激活的动态面板
+            const dynamicPanels: FlexDockPanel[] = activeDynamicPanels
+                .filter(panelId => {
+                    const panelDesc = uiRegistry.getPanel(panelId);
+                    return panelDesc && panelDesc.component;
+                })
+                .map(panelId => {
+                    const panelDesc = uiRegistry.getPanel(panelId)!;
+                    const Component = panelDesc.component;
+                    return {
+                        id: panelDesc.id,
+                        title: (panelDesc as any).titleZh && locale === 'zh' ? (panelDesc as any).titleZh : panelDesc.title,
+                        content: <Component projectPath={currentProjectPath} />,
                         closable: panelDesc.closable ?? true
                     };
                 });
 
             console.log('[App] Loading plugin panels:', pluginPanels);
-            setPanels([...corePanels, ...pluginPanels]);
+            console.log('[App] Loading dynamic panels:', dynamicPanels);
+            setPanels([...corePanels, ...pluginPanels, ...dynamicPanels]);
         }
-    }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode, handleOpenSceneByPath, handleOpenBehaviorTree]);
+    }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode, handleOpenSceneByPath, activeDynamicPanels]);
 
 
     if (!initialized) {
@@ -701,7 +738,14 @@ function App() {
             </div>
 
             <div className="editor-content">
-                <FlexLayoutDockContainer panels={panels} />
+                <FlexLayoutDockContainer
+                    panels={panels}
+                    onPanelClose={(panelId) => {
+                        console.log('[App] Panel closed:', panelId);
+                        // 从激活的动态面板列表中移除
+                        setActiveDynamicPanels(prev => prev.filter(id => id !== panelId));
+                    }}
+                />
             </div>
 
             <div className="editor-footer">
@@ -746,18 +790,6 @@ function App() {
 
             {showAbout && (
                 <AboutDialog onClose={() => setShowAbout(false)} locale={locale} />
-            )}
-
-            {showBehaviorTreeEditor && (
-                <BehaviorTreeWindow
-                    isOpen={showBehaviorTreeEditor}
-                    onClose={() => {
-                        setShowBehaviorTreeEditor(false);
-                        setBehaviorTreeFilePath(null);
-                    }}
-                    filePath={behaviorTreeFilePath}
-                    projectPath={currentProjectPath}
-                />
             )}
 
             {showPluginGenerator && (

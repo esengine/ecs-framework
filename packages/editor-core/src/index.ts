@@ -19,6 +19,7 @@ export * from './Services/ComponentDiscoveryService';
 export * from './Services/LogService';
 export * from './Services/SettingsRegistry';
 export * from './Services/SceneManagerService';
+export * from './Services/FileActionRegistry';
 
 export * from './Types/UITypes';
 export * from './Types/IFileAPI';

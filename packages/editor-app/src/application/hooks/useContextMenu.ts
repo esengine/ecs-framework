@@ -30,6 +30,17 @@ export function useContextMenu() {
         });
     };
 
+    const handleCanvasContextMenu = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        setContextMenu({
+            visible: true,
+            position: { x: e.clientX, y: e.clientY },
+            nodeId: null
+        });
+    };
+
     const closeContextMenu = () => {
         setContextMenu({ ...contextMenu, visible: false });
     };
@@ -38,6 +49,7 @@ export function useContextMenu() {
         contextMenu,
         setContextMenu,
         handleNodeContextMenu,
+        handleCanvasContextMenu,
         closeContextMenu
     };
 }

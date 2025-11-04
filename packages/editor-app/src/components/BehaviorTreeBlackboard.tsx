@@ -237,7 +237,7 @@ export const BehaviorTreeBlackboard: React.FC<BehaviorTreeBlackboardProps> = ({
 
             {/* 标题栏 */}
             <div style={{
-                backgroundColor: '#2d2d2d',
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
                 borderBottom: '1px solid #333'
             }}>
                 <div style={{

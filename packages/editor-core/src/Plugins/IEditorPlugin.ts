@@ -1,5 +1,6 @@
 import type { IPlugin } from '@esengine/ecs-framework';
 import type { MenuItem, ToolbarItem, PanelDescriptor } from '../Types/UITypes';
+import type { ReactNode } from 'react';
 
 /**
  * 编辑器插件类别
@@ -49,6 +50,91 @@ export interface ISerializer<T = any> {
      * 获取序列化器支持的数据类型
      */
     getSupportedType(): string;
+}
+
+/**
+ * 文件上下文菜单项
+ */
+export interface FileContextMenuItem {
+    /**
+     * 菜单项标签
+     */
+    label: string;
+
+    /**
+     * 图标
+     */
+    icon?: ReactNode;
+
+    /**
+     * 点击处理函数
+     */
+    onClick: (filePath: string, parentPath: string) => void | Promise<void>;
+
+    /**
+     * 是否禁用
+     */
+    disabled?: boolean;
+
+    /**
+     * 是否为分隔符
+     */
+    separator?: boolean;
+}
+
+/**
+ * 文件创建模板
+ */
+export interface FileCreationTemplate {
+    /**
+     * 模板名称
+     */
+    label: string;
+
+    /**
+     * 文件扩展名（不含点）
+     */
+    extension: string;
+
+    /**
+     * 默认文件名
+     */
+    defaultFileName: string;
+
+    /**
+     * 图标
+     */
+    icon?: ReactNode;
+
+    /**
+     * 创建文件内容的函数
+     */
+    createContent: (fileName: string) => string | Promise<string>;
+}
+
+/**
+ * 文件操作处理器
+ */
+export interface FileActionHandler {
+    /**
+     * 支持的文件扩展名列表
+     */
+    extensions: string[];
+
+    /**
+     * 双击处理函数
+     */
+    onDoubleClick?: (filePath: string) => void | Promise<void>;
+
+    /**
+     * 打开文件处理函数
+     */
+    onOpen?: (filePath: string) => void | Promise<void>;
+
+    /**
+     * 获取上下文菜单项
+     */
+    getContextMenuItems?: (filePath: string, parentPath: string) => FileContextMenuItem[];
 }
 
 /**
@@ -131,6 +217,16 @@ export interface IEditorPlugin extends IPlugin {
      * 获取行为树节点模板
      */
     getNodeTemplates?(): any[];
+
+    /**
+     * 注册文件操作处理器
+     */
+    registerFileActionHandlers?(): FileActionHandler[];
+
+    /**
+     * 注册文件创建模板
+     */
+    registerFileCreationTemplates?(): FileCreationTemplate[];
 }
 
 /**

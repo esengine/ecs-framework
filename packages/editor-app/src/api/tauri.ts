@@ -146,6 +146,39 @@ export class TauriAPI {
     static async scanBehaviorTrees(projectPath: string): Promise<string[]> {
         return await invoke<string[]>('scan_behavior_trees', { projectPath });
     }
+
+    /**
+   * 重命名文件或文件夹
+   * @param oldPath 原路径
+   * @param newPath 新路径
+   */
+    static async renameFileOrFolder(oldPath: string, newPath: string): Promise<void> {
+        return await invoke<void>('rename_file_or_folder', { oldPath, newPath });
+    }
+
+    /**
+   * 删除文件
+   * @param path 文件路径
+   */
+    static async deleteFile(path: string): Promise<void> {
+        return await invoke<void>('delete_file', { path });
+    }
+
+    /**
+   * 删除文件夹
+   * @param path 文件夹路径
+   */
+    static async deleteFolder(path: string): Promise<void> {
+        return await invoke<void>('delete_folder', { path });
+    }
+
+    /**
+   * 创建文件
+   * @param path 文件路径
+   */
+    static async createFile(path: string): Promise<void> {
+        return await invoke<void>('create_file', { path });
+    }
 }
 
 export interface DirectoryEntry {

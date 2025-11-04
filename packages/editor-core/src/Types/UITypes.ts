@@ -146,6 +146,11 @@ export interface PanelDescriptor {
      * 排序权重
      */
     order?: number;
+
+    /**
+     * 是否为动态面板（不默认显示，需要手动打开）
+     */
+    isDynamic?: boolean;
 }
 
 /**

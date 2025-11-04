@@ -1,0 +1,45 @@
+.behavior-tree-properties-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background: var(--bg-secondary);
+}
+
+.properties-panel-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-primary);
+}
+
+.properties-panel-tabs .tab-button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.properties-panel-tabs .tab-button:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.properties-panel-tabs .tab-button.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background: var(--bg-secondary);
+}
+
+.properties-panel-content {
+    flex: 1;
+    overflow: hidden;
+}

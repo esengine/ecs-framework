@@ -125,6 +125,11 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
         runtime.activeNodeIds.add(nodeData.id);
         state.isAborted = false;
 
+        if (state.executionOrder === undefined) {
+            runtime.executionOrderCounter++;
+            state.executionOrder = runtime.executionOrderCounter;
+        }
+
         const executor = this.executorRegistry.get(nodeData.implementationType);
         if (!executor) {
             this.logger.error(`未找到执行器: ${nodeData.implementationType}`);

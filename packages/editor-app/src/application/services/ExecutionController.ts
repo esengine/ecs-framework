@@ -1,12 +1,11 @@
 import { BehaviorTreeExecutor, ExecutionStatus, ExecutionLog } from '../../utils/BehaviorTreeExecutor';
-import { BehaviorTreeNode, Connection } from '../../stores/behaviorTreeStore';
+import { BehaviorTreeNode, Connection, NodeExecutionStatus } from '../../stores/behaviorTreeStore';
 import { BlackboardValue } from '../../domain/models/Blackboard';
 import { DOMCache } from '../../presentation/utils/DOMCache';
 import { EditorEventBus, EditorEvent } from '../../infrastructure/events/EditorEventBus';
 import { ExecutionHooksManager } from '../interfaces/IExecutionHooks';
 
 export type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
-type NodeExecutionStatus = 'idle' | 'running' | 'success' | 'failure';
 type BlackboardVariables = Record<string, BlackboardValue>;
 
 interface ExecutionControllerConfig {
@@ -15,6 +14,7 @@ interface ExecutionControllerConfig {
     onLogsUpdate: (logs: ExecutionLog[]) => void;
     onBlackboardUpdate: (variables: BlackboardVariables) => void;
     onTickCountUpdate: (count: number) => void;
+    onExecutionStatusUpdate: (statuses: Map<string, NodeExecutionStatus>, orders: Map<string, number>) => void;
     eventBus?: EditorEventBus;
     hooksManager?: ExecutionHooksManager;
 }
@@ -35,6 +35,12 @@ export class ExecutionController {
     private currentNodes: BehaviorTreeNode[] = [];
     private currentConnections: Connection[] = [];
     private currentBlackboard: BlackboardVariables = {};
+
+    private stepByStepMode: boolean = true;
+    private pendingStatusUpdates: ExecutionStatus[] = [];
+    private currentlyDisplayedIndex: number = 0;
+    private lastStepTime: number = 0;
+    private stepInterval: number = 200;
 
     constructor(config: ExecutionControllerConfig) {
         this.config = config;
@@ -57,6 +63,7 @@ export class ExecutionController {
 
     setSpeed(speed: number): void {
         this.speed = speed;
+        this.lastTickTime = 0;
     }
 
     async play(
@@ -156,23 +163,14 @@ export class ExecutionController {
             this.mode = 'idle';
             this.tickCount = 0;
             this.lastTickTime = 0;
+            this.lastStepTime = 0;
+            this.pendingStatusUpdates = [];
+            this.currentlyDisplayedIndex = 0;
 
             this.domCache.clearAllStatusTimers();
             this.domCache.clearStatusCache();
 
-            this.domCache.forEachNode((node) => {
-                node.classList.remove('running', 'success', 'failure', 'executed');
-            });
-
-            this.domCache.forEachConnection((path) => {
-                const connectionType = path.getAttribute('data-connection-type');
-                if (connectionType === 'property') {
-                    path.setAttribute('stroke', '#9c27b0');
-                } else {
-                    path.setAttribute('stroke', '#0e639c');
-                }
-                path.setAttribute('stroke-width', '2');
-            });
+            this.config.onExecutionStatusUpdate(new Map(), new Map());
 
             if (this.animationFrameId !== null) {
                 cancelAnimationFrame(this.animationFrameId);
@@ -217,6 +215,24 @@ export class ExecutionController {
         return {};
     }
 
+    updateNodes(nodes: BehaviorTreeNode[]): void {
+        if (this.mode === 'idle' || !this.executor) {
+            return;
+        }
+
+        this.currentNodes = nodes;
+
+        this.executor.buildTree(
+            nodes,
+            this.config.rootNodeId,
+            this.currentBlackboard,
+            this.currentConnections,
+            this.handleExecutionStatusUpdate.bind(this)
+        );
+
+        this.executor.start();
+    }
+
     clearDOMCache(): void {
         this.domCache.clearAll();
     }
@@ -239,21 +255,96 @@ export class ExecutionController {
             return;
         }
 
+        if (this.stepByStepMode) {
+            this.handleStepByStepExecution(currentTime);
+        } else {
+            this.handleNormalExecution(currentTime);
+        }
+
+        this.animationFrameId = requestAnimationFrame(this.tickLoop.bind(this));
+    }
+
+    private handleNormalExecution(currentTime: number): void {
         const baseTickInterval = 16.67;
-        const tickInterval = baseTickInterval / this.speed;
+        const scaledTickInterval = baseTickInterval / this.speed;
 
-        if (this.lastTickTime === 0 || (currentTime - this.lastTickTime) >= tickInterval) {
-            const deltaTime = 0.016;
+        if (this.lastTickTime === 0) {
+            this.lastTickTime = currentTime;
+        }
 
-            this.executor.tick(deltaTime);
+        const elapsed = currentTime - this.lastTickTime;
 
-            this.tickCount = this.executor.getTickCount();
+        if (elapsed >= scaledTickInterval) {
+            const deltaTime = baseTickInterval / 1000;
+
+            this.executor!.tick(deltaTime);
+
+            this.tickCount = this.executor!.getTickCount();
             this.config.onTickCountUpdate(this.tickCount);
 
             this.lastTickTime = currentTime;
         }
+    }
 
-        this.animationFrameId = requestAnimationFrame(this.tickLoop.bind(this));
+    private handleStepByStepExecution(currentTime: number): void {
+        if (this.lastStepTime === 0) {
+            this.lastStepTime = currentTime;
+        }
+
+        const stepElapsed = currentTime - this.lastStepTime;
+        const actualStepInterval = this.stepInterval / this.speed;
+
+        if (stepElapsed >= actualStepInterval) {
+            if (this.currentlyDisplayedIndex < this.pendingStatusUpdates.length) {
+                this.displayNextNode();
+                this.lastStepTime = currentTime;
+            } else {
+                if (this.lastTickTime === 0) {
+                    this.lastTickTime = currentTime;
+                }
+
+                const tickElapsed = currentTime - this.lastTickTime;
+                const baseTickInterval = 16.67;
+                const scaledTickInterval = baseTickInterval / this.speed;
+
+                if (tickElapsed >= scaledTickInterval) {
+                    const deltaTime = baseTickInterval / 1000;
+                    this.executor!.tick(deltaTime);
+                    this.tickCount = this.executor!.getTickCount();
+                    this.config.onTickCountUpdate(this.tickCount);
+                    this.lastTickTime = currentTime;
+                }
+            }
+        }
+    }
+
+    private displayNextNode(): void {
+        if (this.currentlyDisplayedIndex >= this.pendingStatusUpdates.length) {
+            return;
+        }
+
+        const statusesToDisplay = this.pendingStatusUpdates.slice(0, this.currentlyDisplayedIndex + 1);
+        const currentNode = this.pendingStatusUpdates[this.currentlyDisplayedIndex];
+
+        if (!currentNode) {
+            return;
+        }
+
+        const statusMap = new Map<string, NodeExecutionStatus>();
+        const orderMap = new Map<string, number>();
+
+        statusesToDisplay.forEach((s) => {
+            statusMap.set(s.nodeId, s.status);
+            if (s.executionOrder !== undefined) {
+                orderMap.set(s.nodeId, s.executionOrder);
+            }
+        });
+
+        const nodeName = this.currentNodes.find(n => n.id === currentNode.nodeId)?.template.displayName || 'Unknown';
+        console.log(`[StepByStep] Displaying ${this.currentlyDisplayedIndex + 1}/${this.pendingStatusUpdates.length} | ${nodeName} | Order: ${currentNode.executionOrder} | ID: ${currentNode.nodeId}`);
+        this.config.onExecutionStatusUpdate(statusMap, orderMap);
+
+        this.currentlyDisplayedIndex++;
     }
 
     private handleExecutionStatusUpdate(
@@ -267,52 +358,49 @@ export class ExecutionController {
             this.config.onBlackboardUpdate(runtimeBlackboardVars);
         }
 
-        const statusMap: Record<string, NodeExecutionStatus> = {};
+        if (this.stepByStepMode) {
+            const statusesWithOrder = statuses.filter(s => s.executionOrder !== undefined);
 
-        statuses.forEach((s) => {
-            statusMap[s.nodeId] = s.status;
+            if (statusesWithOrder.length > 0) {
+                const minOrder = Math.min(...statusesWithOrder.map(s => s.executionOrder!));
 
-            if (!this.domCache.hasStatusChanged(s.nodeId, s.status)) {
-                return;
+                if (minOrder === 1 || this.pendingStatusUpdates.length === 0) {
+                    this.pendingStatusUpdates = statusesWithOrder.sort((a, b) =>
+                        (a.executionOrder || 0) - (b.executionOrder || 0)
+                    );
+                    this.currentlyDisplayedIndex = 0;
+                    this.lastStepTime = 0;
+                } else {
+                    const maxExistingOrder = this.pendingStatusUpdates.length > 0
+                        ? Math.max(...this.pendingStatusUpdates.map(s => s.executionOrder || 0))
+                        : 0;
+
+                    const newStatuses = statusesWithOrder.filter(s =>
+                        (s.executionOrder || 0) > maxExistingOrder
+                    );
+
+                    if (newStatuses.length > 0) {
+                        console.log(`[StepByStep] Appending ${newStatuses.length} new nodes, orders:`, newStatuses.map(s => s.executionOrder));
+                        this.pendingStatusUpdates = [
+                            ...this.pendingStatusUpdates,
+                            ...newStatuses
+                        ].sort((a, b) => (a.executionOrder || 0) - (b.executionOrder || 0));
+                    }
+                }
             }
-            this.domCache.setLastStatus(s.nodeId, s.status);
+        } else {
+            const statusMap = new Map<string, NodeExecutionStatus>();
+            const orderMap = new Map<string, number>();
 
-            const nodeElement = this.domCache.getNode(s.nodeId);
-            if (!nodeElement) {
-                return;
-            }
+            statuses.forEach((s) => {
+                statusMap.set(s.nodeId, s.status);
+                if (s.executionOrder !== undefined) {
+                    orderMap.set(s.nodeId, s.executionOrder);
+                }
+            });
 
-            this.domCache.removeNodeClasses(s.nodeId, 'running', 'success', 'failure', 'executed');
-
-            if (s.status === 'running') {
-                this.domCache.addNodeClasses(s.nodeId, 'running');
-            } else if (s.status === 'success') {
-                this.domCache.addNodeClasses(s.nodeId, 'success');
-
-                this.domCache.clearStatusTimer(s.nodeId);
-
-                const timer = window.setTimeout(() => {
-                    this.domCache.removeNodeClasses(s.nodeId, 'success');
-                    this.domCache.addNodeClasses(s.nodeId, 'executed');
-                    this.domCache.clearStatusTimer(s.nodeId);
-                }, 2000);
-
-                this.domCache.setStatusTimer(s.nodeId, timer);
-            } else if (s.status === 'failure') {
-                this.domCache.addNodeClasses(s.nodeId, 'failure');
-
-                this.domCache.clearStatusTimer(s.nodeId);
-
-                const timer = window.setTimeout(() => {
-                    this.domCache.removeNodeClasses(s.nodeId, 'failure');
-                    this.domCache.clearStatusTimer(s.nodeId);
-                }, 2000);
-
-                this.domCache.setStatusTimer(s.nodeId, timer);
-            }
-        });
-
-        this.updateConnectionStyles(statusMap);
+            this.config.onExecutionStatusUpdate(statusMap, orderMap);
+        }
     }
 
     private updateConnectionStyles(

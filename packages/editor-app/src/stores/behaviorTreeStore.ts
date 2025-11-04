@@ -9,18 +9,29 @@ import { createRootNode, ROOT_NODE_ID } from '../domain/constants/RootNode';
 /**
  * 行为树 Store 状态接口
  */
+export type NodeExecutionStatus = 'idle' | 'running' | 'success' | 'failure';
+
+export interface NodeExecutionInfo {
+    status: NodeExecutionStatus;
+    executionOrder?: number;
+}
+
 interface BehaviorTreeState {
+    isOpen: boolean;
     nodes: Node[];
     connections: Connection[];
     blackboard: Blackboard;
     blackboardVariables: Record<string, BlackboardValue>;
     initialBlackboardVariables: Record<string, BlackboardValue>;
+    initialNodesData: Map<string, Record<string, unknown>>;
     selectedNodeIds: string[];
     draggingNodeId: string | null;
     dragStartPositions: Map<string, { x: number; y: number }>;
     isDraggingNode: boolean;
 
     isExecuting: boolean;
+    nodeExecutionStatuses: Map<string, NodeExecutionStatus>;
+    nodeExecutionOrders: Map<string, number>;
 
     canvasOffset: { x: number; y: number };
     canvasScale: number;
@@ -84,6 +95,11 @@ interface BehaviorTreeState {
     setBlackboardVariables: (variables: Record<string, BlackboardValue>) => void;
     setInitialBlackboardVariables: (variables: Record<string, BlackboardValue>) => void;
     setIsExecuting: (isExecuting: boolean) => void;
+    saveNodesDataSnapshot: () => void;
+    restoreNodesData: () => void;
+    setNodeExecutionStatus: (nodeId: string, status: NodeExecutionStatus) => void;
+    updateNodeExecutionStatuses: (statuses: Map<string, NodeExecutionStatus>, orders?: Map<string, number>) => void;
+    clearNodeExecutionStatuses: () => void;
 
     sortChildrenByPosition: () => void;
 
@@ -95,6 +111,7 @@ interface BehaviorTreeState {
         format: 'json' | 'binary'
     ) => string | Uint8Array;
 
+    setIsOpen: (isOpen: boolean) => void;
     reset: () => void;
 }
 
@@ -103,17 +120,21 @@ interface BehaviorTreeState {
  * 行为树 Store
  */
 export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
-    nodes: [createRootNode()],
+    isOpen: false,
+    nodes: [],
     connections: [],
     blackboard: new Blackboard(),
     blackboardVariables: {},
     initialBlackboardVariables: {},
+    initialNodesData: new Map(),
     selectedNodeIds: [],
     draggingNodeId: null,
     dragStartPositions: new Map(),
     isDraggingNode: false,
 
     isExecuting: false,
+    nodeExecutionStatuses: new Map(),
+    nodeExecutionOrders: new Map(),
 
     canvasOffset: { x: 0, y: 0 },
     canvasScale: 1,
@@ -272,6 +293,45 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
 
     setIsExecuting: (isExecuting: boolean) => set({ isExecuting }),
 
+    saveNodesDataSnapshot: () => {
+        const snapshot = new Map<string, Record<string, unknown>>();
+        get().nodes.forEach(node => {
+            snapshot.set(node.id, { ...node.data });
+        });
+        set({ initialNodesData: snapshot });
+    },
+
+    restoreNodesData: () => {
+        const snapshot = get().initialNodesData;
+        if (snapshot.size === 0) return;
+
+        const updatedNodes = get().nodes.map(node => {
+            const savedData = snapshot.get(node.id);
+            if (savedData) {
+                return new Node(node.id, node.template, savedData, node.position, Array.from(node.children));
+            }
+            return node;
+        });
+        set({ nodes: updatedNodes, initialNodesData: new Map() });
+    },
+
+    setNodeExecutionStatus: (nodeId: string, status: NodeExecutionStatus) => {
+        const newStatuses = new Map(get().nodeExecutionStatuses);
+        newStatuses.set(nodeId, status);
+        set({ nodeExecutionStatuses: newStatuses });
+    },
+
+    updateNodeExecutionStatuses: (statuses: Map<string, NodeExecutionStatus>, orders?: Map<string, number>) => {
+        set({
+            nodeExecutionStatuses: new Map(statuses),
+            nodeExecutionOrders: orders ? new Map(orders) : new Map()
+        });
+    },
+
+    clearNodeExecutionStatuses: () => {
+        set({ nodeExecutionStatuses: new Map(), nodeExecutionOrders: new Map() });
+    },
+
     sortChildrenByPosition: () => set((state: BehaviorTreeState) => {
         const nodeMap = new Map<string, Node>();
         state.nodes.forEach((node) => nodeMap.set(node.id, node));
@@ -353,6 +413,7 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
         const loadedBlackboard = Blackboard.fromObject(blackboardData);
 
         set({
+            isOpen: true,
             nodes: loadedNodes,
             connections: loadedConnections,
             blackboard: loadedBlackboard,
@@ -391,8 +452,11 @@ export const useBehaviorTreeStore = create<BehaviorTreeState>((set, get) => ({
         });
     },
 
+    setIsOpen: (isOpen: boolean) => set({ isOpen }),
+
     reset: () => set({
-        nodes: [createRootNode()],
+        isOpen: false,
+        nodes: [],
         connections: [],
         blackboard: new Blackboard(),
         blackboardVariables: {},

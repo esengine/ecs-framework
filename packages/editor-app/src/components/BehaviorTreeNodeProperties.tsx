@@ -39,6 +39,13 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
     const { t } = useTranslation();
     const [assetPickerOpen, setAssetPickerOpen] = useState(false);
     const [assetPickerProperty, setAssetPickerProperty] = useState<string | null>(null);
+    const [isComposing, setIsComposing] = useState(false);
+    const [localValues, setLocalValues] = useState<Record<string, any>>({});
+
+    // 当节点切换时，清空本地状态
+    React.useEffect(() => {
+        setLocalValues({});
+    }, [selectedNode?.template.className]);
 
     if (!selectedNode) {
         return (
@@ -58,11 +65,31 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
     const { template, data } = selectedNode;
 
     const handleChange = (propName: string, value: any) => {
+        if (!isComposing) {
+            onPropertyChange?.(propName, value);
+        }
+    };
+
+    const handleInputChange = (propName: string, value: any) => {
+        setLocalValues(prev => ({ ...prev, [propName]: value }));
+        if (!isComposing) {
+            onPropertyChange?.(propName, value);
+        }
+    };
+
+    const handleCompositionStart = () => {
+        setIsComposing(true);
+    };
+
+    const handleCompositionEnd = (propName: string, value: any) => {
+        setIsComposing(false);
         onPropertyChange?.(propName, value);
     };
 
     const renderProperty = (prop: PropertyDefinition) => {
-        const value = data[prop.name] ?? prop.defaultValue;
+        const propName = prop.name;
+        const hasLocalValue = propName in localValues;
+        const value = hasLocalValue ? localValues[propName] : (data[prop.name] ?? prop.defaultValue);
 
         switch (prop.type) {
             case 'string':
@@ -71,7 +98,10 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
                     <input
                         type="text"
                         value={value || ''}
-                        onChange={(e) => handleChange(prop.name, e.target.value)}
+                        onChange={(e) => handleInputChange(propName, e.target.value)}
+                        onCompositionStart={handleCompositionStart}
+                        onCompositionEnd={(e) => handleCompositionEnd(propName, (e.target as HTMLInputElement).value)}
+                        onBlur={(e) => onPropertyChange?.(propName, e.target.value)}
                         placeholder={prop.description}
                         style={{
                             width: '100%',
@@ -148,7 +178,10 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
                 return (
                     <textarea
                         value={value || ''}
-                        onChange={(e) => handleChange(prop.name, e.target.value)}
+                        onChange={(e) => handleInputChange(propName, e.target.value)}
+                        onCompositionStart={handleCompositionStart}
+                        onCompositionEnd={(e) => handleCompositionEnd(propName, (e.target as HTMLTextAreaElement).value)}
+                        onBlur={(e) => onPropertyChange?.(propName, e.target.value)}
                         placeholder={prop.description}
                         rows={5}
                         style={{
@@ -171,7 +204,10 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
                         <input
                             type="text"
                             value={value || ''}
-                            onChange={(e) => handleChange(prop.name, e.target.value)}
+                            onChange={(e) => handleInputChange(propName, e.target.value)}
+                            onCompositionStart={handleCompositionStart}
+                            onCompositionEnd={(e) => handleCompositionEnd(propName, (e.target as HTMLInputElement).value)}
+                            onBlur={(e) => onPropertyChange?.(propName, e.target.value)}
                             placeholder="黑板变量名"
                             style={{
                                 flex: 1,
@@ -338,43 +374,6 @@ export const BehaviorTreeNodeProperties: React.FC<BehaviorTreeNodePropertiesProp
                         </div>
                     ))
                 )}
-            </div>
-
-            {/* 操作按钮 */}
-            <div style={{
-                padding: '15px',
-                borderTop: '1px solid #333',
-                display: 'flex',
-                gap: '10px'
-            }}>
-                <button
-                    style={{
-                        flex: 1,
-                        padding: '8px',
-                        backgroundColor: '#0e639c',
-                        border: 'none',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        fontSize: '13px'
-                    }}
-                >
-                    {t('behaviorTree.apply')}
-                </button>
-                <button
-                    style={{
-                        flex: 1,
-                        padding: '8px',
-                        backgroundColor: '#3c3c3c',
-                        border: 'none',
-                        borderRadius: '3px',
-                        color: '#cccccc',
-                        cursor: 'pointer',
-                        fontSize: '13px'
-                    }}
-                >
-                    {t('behaviorTree.reset')}
-                </button>
             </div>
 
             {/* 资产选择器对话框 */}

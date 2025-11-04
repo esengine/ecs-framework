@@ -55,6 +55,35 @@ fn path_exists(path: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
+fn rename_file_or_folder(old_path: String, new_path: String) -> Result<(), String> {
+    std::fs::rename(&old_path, &new_path)
+        .map_err(|e| format!("Failed to rename: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+fn delete_file(path: String) -> Result<(), String> {
+    std::fs::remove_file(&path)
+        .map_err(|e| format!("Failed to delete file: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+fn delete_folder(path: String) -> Result<(), String> {
+    std::fs::remove_dir_all(&path)
+        .map_err(|e| format!("Failed to delete folder: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+fn create_file(path: String) -> Result<(), String> {
+    use std::fs::File;
+    File::create(&path)
+        .map_err(|e| format!("Failed to create file: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
 async fn open_project_dialog(app: AppHandle) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::DialogExt;
 
@@ -572,6 +601,10 @@ fn main() {
             create_directory,
             write_file_content,
             path_exists,
+            rename_file_or_folder,
+            delete_file,
+            delete_folder,
+            create_file,
             open_project_dialog,
             save_scene_dialog,
             open_scene_dialog,

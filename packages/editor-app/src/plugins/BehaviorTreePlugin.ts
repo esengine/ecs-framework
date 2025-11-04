@@ -1,7 +1,12 @@
 import type { Core, ServiceContainer } from '@esengine/ecs-framework';
 import { IEditorPlugin, EditorPluginCategory, PanelPosition, MessageHub } from '@esengine/editor-core';
-import type { MenuItem, ToolbarItem, PanelDescriptor, ISerializer } from '@esengine/editor-core';
+import type { MenuItem, ToolbarItem, PanelDescriptor, ISerializer, FileActionHandler, FileCreationTemplate, FileContextMenuItem } from '@esengine/editor-core';
 import { BehaviorTreeData } from '@esengine/behavior-tree';
+import { BehaviorTreeEditorPanel } from '../presentation/components/behavior-tree/panels';
+import { FileText } from 'lucide-react';
+import { TauriAPI } from '../api/tauri';
+import { createElement } from 'react';
+import { useBehaviorTreeStore } from '../stores/behaviorTreeStore';
 
 /**
  * 行为树编辑器插件
@@ -32,79 +37,24 @@ export class BehaviorTreePlugin implements IEditorPlugin {
     }
 
     registerMenuItems(): MenuItem[] {
-        return [
-            {
-                id: 'view-behavior-tree-editor',
-                label: 'Behavior Tree Editor',
-                parentId: 'window',
-                onClick: () => {
-                    this.messageHub?.publish('ui:openWindow', { windowId: 'behavior-tree-editor' });
-                },
-                icon: 'Network',
-                order: 50
-            }
-        ];
+        return [];
     }
 
     registerToolbar(): ToolbarItem[] {
-        return [
-            {
-                id: 'toolbar-new-behavior-tree',
-                label: 'New Behavior Tree',
-                groupId: 'behavior-tree-tools',
-                icon: 'FilePlus',
-                onClick: () => this.createNewBehaviorTree(),
-                order: 10
-            },
-            {
-                id: 'toolbar-save-behavior-tree',
-                label: 'Save Behavior Tree',
-                groupId: 'behavior-tree-tools',
-                icon: 'Save',
-                onClick: () => this.saveBehaviorTree(),
-                order: 20
-            },
-            {
-                id: 'toolbar-validate-behavior-tree',
-                label: 'Validate Behavior Tree',
-                groupId: 'behavior-tree-tools',
-                icon: 'CheckCircle',
-                onClick: () => this.validateBehaviorTree(),
-                order: 30
-            }
-        ];
+        return [];
     }
 
     registerPanels(): PanelDescriptor[] {
         return [
             {
-                id: 'panel-behavior-tree-editor',
-                title: 'Behavior Tree Editor',
-                position: PanelPosition.Center,
-                resizable: true,
-                closable: true,
+                id: 'behavior-tree-editor',
+                title: '行为树编辑器',
                 icon: 'Network',
-                order: 10
-            },
-            {
-                id: 'panel-behavior-tree-nodes',
-                title: 'Behavior Tree Nodes',
-                position: PanelPosition.Left,
-                defaultSize: 250,
-                resizable: true,
+                component: BehaviorTreeEditorPanel,
+                position: PanelPosition.Center,
+                defaultSize: 400,
                 closable: true,
-                icon: 'Package',
-                order: 20
-            },
-            {
-                id: 'panel-behavior-tree-properties',
-                title: 'Node Properties',
-                position: PanelPosition.Right,
-                defaultSize: 300,
-                resizable: true,
-                closable: true,
-                icon: 'Settings',
-                order: 20
+                isDynamic: true
             }
         ];
     }
@@ -155,20 +105,85 @@ export class BehaviorTreePlugin implements IEditorPlugin {
         }
     }
 
-    private createNewBehaviorTree(): void {
-        console.log('[BehaviorTreePlugin] Creating new behavior tree');
+    registerFileActionHandlers(): FileActionHandler[] {
+        return [
+            {
+                extensions: ['btree'],
+                onDoubleClick: async (filePath: string) => {
+                    console.log('[BehaviorTreePlugin] onDoubleClick called for:', filePath);
+
+                    if (this.messageHub) {
+                        useBehaviorTreeStore.getState().setIsOpen(true);
+
+                        await this.messageHub.publish('dynamic-panel:open', {
+                            panelId: 'behavior-tree-editor'
+                        });
+
+                        await this.messageHub.publish('behavior-tree:open-file', {
+                            filePath: filePath
+                        });
+                        console.log('[BehaviorTreePlugin] Panel opened and file loaded');
+                    } else {
+                        console.error('[BehaviorTreePlugin] MessageHub is not available!');
+                    }
+                },
+                onOpen: async (filePath: string) => {
+                    if (this.messageHub) {
+                        useBehaviorTreeStore.getState().setIsOpen(true);
+
+                        await this.messageHub.publish('dynamic-panel:open', {
+                            panelId: 'behavior-tree-editor'
+                        });
+
+                        await this.messageHub.publish('behavior-tree:open-file', {
+                            filePath: filePath
+                        });
+                    }
+                },
+                getContextMenuItems: (filePath: string, parentPath: string): FileContextMenuItem[] => {
+                    return [
+                        {
+                            label: '打开行为树编辑器',
+                            icon: createElement(FileText, { size: 16 }),
+                            onClick: async (filePath: string) => {
+                                if (this.messageHub) {
+                                    useBehaviorTreeStore.getState().setIsOpen(true);
+
+                                    await this.messageHub.publish('dynamic-panel:open', {
+                                        panelId: 'behavior-tree-editor'
+                                    });
+
+                                    await this.messageHub.publish('behavior-tree:open-file', {
+                                        filePath: filePath
+                                    });
+                                }
+                            }
+                        }
+                    ];
+                }
+            }
+        ];
     }
 
-    private openBehaviorTree(): void {
-        console.log('[BehaviorTreePlugin] Opening behavior tree');
-    }
-
-    private saveBehaviorTree(): void {
-        console.log('[BehaviorTreePlugin] Saving behavior tree');
-    }
-
-    private validateBehaviorTree(): void {
-        console.log('[BehaviorTreePlugin] Validating behavior tree');
+    registerFileCreationTemplates(): FileCreationTemplate[] {
+        return [
+            {
+                label: '行为树',
+                extension: 'btree',
+                defaultFileName: 'NewBehaviorTree',
+                icon: createElement(FileText, { size: 16 }),
+                createContent: async (fileName: string) => {
+                    const emptyTree: BehaviorTreeData = {
+                        id: `tree_${Date.now()}`,
+                        name: fileName,
+                        rootNodeId: '',
+                        nodes: new Map(),
+                        blackboardVariables: new Map()
+                    };
+                    return this.serializeBehaviorTreeData(emptyTree);
+                }
+            }
+        ];
     }
 
     private serializeBehaviorTreeData(treeData: BehaviorTreeData): string {

@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Folder, ChevronRight, ChevronDown } from 'lucide-react';
+import { Folder, ChevronRight, ChevronDown, File, Edit3, Trash2, FolderOpen, Copy, FileText, FolderPlus, ChevronsDown, ChevronsUp } from 'lucide-react';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
+import { MessageHub, FileActionRegistry } from '@esengine/editor-core';
+import { Core } from '@esengine/ecs-framework';
+import { ContextMenu, ContextMenuItem } from './ContextMenu';
+import { ConfirmDialog } from './ConfirmDialog';
+import { PromptDialog } from './PromptDialog';
 import '../styles/FileTree.css';
 
 interface TreeNode {
   name: string;
   path: string;
-  type: 'folder';
+  type: 'folder' | 'file';
+  size?: number;
+  modified?: number;
   children?: TreeNode[];
   expanded?: boolean;
   loaded?: boolean;
@@ -16,11 +23,30 @@ interface FileTreeProps {
   rootPath: string | null;
   onSelectFile?: (path: string) => void;
   selectedPath?: string | null;
+  messageHub?: MessageHub;
+  searchQuery?: string;
+  showFiles?: boolean;
 }
 
-export function FileTree({ rootPath, onSelectFile, selectedPath }: FileTreeProps) {
+export function FileTree({ rootPath, onSelectFile, selectedPath, messageHub, searchQuery, showFiles = true }: FileTreeProps) {
     const [tree, setTree] = useState<TreeNode[]>([]);
     const [loading, setLoading] = useState(false);
+    const [internalSelectedPath, setInternalSelectedPath] = useState<string | null>(null);
+    const [contextMenu, setContextMenu] = useState<{
+        position: { x: number; y: number };
+        node: TreeNode | null;
+    } | null>(null);
+    const [renamingNode, setRenamingNode] = useState<string | null>(null);
+    const [newName, setNewName] = useState('');
+    const [deleteDialog, setDeleteDialog] = useState<{ node: TreeNode } | null>(null);
+    const [promptDialog, setPromptDialog] = useState<{
+        type: 'create-file' | 'create-folder' | 'create-template';
+        parentPath: string;
+        templateExtension?: string;
+        templateContent?: (fileName: string) => Promise<string>;
+    } | null>(null);
+    const [filteredTree, setFilteredTree] = useState<TreeNode[]>([]);
+    const fileActionRegistry = Core.services.resolve(FileActionRegistry);
 
     useEffect(() => {
         if (rootPath) {
@@ -29,6 +55,74 @@ export function FileTree({ rootPath, onSelectFile, selectedPath }: FileTreeProps
             setTree([]);
         }
     }, [rootPath]);
+
+    useEffect(() => {
+        if (selectedPath) {
+            setInternalSelectedPath(selectedPath);
+        }
+    }, [selectedPath]);
+
+    useEffect(() => {
+        const performSearch = async () => {
+            const filterByFileType = (nodes: TreeNode[]): TreeNode[] => {
+                return nodes
+                    .filter(node => showFiles || node.type === 'folder')
+                    .map(node => ({
+                        ...node,
+                        children: node.children ? filterByFileType(node.children) : node.children
+                    }));
+            };
+
+            let result = filterByFileType(tree);
+
+            if (searchQuery && searchQuery.trim()) {
+                const query = searchQuery.toLowerCase();
+
+                const loadAndFilterTree = async (nodes: TreeNode[]): Promise<TreeNode[]> => {
+                    const filtered: TreeNode[] = [];
+
+                    for (const node of nodes) {
+                        const nameMatches = node.name.toLowerCase().includes(query);
+                        let filteredChildren: TreeNode[] = [];
+
+                        if (node.type === 'folder') {
+                            let childrenToSearch = node.children || [];
+
+                            if (!node.loaded) {
+                                try {
+                                    const entries = await TauriAPI.listDirectory(node.path);
+                                    childrenToSearch = entriesToNodes(entries);
+                                } catch (error) {
+                                    console.error('Failed to load children for search:', error);
+                                }
+                            }
+
+                            if (childrenToSearch.length > 0) {
+                                filteredChildren = await loadAndFilterTree(childrenToSearch);
+                            }
+                        }
+
+                        if (nameMatches || filteredChildren.length > 0) {
+                            filtered.push({
+                                ...node,
+                                expanded: filteredChildren.length > 0,
+                                loaded: true,
+                                children: filteredChildren.length > 0 ? filteredChildren : (node.type === 'folder' ? [] : undefined)
+                            });
+                        }
+                    }
+
+                    return filtered;
+                };
+
+                result = await loadAndFilterTree(result);
+            }
+
+            setFilteredTree(result);
+        };
+
+        performSearch();
+    }, [searchQuery, tree, showFiles]);
 
     const loadRootDirectory = async (path: string) => {
         setLoading(true);
@@ -57,16 +151,20 @@ export function FileTree({ rootPath, onSelectFile, selectedPath }: FileTreeProps
     };
 
     const entriesToNodes = (entries: DirectoryEntry[]): TreeNode[] => {
-    // 只显示文件夹，过滤掉文件
         return entries
-            .filter((entry) => entry.is_dir)
+            .sort((a, b) => {
+                if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
+                return a.is_dir ? -1 : 1;
+            })
             .map((entry) => ({
                 name: entry.name,
                 path: entry.path,
-                type: 'folder' as const,
-                children: [],
+                type: entry.is_dir ? 'folder' as const : 'file' as const,
+                size: entry.size,
+                modified: entry.modified,
+                children: entry.is_dir ? [] : undefined,
                 expanded: false,
-                loaded: false
+                loaded: entry.is_dir ? false : undefined
             }));
     };
 
@@ -115,13 +213,343 @@ export function FileTree({ rootPath, onSelectFile, selectedPath }: FileTreeProps
         setTree(newTree);
     };
 
+    const refreshTree = async () => {
+        if (rootPath) {
+            await loadRootDirectory(rootPath);
+        }
+    };
+
+    const expandAll = async () => {
+        const expandNode = async (node: TreeNode): Promise<TreeNode> => {
+            if (node.type === 'folder') {
+                let children = node.children || [];
+
+                if (!node.loaded) {
+                    try {
+                        const entries = await TauriAPI.listDirectory(node.path);
+                        children = entriesToNodes(entries);
+                    } catch (error) {
+                        console.error('Failed to load children:', error);
+                        children = [];
+                    }
+                }
+
+                const expandedChildren = await Promise.all(
+                    children.map(child => expandNode(child))
+                );
+
+                return {
+                    ...node,
+                    expanded: true,
+                    loaded: true,
+                    children: expandedChildren
+                };
+            }
+            return node;
+        };
+
+        const expandedTree = await Promise.all(tree.map(node => expandNode(node)));
+        setTree(expandedTree);
+    };
+
+    const collapseAll = () => {
+        const collapseNode = (node: TreeNode): TreeNode => {
+            if (node.type === 'folder') {
+                return {
+                    ...node,
+                    expanded: false,
+                    children: node.children ? node.children.map(collapseNode) : node.children
+                };
+            }
+            return node;
+        };
+
+        const collapsedTree = tree.map(node => collapseNode(node));
+        setTree(collapsedTree);
+    };
+
+    const handleRename = async (node: TreeNode) => {
+        if (!newName || newName === node.name) {
+            setRenamingNode(null);
+            return;
+        }
+
+        const pathParts = node.path.split(/[/\\]/);
+        pathParts[pathParts.length - 1] = newName;
+        const newPath = pathParts.join('/');
+
+        try {
+            await TauriAPI.renameFileOrFolder(node.path, newPath);
+            await refreshTree();
+            setRenamingNode(null);
+            setNewName('');
+        } catch (error) {
+            console.error('Failed to rename:', error);
+            alert(`重命名失败: ${error}`);
+        }
+    };
+
+    const handleDeleteClick = (node: TreeNode) => {
+        setContextMenu(null);
+        setDeleteDialog({ node });
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!deleteDialog) return;
+
+        const node = deleteDialog.node;
+        setDeleteDialog(null);
+
+        try {
+            if (node.type === 'folder') {
+                await TauriAPI.deleteFolder(node.path);
+            } else {
+                await TauriAPI.deleteFile(node.path);
+            }
+            await refreshTree();
+        } catch (error) {
+            console.error('Failed to delete:', error);
+            alert(`删除失败: ${error}`);
+        }
+    };
+
+    const handleCreateFileClick = (parentPath: string) => {
+        setContextMenu(null);
+        setPromptDialog({ type: 'create-file', parentPath });
+    };
+
+    const handleCreateFolderClick = (parentPath: string) => {
+        setContextMenu(null);
+        setPromptDialog({ type: 'create-folder', parentPath });
+    };
+
+    const handleCreateTemplateFileClick = (parentPath: string, template: any) => {
+        setContextMenu(null);
+        setPromptDialog({
+            type: 'create-template',
+            parentPath,
+            templateExtension: template.extension,
+            templateContent: template.createContent
+        });
+    };
+
+    const handlePromptConfirm = async (value: string) => {
+        if (!promptDialog) return;
+
+        const { type, parentPath, templateExtension, templateContent } = promptDialog;
+        setPromptDialog(null);
+
+        let fileName = value;
+        let targetPath = `${parentPath}/${value}`;
+
+        try {
+            if (type === 'create-file') {
+                await TauriAPI.createFile(targetPath);
+            } else if (type === 'create-folder') {
+                await TauriAPI.createDirectory(targetPath);
+            } else if (type === 'create-template' && templateExtension && templateContent) {
+                if (!fileName.endsWith(`.${templateExtension}`)) {
+                    fileName = `${fileName}.${templateExtension}`;
+                    targetPath = `${parentPath}/${fileName}`;
+                }
+
+                const content = await templateContent(fileName);
+                await TauriAPI.writeFileContent(targetPath, content);
+            }
+            await refreshTree();
+        } catch (error) {
+            console.error(`Failed to ${type}:`, error);
+            alert(`${type === 'create-file' ? '创建文件' : type === 'create-folder' ? '创建文件夹' : '创建模板文件'}失败: ${error}`);
+        }
+    };
+
+    const getContextMenuItems = (node: TreeNode | null): ContextMenuItem[] => {
+        if (!node) {
+            const baseItems: ContextMenuItem[] = [
+                {
+                    label: '新建文件',
+                    icon: <FileText size={16} />,
+                    onClick: () => rootPath && handleCreateFileClick(rootPath)
+                },
+                {
+                    label: '新建文件夹',
+                    icon: <FolderPlus size={16} />,
+                    onClick: () => rootPath && handleCreateFolderClick(rootPath)
+                }
+            ];
+
+            if (fileActionRegistry && rootPath) {
+                const templates = fileActionRegistry.getCreationTemplates();
+                if (templates.length > 0) {
+                    baseItems.push({ label: '', separator: true, onClick: () => {} });
+                    for (const template of templates) {
+                        baseItems.push({
+                            label: template.label,
+                            icon: template.icon,
+                            onClick: () => handleCreateTemplateFileClick(rootPath, template)
+                        });
+                    }
+                }
+            }
+
+            return baseItems;
+        }
+
+        const items: ContextMenuItem[] = [];
+
+        if (node.type === 'file') {
+            items.push({
+                label: '打开文件',
+                icon: <File size={16} />,
+                onClick: async () => {
+                    try {
+                        await TauriAPI.openFileWithSystemApp(node.path);
+                    } catch (error) {
+                        console.error('Failed to open file:', error);
+                    }
+                }
+            });
+
+            if (fileActionRegistry) {
+                const handlers = fileActionRegistry.getHandlersForFile(node.path);
+                for (const handler of handlers) {
+                    if (handler.getContextMenuItems) {
+                        const parentPath = node.path.substring(0, node.path.lastIndexOf('/'));
+                        const pluginItems = handler.getContextMenuItems(node.path, parentPath);
+                        for (const pluginItem of pluginItems) {
+                            items.push({
+                                label: pluginItem.label,
+                                icon: pluginItem.icon,
+                                onClick: () => pluginItem.onClick(node.path, parentPath),
+                                disabled: pluginItem.disabled,
+                                separator: pluginItem.separator
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        items.push({
+            label: '重命名',
+            icon: <Edit3 size={16} />,
+            onClick: () => {
+                setRenamingNode(node.path);
+                setNewName(node.name);
+            }
+        });
+
+        items.push({
+            label: '删除',
+            icon: <Trash2 size={16} />,
+            onClick: () => handleDeleteClick(node)
+        });
+
+        items.push({ label: '', separator: true, onClick: () => {} });
+
+        if (node.type === 'folder') {
+            items.push({
+                label: '新建文件',
+                icon: <FileText size={16} />,
+                onClick: () => handleCreateFileClick(node.path)
+            });
+
+            items.push({
+                label: '新建文件夹',
+                icon: <FolderPlus size={16} />,
+                onClick: () => handleCreateFolderClick(node.path)
+            });
+
+            if (fileActionRegistry) {
+                const templates = fileActionRegistry.getCreationTemplates();
+                if (templates.length > 0) {
+                    items.push({ label: '', separator: true, onClick: () => {} });
+                    for (const template of templates) {
+                        items.push({
+                            label: template.label,
+                            icon: template.icon,
+                            onClick: () => handleCreateTemplateFileClick(node.path, template)
+                        });
+                    }
+                }
+            }
+
+            items.push({ label: '', separator: true, onClick: () => {} });
+        }
+
+        items.push({
+            label: '在文件管理器中显示',
+            icon: <FolderOpen size={16} />,
+            onClick: async () => {
+                try {
+                    await TauriAPI.showInFolder(node.path);
+                } catch (error) {
+                    console.error('Failed to show in folder:', error);
+                }
+            }
+        });
+
+        items.push({
+            label: '复制路径',
+            icon: <Copy size={16} />,
+            onClick: () => {
+                navigator.clipboard.writeText(node.path);
+            }
+        });
+
+        return items;
+    };
+
     const handleNodeClick = (node: TreeNode) => {
-        onSelectFile?.(node.path);
-        toggleNode(node.path);
+        if (node.type === 'folder') {
+            setInternalSelectedPath(node.path);
+            onSelectFile?.(node.path);
+            toggleNode(node.path);
+        } else {
+            setInternalSelectedPath(node.path);
+            const extension = node.name.includes('.') ? node.name.split('.').pop() : undefined;
+            messageHub?.publish('asset-file:selected', {
+                fileInfo: {
+                    name: node.name,
+                    path: node.path,
+                    extension,
+                    size: node.size,
+                    modified: node.modified,
+                    isDirectory: false
+                }
+            });
+        }
+    };
+
+    const handleNodeDoubleClick = async (node: TreeNode) => {
+        if (node.type === 'file') {
+            if (fileActionRegistry) {
+                const handled = await fileActionRegistry.handleDoubleClick(node.path);
+                if (handled) {
+                    return;
+                }
+            }
+
+            try {
+                await TauriAPI.openFileWithSystemApp(node.path);
+            } catch (error) {
+                console.error('Failed to open file:', error);
+            }
+        }
+    };
+
+    const handleContextMenu = (e: React.MouseEvent, node: TreeNode | null) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenu({
+            position: { x: e.clientX, y: e.clientY },
+            node
+        });
     };
 
     const renderNode = (node: TreeNode, level: number = 0) => {
-        const isSelected = selectedPath === node.path;
+        const isSelected = (internalSelectedPath || selectedPath) === node.path;
+        const isRenaming = renamingNode === node.path;
         const indent = level * 16;
 
         return (
@@ -129,17 +557,46 @@ export function FileTree({ rootPath, onSelectFile, selectedPath }: FileTreeProps
                 <div
                     className={`tree-node ${isSelected ? 'selected' : ''}`}
                     style={{ paddingLeft: `${indent}px` }}
-                    onClick={() => handleNodeClick(node)}
+                    onClick={() => !isRenaming && handleNodeClick(node)}
+                    onDoubleClick={() => !isRenaming && handleNodeDoubleClick(node)}
+                    onContextMenu={(e) => handleContextMenu(e, node)}
                 >
                     <span className="tree-arrow">
-                        {node.expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        {node.type === 'folder' ? (
+                            node.expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
+                        ) : (
+                            <span style={{ width: '14px', display: 'inline-block' }} />
+                        )}
                     </span>
                     <span className="tree-icon">
-                        <Folder size={16} />
+                        {node.type === 'folder' ? (
+                            <Folder size={16} style={{ color: '#ffa726' }} />
+                        ) : (
+                            <File size={16} style={{ color: '#90caf9' }} />
+                        )}
                     </span>
-                    <span className="tree-label">{node.name}</span>
+                    {isRenaming ? (
+                        <input
+                            type="text"
+                            className="tree-rename-input"
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                            onBlur={() => handleRename(node)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleRename(node);
+                                } else if (e.key === 'Escape') {
+                                    setRenamingNode(null);
+                                }
+                            }}
+                            autoFocus
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    ) : (
+                        <span className="tree-label">{node.name}</span>
+                    )}
                 </div>
-                {node.expanded && node.children && (
+                {node.type === 'folder' && node.expanded && node.children && (
                     <div className="tree-children">
                         {node.children.map((child) => renderNode(child, level + 1))}
                     </div>
@@ -157,8 +614,78 @@ export function FileTree({ rootPath, onSelectFile, selectedPath }: FileTreeProps
     }
 
     return (
-        <div className="file-tree">
-            {tree.map((node) => renderNode(node))}
-        </div>
+        <>
+            <div className="file-tree-toolbar">
+                <button
+                    className="file-tree-toolbar-btn"
+                    onClick={expandAll}
+                    title="展开全部文件夹"
+                >
+                    <ChevronsDown size={14} />
+                </button>
+                <button
+                    className="file-tree-toolbar-btn"
+                    onClick={collapseAll}
+                    title="收缩全部文件夹"
+                >
+                    <ChevronsUp size={14} />
+                </button>
+            </div>
+            <div
+                className="file-tree"
+                onContextMenu={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.classList.contains('file-tree')) {
+                        handleContextMenu(e, null);
+                    }
+                }}
+            >
+                {filteredTree.map((node) => renderNode(node))}
+            </div>
+            {contextMenu && (
+                <ContextMenu
+                    items={getContextMenuItems(contextMenu.node)}
+                    position={contextMenu.position}
+                    onClose={() => setContextMenu(null)}
+                />
+            )}
+            {deleteDialog && (
+                <ConfirmDialog
+                    title="确认删除"
+                    message={
+                        deleteDialog.node.type === 'folder'
+                            ? `确定要删除文件夹 "${deleteDialog.node.name}" 及其所有内容吗？\n此操作无法撤销。`
+                            : `确定要删除文件 "${deleteDialog.node.name}" 吗？\n此操作无法撤销。`
+                    }
+                    confirmText="删除"
+                    cancelText="取消"
+                    onConfirm={handleDeleteConfirm}
+                    onCancel={() => setDeleteDialog(null)}
+                />
+            )}
+            {promptDialog && (
+                <PromptDialog
+                    title={
+                        promptDialog.type === 'create-file' ? '新建文件' :
+                        promptDialog.type === 'create-folder' ? '新建文件夹' :
+                        '新建文件'
+                    }
+                    message={
+                        promptDialog.type === 'create-file' ? '请输入文件名:' :
+                        promptDialog.type === 'create-folder' ? '请输入文件夹名:' :
+                        `请输入文件名 (将自动添加 .${promptDialog.templateExtension} 扩展名):`
+                    }
+                    placeholder={
+                        promptDialog.type === 'create-file' ? '例如: config.json' :
+                        promptDialog.type === 'create-folder' ? '例如: assets' :
+                        '例如: MyFile'
+                    }
+                    confirmText="创建"
+                    cancelText="取消"
+                    onConfirm={handlePromptConfirm}
+                    onCancel={() => setPromptDialog(null)}
+                />
+            )}
+        </>
     );
 }

@@ -17,17 +17,12 @@ interface FlexLayoutDockContainerProps {
 
 export function FlexLayoutDockContainer({ panels, onPanelClose }: FlexLayoutDockContainerProps) {
     const createDefaultLayout = useCallback((): IJsonModel => {
-        const leftPanels = panels.filter((p) => p.id.includes('hierarchy'));
+        const hierarchyPanels = panels.filter((p) => p.id.includes('hierarchy'));
+        const assetPanels = panels.filter((p) => p.id.includes('asset'));
         const rightPanels = panels.filter((p) => p.id.includes('inspector'));
-        const bottomPanels = panels.filter((p) => p.id.includes('console') || p.id.includes('asset'))
-            .sort((a, b) => {
-                // 控制台排在前面
-                if (a.id.includes('console')) return -1;
-                if (b.id.includes('console')) return 1;
-                return 0;
-            });
+        const bottomPanels = panels.filter((p) => p.id.includes('console'));
         const centerPanels = panels.filter((p) =>
-            !leftPanels.includes(p) && !rightPanels.includes(p) && !bottomPanels.includes(p)
+            !hierarchyPanels.includes(p) && !assetPanels.includes(p) && !rightPanels.includes(p) && !bottomPanels.includes(p)
         );
 
         // Build center column children
@@ -61,17 +56,43 @@ export function FlexLayoutDockContainer({ panels, onPanelClose }: FlexLayoutDock
 
         // Build main row children
         const mainRowChildren: (IJsonTabSetNode | IJsonRowNode)[] = [];
-        if (leftPanels.length > 0) {
+
+        // 左侧列：场景层级和资产面板垂直排列（五五分）
+        if (hierarchyPanels.length > 0 || assetPanels.length > 0) {
+            const leftColumnChildren: IJsonTabSetNode[] = [];
+
+            if (hierarchyPanels.length > 0) {
+                leftColumnChildren.push({
+                    type: 'tabset',
+                    weight: 50,
+                    children: hierarchyPanels.map((p) => ({
+                        type: 'tab',
+                        name: p.title,
+                        id: p.id,
+                        component: p.id,
+                        enableClose: p.closable !== false
+                    }))
+                });
+            }
+
+            if (assetPanels.length > 0) {
+                leftColumnChildren.push({
+                    type: 'tabset',
+                    weight: 50,
+                    children: assetPanels.map((p) => ({
+                        type: 'tab',
+                        name: p.title,
+                        id: p.id,
+                        component: p.id,
+                        enableClose: p.closable !== false
+                    }))
+                });
+            }
+
             mainRowChildren.push({
-                type: 'tabset',
+                type: 'row',
                 weight: 20,
-                children: leftPanels.map((p) => ({
-                    type: 'tab',
-                    name: p.title,
-                    id: p.id,
-                    component: p.id,
-                    enableClose: p.closable !== false
-                }))
+                children: leftColumnChildren
             });
         }
         if (centerColumnChildren.length > 0) {

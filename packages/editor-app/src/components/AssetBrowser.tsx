@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Folder, File, FileCode, FileJson, FileImage, FileText, FolderOpen, Copy, Trash2, Edit3 } from 'lucide-react';
+import { Folder, File, FileCode, FileJson, FileImage, FileText, FolderOpen, Copy, Trash2, Edit3, LayoutGrid, List } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
-import { MessageHub } from '@esengine/editor-core';
+import { MessageHub, FileActionRegistry } from '@esengine/editor-core';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { FileTree } from './FileTree';
 import { ResizablePanel } from './ResizablePanel';
@@ -13,21 +13,30 @@ interface AssetItem {
   path: string;
   type: 'file' | 'folder';
   extension?: string;
+  size?: number;
+  modified?: number;
 }
 
 interface AssetBrowserProps {
   projectPath: string | null;
   locale: string;
   onOpenScene?: (scenePath: string) => void;
-  onOpenBehaviorTree?: (btreePath: string) => void;
 }
 
-export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorTree }: AssetBrowserProps) {
+export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserProps) {
+    const messageHub = Core.services.resolve(MessageHub);
+    const fileActionRegistry = Core.services.resolve(FileActionRegistry);
     const [currentPath, setCurrentPath] = useState<string | null>(null);
     const [selectedPath, setSelectedPath] = useState<string | null>(null);
     const [assets, setAssets] = useState<AssetItem[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<AssetItem[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [showDetailView, setShowDetailView] = useState(() => {
+        const saved = localStorage.getItem('asset-browser-detail-view');
+        return saved !== null ? saved === 'true' : false;
+    });
     const [contextMenu, setContextMenu] = useState<{
     position: { x: number; y: number };
     asset: AssetItem;
@@ -105,7 +114,9 @@ export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorT
                     name: entry.name,
                     path: entry.path,
                     type: entry.is_dir ? 'folder' as const : 'file' as const,
-                    extension
+                    extension,
+                    size: entry.size,
+                    modified: entry.modified
                 };
             });
 
@@ -121,6 +132,73 @@ export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorT
         }
     };
 
+    const searchProjectRecursively = async (rootPath: string, query: string): Promise<AssetItem[]> => {
+        const results: AssetItem[] = [];
+        const lowerQuery = query.toLowerCase();
+
+        const searchDirectory = async (dirPath: string) => {
+            try {
+                const entries = await TauriAPI.listDirectory(dirPath);
+
+                for (const entry of entries) {
+                    if (entry.name.startsWith('.')) continue;
+
+                    if (entry.name.toLowerCase().includes(lowerQuery)) {
+                        const extension = entry.is_dir ? undefined :
+                            (entry.name.includes('.') ? entry.name.split('.').pop() : undefined);
+
+                        results.push({
+                            name: entry.name,
+                            path: entry.path,
+                            type: entry.is_dir ? 'folder' as const : 'file' as const,
+                            extension,
+                            size: entry.size,
+                            modified: entry.modified
+                        });
+                    }
+
+                    if (entry.is_dir) {
+                        await searchDirectory(entry.path);
+                    }
+                }
+            } catch (error) {
+                console.error(`Failed to search directory ${dirPath}:`, error);
+            }
+        };
+
+        await searchDirectory(rootPath);
+        return results.sort((a, b) => {
+            if (a.type === b.type) return a.name.localeCompare(b.name);
+            return a.type === 'folder' ? -1 : 1;
+        });
+    };
+
+    useEffect(() => {
+        const performSearch = async () => {
+            if (!searchQuery.trim()) {
+                setSearchResults([]);
+                setIsSearching(false);
+                return;
+            }
+
+            if (!projectPath) return;
+
+            setIsSearching(true);
+            try {
+                const results = await searchProjectRecursively(projectPath, searchQuery);
+                setSearchResults(results);
+            } catch (error) {
+                console.error('Search failed:', error);
+                setSearchResults([]);
+            } finally {
+                setIsSearching(false);
+            }
+        };
+
+        const timeoutId = setTimeout(performSearch, 300);
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery, projectPath]);
+
     const handleFolderSelect = (path: string) => {
         setCurrentPath(path);
         loadAssets(path);
@@ -128,6 +206,17 @@ export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorT
 
     const handleAssetClick = (asset: AssetItem) => {
         setSelectedPath(asset.path);
+
+        messageHub?.publish('asset-file:selected', {
+            fileInfo: {
+                name: asset.name,
+                path: asset.path,
+                extension: asset.extension,
+                size: asset.size,
+                modified: asset.modified,
+                isDirectory: asset.type === 'folder'
+            }
+        });
     };
 
     const handleAssetDoubleClick = async (asset: AssetItem) => {
@@ -137,15 +226,25 @@ export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorT
         } else if (asset.type === 'file') {
             if (asset.extension === 'ecs' && onOpenScene) {
                 onOpenScene(asset.path);
-            } else if (asset.extension === 'btree' && onOpenBehaviorTree) {
-                onOpenBehaviorTree(asset.path);
-            } else {
-                // 其他文件使用系统默认程序打开
-                try {
-                    await TauriAPI.openFileWithSystemApp(asset.path);
-                } catch (error) {
-                    console.error('Failed to open file:', error);
+                return;
+            }
+
+            if (fileActionRegistry) {
+                console.log('[AssetBrowser] Handling double click for:', asset.path);
+                console.log('[AssetBrowser] Extension:', asset.extension);
+                const handled = await fileActionRegistry.handleDoubleClick(asset.path);
+                console.log('[AssetBrowser] Handled by plugin:', handled);
+                if (handled) {
+                    return;
                 }
+            } else {
+                console.log('[AssetBrowser] FileActionRegistry not available');
+            }
+
+            try {
+                await TauriAPI.openFileWithSystemApp(asset.path);
+            } catch (error) {
+                console.error('Failed to open file:', error);
             }
         }
     };
@@ -168,6 +267,27 @@ export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorT
                 icon: <File size={16} />,
                 onClick: () => handleAssetDoubleClick(asset)
             });
+
+            if (fileActionRegistry) {
+                const handlers = fileActionRegistry.getHandlersForFile(asset.path);
+                for (const handler of handlers) {
+                    if (handler.getContextMenuItems) {
+                        const parentPath = asset.path.substring(0, asset.path.lastIndexOf('/'));
+                        const pluginItems = handler.getContextMenuItems(asset.path, parentPath);
+                        for (const pluginItem of pluginItems) {
+                            items.push({
+                                label: pluginItem.label,
+                                icon: pluginItem.icon,
+                                onClick: () => pluginItem.onClick(asset.path, parentPath),
+                                disabled: pluginItem.disabled,
+                                separator: pluginItem.separator
+                            });
+                        }
+                    }
+                }
+            }
+
+            items.push({ label: '', separator: true, onClick: () => {} });
         }
 
         // 在文件管理器中显示
@@ -238,11 +358,14 @@ export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorT
         return crumbs;
     };
 
-    const filteredAssets = searchQuery
-        ? assets.filter((asset) =>
-            asset.name.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        : assets;
+    const filteredAssets = searchQuery.trim() ? searchResults : assets;
+
+    const getRelativePath = (fullPath: string): string => {
+        if (!projectPath) return fullPath;
+        const relativePath = fullPath.replace(projectPath, '').replace(/^[/\\]/, '');
+        const parts = relativePath.split(/[/\\]/);
+        return parts.slice(0, -1).join('/');
+    };
 
     const getFileIcon = (asset: AssetItem) => {
         if (asset.type === 'folder') {
@@ -289,26 +412,102 @@ export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorT
 
     return (
         <div className="asset-browser">
-            <div className="asset-browser-header">
-                <h3>{t.title}</h3>
-            </div>
-
             <div className="asset-browser-content">
-                <ResizablePanel
-                    direction="horizontal"
-                    defaultSize={200}
-                    minSize={150}
-                    maxSize={400}
-                    leftOrTop={
-                        <div className="asset-browser-tree">
-                            <FileTree
-                                rootPath={projectPath}
-                                onSelectFile={handleFolderSelect}
-                                selectedPath={currentPath}
-                            />
-                        </div>
-                    }
-                    rightOrBottom={
+                <div style={{
+                    padding: '8px',
+                    borderBottom: '1px solid #3e3e3e',
+                    display: 'flex',
+                    gap: '8px',
+                    background: '#252526',
+                    alignItems: 'center'
+                }}>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                            onClick={() => {
+                                setShowDetailView(true);
+                                localStorage.setItem('asset-browser-detail-view', 'true');
+                            }}
+                            style={{
+                                padding: '6px 12px',
+                                background: showDetailView ? '#0e639c' : 'transparent',
+                                border: '1px solid #3e3e3e',
+                                borderRadius: '3px',
+                                color: showDetailView ? '#ffffff' : '#cccccc',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                transition: 'all 0.2s',
+                                fontSize: '12px',
+                                fontWeight: showDetailView ? '500' : 'normal'
+                            }}
+                            title="显示详细视图（树形图 + 资产列表）"
+                        >
+                            <LayoutGrid size={14} />
+                            详细视图
+                        </button>
+                        <button
+                            onClick={() => {
+                                setShowDetailView(false);
+                                localStorage.setItem('asset-browser-detail-view', 'false');
+                            }}
+                            style={{
+                                padding: '6px 12px',
+                                background: !showDetailView ? '#0e639c' : 'transparent',
+                                border: '1px solid #3e3e3e',
+                                borderRadius: '3px',
+                                color: !showDetailView ? '#ffffff' : '#cccccc',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                transition: 'all 0.2s',
+                                fontSize: '12px',
+                                fontWeight: !showDetailView ? '500' : 'normal'
+                            }}
+                            title="仅显示树形图（查看完整路径）"
+                        >
+                            <List size={14} />
+                            树形图
+                        </button>
+                    </div>
+                    <input
+                        type="text"
+                        className="asset-search"
+                        placeholder={t.search}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{
+                            flex: 1,
+                            padding: '6px 10px',
+                            background: '#3c3c3c',
+                            border: '1px solid #3e3e3e',
+                            borderRadius: '3px',
+                            color: '#cccccc',
+                            fontSize: '12px',
+                            outline: 'none'
+                        }}
+                    />
+                </div>
+                {showDetailView ? (
+                    <ResizablePanel
+                        direction="horizontal"
+                        defaultSize={200}
+                        minSize={150}
+                        maxSize={400}
+                        leftOrTop={
+                            <div className="asset-browser-tree">
+                                <FileTree
+                                    rootPath={projectPath}
+                                    onSelectFile={handleFolderSelect}
+                                    selectedPath={currentPath}
+                                    messageHub={messageHub}
+                                    searchQuery={searchQuery}
+                                    showFiles={false}
+                                />
+                            </div>
+                        }
+                        rightOrBottom={
                         <div className="asset-browser-list">
                             <div className="asset-browser-breadcrumb">
                                 {breadcrumbs.map((crumb, index) => (
@@ -326,47 +525,65 @@ export function AssetBrowser({ projectPath, locale, onOpenScene, onOpenBehaviorT
                                     </span>
                                 ))}
                             </div>
-                            <div className="asset-browser-toolbar">
-                                <input
-                                    type="text"
-                                    className="asset-search"
-                                    placeholder={t.search}
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-                            {loading ? (
+                            {(loading || isSearching) ? (
                                 <div className="asset-browser-loading">
-                                    <p>{t.loading}</p>
+                                    <p>{isSearching ? '搜索中...' : t.loading}</p>
                                 </div>
                             ) : filteredAssets.length === 0 ? (
                                 <div className="asset-browser-empty">
-                                    <p>{t.empty}</p>
+                                    <p>{searchQuery.trim() ? '未找到匹配的资产' : t.empty}</p>
                                 </div>
                             ) : (
                                 <div className="asset-list">
-                                    {filteredAssets.map((asset, index) => (
-                                        <div
-                                            key={index}
-                                            className={`asset-item ${selectedPath === asset.path ? 'selected' : ''}`}
-                                            onClick={() => handleAssetClick(asset)}
-                                            onDoubleClick={() => handleAssetDoubleClick(asset)}
-                                            onContextMenu={(e) => handleContextMenu(e, asset)}
-                                        >
-                                            {getFileIcon(asset)}
-                                            <div className="asset-name" title={asset.name}>
-                                                {asset.name}
+                                    {filteredAssets.map((asset, index) => {
+                                        const relativePath = getRelativePath(asset.path);
+                                        const showPath = searchQuery.trim() && relativePath;
+                                        return (
+                                            <div
+                                                key={index}
+                                                className={`asset-item ${selectedPath === asset.path ? 'selected' : ''}`}
+                                                onClick={() => handleAssetClick(asset)}
+                                                onDoubleClick={() => handleAssetDoubleClick(asset)}
+                                                onContextMenu={(e) => handleContextMenu(e, asset)}
+                                            >
+                                                {getFileIcon(asset)}
+                                                <div className="asset-info">
+                                                    <div className="asset-name" title={asset.path}>
+                                                        {asset.name}
+                                                    </div>
+                                                    {showPath && (
+                                                        <div className="asset-path" style={{
+                                                            fontSize: '11px',
+                                                            color: '#666',
+                                                            marginTop: '2px'
+                                                        }}>
+                                                            {relativePath}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="asset-type">
+                                                    {asset.type === 'folder' ? t.folder : (asset.extension || t.file)}
+                                                </div>
                                             </div>
-                                            <div className="asset-type">
-                                                {asset.type === 'folder' ? t.folder : (asset.extension || t.file)}
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
                     }
                 />
+                ) : (
+                    <div className="asset-browser-tree-only">
+                        <FileTree
+                            rootPath={projectPath}
+                            onSelectFile={handleFolderSelect}
+                            selectedPath={currentPath}
+                            messageHub={messageHub}
+                            searchQuery={searchQuery}
+                            showFiles={true}
+                        />
+                    </div>
+                )}
             </div>
             {contextMenu && (
                 <ContextMenu

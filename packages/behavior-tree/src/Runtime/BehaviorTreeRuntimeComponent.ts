@@ -83,6 +83,12 @@ export class BehaviorTreeRuntimeComponent extends Component {
     nodesToAbort: Set<string> = new Set();
 
     /**
+     * 执行顺序计数器（用于调试和可视化）
+     */
+    @IgnoreSerialization()
+    executionOrderCounter: number = 0;
+
+    /**
      * 获取节点运行时状态
      */
     getNodeState(nodeId: string): NodeRuntimeState {
@@ -115,6 +121,7 @@ export class BehaviorTreeRuntimeComponent extends Component {
     resetAllStates(): void {
         this.nodeStates.clear();
         this.activeNodeIds.clear();
+        this.executionOrderCounter = 0;
     }
 
     /**

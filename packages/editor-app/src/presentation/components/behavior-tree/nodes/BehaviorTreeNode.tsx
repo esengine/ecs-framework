@@ -7,7 +7,7 @@ import {
     LucideIcon
 } from 'lucide-react';
 import { PropertyDefinition } from '@esengine/behavior-tree';
-import { BehaviorTreeNode as BehaviorTreeNodeType, Connection, ROOT_NODE_ID } from '../../../../stores/behaviorTreeStore';
+import { BehaviorTreeNode as BehaviorTreeNodeType, Connection, ROOT_NODE_ID, NodeExecutionStatus } from '../../../../stores/behaviorTreeStore';
 import { BehaviorTreeExecutor } from '../../../../utils/BehaviorTreeExecutor';
 import { BlackboardValue } from '../../../../domain/models/Blackboard';
 
@@ -22,6 +22,8 @@ interface BehaviorTreeNodeProps {
     blackboardVariables: BlackboardVariables;
     initialBlackboardVariables: BlackboardVariables;
     isExecuting: boolean;
+    executionStatus?: NodeExecutionStatus;
+    executionOrder?: number;
     connections: Connection[];
     nodes: BehaviorTreeNodeType[];
     executorRef: React.RefObject<BehaviorTreeExecutor | null>;
@@ -44,6 +46,8 @@ export const BehaviorTreeNode: React.FC<BehaviorTreeNodeProps> = ({
     blackboardVariables,
     initialBlackboardVariables,
     isExecuting,
+    executionStatus,
+    executionOrder,
     connections,
     nodes,
     executorRef,
@@ -67,7 +71,8 @@ export const BehaviorTreeNode: React.FC<BehaviorTreeNodeProps> = ({
         'bt-node',
         isSelected && 'selected',
         isRoot && 'root',
-        isUncommitted && 'uncommitted'
+        isUncommitted && 'uncommitted',
+        executionStatus && executionStatus !== 'idle' && executionStatus
     ].filter(Boolean).join(' ');
 
     return (
@@ -162,11 +167,33 @@ export const BehaviorTreeNode: React.FC<BehaviorTreeNodeProps> = ({
                                 #{node.id}
                             </div>
                         </div>
+                        {executionOrder !== undefined && (
+                            <div
+                                className="bt-node-execution-order"
+                                style={{
+                                    marginLeft: 'auto',
+                                    backgroundColor: '#2196f3',
+                                    color: '#fff',
+                                    borderRadius: '50%',
+                                    width: '20px',
+                                    height: '20px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '11px',
+                                    fontWeight: 'bold',
+                                    flexShrink: 0
+                                }}
+                                title={`执行顺序: ${executionOrder}`}
+                            >
+                                {executionOrder}
+                            </div>
+                        )}
                         {!isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className) && (
                             <div
                                 className="bt-node-missing-executor-warning"
                                 style={{
-                                    marginLeft: 'auto',
+                                    marginLeft: executionOrder !== undefined ? '4px' : 'auto',
                                     display: 'flex',
                                     alignItems: 'center',
                                     cursor: 'help',
@@ -191,7 +218,7 @@ export const BehaviorTreeNode: React.FC<BehaviorTreeNodeProps> = ({
                             <div
                                 className="bt-node-uncommitted-warning"
                                 style={{
-                                    marginLeft: !isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className) ? '4px' : 'auto',
+                                    marginLeft: (executionOrder !== undefined || (!isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className))) ? '4px' : 'auto',
                                     display: 'flex',
                                     alignItems: 'center',
                                     cursor: 'help',
@@ -220,7 +247,7 @@ export const BehaviorTreeNode: React.FC<BehaviorTreeNodeProps> = ({
                                 <div
                                     className="bt-node-empty-warning-container"
                                     style={{
-                                        marginLeft: isUncommitted ? '4px' : 'auto',
+                                        marginLeft: (executionOrder !== undefined || (!isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className)) || isUncommitted) ? '4px' : 'auto',
                                         display: 'flex',
                                         alignItems: 'center',
                                         cursor: 'help',

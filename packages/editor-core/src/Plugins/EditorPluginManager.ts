@@ -7,6 +7,7 @@ import { EditorPluginCategory } from './IEditorPlugin';
 import { UIRegistry } from '../Services/UIRegistry';
 import { MessageHub } from '../Services/MessageHub';
 import { SerializerRegistry } from '../Services/SerializerRegistry';
+import { FileActionRegistry } from '../Services/FileActionRegistry';
 
 const logger = createLogger('EditorPluginManager');
 
@@ -22,6 +23,7 @@ export class EditorPluginManager extends PluginManager {
     private uiRegistry: UIRegistry | null = null;
     private messageHub: MessageHub | null = null;
     private serializerRegistry: SerializerRegistry | null = null;
+    private fileActionRegistry: FileActionRegistry | null = null;
 
     /**
      * 初始化编辑器插件管理器
@@ -32,6 +34,7 @@ export class EditorPluginManager extends PluginManager {
         this.uiRegistry = services.resolve(UIRegistry);
         this.messageHub = services.resolve(MessageHub);
         this.serializerRegistry = services.resolve(SerializerRegistry);
+        this.fileActionRegistry = services.resolve(FileActionRegistry);
 
         logger.info('EditorPluginManager initialized');
     }
@@ -88,6 +91,24 @@ export class EditorPluginManager extends PluginManager {
                 const serializers = plugin.getSerializers();
                 this.serializerRegistry.registerMultiple(plugin.name, serializers);
                 logger.debug(`Registered ${serializers.length} serializers for ${plugin.name}`);
+            }
+
+            if (plugin.registerFileActionHandlers && this.fileActionRegistry) {
+                const handlers = plugin.registerFileActionHandlers();
+                console.log(`[EditorPluginManager] Registering ${handlers.length} file action handlers for ${plugin.name}`);
+                for (const handler of handlers) {
+                    console.log(`[EditorPluginManager] Handler for extensions:`, handler.extensions);
+                    this.fileActionRegistry.registerActionHandler(handler);
+                }
+                logger.debug(`Registered ${handlers.length} file action handlers for ${plugin.name}`);
+            }
+
+            if (plugin.registerFileCreationTemplates && this.fileActionRegistry) {
+                const templates = plugin.registerFileCreationTemplates();
+                for (const template of templates) {
+                    this.fileActionRegistry.registerCreationTemplate(template);
+                }
+                logger.debug(`Registered ${templates.length} file creation templates for ${plugin.name}`);
             }
 
             if (plugin.onEditorReady) {
@@ -332,6 +353,7 @@ export class EditorPluginManager extends PluginManager {
         this.uiRegistry = null;
         this.messageHub = null;
         this.serializerRegistry = null;
+        this.fileActionRegistry = null;
 
         logger.info('EditorPluginManager disposed');
     }

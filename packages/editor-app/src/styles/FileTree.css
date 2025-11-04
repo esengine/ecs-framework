@@ -1,5 +1,35 @@
+.file-tree-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #252526;
+  border-bottom: 1px solid #3e3e3e;
+}
+
+.file-tree-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: #cccccc;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.file-tree-toolbar-btn:hover {
+  background: #2a2d2e;
+  border-color: #3e3e3e;
+}
+
+.file-tree-toolbar-btn:active {
+  background: #37373d;
+}
+
 .file-tree {
-  height: 100%;
+  height: calc(100% - 32px);
   overflow-y: auto;
   overflow-x: hidden;
   background: #1e1e1e;
@@ -75,4 +105,16 @@
 
 .tree-children {
   /* Children are indented via inline style */
+}
+
+.tree-rename-input {
+  flex: 1;
+  background: #3c3c3c;
+  border: 1px solid #007acc;
+  border-radius: 2px;
+  padding: 2px 4px;
+  color: #cccccc;
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  outline: none;
 }
