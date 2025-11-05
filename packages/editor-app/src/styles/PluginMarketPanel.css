@@ -70,6 +70,25 @@
     background: var(--color-bg-hover, #2d2d30);
 }
 
+.plugin-market-publish {
+    padding: 8px 16px;
+    background: var(--color-accent, #0e639c);
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.plugin-market-publish:hover {
+    background: var(--color-accent-hover, #1177bb);
+}
+
 .plugin-market-content {
     flex: 1;
     overflow-y: auto;

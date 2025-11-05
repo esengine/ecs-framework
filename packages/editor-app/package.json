@@ -22,6 +22,7 @@
     "@tauri-apps/api": "^2.2.0",
     "@tauri-apps/plugin-dialog": "^2.4.0",
     "@tauri-apps/plugin-fs": "^2.4.2",
+    "@tauri-apps/plugin-http": "^2.5.4",
     "@tauri-apps/plugin-shell": "^2.0.0",
     "flexlayout-react": "^0.8.17",
     "i18next": "^25.6.0",

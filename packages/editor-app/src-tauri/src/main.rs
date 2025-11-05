@@ -542,6 +542,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_http::init())
         .register_uri_scheme_protocol("project", move |_app, request| {
             let project_paths = Arc::clone(&project_paths_clone);
 

@@ -35,10 +35,13 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { PluginGeneratorWindow } from './components/PluginGeneratorWindow';
 import { ToastProvider, useToast } from './components/Toast';
 import { MenuBar } from './components/MenuBar';
+import { UserProfile } from './components/UserProfile';
 import { FlexLayoutDockContainer, FlexDockPanel } from './components/FlexLayoutDockContainer';
 import { TauriAPI } from './api/tauri';
 import { SettingsService } from './services/SettingsService';
 import { PluginLoader } from './services/PluginLoader';
+import { GitHubService } from './services/GitHubService';
+import { PluginPublishWizard } from './components/PluginPublishWizard';
 import { checkForUpdatesOnStartup } from './utils/updater';
 import { useLocale } from './hooks/useLocale';
 import { en, zh } from './locales';
@@ -60,6 +63,7 @@ const logger = createLogger('App');
 function App() {
     const initRef = useRef(false);
     const pluginLoaderRef = useRef<PluginLoader>(new PluginLoader());
+    const githubServiceRef = useRef<GitHubService>(new GitHubService());
     const { showToast, hideToast } = useToast();
     const [initialized, setInitialized] = useState(false);
     const [projectLoaded, setProjectLoaded] = useState(false);
@@ -95,6 +99,7 @@ function App() {
     const [activePanelId, setActivePanelId] = useState<string | undefined>(undefined);
     const [dynamicPanelTitles, setDynamicPanelTitles] = useState<Map<string, string>>(new Map());
     const [isEditorFullscreen, setIsEditorFullscreen] = useState(false);
+    const [showLoginDialog, setShowLoginDialog] = useState(false);
 
     useEffect(() => {
         // 禁用默认右键菜单
@@ -130,30 +135,32 @@ function App() {
     useEffect(() => {
         const checkConnection = () => {
             const profilerService = (window as any).__PROFILER_SERVICE__;
-            if (profilerService && profilerService.isConnected()) {
-                if (!isRemoteConnected) {
-                    setIsRemoteConnected(true);
-                    setStatus(t('header.status.remoteConnected'));
-                }
-            } else {
-                if (isRemoteConnected) {
-                    setIsRemoteConnected(false);
-                    if (projectLoaded) {
-                        const componentRegistry = Core.services.resolve(ComponentRegistry);
-                        const componentCount = componentRegistry?.getAllComponents().length || 0;
-                        setStatus(t('header.status.projectOpened') + (componentCount > 0 ? ` (${componentCount} components registered)` : ''));
+            const connected = profilerService && profilerService.isConnected();
+
+            setIsRemoteConnected((prevConnected) => {
+                if (connected !== prevConnected) {
+                    // 状态发生变化
+                    if (connected) {
+                        setStatus(t('header.status.remoteConnected'));
                     } else {
-                        setStatus(t('header.status.ready'));
+                        if (projectLoaded) {
+                            const componentRegistry = Core.services.resolve(ComponentRegistry);
+                            const componentCount = componentRegistry?.getAllComponents().length || 0;
+                            setStatus(t('header.status.projectOpened') + (componentCount > 0 ? ` (${componentCount} components registered)` : ''));
+                        } else {
+                            setStatus(t('header.status.ready'));
+                        }
                     }
+                    return connected;
                 }
-            }
+                return prevConnected;
+            });
         };
 
-        checkConnection();
         const interval = setInterval(checkConnection, 1000);
 
         return () => clearInterval(interval);
-    }, [projectLoaded, isRemoteConnected, t]);
+    }, [projectLoaded, t]);
 
     useEffect(() => {
         const initializeEditor = async () => {
@@ -754,12 +761,24 @@ function App() {
                         onCreatePlugin={handleCreatePlugin}
                     />
                     <div className="header-right">
+                        <UserProfile
+                            githubService={githubServiceRef.current}
+                            onLogin={() => setShowLoginDialog(true)}
+                            locale={locale}
+                        />
                         <button onClick={handleLocaleChange} className="toolbar-btn locale-btn" title={locale === 'en' ? '切换到中文' : 'Switch to English'}>
                             <Globe size={14} />
                         </button>
                         <span className="status">{status}</span>
                     </div>
                 </div>
+            )}
+
+            {showLoginDialog && (
+                <PluginPublishWizard
+                    onClose={() => setShowLoginDialog(false)}
+                    locale={locale}
+                />
             )}
 
             <div className="editor-content">

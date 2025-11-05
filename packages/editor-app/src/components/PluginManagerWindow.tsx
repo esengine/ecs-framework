@@ -12,9 +12,11 @@ import {
     ChevronRight,
     X,
     RefreshCw,
-    ShoppingCart
+    ShoppingCart,
+    Upload
 } from 'lucide-react';
 import { PluginMarketPanel } from './PluginMarketPanel';
+import { PluginPublishWizard } from './PluginPublishWizard';
 import { PluginMarketService } from '../services/PluginMarketService';
 import '../styles/PluginManagerWindow.css';
 
@@ -59,7 +61,8 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
                 categorySystem: '系统',
                 categoryImportExport: '导入/导出',
                 tabInstalled: '已安装',
-                tabMarketplace: '插件市场'
+                tabMarketplace: '插件市场',
+                tabPublish: '发布插件'
             },
             en: {
                 title: 'Plugin Manager',
@@ -83,7 +86,8 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
                 categorySystem: 'System',
                 categoryImportExport: 'Import/Export',
                 tabInstalled: 'Installed',
-                tabMarketplace: 'Marketplace'
+                tabMarketplace: 'Marketplace',
+                tabPublish: 'Publish Plugin'
             }
         };
         return translations[locale]?.[key] || translations.en?.[key] || key;
@@ -99,7 +103,7 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
         };
         return t(categoryKeys[category]);
     };
-    const [activeTab, setActiveTab] = useState<'installed' | 'marketplace'>('installed');
+    const [activeTab, setActiveTab] = useState<'installed' | 'marketplace' | 'publish'>('installed');
     const [plugins, setPlugins] = useState<IEditorPluginMetadata[]>([]);
     const [filter, setFilter] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
@@ -288,6 +292,13 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
                         <ShoppingCart size={16} />
                         {t('tabMarketplace')}
                     </button>
+                    <button
+                        className={`plugin-manager-tab ${activeTab === 'publish' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('publish')}
+                    >
+                        <Upload size={16} />
+                        {t('tabPublish')}
+                    </button>
                 </div>
 
                 {activeTab === 'installed' && (
@@ -417,6 +428,8 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
                 )}
 
                 {activeTab === 'marketplace' && <PluginMarketPanel marketService={marketService} locale={locale} />}
+
+                {activeTab === 'publish' && <PluginPublishWizard onClose={() => setActiveTab('marketplace')} locale={locale} />}
             </div>
         </div>
     );

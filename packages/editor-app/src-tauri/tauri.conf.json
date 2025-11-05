@@ -89,7 +89,8 @@
               "$DOWNLOAD/**"
             ]
           }
-        }
+        },
+        "http-capability"
       ]
     }
   },

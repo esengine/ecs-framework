@@ -24,6 +24,8 @@ export class LogService implements IService {
     private listeners: Set<LogListener> = new Set();
     private nextId = 0;
     private maxLogs = 1000;
+    private pendingNotifications: LogEntry[] = [];
+    private notificationTimer: number | null = null;
 
     private originalConsole = {
         log: console.log.bind(console),
@@ -146,14 +148,33 @@ export class LogService implements IService {
     }
 
     /**
-     * 通知监听器
+     * 通知监听器（批处理日志通知以避免在React渲染期间触发状态更新）
      */
     private notifyListeners(entry: LogEntry): void {
-        for (const listener of this.listeners) {
-            try {
-                listener(entry);
-            } catch (error) {
-                this.originalConsole.error('Error in log listener:', error);
+        this.pendingNotifications.push(entry);
+
+        if (this.notificationTimer === null) {
+            const flushNotifications = () => {
+                const notifications = [...this.pendingNotifications];
+                this.pendingNotifications = [];
+                this.notificationTimer = null;
+
+                for (const notification of notifications) {
+                    for (const listener of this.listeners) {
+                        try {
+                            listener(notification);
+                        } catch (error) {
+                            this.originalConsole.error('Error in log listener:', error);
+                        }
+                    }
+                }
+            };
+
+            // 使用requestIdleCallback如果可用，否则使用setTimeout
+            if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+                this.notificationTimer = window.requestIdleCallback(flushNotifications) as unknown as number;
+            } else {
+                this.notificationTimer = window.setTimeout(flushNotifications, 16); // 约一帧的时间
             }
         }
     }
