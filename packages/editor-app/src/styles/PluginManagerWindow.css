@@ -446,3 +446,37 @@
 .plugin-content::-webkit-scrollbar-thumb:hover {
     background: var(--color-text-secondary);
 }
+
+/* Plugin Manager Tabs */
+.plugin-manager-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 20px;
+    background: var(--color-bg-overlay);
+    border-bottom: 1px solid var(--color-border-default);
+}
+
+.plugin-manager-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.plugin-manager-tab:hover {
+    color: var(--color-text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.plugin-manager-tab.active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+}
