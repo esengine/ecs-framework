@@ -301,7 +301,7 @@ function PluginMarketCard({
                             <Github size={12} />
                             {plugin.author.name}
                         </span>
-                        <span className="plugin-market-card-version">v{plugin.version}</span>
+                        <span className="plugin-market-card-version">v{plugin.latestVersion}</span>
                     </div>
                 </div>
             </div>

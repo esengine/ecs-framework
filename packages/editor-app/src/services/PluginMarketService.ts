@@ -1,4 +1,5 @@
 import type { EditorPluginManager, IEditorPlugin } from '@esengine/editor-core';
+import JSZip from 'jszip';
 
 export interface PluginAuthor {
     name: string;
@@ -11,10 +12,12 @@ export interface PluginRepository {
     url: string;
 }
 
-export interface PluginDistribution {
-    type: 'cdn' | 'npm';
-    url: string;
-    css?: string;
+export interface PluginVersion {
+    version: string;
+    releaseDate: string;
+    changes: string;
+    zipUrl: string;
+    requirements: PluginRequirements;
 }
 
 export interface PluginRequirements {
@@ -25,28 +28,24 @@ export interface PluginRequirements {
 export interface PluginMarketMetadata {
     id: string;
     name: string;
-    displayName?: string;
-    version: string;
     author: PluginAuthor;
     description: string;
     category: string;
     tags?: string[];
     icon?: string;
     repository: PluginRepository;
-    distribution: PluginDistribution;
-    requirements: PluginRequirements;
     license: string;
     homepage?: string;
     screenshots?: string[];
+    latestVersion: string;
+    versions: PluginVersion[];
     verified?: boolean;
     category_type?: 'official' | 'community';
-    reviewedAt?: string;
-    reviewedBy?: string;
 }
 
 export interface PluginRegistry {
     version: string;
-    lastUpdated: string;
+    generatedAt: string;
     cdn: string;
     plugins: PluginMarketMetadata[];
 }
@@ -89,32 +88,36 @@ export class PluginMarketService {
         }
     }
 
-    async installPlugin(plugin: PluginMarketMetadata): Promise<void> {
-        console.log(`[PluginMarketService] Installing plugin: ${plugin.name}`);
+    async installPlugin(plugin: PluginMarketMetadata, version?: string): Promise<void> {
+        const targetVersion = version || plugin.latestVersion;
+        console.log(`[PluginMarketService] Installing plugin: ${plugin.name} v${targetVersion}`);
 
         try {
-            const moduleUrl = plugin.distribution.url;
-
-            if (plugin.distribution.css) {
-                this.loadCSS(plugin.distribution.css);
+            // 获取指定版本信息
+            const versionInfo = plugin.versions.find(v => v.version === targetVersion);
+            if (!versionInfo) {
+                throw new Error(`Version ${targetVersion} not found for plugin ${plugin.name}`);
             }
 
-            const timestamp = Date.now();
-            const urlWithCache = `${moduleUrl}?t=${timestamp}`;
+            // 下载 ZIP 文件
+            console.log(`[PluginMarketService] Downloading ZIP: ${versionInfo.zipUrl}`);
+            const zipBlob = await this.downloadZip(versionInfo.zipUrl);
 
-            const module = await import(/* @vite-ignore */ urlWithCache);
-
-            const pluginInstance = this.extractPluginInstance(module, plugin);
+            // 解压并加载插件
+            console.log(`[PluginMarketService] Extracting and loading plugin...`);
+            const pluginInstance = await this.loadPluginFromZip(zipBlob, plugin);
 
             if (!pluginInstance) {
                 throw new Error(`Failed to extract plugin instance from ${plugin.name}`);
             }
 
+            // 安装到编辑器
             await this.pluginManager.installEditor(pluginInstance);
 
-            this.markAsInstalled(plugin);
+            // 标记为已安装
+            this.markAsInstalled(plugin, targetVersion);
 
-            console.log(`[PluginMarketService] Successfully installed: ${plugin.name}`);
+            console.log(`[PluginMarketService] Successfully installed: ${plugin.name} v${targetVersion}`);
         } catch (error) {
             console.error(`[PluginMarketService] Failed to install plugin ${plugin.name}:`, error);
             throw error;
@@ -149,14 +152,60 @@ export class PluginMarketService {
         const installedVersion = this.getInstalledVersion(plugin.id);
         if (!installedVersion) return false;
 
-        return this.compareVersions(plugin.version, installedVersion) > 0;
+        return this.compareVersions(plugin.latestVersion, installedVersion) > 0;
+    }
+
+    private async downloadZip(url: string): Promise<Blob> {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`Failed to download ZIP: ${response.status}`);
+        }
+
+        return await response.blob();
+    }
+
+    private async loadPluginFromZip(zipBlob: Blob, metadata: PluginMarketMetadata): Promise<IEditorPlugin | null> {
+        try {
+            // 解压 ZIP
+            const zip = await JSZip.loadAsync(zipBlob);
+
+            // 查找 index.js
+            const indexFile = zip.file('index.js');
+            if (!indexFile) {
+                throw new Error('index.js not found in plugin ZIP');
+            }
+
+            // 读取 index.js 内容
+            const indexContent = await indexFile.async('text');
+
+            // 创建 Blob URL
+            const blob = new Blob([indexContent], { type: 'application/javascript' });
+            const blobUrl = URL.createObjectURL(blob);
+
+            try {
+                // 动态导入模块
+                const module = await import(/* @vite-ignore */ blobUrl);
+
+                // 提取插件实例
+                return this.extractPluginInstance(module, metadata);
+            } finally {
+                // 清理 Blob URL
+                URL.revokeObjectURL(blobUrl);
+            }
+        } catch (error) {
+            console.error('[PluginMarketService] Failed to load plugin from ZIP:', error);
+            throw error;
+        }
     }
 
     private extractPluginInstance(module: any, metadata: PluginMarketMetadata): IEditorPlugin | null {
+        // 尝试从 default export 获取
         if (module.default && this.isPluginInstance(module.default)) {
             return module.default;
         }
 
+        // 尝试从命名 export 获取
         for (const key of Object.keys(module)) {
             const value = module[key];
             if (value && this.isPluginInstance(value)) {
@@ -183,25 +232,10 @@ export class PluginMarketService {
         );
     }
 
-    private loadCSS(cssUrl: string): void {
-        const existingLink = document.querySelector(`link[href="${cssUrl}"]`);
-        if (existingLink) {
-            console.log('[PluginMarketService] CSS already loaded:', cssUrl);
-            return;
-        }
-
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = cssUrl;
-        document.head.appendChild(link);
-
-        console.log('[PluginMarketService] Loaded CSS:', cssUrl);
-    }
-
-    private markAsInstalled(plugin: PluginMarketMetadata): void {
+    private markAsInstalled(plugin: PluginMarketMetadata, version: string): void {
         this.installedPlugins.set(plugin.id, {
             id: plugin.id,
-            version: plugin.version,
+            version: version,
             installedAt: new Date().toISOString()
         });
         this.saveInstalledPlugins();
