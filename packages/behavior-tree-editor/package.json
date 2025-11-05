@@ -1,0 +1,39 @@
+{
+  "name": "@esengine/behavior-tree-editor",
+  "version": "1.0.0",
+  "description": "Behavior Tree Editor Plugin for ECS Framework",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "clean": "rimraf bin dist tsconfig.tsbuildinfo",
+    "prebuild": "npm run clean",
+    "build": "npm run build:ts",
+    "build:ts": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "ecs",
+    "behavior-tree",
+    "editor",
+    "plugin"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@esengine/ecs-framework": "file:../core",
+    "@esengine/editor-core": "file:../editor-core",
+    "@esengine/behavior-tree": "file:../behavior-tree",
+    "lucide-react": "^0.469.0",
+    "react": "^18.3.1",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.8.2"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  }
+}

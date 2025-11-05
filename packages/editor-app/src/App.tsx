@@ -1,12 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Core, Scene, createLogger } from '@esengine/ecs-framework';
+import { Core, createLogger, Scene } from '@esengine/ecs-framework';
 import * as ECSFramework from '@esengine/ecs-framework';
-import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, PropertyMetadataService, LogService, SettingsRegistry, SceneManagerService, FileActionRegistry, PanelDescriptor } from '@esengine/editor-core';
+import {
+    EditorPluginManager,
+    UIRegistry,
+    MessageHub,
+    EntityStoreService,
+    ComponentRegistry,
+    LocaleService,
+    LogService,
+    SettingsRegistry,
+    SceneManagerService,
+    ProjectService,
+    CompilerRegistry,
+    InspectorRegistry
+} from '@esengine/editor-core';
 import { GlobalBlackboardService } from '@esengine/behavior-tree';
-import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
-import { ProfilerPlugin } from './plugins/ProfilerPlugin';
-import { EditorAppearancePlugin } from './plugins/EditorAppearancePlugin';
-import { BehaviorTreePlugin } from './plugins/BehaviorTreePlugin';
+import { ServiceRegistry, PluginInstaller, useDialogStore } from './app/managers';
+import { ModuleLoader } from './core/modules/ModuleLoader';
+import type { IModuleContext } from './core/interfaces/IModuleContext';
+import type { EditorEventMap } from './core/events/EditorEventMap';
 import { StartupPage } from './components/StartupPage';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { Inspector } from './components/Inspector';
@@ -20,11 +33,10 @@ import { AboutDialog } from './components/AboutDialog';
 import { ErrorDialog } from './components/ErrorDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { PluginGeneratorWindow } from './components/PluginGeneratorWindow';
-import { ToastProvider } from './components/Toast';
+import { ToastProvider, useToast } from './components/Toast';
 import { MenuBar } from './components/MenuBar';
 import { FlexLayoutDockContainer, FlexDockPanel } from './components/FlexLayoutDockContainer';
 import { TauriAPI } from './api/tauri';
-import { TauriFileAPI } from './adapters/TauriFileAPI';
 import { SettingsService } from './services/SettingsService';
 import { PluginLoader } from './services/PluginLoader';
 import { checkForUpdatesOnStartup } from './utils/updater';
@@ -41,12 +53,14 @@ localeService.registerTranslations('zh', zh);
 Core.services.registerInstance(LocaleService, localeService);
 
 Core.services.registerSingleton(GlobalBlackboardService);
+Core.services.registerSingleton(CompilerRegistry);
 
 const logger = createLogger('App');
 
 function App() {
     const initRef = useRef(false);
     const pluginLoaderRef = useRef<PluginLoader>(new PluginLoader());
+    const { showToast, hideToast } = useToast();
     const [initialized, setInitialized] = useState(false);
     const [projectLoaded, setProjectLoaded] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -55,6 +69,7 @@ function App() {
     const [pluginManager, setPluginManager] = useState<EditorPluginManager | null>(null);
     const [entityStore, setEntityStore] = useState<EntityStoreService | null>(null);
     const [messageHub, setMessageHub] = useState<MessageHub | null>(null);
+    const [inspectorRegistry, setInspectorRegistry] = useState<InspectorRegistry | null>(null);
     const [logService, setLogService] = useState<LogService | null>(null);
     const [uiRegistry, setUiRegistry] = useState<UIRegistry | null>(null);
     const [settingsRegistry, setSettingsRegistry] = useState<SettingsRegistry | null>(null);
@@ -62,23 +77,20 @@ function App() {
     const { t, locale, changeLocale } = useLocale();
     const [status, setStatus] = useState(t('header.status.initializing'));
     const [panels, setPanels] = useState<FlexDockPanel[]>([]);
-    const [showPluginManager, setShowPluginManager] = useState(false);
-    const [showProfiler, setShowProfiler] = useState(false);
-    const [showPortManager, setShowPortManager] = useState(false);
-    const [showSettings, setShowSettings] = useState(false);
-    const [showAbout, setShowAbout] = useState(false);
-    const [showPluginGenerator, setShowPluginGenerator] = useState(false);
     const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
     const [isRemoteConnected, setIsRemoteConnected] = useState(false);
     const [isProfilerMode, setIsProfilerMode] = useState(false);
-    const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
-    const [confirmDialog, setConfirmDialog] = useState<{
-        title: string;
-        message: string;
-        confirmText: string;
-        cancelText: string;
-        onConfirm: () => void;
-            } | null>(null);
+
+    const {
+        showPluginManager, setShowPluginManager,
+        showProfiler, setShowProfiler,
+        showPortManager, setShowPortManager,
+        showSettings, setShowSettings,
+        showAbout, setShowAbout,
+        showPluginGenerator, setShowPluginGenerator,
+        errorDialog, setErrorDialog,
+        confirmDialog, setConfirmDialog
+    } = useDialogStore();
     const [activeDynamicPanels, setActiveDynamicPanels] = useState<string[]>([]);
     const [activePanelId, setActivePanelId] = useState<string | undefined>(undefined);
     const [dynamicPanelTitles, setDynamicPanelTitles] = useState<Map<string, string>>(new Map());
@@ -157,53 +169,36 @@ function App() {
                 const editorScene = new Scene();
                 Core.setScene(editorScene);
 
-                const uiRegistry = new UIRegistry();
-                const messageHub = new MessageHub();
-                const serializerRegistry = new SerializerRegistry();
-                const entityStore = new EntityStoreService(messageHub);
-                const componentRegistry = new ComponentRegistry();
-                const fileAPI = new TauriFileAPI();
-                const projectService = new ProjectService(messageHub, fileAPI);
-                const componentDiscovery = new ComponentDiscoveryService(messageHub);
-                const propertyMetadata = new PropertyMetadataService();
-                const logService = new LogService();
-                const settingsRegistry = new SettingsRegistry();
-                const sceneManagerService = new SceneManagerService(messageHub, fileAPI, projectService);
-                const fileActionRegistry = new FileActionRegistry();
+                const serviceRegistry = new ServiceRegistry();
+                const services = serviceRegistry.registerAllServices(coreInstance);
 
-                // 监听远程日志事件
-                window.addEventListener('profiler:remote-log', ((event: CustomEvent) => {
-                    const { level, message, timestamp, clientId } = event.detail;
-                    logService.addRemoteLog(level, message, timestamp, clientId);
-                }) as EventListener);
+                serviceRegistry.setupRemoteLogListener(services.logService);
 
-                Core.services.registerInstance(UIRegistry, uiRegistry);
-                Core.services.registerInstance(MessageHub, messageHub);
-                Core.services.registerInstance(SerializerRegistry, serializerRegistry);
-                Core.services.registerInstance(EntityStoreService, entityStore);
-                Core.services.registerInstance(ComponentRegistry, componentRegistry);
-                Core.services.registerInstance(ProjectService, projectService);
-                Core.services.registerInstance(ComponentDiscoveryService, componentDiscovery);
-                Core.services.registerInstance(PropertyMetadataService, propertyMetadata);
-                Core.services.registerInstance(LogService, logService);
-                Core.services.registerInstance(SettingsRegistry, settingsRegistry);
-                Core.services.registerInstance(SceneManagerService, sceneManagerService);
-                Core.services.registerInstance(FileActionRegistry, fileActionRegistry);
+                const pluginInstaller = new PluginInstaller();
+                await pluginInstaller.installBuiltinPlugins(services.pluginManager);
 
-                const pluginMgr = new EditorPluginManager();
-                pluginMgr.initialize(coreInstance, Core.services);
-                Core.services.registerInstance(EditorPluginManager, pluginMgr);
+                services.notification.setCallbacks(showToast, hideToast);
 
-                await pluginMgr.installEditor(new SceneInspectorPlugin());
-                await pluginMgr.installEditor(new ProfilerPlugin());
-                await pluginMgr.installEditor(new EditorAppearancePlugin());
-                await pluginMgr.installEditor(new BehaviorTreePlugin());
+                const moduleLoader = new ModuleLoader();
+                const moduleContext: IModuleContext<EditorEventMap> = {
+                    container: services.diContainer.getNativeContainer(),
+                    eventBus: services.eventBus,
+                    commands: services.commandRegistry,
+                    panels: services.panelRegistry,
+                    fileSystem: services.fileSystem,
+                    dialog: services.dialog,
+                    notification: services.notification,
+                    inspectorRegistry: services.inspectorRegistry
+                };
 
-                messageHub.subscribe('ui:openWindow', (data: any) => {
+                // TODO: 实现模块动态加载机制
+                // 模块应该通过配置文件或插件系统自动发现和加载
+                // 而不是在App.tsx中硬编码
+
+                services.messageHub.subscribe('ui:openWindow', (data: any) => {
                     console.log('[App] Received ui:openWindow:', data);
-                    const { windowId, ...params } = data;
+                    const { windowId } = data;
 
-                    // 内置窗口处理
                     if (windowId === 'profiler') {
                         setShowProfiler(true);
                     } else if (windowId === 'pluginManager') {
@@ -214,13 +209,14 @@ function App() {
                 await TauriAPI.greet('Developer');
 
                 setInitialized(true);
-                setPluginManager(pluginMgr);
-                setEntityStore(entityStore);
-                setMessageHub(messageHub);
-                setLogService(logService);
-                setUiRegistry(uiRegistry);
-                setSettingsRegistry(settingsRegistry);
-                setSceneManager(sceneManagerService);
+                setPluginManager(services.pluginManager);
+                setEntityStore(services.entityStore);
+                setMessageHub(services.messageHub);
+                setInspectorRegistry(services.inspectorRegistry);
+                setLogService(services.logService);
+                setUiRegistry(services.uiRegistry);
+                setSettingsRegistry(services.settingsRegistry);
+                setSceneManager(services.sceneManager);
                 setStatus(t('header.status.ready'));
 
                 // Check for updates on startup (after 3 seconds)
@@ -583,7 +579,7 @@ function App() {
                     {
                         id: 'inspector',
                         title: locale === 'zh' ? '检视器' : 'Inspector',
-                        content: <Inspector entityStore={entityStore} messageHub={messageHub} projectPath={currentProjectPath} />,
+                        content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} />,
                         closable: false
                     },
                     {
@@ -604,7 +600,7 @@ function App() {
                     {
                         id: 'inspector',
                         title: locale === 'zh' ? '检视器' : 'Inspector',
-                        content: <Inspector entityStore={entityStore} messageHub={messageHub} projectPath={currentProjectPath} />,
+                        content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} />,
                         closable: false
                     },
                     {

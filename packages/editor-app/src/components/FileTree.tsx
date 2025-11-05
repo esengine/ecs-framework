@@ -30,6 +30,7 @@ interface FileTreeProps {
 
 export interface FileTreeHandle {
   collapseAll: () => void;
+  refresh: () => void;
 }
 
 export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, onSelectFile, selectedPath, messageHub, searchQuery, showFiles = true }, ref) => {
@@ -69,7 +70,8 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
     };
 
     useImperativeHandle(ref, () => ({
-        collapseAll
+        collapseAll,
+        refresh: refreshTree
     }));
 
     useEffect(() => {

@@ -1,0 +1,66 @@
+import { create } from 'zustand';
+
+interface ConfirmDialogData {
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    onConfirm: () => void;
+}
+
+interface ErrorDialogData {
+    title: string;
+    message: string;
+}
+
+interface DialogState {
+    showPluginManager: boolean;
+    showProfiler: boolean;
+    showPortManager: boolean;
+    showSettings: boolean;
+    showAbout: boolean;
+    showPluginGenerator: boolean;
+    errorDialog: ErrorDialogData | null;
+    confirmDialog: ConfirmDialogData | null;
+
+    setShowPluginManager: (show: boolean) => void;
+    setShowProfiler: (show: boolean) => void;
+    setShowPortManager: (show: boolean) => void;
+    setShowSettings: (show: boolean) => void;
+    setShowAbout: (show: boolean) => void;
+    setShowPluginGenerator: (show: boolean) => void;
+    setErrorDialog: (data: ErrorDialogData | null) => void;
+    setConfirmDialog: (data: ConfirmDialogData | null) => void;
+    closeAllDialogs: () => void;
+}
+
+export const useDialogStore = create<DialogState>((set) => ({
+    showPluginManager: false,
+    showProfiler: false,
+    showPortManager: false,
+    showSettings: false,
+    showAbout: false,
+    showPluginGenerator: false,
+    errorDialog: null,
+    confirmDialog: null,
+
+    setShowPluginManager: (show) => set({ showPluginManager: show }),
+    setShowProfiler: (show) => set({ showProfiler: show }),
+    setShowPortManager: (show) => set({ showPortManager: show }),
+    setShowSettings: (show) => set({ showSettings: show }),
+    setShowAbout: (show) => set({ showAbout: show }),
+    setShowPluginGenerator: (show) => set({ showPluginGenerator: show }),
+    setErrorDialog: (data) => set({ errorDialog: data }),
+    setConfirmDialog: (data) => set({ confirmDialog: data }),
+
+    closeAllDialogs: () => set({
+        showPluginManager: false,
+        showProfiler: false,
+        showPortManager: false,
+        showSettings: false,
+        showAbout: false,
+        showPluginGenerator: false,
+        errorDialog: null,
+        confirmDialog: null
+    })
+}));
