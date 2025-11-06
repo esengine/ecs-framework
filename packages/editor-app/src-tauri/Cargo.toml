@@ -26,6 +26,7 @@ tokio = { version = "1", features = ["full"] }
 tokio-tungstenite = "0.21"
 futures-util = "0.3"
 chrono = "0.4"
+zip = "0.6"
 
 [profile.dev]
 incremental = true

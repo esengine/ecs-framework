@@ -18,10 +18,12 @@ import {
 import { PluginMarketPanel } from './PluginMarketPanel';
 import { PluginPublishWizard } from './PluginPublishWizard';
 import { PluginMarketService } from '../services/PluginMarketService';
+import { GitHubService } from '../services/GitHubService';
 import '../styles/PluginManagerWindow.css';
 
 interface PluginManagerWindowProps {
     pluginManager: EditorPluginManager;
+    githubService: GitHubService;
     onClose: () => void;
     onRefresh?: () => Promise<void>;
     onOpen?: () => void;
@@ -36,7 +38,7 @@ const categoryIcons: Record<EditorPluginCategory, string> = {
     [EditorPluginCategory.ImportExport]: 'Package'
 };
 
-export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen, locale }: PluginManagerWindowProps) {
+export function PluginManagerWindow({ pluginManager, githubService, onClose, onRefresh, onOpen, locale }: PluginManagerWindowProps) {
     const t = (key: string) => {
         const translations: Record<string, Record<string, string>> = {
             zh: {
@@ -429,7 +431,7 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
 
                 {activeTab === 'marketplace' && <PluginMarketPanel marketService={marketService} locale={locale} />}
 
-                {activeTab === 'publish' && <PluginPublishWizard onClose={() => setActiveTab('marketplace')} locale={locale} />}
+                {activeTab === 'publish' && <PluginPublishWizard githubService={githubService} onClose={() => setActiveTab('marketplace')} locale={locale} inline={true} />}
             </div>
         </div>
     );

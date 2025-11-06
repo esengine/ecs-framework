@@ -3,8 +3,10 @@
 
 use tauri::Manager;
 use tauri::AppHandle;
+use tauri::Emitter;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use std::io::Write;
 use ecs_editor_lib::profiler_ws::ProfilerServer;
 
 // IPC Commands
@@ -529,6 +531,171 @@ fn show_in_folder(file_path: String) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(serde::Serialize, Clone)]
+struct BuildProgress {
+    step: String,
+    output: Option<String>,
+}
+
+#[tauri::command]
+async fn build_plugin(plugin_folder: String, app: AppHandle) -> Result<String, String> {
+    use std::fs;
+    use std::path::Path;
+    use std::process::Command;
+    use std::io::Write;
+    use zip::write::FileOptions;
+
+    let plugin_path = Path::new(&plugin_folder);
+    if !plugin_path.exists() {
+        return Err(format!("Plugin folder does not exist: {}", plugin_folder));
+    }
+
+    let package_json_path = plugin_path.join("package.json");
+    if !package_json_path.exists() {
+        return Err("package.json not found in plugin folder".to_string());
+    }
+
+    let build_cache_dir = plugin_path.join(".build-cache");
+    if !build_cache_dir.exists() {
+        fs::create_dir_all(&build_cache_dir)
+            .map_err(|e| format!("Failed to create .build-cache directory: {}", e))?;
+    }
+
+    let npm_command = if cfg!(target_os = "windows") {
+        "npm.cmd"
+    } else {
+        "npm"
+    };
+
+    app.emit(
+        "plugin-build-progress",
+        BuildProgress {
+            step: "install".to_string(),
+            output: None,
+        },
+    )
+    .ok();
+
+    let install_output = Command::new(npm_command)
+        .args(["install"])
+        .current_dir(&plugin_folder)
+        .output()
+        .map_err(|e| format!("Failed to run npm install: {}", e))?;
+
+    if !install_output.status.success() {
+        return Err(format!(
+            "npm install failed: {}",
+            String::from_utf8_lossy(&install_output.stderr)
+        ));
+    }
+
+    app.emit(
+        "plugin-build-progress",
+        BuildProgress {
+            step: "build".to_string(),
+            output: None,
+        },
+    )
+    .ok();
+
+    let build_output = Command::new(npm_command)
+        .args(["run", "build"])
+        .current_dir(&plugin_folder)
+        .output()
+        .map_err(|e| format!("Failed to run npm run build: {}", e))?;
+
+    if !build_output.status.success() {
+        return Err(format!(
+            "npm run build failed: {}",
+            String::from_utf8_lossy(&build_output.stderr)
+        ));
+    }
+
+    let dist_path = plugin_path.join("dist");
+    if !dist_path.exists() {
+        return Err("dist directory not found after build".to_string());
+    }
+
+    app.emit(
+        "plugin-build-progress",
+        BuildProgress {
+            step: "package".to_string(),
+            output: None,
+        },
+    )
+    .ok();
+
+    let zip_path = build_cache_dir.join("index.zip");
+    let zip_file = fs::File::create(&zip_path)
+        .map_err(|e| format!("Failed to create zip file: {}", e))?;
+
+    let mut zip = zip::ZipWriter::new(zip_file);
+    let options = FileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .unix_permissions(0o755);
+
+    let package_json_content = fs::read(&package_json_path)
+        .map_err(|e| format!("Failed to read package.json: {}", e))?;
+    zip.start_file("package.json", options)
+        .map_err(|e| format!("Failed to add package.json to zip: {}", e))?;
+    zip.write_all(&package_json_content)
+        .map_err(|e| format!("Failed to write package.json to zip: {}", e))?;
+
+    add_directory_to_zip(&mut zip, &dist_path, &dist_path, options)?;
+
+    zip.finish()
+        .map_err(|e| format!("Failed to finalize zip: {}", e))?;
+
+    app.emit(
+        "plugin-build-progress",
+        BuildProgress {
+            step: "complete".to_string(),
+            output: None,
+        },
+    )
+    .ok();
+
+    Ok(zip_path.to_string_lossy().to_string())
+}
+
+fn add_directory_to_zip<W: std::io::Write + std::io::Seek>(
+    zip: &mut zip::ZipWriter<W>,
+    base_path: &std::path::Path,
+    current_path: &std::path::Path,
+    options: zip::write::FileOptions,
+) -> Result<(), String> {
+    use std::fs;
+
+    let entries = fs::read_dir(current_path)
+        .map_err(|e| format!("Failed to read directory {}: {}", current_path.display(), e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            add_directory_to_zip(zip, base_path, &path, options)?;
+        } else {
+            let relative_path = path
+                .strip_prefix(base_path)
+                .map_err(|e| format!("Failed to get relative path: {}", e))?;
+
+            let zip_path = relative_path.to_string_lossy().replace('\\', "/");
+
+            let file_content = fs::read(&path)
+                .map_err(|e| format!("Failed to read file {}: {}", path.display(), e))?;
+
+            zip.start_file(&zip_path, options)
+                .map_err(|e| format!("Failed to add file {} to zip: {}", zip_path, e))?;
+
+            zip.write_all(&file_content)
+                .map_err(|e| format!("Failed to write file {} to zip: {}", zip_path, e))?;
+        }
+    }
+
+    Ok(())
+}
+
 fn main() {
     let project_paths: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
     let project_paths_clone = Arc::clone(&project_paths);
@@ -625,7 +792,8 @@ fn main() {
             read_global_blackboard,
             write_global_blackboard,
             open_file_with_default_app,
-            show_in_folder
+            show_in_folder,
+            build_plugin
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

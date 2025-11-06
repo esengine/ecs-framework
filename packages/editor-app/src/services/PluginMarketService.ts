@@ -58,7 +58,7 @@ interface InstalledPluginInfo {
 
 export class PluginMarketService {
     private readonly REGISTRY_URL =
-        'https://cdn.jsdelivr.net/gh/esengine/ecs-editor-plugins@latest/registry.json';
+        'https://cdn.jsdelivr.net/gh/esengine/ecs-editor-plugins@gh-pages/registry.json';
 
     private readonly STORAGE_KEY = 'ecs-editor-installed-marketplace-plugins';
 

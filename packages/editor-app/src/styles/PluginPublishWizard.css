@@ -43,12 +43,28 @@
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
+.plugin-publish-wizard.inline {
+    width: 100%;
+    max-width: none;
+    max-height: 100%;
+    height: 100%;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    overflow: hidden;
+}
+
 .plugin-publish-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 20px 24px;
     border-bottom: 1px solid var(--color-border, #333);
+}
+
+.plugin-publish-wizard.inline .plugin-publish-header {
+    padding: 16px 20px;
+    background: var(--color-bg-secondary, #252526);
 }
 
 .plugin-publish-header h2 {
@@ -80,6 +96,13 @@
     flex: 1;
     overflow-y: auto;
     padding: 24px;
+}
+
+.plugin-publish-wizard.inline .plugin-publish-content {
+    padding: 20px;
+    background: var(--color-bg-primary, #1e1e1e);
+    height: 0;
+    min-height: 0;
 }
 
 .publish-step {
@@ -454,4 +477,86 @@
     color: var(--color-text-secondary, #858585);
     text-align: center;
     font-family: monospace;
+}
+
+.build-log {
+    width: 100%;
+    max-height: 300px;
+    overflow-y: auto;
+    background: var(--color-bg-hover, #2d2d30);
+    border: 1px solid var(--color-border, #333);
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 16px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.log-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    color: var(--color-text-primary, #cccccc);
+    word-break: break-all;
+}
+
+.log-line svg {
+    flex-shrink: 0;
+}
+
+/* 现有 PR 提示框 */
+.existing-pr-notice {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    margin: 16px 0;
+    background: rgba(244, 180, 0, 0.1);
+    border: 1px solid rgba(244, 180, 0, 0.3);
+    border-radius: 8px;
+    color: var(--color-text-primary, #cccccc);
+}
+
+.existing-pr-notice svg {
+    color: #f4b400;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.existing-pr-notice .notice-content {
+    flex: 1;
+}
+
+.existing-pr-notice strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #f4b400;
+    font-size: 14px;
+}
+
+.existing-pr-notice p {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-text-secondary, #858585);
+}
+
+.existing-pr-notice .btn-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(74, 158, 255, 0.15);
+    border: 1px solid rgba(74, 158, 255, 0.3);
+    border-radius: 6px;
+    color: #4a9eff;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.existing-pr-notice .btn-link:hover {
+    background: rgba(74, 158, 255, 0.25);
+    border-color: #4a9eff;
 }

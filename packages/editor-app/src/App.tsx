@@ -36,12 +36,14 @@ import { PluginGeneratorWindow } from './components/PluginGeneratorWindow';
 import { ToastProvider, useToast } from './components/Toast';
 import { MenuBar } from './components/MenuBar';
 import { UserProfile } from './components/UserProfile';
+import { UserDashboard } from './components/UserDashboard';
 import { FlexLayoutDockContainer, FlexDockPanel } from './components/FlexLayoutDockContainer';
 import { TauriAPI } from './api/tauri';
 import { SettingsService } from './services/SettingsService';
 import { PluginLoader } from './services/PluginLoader';
 import { GitHubService } from './services/GitHubService';
 import { PluginPublishWizard } from './components/PluginPublishWizard';
+import { GitHubLoginDialog } from './components/GitHubLoginDialog';
 import { checkForUpdatesOnStartup } from './utils/updater';
 import { useLocale } from './hooks/useLocale';
 import { en, zh } from './locales';
@@ -62,8 +64,8 @@ const logger = createLogger('App');
 
 function App() {
     const initRef = useRef(false);
-    const pluginLoaderRef = useRef<PluginLoader>(new PluginLoader());
-    const githubServiceRef = useRef<GitHubService>(new GitHubService());
+    const [pluginLoader] = useState(() => new PluginLoader());
+    const [githubService] = useState(() => new GitHubService());
     const { showToast, hideToast } = useToast();
     const [initialized, setInitialized] = useState(false);
     const [projectLoaded, setProjectLoaded] = useState(false);
@@ -100,6 +102,7 @@ function App() {
     const [dynamicPanelTitles, setDynamicPanelTitles] = useState<Map<string, string>>(new Map());
     const [isEditorFullscreen, setIsEditorFullscreen] = useState(false);
     const [showLoginDialog, setShowLoginDialog] = useState(false);
+    const [showDashboard, setShowDashboard] = useState(false);
 
     useEffect(() => {
         // 禁用默认右键菜单
@@ -326,7 +329,7 @@ function App() {
 
             if (pluginManager) {
                 setLoadingMessage(locale === 'zh' ? '加载项目插件...' : 'Loading project plugins...');
-                await pluginLoaderRef.current.loadProjectPlugins(projectPath, pluginManager);
+                await pluginLoader.loadProjectPlugins(projectPath, pluginManager);
             }
 
             setIsLoading(false);
@@ -523,7 +526,7 @@ function App() {
 
     const handleCloseProject = async () => {
         if (pluginManager) {
-            await pluginLoaderRef.current.unloadProjectPlugins(pluginManager);
+            await pluginLoader.unloadProjectPlugins(pluginManager);
         }
         setProjectLoaded(false);
         setCurrentProjectPath(null);
@@ -762,8 +765,9 @@ function App() {
                     />
                     <div className="header-right">
                         <UserProfile
-                            githubService={githubServiceRef.current}
+                            githubService={githubService}
                             onLogin={() => setShowLoginDialog(true)}
+                            onOpenDashboard={() => setShowDashboard(true)}
                             locale={locale}
                         />
                         <button onClick={handleLocaleChange} className="toolbar-btn locale-btn" title={locale === 'en' ? '切换到中文' : 'Switch to English'}>
@@ -775,8 +779,17 @@ function App() {
             )}
 
             {showLoginDialog && (
-                <PluginPublishWizard
+                <GitHubLoginDialog
+                    githubService={githubService}
                     onClose={() => setShowLoginDialog(false)}
+                    locale={locale}
+                />
+            )}
+
+            {showDashboard && (
+                <UserDashboard
+                    githubService={githubService}
+                    onClose={() => setShowDashboard(false)}
                     locale={locale}
                 />
             )}
@@ -801,6 +814,7 @@ function App() {
             {showPluginManager && pluginManager && (
                 <PluginManagerWindow
                     pluginManager={pluginManager}
+                    githubService={githubService}
                     onClose={() => setShowPluginManager(false)}
                     locale={locale}
                     onOpen={() => {
@@ -814,7 +828,7 @@ function App() {
                     }}
                     onRefresh={async () => {
                         if (currentProjectPath && pluginManager) {
-                            await pluginLoaderRef.current.loadProjectPlugins(currentProjectPath, pluginManager);
+                            await pluginLoader.loadProjectPlugins(currentProjectPath, pluginManager);
                         }
                     }}
                 />
@@ -843,7 +857,7 @@ function App() {
                     locale={locale}
                     onSuccess={async () => {
                         if (currentProjectPath && pluginManager) {
-                            await pluginLoaderRef.current.loadProjectPlugins(currentProjectPath, pluginManager);
+                            await pluginLoader.loadProjectPlugins(currentProjectPath, pluginManager);
                         }
                     }}
                 />

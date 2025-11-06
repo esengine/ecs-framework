@@ -1,15 +1,19 @@
 import { useState } from 'react';
-import { X, Github, AlertCircle, CheckCircle, Loader, ExternalLink, FolderOpen } from 'lucide-react';
+import { X, AlertCircle, CheckCircle, Loader, ExternalLink, FolderOpen } from 'lucide-react';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { GitHubService } from '../services/GitHubService';
+import { GitHubAuth } from './GitHubAuth';
 import { PluginPublishService, type PluginPublishInfo, type PublishProgress } from '../services/PluginPublishService';
+import { PluginBuildService, type BuildProgress } from '../services/PluginBuildService';
 import { open } from '@tauri-apps/plugin-shell';
 import { EditorPluginCategory, type IEditorPluginMetadata } from '@esengine/editor-core';
 import '../styles/PluginPublishWizard.css';
 
 interface PluginPublishWizardProps {
+    githubService: GitHubService;
     onClose: () => void;
     locale: string;
+    inline?: boolean; // 是否内联显示（在 tab 中）而不是弹窗
 }
 
 type Step = 'auth' | 'selectFolder' | 'info' | 'building' | 'confirm' | 'publishing' | 'success' | 'error';
@@ -23,12 +27,11 @@ interface PluginPackageJson {
     license?: string;
 }
 
-export function PluginPublishWizard({ onClose, locale }: PluginPublishWizardProps) {
-    const [githubService] = useState(() => new GitHubService());
+export function PluginPublishWizard({ githubService, onClose, locale, inline = false }: PluginPublishWizardProps) {
     const [publishService] = useState(() => new PluginPublishService(githubService));
+    const [buildService] = useState(() => new PluginBuildService());
 
     const [step, setStep] = useState<Step>(githubService.isAuthenticated() ? 'selectFolder' : 'auth');
-    const [githubToken, setGithubToken] = useState('');
     const [pluginFolder, setPluginFolder] = useState('');
     const [packageJson, setPackageJson] = useState<PluginPackageJson | null>(null);
     const [publishInfo, setPublishInfo] = useState<Partial<PluginPublishInfo>>({
@@ -38,13 +41,10 @@ export function PluginPublishWizard({ onClose, locale }: PluginPublishWizardProp
     const [prUrl, setPrUrl] = useState('');
     const [error, setError] = useState('');
     const [buildLog, setBuildLog] = useState<string[]>([]);
+    const [buildProgress, setBuildProgress] = useState<BuildProgress | null>(null);
     const [publishProgress, setPublishProgress] = useState<PublishProgress | null>(null);
-
-    // OAuth Device Flow state
-    const [useOAuth, setUseOAuth] = useState(true);
-    const [userCode, setUserCode] = useState('');
-    const [verificationUri, setVerificationUri] = useState('');
-    const [authStatus, setAuthStatus] = useState<'idle' | 'pending' | 'authorized' | 'error'>('idle');
+    const [builtZipPath, setBuiltZipPath] = useState<string>('');
+    const [existingPR, setExistingPR] = useState<{ number: number; url: string } | null>(null);
 
     const t = (key: string) => {
         const translations: Record<string, Record<string, string>> = {
@@ -113,7 +113,10 @@ export function PluginPublishWizard({ onClose, locale }: PluginPublishWizardProp
                 publishingStep3: '正在上传文件...',
                 publishingStep4: '正在创建 Pull Request...',
                 confirmMessage: '确认要发布以下插件？',
-                reviewMessage: '你的插件提交已创建 PR，维护者将进行审核。审核通过后，插件将自动发布到市场。'
+                reviewMessage: '你的插件提交已创建 PR，维护者将进行审核。审核通过后，插件将自动发布到市场。',
+                existingPRDetected: '检测到现有 PR',
+                existingPRMessage: '该插件已有待审核的 PR #{{number}}。点击"确认"将更新现有 PR（不会创建新的 PR）。',
+                viewExistingPR: '查看现有 PR'
             },
             en: {
                 title: 'Publish Plugin to Marketplace',
@@ -181,75 +184,17 @@ export function PluginPublishWizard({ onClose, locale }: PluginPublishWizardProp
                 publishingStep4: 'Creating Pull Request...',
                 confirmMessage: 'Confirm publishing this plugin?',
                 reviewMessage:
-                    'Your plugin submission has been created as a PR. Maintainers will review it. Once approved, the plugin will be published to the marketplace.'
+                    'Your plugin submission has been created as a PR. Maintainers will review it. Once approved, the plugin will be published to the marketplace.',
+                existingPRDetected: 'Existing PR Detected',
+                existingPRMessage: 'This plugin already has a pending PR #{{number}}. Clicking "Confirm" will update the existing PR (no new PR will be created).',
+                viewExistingPR: 'View Existing PR'
             }
         };
         return translations[locale]?.[key] || translations.en?.[key] || key;
     };
 
-    const handleOAuthLogin = async () => {
-        setAuthStatus('pending');
-        setError('');
-
-        try {
-            console.log('[PluginPublishWizard] Starting OAuth login...');
-
-            // 1. 请求设备代码
-            console.log('[PluginPublishWizard] Requesting device code...');
-            const deviceCodeResp = await githubService.requestDeviceCode();
-            console.log('[PluginPublishWizard] Device code received:', deviceCodeResp.user_code);
-
-            setUserCode(deviceCodeResp.user_code);
-            setVerificationUri(deviceCodeResp.verification_uri);
-
-            // 2. 自动打开浏览器
-            console.log('[PluginPublishWizard] Opening browser...');
-            await open(deviceCodeResp.verification_uri);
-
-            // 3. 开始轮询检查授权状态
-            console.log('[PluginPublishWizard] Starting authentication polling...');
-            await githubService.authenticateWithDeviceFlow(
-                deviceCodeResp.device_code,
-                deviceCodeResp.interval,
-                (status) => {
-                    console.log('[PluginPublishWizard] Auth status changed:', status);
-                    setAuthStatus(status === 'pending' ? 'pending' : status === 'authorized' ? 'authorized' : 'error');
-                }
-            );
-
-            // 授权成功
-            console.log('[PluginPublishWizard] Authorization successful!');
-            setAuthStatus('authorized');
-            setTimeout(() => {
-                setStep('selectFolder');
-            }, 1500);
-        } catch (err) {
-            console.error('[PluginPublishWizard] OAuth failed:', err);
-            setAuthStatus('error');
-            const errorMessage = err instanceof Error ? err.message : 'OAuth authorization failed';
-            const fullError = err instanceof Error && err.stack ? `${errorMessage}\n\nDetails: ${err.stack}` : errorMessage;
-            setError(fullError);
-        }
-    };
-
-    const handleTokenAuth = async () => {
-        if (!githubToken.trim()) return;
-
-        try {
-            await githubService.authenticate(githubToken);
-            setStep('selectFolder');
-            setError('');
-        } catch {
-            setError('Authentication failed. Please check your token.');
-        }
-    };
-
-    const copyToClipboard = async (text: string) => {
-        try {
-            await navigator.clipboard.writeText(text);
-        } catch (err) {
-            console.error('Failed to copy:', err);
-        }
+    const handleAuthSuccess = () => {
+        setStep('selectFolder');
     };
 
     const handleSelectFolder = async () => {
@@ -281,6 +226,24 @@ export function PluginPublishWizard({ onClose, locale }: PluginPublishWizardProp
                     version: pkgJson.version
                 }));
 
+                // 检测是否已有待审核的 PR
+                try {
+                    const user = githubService.getUser();
+                    if (user) {
+                        const branchName = `add-plugin-${pkgJson.name}-v${pkgJson.version}`;
+                        const headBranch = `${user.login}:${branchName}`;
+                        const pr = await githubService.findPullRequestByBranch('esengine', 'ecs-editor-plugins', headBranch);
+                        if (pr) {
+                            setExistingPR({ number: pr.number, url: pr.html_url });
+                        } else {
+                            setExistingPR(null);
+                        }
+                    }
+                } catch (err) {
+                    console.log('[PluginPublishWizard] Failed to check existing PR:', err);
+                    setExistingPR(null);
+                }
+
                 setStep('info');
                 setError('');
             } catch (err) {
@@ -304,26 +267,50 @@ export function PluginPublishWizard({ onClose, locale }: PluginPublishWizardProp
 
     const handleBuild = async () => {
         setBuildLog([]);
+        setBuildProgress(null);
         setError('');
 
+        buildService.setProgressCallback((progress) => {
+            console.log('[PluginPublishWizard] Build progress:', progress);
+            setBuildProgress(progress);
+
+            if (progress.step === 'install') {
+                setBuildLog((prev) => {
+                    if (prev[prev.length - 1] !== t('buildingStep1')) {
+                        return [...prev, t('buildingStep1')];
+                    }
+                    return prev;
+                });
+            } else if (progress.step === 'build') {
+                setBuildLog((prev) => {
+                    if (prev[prev.length - 1] !== t('buildingStep2')) {
+                        return [...prev, t('buildingStep2')];
+                    }
+                    return prev;
+                });
+            } else if (progress.step === 'package') {
+                setBuildLog((prev) => {
+                    if (prev[prev.length - 1] !== t('buildingStep3')) {
+                        return [...prev, t('buildingStep3')];
+                    }
+                    return prev;
+                });
+            } else if (progress.step === 'complete') {
+                setBuildLog((prev) => [...prev, t('buildComplete')]);
+            }
+
+            if (progress.output) {
+                console.log('[Build output]', progress.output);
+            }
+        });
+
         try {
-            // TODO: 实现本地构建
-            // 1. 运行 npm install
-            // 2. 运行 npm run build
-            // 3. 打包 dist/ 目录为 ZIP
-            // 4. 保存 ZIP 到临时目录
-
-            setBuildLog((prev) => [...prev, t('buildingStep1')]);
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
-            setBuildLog((prev) => [...prev, t('buildingStep2')]);
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-
-            setBuildLog((prev) => [...prev, t('buildingStep3')]);
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
+            const zipPath = await buildService.buildPlugin(pluginFolder);
+            console.log('[PluginPublishWizard] Build completed, ZIP at:', zipPath);
+            setBuiltZipPath(zipPath);
             setStep('confirm');
         } catch (err) {
+            console.error('[PluginPublishWizard] Build failed:', err);
             setError(err instanceof Error ? err.message : 'Unknown error');
             setStep('error');
         }
@@ -373,9 +360,9 @@ export function PluginPublishWizard({ onClose, locale }: PluginPublishWizardProp
             };
 
             console.log('[PluginPublishWizard] Publishing with info:', fullPublishInfo);
+            console.log('[PluginPublishWizard] Built ZIP path:', builtZipPath);
 
-            // 上传 ZIP 并创建 PR
-            const prUrl = await publishService.publishPluginWithZip(fullPublishInfo, pluginFolder);
+            const prUrl = await publishService.publishPluginWithZip(fullPublishInfo, builtZipPath);
             setPrUrl(prUrl);
             setStep('success');
         } catch (err) {
@@ -385,149 +372,32 @@ export function PluginPublishWizard({ onClose, locale }: PluginPublishWizardProp
         }
     };
 
-    const openCreateTokenPage = async () => {
-        await githubService.openAuthorizationPage();
-    };
-
     const openPR = async () => {
         if (prUrl) {
             await open(prUrl);
         }
     };
 
-    return (
-        <div className="plugin-publish-overlay" onClick={onClose}>
-            <div className="plugin-publish-wizard" onClick={(e) => e.stopPropagation()}>
-                <div className="plugin-publish-header">
-                    <h2>{t('title')}</h2>
+    const wizardContent = (
+        <div className={inline ? "plugin-publish-wizard inline" : "plugin-publish-wizard"} onClick={(e) => inline ? undefined : e.stopPropagation()}>
+            <div className="plugin-publish-header">
+                <h2>{t('title')}</h2>
+                {!inline && (
                     <button className="plugin-publish-close" onClick={onClose}>
                         <X size={20} />
                     </button>
-                </div>
+                )}
+            </div>
 
-                <div className="plugin-publish-content">
+            <div className="plugin-publish-content">
                     {step === 'auth' && (
                         <div className="publish-step">
                             <h3>{t('stepAuth')}</h3>
-                            <div className="github-auth">
-                                <Github size={48} style={{ color: '#0366d6' }} />
-                                <p>{t('githubLogin')}</p>
-
-                                <div className="auth-tabs">
-                                    <button
-                                        className={`auth-tab ${useOAuth ? 'active' : ''}`}
-                                        onClick={() => setUseOAuth(true)}
-                                    >
-                                        {t('oauthLogin')}
-                                    </button>
-                                    <button
-                                        className={`auth-tab ${!useOAuth ? 'active' : ''}`}
-                                        onClick={() => setUseOAuth(false)}
-                                    >
-                                        {t('tokenLogin')}
-                                    </button>
-                                </div>
-
-                                {useOAuth ? (
-                                    <div className="oauth-auth">
-                                        {authStatus === 'idle' && (
-                                            <>
-                                                <div className="oauth-instructions">
-                                                    <p>{t('oauthStep1')}</p>
-                                                    <p>{t('oauthStep2')}</p>
-                                                    <p>{t('oauthStep3')}</p>
-                                                </div>
-
-                                                <button className="btn-primary" onClick={handleOAuthLogin}>
-                                                    <Github size={16} />
-                                                    {t('startAuth')}
-                                                </button>
-                                            </>
-                                        )}
-
-                                        {authStatus === 'pending' && (
-                                            <div className="oauth-pending">
-                                                <Loader size={48} className="spinning" style={{ color: '#0366d6' }} />
-                                                <h4>{t('authorizing')}</h4>
-
-                                                {userCode && (
-                                                    <div className="user-code-display">
-                                                        <label>{t('userCode')}</label>
-                                                        <div className="code-box">
-                                                            <span className="code-text">{userCode}</span>
-                                                            <button
-                                                                className="btn-copy"
-                                                                onClick={() => copyToClipboard(userCode)}
-                                                                title={t('copyCode')}
-                                                            >
-                                                                📋
-                                                            </button>
-                                                        </div>
-                                                        <button
-                                                            className="btn-link"
-                                                            onClick={() => open(verificationUri)}
-                                                        >
-                                                            <ExternalLink size={14} />
-                                                            {t('openBrowser')}
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {authStatus === 'authorized' && (
-                                            <div className="oauth-success">
-                                                <CheckCircle size={48} style={{ color: '#34c759' }} />
-                                                <h4>{t('authorized')}</h4>
-                                            </div>
-                                        )}
-
-                                        {authStatus === 'error' && (
-                                            <div className="oauth-error">
-                                                <AlertCircle size={48} style={{ color: '#ff3b30' }} />
-                                                <h4>{t('authFailed')}</h4>
-                                                {error && (
-                                                    <div className="error-details">
-                                                        <pre>{error}</pre>
-                                                    </div>
-                                                )}
-                                                <button className="btn-secondary" onClick={() => setAuthStatus('idle')}>
-                                                    {t('back')}
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="token-auth">
-                                        <div className="form-group">
-                                            <label>{t('tokenLabel')}</label>
-                                            <input
-                                                type="password"
-                                                value={githubToken}
-                                                onChange={(e) => setGithubToken(e.target.value)}
-                                                placeholder={t('tokenPlaceholder')}
-                                            />
-                                            <small>{t('tokenHint')}</small>
-                                        </div>
-
-                                        <button className="btn-link" onClick={openCreateTokenPage}>
-                                            <ExternalLink size={14} />
-                                            {t('createToken')}
-                                        </button>
-
-                                        <button className="btn-primary" onClick={handleTokenAuth}>
-                                            {t('login')}
-                                        </button>
-                                    </div>
-                                )}
-
-                                {error && (
-                                    <div className="error-message">
-                                        <AlertCircle size={16} />
-                                        {error}
-                                    </div>
-                                )}
-                            </div>
+                            <GitHubAuth
+                                githubService={githubService}
+                                onSuccess={handleAuthSuccess}
+                                locale={locale}
+                            />
                         </div>
                     )}
 
@@ -571,6 +441,23 @@ export function PluginPublishWizard({ onClose, locale }: PluginPublishWizardProp
                     {step === 'info' && (
                         <div className="publish-step">
                             <h3>{t('stepInfo')}</h3>
+
+                            {existingPR && (
+                                <div className="existing-pr-notice">
+                                    <AlertCircle size={20} />
+                                    <div className="notice-content">
+                                        <strong>{t('existingPRDetected')}</strong>
+                                        <p>{t('existingPRMessage').replace('{{number}}', String(existingPR.number))}</p>
+                                        <button
+                                            className="btn-link"
+                                            onClick={() => open(existingPR.url)}
+                                        >
+                                            <ExternalLink size={16} />
+                                            {t('viewExistingPR')}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="form-group">
                                 <label>{t('version')} *</label>
@@ -658,8 +545,8 @@ export function PluginPublishWizard({ onClose, locale }: PluginPublishWizardProp
                             <div className="build-log">
                                 {buildLog.map((log, i) => (
                                     <div key={i} className="log-line">
-                                        <CheckCircle size={14} style={{ color: '#34c759' }} />
-                                        {log}
+                                        <CheckCircle size={16} style={{ color: '#34c759', flexShrink: 0 }} />
+                                        <span>{log}</span>
                                     </div>
                                 ))}
                             </div>
@@ -671,6 +558,23 @@ export function PluginPublishWizard({ onClose, locale }: PluginPublishWizardProp
                             <h3>{t('stepConfirm')}</h3>
 
                             <p>{t('confirmMessage')}</p>
+
+                            {existingPR && (
+                                <div className="existing-pr-notice">
+                                    <AlertCircle size={20} />
+                                    <div className="notice-content">
+                                        <strong>{t('existingPRDetected')}</strong>
+                                        <p>{t('existingPRMessage').replace('{{number}}', String(existingPR.number))}</p>
+                                        <button
+                                            className="btn-link"
+                                            onClick={() => open(existingPR.url)}
+                                        >
+                                            <ExternalLink size={16} />
+                                            {t('viewExistingPR')}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="confirm-details">
                                 <div className="detail-row">
@@ -689,6 +593,14 @@ export function PluginPublishWizard({ onClose, locale }: PluginPublishWizardProp
                                     <span className="detail-label">{t('repositoryUrl')}:</span>
                                     <span className="detail-value">{publishInfo.repositoryUrl}</span>
                                 </div>
+                                {builtZipPath && (
+                                    <div className="detail-row">
+                                        <span className="detail-label">Built Package:</span>
+                                        <span className="detail-value" style={{ fontSize: '12px', wordBreak: 'break-all' }}>
+                                            {builtZipPath}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="button-group">
@@ -756,7 +668,12 @@ export function PluginPublishWizard({ onClose, locale }: PluginPublishWizardProp
                         </div>
                     )}
                 </div>
-            </div>
+        </div>
+    );
+
+    return inline ? wizardContent : (
+        <div className="plugin-publish-overlay" onClick={onClose}>
+            {wizardContent}
         </div>
     );
 }

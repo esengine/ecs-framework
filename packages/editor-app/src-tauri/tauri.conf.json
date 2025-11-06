@@ -78,15 +78,28 @@
             "fs:allow-read-text-file",
             "fs:allow-write-text-file",
             "fs:allow-read-dir",
-            "fs:allow-exists"
+            "fs:allow-exists",
+            "fs:allow-read",
+            "fs:allow-write",
+            "fs:allow-create",
+            "fs:allow-mkdir",
+            "fs:allow-read-file",
+            "fs:allow-write-file",
+            "fs:allow-remove",
+            "fs:allow-rename",
+            "fs:allow-copy-file"
           ],
           "scope": {
             "allow": [
               "$HOME/**",
               "$APPDATA/**",
+              "$APPLOCALDATA/**",
+              "$APPCACHE/**",
+              "$APPLOG/**",
               "$DESKTOP/**",
               "$DOCUMENT/**",
-              "$DOWNLOAD/**"
+              "$DOWNLOAD/**",
+              "$TEMP/**"
             ]
           }
         },

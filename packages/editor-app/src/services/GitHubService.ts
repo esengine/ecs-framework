@@ -79,11 +79,77 @@ interface GitHubPullRequest {
     body: string | null;
     html_url: string;
     user: GitHubUser;
+    created_at: string;
+    updated_at: string;
+    merged_at: string | null;
+    head: {
+        ref: string;
+        repo: {
+            full_name: string;
+        };
+    };
+}
+
+export interface PublishedPlugin {
+    id: string;
+    name: string;
+    version: string;
+    description: string;
+    category: string;
+    repositoryUrl: string;
+    prUrl: string;
+    publishedAt: string;
+}
+
+export interface CheckStatus {
+    conclusion: 'success' | 'failure' | 'pending' | 'neutral' | 'cancelled' | 'skipped' | 'timed_out' | null;
+    name: string;
+    detailsUrl?: string;
+    output?: {
+        title: string;
+        summary: string;
+    };
+}
+
+export interface PRComment {
+    id: number;
+    user: {
+        login: string;
+        avatar_url: string;
+    };
+    body: string;
+    created_at: string;
+    html_url: string;
+}
+
+export interface PRReview {
+    id: number;
+    user: {
+        login: string;
+        avatar_url: string;
+    };
+    body: string;
+    state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED';
+    submitted_at: string;
+    html_url: string;
+}
+
+export interface PendingReview {
+    prNumber: number;
+    pluginName: string;
+    version: string;
+    status: 'open' | 'merged' | 'closed';
+    createdAt: string;
+    prUrl: string;
+    checks?: CheckStatus[];
+    comments?: PRComment[];
+    reviews?: PRReview[];
 }
 
 export class GitHubService {
     private accessToken: string | null = null;
     private user: GitHubUser | null = null;
+    private retryTimer: number | null = null;
 
     private readonly STORAGE_KEY = 'github-access-token';
     private readonly API_BASE = 'https://api.github.com';
@@ -319,8 +385,195 @@ export class GitHubService {
         return response.html_url;
     }
 
+    async findPullRequestByBranch(owner: string, repo: string, headBranch: string): Promise<GitHubPullRequest | null> {
+        try {
+            const response = await this.request<GitHubPullRequest[]>(`GET /repos/${owner}/${repo}/pulls`, {
+                head: headBranch,
+                state: 'open'
+            });
+
+            return response.length > 0 && response[0] ? response[0] : null;
+        } catch {
+            return null;
+        }
+    }
+
+    async closePullRequest(owner: string, repo: string, pullNumber: number): Promise<void> {
+        await this.request<GitHubPullRequest>(`PATCH /repos/${owner}/${repo}/pulls/${pullNumber}`, {
+            state: 'closed'
+        });
+    }
+
     async getRepository(owner: string, repo: string): Promise<GitHubRepository> {
         return await this.request<GitHubRepository>(`GET /repos/${owner}/${repo}`);
+    }
+
+    async getUserPullRequests(owner: string, repo: string, state: 'open' | 'closed' | 'all' = 'all'): Promise<GitHubPullRequest[]> {
+        if (!this.user) {
+            throw new Error('User not authenticated');
+        }
+
+        const prs = await this.request<GitHubPullRequest[]>(`GET /repos/${owner}/${repo}/pulls?state=${state}&per_page=100`);
+
+        return prs.filter((pr) => pr.user.login === this.user!.login);
+    }
+
+    async getPublishedPlugins(): Promise<PublishedPlugin[]> {
+        try {
+            const prs = await this.getUserPullRequests('esengine', 'ecs-editor-plugins', 'closed');
+            const mergedPRs = prs.filter((pr) => pr.merged_at !== null);
+
+            const plugins: PublishedPlugin[] = [];
+
+            for (const pr of mergedPRs) {
+                const match = pr.title.match(/Add plugin: (.+) v([\d.]+)/);
+                if (match && match[1] && match[2]) {
+                    const pluginName = match[1];
+                    const version = match[2];
+
+                    const repoMatch = pr.body?.match(/\*\*Repository\*\*: (.+)/);
+                    const repositoryUrl = repoMatch?.[1] || '';
+
+                    const categoryMatch = pr.body?.match(/\*\*Category\*\*: (.+)/);
+                    const category = categoryMatch?.[1] || 'community';
+
+                    const descMatch = pr.body?.match(/### Description\n\n(.+)\n/);
+                    const description = descMatch?.[1] || '';
+
+                    const branchName = pr.head.ref;
+                    const idMatch = branchName.match(/add-plugin-(.+)-v/);
+                    const id = idMatch?.[1] || pluginName.toLowerCase().replace(/\s+/g, '-');
+
+                    plugins.push({
+                        id,
+                        name: pluginName,
+                        version,
+                        description,
+                        category,
+                        repositoryUrl,
+                        prUrl: pr.html_url,
+                        publishedAt: pr.merged_at || pr.created_at
+                    });
+                }
+            }
+
+            return plugins;
+        } catch (error) {
+            console.error('[GitHubService] Failed to fetch published plugins:', error);
+            return [];
+        }
+    }
+
+    async getPRCheckStatus(owner: string, repo: string, prNumber: number): Promise<CheckStatus[]> {
+        try {
+            const pr = await this.request<GitHubPullRequest>(`GET /repos/${owner}/${repo}/pulls/${prNumber}`);
+
+            const headRepoOwner = pr.head.repo.full_name.split('/')[0];
+            const checkRuns = await this.request<{ check_runs: any[] }>(
+                `GET /repos/${headRepoOwner}/${repo}/commits/${pr.head.ref}/check-runs`
+            );
+
+            return checkRuns.check_runs.map((run: any) => ({
+                conclusion: run.conclusion,
+                name: run.name,
+                detailsUrl: run.html_url,
+                output: run.output ? {
+                    title: run.output.title || '',
+                    summary: run.output.summary || ''
+                } : undefined
+            }));
+        } catch (error) {
+            console.error('[GitHubService] Failed to fetch PR check status:', error);
+            return [];
+        }
+    }
+
+    async getPRComments(owner: string, repo: string, prNumber: number): Promise<PRComment[]> {
+        try {
+            const comments = await this.request<any[]>(`GET /repos/${owner}/${repo}/issues/${prNumber}/comments`);
+            return comments.map(comment => ({
+                id: comment.id,
+                user: {
+                    login: comment.user.login,
+                    avatar_url: comment.user.avatar_url
+                },
+                body: comment.body,
+                created_at: comment.created_at,
+                html_url: comment.html_url
+            }));
+        } catch (error) {
+            console.error('[GitHubService] Failed to fetch PR comments:', error);
+            return [];
+        }
+    }
+
+    async getPRReviews(owner: string, repo: string, prNumber: number): Promise<PRReview[]> {
+        try {
+            const reviews = await this.request<any[]>(`GET /repos/${owner}/${repo}/pulls/${prNumber}/reviews`);
+            return reviews
+                .filter(review => review.body && review.body.trim())
+                .map(review => ({
+                    id: review.id,
+                    user: {
+                        login: review.user.login,
+                        avatar_url: review.user.avatar_url
+                    },
+                    body: review.body,
+                    state: review.state,
+                    submitted_at: review.submitted_at,
+                    html_url: review.html_url
+                }));
+        } catch (error) {
+            console.error('[GitHubService] Failed to fetch PR reviews:', error);
+            return [];
+        }
+    }
+
+    async getPendingReviews(): Promise<PendingReview[]> {
+        try {
+            const prs = await this.getUserPullRequests('esengine', 'ecs-editor-plugins', 'all');
+
+            const reviewsWithDetails = await Promise.all(
+                prs.map(async (pr) => {
+                    const match = pr.title.match(/Add plugin: (.+) v([\d.]+)/);
+                    const pluginName = match?.[1] || 'Unknown Plugin';
+                    const version = match?.[2] || '0.0.0';
+
+                    let checks: CheckStatus[] = [];
+                    let comments: PRComment[] = [];
+                    let reviews: PRReview[] = [];
+
+                    if (pr.state === 'open') {
+                        [checks, comments, reviews] = await Promise.all([
+                            this.getPRCheckStatus('esengine', 'ecs-editor-plugins', pr.number),
+                            this.getPRComments('esengine', 'ecs-editor-plugins', pr.number),
+                            this.getPRReviews('esengine', 'ecs-editor-plugins', pr.number)
+                        ]);
+                    }
+
+                    const status: 'open' | 'merged' | 'closed' = pr.merged_at
+                        ? 'merged'
+                        : (pr.state as 'open' | 'closed');
+
+                    return {
+                        prNumber: pr.number,
+                        pluginName,
+                        version,
+                        status,
+                        createdAt: pr.created_at,
+                        prUrl: pr.html_url,
+                        checks,
+                        comments,
+                        reviews
+                    };
+                })
+            );
+
+            return reviewsWithDetails;
+        } catch (error) {
+            console.error('[GitHubService] Failed to fetch pending reviews:', error);
+            return [];
+        }
     }
 
     private async fetchUser(): Promise<GitHubUser> {
@@ -372,12 +625,24 @@ export class GitHubService {
                     .then((user) => {
                         console.log('[GitHubService] User loaded from stored token:', user.login);
                         this.user = user;
+                        if (this.retryTimer) {
+                            clearTimeout(this.retryTimer);
+                            this.retryTimer = null;
+                        }
                     })
                     .catch((error) => {
                         console.error('[GitHubService] Failed to fetch user with stored token:', error);
-                        this.accessToken = null;
-                        this.user = null;
-                        localStorage.removeItem(this.STORAGE_KEY);
+
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+                            console.log('[GitHubService] Token is invalid or expired, removing it');
+                            this.accessToken = null;
+                            this.user = null;
+                            localStorage.removeItem(this.STORAGE_KEY);
+                        } else {
+                            console.log('[GitHubService] Temporary error fetching user, will retry in 5 seconds');
+                            this.scheduleRetryLoadUser();
+                        }
                     });
             } else {
                 console.log('[GitHubService] No stored token found');
@@ -385,6 +650,37 @@ export class GitHubService {
         } catch (error) {
             console.error('[GitHubService] Failed to load token:', error);
         }
+    }
+
+    private scheduleRetryLoadUser(): void {
+        if (this.retryTimer) {
+            clearTimeout(this.retryTimer);
+        }
+
+        this.retryTimer = window.setTimeout(() => {
+            console.log('[GitHubService] Retrying to load user...');
+            if (this.accessToken && !this.user) {
+                this.fetchUser()
+                    .then((user) => {
+                        console.log('[GitHubService] User loaded successfully on retry:', user.login);
+                        this.user = user;
+                        this.retryTimer = null;
+                    })
+                    .catch((error) => {
+                        console.error('[GitHubService] Retry failed:', error);
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+                            console.log('[GitHubService] Token is invalid, removing it');
+                            this.accessToken = null;
+                            this.user = null;
+                            localStorage.removeItem(this.STORAGE_KEY);
+                        } else {
+                            console.log('[GitHubService] Will retry again in 10 seconds');
+                            this.retryTimer = window.setTimeout(() => this.scheduleRetryLoadUser(), 10000);
+                        }
+                    });
+            }
+        }, 5000);
     }
 
     private saveToken(token: string): void {

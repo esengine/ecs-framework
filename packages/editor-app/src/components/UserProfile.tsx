@@ -1,15 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
-import { Github, LogOut, User } from 'lucide-react';
+import { Github, LogOut, User, LayoutDashboard } from 'lucide-react';
 import type { GitHubService, GitHubUser } from '../services/GitHubService';
 import '../styles/UserProfile.css';
 
 interface UserProfileProps {
     githubService: GitHubService;
     onLogin: () => void;
+    onOpenDashboard: () => void;
     locale: string;
 }
 
-export function UserProfile({ githubService, onLogin, locale }: UserProfileProps) {
+export function UserProfile({ githubService, onLogin, onOpenDashboard, locale }: UserProfileProps) {
     const [user, setUser] = useState<GitHubUser | null>(githubService.getUser());
     const [showMenu, setShowMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -19,12 +20,14 @@ export function UserProfile({ githubService, onLogin, locale }: UserProfileProps
             zh: {
                 login: '登录',
                 logout: '登出',
+                dashboard: '个人中心',
                 profile: '个人信息',
                 notLoggedIn: '未登录'
             },
             en: {
                 login: 'Login',
                 logout: 'Logout',
+                dashboard: 'Dashboard',
                 profile: 'Profile',
                 notLoggedIn: 'Not logged in'
             }
@@ -106,6 +109,17 @@ export function UserProfile({ githubService, onLogin, locale }: UserProfileProps
                     </div>
 
                     <div className="user-menu-divider" />
+
+                    <button
+                        className="user-menu-item"
+                        onClick={() => {
+                            setShowMenu(false);
+                            onOpenDashboard();
+                        }}
+                    >
+                        <LayoutDashboard size={16} />
+                        {t('dashboard')}
+                    </button>
 
                     <button className="user-menu-item" onClick={handleLogout}>
                         <LogOut size={16} />

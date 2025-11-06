@@ -1,0 +1,265 @@
+.github-auth {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+}
+
+.github-auth > p {
+    margin: 0;
+    color: #ccc;
+    font-size: 14px;
+}
+
+.auth-tabs {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.auth-tab {
+    flex: 1;
+    padding: 10px;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    color: #999;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.auth-tab:hover {
+    background: #333;
+    border-color: #444;
+}
+
+.auth-tab.active {
+    background: #0366d6;
+    border-color: #0366d6;
+    color: #fff;
+}
+
+.oauth-auth,
+.token-auth {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}
+
+.oauth-instructions {
+    background: #2a2a2a;
+    padding: 16px;
+    border-radius: 4px;
+    border-left: 3px solid #0366d6;
+}
+
+.oauth-instructions p {
+    margin: 8px 0;
+    color: #ccc;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.oauth-instructions p:first-child {
+    margin-top: 0;
+}
+
+.oauth-instructions p:last-child {
+    margin-bottom: 0;
+}
+
+.oauth-pending,
+.oauth-success,
+.oauth-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+}
+
+.oauth-pending h4,
+.oauth-success h4,
+.oauth-error h4 {
+    margin: 0;
+    color: #fff;
+    font-size: 16px;
+}
+
+.user-code-display {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.user-code-display label {
+    color: #ccc;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.code-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #2a2a2a;
+    padding: 12px 16px;
+    border-radius: 4px;
+    border: 1px solid #3a3a3a;
+}
+
+.code-text {
+    flex: 1;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 20px;
+    font-weight: bold;
+    color: #0366d6;
+    letter-spacing: 2px;
+}
+
+.btn-copy {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+    transition: transform 0.1s;
+}
+
+.btn-copy:hover {
+    transform: scale(1.1);
+}
+
+.btn-copy:active {
+    transform: scale(0.95);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    color: #ccc;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.form-group input {
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    padding: 10px 12px;
+    color: #fff;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #0366d6;
+}
+
+.form-group small {
+    color: #999;
+    font-size: 12px;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-link {
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+}
+
+.btn-primary {
+    background: #0366d6;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #0256c7;
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-secondary {
+    background: #2a2a2a;
+    color: #fff;
+    border: 1px solid #3a3a3a;
+}
+
+.btn-secondary:hover {
+    background: #333;
+    border-color: #444;
+}
+
+.btn-link {
+    background: none;
+    color: #0366d6;
+    padding: 8px 0;
+}
+
+.btn-link:hover {
+    color: #0256c7;
+    text-decoration: underline;
+}
+
+.error-message {
+    background: rgba(255, 59, 48, 0.1);
+    border: 1px solid rgba(255, 59, 48, 0.3);
+    border-radius: 4px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #ff3b30;
+    font-size: 14px;
+    width: 100%;
+}
+
+.error-details {
+    background: #2a2a2a;
+    padding: 12px;
+    border-radius: 4px;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.error-details pre {
+    margin: 0;
+    color: #ff3b30;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}

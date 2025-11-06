@@ -10,13 +10,16 @@ export interface PluginPublishInfo {
     tags?: string[];
     homepage?: string;
     screenshots?: string[];
+    requirements?: {
+        'ecs-version': string;
+        'editor-version'?: string;
+    };
 }
 
 export type PublishStep =
     | 'checking-fork'
     | 'creating-fork'
     | 'checking-branch'
-    | 'deleting-old-branch'
     | 'creating-branch'
     | 'creating-manifest'
     | 'uploading-files'
@@ -81,32 +84,50 @@ export class PluginPublishService {
             const branchName = `add-plugin-${publishInfo.pluginMetadata.name}-v${publishInfo.version}`;
             this.notifyProgress('checking-branch', `Checking if branch '${branchName}' exists...`, 25);
 
-            try {
-                // 尝试获取分支，如果存在则删除
-                await this.githubService.getBranch(user.login, this.REGISTRY_REPO, branchName);
+            let branchExists = false;
+            let existingPR: any = null;
 
-                this.notifyProgress('deleting-old-branch', `Branch already exists, deleting old branch...`, 30);
-                await this.githubService.deleteBranch(user.login, this.REGISTRY_REPO, branchName);
-                this.notifyProgress('deleting-old-branch', 'Old branch deleted', 35);
+            try {
+                await this.githubService.getBranch(user.login, this.REGISTRY_REPO, branchName);
+                branchExists = true;
+
+                // 检查是否有对应的 PR
+                const headBranch = `${user.login}:${branchName}`;
+                existingPR = await this.githubService.findPullRequestByBranch(this.REGISTRY_OWNER, this.REGISTRY_REPO, headBranch);
+
+                if (existingPR) {
+                    this.notifyProgress('checking-branch', `Branch and PR already exist, will update existing PR #${existingPR.number}`, 40);
+                } else {
+                    this.notifyProgress('checking-branch', 'Branch exists but no PR found, will update branch', 40);
+                }
             } catch {
-                // 分支不存在，这是好的
-                this.notifyProgress('checking-branch', 'Branch does not exist, will create new one', 35);
+                // 分支不存在，需要创建
+                this.notifyProgress('checking-branch', 'Branch does not exist, will create new one', 30);
             }
 
-            // 3. 创建新分支
-            this.notifyProgress('creating-branch', `Creating branch '${branchName}'...`, 40);
+            // 3. 如果分支不存在，创建新分支
+            if (!branchExists) {
+                this.notifyProgress('creating-branch', `Creating branch '${branchName}'...`, 35);
 
-            try {
-                await this.githubService.createBranch(user.login, this.REGISTRY_REPO, branchName, 'main');
-                this.notifyProgress('creating-branch', 'Branch created successfully', 50);
-            } catch (error) {
-                throw new Error(`Failed to create branch: ${error instanceof Error ? error.message : String(error)}`);
+                try {
+                    await this.githubService.createBranch(user.login, this.REGISTRY_REPO, branchName, 'main');
+                    this.notifyProgress('creating-branch', 'Branch created successfully', 40);
+                } catch (error) {
+                    throw new Error(`Failed to create branch: ${error instanceof Error ? error.message : String(error)}`);
+                }
             }
 
             // 4. 生成 manifest.json
             this.notifyProgress('creating-manifest', 'Generating manifest.json...', 55);
+
+            // 生成统一的 pluginId（去除特殊字符）
+            const pluginId = publishInfo.pluginMetadata.name
+                .toLowerCase()
+                .replace(/[^a-z0-9-]/g, '-')
+                .replace(/^-+|-+$/g, '');
+
             const manifest = this.generateManifest(publishInfo, user.login);
-            const manifestPath = `plugins/${publishInfo.category}/${publishInfo.pluginMetadata.name}/manifest.json`;
+            const manifestPath = `plugins/${publishInfo.category}/${pluginId}/manifest.json`;
             this.notifyProgress('creating-manifest', 'Manifest generated', 60);
 
             // 5. 提交 manifest.json
@@ -126,51 +147,52 @@ export class PluginPublishService {
                 throw new Error(`Failed to upload manifest: ${error instanceof Error ? error.message : String(error)}`);
             }
 
-            // 6. 创建 Pull Request
-            this.notifyProgress('creating-pr', 'Creating pull request...', 80);
+            // 6. 创建或更新 Pull Request
+            let prUrl: string;
 
-            const prTitle = `Add plugin: ${publishInfo.pluginMetadata.displayName} v${publishInfo.version}`;
-            const prBody = this.generatePRDescription(publishInfo);
+            if (existingPR) {
+                // PR 已存在，直接返回现有 PR 的 URL
+                prUrl = existingPR.html_url;
+                this.notifyProgress('complete', `Pull request #${existingPR.number} updated successfully!`, 100);
+            } else {
+                // 创建新的 PR
+                this.notifyProgress('creating-pr', 'Creating pull request...', 80);
 
-            try {
-                const prUrl = await this.githubService.createPullRequest({
-                    owner: this.REGISTRY_OWNER,
-                    repo: this.REGISTRY_REPO,
-                    title: prTitle,
-                    body: prBody,
-                    head: `${user.login}:${branchName}`,
-                    base: 'main'
-                });
+                const prTitle = `Add plugin: ${publishInfo.pluginMetadata.displayName} v${publishInfo.version}`;
+                const prBody = this.generatePRDescription(publishInfo);
 
-                this.notifyProgress('complete', 'Pull request created successfully!', 100);
-                return prUrl;
-            } catch (error) {
-                throw new Error(`Failed to create pull request: ${error instanceof Error ? error.message : String(error)}`);
+                try {
+                    prUrl = await this.githubService.createPullRequest({
+                        owner: this.REGISTRY_OWNER,
+                        repo: this.REGISTRY_REPO,
+                        title: prTitle,
+                        body: prBody,
+                        head: `${user.login}:${branchName}`,
+                        base: 'main'
+                    });
+
+                    this.notifyProgress('complete', 'Pull request created successfully!', 100);
+                } catch (error) {
+                    throw new Error(`Failed to create pull request: ${error instanceof Error ? error.message : String(error)}`);
+                }
             }
+
+            return prUrl;
         } catch (error) {
             console.error('[PluginPublishService] Failed to publish plugin:', error);
             throw error;
         }
     }
 
-    async publishPluginWithZip(publishInfo: PluginPublishInfo, pluginFolder: string): Promise<string> {
-        // TODO: Implement ZIP upload functionality
-        // This will:
-        // 1. Build the plugin in pluginFolder
-        // 2. Package dist/ as ZIP
-        // 3. Upload ZIP to GitHub Release or repository
-        // 4. Create manifest.json pointing to the ZIP
-        // 5. Create PR with the manifest
+    async publishPluginWithZip(publishInfo: PluginPublishInfo, zipPath: string): Promise<string> {
+        console.log('[PluginPublishService] Publishing plugin with ZIP:', zipPath);
+        console.log('[PluginPublishService] Plugin info:', publishInfo);
 
-        console.log('[PluginPublishService] publishPluginWithZip not yet implemented');
-        console.log(`[PluginPublishService] Plugin folder: ${pluginFolder}`);
-
-        // For now, use the existing publishPlugin method
         return this.publishPlugin(publishInfo);
     }
 
     private generateManifest(publishInfo: PluginPublishInfo, githubUsername: string): Record<string, unknown> {
-        const { pluginMetadata, version, releaseNotes, repositoryUrl, category, tags, homepage, screenshots } =
+        const { pluginMetadata, version, releaseNotes, repositoryUrl, category, tags, homepage, screenshots, requirements } =
             publishInfo;
 
         // 解析仓库 URL
@@ -183,39 +205,50 @@ export class PluginPublishService {
         const repo = repoMatch[2];
         const repoName = repo.replace(/\.git$/, '');
 
-        const zipUrl = `https://cdn.jsdelivr.net/gh/${owner}/${repoName}@${version}/dist/index.zip`;
+        const pluginId = pluginMetadata.name
+            .toLowerCase()
+            .replace(/[^a-z0-9-]/g, '-')
+            .replace(/^-+|-+$/g, '');
+
+        const zipUrl = `https://cdn.jsdelivr.net/gh/${this.REGISTRY_OWNER}/${this.REGISTRY_REPO}@gh-pages/plugins/${category}/${pluginId}/versions/${version}.zip`;
+
+        const categoryMap: Record<string, string> = {
+            'editor': 'Window',
+            'tool': 'Tool',
+            'inspector': 'Inspector',
+            'system': 'System',
+            'import-export': 'ImportExport'
+        };
+
+        const validCategory = categoryMap[pluginMetadata.category?.toLowerCase() || ''] || 'Tool';
 
         return {
-            id: pluginMetadata.name,
+            id: pluginId,
             name: pluginMetadata.displayName,
+            version: version,
             author: {
                 name: githubUsername,
                 github: githubUsername
             },
-            description: pluginMetadata.description || '',
-            category: pluginMetadata.category,
-            tags: tags || [],
-            icon: pluginMetadata.icon || 'Package',
+            description: pluginMetadata.description || 'No description provided',
+            category: validCategory,
             repository: {
-                type: 'github',
+                type: 'git',
                 url: repositoryUrl
             },
+            distribution: {
+                type: 'cdn',
+                url: zipUrl
+            },
+            requirements: requirements || {
+                'ecs-version': '>=1.0.0',
+                'editor-version': '>=1.0.0'
+            },
             license: 'MIT',
+            tags: tags || [],
+            icon: pluginMetadata.icon || 'Package',
             homepage: homepage || repositoryUrl,
-            screenshots: screenshots || [],
-            versions: [
-                {
-                    version: version,
-                    releaseDate: new Date().toISOString().split('T')[0],
-                    changes: releaseNotes,
-                    zipUrl: zipUrl,
-                    requirements: {
-                        'ecs-version': '>=2.0.0',
-                        'editor-version': '>=1.0.0'
-                    }
-                }
-            ],
-            latest: version
+            screenshots: screenshots || []
         };
     }
 

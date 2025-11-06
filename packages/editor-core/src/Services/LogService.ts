@@ -22,10 +22,10 @@ export type LogListener = (entry: LogEntry) => void;
 export class LogService implements IService {
     private logs: LogEntry[] = [];
     private listeners: Set<LogListener> = new Set();
-    private nextId = 0;
+    private nextId = Date.now(); // 使用时间戳作为起始ID，避免重复
     private maxLogs = 1000;
     private pendingNotifications: LogEntry[] = [];
-    private notificationTimer: number | null = null;
+    private notificationScheduled = false;
 
     private originalConsole = {
         log: console.log.bind(console),
@@ -153,11 +153,13 @@ export class LogService implements IService {
     private notifyListeners(entry: LogEntry): void {
         this.pendingNotifications.push(entry);
 
-        if (this.notificationTimer === null) {
-            const flushNotifications = () => {
+        if (!this.notificationScheduled) {
+            this.notificationScheduled = true;
+
+            queueMicrotask(() => {
                 const notifications = [...this.pendingNotifications];
                 this.pendingNotifications = [];
-                this.notificationTimer = null;
+                this.notificationScheduled = false;
 
                 for (const notification of notifications) {
                     for (const listener of this.listeners) {
@@ -168,14 +170,7 @@ export class LogService implements IService {
                         }
                     }
                 }
-            };
-
-            // 使用requestIdleCallback如果可用，否则使用setTimeout
-            if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-                this.notificationTimer = window.requestIdleCallback(flushNotifications) as unknown as number;
-            } else {
-                this.notificationTimer = window.setTimeout(flushNotifications, 16); // 约一帧的时间
-            }
+            });
         }
     }
 
