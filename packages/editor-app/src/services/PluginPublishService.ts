@@ -434,7 +434,7 @@ ${releaseNotes}
         return new Promise((resolve) => setTimeout(resolve, ms));
     }
 
-    async deletePlugin(pluginId: string, pluginName: string, category: 'official' | 'community', reason: string): Promise<string> {
+    async deletePlugin(pluginId: string, pluginName: string, category: 'official' | 'community', reason: string, forceRecreate: boolean = false): Promise<string> {
         if (!this.githubService.isAuthenticated()) {
             throw new Error('Please login to GitHub first');
         }
@@ -470,13 +470,20 @@ ${releaseNotes}
                 await this.githubService.getBranch(user.login, this.REGISTRY_REPO, branchName);
                 branchExists = true;
 
-                const headBranch = `${user.login}:${branchName}`;
-                existingPR = await this.githubService.findPullRequestByBranch(this.REGISTRY_OWNER, this.REGISTRY_REPO, headBranch);
-
-                if (existingPR) {
-                    this.notifyProgress('checking-branch', `Branch and PR already exist, will update existing PR #${existingPR.number}`, 20);
+                if (forceRecreate) {
+                    this.notifyProgress('checking-branch', 'Deleting old branch to recreate...', 16);
+                    await this.githubService.deleteBranch(user.login, this.REGISTRY_REPO, branchName);
+                    branchExists = false;
+                    this.notifyProgress('checking-branch', 'Old branch deleted', 17);
                 } else {
-                    this.notifyProgress('checking-branch', 'Branch exists, will reuse it', 20);
+                    const headBranch = `${user.login}:${branchName}`;
+                    existingPR = await this.githubService.findPullRequestByBranch(this.REGISTRY_OWNER, this.REGISTRY_REPO, headBranch);
+
+                    if (existingPR) {
+                        this.notifyProgress('checking-branch', `Branch and PR already exist, will update existing PR #${existingPR.number}`, 20);
+                    } else {
+                        this.notifyProgress('checking-branch', 'Branch exists, will reuse it', 20);
+                    }
                 }
             } catch {
                 this.notifyProgress('checking-branch', 'Branch does not exist, will create new one', 18);
@@ -494,35 +501,39 @@ ${releaseNotes}
                 }
             }
 
-            this.notifyProgress('uploading-files', 'Collecting plugin files from main repository...', 25);
+            this.notifyProgress('uploading-files', 'Collecting plugin files...', 25);
 
             const pluginPath = `plugins/${category}/${pluginId}`;
+
+            const sourceOwner = branchExists ? user.login : this.REGISTRY_OWNER;
+            const sourceBranch = branchExists ? branchName : 'main';
+
             const contents = await this.githubService.getDirectoryContents(
-                this.REGISTRY_OWNER,
+                sourceOwner,
                 this.REGISTRY_REPO,
                 pluginPath,
-                'main'
+                sourceBranch
             );
 
             if (contents.length === 0) {
                 throw new Error(`Plugin directory not found: ${pluginPath}`);
             }
 
-            const filesToDelete: string[] = [];
+            const filesToDelete: Array<{ path: string; sha: string }> = [];
 
             for (const item of contents) {
                 if (item.type === 'file') {
-                    filesToDelete.push(item.path);
+                    filesToDelete.push({ path: item.path, sha: item.sha });
                 } else if (item.type === 'dir') {
                     const subContents = await this.githubService.getDirectoryContents(
-                        this.REGISTRY_OWNER,
+                        sourceOwner,
                         this.REGISTRY_REPO,
                         item.path,
-                        'main'
+                        sourceBranch
                     );
                     for (const subItem of subContents) {
                         if (subItem.type === 'file') {
-                            filesToDelete.push(subItem.path);
+                            filesToDelete.push({ path: subItem.path, sha: subItem.sha });
                         }
                     }
                 }
@@ -532,30 +543,31 @@ ${releaseNotes}
                 throw new Error(`No files found to delete in ${pluginPath}`);
             }
 
-            console.log(`[PluginPublishService] Files to delete:`, filesToDelete);
+            console.log(`[PluginPublishService] Files to delete:`, filesToDelete.map(f => f.path));
             this.notifyProgress('uploading-files', `Deleting ${filesToDelete.length} files...`, 40);
 
             let deletedCount = 0;
             const errors: string[] = [];
 
-            for (const filePath of filesToDelete) {
+            for (const file of filesToDelete) {
                 try {
-                    console.log(`[PluginPublishService] Deleting file: ${filePath} from ${user.login}/${this.REGISTRY_REPO}:${branchName}`);
-                    await this.githubService.deleteFile(
+                    console.log(`[PluginPublishService] Deleting file: ${file.path} (SHA: ${file.sha}) from ${user.login}/${this.REGISTRY_REPO}:${branchName}`);
+                    await this.githubService.deleteFileWithSha(
                         user.login,
                         this.REGISTRY_REPO,
-                        filePath,
+                        file.path,
+                        file.sha,
                         `Remove ${pluginName}`,
                         branchName
                     );
                     deletedCount++;
-                    console.log(`[PluginPublishService] Successfully deleted: ${filePath}`);
+                    console.log(`[PluginPublishService] Successfully deleted: ${file.path}`);
                     const progress = 40 + Math.floor((deletedCount / filesToDelete.length) * 40);
                     this.notifyProgress('uploading-files', `Deleted ${deletedCount}/${filesToDelete.length} files`, progress);
                 } catch (error) {
                     const errorMsg = error instanceof Error ? error.message : String(error);
-                    console.error(`[PluginPublishService] Failed to delete ${filePath}:`, errorMsg);
-                    errors.push(`${filePath}: ${errorMsg}`);
+                    console.error(`[PluginPublishService] Failed to delete ${file.path}:`, errorMsg);
+                    errors.push(`${file.path}: ${errorMsg}`);
                 }
             }
 

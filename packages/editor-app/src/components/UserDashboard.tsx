@@ -85,7 +85,12 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 deleteReasonLabel: '删除原因（必填）',
                 deleteReasonPlaceholder: '请说明删除此插件的原因...',
                 confirmDelete: '确认删除',
-                deletePluginError: '删除插件失败'
+                deletePluginError: '删除插件失败',
+                deletePluginSuccess: '删除请求已提交！',
+                openPRQuestion: '是否打开PR查看详情？',
+                deleteConflictError: '删除时发生冲突，可能是因为分支版本不一致。',
+                retryDeleteQuestion: '是否重试？（将删除旧分支并重新创建）',
+                deletePending: '删除请求中'
             },
             en: {
                 title: 'User Dashboard',
@@ -137,7 +142,12 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 deleteReasonLabel: 'Reason for Deletion (Required)',
                 deleteReasonPlaceholder: 'Please explain why you want to delete this plugin...',
                 confirmDelete: 'Confirm Delete',
-                deletePluginError: 'Failed to delete plugin'
+                deletePluginError: 'Failed to delete plugin',
+                deletePluginSuccess: 'Deletion request submitted!',
+                openPRQuestion: 'Open PR to view details?',
+                deleteConflictError: 'Conflict occurred during deletion, possibly due to branch version mismatch.',
+                retryDeleteQuestion: 'Retry? (Will delete old branch and recreate)',
+                deletePending: 'Deletion Pending'
             }
         };
         return translations[locale]?.[key] || translations.en?.[key] || key;
@@ -214,10 +224,58 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
 
             setConfirmDeletePlugin(null);
             setDeleteReason('');
+
             await loadData();
+
+            if (confirm(t('deletePluginSuccess') + '\n\n' + t('openPRQuestion'))) {
+                open(prUrl);
+            }
         } catch (err) {
             console.error('[UserDashboard] Failed to delete plugin:', err);
-            alert(t('deletePluginError') + ': ' + (err instanceof Error ? err.message : String(err)));
+            const errorMsg = err instanceof Error ? err.message : String(err);
+
+            if (errorMsg.includes('conflicts') || errorMsg.includes('does not match')) {
+                if (confirm(t('deleteConflictError') + '\n\n' + t('retryDeleteQuestion'))) {
+                    setDeletingPlugin(false);
+                    setDeleteProgress({ message: '', progress: 0 });
+
+                    setTimeout(async () => {
+                        setDeletingPlugin(true);
+                        try {
+                            const { PluginPublishService } = await import('../services/PluginPublishService');
+                            const publishService = new PluginPublishService(githubService);
+
+                            publishService.setProgressCallback((progress) => {
+                                setDeleteProgress({ message: progress.message, progress: progress.progress });
+                            });
+
+                            const prUrl = await publishService.deletePlugin(
+                                confirmDeletePlugin.id,
+                                confirmDeletePlugin.name,
+                                confirmDeletePlugin.category_type as 'official' | 'community',
+                                deleteReason,
+                                true
+                            );
+
+                            setConfirmDeletePlugin(null);
+                            setDeleteReason('');
+                            await loadData();
+
+                            if (confirm(t('deletePluginSuccess') + '\n\n' + t('openPRQuestion'))) {
+                                open(prUrl);
+                            }
+                        } catch (retryErr) {
+                            console.error('[UserDashboard] Retry failed:', retryErr);
+                            alert(t('deletePluginError') + ': ' + (retryErr instanceof Error ? retryErr.message : String(retryErr)));
+                        } finally {
+                            setDeletingPlugin(false);
+                        }
+                    }, 100);
+                    return;
+                }
+            }
+
+            alert(t('deletePluginError') + ': ' + errorMsg);
         } finally {
             setDeletingPlugin(false);
         }

@@ -428,11 +428,25 @@ export class GitHubService {
     }
 
     async deleteFile(owner: string, repo: string, path: string, message: string, branch: string): Promise<void> {
+        console.log(`[GitHubService] Getting file SHA for: ${owner}/${repo}/${path}?ref=${branch}`);
         const existing = await this.request<GitHubFileContent>(`GET /repos/${owner}/${repo}/contents/${path}?ref=${branch}`);
 
+        if (!existing || !existing.sha) {
+            throw new Error(`Failed to get file SHA for ${path}`);
+        }
+
+        console.log(`[GitHubService] Deleting file with SHA: ${existing.sha}`);
         await this.request<void>(`DELETE /repos/${owner}/${repo}/contents/${path}`, {
             message: message,
             sha: existing.sha,
+            branch: branch
+        });
+    }
+
+    async deleteFileWithSha(owner: string, repo: string, path: string, sha: string, message: string, branch: string): Promise<void> {
+        await this.request<void>(`DELETE /repos/${owner}/${repo}/contents/${path}`, {
+            message: message,
+            sha: sha,
             branch: branch
         });
     }
@@ -606,9 +620,19 @@ export class GitHubService {
 
             const reviewsWithDetails = await Promise.all(
                 prs.map(async (pr) => {
-                    const match = pr.title.match(/Add plugin: (.+) v([\d.]+)/);
-                    const pluginName = match?.[1] || 'Unknown Plugin';
-                    const version = match?.[2] || '0.0.0';
+                    let pluginName = 'Unknown Plugin';
+                    let version = '0.0.0';
+
+                    const addMatch = pr.title.match(/Add plugin: (.+) v([\d.]+)/);
+                    const removeMatch = pr.title.match(/Remove plugin: (.+)/);
+
+                    if (addMatch && addMatch[1] && addMatch[2]) {
+                        pluginName = addMatch[1];
+                        version = addMatch[2];
+                    } else if (removeMatch && removeMatch[1]) {
+                        pluginName = removeMatch[1];
+                        version = '(删除请求)';
+                    }
 
                     let checks: CheckStatus[] = [];
                     let comments: PRComment[] = [];
@@ -668,7 +692,7 @@ export class GitHubService {
             }
         };
 
-        if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+        if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE')) {
             options.body = JSON.stringify(body);
         }
 
