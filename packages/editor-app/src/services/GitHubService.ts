@@ -96,6 +96,7 @@ export interface PublishedPlugin {
     version: string;
     description: string;
     category: string;
+    category_type: string;
     repositoryUrl: string;
     prUrl: string;
     publishedAt: string;
@@ -318,10 +319,21 @@ export class GitHubService {
         return response.full_name;
     }
 
+    async getRef(owner: string, repo: string, ref: string): Promise<GitHubRef> {
+        return await this.request<GitHubRef>(`GET /repos/${owner}/${repo}/git/ref/${ref}`);
+    }
+
     async createBranch(owner: string, repo: string, branch: string, fromBranch: string = 'main'): Promise<void> {
         const refResponse = await this.request<GitHubRef>(`GET /repos/${owner}/${repo}/git/ref/heads/${fromBranch}`);
         const sha = refResponse.object.sha;
 
+        await this.request<GitHubRef>(`POST /repos/${owner}/${repo}/git/refs`, {
+            ref: `refs/heads/${branch}`,
+            sha: sha
+        });
+    }
+
+    async createBranchFromSha(owner: string, repo: string, branch: string, sha: string): Promise<void> {
         await this.request<GitHubRef>(`POST /repos/${owner}/${repo}/git/refs`, {
             ref: `refs/heads/${branch}`,
             sha: sha
@@ -372,6 +384,57 @@ export class GitHubService {
         }
 
         await this.request<GitHubFileContent>(`PUT /repos/${owner}/${repo}/contents/${path}`, body);
+    }
+
+    async createOrUpdateBinaryFile(
+        owner: string,
+        repo: string,
+        path: string,
+        base64Content: string,
+        message: string,
+        branch: string
+    ): Promise<void> {
+        let sha: string | undefined;
+
+        try {
+            const existing = await this.request<GitHubFileContent>(`GET /repos/${owner}/${repo}/contents/${path}?ref=${branch}`);
+            sha = existing.sha;
+        } catch {
+            // 文件不存在
+        }
+
+        const body: Record<string, string> = {
+            message: message,
+            content: base64Content,
+            branch: branch
+        };
+
+        if (sha) {
+            body.sha = sha;
+        }
+
+        await this.request<GitHubFileContent>(`PUT /repos/${owner}/${repo}/contents/${path}`, body);
+    }
+
+    async getDirectoryContents(owner: string, repo: string, path: string, branch: string = 'main'): Promise<GitHubFileContent[]> {
+        try {
+            const response = await this.request<GitHubFileContent | GitHubFileContent[]>(
+                `GET /repos/${owner}/${repo}/contents/${path}?ref=${branch}`
+            );
+            return Array.isArray(response) ? response : [response];
+        } catch {
+            return [];
+        }
+    }
+
+    async deleteFile(owner: string, repo: string, path: string, message: string, branch: string): Promise<void> {
+        const existing = await this.request<GitHubFileContent>(`GET /repos/${owner}/${repo}/contents/${path}?ref=${branch}`);
+
+        await this.request<void>(`DELETE /repos/${owner}/${repo}/contents/${path}`, {
+            message: message,
+            sha: existing.sha,
+            branch: branch
+        });
     }
 
     async createPullRequest(options: CreatePROptions): Promise<string> {
@@ -442,7 +505,14 @@ export class GitHubService {
 
                     const branchName = pr.head.ref;
                     const idMatch = branchName.match(/add-plugin-(.+)-v/);
-                    const id = idMatch?.[1] || pluginName.toLowerCase().replace(/\s+/g, '-');
+                    const rawId = idMatch?.[1] || pluginName.toLowerCase().replace(/\s+/g, '-');
+
+                    const id = rawId
+                        .toLowerCase()
+                        .replace(/[^a-z0-9-]/g, '-')
+                        .replace(/^-+|-+$/g, '');
+
+                    const categoryType = id.startsWith('esengine-') ? 'official' : 'community';
 
                     plugins.push({
                         id,
@@ -450,6 +520,7 @@ export class GitHubService {
                         version,
                         description,
                         category,
+                        category_type: categoryType,
                         repositoryUrl,
                         prUrl: pr.html_url,
                         publishedAt: pr.merged_at || pr.created_at

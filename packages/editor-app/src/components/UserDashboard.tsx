@@ -26,6 +26,10 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
     const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
     const [prFilter, setPRFilter] = useState<PRFilter>('open');
     const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
+    const [confirmDeletePlugin, setConfirmDeletePlugin] = useState<PublishedPlugin | null>(null);
+    const [deleteReason, setDeleteReason] = useState('');
+    const [deletingPlugin, setDeletingPlugin] = useState(false);
+    const [deleteProgress, setDeleteProgress] = useState({ message: '', progress: 0 });
 
     const user = githubService.getUser();
 
@@ -74,7 +78,14 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 reviewCommented: '已评论',
                 noCommentsYet: '暂无评论',
                 showComments: '显示评论',
-                hideComments: '隐藏评论'
+                hideComments: '隐藏评论',
+                deletePlugin: '删除插件',
+                confirmDeletePluginTitle: '确认删除插件',
+                confirmDeletePluginMessage: '确定要删除插件 "{{name}}" 吗？这将创建一个删除请求PR，需要审核后才会从市场移除。',
+                deleteReasonLabel: '删除原因（必填）',
+                deleteReasonPlaceholder: '请说明删除此插件的原因...',
+                confirmDelete: '确认删除',
+                deletePluginError: '删除插件失败'
             },
             en: {
                 title: 'User Dashboard',
@@ -119,7 +130,14 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 reviewCommented: 'Commented',
                 noCommentsYet: 'No comments yet',
                 showComments: 'Show Comments',
-                hideComments: 'Hide Comments'
+                hideComments: 'Hide Comments',
+                deletePlugin: 'Delete Plugin',
+                confirmDeletePluginTitle: 'Confirm Plugin Deletion',
+                confirmDeletePluginMessage: 'Are you sure you want to delete plugin "{{name}}"? This will create a deletion request PR that requires review before removal from marketplace.',
+                deleteReasonLabel: 'Reason for Deletion (Required)',
+                deleteReasonPlaceholder: 'Please explain why you want to delete this plugin...',
+                confirmDelete: 'Confirm Delete',
+                deletePluginError: 'Failed to delete plugin'
             }
         };
         return translations[locale]?.[key] || translations.en?.[key] || key;
@@ -166,6 +184,42 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 return 'status-badge status-closed';
             default:
                 return 'status-badge';
+        }
+    };
+
+    const handleDeletePlugin = async () => {
+        if (!confirmDeletePlugin || !deleteReason.trim()) {
+            return;
+        }
+
+        setDeletingPlugin(true);
+        setDeleteProgress({ message: '', progress: 0 });
+
+        try {
+            const { PluginPublishService } = await import('../services/PluginPublishService');
+            const publishService = new PluginPublishService(githubService);
+
+            publishService.setProgressCallback((progress) => {
+                setDeleteProgress({ message: progress.message, progress: progress.progress });
+            });
+
+            const prUrl = await publishService.deletePlugin(
+                confirmDeletePlugin.id,
+                confirmDeletePlugin.name,
+                confirmDeletePlugin.category_type as 'official' | 'community',
+                deleteReason
+            );
+
+            console.log(`[UserDashboard] Delete PR created:`, prUrl);
+
+            setConfirmDeletePlugin(null);
+            setDeleteReason('');
+            await loadData();
+        } catch (err) {
+            console.error('[UserDashboard] Failed to delete plugin:', err);
+            alert(t('deletePluginError') + ': ' + (err instanceof Error ? err.message : String(err)));
+        } finally {
+            setDeletingPlugin(false);
         }
     };
 
@@ -312,6 +366,14 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                             <a href={plugin.prUrl} target="_blank" rel="noopener noreferrer" className="plugin-link">
                                 {t('viewPR')} <ExternalLink size={14} />
                             </a>
+                            <button
+                                className="btn-delete"
+                                onClick={() => setConfirmDeletePlugin(plugin)}
+                                title={t('deletePlugin')}
+                            >
+                                <Trash2 size={14} />
+                                {t('deletePlugin')}
+                            </button>
                         </div>
                     </div>
                 ))}
@@ -581,6 +643,57 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                                     disabled={deletingPR !== null}
                                 >
                                     {deletingPR === confirmDelete ? t('deleting') : t('confirm')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {confirmDeletePlugin && (
+                    <div className="confirm-dialog-overlay">
+                        <div className="confirm-dialog">
+                            <h3>{t('confirmDeletePluginTitle')}</h3>
+                            <p>{t('confirmDeletePluginMessage').replace('{{name}}', confirmDeletePlugin.name)}</p>
+
+                            <div className="confirm-dialog-input-group">
+                                <label htmlFor="delete-reason">{t('deleteReasonLabel')}</label>
+                                <textarea
+                                    id="delete-reason"
+                                    className="confirm-dialog-textarea"
+                                    value={deleteReason}
+                                    onChange={(e) => setDeleteReason(e.target.value)}
+                                    placeholder={t('deleteReasonPlaceholder')}
+                                    rows={4}
+                                    disabled={deletingPlugin}
+                                />
+                            </div>
+
+                            {deletingPlugin && (
+                                <div className="confirm-dialog-progress">
+                                    <div className="progress-bar">
+                                        <div className="progress-fill" style={{ width: `${deleteProgress.progress}%` }}></div>
+                                    </div>
+                                    <p className="progress-message">{deleteProgress.message}</p>
+                                </div>
+                            )}
+
+                            <div className="confirm-dialog-actions">
+                                <button
+                                    className="confirm-dialog-cancel"
+                                    onClick={() => {
+                                        setConfirmDeletePlugin(null);
+                                        setDeleteReason('');
+                                    }}
+                                    disabled={deletingPlugin}
+                                >
+                                    {t('cancel')}
+                                </button>
+                                <button
+                                    className="confirm-dialog-confirm confirm-dialog-danger"
+                                    onClick={handleDeletePlugin}
+                                    disabled={deletingPlugin || !deleteReason.trim()}
+                                >
+                                    {deletingPlugin ? t('deleting') : t('confirmDelete')}
                                 </button>
                             </div>
                         </div>
