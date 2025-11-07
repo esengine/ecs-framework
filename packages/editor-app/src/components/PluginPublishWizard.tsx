@@ -27,6 +27,14 @@ interface PluginPackageJson {
     license?: string;
 }
 
+function calculateNextVersion(currentVersion: string): string {
+    const parts = currentVersion.split('.').map(Number);
+    if (parts.length !== 3 || parts.some(isNaN)) return currentVersion;
+
+    const [major, minor, patch] = parts;
+    return `${major}.${minor}.${(patch ?? 0) + 1}`;
+}
+
 export function PluginPublishWizard({ githubService, onClose, locale, inline = false }: PluginPublishWizardProps) {
     const [publishService] = useState(() => new PluginPublishService(githubService));
     const [buildService] = useState(() => new PluginBuildService());
@@ -45,14 +53,20 @@ export function PluginPublishWizard({ githubService, onClose, locale, inline = f
     const [publishProgress, setPublishProgress] = useState<PublishProgress | null>(null);
     const [builtZipPath, setBuiltZipPath] = useState<string>('');
     const [existingPR, setExistingPR] = useState<{ number: number; url: string } | null>(null);
+    const [existingVersions, setExistingVersions] = useState<string[]>([]);
+    const [suggestedVersion, setSuggestedVersion] = useState<string>('');
+    const [existingManifest, setExistingManifest] = useState<any>(null);
+    const [isUpdate, setIsUpdate] = useState(false);
 
     const t = (key: string) => {
         const translations: Record<string, Record<string, string>> = {
             zh: {
                 title: '发布插件到市场',
+                updateTitle: '更新插件版本',
                 stepAuth: '步骤 1: GitHub 登录',
                 stepSelectFolder: '步骤 2: 选择插件文件夹',
                 stepInfo: '步骤 3: 插件信息',
+                stepInfoUpdate: '步骤 3: 版本更新',
                 stepBuilding: '步骤 4: 构建打包',
                 stepConfirm: '步骤 5: 确认发布',
                 githubLogin: 'GitHub 登录',
@@ -83,6 +97,11 @@ export function PluginPublishWizard({ githubService, onClose, locale, inline = f
                 selectedFolder: '已选择文件夹',
                 pluginInfo: '插件信息',
                 version: '版本号',
+                currentVersion: '当前版本',
+                suggestedVersion: '建议版本',
+                versionHistory: '版本历史',
+                updatePlugin: '更新插件',
+                newPlugin: '新插件',
                 category: '分类',
                 official: '官方',
                 community: '社区',
@@ -120,9 +139,11 @@ export function PluginPublishWizard({ githubService, onClose, locale, inline = f
             },
             en: {
                 title: 'Publish Plugin to Marketplace',
+                updateTitle: 'Update Plugin Version',
                 stepAuth: 'Step 1: GitHub Authentication',
                 stepSelectFolder: 'Step 2: Select Plugin Folder',
                 stepInfo: 'Step 3: Plugin Information',
+                stepInfoUpdate: 'Step 3: Version Update',
                 stepBuilding: 'Step 4: Build & Package',
                 stepConfirm: 'Step 5: Confirm Publication',
                 githubLogin: 'GitHub Login',
@@ -153,6 +174,11 @@ export function PluginPublishWizard({ githubService, onClose, locale, inline = f
                 selectedFolder: 'Selected Folder',
                 pluginInfo: 'Plugin Information',
                 version: 'Version',
+                currentVersion: 'Current Version',
+                suggestedVersion: 'Suggested Version',
+                versionHistory: 'Version History',
+                updatePlugin: 'Update Plugin',
+                newPlugin: 'New Plugin',
                 category: 'Category',
                 official: 'Official',
                 community: 'Community',
@@ -220,11 +246,57 @@ export function PluginPublishWizard({ githubService, onClose, locale, inline = f
 
                 setPackageJson(pkgJson);
 
-                // 自动填充一些字段
-                setPublishInfo((prev) => ({
-                    ...prev,
-                    version: pkgJson.version
-                }));
+                // 检测已发布的版本
+                try {
+                    const pluginId = pkgJson.name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
+                    const manifestContent = await githubService.getFileContent(
+                        'esengine',
+                        'ecs-editor-plugins',
+                        `plugins/community/${pluginId}/manifest.json`,
+                        'main'
+                    );
+                    const manifest = JSON.parse(manifestContent);
+
+                    if (Array.isArray(manifest.versions)) {
+                        const versions = manifest.versions.map((v: any) => v.version);
+                        setExistingVersions(versions);
+                        setExistingManifest(manifest);
+                        setIsUpdate(true);
+
+                        // 计算建议版本号
+                        const latestVersion = manifest.latestVersion || versions[0];
+                        const suggested = calculateNextVersion(latestVersion);
+                        setSuggestedVersion(suggested);
+
+                        // 更新模式：自动填充现有信息
+                        setPublishInfo((prev) => ({
+                            ...prev,
+                            version: suggested,
+                            repositoryUrl: manifest.repository?.url || '',
+                            category: manifest.category_type || 'community',
+                            tags: manifest.tags || [],
+                            homepage: manifest.homepage
+                        }));
+                    } else {
+                        // 首次发布
+                        setExistingVersions([]);
+                        setExistingManifest(null);
+                        setIsUpdate(false);
+                        setPublishInfo((prev) => ({
+                            ...prev,
+                            version: pkgJson.version
+                        }));
+                    }
+                } catch (err) {
+                    console.log('[PluginPublishWizard] No existing versions found, this is a new plugin');
+                    setExistingVersions([]);
+                    setExistingManifest(null);
+                    setIsUpdate(false);
+                    setPublishInfo((prev) => ({
+                        ...prev,
+                        version: pkgJson.version
+                    }));
+                }
 
                 // 检测是否已有待审核的 PR
                 try {
@@ -461,35 +533,39 @@ export function PluginPublishWizard({ githubService, onClose, locale, inline = f
 
                             <div className="form-group">
                                 <label>{t('version')} *</label>
+                                {isUpdate && (
+                                    <div className="version-info">
+                                        <div className="version-notice">
+                                            <CheckCircle size={16} />
+                                            <span>{t('updatePlugin')}: {existingManifest?.name} v{existingVersions[0]}</span>
+                                        </div>
+                                        {suggestedVersion && (
+                                            <button
+                                                type="button"
+                                                className="btn-version-suggest"
+                                                onClick={() => setPublishInfo({ ...publishInfo, version: suggestedVersion })}
+                                            >
+                                                {t('suggestedVersion')}: {suggestedVersion}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                                 <input
                                     type="text"
                                     value={publishInfo.version || ''}
                                     onChange={(e) => setPublishInfo({ ...publishInfo, version: e.target.value })}
                                     placeholder="1.0.0"
                                 />
-                            </div>
-
-                            <div className="form-group">
-                                <label>{t('category')} *</label>
-                                <select
-                                    value={publishInfo.category}
-                                    onChange={(e) =>
-                                        setPublishInfo({ ...publishInfo, category: e.target.value as 'official' | 'community' })
-                                    }
-                                >
-                                    <option value="community">{t('community')}</option>
-                                    <option value="official">{t('official')}</option>
-                                </select>
-                            </div>
-
-                            <div className="form-group">
-                                <label>{t('repositoryUrl')} *</label>
-                                <input
-                                    type="text"
-                                    value={publishInfo.repositoryUrl || ''}
-                                    onChange={(e) => setPublishInfo({ ...publishInfo, repositoryUrl: e.target.value })}
-                                    placeholder={t('repositoryPlaceholder')}
-                                />
+                                {isUpdate && (
+                                    <details className="version-history">
+                                        <summary>{t('versionHistory')} ({existingVersions.length})</summary>
+                                        <ul>
+                                            {existingVersions.map((v) => (
+                                                <li key={v}>v{v}</li>
+                                            ))}
+                                        </ul>
+                                    </details>
+                                )}
                             </div>
 
                             <div className="form-group">
@@ -502,23 +578,50 @@ export function PluginPublishWizard({ githubService, onClose, locale, inline = f
                                 />
                             </div>
 
-                            <div className="form-group">
-                                <label>{t('tags')}</label>
-                                <input
-                                    type="text"
-                                    value={publishInfo.tags?.join(', ') || ''}
-                                    onChange={(e) =>
-                                        setPublishInfo({
-                                            ...publishInfo,
-                                            tags: e.target.value
-                                                .split(',')
-                                                .map((t) => t.trim())
-                                                .filter(Boolean)
-                                        })
-                                    }
-                                    placeholder={t('tagsPlaceholder')}
-                                />
-                            </div>
+                            {!isUpdate && (
+                                <>
+                                    <div className="form-group">
+                                        <label>{t('category')} *</label>
+                                        <select
+                                            value={publishInfo.category}
+                                            onChange={(e) =>
+                                                setPublishInfo({ ...publishInfo, category: e.target.value as 'official' | 'community' })
+                                            }
+                                        >
+                                            <option value="community">{t('community')}</option>
+                                            <option value="official">{t('official')}</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>{t('repositoryUrl')} *</label>
+                                        <input
+                                            type="text"
+                                            value={publishInfo.repositoryUrl || ''}
+                                            onChange={(e) => setPublishInfo({ ...publishInfo, repositoryUrl: e.target.value })}
+                                            placeholder={t('repositoryPlaceholder')}
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>{t('tags')}</label>
+                                        <input
+                                            type="text"
+                                            value={publishInfo.tags?.join(', ') || ''}
+                                            onChange={(e) =>
+                                                setPublishInfo({
+                                                    ...publishInfo,
+                                                    tags: e.target.value
+                                                        .split(',')
+                                                        .map((t) => t.trim())
+                                                        .filter(Boolean)
+                                                })
+                                            }
+                                            placeholder={t('tagsPlaceholder')}
+                                        />
+                                    </div>
+                                </>
+                            )}
 
                             {error && (
                                 <div className="error-message">

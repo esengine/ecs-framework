@@ -1,10 +1,11 @@
 import { singleton } from 'tsyringe';
+import { IService } from '@esengine/ecs-framework';
 import { useBehaviorTreeDataStore } from '../application/state/BehaviorTreeDataStore';
 import { useTreeStore } from '../stores';
 import type { BehaviorTree } from '../domain/models/BehaviorTree';
 
 @singleton()
-export class BehaviorTreeService {
+export class BehaviorTreeService implements IService {
     async createNew(): Promise<void> {
         useTreeStore.getState().reset();
         useBehaviorTreeDataStore.getState().reset();
@@ -24,5 +25,9 @@ export class BehaviorTreeService {
 
     setTree(tree: BehaviorTree): void {
         useBehaviorTreeDataStore.getState().setTree(tree);
+    }
+
+    dispose(): void {
+        console.log('[BehaviorTreeService] Disposing service');
     }
 }

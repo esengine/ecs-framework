@@ -538,6 +538,19 @@ struct BuildProgress {
 }
 
 #[tauri::command]
+fn read_file_as_base64(file_path: String) -> Result<String, String> {
+    use std::fs;
+    use base64::{Engine as _, engine::general_purpose};
+
+    let file_content = fs::read(&file_path)
+        .map_err(|e| format!("Failed to read file {}: {}", file_path, e))?;
+
+    let base64_content = general_purpose::STANDARD.encode(&file_content);
+
+    Ok(base64_content)
+}
+
+#[tauri::command]
 async fn build_plugin(plugin_folder: String, app: AppHandle) -> Result<String, String> {
     use std::fs;
     use std::path::Path;
@@ -641,7 +654,17 @@ async fn build_plugin(plugin_folder: String, app: AppHandle) -> Result<String, S
     zip.write_all(&package_json_content)
         .map_err(|e| format!("Failed to write package.json to zip: {}", e))?;
 
-    add_directory_to_zip(&mut zip, &dist_path, &dist_path, options)?;
+    let index_esm_path = dist_path.join("index.esm.js");
+    if index_esm_path.exists() {
+        let index_content = fs::read(&index_esm_path)
+            .map_err(|e| format!("Failed to read index.esm.js: {}", e))?;
+        zip.start_file("index.js", options)
+            .map_err(|e| format!("Failed to add index.js to zip: {}", e))?;
+        zip.write_all(&index_content)
+            .map_err(|e| format!("Failed to write index.js to zip: {}", e))?;
+    } else {
+        return Err("index.esm.js not found in dist directory. Please ensure the plugin is built with Rollup.".to_string());
+    }
 
     zip.finish()
         .map_err(|e| format!("Failed to finalize zip: {}", e))?;
@@ -793,7 +816,8 @@ fn main() {
             write_global_blackboard,
             open_file_with_default_app,
             show_in_folder,
-            build_plugin
+            build_plugin,
+            read_file_as_base64
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

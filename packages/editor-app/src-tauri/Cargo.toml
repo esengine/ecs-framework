@@ -27,6 +27,7 @@ tokio-tungstenite = "0.21"
 futures-util = "0.3"
 chrono = "0.4"
 zip = "0.6"
+base64 = "0.22"
 
 [profile.dev]
 incremental = true

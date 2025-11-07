@@ -28,7 +28,8 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
                 title: '插件市场',
                 searchPlaceholder: '搜索插件...',
                 loading: '加载中...',
-                loadError: '加载失败',
+                loadError: '无法连接到插件市场',
+                loadErrorDesc: '可能是网络连接问题，请检查您的网络设置后重试',
                 retry: '重试',
                 noPlugins: '没有找到插件',
                 install: '安装',
@@ -44,13 +45,16 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
                 filterCommunity: '社区插件',
                 categoryAll: '全部分类',
                 installing: '安装中...',
-                uninstalling: '卸载中...'
+                uninstalling: '卸载中...',
+                useDirectSource: '使用直连源',
+                useDirectSourceTip: '启用后直接从GitHub获取数据，绕过CDN缓存（适合测试）'
             },
             en: {
                 title: 'Plugin Marketplace',
                 searchPlaceholder: 'Search plugins...',
                 loading: 'Loading...',
-                loadError: 'Load failed',
+                loadError: 'Unable to connect to plugin marketplace',
+                loadErrorDesc: 'This might be a network connection issue. Please check your network settings and try again',
                 retry: 'Retry',
                 noPlugins: 'No plugins found',
                 install: 'Install',
@@ -66,7 +70,9 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
                 filterCommunity: 'Community',
                 categoryAll: 'All Categories',
                 installing: 'Installing...',
-                uninstalling: 'Uninstalling...'
+                uninstalling: 'Uninstalling...',
+                useDirectSource: 'Direct Source',
+                useDirectSourceTip: 'Fetch data directly from GitHub, bypassing CDN cache (for testing)'
             }
         };
         return translations[locale]?.[key] || translations.en?.[key] || key;
@@ -80,6 +86,7 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
     const [typeFilter, setTypeFilter] = useState<'all' | 'official' | 'community'>('all');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
     const [installingPlugins, setInstallingPlugins] = useState<Set<string>>(new Set());
+    const [useDirectSource, setUseDirectSource] = useState(marketService.isUsingDirectSource());
 
     useEffect(() => {
         loadPlugins();
@@ -89,12 +96,12 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
         filterPlugins();
     }, [plugins, searchQuery, typeFilter, categoryFilter]);
 
-    const loadPlugins = async () => {
+    const loadPlugins = async (bypassCache: boolean = false) => {
         setLoading(true);
         setError(null);
 
         try {
-            const pluginList = await marketService.fetchPluginList();
+            const pluginList = await marketService.fetchPluginList(bypassCache);
             setPlugins(pluginList);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unknown error');
@@ -125,6 +132,13 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
         }
 
         setFilteredPlugins(filtered);
+    };
+
+    const handleToggleDirectSource = () => {
+        const newValue = !useDirectSource;
+        setUseDirectSource(newValue);
+        marketService.setUseDirectSource(newValue);
+        loadPlugins(true);
     };
 
     const handleInstall = async (plugin: PluginMarketMetadata) => {
@@ -181,9 +195,16 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
     if (error) {
         return (
             <div className="plugin-market-error">
-                <AlertCircle size={48} />
-                <p>{t('loadError')}: {error}</p>
-                <button onClick={loadPlugins}>{t('retry')}</button>
+                <AlertCircle size={64} className="error-icon" />
+                <h3>{t('loadError')}</h3>
+                <p className="error-description">{t('loadErrorDesc')}</p>
+                <div className="error-details">
+                    <p className="error-message">{error}</p>
+                </div>
+                <button className="retry-button" onClick={() => loadPlugins(true)}>
+                    <RefreshCw size={16} />
+                    {t('retry')}
+                </button>
             </div>
         );
     }
@@ -227,7 +248,16 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
                             ))}
                     </select>
 
-                    <button className="plugin-market-refresh" onClick={loadPlugins} title={t('retry')}>
+                    <label className="plugin-market-direct-source-toggle" title={t('useDirectSourceTip')}>
+                        <input
+                            type="checkbox"
+                            checked={useDirectSource}
+                            onChange={handleToggleDirectSource}
+                        />
+                        <span className="toggle-label">{t('useDirectSource')}</span>
+                    </label>
+
+                    <button className="plugin-market-refresh" onClick={() => loadPlugins(true)} title={t('retry')}>
                         <RefreshCw size={16} />
                     </button>
                 </div>
@@ -279,7 +309,13 @@ function PluginMarketCard({
     onUninstall,
     t
 }: PluginMarketCardProps) {
+    const [selectedVersion, setSelectedVersion] = useState(plugin.latestVersion);
+    const [showVersions, setShowVersions] = useState(false);
+
     const IconComponent = plugin.icon ? (LucideIcons as any)[plugin.icon] : Package;
+
+    const selectedVersionData = plugin.versions.find((v) => v.version === selectedVersion);
+    const multipleVersions = plugin.versions.length > 1;
 
     return (
         <div className="plugin-market-card">
@@ -301,12 +337,34 @@ function PluginMarketCard({
                             <Github size={12} />
                             {plugin.author.name}
                         </span>
-                        <span className="plugin-market-card-version">v{plugin.latestVersion}</span>
+                        {multipleVersions ? (
+                            <select
+                                className="plugin-market-version-select"
+                                value={selectedVersion}
+                                onChange={(e) => setSelectedVersion(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {plugin.versions.map((v) => (
+                                    <option key={v.version} value={v.version}>
+                                        v{v.version} {v.version === plugin.latestVersion ? '(最新)' : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <span className="plugin-market-card-version">v{plugin.latestVersion}</span>
+                        )}
                     </div>
                 </div>
             </div>
 
             <div className="plugin-market-card-description">{plugin.description}</div>
+
+            {selectedVersionData && selectedVersionData.changes && (
+                <details className="plugin-market-version-changes">
+                    <summary>更新日志</summary>
+                    <p>{selectedVersionData.changes}</p>
+                </details>
+            )}
 
             {plugin.tags && plugin.tags.length > 0 && (
                 <div className="plugin-market-card-tags">

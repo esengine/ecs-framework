@@ -179,6 +179,15 @@ export class TauriAPI {
     static async createFile(path: string): Promise<void> {
         return await invoke<void>('create_file', { path });
     }
+
+    /**
+   * 读取文件并转换为base64
+   * @param path 文件路径
+   * @returns base64编码的文件内容
+   */
+    static async readFileAsBase64(path: string): Promise<string> {
+        return await invoke<string>('read_file_as_base64', { filePath: path });
+    }
 }
 
 export interface DirectoryEntry {

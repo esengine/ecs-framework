@@ -296,18 +296,72 @@
     color: var(--color-text-secondary, #858585);
 }
 
-.plugin-market-error button,
+.plugin-market-error {
+    gap: 12px;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.plugin-market-error .error-icon {
+    color: #ff9500;
+    margin-bottom: 8px;
+}
+
+.plugin-market-error h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--color-text-primary, #cccccc);
+    margin: 0;
+}
+
+.plugin-market-error .error-description {
+    font-size: 14px;
+    color: var(--color-text-secondary, #858585);
+    line-height: 1.6;
+    margin: 8px 0;
+}
+
+.plugin-market-error .error-details {
+    background: rgba(255, 59, 48, 0.1);
+    border: 1px solid rgba(255, 59, 48, 0.3);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 16px 0;
+    max-width: 100%;
+}
+
+.plugin-market-error .error-message {
+    font-size: 12px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    color: #ff3b30;
+    margin: 0;
+    word-break: break-word;
+}
+
+.plugin-market-error .retry-button,
 .plugin-market-loading button {
-    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
     background: var(--color-accent, #0e639c);
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
 }
 
-.plugin-market-error button:hover {
+.plugin-market-error .retry-button:hover,
+.plugin-market-loading button:hover {
     background: var(--color-accent-hover, #1177bb);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(14, 99, 156, 0.3);
 }
 
 .spinning {
@@ -321,4 +375,119 @@
     to {
         transform: rotate(360deg);
     }
+}
+
+.plugin-market-direct-source-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    background: rgba(14, 99, 156, 0.1);
+    border: 1px solid rgba(14, 99, 156, 0.3);
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-accent, #0e639c);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.plugin-market-direct-source-toggle:hover {
+    background: rgba(14, 99, 156, 0.15);
+    border-color: rgba(14, 99, 156, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(14, 99, 156, 0.2);
+}
+
+.plugin-market-direct-source-toggle input[type="checkbox"] {
+    position: relative;
+    width: 38px;
+    height: 20px;
+    margin: 0;
+    cursor: pointer;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.plugin-market-direct-source-toggle input[type="checkbox"]:checked {
+    background: var(--color-accent, #0e639c);
+    border-color: var(--color-accent, #0e639c);
+}
+
+.plugin-market-direct-source-toggle input[type="checkbox"]::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 1px;
+    left: 1px;
+    background: white;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.plugin-market-direct-source-toggle input[type="checkbox"]:checked::before {
+    left: 19px;
+}
+
+.plugin-market-direct-source-toggle .toggle-label {
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+/* 版本选择器 */
+.plugin-market-version-select {
+    padding: 2px 6px;
+    background: var(--color-bg-tertiary, #333);
+    border: 1px solid var(--color-border, #333);
+    border-radius: 3px;
+    color: var(--color-text-primary, #cccccc);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.plugin-market-version-select:hover {
+    border-color: var(--color-accent, #0e639c);
+    background: var(--color-bg-hover, #2d2d30);
+}
+
+.plugin-market-version-select:focus {
+    outline: none;
+    border-color: var(--color-accent, #0e639c);
+}
+
+/* 更新日志 */
+.plugin-market-version-changes {
+    margin: 8px 0;
+    padding: 8px;
+    background: rgba(14, 99, 156, 0.1);
+    border: 1px solid rgba(14, 99, 156, 0.2);
+    border-radius: 4px;
+}
+
+.plugin-market-version-changes summary {
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-accent, #0e639c);
+    padding: 4px;
+    user-select: none;
+}
+
+.plugin-market-version-changes summary:hover {
+    opacity: 0.8;
+}
+
+.plugin-market-version-changes p {
+    margin: 8px 0 0 0;
+    padding-left: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-text-secondary, #858585);
 }

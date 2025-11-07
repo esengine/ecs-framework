@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { X, Package, GitPullRequest, ExternalLink, RefreshCw, Trash2, CheckCircle, XCircle, AlertCircle, Clock, MessageSquare, User } from 'lucide-react';
+import { X, Package, GitPullRequest, ExternalLink, RefreshCw, Trash2, CheckCircle, XCircle, AlertCircle, Clock, MessageSquare, User, Upload, Plus } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { open } from '@tauri-apps/plugin-shell';
 import type { GitHubService, PublishedPlugin, PendingReview, CheckStatus, PRComment, PRReview } from '../services/GitHubService';
+import { PluginUpdateDialog } from './PluginUpdateDialog';
+import { PluginPublishWizard } from './PluginPublishWizard';
 import '../styles/UserDashboard.css';
 
 interface UserDashboardProps {
@@ -32,6 +34,8 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
     const [deleteProgress, setDeleteProgress] = useState({ message: '', progress: 0 });
     const [resolvingConflicts, setResolvingConflicts] = useState<number | null>(null);
     const [recreatingPR, setRecreatingPR] = useState<number | null>(null);
+    const [pluginToUpdate, setPluginToUpdate] = useState<PublishedPlugin | null>(null);
+    const [showPublishWizard, setShowPublishWizard] = useState(false);
 
     const user = githubService.getUser();
 
@@ -44,6 +48,9 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 refresh: '刷新',
                 loading: '加载中...',
                 error: '加载失败',
+                retry: '重试',
+                loadError: '无法加载数据',
+                networkError: '可能是网络连接问题，请检查您的网络设置后重试',
                 noPublished: '还没有发布任何插件',
                 noPending: '没有待审核的插件',
                 version: '版本',
@@ -81,6 +88,8 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 noCommentsYet: '暂无评论',
                 showComments: '显示评论',
                 hideComments: '隐藏评论',
+                updatePlugin: '更新插件',
+                publishNewPlugin: '发布新插件',
                 deletePlugin: '删除插件',
                 confirmDeletePluginTitle: '确认删除插件',
                 confirmDeletePluginMessage: '确定要删除插件 "{{name}}" 吗？这将创建一个删除请求PR，需要审核后才会从市场移除。',
@@ -119,6 +128,9 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 refresh: 'Refresh',
                 loading: 'Loading...',
                 error: 'Failed to load',
+                retry: 'Retry',
+                loadError: 'Unable to load data',
+                networkError: 'This might be a network connection issue. Please check your network settings and try again',
                 noPublished: 'No published plugins yet',
                 noPending: 'No pending reviews',
                 version: 'Version',
@@ -156,6 +168,8 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 noCommentsYet: 'No comments yet',
                 showComments: 'Show Comments',
                 hideComments: 'Hide Comments',
+                updatePlugin: 'Update Plugin',
+                publishNewPlugin: 'Publish New Plugin',
                 deletePlugin: 'Delete Plugin',
                 confirmDeletePluginTitle: 'Confirm Plugin Deletion',
                 confirmDeletePluginMessage: 'Are you sure you want to delete plugin "{{name}}"? This will create a deletion request PR that requires review before removal from marketplace.',
@@ -508,7 +522,20 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
         }
 
         if (error) {
-            return <div className="dashboard-error">{t('error')}: {error}</div>;
+            return (
+                <div className="dashboard-error-container">
+                    <AlertCircle size={48} className="error-icon" />
+                    <h3>{t('loadError')}</h3>
+                    <p className="error-description">{t('networkError')}</p>
+                    <div className="error-details">
+                        <p className="error-message">{error}</p>
+                    </div>
+                    <button className="retry-button" onClick={loadData}>
+                        <RefreshCw size={16} />
+                        {t('retry')}
+                    </button>
+                </div>
+            );
         }
 
         if (publishedPlugins.length === 0) {
@@ -538,6 +565,14 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                             </span>
                         </div>
                         <div className="plugin-actions">
+                            <button
+                                className="btn-update"
+                                onClick={() => setPluginToUpdate(plugin)}
+                                title={t('updatePlugin')}
+                            >
+                                <Upload size={14} />
+                                {t('updatePlugin')}
+                            </button>
                             {plugin.repositoryUrl && (
                                 <a
                                     href={plugin.repositoryUrl}
@@ -572,7 +607,20 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
         }
 
         if (error) {
-            return <div className="dashboard-error">{t('error')}: {error}</div>;
+            return (
+                <div className="dashboard-error-container">
+                    <AlertCircle size={48} className="error-icon" />
+                    <h3>{t('loadError')}</h3>
+                    <p className="error-description">{t('networkError')}</p>
+                    <div className="error-details">
+                        <p className="error-message">{error}</p>
+                    </div>
+                    <button className="retry-button" onClick={loadData}>
+                        <RefreshCw size={16} />
+                        {t('retry')}
+                    </button>
+                </div>
+            );
         }
 
         const filteredReviews = getFilteredReviews();
@@ -813,6 +861,10 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 <div className="dashboard-header">
                     <h2 className="dashboard-title">{t('title')}</h2>
                     <div className="dashboard-header-actions">
+                        <button className="dashboard-publish-btn" onClick={() => setShowPublishWizard(true)}>
+                            <Plus size={16} />
+                            {t('publishNewPlugin')}
+                        </button>
                         <button className="dashboard-refresh-btn" onClick={loadData} disabled={loading}>
                             <RefreshCw size={16} className={loading ? 'spinning' : ''} />
                             {t('refresh')}
@@ -928,6 +980,27 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                             </div>
                         </div>
                     </div>
+                )}
+
+                {pluginToUpdate && (
+                    <PluginUpdateDialog
+                        plugin={pluginToUpdate}
+                        githubService={githubService}
+                        onClose={() => setPluginToUpdate(null)}
+                        onSuccess={() => {
+                            loadData();
+                        }}
+                        locale={locale}
+                    />
+                )}
+
+                {showPublishWizard && (
+                    <PluginPublishWizard
+                        githubService={githubService}
+                        onClose={() => setShowPublishWizard(false)}
+                        locale={locale}
+                        inline={false}
+                    />
                 )}
             </div>
         </div>

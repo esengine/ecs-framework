@@ -196,14 +196,8 @@ export class PluginPublishService {
         publishInfo: PluginPublishInfo,
         zipPath: string
     ): Promise<void> {
-        const { readFile } = await import('@tauri-apps/plugin-fs');
-        const zipContent = await readFile(zipPath);
-
-        let binaryString = '';
-        for (let i = 0; i < zipContent.length; i++) {
-            binaryString += String.fromCharCode(zipContent[i]!);
-        }
-        const base64Zip = btoa(binaryString);
+        const { TauriAPI } = await import('../api/tauri');
+        const base64Zip = await TauriAPI.readFileAsBase64(zipPath);
 
         this.notifyProgress('uploading-files', 'Uploading plugin ZIP file...', 30);
 
@@ -224,6 +218,25 @@ export class PluginPublishService {
         }
     }
 
+    private async getExistingManifest(
+        pluginId: string,
+        category: 'official' | 'community'
+    ): Promise<Record<string, any> | null> {
+        try {
+            const manifestPath = `plugins/${category}/${pluginId}/manifest.json`;
+            const content = await this.githubService.getFileContent(
+                this.REGISTRY_OWNER,
+                this.REGISTRY_REPO,
+                manifestPath,
+                'main'
+            );
+            return JSON.parse(content);
+        } catch (error) {
+            console.log(`[PluginPublishService] No existing manifest found, will create new one`);
+            return null;
+        }
+    }
+
     private async uploadManifest(
         owner: string,
         branch: string,
@@ -231,6 +244,18 @@ export class PluginPublishService {
         manifest: Record<string, unknown>,
         publishInfo: PluginPublishInfo
     ): Promise<void> {
+        this.notifyProgress('uploading-files', `Checking for existing manifest...`, 65);
+
+        const pluginId = this.generatePluginId(publishInfo.pluginMetadata.name);
+        const existingManifest = await this.getExistingManifest(pluginId, publishInfo.category);
+
+        let finalManifest = manifest;
+
+        if (existingManifest) {
+            this.notifyProgress('uploading-files', `Merging with existing manifest...`, 68);
+            finalManifest = this.mergeManifestVersions(existingManifest, manifest, publishInfo.version);
+        }
+
         this.notifyProgress('uploading-files', `Uploading manifest to ${manifestPath}...`, 70);
 
         try {
@@ -238,7 +263,7 @@ export class PluginPublishService {
                 owner,
                 this.REGISTRY_REPO,
                 manifestPath,
-                JSON.stringify(manifest, null, 2),
+                JSON.stringify(finalManifest, null, 2),
                 `Add ${publishInfo.pluginMetadata.displayName} v${publishInfo.version}`,
                 branch
             );
@@ -246,6 +271,42 @@ export class PluginPublishService {
         } catch (error) {
             throw new Error(`Failed to upload manifest: ${error instanceof Error ? error.message : String(error)}`);
         }
+    }
+
+    private mergeManifestVersions(
+        existingManifest: Record<string, any>,
+        newManifest: Record<string, any>,
+        newVersion: string
+    ): Record<string, any> {
+        const existingVersions = Array.isArray(existingManifest.versions) ? existingManifest.versions : [];
+        const newVersionInfo = (newManifest.versions as any[])[0];
+
+        const versionExists = existingVersions.some((v: any) => v.version === newVersion);
+
+        let updatedVersions: any[];
+        if (versionExists) {
+            updatedVersions = existingVersions.map((v: any) =>
+                v.version === newVersion ? newVersionInfo : v
+            );
+        } else {
+            updatedVersions = [...existingVersions, newVersionInfo];
+        }
+
+        updatedVersions.sort((a: any, b: any) => {
+            const [aMajor, aMinor, aPatch] = a.version.split('.').map(Number);
+            const [bMajor, bMinor, bPatch] = b.version.split('.').map(Number);
+
+            if (aMajor !== bMajor) return bMajor - aMajor;
+            if (aMinor !== bMinor) return bMinor - aMinor;
+            return bPatch - aPatch;
+        });
+
+        return {
+            ...existingManifest,
+            ...newManifest,
+            latestVersion: updatedVersions[0].version,
+            versions: updatedVersions
+        };
     }
 
     private async createOrUpdatePR(
@@ -290,7 +351,6 @@ export class PluginPublishService {
         const { pluginMetadata, version, releaseNotes, repositoryUrl, category, tags, homepage, screenshots, requirements } =
             publishInfo;
 
-        // 解析仓库 URL
         const repoMatch = repositoryUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
         if (!repoMatch || !repoMatch[1] || !repoMatch[2]) {
             throw new Error('Invalid GitHub repository URL');
@@ -314,10 +374,22 @@ export class PluginPublishService {
 
         const validCategory = categoryMap[pluginMetadata.category?.toLowerCase() || ''] || 'Tool';
 
+        const versionInfo = {
+            version: version,
+            releaseDate: new Date().toISOString(),
+            changes: releaseNotes || 'No release notes provided',
+            zipUrl: zipUrl,
+            requirements: requirements || {
+                'ecs-version': '>=1.0.0',
+                'editor-version': '>=1.0.0'
+            }
+        };
+
         return {
             id: pluginId,
             name: pluginMetadata.displayName,
-            version: version,
+            latestVersion: version,
+            versions: [versionInfo],
             author: {
                 name: githubUsername,
                 github: githubUsername
@@ -327,14 +399,6 @@ export class PluginPublishService {
             repository: {
                 type: 'git',
                 url: repositoryUrl
-            },
-            distribution: {
-                type: 'cdn',
-                url: zipUrl
-            },
-            requirements: requirements || {
-                'ecs-version': '>=1.0.0',
-                'editor-version': '>=1.0.0'
             },
             license: 'MIT',
             tags: tags || [],

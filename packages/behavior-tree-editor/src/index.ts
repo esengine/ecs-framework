@@ -1,3 +1,8 @@
+import { BehaviorTreePlugin } from './BehaviorTreePlugin';
+
+export default new BehaviorTreePlugin();
+
+export { BehaviorTreePlugin } from './BehaviorTreePlugin';
 export * from './BehaviorTreeModule';
 export * from './services/BehaviorTreeService';
 export * from './providers/BehaviorTreeNodeInspectorProvider';

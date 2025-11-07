@@ -498,6 +498,18 @@ export class GitHubService {
         }
     }
 
+    async getFileContent(owner: string, repo: string, path: string, branch: string = 'main'): Promise<string> {
+        const response = await this.request<GitHubFileContent>(
+            `GET /repos/${owner}/${repo}/contents/${path}?ref=${branch}`
+        );
+
+        if (!response.content) {
+            throw new Error(`File ${path} does not have content`);
+        }
+
+        return atob(response.content.replace(/\n/g, ''));
+    }
+
     async deleteFile(owner: string, repo: string, path: string, message: string, branch: string): Promise<void> {
         console.log(`[GitHubService] Getting file SHA for: ${owner}/${repo}/${path}?ref=${branch}`);
         const existing = await this.request<GitHubFileContent>(`GET /repos/${owner}/${repo}/contents/${path}?ref=${branch}`);
@@ -578,12 +590,31 @@ export class GitHubService {
             const mergedPRs = prs.filter((pr) => pr.merged_at !== null);
 
             const plugins: PublishedPlugin[] = [];
+            const deletedPlugins = new Map<string, Date>();
+
+            for (const pr of mergedPRs) {
+                const removeMatch = pr.title.match(/Remove plugin: (.+)/);
+                if (removeMatch && removeMatch[1] && pr.merged_at) {
+                    const pluginName = removeMatch[1];
+                    const mergedDate = new Date(pr.merged_at);
+                    deletedPlugins.set(pluginName, mergedDate);
+                }
+            }
 
             for (const pr of mergedPRs) {
                 const match = pr.title.match(/Add plugin: (.+) v([\d.]+)/);
                 if (match && match[1] && match[2]) {
                     const pluginName = match[1];
                     const version = match[2];
+
+                    const deletedDate = deletedPlugins.get(pluginName);
+                    if (deletedDate && pr.merged_at) {
+                        const addedDate = new Date(pr.merged_at);
+                        if (deletedDate > addedDate) {
+                            console.log(`[GitHubService] Plugin ${pluginName} was deleted after being added, skipping`);
+                            continue;
+                        }
+                    }
 
                     const repoMatch = pr.body?.match(/\*\*Repository\*\*: (.+)/);
                     const repositoryUrl = repoMatch?.[1] || '';

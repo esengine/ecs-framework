@@ -10,7 +10,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "downlevelIteration": true,
-    "outDir": "./dist",
+    "outDir": "./bin",
     "rootDir": "./src",
     "composite": true,
     "jsx": "react-jsx",

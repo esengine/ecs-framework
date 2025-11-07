@@ -3,14 +3,16 @@
   "version": "1.0.0",
   "description": "Behavior Tree Editor Plugin for ECS Framework",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/index.esm.js",
+  "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "clean": "rimraf bin dist tsconfig.tsbuildinfo",
     "prebuild": "npm run clean",
-    "build": "npm run build:ts",
-    "build:ts": "tsc",
-    "dev": "tsc --watch"
+    "build": "npm run build:tsc && npm run build:rollup",
+    "build:tsc": "tsc",
+    "build:rollup": "rollup -c",
+    "dev": "rollup -c -w"
   },
   "keywords": [
     "ecs",
@@ -30,7 +32,11 @@
   },
   "devDependencies": {
     "@types/react": "^18.3.18",
+    "@rollup/plugin-commonjs": "^28.0.1",
+    "@rollup/plugin-node-resolve": "^15.3.0",
     "rimraf": "^6.0.1",
+    "rollup": "^4.28.1",
+    "rollup-plugin-dts": "^6.1.1",
     "typescript": "^5.8.2"
   },
   "peerDependencies": {

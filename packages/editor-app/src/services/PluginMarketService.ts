@@ -1,5 +1,6 @@
 import type { EditorPluginManager, IEditorPlugin } from '@esengine/editor-core';
 import JSZip from 'jszip';
+import { fetch } from '@tauri-apps/plugin-http';
 
 export interface PluginAuthor {
     name: string;
@@ -57,10 +58,16 @@ interface InstalledPluginInfo {
 }
 
 export class PluginMarketService {
-    private readonly REGISTRY_URL =
-        'https://cdn.jsdelivr.net/gh/esengine/ecs-editor-plugins@gh-pages/registry.json';
+    private readonly REGISTRY_URLS = [
+        'https://cdn.jsdelivr.net/gh/esengine/ecs-editor-plugins@gh-pages/registry.json',
+        'https://raw.githubusercontent.com/esengine/ecs-editor-plugins/gh-pages/registry.json',
+        'https://fastly.jsdelivr.net/gh/esengine/ecs-editor-plugins@gh-pages/registry.json'
+    ];
+
+    private readonly GITHUB_DIRECT_URL = 'https://raw.githubusercontent.com/esengine/ecs-editor-plugins/gh-pages/registry.json';
 
     private readonly STORAGE_KEY = 'ecs-editor-installed-marketplace-plugins';
+    private readonly USE_DIRECT_SOURCE_KEY = 'ecs-editor-use-direct-source';
 
     private pluginManager: EditorPluginManager;
     private installedPlugins: Map<string, InstalledPluginInfo> = new Map();
@@ -70,22 +77,87 @@ export class PluginMarketService {
         this.loadInstalledPlugins();
     }
 
-    async fetchPluginList(): Promise<PluginMarketMetadata[]> {
-        try {
-            const response = await fetch(this.REGISTRY_URL, {
-                cache: 'no-cache'
-            });
+    isUsingDirectSource(): boolean {
+        return localStorage.getItem(this.USE_DIRECT_SOURCE_KEY) === 'true';
+    }
 
-            if (!response.ok) {
-                throw new Error(`Failed to fetch plugin registry: ${response.status}`);
-            }
+    setUseDirectSource(useDirect: boolean): void {
+        localStorage.setItem(this.USE_DIRECT_SOURCE_KEY, String(useDirect));
+        console.log(`[PluginMarketService] Direct source ${useDirect ? 'enabled' : 'disabled'}`);
+    }
 
-            const registry: PluginRegistry = await response.json();
-            return registry.plugins;
-        } catch (error) {
-            console.error('[PluginMarketService] Failed to fetch plugin list:', error);
-            throw error;
+    async fetchPluginList(bypassCache: boolean = false): Promise<PluginMarketMetadata[]> {
+        const useDirectSource = this.isUsingDirectSource();
+
+        if (useDirectSource) {
+            console.log('[PluginMarketService] Using direct GitHub source (bypass CDN)');
+            return await this.fetchFromUrl(this.GITHUB_DIRECT_URL, bypassCache);
         }
+
+        const errors: string[] = [];
+
+        for (let i = 0; i < this.REGISTRY_URLS.length; i++) {
+            try {
+                const url = this.REGISTRY_URLS[i];
+                if (!url) continue;
+
+                const plugins = await this.fetchFromUrl(url, bypassCache, i + 1, this.REGISTRY_URLS.length);
+                return plugins;
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.warn(`[PluginMarketService] Failed to fetch from URL ${i + 1}: ${errorMessage}`);
+                errors.push(`URL ${i + 1}: ${errorMessage}`);
+            }
+        }
+
+        const finalError = `无法从任何数据源加载插件列表。尝试的错误:\n${errors.join('\n')}`;
+        console.error('[PluginMarketService] All URLs failed:', finalError);
+        throw new Error(finalError);
+    }
+
+    private async fetchFromUrl(
+        baseUrl: string,
+        bypassCache: boolean,
+        urlIndex?: number,
+        totalUrls?: number
+    ): Promise<PluginMarketMetadata[]> {
+        let url = baseUrl;
+        if (bypassCache) {
+            url += `?t=${Date.now()}`;
+            if (urlIndex && totalUrls) {
+                console.log(`[PluginMarketService] Bypassing cache with timestamp (URL ${urlIndex}/${totalUrls})`);
+            }
+        }
+
+        if (urlIndex && totalUrls) {
+            console.log(`[PluginMarketService] Trying URL ${urlIndex}/${totalUrls}: ${url}`);
+        } else {
+            console.log(`[PluginMarketService] Fetching from: ${url}`);
+        }
+
+        const response = await fetch(url, {
+            cache: 'no-cache',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const registry: PluginRegistry = await response.json();
+
+        if (urlIndex) {
+            console.log(`[PluginMarketService] Successfully loaded from URL ${urlIndex}`);
+        } else {
+            console.log(`[PluginMarketService] Successfully loaded`);
+        }
+        console.log(`[PluginMarketService] Loaded ${registry.plugins.length} plugins from registry`);
+        console.log(`[PluginMarketService] Registry generated at: ${registry.generatedAt}`);
+
+        return registry.plugins;
     }
 
     async installPlugin(plugin: PluginMarketMetadata, version?: string): Promise<void> {
