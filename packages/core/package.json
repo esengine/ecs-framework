@@ -78,7 +78,6 @@
     "directory": "packages/core"
   },
   "dependencies": {
-    "fflate": "^0.8.2",
     "tslib": "^2.8.1"
   }
 }
