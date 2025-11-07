@@ -30,6 +30,8 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
     const [deleteReason, setDeleteReason] = useState('');
     const [deletingPlugin, setDeletingPlugin] = useState(false);
     const [deleteProgress, setDeleteProgress] = useState({ message: '', progress: 0 });
+    const [resolvingConflicts, setResolvingConflicts] = useState<number | null>(null);
+    const [recreatingPR, setRecreatingPR] = useState<number | null>(null);
 
     const user = githubService.getUser();
 
@@ -90,7 +92,25 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 openPRQuestion: '是否打开PR查看详情？',
                 deleteConflictError: '删除时发生冲突，可能是因为分支版本不一致。',
                 retryDeleteQuestion: '是否重试？（将删除旧分支并重新创建）',
-                deletePending: '删除请求中'
+                deletePending: '删除请求中',
+                conflicts: '冲突',
+                conflictsDetected: '检测到冲突',
+                conflictFilesLabel: '冲突文件',
+                resolveConflicts: '解决冲突',
+                resolving: '解决中...',
+                resolveConflictsSuccess: '冲突已解决！正在刷新...',
+                resolveConflictsFailed: '解决冲突失败',
+                resolveConflictsHint: '点击此按钮将主分支的最新代码合并到此PR，可能会自动解决冲突',
+                manualResolveRequired: '此冲突需要手动解决',
+                manualResolveHint: '自动合并失败，存在代码冲突。',
+                openInGitHub: '在GitHub上解决',
+                manualResolveInstructions: '请点击下面的按钮在GitHub上手动解决冲突，或者在本地克隆仓库后解决。',
+                recreatePR: '重新创建PR',
+                recreatePRHint: '删除当前分支并基于最新主分支重新创建删除请求（推荐）',
+                recreatePRConfirm: '确定要关闭当前PR并重新创建吗？\n\n这将：\n1. 关闭当前PR\n2. 删除冲突的分支\n3. 基于最新主分支重新创建删除请求\n\n删除原因会保留。',
+                recreating: '重新创建中...',
+                recreatePRSuccess: '已重新创建删除请求！',
+                recreatePRFailed: '重新创建失败'
             },
             en: {
                 title: 'User Dashboard',
@@ -147,7 +167,25 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 openPRQuestion: 'Open PR to view details?',
                 deleteConflictError: 'Conflict occurred during deletion, possibly due to branch version mismatch.',
                 retryDeleteQuestion: 'Retry? (Will delete old branch and recreate)',
-                deletePending: 'Deletion Pending'
+                deletePending: 'Deletion Pending',
+                conflicts: 'Conflicts',
+                conflictsDetected: 'Conflicts Detected',
+                conflictFilesLabel: 'Conflict Files',
+                resolveConflicts: 'Resolve Conflicts',
+                resolving: 'Resolving...',
+                resolveConflictsSuccess: 'Conflicts resolved! Refreshing...',
+                resolveConflictsFailed: 'Failed to resolve conflicts',
+                resolveConflictsHint: 'Click to merge latest changes from main branch into this PR, which may automatically resolve conflicts',
+                manualResolveRequired: 'Manual resolution required',
+                manualResolveHint: 'Automatic merge failed due to code conflicts.',
+                openInGitHub: 'Resolve on GitHub',
+                manualResolveInstructions: 'Please click the button below to resolve conflicts on GitHub, or clone the repository locally.',
+                recreatePR: 'Recreate PR',
+                recreatePRHint: 'Delete current branch and recreate deletion request based on latest main branch (Recommended)',
+                recreatePRConfirm: 'Are you sure you want to close current PR and recreate?\n\nThis will:\n1. Close current PR\n2. Delete conflicting branch\n3. Recreate deletion request based on latest main branch\n\nDeletion reason will be preserved.',
+                recreating: 'Recreating...',
+                recreatePRSuccess: 'Deletion request recreated!',
+                recreatePRFailed: 'Failed to recreate'
             }
         };
         return translations[locale]?.[key] || translations.en?.[key] || key;
@@ -293,6 +331,95 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
             setError(t('deleteFailed') + ': ' + (err instanceof Error ? err.message : String(err)));
         } finally {
             setDeletingPR(null);
+        }
+    };
+
+    const handleResolveConflicts = async (review: PendingReview) => {
+        setResolvingConflicts(review.prNumber);
+        try {
+            await githubService.updatePRBranch('esengine', 'ecs-editor-plugins', review.prNumber);
+            console.log(`[UserDashboard] Successfully resolved conflicts for PR #${review.prNumber}`);
+
+            alert(t('resolveConflictsSuccess'));
+            await loadData();
+        } catch (err) {
+            console.error('[UserDashboard] Failed to resolve conflicts:', err);
+            const errorMsg = err instanceof Error ? err.message : String(err);
+
+            if (errorMsg.includes('422') || errorMsg.includes('merge conflict')) {
+                const message = `${t('manualResolveRequired')}\n\n${t('manualResolveHint')}\n${t('manualResolveInstructions')}\n\n${t('openInGitHub')}?`;
+                if (confirm(message)) {
+                    open(review.prUrl);
+                }
+            } else {
+                alert(t('resolveConflictsFailed') + ': ' + errorMsg);
+            }
+        } finally {
+            setResolvingConflicts(null);
+        }
+    };
+
+    const handleRecreatePR = async (review: PendingReview) => {
+        if (!confirm(t('recreatePRConfirm'))) {
+            return;
+        }
+
+        const removeMatch = review.pluginName.match(/^(.+)$/);
+        if (!removeMatch) {
+            alert(t('recreatePRFailed') + ': Cannot extract plugin name');
+            return;
+        }
+
+        const pluginName = removeMatch[0];
+
+        const plugin = publishedPlugins.find(p => p.name === pluginName);
+        if (!plugin) {
+            alert(t('recreatePRFailed') + ': Plugin not found in published list');
+            return;
+        }
+
+        setRecreatingPR(review.prNumber);
+        try {
+            await githubService.closePullRequest('esengine', 'ecs-editor-plugins', review.prNumber);
+            console.log(`[UserDashboard] Closed PR #${review.prNumber}`);
+
+            if (review.headBranch && review.headRepo) {
+                const [repoOwner, repoName] = review.headRepo.split('/');
+                if (repoOwner && repoName) {
+                    try {
+                        await githubService.deleteBranch(repoOwner, repoName, review.headBranch);
+                        console.log(`[UserDashboard] Deleted branch ${review.headBranch}`);
+                    } catch (err) {
+                        console.warn('[UserDashboard] Failed to delete branch:', err);
+                    }
+                }
+            }
+
+            const { PluginPublishService } = await import('../services/PluginPublishService');
+            const publishService = new PluginPublishService(githubService);
+
+            const deleteReason = 'Recreated due to conflicts';
+
+            const prUrl = await publishService.deletePlugin(
+                plugin.id,
+                plugin.name,
+                plugin.category_type as 'official' | 'community',
+                deleteReason,
+                true
+            );
+
+            console.log(`[UserDashboard] Recreated delete PR:`, prUrl);
+            alert(t('recreatePRSuccess'));
+            await loadData();
+
+            if (confirm(t('openPRQuestion'))) {
+                open(prUrl);
+            }
+        } catch (err) {
+            console.error('[UserDashboard] Failed to recreate PR:', err);
+            alert(t('recreatePRFailed') + ': ' + (err instanceof Error ? err.message : String(err)));
+        } finally {
+            setRecreatingPR(null);
         }
     };
 
@@ -504,6 +631,51 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                                     {t('createdAt')}: {formatDate(review.createdAt)}
                                 </span>
                             </div>
+                            {review.hasConflicts && (
+                                <div className="review-conflicts">
+                                    <div className="conflicts-header">
+                                        <AlertCircle size={16} className="conflicts-icon" />
+                                        {t('conflictsDetected')}
+                                    </div>
+                                    {review.conflictFiles && review.conflictFiles.length > 0 && (
+                                        <div className="conflicts-files">
+                                            <div className="conflicts-files-label">{t('conflictFilesLabel')}:</div>
+                                            <ul className="conflicts-files-list">
+                                                {review.conflictFiles.map((file, index) => (
+                                                    <li key={index} className="conflict-file-item">{file}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                    <div className="conflicts-actions">
+                                        <button
+                                            className="resolve-conflicts-btn"
+                                            onClick={() => handleResolveConflicts(review)}
+                                            disabled={resolvingConflicts === review.prNumber || recreatingPR === review.prNumber}
+                                            title={t('resolveConflictsHint')}
+                                        >
+                                            {resolvingConflicts === review.prNumber ? t('resolving') : t('resolveConflicts')}
+                                        </button>
+                                        <button
+                                            className="recreate-pr-btn"
+                                            onClick={() => handleRecreatePR(review)}
+                                            disabled={recreatingPR === review.prNumber || resolvingConflicts === review.prNumber}
+                                            title={t('recreatePRHint')}
+                                        >
+                                            {recreatingPR === review.prNumber ? t('recreating') : t('recreatePR')}
+                                        </button>
+                                        <button
+                                            className="open-github-btn"
+                                            onClick={handleLinkClick(review.prUrl)}
+                                            title={t('manualResolveInstructions')}
+                                            disabled={recreatingPR === review.prNumber || resolvingConflicts === review.prNumber}
+                                        >
+                                            <ExternalLink size={14} />
+                                            {t('openInGitHub')}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                             {review.checks && review.checks.length > 0 && (
                                 <div className="review-checks">
                                     <div className="checks-header">{t('ciChecks')}:</div>

@@ -57,127 +57,22 @@ export class PluginPublishService {
             throw new Error('Please login to GitHub first');
         }
 
-        const user = this.githubService.getUser();
-        if (!user) {
-            throw new Error('User information not available');
-        }
-
-        this.notifyProgress('checking-fork', 'Checking if fork exists...', 10);
-
         try {
-            // 1. Fork ecs-editor-plugins 仓库（如果还没有 fork）
-            let forkedRepo: string;
+            const { branchName, existingPR } = await this.preparePublishEnvironment(
+                publishInfo.pluginMetadata.name,
+                publishInfo.version
+            );
 
-            try {
-                await this.githubService.getRepository(user.login, this.REGISTRY_REPO);
-                forkedRepo = `${user.login}/${this.REGISTRY_REPO}`;
-                this.notifyProgress('checking-fork', 'Fork already exists', 20);
-            } catch {
-                this.notifyProgress('creating-fork', 'Creating fork...', 15);
-                forkedRepo = await this.githubService.forkRepository(this.REGISTRY_OWNER, this.REGISTRY_REPO);
-                // 等待 fork 完成
-                await this.sleep(3000);
-                this.notifyProgress('creating-fork', 'Fork created successfully', 20);
-            }
+            const user = this.githubService.getUser()!;
+            const pluginId = this.generatePluginId(publishInfo.pluginMetadata.name);
 
-            // 2. 检查并处理分支
-            const branchName = `add-plugin-${publishInfo.pluginMetadata.name}-v${publishInfo.version}`;
-            this.notifyProgress('checking-branch', `Checking if branch '${branchName}' exists...`, 25);
-
-            let branchExists = false;
-            let existingPR: any = null;
-
-            try {
-                await this.githubService.getBranch(user.login, this.REGISTRY_REPO, branchName);
-                branchExists = true;
-
-                // 检查是否有对应的 PR
-                const headBranch = `${user.login}:${branchName}`;
-                existingPR = await this.githubService.findPullRequestByBranch(this.REGISTRY_OWNER, this.REGISTRY_REPO, headBranch);
-
-                if (existingPR) {
-                    this.notifyProgress('checking-branch', `Branch and PR already exist, will update existing PR #${existingPR.number}`, 40);
-                } else {
-                    this.notifyProgress('checking-branch', 'Branch exists but no PR found, will update branch', 40);
-                }
-            } catch {
-                // 分支不存在，需要创建
-                this.notifyProgress('checking-branch', 'Branch does not exist, will create new one', 30);
-            }
-
-            // 3. 如果分支不存在，创建新分支
-            if (!branchExists) {
-                this.notifyProgress('creating-branch', `Creating branch '${branchName}'...`, 35);
-
-                try {
-                    await this.githubService.createBranch(user.login, this.REGISTRY_REPO, branchName, 'main');
-                    this.notifyProgress('creating-branch', 'Branch created successfully', 40);
-                } catch (error) {
-                    throw new Error(`Failed to create branch: ${error instanceof Error ? error.message : String(error)}`);
-                }
-            }
-
-            // 4. 生成 manifest.json
             this.notifyProgress('creating-manifest', 'Generating manifest.json...', 55);
-
-            // 生成统一的 pluginId（去除特殊字符）
-            const pluginId = publishInfo.pluginMetadata.name
-                .toLowerCase()
-                .replace(/[^a-z0-9-]/g, '-')
-                .replace(/^-+|-+$/g, '');
-
             const manifest = this.generateManifest(publishInfo, user.login);
             const manifestPath = `plugins/${publishInfo.category}/${pluginId}/manifest.json`;
-            this.notifyProgress('creating-manifest', 'Manifest generated', 60);
 
-            // 5. 提交 manifest.json
-            this.notifyProgress('uploading-files', `Uploading manifest to ${manifestPath}...`, 65);
+            await this.uploadManifest(user.login, branchName, manifestPath, manifest, publishInfo);
 
-            try {
-                await this.githubService.createOrUpdateFile(
-                    user.login,
-                    this.REGISTRY_REPO,
-                    manifestPath,
-                    JSON.stringify(manifest, null, 2),
-                    `Add ${publishInfo.pluginMetadata.displayName} v${publishInfo.version}`,
-                    branchName
-                );
-                this.notifyProgress('uploading-files', 'Manifest uploaded successfully', 75);
-            } catch (error) {
-                throw new Error(`Failed to upload manifest: ${error instanceof Error ? error.message : String(error)}`);
-            }
-
-            // 6. 创建或更新 Pull Request
-            let prUrl: string;
-
-            if (existingPR) {
-                // PR 已存在，直接返回现有 PR 的 URL
-                prUrl = existingPR.html_url;
-                this.notifyProgress('complete', `Pull request #${existingPR.number} updated successfully!`, 100);
-            } else {
-                // 创建新的 PR
-                this.notifyProgress('creating-pr', 'Creating pull request...', 80);
-
-                const prTitle = `Add plugin: ${publishInfo.pluginMetadata.displayName} v${publishInfo.version}`;
-                const prBody = this.generatePRDescription(publishInfo);
-
-                try {
-                    prUrl = await this.githubService.createPullRequest({
-                        owner: this.REGISTRY_OWNER,
-                        repo: this.REGISTRY_REPO,
-                        title: prTitle,
-                        body: prBody,
-                        head: `${user.login}:${branchName}`,
-                        base: 'main'
-                    });
-
-                    this.notifyProgress('complete', 'Pull request created successfully!', 100);
-                } catch (error) {
-                    throw new Error(`Failed to create pull request: ${error instanceof Error ? error.message : String(error)}`);
-                }
-            }
-
-            return prUrl;
+            return await this.createOrUpdatePR(existingPR, branchName, publishInfo, user.login);
         } catch (error) {
             console.error('[PluginPublishService] Failed to publish plugin:', error);
             throw error;
@@ -192,146 +87,203 @@ export class PluginPublishService {
             throw new Error('Please login to GitHub first');
         }
 
+        try {
+            const { branchName, existingPR } = await this.preparePublishEnvironment(
+                publishInfo.pluginMetadata.name,
+                publishInfo.version
+            );
+
+            const user = this.githubService.getUser()!;
+            const pluginId = this.generatePluginId(publishInfo.pluginMetadata.name);
+
+            await this.uploadZipFile(user.login, branchName, pluginId, publishInfo, zipPath);
+
+            this.notifyProgress('creating-manifest', 'Generating manifest.json...', 60);
+            const manifest = this.generateManifest(publishInfo, user.login);
+            const manifestPath = `plugins/${publishInfo.category}/${pluginId}/manifest.json`;
+
+            await this.uploadManifest(user.login, branchName, manifestPath, manifest, publishInfo);
+
+            return await this.createOrUpdatePR(existingPR, branchName, publishInfo, user.login);
+        } catch (error) {
+            console.error('[PluginPublishService] Failed to publish plugin:', error);
+            throw error;
+        }
+    }
+
+    private async preparePublishEnvironment(
+        pluginName: string,
+        version: string
+    ): Promise<{ branchName: string; existingPR: { number: number; html_url: string } | null }> {
         const user = this.githubService.getUser();
         if (!user) {
             throw new Error('User information not available');
         }
 
-        this.notifyProgress('checking-fork', 'Checking if fork exists...', 5);
+        this.notifyProgress('checking-fork', 'Checking if fork exists...', 10);
 
         try {
-            let forkedRepo: string;
+            await this.githubService.getRepository(user.login, this.REGISTRY_REPO);
+            this.notifyProgress('checking-fork', 'Fork already exists', 15);
+        } catch {
+            this.notifyProgress('creating-fork', 'Creating fork...', 12);
+            await this.githubService.forkRepository(this.REGISTRY_OWNER, this.REGISTRY_REPO);
+            await this.sleep(3000);
+            this.notifyProgress('creating-fork', 'Fork created successfully', 15);
+        }
 
-            try {
-                await this.githubService.getRepository(user.login, this.REGISTRY_REPO);
-                forkedRepo = `${user.login}/${this.REGISTRY_REPO}`;
-                this.notifyProgress('checking-fork', 'Fork already exists', 10);
-            } catch {
-                this.notifyProgress('creating-fork', 'Creating fork...', 7);
-                forkedRepo = await this.githubService.forkRepository(this.REGISTRY_OWNER, this.REGISTRY_REPO);
-                await this.sleep(3000);
-                this.notifyProgress('creating-fork', 'Fork created successfully', 10);
-            }
+        const branchName = `add-plugin-${pluginName}-v${version}`;
+        this.notifyProgress('checking-branch', `Checking if branch '${branchName}' exists...`, 20);
 
-            const branchName = `add-plugin-${publishInfo.pluginMetadata.name}-v${publishInfo.version}`;
-            this.notifyProgress('checking-branch', `Checking if branch '${branchName}' exists...`, 15);
+        let branchExists = false;
+        let existingPR: { number: number; html_url: string } | null = null;
 
-            let branchExists = false;
-            let existingPR: any = null;
+        try {
+            await this.githubService.getBranch(user.login, this.REGISTRY_REPO, branchName);
+            branchExists = true;
 
-            try {
-                await this.githubService.getBranch(user.login, this.REGISTRY_REPO, branchName);
-                branchExists = true;
-
-                const headBranch = `${user.login}:${branchName}`;
-                existingPR = await this.githubService.findPullRequestByBranch(this.REGISTRY_OWNER, this.REGISTRY_REPO, headBranch);
-
-                if (existingPR) {
-                    this.notifyProgress('checking-branch', `Branch and PR already exist, will update existing PR #${existingPR.number}`, 25);
-                } else {
-                    this.notifyProgress('checking-branch', 'Branch exists but no PR found, will update branch', 25);
-                }
-            } catch {
-                this.notifyProgress('checking-branch', 'Branch does not exist, will create new one', 20);
-            }
-
-            if (!branchExists) {
-                this.notifyProgress('creating-branch', `Creating branch '${branchName}'...`, 22);
-
-                try {
-                    await this.githubService.createBranch(user.login, this.REGISTRY_REPO, branchName, 'main');
-                    this.notifyProgress('creating-branch', 'Branch created successfully', 25);
-                } catch (error) {
-                    throw new Error(`Failed to create branch: ${error instanceof Error ? error.message : String(error)}`);
-                }
-            }
-
-            const pluginId = publishInfo.pluginMetadata.name
-                .toLowerCase()
-                .replace(/[^a-z0-9-]/g, '-')
-                .replace(/^-+|-+$/g, '');
-
-            const { readFile } = await import('@tauri-apps/plugin-fs');
-            const zipContent = await readFile(zipPath);
-
-            let binaryString = '';
-            for (let i = 0; i < zipContent.length; i++) {
-                binaryString += String.fromCharCode(zipContent[i]!);
-            }
-            const base64Zip = btoa(binaryString);
-
-            this.notifyProgress('uploading-files', 'Uploading plugin ZIP file...', 30);
-
-            const zipFilePath = `plugins/${publishInfo.category}/${pluginId}/versions/${publishInfo.version}.zip`;
-
-            try {
-                await this.githubService.createOrUpdateBinaryFile(
-                    user.login,
-                    this.REGISTRY_REPO,
-                    zipFilePath,
-                    base64Zip,
-                    `Add ${publishInfo.pluginMetadata.displayName} v${publishInfo.version} ZIP`,
-                    branchName
-                );
-                this.notifyProgress('uploading-files', 'ZIP file uploaded successfully', 55);
-            } catch (error) {
-                throw new Error(`Failed to upload ZIP: ${error instanceof Error ? error.message : String(error)}`);
-            }
-
-            this.notifyProgress('creating-manifest', 'Generating manifest.json...', 60);
-
-            const manifest = this.generateManifest(publishInfo, user.login);
-            const manifestPath = `plugins/${publishInfo.category}/${pluginId}/manifest.json`;
-            this.notifyProgress('creating-manifest', 'Manifest generated', 65);
-
-            this.notifyProgress('uploading-files', `Uploading manifest to ${manifestPath}...`, 70);
-
-            try {
-                await this.githubService.createOrUpdateFile(
-                    user.login,
-                    this.REGISTRY_REPO,
-                    manifestPath,
-                    JSON.stringify(manifest, null, 2),
-                    `Add ${publishInfo.pluginMetadata.displayName} v${publishInfo.version}`,
-                    branchName
-                );
-                this.notifyProgress('uploading-files', 'Manifest uploaded successfully', 80);
-            } catch (error) {
-                throw new Error(`Failed to upload manifest: ${error instanceof Error ? error.message : String(error)}`);
-            }
-
-            let prUrl: string;
+            const headBranch = `${user.login}:${branchName}`;
+            existingPR = await this.githubService.findPullRequestByBranch(
+                this.REGISTRY_OWNER,
+                this.REGISTRY_REPO,
+                headBranch
+            );
 
             if (existingPR) {
-                prUrl = existingPR.html_url;
-                this.notifyProgress('complete', `Pull request #${existingPR.number} updated successfully!`, 100);
+                this.notifyProgress(
+                    'checking-branch',
+                    `Branch and PR already exist, will update existing PR #${existingPR.number}`,
+                    30
+                );
             } else {
-                this.notifyProgress('creating-pr', 'Creating pull request...', 85);
-
-                const prTitle = `Add plugin: ${publishInfo.pluginMetadata.displayName} v${publishInfo.version}`;
-                const prBody = this.generatePRDescription(publishInfo);
-
-                try {
-                    prUrl = await this.githubService.createPullRequest({
-                        owner: this.REGISTRY_OWNER,
-                        repo: this.REGISTRY_REPO,
-                        title: prTitle,
-                        body: prBody,
-                        head: `${user.login}:${branchName}`,
-                        base: 'main'
-                    });
-
-                    this.notifyProgress('complete', 'Pull request created successfully!', 100);
-                } catch (error) {
-                    throw new Error(`Failed to create pull request: ${error instanceof Error ? error.message : String(error)}`);
-                }
+                this.notifyProgress('checking-branch', 'Branch exists, will reuse it', 30);
             }
-
-            return prUrl;
-        } catch (error) {
-            console.error('[PluginPublishService] Failed to publish plugin:', error);
-            throw error;
+        } catch {
+            this.notifyProgress('checking-branch', 'Branch does not exist, will create new one', 25);
         }
+
+        if (!branchExists) {
+            this.notifyProgress('creating-branch', `Creating branch '${branchName}'...`, 27);
+            try {
+                await this.githubService.createBranch(
+                    user.login,
+                    this.REGISTRY_REPO,
+                    branchName,
+                    'main'
+                );
+                this.notifyProgress('creating-branch', 'Branch created successfully', 30);
+            } catch (error) {
+                throw new Error(
+                    `Failed to create branch: ${error instanceof Error ? error.message : String(error)}`
+                );
+            }
+        }
+
+        return { branchName, existingPR };
+    }
+
+    private generatePluginId(name: string): string {
+        return name
+            .toLowerCase()
+            .replace(/[^a-z0-9-]/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+
+    private async uploadZipFile(
+        owner: string,
+        branch: string,
+        pluginId: string,
+        publishInfo: PluginPublishInfo,
+        zipPath: string
+    ): Promise<void> {
+        const { readFile } = await import('@tauri-apps/plugin-fs');
+        const zipContent = await readFile(zipPath);
+
+        let binaryString = '';
+        for (let i = 0; i < zipContent.length; i++) {
+            binaryString += String.fromCharCode(zipContent[i]!);
+        }
+        const base64Zip = btoa(binaryString);
+
+        this.notifyProgress('uploading-files', 'Uploading plugin ZIP file...', 30);
+
+        const zipFilePath = `plugins/${publishInfo.category}/${pluginId}/versions/${publishInfo.version}.zip`;
+
+        try {
+            await this.githubService.createOrUpdateBinaryFile(
+                owner,
+                this.REGISTRY_REPO,
+                zipFilePath,
+                base64Zip,
+                `Add ${publishInfo.pluginMetadata.displayName} v${publishInfo.version} ZIP`,
+                branch
+            );
+            this.notifyProgress('uploading-files', 'ZIP file uploaded successfully', 55);
+        } catch (error) {
+            throw new Error(`Failed to upload ZIP: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
+    private async uploadManifest(
+        owner: string,
+        branch: string,
+        manifestPath: string,
+        manifest: Record<string, unknown>,
+        publishInfo: PluginPublishInfo
+    ): Promise<void> {
+        this.notifyProgress('uploading-files', `Uploading manifest to ${manifestPath}...`, 70);
+
+        try {
+            await this.githubService.createOrUpdateFile(
+                owner,
+                this.REGISTRY_REPO,
+                manifestPath,
+                JSON.stringify(manifest, null, 2),
+                `Add ${publishInfo.pluginMetadata.displayName} v${publishInfo.version}`,
+                branch
+            );
+            this.notifyProgress('uploading-files', 'Manifest uploaded successfully', 80);
+        } catch (error) {
+            throw new Error(`Failed to upload manifest: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
+    private async createOrUpdatePR(
+        existingPR: { number: number; html_url: string } | null,
+        branchName: string,
+        publishInfo: PluginPublishInfo,
+        userLogin: string
+    ): Promise<string> {
+        let prUrl: string;
+
+        if (existingPR) {
+            prUrl = existingPR.html_url;
+            this.notifyProgress('complete', `Pull request #${existingPR.number} updated successfully!`, 100);
+        } else {
+            this.notifyProgress('creating-pr', 'Creating pull request...', 85);
+
+            const prTitle = `Add plugin: ${publishInfo.pluginMetadata.displayName} v${publishInfo.version}`;
+            const prBody = this.generatePRDescription(publishInfo);
+
+            try {
+                prUrl = await this.githubService.createPullRequest({
+                    owner: this.REGISTRY_OWNER,
+                    repo: this.REGISTRY_REPO,
+                    title: prTitle,
+                    body: prBody,
+                    head: `${userLogin}:${branchName}`,
+                    base: 'main'
+                });
+
+                this.notifyProgress('complete', 'Pull request created successfully!', 100);
+            } catch (error) {
+                throw new Error(
+                    `Failed to create pull request: ${error instanceof Error ? error.message : String(error)}`
+                );
+            }
+        }
+
+        return prUrl;
     }
 
     private generateManifest(publishInfo: PluginPublishInfo, githubUsername: string): Record<string, unknown> {
@@ -348,10 +300,7 @@ export class PluginPublishService {
         const repo = repoMatch[2];
         const repoName = repo.replace(/\.git$/, '');
 
-        const pluginId = pluginMetadata.name
-            .toLowerCase()
-            .replace(/[^a-z0-9-]/g, '-')
-            .replace(/^-+|-+$/g, '');
+        const pluginId = this.generatePluginId(pluginMetadata.name);
 
         const zipUrl = `https://cdn.jsdelivr.net/gh/${this.REGISTRY_OWNER}/${this.REGISTRY_REPO}@gh-pages/plugins/${category}/${pluginId}/versions/${version}.zip`;
 
@@ -464,7 +413,7 @@ ${releaseNotes}
             this.notifyProgress('checking-branch', `Checking if branch '${branchName}' exists...`, 15);
 
             let branchExists = false;
-            let existingPR: any = null;
+            let existingPR: { number: number; html_url: string } | null = null;
 
             try {
                 await this.githubService.getBranch(user.login, this.REGISTRY_REPO, branchName);
@@ -505,14 +454,11 @@ ${releaseNotes}
 
             const pluginPath = `plugins/${category}/${pluginId}`;
 
-            const sourceOwner = branchExists ? user.login : this.REGISTRY_OWNER;
-            const sourceBranch = branchExists ? branchName : 'main';
-
             const contents = await this.githubService.getDirectoryContents(
-                sourceOwner,
+                this.REGISTRY_OWNER,
                 this.REGISTRY_REPO,
                 pluginPath,
-                sourceBranch
+                'main'
             );
 
             if (contents.length === 0) {
@@ -526,10 +472,10 @@ ${releaseNotes}
                     filesToDelete.push({ path: item.path, sha: item.sha });
                 } else if (item.type === 'dir') {
                     const subContents = await this.githubService.getDirectoryContents(
-                        sourceOwner,
+                        this.REGISTRY_OWNER,
                         this.REGISTRY_REPO,
                         item.path,
-                        sourceBranch
+                        'main'
                     );
                     for (const subItem of subContents) {
                         if (subItem.type === 'file') {

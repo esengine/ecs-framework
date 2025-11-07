@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Github, LogOut, User, LayoutDashboard } from 'lucide-react';
+import { Github, LogOut, User, LayoutDashboard, Loader2 } from 'lucide-react';
 import type { GitHubService, GitHubUser } from '../services/GitHubService';
 import '../styles/UserProfile.css';
 
@@ -13,6 +13,7 @@ interface UserProfileProps {
 export function UserProfile({ githubService, onLogin, onOpenDashboard, locale }: UserProfileProps) {
     const [user, setUser] = useState<GitHubUser | null>(githubService.getUser());
     const [showMenu, setShowMenu] = useState(false);
+    const [isLoadingUser, setIsLoadingUser] = useState(githubService.isLoadingUserInfo());
     const menuRef = useRef<HTMLDivElement>(null);
 
     const t = (key: string) => {
@@ -22,14 +23,16 @@ export function UserProfile({ githubService, onLogin, onOpenDashboard, locale }:
                 logout: '登出',
                 dashboard: '个人中心',
                 profile: '个人信息',
-                notLoggedIn: '未登录'
+                notLoggedIn: '未登录',
+                loadingUser: '加载中...'
             },
             en: {
                 login: 'Login',
                 logout: 'Logout',
                 dashboard: 'Dashboard',
                 profile: 'Profile',
-                notLoggedIn: 'Not logged in'
+                notLoggedIn: 'Not logged in',
+                loadingUser: 'Loading...'
             }
         };
         return translations[locale]?.[key] || translations.en?.[key] || key;
@@ -45,6 +48,16 @@ export function UserProfile({ githubService, onLogin, onOpenDashboard, locale }:
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        // 监听加载状态变化
+        const unsubscribe = githubService.onUserLoadStateChange((isLoading) => {
+            console.log('[UserProfile] User load state changed:', isLoading);
+            setIsLoadingUser(isLoading);
+        });
+
+        return unsubscribe;
+    }, [githubService]);
 
     useEffect(() => {
         // 监听认证状态变化
@@ -77,9 +90,23 @@ export function UserProfile({ githubService, onLogin, onOpenDashboard, locale }:
     if (!user) {
         return (
             <div className="user-profile">
-                <button className="login-button" onClick={onLogin}>
-                    <Github size={16} />
-                    {t('login')}
+                <button
+                    className="login-button"
+                    onClick={onLogin}
+                    disabled={isLoadingUser}
+                    title={isLoadingUser ? t('loadingUser') : undefined}
+                >
+                    {isLoadingUser ? (
+                        <>
+                            <Loader2 size={16} className="spinning" />
+                            {t('loadingUser')}
+                        </>
+                    ) : (
+                        <>
+                            <Github size={16} />
+                            {t('login')}
+                        </>
+                    )}
                 </button>
             </div>
         );

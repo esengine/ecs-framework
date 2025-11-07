@@ -19,8 +19,26 @@
     transition: all 0.2s;
 }
 
-.login-button:hover {
+.login-button:hover:not(:disabled) {
     background: var(--color-accent-hover, #1177bb);
+}
+
+.login-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.login-button .spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .user-avatar-button {

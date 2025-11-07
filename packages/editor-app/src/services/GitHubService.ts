@@ -82,11 +82,13 @@ interface GitHubPullRequest {
     created_at: string;
     updated_at: string;
     merged_at: string | null;
+    mergeable: boolean | null;
+    mergeable_state: string;
     head: {
         ref: string;
         repo: {
             full_name: string;
-        };
+        } | null;
     };
 }
 
@@ -110,6 +112,46 @@ export interface CheckStatus {
         title: string;
         summary: string;
     };
+}
+
+interface GitHubCheckRun {
+    id: number;
+    name: string;
+    status: string;
+    conclusion: 'success' | 'failure' | 'pending' | 'neutral' | 'cancelled' | 'skipped' | 'timed_out' | null;
+    html_url: string;
+    output: {
+        title: string;
+        summary: string;
+    } | null;
+}
+
+interface GitHubCheckRunsResponse {
+    total_count: number;
+    check_runs: GitHubCheckRun[];
+}
+
+interface GitHubComment {
+    id: number;
+    user: {
+        login: string;
+        avatar_url: string;
+    };
+    body: string;
+    created_at: string;
+    html_url: string;
+}
+
+interface GitHubReview {
+    id: number;
+    user: {
+        login: string;
+        avatar_url: string;
+    };
+    body: string;
+    state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED';
+    submitted_at: string;
+    html_url: string;
 }
 
 export interface PRComment {
@@ -145,12 +187,18 @@ export interface PendingReview {
     checks?: CheckStatus[];
     comments?: PRComment[];
     reviews?: PRReview[];
+    hasConflicts?: boolean;
+    conflictFiles?: string[];
+    headBranch?: string;
+    headRepo?: string;
 }
 
 export class GitHubService {
     private accessToken: string | null = null;
     private user: GitHubUser | null = null;
     private retryTimer: number | null = null;
+    private isLoadingUser: boolean = false;
+    private userLoadStateChangeCallbacks: Set<(isLoading: boolean) => void> = new Set();
 
     private readonly STORAGE_KEY = 'github-access-token';
     private readonly API_BASE = 'https://api.github.com';
@@ -160,6 +208,29 @@ export class GitHubService {
 
     constructor() {
         this.loadToken();
+    }
+
+    isLoadingUserInfo(): boolean {
+        return this.isLoadingUser;
+    }
+
+    onUserLoadStateChange(callback: (isLoading: boolean) => void): () => void {
+        this.userLoadStateChangeCallbacks.add(callback);
+        callback(this.isLoadingUser);
+        return () => {
+            this.userLoadStateChangeCallbacks.delete(callback);
+        };
+    }
+
+    private notifyUserLoadStateChange(isLoading: boolean): void {
+        this.isLoadingUser = isLoading;
+        this.userLoadStateChangeCallbacks.forEach((callback) => {
+            try {
+                callback(isLoading);
+            } catch (error) {
+                console.error('[GitHubService] Error in user load state change callback:', error);
+            }
+        });
     }
 
     isAuthenticated(): boolean {
@@ -481,6 +552,12 @@ export class GitHubService {
         });
     }
 
+    async updatePRBranch(owner: string, repo: string, prNumber: number): Promise<void> {
+        await this.request<any>(`PUT /repos/${owner}/${repo}/pulls/${prNumber}/update-branch`, {
+            expected_head_sha: undefined
+        });
+    }
+
     async getRepository(owner: string, repo: string): Promise<GitHubRepository> {
         return await this.request<GitHubRepository>(`GET /repos/${owner}/${repo}`);
     }
@@ -553,19 +630,29 @@ export class GitHubService {
         try {
             const pr = await this.request<GitHubPullRequest>(`GET /repos/${owner}/${repo}/pulls/${prNumber}`);
 
+            if (!pr.head.repo) {
+                return [];
+            }
+
             const headRepoOwner = pr.head.repo.full_name.split('/')[0];
-            const checkRuns = await this.request<{ check_runs: any[] }>(
+            if (!headRepoOwner) {
+                return [];
+            }
+
+            const checkRuns = await this.request<GitHubCheckRunsResponse>(
                 `GET /repos/${headRepoOwner}/${repo}/commits/${pr.head.ref}/check-runs`
             );
 
-            return checkRuns.check_runs.map((run: any) => ({
+            return checkRuns.check_runs.map((run) => ({
                 conclusion: run.conclusion,
                 name: run.name,
                 detailsUrl: run.html_url,
-                output: run.output ? {
-                    title: run.output.title || '',
-                    summary: run.output.summary || ''
-                } : undefined
+                output: run.output
+                    ? {
+                          title: run.output.title || '',
+                          summary: run.output.summary || ''
+                      }
+                    : undefined
             }));
         } catch (error) {
             console.error('[GitHubService] Failed to fetch PR check status:', error);
@@ -575,8 +662,10 @@ export class GitHubService {
 
     async getPRComments(owner: string, repo: string, prNumber: number): Promise<PRComment[]> {
         try {
-            const comments = await this.request<any[]>(`GET /repos/${owner}/${repo}/issues/${prNumber}/comments`);
-            return comments.map(comment => ({
+            const comments = await this.request<GitHubComment[]>(
+                `GET /repos/${owner}/${repo}/issues/${prNumber}/comments`
+            );
+            return comments.map((comment) => ({
                 id: comment.id,
                 user: {
                     login: comment.user.login,
@@ -594,10 +683,12 @@ export class GitHubService {
 
     async getPRReviews(owner: string, repo: string, prNumber: number): Promise<PRReview[]> {
         try {
-            const reviews = await this.request<any[]>(`GET /repos/${owner}/${repo}/pulls/${prNumber}/reviews`);
+            const reviews = await this.request<GitHubReview[]>(
+                `GET /repos/${owner}/${repo}/pulls/${prNumber}/reviews`
+            );
             return reviews
-                .filter(review => review.body && review.body.trim())
-                .map(review => ({
+                .filter((review) => review.body && review.body.trim())
+                .map((review) => ({
                     id: review.id,
                     user: {
                         login: review.user.login,
@@ -611,6 +702,31 @@ export class GitHubService {
         } catch (error) {
             console.error('[GitHubService] Failed to fetch PR reviews:', error);
             return [];
+        }
+    }
+
+    async getPRConflictFiles(owner: string, repo: string, prNumber: number): Promise<{ hasConflicts: boolean; conflictFiles: string[] }> {
+        try {
+            const pr = await this.request<GitHubPullRequest>(`GET /repos/${owner}/${repo}/pulls/${prNumber}`);
+
+            const hasConflicts = pr.mergeable === false || pr.mergeable_state === 'dirty' || pr.mergeable_state === 'conflicts';
+
+            if (!hasConflicts) {
+                return { hasConflicts: false, conflictFiles: [] };
+            }
+
+            const files = await this.request<any[]>(`GET /repos/${owner}/${repo}/pulls/${prNumber}/files`);
+            const conflictFiles = files
+                .filter(file => file.status === 'modified' || file.status === 'added' || file.status === 'deleted')
+                .map(file => file.filename);
+
+            return {
+                hasConflicts: true,
+                conflictFiles
+            };
+        } catch (error) {
+            console.error('[GitHubService] Failed to fetch PR conflict files:', error);
+            return { hasConflicts: false, conflictFiles: [] };
         }
     }
 
@@ -637,13 +753,22 @@ export class GitHubService {
                     let checks: CheckStatus[] = [];
                     let comments: PRComment[] = [];
                     let reviews: PRReview[] = [];
+                    let hasConflicts = false;
+                    let conflictFiles: string[] = [];
 
                     if (pr.state === 'open') {
-                        [checks, comments, reviews] = await Promise.all([
+                        const results = await Promise.all([
                             this.getPRCheckStatus('esengine', 'ecs-editor-plugins', pr.number),
                             this.getPRComments('esengine', 'ecs-editor-plugins', pr.number),
-                            this.getPRReviews('esengine', 'ecs-editor-plugins', pr.number)
+                            this.getPRReviews('esengine', 'ecs-editor-plugins', pr.number),
+                            this.getPRConflictFiles('esengine', 'ecs-editor-plugins', pr.number)
                         ]);
+
+                        checks = results[0];
+                        comments = results[1];
+                        reviews = results[2];
+                        hasConflicts = results[3].hasConflicts;
+                        conflictFiles = results[3].conflictFiles;
                     }
 
                     const status: 'open' | 'merged' | 'closed' = pr.merged_at
@@ -659,7 +784,11 @@ export class GitHubService {
                         prUrl: pr.html_url,
                         checks,
                         comments,
-                        reviews
+                        reviews,
+                        hasConflicts,
+                        conflictFiles,
+                        headBranch: pr.head.ref,
+                        headRepo: pr.head.repo?.full_name
                     };
                 })
             );
@@ -716,6 +845,7 @@ export class GitHubService {
             if (stored) {
                 console.log('[GitHubService] Loading stored token...');
                 this.accessToken = stored;
+                this.notifyUserLoadStateChange(true);
                 this.fetchUser()
                     .then((user) => {
                         console.log('[GitHubService] User loaded from stored token:', user.login);
@@ -724,6 +854,7 @@ export class GitHubService {
                             clearTimeout(this.retryTimer);
                             this.retryTimer = null;
                         }
+                        this.notifyUserLoadStateChange(false);
                     })
                     .catch((error) => {
                         console.error('[GitHubService] Failed to fetch user with stored token:', error);
@@ -734,6 +865,7 @@ export class GitHubService {
                             this.accessToken = null;
                             this.user = null;
                             localStorage.removeItem(this.STORAGE_KEY);
+                            this.notifyUserLoadStateChange(false);
                         } else {
                             console.log('[GitHubService] Temporary error fetching user, will retry in 5 seconds');
                             this.scheduleRetryLoadUser();
@@ -744,6 +876,7 @@ export class GitHubService {
             }
         } catch (error) {
             console.error('[GitHubService] Failed to load token:', error);
+            this.notifyUserLoadStateChange(false);
         }
     }
 
@@ -760,6 +893,7 @@ export class GitHubService {
                         console.log('[GitHubService] User loaded successfully on retry:', user.login);
                         this.user = user;
                         this.retryTimer = null;
+                        this.notifyUserLoadStateChange(false);
                     })
                     .catch((error) => {
                         console.error('[GitHubService] Retry failed:', error);
@@ -769,6 +903,7 @@ export class GitHubService {
                             this.accessToken = null;
                             this.user = null;
                             localStorage.removeItem(this.STORAGE_KEY);
+                            this.notifyUserLoadStateChange(false);
                         } else {
                             console.log('[GitHubService] Will retry again in 10 seconds');
                             this.retryTimer = window.setTimeout(() => this.scheduleRetryLoadUser(), 10000);
