@@ -108,9 +108,10 @@ export class WorldManager implements IService {
             throw new Error(`已达到最大World数量限制: ${this._config.maxWorlds}`);
         }
 
+        // 优先级：config.debug > WorldManager.debug > 默认
         const worldConfig: IWorldConfig = {
             name: worldId,
-            ...(this._config.debug !== undefined && { debug: this._config.debug }),
+            debug: config?.debug ?? this._config.debug ?? false,
             ...(config?.maxScenes !== undefined && { maxScenes: config.maxScenes }),
             ...(config?.autoCleanup !== undefined && { autoCleanup: config.autoCleanup })
         };

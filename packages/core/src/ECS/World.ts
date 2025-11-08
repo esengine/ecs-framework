@@ -1,6 +1,7 @@
 import { IScene } from './IScene';
 import { Scene } from './Scene';
 import { createLogger } from '../Utils/Logger';
+import { PerformanceMonitor } from '../Utils/PerformanceMonitor';
 
 const logger = createLogger('World');
 
@@ -120,6 +121,13 @@ export class World {
 
         // 如果没有提供Scene实例，创建默认Scene
         const scene = sceneInstance || (new Scene() as unknown as T);
+
+        // 如果配置了 debug，为 Scene 注册并启用 PerformanceMonitor
+        if (this._config.debug) {
+            const performanceMonitor = new PerformanceMonitor();
+            performanceMonitor.enable();
+            scene.services.registerInstance(PerformanceMonitor, performanceMonitor);
+        }
 
         // 设置Scene的标识
         if ('id' in scene) {

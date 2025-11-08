@@ -251,7 +251,7 @@ export class Scene implements IScene {
      *
      * 从 ServiceContainer 获取，如果未注册则创建默认实例（向后兼容）
      */
-    private get performanceMonitor(): PerformanceMonitor {
+    public get performanceMonitor(): PerformanceMonitor {
         if (!this._performanceMonitor) {
             this._performanceMonitor = this._services.tryResolve(PerformanceMonitor) ?? new PerformanceMonitor();
         }
