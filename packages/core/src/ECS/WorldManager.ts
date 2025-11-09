@@ -65,7 +65,6 @@ export interface IWorldManagerConfig {
 export class WorldManager implements IService {
     private readonly _config: Required<IWorldManagerConfig>;
     private readonly _worlds: Map<string, World> = new Map();
-    private readonly _activeWorlds: Set<string> = new Set();
     private _isRunning: boolean = false;
     private _framesSinceCleanup: number = 0;
 
@@ -129,11 +128,6 @@ export class WorldManager implements IService {
             return false;
         }
 
-        // 如果World正在运行，先停止它
-        if (this._activeWorlds.has(worldId)) {
-            this.setWorldActive(worldId, false);
-        }
-
         // 销毁World
         world.destroy();
         this._worlds.delete(worldId);
@@ -174,11 +168,9 @@ export class WorldManager implements IService {
         }
 
         if (active) {
-            this._activeWorlds.add(worldId);
             world.start();
             logger.debug(`激活World: ${worldId}`);
         } else {
-            this._activeWorlds.delete(worldId);
             world.stop();
             logger.debug(`停用World: ${worldId}`);
         }
@@ -188,7 +180,8 @@ export class WorldManager implements IService {
      * 检查World是否激活
      */
     public isWorldActive(worldId: string): boolean {
-        return this._activeWorlds.has(worldId);
+        const world = this._worlds.get(worldId);
+        return world?.isActive ?? false;
     }
 
     // ===== 批量操作 =====
@@ -210,9 +203,8 @@ export class WorldManager implements IService {
     public updateAll(): void {
         if (!this._isRunning) return;
 
-        for (const worldId of this._activeWorlds) {
-            const world = this._worlds.get(worldId);
-            if (world && world.isActive) {
+        for (const world of this._worlds.values()) {
+            if (world.isActive) {
                 // 更新World的全局System
                 world.updateGlobalSystems();
 
@@ -241,9 +233,8 @@ export class WorldManager implements IService {
      */
     public getActiveWorlds(): World[] {
         const activeWorlds: World[] = [];
-        for (const worldId of this._activeWorlds) {
-            const world = this._worlds.get(worldId);
-            if (world) {
+        for (const world of this._worlds.values()) {
+            if (world.isActive) {
                 activeWorlds.push(world);
             }
         }
@@ -256,8 +247,8 @@ export class WorldManager implements IService {
     public startAll(): void {
         this._isRunning = true;
 
-        for (const worldId of this._worlds.keys()) {
-            this.setWorldActive(worldId, true);
+        for (const world of this._worlds.values()) {
+            world.start();
         }
 
         logger.info('启动所有World');
@@ -269,8 +260,8 @@ export class WorldManager implements IService {
     public stopAll(): void {
         this._isRunning = false;
 
-        for (const worldId of this._activeWorlds) {
-            this.setWorldActive(worldId, false);
+        for (const world of this._worlds.values()) {
+            world.stop();
         }
 
         logger.info('停止所有World');
@@ -309,7 +300,7 @@ export class WorldManager implements IService {
     public getStats() {
         const stats = {
             totalWorlds: this._worlds.size,
-            activeWorlds: this._activeWorlds.size,
+            activeWorlds: this.activeWorldCount,
             totalScenes: 0,
             totalEntities: 0,
             totalSystems: 0,
@@ -328,7 +319,7 @@ export class WorldManager implements IService {
             stats.worlds.push({
                 id: worldId,
                 name: world.name,
-                isActive: this._activeWorlds.has(worldId),
+                isActive: world.isActive,
                 sceneCount: world.sceneCount,
                 ...worldStats
             });
@@ -345,7 +336,7 @@ export class WorldManager implements IService {
             ...this.getStats(),
             worlds: Array.from(this._worlds.entries()).map(([worldId, world]) => ({
                 id: worldId,
-                isActive: this._activeWorlds.has(worldId),
+                isActive: world.isActive,
                 status: world.getStatus()
             }))
         };
@@ -392,7 +383,6 @@ export class WorldManager implements IService {
         }
 
         this._worlds.clear();
-        this._activeWorlds.clear();
         this._isRunning = false;
 
         logger.info('WorldManager已销毁');
@@ -446,7 +436,11 @@ export class WorldManager implements IService {
      * 获取激活World数量
      */
     public get activeWorldCount(): number {
-        return this._activeWorlds.size;
+        let count = 0;
+        for (const world of this._worlds.values()) {
+            if (world.isActive) count++;
+        }
+        return count;
     }
 
     /**
