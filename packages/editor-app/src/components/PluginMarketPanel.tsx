@@ -19,9 +19,11 @@ import '../styles/PluginMarketPanel.css';
 interface PluginMarketPanelProps {
     marketService: PluginMarketService;
     locale: string;
+    projectPath: string | null;
+    onReloadPlugins?: () => Promise<void>;
 }
 
-export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelProps) {
+export function PluginMarketPanel({ marketService, locale, projectPath, onReloadPlugins }: PluginMarketPanelProps) {
     const t = (key: string) => {
         const translations: Record<string, Record<string, string>> = {
             zh: {
@@ -47,7 +49,11 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
                 installing: '安装中...',
                 uninstalling: '卸载中...',
                 useDirectSource: '使用直连源',
-                useDirectSourceTip: '启用后直接从GitHub获取数据，绕过CDN缓存（适合测试）'
+                useDirectSourceTip: '启用后直接从GitHub获取数据，绕过CDN缓存（适合测试）',
+                latest: '最新',
+                releaseNotes: '更新日志',
+                selectVersion: '选择版本',
+                noProjectOpen: '请先打开一个项目'
             },
             en: {
                 title: 'Plugin Marketplace',
@@ -72,7 +78,11 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
                 installing: 'Installing...',
                 uninstalling: 'Uninstalling...',
                 useDirectSource: 'Direct Source',
-                useDirectSourceTip: 'Fetch data directly from GitHub, bypassing CDN cache (for testing)'
+                useDirectSourceTip: 'Fetch data directly from GitHub, bypassing CDN cache (for testing)',
+                latest: 'Latest',
+                releaseNotes: 'Release Notes',
+                selectVersion: 'Select Version',
+                noProjectOpen: 'Please open a project first'
             }
         };
         return translations[locale]?.[key] || translations.en?.[key] || key;
@@ -141,11 +151,16 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
         loadPlugins(true);
     };
 
-    const handleInstall = async (plugin: PluginMarketMetadata) => {
+    const handleInstall = async (plugin: PluginMarketMetadata, version?: string) => {
+        if (!projectPath) {
+            alert(t('noProjectOpen') || 'Please open a project first');
+            return;
+        }
+
         setInstallingPlugins((prev) => new Set(prev).add(plugin.id));
 
         try {
-            await marketService.installPlugin(plugin);
+            await marketService.installPlugin(plugin, version, onReloadPlugins);
             setPlugins([...plugins]);
         } catch (error) {
             console.error('Failed to install plugin:', error);
@@ -167,7 +182,7 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
         setInstallingPlugins((prev) => new Set(prev).add(plugin.id));
 
         try {
-            await marketService.uninstallPlugin(plugin.id);
+            await marketService.uninstallPlugin(plugin.id, onReloadPlugins);
             setPlugins([...plugins]);
         } catch (error) {
             console.error('Failed to uninstall plugin:', error);
@@ -278,7 +293,7 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
                                 isInstalled={marketService.isInstalled(plugin.id)}
                                 hasUpdate={marketService.hasUpdate(plugin)}
                                 isInstalling={installingPlugins.has(plugin.id)}
-                                onInstall={() => handleInstall(plugin)}
+                                onInstall={(version) => handleInstall(plugin, version)}
                                 onUninstall={() => handleUninstall(plugin)}
                                 t={t}
                             />
@@ -295,7 +310,7 @@ interface PluginMarketCardProps {
     isInstalled: boolean;
     hasUpdate: boolean;
     isInstalling: boolean;
-    onInstall: () => void;
+    onInstall: (version?: string) => void;
     onUninstall: () => void;
     t: (key: string) => string;
 }
@@ -343,10 +358,11 @@ function PluginMarketCard({
                                 value={selectedVersion}
                                 onChange={(e) => setSelectedVersion(e.target.value)}
                                 onClick={(e) => e.stopPropagation()}
+                                title={t('selectVersion')}
                             >
                                 {plugin.versions.map((v) => (
                                     <option key={v.version} value={v.version}>
-                                        v{v.version} {v.version === plugin.latestVersion ? '(最新)' : ''}
+                                        v{v.version} {v.version === plugin.latestVersion ? `(${t('latest')})` : ''}
                                     </option>
                                 ))}
                             </select>
@@ -361,7 +377,7 @@ function PluginMarketCard({
 
             {selectedVersionData && selectedVersionData.changes && (
                 <details className="plugin-market-version-changes">
-                    <summary>更新日志</summary>
+                    <summary>{t('releaseNotes')}</summary>
                     <p>{selectedVersionData.changes}</p>
                 </details>
             )}
@@ -401,7 +417,7 @@ function PluginMarketCard({
                     ) : isInstalled ? (
                         <>
                             {hasUpdate && (
-                                <button className="plugin-market-btn update" onClick={onInstall}>
+                                <button className="plugin-market-btn update" onClick={() => onInstall(plugin.latestVersion)}>
                                     <Download size={14} />
                                     {t('update')}
                                 </button>
@@ -412,7 +428,7 @@ function PluginMarketCard({
                             </button>
                         </>
                     ) : (
-                        <button className="plugin-market-btn install" onClick={onInstall}>
+                        <button className="plugin-market-btn install" onClick={() => onInstall(selectedVersion)}>
                             <Download size={14} />
                             {t('install')}
                         </button>

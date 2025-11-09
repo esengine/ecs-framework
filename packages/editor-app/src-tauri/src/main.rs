@@ -647,6 +647,7 @@ async fn build_plugin(plugin_folder: String, app: AppHandle) -> Result<String, S
         .compression_method(zip::CompressionMethod::Deflated)
         .unix_permissions(0o755);
 
+    // 添加 package.json
     let package_json_content = fs::read(&package_json_path)
         .map_err(|e| format!("Failed to read package.json: {}", e))?;
     zip.start_file("package.json", options)
@@ -654,17 +655,9 @@ async fn build_plugin(plugin_folder: String, app: AppHandle) -> Result<String, S
     zip.write_all(&package_json_content)
         .map_err(|e| format!("Failed to write package.json to zip: {}", e))?;
 
-    let index_esm_path = dist_path.join("index.esm.js");
-    if index_esm_path.exists() {
-        let index_content = fs::read(&index_esm_path)
-            .map_err(|e| format!("Failed to read index.esm.js: {}", e))?;
-        zip.start_file("index.js", options)
-            .map_err(|e| format!("Failed to add index.js to zip: {}", e))?;
-        zip.write_all(&index_content)
-            .map_err(|e| format!("Failed to write index.js to zip: {}", e))?;
-    } else {
-        return Err("index.esm.js not found in dist directory. Please ensure the plugin is built with Rollup.".to_string());
-    }
+    // 打包整个 dist 目录（保留 dist/ 前缀）
+    add_directory_to_zip(&mut zip, &plugin_path, &dist_path, options)
+        .map_err(|e| format!("Failed to add dist directory to zip: {}", e))?;
 
     zip.finish()
         .map_err(|e| format!("Failed to finalize zip: {}", e))?;
@@ -715,6 +708,96 @@ fn add_directory_to_zip<W: std::io::Write + std::io::Seek>(
                 .map_err(|e| format!("Failed to write file {} to zip: {}", zip_path, e))?;
         }
     }
+
+    Ok(())
+}
+
+/// 安装插件到项目 plugins 目录
+#[tauri::command]
+async fn install_marketplace_plugin(
+    project_path: String,
+    plugin_id: String,
+    zip_data_base64: String,
+) -> Result<String, String> {
+    use std::fs;
+    use std::path::Path;
+    use base64::{Engine as _, engine::general_purpose};
+    use zip::ZipArchive;
+    use std::io::Cursor;
+
+    let project_path = Path::new(&project_path);
+    if !project_path.exists() {
+        return Err(format!("Project path does not exist: {}", project_path.display()));
+    }
+
+    let plugins_dir = project_path.join("plugins");
+    if !plugins_dir.exists() {
+        fs::create_dir_all(&plugins_dir)
+            .map_err(|e| format!("Failed to create plugins directory: {}", e))?;
+    }
+
+    let plugin_dir = plugins_dir.join(&plugin_id);
+    if plugin_dir.exists() {
+        fs::remove_dir_all(&plugin_dir)
+            .map_err(|e| format!("Failed to remove old plugin directory: {}", e))?;
+    }
+
+    fs::create_dir_all(&plugin_dir)
+        .map_err(|e| format!("Failed to create plugin directory: {}", e))?;
+
+    let zip_bytes = general_purpose::STANDARD
+        .decode(&zip_data_base64)
+        .map_err(|e| format!("Failed to decode base64 ZIP data: {}", e))?;
+
+    let cursor = Cursor::new(zip_bytes);
+    let mut archive = ZipArchive::new(cursor)
+        .map_err(|e| format!("Failed to read ZIP archive: {}", e))?;
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)
+            .map_err(|e| format!("Failed to read ZIP entry {}: {}", i, e))?;
+
+        let file_path = match file.enclosed_name() {
+            Some(path) => path,
+            None => continue,
+        };
+
+        let out_path = plugin_dir.join(file_path);
+
+        if file.is_dir() {
+            fs::create_dir_all(&out_path)
+                .map_err(|e| format!("Failed to create directory {}: {}", out_path.display(), e))?;
+        } else {
+            if let Some(parent) = out_path.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create parent directory: {}", e))?;
+            }
+
+            let mut out_file = fs::File::create(&out_path)
+                .map_err(|e| format!("Failed to create file {}: {}", out_path.display(), e))?;
+
+            std::io::copy(&mut file, &mut out_file)
+                .map_err(|e| format!("Failed to write file {}: {}", out_path.display(), e))?;
+        }
+    }
+
+    Ok(plugin_dir.to_string_lossy().to_string())
+}
+
+/// 卸载插件
+#[tauri::command]
+async fn uninstall_marketplace_plugin(project_path: String, plugin_id: String) -> Result<(), String> {
+    use std::fs;
+    use std::path::Path;
+
+    let project_path = Path::new(&project_path);
+    let plugin_dir = project_path.join("plugins").join(&plugin_id);
+
+    if !plugin_dir.exists() {
+        return Err(format!("Plugin directory does not exist: {}", plugin_dir.display()));
+    }
+
+    fs::remove_dir_all(&plugin_dir)
+        .map_err(|e| format!("Failed to remove plugin directory: {}", e))?;
 
     Ok(())
 }
@@ -817,7 +900,9 @@ fn main() {
             open_file_with_default_app,
             show_in_folder,
             build_plugin,
-            read_file_as_base64
+            read_file_as_base64,
+            install_marketplace_plugin,
+            uninstall_marketplace_plugin
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

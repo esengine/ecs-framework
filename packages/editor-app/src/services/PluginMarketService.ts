@@ -71,10 +71,16 @@ export class PluginMarketService {
 
     private pluginManager: EditorPluginManager;
     private installedPlugins: Map<string, InstalledPluginInfo> = new Map();
+    private projectPath: string | null = null;
 
     constructor(pluginManager: EditorPluginManager) {
         this.pluginManager = pluginManager;
         this.loadInstalledPlugins();
+    }
+
+    setProjectPath(path: string | null): void {
+        this.projectPath = path;
+        console.log(`[PluginMarketService] Project path set to: ${path}`);
     }
 
     isUsingDirectSource(): boolean {
@@ -160,9 +166,13 @@ export class PluginMarketService {
         return registry.plugins;
     }
 
-    async installPlugin(plugin: PluginMarketMetadata, version?: string): Promise<void> {
+    async installPlugin(plugin: PluginMarketMetadata, version?: string, onReload?: () => Promise<void>): Promise<void> {
         const targetVersion = version || plugin.latestVersion;
         console.log(`[PluginMarketService] Installing plugin: ${plugin.name} v${targetVersion}`);
+
+        if (!this.projectPath) {
+            throw new Error('No project opened. Please open a project first.');
+        }
 
         try {
             // 获取指定版本信息
@@ -175,19 +185,18 @@ export class PluginMarketService {
             console.log(`[PluginMarketService] Downloading ZIP: ${versionInfo.zipUrl}`);
             const zipBlob = await this.downloadZip(versionInfo.zipUrl);
 
-            // 解压并加载插件
-            console.log(`[PluginMarketService] Extracting and loading plugin...`);
-            const pluginInstance = await this.loadPluginFromZip(zipBlob, plugin);
-
-            if (!pluginInstance) {
-                throw new Error(`Failed to extract plugin instance from ${plugin.name}`);
-            }
-
-            // 安装到编辑器
-            await this.pluginManager.installEditor(pluginInstance);
+            // 解压到项目 plugins 目录
+            console.log(`[PluginMarketService] Extracting plugin to project...`);
+            await this.extractZipToProject(zipBlob, plugin.id);
 
             // 标记为已安装
             this.markAsInstalled(plugin, targetVersion);
+
+            // 重新加载项目插件
+            if (onReload) {
+                console.log(`[PluginMarketService] Reloading project plugins...`);
+                await onReload();
+            }
 
             console.log(`[PluginMarketService] Successfully installed: ${plugin.name} v${targetVersion}`);
         } catch (error) {
@@ -196,14 +205,35 @@ export class PluginMarketService {
         }
     }
 
-    async uninstallPlugin(pluginId: string): Promise<void> {
+    async uninstallPlugin(pluginId: string, onReload?: () => Promise<void>): Promise<void> {
         console.log(`[PluginMarketService] Uninstalling plugin: ${pluginId}`);
 
+        if (!this.projectPath) {
+            throw new Error('No project opened');
+        }
+
         try {
+            // 从编辑器卸载
             await this.pluginManager.uninstallEditor(pluginId);
 
+            // 调用 Tauri 后端命令删除插件目录
+            const { invoke } = await import('@tauri-apps/api/core');
+            await invoke('uninstall_marketplace_plugin', {
+                projectPath: this.projectPath,
+                pluginId: pluginId
+            });
+
+            console.log(`[PluginMarketService] Successfully removed plugin directory`);
+
+            // 从已安装列表移除
             this.installedPlugins.delete(pluginId);
             this.saveInstalledPlugins();
+
+            // 重新加载项目插件
+            if (onReload) {
+                console.log(`[PluginMarketService] Reloading project plugins...`);
+                await onReload();
+            }
 
             console.log(`[PluginMarketService] Successfully uninstalled: ${pluginId}`);
         } catch (error) {
@@ -237,72 +267,39 @@ export class PluginMarketService {
         return await response.blob();
     }
 
-    private async loadPluginFromZip(zipBlob: Blob, metadata: PluginMarketMetadata): Promise<IEditorPlugin | null> {
+    private async extractZipToProject(zipBlob: Blob, pluginId: string): Promise<void> {
+        if (!this.projectPath) {
+            throw new Error('Project path not set');
+        }
+
         try {
-            // 解压 ZIP
-            const zip = await JSZip.loadAsync(zipBlob);
+            // 将 Blob 转换为 ArrayBuffer
+            const arrayBuffer = await zipBlob.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
 
-            // 查找 index.js
-            const indexFile = zip.file('index.js');
-            if (!indexFile) {
-                throw new Error('index.js not found in plugin ZIP');
+            // 转换为 base64
+            let binary = '';
+            const len = uint8Array.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(uint8Array[i] ?? 0);
             }
+            const base64Data = btoa(binary);
 
-            // 读取 index.js 内容
-            const indexContent = await indexFile.async('text');
+            // 调用 Tauri 后端命令进行安装
+            const { invoke } = await import('@tauri-apps/api/core');
+            const pluginDir = await invoke<string>('install_marketplace_plugin', {
+                projectPath: this.projectPath,
+                pluginId: pluginId,
+                zipDataBase64: base64Data
+            });
 
-            // 创建 Blob URL
-            const blob = new Blob([indexContent], { type: 'application/javascript' });
-            const blobUrl = URL.createObjectURL(blob);
-
-            try {
-                // 动态导入模块
-                const module = await import(/* @vite-ignore */ blobUrl);
-
-                // 提取插件实例
-                return this.extractPluginInstance(module, metadata);
-            } finally {
-                // 清理 Blob URL
-                URL.revokeObjectURL(blobUrl);
-            }
+            console.log(`[PluginMarketService] Successfully extracted plugin to ${pluginDir}`);
         } catch (error) {
-            console.error('[PluginMarketService] Failed to load plugin from ZIP:', error);
-            throw error;
+            console.error('[PluginMarketService] Failed to extract ZIP:', error);
+            throw new Error(`Failed to extract plugin: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
-    private extractPluginInstance(module: any, metadata: PluginMarketMetadata): IEditorPlugin | null {
-        // 尝试从 default export 获取
-        if (module.default && this.isPluginInstance(module.default)) {
-            return module.default;
-        }
-
-        // 尝试从命名 export 获取
-        for (const key of Object.keys(module)) {
-            const value = module[key];
-            if (value && this.isPluginInstance(value)) {
-                return value;
-            }
-        }
-
-        console.error('[PluginMarketService] No valid plugin instance found in module:', module);
-        return null;
-    }
-
-    private isPluginInstance(obj: any): obj is IEditorPlugin {
-        if (!obj || typeof obj !== 'object') {
-            return false;
-        }
-
-        return (
-            typeof obj.name === 'string' &&
-            typeof obj.version === 'string' &&
-            typeof obj.displayName === 'string' &&
-            typeof obj.category === 'string' &&
-            typeof obj.install === 'function' &&
-            typeof obj.uninstall === 'function'
-        );
-    }
 
     private markAsInstalled(plugin: PluginMarketMetadata, version: string): void {
         this.installedPlugins.set(plugin.id, {

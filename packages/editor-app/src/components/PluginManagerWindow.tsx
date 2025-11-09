@@ -26,6 +26,7 @@ interface PluginManagerWindowProps {
     onRefresh?: () => Promise<void>;
     onOpen?: () => void;
     locale: string;
+    projectPath: string | null;
 }
 
 const categoryIcons: Record<EditorPluginCategory, string> = {
@@ -36,7 +37,7 @@ const categoryIcons: Record<EditorPluginCategory, string> = {
     [EditorPluginCategory.ImportExport]: 'Package'
 };
 
-export function PluginManagerWindow({ pluginManager, githubService, onClose, onRefresh, onOpen, locale }: PluginManagerWindowProps) {
+export function PluginManagerWindow({ pluginManager, githubService, onClose, onRefresh, onOpen, locale, projectPath }: PluginManagerWindowProps) {
     const t = (key: string) => {
         const translations: Record<string, Record<string, string>> = {
             zh: {
@@ -111,6 +112,11 @@ export function PluginManagerWindow({ pluginManager, githubService, onClose, onR
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const marketService = useMemo(() => new PluginMarketService(pluginManager), [pluginManager]);
+
+    // 设置项目路径到 marketService
+    useEffect(() => {
+        marketService.setProjectPath(projectPath);
+    }, [projectPath, marketService]);
 
     const updatePluginList = () => {
         const allPlugins = pluginManager.getAllPluginMetadata();
@@ -418,7 +424,14 @@ export function PluginManagerWindow({ pluginManager, githubService, onClose, onR
                     </>
                 )}
 
-                {activeTab === 'marketplace' && <PluginMarketPanel marketService={marketService} locale={locale} />}
+                {activeTab === 'marketplace' && (
+                    <PluginMarketPanel
+                        marketService={marketService}
+                        locale={locale}
+                        projectPath={projectPath}
+                        onReloadPlugins={onRefresh}
+                    />
+                )}
             </div>
         </div>
     );
