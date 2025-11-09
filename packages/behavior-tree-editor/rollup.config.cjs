@@ -15,14 +15,14 @@ const external = [
 ];
 
 module.exports = [
-    // ES模块构建
     {
         input: 'bin/index.js',
         output: {
             file: 'dist/index.esm.js',
             format: 'es',
             sourcemap: true,
-            exports: 'named'
+            exports: 'named',
+            inlineDynamicImports: true
         },
         plugins: [
             resolve({

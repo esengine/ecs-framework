@@ -1,5 +1,6 @@
 import { singleton } from 'tsyringe';
-import { IService } from '@esengine/ecs-framework';
+import { Core, IService } from '@esengine/ecs-framework';
+import { MessageHub } from '@esengine/editor-core';
 import { useBehaviorTreeDataStore } from '../application/state/BehaviorTreeDataStore';
 import { useTreeStore } from '../stores';
 import type { BehaviorTree } from '../domain/models/BehaviorTree';
@@ -13,6 +14,25 @@ export class BehaviorTreeService implements IService {
 
     async loadFromFile(filePath: string): Promise<void> {
         console.log('[BehaviorTreeService] Loading tree from:', filePath);
+
+        try {
+            const { invoke } = await import('@tauri-apps/api/core');
+            const content = await invoke<string>('read_behavior_tree_file', { filePath });
+
+            useTreeStore.getState().importFromJSON(content);
+            useTreeStore.getState().setIsOpen(true);
+            useTreeStore.getState().setPendingFilePath(filePath);
+
+            const messageHub = Core.services.resolve(MessageHub);
+            if (messageHub) {
+                messageHub.publish('behavior-tree:open', { filePath, tree: JSON.parse(content) });
+            }
+
+            console.log('[BehaviorTreeService] Tree loaded successfully');
+        } catch (error) {
+            console.error('[BehaviorTreeService] Failed to load tree:', error);
+            throw error;
+        }
     }
 
     async saveToFile(filePath: string): Promise<void> {

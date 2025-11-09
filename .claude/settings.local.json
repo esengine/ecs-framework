@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run type-check:*)",
+      "Bash(gh pr list:*)",
+      "Bash(packages/behavior-tree-editor/src/components/panels/BehaviorTreeEditorPanel.tsx)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
