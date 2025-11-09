@@ -92,16 +92,23 @@ interface GitHubPullRequest {
     };
 }
 
+export interface PluginVersion {
+    version: string;
+    prUrl: string;
+    publishedAt: string;
+}
+
 export interface PublishedPlugin {
     id: string;
     name: string;
-    version: string;
     description: string;
     category: string;
     category_type: string;
     repositoryUrl: string;
-    prUrl: string;
-    publishedAt: string;
+    /** 最新版本号 */
+    latestVersion: string;
+    /** 所有已发布的版本 */
+    versions: PluginVersion[];
 }
 
 export interface CheckStatus {
@@ -589,9 +596,20 @@ export class GitHubService {
             const prs = await this.getUserPullRequests('esengine', 'ecs-editor-plugins', 'closed');
             const mergedPRs = prs.filter((pr) => pr.merged_at !== null);
 
-            const plugins: PublishedPlugin[] = [];
+            // 存储已删除的插件
             const deletedPlugins = new Map<string, Date>();
+            // 按插件 ID 分组的版本信息
+            const pluginVersionsMap = new Map<string, {
+                id: string;
+                name: string;
+                description: string;
+                category: string;
+                category_type: string;
+                repositoryUrl: string;
+                versions: PluginVersion[];
+            }>();
 
+            // 第一遍：收集已删除的插件
             for (const pr of mergedPRs) {
                 const removeMatch = pr.title.match(/Remove plugin: (.+)/);
                 if (removeMatch && removeMatch[1] && pr.merged_at) {
@@ -601,12 +619,14 @@ export class GitHubService {
                 }
             }
 
+            // 第二遍：收集所有版本信息
             for (const pr of mergedPRs) {
                 const match = pr.title.match(/Add plugin: (.+) v([\d.]+)/);
                 if (match && match[1] && match[2]) {
                     const pluginName = match[1];
                     const version = match[2];
 
+                    // 检查插件是否已被删除
                     const deletedDate = deletedPlugins.get(pluginName);
                     if (deletedDate && pr.merged_at) {
                         const addedDate = new Date(pr.merged_at);
@@ -616,6 +636,7 @@ export class GitHubService {
                         }
                     }
 
+                    // 提取插件信息
                     const repoMatch = pr.body?.match(/\*\*Repository\*\*: (.+)/);
                     const repositoryUrl = repoMatch?.[1] || '';
 
@@ -636,19 +657,46 @@ export class GitHubService {
 
                     const categoryType = id.startsWith('esengine-') ? 'official' : 'community';
 
-                    plugins.push({
-                        id,
-                        name: pluginName,
+                    // 获取或创建插件记录
+                    if (!pluginVersionsMap.has(id)) {
+                        pluginVersionsMap.set(id, {
+                            id,
+                            name: pluginName,
+                            description,
+                            category,
+                            category_type: categoryType,
+                            repositoryUrl,
+                            versions: []
+                        });
+                    }
+
+                    // 添加版本信息
+                    const pluginData = pluginVersionsMap.get(id)!;
+                    pluginData.versions.push({
                         version,
-                        description,
-                        category,
-                        category_type: categoryType,
-                        repositoryUrl,
                         prUrl: pr.html_url,
                         publishedAt: pr.merged_at || pr.created_at
                     });
                 }
             }
+
+            // 转换为最终结果，并对版本排序
+            const plugins: PublishedPlugin[] = Array.from(pluginVersionsMap.values()).map(plugin => {
+                // 按版本号降序排序（最新版本在前）
+                const sortedVersions = plugin.versions.sort((a, b) => {
+                    const parseVersion = (v: string) => {
+                        const parts = v.split('.').map(Number);
+                        return (parts[0] || 0) * 10000 + (parts[1] || 0) * 100 + (parts[2] || 0);
+                    };
+                    return parseVersion(b.version) - parseVersion(a.version);
+                });
+
+                return {
+                    ...plugin,
+                    latestVersion: sortedVersions[0]?.version || '0.0.0',
+                    versions: sortedVersions
+                };
+            });
 
             return plugins;
         } catch (error) {
