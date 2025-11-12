@@ -1,6 +1,5 @@
 import { RefObject, useEffect, useRef } from 'react';
-import { Node as BehaviorTreeNode } from '../domain/models/Node';
-import { ROOT_NODE_ID } from '../domain/constants/RootNode';
+import { BehaviorTreeNode, ROOT_NODE_ID } from '../stores/useBehaviorTreeStore';
 
 interface QuickCreateMenuState {
     visible: boolean;
@@ -16,7 +15,6 @@ interface UseCanvasMouseEventsParams {
     canvasOffset: { x: number; y: number };
     canvasScale: number;
     connectingFrom: string | null;
-    connectingFromProperty: string | null;
     connectingToPos: { x: number; y: number } | null;
     isBoxSelecting: boolean;
     boxSelectStart: { x: number; y: number } | null;
@@ -42,7 +40,6 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams) {
         canvasOffset,
         canvasScale,
         connectingFrom,
-        connectingFromProperty,
         connectingToPos,
         isBoxSelecting,
         boxSelectStart,
@@ -142,18 +139,11 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams) {
     const handleCanvasMouseMove = (e: React.MouseEvent) => {
         if (connectingFrom && canvasRef.current && !quickCreateMenu.visible) {
             const rect = canvasRef.current.getBoundingClientRect();
-
-            // 步骤1：计算相对于画布容器的坐标
-            const containerX = e.clientX - rect.left;
-            const containerY = e.clientY - rect.top;
-
-            // 步骤2：转换为画布逻辑坐标
-            const logicX = (containerX - canvasOffset.x) / canvasScale;
-            const logicY = (containerY - canvasOffset.y) / canvasScale;
-
+            const canvasX = (e.clientX - rect.left - canvasOffset.x) / canvasScale;
+            const canvasY = (e.clientY - rect.top - canvasOffset.y) / canvasScale;
             setConnectingToPos({
-                x: logicX,
-                y: logicY
+                x: canvasX,
+                y: canvasY
             });
         }
     };
@@ -164,14 +154,6 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams) {
         }
 
         if (connectingFrom && connectingToPos) {
-            // 属性连接不支持创建新节点，直接清理连接状态
-            if (connectingFromProperty) {
-                clearConnecting();
-                setConnectingToPos(null);
-                return;
-            }
-
-            // 节点连接才检查是否能添加子节点
             const sourceNode = nodes.find(n => n.id === connectingFrom);
             if (sourceNode && !sourceNode.canAddChild()) {
                 const maxChildren = sourceNode.template.maxChildren ?? Infinity;

@@ -17,7 +17,10 @@ export * from './application/interfaces/IExecutionHooks';
 export * from './application/state/BehaviorTreeDataStore';
 export * from './hooks';
 export * from './stores';
-export * from './types';
+// Re-export specific items to avoid conflicts
+export {
+    EditorConfig
+} from './types';
 export * from './infrastructure/factories/NodeFactory';
 export * from './infrastructure/serialization/BehaviorTreeSerializer';
 export * from './infrastructure/validation/BehaviorTreeValidator';
@@ -26,5 +29,10 @@ export * from './utils/BehaviorTreeExecutor';
 export * from './utils/DOMCache';
 export * from './utils/portUtils';
 export * from './compiler/BehaviorTreeCompiler';
-export * from './config/editorConstants';
+// Export everything except DEFAULT_EDITOR_CONFIG from editorConstants
+export {
+    ICON_MAP,
+    ROOT_NODE_TEMPLATE,
+    DEFAULT_EDITOR_CONFIG
+} from './config/editorConstants';
 export * from './interfaces/IEditorExtensions';

@@ -1,12 +1,10 @@
 import { useState, RefObject } from 'react';
 import { NodeTemplate } from '@esengine/behavior-tree';
+import { BehaviorTreeNode, Connection } from '../stores/useBehaviorTreeStore';
 import { Node } from '../domain/models/Node';
-import { Connection } from '../domain/models/Connection';
 import { Position } from '../domain/value-objects/Position';
 import { useNodeOperations } from './useNodeOperations';
 import { useConnectionOperations } from './useConnectionOperations';
-
-type BehaviorTreeNode = Node;
 
 interface QuickCreateMenuState {
     visible: boolean;
@@ -69,24 +67,32 @@ export function useQuickCreateMenu(params: UseQuickCreateMenuParams) {
         const nodeToReplace = nodes.find((n) => n.id === quickCreateMenu.replaceNodeId);
         if (!nodeToReplace) return;
 
+        // 如果行为树正在执行，先停止
         if (executionMode !== 'idle') {
             onStop();
         }
 
+        // 合并数据：新模板的默认配置 + 保留旧节点中同名属性的值
         const newData = { ...newTemplate.defaultConfig };
+
+        // 获取新模板的属性名列表
         const newPropertyNames = new Set(newTemplate.properties.map((p) => p.name));
 
+        // 遍历旧节点的 data，保留新模板中也存在的属性
         for (const [key, value] of Object.entries(nodeToReplace.data)) {
+            // 跳过节点类型相关的字段
             if (key === 'nodeType' || key === 'compositeType' || key === 'decoratorType' ||
                 key === 'actionType' || key === 'conditionType') {
                 continue;
             }
 
+            // 如果新模板也有这个属性，保留旧值（包括绑定信息）
             if (newPropertyNames.has(key)) {
                 newData[key] = value;
             }
         }
 
+        // 创建新节点，保留原节点的位置和连接
         const newNode = new Node(
             nodeToReplace.id,
             newTemplate,
@@ -95,8 +101,10 @@ export function useQuickCreateMenu(params: UseQuickCreateMenuParams) {
             Array.from(nodeToReplace.children)
         );
 
+        // 替换节点
         setNodes(nodes.map((n) => n.id === newNode.id ? newNode : n));
 
+        // 删除所有指向该节点的属性连接，让用户重新连接
         const propertyConnections = connections.filter((conn) =>
             conn.connectionType === 'property' && conn.to === newNode.id
         );
@@ -109,11 +117,15 @@ export function useQuickCreateMenu(params: UseQuickCreateMenuParams) {
             );
         });
 
+        // 关闭快速创建菜单
         closeQuickCreateMenu();
+
+        // 显示提示
         showToast?.(`已将节点替换为 ${newTemplate.displayName}`, 'success');
     };
 
     const handleQuickCreateNode = (template: NodeTemplate) => {
+        // 如果是替换模式，直接调用替换函数
         if (quickCreateMenu.mode === 'replace') {
             handleReplaceNode(template);
             return;
@@ -133,10 +145,12 @@ export function useQuickCreateMenu(params: UseQuickCreateMenuParams) {
             template.defaultConfig
         );
 
+        // 如果有连接源，创建连接
         if (connectingFrom) {
             const fromNode = nodes.find((n: BehaviorTreeNode) => n.id === connectingFrom);
             if (fromNode) {
                 if (connectingFromProperty) {
+                    // 属性连接
                     connectionOperations.addConnection(
                         connectingFrom,
                         newNode.id,
@@ -145,12 +159,14 @@ export function useQuickCreateMenu(params: UseQuickCreateMenuParams) {
                         undefined
                     );
                 } else {
+                    // 节点连接
                     connectionOperations.addConnection(connectingFrom, newNode.id, 'node');
                 }
             }
         }
 
         closeQuickCreateMenu();
+
         onNodeCreate?.(template, { x: posX, y: posY });
     };
 

@@ -1,10 +1,8 @@
-import { MutableRefObject } from 'react';
 import { ask } from '@tauri-apps/plugin-dialog';
+import { BehaviorTreeNode } from '../stores/useBehaviorTreeStore';
 import { Node } from '../domain/models/Node';
 import { Position } from '../domain/value-objects/Position';
 import { NodeTemplate } from '@esengine/behavior-tree';
-
-type BehaviorTreeNode = Node;
 
 interface UseEditorHandlersParams {
     isDraggingNode: boolean;
@@ -17,7 +15,6 @@ interface UseEditorHandlersParams {
     onNodeSelect?: (node: BehaviorTreeNode) => void;
     rootNodeId: string;
     rootNodeTemplate: NodeTemplate;
-    justFinishedDragRef: MutableRefObject<boolean>;
 }
 
 export function useEditorHandlers(params: UseEditorHandlersParams) {
@@ -31,17 +28,11 @@ export function useEditorHandlers(params: UseEditorHandlersParams) {
         triggerForceUpdate,
         onNodeSelect,
         rootNodeId,
-        rootNodeTemplate,
-        justFinishedDragRef
+        rootNodeTemplate
     } = params;
 
     const handleNodeClick = (e: React.MouseEvent, node: BehaviorTreeNode) => {
         if (isDraggingNode) {
-            return;
-        }
-
-        if (justFinishedDragRef.current) {
-            justFinishedDragRef.current = false;
             return;
         }
 

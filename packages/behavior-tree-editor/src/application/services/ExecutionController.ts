@@ -1,9 +1,7 @@
 import { BehaviorTreeExecutor, ExecutionStatus, ExecutionLog } from '../../utils/BehaviorTreeExecutor';
-import { Node as BehaviorTreeNode } from '../../domain/models/Node';
-import { Connection } from '../../domain/models/Connection';
-import { NodeExecutionStatus } from '../../stores/useExecutionStore';
+import { BehaviorTreeNode, Connection, NodeExecutionStatus } from '../../stores/behaviorTreeStore';
 import { BlackboardValue } from '../../domain/models/Blackboard';
-import { DOMCache } from '../../utils/DOMCache';
+import { DOMCache } from '../../presentation/utils/DOMCache';
 import { EditorEventBus, EditorEvent } from '../../infrastructure/events/EditorEventBus';
 import { ExecutionHooksManager } from '../interfaces/IExecutionHooks';
 

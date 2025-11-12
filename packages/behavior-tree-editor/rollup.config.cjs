@@ -58,6 +58,9 @@ module.exports = [
                 respectExternal: true
             })
         ],
-        external
+        external: [
+            ...external,
+            /\.css$/
+        ]
     }
 ];

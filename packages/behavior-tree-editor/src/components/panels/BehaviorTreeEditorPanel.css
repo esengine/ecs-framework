@@ -1,81 +1,126 @@
+/* 行为树编辑器面板样式 */
 .behavior-tree-editor-panel {
     display: flex;
     flex-direction: column;
-    height: 100%;
     width: 100%;
-    background: #1e1e1e;
+    height: 100%;
+    background-color: #1a1a1a;
 }
 
-.behavior-tree-editor-toolbar {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    background: #252526;
-    border-bottom: 1px solid #3e3e42;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.behavior-tree-editor-toolbar .toolbar-section {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.behavior-tree-editor-toolbar .toolbar-divider {
-    width: 1px;
-    height: 24px;
-    background: #3e3e42;
-    margin: 0 4px;
-}
-
-.behavior-tree-editor-toolbar .toolbar-btn {
+/* 空状态 */
+.behavior-tree-editor-empty {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 6px;
-    background: transparent;
+    width: 100%;
+    height: 100%;
+    background-color: #1a1a1a;
+}
+
+.empty-state {
+    text-align: center;
+    color: #666;
+}
+
+.empty-state svg {
+    color: #444;
+    margin-bottom: 16px;
+}
+
+.empty-state p {
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+.empty-state .hint {
+    font-size: 12px;
+    color: #555;
+}
+
+/* 工具栏 */
+.editor-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 40px;
+    padding: 0 16px;
+    background-color: #2d2d30;
+    border-bottom: 1px solid #3e3e42;
+}
+
+.toolbar-left,
+.toolbar-center,
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.file-name {
+    color: #cccccc;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.toolbar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background-color: transparent;
     border: 1px solid transparent;
     border-radius: 4px;
-    cursor: pointer;
     color: #cccccc;
+    cursor: pointer;
     transition: all 0.2s;
 }
 
-.behavior-tree-editor-toolbar .toolbar-btn:hover:not(:disabled) {
-    background: #2a2d2e;
-    border-color: #3e3e42;
+.toolbar-btn:hover:not(:disabled) {
+    background-color: #3e3e42;
+    border-color: #464647;
 }
 
-.behavior-tree-editor-toolbar .toolbar-btn:active:not(:disabled) {
-    background: #37373d;
+.toolbar-btn:active:not(:disabled) {
+    background-color: #2a2d2e;
 }
 
-.behavior-tree-editor-toolbar .toolbar-btn:disabled {
+.toolbar-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
 }
 
-.behavior-tree-editor-toolbar .file-info {
+/* 画布容器 */
+.editor-canvas-container {
     flex: 1;
-    justify-content: flex-end;
-}
-
-.behavior-tree-editor-toolbar .file-name {
-    font-size: 13px;
-    color: #9d9d9d;
-    font-weight: 500;
-}
-
-.behavior-tree-editor-content {
-    flex: 1;
-    overflow: hidden;
     position: relative;
+    overflow: hidden;
 }
 
-.editor-canvas-area {
+/* 节点层 */
+.nodes-layer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+/* 行为树画布 */
+.behavior-tree-canvas {
+    position: relative;
     width: 100%;
     height: 100%;
     overflow: hidden;
-    position: relative;
+}
+
+.canvas-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.canvas-content {
+    position: absolute;
+    width: 100%;
+    height: 100%;
 }

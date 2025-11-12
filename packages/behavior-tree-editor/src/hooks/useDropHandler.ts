@@ -13,7 +13,6 @@ interface UseDropHandlerParams {
     canvasScale: number;
     nodeOperations: ReturnType<typeof useNodeOperations>;
     onNodeCreate?: (template: NodeTemplate, position: { x: number; y: number }) => void;
-    isDraggingNode?: boolean;
 }
 
 export function useDropHandler(params: UseDropHandlerParams) {
@@ -22,8 +21,7 @@ export function useDropHandler(params: UseDropHandlerParams) {
         canvasOffset,
         canvasScale,
         nodeOperations,
-        onNodeCreate,
-        isDraggingNode
+        onNodeCreate
     } = params;
 
     const [isDragging, setIsDragging] = useState(false);
@@ -32,20 +30,6 @@ export function useDropHandler(params: UseDropHandlerParams) {
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(false);
-
-        // 如果正在移动节点，不处理drop事件
-        if (isDraggingNode) {
-            return;
-        }
-
-        // 检查是否有有效的拖拽数据
-        const hasBlackboardData = e.dataTransfer.types.includes('application/blackboard-variable');
-        const hasNodeTemplateData = e.dataTransfer.types.includes('application/behavior-tree-node');
-
-        // 如果没有任何有效的拖拽数据，直接返回（避免解析空数据）
-        if (!hasBlackboardData && !hasNodeTemplateData) {
-            return;
-        }
 
         try {
             const rect = canvasRef.current?.getBoundingClientRect();

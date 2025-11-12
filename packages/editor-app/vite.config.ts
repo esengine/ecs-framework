@@ -544,17 +544,6 @@ const commonjs = require('@rollup/plugin-commonjs');
 const dts = require('rollup-plugin-dts').default;
 const postcss = require('rollup-plugin-postcss');
 
-// 忽略 CSS 导入的插件
-const ignoreCss = () => ({
-    name: 'ignore-css',
-    resolveId(source) {
-        if (source.endsWith('.css')) {
-            return { id: source, external: true };
-        }
-        return null;
-    }
-});
-
 const external = [
     'react',
     'react/jsx-runtime',
@@ -577,7 +566,8 @@ module.exports = [
             file: 'dist/index.js',
             format: 'es',
             sourcemap: true,
-            exports: 'named'
+            exports: 'named',
+            inlineDynamicImports: true
         },
         plugins: [
             resolve({
@@ -610,7 +600,10 @@ module.exports = [
                 respectExternal: true
             })
         ],
-        external
+        external: [
+            ...external,
+            /\\.css$/
+        ]
     }
 ];
 `;

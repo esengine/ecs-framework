@@ -135,12 +135,19 @@ function App() {
                 setPluginUpdateTrigger((prev) => prev + 1);
             });
 
+            const unsubscribeNotification = messageHub.subscribe('notification:show', (notification: { message: string; type: 'success' | 'error' | 'warning' | 'info'; timestamp: number }) => {
+                if (notification && notification.message) {
+                    showToast(notification.message, notification.type);
+                }
+            });
+
             return () => {
                 unsubscribeEnabled();
                 unsubscribeDisabled();
+                unsubscribeNotification();
             };
         }
-    }, [messageHub]);
+    }, [messageHub, showToast]);
 
     // 监听远程连接状态
     useEffect(() => {

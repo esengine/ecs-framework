@@ -26,18 +26,14 @@ export class BehaviorTreePlugin implements IEditorPlugin {
     readonly icon = 'GitBranch';
 
     async install(core: Core, services: ServiceContainer): Promise<void> {
-        console.log('[BehaviorTreePlugin] Installing behavior tree editor plugin...');
-
         this.registerServices(services);
         this.registerCompilers(services);
         this.registerInspectors(services);
         this.registerFileActions(services);
-
-        console.log('[BehaviorTreePlugin] Behavior tree editor plugin installed');
     }
 
     async uninstall(): Promise<void> {
-        console.log('[BehaviorTreePlugin] Uninstalling behavior tree editor plugin...');
+        // 清理插件资源
     }
 
     registerPanels(): PanelDescriptor[] {
@@ -48,14 +44,14 @@ export class BehaviorTreePlugin implements IEditorPlugin {
                 position: PanelPosition.Center,
                 closable: true,
                 component: BehaviorTreeEditorPanel,
-                order: 100
+                order: 100,
+                isDynamic: true  // 标记为动态面板
             }
         ];
     }
 
     private registerServices(services: ServiceContainer): void {
         services.registerSingleton(BehaviorTreeService);
-        console.log('[BehaviorTreePlugin] Services registered');
     }
 
     private registerCompilers(services: ServiceContainer): void {
@@ -63,7 +59,6 @@ export class BehaviorTreePlugin implements IEditorPlugin {
         if (compilerRegistry) {
             const compiler = new BehaviorTreeCompiler();
             compilerRegistry.register(compiler);
-            console.log('[BehaviorTreePlugin] Compiler registered');
         }
     }
 
@@ -72,14 +67,12 @@ export class BehaviorTreePlugin implements IEditorPlugin {
         if (inspectorRegistry) {
             const provider = new BehaviorTreeNodeInspectorProvider();
             inspectorRegistry.register(provider);
-            console.log('[BehaviorTreePlugin] Inspector provider registered');
         }
     }
 
     private registerFileActions(services: ServiceContainer): void {
         const fileActionRegistry = services.resolve(FileActionRegistry);
         if (!fileActionRegistry) {
-            console.warn('[BehaviorTreePlugin] FileActionRegistry not found');
             return;
         }
 
@@ -113,7 +106,5 @@ export class BehaviorTreePlugin implements IEditorPlugin {
         };
 
         fileActionRegistry.registerActionHandler(actionHandler);
-
-        console.log('[BehaviorTreePlugin] File actions registered');
     }
 }

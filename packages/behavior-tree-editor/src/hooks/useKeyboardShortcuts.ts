@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Connection, ROOT_NODE_ID } from '../stores/behaviorTreeStore';
+import { Connection, ROOT_NODE_ID } from '../stores/useBehaviorTreeStore';
 import { useNodeOperations } from './useNodeOperations';
 import { useConnectionOperations } from './useConnectionOperations';
 

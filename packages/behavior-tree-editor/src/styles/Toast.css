@@ -1,0 +1,114 @@
+/* Toast Container */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+/* Toast Base */
+.toast {
+    min-width: 250px;
+    max-width: 400px;
+    padding: 12px 20px;
+    border-radius: 4px;
+    background: #2d2d30;
+    color: #cccccc;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 1.4;
+    pointer-events: auto;
+    animation: slideIn 0.3s ease-out;
+    transition: all 0.3s ease-out;
+}
+
+/* Toast Types */
+.toast.success {
+    background: #1e3a1e;
+    border-left: 4px solid #4caf50;
+}
+
+.toast.error {
+    background: #3a1e1e;
+    border-left: 4px solid #f44336;
+}
+
+.toast.warning {
+    background: #3a341e;
+    border-left: 4px solid #ff9800;
+}
+
+.toast.info {
+    background: #1e2a3a;
+    border-left: 4px solid #2196f3;
+}
+
+/* Toast Icon */
+.toast-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+}
+
+/* Toast Message */
+.toast-message {
+    flex: 1;
+    word-wrap: break-word;
+}
+
+/* Toast Close Button */
+.toast-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 10px;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.toast-close:hover {
+    color: #fff;
+}
+
+/* Toast Exit Animation */
+.toast.exiting {
+    animation: slideOut 0.3s ease-in forwards;
+    opacity: 0;
+}
+
+/* Animations */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}

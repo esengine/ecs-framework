@@ -1,9 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ExecutionController, ExecutionMode } from '../application/services/ExecutionController';
 import { BlackboardManager } from '../application/services/BlackboardManager';
-import { Node as BehaviorTreeNode } from '../domain/models/Node';
-import { Connection } from '../domain/models/Connection';
-import { useExecutionStore } from '../stores';
+import { BehaviorTreeNode, Connection, useBehaviorTreeStore } from '../stores/useBehaviorTreeStore';
 import { ExecutionLog } from '../utils/BehaviorTreeExecutor';
 import { BlackboardValue } from '../domain/models/Blackboard';
 
@@ -50,7 +48,7 @@ export function useExecutionController(params: UseExecutionControllerParams) {
             onBlackboardUpdate,
             onTickCountUpdate: setTickCount,
             onExecutionStatusUpdate: (statuses, orders) => {
-                const store = useExecutionStore.getState();
+                const store = useBehaviorTreeStore.getState();
                 store.updateNodeExecutionStatuses(statuses, orders);
             }
         });
@@ -122,7 +120,7 @@ export function useExecutionController(params: UseExecutionControllerParams) {
             const restoredVars = blackboardManager.restoreInitialVariables();
             onBlackboardUpdate(restoredVars);
             onRestoreNodesData();
-            useExecutionStore.getState().clearNodeExecutionStatuses();
+            useBehaviorTreeStore.getState().clearNodeExecutionStatuses();
             onExecutingChange(false);
         } catch (error) {
             console.error('Failed to stop execution:', error);

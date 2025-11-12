@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Node as BehaviorTreeNode } from '../domain/models/Node';
-import { ROOT_NODE_ID } from '../domain/constants/RootNode';
+import { BehaviorTreeNode, ROOT_NODE_ID } from '../stores/useBehaviorTreeStore';
 
 interface ContextMenuState {
     visible: boolean;
@@ -19,6 +18,7 @@ export function useContextMenu() {
         e.preventDefault();
         e.stopPropagation();
 
+        // 不允许对Root节点右键
         if (node.id === ROOT_NODE_ID) {
             return;
         }

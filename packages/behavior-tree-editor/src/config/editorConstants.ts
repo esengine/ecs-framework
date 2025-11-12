@@ -45,3 +45,12 @@ export const ROOT_NODE_TEMPLATE: NodeTemplate = {
     },
     properties: []
 };
+
+export const DEFAULT_EDITOR_CONFIG = {
+    enableSnapping: false,
+    gridSize: 20,
+    minZoom: 0.1,
+    maxZoom: 3,
+    showGrid: true,
+    showMinimap: false
+};

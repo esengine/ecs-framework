@@ -8,7 +8,7 @@ import {
     TaskStatus,
     NodeType
 } from '@esengine/behavior-tree';
-import type { Node as BehaviorTreeNode } from '../domain/models/Node';
+import type { BehaviorTreeNode } from '../stores/behaviorTreeStore';
 
 const logger = createLogger('BehaviorTreeExecutor');
 

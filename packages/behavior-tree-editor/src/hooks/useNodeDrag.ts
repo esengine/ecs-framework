@@ -1,6 +1,5 @@
-import { useState, useRef, RefObject } from 'react';
-import { Node as BehaviorTreeNode } from '../domain/models/Node';
-import { ROOT_NODE_ID } from '../domain/constants/RootNode';
+import { useState, RefObject } from 'react';
+import { BehaviorTreeNode, ROOT_NODE_ID } from '../stores/useBehaviorTreeStore';
 import { Position } from '../domain/value-objects/Position';
 import { useNodeOperations } from './useNodeOperations';
 
@@ -50,7 +49,6 @@ export function useNodeDrag(params: UseNodeDragParams) {
     } = params;
 
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-    const justFinishedDragRef = useRef(false);
 
     const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
         if (e.button !== 0) return;
@@ -127,9 +125,7 @@ export function useNodeDrag(params: UseNodeDragParams) {
     const handleNodeMouseUp = () => {
         if (!draggingNodeId) return;
 
-        const hasMoved = dragDelta.dx !== 0 || dragDelta.dy !== 0;
-
-        if (hasMoved) {
+        if (dragDelta.dx !== 0 || dragDelta.dy !== 0) {
             const moves: Array<{ nodeId: string; position: Position }> = [];
             dragStartPositions.forEach((startPos: { x: number; y: number }, nodeId: string) => {
                 moves.push({
@@ -145,23 +141,21 @@ export function useNodeDrag(params: UseNodeDragParams) {
             setTimeout(() => {
                 sortChildrenByPosition();
             }, 0);
-
-            justFinishedDragRef.current = true;
-            setTimeout(() => {
-                justFinishedDragRef.current = false;
-            }, 0);
         }
 
         setDragDelta({ dx: 0, dy: 0 });
+
         stopDragging();
-        setIsDraggingNode(false);
+
+        setTimeout(() => {
+            setIsDraggingNode(false);
+        }, 10);
     };
 
     return {
         handleNodeMouseDown,
         handleNodeMouseMove,
         handleNodeMouseUp,
-        dragOffset,
-        justFinishedDragRef
+        dragOffset
     };
 }

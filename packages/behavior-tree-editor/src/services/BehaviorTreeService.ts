@@ -13,8 +13,6 @@ export class BehaviorTreeService implements IService {
     }
 
     async loadFromFile(filePath: string): Promise<void> {
-        console.log('[BehaviorTreeService] Loading tree from:', filePath);
-
         try {
             const { invoke } = await import('@tauri-apps/api/core');
             const content = await invoke<string>('read_behavior_tree_file', { filePath });
@@ -25,10 +23,12 @@ export class BehaviorTreeService implements IService {
 
             const messageHub = Core.services.resolve(MessageHub);
             if (messageHub) {
-                messageHub.publish('behavior-tree:open', { filePath, tree: JSON.parse(content) });
+                // 发布 dynamic-panel:open 消息来打开行为树编辑器面板
+                messageHub.publish('dynamic-panel:open', {
+                    panelId: 'behavior-tree-editor',
+                    title: `Behavior Tree - ${filePath.split(/[\\/]/).pop()}`  // 使用文件名作为标题
+                });
             }
-
-            console.log('[BehaviorTreeService] Tree loaded successfully');
         } catch (error) {
             console.error('[BehaviorTreeService] Failed to load tree:', error);
             throw error;
@@ -36,7 +36,7 @@ export class BehaviorTreeService implements IService {
     }
 
     async saveToFile(filePath: string): Promise<void> {
-        console.log('[BehaviorTreeService] Saving tree to:', filePath);
+        // TODO: 实现保存功能
     }
 
     getCurrentTree(): BehaviorTree {
@@ -48,6 +48,6 @@ export class BehaviorTreeService implements IService {
     }
 
     dispose(): void {
-        console.log('[BehaviorTreeService] Disposing service');
+        // 清理资源
     }
 }

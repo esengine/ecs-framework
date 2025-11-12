@@ -5,10 +5,7 @@ import { CommandManager } from '@esengine/editor-core';
  * 撤销/重做功能 Hook
  */
 export function useCommandHistory() {
-    const commandManagerRef = useRef<CommandManager>(new CommandManager({
-        maxHistorySize: 100,
-        autoMerge: true
-    }));
+    const commandManagerRef = useRef<CommandManager>(new CommandManager());
 
     const commandManager = commandManagerRef.current;
 

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { BehaviorTree } from '../../domain/models/BehaviorTree';
 import { ITreeState } from '../commands/ITreeState';
-import { useTreeStore } from '../../stores/useTreeStore';
+import { useBehaviorTreeStore } from '../../stores/behaviorTreeStore';
 import { Blackboard } from '../../domain/models/Blackboard';
 import { createRootNode, ROOT_NODE_ID } from '../../domain/constants/RootNode';
 
@@ -59,7 +59,7 @@ export class TreeStateAdapter implements ITreeState {
         const nodes = Array.from(tree.nodes);
         const connections = Array.from(tree.connections);
 
-        useTreeStore.getState().setNodes(nodes);
-        useTreeStore.getState().setConnections(connections);
+        useBehaviorTreeStore.getState().setNodes(nodes);
+        useBehaviorTreeStore.getState().setConnections(connections);
     }
 }
