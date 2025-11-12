@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { EditorPluginManager, IEditorPluginMetadata, EditorPluginCategory, INotification, IDialog } from '@esengine/editor-core';
+import { EditorPluginManager, IEditorPluginMetadata, EditorPluginCategory } from '@esengine/editor-core';
 import * as LucideIcons from 'lucide-react';
 import {
     Package,
@@ -22,13 +22,11 @@ import '../styles/PluginManagerWindow.css';
 interface PluginManagerWindowProps {
     pluginManager: EditorPluginManager;
     githubService: GitHubService;
-    pluginsDir: string;
-    notification: INotification;
-    dialog: IDialog;
     onClose: () => void;
     onRefresh?: () => Promise<void>;
     onOpen?: () => void;
     locale: string;
+    projectPath: string | null;
 }
 
 const categoryIcons: Record<EditorPluginCategory, string> = {
@@ -39,7 +37,7 @@ const categoryIcons: Record<EditorPluginCategory, string> = {
     [EditorPluginCategory.ImportExport]: 'Package'
 };
 
-export function PluginManagerWindow({ pluginManager, githubService, pluginsDir, notification, dialog, onClose, onRefresh, onOpen, locale }: PluginManagerWindowProps) {
+export function PluginManagerWindow({ pluginManager, githubService, onClose, onRefresh, onOpen, locale, projectPath }: PluginManagerWindowProps) {
     const t = (key: string) => {
         const translations: Record<string, Record<string, string>> = {
             zh: {
@@ -113,7 +111,12 @@ export function PluginManagerWindow({ pluginManager, githubService, pluginsDir, 
     );
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const marketService = useMemo(() => new PluginMarketService(pluginManager, pluginsDir), [pluginManager, pluginsDir]);
+    const marketService = useMemo(() => new PluginMarketService(pluginManager), [pluginManager]);
+
+    // 设置项目路径到 marketService
+    useEffect(() => {
+        marketService.setProjectPath(projectPath);
+    }, [projectPath, marketService]);
 
     const updatePluginList = () => {
         const allPlugins = pluginManager.getAllPluginMetadata();
@@ -421,7 +424,14 @@ export function PluginManagerWindow({ pluginManager, githubService, pluginsDir, 
                     </>
                 )}
 
-                {activeTab === 'marketplace' && <PluginMarketPanel marketService={marketService} notification={notification} dialog={dialog} locale={locale} />}
+                {activeTab === 'marketplace' && (
+                    <PluginMarketPanel
+                        marketService={marketService}
+                        locale={locale}
+                        projectPath={projectPath}
+                        onReloadPlugins={onRefresh}
+                    />
+                )}
             </div>
         </div>
     );

@@ -93,6 +93,8 @@ export class ServiceRegistry {
         const notification = new NotificationService();
         const inspectorRegistry = new InspectorRegistry();
 
+        Core.services.registerInstance(InspectorRegistry, inspectorRegistry);
+
         return {
             uiRegistry,
             messageHub,

@@ -52,34 +52,13 @@ export class PluginPublishService {
         this.progressCallback?.({ step, message, progress });
     }
 
-    async publishPlugin(publishInfo: PluginPublishInfo): Promise<string> {
-        if (!this.githubService.isAuthenticated()) {
-            throw new Error('Please login to GitHub first');
-        }
-
-        try {
-            const { branchName, existingPR } = await this.preparePublishEnvironment(
-                publishInfo.pluginMetadata.name,
-                publishInfo.version
-            );
-
-            const user = this.githubService.getUser()!;
-            const pluginId = this.generatePluginId(publishInfo.pluginMetadata.name);
-
-            this.notifyProgress('creating-manifest', 'Generating manifest.json...', 55);
-            const manifest = this.generateManifest(publishInfo, user.login);
-            const manifestPath = `plugins/${publishInfo.category}/${pluginId}/manifest.json`;
-
-            await this.uploadManifest(user.login, branchName, manifestPath, manifest, publishInfo);
-
-            return await this.createOrUpdatePR(existingPR, branchName, publishInfo, user.login);
-        } catch (error) {
-            console.error('[PluginPublishService] Failed to publish plugin:', error);
-            throw error;
-        }
-    }
-
-    async publishPluginWithZip(publishInfo: PluginPublishInfo, zipPath: string): Promise<string> {
+    /**
+     * 发布插件到市场
+     * @param publishInfo 插件发布信息
+     * @param zipPath 插件 ZIP 文件路径（必需）
+     * @returns Pull Request URL
+     */
+    async publishPlugin(publishInfo: PluginPublishInfo, zipPath: string): Promise<string> {
         console.log('[PluginPublishService] Publishing plugin with ZIP:', zipPath);
         console.log('[PluginPublishService] Plugin info:', publishInfo);
 
@@ -96,14 +75,17 @@ export class PluginPublishService {
             const user = this.githubService.getUser()!;
             const pluginId = this.generatePluginId(publishInfo.pluginMetadata.name);
 
+            // 上传 ZIP 文件
             await this.uploadZipFile(user.login, branchName, pluginId, publishInfo, zipPath);
 
+            // 生成并上传 manifest
             this.notifyProgress('creating-manifest', 'Generating manifest.json...', 60);
             const manifest = this.generateManifest(publishInfo, user.login);
             const manifestPath = `plugins/${publishInfo.category}/${pluginId}/manifest.json`;
 
             await this.uploadManifest(user.login, branchName, manifestPath, manifest, publishInfo);
 
+            // 创建或更新 PR
             return await this.createOrUpdatePR(existingPR, branchName, publishInfo, user.login);
         } catch (error) {
             console.error('[PluginPublishService] Failed to publish plugin:', error);
@@ -278,7 +260,10 @@ export class PluginPublishService {
         newManifest: Record<string, any>,
         newVersion: string
     ): Record<string, any> {
-        const existingVersions = Array.isArray(existingManifest.versions) ? existingManifest.versions : [];
+        const existingVersions: any[] = Array.isArray(existingManifest.versions)
+            ? existingManifest.versions
+            : [];
+
         const newVersionInfo = (newManifest.versions as any[])[0];
 
         const versionExists = existingVersions.some((v: any) => v.version === newVersion);
@@ -301,12 +286,17 @@ export class PluginPublishService {
             return bPatch - aPatch;
         });
 
-        return {
+        const mergedManifest: any = {
             ...existingManifest,
             ...newManifest,
             latestVersion: updatedVersions[0].version,
             versions: updatedVersions
         };
+
+        delete mergedManifest.version;
+        delete mergedManifest.distribution;
+
+        return mergedManifest as Record<string, any>;
     }
 
     private async createOrUpdatePR(

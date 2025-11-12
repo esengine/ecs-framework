@@ -13,18 +13,17 @@ import {
     Filter
 } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-shell';
-import type { INotification, IDialog } from '@esengine/editor-core';
 import type { PluginMarketService, PluginMarketMetadata } from '../services/PluginMarketService';
 import '../styles/PluginMarketPanel.css';
 
 interface PluginMarketPanelProps {
     marketService: PluginMarketService;
-    notification: INotification;
-    dialog: IDialog;
     locale: string;
+    projectPath: string | null;
+    onReloadPlugins?: () => Promise<void>;
 }
 
-export function PluginMarketPanel({ marketService, notification, dialog, locale }: PluginMarketPanelProps) {
+export function PluginMarketPanel({ marketService, locale, projectPath, onReloadPlugins }: PluginMarketPanelProps) {
     const t = (key: string) => {
         const translations: Record<string, Record<string, string>> = {
             zh: {
@@ -50,7 +49,11 @@ export function PluginMarketPanel({ marketService, notification, dialog, locale 
                 installing: '安装中...',
                 uninstalling: '卸载中...',
                 useDirectSource: '使用直连源',
-                useDirectSourceTip: '启用后直接从GitHub获取数据，绕过CDN缓存（适合测试）'
+                useDirectSourceTip: '启用后直接从GitHub获取数据，绕过CDN缓存（适合测试）',
+                latest: '最新',
+                releaseNotes: '更新日志',
+                selectVersion: '选择版本',
+                noProjectOpen: '请先打开一个项目'
             },
             en: {
                 title: 'Plugin Marketplace',
@@ -75,7 +78,11 @@ export function PluginMarketPanel({ marketService, notification, dialog, locale 
                 installing: 'Installing...',
                 uninstalling: 'Uninstalling...',
                 useDirectSource: 'Direct Source',
-                useDirectSourceTip: 'Fetch data directly from GitHub, bypassing CDN cache (for testing)'
+                useDirectSourceTip: 'Fetch data directly from GitHub, bypassing CDN cache (for testing)',
+                latest: 'Latest',
+                releaseNotes: 'Release Notes',
+                selectVersion: 'Select Version',
+                noProjectOpen: 'Please open a project first'
             }
         };
         return translations[locale]?.[key] || translations.en?.[key] || key;
@@ -144,24 +151,20 @@ export function PluginMarketPanel({ marketService, notification, dialog, locale 
         loadPlugins(true);
     };
 
-    const handleInstall = async (plugin: PluginMarketMetadata) => {
+    const handleInstall = async (plugin: PluginMarketMetadata, version?: string) => {
+        if (!projectPath) {
+            alert(t('noProjectOpen') || 'Please open a project first');
+            return;
+        }
+
         setInstallingPlugins((prev) => new Set(prev).add(plugin.id));
 
         try {
-            await marketService.installPlugin(plugin);
+            await marketService.installPlugin(plugin, version, onReloadPlugins);
             setPlugins([...plugins]);
-
-            // 提示用户刷新插件列表
-            const message = locale === 'zh'
-                ? `插件 ${plugin.name} 安装成功！插件文件已保存到本地。请点击"已安装"标签页的刷新按钮来加载插件。`
-                : `Plugin ${plugin.name} installed successfully! Plugin files have been saved locally. Please click the refresh button in the "Installed" tab to load the plugin.`;
-            notification.show(message, 'success', 5000);
         } catch (error) {
             console.error('Failed to install plugin:', error);
-            const errorMsg = locale === 'zh'
-                ? `安装 ${plugin.name} 失败: ${error}`
-                : `Failed to install ${plugin.name}: ${error}`;
-            notification.show(errorMsg, 'error', 5000);
+            alert(`Failed to install ${plugin.name}: ${error}`);
         } finally {
             setInstallingPlugins((prev) => {
                 const next = new Set(prev);
@@ -172,33 +175,18 @@ export function PluginMarketPanel({ marketService, notification, dialog, locale 
     };
 
     const handleUninstall = async (plugin: PluginMarketMetadata) => {
-        const title = locale === 'zh' ? '确认卸载' : 'Confirm Uninstall';
-        const message = locale === 'zh'
-            ? `确定要卸载 ${plugin.name} 吗？`
-            : `Are you sure you want to uninstall ${plugin.name}?`;
-
-        const confirmed = await dialog.showConfirm(title, message);
-        if (!confirmed) {
+        if (!confirm(`Are you sure you want to uninstall ${plugin.name}?`)) {
             return;
         }
 
         setInstallingPlugins((prev) => new Set(prev).add(plugin.id));
 
         try {
-            await marketService.uninstallPlugin(plugin.id);
+            await marketService.uninstallPlugin(plugin.id, onReloadPlugins);
             setPlugins([...plugins]);
-
-            // 提示用户卸载成功
-            const message = locale === 'zh'
-                ? `插件 ${plugin.name} 已成功卸载！插件文件已从本地删除。`
-                : `Plugin ${plugin.name} uninstalled successfully! Plugin files have been removed from local storage.`;
-            notification.show(message, 'success', 5000);
         } catch (error) {
             console.error('Failed to uninstall plugin:', error);
-            const errorMsg = locale === 'zh'
-                ? `卸载 ${plugin.name} 失败: ${error}`
-                : `Failed to uninstall ${plugin.name}: ${error}`;
-            notification.show(errorMsg, 'error', 5000);
+            alert(`Failed to uninstall ${plugin.name}: ${error}`);
         } finally {
             setInstallingPlugins((prev) => {
                 const next = new Set(prev);
@@ -305,7 +293,7 @@ export function PluginMarketPanel({ marketService, notification, dialog, locale 
                                 isInstalled={marketService.isInstalled(plugin.id)}
                                 hasUpdate={marketService.hasUpdate(plugin)}
                                 isInstalling={installingPlugins.has(plugin.id)}
-                                onInstall={() => handleInstall(plugin)}
+                                onInstall={(version) => handleInstall(plugin, version)}
                                 onUninstall={() => handleUninstall(plugin)}
                                 t={t}
                             />
@@ -322,7 +310,7 @@ interface PluginMarketCardProps {
     isInstalled: boolean;
     hasUpdate: boolean;
     isInstalling: boolean;
-    onInstall: () => void;
+    onInstall: (version?: string) => void;
     onUninstall: () => void;
     t: (key: string) => string;
 }
@@ -370,10 +358,11 @@ function PluginMarketCard({
                                 value={selectedVersion}
                                 onChange={(e) => setSelectedVersion(e.target.value)}
                                 onClick={(e) => e.stopPropagation()}
+                                title={t('selectVersion')}
                             >
                                 {plugin.versions.map((v) => (
                                     <option key={v.version} value={v.version}>
-                                        v{v.version} {v.version === plugin.latestVersion ? '(最新)' : ''}
+                                        v{v.version} {v.version === plugin.latestVersion ? `(${t('latest')})` : ''}
                                     </option>
                                 ))}
                             </select>
@@ -388,7 +377,7 @@ function PluginMarketCard({
 
             {selectedVersionData && selectedVersionData.changes && (
                 <details className="plugin-market-version-changes">
-                    <summary>更新日志</summary>
+                    <summary>{t('releaseNotes')}</summary>
                     <p>{selectedVersionData.changes}</p>
                 </details>
             )}
@@ -428,7 +417,7 @@ function PluginMarketCard({
                     ) : isInstalled ? (
                         <>
                             {hasUpdate && (
-                                <button className="plugin-market-btn update" onClick={onInstall}>
+                                <button className="plugin-market-btn update" onClick={() => onInstall(plugin.latestVersion)}>
                                     <Download size={14} />
                                     {t('update')}
                                 </button>
@@ -439,7 +428,7 @@ function PluginMarketCard({
                             </button>
                         </>
                     ) : (
-                        <button className="plugin-market-btn install" onClick={onInstall}>
+                        <button className="plugin-market-btn install" onClick={() => onInstall(selectedVersion)}>
                             <Download size={14} />
                             {t('install')}
                         </button>

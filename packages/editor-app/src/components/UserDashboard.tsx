@@ -36,6 +36,7 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
     const [recreatingPR, setRecreatingPR] = useState<number | null>(null);
     const [pluginToUpdate, setPluginToUpdate] = useState<PublishedPlugin | null>(null);
     const [showPublishWizard, setShowPublishWizard] = useState(false);
+    const [expandedVersions, setExpandedVersions] = useState<Set<string>>(new Set());
 
     const user = githubService.getUser();
 
@@ -54,6 +55,11 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 noPublished: '还没有发布任何插件',
                 noPending: '没有待审核的插件',
                 version: '版本',
+                latestVersion: '最新版本',
+                allVersions: '所有版本',
+                showVersions: '显示版本历史',
+                hideVersions: '隐藏版本历史',
+                versionCount: '{{count}} 个版本',
                 category: '分类',
                 publishedAt: '发布于',
                 createdAt: '提交于',
@@ -90,6 +96,9 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 hideComments: '隐藏评论',
                 updatePlugin: '更新插件',
                 publishNewPlugin: '发布新插件',
+                cannotUpdate: '无法更新',
+                hasPendingPR: '该插件有待审核的 PR',
+                pleaseDealWithPR: '请先处理现有的 PR #{{number}}，然后再提交新的更新。',
                 deletePlugin: '删除插件',
                 confirmDeletePluginTitle: '确认删除插件',
                 confirmDeletePluginMessage: '确定要删除插件 "{{name}}" 吗？这将创建一个删除请求PR，需要审核后才会从市场移除。',
@@ -134,6 +143,11 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 noPublished: 'No published plugins yet',
                 noPending: 'No pending reviews',
                 version: 'Version',
+                latestVersion: 'Latest Version',
+                allVersions: 'All Versions',
+                showVersions: 'Show Version History',
+                hideVersions: 'Hide Version History',
+                versionCount: '{{count}} versions',
                 category: 'Category',
                 publishedAt: 'Published at',
                 createdAt: 'Submitted at',
@@ -170,6 +184,9 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 hideComments: 'Hide Comments',
                 updatePlugin: 'Update Plugin',
                 publishNewPlugin: 'Publish New Plugin',
+                cannotUpdate: 'Cannot Update',
+                hasPendingPR: 'This plugin has a pending PR',
+                pleaseDealWithPR: 'Please handle the existing PR #{{number}} before submitting a new update.',
                 deletePlugin: 'Delete Plugin',
                 confirmDeletePluginTitle: 'Confirm Plugin Deletion',
                 confirmDeletePluginMessage: 'Are you sure you want to delete plugin "{{name}}"? This will create a deletion request PR that requires review before removal from marketplace.',
@@ -234,6 +251,10 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
             month: 'short',
             day: 'numeric'
         });
+    };
+
+    const handleUpdatePlugin = (plugin: PublishedPlugin) => {
+        setPluginToUpdate(plugin);
     };
 
     const getStatusBadgeClass = (status: string) => {
@@ -544,31 +565,89 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
 
         return (
             <div className="plugin-list">
-                {publishedPlugins.map((plugin) => (
-                    <div key={plugin.id} className="plugin-card">
-                        <div className="plugin-header">
-                            <Package size={20} />
-                            <div className="plugin-info">
-                                <h3 className="plugin-name">{plugin.name}</h3>
-                                <p className="plugin-description">{plugin.description}</p>
+                {publishedPlugins.map((plugin) => {
+                    const isExpanded = expandedVersions.has(plugin.id);
+                    const hasMultipleVersions = plugin.versions.length > 1;
+                    const pendingPR = pendingReviews.find(pr => pr.pluginName === plugin.name && pr.status === 'open');
+
+                    return (
+                        <div key={plugin.id} className="plugin-card">
+                            <div className="plugin-header">
+                                <Package size={20} />
+                                <div className="plugin-info">
+                                    <h3 className="plugin-name">{plugin.name}</h3>
+                                    <p className="plugin-description">{plugin.description}</p>
+                                </div>
                             </div>
-                        </div>
-                        <div className="plugin-meta">
-                            <span className="plugin-meta-item">
-                                {t('version')}: <strong>{plugin.version}</strong>
-                            </span>
-                            <span className="plugin-meta-item">
-                                {t('category')}: <strong>{plugin.category}</strong>
-                            </span>
-                            <span className="plugin-meta-item">
-                                {t('publishedAt')}: {formatDate(plugin.publishedAt)}
-                            </span>
-                        </div>
+                            <div className="plugin-meta">
+                                <span className="plugin-meta-item">
+                                    {t('latestVersion')}: <strong>{plugin.latestVersion}</strong>
+                                    {hasMultipleVersions && (
+                                        <button
+                                            className="btn-version-toggle"
+                                            onClick={() => {
+                                                const newExpanded = new Set(expandedVersions);
+                                                if (isExpanded) {
+                                                    newExpanded.delete(plugin.id);
+                                                } else {
+                                                    newExpanded.add(plugin.id);
+                                                }
+                                                setExpandedVersions(newExpanded);
+                                            }}
+                                            title={isExpanded ? t('hideVersions') : t('showVersions')}
+                                        >
+                                            ({t('versionCount').replace('{{count}}', String(plugin.versions.length))})
+                                        </button>
+                                    )}
+                                </span>
+                                <span className="plugin-meta-item">
+                                    {t('category')}: <strong>{plugin.category}</strong>
+                                </span>
+                                <span className="plugin-meta-item">
+                                    {t('publishedAt')}: {formatDate(plugin.versions[0]?.publishedAt || '')}
+                                </span>
+                            </div>
+
+                            {/* 版本历史列表 */}
+                            {isExpanded && hasMultipleVersions && (
+                                <div className="version-history-list">
+                                    <h4>{t('allVersions')}</h4>
+                                    <div className="versions-container">
+                                        {plugin.versions.map((version) => (
+                                            <div key={version.version} className="version-item">
+                                                <span className="version-number">v{version.version}</span>
+                                                <span className="version-date">{formatDate(version.publishedAt)}</span>
+                                                <a
+                                                    href={version.prUrl}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        open(version.prUrl);
+                                                    }}
+                                                    className="version-pr-link"
+                                                    title={t('viewPR')}
+                                                >
+                                                    <ExternalLink size={14} />
+                                                </a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         <div className="plugin-actions">
+                            {pendingPR && (
+                                <div className="pending-pr-badge" title={t('pleaseDealWithPR').replace('{{number}}', String(pendingPR.prNumber))}>
+                                    <AlertCircle size={14} />
+                                    <span>PR #{pendingPR.prNumber} {t('statusOpen')}</span>
+                                </div>
+                            )}
                             <button
                                 className="btn-update"
-                                onClick={() => setPluginToUpdate(plugin)}
-                                title={t('updatePlugin')}
+                                onClick={() => handleUpdatePlugin(plugin)}
+                                disabled={!!pendingPR}
+                                title={pendingPR
+                                    ? t('pleaseDealWithPR').replace('{{number}}', String(pendingPR.prNumber))
+                                    : t('updatePlugin')
+                                }
                             >
                                 <Upload size={14} />
                                 {t('updatePlugin')}
@@ -583,9 +662,16 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                                     {t('viewRepo')} <ExternalLink size={14} />
                                 </a>
                             )}
-                            <a href={plugin.prUrl} target="_blank" rel="noopener noreferrer" className="plugin-link">
-                                {t('viewPR')} <ExternalLink size={14} />
-                            </a>
+                            {plugin.versions[0]?.prUrl && (
+                                <a
+                                    href={plugin.versions[0].prUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="plugin-link"
+                                >
+                                    {t('viewPR')} <ExternalLink size={14} />
+                                </a>
+                            )}
                             <button
                                 className="btn-delete"
                                 onClick={() => setConfirmDeletePlugin(plugin)}
@@ -596,7 +682,8 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                             </button>
                         </div>
                     </div>
-                ))}
+                    );
+                })}
             </div>
         );
     };

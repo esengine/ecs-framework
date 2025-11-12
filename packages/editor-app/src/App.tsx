@@ -823,6 +823,7 @@ function App() {
                     dialog={dialog}
                     onClose={() => setShowPluginManager(false)}
                     locale={locale}
+                    projectPath={currentProjectPath}
                     onOpen={() => {
                         // 同步所有插件的语言状态
                         const allPlugins = pluginManager.getAllEditorPlugins();

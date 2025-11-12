@@ -1,7 +1,6 @@
 import type { EditorPluginManager, IEditorPlugin } from '@esengine/editor-core';
 import JSZip from 'jszip';
 import { fetch } from '@tauri-apps/plugin-http';
-import { invoke } from '@tauri-apps/api/core';
 
 export interface PluginAuthor {
     name: string;
@@ -72,12 +71,16 @@ export class PluginMarketService {
 
     private pluginManager: EditorPluginManager;
     private installedPlugins: Map<string, InstalledPluginInfo> = new Map();
-    private pluginsDir: string;
+    private projectPath: string | null = null;
 
-    constructor(pluginManager: EditorPluginManager, pluginsDir: string) {
+    constructor(pluginManager: EditorPluginManager) {
         this.pluginManager = pluginManager;
-        this.pluginsDir = pluginsDir;
         this.loadInstalledPlugins();
+    }
+
+    setProjectPath(path: string | null): void {
+        this.projectPath = path;
+        console.log(`[PluginMarketService] Project path set to: ${path}`);
     }
 
     isUsingDirectSource(): boolean {
@@ -163,9 +166,13 @@ export class PluginMarketService {
         return registry.plugins;
     }
 
-    async installPlugin(plugin: PluginMarketMetadata, version?: string): Promise<void> {
+    async installPlugin(plugin: PluginMarketMetadata, version?: string, onReload?: () => Promise<void>): Promise<void> {
         const targetVersion = version || plugin.latestVersion;
         console.log(`[PluginMarketService] Installing plugin: ${plugin.name} v${targetVersion}`);
+
+        if (!this.projectPath) {
+            throw new Error('No project opened. Please open a project first.');
+        }
 
         try {
             // 获取指定版本信息
@@ -178,47 +185,55 @@ export class PluginMarketService {
             console.log(`[PluginMarketService] Downloading ZIP: ${versionInfo.zipUrl}`);
             const zipBlob = await this.downloadZip(versionInfo.zipUrl);
 
-            // 解压到本地
-            console.log(`[PluginMarketService] Extracting to local directory...`);
-            await this.extractZipToLocal(zipBlob, plugin.id);
+            // 解压到项目 plugins 目录
+            console.log(`[PluginMarketService] Extracting plugin to project...`);
+            await this.extractZipToProject(zipBlob, plugin.id);
 
             // 标记为已安装
             this.markAsInstalled(plugin, targetVersion);
 
+            // 重新加载项目插件
+            if (onReload) {
+                console.log(`[PluginMarketService] Reloading project plugins...`);
+                await onReload();
+            }
+
             console.log(`[PluginMarketService] Successfully installed: ${plugin.name} v${targetVersion}`);
-            console.log(`[PluginMarketService] Plugin files saved to: ${this.pluginsDir}/${plugin.id}`);
         } catch (error) {
             console.error(`[PluginMarketService] Failed to install plugin ${plugin.name}:`, error);
             throw error;
         }
     }
 
-    async uninstallPlugin(pluginId: string): Promise<void> {
+    async uninstallPlugin(pluginId: string, onReload?: () => Promise<void>): Promise<void> {
         console.log(`[PluginMarketService] Uninstalling plugin: ${pluginId}`);
 
+        if (!this.projectPath) {
+            throw new Error('No project opened');
+        }
+
         try {
-            // 尝试卸载插件实例（如果已加载）
-            try {
-                await this.pluginManager.uninstallEditor(pluginId);
-                console.log(`[PluginMarketService] Unloaded plugin instance: ${pluginId}`);
-            } catch (err) {
-                // 插件可能没有加载，忽略错误
-                console.log(`[PluginMarketService] Plugin instance not loaded (OK): ${pluginId}`);
-            }
+            // 从编辑器卸载
+            await this.pluginManager.uninstallEditor(pluginId);
 
-            // 删除本地文件（使用后端命令以避免权限问题）
-            const pluginDir = `${this.pluginsDir}/${pluginId}`.replace(/\\/g, '/');
-            try {
-                await invoke('delete_folder', { path: pluginDir });
-                console.log(`[PluginMarketService] Removed plugin directory: ${pluginDir}`);
-            } catch (err) {
-                console.error(`[PluginMarketService] Failed to remove directory ${pluginDir}:`, err);
-                throw new Error(`Failed to remove plugin directory: ${err}`);
-            }
+            // 调用 Tauri 后端命令删除插件目录
+            const { invoke } = await import('@tauri-apps/api/core');
+            await invoke('uninstall_marketplace_plugin', {
+                projectPath: this.projectPath,
+                pluginId: pluginId
+            });
 
-            // 移除安装记录
+            console.log(`[PluginMarketService] Successfully removed plugin directory`);
+
+            // 从已安装列表移除
             this.installedPlugins.delete(pluginId);
             this.saveInstalledPlugins();
+
+            // 重新加载项目插件
+            if (onReload) {
+                console.log(`[PluginMarketService] Reloading project plugins...`);
+                await onReload();
+            }
 
             console.log(`[PluginMarketService] Successfully uninstalled: ${pluginId}`);
         } catch (error) {
@@ -252,147 +267,39 @@ export class PluginMarketService {
         return await response.blob();
     }
 
-    private async extractZipToLocal(zipBlob: Blob, pluginId: string): Promise<void> {
+    private async extractZipToProject(zipBlob: Blob, pluginId: string): Promise<void> {
+        if (!this.projectPath) {
+            throw new Error('Project path not set');
+        }
+
         try {
-            // 解压 ZIP
-            const zip = await JSZip.loadAsync(zipBlob);
+            // 将 Blob 转换为 ArrayBuffer
+            const arrayBuffer = await zipBlob.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
 
-            // 目标目录（规范化路径分隔符）
-            const targetDir = `${this.pluginsDir}/${pluginId}`.replace(/\\/g, '/');
+            // 转换为 base64
+            let binary = '';
+            const len = uint8Array.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(uint8Array[i] ?? 0);
+            }
+            const base64Data = btoa(binary);
 
-            // 创建目标目录
-            await invoke('create_directory', { path: targetDir });
-            console.log(`[PluginMarketService] Created directory: ${targetDir}`);
-
-            // 遍历 ZIP 中的所有文件
-            const filePromises: Promise<void>[] = [];
-
-            zip.forEach((relativePath, file) => {
-                // 规范化路径：将反斜杠转换为正斜杠
-                const normalizedPath = relativePath.replace(/\\/g, '/');
-
-                if (file.dir) {
-                    // 创建目录
-                    const dirPath = `${targetDir}/${normalizedPath}`;
-                    filePromises.push(
-                        invoke('create_directory', { path: dirPath })
-                            .then(() => console.log(`[PluginMarketService] Created directory: ${dirPath}`))
-                            .catch(err => console.warn(`[PluginMarketService] Failed to create directory ${dirPath}:`, err))
-                    );
-                } else {
-                    // 写入文件
-                    const filePath = `${targetDir}/${normalizedPath}`;
-                    filePromises.push(
-                        file.async('uint8array').then(async (content) => {
-                            // 确保父目录存在
-                            const lastSlashIndex = filePath.lastIndexOf('/');
-                            if (lastSlashIndex > 0) {
-                                const parentDir = filePath.substring(0, lastSlashIndex);
-                                await invoke('create_directory', { path: parentDir }).catch(() => {});
-                            }
-
-                            // 写入文件
-                            await invoke('write_binary_file', {
-                                filePath,
-                                content: Array.from(content)
-                            });
-                            console.log(`[PluginMarketService] Extracted file: ${normalizedPath}`);
-                        })
-                    );
-                }
+            // 调用 Tauri 后端命令进行安装
+            const { invoke } = await import('@tauri-apps/api/core');
+            const pluginDir = await invoke<string>('install_marketplace_plugin', {
+                projectPath: this.projectPath,
+                pluginId: pluginId,
+                zipDataBase64: base64Data
             });
 
-            await Promise.all(filePromises);
-            console.log(`[PluginMarketService] All files extracted to ${targetDir}`);
+            console.log(`[PluginMarketService] Successfully extracted plugin to ${pluginDir}`);
         } catch (error) {
-            console.error('[PluginMarketService] Failed to extract ZIP to local:', error);
-            throw error;
+            console.error('[PluginMarketService] Failed to extract ZIP:', error);
+            throw new Error(`Failed to extract plugin: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
-    private async loadPluginFromZip(zipBlob: Blob, metadata: PluginMarketMetadata): Promise<IEditorPlugin | null> {
-        try {
-            // 解压 ZIP
-            const zip = await JSZip.loadAsync(zipBlob);
-
-            // 读取 package.json
-            const packageJsonFile = zip.file('package.json');
-            if (!packageJsonFile) {
-                throw new Error('package.json not found in plugin ZIP');
-            }
-
-            const packageJsonContent = await packageJsonFile.async('text');
-            const packageJson = JSON.parse(packageJsonContent);
-
-            // 获取入口文件路径 (优先 module，其次 main)
-            const entryPath = packageJson.module || packageJson.main;
-            if (!entryPath) {
-                throw new Error('No entry point (main or module) found in package.json');
-            }
-
-            console.log(`[PluginMarketService] Loading plugin from entry: ${entryPath}`);
-
-            // 查找入口文件
-            const entryFile = zip.file(entryPath);
-            if (!entryFile) {
-                throw new Error(`Entry file ${entryPath} not found in plugin ZIP`);
-            }
-
-            // 读取入口文件内容
-            const entryContent = await entryFile.async('text');
-
-            // 创建 Blob URL
-            const blob = new Blob([entryContent], { type: 'application/javascript' });
-            const blobUrl = URL.createObjectURL(blob);
-
-            try {
-                // 动态导入模块
-                const module = await import(/* @vite-ignore */ blobUrl);
-
-                // 提取插件实例
-                return this.extractPluginInstance(module, metadata);
-            } finally {
-                // 清理 Blob URL
-                URL.revokeObjectURL(blobUrl);
-            }
-        } catch (error) {
-            console.error('[PluginMarketService] Failed to load plugin from ZIP:', error);
-            throw error;
-        }
-    }
-
-    private extractPluginInstance(module: any, metadata: PluginMarketMetadata): IEditorPlugin | null {
-        // 尝试从 default export 获取
-        if (module.default && this.isPluginInstance(module.default)) {
-            return module.default;
-        }
-
-        // 尝试从命名 export 获取
-        for (const key of Object.keys(module)) {
-            const value = module[key];
-            if (value && this.isPluginInstance(value)) {
-                return value;
-            }
-        }
-
-        console.error('[PluginMarketService] No valid plugin instance found in module:', module);
-        return null;
-    }
-
-    private isPluginInstance(obj: any): obj is IEditorPlugin {
-        if (!obj || typeof obj !== 'object') {
-            return false;
-        }
-
-        return (
-            typeof obj.name === 'string' &&
-            typeof obj.version === 'string' &&
-            typeof obj.displayName === 'string' &&
-            typeof obj.category === 'string' &&
-            typeof obj.install === 'function' &&
-            typeof obj.uninstall === 'function'
-        );
-    }
 
     private markAsInstalled(plugin: PluginMarketMetadata, version: string): void {
         this.installedPlugins.set(plugin.id, {

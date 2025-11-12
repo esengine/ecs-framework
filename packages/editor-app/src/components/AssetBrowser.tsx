@@ -262,7 +262,6 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
     const getContextMenuItems = (asset: AssetItem): ContextMenuItem[] => {
         const items: ContextMenuItem[] = [];
 
-        // 打开
         if (asset.type === 'file') {
             items.push({
                 label: locale === 'zh' ? '打开' : 'Open',
@@ -290,6 +289,26 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
             }
 
             items.push({ label: '', separator: true, onClick: () => {} });
+        }
+
+        if (asset.type === 'directory' && fileActionRegistry) {
+            const templates = fileActionRegistry.getCreationTemplates();
+            if (templates.length > 0) {
+                items.push({ label: '', separator: true, onClick: () => {} });
+                for (const template of templates) {
+                    items.push({
+                        label: `${locale === 'zh' ? '新建' : 'New'} ${template.label}`,
+                        icon: template.icon,
+                        onClick: async () => {
+                            const fileName = `${template.defaultFileName}.${template.extension}`;
+                            const filePath = `${asset.path}/${fileName}`;
+                            if (template.onCreate) {
+                                await template.onCreate(filePath);
+                            }
+                        }
+                    });
+                }
+            }
         }
 
         // 在文件管理器中显示

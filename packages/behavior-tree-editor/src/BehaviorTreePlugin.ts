@@ -3,16 +3,20 @@ import {
     IEditorPlugin,
     EditorPluginCategory,
     CompilerRegistry,
-    MessageHub,
-    FileActionHandler
+    InspectorRegistry,
+    FileActionRegistry,
+    PanelPosition,
+    type FileCreationTemplate,
+    type FileActionHandler,
+    type PanelDescriptor
 } from '@esengine/editor-core';
 import { BehaviorTreeService } from './services/BehaviorTreeService';
 import { BehaviorTreeCompiler } from './compiler/BehaviorTreeCompiler';
-import { useTreeStore } from './stores/useTreeStore';
+import { BehaviorTreeNodeInspectorProvider } from './providers/BehaviorTreeNodeInspectorProvider';
+import { BehaviorTreeEditorPanel } from './components/panels/BehaviorTreeEditorPanel';
+import { createElement } from 'react';
+import { GitBranch } from 'lucide-react';
 
-/**
- * Behavior Tree Editor Plugin
- */
 export class BehaviorTreePlugin implements IEditorPlugin {
     readonly name = '@esengine/behavior-tree-editor';
     readonly version = '1.0.0';
@@ -21,74 +25,30 @@ export class BehaviorTreePlugin implements IEditorPlugin {
     readonly description = 'Visual behavior tree editor for game AI development';
     readonly icon = 'GitBranch';
 
-    private core?: Core;
-    private services?: ServiceContainer;
-    private messageHub?: MessageHub;
-
     async install(core: Core, services: ServiceContainer): Promise<void> {
         console.log('[BehaviorTreePlugin] Installing behavior tree editor plugin...');
 
-        this.core = core;
-        this.services = services;
-        this.messageHub = services.resolve(MessageHub);
-
         this.registerServices(services);
         this.registerCompilers(services);
+        this.registerInspectors(services);
+        this.registerFileActions(services);
 
         console.log('[BehaviorTreePlugin] Behavior tree editor plugin installed');
     }
 
     async uninstall(): Promise<void> {
         console.log('[BehaviorTreePlugin] Uninstalling behavior tree editor plugin...');
-        this.core = undefined;
-        this.services = undefined;
-        this.messageHub = undefined;
     }
 
-    registerFileActionHandlers(): FileActionHandler[] {
+    registerPanels(): PanelDescriptor[] {
         return [
             {
-                extensions: ['btree'],
-                onDoubleClick: async (filePath: string) => {
-                    console.log('[BehaviorTreePlugin] onDoubleClick called for:', filePath);
-
-                    if (this.messageHub) {
-                        const store = useTreeStore.getState();
-                        store.setIsOpen(true);
-                        store.setPendingFilePath(filePath);
-
-                        const fileName = filePath.split(/[\\/]/).pop()?.replace('.btree', '') || '行为树';
-
-                        await this.messageHub.publish('dynamic-panel:open', {
-                            panelId: 'behavior-tree-editor',
-                            title: fileName
-                        });
-
-                        await this.messageHub.publish('behavior-tree:load-file', {
-                            filePath
-                        });
-                    } else {
-                        console.error('[BehaviorTreePlugin] MessageHub is not available!');
-                    }
-                },
-                onOpen: async (filePath: string) => {
-                    if (this.messageHub) {
-                        const store = useTreeStore.getState();
-                        store.setIsOpen(true);
-                        store.setPendingFilePath(filePath);
-
-                        const fileName = filePath.split(/[\\/]/).pop()?.replace('.btree', '') || '行为树';
-
-                        await this.messageHub.publish('dynamic-panel:open', {
-                            panelId: 'behavior-tree-editor',
-                            title: fileName
-                        });
-
-                        await this.messageHub.publish('behavior-tree:load-file', {
-                            filePath
-                        });
-                    }
-                }
+                id: 'behavior-tree-editor',
+                title: 'Behavior Tree Editor',
+                position: PanelPosition.Center,
+                closable: true,
+                component: BehaviorTreeEditorPanel,
+                order: 100
             }
         ];
     }
@@ -105,5 +65,55 @@ export class BehaviorTreePlugin implements IEditorPlugin {
             compilerRegistry.register(compiler);
             console.log('[BehaviorTreePlugin] Compiler registered');
         }
+    }
+
+    private registerInspectors(services: ServiceContainer): void {
+        const inspectorRegistry = services.resolve(InspectorRegistry);
+        if (inspectorRegistry) {
+            const provider = new BehaviorTreeNodeInspectorProvider();
+            inspectorRegistry.register(provider);
+            console.log('[BehaviorTreePlugin] Inspector provider registered');
+        }
+    }
+
+    private registerFileActions(services: ServiceContainer): void {
+        const fileActionRegistry = services.resolve(FileActionRegistry);
+        if (!fileActionRegistry) {
+            console.warn('[BehaviorTreePlugin] FileActionRegistry not found');
+            return;
+        }
+
+        const creationTemplate: FileCreationTemplate = {
+            label: 'Behavior Tree',
+            extension: 'btree',
+            defaultFileName: 'NewBehaviorTree',
+            icon: createElement(GitBranch, { size: 16 }),
+            createContent: (fileName: string) => {
+                const emptyTree = {
+                    name: fileName.replace('.btree', ''),
+                    nodes: [],
+                    connections: [],
+                    variables: {}
+                };
+
+                return JSON.stringify(emptyTree, null, 2);
+            }
+        };
+
+        fileActionRegistry.registerCreationTemplate(creationTemplate);
+
+        const actionHandler: FileActionHandler = {
+            extensions: ['btree'],
+            onDoubleClick: async (filePath: string) => {
+                const service = services.resolve(BehaviorTreeService);
+                if (service) {
+                    await service.loadFromFile(filePath);
+                }
+            }
+        };
+
+        fileActionRegistry.registerActionHandler(actionHandler);
+
+        console.log('[BehaviorTreePlugin] File actions registered');
     }
 }

@@ -1,11 +1,8 @@
 import { IInspectorProvider, InspectorContext } from './IInspectorProvider';
+import { IService } from '@esengine/ecs-framework';
 import React from 'react';
 
-/**
- * Inspector注册表
- * 管理所有Inspector提供器
- */
-export class InspectorRegistry {
+export class InspectorRegistry implements IService {
     private providers: Map<string, IInspectorProvider> = new Map();
 
     /**
@@ -70,10 +67,11 @@ export class InspectorRegistry {
         return provider.render(target, context);
     }
 
-    /**
-     * 清空所有提供器
-     */
     clear(): void {
         this.providers.clear();
+    }
+
+    dispose(): void {
+        this.clear();
     }
 }

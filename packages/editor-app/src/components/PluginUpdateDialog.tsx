@@ -35,7 +35,7 @@ export function PluginUpdateDialog({ plugin, githubService, onClose, onSuccess, 
     const [pluginFolder, setPluginFolder] = useState('');
     const [version, setVersion] = useState('');
     const [releaseNotes, setReleaseNotes] = useState('');
-    const [suggestedVersion] = useState(() => calculateNextVersion(plugin.version));
+    const [suggestedVersion] = useState(() => calculateNextVersion(plugin.latestVersion));
     const [error, setError] = useState('');
     const [buildLog, setBuildLog] = useState<string[]>([]);
     const [buildProgress, setBuildProgress] = useState<BuildProgress | null>(null);
@@ -179,7 +179,7 @@ export function PluginUpdateDialog({ plugin, githubService, onClose, onSuccess, 
                 tags: []
             };
 
-            const prUrl = await publishService.publishPluginWithZip(publishInfo, zipPath);
+            const prUrl = await publishService.publishPlugin(publishInfo, zipPath);
 
             console.log('[PluginUpdateDialog] Update published:', prUrl);
             setPrUrl(prUrl);
@@ -212,7 +212,7 @@ export function PluginUpdateDialog({ plugin, githubService, onClose, onSuccess, 
                         <div className="current-plugin-info">
                             <h4>{plugin.name}</h4>
                             <p>
-                                {t('currentVersion')}: <strong>v{plugin.version}</strong>
+                                {t('currentVersion')}: <strong>v{plugin.latestVersion}</strong>
                             </p>
                         </div>
 
