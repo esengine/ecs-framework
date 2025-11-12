@@ -1,9 +1,34 @@
 import { singleton } from 'tsyringe';
-import { open, save, message, ask } from '@tauri-apps/plugin-dialog';
+import { open, save } from '@tauri-apps/plugin-dialog';
 import type { IDialog, OpenDialogOptions, SaveDialogOptions } from '@esengine/editor-core';
 
+export interface ConfirmDialogData {
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+}
+
+export interface IDialogExtended extends IDialog {
+    setConfirmCallback(callback: (data: ConfirmDialogData) => void): void;
+    setLocale(locale: string): void;
+}
+
 @singleton()
-export class TauriDialogService implements IDialog {
+export class TauriDialogService implements IDialogExtended {
+    private showConfirmCallback?: (data: ConfirmDialogData) => void;
+    private locale: string = 'zh';
+
+    setConfirmCallback(callback: (data: ConfirmDialogData) => void): void {
+        this.showConfirmCallback = callback;
+    }
+
+    setLocale(locale: string): void {
+        this.locale = locale;
+    }
+
     async openDialog(options: OpenDialogOptions): Promise<string | string[] | null> {
         const result = await open({
             multiple: options.multiple || false,
@@ -27,16 +52,35 @@ export class TauriDialogService implements IDialog {
     }
 
     async showMessage(title: string, messageText: string, type: 'info' | 'warning' | 'error' = 'info'): Promise<void> {
-        await message(messageText, { title, kind: type });
+        console.warn('[TauriDialogService] showMessage not implemented with custom UI, use notification instead');
     }
 
     async showConfirm(title: string, messageText: string): Promise<boolean> {
-        const result = await ask(messageText, {
-            title,
-            kind: 'info',
-            okLabel: '确定',
-            cancelLabel: '取消'
+        return new Promise((resolve) => {
+            if (this.showConfirmCallback) {
+                let resolved = false;
+                const handleResolve = (result: boolean) => {
+                    if (!resolved) {
+                        resolved = true;
+                        resolve(result);
+                    }
+                };
+
+                const confirmText = this.locale === 'zh' ? '确定' : 'Confirm';
+                const cancelText = this.locale === 'zh' ? '取消' : 'Cancel';
+
+                this.showConfirmCallback({
+                    title,
+                    message: messageText,
+                    confirmText,
+                    cancelText,
+                    onConfirm: () => handleResolve(true),
+                    onCancel: () => handleResolve(false)
+                });
+            } else {
+                console.warn('[TauriDialogService] showConfirmCallback not set');
+                resolve(false);
+            }
         });
-        return result;
     }
 }

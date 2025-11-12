@@ -650,7 +650,23 @@ export class GitHubService {
                 }
             }
 
-            return plugins;
+            // 按插件 ID 去重，每个插件只保留最新版本
+            const pluginMap = new Map<string, PublishedPlugin>();
+            for (const plugin of plugins) {
+                const existing = pluginMap.get(plugin.id);
+                if (!existing) {
+                    pluginMap.set(plugin.id, plugin);
+                } else {
+                    // 比较版本号，保留更新的
+                    const existingDate = new Date(existing.publishedAt);
+                    const currentDate = new Date(plugin.publishedAt);
+                    if (currentDate > existingDate) {
+                        pluginMap.set(plugin.id, plugin);
+                    }
+                }
+            }
+
+            return Array.from(pluginMap.values());
         } catch (error) {
             console.error('[GitHubService] Failed to fetch published plugins:', error);
             return [];

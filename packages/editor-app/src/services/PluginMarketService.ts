@@ -1,6 +1,7 @@
 import type { EditorPluginManager, IEditorPlugin } from '@esengine/editor-core';
 import JSZip from 'jszip';
 import { fetch } from '@tauri-apps/plugin-http';
+import { invoke } from '@tauri-apps/api/core';
 
 export interface PluginAuthor {
     name: string;
@@ -71,9 +72,11 @@ export class PluginMarketService {
 
     private pluginManager: EditorPluginManager;
     private installedPlugins: Map<string, InstalledPluginInfo> = new Map();
+    private pluginsDir: string;
 
-    constructor(pluginManager: EditorPluginManager) {
+    constructor(pluginManager: EditorPluginManager, pluginsDir: string) {
         this.pluginManager = pluginManager;
+        this.pluginsDir = pluginsDir;
         this.loadInstalledPlugins();
     }
 
@@ -175,21 +178,15 @@ export class PluginMarketService {
             console.log(`[PluginMarketService] Downloading ZIP: ${versionInfo.zipUrl}`);
             const zipBlob = await this.downloadZip(versionInfo.zipUrl);
 
-            // 解压并加载插件
-            console.log(`[PluginMarketService] Extracting and loading plugin...`);
-            const pluginInstance = await this.loadPluginFromZip(zipBlob, plugin);
-
-            if (!pluginInstance) {
-                throw new Error(`Failed to extract plugin instance from ${plugin.name}`);
-            }
-
-            // 安装到编辑器
-            await this.pluginManager.installEditor(pluginInstance);
+            // 解压到本地
+            console.log(`[PluginMarketService] Extracting to local directory...`);
+            await this.extractZipToLocal(zipBlob, plugin.id);
 
             // 标记为已安装
             this.markAsInstalled(plugin, targetVersion);
 
             console.log(`[PluginMarketService] Successfully installed: ${plugin.name} v${targetVersion}`);
+            console.log(`[PluginMarketService] Plugin files saved to: ${this.pluginsDir}/${plugin.id}`);
         } catch (error) {
             console.error(`[PluginMarketService] Failed to install plugin ${plugin.name}:`, error);
             throw error;
@@ -200,8 +197,26 @@ export class PluginMarketService {
         console.log(`[PluginMarketService] Uninstalling plugin: ${pluginId}`);
 
         try {
-            await this.pluginManager.uninstallEditor(pluginId);
+            // 尝试卸载插件实例（如果已加载）
+            try {
+                await this.pluginManager.uninstallEditor(pluginId);
+                console.log(`[PluginMarketService] Unloaded plugin instance: ${pluginId}`);
+            } catch (err) {
+                // 插件可能没有加载，忽略错误
+                console.log(`[PluginMarketService] Plugin instance not loaded (OK): ${pluginId}`);
+            }
 
+            // 删除本地文件（使用后端命令以避免权限问题）
+            const pluginDir = `${this.pluginsDir}/${pluginId}`.replace(/\\/g, '/');
+            try {
+                await invoke('delete_folder', { path: pluginDir });
+                console.log(`[PluginMarketService] Removed plugin directory: ${pluginDir}`);
+            } catch (err) {
+                console.error(`[PluginMarketService] Failed to remove directory ${pluginDir}:`, err);
+                throw new Error(`Failed to remove plugin directory: ${err}`);
+            }
+
+            // 移除安装记录
             this.installedPlugins.delete(pluginId);
             this.saveInstalledPlugins();
 
@@ -237,22 +252,97 @@ export class PluginMarketService {
         return await response.blob();
     }
 
+    private async extractZipToLocal(zipBlob: Blob, pluginId: string): Promise<void> {
+        try {
+            // 解压 ZIP
+            const zip = await JSZip.loadAsync(zipBlob);
+
+            // 目标目录（规范化路径分隔符）
+            const targetDir = `${this.pluginsDir}/${pluginId}`.replace(/\\/g, '/');
+
+            // 创建目标目录
+            await invoke('create_directory', { path: targetDir });
+            console.log(`[PluginMarketService] Created directory: ${targetDir}`);
+
+            // 遍历 ZIP 中的所有文件
+            const filePromises: Promise<void>[] = [];
+
+            zip.forEach((relativePath, file) => {
+                // 规范化路径：将反斜杠转换为正斜杠
+                const normalizedPath = relativePath.replace(/\\/g, '/');
+
+                if (file.dir) {
+                    // 创建目录
+                    const dirPath = `${targetDir}/${normalizedPath}`;
+                    filePromises.push(
+                        invoke('create_directory', { path: dirPath })
+                            .then(() => console.log(`[PluginMarketService] Created directory: ${dirPath}`))
+                            .catch(err => console.warn(`[PluginMarketService] Failed to create directory ${dirPath}:`, err))
+                    );
+                } else {
+                    // 写入文件
+                    const filePath = `${targetDir}/${normalizedPath}`;
+                    filePromises.push(
+                        file.async('uint8array').then(async (content) => {
+                            // 确保父目录存在
+                            const lastSlashIndex = filePath.lastIndexOf('/');
+                            if (lastSlashIndex > 0) {
+                                const parentDir = filePath.substring(0, lastSlashIndex);
+                                await invoke('create_directory', { path: parentDir }).catch(() => {});
+                            }
+
+                            // 写入文件
+                            await invoke('write_binary_file', {
+                                filePath,
+                                content: Array.from(content)
+                            });
+                            console.log(`[PluginMarketService] Extracted file: ${normalizedPath}`);
+                        })
+                    );
+                }
+            });
+
+            await Promise.all(filePromises);
+            console.log(`[PluginMarketService] All files extracted to ${targetDir}`);
+        } catch (error) {
+            console.error('[PluginMarketService] Failed to extract ZIP to local:', error);
+            throw error;
+        }
+    }
+
     private async loadPluginFromZip(zipBlob: Blob, metadata: PluginMarketMetadata): Promise<IEditorPlugin | null> {
         try {
             // 解压 ZIP
             const zip = await JSZip.loadAsync(zipBlob);
 
-            // 查找 index.js
-            const indexFile = zip.file('index.js');
-            if (!indexFile) {
-                throw new Error('index.js not found in plugin ZIP');
+            // 读取 package.json
+            const packageJsonFile = zip.file('package.json');
+            if (!packageJsonFile) {
+                throw new Error('package.json not found in plugin ZIP');
             }
 
-            // 读取 index.js 内容
-            const indexContent = await indexFile.async('text');
+            const packageJsonContent = await packageJsonFile.async('text');
+            const packageJson = JSON.parse(packageJsonContent);
+
+            // 获取入口文件路径 (优先 module，其次 main)
+            const entryPath = packageJson.module || packageJson.main;
+            if (!entryPath) {
+                throw new Error('No entry point (main or module) found in package.json');
+            }
+
+            console.log(`[PluginMarketService] Loading plugin from entry: ${entryPath}`);
+
+            // 查找入口文件
+            const entryFile = zip.file(entryPath);
+            if (!entryFile) {
+                throw new Error(`Entry file ${entryPath} not found in plugin ZIP`);
+            }
+
+            // 读取入口文件内容
+            const entryContent = await entryFile.async('text');
 
             // 创建 Blob URL
-            const blob = new Blob([indexContent], { type: 'application/javascript' });
+            const blob = new Blob([entryContent], { type: 'application/javascript' });
             const blobUrl = URL.createObjectURL(blob);
 
             try {

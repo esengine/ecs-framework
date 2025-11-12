@@ -1,12 +1,5 @@
 import { create } from 'zustand';
-
-interface ConfirmDialogData {
-    title: string;
-    message: string;
-    confirmText: string;
-    cancelText: string;
-    onConfirm: () => void;
-}
+import type { ConfirmDialogData } from '../../services/TauriDialogService';
 
 interface ErrorDialogData {
     title: string;

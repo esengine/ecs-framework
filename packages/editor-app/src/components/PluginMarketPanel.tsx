@@ -13,15 +13,18 @@ import {
     Filter
 } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-shell';
+import type { INotification, IDialog } from '@esengine/editor-core';
 import type { PluginMarketService, PluginMarketMetadata } from '../services/PluginMarketService';
 import '../styles/PluginMarketPanel.css';
 
 interface PluginMarketPanelProps {
     marketService: PluginMarketService;
+    notification: INotification;
+    dialog: IDialog;
     locale: string;
 }
 
-export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelProps) {
+export function PluginMarketPanel({ marketService, notification, dialog, locale }: PluginMarketPanelProps) {
     const t = (key: string) => {
         const translations: Record<string, Record<string, string>> = {
             zh: {
@@ -147,9 +150,18 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
         try {
             await marketService.installPlugin(plugin);
             setPlugins([...plugins]);
+
+            // 提示用户刷新插件列表
+            const message = locale === 'zh'
+                ? `插件 ${plugin.name} 安装成功！插件文件已保存到本地。请点击"已安装"标签页的刷新按钮来加载插件。`
+                : `Plugin ${plugin.name} installed successfully! Plugin files have been saved locally. Please click the refresh button in the "Installed" tab to load the plugin.`;
+            notification.show(message, 'success', 5000);
         } catch (error) {
             console.error('Failed to install plugin:', error);
-            alert(`Failed to install ${plugin.name}: ${error}`);
+            const errorMsg = locale === 'zh'
+                ? `安装 ${plugin.name} 失败: ${error}`
+                : `Failed to install ${plugin.name}: ${error}`;
+            notification.show(errorMsg, 'error', 5000);
         } finally {
             setInstallingPlugins((prev) => {
                 const next = new Set(prev);
@@ -160,7 +172,13 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
     };
 
     const handleUninstall = async (plugin: PluginMarketMetadata) => {
-        if (!confirm(`Are you sure you want to uninstall ${plugin.name}?`)) {
+        const title = locale === 'zh' ? '确认卸载' : 'Confirm Uninstall';
+        const message = locale === 'zh'
+            ? `确定要卸载 ${plugin.name} 吗？`
+            : `Are you sure you want to uninstall ${plugin.name}?`;
+
+        const confirmed = await dialog.showConfirm(title, message);
+        if (!confirmed) {
             return;
         }
 
@@ -169,9 +187,18 @@ export function PluginMarketPanel({ marketService, locale }: PluginMarketPanelPr
         try {
             await marketService.uninstallPlugin(plugin.id);
             setPlugins([...plugins]);
+
+            // 提示用户卸载成功
+            const message = locale === 'zh'
+                ? `插件 ${plugin.name} 已成功卸载！插件文件已从本地删除。`
+                : `Plugin ${plugin.name} uninstalled successfully! Plugin files have been removed from local storage.`;
+            notification.show(message, 'success', 5000);
         } catch (error) {
             console.error('Failed to uninstall plugin:', error);
-            alert(`Failed to uninstall ${plugin.name}: ${error}`);
+            const errorMsg = locale === 'zh'
+                ? `卸载 ${plugin.name} 失败: ${error}`
+                : `Failed to uninstall ${plugin.name}: ${error}`;
+            notification.show(errorMsg, 'error', 5000);
         } finally {
             setInstallingPlugins((prev) => {
                 const next = new Set(prev);

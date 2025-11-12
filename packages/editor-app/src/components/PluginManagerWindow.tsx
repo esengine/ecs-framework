@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { EditorPluginManager, IEditorPluginMetadata, EditorPluginCategory } from '@esengine/editor-core';
+import { EditorPluginManager, IEditorPluginMetadata, EditorPluginCategory, INotification, IDialog } from '@esengine/editor-core';
 import * as LucideIcons from 'lucide-react';
 import {
     Package,
@@ -22,6 +22,9 @@ import '../styles/PluginManagerWindow.css';
 interface PluginManagerWindowProps {
     pluginManager: EditorPluginManager;
     githubService: GitHubService;
+    pluginsDir: string;
+    notification: INotification;
+    dialog: IDialog;
     onClose: () => void;
     onRefresh?: () => Promise<void>;
     onOpen?: () => void;
@@ -36,7 +39,7 @@ const categoryIcons: Record<EditorPluginCategory, string> = {
     [EditorPluginCategory.ImportExport]: 'Package'
 };
 
-export function PluginManagerWindow({ pluginManager, githubService, onClose, onRefresh, onOpen, locale }: PluginManagerWindowProps) {
+export function PluginManagerWindow({ pluginManager, githubService, pluginsDir, notification, dialog, onClose, onRefresh, onOpen, locale }: PluginManagerWindowProps) {
     const t = (key: string) => {
         const translations: Record<string, Record<string, string>> = {
             zh: {
@@ -110,7 +113,7 @@ export function PluginManagerWindow({ pluginManager, githubService, onClose, onR
     );
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const marketService = useMemo(() => new PluginMarketService(pluginManager), [pluginManager]);
+    const marketService = useMemo(() => new PluginMarketService(pluginManager, pluginsDir), [pluginManager, pluginsDir]);
 
     const updatePluginList = () => {
         const allPlugins = pluginManager.getAllPluginMetadata();
@@ -418,7 +421,7 @@ export function PluginManagerWindow({ pluginManager, githubService, onClose, onR
                     </>
                 )}
 
-                {activeTab === 'marketplace' && <PluginMarketPanel marketService={marketService} locale={locale} />}
+                {activeTab === 'marketplace' && <PluginMarketPanel marketService={marketService} notification={notification} dialog={dialog} locale={locale} />}
             </div>
         </div>
     );

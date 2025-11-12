@@ -654,17 +654,7 @@ async fn build_plugin(plugin_folder: String, app: AppHandle) -> Result<String, S
     zip.write_all(&package_json_content)
         .map_err(|e| format!("Failed to write package.json to zip: {}", e))?;
 
-    let index_esm_path = dist_path.join("index.esm.js");
-    if index_esm_path.exists() {
-        let index_content = fs::read(&index_esm_path)
-            .map_err(|e| format!("Failed to read index.esm.js: {}", e))?;
-        zip.start_file("index.js", options)
-            .map_err(|e| format!("Failed to add index.js to zip: {}", e))?;
-        zip.write_all(&index_content)
-            .map_err(|e| format!("Failed to write index.js to zip: {}", e))?;
-    } else {
-        return Err("index.esm.js not found in dist directory. Please ensure the plugin is built with Rollup.".to_string());
-    }
+    add_directory_to_zip(&mut zip, plugin_path, &dist_path, options)?;
 
     zip.finish()
         .map_err(|e| format!("Failed to finalize zip: {}", e))?;

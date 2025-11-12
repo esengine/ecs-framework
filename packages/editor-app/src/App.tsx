@@ -13,13 +13,12 @@ import {
     SceneManagerService,
     ProjectService,
     CompilerRegistry,
-    InspectorRegistry
+    InspectorRegistry,
+    INotification
 } from '@esengine/editor-core';
+import type { IDialogExtended } from './services/TauriDialogService';
 import { GlobalBlackboardService } from '@esengine/behavior-tree';
 import { ServiceRegistry, PluginInstaller, useDialogStore } from './app/managers';
-import { ModuleLoader } from './core/modules/ModuleLoader';
-import type { IModuleContext } from './core/interfaces/IModuleContext';
-import type { EditorEventMap } from './core/events/EditorEventMap';
 import { StartupPage } from './components/StartupPage';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { Inspector } from './components/Inspector';
@@ -80,7 +79,16 @@ function App() {
     const [uiRegistry, setUiRegistry] = useState<UIRegistry | null>(null);
     const [settingsRegistry, setSettingsRegistry] = useState<SettingsRegistry | null>(null);
     const [sceneManager, setSceneManager] = useState<SceneManagerService | null>(null);
+    const [notification, setNotification] = useState<INotification | null>(null);
+    const [dialog, setDialog] = useState<IDialogExtended | null>(null);
     const { t, locale, changeLocale } = useLocale();
+
+    // 同步 locale 到 TauriDialogService
+    useEffect(() => {
+        if (dialog) {
+            dialog.setLocale(locale);
+        }
+    }, [locale, dialog]);
     const [status, setStatus] = useState(t('header.status.initializing'));
     const [panels, setPanels] = useState<FlexDockPanel[]>([]);
     const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
@@ -188,22 +196,7 @@ function App() {
                 await pluginInstaller.installBuiltinPlugins(services.pluginManager);
 
                 services.notification.setCallbacks(showToast, hideToast);
-
-                const moduleLoader = new ModuleLoader();
-                const moduleContext: IModuleContext<EditorEventMap> = {
-                    container: services.diContainer.getNativeContainer(),
-                    eventBus: services.eventBus,
-                    commands: services.commandRegistry,
-                    panels: services.panelRegistry,
-                    fileSystem: services.fileSystem,
-                    dialog: services.dialog,
-                    notification: services.notification,
-                    inspectorRegistry: services.inspectorRegistry
-                };
-
-                // TODO: 实现模块动态加载机制
-                // 模块应该通过配置文件或插件系统自动发现和加载
-                // 而不是在App.tsx中硬编码
+                (services.dialog as IDialogExtended).setConfirmCallback(setConfirmDialog);
 
                 services.messageHub.subscribe('ui:openWindow', (data: any) => {
                     console.log('[App] Received ui:openWindow:', data);
@@ -227,6 +220,8 @@ function App() {
                 setUiRegistry(services.uiRegistry);
                 setSettingsRegistry(services.settingsRegistry);
                 setSceneManager(services.sceneManager);
+                setNotification(services.notification);
+                setDialog(services.dialog as IDialogExtended);
                 setStatus(t('header.status.ready'));
 
                 // Check for updates on startup (after 3 seconds)
@@ -731,8 +726,16 @@ function App() {
                         message={confirmDialog.message}
                         confirmText={confirmDialog.confirmText}
                         cancelText={confirmDialog.cancelText}
-                        onConfirm={confirmDialog.onConfirm}
-                        onCancel={() => setConfirmDialog(null)}
+                        onConfirm={() => {
+                            confirmDialog.onConfirm();
+                            setConfirmDialog(null);
+                        }}
+                        onCancel={() => {
+                            if (confirmDialog.onCancel) {
+                                confirmDialog.onCancel();
+                            }
+                            setConfirmDialog(null);
+                        }}
                     />
                 )}
             </>
@@ -811,10 +814,13 @@ function App() {
                 <span>{t('footer.core')}: {t('footer.active')}</span>
             </div>
 
-            {showPluginManager && pluginManager && (
+            {showPluginManager && pluginManager && notification && dialog && (
                 <PluginManagerWindow
                     pluginManager={pluginManager}
                     githubService={githubService}
+                    pluginsDir={currentProjectPath ? `${currentProjectPath}/plugins` : 'plugins'}
+                    notification={notification}
+                    dialog={dialog}
                     onClose={() => setShowPluginManager(false)}
                     locale={locale}
                     onOpen={() => {
@@ -868,6 +874,25 @@ function App() {
                     title={errorDialog.title}
                     message={errorDialog.message}
                     onClose={() => setErrorDialog(null)}
+                />
+            )}
+
+            {confirmDialog && (
+                <ConfirmDialog
+                    title={confirmDialog.title}
+                    message={confirmDialog.message}
+                    confirmText={confirmDialog.confirmText}
+                    cancelText={confirmDialog.cancelText}
+                    onConfirm={() => {
+                        confirmDialog.onConfirm();
+                        setConfirmDialog(null);
+                    }}
+                    onCancel={() => {
+                        if (confirmDialog.onCancel) {
+                            confirmDialog.onCancel();
+                        }
+                        setConfirmDialog(null);
+                    }}
                 />
             )}
         </div>

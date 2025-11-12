@@ -6,26 +6,6 @@
     background: #1e1e1e;
 }
 
-/* 全屏模式 */
-.behavior-tree-editor-panel.fullscreen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 9999;
-    background: #1e1e1e;
-}
-
-/* 全屏模式下的工具栏 - 确保不透明 */
-.behavior-tree-editor-panel.fullscreen .behavior-tree-editor-toolbar {
-    background: #252526;
-    opacity: 1;
-    position: relative;
-    z-index: 10000;
-}
-
-/* 工具栏 */
 .behavior-tree-editor-toolbar {
     display: flex;
     align-items: center;
@@ -76,107 +56,6 @@
     cursor: not-allowed;
 }
 
-/* 执行控制按钮颜色 */
-.behavior-tree-editor-toolbar .toolbar-btn.btn-play {
-    color: #4caf50;
-}
-
-.behavior-tree-editor-toolbar .toolbar-btn.btn-play:hover:not(:disabled) {
-    background: rgba(76, 175, 80, 0.15);
-    border-color: rgba(76, 175, 80, 0.3);
-}
-
-.behavior-tree-editor-toolbar .toolbar-btn.btn-pause {
-    color: #ff9800;
-}
-
-.behavior-tree-editor-toolbar .toolbar-btn.btn-pause:hover:not(:disabled) {
-    background: rgba(255, 152, 0, 0.15);
-    border-color: rgba(255, 152, 0, 0.3);
-}
-
-.behavior-tree-editor-toolbar .toolbar-btn.btn-stop {
-    color: #f44336;
-}
-
-.behavior-tree-editor-toolbar .toolbar-btn.btn-stop:hover:not(:disabled) {
-    background: rgba(244, 67, 54, 0.15);
-    border-color: rgba(244, 67, 54, 0.3);
-}
-
-.behavior-tree-editor-toolbar .toolbar-btn.btn-step {
-    color: #2196f3;
-}
-
-.behavior-tree-editor-toolbar .toolbar-btn.btn-step:hover:not(:disabled) {
-    background: rgba(33, 150, 243, 0.15);
-    border-color: rgba(33, 150, 243, 0.3);
-}
-
-/* 速率控制 */
-.speed-control {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-left: 8px;
-}
-
-.speed-control .speed-label {
-    font-size: 12px;
-    color: #999;
-}
-
-.speed-control .speed-slider {
-    width: 100px;
-    height: 6px;
-    background: #3c3c3c;
-    border-radius: 3px;
-    outline: none;
-    appearance: none;
-    -webkit-appearance: none;
-}
-
-.speed-control .speed-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 16px;
-    height: 16px;
-    background: #0e639c;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 0 0 2px rgba(14, 99, 156, 0.3);
-    transition: all 0.2s;
-}
-
-.speed-control .speed-slider::-webkit-slider-thumb:hover {
-    background: #1177bb;
-    box-shadow: 0 0 0 4px rgba(14, 99, 156, 0.3);
-}
-
-.speed-control .speed-slider::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    background: #0e639c;
-    border-radius: 50%;
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 0 0 2px rgba(14, 99, 156, 0.3);
-    transition: all 0.2s;
-}
-
-.speed-control .speed-slider::-moz-range-thumb:hover {
-    background: #1177bb;
-    box-shadow: 0 0 0 4px rgba(14, 99, 156, 0.3);
-}
-
-.speed-control .speed-value {
-    font-size: 12px;
-    color: #ccc;
-    min-width: 35px;
-    text-align: right;
-}
-
-/* 文件信息 */
 .behavior-tree-editor-toolbar .file-info {
     flex: 1;
     justify-content: flex-end;
@@ -188,7 +67,6 @@
     font-weight: 500;
 }
 
-/* 主内容区 */
 .behavior-tree-editor-content {
     flex: 1;
     overflow: hidden;
@@ -200,84 +78,4 @@
     height: 100%;
     overflow: hidden;
     position: relative;
-}
-
-/* 黑板侧边栏 - 浮动面板 */
-.blackboard-sidebar {
-    position: absolute;
-    right: 16px;
-    top: 16px;
-    bottom: 16px;
-    width: 350px;
-    display: flex;
-    flex-direction: column;
-    background: #252526;
-    border: 1px solid #3e3e42;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
-    z-index: 100;
-}
-
-.blackboard-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px;
-    background: #2d2d2d;
-    border-bottom: 1px solid #3e3e42;
-    border-radius: 8px 8px 0 0;
-    font-weight: 500;
-    font-size: 13px;
-    color: #cccccc;
-}
-
-.blackboard-header .close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    cursor: pointer;
-    color: #9d9d9d;
-    transition: all 0.2s;
-}
-
-.blackboard-header .close-btn:hover {
-    background: #2a2d2e;
-    border-color: #3e3e42;
-    color: #cccccc;
-}
-
-.blackboard-content {
-    flex: 1;
-    overflow: hidden;
-}
-
-/* 黑板切换按钮 */
-.blackboard-toggle-btn {
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 48px;
-    background: #252526;
-    border: 1px solid #3e3e42;
-    border-radius: 8px 0 0 8px;
-    cursor: pointer;
-    color: #9d9d9d;
-    transition: all 0.2s;
-    z-index: 99;
-    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
-}
-
-.blackboard-toggle-btn:hover {
-    background: #2a2d2e;
-    color: #cccccc;
-    width: 36px;
 }

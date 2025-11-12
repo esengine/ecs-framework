@@ -1,6 +1,7 @@
 const resolve = require('@rollup/plugin-node-resolve');
 const commonjs = require('@rollup/plugin-commonjs');
 const dts = require('rollup-plugin-dts').default;
+const postcss = require('rollup-plugin-postcss');
 
 const external = [
     'react',
@@ -11,7 +12,9 @@ const external = [
     '@esengine/ecs-framework',
     '@esengine/editor-core',
     '@esengine/behavior-tree',
-    'tsyringe'
+    'tsyringe',
+    '@tauri-apps/api/core',
+    '@tauri-apps/plugin-dialog'
 ];
 
 module.exports = [
@@ -28,11 +31,15 @@ module.exports = [
             resolve({
                 extensions: ['.js', '.jsx']
             }),
+            postcss({
+                inject: true,
+                minimize: false
+            }),
             commonjs()
         ],
         external,
         onwarn(warning, warn) {
-            if (warning.code === 'CIRCULAR_DEPENDENCY') {
+            if (warning.code === 'CIRCULAR_DEPENDENCY' || warning.code === 'THIS_IS_UNDEFINED') {
                 return;
             }
             warn(warning);

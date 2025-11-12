@@ -1,9 +1,10 @@
 import { singleton } from 'tsyringe';
 import { Core } from '@esengine/ecs-framework';
-import { CompilerRegistry, IEditorModule, IModuleContext } from '@esengine/editor-core';
+import { CompilerRegistry, IEditorModule, IModuleContext, PanelPosition } from '@esengine/editor-core';
 import { BehaviorTreeService } from './services/BehaviorTreeService';
 import { BehaviorTreeCompiler } from './compiler/BehaviorTreeCompiler';
 import { BehaviorTreeNodeInspectorProvider } from './providers/BehaviorTreeNodeInspectorProvider';
+import { BehaviorTreeEditorPanel } from './components/panels/BehaviorTreeEditorPanel';
 
 @singleton()
 export class BehaviorTreeModule implements IEditorModule {
@@ -81,6 +82,19 @@ export class BehaviorTreeModule implements IEditorModule {
 
     private registerPanels(context: IModuleContext): void {
         console.log('[BehaviorTreeModule] Registering panels...');
+
+        context.panels.register({
+            id: 'behavior-tree-editor',
+            title: '行为树编辑器',
+            icon: 'GitBranch',
+            component: BehaviorTreeEditorPanel,
+            position: PanelPosition.Center,
+            defaultSize: 400,
+            closable: true,
+            isDynamic: true
+        });
+
+        console.log('[BehaviorTreeModule] Panel registered: behavior-tree-editor');
     }
 
     private subscribeEvents(context: IModuleContext): void {
