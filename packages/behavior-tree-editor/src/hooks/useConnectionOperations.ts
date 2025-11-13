@@ -13,7 +13,7 @@ export function useConnectionOperations(
     validator: IValidator,
     commandManager: CommandManager
 ) {
-    const treeState = useMemo(() => new TreeStateAdapter(), []);
+    const treeState = useMemo(() => TreeStateAdapter.getInstance(), []);
 
     const addConnectionUseCase = useMemo(
         () => new AddConnectionUseCase(commandManager, treeState, validator),

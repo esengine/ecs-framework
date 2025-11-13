@@ -1,6 +1,6 @@
 import { useState, RefObject } from 'react';
 import { NodeTemplate } from '@esengine/behavior-tree';
-import { BehaviorTreeNode, Connection } from '../stores/useBehaviorTreeStore';
+import { BehaviorTreeNode, Connection, useBehaviorTreeDataStore } from '../stores';
 import { Node } from '../domain/models/Node';
 import { Position } from '../domain/value-objects/Position';
 import { useNodeOperations } from './useNodeOperations';
@@ -27,7 +27,6 @@ interface UseQuickCreateMenuParams {
     connectingFromProperty: string | null;
     clearConnecting: () => void;
     nodes: BehaviorTreeNode[];
-    setNodes: (nodes: BehaviorTreeNode[]) => void;
     connections: Connection[];
     executionMode: ExecutionMode;
     onStop: () => void;
@@ -46,7 +45,6 @@ export function useQuickCreateMenu(params: UseQuickCreateMenuParams) {
         connectingFromProperty,
         clearConnecting,
         nodes,
-        setNodes,
         connections,
         executionMode,
         onStop,
@@ -101,8 +99,10 @@ export function useQuickCreateMenu(params: UseQuickCreateMenuParams) {
             Array.from(nodeToReplace.children)
         );
 
-        // 替换节点
-        setNodes(nodes.map((n) => n.id === newNode.id ? newNode : n));
+        // 替换节点 - 通过 store 更新
+        const store = useBehaviorTreeDataStore.getState();
+        const updatedTree = store.tree.updateNode(newNode.id, () => newNode);
+        store.setTree(updatedTree);
 
         // 删除所有指向该节点的属性连接，让用户重新连接
         const propertyConnections = connections.filter((conn) =>

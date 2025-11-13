@@ -1,17 +1,22 @@
 import { create } from 'zustand';
 
 /**
- * UI 状态
- * 管理UI相关的状态（选中、拖拽、画布）
+ * UI 状态 Store
+ * 只包含 UI 交互状态，不包含业务数据
  */
 interface UIState {
     /**
-     * 选中的节点ID列表
+     * 选中的节点 ID 列表
      */
     selectedNodeIds: string[];
 
     /**
-     * 正在拖拽的节点ID
+     * 选中的连接
+     */
+    selectedConnection: { from: string; to: string } | null;
+
+    /**
+     * 正在拖拽的节点 ID
      */
     draggingNodeId: string | null;
 
@@ -26,19 +31,14 @@ interface UIState {
     isDraggingNode: boolean;
 
     /**
-     * 拖拽偏移量
+     * 拖拽偏移量（临时状态）
      */
     dragDelta: { dx: number; dy: number };
 
     /**
-     * 画布偏移
+     * 画布偏移（临时，用于平移操作中）
      */
-    canvasOffset: { x: number; y: number };
-
-    /**
-     * 画布缩放
-     */
-    canvasScale: number;
+    tempCanvasOffset: { x: number; y: number } | null;
 
     /**
      * 是否正在平移画布
@@ -50,21 +50,74 @@ interface UIState {
      */
     panStart: { x: number; y: number };
 
-    // Actions
+    /**
+     * 正在连接的起始节点 ID
+     */
+    connectingFrom: string | null;
+
+    /**
+     * 正在连接的起始属性名
+     */
+    connectingFromProperty: string | null;
+
+    /**
+     * 连接线的临时终点位置
+     */
+    connectingToPos: { x: number; y: number } | null;
+
+    /**
+     * 是否正在框选
+     */
+    isBoxSelecting: boolean;
+
+    /**
+     * 框选起始位置
+     */
+    boxSelectStart: { x: number; y: number } | null;
+
+    /**
+     * 框选结束位置
+     */
+    boxSelectEnd: { x: number; y: number } | null;
+
+    /**
+     * 选择操作
+     */
     setSelectedNodeIds: (nodeIds: string[]) => void;
     toggleNodeSelection: (nodeId: string) => void;
     clearSelection: () => void;
+    setSelectedConnection: (connection: { from: string; to: string } | null) => void;
 
+    /**
+     * 拖拽操作
+     */
     startDragging: (nodeId: string, startPositions: Map<string, { x: number; y: number }>) => void;
     stopDragging: () => void;
     setIsDraggingNode: (isDragging: boolean) => void;
     setDragDelta: (delta: { dx: number; dy: number }) => void;
 
-    setCanvasOffset: (offset: { x: number; y: number }) => void;
-    setCanvasScale: (scale: number) => void;
+    /**
+     * 画布操作
+     */
+    setTempCanvasOffset: (offset: { x: number; y: number } | null) => void;
     setIsPanning: (isPanning: boolean) => void;
     setPanStart: (panStart: { x: number; y: number }) => void;
-    resetView: () => void;
+
+    /**
+     * 连接操作
+     */
+    setConnectingFrom: (nodeId: string | null) => void;
+    setConnectingFromProperty: (propertyName: string | null) => void;
+    setConnectingToPos: (pos: { x: number; y: number } | null) => void;
+    clearConnecting: () => void;
+
+    /**
+     * 框选操作
+     */
+    setIsBoxSelecting: (isSelecting: boolean) => void;
+    setBoxSelectStart: (pos: { x: number; y: number } | null) => void;
+    setBoxSelectEnd: (pos: { x: number; y: number } | null) => void;
+    clearBoxSelect: () => void;
 }
 
 /**
@@ -72,15 +125,20 @@ interface UIState {
  */
 export const useUIStore = create<UIState>((set, get) => ({
     selectedNodeIds: [],
+    selectedConnection: null,
     draggingNodeId: null,
     dragStartPositions: new Map(),
     isDraggingNode: false,
     dragDelta: { dx: 0, dy: 0 },
-
-    canvasOffset: { x: 0, y: 0 },
-    canvasScale: 1,
+    tempCanvasOffset: null,
     isPanning: false,
     panStart: { x: 0, y: 0 },
+    connectingFrom: null,
+    connectingFromProperty: null,
+    connectingToPos: null,
+    isBoxSelecting: false,
+    boxSelectStart: null,
+    boxSelectEnd: null,
 
     setSelectedNodeIds: (nodeIds: string[]) => set({ selectedNodeIds: nodeIds }),
 
@@ -93,7 +151,10 @@ export const useUIStore = create<UIState>((set, get) => ({
         }
     },
 
-    clearSelection: () => set({ selectedNodeIds: [] }),
+    clearSelection: () => set({ selectedNodeIds: [], selectedConnection: null }),
+
+    setSelectedConnection: (connection: { from: string; to: string } | null) =>
+        set({ selectedConnection: connection }),
 
     startDragging: (nodeId: string, startPositions: Map<string, { x: number; y: number }>) =>
         set({
@@ -114,18 +175,35 @@ export const useUIStore = create<UIState>((set, get) => ({
 
     setDragDelta: (delta: { dx: number; dy: number }) => set({ dragDelta: delta }),
 
-    setCanvasOffset: (offset: { x: number; y: number }) => set({ canvasOffset: offset }),
-
-    setCanvasScale: (scale: number) => set({ canvasScale: scale }),
+    setTempCanvasOffset: (offset: { x: number; y: number } | null) => set({ tempCanvasOffset: offset }),
 
     setIsPanning: (isPanning: boolean) => set({ isPanning }),
 
     setPanStart: (panStart: { x: number; y: number }) => set({ panStart }),
 
-    resetView: () =>
+    setConnectingFrom: (nodeId: string | null) => set({ connectingFrom: nodeId }),
+
+    setConnectingFromProperty: (propertyName: string | null) => set({ connectingFromProperty: propertyName }),
+
+    setConnectingToPos: (pos: { x: number; y: number } | null) => set({ connectingToPos: pos }),
+
+    clearConnecting: () =>
         set({
-            canvasOffset: { x: 0, y: 0 },
-            canvasScale: 1,
-            isPanning: false
+            connectingFrom: null,
+            connectingFromProperty: null,
+            connectingToPos: null
+        }),
+
+    setIsBoxSelecting: (isSelecting: boolean) => set({ isBoxSelecting: isSelecting }),
+
+    setBoxSelectStart: (pos: { x: number; y: number } | null) => set({ boxSelectStart: pos }),
+
+    setBoxSelectEnd: (pos: { x: number; y: number } | null) => set({ boxSelectEnd: pos }),
+
+    clearBoxSelect: () =>
+        set({
+            isBoxSelecting: false,
+            boxSelectStart: null,
+            boxSelectEnd: null
         })
 }));

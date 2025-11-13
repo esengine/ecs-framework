@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ICompiler, CompileResult, CompilerContext, IFileSystem } from '@esengine/editor-core';
 import { File, FolderTree, FolderOpen } from 'lucide-react';
-import { useTreeStore } from '../stores/useTreeStore';
+import { useBehaviorTreeDataStore } from '../stores';
 import { GlobalBlackboardTypeGenerator } from '../generators/GlobalBlackboardTypeGenerator';
 
 export interface BehaviorTreeCompileOptions {
@@ -108,14 +108,11 @@ export class BehaviorTreeCompiler implements ICompiler<BehaviorTreeCompileOption
             const fileContent = await fileSystem.readFile(btreePath);
             const treeData = JSON.parse(fileContent);
 
-            const treeStore = useTreeStore.getState();
-            const runtimeAsset = treeStore.exportToRuntimeAsset(
-                {
-                    name: fileId,
-                    description: treeData.metadata?.description || ''
-                },
-                format
-            );
+            // TODO: 实现从 treeData 直接导出运行时资产，而不依赖 store
+            // 暂时使用简化的导出逻辑
+            const runtimeAsset = format === 'json'
+                ? JSON.stringify(treeData, null, 2)
+                : new TextEncoder().encode(JSON.stringify(treeData));
 
             const extension = format === 'json' ? '.btree.json' : '.btree.bin';
             const assetPath = `${assetOutputPath}/${fileId}${extension}`;
@@ -220,14 +217,10 @@ export class BehaviorTreeCompiler implements ICompiler<BehaviorTreeCompileOption
     }
 
     private getCurrentFileName(): string | null {
-        const treeStore = useTreeStore.getState();
-        const pendingPath = treeStore.pendingFilePath;
-        if (!pendingPath) return null;
-
-        const fileName = pendingPath.split(/[/\\]/).pop();
-        if (!fileName) return null;
-
-        return fileName.replace('.btree', '');
+        // TODO: 编译器不应该依赖编辑器 store 状态
+        // 需要通过其他方式获取当前文件名
+        // 暂时返回 null，要求用户使用工作区模式
+        return null;
     }
 
     validateOptions(options: BehaviorTreeCompileOptions): string | null {

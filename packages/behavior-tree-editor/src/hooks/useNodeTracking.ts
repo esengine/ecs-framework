@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { BehaviorTreeNode } from '../stores/useBehaviorTreeStore';
+import { BehaviorTreeNode } from '../stores';
 import { ExecutionMode } from '../application/services/ExecutionController';
 
 interface UseNodeTrackingParams {

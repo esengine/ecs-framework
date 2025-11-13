@@ -1,20 +1,15 @@
+import { useCallback } from 'react';
 import { ask } from '@tauri-apps/plugin-dialog';
-import { BehaviorTreeNode } from '../stores/useBehaviorTreeStore';
-import { Node } from '../domain/models/Node';
-import { Position } from '../domain/value-objects/Position';
-import { NodeTemplate } from '@esengine/behavior-tree';
+import { BehaviorTreeNode } from '../stores';
 
 interface UseEditorHandlersParams {
     isDraggingNode: boolean;
     selectedNodeIds: string[];
     setSelectedNodeIds: (ids: string[]) => void;
-    setNodes: (nodes: Node[]) => void;
-    setConnections: (connections: any[]) => void;
     resetView: () => void;
+    resetTree: () => void;
     triggerForceUpdate: () => void;
     onNodeSelect?: (node: BehaviorTreeNode) => void;
-    rootNodeId: string;
-    rootNodeTemplate: NodeTemplate;
 }
 
 export function useEditorHandlers(params: UseEditorHandlersParams) {
@@ -22,16 +17,16 @@ export function useEditorHandlers(params: UseEditorHandlersParams) {
         isDraggingNode,
         selectedNodeIds,
         setSelectedNodeIds,
-        setNodes,
-        setConnections,
         resetView,
+        resetTree,
         triggerForceUpdate,
-        onNodeSelect,
-        rootNodeId,
-        rootNodeTemplate
+        onNodeSelect
     } = params;
 
-    const handleNodeClick = (e: React.MouseEvent, node: BehaviorTreeNode) => {
+    const handleNodeClick = useCallback((e: React.MouseEvent, node: BehaviorTreeNode) => {
+        // 阻止事件冒泡，避免触发画布的点击事件
+        e.stopPropagation();
+
         if (isDraggingNode) {
             return;
         }
@@ -46,35 +41,26 @@ export function useEditorHandlers(params: UseEditorHandlersParams) {
             setSelectedNodeIds([node.id]);
         }
         onNodeSelect?.(node);
-    };
+    }, [isDraggingNode, selectedNodeIds, setSelectedNodeIds, onNodeSelect]);
 
-    const handleResetView = () => {
+    const handleResetView = useCallback(() => {
         resetView();
         requestAnimationFrame(() => {
             triggerForceUpdate();
         });
-    };
+    }, [resetView, triggerForceUpdate]);
 
-    const handleClearCanvas = async () => {
+    const handleClearCanvas = useCallback(async () => {
         const confirmed = await ask('确定要清空画布吗？此操作不可撤销。', {
             title: '清空画布',
             kind: 'warning'
         });
 
         if (confirmed) {
-            setNodes([
-                new Node(
-                    rootNodeId,
-                    rootNodeTemplate,
-                    { nodeType: 'root' },
-                    new Position(400, 100),
-                    []
-                )
-            ]);
-            setConnections([]);
+            resetTree();
             setSelectedNodeIds([]);
         }
-    };
+    }, [resetTree, setSelectedNodeIds]);
 
     return {
         handleNodeClick,

@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { createLogger } from '@esengine/ecs-framework';
-import { useTreeStore } from '../stores/useTreeStore';
+import { useBehaviorTreeDataStore } from '../stores';
 
 const logger = createLogger('BehaviorTreeFileService');
 
@@ -33,7 +33,7 @@ export class BehaviorTreeFileService {
                 logger.info('加载行为树文件:', filePath);
                 const json = await invoke<string>('read_behavior_tree_file', { filePath });
 
-                const store = useTreeStore.getState();
+                const store = useBehaviorTreeDataStore.getState();
                 store.importFromJSON(json);
 
                 const fileName = filePath.split(/[\\/]/).pop()?.replace('.btree', '') || '未命名';

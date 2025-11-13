@@ -1,6 +1,7 @@
-import React, { useRef, useCallback, forwardRef } from 'react';
+import React, { useRef, useCallback, forwardRef, useState, useEffect } from 'react';
 import { useCanvasInteraction } from '../../hooks/useCanvasInteraction';
 import { EditorConfig } from '../../types';
+import { GridBackground } from './GridBackground';
 
 /**
  * 画布组件属性
@@ -92,7 +93,9 @@ export const BehaviorTreeCanvas = forwardRef<HTMLDivElement, BehaviorTreeCanvasP
     onDragLeave
 }, forwardedRef) => {
     const internalRef = useRef<HTMLDivElement>(null);
-    const canvasRef = forwardedRef || internalRef;
+    const canvasRef = (forwardedRef as React.RefObject<HTMLDivElement>) || internalRef;
+
+    const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
     const {
         canvasOffset,
@@ -103,6 +106,30 @@ export const BehaviorTreeCanvas = forwardRef<HTMLDivElement, BehaviorTreeCanvasP
         updatePanning,
         stopPanning
     } = useCanvasInteraction();
+
+    // 监听画布尺寸变化
+    useEffect(() => {
+        const updateSize = () => {
+            if (canvasRef.current) {
+                const rect = canvasRef.current.getBoundingClientRect();
+                setCanvasSize({
+                    width: rect.width,
+                    height: rect.height
+                });
+            }
+        };
+
+        updateSize();
+
+        const resizeObserver = new ResizeObserver(updateSize);
+        if (canvasRef.current) {
+            resizeObserver.observe(canvasRef.current);
+        }
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [canvasRef]);
 
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         if (e.button === 1 || (e.button === 0 && e.altKey)) {
@@ -159,20 +186,13 @@ export const BehaviorTreeCanvas = forwardRef<HTMLDivElement, BehaviorTreeCanvasP
             onDragEnter={onDragEnter}
             onDragLeave={onDragLeave}
         >
-            {/* 网格背景 */}
-            {config.showGrid && (
-                <div
-                    className="canvas-grid"
-                    style={{
-                        position: 'absolute',
-                        inset: 0,
-                        backgroundImage: `
-                            linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)
-                        `,
-                        backgroundSize: `${(config.gridSize || 20) * canvasScale}px ${(config.gridSize || 20) * canvasScale}px`,
-                        backgroundPosition: `${canvasOffset.x}px ${canvasOffset.y}px`
-                    }}
+            {/* ComfyUI 风格的点阵网格背景 */}
+            {config.showGrid && canvasSize.width > 0 && canvasSize.height > 0 && (
+                <GridBackground
+                    canvasOffset={canvasOffset}
+                    canvasScale={canvasScale}
+                    width={canvasSize.width}
+                    height={canvasSize.height}
                 />
             )}
 

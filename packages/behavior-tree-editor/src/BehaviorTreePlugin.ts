@@ -14,6 +14,7 @@ import { BehaviorTreeService } from './services/BehaviorTreeService';
 import { BehaviorTreeCompiler } from './compiler/BehaviorTreeCompiler';
 import { BehaviorTreeNodeInspectorProvider } from './providers/BehaviorTreeNodeInspectorProvider';
 import { BehaviorTreeEditorPanel } from './components/panels/BehaviorTreeEditorPanel';
+import { useBehaviorTreeDataStore } from './stores';
 import { createElement } from 'react';
 import { GitBranch } from 'lucide-react';
 
@@ -25,7 +26,13 @@ export class BehaviorTreePlugin implements IEditorPlugin {
     readonly description = 'Visual behavior tree editor for game AI development';
     readonly icon = 'GitBranch';
 
+    private services?: ServiceContainer;
+    private registeredServices: Set<any> = new Set();
+    private fileActionHandler?: FileActionHandler;
+    private fileCreationTemplate?: FileCreationTemplate;
+
     async install(core: Core, services: ServiceContainer): Promise<void> {
+        this.services = services;
         this.registerServices(services);
         this.registerCompilers(services);
         this.registerInspectors(services);
@@ -33,7 +40,15 @@ export class BehaviorTreePlugin implements IEditorPlugin {
     }
 
     async uninstall(): Promise<void> {
-        // 清理插件资源
+        if (this.services) {
+            for (const serviceType of this.registeredServices) {
+                this.services.unregister(serviceType);
+            }
+        }
+
+        this.registeredServices.clear();
+        useBehaviorTreeDataStore.getState().reset();
+        this.services = undefined;
     }
 
     registerPanels(): PanelDescriptor[] {
@@ -51,7 +66,12 @@ export class BehaviorTreePlugin implements IEditorPlugin {
     }
 
     private registerServices(services: ServiceContainer): void {
+        if (services.isRegistered(BehaviorTreeService)) {
+            services.unregister(BehaviorTreeService);
+        }
+
         services.registerSingleton(BehaviorTreeService);
+        this.registeredServices.add(BehaviorTreeService);
     }
 
     private registerCompilers(services: ServiceContainer): void {
@@ -71,12 +91,7 @@ export class BehaviorTreePlugin implements IEditorPlugin {
     }
 
     private registerFileActions(services: ServiceContainer): void {
-        const fileActionRegistry = services.resolve(FileActionRegistry);
-        if (!fileActionRegistry) {
-            return;
-        }
-
-        const creationTemplate: FileCreationTemplate = {
+        this.fileCreationTemplate = {
             label: 'Behavior Tree',
             extension: 'btree',
             defaultFileName: 'NewBehaviorTree',
@@ -93,9 +108,7 @@ export class BehaviorTreePlugin implements IEditorPlugin {
             }
         };
 
-        fileActionRegistry.registerCreationTemplate(creationTemplate);
-
-        const actionHandler: FileActionHandler = {
+        this.fileActionHandler = {
             extensions: ['btree'],
             onDoubleClick: async (filePath: string) => {
                 const service = services.resolve(BehaviorTreeService);
@@ -104,7 +117,13 @@ export class BehaviorTreePlugin implements IEditorPlugin {
                 }
             }
         };
+    }
 
-        fileActionRegistry.registerActionHandler(actionHandler);
+    registerFileActionHandlers(): FileActionHandler[] {
+        return this.fileActionHandler ? [this.fileActionHandler] : [];
+    }
+
+    registerFileCreationTemplates(): FileCreationTemplate[] {
+        return this.fileCreationTemplate ? [this.fileCreationTemplate] : [];
     }
 }

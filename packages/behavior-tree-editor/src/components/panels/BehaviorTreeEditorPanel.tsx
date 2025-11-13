@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTreeStore } from '../../stores';
+import { useBehaviorTreeDataStore } from '../../stores';
 import { BehaviorTreeEditor } from '../BehaviorTreeEditor';
 import { FolderOpen } from 'lucide-react';
 import './BehaviorTreeEditorPanel.css';
@@ -9,7 +9,8 @@ interface BehaviorTreeEditorPanelProps {
 }
 
 export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = ({ projectPath }) => {
-    const { isOpen, blackboardVariables } = useTreeStore();
+    const isOpen = useBehaviorTreeDataStore(state => state.isOpen);
+    const blackboardVariables = useBehaviorTreeDataStore(state => state.blackboardVariables);
 
     if (!isOpen) {
         return (

@@ -41,7 +41,7 @@ interface ConnectionRendererProps {
  * 连线渲染器
  * 使用贝塞尔曲线渲染节点间的连接
  */
-export const ConnectionRenderer: React.FC<ConnectionRendererProps> = ({
+const ConnectionRendererComponent: React.FC<ConnectionRendererProps> = ({
     connectionData,
     fromNode,
     toNode,
@@ -94,9 +94,14 @@ export const ConnectionRenderer: React.FC<ConnectionRendererProps> = ({
         };
     }, [connection, fromNode, toNode, getPortPosition]);
 
-    const color = connection.connectionType === 'property' ? '#9c27b0' : '#0e639c';
+    const isPropertyConnection = connection.connectionType === 'property';
+
+    const color = isPropertyConnection ? '#ab47bc' : '#00bcd4';
+    const glowColor = isPropertyConnection ? 'rgba(171, 71, 188, 0.6)' : 'rgba(0, 188, 212, 0.6)';
     const strokeColor = isSelected ? '#FFD700' : color;
-    const strokeWidth = isSelected ? 4 : 2;
+    const strokeWidth = isSelected ? 3.5 : 2.5;
+
+    const gradientId = `gradient-${connection.from}-${connection.to}`;
     const markerId = `arrowhead-${connection.from}-${connection.to}`;
 
     if (!pathData) {
@@ -123,37 +128,54 @@ export const ConnectionRenderer: React.FC<ConnectionRendererProps> = ({
             data-connection-from={connection.from}
             data-connection-to={connection.to}
         >
-            {/* 透明的宽线条，用于更容易点击 */}
-            <path
-                d={pathData.path}
-                fill="none"
-                stroke="transparent"
-                strokeWidth={20}
-            />
-
-            {/* 箭头标记定义 */}
             <defs>
+                {/* 渐变定义 */}
+                <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor={strokeColor} stopOpacity="0.8" />
+                    <stop offset="50%" stopColor={strokeColor} stopOpacity="1" />
+                    <stop offset="100%" stopColor={strokeColor} stopOpacity="0.8" />
+                </linearGradient>
+
+                {/* 箭头标记定义 */}
                 <marker
                     id={markerId}
-                    markerWidth="10"
-                    markerHeight="10"
-                    refX="9"
-                    refY="3"
+                    markerWidth="12"
+                    markerHeight="12"
+                    refX="10"
+                    refY="6"
                     orient="auto"
                     markerUnits="strokeWidth"
                 >
                     <polygon
-                        points="0 0, 10 3, 0 6"
+                        points="0 0, 12 6, 0 12"
                         fill={strokeColor}
                     />
                 </marker>
             </defs>
 
+            {/* 透明的宽线条，用于更容易点击 */}
+            <path
+                d={pathData.path}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={24}
+            />
+
+            {/* 发光背景层 */}
+            <path
+                d={pathData.path}
+                fill="none"
+                stroke={glowColor}
+                strokeWidth={strokeWidth + 2}
+                strokeLinecap="round"
+                opacity={isSelected ? 0.4 : 0.2}
+            />
+
             {/* 实际显示的线条 */}
             <path
                 d={pathData.path}
                 fill="none"
-                stroke={strokeColor}
+                stroke={`url(#${gradientId})`}
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
                 markerEnd={`url(#${markerId})`}
@@ -161,15 +183,28 @@ export const ConnectionRenderer: React.FC<ConnectionRendererProps> = ({
 
             {/* 选中时显示的中点 */}
             {isSelected && (
-                <circle
-                    cx={pathData.midX}
-                    cy={pathData.midY}
-                    r="5"
-                    fill={strokeColor}
-                    stroke="#1a1a1a"
-                    strokeWidth="2"
-                />
+                <>
+                    {/* 发光光晕 */}
+                    <circle
+                        cx={pathData.midX}
+                        cy={pathData.midY}
+                        r="8"
+                        fill={strokeColor}
+                        opacity="0.3"
+                    />
+                    {/* 实心圆点 */}
+                    <circle
+                        cx={pathData.midX}
+                        cy={pathData.midY}
+                        r="5"
+                        fill={strokeColor}
+                        stroke="rgba(0, 0, 0, 0.5)"
+                        strokeWidth="2"
+                    />
+                </>
             )}
         </g>
     );
 };
+
+export const ConnectionRenderer = ConnectionRendererComponent;

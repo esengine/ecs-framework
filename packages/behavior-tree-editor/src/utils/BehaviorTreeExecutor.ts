@@ -8,7 +8,7 @@ import {
     TaskStatus,
     NodeType
 } from '@esengine/behavior-tree';
-import type { BehaviorTreeNode } from '../stores/behaviorTreeStore';
+import type { BehaviorTreeNode } from '../stores';
 
 const logger = createLogger('BehaviorTreeExecutor');
 
@@ -127,10 +127,25 @@ export class BehaviorTreeExecutor {
             throw new Error('未找到根节点');
         }
 
-        // 如果根节点是编辑器特有的"根节点"且只有一个子节点，使用第一个子节点作为实际根节点
+        // 如果根节点是编辑器特有的"根节点"，跳过它，使用其子节点
         let actualRootId = rootNodeId;
-        if (rootNode.template.displayName === '根节点' && rootNode.children.length === 1) {
-            actualRootId = rootNode.children[0]!;
+        let skipRootNode = false;
+
+        if (rootNode.template.displayName === '根节点') {
+            skipRootNode = true;
+
+            if (rootNode.children.length === 0) {
+                throw new Error(
+                    '行为树为空！请在编辑器中添加节点并连接到根节点'
+                );
+            }
+
+            if (rootNode.children.length === 1) {
+                actualRootId = rootNode.children[0]!;
+            } else {
+                // 如果有多个子节点，创建一个隐式的Sequence节点
+                throw new Error('根节点有多个子节点，请使用组合节点（如序列、选择）作为第一个子节点');
+            }
         }
 
         const treeData: BehaviorTreeData = {
@@ -145,7 +160,7 @@ export class BehaviorTreeExecutor {
 
         for (const node of nodes) {
             // 跳过编辑器的虚拟根节点
-            if (node.id === rootNodeId && node.template.displayName === '根节点' && rootNode.children.length === 1) {
+            if (skipRootNode && node.id === rootNodeId) {
                 continue;
             }
 

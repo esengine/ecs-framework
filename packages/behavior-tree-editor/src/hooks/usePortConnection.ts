@@ -1,5 +1,5 @@
 import { RefObject } from 'react';
-import { BehaviorTreeNode, Connection, ROOT_NODE_ID } from '../stores/useBehaviorTreeStore';
+import { BehaviorTreeNode, Connection, ROOT_NODE_ID } from '../stores';
 import { PropertyDefinition } from '@esengine/behavior-tree';
 import { useConnectionOperations } from './useConnectionOperations';
 

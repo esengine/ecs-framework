@@ -10,7 +10,7 @@ import { PropertyDefinition } from '@esengine/behavior-tree';
 import { Node as BehaviorTreeNodeType } from '../../domain/models/Node';
 import { Connection } from '../../domain/models/Connection';
 import { ROOT_NODE_ID } from '../../domain/constants/RootNode';
-import { NodeExecutionStatus } from '../../stores/useExecutionStore';
+import type { NodeExecutionStatus } from '../../stores';
 import { BehaviorTreeExecutor } from '../../utils/BehaviorTreeExecutor';
 import { BlackboardValue } from '../../domain/models/Blackboard';
 
@@ -40,7 +40,7 @@ interface BehaviorTreeNodeProps {
     onPortMouseUp: (e: React.MouseEvent, nodeId: string, propertyName?: string) => void;
 }
 
-export const BehaviorTreeNode: React.FC<BehaviorTreeNodeProps> = ({
+const BehaviorTreeNodeComponent: React.FC<BehaviorTreeNodeProps> = ({
     node,
     isSelected,
     isBeingDragged,
@@ -348,3 +348,53 @@ export const BehaviorTreeNode: React.FC<BehaviorTreeNodeProps> = ({
         </div>
     );
 };
+
+/**
+ * 使用 React.memo 优化节点组件性能
+ * 只在关键 props 变化时重新渲染
+ */
+export const BehaviorTreeNode = React.memo(BehaviorTreeNodeComponent, (prevProps, nextProps) => {
+    // 如果节点本身变化，需要重新渲染
+    if (prevProps.node.id !== nextProps.node.id ||
+        prevProps.node.position.x !== nextProps.node.position.x ||
+        prevProps.node.position.y !== nextProps.node.position.y ||
+        prevProps.node.template.className !== nextProps.node.template.className) {
+        return false;
+    }
+
+    // 如果选中状态、拖拽状态或执行状态变化，需要重新渲染
+    if (prevProps.isSelected !== nextProps.isSelected ||
+        prevProps.isBeingDragged !== nextProps.isBeingDragged ||
+        prevProps.executionStatus !== nextProps.executionStatus ||
+        prevProps.executionOrder !== nextProps.executionOrder ||
+        prevProps.draggingNodeId !== nextProps.draggingNodeId) {
+        return false;
+    }
+
+    // 如果正在被拖拽，且 dragDelta 变化，需要重新渲染
+    if (nextProps.isBeingDragged &&
+        (prevProps.dragDelta.dx !== nextProps.dragDelta.dx ||
+         prevProps.dragDelta.dy !== nextProps.dragDelta.dy)) {
+        return false;
+    }
+
+    // 如果执行状态变化，需要重新渲染
+    if (prevProps.isExecuting !== nextProps.isExecuting) {
+        return false;
+    }
+
+    // 检查 uncommittedNodeIds 中是否包含当前节点
+    const prevUncommitted = prevProps.uncommittedNodeIds.has(nextProps.node.id);
+    const nextUncommitted = nextProps.uncommittedNodeIds.has(nextProps.node.id);
+    if (prevUncommitted !== nextUncommitted) {
+        return false;
+    }
+
+    // 节点数据变化时需要重新渲染
+    if (JSON.stringify(prevProps.node.data) !== JSON.stringify(nextProps.node.data)) {
+        return false;
+    }
+
+    // 其他情况不重新渲染
+    return true;
+});

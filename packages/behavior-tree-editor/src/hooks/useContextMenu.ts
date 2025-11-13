@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BehaviorTreeNode, ROOT_NODE_ID } from '../stores/useBehaviorTreeStore';
+import { BehaviorTreeNode, ROOT_NODE_ID } from '../stores';
 
 interface ContextMenuState {
     visible: boolean;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ExecutionController, ExecutionMode } from '../application/services/ExecutionController';
 import { BlackboardManager } from '../application/services/BlackboardManager';
-import { BehaviorTreeNode, Connection, useBehaviorTreeStore } from '../stores/useBehaviorTreeStore';
+import { BehaviorTreeNode, Connection, useBehaviorTreeDataStore } from '../stores';
 import { ExecutionLog } from '../utils/BehaviorTreeExecutor';
 import { BlackboardValue } from '../domain/models/Blackboard';
 
@@ -48,7 +48,7 @@ export function useExecutionController(params: UseExecutionControllerParams) {
             onBlackboardUpdate,
             onTickCountUpdate: setTickCount,
             onExecutionStatusUpdate: (statuses, orders) => {
-                const store = useBehaviorTreeStore.getState();
+                const store = useBehaviorTreeDataStore.getState();
                 store.updateNodeExecutionStatuses(statuses, orders);
             }
         });
@@ -57,8 +57,10 @@ export function useExecutionController(params: UseExecutionControllerParams) {
     const blackboardManager = useMemo(() => new BlackboardManager(), []);
 
     useEffect(() => {
+        // 保存当前 controller 的引用，确保清理时使用正确的实例
+        const currentController = controller;
         return () => {
-            controller.destroy();
+            currentController.destroy();
         };
     }, [controller]);
 
@@ -120,7 +122,7 @@ export function useExecutionController(params: UseExecutionControllerParams) {
             const restoredVars = blackboardManager.restoreInitialVariables();
             onBlackboardUpdate(restoredVars);
             onRestoreNodesData();
-            useBehaviorTreeStore.getState().clearNodeExecutionStatuses();
+            useBehaviorTreeDataStore.getState().clearNodeExecutionStatuses();
             onExecutingChange(false);
         } catch (error) {
             console.error('Failed to stop execution:', error);

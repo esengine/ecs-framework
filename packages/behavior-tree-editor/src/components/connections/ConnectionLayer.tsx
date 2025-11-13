@@ -55,6 +55,7 @@ export const ConnectionLayer: React.FC<ConnectionLayerProps> = ({
         return new Map(nodes.map((node) => [node.id, node]));
     }, [nodes]);
 
+    // 分离基础数据和选中状态的计算，避免不必要的重新创建
     const connectionViewData = useMemo(() => {
         return connections
             .map((connection) => {
@@ -65,18 +66,16 @@ export const ConnectionLayer: React.FC<ConnectionLayerProps> = ({
                     return null;
                 }
 
-                const isSelected = selectedConnection?.from === connection.from &&
-                                 selectedConnection?.to === connection.to;
-
-                const viewData: ConnectionViewData = {
-                    connection,
-                    isSelected
-                };
-
-                return { viewData, fromNode, toNode };
+                return { connection, fromNode, toNode };
             })
             .filter((item): item is NonNullable<typeof item> => item !== null);
-    }, [connections, nodeMap, selectedConnection]);
+    }, [connections, nodeMap]);
+
+    // 只在渲染时计算选中状态，避免整个数组重建
+    const isConnectionSelected = (connection: { from: string; to: string }) => {
+        return selectedConnection?.from === connection.from &&
+               selectedConnection?.to === connection.to;
+    };
 
     if (connectionViewData.length === 0) {
         return null;
@@ -93,17 +92,23 @@ export const ConnectionLayer: React.FC<ConnectionLayerProps> = ({
             }}
         >
             <g style={{ pointerEvents: 'auto' }}>
-                {connectionViewData.map(({ viewData, fromNode, toNode }) => (
-                    <ConnectionRenderer
-                        key={`${viewData.connection.from}-${viewData.connection.to}`}
-                        connectionData={viewData}
-                        fromNode={fromNode}
-                        toNode={toNode}
-                        getPortPosition={getPortPosition}
-                        onClick={onConnectionClick}
-                        onContextMenu={onConnectionContextMenu}
-                    />
-                ))}
+                {connectionViewData.map(({ connection, fromNode, toNode }) => {
+                    const viewData: ConnectionViewData = {
+                        connection,
+                        isSelected: isConnectionSelected(connection)
+                    };
+                    return (
+                        <ConnectionRenderer
+                            key={`${connection.from}-${connection.to}`}
+                            connectionData={viewData}
+                            fromNode={fromNode}
+                            toNode={toNode}
+                            getPortPosition={getPortPosition}
+                            onClick={onConnectionClick}
+                            onContextMenu={onConnectionContextMenu}
+                        />
+                    );
+                })}
             </g>
         </svg>
     );

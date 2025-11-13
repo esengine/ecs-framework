@@ -64,7 +64,7 @@ export function useCommandHistory() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [undo, redo]);
 
-    return useMemo(() => ({
+    return {
         commandManager,
         canUndo: canUndo(),
         canRedo: canRedo(),
@@ -73,5 +73,5 @@ export function useCommandHistory() {
         getUndoHistory,
         getRedoHistory,
         clear
-    }), [commandManager, canUndo, canRedo, undo, redo, getUndoHistory, getRedoHistory, clear]);
+    };
 }

@@ -1,5 +1,5 @@
 import { RefObject, useEffect, useRef } from 'react';
-import { BehaviorTreeNode, ROOT_NODE_ID } from '../stores/useBehaviorTreeStore';
+import { BehaviorTreeNode, ROOT_NODE_ID } from '../stores';
 
 interface QuickCreateMenuState {
     visible: boolean;
@@ -61,11 +61,19 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams) {
 
     const isBoxSelectingRef = useRef(isBoxSelecting);
     const boxSelectStartRef = useRef(boxSelectStart);
+    const canvasOffsetRef = useRef(canvasOffset);
+    const canvasScaleRef = useRef(canvasScale);
+    const nodesRef = useRef(nodes);
+    const selectedNodeIdsRef = useRef(selectedNodeIds);
 
     useEffect(() => {
         isBoxSelectingRef.current = isBoxSelecting;
         boxSelectStartRef.current = boxSelectStart;
-    }, [isBoxSelecting, boxSelectStart]);
+        canvasOffsetRef.current = canvasOffset;
+        canvasScaleRef.current = canvasScale;
+        nodesRef.current = nodes;
+        selectedNodeIdsRef.current = selectedNodeIds;
+    }, [isBoxSelecting, boxSelectStart, canvasOffset, canvasScale, nodes, selectedNodeIds]);
 
     useEffect(() => {
         if (!isBoxSelecting) return;
@@ -76,8 +84,8 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams) {
             const rect = canvasRef.current?.getBoundingClientRect();
             if (!rect) return;
 
-            const canvasX = (e.clientX - rect.left - canvasOffset.x) / canvasScale;
-            const canvasY = (e.clientY - rect.top - canvasOffset.y) / canvasScale;
+            const canvasX = (e.clientX - rect.left - canvasOffsetRef.current.x) / canvasScaleRef.current;
+            const canvasY = (e.clientY - rect.top - canvasOffsetRef.current.y) / canvasScaleRef.current;
             setBoxSelectEnd({ x: canvasX, y: canvasY });
         };
 
@@ -95,7 +103,7 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams) {
             const minY = Math.min(boxSelectStartRef.current.y, boxSelectEnd.y);
             const maxY = Math.max(boxSelectStartRef.current.y, boxSelectEnd.y);
 
-            const selectedInBox = nodes
+            const selectedInBox = nodesRef.current
                 .filter((node: BehaviorTreeNode) => {
                     if (node.id === ROOT_NODE_ID) return false;
 
@@ -108,17 +116,17 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams) {
                     const nodeRect = nodeElement.getBoundingClientRect();
                     const canvasRect = canvasRef.current!.getBoundingClientRect();
 
-                    const nodeLeft = (nodeRect.left - canvasRect.left - canvasOffset.x) / canvasScale;
-                    const nodeRight = (nodeRect.right - canvasRect.left - canvasOffset.x) / canvasScale;
-                    const nodeTop = (nodeRect.top - canvasRect.top - canvasOffset.y) / canvasScale;
-                    const nodeBottom = (nodeRect.bottom - canvasRect.top - canvasOffset.y) / canvasScale;
+                    const nodeLeft = (nodeRect.left - canvasRect.left - canvasOffsetRef.current.x) / canvasScaleRef.current;
+                    const nodeRight = (nodeRect.right - canvasRect.left - canvasOffsetRef.current.x) / canvasScaleRef.current;
+                    const nodeTop = (nodeRect.top - canvasRect.top - canvasOffsetRef.current.y) / canvasScaleRef.current;
+                    const nodeBottom = (nodeRect.bottom - canvasRect.top - canvasOffsetRef.current.y) / canvasScaleRef.current;
 
                     return nodeRight > minX && nodeLeft < maxX && nodeBottom > minY && nodeTop < maxY;
                 })
                 .map((node: BehaviorTreeNode) => node.id);
 
             if (e.ctrlKey || e.metaKey) {
-                const newSet = new Set([...selectedNodeIds, ...selectedInBox]);
+                const newSet = new Set([...selectedNodeIdsRef.current, ...selectedInBox]);
                 setSelectedNodeIds(Array.from(newSet));
             } else {
                 setSelectedNodeIds(selectedInBox);
@@ -134,7 +142,7 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams) {
             document.removeEventListener('mousemove', handleGlobalMouseMove);
             document.removeEventListener('mouseup', handleGlobalMouseUp);
         };
-    }, [isBoxSelecting, boxSelectStart, boxSelectEnd, nodes, selectedNodeIds, canvasRef, canvasOffset, canvasScale, setBoxSelectEnd, setSelectedNodeIds, clearBoxSelect]);
+    }, [isBoxSelecting, boxSelectStart, boxSelectEnd, canvasRef, setBoxSelectEnd, setSelectedNodeIds, clearBoxSelect]);
 
     const handleCanvasMouseMove = (e: React.MouseEvent) => {
         if (connectingFrom && canvasRef.current && !quickCreateMenu.visible) {

@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { NodeTemplate } from '@esengine/behavior-tree';
 import { RotateCcw } from 'lucide-react';
-import { useBehaviorTreeStore, BehaviorTreeNode, ROOT_NODE_ID } from '../stores/useBehaviorTreeStore';
-import { useUIStore } from '../stores/useUIStore';
+import { useBehaviorTreeDataStore, BehaviorTreeNode, ROOT_NODE_ID } from '../stores';
+import { useUIStore } from '../stores';
 import { showToast as notificationShowToast } from '../services/NotificationService';
 import { BlackboardValue } from '../domain/models/Blackboard';
 import { BehaviorTreeCanvas } from './canvas/BehaviorTreeCanvas';
@@ -26,7 +26,6 @@ import { BehaviorTreeNode as BehaviorTreeNodeComponent } from './nodes/BehaviorT
 import { getPortPosition as getPortPositionUtil } from '../utils/portUtils';
 import { useExecutionController } from '../hooks/useExecutionController';
 import { useNodeTracking } from '../hooks/useNodeTracking';
-import { useEditorState } from '../hooks/useEditorState';
 import { useEditorHandlers } from '../hooks/useEditorHandlers';
 import { ICON_MAP, ROOT_NODE_TEMPLATE, DEFAULT_EDITOR_CONFIG } from '../config/editorConstants';
 import '../styles/BehaviorTreeNode.css';
@@ -53,26 +52,10 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     // 使用传入的 showToast 或回退到 NotificationService
     const showToast = showToastProp || notificationShowToast;
 
-    // 数据 store（行为树数据）
+    // 数据 store（行为树数据 - 唯一数据源）
     const {
-        nodes,
-        connections,
-        connectingFrom,
-        connectingFromProperty,
-        connectingToPos,
-        isBoxSelecting,
-        boxSelectStart,
-        boxSelectEnd,
-        setNodes,
-        setConnections,
-        setConnectingFrom,
-        setConnectingFromProperty,
-        setConnectingToPos,
-        clearConnecting,
-        setIsBoxSelecting,
-        setBoxSelectStart,
-        setBoxSelectEnd,
-        clearBoxSelect,
+        canvasOffset,
+        canvasScale,
         triggerForceUpdate,
         sortChildrenByPosition,
         setBlackboardVariables,
@@ -83,31 +66,46 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         saveNodesDataSnapshot,
         restoreNodesData,
         nodeExecutionStatuses,
-        nodeExecutionOrders
-    } = useBehaviorTreeStore();
+        nodeExecutionOrders,
+        resetView
+    } = useBehaviorTreeDataStore();
 
-    // UI store（选中、拖拽、画布状态）
+    // 使用缓存的节点和连接数组（store 中已经优化，只在 tree 真正变化时更新）
+    const nodes = useBehaviorTreeDataStore(state => state.cachedNodes);
+    const connections = useBehaviorTreeDataStore(state => state.cachedConnections);
+
+    // UI store（UI 交互状态）
     const {
         selectedNodeIds,
+        selectedConnection,
         draggingNodeId,
         dragStartPositions,
         isDraggingNode,
-        canvasOffset,
-        canvasScale,
         dragDelta,
+        connectingFrom,
+        connectingFromProperty,
+        connectingToPos,
+        isBoxSelecting,
+        boxSelectStart,
+        boxSelectEnd,
         setSelectedNodeIds,
+        setSelectedConnection,
         startDragging,
         stopDragging,
         setIsDraggingNode,
-        resetView,
-        setDragDelta
+        setDragDelta,
+        setConnectingFrom,
+        setConnectingFromProperty,
+        setConnectingToPos,
+        clearConnecting,
+        setIsBoxSelecting,
+        setBoxSelectStart,
+        setBoxSelectEnd,
+        clearBoxSelect
     } = useUIStore();
 
     const canvasRef = useRef<HTMLDivElement>(null);
     const stopExecutionRef = useRef<(() => void) | null>(null);
-
-    // Store state
-    const { selectedConnection, setSelectedConnection } = useEditorState();
 
     // Node factory
     const nodeFactory = useMemo(() => new NodeFactory(), []);
@@ -171,7 +169,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         connectingFromProperty,
         clearConnecting,
         nodes,
-        setNodes,
         connections,
         executionMode,
         onStop: () => stopExecutionRef.current?.(),
@@ -187,13 +184,10 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         isDraggingNode,
         selectedNodeIds,
         setSelectedNodeIds,
-        setNodes,
-        setConnections,
         resetView,
+        resetTree: useBehaviorTreeDataStore.getState().reset,
         triggerForceUpdate,
-        onNodeSelect,
-        rootNodeId: ROOT_NODE_ID,
-        rootNodeTemplate: ROOT_NODE_TEMPLATE
+        onNodeSelect
     });
 
     // 添加缺少的处理函数
@@ -329,8 +323,18 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         showToast
     });
 
+    const handleCombinedMouseMove = (e: React.MouseEvent) => {
+        handleCanvasMouseMove(e);
+        handleNodeMouseMove(e);
+    };
+
+    const handleCombinedMouseUp = (e: React.MouseEvent) => {
+        handleCanvasMouseUp(e);
+        handleNodeMouseUp();
+    };
+
     const getPortPosition = (nodeId: string, propertyName?: string, portType: 'input' | 'output' = 'output') =>
-        getPortPositionUtil(canvasRef, canvasOffset, canvasScale, nodes, nodeId, propertyName, portType);
+        getPortPositionUtil(canvasRef, canvasOffset, canvasScale, nodes, nodeId, propertyName, portType, draggingNodeId, dragDelta, selectedNodeIds);
 
     stopExecutionRef.current = handleStop;
 
@@ -365,9 +369,9 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 onClick={handleCanvasClick}
                 onContextMenu={handleCanvasContextMenu}
                 onDoubleClick={handleCanvasDoubleClick}
-                onMouseMove={handleCanvasMouseMove}
+                onMouseMove={handleCombinedMouseMove}
                 onMouseDown={handleCanvasMouseDown}
-                onMouseUp={handleCanvasMouseUp}
+                onMouseUp={handleCombinedMouseUp}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragEnter={handleDragEnter}
@@ -419,7 +423,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 )}
 
                 {/* 节点层 */}
-                {nodes.map((node) => (
+                {nodes.map((node: BehaviorTreeNode) => (
                     <BehaviorTreeNodeComponent
                         key={node.id}
                         node={node}

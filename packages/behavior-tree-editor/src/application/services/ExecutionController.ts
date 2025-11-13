@@ -1,5 +1,6 @@
 import { BehaviorTreeExecutor, ExecutionStatus, ExecutionLog } from '../../utils/BehaviorTreeExecutor';
-import { BehaviorTreeNode, Connection, NodeExecutionStatus } from '../../stores/behaviorTreeStore';
+import { BehaviorTreeNode, Connection } from '../../stores';
+import type { NodeExecutionStatus } from '../../stores';
 import { BlackboardValue } from '../../domain/models/Blackboard';
 import { DOMCache } from '../../presentation/utils/DOMCache';
 import { EditorEventBus, EditorEvent } from '../../infrastructure/events/EditorEventBus';

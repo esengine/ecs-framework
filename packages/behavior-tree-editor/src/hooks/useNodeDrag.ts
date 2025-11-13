@@ -1,5 +1,5 @@
-import { useState, RefObject } from 'react';
-import { BehaviorTreeNode, ROOT_NODE_ID } from '../stores/useBehaviorTreeStore';
+import { useRef, useCallback, RefObject } from 'react';
+import { BehaviorTreeNode, ROOT_NODE_ID } from '../stores';
 import { Position } from '../domain/value-objects/Position';
 import { useNodeOperations } from './useNodeOperations';
 
@@ -25,6 +25,20 @@ interface UseNodeDragParams {
     sortChildrenByPosition: () => void;
 }
 
+/**
+ * 拖拽上下文，存储拖拽过程中需要保持稳定的值
+ */
+interface DragContext {
+    // 鼠标按下时的客户端坐标
+    startClientX: number;
+    startClientY: number;
+    // 拖拽开始时的画布状态（缩放和偏移）
+    startCanvasScale: number;
+    startCanvasOffset: { x: number; y: number };
+    // 被拖拽节点的初始画布坐标
+    nodeStartPositions: Map<string, { x: number; y: number }>;
+}
+
 export function useNodeDrag(params: UseNodeDragParams) {
     const {
         canvasRef,
@@ -48,11 +62,11 @@ export function useNodeDrag(params: UseNodeDragParams) {
         sortChildrenByPosition
     } = params;
 
-    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    // 使用 ref 存储拖拽上下文，避免闭包问题
+    const dragContextRef = useRef<DragContext | null>(null);
 
-    const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
+    const handleNodeMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
         if (e.button !== 0) return;
-
         if (nodeId === ROOT_NODE_ID) return;
 
         const target = e.target as HTMLElement;
@@ -65,15 +79,11 @@ export function useNodeDrag(params: UseNodeDragParams) {
         setIsBoxSelecting(false);
         setBoxSelectStart(null);
         setBoxSelectEnd(null);
+
         const node = nodes.find((n: BehaviorTreeNode) => n.id === nodeId);
         if (!node) return;
 
-        const rect = canvasRef.current?.getBoundingClientRect();
-        if (!rect) return;
-
-        const canvasX = (e.clientX - rect.left - canvasOffset.x) / canvasScale;
-        const canvasY = (e.clientY - rect.top - canvasOffset.y) / canvasScale;
-
+        // 确定要拖拽的节点列表
         let nodesToDrag: string[];
         if (selectedNodeIds.includes(nodeId)) {
             nodesToDrag = selectedNodeIds;
@@ -82,6 +92,7 @@ export function useNodeDrag(params: UseNodeDragParams) {
             setSelectedNodeIds([nodeId]);
         }
 
+        // 记录所有要拖拽节点的初始位置
         const startPositions = new Map<string, { x: number; y: number }>();
         nodesToDrag.forEach((id: string) => {
             const n = nodes.find((node: BehaviorTreeNode) => node.id === id);
@@ -90,44 +101,48 @@ export function useNodeDrag(params: UseNodeDragParams) {
             }
         });
 
-        startDragging(nodeId, startPositions);
-        setDragOffset({
-            x: canvasX - node.position.x,
-            y: canvasY - node.position.y
-        });
-    };
+        // 创建拖拽上下文，保存拖拽开始时的所有关键状态
+        dragContextRef.current = {
+            startClientX: e.clientX,
+            startClientY: e.clientY,
+            startCanvasScale: canvasScale,
+            startCanvasOffset: { ...canvasOffset },
+            nodeStartPositions: startPositions
+        };
 
-    const handleNodeMouseMove = (e: React.MouseEvent) => {
-        if (!draggingNodeId) return;
+        startDragging(nodeId, startPositions);
+    }, [nodes, selectedNodeIds, canvasScale, canvasOffset, setSelectedNodeIds, setIsBoxSelecting, setBoxSelectStart, setBoxSelectEnd, startDragging]);
+
+    const handleNodeMouseMove = useCallback((e: React.MouseEvent) => {
+        if (!draggingNodeId || !dragContextRef.current) return;
 
         if (!isDraggingNode) {
             setIsDraggingNode(true);
         }
 
-        const rect = canvasRef.current?.getBoundingClientRect();
-        if (!rect) return;
+        const context = dragContextRef.current;
 
-        const canvasX = (e.clientX - rect.left - canvasOffset.x) / canvasScale;
-        const canvasY = (e.clientY - rect.top - canvasOffset.y) / canvasScale;
+        // 计算鼠标在客户端坐标系中的移动距离（像素）
+        const clientDeltaX = e.clientX - context.startClientX;
+        const clientDeltaY = e.clientY - context.startClientY;
 
-        const newX = canvasX - dragOffset.x;
-        const newY = canvasY - dragOffset.y;
+        // 转换为画布坐标系中的移动距离
+        // 注意：这里使用拖拽开始时的缩放比例，确保计算一致性
+        const canvasDeltaX = clientDeltaX / context.startCanvasScale;
+        const canvasDeltaY = clientDeltaY / context.startCanvasScale;
 
-        const draggedNodeStartPos = dragStartPositions.get(draggingNodeId);
-        if (!draggedNodeStartPos) return;
+        setDragDelta({ dx: canvasDeltaX, dy: canvasDeltaY });
+    }, [draggingNodeId, isDraggingNode, setIsDraggingNode, setDragDelta]);
 
-        const deltaX = newX - draggedNodeStartPos.x;
-        const deltaY = newY - draggedNodeStartPos.y;
+    const handleNodeMouseUp = useCallback(() => {
+        if (!draggingNodeId || !dragContextRef.current) return;
 
-        setDragDelta({ dx: deltaX, dy: deltaY });
-    };
-
-    const handleNodeMouseUp = () => {
-        if (!draggingNodeId) return;
+        const context = dragContextRef.current;
 
         if (dragDelta.dx !== 0 || dragDelta.dy !== 0) {
+            // 根据拖拽增量计算所有节点的新位置
             const moves: Array<{ nodeId: string; position: Position }> = [];
-            dragStartPositions.forEach((startPos: { x: number; y: number }, nodeId: string) => {
+            context.nodeStartPositions.forEach((startPos, nodeId) => {
                 moves.push({
                     nodeId,
                     position: new Position(
@@ -136,26 +151,31 @@ export function useNodeDrag(params: UseNodeDragParams) {
                     )
                 });
             });
+
+            // 先重置拖拽状态，避免 moveNodes 触发重新渲染时位置计算错误
+            setDragDelta({ dx: 0, dy: 0 });
+            setIsDraggingNode(false);
+
+            // 然后更新节点位置
             nodeOperations.moveNodes(moves);
 
             setTimeout(() => {
                 sortChildrenByPosition();
             }, 0);
+        } else {
+            // 没有实际移动，直接重置状态
+            setDragDelta({ dx: 0, dy: 0 });
+            setIsDraggingNode(false);
         }
 
-        setDragDelta({ dx: 0, dy: 0 });
-
+        // 清理拖拽上下文
+        dragContextRef.current = null;
         stopDragging();
-
-        setTimeout(() => {
-            setIsDraggingNode(false);
-        }, 10);
-    };
+    }, [draggingNodeId, dragDelta, nodeOperations, sortChildrenByPosition, setDragDelta, stopDragging, setIsDraggingNode]);
 
     return {
         handleNodeMouseDown,
         handleNodeMouseMove,
-        handleNodeMouseUp,
-        dragOffset
+        handleNodeMouseUp
     };
 }

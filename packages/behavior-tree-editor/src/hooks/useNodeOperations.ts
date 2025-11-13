@@ -18,7 +18,7 @@ export function useNodeOperations(
     validator: IValidator,
     commandManager: CommandManager
 ) {
-    const treeState = useMemo(() => new TreeStateAdapter(), []);
+    const treeState = useMemo(() => TreeStateAdapter.getInstance(), []);
 
     const createNodeUseCase = useMemo(
         () => new CreateNodeUseCase(nodeFactory, commandManager, treeState),

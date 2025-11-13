@@ -118,12 +118,22 @@ function App() {
             e.preventDefault();
         };
 
+        // 添加快捷键监听（Ctrl+R 重新加载插件）
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                e.preventDefault();
+                handleReloadPlugins();
+            }
+        };
+
         document.addEventListener('contextmenu', handleContextMenu);
+        document.addEventListener('keydown', handleKeyDown);
 
         return () => {
             document.removeEventListener('contextmenu', handleContextMenu);
+            document.removeEventListener('keydown', handleKeyDown);
         };
-    }, []);
+    }, [currentProjectPath, pluginManager, locale]);
 
     useEffect(() => {
         if (messageHub) {
@@ -576,6 +586,26 @@ function App() {
         setShowPluginGenerator(true);
     };
 
+    const handleReloadPlugins = async () => {
+        if (currentProjectPath && pluginManager) {
+            try {
+                // 关闭所有动态面板，确保组件完全卸载
+                console.log('[App] Closing all dynamic panels before plugin reload');
+                setActiveDynamicPanels([]);
+
+                // 等待 React 完成卸载
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                // 重新加载插件
+                await pluginLoader.loadProjectPlugins(currentProjectPath, pluginManager);
+                showToast(locale === 'zh' ? '插件已重新加载' : 'Plugins reloaded', 'success');
+            } catch (error) {
+                console.error('Failed to reload plugins:', error);
+                showToast(locale === 'zh' ? '重新加载插件失败' : 'Failed to reload plugins', 'error');
+            }
+        }
+    };
+
     useEffect(() => {
         if (projectLoaded && entityStore && messageHub && logService && uiRegistry && pluginManager) {
             let corePanels: FlexDockPanel[];
@@ -772,6 +802,7 @@ function App() {
                         onToggleDevtools={handleToggleDevtools}
                         onOpenAbout={handleOpenAbout}
                         onCreatePlugin={handleCreatePlugin}
+                        onReloadPlugins={handleReloadPlugins}
                     />
                     <div className="header-right">
                         <UserProfile

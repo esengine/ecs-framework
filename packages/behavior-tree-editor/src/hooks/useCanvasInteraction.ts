@@ -1,22 +1,23 @@
 import { useCallback, useMemo } from 'react';
-import { useCanvasStore } from '../stores';
+import { useBehaviorTreeDataStore, useUIStore } from '../stores';
 
 /**
  * 画布交互 Hook
  * 封装画布的缩放、平移等交互逻辑
  */
 export function useCanvasInteraction() {
-    const {
-        offset: canvasOffset,
-        scale: canvasScale,
-        isPanning,
-        panStart,
-        setOffset: setCanvasOffset,
-        setScale: setCanvasScale,
-        setIsPanning,
-        setPanStart,
-        resetView
-    } = useCanvasStore();
+    // 从数据 store 获取画布状态
+    const canvasOffset = useBehaviorTreeDataStore(state => state.canvasOffset);
+    const canvasScale = useBehaviorTreeDataStore(state => state.canvasScale);
+    const setCanvasOffset = useBehaviorTreeDataStore(state => state.setCanvasOffset);
+    const setCanvasScale = useBehaviorTreeDataStore(state => state.setCanvasScale);
+    const resetView = useBehaviorTreeDataStore(state => state.resetView);
+
+    // 从 UI store 获取平移状态
+    const isPanning = useUIStore(state => state.isPanning);
+    const panStart = useUIStore(state => state.panStart);
+    const setIsPanning = useUIStore(state => state.setIsPanning);
+    const setPanStart = useUIStore(state => state.setPanStart);
 
     const handleWheel = useCallback((e: React.WheelEvent) => {
         e.preventDefault();

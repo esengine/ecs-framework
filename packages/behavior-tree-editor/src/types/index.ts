@@ -2,7 +2,7 @@ import type { Node } from '../domain/models/Node';
 import type { Connection } from '../domain/models/Connection';
 import type { Position } from '../domain/value-objects/Position';
 import type { Size } from '../domain/value-objects/Size';
-import type { NodeExecutionStatus } from '../stores/useExecutionStore';
+import type { NodeExecutionStatus } from '../stores';
 
 export type { Position, Size };
 
