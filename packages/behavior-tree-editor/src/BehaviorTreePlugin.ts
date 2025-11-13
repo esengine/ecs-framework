@@ -17,6 +17,7 @@ import { BehaviorTreeEditorPanel } from './components/panels/BehaviorTreeEditorP
 import { useBehaviorTreeDataStore } from './stores';
 import { createElement } from 'react';
 import { GitBranch } from 'lucide-react';
+import { createRootNode, ROOT_NODE_ID } from './domain/constants/RootNode';
 
 export class BehaviorTreePlugin implements IEditorPlugin {
     readonly name = '@esengine/behavior-tree-editor';
@@ -97,9 +98,23 @@ export class BehaviorTreePlugin implements IEditorPlugin {
             defaultFileName: 'NewBehaviorTree',
             icon: createElement(GitBranch, { size: 16 }),
             createContent: (fileName: string) => {
+                // 创建根节点
+                const rootNode = createRootNode();
+                const rootNodeData = {
+                    id: rootNode.id,
+                    type: rootNode.template.type,
+                    displayName: rootNode.template.displayName,
+                    data: rootNode.data,
+                    position: {
+                        x: rootNode.position.x,
+                        y: rootNode.position.y
+                    },
+                    children: []
+                };
+
                 const emptyTree = {
                     name: fileName.replace('.btree', ''),
-                    nodes: [],
+                    nodes: [rootNodeData],
                     connections: [],
                     variables: {}
                 };

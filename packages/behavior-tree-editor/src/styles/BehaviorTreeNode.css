@@ -213,6 +213,17 @@
     inset 0 1px 2px rgba(255, 255, 255, 0.2);
 }
 
+/* 增大端口的可交互区域，使用伪元素 */
+.bt-node-port::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  border-radius: 50%;
+}
+
 .bt-node-port-input {
   background: radial-gradient(circle at 30% 30%, #2196f3, #0d47a1);
   top: -8px;

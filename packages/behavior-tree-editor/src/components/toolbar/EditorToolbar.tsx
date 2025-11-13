@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square, SkipForward, RotateCcw, Trash2, Undo, Redo } from 'lucide-react';
+import { Play, Pause, Square, SkipForward, RotateCcw, Trash2, Undo, Redo, ZoomIn } from 'lucide-react';
 
 type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
 
@@ -15,7 +15,6 @@ interface EditorToolbarProps {
     onUndo: () => void;
     onRedo: () => void;
     onResetView: () => void;
-    onClearCanvas: () => void;
 }
 
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({
@@ -29,249 +28,299 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     onReset,
     onUndo,
     onRedo,
-    onResetView,
-    onClearCanvas
+    onResetView
 }) => {
     return (
         <div style={{
             position: 'absolute',
-            top: '10px',
+            top: '12px',
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex',
-            gap: '8px',
-            backgroundColor: 'rgba(45, 45, 45, 0.95)',
-            padding: '8px',
-            borderRadius: '6px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            gap: '6px',
+            backgroundColor: '#2a2a2a',
+            padding: '6px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            border: '1px solid #3f3f3f',
             zIndex: 100
         }}>
-            {/* 播放按钮 */}
-            <button
-                onClick={onPlay}
-                disabled={executionMode === 'running'}
-                style={{
-                    padding: '8px',
-                    backgroundColor: executionMode === 'running' ? '#2d2d2d' : '#4caf50',
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: executionMode === 'running' ? '#666' : '#fff',
-                    cursor: executionMode === 'running' ? 'not-allowed' : 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}
-                title="运行 (Play)"
-            >
-                <Play size={16} />
-            </button>
+            {/* 执行控制组 */}
+            <div style={{
+                display: 'flex',
+                gap: '4px',
+                padding: '2px',
+                backgroundColor: '#1e1e1e',
+                borderRadius: '6px'
+            }}>
+                {/* 播放按钮 */}
+                <button
+                    onClick={onPlay}
+                    disabled={executionMode === 'running'}
+                    style={{
+                        padding: '6px 10px',
+                        backgroundColor: executionMode === 'running' ? '#2a2a2a' : '#16a34a',
+                        border: 'none',
+                        borderRadius: '4px',
+                        color: executionMode === 'running' ? '#666' : '#fff',
+                        cursor: executionMode === 'running' ? 'not-allowed' : 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 0.15s'
+                    }}
+                    title="运行 (Play)"
+                    onMouseEnter={(e) => {
+                        if (executionMode !== 'running') {
+                            e.currentTarget.style.backgroundColor = '#15803d';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (executionMode !== 'running') {
+                            e.currentTarget.style.backgroundColor = '#16a34a';
+                        }
+                    }}
+                >
+                    <Play size={14} fill="currentColor" />
+                </button>
 
-            {/* 暂停按钮 */}
-            <button
-                onClick={onPause}
-                disabled={executionMode === 'idle'}
-                style={{
-                    padding: '8px',
-                    backgroundColor: executionMode === 'idle' ? '#2d2d2d' : '#ff9800',
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: executionMode === 'idle' ? '#666' : '#fff',
-                    cursor: executionMode === 'idle' ? 'not-allowed' : 'pointer',
-                    fontSize: '14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}
-                title={executionMode === 'paused' ? '继续' : '暂停'}
-            >
-                {executionMode === 'paused' ? <Play size={16} /> : <Pause size={16} />}
-            </button>
+                {/* 暂停按钮 */}
+                <button
+                    onClick={onPause}
+                    disabled={executionMode === 'idle'}
+                    style={{
+                        padding: '6px 10px',
+                        backgroundColor: executionMode === 'idle' ? '#2a2a2a' : '#f59e0b',
+                        border: 'none',
+                        borderRadius: '4px',
+                        color: executionMode === 'idle' ? '#666' : '#fff',
+                        cursor: executionMode === 'idle' ? 'not-allowed' : 'pointer',
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        transition: 'all 0.15s'
+                    }}
+                    title={executionMode === 'paused' ? '继续' : '暂停'}
+                    onMouseEnter={(e) => {
+                        if (executionMode !== 'idle') {
+                            e.currentTarget.style.backgroundColor = '#d97706';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (executionMode !== 'idle') {
+                            e.currentTarget.style.backgroundColor = '#f59e0b';
+                        }
+                    }}
+                >
+                    {executionMode === 'paused' ? <Play size={14} fill="currentColor" /> : <Pause size={14} fill="currentColor" />}
+                </button>
 
-            {/* 停止按钮 */}
-            <button
-                onClick={onStop}
-                disabled={executionMode === 'idle'}
-                style={{
-                    padding: '8px',
-                    backgroundColor: executionMode === 'idle' ? '#2d2d2d' : '#f44336',
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: executionMode === 'idle' ? '#666' : '#fff',
-                    cursor: executionMode === 'idle' ? 'not-allowed' : 'pointer',
-                    fontSize: '14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}
-                title="停止"
-            >
-                <Square size={16} />
-            </button>
+                {/* 停止按钮 */}
+                <button
+                    onClick={onStop}
+                    disabled={executionMode === 'idle'}
+                    style={{
+                        padding: '6px 10px',
+                        backgroundColor: executionMode === 'idle' ? '#2a2a2a' : '#dc2626',
+                        border: 'none',
+                        borderRadius: '4px',
+                        color: executionMode === 'idle' ? '#666' : '#fff',
+                        cursor: executionMode === 'idle' ? 'not-allowed' : 'pointer',
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        transition: 'all 0.15s'
+                    }}
+                    title="停止"
+                    onMouseEnter={(e) => {
+                        if (executionMode !== 'idle') {
+                            e.currentTarget.style.backgroundColor = '#b91c1c';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (executionMode !== 'idle') {
+                            e.currentTarget.style.backgroundColor = '#dc2626';
+                        }
+                    }}
+                >
+                    <Square size={14} fill="currentColor" />
+                </button>
 
-            {/* 单步执行按钮 */}
-            <button
-                onClick={onStep}
-                disabled={executionMode !== 'idle' && executionMode !== 'paused'}
-                style={{
-                    padding: '8px',
-                    backgroundColor: (executionMode !== 'idle' && executionMode !== 'paused') ? '#2d2d2d' : '#2196f3',
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: (executionMode !== 'idle' && executionMode !== 'paused') ? '#666' : '#fff',
-                    cursor: (executionMode !== 'idle' && executionMode !== 'paused') ? 'not-allowed' : 'pointer',
-                    fontSize: '14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}
-                title="单步执行"
-            >
-                <SkipForward size={16} />
-            </button>
-
-            {/* 重置按钮 */}
-            <button
-                onClick={onReset}
-                style={{
-                    padding: '8px',
-                    backgroundColor: '#9e9e9e',
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}
-                title="重置"
-            >
-                <RotateCcw size={16} />
-            </button>
+                {/* 单步执行按钮 */}
+                <button
+                    onClick={onStep}
+                    disabled={executionMode !== 'idle' && executionMode !== 'paused'}
+                    style={{
+                        padding: '6px 10px',
+                        backgroundColor: (executionMode !== 'idle' && executionMode !== 'paused') ? '#2a2a2a' : '#3b82f6',
+                        border: 'none',
+                        borderRadius: '4px',
+                        color: (executionMode !== 'idle' && executionMode !== 'paused') ? '#666' : '#fff',
+                        cursor: (executionMode !== 'idle' && executionMode !== 'paused') ? 'not-allowed' : 'pointer',
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        transition: 'all 0.15s'
+                    }}
+                    title="单步执行"
+                    onMouseEnter={(e) => {
+                        if (executionMode === 'idle' || executionMode === 'paused') {
+                            e.currentTarget.style.backgroundColor = '#2563eb';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (executionMode === 'idle' || executionMode === 'paused') {
+                            e.currentTarget.style.backgroundColor = '#3b82f6';
+                        }
+                    }}
+                >
+                    <SkipForward size={14} />
+                </button>
+            </div>
 
             {/* 分隔符 */}
             <div style={{
                 width: '1px',
-                backgroundColor: '#666',
-                margin: '4px 0'
+                backgroundColor: '#444',
+                margin: '2px 0'
             }} />
 
-            {/* 重置视图按钮 */}
+            {/* 视图控制 */}
             <button
                 onClick={onResetView}
                 style={{
-                    padding: '8px 12px',
+                    padding: '6px 10px',
                     backgroundColor: '#3c3c3c',
                     border: 'none',
                     borderRadius: '4px',
-                    color: '#cccccc',
+                    color: '#ccc',
                     cursor: 'pointer',
-                    fontSize: '12px',
+                    fontSize: '11px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px'
+                    gap: '4px',
+                    transition: 'all 0.15s'
                 }}
                 title="重置视图 (滚轮缩放, Alt+拖动平移)"
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a4a4a'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3c3c3c'}
             >
-                <RotateCcw size={14} />
-                View
-            </button>
-
-            {/* 清空画布按钮 */}
-            <button
-                style={{
-                    padding: '8px 12px',
-                    backgroundColor: '#3c3c3c',
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: '#cccccc',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                }}
-                title="清空画布"
-                onClick={onClearCanvas}
-            >
-                <Trash2 size={14} />
-                清空
+                <ZoomIn size={13} />
+                <span>Reset View</span>
             </button>
 
             {/* 分隔符 */}
             <div style={{
                 width: '1px',
-                height: '24px',
-                backgroundColor: '#555',
-                margin: '0 4px'
+                backgroundColor: '#444',
+                margin: '2px 0'
             }} />
 
-            {/* 撤销按钮 */}
-            <button
-                onClick={onUndo}
-                disabled={!canUndo}
-                style={{
-                    padding: '8px',
-                    backgroundColor: canUndo ? '#3c3c3c' : '#2d2d2d',
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: canUndo ? '#cccccc' : '#666',
-                    cursor: canUndo ? 'pointer' : 'not-allowed',
-                    fontSize: '14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}
-                title="撤销 (Ctrl+Z)"
-            >
-                <Undo size={16} />
-            </button>
+            {/* 历史控制组 */}
+            <div style={{
+                display: 'flex',
+                gap: '4px',
+                padding: '2px',
+                backgroundColor: '#1e1e1e',
+                borderRadius: '6px'
+            }}>
+                <button
+                    onClick={onUndo}
+                    disabled={!canUndo}
+                    style={{
+                        padding: '6px 8px',
+                        backgroundColor: canUndo ? '#3c3c3c' : '#2a2a2a',
+                        border: 'none',
+                        borderRadius: '4px',
+                        color: canUndo ? '#ccc' : '#666',
+                        cursor: canUndo ? 'pointer' : 'not-allowed',
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        transition: 'all 0.15s'
+                    }}
+                    title="撤销 (Ctrl+Z)"
+                    onMouseEnter={(e) => {
+                        if (canUndo) {
+                            e.currentTarget.style.backgroundColor = '#4a4a4a';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (canUndo) {
+                            e.currentTarget.style.backgroundColor = '#3c3c3c';
+                        }
+                    }}
+                >
+                    <Undo size={14} />
+                </button>
 
-            {/* 重做按钮 */}
-            <button
-                onClick={onRedo}
-                disabled={!canRedo}
-                style={{
-                    padding: '8px',
-                    backgroundColor: canRedo ? '#3c3c3c' : '#2d2d2d',
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: canRedo ? '#cccccc' : '#666',
-                    cursor: canRedo ? 'pointer' : 'not-allowed',
-                    fontSize: '14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}
-                title="重做 (Ctrl+Shift+Z / Ctrl+Y)"
-            >
-                <Redo size={16} />
-            </button>
+                <button
+                    onClick={onRedo}
+                    disabled={!canRedo}
+                    style={{
+                        padding: '6px 8px',
+                        backgroundColor: canRedo ? '#3c3c3c' : '#2a2a2a',
+                        border: 'none',
+                        borderRadius: '4px',
+                        color: canRedo ? '#ccc' : '#666',
+                        cursor: canRedo ? 'pointer' : 'not-allowed',
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        transition: 'all 0.15s'
+                    }}
+                    title="重做 (Ctrl+Shift+Z / Ctrl+Y)"
+                    onMouseEnter={(e) => {
+                        if (canRedo) {
+                            e.currentTarget.style.backgroundColor = '#4a4a4a';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (canRedo) {
+                            e.currentTarget.style.backgroundColor = '#3c3c3c';
+                        }
+                    }}
+                >
+                    <Redo size={14} />
+                </button>
+            </div>
 
             {/* 状态指示器 */}
             <div style={{
-                padding: '8px 12px',
+                padding: '6px 12px',
                 backgroundColor: '#1e1e1e',
-                borderRadius: '4px',
-                fontSize: '12px',
-                color: '#ccc',
+                borderRadius: '6px',
+                fontSize: '11px',
+                color: '#999',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                fontWeight: 500,
+                minWidth: '70px'
             }}>
                 <span style={{
-                    width: '8px',
-                    height: '8px',
+                    width: '6px',
+                    height: '6px',
                     borderRadius: '50%',
                     backgroundColor:
-                        executionMode === 'running' ? '#4caf50' :
-                            executionMode === 'paused' ? '#ff9800' : '#666'
+                        executionMode === 'running' ? '#16a34a' :
+                            executionMode === 'paused' ? '#f59e0b' : '#666',
+                    boxShadow: executionMode !== 'idle' ? `0 0 8px ${
+                        executionMode === 'running' ? '#16a34a' :
+                            executionMode === 'paused' ? '#f59e0b' : 'transparent'
+                    }` : 'none',
+                    transition: 'all 0.2s'
                 }} />
-                {executionMode === 'idle' ? 'Idle' :
-                    executionMode === 'running' ? 'Running' :
-                        executionMode === 'paused' ? 'Paused' : 'Step'}
+                <span style={{
+                    color: executionMode === 'running' ? '#16a34a' :
+                        executionMode === 'paused' ? '#f59e0b' : '#888'
+                }}>
+                    {executionMode === 'idle' ? 'Idle' :
+                        executionMode === 'running' ? 'Running' :
+                            executionMode === 'paused' ? 'Paused' : 'Step'}
+                </span>
             </div>
         </div>
     );

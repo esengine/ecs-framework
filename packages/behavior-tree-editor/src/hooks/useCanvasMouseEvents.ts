@@ -161,6 +161,12 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams) {
             return;
         }
 
+        const target = e.target as HTMLElement;
+        const isPort = target.closest('[data-port="true"]');
+        if (isPort) {
+            return;
+        }
+
         if (connectingFrom && connectingToPos) {
             const sourceNode = nodes.find(n => n.id === connectingFrom);
             if (sourceNode && !sourceNode.canAddChild()) {
