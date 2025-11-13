@@ -50,11 +50,14 @@ export class LoggerManager {
             return this.defaultLogger;
         }
 
+        // 如果有自定义 factory, 每次都调用(不缓存), 由使用方自行管理
+        if (this._loggerFactory) {
+            return this._loggerFactory(name);
+        }
+
+        // 默认 ConsoleLogger 仍然缓存(保持向后兼容)
         if (!this._loggers.has(name)) {
-            const logger = this._loggerFactory
-                ? this._loggerFactory(name)
-                : new ConsoleLogger({ prefix: name, level: this._defaultLevel });
-            this._loggers.set(name, logger);
+            this._loggers.set(name, new ConsoleLogger({ prefix: name, level: this._defaultLevel }));
         }
 
         return this._loggers.get(name)!;
@@ -132,18 +135,17 @@ export class LoggerManager {
     /**
      * 设置日志器工厂方法
      * @param factory 日志器工厂方法
+     *
+     * 注意: 应该在导入 ECS 模块之前调用此方法。
+     * 设置后, 每次调用 getLogger() 都会通过 factory 创建新的 logger 实例, 由用户侧管理
      */
     public setLoggerFactory(factory: (name?: string) => ILogger): void {
-        if (this._defaultLogger || this._loggers.size > 0) {
-            console.warn(
-                '[LoggerManager] setLoggerFactory 应该在导入 ECS 模块之前调用。' +
-                '已创建的 logger 引用不会被更新。'
-            );
-        }
-
         this._loggerFactory = factory;
-        // 清空已创建的 logger, 下次获取时使用新工厂方法
-        delete (this as any)._defaultLogger;
+
+        // 清空默认 logger,下次获取时使用新工厂方法
+        delete this._defaultLogger;
+
+        // 清空缓存
         this._loggers.clear();
     }
 }
