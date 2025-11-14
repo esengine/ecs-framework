@@ -435,7 +435,7 @@ const worldManager = Core.services.resolve(WorldManager);
 // {
 //   maxWorlds: 50,
 //   autoCleanup: true,
-//   cleanupInterval: 30000  // 30 秒
+//   cleanupFrameInterval: 1800  // 间隔多少帧清理闲置 World
 // }
 ```
 
