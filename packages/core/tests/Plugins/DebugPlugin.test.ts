@@ -198,6 +198,14 @@ describe('DebugPlugin', () => {
             const results = debugPlugin.queryEntities({ tag: 999 });
             expect(results.length).toBe(0);
         });
+
+        it('应该能够按 sceneName 过滤实体', () => {
+            // 查询特定场景的实体
+            const results = debugPlugin.queryEntities({ sceneName: 'test-scene' });
+
+            // 应该返回 test-scene 中的所有实体（Player, Enemy, Item）
+            expect(results.length).toBe(3);
+        });
     });
 
     describe('监控功能', () => {

@@ -152,6 +152,16 @@ describe('World', () => {
             expect(world.sceneCount).toBe(1);
         });
         
+        test('空的Scene name应该抛出错误', () => {
+            expect(() => {
+                world.createScene('');
+            }).toThrow('Scene name不能为空');
+
+            expect(() => {
+                world.createScene('   ');
+            }).toThrow('Scene name不能为空');
+        });
+
         test('重复的Scene ID应该抛出错误', () => {
             world.createScene('duplicate');
 
@@ -159,7 +169,7 @@ describe('World', () => {
                 world.createScene('duplicate');
             }).toThrow("Scene name 'duplicate' 已存在于World 'TestWorld' 中");
         });
-        
+
         test('超出最大Scene数量限制应该抛出错误', () => {
             const limitedWorld = new World({ maxScenes: 2 });
             
@@ -488,10 +498,10 @@ describe('World', () => {
     });
 
     describe('错误处理', () => {
-        test('Scene ID为空时应该创建默认ID', () => {
+        test('Scene name为空时应该抛出错误', () => {
             expect(() => {
                 world.createScene('');
-            }).not.toThrow();
+            }).toThrow('Scene name不能为空');
         });
 
         test('极限情况下的资源管理', () => {

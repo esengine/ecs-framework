@@ -137,6 +137,10 @@ export class World {
      * 创建并添加Scene到World
      */
     public createScene<T extends IScene>(sceneName: string, sceneInstance?: T): T {
+        if (!sceneName || typeof sceneName !== 'string' || sceneName.trim() === '') {
+            throw new Error('Scene name不能为空');
+        }
+
         if (this._scenes.has(sceneName)) {
             throw new Error(`Scene name '${sceneName}' 已存在于World '${this.name}' 中`);
         }
