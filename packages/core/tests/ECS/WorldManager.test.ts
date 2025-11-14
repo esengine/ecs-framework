@@ -114,7 +114,7 @@ describe('WorldManager', () => {
 
             expect(() => {
                 worldManager.createWorld('duplicate-world');
-            }).toThrow("World ID 'duplicate-world' 已存在");
+            }).toThrow("World name 'duplicate-world' 已存在");
         });
 
         test('超出最大World数量应该抛出错误', () => {

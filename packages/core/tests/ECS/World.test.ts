@@ -154,10 +154,10 @@ describe('World', () => {
         
         test('重复的Scene ID应该抛出错误', () => {
             world.createScene('duplicate');
-            
+
             expect(() => {
                 world.createScene('duplicate');
-            }).toThrow("Scene ID 'duplicate' 已存在于World 'TestWorld' 中");
+            }).toThrow("Scene name 'duplicate' 已存在于World 'TestWorld' 中");
         });
         
         test('超出最大Scene数量限制应该抛出错误', () => {
