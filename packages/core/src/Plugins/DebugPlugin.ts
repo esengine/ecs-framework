@@ -275,7 +275,7 @@ export class DebugPlugin implements IPlugin, IService {
      * @param filter - 查询过滤器
      */
     public queryEntities(filter: {
-        sceneId?: string;
+        sceneName?: string;
         tag?: number;
         name?: string;
         hasComponent?: string;
@@ -289,7 +289,7 @@ export class DebugPlugin implements IPlugin, IService {
 
         for (const world of worlds) {
             for (const scene of world.getAllScenes()) {
-                if (filter.sceneId && scene.name !== filter.sceneId) {
+                if (filter.sceneName && scene.name !== filter.sceneName) {
                     continue;
                 }
 

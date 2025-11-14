@@ -92,13 +92,13 @@ export class WorldManager implements IService {
     /**
      * 创建新World
      */
-    public createWorld(worldId: string, config?: IWorldConfig): World {
-        if (!worldId || typeof worldId !== 'string' || worldId.trim() === '') {
-            throw new Error('World ID不能为空');
+    public createWorld(worldName: string, config?: IWorldConfig): World {
+        if (!worldName || typeof worldName !== 'string' || worldName.trim() === '') {
+            throw new Error('World name不能为空');
         }
 
-        if (this._worlds.has(worldId)) {
-            throw new Error(`World ID '${worldId}' 已存在`);
+        if (this._worlds.has(worldName)) {
+            throw new Error(`World name '${worldName}' 已存在`);
         }
 
         if (this._worlds.size >= this._config.maxWorlds!) {
@@ -107,14 +107,14 @@ export class WorldManager implements IService {
 
         // 优先级：config.debug > WorldManager.debug > 默认
         const worldConfig: IWorldConfig = {
-            name: worldId,
+            name: worldName,
             debug: config?.debug ?? this._config.debug ?? false,
             ...(config?.maxScenes !== undefined && { maxScenes: config.maxScenes }),
             ...(config?.autoCleanup !== undefined && { autoCleanup: config.autoCleanup })
         };
 
         const world = new World(worldConfig);
-        this._worlds.set(worldId, world);
+        this._worlds.set(worldName, world);
 
         return world;
     }
@@ -122,25 +122,25 @@ export class WorldManager implements IService {
     /**
      * 移除World
      */
-    public removeWorld(worldId: string): boolean {
-        const world = this._worlds.get(worldId);
+    public removeWorld(worldName: string): boolean {
+        const world = this._worlds.get(worldName);
         if (!world) {
             return false;
         }
 
         // 销毁World
         world.destroy();
-        this._worlds.delete(worldId);
+        this._worlds.delete(worldName);
 
-        logger.info(`移除World: ${worldId}`);
+        logger.info(`移除World: ${worldName}`);
         return true;
     }
 
     /**
      * 获取World
      */
-    public getWorld(worldId: string): World | null {
-        return this._worlds.get(worldId) || null;
+    public getWorld(worldName: string): World | null {
+        return this._worlds.get(worldName) || null;
     }
 
     /**
@@ -160,27 +160,27 @@ export class WorldManager implements IService {
     /**
      * 设置World激活状态
      */
-    public setWorldActive(worldId: string, active: boolean): void {
-        const world = this._worlds.get(worldId);
+    public setWorldActive(worldName: string, active: boolean): void {
+        const world = this._worlds.get(worldName);
         if (!world) {
-            logger.warn(`World '${worldId}' 不存在`);
+            logger.warn(`World '${worldName}' 不存在`);
             return;
         }
 
         if (active) {
             world.start();
-            logger.debug(`激活World: ${worldId}`);
+            logger.debug(`激活World: ${worldName}`);
         } else {
             world.stop();
-            logger.debug(`停用World: ${worldId}`);
+            logger.debug(`停用World: ${worldName}`);
         }
     }
 
     /**
      * 检查World是否激活
      */
-    public isWorldActive(worldId: string): boolean {
-        const world = this._worlds.get(worldId);
+    public isWorldActive(worldName: string): boolean {
+        const world = this._worlds.get(worldName);
         return world?.isActive ?? false;
     }
 
@@ -310,14 +310,14 @@ export class WorldManager implements IService {
             worlds: [] as any[]
         };
 
-        for (const [worldId, world] of this._worlds) {
+        for (const [worldName, world] of this._worlds) {
             const worldStats = world.getStats();
             stats.totalScenes += worldStats.totalSystems; // World的getStats可能需要调整
             stats.totalEntities += worldStats.totalEntities;
             stats.totalSystems += worldStats.totalSystems;
 
             stats.worlds.push({
-                id: worldId,
+                id: worldName,
                 name: world.name,
                 isActive: world.isActive,
                 sceneCount: world.sceneCount,
@@ -334,8 +334,8 @@ export class WorldManager implements IService {
     public getDetailedStatus() {
         return {
             ...this.getStats(),
-            worlds: Array.from(this._worlds.entries()).map(([worldId, world]) => ({
-                id: worldId,
+            worlds: Array.from(this._worlds.entries()).map(([worldName, world]) => ({
+                id: worldName,
                 isActive: world.isActive,
                 status: world.getStatus()
             }))
@@ -350,14 +350,14 @@ export class WorldManager implements IService {
     public cleanup(): number {
         const worldsToRemove: string[] = [];
 
-        for (const [worldId, world] of this._worlds) {
+        for (const [worldName, world] of this._worlds) {
             if (this.shouldCleanupWorld(world)) {
-                worldsToRemove.push(worldId);
+                worldsToRemove.push(worldName);
             }
         }
 
-        for (const worldId of worldsToRemove) {
-            this.removeWorld(worldId);
+        for (const worldName of worldsToRemove) {
+            this.removeWorld(worldName);
         }
 
         if (worldsToRemove.length > 0) {
@@ -377,9 +377,9 @@ export class WorldManager implements IService {
         this.stopAll();
 
         // 销毁所有World
-        const worldIds = Array.from(this._worlds.keys());
-        for (const worldId of worldIds) {
-            this.removeWorld(worldId);
+        const worldNames = Array.from(this._worlds.keys());
+        for (const worldName of worldNames) {
+            this.removeWorld(worldName);
         }
 
         this._worlds.clear();

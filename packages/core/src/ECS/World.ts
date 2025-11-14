@@ -136,9 +136,13 @@ export class World {
     /**
      * 创建并添加Scene到World
      */
-    public createScene<T extends IScene>(sceneId: string, sceneInstance?: T): T {
-        if (this._scenes.has(sceneId)) {
-            throw new Error(`Scene ID '${sceneId}' 已存在于World '${this.name}' 中`);
+    public createScene<T extends IScene>(sceneName: string, sceneInstance?: T): T {
+        if (!sceneName || typeof sceneName !== 'string' || sceneName.trim() === '') {
+            throw new Error('Scene name不能为空');
+        }
+
+        if (this._scenes.has(sceneName)) {
+            throw new Error(`Scene name '${sceneName}' 已存在于World '${this.name}' 中`);
         }
 
         if (this._scenes.size >= this._config.maxScenes!) {
@@ -157,13 +161,13 @@ export class World {
 
         // 设置Scene的标识
         if ('id' in scene) {
-            (scene as any).id = sceneId;
+            (scene as any).id = sceneName;
         }
         if ('name' in scene && !scene.name) {
-            scene.name = sceneId;
+            scene.name = sceneName;
         }
 
-        this._scenes.set(sceneId, scene);
+        this._scenes.set(sceneName, scene);
 
         // 初始化Scene
         scene.initialize();
@@ -174,30 +178,30 @@ export class World {
     /**
      * 移除Scene
      */
-    public removeScene(sceneId: string): boolean {
-        const scene = this._scenes.get(sceneId);
+    public removeScene(sceneName: string): boolean {
+        const scene = this._scenes.get(sceneName);
         if (!scene) {
             return false;
         }
 
         // 如果Scene正在运行，先停止它
-        if (this._activeScenes.has(sceneId)) {
-            this.setSceneActive(sceneId, false);
+        if (this._activeScenes.has(sceneName)) {
+            this.setSceneActive(sceneName, false);
         }
 
         // 清理Scene资源
         scene.end();
-        this._scenes.delete(sceneId);
+        this._scenes.delete(sceneName);
 
-        logger.info(`从World '${this.name}' 中移除Scene: ${sceneId}`);
+        logger.info(`从World '${this.name}' 中移除Scene: ${sceneName}`);
         return true;
     }
 
     /**
      * 获取Scene
      */
-    public getScene<T extends IScene>(sceneId: string): T | null {
-        return this._scenes.get(sceneId) as T || null;
+    public getScene<T extends IScene>(sceneName: string): T | null {
+        return this._scenes.get(sceneName) as T || null;
     }
 
     /**
@@ -218,9 +222,9 @@ export class World {
      * 移除所有Scene
      */
     public removeAllScenes(): void {
-        const sceneIds = Array.from(this._scenes.keys());
-        for (const sceneId of sceneIds) {
-            this.removeScene(sceneId);
+        const sceneNames = Array.from(this._scenes.keys());
+        for (const sceneName of sceneNames) {
+            this.removeScene(sceneName);
         }
         logger.info(`从World '${this.name}' 中移除所有Scene`);
     }
@@ -228,32 +232,32 @@ export class World {
     /**
      * 设置Scene激活状态
      */
-    public setSceneActive(sceneId: string, active: boolean): void {
-        const scene = this._scenes.get(sceneId);
+    public setSceneActive(sceneName: string, active: boolean): void {
+        const scene = this._scenes.get(sceneName);
         if (!scene) {
-            logger.warn(`Scene '${sceneId}' 不存在于World '${this.name}' 中`);
+            logger.warn(`Scene '${sceneName}' 不存在于World '${this.name}' 中`);
             return;
         }
 
         if (active) {
-            this._activeScenes.add(sceneId);
+            this._activeScenes.add(sceneName);
             // 启动Scene
             if (scene.begin) {
                 scene.begin();
             }
-            logger.debug(`在World '${this.name}' 中激活Scene: ${sceneId}`);
+            logger.debug(`在World '${this.name}' 中激活Scene: ${sceneName}`);
         } else {
-            this._activeScenes.delete(sceneId);
+            this._activeScenes.delete(sceneName);
             // 可选择性地停止Scene，或者让它继续运行但不更新
-            logger.debug(`在World '${this.name}' 中停用Scene: ${sceneId}`);
+            logger.debug(`在World '${this.name}' 中停用Scene: ${sceneName}`);
         }
     }
 
     /**
      * 检查Scene是否激活
      */
-    public isSceneActive(sceneId: string): boolean {
-        return this._activeScenes.has(sceneId);
+    public isSceneActive(sceneName: string): boolean {
+        return this._activeScenes.has(sceneName);
     }
 
     /**
@@ -344,8 +348,8 @@ export class World {
         }
 
         // 停止所有Scene
-        for (const sceneId of this._activeScenes) {
-            this.setSceneActive(sceneId, false);
+        for (const sceneName of this._activeScenes) {
+            this.setSceneActive(sceneName, false);
         }
 
         // 重置所有全局System
@@ -386,8 +390,8 @@ export class World {
         }
 
         // 更新所有激活的Scene
-        for (const sceneId of this._activeScenes) {
-            const scene = this._scenes.get(sceneId);
+        for (const sceneName of this._activeScenes) {
+            const scene = this._scenes.get(sceneName);
             if (scene && scene.update) {
                 scene.update();
             }
@@ -409,9 +413,9 @@ export class World {
         this.stop();
 
         // 销毁所有Scene
-        const sceneIds = Array.from(this._scenes.keys());
-        for (const sceneId of sceneIds) {
-            this.removeScene(sceneId);
+        const sceneNames = Array.from(this._scenes.keys());
+        for (const sceneName of sceneNames) {
+            this.removeScene(sceneName);
         }
 
         // 清理全局System
@@ -445,10 +449,10 @@ export class World {
             globalSystemCount: this._globalSystems.length,
             createdAt: this._createdAt,
             config: { ...this._config },
-            scenes: Array.from(this._scenes.keys()).map((sceneId) => ({
-                id: sceneId,
-                isActive: this._activeScenes.has(sceneId),
-                name: this._scenes.get(sceneId)?.name || sceneId
+            scenes: Array.from(this._scenes.keys()).map((sceneName) => ({
+                id: sceneName,
+                isActive: this._activeScenes.has(sceneName),
+                name: this._scenes.get(sceneName)?.name || sceneName
             }))
         };
     }
@@ -490,8 +494,8 @@ export class World {
         const currentTime = Date.now();
         const cleanupThreshold = 5 * 60 * 1000; // 5分钟
 
-        for (const [sceneId, scene] of this._scenes) {
-            if (!this._activeScenes.has(sceneId) &&
+        for (const [sceneName, scene] of this._scenes) {
+            if (!this._activeScenes.has(sceneName) &&
                 scene.entities &&
                 scene.entities.count === 0 &&
                 (currentTime - this._createdAt) > cleanupThreshold) {
@@ -506,20 +510,20 @@ export class World {
      * 执行清理操作
      */
     private cleanup(): void {
-        const sceneIds = Array.from(this._scenes.keys());
+        const sceneNames = Array.from(this._scenes.keys());
         const currentTime = Date.now();
         const cleanupThreshold = 5 * 60 * 1000; // 5分钟
 
-        for (const sceneId of sceneIds) {
-            const scene = this._scenes.get(sceneId);
+        for (const sceneName of sceneNames) {
+            const scene = this._scenes.get(sceneName);
             if (scene &&
-                !this._activeScenes.has(sceneId) &&
+                !this._activeScenes.has(sceneName) &&
                 scene.entities &&
                 scene.entities.count === 0 &&
                 (currentTime - this._createdAt) > cleanupThreshold) {
 
-                this.removeScene(sceneId);
-                logger.debug(`自动清理空Scene: ${sceneId} from World ${this.name}`);
+                this.removeScene(sceneName);
+                logger.debug(`自动清理空Scene: ${sceneName} from World ${this.name}`);
             }
         }
     }
