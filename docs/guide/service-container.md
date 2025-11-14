@@ -44,7 +44,13 @@ class MyService implements IService {
 
 ### 访问服务容器
 
-Core 类内置了服务容器，可以通过 `Core.services` 访问：
+ECS Framework 提供了三级服务容器：
+
+> **版本说明**：World 服务容器功能在 v2.2.13+ 版本中可用
+
+#### Core 级别服务容器
+
+应用程序全局服务容器，可以通过 `Core.services` 访问：
 
 ```typescript
 import { Core } from '@esengine/ecs-framework';
@@ -52,9 +58,52 @@ import { Core } from '@esengine/ecs-framework';
 // 初始化Core
 Core.create({ debug: true });
 
-// 访问服务容器
+// 访问全局服务容器
 const container = Core.services;
 ```
+
+#### World 级别服务容器
+
+每个 World 拥有独立的服务容器，用于管理 World 范围内的服务：
+
+```typescript
+import { World } from '@esengine/ecs-framework';
+
+// 创建 World
+const world = new World({ name: 'GameWorld' });
+
+// 访问 World 级别的服务容器
+const worldContainer = world.services;
+
+// 注册 World 级别的服务
+world.services.registerSingleton(RoomManager);
+```
+
+#### Scene 级别服务容器
+
+每个 Scene 拥有独立的服务容器，用于管理 Scene 范围内的服务：
+
+```typescript
+// 访问 Scene 级别的服务容器
+const sceneContainer = scene.services;
+
+// 注册 Scene 级别的服务
+scene.services.registerSingleton(PhysicsSystem);
+```
+
+#### 服务容器层级
+
+```
+Core.services (应用程序全局)
+  └─ World.services (World 级别)
+      └─ Scene.services (Scene 级别)
+```
+
+不同级别的服务容器是独立的，服务不会自动向上或向下查找。选择合适的容器级别：
+
+- **Core.services**: 应用程序级别的全局服务（配置、插件管理器等）
+- **World.services**: World 级别的服务（房间管理器、多人游戏状态等）
+- **Scene.services**: Scene 级别的服务（ECS 系统、场景特定逻辑等）
 
 ### 注册服务
 

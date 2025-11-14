@@ -191,7 +191,7 @@ export class Core {
         });
 
         // 初始化World管理器
-        this._worldManager = new WorldManager(this._config.worldManagerConfig);
+        this._worldManager = new WorldManager({ debug: !!this._config.debug, ...this._config.worldManagerConfig });
         this._serviceContainer.registerInstance(WorldManager, this._worldManager);
 
         // 初始化插件管理器

@@ -4,6 +4,7 @@ import { EntitySystem } from '../../src/ECS/Systems/EntitySystem';
 import { Entity } from '../../src/ECS/Entity';
 import { Component } from '../../src/ECS/Component';
 import { Matcher } from '../../src/ECS/Utils/Matcher';
+import { IService } from '../../src/Core/ServiceContainer';
 
 // 测试用组件
 class TestComponent extends Component {
@@ -48,13 +49,23 @@ class TestGlobalSystem implements IGlobalSystem {
 
 class TestSceneSystem extends EntitySystem {
     public updateCount = 0;
-    
+
     constructor() {
         super(Matcher.empty().all(PlayerComponent));
     }
-    
+
     protected override process(): void {
         this.updateCount++;
+    }
+}
+
+// 测试用服务
+class TestWorldService implements IService {
+    public disposed = false;
+    public value = 'test';
+
+    dispose(): void {
+        this.disposed = true;
     }
 }
 
@@ -438,27 +449,65 @@ describe('World', () => {
         });
     });
     
+    describe('服务容器', () => {
+        test('应该能访问World级别的服务容器', () => {
+            const services = world.services;
+
+            expect(services).toBeDefined();
+            expect(services).toHaveProperty('registerSingleton');
+            expect(services).toHaveProperty('resolve');
+        });
+
+        test('应该能在World服务容器中注册和解析服务', () => {
+            world.services.registerSingleton(TestWorldService);
+
+            const service = world.services.resolve(TestWorldService);
+
+            expect(service).toBeDefined();
+            expect(service.value).toBe('test');
+            expect(service.disposed).toBe(false);
+        });
+
+        test('World销毁时应该清理服务容器中的服务', () => {
+            const service = new TestWorldService();
+            world.services.registerInstance(TestWorldService, service);
+
+            world.destroy();
+
+            expect(service.disposed).toBe(true);
+        });
+
+        test('World服务容器应该独立于Scene服务容器', () => {
+            const scene = world.createScene('test-scene');
+
+            world.services.registerSingleton(TestWorldService);
+
+            expect(world.services.isRegistered(TestWorldService)).toBe(true);
+            expect(scene.services.isRegistered(TestWorldService)).toBe(false);
+        });
+    });
+
     describe('错误处理', () => {
         test('Scene ID为空时应该创建默认ID', () => {
             expect(() => {
                 world.createScene('');
             }).not.toThrow();
         });
-        
+
         test('极限情况下的资源管理', () => {
             // 创建大量Scene
             for (let i = 0; i < 5; i++) {
                 world.createScene(`scene_${i}`);
                 world.setSceneActive(`scene_${i}`, true);
             }
-            
+
             // 添加多个全局System
             for (let i = 0; i < 3; i++) {
                 world.addGlobalSystem(new TestGlobalSystem());
             }
-            
+
             world.start();
-            
+
             // 测试批量清理
             expect(() => world.destroy()).not.toThrow();
         });

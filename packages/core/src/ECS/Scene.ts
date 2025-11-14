@@ -251,7 +251,7 @@ export class Scene implements IScene {
      *
      * 从 ServiceContainer 获取，如果未注册则创建默认实例（向后兼容）
      */
-    private get performanceMonitor(): PerformanceMonitor {
+    public get performanceMonitor(): PerformanceMonitor {
         if (!this._performanceMonitor) {
             this._performanceMonitor = this._services.tryResolve(PerformanceMonitor) ?? new PerformanceMonitor();
         }
@@ -294,10 +294,23 @@ export class Scene implements IScene {
      * 结束场景，清除实体、实体处理器等
      *
      * 这个方法会结束场景。它将移除所有实体，结束实体处理器等，并调用unload方法。
+     *
+     * 执行顺序：
+     * 1. 调用 unload() - 用户可以在此访问实体和系统进行清理
+     * 2. 清理所有实体
+     * 3. 清空服务容器，触发所有系统的 onDestroy()
+     *
+     * 注意：
+     * - onRemoved 回调不会在 Scene.end() 时触发，因为这是批量销毁场景
+     * - 用户清理：在 Scene.unload() 中处理（可访问实体和系统）
+     * - 系统清理：在 System.onDestroy() 中处理（实体已被清理）
      */
     public end() {
         // 标记场景已结束运行
         this._didSceneBegin = false;
+
+        // 先调用用户的卸载方法，此时用户可以访问实体和系统进行清理
+        this.unload();
 
         // 移除所有实体
         this.entities.removeAllEntities();
@@ -309,14 +322,12 @@ export class Scene implements IScene {
         this.componentStorageManager.clear();
 
         // 清空服务容器（会调用所有服务的dispose方法，包括所有EntitySystem）
+        // 系统的 onDestroy 回调会在这里被触发
         this._services.clear();
 
         // 清空系统缓存
         this._cachedSystems = null;
         this._systemsOrderDirty = true;
-
-        // 调用卸载方法
-        this.unload();
     }
 
     /**

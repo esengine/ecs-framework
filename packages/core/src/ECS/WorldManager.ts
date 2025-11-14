@@ -19,9 +19,9 @@ export interface IWorldManagerConfig {
     autoCleanup?: boolean;
 
     /**
-     * 清理间隔（毫秒）
+     * 清理间隔（帧数）
      */
-    cleanupInterval?: number;
+    cleanupFrameInterval?: number;
 
     /**
      * 是否启用调试模式
@@ -63,17 +63,16 @@ export interface IWorldManagerConfig {
  * ```
  */
 export class WorldManager implements IService {
-    private readonly _config: IWorldManagerConfig;
+    private readonly _config: Required<IWorldManagerConfig>;
     private readonly _worlds: Map<string, World> = new Map();
-    private readonly _activeWorlds: Set<string> = new Set();
-    private _cleanupTimer: ReturnType<typeof setInterval> | null = null;
     private _isRunning: boolean = false;
+    private _framesSinceCleanup: number = 0;
 
     public constructor(config: IWorldManagerConfig = {}) {
         this._config = {
             maxWorlds: 50,
             autoCleanup: true,
-            cleanupInterval: 30000, // 30秒
+            cleanupFrameInterval: 1800, // 1800帧
             debug: false,
             ...config
         };
@@ -84,10 +83,8 @@ export class WorldManager implements IService {
         logger.info('WorldManager已初始化', {
             maxWorlds: this._config.maxWorlds,
             autoCleanup: this._config.autoCleanup,
-            cleanupInterval: this._config.cleanupInterval
+            cleanupFrameInterval: this._config.cleanupFrameInterval
         });
-
-        this.startCleanupTimer();
     }
 
     // ===== World管理 =====
@@ -108,9 +105,10 @@ export class WorldManager implements IService {
             throw new Error(`已达到最大World数量限制: ${this._config.maxWorlds}`);
         }
 
+        // 优先级：config.debug > WorldManager.debug > 默认
         const worldConfig: IWorldConfig = {
             name: worldId,
-            ...(this._config.debug !== undefined && { debug: this._config.debug }),
+            debug: config?.debug ?? this._config.debug ?? false,
             ...(config?.maxScenes !== undefined && { maxScenes: config.maxScenes }),
             ...(config?.autoCleanup !== undefined && { autoCleanup: config.autoCleanup })
         };
@@ -128,11 +126,6 @@ export class WorldManager implements IService {
         const world = this._worlds.get(worldId);
         if (!world) {
             return false;
-        }
-
-        // 如果World正在运行，先停止它
-        if (this._activeWorlds.has(worldId)) {
-            this.setWorldActive(worldId, false);
         }
 
         // 销毁World
@@ -175,11 +168,9 @@ export class WorldManager implements IService {
         }
 
         if (active) {
-            this._activeWorlds.add(worldId);
             world.start();
             logger.debug(`激活World: ${worldId}`);
         } else {
-            this._activeWorlds.delete(worldId);
             world.stop();
             logger.debug(`停用World: ${worldId}`);
         }
@@ -189,7 +180,8 @@ export class WorldManager implements IService {
      * 检查World是否激活
      */
     public isWorldActive(worldId: string): boolean {
-        return this._activeWorlds.has(worldId);
+        const world = this._worlds.get(worldId);
+        return world?.isActive ?? false;
     }
 
     // ===== 批量操作 =====
@@ -211,14 +203,27 @@ export class WorldManager implements IService {
     public updateAll(): void {
         if (!this._isRunning) return;
 
-        for (const worldId of this._activeWorlds) {
-            const world = this._worlds.get(worldId);
-            if (world && world.isActive) {
+        for (const world of this._worlds.values()) {
+            if (world.isActive) {
                 // 更新World的全局System
                 world.updateGlobalSystems();
 
                 // 更新World中的所有Scene
                 world.updateScenes();
+            }
+        }
+
+        // 基于帧的自动清理
+        if (this._config.autoCleanup) {
+            this._framesSinceCleanup++;
+
+            if (this._framesSinceCleanup >= this._config.cleanupFrameInterval) {
+                this.cleanup();
+                this._framesSinceCleanup = 0; // 重置计数器
+
+                if (this._config.debug) {
+                    logger.debug(`执行定期清理World (间隔: ${this._config.cleanupFrameInterval} 帧)`);
+                }
             }
         }
     }
@@ -228,9 +233,8 @@ export class WorldManager implements IService {
      */
     public getActiveWorlds(): World[] {
         const activeWorlds: World[] = [];
-        for (const worldId of this._activeWorlds) {
-            const world = this._worlds.get(worldId);
-            if (world) {
+        for (const world of this._worlds.values()) {
+            if (world.isActive) {
                 activeWorlds.push(world);
             }
         }
@@ -243,8 +247,8 @@ export class WorldManager implements IService {
     public startAll(): void {
         this._isRunning = true;
 
-        for (const worldId of this._worlds.keys()) {
-            this.setWorldActive(worldId, true);
+        for (const world of this._worlds.values()) {
+            world.start();
         }
 
         logger.info('启动所有World');
@@ -256,8 +260,8 @@ export class WorldManager implements IService {
     public stopAll(): void {
         this._isRunning = false;
 
-        for (const worldId of this._activeWorlds) {
-            this.setWorldActive(worldId, false);
+        for (const world of this._worlds.values()) {
+            world.stop();
         }
 
         logger.info('停止所有World');
@@ -296,7 +300,7 @@ export class WorldManager implements IService {
     public getStats() {
         const stats = {
             totalWorlds: this._worlds.size,
-            activeWorlds: this._activeWorlds.size,
+            activeWorlds: this.activeWorldCount,
             totalScenes: 0,
             totalEntities: 0,
             totalSystems: 0,
@@ -315,7 +319,7 @@ export class WorldManager implements IService {
             stats.worlds.push({
                 id: worldId,
                 name: world.name,
-                isActive: this._activeWorlds.has(worldId),
+                isActive: world.isActive,
                 sceneCount: world.sceneCount,
                 ...worldStats
             });
@@ -332,7 +336,7 @@ export class WorldManager implements IService {
             ...this.getStats(),
             worlds: Array.from(this._worlds.entries()).map(([worldId, world]) => ({
                 id: worldId,
-                isActive: this._activeWorlds.has(worldId),
+                isActive: world.isActive,
                 status: world.getStatus()
             }))
         };
@@ -369,9 +373,6 @@ export class WorldManager implements IService {
     public destroy(): void {
         logger.info('正在销毁WorldManager...');
 
-        // 停止清理定时器
-        this.stopCleanupTimer();
-
         // 停止所有World
         this.stopAll();
 
@@ -382,7 +383,6 @@ export class WorldManager implements IService {
         }
 
         this._worlds.clear();
-        this._activeWorlds.clear();
         this._isRunning = false;
 
         logger.info('WorldManager已销毁');
@@ -399,61 +399,28 @@ export class WorldManager implements IService {
     // ===== 私有方法 =====
 
     /**
-     * 启动清理定时器
-     */
-    private startCleanupTimer(): void {
-        if (!this._config.autoCleanup || this._cleanupTimer) {
-            return;
-        }
-
-        this._cleanupTimer = setInterval(() => {
-            this.cleanup();
-        }, this._config.cleanupInterval);
-
-        logger.debug(`启动World清理定时器，间隔: ${this._config.cleanupInterval}ms`);
-    }
-
-    /**
-     * 停止清理定时器
-     */
-    private stopCleanupTimer(): void {
-        if (this._cleanupTimer) {
-            clearInterval(this._cleanupTimer);
-            this._cleanupTimer = null;
-            logger.debug('停止World清理定时器');
-        }
-    }
-
-    /**
      * 判断World是否应该被清理
+     * 清理策略：
+     * 1. World未激活
+     * 2. 没有Scene或所有Scene都是空的
+     * 3. 创建时间超过10分钟
      */
     private shouldCleanupWorld(world: World): boolean {
-        // 清理策略：
-        // 1. World未激活
-        // 2. 没有Scene或所有Scene都是空的
-        // 3. 创建时间超过10分钟
-
         if (world.isActive) {
             return false;
         }
 
+        const age = Date.now() - world.createdAt;
+        const isOldEnough = age > 10 * 60 * 1000; // 10分钟
+
         if (world.sceneCount === 0) {
-            const age = Date.now() - world.createdAt;
-            return age > 10 * 60 * 1000; // 10分钟
+            return isOldEnough;
         }
 
         // 检查是否所有Scene都是空的
         const allScenes = world.getAllScenes();
-        const hasEntities = allScenes.some((scene) =>
-            scene.entities && scene.entities.count > 0
-        );
-
-        if (!hasEntities) {
-            const age = Date.now() - world.createdAt;
-            return age > 10 * 60 * 1000; // 10分钟
-        }
-
-        return false;
+        const hasEntities = allScenes.some((scene) => scene.entities && scene.entities.count > 0);
+        return !hasEntities && isOldEnough;
     }
 
     // ===== 访问器 =====
@@ -469,7 +436,11 @@ export class WorldManager implements IService {
      * 获取激活World数量
      */
     public get activeWorldCount(): number {
-        return this._activeWorlds.size;
+        let count = 0;
+        for (const world of this._worlds.values()) {
+            if (world.isActive) count++;
+        }
+        return count;
     }
 
     /**

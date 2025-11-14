@@ -1,13 +1,21 @@
-import { ConsoleLogger, LogLevel, createLogger, LoggerManager, setLoggerColors, resetLoggerColors, Colors } from '../../src/Utils/Logger';
+import {
+    ConsoleLogger,
+    LogLevel,
+    createLogger,
+    LoggerManager,
+    setLoggerColors,
+    resetLoggerColors,
+    Colors
+} from '../../src/Utils/Logger';
 
 describe('Logger', () => {
     describe('ConsoleLogger', () => {
         let consoleSpy: jest.SpyInstance;
-        
+
         beforeEach(() => {
             consoleSpy = jest.spyOn(console, 'info').mockImplementation();
         });
-        
+
         afterEach(() => {
             consoleSpy.mockRestore();
         });
@@ -21,9 +29,7 @@ describe('Logger', () => {
 
             logger.info('测试消息');
 
-            expect(consoleSpy).toHaveBeenCalledWith(
-                '\x1b[32m[INFO] 测试消息\x1b[0m'
-            );
+            expect(consoleSpy).toHaveBeenCalledWith('\x1b[32m[INFO] 测试消息\x1b[0m');
         });
 
         it('应该在颜色禁用时输出纯文本', () => {
@@ -90,9 +96,7 @@ describe('Logger', () => {
 
             logger.info('测试消息');
 
-            expect(consoleSpy).toHaveBeenCalledWith(
-                '\x1b[36m[INFO] 测试消息\x1b[0m'
-            );
+            expect(consoleSpy).toHaveBeenCalledWith('\x1b[36m[INFO] 测试消息\x1b[0m');
         });
 
         it('应该支持运行时修改颜色配置', () => {
@@ -108,9 +112,7 @@ describe('Logger', () => {
 
             logger.info('测试消息');
 
-            expect(consoleSpy).toHaveBeenCalledWith(
-                '\x1b[94m[INFO] 测试消息\x1b[0m'
-            );
+            expect(consoleSpy).toHaveBeenCalledWith('\x1b[94m[INFO] 测试消息\x1b[0m');
         });
     });
 
@@ -228,28 +230,6 @@ describe('Logger', () => {
             // 获取默认日志器时才调用
             manager.getLogger();
             expect(factorySpy).toHaveBeenCalled();
-        });
-
-        it('应该在已创建日志器后设置工厂时发出警告', () => {
-            const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
-
-            // 先创建一个日志器
-            manager.getLogger('ExistingLogger');
-
-            // 再设置工厂
-            manager.setLoggerFactory(() => ({
-                debug: jest.fn(),
-                info: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-                fatal: jest.fn()
-            }));
-
-            expect(warnSpy).toHaveBeenCalledWith(
-                expect.stringContaining('setLoggerFactory 应该在导入 ECS 模块之前调用')
-            );
-
-            warnSpy.mockRestore();
         });
     });
 

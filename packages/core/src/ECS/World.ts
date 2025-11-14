@@ -1,6 +1,8 @@
 import { IScene } from './IScene';
 import { Scene } from './Scene';
 import { createLogger } from '../Utils/Logger';
+import { PerformanceMonitor } from '../Utils/PerformanceMonitor';
+import { ServiceContainer } from '../Core/ServiceContainer';
 
 const logger = createLogger('World');
 
@@ -64,6 +66,13 @@ export interface IWorldConfig {
  * World类 - ECS世界管理器
  *
  * World是Scene的容器，每个World可以管理多个Scene。
+ * World拥有独立的服务容器，用于管理World级别的全局服务。
+ *
+ * 服务容器层级：
+ * - Core.services: 应用程序全局服务
+ * - World.services: World级别服务（每个World独立）
+ * - Scene.services: Scene级别服务（每个Scene独立）
+ *
  * 这种设计允许创建独立的游戏世界，如：
  * - 游戏房间（每个房间一个World）
  * - 不同的游戏模式
@@ -74,9 +83,15 @@ export interface IWorldConfig {
  * // 创建游戏房间的World
  * const roomWorld = new World({ name: 'Room_001' });
  *
+ * // 注册World级别的服务
+ * roomWorld.services.registerSingleton(RoomManager);
+ *
  * // 在World中创建Scene
  * const gameScene = roomWorld.createScene('game', new Scene());
  * const uiScene = roomWorld.createScene('ui', new Scene());
+ *
+ * // 在Scene中使用World级别的服务
+ * const roomManager = roomWorld.services.resolve(RoomManager);
  *
  * // 更新整个World
  * roomWorld.update(deltaTime);
@@ -88,6 +103,7 @@ export class World {
     private readonly _scenes: Map<string, IScene> = new Map();
     private readonly _activeScenes: Set<string> = new Set();
     private readonly _globalSystems: IGlobalSystem[] = [];
+    private readonly _services: ServiceContainer;
     private _isActive: boolean = false;
     private _createdAt: number;
 
@@ -102,6 +118,17 @@ export class World {
 
         this.name = this._config.name!;
         this._createdAt = Date.now();
+        this._services = new ServiceContainer();
+    }
+
+    // ===== 服务容器 =====
+
+    /**
+     * World级别的服务容器
+     * 用于管理World范围内的全局服务
+     */
+    public get services(): ServiceContainer {
+        return this._services;
     }
 
     // ===== Scene管理 =====
@@ -120,6 +147,13 @@ export class World {
 
         // 如果没有提供Scene实例，创建默认Scene
         const scene = sceneInstance || (new Scene() as unknown as T);
+
+        // 如果配置了 debug，为 Scene 注册并启用 PerformanceMonitor
+        if (this._config.debug) {
+            const performanceMonitor = new PerformanceMonitor();
+            performanceMonitor.enable();
+            scene.services.registerInstance(PerformanceMonitor, performanceMonitor);
+        }
 
         // 设置Scene的标识
         if ('id' in scene) {
@@ -389,6 +423,9 @@ export class World {
             }
         }
         this._globalSystems.length = 0;
+
+        // 清空服务容器
+        this._services.clear();
 
         this._scenes.clear();
         this._activeScenes.clear();
