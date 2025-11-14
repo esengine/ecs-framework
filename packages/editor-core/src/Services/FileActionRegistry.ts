@@ -22,10 +22,38 @@ export class FileActionRegistry implements IService {
     }
 
     /**
+     * 注销文件操作处理器
+     */
+    unregisterActionHandler(handler: FileActionHandler): void {
+        for (const ext of handler.extensions) {
+            const handlers = this.actionHandlers.get(ext);
+            if (handlers) {
+                const index = handlers.indexOf(handler);
+                if (index !== -1) {
+                    handlers.splice(index, 1);
+                }
+                if (handlers.length === 0) {
+                    this.actionHandlers.delete(ext);
+                }
+            }
+        }
+    }
+
+    /**
      * 注册文件创建模板
      */
     registerCreationTemplate(template: FileCreationTemplate): void {
         this.creationTemplates.push(template);
+    }
+
+    /**
+     * 注销文件创建模板
+     */
+    unregisterCreationTemplate(template: FileCreationTemplate): void {
+        const index = this.creationTemplates.indexOf(template);
+        if (index !== -1) {
+            this.creationTemplates.splice(index, 1);
+        }
     }
 
     /**

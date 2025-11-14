@@ -1,15 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { EditorPluginManager, IEditorPluginMetadata, EditorPluginCategory } from '@esengine/editor-core';
 import * as LucideIcons from 'lucide-react';
-import { Package, CheckCircle, XCircle, Search, Grid, List, ChevronDown, ChevronRight, X, RefreshCw } from 'lucide-react';
+import {
+    Package,
+    CheckCircle,
+    XCircle,
+    Search,
+    Grid,
+    List,
+    ChevronDown,
+    ChevronRight,
+    X,
+    RefreshCw,
+    ShoppingCart
+} from 'lucide-react';
+import { PluginMarketPanel } from './PluginMarketPanel';
+import { PluginMarketService } from '../services/PluginMarketService';
+import { GitHubService } from '../services/GitHubService';
 import '../styles/PluginManagerWindow.css';
 
 interface PluginManagerWindowProps {
     pluginManager: EditorPluginManager;
+    githubService: GitHubService;
     onClose: () => void;
     onRefresh?: () => Promise<void>;
     onOpen?: () => void;
     locale: string;
+    projectPath: string | null;
 }
 
 const categoryIcons: Record<EditorPluginCategory, string> = {
@@ -20,7 +37,7 @@ const categoryIcons: Record<EditorPluginCategory, string> = {
     [EditorPluginCategory.ImportExport]: 'Package'
 };
 
-export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen, locale }: PluginManagerWindowProps) {
+export function PluginManagerWindow({ pluginManager, githubService, onClose, onRefresh, onOpen, locale, projectPath }: PluginManagerWindowProps) {
     const t = (key: string) => {
         const translations: Record<string, Record<string, string>> = {
             zh: {
@@ -43,7 +60,9 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
                 categoryWindows: '窗口',
                 categoryInspectors: '检查器',
                 categorySystem: '系统',
-                categoryImportExport: '导入/导出'
+                categoryImportExport: '导入/导出',
+                tabInstalled: '已安装',
+                tabMarketplace: '插件市场'
             },
             en: {
                 title: 'Plugin Manager',
@@ -65,7 +84,9 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
                 categoryWindows: 'Windows',
                 categoryInspectors: 'Inspectors',
                 categorySystem: 'System',
-                categoryImportExport: 'Import/Export'
+                categoryImportExport: 'Import/Export',
+                tabInstalled: 'Installed',
+                tabMarketplace: 'Marketplace'
             }
         };
         return translations[locale]?.[key] || translations.en?.[key] || key;
@@ -81,6 +102,7 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
         };
         return t(categoryKeys[category]);
     };
+    const [activeTab, setActiveTab] = useState<'installed' | 'marketplace'>('installed');
     const [plugins, setPlugins] = useState<IEditorPluginMetadata[]>([]);
     const [filter, setFilter] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
@@ -88,6 +110,13 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
         new Set(Object.values(EditorPluginCategory))
     );
     const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const marketService = useMemo(() => new PluginMarketService(pluginManager), [pluginManager]);
+
+    // 设置项目路径到 marketService
+    useEffect(() => {
+        marketService.setProjectPath(projectPath);
+    }, [projectPath, marketService]);
 
     const updatePluginList = () => {
         const allPlugins = pluginManager.getAllPluginMetadata();
@@ -154,13 +183,16 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
         );
     });
 
-    const pluginsByCategory = filteredPlugins.reduce((acc, plugin) => {
-        if (!acc[plugin.category]) {
-            acc[plugin.category] = [];
-        }
-        acc[plugin.category].push(plugin);
-        return acc;
-    }, {} as Record<EditorPluginCategory, IEditorPluginMetadata[]>);
+    const pluginsByCategory = filteredPlugins.reduce(
+        (acc, plugin) => {
+            if (!acc[plugin.category]) {
+                acc[plugin.category] = [];
+            }
+            acc[plugin.category].push(plugin);
+            return acc;
+        },
+        {} as Record<EditorPluginCategory, IEditorPluginMetadata[]>
+    );
 
     const enabledCount = plugins.filter((p) => p.enabled).length;
     const disabledCount = plugins.filter((p) => !p.enabled).length;
@@ -185,9 +217,7 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
                         {plugin.enabled ? <CheckCircle size={18} /> : <XCircle size={18} />}
                     </button>
                 </div>
-                {plugin.description && (
-                    <div className="plugin-card-description">{plugin.description}</div>
-                )}
+                {plugin.description && <div className="plugin-card-description">{plugin.description}</div>}
                 <div className="plugin-card-footer">
                     <span className="plugin-card-category">
                         {(() => {
@@ -218,9 +248,7 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
                         {plugin.displayName}
                         <span className="plugin-list-version">v{plugin.version}</span>
                     </div>
-                    {plugin.description && (
-                        <div className="plugin-list-description">{plugin.description}</div>
-                    )}
+                    {plugin.description && <div className="plugin-list-description">{plugin.description}</div>}
                 </div>
                 <div className="plugin-list-status">
                     {plugin.enabled ? (
@@ -253,118 +281,157 @@ export function PluginManagerWindow({ pluginManager, onClose, onRefresh, onOpen,
                     </button>
                 </div>
 
-                <div className="plugin-toolbar">
-                    <div className="plugin-toolbar-left">
-                        <div className="plugin-search">
-                            <Search size={14} />
-                            <input
-                                type="text"
-                                placeholder={t('searchPlaceholder')}
-                                value={filter}
-                                onChange={(e) => setFilter(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                    <div className="plugin-toolbar-right">
-                        <div className="plugin-stats">
-                            <span className="stat-item enabled">
-                                <CheckCircle size={14} />
-                                {enabledCount} {t('enabled')}
-                            </span>
-                            <span className="stat-item disabled">
-                                <XCircle size={14} />
-                                {disabledCount} {t('disabled')}
-                            </span>
-                        </div>
-                        {onRefresh && (
-                            <button
-                                className="plugin-refresh-btn"
-                                onClick={handleRefresh}
-                                disabled={isRefreshing}
-                                title={t('refreshPluginList')}
-                                style={{
-                                    padding: '6px 12px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    backgroundColor: '#0e639c',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    color: '#fff',
-                                    cursor: isRefreshing ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px',
-                                    opacity: isRefreshing ? 0.6 : 1
-                                }}
-                            >
-                                <RefreshCw size={14} className={isRefreshing ? 'spinning' : ''} />
-                                {t('refresh')}
-                            </button>
-                        )}
-                        <div className="plugin-view-mode">
-                            <button
-                                className={viewMode === 'list' ? 'active' : ''}
-                                onClick={() => setViewMode('list')}
-                                title={t('listView')}
-                            >
-                                <List size={14} />
-                            </button>
-                            <button
-                                className={viewMode === 'grid' ? 'active' : ''}
-                                onClick={() => setViewMode('grid')}
-                                title={t('gridView')}
-                            >
-                                <Grid size={14} />
-                            </button>
-                        </div>
-                    </div>
+                <div className="plugin-manager-tabs">
+                    <button
+                        className={`plugin-manager-tab ${activeTab === 'installed' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('installed')}
+                    >
+                        <Package size={16} />
+                        {t('tabInstalled')}
+                    </button>
+                    <button
+                        className={`plugin-manager-tab ${activeTab === 'marketplace' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('marketplace')}
+                    >
+                        <ShoppingCart size={16} />
+                        {t('tabMarketplace')}
+                    </button>
                 </div>
 
-                <div className="plugin-content">
-                    {plugins.length === 0 ? (
-                        <div className="plugin-empty">
-                            <Package size={48} />
-                            <p>{t('noPlugins')}</p>
+                {activeTab === 'installed' && (
+                    <>
+                        <div className="plugin-toolbar">
+                            <div className="plugin-toolbar-left">
+                                <div className="plugin-search">
+                                    <Search size={14} />
+                                    <input
+                                        type="text"
+                                        placeholder={t('searchPlaceholder')}
+                                        value={filter}
+                                        onChange={(e) => setFilter(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="plugin-toolbar-right">
+                                <div className="plugin-stats">
+                                    <span className="stat-item enabled">
+                                        <CheckCircle size={14} />
+                                        {enabledCount} {t('enabled')}
+                                    </span>
+                                    <span className="stat-item disabled">
+                                        <XCircle size={14} />
+                                        {disabledCount} {t('disabled')}
+                                    </span>
+                                </div>
+                                {onRefresh && (
+                                    <button
+                                        className="plugin-refresh-btn"
+                                        onClick={handleRefresh}
+                                        disabled={isRefreshing}
+                                        title={t('refreshPluginList')}
+                                        style={{
+                                            padding: '6px 12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            backgroundColor: '#0e639c',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            color: '#fff',
+                                            cursor: isRefreshing ? 'not-allowed' : 'pointer',
+                                            fontSize: '12px',
+                                            opacity: isRefreshing ? 0.6 : 1
+                                        }}
+                                    >
+                                        <RefreshCw size={14} className={isRefreshing ? 'spinning' : ''} />
+                                        {t('refresh')}
+                                    </button>
+                                )}
+                                <div className="plugin-view-mode">
+                                    <button
+                                        className={viewMode === 'list' ? 'active' : ''}
+                                        onClick={() => setViewMode('list')}
+                                        title={t('listView')}
+                                    >
+                                        <List size={14} />
+                                    </button>
+                                    <button
+                                        className={viewMode === 'grid' ? 'active' : ''}
+                                        onClick={() => setViewMode('grid')}
+                                        title={t('gridView')}
+                                    >
+                                        <Grid size={14} />
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="plugin-categories">
-                            {Object.entries(pluginsByCategory).map(([category, categoryPlugins]) => {
-                                const cat = category as EditorPluginCategory;
-                                const isExpanded = expandedCategories.has(cat);
 
-                                return (
-                                    <div key={category} className="plugin-category">
-                                        <div
-                                            className="plugin-category-header"
-                                            onClick={() => toggleCategory(cat)}
-                                        >
-                                            <button className="plugin-category-toggle">
-                                                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                                            </button>
-                                            <span className="plugin-category-icon">
-                                                {(() => {
-                                                    const CategoryIcon = (LucideIcons as any)[categoryIcons[cat]];
-                                                    return CategoryIcon ? <CategoryIcon size={16} /> : null;
-                                                })()}
-                                            </span>
-                                            <span className="plugin-category-name">{getCategoryName(cat)}</span>
-                                            <span className="plugin-category-count">
-                                                {categoryPlugins.length}
-                                            </span>
-                                        </div>
+                        <div
+                            className="plugin-content"
+                            style={{ display: activeTab === 'installed' ? 'block' : 'none' }}
+                        >
+                            {plugins.length === 0 ? (
+                                <div className="plugin-empty">
+                                    <Package size={48} />
+                                    <p>{t('noPlugins')}</p>
+                                </div>
+                            ) : (
+                                <div className="plugin-categories">
+                                    {Object.entries(pluginsByCategory).map(([category, categoryPlugins]) => {
+                                        const cat = category as EditorPluginCategory;
+                                        const isExpanded = expandedCategories.has(cat);
 
-                                        {isExpanded && (
-                                            <div className={`plugin-category-content ${viewMode}`}>
-                                                {viewMode === 'grid'
-                                                    ? categoryPlugins.map(renderPluginCard)
-                                                    : categoryPlugins.map(renderPluginList)}
+                                        return (
+                                            <div key={category} className="plugin-category">
+                                                <div
+                                                    className="plugin-category-header"
+                                                    onClick={() => toggleCategory(cat)}
+                                                >
+                                                    <button className="plugin-category-toggle">
+                                                        {isExpanded ? (
+                                                            <ChevronDown size={16} />
+                                                        ) : (
+                                                            <ChevronRight size={16} />
+                                                        )}
+                                                    </button>
+                                                    <span className="plugin-category-icon">
+                                                        {(() => {
+                                                            const CategoryIcon = (LucideIcons as any)[
+                                                                categoryIcons[cat]
+                                                            ];
+                                                            return CategoryIcon ? <CategoryIcon size={16} /> : null;
+                                                        })()}
+                                                    </span>
+                                                    <span className="plugin-category-name">{getCategoryName(cat)}</span>
+                                                    <span className="plugin-category-count">
+                                                        {categoryPlugins.length}
+                                                    </span>
+                                                </div>
+
+                                                {isExpanded && (
+                                                    <div className={`plugin-category-content ${viewMode}`}>
+                                                        {viewMode === 'grid'
+                                                            ? categoryPlugins.map(renderPluginCard)
+                                                            : categoryPlugins.map(renderPluginList)}
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
+                    </>
+                )}
+
+                {activeTab === 'marketplace' && (
+                    <PluginMarketPanel
+                        marketService={marketService}
+                        locale={locale}
+                        projectPath={projectPath}
+                        onReloadPlugins={onRefresh}
+                    />
+                )}
             </div>
         </div>
     );

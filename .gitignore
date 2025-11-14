@@ -16,6 +16,7 @@ dist/
 *.tmp
 *.temp
 .cache/
+.build-cache/
 
 # IDE 配置
 .idea/

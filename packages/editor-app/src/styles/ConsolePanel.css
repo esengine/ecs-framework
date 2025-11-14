@@ -305,6 +305,27 @@
   transform: scale(1.1);
 }
 
+.log-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  padding: 2px 6px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family-mono);
+  transition: all var(--transition-fast);
+}
+
+.log-expand-btn:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-primary);
+}
+
 .log-message-json {
   margin: 4px 0 0 0;
   padding: 8px;

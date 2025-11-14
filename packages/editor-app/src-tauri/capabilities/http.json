@@ -1,0 +1,18 @@
+{
+  "identifier": "http-capability",
+  "description": "HTTP permissions for GitHub API access and plugin marketplace",
+  "local": true,
+  "windows": ["main"],
+  "permissions": [
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://github.com/**" },
+        { "url": "https://api.github.com/**" },
+        { "url": "https://raw.githubusercontent.com/**" },
+        { "url": "https://cdn.jsdelivr.net/**" },
+        { "url": "https://fastly.jsdelivr.net/**" }
+      ]
+    }
+  ]
+}

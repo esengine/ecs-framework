@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Folder, File, FileCode, FileJson, FileImage, FileText, FolderOpen, Copy, Trash2, Edit3, LayoutGrid, List, ChevronsUp } from 'lucide-react';
+import { Folder, File, FileCode, FileJson, FileImage, FileText, FolderOpen, Copy, Trash2, Edit3, LayoutGrid, List, ChevronsUp, RefreshCw } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
 import { MessageHub, FileActionRegistry } from '@esengine/editor-core';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
@@ -262,7 +262,6 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
     const getContextMenuItems = (asset: AssetItem): ContextMenuItem[] => {
         const items: ContextMenuItem[] = [];
 
-        // 打开
         if (asset.type === 'file') {
             items.push({
                 label: locale === 'zh' ? '打开' : 'Open',
@@ -290,6 +289,26 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
             }
 
             items.push({ label: '', separator: true, onClick: () => {} });
+        }
+
+        if (asset.type === 'directory' && fileActionRegistry) {
+            const templates = fileActionRegistry.getCreationTemplates();
+            if (templates.length > 0) {
+                items.push({ label: '', separator: true, onClick: () => {} });
+                for (const template of templates) {
+                    items.push({
+                        label: `${locale === 'zh' ? '新建' : 'New'} ${template.label}`,
+                        icon: template.icon,
+                        onClick: async () => {
+                            const fileName = `${template.defaultFileName}.${template.extension}`;
+                            const filePath = `${asset.path}/${fileName}`;
+                            if (template.onCreate) {
+                                await template.onCreate(filePath);
+                            }
+                        }
+                    });
+                }
+            }
         }
 
         // 在文件管理器中显示
@@ -481,6 +500,39 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                         title="收起所有文件夹"
                     >
                         <ChevronsUp size={14} />
+                    </button>
+                    <button
+                        onClick={() => {
+                            if (currentPath) {
+                                loadAssets(currentPath);
+                            }
+                            if (showDetailView) {
+                                detailViewFileTreeRef.current?.refresh();
+                            } else {
+                                treeOnlyViewFileTreeRef.current?.refresh();
+                            }
+                        }}
+                        style={{
+                            padding: '6px 8px',
+                            background: 'transparent',
+                            border: '1px solid #3e3e3e',
+                            color: '#cccccc',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '3px'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#2a2d2e';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                        }}
+                        title="刷新资产列表"
+                    >
+                        <RefreshCw size={14} />
                     </button>
                     <input
                         type="text"

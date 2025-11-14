@@ -95,9 +95,7 @@ export class EditorPluginManager extends PluginManager {
 
             if (plugin.registerFileActionHandlers && this.fileActionRegistry) {
                 const handlers = plugin.registerFileActionHandlers();
-                console.log(`[EditorPluginManager] Registering ${handlers.length} file action handlers for ${plugin.name}`);
                 for (const handler of handlers) {
-                    console.log(`[EditorPluginManager] Handler for extensions:`, handler.extensions);
                     this.fileActionRegistry.registerActionHandler(handler);
                 }
                 logger.debug(`Registered ${handlers.length} file action handlers for ${plugin.name}`);
@@ -158,6 +156,20 @@ export class EditorPluginManager extends PluginManager {
                 const panels = plugin.registerPanels();
                 for (const panel of panels) {
                     this.uiRegistry?.unregisterPanel(panel.id);
+                }
+            }
+
+            if (plugin.registerFileActionHandlers && this.fileActionRegistry) {
+                const handlers = plugin.registerFileActionHandlers();
+                for (const handler of handlers) {
+                    this.fileActionRegistry.unregisterActionHandler(handler);
+                }
+            }
+
+            if (plugin.registerFileCreationTemplates && this.fileActionRegistry) {
+                const templates = plugin.registerFileCreationTemplates();
+                for (const template of templates) {
+                    this.fileActionRegistry.unregisterCreationTemplate(template);
                 }
             }
 

@@ -1,24 +1,17 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Entity } from '@esengine/ecs-framework';
-import { EntityStoreService, MessageHub } from '@esengine/editor-core';
+import { EntityStoreService, MessageHub, InspectorRegistry, InspectorContext } from '@esengine/editor-core';
 import { PropertyInspector } from './PropertyInspector';
-import { BehaviorTreeNodeProperties } from './BehaviorTreeNodeProperties';
-import { FileSearch, ChevronDown, ChevronRight, X, Settings, Box, AlertTriangle, Copy, File as FileIcon, Folder, Clock, HardDrive } from 'lucide-react';
-import { BehaviorTreeNode, useBehaviorTreeStore } from '../stores/behaviorTreeStore';
-import { ICON_MAP } from '../presentation/config/editorConstants';
-import { useNodeOperations } from '../presentation/hooks/useNodeOperations';
-import { useCommandHistory } from '../presentation/hooks/useCommandHistory';
-import { NodeFactory } from '../infrastructure/factories/NodeFactory';
-import { BehaviorTreeValidator } from '../infrastructure/validation/BehaviorTreeValidator';
+import { FileSearch, ChevronDown, ChevronRight, X, Settings, File as FileIcon, Folder, Clock, HardDrive } from 'lucide-react';
 import { TauriAPI } from '../api/tauri';
+import { useToast } from './Toast';
 import '../styles/EntityInspector.css';
 
 interface InspectorProps {
     entityStore: EntityStoreService;
     messageHub: MessageHub;
+    inspectorRegistry: InspectorRegistry;
     projectPath?: string | null;
-    isExecuting?: boolean;
-    executionMode?: 'idle' | 'running' | 'paused' | 'step';
 }
 
 interface AssetFileInfo {
@@ -33,38 +26,15 @@ interface AssetFileInfo {
 type InspectorTarget =
     | { type: 'entity'; data: Entity }
     | { type: 'remote-entity'; data: any; details?: any }
-    | { type: 'behavior-tree-node'; data: BehaviorTreeNode }
     | { type: 'asset-file'; data: AssetFileInfo; content?: string }
+    | { type: 'extension'; data: unknown }
     | null;
 
-export function Inspector({ entityStore: _entityStore, messageHub, projectPath, isExecuting, executionMode }: InspectorProps) {
+export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegistry, projectPath }: InspectorProps) {
     const [target, setTarget] = useState<InspectorTarget>(null);
     const [expandedComponents, setExpandedComponents] = useState<Set<number>>(new Set());
     const [componentVersion, setComponentVersion] = useState(0);
-
-    // 行为树节点操作相关
-    const nodeFactory = useMemo(() => new NodeFactory(), []);
-    const validator = useMemo(() => new BehaviorTreeValidator(), []);
-    const { commandManager } = useCommandHistory();
-    const nodeOperations = useNodeOperations(nodeFactory, validator, commandManager);
-    const { nodes, connections, isExecuting: storeIsExecuting } = useBehaviorTreeStore();
-
-    // 优先使用传入的 isExecuting，否则使用 store 中的
-    const isRunning = isExecuting ?? storeIsExecuting;
-
-    // 当节点数据更新时，同步更新 target 中的节点
-    useEffect(() => {
-        if (target?.type === 'behavior-tree-node') {
-            const updatedNode = nodes.find(n => n.id === target.data.id);
-            if (updatedNode) {
-                const currentDataStr = JSON.stringify(target.data.data);
-                const updatedDataStr = JSON.stringify(updatedNode.data);
-                if (currentDataStr !== updatedDataStr) {
-                    setTarget({ type: 'behavior-tree-node', data: updatedNode });
-                }
-            }
-        }
-    }, [nodes]);
+    const { showToast } = useToast();
 
     useEffect(() => {
         const handleEntitySelection = (data: { entity: Entity | null }) => {
@@ -88,8 +58,8 @@ export function Inspector({ entityStore: _entityStore, messageHub, projectPath, 
             }
         };
 
-        const handleBehaviorTreeNodeSelection = (data: { node: BehaviorTreeNode }) => {
-            setTarget({ type: 'behavior-tree-node', data: data.node });
+        const handleExtensionSelection = (data: { data: unknown }) => {
+            setTarget({ type: 'extension', data: data.data });
         };
 
         const handleAssetFileSelection = async (data: { fileInfo: AssetFileInfo }) => {
@@ -122,7 +92,7 @@ export function Inspector({ entityStore: _entityStore, messageHub, projectPath, 
 
         const unsubEntitySelect = messageHub.subscribe('entity:selected', handleEntitySelection);
         const unsubRemoteSelect = messageHub.subscribe('remote-entity:selected', handleRemoteEntitySelection);
-        const unsubNodeSelect = messageHub.subscribe('behavior-tree:node-selected', handleBehaviorTreeNodeSelection);
+        const unsubNodeSelect = messageHub.subscribe('behavior-tree:node-selected', handleExtensionSelection);
         const unsubAssetFileSelect = messageHub.subscribe('asset-file:selected', handleAssetFileSelection);
         const unsubComponentAdded = messageHub.subscribe('component:added', handleComponentChange);
         const unsubComponentRemoved = messageHub.subscribe('component:removed', handleComponentChange);
@@ -170,81 +140,6 @@ export function Inspector({ entityStore: _entityStore, messageHub, projectPath, 
             component,
             propertyName,
             value
-        });
-    };
-
-    const handleNodePropertyChange = (propertyName: string, value: any) => {
-        if (target?.type !== 'behavior-tree-node') return;
-        const node = target.data;
-
-        nodeOperations.updateNodeData(node.id, {
-            ...node.data,
-            [propertyName]: value
-        });
-    };
-
-    const handleCopyNodeInfo = () => {
-        if (target?.type !== 'behavior-tree-node') return;
-        const node = target.data;
-
-        const childrenInfo = node.children.map((childId, index) => {
-            const childNode = nodes.find(n => n.id === childId);
-            return `  ${index + 1}. ${childNode?.template.displayName || '未知'} (ID: ${childId})`;
-        }).join('\n');
-
-        const incomingConnections = connections.filter(conn => conn.to === node.id);
-        const outgoingConnections = connections.filter(conn => conn.from === node.id);
-
-        const connectionInfo = [
-            incomingConnections.length > 0 ? `输入连接: ${incomingConnections.length}个` : '',
-            ...incomingConnections.map(conn => {
-                const fromNode = nodes.find(n => n.id === conn.from);
-                return `  来自: ${fromNode?.template.displayName || '未知'} (${conn.from})`;
-            }),
-            outgoingConnections.length > 0 ? `输出连接: ${outgoingConnections.length}个` : '',
-            ...outgoingConnections.map(conn => {
-                const toNode = nodes.find(n => n.id === conn.to);
-                return `  到: ${toNode?.template.displayName || '未知'} (${conn.to})`;
-            })
-        ].filter(Boolean).join('\n');
-
-        const nodeInfo = `
-节点信息
-========
-名称: ${node.template.displayName}
-类型: ${node.template.type}
-分类: ${node.template.category}
-类名: ${node.template.className || '无'}
-节点ID: ${node.id}
-
-子节点 (${node.children.length}个):
-${childrenInfo || '  无'}
-
-连接信息:
-${connectionInfo || '  无连接'}
-
-属性数据:
-${JSON.stringify(node.data, null, 2)}
-        `.trim();
-
-        navigator.clipboard.writeText(nodeInfo).then(() => {
-            messageHub.publish('notification:show', {
-                type: 'success',
-                message: '节点信息已复制到剪贴板'
-            });
-        }).catch(() => {
-            const textarea = document.createElement('textarea');
-            textarea.value = nodeInfo;
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            messageHub.publish('notification:show', {
-                type: 'success',
-                message: '节点信息已复制到剪贴板'
-            });
         });
     };
 
@@ -377,143 +272,6 @@ ${JSON.stringify(node.data, null, 2)}
         );
     };
 
-    const renderBehaviorTreeNode = (node: BehaviorTreeNode) => {
-        const IconComponent = node.template.icon ? (ICON_MAP as any)[node.template.icon] : Box;
-
-        return (
-            <div className="entity-inspector">
-                <div className="inspector-header">
-                    {IconComponent && <IconComponent size={16} style={{ color: node.template.color || '#999' }} />}
-                    <span className="entity-name">{node.template.displayName || '未命名节点'}</span>
-                    <button
-                        onClick={handleCopyNodeInfo}
-                        style={{
-                            marginLeft: 'auto',
-                            background: 'transparent',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            color: '#999',
-                            fontSize: '12px'
-                        }}
-                        title="复制节点信息"
-                    >
-                        <Copy size={14} />
-                        <span>复制信息</span>
-                    </button>
-                </div>
-
-                {isRunning && (
-                    <div style={{
-                        padding: '10px 14px',
-                        backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                        borderLeft: '3px solid #ff9800',
-                        margin: '12px',
-                        borderRadius: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        fontSize: '12px',
-                        color: '#ff9800',
-                        lineHeight: '1.4'
-                    }}>
-                        <AlertTriangle size={16} style={{ flexShrink: 0 }} />
-                        <span>运行时模式：属性修改将在停止后还原</span>
-                    </div>
-                )}
-
-                <div className="inspector-content">
-                    <div className="inspector-section">
-                        <div className="section-title">基本信息</div>
-                        <div className="property-field">
-                            <label className="property-label">节点类型</label>
-                            <span className="property-value-text">{node.template.type}</span>
-                        </div>
-                        <div className="property-field">
-                            <label className="property-label">分类</label>
-                            <span className="property-value-text">{node.template.category}</span>
-                        </div>
-                        {node.template.description && (
-                            <div className="property-field">
-                                <label className="property-label">描述</label>
-                                <span className="property-value-text" style={{ color: '#999' }}>{node.template.description}</span>
-                            </div>
-                        )}
-                        {node.template.className && (
-                            <div className="property-field">
-                                <label className="property-label">类名</label>
-                                <span className="property-value-text" style={{ fontFamily: 'Consolas, Monaco, monospace', color: '#0e639c' }}>
-                                    {node.template.className}
-                                </span>
-                            </div>
-                        )}
-                    </div>
-
-                    {node.template.properties && node.template.properties.length > 0 && (
-                        <div className="inspector-section">
-                            <div className="section-title">属性</div>
-                            <BehaviorTreeNodeProperties
-                                key={node.id}
-                                selectedNode={node}
-                                onPropertyChange={handleNodePropertyChange}
-                                projectPath={projectPath}
-                            />
-                        </div>
-                    )}
-
-                    {node.children.length > 0 && (
-                        <div className="inspector-section">
-                            <div className="section-title">子节点 ({node.children.length})</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {node.children.map((childId, index) => {
-                                    const childNode = nodes.find(n => n.id === childId);
-                                    const ChildIcon = childNode?.template.icon ? (ICON_MAP as any)[childNode.template.icon] : Box;
-                                    return (
-                                        <div
-                                            key={childId}
-                                            className="child-node-item"
-                                            style={{
-                                                borderLeft: `3px solid ${childNode?.template.color || '#666'}`
-                                            }}
-                                        >
-                                            <span className="child-node-index">{index + 1}.</span>
-                                            {childNode && ChildIcon && (
-                                                <ChildIcon size={14} style={{ color: childNode.template.color || '#999', flexShrink: 0 }} />
-                                            )}
-                                            <span className="child-node-name">
-                                                {childNode?.template.displayName || childId}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="inspector-section">
-                        <div className="section-title">调试信息</div>
-                        <div className="property-field">
-                            <label className="property-label">节点ID</label>
-                            <span className="property-value-text" style={{ fontFamily: 'Consolas, Monaco, monospace', color: '#666', fontSize: '11px' }}>
-                                {node.id}
-                            </span>
-                        </div>
-                        <div className="property-field">
-                            <label className="property-label">位置</label>
-                            <span className="property-value-text" style={{ color: '#999' }}>
-                                ({node.position.x.toFixed(0)}, {node.position.y.toFixed(0)})
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
     if (!target) {
         return (
             <div className="entity-inspector">
@@ -528,8 +286,29 @@ ${JSON.stringify(node.data, null, 2)}
         );
     }
 
-    if (target.type === 'behavior-tree-node') {
-        return renderBehaviorTreeNode(target.data);
+    if (target.type === 'extension') {
+        const context: InspectorContext = {
+            target: target.data,
+            projectPath,
+            readonly: false
+        };
+
+        const extensionContent = inspectorRegistry.render(target.data, context);
+        if (extensionContent) {
+            return extensionContent;
+        }
+
+        return (
+            <div className="entity-inspector">
+                <div className="empty-inspector">
+                    <FileSearch size={48} style={{ color: '#555', marginBottom: '16px' }} />
+                    <div style={{ color: '#999', fontSize: '14px' }}>未找到合适的检视器</div>
+                    <div style={{ color: '#666', fontSize: '12px', marginTop: '8px' }}>
+                        此对象类型未注册检视器扩展
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     if (target.type === 'asset-file') {

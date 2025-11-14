@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { LogService, LogEntry } from '@esengine/editor-core';
 import { LogLevel } from '@esengine/ecs-framework';
-import { Trash2, AlertCircle, Info, AlertTriangle, XCircle, Bug, Search, Maximize2, ChevronRight, ChevronDown, Wifi } from 'lucide-react';
+import { Trash2, AlertCircle, Info, AlertTriangle, XCircle, Bug, Search, Wifi } from 'lucide-react';
 import { JsonViewer } from './JsonViewer';
 import '../styles/ConsolePanel.css';
 
@@ -9,114 +9,73 @@ interface ConsolePanelProps {
     logService: LogService;
 }
 
-interface ParsedLogData {
-    isJSON: boolean;
-    jsonStr?: string;
-    extracted?: { prefix: string; json: string; suffix: string } | null;
+const MAX_LOGS = 1000;
+
+// 提取JSON检测和格式化逻辑
+function tryParseJSON(message: string): { isJSON: boolean; parsed?: unknown } {
+    try {
+        const parsed: unknown = JSON.parse(message);
+        return { isJSON: true, parsed };
+    } catch {
+        return { isJSON: false };
+    }
 }
 
-const LogEntryItem = memo(({
-    log,
-    isExpanded,
-    onToggleExpand,
-    onOpenJsonViewer,
-    parsedData
-}: {
+// 格式化时间
+function formatTime(date: Date): string {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    const ms = date.getMilliseconds().toString().padStart(3, '0');
+    return `${hours}:${minutes}:${seconds}.${ms}`;
+}
+
+// 日志等级图标
+function getLevelIcon(level: LogLevel) {
+    switch (level) {
+        case LogLevel.Debug:
+            return <Bug size={14} />;
+        case LogLevel.Info:
+            return <Info size={14} />;
+        case LogLevel.Warn:
+            return <AlertTriangle size={14} />;
+        case LogLevel.Error:
+        case LogLevel.Fatal:
+            return <XCircle size={14} />;
+        default:
+            return <AlertCircle size={14} />;
+    }
+}
+
+// 日志等级样式类
+function getLevelClass(level: LogLevel): string {
+    switch (level) {
+        case LogLevel.Debug:
+            return 'log-entry-debug';
+        case LogLevel.Info:
+            return 'log-entry-info';
+        case LogLevel.Warn:
+            return 'log-entry-warn';
+        case LogLevel.Error:
+        case LogLevel.Fatal:
+            return 'log-entry-error';
+        default:
+            return '';
+    }
+}
+
+// 单个日志条目组件
+const LogEntryItem = memo(({ log, onOpenJsonViewer }: {
     log: LogEntry;
-    isExpanded: boolean;
-    onToggleExpand: (id: number) => void;
-    onOpenJsonViewer: (jsonStr: string) => void;
-    parsedData: ParsedLogData;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onOpenJsonViewer: (data: any) => void;
 }) => {
-    const getLevelIcon = (level: LogLevel) => {
-        switch (level) {
-            case LogLevel.Debug:
-                return <Bug size={14} />;
-            case LogLevel.Info:
-                return <Info size={14} />;
-            case LogLevel.Warn:
-                return <AlertTriangle size={14} />;
-            case LogLevel.Error:
-            case LogLevel.Fatal:
-                return <XCircle size={14} />;
-            default:
-                return <AlertCircle size={14} />;
-        }
-    };
-
-    const getLevelClass = (level: LogLevel): string => {
-        switch (level) {
-            case LogLevel.Debug:
-                return 'log-entry-debug';
-            case LogLevel.Info:
-                return 'log-entry-info';
-            case LogLevel.Warn:
-                return 'log-entry-warn';
-            case LogLevel.Error:
-            case LogLevel.Fatal:
-                return 'log-entry-error';
-            default:
-                return '';
-        }
-    };
-
-    const formatTime = (date: Date): string => {
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        const seconds = date.getSeconds().toString().padStart(2, '0');
-        const ms = date.getMilliseconds().toString().padStart(3, '0');
-        return `${hours}:${minutes}:${seconds}.${ms}`;
-    };
-
-    const formatMessage = (message: string, isExpanded: boolean, parsedData: ParsedLogData): JSX.Element => {
-        const MAX_PREVIEW_LENGTH = 200;
-        const { isJSON, jsonStr, extracted } = parsedData;
-        const shouldTruncate = message.length > MAX_PREVIEW_LENGTH && !isExpanded;
-
-        return (
-            <div className="log-message-container">
-                <div className="log-message-text">
-                    {shouldTruncate ? (
-                        <>
-                            {extracted && extracted.prefix && <span>{extracted.prefix} </span>}
-                            <span className="log-message-preview">
-                                {message.substring(0, MAX_PREVIEW_LENGTH)}...
-                            </span>
-                        </>
-                    ) : (
-                        <span>{message}</span>
-                    )}
-                </div>
-                {isJSON && jsonStr && (
-                    <button
-                        className="log-open-json-btn"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenJsonViewer(jsonStr);
-                        }}
-                        title="Open in JSON Viewer"
-                    >
-                        <Maximize2 size={12} />
-                    </button>
-                )}
-            </div>
-        );
-    };
-
-    const shouldShowExpander = log.message.length > 200;
+    const { isJSON, parsed } = useMemo(() => tryParseJSON(log.message), [log.message]);
+    const shouldTruncate = log.message.length > 200;
+    const [isExpanded, setIsExpanded] = useState(false);
 
     return (
-        <div
-            className={`log-entry ${getLevelClass(log.level)} ${log.source === 'remote' ? 'log-entry-remote' : ''} ${isExpanded ? 'log-entry-expanded' : ''}`}
-        >
-            {shouldShowExpander && (
-                <div
-                    className="log-entry-expander"
-                    onClick={() => onToggleExpand(log.id)}
-                >
-                    {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                </div>
-            )}
+        <div className={`log-entry ${getLevelClass(log.level)} ${log.source === 'remote' ? 'log-entry-remote' : ''}`}>
             <div className="log-entry-icon">
                 {getLevelIcon(log.level)}
             </div>
@@ -132,7 +91,45 @@ const LogEntryItem = memo(({
                 </div>
             )}
             <div className="log-entry-message">
-                {formatMessage(log.message, isExpanded, parsedData)}
+                <div className="log-message-container">
+                    <div className="log-message-text">
+                        {shouldTruncate && !isExpanded ? (
+                            <>
+                                <span className="log-message-preview">
+                                    {log.message.substring(0, 200)}...
+                                </span>
+                                <button
+                                    className="log-expand-btn"
+                                    onClick={() => setIsExpanded(true)}
+                                >
+                                    Show more
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <span>{log.message}</span>
+                                {shouldTruncate && (
+                                    <button
+                                        className="log-expand-btn"
+                                        onClick={() => setIsExpanded(false)}
+                                    >
+                                        Show less
+                                    </button>
+                                )}
+                            </>
+                        )}
+                    </div>
+                    {isJSON && parsed !== undefined && (
+                        <button
+                            className="log-open-json-btn"
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            onClick={() => onOpenJsonViewer(parsed as any)}
+                            title="Open in JSON Viewer"
+                        >
+                            JSON
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -140,10 +137,9 @@ const LogEntryItem = memo(({
 
 LogEntryItem.displayName = 'LogEntryItem';
 
-const MAX_LOGS = 1000;
-
 export function ConsolePanel({ logService }: ConsolePanelProps) {
-    const [logs, setLogs] = useState<LogEntry[]>([]);
+    // 状态管理
+    const [logs, setLogs] = useState<LogEntry[]>(() => logService.getLogs().slice(-MAX_LOGS));
     const [filter, setFilter] = useState('');
     const [levelFilter, setLevelFilter] = useState<Set<LogLevel>>(new Set([
         LogLevel.Debug,
@@ -154,37 +150,30 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
     ]));
     const [showRemoteOnly, setShowRemoteOnly] = useState(false);
     const [autoScroll, setAutoScroll] = useState(true);
-    const [expandedLogs, setExpandedLogs] = useState<Set<number>>(new Set());
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [jsonViewerData, setJsonViewerData] = useState<any>(null);
     const logContainerRef = useRef<HTMLDivElement>(null);
 
+    // 订阅日志更新
     useEffect(() => {
-        setLogs(logService.getLogs().slice(-MAX_LOGS));
-
         const unsubscribe = logService.subscribe((entry) => {
             setLogs((prev) => {
                 const newLogs = [...prev, entry];
-                if (newLogs.length > MAX_LOGS) {
-                    return newLogs.slice(-MAX_LOGS);
-                }
-                return newLogs;
+                return newLogs.length > MAX_LOGS ? newLogs.slice(-MAX_LOGS) : newLogs;
             });
         });
 
         return unsubscribe;
     }, [logService]);
 
+    // 自动滚动
     useEffect(() => {
         if (autoScroll && logContainerRef.current) {
             logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
         }
     }, [logs, autoScroll]);
 
-    const handleClear = () => {
-        logService.clear();
-        setLogs([]);
-    };
-
+    // 处理滚动
     const handleScroll = () => {
         if (logContainerRef.current) {
             const { scrollTop, scrollHeight, clientHeight } = logContainerRef.current;
@@ -193,6 +182,13 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
         }
     };
 
+    // 清空日志
+    const handleClear = () => {
+        logService.clear();
+        setLogs([]);
+    };
+
+    // 切换等级过滤
     const toggleLevelFilter = (level: LogLevel) => {
         const newFilter = new Set(levelFilter);
         if (newFilter.has(level)) {
@@ -203,129 +199,7 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
         setLevelFilter(newFilter);
     };
 
-    // 使用ref保存缓存，避免每次都重新计算
-    const parsedLogsCacheRef = useRef<Map<number, ParsedLogData>>(new Map());
-
-    const extractJSON = useMemo(() => {
-        return (message: string): { prefix: string; json: string; suffix: string } | null => {
-            // 快速路径：如果消息太短，直接返回
-            if (message.length < 2) return null;
-
-            const jsonStartChars = ['{', '['];
-            let startIndex = -1;
-
-            for (const char of jsonStartChars) {
-                const index = message.indexOf(char);
-                if (index !== -1 && (startIndex === -1 || index < startIndex)) {
-                    startIndex = index;
-                }
-            }
-
-            if (startIndex === -1) return null;
-
-            // 使用栈匹配算法，更高效地找到JSON边界
-            const startChar = message[startIndex];
-            const endChar = startChar === '{' ? '}' : ']';
-            let depth = 0;
-            let inString = false;
-            let escape = false;
-
-            for (let i = startIndex; i < message.length; i++) {
-                const char = message[i];
-
-                if (escape) {
-                    escape = false;
-                    continue;
-                }
-
-                if (char === '\\') {
-                    escape = true;
-                    continue;
-                }
-
-                if (char === '"') {
-                    inString = !inString;
-                    continue;
-                }
-
-                if (inString) continue;
-
-                if (char === startChar) {
-                    depth++;
-                } else if (char === endChar) {
-                    depth--;
-                    if (depth === 0) {
-                        // 找到匹配的结束符
-                        const possibleJson = message.substring(startIndex, i + 1);
-                        try {
-                            JSON.parse(possibleJson);
-                            return {
-                                prefix: message.substring(0, startIndex).trim(),
-                                json: possibleJson,
-                                suffix: message.substring(i + 1).trim()
-                            };
-                        } catch {
-                            return null;
-                        }
-                    }
-                }
-            }
-
-            return null;
-        };
-    }, []);
-
-    const parsedLogsCache = useMemo(() => {
-        const cache = parsedLogsCacheRef.current;
-
-        // 只处理新增的日志
-        for (const log of logs) {
-            // 如果已经缓存过，跳过
-            if (cache.has(log.id)) continue;
-
-            try {
-                JSON.parse(log.message);
-                cache.set(log.id, {
-                    isJSON: true,
-                    jsonStr: log.message,
-                    extracted: null
-                });
-            } catch {
-                const extracted = extractJSON(log.message);
-                if (extracted) {
-                    try {
-                        JSON.parse(extracted.json);
-                        cache.set(log.id, {
-                            isJSON: true,
-                            jsonStr: extracted.json,
-                            extracted
-                        });
-                    } catch {
-                        cache.set(log.id, {
-                            isJSON: false,
-                            extracted
-                        });
-                    }
-                } else {
-                    cache.set(log.id, {
-                        isJSON: false,
-                        extracted: null
-                    });
-                }
-            }
-        }
-
-        // 清理不再需要的缓存（日志被删除）
-        const logIds = new Set(logs.map((log) => log.id));
-        for (const cachedId of cache.keys()) {
-            if (!logIds.has(cachedId)) {
-                cache.delete(cachedId);
-            }
-        }
-
-        return cache;
-    }, [logs, extractJSON]);
-
+    // 过滤日志
     const filteredLogs = useMemo(() => {
         return logs.filter((log) => {
             if (!levelFilter.has(log.level)) return false;
@@ -337,25 +211,7 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
         });
     }, [logs, levelFilter, showRemoteOnly, filter]);
 
-    const toggleLogExpand = (logId: number) => {
-        const newExpanded = new Set(expandedLogs);
-        if (newExpanded.has(logId)) {
-            newExpanded.delete(logId);
-        } else {
-            newExpanded.add(logId);
-        }
-        setExpandedLogs(newExpanded);
-    };
-
-    const openJsonViewer = (jsonStr: string) => {
-        try {
-            const parsed = JSON.parse(jsonStr);
-            setJsonViewerData(parsed);
-        } catch {
-            console.error('Failed to parse JSON:', jsonStr);
-        }
-    };
-
+    // 统计各等级日志数量
     const levelCounts = useMemo(() => ({
         [LogLevel.Debug]: logs.filter((l) => l.level === LogLevel.Debug).length,
         [LogLevel.Info]: logs.filter((l) => l.level === LogLevel.Info).length,
@@ -446,10 +302,7 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
                         <LogEntryItem
                             key={log.id}
                             log={log}
-                            isExpanded={expandedLogs.has(log.id)}
-                            onToggleExpand={toggleLogExpand}
-                            onOpenJsonViewer={openJsonViewer}
-                            parsedData={parsedLogsCache.get(log.id) || { isJSON: false }}
+                            onOpenJsonViewer={setJsonViewerData}
                         />
                     ))
                 )}

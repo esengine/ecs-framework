@@ -33,6 +33,7 @@ interface MenuBarProps {
   onToggleDevtools?: () => void;
   onOpenAbout?: () => void;
   onCreatePlugin?: () => void;
+  onReloadPlugins?: () => void;
 }
 
 export function MenuBar({
@@ -53,7 +54,8 @@ export function MenuBar({
     onOpenSettings,
     onToggleDevtools,
     onOpenAbout,
-    onCreatePlugin
+    onCreatePlugin,
+    onReloadPlugins
 }: MenuBarProps) {
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [pluginMenuItems, setPluginMenuItems] = useState<PluginMenuItem[]>([]);
@@ -147,6 +149,7 @@ export function MenuBar({
                 pluginManager: 'Plugin Manager',
                 tools: 'Tools',
                 createPlugin: 'Create Plugin',
+                reloadPlugins: 'Reload Plugins',
                 portManager: 'Port Manager',
                 settings: 'Settings',
                 help: 'Help',
@@ -181,6 +184,7 @@ export function MenuBar({
                 pluginManager: '插件管理器',
                 tools: '工具',
                 createPlugin: '创建插件',
+                reloadPlugins: '重新加载插件',
                 portManager: '端口管理器',
                 settings: '设置',
                 help: '帮助',
@@ -231,6 +235,7 @@ export function MenuBar({
         ],
         tools: [
             { label: t('createPlugin'), onClick: onCreatePlugin },
+            { label: t('reloadPlugins'), shortcut: 'Ctrl+R', onClick: onReloadPlugins },
             { separator: true },
             { label: t('portManager'), onClick: onOpenPortManager },
             { separator: true },

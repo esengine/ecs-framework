@@ -22,8 +22,10 @@ export type LogListener = (entry: LogEntry) => void;
 export class LogService implements IService {
     private logs: LogEntry[] = [];
     private listeners: Set<LogListener> = new Set();
-    private nextId = 0;
+    private nextId = Date.now(); // 使用时间戳作为起始ID，避免重复
     private maxLogs = 1000;
+    private pendingNotifications: LogEntry[] = [];
+    private notificationScheduled = false;
 
     private originalConsole = {
         log: console.log.bind(console),
@@ -146,15 +148,29 @@ export class LogService implements IService {
     }
 
     /**
-     * 通知监听器
+     * 通知监听器（批处理日志通知以避免在React渲染期间触发状态更新）
      */
     private notifyListeners(entry: LogEntry): void {
-        for (const listener of this.listeners) {
-            try {
-                listener(entry);
-            } catch (error) {
-                this.originalConsole.error('Error in log listener:', error);
-            }
+        this.pendingNotifications.push(entry);
+
+        if (!this.notificationScheduled) {
+            this.notificationScheduled = true;
+
+            queueMicrotask(() => {
+                const notifications = [...this.pendingNotifications];
+                this.pendingNotifications = [];
+                this.notificationScheduled = false;
+
+                for (const notification of notifications) {
+                    for (const listener of this.listeners) {
+                        try {
+                            listener(notification);
+                        } catch (error) {
+                            this.originalConsole.error('Error in log listener:', error);
+                        }
+                    }
+                }
+            });
         }
     }
 
