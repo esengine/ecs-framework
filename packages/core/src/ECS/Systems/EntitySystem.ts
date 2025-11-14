@@ -73,6 +73,7 @@ export abstract class EntitySystem implements ISystemBase, IService {
     private _matcher: Matcher;
     private _eventListeners: EventListenerRecord[];
     private _scene: Scene | null;
+    private _destroyed: boolean;
     protected logger: ReturnType<typeof createLogger>;
 
     /**
@@ -145,6 +146,7 @@ export abstract class EntitySystem implements ISystemBase, IService {
         this._matcher = matcher || Matcher.empty();
         this._eventListeners = [];
         this._scene = null;
+        this._destroyed = false;
 
         this._entityIdMap = null;
         this._entityIdMapVersion = -1;
@@ -247,8 +249,17 @@ export abstract class EntitySystem implements ISystemBase, IService {
      * 重置系统状态
      *
      * 当系统从场景中移除时调用，重置初始化状态以便重新添加时能正确初始化。
+     *
+     * 注意：此方法由 Scene.removeEntityProcessor 调用，在 unregister（触发dispose）之后调用。
+     * dispose 已经调用了 onDestroy 并设置了 _destroyed 标志，所以这里不需要重置该标志。
+     * 重置 _destroyed 会违反服务容器的语义（dispose 后不应重用）。
      */
     public reset(): void {
+        // 如果系统已经被销毁，不需要再次调用destroy
+        if (this._destroyed) {
+            return;
+        }
+
         this.scene = null;
         this._initialized = false;
         this._entityCache.clearAll();
@@ -257,8 +268,7 @@ export abstract class EntitySystem implements ISystemBase, IService {
         this._entityIdMap = null;
         this._entityIdMapVersion = -1;
 
-        // 清理所有事件监听器
-        // 调用框架销毁方法
+        // 清理所有事件监听器并调用销毁回调
         this.destroy();
     }
 
@@ -728,14 +738,23 @@ export abstract class EntitySystem implements ISystemBase, IService {
      *
      * 默认行为：
      * - 移除所有事件监听器
+     * - 调用 onDestroy 回调（仅首次）
      * - 清空所有缓存
      * - 重置初始化状态
      *
      * 子类可以重写此方法来清理自定义资源，但应该调用super.dispose()。
      */
     public dispose(): void {
+        // 防止重复销毁
+        if (this._destroyed) {
+            return;
+        }
+
         // 移除所有事件监听器
         this.cleanupManualEventListeners();
+
+        // 调用用户销毁回调
+        this.onDestroy();
 
         // 清空所有缓存
         this._entityCache.clearAll();
@@ -744,6 +763,7 @@ export abstract class EntitySystem implements ISystemBase, IService {
         // 重置状态
         this._initialized = false;
         this._scene = null;
+        this._destroyed = true;
 
         this.logger.debug(`System ${this._systemName} disposed`);
     }
@@ -827,8 +847,13 @@ export abstract class EntitySystem implements ISystemBase, IService {
      * 由框架调用，处理系统的完整销毁流程
      */
     public destroy(): void {
-        this.cleanupManualEventListeners();
+        // 防止重复销毁
+        if (this._destroyed) {
+            return;
+        }
 
+        this.cleanupManualEventListeners();
+        this._destroyed = true;
         this.onDestroy();
     }
 
