@@ -294,6 +294,10 @@ export class Scene implements IScene {
      * 结束场景，清除实体、实体处理器等
      *
      * 这个方法会结束场景。它将移除所有实体，结束实体处理器等，并调用unload方法。
+     *
+     * 注意：
+     * - onRemoved 回调不会在 Scene.end() 时触发，因为这是批量销毁场景
+     * - 如需清理资源，请在系统的 onDestroy() 方法中处理
      */
     public end() {
         // 标记场景已结束运行
@@ -309,6 +313,7 @@ export class Scene implements IScene {
         this.componentStorageManager.clear();
 
         // 清空服务容器（会调用所有服务的dispose方法，包括所有EntitySystem）
+        // 系统的 onDestroy 回调会在这里被触发，用户应在此处理清理逻辑
         this._services.clear();
 
         // 清空系统缓存

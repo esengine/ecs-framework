@@ -192,6 +192,47 @@ describe('EntitySystem', () => {
 
             expect(handler).not.toHaveBeenCalled();
         });
+
+        it('dispose 方法应该调用 onDestroy 回调', () => {
+            const plainSystem = new PlainEntitySystem();
+            scene.addSystem(plainSystem);
+
+            // 直接调用 dispose
+            plainSystem.dispose();
+
+            // 验证 onDestroy 被调用
+            expect(plainSystem.onDestroyCallCount).toBe(1);
+        });
+
+        it('多次调用 dispose 或 destroy 不应该重复调用 onDestroy', () => {
+            const plainSystem = new PlainEntitySystem();
+            scene.addSystem(plainSystem);
+
+            // 调用 dispose
+            plainSystem.dispose();
+            expect(plainSystem.onDestroyCallCount).toBe(1);
+
+            // 再次调用 dispose
+            plainSystem.dispose();
+            expect(plainSystem.onDestroyCallCount).toBe(1);
+
+            // 调用 destroy
+            plainSystem.destroy();
+            expect(plainSystem.onDestroyCallCount).toBe(1);
+        });
+
+        it('先调用 destroy 再调用 dispose 不应该重复调用 onDestroy', () => {
+            const plainSystem = new PlainEntitySystem();
+            scene.addSystem(plainSystem);
+
+            // 先调用 destroy
+            plainSystem.destroy();
+            expect(plainSystem.onDestroyCallCount).toBe(1);
+
+            // 再调用 dispose
+            plainSystem.dispose();
+            expect(plainSystem.onDestroyCallCount).toBe(1);
+        });
     });
 
     describe('错误处理', () => {
