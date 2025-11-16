@@ -1,7 +1,8 @@
 /* ==================== 节点基础样式 ==================== */
 .bt-node {
   position: absolute;
-  min-width: 220px;
+  min-width: 160px;
+  max-width: 280px;
   background: linear-gradient(135deg, #2a2a2d 0%, #1e1e21 100%);
   border-radius: 12px;
   box-shadow:
@@ -28,6 +29,29 @@
     0 0 24px rgba(0, 122, 204, 0.6),
     0 6px 32px rgba(0, 0, 0, 0.6);
   border-color: #007acc;
+}
+
+/* ==================== 断点样式 ==================== */
+.bt-node.has-breakpoint {
+  box-shadow:
+    0 0 0 2px #f44336,
+    0 0 12px rgba(244, 67, 54, 0.5),
+    0 4px 24px rgba(0, 0, 0, 0.5);
+  border-color: #f44336;
+}
+
+.bt-node.has-breakpoint::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  background: #f44336;
+  border-radius: 50%;
+  border: 2px solid #1a1a1d;
+  box-shadow: 0 0 8px rgba(244, 67, 54, 0.8);
+  z-index: 10;
 }
 
 /* ==================== 执行状态样式 ==================== */
@@ -197,7 +221,7 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* ==================== 端口样式（ComfyUI风格）==================== */
+/* ==================== 端口样式 ==================== */
 .bt-node-port {
   position: absolute;
   width: 16px;

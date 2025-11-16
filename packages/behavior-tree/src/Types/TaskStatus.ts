@@ -16,6 +16,8 @@ export enum TaskStatus {
  * 内置节点类型常量
  */
 export const NodeType = {
+    /** 根节点 - 行为树的起始节点 */
+    Root: 'root',
     /** 复合节点 - 有多个子节点 */
     Composite: 'composite',
     /** 装饰器节点 - 有一个子节点 */

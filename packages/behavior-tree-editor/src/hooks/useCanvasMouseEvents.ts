@@ -15,6 +15,7 @@ interface UseCanvasMouseEventsParams {
     canvasOffset: { x: number; y: number };
     canvasScale: number;
     connectingFrom: string | null;
+    connectingFromProperty: string | null;
     connectingToPos: { x: number; y: number } | null;
     isBoxSelecting: boolean;
     boxSelectStart: { x: number; y: number } | null;
@@ -40,6 +41,7 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams) {
         canvasOffset,
         canvasScale,
         connectingFrom,
+        connectingFromProperty,
         connectingToPos,
         isBoxSelecting,
         boxSelectStart,
@@ -168,6 +170,17 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams) {
         }
 
         if (connectingFrom && connectingToPos) {
+            // 如果是属性连接，不允许创建新节点
+            if (connectingFromProperty) {
+                showToast?.(
+                    '属性连接必须连接到现有节点的属性端口',
+                    'warning'
+                );
+                clearConnecting();
+                setConnectingToPos(null);
+                return;
+            }
+
             const sourceNode = nodes.find(n => n.id === connectingFrom);
             if (sourceNode && !sourceNode.canAddChild()) {
                 const maxChildren = sourceNode.template.maxChildren ?? Infinity;

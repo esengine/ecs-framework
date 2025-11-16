@@ -55,7 +55,8 @@ export const ConnectionLayer: React.FC<ConnectionLayerProps> = ({
                 position: 'absolute',
                 inset: 0,
                 pointerEvents: 'none',
-                overflow: 'visible'
+                overflow: 'visible',
+                zIndex: 0
             }}
         >
             <g style={{ pointerEvents: 'auto' }}>

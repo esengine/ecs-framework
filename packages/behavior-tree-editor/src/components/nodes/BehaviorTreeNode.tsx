@@ -97,6 +97,35 @@ const BehaviorTreeNodeComponent: React.FC<BehaviorTreeNodeProps> = ({
                 zIndex: isRoot ? 50 : (draggingNodeId === node.id ? 100 : (isSelected ? 10 : 1))
             }}
         >
+            {/* 执行顺序角标 - 使用绝对定位，不影响节点布局 */}
+            {executionOrder !== undefined && (
+                <div
+                    className="bt-node-execution-badge"
+                    style={{
+                        position: 'absolute',
+                        top: '-8px',
+                        right: '-8px',
+                        backgroundColor: '#2196f3',
+                        color: '#fff',
+                        borderRadius: '50%',
+                        minWidth: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        padding: '0 6px',
+                        boxShadow: '0 2px 8px rgba(33, 150, 243, 0.5)',
+                        border: '2px solid #1a1a1d',
+                        zIndex: 10,
+                        pointerEvents: 'none'
+                    }}
+                    title={`执行顺序: ${executionOrder}`}
+                >
+                    {executionOrder}
+                </div>
+            )}
             {isBlackboardVariable ? (
                 (() => {
                     const varName = node.data.variableName as string;
@@ -141,6 +170,7 @@ const BehaviorTreeNodeComponent: React.FC<BehaviorTreeNodeProps> = ({
                             <div
                                 data-port="true"
                                 data-node-id={node.id}
+                                data-property="__value__"
                                 data-port-type="variable-output"
                                 onMouseDown={(e) => onPortMouseDown(e, node.id, '__value__')}
                                 onMouseUp={(e) => onPortMouseUp(e, node.id, '__value__')}
@@ -171,33 +201,11 @@ const BehaviorTreeNodeComponent: React.FC<BehaviorTreeNodeProps> = ({
                                 #{node.id}
                             </div>
                         </div>
-                        {executionOrder !== undefined && (
-                            <div
-                                className="bt-node-execution-order"
-                                style={{
-                                    marginLeft: 'auto',
-                                    backgroundColor: '#2196f3',
-                                    color: '#fff',
-                                    borderRadius: '50%',
-                                    width: '20px',
-                                    height: '20px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '11px',
-                                    fontWeight: 'bold',
-                                    flexShrink: 0
-                                }}
-                                title={`执行顺序: ${executionOrder}`}
-                            >
-                                {executionOrder}
-                            </div>
-                        )}
                         {!isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className) && (
                             <div
                                 className="bt-node-missing-executor-warning"
                                 style={{
-                                    marginLeft: executionOrder !== undefined ? '4px' : 'auto',
+                                    marginLeft: 'auto',
                                     display: 'flex',
                                     alignItems: 'center',
                                     cursor: 'help',
@@ -222,7 +230,7 @@ const BehaviorTreeNodeComponent: React.FC<BehaviorTreeNodeProps> = ({
                             <div
                                 className="bt-node-uncommitted-warning"
                                 style={{
-                                    marginLeft: (executionOrder !== undefined || (!isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className))) ? '4px' : 'auto',
+                                    marginLeft: (!isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className)) ? '4px' : 'auto',
                                     display: 'flex',
                                     alignItems: 'center',
                                     cursor: 'help',
@@ -251,7 +259,7 @@ const BehaviorTreeNodeComponent: React.FC<BehaviorTreeNodeProps> = ({
                                 <div
                                     className="bt-node-empty-warning-container"
                                     style={{
-                                        marginLeft: (executionOrder !== undefined || (!isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className)) || isUncommitted) ? '4px' : 'auto',
+                                        marginLeft: ((!isRoot && node.template.className && executorRef.current && !executorRef.current.hasExecutor(node.template.className)) || isUncommitted) ? '4px' : 'auto',
                                         display: 'flex',
                                         alignItems: 'center',
                                         cursor: 'help',
@@ -362,7 +370,6 @@ export const BehaviorTreeNode = React.memo(BehaviorTreeNodeComponent, (prevProps
         return false;
     }
 
-    // 如果选中状态、拖拽状态或执行状态变化，需要重新渲染
     if (prevProps.isSelected !== nextProps.isSelected ||
         prevProps.isBeingDragged !== nextProps.isBeingDragged ||
         prevProps.executionStatus !== nextProps.executionStatus ||

@@ -11,6 +11,7 @@ import {
     type PanelDescriptor
 } from '@esengine/editor-core';
 import { BehaviorTreeService } from './services/BehaviorTreeService';
+import { FileSystemService } from './services/FileSystemService';
 import { BehaviorTreeCompiler } from './compiler/BehaviorTreeCompiler';
 import { BehaviorTreeNodeInspectorProvider } from './providers/BehaviorTreeNodeInspectorProvider';
 import { BehaviorTreeEditorPanel } from './components/panels/BehaviorTreeEditorPanel';
@@ -67,10 +68,17 @@ export class BehaviorTreePlugin implements IEditorPlugin {
     }
 
     private registerServices(services: ServiceContainer): void {
+        // 先注册 FileSystemService（BehaviorTreeService 依赖它）
+        if (services.isRegistered(FileSystemService)) {
+            services.unregister(FileSystemService);
+        }
+        services.registerSingleton(FileSystemService);
+        this.registeredServices.add(FileSystemService);
+
+        // 再注册 BehaviorTreeService
         if (services.isRegistered(BehaviorTreeService)) {
             services.unregister(BehaviorTreeService);
         }
-
         services.registerSingleton(BehaviorTreeService);
         this.registeredServices.add(BehaviorTreeService);
     }

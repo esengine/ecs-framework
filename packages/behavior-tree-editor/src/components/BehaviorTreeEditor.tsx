@@ -110,6 +110,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     const justFinishedBoxSelectRef = useRef(false);
     const [blackboardCollapsed, setBlackboardCollapsed] = useState(false);
 
+    const updateVariable = useBehaviorTreeDataStore((state) => state.updateBlackboardVariable);
+
     // 监听框选状态变化，当框选结束时设置标记
     useEffect(() => {
         if (!isBoxSelecting && justFinishedBoxSelectRef.current) {
@@ -156,7 +158,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         handlePause,
         handleStop,
         handleStep,
-        handleSpeedChange
+        handleSpeedChange,
+        controller
     } = useExecutionController({
         rootNodeId: ROOT_NODE_ID,
         projectPath: projectPath || '',
@@ -168,7 +171,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         onInitialBlackboardSave: setInitialBlackboardVariables,
         onExecutingChange: setIsExecuting,
         onSaveNodesDataSnapshot: saveNodesDataSnapshot,
-        onRestoreNodesData: restoreNodesData
+        onRestoreNodesData: restoreNodesData,
+        sortChildrenByPosition
     });
 
     const executorRef = useRef(null);
@@ -255,6 +259,17 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         const newVariables = { ...blackboardVariables };
         delete newVariables[key];
         setBlackboardVariables(newVariables);
+    };
+
+    const handleResetBlackboardVariable = (name: string) => {
+        const initialValue = initialBlackboardVariables[name];
+        if (initialValue !== undefined) {
+            updateVariable(name, initialValue);
+        }
+    };
+
+    const handleResetAllBlackboardVariables = () => {
+        setBlackboardVariables(initialBlackboardVariables);
     };
 
     const handleBlackboardVariableRename = (oldKey: string, newKey: string) => {
@@ -349,6 +364,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         canvasOffset,
         canvasScale,
         connectingFrom,
+        connectingFromProperty,
         connectingToPos,
         isBoxSelecting,
         boxSelectStart,
@@ -457,7 +473,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         width: '100%',
                         height: '100%',
                         pointerEvents: 'none',
-                        overflow: 'visible'
+                        overflow: 'visible',
+                        zIndex: 150
                     }}>
                         {(() => {
                             // 获取正在连接的端口类型
@@ -566,6 +583,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 visible={contextMenu.contextMenu.visible}
                 position={contextMenu.contextMenu.position}
                 nodeId={contextMenu.contextMenu.nodeId}
+                isBlackboardVariable={contextMenu.contextMenu.nodeId ? nodes.find(n => n.id === contextMenu.contextMenu.nodeId)?.data.nodeType === 'blackboard-variable' : false}
                 onReplaceNode={() => {
                     if (contextMenu.contextMenu.nodeId) {
                         quickCreateMenu.openQuickCreateMenu(

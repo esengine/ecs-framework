@@ -8,7 +8,7 @@ interface GridBackgroundProps {
 }
 
 /**
- * ComfyUI 风格的网格背景
+ * 编辑器网格背景
  */
 export const GridBackground: React.FC<GridBackgroundProps> = ({
     canvasOffset,
@@ -87,7 +87,7 @@ export const GridBackground: React.FC<GridBackgroundProps> = ({
                 pointerEvents: 'none'
             }}
         >
-            {/* 大网格线（可选，更接近 ComfyUI）*/}
+            {/* 主网格线 */}
             {majorGridPattern.map((line, idx) => (
                 line.type === 'v' ? (
                     <line

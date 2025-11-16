@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square, SkipForward, RotateCcw, Trash2, Undo, Redo, ZoomIn } from 'lucide-react';
+import { Play, Pause, Square, SkipForward, Undo, Redo, ZoomIn } from 'lucide-react';
 
 type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
 

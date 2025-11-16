@@ -3,6 +3,7 @@ import { Core, IService } from '@esengine/ecs-framework';
 import { MessageHub } from '@esengine/editor-core';
 import { useBehaviorTreeDataStore } from '../application/state/BehaviorTreeDataStore';
 import type { BehaviorTree } from '../domain/models/BehaviorTree';
+import { FileSystemService } from './FileSystemService';
 
 @singleton()
 export class BehaviorTreeService implements IService {
@@ -12,8 +13,13 @@ export class BehaviorTreeService implements IService {
 
     async loadFromFile(filePath: string): Promise<void> {
         try {
-            const { invoke } = await import('@tauri-apps/api/core');
-            const content = await invoke<string>('read_behavior_tree_file', { filePath });
+            // 运行时解析 FileSystemService
+            const fileSystem = Core.services.resolve(FileSystemService);
+            if (!fileSystem) {
+                throw new Error('FileSystemService not found. Please ensure the BehaviorTreePlugin is properly installed.');
+            }
+
+            const content = await fileSystem.readBehaviorTreeFile(filePath);
 
             const store = useBehaviorTreeDataStore.getState();
             store.importFromJSON(content);
@@ -31,8 +37,30 @@ export class BehaviorTreeService implements IService {
         }
     }
 
-    async saveToFile(filePath: string): Promise<void> {
-        // TODO: 实现保存功能
+    async saveToFile(filePath: string, metadata?: { name: string; description: string }): Promise<void> {
+        try {
+            // 运行时解析 FileSystemService
+            const fileSystem = Core.services.resolve(FileSystemService);
+            if (!fileSystem) {
+                throw new Error('FileSystemService not found. Please ensure the BehaviorTreePlugin is properly installed.');
+            }
+
+            const store = useBehaviorTreeDataStore.getState();
+
+            // 如果没有提供元数据，使用文件名作为默认名称
+            const defaultMetadata = {
+                name: metadata?.name || filePath.split(/[\\/]/).pop()?.replace('.btree', '') || 'Untitled',
+                description: metadata?.description || ''
+            };
+
+            const content = store.exportToJSON(defaultMetadata);
+            await fileSystem.writeBehaviorTreeFile(filePath, content);
+
+            console.log('[BehaviorTreeService] Tree saved successfully:', filePath);
+        } catch (error) {
+            console.error('[BehaviorTreeService] Failed to save tree:', error);
+            throw error;
+        }
     }
 
     getCurrentTree(): BehaviorTree {

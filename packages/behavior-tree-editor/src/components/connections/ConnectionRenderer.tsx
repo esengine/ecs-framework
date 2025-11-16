@@ -24,9 +24,11 @@ const ConnectionRendererComponent: React.FC<ConnectionRendererProps> = ({
         let fromPos, toPos;
 
         if (connection.connectionType === 'property') {
-            fromPos = getPortPosition(connection.from);
+            // 属性连接：使用 fromProperty 和 toProperty
+            fromPos = getPortPosition(connection.from, connection.fromProperty);
             toPos = getPortPosition(connection.to, connection.toProperty);
         } else {
+            // 节点连接：使用输出和输入端口
             fromPos = getPortPosition(connection.from, undefined, 'output');
             toPos = getPortPosition(connection.to, undefined, 'input');
         }
