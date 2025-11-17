@@ -42,6 +42,23 @@ export class EditorAppearancePlugin implements IEditorPlugin {
                             step: 1
                         }
                     ]
+                },
+                {
+                    id: 'inspector',
+                    title: '检视器设置',
+                    description: '配置属性检视器显示',
+                    settings: [
+                        {
+                            key: 'inspector.decimalPlaces',
+                            label: '数字小数位数',
+                            type: 'number',
+                            defaultValue: 4,
+                            description: '数字类型属性显示的小数位数，设置为 -1 表示不限制',
+                            min: -1,
+                            max: 10,
+                            step: 1
+                        }
+                    ]
                 }
             ]
         });

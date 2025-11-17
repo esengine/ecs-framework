@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square, SkipForward, Undo, Redo, ZoomIn } from 'lucide-react';
+import { Play, Pause, Square, SkipForward, Undo, Redo, ZoomIn, Save, FolderOpen, Download, Clipboard, Home } from 'lucide-react';
 
 type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
 
@@ -7,6 +7,8 @@ interface EditorToolbarProps {
     executionMode: ExecutionMode;
     canUndo: boolean;
     canRedo: boolean;
+    hasUnsavedChanges?: boolean;
+    currentFileName?: string;
     onPlay: () => void;
     onPause: () => void;
     onStop: () => void;
@@ -15,12 +17,19 @@ interface EditorToolbarProps {
     onUndo: () => void;
     onRedo: () => void;
     onResetView: () => void;
+    onSave?: () => void;
+    onOpen?: () => void;
+    onExport?: () => void;
+    onCopyToClipboard?: () => void;
+    onGoToRoot?: () => void;
 }
 
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     executionMode,
     canUndo,
     canRedo,
+    hasUnsavedChanges = false,
+    currentFileName,
     onPlay,
     onPause,
     onStop,
@@ -28,7 +37,12 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     onReset,
     onUndo,
     onRedo,
-    onResetView
+    onResetView,
+    onSave,
+    onOpen,
+    onExport,
+    onCopyToClipboard,
+    onGoToRoot
 }) => {
     return (
         <div style={{
@@ -45,6 +59,114 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             border: '1px solid #3f3f3f',
             zIndex: 100
         }}>
+            {/* 文件操作组 */}
+            <div style={{
+                display: 'flex',
+                gap: '4px',
+                padding: '2px',
+                backgroundColor: '#1e1e1e',
+                borderRadius: '6px'
+            }}>
+                {onOpen && (
+                    <button
+                        onClick={onOpen}
+                        style={{
+                            padding: '6px 8px',
+                            backgroundColor: '#3c3c3c',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: '#ccc',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            transition: 'all 0.15s'
+                        }}
+                        title="打开文件 (Ctrl+O)"
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a4a4a'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3c3c3c'}
+                    >
+                        <FolderOpen size={14} />
+                    </button>
+                )}
+
+                {onSave && (
+                    <button
+                        onClick={onSave}
+                        style={{
+                            padding: '6px 8px',
+                            backgroundColor: hasUnsavedChanges ? '#2563eb' : '#3c3c3c',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: hasUnsavedChanges ? '#fff' : '#ccc',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            transition: 'all 0.15s'
+                        }}
+                        title={`保存 (Ctrl+S)${hasUnsavedChanges ? ' - 有未保存的更改' : ''}`}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = hasUnsavedChanges ? '#1d4ed8' : '#4a4a4a'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = hasUnsavedChanges ? '#2563eb' : '#3c3c3c'}
+                    >
+                        <Save size={14} />
+                    </button>
+                )}
+
+                {onExport && (
+                    <button
+                        onClick={onExport}
+                        style={{
+                            padding: '6px 8px',
+                            backgroundColor: '#3c3c3c',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: '#ccc',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            transition: 'all 0.15s'
+                        }}
+                        title="导出运行时配置"
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a4a4a'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3c3c3c'}
+                    >
+                        <Download size={14} />
+                    </button>
+                )}
+
+                {onCopyToClipboard && (
+                    <button
+                        onClick={onCopyToClipboard}
+                        style={{
+                            padding: '6px 8px',
+                            backgroundColor: '#3c3c3c',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: '#ccc',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            transition: 'all 0.15s'
+                        }}
+                        title="复制JSON到剪贴板"
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a4a4a'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3c3c3c'}
+                    >
+                        <Clipboard size={14} />
+                    </button>
+                )}
+            </div>
+
+            {/* 分隔符 */}
+            <div style={{
+                width: '1px',
+                backgroundColor: '#444',
+                margin: '2px 0'
+            }} />
+
             {/* 执行控制组 */}
             <div style={{
                 display: 'flex',
@@ -322,6 +444,59 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                             executionMode === 'paused' ? 'Paused' : 'Step'}
                 </span>
             </div>
+
+            {onGoToRoot && (
+                <>
+                    <div style={{
+                        width: '1px',
+                        backgroundColor: '#444',
+                        margin: '2px 0'
+                    }} />
+                    <button
+                        onClick={onGoToRoot}
+                        style={{
+                            padding: '6px 10px',
+                            backgroundColor: '#3c3c3c',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: '#ccc',
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.15s'
+                        }}
+                        title="回到根节点"
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a4a4a'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3c3c3c'}
+                    >
+                        <Home size={13} />
+                        <span>Root</span>
+                    </button>
+                </>
+            )}
+
+            {currentFileName && (
+                <div style={{
+                    padding: '6px 10px',
+                    backgroundColor: '#1e1e1e',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    color: '#888',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    maxWidth: '150px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                }}>
+                    <span style={{ color: hasUnsavedChanges ? '#f59e0b' : '#888' }}>
+                        {hasUnsavedChanges ? '● ' : ''}{currentFileName}
+                    </span>
+                </div>
+            )}
         </div>
     );
 };

@@ -40,6 +40,12 @@ interface BehaviorTreeEditorProps {
     projectPath?: string | null;
     showToolbar?: boolean;
     showToast?: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
+    currentFileName?: string;
+    hasUnsavedChanges?: boolean;
+    onSave?: () => void;
+    onOpen?: () => void;
+    onExport?: () => void;
+    onCopyToClipboard?: () => void;
 }
 
 export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
@@ -48,7 +54,13 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     blackboardVariables = {},
     projectPath = null,
     showToolbar = true,
-    showToast: showToastProp
+    showToast: showToastProp,
+    currentFileName,
+    hasUnsavedChanges = false,
+    onSave,
+    onOpen,
+    onExport,
+    onCopyToClipboard
 }) => {
     // 使用传入的 showToast 或回退到 NotificationService
     const showToast = showToastProp || notificationShowToast;
@@ -412,6 +424,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     executionMode={executionMode}
                     canUndo={canUndo}
                     canRedo={canRedo}
+                    hasUnsavedChanges={hasUnsavedChanges}
+                    currentFileName={currentFileName}
                     onPlay={handlePlay}
                     onPause={handlePause}
                     onStop={handleStop}
@@ -420,6 +434,11 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     onUndo={undo}
                     onRedo={redo}
                     onResetView={handleResetView}
+                    onSave={onSave}
+                    onOpen={onOpen}
+                    onExport={onExport}
+                    onCopyToClipboard={onCopyToClipboard}
+                    onGoToRoot={handleResetView}
                 />
             )}
 

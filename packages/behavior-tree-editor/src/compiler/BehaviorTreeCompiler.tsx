@@ -10,6 +10,7 @@ export interface BehaviorTreeCompileOptions {
     typeOutputPath: string;
     selectedFiles: string[];
     fileFormats: Map<string, 'json' | 'binary'>;
+    currentFile?: string;
 }
 
 export class BehaviorTreeCompiler implements ICompiler<BehaviorTreeCompileOptions> {
@@ -18,9 +19,11 @@ export class BehaviorTreeCompiler implements ICompiler<BehaviorTreeCompileOption
     readonly description = '将行为树文件编译为运行时资产和TypeScript类型定义';
 
     private projectPath: string | null = null;
+    private currentOptions: BehaviorTreeCompileOptions | null = null;
 
     async compile(options: BehaviorTreeCompileOptions, context: CompilerContext): Promise<CompileResult> {
         this.projectPath = context.projectPath;
+        this.currentOptions = options;
         const fileSystem = context.moduleContext.fileSystem;
 
         if (!this.projectPath) {
@@ -217,9 +220,9 @@ export class BehaviorTreeCompiler implements ICompiler<BehaviorTreeCompileOption
     }
 
     private getCurrentFileName(): string | null {
-        // TODO: 编译器不应该依赖编辑器 store 状态
-        // 需要通过其他方式获取当前文件名
-        // 暂时返回 null，要求用户使用工作区模式
+        if (this.currentOptions?.currentFile) {
+            return this.currentOptions.currentFile;
+        }
         return null;
     }
 

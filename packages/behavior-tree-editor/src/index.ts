@@ -4,15 +4,18 @@ export default new BehaviorTreePlugin();
 
 export { BehaviorTreePlugin } from './BehaviorTreePlugin';
 export { BehaviorTreeEditorPanel } from './components/panels/BehaviorTreeEditorPanel';
+export { BehaviorTreeEditorMobX } from './components/BehaviorTreeEditorMobX';
 export * from './BehaviorTreeModule';
 export * from './services/BehaviorTreeService';
 export * from './providers/BehaviorTreeNodeInspectorProvider';
+export * from './viewmodels';
 
 export * from './domain';
 export * from './application/commands/tree';
 export * from './application/use-cases';
 export * from './application/services/BlackboardManager';
 export * from './application/services/ExecutionController';
+export * from './application/services/GlobalBlackboardService';
 export * from './application/interfaces/IExecutionHooks';
 export * from './application/state/BehaviorTreeDataStore';
 export * from './hooks';
@@ -25,9 +28,11 @@ export * from './infrastructure/factories/NodeFactory';
 export * from './infrastructure/serialization/BehaviorTreeSerializer';
 export * from './infrastructure/validation/BehaviorTreeValidator';
 export * from './infrastructure/events/EditorEventBus';
+export * from './infrastructure/services/NodeRegistryService';
 export * from './utils/BehaviorTreeExecutor';
 export * from './utils/DOMCache';
 export * from './utils/portUtils';
+export * from './utils/RuntimeLoader';
 export * from './compiler/BehaviorTreeCompiler';
 // Export everything except DEFAULT_EDITOR_CONFIG from editorConstants
 export {

@@ -589,16 +589,38 @@ function App() {
     const handleReloadPlugins = async () => {
         if (currentProjectPath && pluginManager) {
             try {
-                // 关闭所有动态面板，确保组件完全卸载
-                console.log('[App] Closing all dynamic panels before plugin reload');
+                console.log('[App] Starting plugin hot reload...');
+
+                // 1. 关闭所有动态面板
+                console.log('[App] Closing all dynamic panels');
                 setActiveDynamicPanels([]);
 
-                // 等待 React 完成卸载
+                // 2. 清空当前面板列表（强制卸载插件面板组件）
+                console.log('[App] Clearing plugin panels');
+                setPanels((prev) => prev.filter((p) =>
+                    ['scene-hierarchy', 'inspector', 'console', 'asset-browser'].includes(p.id)
+                ));
+
+                // 3. 等待React完成卸载
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+                // 4. 卸载所有项目插件（清理UIRegistry、调用uninstall）
+                console.log('[App] Unloading all project plugins');
+                await pluginLoader.unloadProjectPlugins(pluginManager);
+
+                // 5. 等待卸载完成
                 await new Promise(resolve => setTimeout(resolve, 100));
 
-                // 重新加载插件
+                // 6. 重新加载插件
+                console.log('[App] Reloading project plugins');
                 await pluginLoader.loadProjectPlugins(currentProjectPath, pluginManager);
+
+                // 7. 触发面板重新渲染
+                console.log('[App] Triggering panel re-render');
+                setPluginUpdateTrigger((prev) => prev + 1);
+
                 showToast(locale === 'zh' ? '插件已重新加载' : 'Plugins reloaded', 'success');
+                console.log('[App] Plugin hot reload completed');
             } catch (error) {
                 console.error('Failed to reload plugins:', error);
                 showToast(locale === 'zh' ? '重新加载插件失败' : 'Failed to reload plugins', 'error');
@@ -669,7 +691,6 @@ function App() {
                     if (!panelDesc.component) {
                         return false;
                     }
-                    // 过滤掉动态面板
                     if (panelDesc.isDynamic) {
                         return false;
                     }
@@ -687,7 +708,7 @@ function App() {
                     return {
                         id: panelDesc.id,
                         title: (panelDesc as any).titleZh && locale === 'zh' ? (panelDesc as any).titleZh : panelDesc.title,
-                        content: <Component projectPath={currentProjectPath} />,
+                        content: <Component key={`${panelDesc.id}-${pluginUpdateTrigger}`} projectPath={currentProjectPath} />,
                         closable: panelDesc.closable ?? true
                     };
                 });

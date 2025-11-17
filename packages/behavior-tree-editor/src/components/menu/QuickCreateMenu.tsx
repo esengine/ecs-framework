@@ -1,6 +1,7 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { NodeTemplate, NodeTemplates } from '@esengine/behavior-tree';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
+import { NodeTemplate } from '@esengine/behavior-tree';
 import { Search, X, LucideIcon, ChevronDown, ChevronRight } from 'lucide-react';
+import { NodeFactory } from '../../infrastructure/factories/NodeFactory';
 
 interface QuickCreateMenuProps {
     visible: boolean;
@@ -36,7 +37,8 @@ export const QuickCreateMenu: React.FC<QuickCreateMenuProps> = ({
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
     const [shouldAutoScroll, setShouldAutoScroll] = useState(false);
 
-    const allTemplates = NodeTemplates.getAllTemplates();
+    const nodeFactory = useMemo(() => new NodeFactory(), []);
+    const allTemplates = useMemo(() => nodeFactory.getAllTemplates(), [nodeFactory]);
     const searchTextLower = searchText.toLowerCase();
     const filteredTemplates = searchTextLower
         ? allTemplates.filter((t: NodeTemplate) => {

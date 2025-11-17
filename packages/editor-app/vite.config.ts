@@ -56,7 +56,13 @@ const userProjectPlugin = () => ({
     // 处理从 /@user-project/ 模块导入的相对路径
     if (importer && importer.startsWith('/@user-project/')) {
       if (id.startsWith('./') || id.startsWith('../')) {
-        const importerDir = path.dirname(importer.substring('/@user-project'.length));
+        // 移除importer中的查询参数
+        let cleanImporter = importer;
+        const queryIndex = importer.indexOf('?');
+        if (queryIndex !== -1) {
+          cleanImporter = importer.substring(0, queryIndex);
+        }
+        const importerDir = path.dirname(cleanImporter.substring('/@user-project'.length));
         let resolvedPath = path.join(importerDir, id);
         resolvedPath = resolvedPath.replace(/\\/g, '/');
 
@@ -85,7 +91,14 @@ const userProjectPlugin = () => ({
   },
   load(id: string) {
     if (id.startsWith('/@user-project/')) {
-      const relativePath = decodeURIComponent(id.substring('/@user-project'.length));
+      // 移除查询参数（用于缓存失效）
+      let cleanId = id;
+      const queryIndex = id.indexOf('?');
+      if (queryIndex !== -1) {
+        cleanId = id.substring(0, queryIndex);
+      }
+
+      const relativePath = decodeURIComponent(cleanId.substring('/@user-project'.length));
 
       let projectPath: string | null = null;
       for (const [, p] of userProjectPathMap) {

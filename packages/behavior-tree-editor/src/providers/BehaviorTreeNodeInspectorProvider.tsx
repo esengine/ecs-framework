@@ -1,6 +1,178 @@
-import React from 'react';
-import { IInspectorProvider, InspectorContext } from '@esengine/editor-core';
+import React, { useState, useCallback } from 'react';
+import { IInspectorProvider, InspectorContext, MessageHub } from '@esengine/editor-core';
 import { Node as BehaviorTreeNode } from '../domain/models/Node';
+import { PropertyDefinition } from '@esengine/behavior-tree';
+
+/**
+ * 节点属性编辑器组件
+ */
+interface PropertyEditorProps {
+    property: PropertyDefinition;
+    value: any;
+    onChange: (name: string, value: any) => void;
+}
+
+const PropertyEditor: React.FC<PropertyEditorProps> = ({ property, value, onChange }) => {
+    const handleChange = useCallback((newValue: any) => {
+        onChange(property.name, newValue);
+    }, [property.name, onChange]);
+
+    const renderInput = () => {
+        switch (property.type) {
+            case 'number':
+                return (
+                    <input
+                        type="number"
+                        value={value ?? property.defaultValue ?? 0}
+                        min={property.min}
+                        max={property.max}
+                        step={property.step || 1}
+                        onChange={(e) => handleChange(parseFloat(e.target.value) || 0)}
+                        style={{
+                            width: '100%',
+                            padding: '4px 8px',
+                            backgroundColor: '#2a2a2a',
+                            border: '1px solid #444',
+                            borderRadius: '3px',
+                            color: '#e0e0e0',
+                            fontSize: '12px'
+                        }}
+                    />
+                );
+
+            case 'boolean':
+                return (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <input
+                            type="checkbox"
+                            checked={value ?? property.defaultValue ?? false}
+                            onChange={(e) => handleChange(e.target.checked)}
+                        />
+                        <span style={{ fontSize: '11px', color: value ? '#4ade80' : '#888' }}>
+                            {value ? '是' : '否'}
+                        </span>
+                    </label>
+                );
+
+            case 'select':
+                return (
+                    <select
+                        value={value ?? property.defaultValue ?? ''}
+                        onChange={(e) => handleChange(e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '4px 8px',
+                            backgroundColor: '#2a2a2a',
+                            border: '1px solid #444',
+                            borderRadius: '3px',
+                            color: '#e0e0e0',
+                            fontSize: '12px'
+                        }}
+                    >
+                        {property.options?.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
+                );
+
+            case 'code':
+                return (
+                    <textarea
+                        value={value ?? property.defaultValue ?? ''}
+                        onChange={(e) => handleChange(e.target.value)}
+                        rows={4}
+                        style={{
+                            width: '100%',
+                            padding: '6px 8px',
+                            backgroundColor: '#1e1e1e',
+                            border: '1px solid #444',
+                            borderRadius: '3px',
+                            color: '#d4d4d4',
+                            fontSize: '11px',
+                            fontFamily: 'Consolas, Monaco, monospace',
+                            resize: 'vertical'
+                        }}
+                    />
+                );
+
+            case 'string':
+            default:
+                return (
+                    <input
+                        type="text"
+                        value={value ?? property.defaultValue ?? ''}
+                        onChange={(e) => handleChange(e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '4px 8px',
+                            backgroundColor: '#2a2a2a',
+                            border: '1px solid #444',
+                            borderRadius: '3px',
+                            color: '#e0e0e0',
+                            fontSize: '12px'
+                        }}
+                    />
+                );
+        }
+    };
+
+    return (
+        <div className="property-field" style={{ marginBottom: '8px' }}>
+            <label className="property-label" style={{ marginBottom: '4px', display: 'block' }}>
+                {property.label || property.name}
+                {property.required && <span style={{ color: '#f87171', marginLeft: '4px' }}>*</span>}
+            </label>
+            {renderInput()}
+            {property.description && (
+                <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+                    {property.description}
+                </div>
+            )}
+        </div>
+    );
+};
+
+/**
+ * 节点属性面板组件
+ */
+interface NodePropertiesPanelProps {
+    node: BehaviorTreeNode;
+    onPropertyChange?: (nodeId: string, propertyName: string, value: any) => void;
+}
+
+const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({ node, onPropertyChange }) => {
+    const [localData, setLocalData] = useState<Record<string, any>>(node.data);
+
+    const handlePropertyChange = useCallback((name: string, value: any) => {
+        setLocalData(prev => ({ ...prev, [name]: value }));
+        onPropertyChange?.(node.id, name, value);
+    }, [node.id, onPropertyChange]);
+
+    const properties = node.template.properties || [];
+
+    if (properties.length === 0) {
+        return (
+            <div style={{ padding: '12px', color: '#888', fontSize: '12px', textAlign: 'center' }}>
+                该节点没有可配置的属性
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ padding: '4px 0' }}>
+            {properties.map((prop) => (
+                <PropertyEditor
+                    key={prop.name}
+                    property={prop}
+                    value={localData[prop.name]}
+                    onChange={handlePropertyChange}
+                />
+            ))}
+        </div>
+    );
+};
 
 /**
  * 行为树节点Inspector提供器
@@ -10,6 +182,11 @@ export class BehaviorTreeNodeInspectorProvider implements IInspectorProvider<Beh
     readonly id = 'behavior-tree-node-inspector';
     readonly name = '行为树节点检视器';
     readonly priority = 100;
+    private messageHub?: MessageHub;
+
+    setMessageHub(hub: MessageHub): void {
+        this.messageHub = hub;
+    }
 
     canHandle(target: unknown): target is BehaviorTreeNode {
         return target instanceof BehaviorTreeNode ||
@@ -22,6 +199,16 @@ export class BehaviorTreeNodeInspectorProvider implements IInspectorProvider<Beh
     }
 
     render(node: BehaviorTreeNode, context: InspectorContext): React.ReactElement {
+        const handlePropertyChange = (nodeId: string, propertyName: string, value: any) => {
+            if (this.messageHub) {
+                this.messageHub.publish('behavior-tree:node-property-changed', {
+                    nodeId,
+                    propertyName,
+                    value
+                });
+            }
+        };
+
         return (
             <div className="entity-inspector">
                 <div className="inspector-header">
@@ -49,6 +236,16 @@ export class BehaviorTreeNodeInspectorProvider implements IInspectorProvider<Beh
                         )}
                     </div>
 
+                    {node.template.properties && node.template.properties.length > 0 && (
+                        <div className="inspector-section">
+                            <div className="section-title">节点属性</div>
+                            <NodePropertiesPanel
+                                node={node}
+                                onPropertyChange={handlePropertyChange}
+                            />
+                        </div>
+                    )}
+
                     <div className="inspector-section">
                         <div className="section-title">调试信息</div>
                         <div className="property-field">
@@ -66,6 +263,10 @@ export class BehaviorTreeNodeInspectorProvider implements IInspectorProvider<Beh
                             <span className="property-value-text" style={{ color: '#999' }}>
                                 ({node.position.x.toFixed(0)}, {node.position.y.toFixed(0)})
                             </span>
+                        </div>
+                        <div className="property-field">
+                            <label className="property-label">子节点数</label>
+                            <span className="property-value-text">{node.children.length}</span>
                         </div>
                     </div>
                 </div>
