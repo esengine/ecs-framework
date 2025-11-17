@@ -84,10 +84,13 @@ export class BehaviorTreePlugin implements IEditorPlugin {
     }
 
     private registerCompilers(services: ServiceContainer): void {
-        const compilerRegistry = services.resolve(CompilerRegistry);
-        if (compilerRegistry) {
+        try {
+            const compilerRegistry = services.resolve(CompilerRegistry);
             const compiler = new BehaviorTreeCompiler();
             compilerRegistry.register(compiler);
+            console.log('[BehaviorTreePlugin] Successfully registered BehaviorTreeCompiler');
+        } catch (error) {
+            console.error('[BehaviorTreePlugin] Failed to register compiler:', error);
         }
     }
 

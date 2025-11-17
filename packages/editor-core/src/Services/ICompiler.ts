@@ -5,12 +5,19 @@ export interface CompileResult {
     errors?: string[];
 }
 
-import type { IModuleContext } from '../Module/IModuleContext';
+import type { IFileSystem } from './IFileSystem';
+import type { IDialog } from './IDialog';
+import type { IService, ServiceType } from '@esengine/ecs-framework';
+
+export interface CompilerModuleContext {
+    fileSystem: IFileSystem;
+    dialog: IDialog;
+}
 
 export interface CompilerContext {
     projectPath: string | null;
-    moduleContext: IModuleContext;
-    getService<T>(serviceClass: new (...args: unknown[]) => T): T | undefined;
+    moduleContext: CompilerModuleContext;
+    getService<T extends IService>(serviceClass: ServiceType<T>): T | undefined;
 }
 
 export interface ICompiler<TOptions = unknown> {

@@ -137,7 +137,7 @@ export function useExecutionController(params: UseExecutionControllerParams) {
 
     const handleStep = () => {
         controller.step();
-        setExecutionMode('step');
+        // 单步执行后保持idle状态，不需要专门的step状态
     };
 
     const handleReset = async () => {

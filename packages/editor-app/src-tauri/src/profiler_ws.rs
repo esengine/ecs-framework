@@ -84,6 +84,7 @@ impl ProfilerServer {
         println!("[ProfilerServer] Server stopped");
     }
 
+    #[allow(dead_code)]
     pub fn broadcast(&self, message: String) {
         let _ = self.tx.send(message);
     }

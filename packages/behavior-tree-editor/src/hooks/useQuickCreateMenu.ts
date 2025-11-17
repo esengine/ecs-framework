@@ -15,7 +15,7 @@ interface QuickCreateMenuState {
     replaceNodeId: string | null;
 }
 
-type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
+type ExecutionMode = 'idle' | 'running' | 'paused';
 
 interface UseQuickCreateMenuParams {
     nodeOperations: ReturnType<typeof useNodeOperations>;

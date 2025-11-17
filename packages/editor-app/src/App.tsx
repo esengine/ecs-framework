@@ -43,6 +43,7 @@ import { PluginLoader } from './services/PluginLoader';
 import { GitHubService } from './services/GitHubService';
 import { PluginPublishWizard } from './components/PluginPublishWizard';
 import { GitHubLoginDialog } from './components/GitHubLoginDialog';
+import { CompilerConfigDialog } from './components/CompilerConfigDialog';
 import { checkForUpdatesOnStartup } from './utils/updater';
 import { useLocale } from './hooks/useLocale';
 import { en, zh } from './locales';
@@ -111,6 +112,11 @@ function App() {
     const [isEditorFullscreen, setIsEditorFullscreen] = useState(false);
     const [showLoginDialog, setShowLoginDialog] = useState(false);
     const [showDashboard, setShowDashboard] = useState(false);
+    const [compilerDialog, setCompilerDialog] = useState<{
+        isOpen: boolean;
+        compilerId: string;
+        currentFileName?: string;
+    }>({ isOpen: false, compilerId: '' });
 
     useEffect(() => {
         // 禁用默认右键菜单
@@ -226,8 +232,6 @@ function App() {
                     }
                 });
 
-                await TauriAPI.greet('Developer');
-
                 setInitialized(true);
                 setPluginManager(services.pluginManager);
                 setEntityStore(services.entityStore);
@@ -284,6 +288,25 @@ function App() {
             const { fullscreen } = data;
             logger.info('Editor fullscreen state changed:', fullscreen);
             setIsEditorFullscreen(fullscreen);
+        });
+
+        return () => unsubscribe?.();
+    }, [messageHub]);
+
+    useEffect(() => {
+        if (!messageHub) return;
+
+        const unsubscribe = messageHub.subscribe('compiler:open-dialog', (data: {
+            compilerId: string;
+            currentFileName?: string;
+            projectPath?: string;
+        }) => {
+            logger.info('Opening compiler dialog:', data.compilerId);
+            setCompilerDialog({
+                isOpen: true,
+                compilerId: data.compilerId,
+                currentFileName: data.currentFileName
+            });
         });
 
         return () => unsubscribe?.();
@@ -855,6 +878,21 @@ function App() {
                     locale={locale}
                 />
             )}
+
+            <CompilerConfigDialog
+                isOpen={compilerDialog.isOpen}
+                compilerId={compilerDialog.compilerId}
+                projectPath={currentProjectPath}
+                currentFileName={compilerDialog.currentFileName}
+                onClose={() => setCompilerDialog({ isOpen: false, compilerId: '' })}
+                onCompileComplete={(result) => {
+                    if (result.success) {
+                        showToast(result.message, 'success');
+                    } else {
+                        showToast(result.message, 'error');
+                    }
+                }}
+            />
 
             <div className="editor-content">
                 <FlexLayoutDockContainer

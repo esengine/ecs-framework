@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { NodeTemplate } from '@esengine/behavior-tree';
-import { RotateCcw } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { NodeTemplate, BlackboardValueType } from '@esengine/behavior-tree';
 import { useBehaviorTreeDataStore, BehaviorTreeNode, ROOT_NODE_ID } from '../stores';
 import { useUIStore } from '../stores';
 import { showToast as notificationShowToast } from '../services/NotificationService';
 import { BlackboardValue } from '../domain/models/Blackboard';
+import { GlobalBlackboardService } from '../application/services/GlobalBlackboardService';
 import { BehaviorTreeCanvas } from './canvas/BehaviorTreeCanvas';
 import { ConnectionLayer } from './connections/ConnectionLayer';
 import { NodeFactory } from '../infrastructure/factories/NodeFactory';
@@ -28,7 +28,7 @@ import { getPortPosition as getPortPositionUtil } from '../utils/portUtils';
 import { useExecutionController } from '../hooks/useExecutionController';
 import { useNodeTracking } from '../hooks/useNodeTracking';
 import { useEditorHandlers } from '../hooks/useEditorHandlers';
-import { ICON_MAP, ROOT_NODE_TEMPLATE, DEFAULT_EDITOR_CONFIG } from '../config/editorConstants';
+import { ICON_MAP, DEFAULT_EDITOR_CONFIG } from '../config/editorConstants';
 import '../styles/BehaviorTreeNode.css';
 
 type BlackboardVariables = Record<string, BlackboardValue>;
@@ -84,8 +84,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     } = useBehaviorTreeDataStore();
 
     // 使用缓存的节点和连接数组（store 中已经优化，只在 tree 真正变化时更新）
-    const nodes = useBehaviorTreeDataStore(state => state.cachedNodes);
-    const connections = useBehaviorTreeDataStore(state => state.cachedConnections);
+    const nodes = useBehaviorTreeDataStore((state) => state.cachedNodes);
+    const connections = useBehaviorTreeDataStore((state) => state.cachedConnections);
 
     // UI store（UI 交互状态）
     const {
@@ -121,8 +121,65 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     const stopExecutionRef = useRef<(() => void) | null>(null);
     const justFinishedBoxSelectRef = useRef(false);
     const [blackboardCollapsed, setBlackboardCollapsed] = useState(false);
+    const [globalVariables, setGlobalVariables] = useState<Record<string, BlackboardValue>>({});
 
     const updateVariable = useBehaviorTreeDataStore((state) => state.updateBlackboardVariable);
+
+    const globalBlackboardService = useMemo(() => GlobalBlackboardService.getInstance(), []);
+
+    useEffect(() => {
+        if (projectPath) {
+            globalBlackboardService.setProjectPath(projectPath);
+            setGlobalVariables(globalBlackboardService.getVariablesMap());
+        }
+
+        const unsubscribe = globalBlackboardService.onChange(() => {
+            setGlobalVariables(globalBlackboardService.getVariablesMap());
+        });
+
+        return () => unsubscribe();
+    }, [globalBlackboardService, projectPath]);
+
+    const handleGlobalVariableAdd = useCallback((key: string, value: any, type: string) => {
+        try {
+            let bbType: BlackboardValueType;
+            switch (type) {
+                case 'number':
+                    bbType = BlackboardValueType.Number;
+                    break;
+                case 'boolean':
+                    bbType = BlackboardValueType.Boolean;
+                    break;
+                case 'object':
+                    bbType = BlackboardValueType.Object;
+                    break;
+                default:
+                    bbType = BlackboardValueType.String;
+            }
+
+            globalBlackboardService.addVariable({ key, type: bbType, defaultValue: value });
+            showToast(`全局变量 "${key}" 已添加`, 'success');
+        } catch (error) {
+            showToast(`添加全局变量失败: ${error}`, 'error');
+        }
+    }, [globalBlackboardService, showToast]);
+
+    const handleGlobalVariableChange = useCallback((key: string, value: any) => {
+        try {
+            globalBlackboardService.updateVariable(key, { defaultValue: value });
+        } catch (error) {
+            showToast(`更新全局变量失败: ${error}`, 'error');
+        }
+    }, [globalBlackboardService, showToast]);
+
+    const handleGlobalVariableDelete = useCallback((key: string) => {
+        try {
+            globalBlackboardService.deleteVariable(key);
+            showToast(`全局变量 "${key}" 已删除`, 'success');
+        } catch (error) {
+            showToast(`删除全局变量失败: ${error}`, 'error');
+        }
+    }, [globalBlackboardService, showToast]);
 
     // 监听框选状态变化，当框选结束时设置标记
     useEffect(() => {
@@ -425,7 +482,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     canUndo={canUndo}
                     canRedo={canRedo}
                     hasUnsavedChanges={hasUnsavedChanges}
-                    currentFileName={currentFileName}
                     onPlay={handlePlay}
                     onPause={handlePause}
                     onStop={handleStop}
@@ -438,7 +494,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     onOpen={onOpen}
                     onExport={onExport}
                     onCopyToClipboard={onCopyToClipboard}
-                    onGoToRoot={handleResetView}
                 />
             )}
 
@@ -456,196 +511,196 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     overflow: 'hidden'
                 }}>
 
-            <BehaviorTreeCanvas
-                ref={canvasRef}
-                config={DEFAULT_EDITOR_CONFIG}
-                onClick={handleCanvasClick}
-                onContextMenu={handleCanvasContextMenu}
-                onDoubleClick={handleCanvasDoubleClick}
-                onMouseMove={handleCombinedMouseMove}
-                onMouseDown={handleCanvasMouseDown}
-                onMouseUp={handleCombinedMouseUp}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-            >
-                {/* 连接线层 */}
-                <ConnectionLayer
-                    connections={connections}
-                    nodes={nodes}
-                    selectedConnection={selectedConnection}
-                    getPortPosition={getPortPosition}
-                    onConnectionClick={(e, fromId, toId) => {
-                        setSelectedConnection({ from: fromId, to: toId });
-                        setSelectedNodeIds([]);
-                    }}
-                />
+                    <BehaviorTreeCanvas
+                        ref={canvasRef}
+                        config={DEFAULT_EDITOR_CONFIG}
+                        onClick={handleCanvasClick}
+                        onContextMenu={handleCanvasContextMenu}
+                        onDoubleClick={handleCanvasDoubleClick}
+                        onMouseMove={handleCombinedMouseMove}
+                        onMouseDown={handleCanvasMouseDown}
+                        onMouseUp={handleCombinedMouseUp}
+                        onDrop={handleDrop}
+                        onDragOver={handleDragOver}
+                        onDragEnter={handleDragEnter}
+                        onDragLeave={handleDragLeave}
+                    >
+                        {/* 连接线层 */}
+                        <ConnectionLayer
+                            connections={connections}
+                            nodes={nodes}
+                            selectedConnection={selectedConnection}
+                            getPortPosition={getPortPosition}
+                            onConnectionClick={(e, fromId, toId) => {
+                                setSelectedConnection({ from: fromId, to: toId });
+                                setSelectedNodeIds([]);
+                            }}
+                        />
 
-                {/* 正在拖拽的连接线预览 */}
-                {connectingFrom && connectingToPos && (
-                    <svg style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        pointerEvents: 'none',
-                        overflow: 'visible',
-                        zIndex: 150
-                    }}>
-                        {(() => {
-                            // 获取正在连接的端口类型
-                            const fromPortType = canvasRef.current?.getAttribute('data-connecting-from-port-type') || '';
+                        {/* 正在拖拽的连接线预览 */}
+                        {connectingFrom && connectingToPos && (
+                            <svg style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                pointerEvents: 'none',
+                                overflow: 'visible',
+                                zIndex: 150
+                            }}>
+                                {(() => {
+                                    // 获取正在连接的端口类型
+                                    const fromPortType = canvasRef.current?.getAttribute('data-connecting-from-port-type') || '';
 
-                            // 根据端口类型判断是从输入还是输出端口开始
-                            let portType: 'input' | 'output' = 'output';
-                            if (fromPortType === 'node-input' || fromPortType === 'property-input') {
-                                portType = 'input';
-                            }
+                                    // 根据端口类型判断是从输入还是输出端口开始
+                                    let portType: 'input' | 'output' = 'output';
+                                    if (fromPortType === 'node-input' || fromPortType === 'property-input') {
+                                        portType = 'input';
+                                    }
 
-                            const fromPos = getPortPosition(
-                                connectingFrom,
-                                connectingFromProperty || undefined,
-                                portType
-                            );
-                            if (!fromPos) return null;
+                                    const fromPos = getPortPosition(
+                                        connectingFrom,
+                                        connectingFromProperty || undefined,
+                                        portType
+                                    );
+                                    if (!fromPos) return null;
 
-                            const isPropertyConnection = !!connectingFromProperty;
-                            const x1 = fromPos.x;
-                            const y1 = fromPos.y;
-                            const x2 = connectingToPos.x;
-                            const y2 = connectingToPos.y;
+                                    const isPropertyConnection = !!connectingFromProperty;
+                                    const x1 = fromPos.x;
+                                    const y1 = fromPos.y;
+                                    const x2 = connectingToPos.x;
+                                    const y2 = connectingToPos.y;
 
-                            // 使用贝塞尔曲线渲染
-                            let pathD: string;
-                            if (isPropertyConnection) {
-                                // 属性连接使用水平贝塞尔曲线
-                                const controlX1 = x1 + (x2 - x1) * 0.5;
-                                const controlX2 = x1 + (x2 - x1) * 0.5;
-                                pathD = `M ${x1} ${y1} C ${controlX1} ${y1}, ${controlX2} ${y2}, ${x2} ${y2}`;
-                            } else {
-                                // 节点连接使用垂直贝塞尔曲线
-                                const controlY = y1 + (y2 - y1) * 0.5;
-                                pathD = `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`;
-                            }
+                                    // 使用贝塞尔曲线渲染
+                                    let pathD: string;
+                                    if (isPropertyConnection) {
+                                        // 属性连接使用水平贝塞尔曲线
+                                        const controlX1 = x1 + (x2 - x1) * 0.5;
+                                        const controlX2 = x1 + (x2 - x1) * 0.5;
+                                        pathD = `M ${x1} ${y1} C ${controlX1} ${y1}, ${controlX2} ${y2}, ${x2} ${y2}`;
+                                    } else {
+                                        // 节点连接使用垂直贝塞尔曲线
+                                        const controlY = y1 + (y2 - y1) * 0.5;
+                                        pathD = `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`;
+                                    }
 
-                            return (
-                                <path
-                                    d={pathD}
-                                    stroke={isPropertyConnection ? '#ab47bc' : '#00bcd4'}
-                                    strokeWidth="2.5"
-                                    fill="none"
-                                    strokeDasharray={isPropertyConnection ? '5,5' : 'none'}
-                                    strokeLinecap="round"
-                                />
-                            );
-                        })()}
-                    </svg>
-                )}
+                                    return (
+                                        <path
+                                            d={pathD}
+                                            stroke={isPropertyConnection ? '#ab47bc' : '#00bcd4'}
+                                            strokeWidth="2.5"
+                                            fill="none"
+                                            strokeDasharray={isPropertyConnection ? '5,5' : 'none'}
+                                            strokeLinecap="round"
+                                        />
+                                    );
+                                })()}
+                            </svg>
+                        )}
 
-                {/* 节点层 */}
-                {nodes.map((node: BehaviorTreeNode) => (
-                    <BehaviorTreeNodeComponent
-                        key={node.id}
-                        node={node}
-                        isSelected={selectedNodeIds.includes(node.id)}
-                        isBeingDragged={draggingNodeId === node.id}
-                        dragDelta={dragDelta}
-                        uncommittedNodeIds={uncommittedNodeIds}
-                        blackboardVariables={blackboardVariables}
-                        initialBlackboardVariables={initialBlackboardVariables}
-                        isExecuting={isExecuting}
-                        executionStatus={nodeExecutionStatuses.get(node.id)}
-                        executionOrder={nodeExecutionOrders.get(node.id)}
-                        connections={connections}
-                        nodes={nodes}
-                        executorRef={executorRef}
-                        iconMap={ICON_MAP}
-                        draggingNodeId={draggingNodeId}
-                        onNodeClick={handleNodeClick}
-                        onContextMenu={handleNodeContextMenu}
-                        onNodeMouseDown={handleNodeMouseDown}
-                        onNodeMouseUpForConnection={handleNodeMouseUpForConnection}
-                        onPortMouseDown={handlePortMouseDown}
-                        onPortMouseUp={handlePortMouseUp}
-                    />
-                ))}
-            </BehaviorTreeCanvas>
+                        {/* 节点层 */}
+                        {nodes.map((node: BehaviorTreeNode) => (
+                            <BehaviorTreeNodeComponent
+                                key={node.id}
+                                node={node}
+                                isSelected={selectedNodeIds.includes(node.id)}
+                                isBeingDragged={draggingNodeId === node.id}
+                                dragDelta={dragDelta}
+                                uncommittedNodeIds={uncommittedNodeIds}
+                                blackboardVariables={blackboardVariables}
+                                initialBlackboardVariables={initialBlackboardVariables}
+                                isExecuting={isExecuting}
+                                executionStatus={nodeExecutionStatuses.get(node.id)}
+                                executionOrder={nodeExecutionOrders.get(node.id)}
+                                connections={connections}
+                                nodes={nodes}
+                                executorRef={executorRef}
+                                iconMap={ICON_MAP}
+                                draggingNodeId={draggingNodeId}
+                                onNodeClick={handleNodeClick}
+                                onContextMenu={handleNodeContextMenu}
+                                onNodeMouseDown={handleNodeMouseDown}
+                                onNodeMouseUpForConnection={handleNodeMouseUpForConnection}
+                                onPortMouseDown={handlePortMouseDown}
+                                onPortMouseUp={handlePortMouseUp}
+                            />
+                        ))}
+                    </BehaviorTreeCanvas>
 
-            {/* 框选区域 - 在画布外层，这样才能显示在节点上方 */}
-            {isBoxSelecting && boxSelectStart && boxSelectEnd && canvasRef.current && (() => {
-                const rect = canvasRef.current.getBoundingClientRect();
-                const minX = Math.min(boxSelectStart.x, boxSelectEnd.x);
-                const minY = Math.min(boxSelectStart.y, boxSelectEnd.y);
-                const maxX = Math.max(boxSelectStart.x, boxSelectEnd.x);
-                const maxY = Math.max(boxSelectStart.y, boxSelectEnd.y);
+                    {/* 框选区域 - 在画布外层，这样才能显示在节点上方 */}
+                    {isBoxSelecting && boxSelectStart && boxSelectEnd && canvasRef.current && (() => {
+                        const rect = canvasRef.current.getBoundingClientRect();
+                        const minX = Math.min(boxSelectStart.x, boxSelectEnd.x);
+                        const minY = Math.min(boxSelectStart.y, boxSelectEnd.y);
+                        const maxX = Math.max(boxSelectStart.x, boxSelectEnd.x);
+                        const maxY = Math.max(boxSelectStart.y, boxSelectEnd.y);
 
-                return (
-                    <div style={{
-                        position: 'fixed',
-                        left: rect.left + minX * canvasScale + canvasOffset.x,
-                        top: rect.top + minY * canvasScale + canvasOffset.y,
-                        width: (maxX - minX) * canvasScale,
-                        height: (maxY - minY) * canvasScale,
-                        border: '1px dashed #4a90e2',
-                        backgroundColor: 'rgba(74, 144, 226, 0.1)',
-                        pointerEvents: 'none',
-                        zIndex: 9999
-                    }} />
-                );
-            })()}
-
-            {/* 右键菜单 */}
-            <NodeContextMenu
-                visible={contextMenu.contextMenu.visible}
-                position={contextMenu.contextMenu.position}
-                nodeId={contextMenu.contextMenu.nodeId}
-                isBlackboardVariable={contextMenu.contextMenu.nodeId ? nodes.find(n => n.id === contextMenu.contextMenu.nodeId)?.data.nodeType === 'blackboard-variable' : false}
-                onReplaceNode={() => {
-                    if (contextMenu.contextMenu.nodeId) {
-                        quickCreateMenu.openQuickCreateMenu(
-                            contextMenu.contextMenu.position,
-                            'replace',
-                            contextMenu.contextMenu.nodeId
+                        return (
+                            <div style={{
+                                position: 'fixed',
+                                left: rect.left + minX * canvasScale + canvasOffset.x,
+                                top: rect.top + minY * canvasScale + canvasOffset.y,
+                                width: (maxX - minX) * canvasScale,
+                                height: (maxY - minY) * canvasScale,
+                                border: '1px dashed #4a90e2',
+                                backgroundColor: 'rgba(74, 144, 226, 0.1)',
+                                pointerEvents: 'none',
+                                zIndex: 9999
+                            }} />
                         );
-                    }
-                    contextMenu.closeContextMenu();
-                }}
-                onDeleteNode={() => {
-                    if (contextMenu.contextMenu.nodeId) {
-                        nodeOperations.deleteNode(contextMenu.contextMenu.nodeId);
-                    }
-                    contextMenu.closeContextMenu();
-                }}
-                onCreateNode={() => {
-                    quickCreateMenu.openQuickCreateMenu(
-                        contextMenu.contextMenu.position,
-                        'create'
-                    );
-                    contextMenu.closeContextMenu();
-                }}
-            />
+                    })()}
 
-            {/* 快速创建菜单 */}
-            <QuickCreateMenu
-                visible={quickCreateMenu.quickCreateMenu.visible}
-                position={quickCreateMenu.quickCreateMenu.position}
-                searchText={quickCreateMenu.quickCreateMenu.searchText}
-                selectedIndex={quickCreateMenu.quickCreateMenu.selectedIndex}
-                mode={quickCreateMenu.quickCreateMenu.mode}
-                iconMap={ICON_MAP}
-                onSearchChange={(text) => quickCreateMenu.setQuickCreateMenu(prev => ({ ...prev, searchText: text }))}
-                onIndexChange={(index) => quickCreateMenu.setQuickCreateMenu(prev => ({ ...prev, selectedIndex: index }))}
-                onNodeSelect={(template) => {
-                    if (quickCreateMenu.quickCreateMenu.mode === 'create') {
-                        quickCreateMenu.handleQuickCreateNode(template);
-                    } else {
-                        quickCreateMenu.handleReplaceNode(template);
-                    }
-                }}
-                onClose={() => quickCreateMenu.setQuickCreateMenu(prev => ({ ...prev, visible: false }))}
-            />
+                    {/* 右键菜单 */}
+                    <NodeContextMenu
+                        visible={contextMenu.contextMenu.visible}
+                        position={contextMenu.contextMenu.position}
+                        nodeId={contextMenu.contextMenu.nodeId}
+                        isBlackboardVariable={contextMenu.contextMenu.nodeId ? nodes.find((n) => n.id === contextMenu.contextMenu.nodeId)?.data.nodeType === 'blackboard-variable' : false}
+                        onReplaceNode={() => {
+                            if (contextMenu.contextMenu.nodeId) {
+                                quickCreateMenu.openQuickCreateMenu(
+                                    contextMenu.contextMenu.position,
+                                    'replace',
+                                    contextMenu.contextMenu.nodeId
+                                );
+                            }
+                            contextMenu.closeContextMenu();
+                        }}
+                        onDeleteNode={() => {
+                            if (contextMenu.contextMenu.nodeId) {
+                                nodeOperations.deleteNode(contextMenu.contextMenu.nodeId);
+                            }
+                            contextMenu.closeContextMenu();
+                        }}
+                        onCreateNode={() => {
+                            quickCreateMenu.openQuickCreateMenu(
+                                contextMenu.contextMenu.position,
+                                'create'
+                            );
+                            contextMenu.closeContextMenu();
+                        }}
+                    />
+
+                    {/* 快速创建菜单 */}
+                    <QuickCreateMenu
+                        visible={quickCreateMenu.quickCreateMenu.visible}
+                        position={quickCreateMenu.quickCreateMenu.position}
+                        searchText={quickCreateMenu.quickCreateMenu.searchText}
+                        selectedIndex={quickCreateMenu.quickCreateMenu.selectedIndex}
+                        mode={quickCreateMenu.quickCreateMenu.mode}
+                        iconMap={ICON_MAP}
+                        onSearchChange={(text) => quickCreateMenu.setQuickCreateMenu((prev) => ({ ...prev, searchText: text }))}
+                        onIndexChange={(index) => quickCreateMenu.setQuickCreateMenu((prev) => ({ ...prev, selectedIndex: index }))}
+                        onNodeSelect={(template) => {
+                            if (quickCreateMenu.quickCreateMenu.mode === 'create') {
+                                quickCreateMenu.handleQuickCreateNode(template);
+                            } else {
+                                quickCreateMenu.handleReplaceNode(template);
+                            }
+                        }}
+                        onClose={() => quickCreateMenu.setQuickCreateMenu((prev) => ({ ...prev, visible: false }))}
+                    />
 
                 </div>
 
@@ -658,23 +713,14 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     <BlackboardPanel
                         variables={blackboardVariables}
                         initialVariables={initialBlackboardVariables}
-                        globalVariables={{}}
+                        globalVariables={globalVariables}
                         onVariableAdd={handleBlackboardVariableAdd}
                         onVariableChange={handleBlackboardVariableChange}
                         onVariableDelete={handleBlackboardVariableDelete}
                         onVariableRename={handleBlackboardVariableRename}
-                        onGlobalVariableChange={(key, value) => {
-                            // TODO: 集成全局黑板服务
-                            console.log('Global variable change:', key, value);
-                        }}
-                        onGlobalVariableAdd={(key, value) => {
-                            // TODO: 集成全局黑板服务
-                            console.log('Global variable add:', key, value);
-                        }}
-                        onGlobalVariableDelete={(key) => {
-                            // TODO: 集成全局黑板服务
-                            console.log('Global variable delete:', key);
-                        }}
+                        onGlobalVariableChange={handleGlobalVariableChange}
+                        onGlobalVariableAdd={handleGlobalVariableAdd}
+                        onGlobalVariableDelete={handleGlobalVariableDelete}
                         isCollapsed={blackboardCollapsed}
                         onToggleCollapse={() => setBlackboardCollapsed(!blackboardCollapsed)}
                     />

@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { NodeTemplates } from '@esengine/behavior-tree';
+import { NodeTemplates, NodeTemplate } from '@esengine/behavior-tree';
 import { BehaviorTree } from '../../domain/models/BehaviorTree';
 import { Node } from '../../domain/models/Node';
-import { Connection } from '../../domain/models/Connection';
+import { Connection, ConnectionType } from '../../domain/models/Connection';
 import { Blackboard, BlackboardValue } from '../../domain/models/Blackboard';
 import { ITreeState } from '../commands/ITreeState';
 import { createRootNode, createRootNodeTemplate, ROOT_NODE_ID } from '../../domain/constants/RootNode';
@@ -42,6 +42,16 @@ interface BehaviorTreeDataState {
      * 文件是否已打开
      */
     isOpen: boolean;
+
+    /**
+     * 当前文件路径
+     */
+    currentFilePath: string | null;
+
+    /**
+     * 当前文件名
+     */
+    currentFileName: string;
 
     /**
      * 黑板变量（运行时）
@@ -98,6 +108,11 @@ interface BehaviorTreeDataState {
      * 设置文件打开状态
      */
     setIsOpen: (isOpen: boolean) => void;
+
+    /**
+     * 设置当前文件信息
+     */
+    setCurrentFile: (filePath: string | null, fileName: string) => void;
 
     /**
      * 从 JSON 导入
@@ -185,6 +200,8 @@ export const useBehaviorTreeDataStore = create<BehaviorTreeDataState>((set, get)
         cachedNodes: Array.from(initialTree.nodes),
         cachedConnections: Array.from(initialTree.connections),
         isOpen: false,
+        currentFilePath: null,
+        currentFileName: 'Untitled',
         blackboardVariables: {},
         initialBlackboardVariables: {},
         initialNodesData: new Map(),
@@ -210,6 +227,8 @@ export const useBehaviorTreeDataStore = create<BehaviorTreeDataState>((set, get)
                 cachedNodes: Array.from(newTree.nodes),
                 cachedConnections: Array.from(newTree.connections),
                 isOpen: false,
+                currentFilePath: null,
+                currentFileName: 'Untitled',
                 blackboardVariables: {},
                 initialBlackboardVariables: {},
                 initialNodesData: new Map(),
@@ -223,6 +242,11 @@ export const useBehaviorTreeDataStore = create<BehaviorTreeDataState>((set, get)
         },
 
         setIsOpen: (isOpen: boolean) => set({ isOpen }),
+
+        setCurrentFile: (filePath: string | null, fileName: string) => set({
+            currentFilePath: filePath,
+            currentFileName: fileName
+        }),
 
         importFromJSON: (json: string) => {
             const data = JSON.parse(json) as {
@@ -271,15 +295,14 @@ export const useBehaviorTreeDataStore = create<BehaviorTreeDataState>((set, get)
                 }
 
                 const position = new Position(nodeObj.position.x, nodeObj.position.y);
-                return new Node(nodeObj.id, template as Parameters<typeof Node.prototype.constructor>[1], nodeObj.data, position, nodeObj.children || []);
+                return new Node(nodeObj.id, template as NodeTemplate, nodeObj.data, position, nodeObj.children || []);
             });
 
-            // 导入连接
             const loadedConnections: Connection[] = (data.connections || []).map((connObj) => {
                 return new Connection(
                     connObj.from,
                     connObj.to,
-                    (connObj.connectionType || 'node') as Parameters<typeof Connection.prototype.constructor>[2],
+                    (connObj.connectionType || 'node') as ConnectionType,
                     connObj.fromProperty,
                     connObj.toProperty
                 );

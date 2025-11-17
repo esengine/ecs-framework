@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ICompiler, CompileResult, CompilerContext, IFileSystem } from '@esengine/editor-core';
 import { File, FolderTree, FolderOpen } from 'lucide-react';
-import { useBehaviorTreeDataStore } from '../stores';
 import { GlobalBlackboardTypeGenerator } from '../generators/GlobalBlackboardTypeGenerator';
+import { EditorFormatConverter, BehaviorTreeAssetSerializer } from '@esengine/behavior-tree';
+import { useBehaviorTreeDataStore } from '../application/state/BehaviorTreeDataStore';
 
 export interface BehaviorTreeCompileOptions {
     mode: 'single' | 'workspace';
@@ -11,6 +12,7 @@ export interface BehaviorTreeCompileOptions {
     selectedFiles: string[];
     fileFormats: Map<string, 'json' | 'binary'>;
     currentFile?: string;
+    currentFilePath?: string;
 }
 
 export class BehaviorTreeCompiler implements ICompiler<BehaviorTreeCompileOptions> {
@@ -58,6 +60,8 @@ export class BehaviorTreeCompiler implements ICompiler<BehaviorTreeCompileOption
                 }
             } else {
                 const currentFileName = this.getCurrentFileName();
+                const currentFilePath = this.currentOptions?.currentFilePath;
+
                 if (!currentFileName) {
                     return {
                         success: false,
@@ -67,7 +71,14 @@ export class BehaviorTreeCompiler implements ICompiler<BehaviorTreeCompileOption
                 }
 
                 const format = options.fileFormats.get(currentFileName) || 'binary';
-                const result = await this.compileFile(currentFileName, options.assetOutputPath, options.typeOutputPath, format, fileSystem);
+                const result = await this.compileFileWithPath(
+                    currentFileName,
+                    currentFilePath || `${this.projectPath}/.ecs/behaviors/${currentFileName}.btree`,
+                    options.assetOutputPath,
+                    options.typeOutputPath,
+                    format,
+                    fileSystem
+                );
 
                 if (result.success) {
                     outputFiles.push(...(result.outputFiles || []));
@@ -106,30 +117,44 @@ export class BehaviorTreeCompiler implements ICompiler<BehaviorTreeCompileOption
         format: 'json' | 'binary',
         fileSystem: IFileSystem
     ): Promise<CompileResult> {
+        const btreePath = `${this.projectPath}/.ecs/behaviors/${fileId}.btree`;
+        return this.compileFileWithPath(fileId, btreePath, assetOutputPath, typeOutputPath, format, fileSystem);
+    }
+
+    private async compileFileWithPath(
+        fileId: string,
+        btreePath: string,
+        assetOutputPath: string,
+        typeOutputPath: string,
+        format: 'json' | 'binary',
+        fileSystem: IFileSystem
+    ): Promise<CompileResult> {
         try {
-            const btreePath = `${this.projectPath}/.ecs/behaviors/${fileId}.btree`;
+            console.log(`[Compiler] Reading file: ${btreePath}`);
             const fileContent = await fileSystem.readFile(btreePath);
             const treeData = JSON.parse(fileContent);
 
-            // TODO: 实现从 treeData 直接导出运行时资产，而不依赖 store
-            // 暂时使用简化的导出逻辑
-            const runtimeAsset = format === 'json'
-                ? JSON.stringify(treeData, null, 2)
-                : new TextEncoder().encode(JSON.stringify(treeData));
+            const editorFormat = this.convertToEditorFormat(treeData, fileId);
+            const asset = EditorFormatConverter.toAsset(editorFormat);
 
+            let runtimeAsset: string | Uint8Array;
             const extension = format === 'json' ? '.btree.json' : '.btree.bin';
             const assetPath = `${assetOutputPath}/${fileId}${extension}`;
 
             if (format === 'json') {
+                runtimeAsset = BehaviorTreeAssetSerializer.serialize(asset, { format: 'json', pretty: true });
                 await fileSystem.writeFile(assetPath, runtimeAsset as string);
             } else {
+                runtimeAsset = BehaviorTreeAssetSerializer.serialize(asset, { format: 'binary' });
                 await fileSystem.writeBinary(assetPath, runtimeAsset as Uint8Array);
             }
 
             const blackboardVars = treeData.blackboard || {};
+            console.log(`[Compiler] ${fileId} blackboard vars:`, blackboardVars);
             const typeContent = this.generateBlackboardTypes(fileId, blackboardVars);
-            const typePath = `${typeOutputPath}/${fileId}.d.ts`;
+            const typePath = `${typeOutputPath}/${fileId}.ts`;
             await fileSystem.writeFile(typePath, typeContent);
+            console.log(`[Compiler] Generated type file: ${typePath}`);
 
             return {
                 success: true,
@@ -143,6 +168,40 @@ export class BehaviorTreeCompiler implements ICompiler<BehaviorTreeCompileOption
                 errors: [String(error)]
             };
         }
+    }
+
+    /**
+     * 将存储的 JSON 数据转换为 EditorFormat
+     * @param treeData - 从文件读取的原始数据
+     * @param fileId - 文件标识符
+     * @returns 编辑器格式数据
+     */
+    private convertToEditorFormat(treeData: any, fileId: string): any {
+        // 如果已经是新格式（包含 nodes 数组），直接使用
+        if (treeData.nodes && Array.isArray(treeData.nodes)) {
+            return {
+                version: treeData.version || '1.0.0',
+                metadata: treeData.metadata || {
+                    name: fileId,
+                    description: ''
+                },
+                nodes: treeData.nodes,
+                connections: treeData.connections || [],
+                blackboard: treeData.blackboard || {}
+            };
+        }
+
+        // 兼容旧格式，返回默认结构
+        return {
+            version: '1.0.0',
+            metadata: {
+                name: fileId,
+                description: ''
+            },
+            nodes: [],
+            connections: [],
+            blackboard: treeData.blackboard || {}
+        };
     }
 
     private async generateGlobalBlackboardTypes(
@@ -279,9 +338,25 @@ function BehaviorTreeCompileConfigUI({ onOptionsChange, context }: ConfigUIProps
 
         const savedAssetPath = localStorage.getItem('export-asset-path');
         const savedTypePath = localStorage.getItem('export-type-path');
-        if (savedAssetPath) setAssetOutputPath(savedAssetPath);
-        if (savedTypePath) setTypeOutputPath(savedTypePath);
+
+        // Set default paths based on projectPath if no saved paths
+        if (savedAssetPath) {
+            setAssetOutputPath(savedAssetPath);
+        } else if (projectPath) {
+            const defaultAssetPath = `${projectPath}/assets/behaviors`;
+            setAssetOutputPath(defaultAssetPath);
+        }
+
+        if (savedTypePath) {
+            setTypeOutputPath(savedTypePath);
+        } else if (projectPath) {
+            const defaultTypePath = `${projectPath}/src/types/behaviors`;
+            setTypeOutputPath(defaultTypePath);
+        }
     }, [projectPath]);
+
+    const currentFilePath = useBehaviorTreeDataStore((state) => state.currentFilePath);
+    const currentFileName = useBehaviorTreeDataStore((state) => state.currentFileName);
 
     useEffect(() => {
         onOptionsChange({
@@ -289,9 +364,11 @@ function BehaviorTreeCompileConfigUI({ onOptionsChange, context }: ConfigUIProps
             assetOutputPath,
             typeOutputPath,
             selectedFiles: mode === 'workspace' ? Array.from(selectedFiles) : [],
-            fileFormats
+            fileFormats,
+            currentFile: currentFileName || undefined,
+            currentFilePath: currentFilePath || undefined
         });
-    }, [mode, assetOutputPath, typeOutputPath, selectedFiles, fileFormats, onOptionsChange]);
+    }, [mode, assetOutputPath, typeOutputPath, selectedFiles, fileFormats, onOptionsChange, currentFileName, currentFilePath]);
 
     const handleBrowseAssetPath = async () => {
         const selected = await dialog.openDialog({
@@ -390,6 +467,36 @@ function BehaviorTreeCompileConfigUI({ onOptionsChange, context }: ConfigUIProps
                     <File size={16} />
                     当前文件
                 </button>
+            </div>
+
+            {/* 模式说明 */}
+            <div style={{
+                padding: '8px 12px',
+                background: '#1e3a5f',
+                borderRadius: '4px',
+                fontSize: '11px',
+                color: '#8ac3ff',
+                lineHeight: '1.5'
+            }}>
+                {mode === 'workspace' ? (
+                    <>
+                        <strong>工作区模式：</strong>将编译 <code style={{ background: '#0d2744', padding: '2px 4px', borderRadius: '2px' }}>{projectPath}/.ecs/behaviors/</code> 目录下的所有 .btree 文件
+                    </>
+                ) : (
+                    <>
+                        <strong>当前文件模式：</strong>将编译当前打开的文件
+                        {currentFilePath && (
+                            <div style={{ marginTop: '4px', wordBreak: 'break-all' }}>
+                                <code style={{ background: '#0d2744', padding: '2px 4px', borderRadius: '2px' }}>{currentFilePath}</code>
+                            </div>
+                        )}
+                        {!currentFilePath && (
+                            <div style={{ marginTop: '4px', color: '#ffaa00' }}>
+                                ⚠️ 未打开任何文件
+                            </div>
+                        )}
+                    </>
+                )}
             </div>
 
             {/* 资产输出路径 */}

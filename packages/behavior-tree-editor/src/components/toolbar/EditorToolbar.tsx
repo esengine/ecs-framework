@@ -1,14 +1,13 @@
 import React from 'react';
 import { Play, Pause, Square, SkipForward, Undo, Redo, ZoomIn, Save, FolderOpen, Download, Clipboard, Home } from 'lucide-react';
 
-type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
+type ExecutionMode = 'idle' | 'running' | 'paused';
 
 interface EditorToolbarProps {
     executionMode: ExecutionMode;
     canUndo: boolean;
     canRedo: boolean;
     hasUnsavedChanges?: boolean;
-    currentFileName?: string;
     onPlay: () => void;
     onPause: () => void;
     onStop: () => void;
@@ -29,7 +28,6 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     canUndo,
     canRedo,
     hasUnsavedChanges = false,
-    currentFileName,
     onPlay,
     onPause,
     onStop,
@@ -440,8 +438,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         executionMode === 'paused' ? '#f59e0b' : '#888'
                 }}>
                     {executionMode === 'idle' ? 'Idle' :
-                        executionMode === 'running' ? 'Running' :
-                            executionMode === 'paused' ? 'Paused' : 'Step'}
+                        executionMode === 'running' ? 'Running' : 'Paused'}
                 </span>
             </div>
 
@@ -475,27 +472,6 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         <span>Root</span>
                     </button>
                 </>
-            )}
-
-            {currentFileName && (
-                <div style={{
-                    padding: '6px 10px',
-                    backgroundColor: '#1e1e1e',
-                    borderRadius: '6px',
-                    fontSize: '11px',
-                    color: '#888',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    maxWidth: '150px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                }}>
-                    <span style={{ color: hasUnsavedChanges ? '#f59e0b' : '#888' }}>
-                        {hasUnsavedChanges ? '● ' : ''}{currentFileName}
-                    </span>
-                </div>
             )}
         </div>
     );

@@ -119,17 +119,28 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({ property, value, onChan
     };
 
     return (
-        <div className="property-field" style={{ marginBottom: '8px' }}>
-            <label className="property-label" style={{ marginBottom: '4px', display: 'block' }}>
+        <div className="property-field" style={{
+            marginBottom: '6px',
+            display: 'grid',
+            gridTemplateColumns: '120px 1fr',
+            alignItems: 'center',
+            gap: '8px'
+        }}>
+            <label
+                className="property-label"
+                style={{
+                    fontSize: '11px',
+                    color: '#999',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                }}
+                title={property.description || property.label || property.name}
+            >
                 {property.label || property.name}
-                {property.required && <span style={{ color: '#f87171', marginLeft: '4px' }}>*</span>}
+                {property.required && <span style={{ color: '#f87171', marginLeft: '2px' }}>*</span>}
             </label>
             {renderInput()}
-            {property.description && (
-                <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
-                    {property.description}
-                </div>
-            )}
         </div>
     );
 };
@@ -218,22 +229,35 @@ export class BehaviorTreeNodeInspectorProvider implements IInspectorProvider<Beh
                 <div className="inspector-content">
                     <div className="inspector-section">
                         <div className="section-title">基本信息</div>
-                        <div className="property-field">
-                            <label className="property-label">节点类型</label>
-                            <span className="property-value-text">{node.template.type}</span>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: '80px 1fr',
+                            gap: '4px 8px',
+                            fontSize: '11px'
+                        }}>
+                            <span style={{ color: '#888' }}>类型</span>
+                            <span style={{ color: '#e0e0e0' }}>{node.template.type}</span>
+
+                            <span style={{ color: '#888' }}>分类</span>
+                            <span style={{ color: '#e0e0e0' }}>{node.template.category}</span>
+
+                            {node.template.description && (
+                                <>
+                                    <span style={{ color: '#888' }}>描述</span>
+                                    <span
+                                        style={{
+                                            color: '#999',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                        title={node.template.description}
+                                    >
+                                        {node.template.description}
+                                    </span>
+                                </>
+                            )}
                         </div>
-                        <div className="property-field">
-                            <label className="property-label">分类</label>
-                            <span className="property-value-text">{node.template.category}</span>
-                        </div>
-                        {node.template.description && (
-                            <div className="property-field">
-                                <label className="property-label">描述</label>
-                                <span className="property-value-text" style={{ color: '#999' }}>
-                                    {node.template.description}
-                                </span>
-                            </div>
-                        )}
                     </div>
 
                     {node.template.properties && node.template.properties.length > 0 && (
@@ -248,25 +272,30 @@ export class BehaviorTreeNodeInspectorProvider implements IInspectorProvider<Beh
 
                     <div className="inspector-section">
                         <div className="section-title">调试信息</div>
-                        <div className="property-field">
-                            <label className="property-label">节点ID</label>
-                            <span className="property-value-text" style={{
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: '80px 1fr',
+                            gap: '4px 8px',
+                            fontSize: '11px'
+                        }}>
+                            <span style={{ color: '#888' }}>ID</span>
+                            <span style={{
                                 fontFamily: 'Consolas, Monaco, monospace',
                                 color: '#666',
-                                fontSize: '11px'
-                            }}>
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                            }} title={node.id}>
                                 {node.id}
                             </span>
-                        </div>
-                        <div className="property-field">
-                            <label className="property-label">位置</label>
-                            <span className="property-value-text" style={{ color: '#999' }}>
+
+                            <span style={{ color: '#888' }}>位置</span>
+                            <span style={{ color: '#999' }}>
                                 ({node.position.x.toFixed(0)}, {node.position.y.toFixed(0)})
                             </span>
-                        </div>
-                        <div className="property-field">
-                            <label className="property-label">子节点数</label>
-                            <span className="property-value-text">{node.children.length}</span>
+
+                            <span style={{ color: '#888' }}>子节点</span>
+                            <span style={{ color: '#e0e0e0' }}>{node.children.length}</span>
                         </div>
                     </div>
                 </div>

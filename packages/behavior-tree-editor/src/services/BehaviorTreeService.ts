@@ -20,15 +20,24 @@ export class BehaviorTreeService implements IService {
             }
 
             const content = await fileSystem.readBehaviorTreeFile(filePath);
+            const fileName = filePath.split(/[\\/]/).pop()?.replace('.btree', '') || 'Untitled';
 
             const store = useBehaviorTreeDataStore.getState();
             store.importFromJSON(content);
+            // 在 store 中保存文件信息，Panel 挂载时读取
+            store.setCurrentFile(filePath, fileName);
 
             const messageHub = Core.services.resolve(MessageHub);
             if (messageHub) {
                 messageHub.publish('dynamic-panel:open', {
                     panelId: 'behavior-tree-editor',
                     title: `Behavior Tree - ${filePath.split(/[\\/]/).pop()}`
+                });
+
+                // 保留事件发布，以防 Panel 已挂载
+                messageHub.publish('behavior-tree:file-opened', {
+                    filePath,
+                    fileName
                 });
             }
         } catch (error) {

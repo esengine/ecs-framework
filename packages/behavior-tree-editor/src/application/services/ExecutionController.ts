@@ -7,7 +7,7 @@ import { EditorEventBus, EditorEvent } from '../../infrastructure/events/EditorE
 import { ExecutionHooksManager } from '../interfaces/IExecutionHooks';
 import type { Breakpoint } from '../../types/Breakpoint';
 
-export type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
+export type ExecutionMode = 'idle' | 'running' | 'paused';
 type BlackboardVariables = Record<string, BlackboardValue>;
 
 interface ExecutionControllerConfig {
@@ -209,8 +209,67 @@ export class ExecutionController {
         }
     }
 
-    step(): void {
-        // 单步执行功能预留
+    async step(): Promise<void> {
+        if (this.mode === 'running') {
+            await this.pause();
+        }
+
+        if (this.mode === 'idle') {
+            if (!this.currentNodes.length) {
+                console.warn('No tree loaded for step execution');
+                return;
+            }
+
+            if (!this.executor) {
+                this.executor = new BehaviorTreeExecutor();
+            }
+
+            this.executor.buildTree(
+                this.currentNodes,
+                this.config.rootNodeId,
+                this.currentBlackboard,
+                this.currentConnections,
+                this.handleExecutionStatusUpdate.bind(this)
+            );
+
+            if (this.breakpointCallback) {
+                this.executor.setBreakpointCallback(this.breakpointCallback);
+            }
+
+            this.executor.start();
+        }
+
+        try {
+            await this.hooksManager?.triggerBeforeStep?.(0);
+
+            if (this.stepByStepMode && this.pendingStatusUpdates.length > 0) {
+                if (this.currentlyDisplayedIndex < this.pendingStatusUpdates.length) {
+                    this.displayNextNode();
+                } else {
+                    this.executeSingleTick();
+                }
+            } else {
+                this.executeSingleTick();
+            }
+
+            this.eventBus?.emit(EditorEvent.EXECUTION_STEPPED, { tickCount: this.tickCount });
+            await this.hooksManager?.triggerAfterStep?.(0);
+        } catch (error) {
+            console.error('Error in step:', error);
+            await this.hooksManager?.triggerOnError(error as Error, 'step');
+        }
+
+        this.mode = 'paused';
+    }
+
+    private executeSingleTick(): void {
+        if (!this.executor) return;
+
+        const deltaTime = 16.67 / 1000;
+        this.executor.tick(deltaTime);
+
+        this.tickCount = this.executor.getTickCount();
+        this.config.onTickCountUpdate(this.tickCount);
     }
 
     updateBlackboardVariable(key: string, value: BlackboardValue): void {

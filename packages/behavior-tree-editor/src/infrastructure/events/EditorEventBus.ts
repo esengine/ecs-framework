@@ -18,6 +18,7 @@ export enum EditorEvent {
     EXECUTION_PAUSED = 'execution:paused',
     EXECUTION_RESUMED = 'execution:resumed',
     EXECUTION_STOPPED = 'execution:stopped',
+    EXECUTION_STEPPED = 'execution:stepped',
     EXECUTION_TICK = 'execution:tick',
     EXECUTION_NODE_STATUS_CHANGED = 'execution:node_status_changed',
 
