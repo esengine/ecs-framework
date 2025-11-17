@@ -135,11 +135,10 @@ export class BehaviorTreeEditorViewModel {
     }
 
     private createTreeStateAdapter(): TreeStateAdapter {
-        const self = this;
         return {
-            getTree: () => self.tree,
+            getTree: () => this.tree,
             setTree: action((tree: BehaviorTree) => {
-                self.tree = tree;
+                this.tree = tree;
             })
         } as TreeStateAdapter;
     }

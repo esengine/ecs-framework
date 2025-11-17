@@ -97,7 +97,7 @@ export class BehaviorTreeModule implements IEditorModule {
         console.log('[BehaviorTreeModule] Panel registered: behavior-tree-editor');
     }
 
-    private subscribeEvents(context: IModuleContext): void {
+    private subscribeEvents(_context: IModuleContext): void {
         // 文件加载由 BehaviorTreeEditorPanel 处理
     }
 }

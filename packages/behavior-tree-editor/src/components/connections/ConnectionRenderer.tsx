@@ -74,7 +74,7 @@ const ConnectionRendererComponent: React.FC<ConnectionRendererProps> = ({
     }
 
     const pathD = pathData.path;
-    const endPosMatch = pathD.match(/C [0-9\-\.]+ [0-9\-\.]+, [0-9\-\.]+ [0-9\-\.]+, ([0-9\-\.]+) ([0-9\-\.]+)/);
+    const endPosMatch = pathD.match(/C [0-9.-]+ [0-9.-]+, [0-9.-]+ [0-9.-]+, ([0-9.-]+) ([0-9.-]+)/);
     const endX = endPosMatch ? parseFloat(endPosMatch[1]) : 0;
     const endY = endPosMatch ? parseFloat(endPosMatch[2]) : 0;
 

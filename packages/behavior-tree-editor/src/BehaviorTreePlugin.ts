@@ -4,7 +4,6 @@ import {
     EditorPluginCategory,
     CompilerRegistry,
     InspectorRegistry,
-    FileActionRegistry,
     PanelPosition,
     type FileCreationTemplate,
     type FileActionHandler,
@@ -18,7 +17,8 @@ import { BehaviorTreeEditorPanel } from './components/panels/BehaviorTreeEditorP
 import { useBehaviorTreeDataStore } from './stores';
 import { createElement } from 'react';
 import { GitBranch } from 'lucide-react';
-import { createRootNode, ROOT_NODE_ID } from './domain/constants/RootNode';
+import { createRootNode } from './domain/constants/RootNode';
+import type { IService, ServiceType } from '@esengine/ecs-framework';
 
 export class BehaviorTreePlugin implements IEditorPlugin {
     readonly name = '@esengine/behavior-tree-editor';
@@ -29,7 +29,7 @@ export class BehaviorTreePlugin implements IEditorPlugin {
     readonly icon = 'GitBranch';
 
     private services?: ServiceContainer;
-    private registeredServices: Set<any> = new Set();
+    private registeredServices: Set<ServiceType<IService>> = new Set();
     private fileActionHandler?: FileActionHandler;
     private fileCreationTemplate?: FileCreationTemplate;
 

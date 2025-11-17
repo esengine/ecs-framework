@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { NodeTemplate, NodeTemplates } from '@esengine/behavior-tree';
+import { NodeTemplates } from '@esengine/behavior-tree';
 import { BehaviorTree } from '../../domain/models/BehaviorTree';
 import { Node } from '../../domain/models/Node';
 import { Connection } from '../../domain/models/Connection';
@@ -222,266 +222,283 @@ export const useBehaviorTreeDataStore = create<BehaviorTreeDataState>((set, get)
             });
         },
 
-    setIsOpen: (isOpen: boolean) => set({ isOpen }),
+        setIsOpen: (isOpen: boolean) => set({ isOpen }),
 
-    importFromJSON: (json: string) => {
-        const data = JSON.parse(json);
-        const blackboardData = data.blackboard || {};
+        importFromJSON: (json: string) => {
+            const data = JSON.parse(json) as {
+                nodes?: Array<{
+                    id: string;
+                    template?: { className?: string };
+                    data: Record<string, unknown>;
+                    position: { x: number; y: number };
+                    children?: string[];
+                }>;
+                connections?: Array<{
+                    from: string;
+                    to: string;
+                    connectionType?: string;
+                    fromProperty?: string;
+                    toProperty?: string;
+                }>;
+                blackboard?: Record<string, BlackboardValue>;
+                canvasState?: { offset?: { x: number; y: number }; scale?: number };
+            };
+            const blackboardData = data.blackboard || {};
 
-        // 导入节点
-        const loadedNodes: Node[] = (data.nodes || []).map((nodeObj: any) => {
-            // 根节点也需要保留文件中的 children 数据
-            if (nodeObj.id === ROOT_NODE_ID) {
-                const position = new Position(nodeObj.position.x || 400, nodeObj.position.y || 100);
-                return new Node(
-                    ROOT_NODE_ID,
-                    createRootNodeTemplate(),
-                    { nodeType: 'root' },
-                    position,
-                    nodeObj.children || []
-                );
-            }
-
-            const className = nodeObj.template?.className;
-            let template = nodeObj.template;
-
-            if (className) {
-                const allTemplates = NodeTemplates.getAllTemplates();
-                const latestTemplate = allTemplates.find((t: any) => t.className === className);
-                if (latestTemplate) {
-                    template = latestTemplate;
+            // 导入节点
+            const loadedNodes: Node[] = (data.nodes || []).map((nodeObj) => {
+                // 根节点也需要保留文件中的 children 数据
+                if (nodeObj.id === ROOT_NODE_ID) {
+                    const position = new Position(nodeObj.position.x || 400, nodeObj.position.y || 100);
+                    return new Node(
+                        ROOT_NODE_ID,
+                        createRootNodeTemplate(),
+                        { nodeType: 'root' },
+                        position,
+                        nodeObj.children || []
+                    );
                 }
-            }
 
-            const position = new Position(nodeObj.position.x, nodeObj.position.y);
-            return new Node(nodeObj.id, template, nodeObj.data, position, nodeObj.children || []);
-        });
+                const className = nodeObj.template?.className;
+                let template = nodeObj.template;
 
-        // 导入连接
-        const loadedConnections: Connection[] = (data.connections || []).map((connObj: any) => {
-            return new Connection(
-                connObj.from,
-                connObj.to,
-                connObj.connectionType || 'node',
-                connObj.fromProperty,
-                connObj.toProperty
-            );
-        });
+                if (className) {
+                    const allTemplates = NodeTemplates.getAllTemplates();
+                    const latestTemplate = allTemplates.find((t) => t.className === className);
+                    if (latestTemplate) {
+                        template = latestTemplate;
+                    }
+                }
 
-        const loadedBlackboard = Blackboard.fromObject(blackboardData);
-
-        // 创建新的行为树
-        const tree = new BehaviorTree(
-            loadedNodes,
-            loadedConnections,
-            loadedBlackboard,
-            ROOT_NODE_ID
-        );
-
-        set({
-            tree,
-            cachedNodes: Array.from(tree.nodes),
-            cachedConnections: Array.from(tree.connections),
-            isOpen: true,
-            blackboardVariables: blackboardData,
-            initialBlackboardVariables: blackboardData,
-            canvasOffset: data.canvasState?.offset || { x: 0, y: 0 },
-            canvasScale: data.canvasState?.scale || 1
-        });
-    },
-
-    exportToJSON: (metadata: { name: string; description: string }) => {
-        const state = get();
-        const now = new Date().toISOString();
-        const data = {
-            version: '1.0.0',
-            metadata: {
-                name: metadata.name,
-                description: metadata.description,
-                createdAt: now,
-                modifiedAt: now
-            },
-            nodes: state.getNodes().map((n) => n.toObject()),
-            connections: state.getConnections().map((c) => c.toObject()),
-            blackboard: state.getBlackboard().toObject(),
-            canvasState: {
-                offset: state.canvasOffset,
-                scale: state.canvasScale
-            }
-        };
-        return JSON.stringify(data, null, 2);
-    },
-
-    setBlackboardVariables: (variables: Record<string, BlackboardValue>) => {
-        const newBlackboard = Blackboard.fromObject(variables);
-        const currentTree = get().tree;
-        const newTree = new BehaviorTree(
-            currentTree.nodes as Node[],
-            currentTree.connections as Connection[],
-            newBlackboard,
-            currentTree.rootNodeId
-        );
-        set({
-            tree: newTree,
-            cachedNodes: Array.from(newTree.nodes),
-            cachedConnections: Array.from(newTree.connections),
-            blackboardVariables: variables
-        });
-    },
-
-    setInitialBlackboardVariables: (variables: Record<string, BlackboardValue>) =>
-        set({ initialBlackboardVariables: variables }),
-
-    updateBlackboardVariable: (name: string, value: BlackboardValue) => {
-        const state = get();
-        const newBlackboard = Blackboard.fromObject(state.blackboardVariables);
-        newBlackboard.setValue(name, value);
-        const variables = newBlackboard.toObject();
-
-        const currentTree = state.tree;
-        const newTree = new BehaviorTree(
-            currentTree.nodes as Node[],
-            currentTree.connections as Connection[],
-            newBlackboard,
-            currentTree.rootNodeId
-        );
-
-        set({
-            tree: newTree,
-            cachedNodes: Array.from(newTree.nodes),
-            cachedConnections: Array.from(newTree.connections),
-            blackboardVariables: variables
-        });
-    },
-
-    setIsExecuting: (isExecuting: boolean) => set({ isExecuting }),
-
-    saveNodesDataSnapshot: () => {
-        const snapshot = new Map<string, Record<string, unknown>>();
-        get().getNodes().forEach(node => {
-            snapshot.set(node.id, { ...node.data });
-        });
-        set({ initialNodesData: snapshot });
-    },
-
-    restoreNodesData: () => {
-        const state = get();
-        const snapshot = state.initialNodesData;
-        if (snapshot.size === 0) return;
-
-        const updatedNodes = state.getNodes().map(node => {
-            const savedData = snapshot.get(node.id);
-            if (savedData) {
-                return new Node(node.id, node.template, savedData, node.position, Array.from(node.children));
-            }
-            return node;
-        });
-
-        const newTree = new BehaviorTree(
-            updatedNodes,
-            state.getConnections(),
-            state.getBlackboard(),
-            state.getRootNodeId()
-        );
-
-        set({
-            tree: newTree,
-            cachedNodes: Array.from(newTree.nodes),
-            cachedConnections: Array.from(newTree.connections),
-            initialNodesData: new Map()
-        });
-    },
-
-    setNodeExecutionStatus: (nodeId: string, status: NodeExecutionStatus) => {
-        const newStatuses = new Map(get().nodeExecutionStatuses);
-        newStatuses.set(nodeId, status);
-        set({ nodeExecutionStatuses: newStatuses });
-    },
-
-    updateNodeExecutionStatuses: (statuses: Map<string, NodeExecutionStatus>, orders?: Map<string, number>) => {
-        set({
-            nodeExecutionStatuses: new Map(statuses),
-            nodeExecutionOrders: orders ? new Map(orders) : new Map()
-        });
-    },
-
-    clearNodeExecutionStatuses: () => {
-        set({
-            nodeExecutionStatuses: new Map(),
-            nodeExecutionOrders: new Map()
-        });
-    },
-
-    setCanvasOffset: (offset: { x: number; y: number }) => set({ canvasOffset: offset }),
-
-    setCanvasScale: (scale: number) => set({ canvasScale: scale }),
-
-    resetView: () => set({ canvasOffset: { x: 0, y: 0 }, canvasScale: 1 }),
-
-    triggerForceUpdate: () => set((state) => ({ forceUpdateCounter: state.forceUpdateCounter + 1 })),
-
-    sortChildrenByPosition: () => {
-        const state = get();
-        const nodes = state.getNodes();
-        const nodeMap = new Map<string, Node>();
-        nodes.forEach((node) => nodeMap.set(node.id, node));
-
-        const sortedNodes = nodes.map((node) => {
-            if (node.children.length <= 1) {
-                return node;
-            }
-
-            const sortedChildren = Array.from(node.children).sort((a, b) => {
-                const nodeA = nodeMap.get(a);
-                const nodeB = nodeMap.get(b);
-                if (!nodeA || !nodeB) return 0;
-                return nodeA.position.x - nodeB.position.x;
+                const position = new Position(nodeObj.position.x, nodeObj.position.y);
+                return new Node(nodeObj.id, template as Parameters<typeof Node.prototype.constructor>[1], nodeObj.data, position, nodeObj.children || []);
             });
 
-            return new Node(node.id, node.template, node.data, node.position, sortedChildren);
-        });
+            // 导入连接
+            const loadedConnections: Connection[] = (data.connections || []).map((connObj) => {
+                return new Connection(
+                    connObj.from,
+                    connObj.to,
+                    (connObj.connectionType || 'node') as Parameters<typeof Connection.prototype.constructor>[2],
+                    connObj.fromProperty,
+                    connObj.toProperty
+                );
+            });
 
-        const newTree = new BehaviorTree(
-            sortedNodes,
-            state.getConnections(),
-            state.getBlackboard(),
-            state.getRootNodeId()
-        );
+            const loadedBlackboard = Blackboard.fromObject(blackboardData);
 
-        set({
-            tree: newTree,
-            cachedNodes: Array.from(newTree.nodes),
-            cachedConnections: Array.from(newTree.connections)
-        });
-    },
+            // 创建新的行为树
+            const tree = new BehaviorTree(
+                loadedNodes,
+                loadedConnections,
+                loadedBlackboard,
+                ROOT_NODE_ID
+            );
 
-    getNodes: () => {
-        return get().cachedNodes;
-    },
+            set({
+                tree,
+                cachedNodes: Array.from(tree.nodes),
+                cachedConnections: Array.from(tree.connections),
+                isOpen: true,
+                blackboardVariables: blackboardData,
+                initialBlackboardVariables: blackboardData,
+                canvasOffset: data.canvasState?.offset || { x: 0, y: 0 },
+                canvasScale: data.canvasState?.scale || 1
+            });
+        },
 
-    getNode: (nodeId: string) => {
-        try {
-            return get().tree.getNode(nodeId);
-        } catch {
-            return undefined;
+        exportToJSON: (metadata: { name: string; description: string }) => {
+            const state = get();
+            const now = new Date().toISOString();
+            const data = {
+                version: '1.0.0',
+                metadata: {
+                    name: metadata.name,
+                    description: metadata.description,
+                    createdAt: now,
+                    modifiedAt: now
+                },
+                nodes: state.getNodes().map((n) => n.toObject()),
+                connections: state.getConnections().map((c) => c.toObject()),
+                blackboard: state.getBlackboard().toObject(),
+                canvasState: {
+                    offset: state.canvasOffset,
+                    scale: state.canvasScale
+                }
+            };
+            return JSON.stringify(data, null, 2);
+        },
+
+        setBlackboardVariables: (variables: Record<string, BlackboardValue>) => {
+            const newBlackboard = Blackboard.fromObject(variables);
+            const currentTree = get().tree;
+            const newTree = new BehaviorTree(
+                currentTree.nodes as Node[],
+                currentTree.connections as Connection[],
+                newBlackboard,
+                currentTree.rootNodeId
+            );
+            set({
+                tree: newTree,
+                cachedNodes: Array.from(newTree.nodes),
+                cachedConnections: Array.from(newTree.connections),
+                blackboardVariables: variables
+            });
+        },
+
+        setInitialBlackboardVariables: (variables: Record<string, BlackboardValue>) =>
+            set({ initialBlackboardVariables: variables }),
+
+        updateBlackboardVariable: (name: string, value: BlackboardValue) => {
+            const state = get();
+            const newBlackboard = Blackboard.fromObject(state.blackboardVariables);
+            newBlackboard.setValue(name, value);
+            const variables = newBlackboard.toObject();
+
+            const currentTree = state.tree;
+            const newTree = new BehaviorTree(
+                currentTree.nodes as Node[],
+                currentTree.connections as Connection[],
+                newBlackboard,
+                currentTree.rootNodeId
+            );
+
+            set({
+                tree: newTree,
+                cachedNodes: Array.from(newTree.nodes),
+                cachedConnections: Array.from(newTree.connections),
+                blackboardVariables: variables
+            });
+        },
+
+        setIsExecuting: (isExecuting: boolean) => set({ isExecuting }),
+
+        saveNodesDataSnapshot: () => {
+            const snapshot = new Map<string, Record<string, unknown>>();
+            get().getNodes().forEach((node) => {
+                snapshot.set(node.id, { ...node.data });
+            });
+            set({ initialNodesData: snapshot });
+        },
+
+        restoreNodesData: () => {
+            const state = get();
+            const snapshot = state.initialNodesData;
+            if (snapshot.size === 0) return;
+
+            const updatedNodes = state.getNodes().map((node) => {
+                const savedData = snapshot.get(node.id);
+                if (savedData) {
+                    return new Node(node.id, node.template, savedData, node.position, Array.from(node.children));
+                }
+                return node;
+            });
+
+            const newTree = new BehaviorTree(
+                updatedNodes,
+                state.getConnections(),
+                state.getBlackboard(),
+                state.getRootNodeId()
+            );
+
+            set({
+                tree: newTree,
+                cachedNodes: Array.from(newTree.nodes),
+                cachedConnections: Array.from(newTree.connections),
+                initialNodesData: new Map()
+            });
+        },
+
+        setNodeExecutionStatus: (nodeId: string, status: NodeExecutionStatus) => {
+            const newStatuses = new Map(get().nodeExecutionStatuses);
+            newStatuses.set(nodeId, status);
+            set({ nodeExecutionStatuses: newStatuses });
+        },
+
+        updateNodeExecutionStatuses: (statuses: Map<string, NodeExecutionStatus>, orders?: Map<string, number>) => {
+            set({
+                nodeExecutionStatuses: new Map(statuses),
+                nodeExecutionOrders: orders ? new Map(orders) : new Map()
+            });
+        },
+
+        clearNodeExecutionStatuses: () => {
+            set({
+                nodeExecutionStatuses: new Map(),
+                nodeExecutionOrders: new Map()
+            });
+        },
+
+        setCanvasOffset: (offset: { x: number; y: number }) => set({ canvasOffset: offset }),
+
+        setCanvasScale: (scale: number) => set({ canvasScale: scale }),
+
+        resetView: () => set({ canvasOffset: { x: 0, y: 0 }, canvasScale: 1 }),
+
+        triggerForceUpdate: () => set((state) => ({ forceUpdateCounter: state.forceUpdateCounter + 1 })),
+
+        sortChildrenByPosition: () => {
+            const state = get();
+            const nodes = state.getNodes();
+            const nodeMap = new Map<string, Node>();
+            nodes.forEach((node) => nodeMap.set(node.id, node));
+
+            const sortedNodes = nodes.map((node) => {
+                if (node.children.length <= 1) {
+                    return node;
+                }
+
+                const sortedChildren = Array.from(node.children).sort((a, b) => {
+                    const nodeA = nodeMap.get(a);
+                    const nodeB = nodeMap.get(b);
+                    if (!nodeA || !nodeB) return 0;
+                    return nodeA.position.x - nodeB.position.x;
+                });
+
+                return new Node(node.id, node.template, node.data, node.position, sortedChildren);
+            });
+
+            const newTree = new BehaviorTree(
+                sortedNodes,
+                state.getConnections(),
+                state.getBlackboard(),
+                state.getRootNodeId()
+            );
+
+            set({
+                tree: newTree,
+                cachedNodes: Array.from(newTree.nodes),
+                cachedConnections: Array.from(newTree.connections)
+            });
+        },
+
+        getNodes: () => {
+            return get().cachedNodes;
+        },
+
+        getNode: (nodeId: string) => {
+            try {
+                return get().tree.getNode(nodeId);
+            } catch {
+                return undefined;
+            }
+        },
+
+        hasNode: (nodeId: string) => {
+            return get().tree.hasNode(nodeId);
+        },
+
+        getConnections: () => {
+            return get().cachedConnections;
+        },
+
+        getBlackboard: () => {
+            return get().tree.blackboard;
+        },
+
+        getRootNodeId: () => {
+            return get().tree.rootNodeId;
         }
-    },
-
-    hasNode: (nodeId: string) => {
-        return get().tree.hasNode(nodeId);
-    },
-
-    getConnections: () => {
-        return get().cachedConnections;
-    },
-
-    getBlackboard: () => {
-        return get().tree.blackboard;
-    },
-
-    getRootNodeId: () => {
-        return get().tree.rootNodeId;
-    }
     };
 });
 

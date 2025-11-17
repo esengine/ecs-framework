@@ -1,12 +1,24 @@
 import { GlobalBlackboardConfig, BlackboardValueType, BlackboardVariable } from '@esengine/behavior-tree';
 
 /**
+ * 黑板变量值的具体类型
+ */
+export type BlackboardValue =
+    | string
+    | number
+    | boolean
+    | { x: number; y: number }
+    | { x: number; y: number; z: number }
+    | Record<string, string | number | boolean>
+    | Array<string | number | boolean>;
+
+/**
  * 全局黑板变量定义
  */
 export interface GlobalBlackboardVariable {
     key: string;
     type: BlackboardValueType;
-    defaultValue: any;
+    defaultValue: BlackboardValue;
     description?: string;
 }
 
@@ -111,10 +123,10 @@ export class GlobalBlackboardService {
     /**
      * 获取变量映射
      */
-    getVariablesMap(): Record<string, any> {
-        const map: Record<string, any> = {};
-        for (const [key, variable] of this.variables) {
-            map[key] = variable.defaultValue;
+    getVariablesMap(): Record<string, BlackboardValue> {
+        const map: Record<string, BlackboardValue> = {};
+        for (const [, variable] of this.variables) {
+            map[variable.key] = variable.defaultValue;
         }
         return map;
     }
@@ -163,7 +175,7 @@ export class GlobalBlackboardService {
                 this.variables.set(variable.name, {
                     key: variable.name,
                     type: variable.type,
-                    defaultValue: variable.value,
+                    defaultValue: variable.value as BlackboardValue,
                     description: variable.description
                 });
             }
@@ -206,7 +218,7 @@ export class GlobalBlackboardService {
     }
 
     private notifyChange(): void {
-        this.changeCallbacks.forEach(cb => {
+        this.changeCallbacks.forEach((cb) => {
             try {
                 cb();
             } catch (error) {

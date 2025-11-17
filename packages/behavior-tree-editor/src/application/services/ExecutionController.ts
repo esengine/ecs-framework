@@ -356,7 +356,7 @@ export class ExecutionController {
             }
         });
 
-        const nodeName = this.currentNodes.find(n => n.id === currentNode.nodeId)?.template.displayName || 'Unknown';
+        const nodeName = this.currentNodes.find((n) => n.id === currentNode.nodeId)?.template.displayName || 'Unknown';
         console.log(`[StepByStep] Displaying ${this.currentlyDisplayedIndex + 1}/${this.pendingStatusUpdates.length} | ${nodeName} | Order: ${currentNode.executionOrder} | ID: ${currentNode.nodeId}`);
         this.config.onExecutionStatusUpdate(statusMap, orderMap);
 
@@ -375,10 +375,10 @@ export class ExecutionController {
         }
 
         if (this.stepByStepMode) {
-            const statusesWithOrder = statuses.filter(s => s.executionOrder !== undefined);
+            const statusesWithOrder = statuses.filter((s) => s.executionOrder !== undefined);
 
             if (statusesWithOrder.length > 0) {
-                const minOrder = Math.min(...statusesWithOrder.map(s => s.executionOrder!));
+                const minOrder = Math.min(...statusesWithOrder.map((s) => s.executionOrder!));
 
                 if (minOrder === 1 || this.pendingStatusUpdates.length === 0) {
                     this.pendingStatusUpdates = statusesWithOrder.sort((a, b) =>
@@ -388,15 +388,15 @@ export class ExecutionController {
                     this.lastStepTime = 0;
                 } else {
                     const maxExistingOrder = this.pendingStatusUpdates.length > 0
-                        ? Math.max(...this.pendingStatusUpdates.map(s => s.executionOrder || 0))
+                        ? Math.max(...this.pendingStatusUpdates.map((s) => s.executionOrder || 0))
                         : 0;
 
-                    const newStatuses = statusesWithOrder.filter(s =>
+                    const newStatuses = statusesWithOrder.filter((s) =>
                         (s.executionOrder || 0) > maxExistingOrder
                     );
 
                     if (newStatuses.length > 0) {
-                        console.log(`[StepByStep] Appending ${newStatuses.length} new nodes, orders:`, newStatuses.map(s => s.executionOrder));
+                        console.log(`[StepByStep] Appending ${newStatuses.length} new nodes, orders:`, newStatuses.map((s) => s.executionOrder));
                         this.pendingStatusUpdates = [
                             ...this.pendingStatusUpdates,
                             ...newStatuses

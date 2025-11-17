@@ -341,7 +341,7 @@ export class PluginPublishService {
         const { pluginMetadata, version, releaseNotes, repositoryUrl, category, tags, homepage, screenshots, requirements } =
             publishInfo;
 
-        const repoMatch = repositoryUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+        const repoMatch = repositoryUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
         if (!repoMatch || !repoMatch[1] || !repoMatch[2]) {
             throw new Error('Invalid GitHub repository URL');
         }
