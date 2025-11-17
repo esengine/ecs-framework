@@ -4,45 +4,14 @@ import { ConnectionViewData } from '../../types';
 import { Node } from '../../domain/models/Node';
 import { Connection } from '../../domain/models/Connection';
 
-/**
- * 连线层属性
- */
 interface ConnectionLayerProps {
-    /**
-     * 所有连接
-     */
     connections: Connection[];
-
-    /**
-     * 所有节点（用于查找位置）
-     */
     nodes: Node[];
-
-    /**
-     * 选中的连接
-     */
     selectedConnection?: { from: string; to: string } | null;
-
-    /**
-     * 获取端口位置的函数
-     */
     getPortPosition: (nodeId: string, propertyName?: string, portType?: 'input' | 'output') => { x: number; y: number } | null;
-
-    /**
-     * 连线点击事件
-     */
     onConnectionClick?: (e: React.MouseEvent, fromId: string, toId: string) => void;
-
-    /**
-     * 连线右键事件
-     */
     onConnectionContextMenu?: (e: React.MouseEvent, fromId: string, toId: string) => void;
 }
-
-/**
- * 连线层
- * 管理所有连线的渲染
- */
 export const ConnectionLayer: React.FC<ConnectionLayerProps> = ({
     connections,
     nodes,
@@ -55,7 +24,6 @@ export const ConnectionLayer: React.FC<ConnectionLayerProps> = ({
         return new Map(nodes.map((node) => [node.id, node]));
     }, [nodes]);
 
-    // 分离基础数据和选中状态的计算，避免不必要的重新创建
     const connectionViewData = useMemo(() => {
         return connections
             .map((connection) => {
@@ -71,7 +39,6 @@ export const ConnectionLayer: React.FC<ConnectionLayerProps> = ({
             .filter((item): item is NonNullable<typeof item> => item !== null);
     }, [connections, nodeMap]);
 
-    // 只在渲染时计算选中状态，避免整个数组重建
     const isConnectionSelected = (connection: { from: string; to: string }) => {
         return selectedConnection?.from === connection.from &&
                selectedConnection?.to === connection.to;
@@ -88,7 +55,8 @@ export const ConnectionLayer: React.FC<ConnectionLayerProps> = ({
                 position: 'absolute',
                 inset: 0,
                 pointerEvents: 'none',
-                overflow: 'visible'
+                overflow: 'visible',
+                zIndex: 0
             }}
         >
             <g style={{ pointerEvents: 'auto' }}>

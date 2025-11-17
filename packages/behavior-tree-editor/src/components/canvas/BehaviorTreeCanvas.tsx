@@ -186,7 +186,7 @@ export const BehaviorTreeCanvas = forwardRef<HTMLDivElement, BehaviorTreeCanvasP
             onDragEnter={onDragEnter}
             onDragLeave={onDragLeave}
         >
-            {/* ComfyUI 风格的点阵网格背景 */}
+            {/* 网格背景 */}
             {config.showGrid && canvasSize.width > 0 && canvasSize.height > 0 && (
                 <GridBackground
                     canvasOffset={canvasOffset}

@@ -23,6 +23,7 @@ import { EditorToolbar } from './toolbar/EditorToolbar';
 import { QuickCreateMenu } from './menu/QuickCreateMenu';
 import { NodeContextMenu } from './menu/NodeContextMenu';
 import { BehaviorTreeNode as BehaviorTreeNodeComponent } from './nodes/BehaviorTreeNode';
+import { BlackboardPanel } from './blackboard/BlackboardPanel';
 import { getPortPosition as getPortPositionUtil } from '../utils/portUtils';
 import { useExecutionController } from '../hooks/useExecutionController';
 import { useNodeTracking } from '../hooks/useNodeTracking';
@@ -106,6 +107,23 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
     const canvasRef = useRef<HTMLDivElement>(null);
     const stopExecutionRef = useRef<(() => void) | null>(null);
+    const justFinishedBoxSelectRef = useRef(false);
+    const [blackboardCollapsed, setBlackboardCollapsed] = useState(false);
+
+    const updateVariable = useBehaviorTreeDataStore((state) => state.updateBlackboardVariable);
+
+    // 监听框选状态变化，当框选结束时设置标记
+    useEffect(() => {
+        if (!isBoxSelecting && justFinishedBoxSelectRef.current) {
+            // 框选刚结束，在下一个事件循环清除标记
+            setTimeout(() => {
+                justFinishedBoxSelectRef.current = false;
+            }, 0);
+        } else if (isBoxSelecting) {
+            // 正在框选
+            justFinishedBoxSelectRef.current = true;
+        }
+    }, [isBoxSelecting]);
 
     // Node factory
     const nodeFactory = useMemo(() => new NodeFactory(), []);
@@ -140,7 +158,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         handlePause,
         handleStop,
         handleStep,
-        handleSpeedChange
+        handleSpeedChange,
+        controller
     } = useExecutionController({
         rootNodeId: ROOT_NODE_ID,
         projectPath: projectPath || '',
@@ -152,7 +171,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         onInitialBlackboardSave: setInitialBlackboardVariables,
         onExecutingChange: setIsExecuting,
         onSaveNodesDataSnapshot: saveNodesDataSnapshot,
-        onRestoreNodesData: restoreNodesData
+        onRestoreNodesData: restoreNodesData,
+        sortChildrenByPosition
     });
 
     const executorRef = useRef(null);
@@ -192,10 +212,14 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
 
     // 添加缺少的处理函数
     const handleCanvasClick = (e: React.MouseEvent) => {
-        if (!isDraggingNode) {
+        // 如果正在框选或者刚刚结束框选，不要清空选择
+        // 因为 click 事件会在 mouseup 之后触发，会清空框选的结果
+        if (!isDraggingNode && !isBoxSelecting && !justFinishedBoxSelectRef.current) {
             setSelectedNodeIds([]);
             setSelectedConnection(null);
         }
+        // 关闭右键菜单
+        contextMenu.closeContextMenu();
     };
 
     const handleCanvasContextMenu = (e: React.MouseEvent) => {
@@ -218,6 +242,42 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             { x: e.clientX, y: e.clientY },
             'create'
         );
+    };
+
+    // 黑板变量管理
+    const handleBlackboardVariableAdd = (key: string, value: any) => {
+        const newVariables = { ...blackboardVariables, [key]: value };
+        setBlackboardVariables(newVariables);
+    };
+
+    const handleBlackboardVariableChange = (key: string, value: any) => {
+        const newVariables = { ...blackboardVariables, [key]: value };
+        setBlackboardVariables(newVariables);
+    };
+
+    const handleBlackboardVariableDelete = (key: string) => {
+        const newVariables = { ...blackboardVariables };
+        delete newVariables[key];
+        setBlackboardVariables(newVariables);
+    };
+
+    const handleResetBlackboardVariable = (name: string) => {
+        const initialValue = initialBlackboardVariables[name];
+        if (initialValue !== undefined) {
+            updateVariable(name, initialValue);
+        }
+    };
+
+    const handleResetAllBlackboardVariables = () => {
+        setBlackboardVariables(initialBlackboardVariables);
+    };
+
+    const handleBlackboardVariableRename = (oldKey: string, newKey: string) => {
+        if (oldKey === newKey) return;
+        const newVariables = { ...blackboardVariables };
+        newVariables[newKey] = newVariables[oldKey];
+        delete newVariables[oldKey];
+        setBlackboardVariables(newVariables);
     };
 
     // 节点拖拽
@@ -304,6 +364,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         canvasOffset,
         canvasScale,
         connectingFrom,
+        connectingFromProperty,
         connectingToPos,
         isBoxSelecting,
         boxSelectStart,
@@ -344,7 +405,8 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
             height: '100%',
             flex: 1,
             backgroundColor: '#1e1e1e',
-            position: 'relative'
+            display: 'flex',
+            flexDirection: 'column'
         }}>
             {showToolbar && (
                 <EditorToolbar
@@ -359,9 +421,22 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                     onUndo={undo}
                     onRedo={redo}
                     onResetView={handleResetView}
-                    onClearCanvas={handleClearCanvas}
                 />
             )}
+
+            {/* 主内容区：画布 + 黑板面板 */}
+            <div style={{
+                flex: 1,
+                display: 'flex',
+                overflow: 'hidden',
+                position: 'relative'
+            }}>
+                {/* 画布区域 */}
+                <div style={{
+                    flex: 1,
+                    position: 'relative',
+                    overflow: 'hidden'
+                }}>
 
             <BehaviorTreeCanvas
                 ref={canvasRef}
@@ -398,24 +473,53 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         width: '100%',
                         height: '100%',
                         pointerEvents: 'none',
-                        overflow: 'visible'
+                        overflow: 'visible',
+                        zIndex: 150
                     }}>
                         {(() => {
+                            // 获取正在连接的端口类型
+                            const fromPortType = canvasRef.current?.getAttribute('data-connecting-from-port-type') || '';
+
+                            // 根据端口类型判断是从输入还是输出端口开始
+                            let portType: 'input' | 'output' = 'output';
+                            if (fromPortType === 'node-input' || fromPortType === 'property-input') {
+                                portType = 'input';
+                            }
+
                             const fromPos = getPortPosition(
                                 connectingFrom,
                                 connectingFromProperty || undefined,
-                                connectingFromProperty ? 'output' : 'output'
+                                portType
                             );
                             if (!fromPos) return null;
 
                             const isPropertyConnection = !!connectingFromProperty;
+                            const x1 = fromPos.x;
+                            const y1 = fromPos.y;
+                            const x2 = connectingToPos.x;
+                            const y2 = connectingToPos.y;
+
+                            // 使用贝塞尔曲线渲染
+                            let pathD: string;
+                            if (isPropertyConnection) {
+                                // 属性连接使用水平贝塞尔曲线
+                                const controlX1 = x1 + (x2 - x1) * 0.5;
+                                const controlX2 = x1 + (x2 - x1) * 0.5;
+                                pathD = `M ${x1} ${y1} C ${controlX1} ${y1}, ${controlX2} ${y2}, ${x2} ${y2}`;
+                            } else {
+                                // 节点连接使用垂直贝塞尔曲线
+                                const controlY = y1 + (y2 - y1) * 0.5;
+                                pathD = `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`;
+                            }
+
                             return (
                                 <path
-                                    d={`M ${fromPos.x} ${fromPos.y} L ${connectingToPos.x} ${connectingToPos.y}`}
-                                    stroke={isPropertyConnection ? '#FFD700' : '#4a90e2'}
-                                    strokeWidth="2"
+                                    d={pathD}
+                                    stroke={isPropertyConnection ? '#ab47bc' : '#00bcd4'}
+                                    strokeWidth="2.5"
                                     fill="none"
                                     strokeDasharray={isPropertyConnection ? '5,5' : 'none'}
+                                    strokeLinecap="round"
                                 />
                             );
                         })()}
@@ -449,27 +553,37 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                         onPortMouseUp={handlePortMouseUp}
                     />
                 ))}
+            </BehaviorTreeCanvas>
 
-                {/* 框选区域 */}
-                {isBoxSelecting && boxSelectStart && boxSelectEnd && (
+            {/* 框选区域 - 在画布外层，这样才能显示在节点上方 */}
+            {isBoxSelecting && boxSelectStart && boxSelectEnd && canvasRef.current && (() => {
+                const rect = canvasRef.current.getBoundingClientRect();
+                const minX = Math.min(boxSelectStart.x, boxSelectEnd.x);
+                const minY = Math.min(boxSelectStart.y, boxSelectEnd.y);
+                const maxX = Math.max(boxSelectStart.x, boxSelectEnd.x);
+                const maxY = Math.max(boxSelectStart.y, boxSelectEnd.y);
+
+                return (
                     <div style={{
-                        position: 'absolute',
-                        left: Math.min(boxSelectStart.x, boxSelectEnd.x),
-                        top: Math.min(boxSelectStart.y, boxSelectEnd.y),
-                        width: Math.abs(boxSelectEnd.x - boxSelectStart.x),
-                        height: Math.abs(boxSelectEnd.y - boxSelectStart.y),
+                        position: 'fixed',
+                        left: rect.left + minX * canvasScale + canvasOffset.x,
+                        top: rect.top + minY * canvasScale + canvasOffset.y,
+                        width: (maxX - minX) * canvasScale,
+                        height: (maxY - minY) * canvasScale,
                         border: '1px dashed #4a90e2',
                         backgroundColor: 'rgba(74, 144, 226, 0.1)',
-                        pointerEvents: 'none'
+                        pointerEvents: 'none',
+                        zIndex: 9999
                     }} />
-                )}
-            </BehaviorTreeCanvas>
+                );
+            })()}
 
             {/* 右键菜单 */}
             <NodeContextMenu
                 visible={contextMenu.contextMenu.visible}
                 position={contextMenu.contextMenu.position}
                 nodeId={contextMenu.contextMenu.nodeId}
+                isBlackboardVariable={contextMenu.contextMenu.nodeId ? nodes.find(n => n.id === contextMenu.contextMenu.nodeId)?.data.nodeType === 'blackboard-variable' : false}
                 onReplaceNode={() => {
                     if (contextMenu.contextMenu.nodeId) {
                         quickCreateMenu.openQuickCreateMenu(
@@ -514,6 +628,40 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
                 }}
                 onClose={() => quickCreateMenu.setQuickCreateMenu(prev => ({ ...prev, visible: false }))}
             />
+
+                </div>
+
+                {/* 黑板面板（侧边栏） */}
+                <div style={{
+                    width: blackboardCollapsed ? '48px' : '300px',
+                    flexShrink: 0,
+                    transition: 'width 0.2s ease'
+                }}>
+                    <BlackboardPanel
+                        variables={blackboardVariables}
+                        initialVariables={initialBlackboardVariables}
+                        globalVariables={{}}
+                        onVariableAdd={handleBlackboardVariableAdd}
+                        onVariableChange={handleBlackboardVariableChange}
+                        onVariableDelete={handleBlackboardVariableDelete}
+                        onVariableRename={handleBlackboardVariableRename}
+                        onGlobalVariableChange={(key, value) => {
+                            // TODO: 集成全局黑板服务
+                            console.log('Global variable change:', key, value);
+                        }}
+                        onGlobalVariableAdd={(key, value) => {
+                            // TODO: 集成全局黑板服务
+                            console.log('Global variable add:', key, value);
+                        }}
+                        onGlobalVariableDelete={(key) => {
+                            // TODO: 集成全局黑板服务
+                            console.log('Global variable delete:', key);
+                        }}
+                        isCollapsed={blackboardCollapsed}
+                        onToggleCollapse={() => setBlackboardCollapsed(!blackboardCollapsed)}
+                    />
+                </div>
+            </div>
         </div>
     );
 };

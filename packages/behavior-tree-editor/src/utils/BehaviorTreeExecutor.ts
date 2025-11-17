@@ -9,6 +9,8 @@ import {
     NodeType
 } from '@esengine/behavior-tree';
 import type { BehaviorTreeNode } from '../stores';
+import { useExecutionStatsStore } from '../stores/ExecutionStatsStore';
+import type { Breakpoint } from '../components/debugging/DebugControlPanel';
 
 const logger = createLogger('BehaviorTreeExecutor');
 
@@ -32,6 +34,8 @@ export type ExecutionCallback = (
     blackboardVariables?: Record<string, any>
 ) => void;
 
+export type BreakpointCallback = (nodeId: string, nodeName: string) => void;
+
 /**
  * 行为树执行器
  *
@@ -44,6 +48,7 @@ export class BehaviorTreeExecutor {
     private runtime: BehaviorTreeRuntimeComponent | null = null;
     private treeData: BehaviorTreeData | null = null;
     private callback: ExecutionCallback | null = null;
+    private onBreakpointHit: BreakpointCallback | null = null;
     private isRunning = false;
     private isPaused = false;
     private executionLogs: ExecutionLog[] = [];
@@ -54,6 +59,7 @@ export class BehaviorTreeExecutor {
     private nodeIdMap: Map<string, string> = new Map();
     private blackboardKeys: string[] = [];
     private rootNodeId: string = '';
+    private breakpoints: Map<string, Breakpoint> = new Map();
 
     private assetManager: BehaviorTreeAssetManager;
     private executionSystem: BehaviorTreeExecutionSystem;
@@ -135,16 +141,25 @@ export class BehaviorTreeExecutor {
             skipRootNode = true;
 
             if (rootNode.children.length === 0) {
-                throw new Error(
-                    '行为树为空！请在编辑器中添加节点并连接到根节点'
-                );
+                // 树为空时，记录警告但不抛出错误
+                this.addLog('行为树为空！请在编辑器中添加节点并连接到根节点', 'warning');
+                // 返回一个空的有效树数据，避免崩溃
+                return {
+                    id: `tree_${Date.now()}`,
+                    name: 'EmptyTree',
+                    rootNodeId: rootNodeId,
+                    nodes: new Map(),
+                    blackboardVariables: new Map()
+                };
             }
 
             if (rootNode.children.length === 1) {
                 actualRootId = rootNode.children[0]!;
             } else {
-                // 如果有多个子节点，创建一个隐式的Sequence节点
-                throw new Error('根节点有多个子节点，请使用组合节点（如序列、选择）作为第一个子节点');
+                // 如果有多个子节点，记录警告
+                this.addLog('根节点有多个子节点，请使用组合节点（如序列、选择）作为第一个子节点', 'warning');
+                // 使用第一个子节点作为根节点
+                actualRootId = rootNode.children[0]!;
             }
         }
 
@@ -275,6 +290,9 @@ export class BehaviorTreeExecutor {
         this.runtime.resetAllStates();
         this.runtime.isRunning = true;
 
+        // 开始新的执行路径
+        useExecutionStatsStore.getState().startNewPath();
+
         this.addLog('开始执行行为树', 'info');
     }
 
@@ -283,6 +301,7 @@ export class BehaviorTreeExecutor {
      */
     pause(): void {
         this.isPaused = true;
+        this.isRunning = false;
         if (this.runtime) {
             this.runtime.isRunning = false;
         }
@@ -293,6 +312,7 @@ export class BehaviorTreeExecutor {
      */
     resume(): void {
         this.isPaused = false;
+        this.isRunning = true;
         if (this.runtime) {
             this.runtime.isRunning = true;
         }
@@ -309,6 +329,9 @@ export class BehaviorTreeExecutor {
             this.runtime.isRunning = false;
             this.runtime.resetAllStates();
         }
+
+        // 结束当前执行路径
+        useExecutionStatsStore.getState().endCurrentPath();
 
         this.addLog('行为树已停止', 'info');
     }
@@ -419,6 +442,36 @@ export class BehaviorTreeExecutor {
                 console.log(`[ExecutionOrder READ] ${nodeData.name} | ID: ${nodeId} | Order: ${state.executionOrder}`);
             }
 
+            // 集成执行统计记录
+            if (hasStateChanged) {
+                // 从 idle/success/failure 到 running：记录节点开始
+                if (currentStatus === 'running' && lastStatus !== 'running') {
+                    const executionOrder = state?.executionOrder ?? 0;
+                    useExecutionStatsStore.getState().recordNodeStart(nodeId, executionOrder);
+
+                    // 检查断点
+                    console.log(`[Breakpoint Debug] Node ${nodeData.name} (${nodeId}) started running`);
+                    console.log(`[Breakpoint Debug] Breakpoints count:`, this.breakpoints.size);
+                    console.log(`[Breakpoint Debug] Has breakpoint:`, this.breakpoints.has(nodeId));
+
+                    const breakpoint = this.breakpoints.get(nodeId);
+                    if (breakpoint) {
+                        console.log(`[Breakpoint Debug] Breakpoint found, enabled:`, breakpoint.enabled);
+                        if (breakpoint.enabled) {
+                            this.addLog(`断点触发: ${nodeData.name}`, 'warning', nodeId);
+                            console.log(`[Breakpoint Debug] Calling onBreakpointHit callback:`, !!this.onBreakpointHit);
+                            if (this.onBreakpointHit) {
+                                this.onBreakpointHit(nodeId, nodeData.name);
+                            }
+                        }
+                    }
+                }
+                // 从 running 到 success/failure：记录节点结束
+                else if (lastStatus === 'running' && (currentStatus === 'success' || currentStatus === 'failure')) {
+                    useExecutionStatsStore.getState().recordNodeEnd(nodeId, currentStatus);
+                }
+            }
+
             // 记录状态变化日志
             if (hasStateChanged && currentStatus !== 'idle') {
                 this.onNodeStatusChanged(nodeId, nodeData.name, lastStatus || 'idle', currentStatus);
@@ -504,6 +557,20 @@ export class BehaviorTreeExecutor {
 
         this.runtime.setBlackboardValue(key, value);
         logger.info(`黑板变量已更新: ${key} = ${JSON.stringify(value)}`);
+    }
+
+    /**
+     * 设置断点
+     */
+    setBreakpoints(breakpoints: Map<string, Breakpoint>): void {
+        this.breakpoints = breakpoints;
+    }
+
+    /**
+     * 设置断点触发回调
+     */
+    setBreakpointCallback(callback: BreakpointCallback | null): void {
+        this.onBreakpointHit = callback;
     }
 
     /**

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { ExecutionController, ExecutionMode } from '../application/services/ExecutionController';
 import { BlackboardManager } from '../application/services/BlackboardManager';
 import { BehaviorTreeNode, Connection, useBehaviorTreeDataStore } from '../stores';
@@ -19,6 +19,7 @@ interface UseExecutionControllerParams {
     onExecutingChange: (isExecuting: boolean) => void;
     onSaveNodesDataSnapshot: () => void;
     onRestoreNodesData: () => void;
+    sortChildrenByPosition: () => void;
 }
 
 export function useExecutionController(params: UseExecutionControllerParams) {
@@ -32,7 +33,8 @@ export function useExecutionController(params: UseExecutionControllerParams) {
         onInitialBlackboardSave,
         onExecutingChange,
         onSaveNodesDataSnapshot,
-        onRestoreNodesData
+        onRestoreNodesData,
+        sortChildrenByPosition
     } = params;
 
     const [executionMode, setExecutionMode] = useState<ExecutionMode>('idle');
@@ -51,6 +53,7 @@ export function useExecutionController(params: UseExecutionControllerParams) {
                 const store = useBehaviorTreeDataStore.getState();
                 store.updateNodeExecutionStatuses(statuses, orders);
             }
+            // 不在这里传递 onBreakpointHit，避免频繁重建
         });
     }, [rootNodeId, projectPath, onBlackboardUpdate]);
 
@@ -88,6 +91,9 @@ export function useExecutionController(params: UseExecutionControllerParams) {
 
     const handlePlay = async () => {
         try {
+            sortChildrenByPosition();
+            console.log('[Execute] Sorted children by position before execution');
+
             blackboardManager.setInitialVariables(blackboardVariables);
             blackboardManager.setCurrentVariables(blackboardVariables);
             onInitialBlackboardSave(blackboardManager.getInitialVariables());

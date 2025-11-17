@@ -5,6 +5,7 @@ import { BlackboardValue } from '../../domain/models/Blackboard';
 import { DOMCache } from '../../presentation/utils/DOMCache';
 import { EditorEventBus, EditorEvent } from '../../infrastructure/events/EditorEventBus';
 import { ExecutionHooksManager } from '../interfaces/IExecutionHooks';
+import type { Breakpoint } from '../../components/debugging/DebugControlPanel';
 
 export type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
 type BlackboardVariables = Record<string, BlackboardValue>;
@@ -16,6 +17,7 @@ interface ExecutionControllerConfig {
     onBlackboardUpdate: (variables: BlackboardVariables) => void;
     onTickCountUpdate: (count: number) => void;
     onExecutionStatusUpdate: (statuses: Map<string, NodeExecutionStatus>, orders: Map<string, number>) => void;
+    onBreakpointHit?: (nodeId: string, nodeName: string) => void;
     eventBus?: EditorEventBus;
     hooksManager?: ExecutionHooksManager;
 }
@@ -42,6 +44,9 @@ export class ExecutionController {
     private currentlyDisplayedIndex: number = 0;
     private lastStepTime: number = 0;
     private stepInterval: number = 200;
+
+    // 存储断点回调的引用
+    private breakpointCallback: ((nodeId: string, nodeName: string) => void) | null = null;
 
     constructor(config: ExecutionControllerConfig) {
         this.config = config;
@@ -104,6 +109,11 @@ export class ExecutionController {
                 connections,
                 this.handleExecutionStatusUpdate.bind(this)
             );
+
+            // 设置断点触发回调（使用存储的回调）
+            if (this.breakpointCallback) {
+                this.executor.setBreakpointCallback(this.breakpointCallback);
+            }
 
             this.executor.start();
             this.animationFrameId = requestAnimationFrame(this.tickLoop.bind(this));
@@ -230,6 +240,11 @@ export class ExecutionController {
             this.currentConnections,
             this.handleExecutionStatusUpdate.bind(this)
         );
+
+        // 设置断点触发回调（使用存储的回调）
+        if (this.breakpointCallback) {
+            this.executor.setBreakpointCallback(this.breakpointCallback);
+        }
 
         this.executor.start();
     }
@@ -453,6 +468,23 @@ export class ExecutionController {
                 if (toStatus) currentStatuses[conn.to] = toStatus;
             });
             this.updateConnectionStyles(currentStatuses, connections);
+        }
+    }
+
+    setBreakpoints(breakpoints: Map<string, Breakpoint>): void {
+        if (this.executor) {
+            this.executor.setBreakpoints(breakpoints);
+        }
+    }
+
+    /**
+     * 设置断点触发回调
+     */
+    setBreakpointCallback(callback: (nodeId: string, nodeName: string) => void): void {
+        this.breakpointCallback = callback;
+        // 如果 executor 已存在，立即设置
+        if (this.executor) {
+            this.executor.setBreakpointCallback(callback);
         }
     }
 }

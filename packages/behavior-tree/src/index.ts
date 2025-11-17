@@ -21,6 +21,7 @@ export * from './Serialization/NodeTemplates';
 export * from './Serialization/BehaviorTreeAsset';
 export * from './Serialization/EditorFormatConverter';
 export * from './Serialization/BehaviorTreeAssetSerializer';
+export * from './Serialization/EditorToBehaviorTreeDataConverter';
 
 // 服务
 export * from './Services/GlobalBlackboardService';

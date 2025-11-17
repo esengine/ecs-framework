@@ -5,6 +5,7 @@ interface NodeContextMenuProps {
     visible: boolean;
     position: { x: number; y: number };
     nodeId: string | null;
+    isBlackboardVariable?: boolean;
     onReplaceNode?: () => void;
     onDeleteNode?: () => void;
     onCreateNode?: () => void;
@@ -14,6 +15,7 @@ export const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
     visible,
     position,
     nodeId,
+    isBlackboardVariable = false,
     onReplaceNode,
     onDeleteNode,
     onCreateNode

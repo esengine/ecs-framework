@@ -1,5 +1,5 @@
 import { RefObject } from 'react';
-import { BehaviorTreeNode, Connection, ROOT_NODE_ID } from '../stores';
+import { BehaviorTreeNode, Connection, ROOT_NODE_ID, useUIStore } from '../stores';
 import { PropertyDefinition } from '@esengine/behavior-tree';
 import { useConnectionOperations } from './useConnectionOperations';
 
@@ -24,8 +24,6 @@ export function usePortConnection(params: UsePortConnectionParams) {
         canvasRef,
         nodes,
         connections,
-        connectingFrom,
-        connectingFromProperty,
         connectionOperations,
         setConnectingFrom,
         setConnectingFromProperty,
@@ -49,12 +47,17 @@ export function usePortConnection(params: UsePortConnectionParams) {
 
     const handlePortMouseUp = (e: React.MouseEvent, nodeId: string, propertyName?: string) => {
         e.stopPropagation();
-        if (!connectingFrom) {
+
+        // 从 store 读取最新状态避免闭包陷阱
+        const currentConnectingFrom = useUIStore.getState().connectingFrom;
+        const currentConnectingFromProperty = useUIStore.getState().connectingFromProperty;
+
+        if (!currentConnectingFrom) {
             clearConnecting();
             return;
         }
 
-        if (connectingFrom === nodeId) {
+        if (currentConnectingFrom === nodeId) {
             showToast?.('不能将节点连接到自己', 'warning');
             clearConnecting();
             return;
@@ -64,9 +67,9 @@ export function usePortConnection(params: UsePortConnectionParams) {
         const toPortType = target.getAttribute('data-port-type');
         const fromPortType = canvasRef.current?.getAttribute('data-connecting-from-port-type');
 
-        let actualFrom = connectingFrom;
+        let actualFrom = currentConnectingFrom;
         let actualTo = nodeId;
-        let actualFromProperty = connectingFromProperty;
+        let actualFromProperty = currentConnectingFromProperty;
         let actualToProperty = propertyName;
 
         const needReverse =
@@ -75,9 +78,9 @@ export function usePortConnection(params: UsePortConnectionParams) {
 
         if (needReverse) {
             actualFrom = nodeId;
-            actualTo = connectingFrom;
+            actualTo = currentConnectingFrom;
             actualFromProperty = propertyName || null;
-            actualToProperty = connectingFromProperty ?? undefined;
+            actualToProperty = currentConnectingFromProperty ?? undefined;
         }
 
         if (actualFromProperty || actualToProperty) {
@@ -169,7 +172,8 @@ export function usePortConnection(params: UsePortConnectionParams) {
     };
 
     const handleNodeMouseUpForConnection = (e: React.MouseEvent, nodeId: string) => {
-        if (connectingFrom && connectingFrom !== nodeId) {
+        const currentConnectingFrom = useUIStore.getState().connectingFrom;
+        if (currentConnectingFrom && currentConnectingFrom !== nodeId) {
             handlePortMouseUp(e, nodeId);
         }
     };

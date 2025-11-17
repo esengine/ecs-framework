@@ -70,7 +70,8 @@ export function useNodeDrag(params: UseNodeDragParams) {
         if (nodeId === ROOT_NODE_ID) return;
 
         const target = e.target as HTMLElement;
-        if (target.getAttribute('data-port')) {
+        const isPort = target.closest('[data-port="true"]');
+        if (isPort) {
             return;
         }
 

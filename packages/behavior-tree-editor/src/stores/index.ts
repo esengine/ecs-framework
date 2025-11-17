@@ -9,6 +9,10 @@ export type { NodeExecutionStatus } from '../application/state/BehaviorTreeDataS
 // UI Store
 export { useUIStore } from './useUIStore';
 
+// 执行统计 Store
+export { useExecutionStatsStore } from './ExecutionStatsStore';
+export type { NodeExecutionStats, ExecutionHistoryEntry, ExecutionPath } from './ExecutionStatsStore';
+
 // 常量
 export { ROOT_NODE_ID } from '../domain/constants/RootNode';
 
