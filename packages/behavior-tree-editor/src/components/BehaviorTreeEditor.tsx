@@ -7,8 +7,8 @@ import { showToast as notificationShowToast } from '../services/NotificationServ
 import { BlackboardValue } from '../domain/models/Blackboard';
 import { BehaviorTreeCanvas } from './canvas/BehaviorTreeCanvas';
 import { ConnectionLayer } from './connections/ConnectionLayer';
-import { NodeFactory } from '../factories/NodeFactory';
-import { BehaviorTreeValidator } from '../validation/BehaviorTreeValidator';
+import { NodeFactory } from '../infrastructure/factories/NodeFactory';
+import { TreeValidator } from '../domain/services/TreeValidator';
 import { useNodeOperations } from '../hooks/useNodeOperations';
 import { useConnectionOperations } from '../hooks/useConnectionOperations';
 import { useCommandHistory } from '../hooks/useCommandHistory';
@@ -129,7 +129,7 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     const nodeFactory = useMemo(() => new NodeFactory(), []);
 
     // 验证器
-    const validator = useMemo(() => new BehaviorTreeValidator(), []);
+    const validator = useMemo(() => new TreeValidator(), []);
 
     // 命令历史
     const { commandManager, canUndo, canRedo, undo, redo } = useCommandHistory();
@@ -137,7 +137,6 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
     // 节点操作
     const nodeOperations = useNodeOperations(
         nodeFactory,
-        validator,
         commandManager
     );
 

@@ -2,10 +2,10 @@ import { BehaviorTreeExecutor, ExecutionStatus, ExecutionLog } from '../../utils
 import { BehaviorTreeNode, Connection } from '../../stores';
 import type { NodeExecutionStatus } from '../../stores';
 import { BlackboardValue } from '../../domain/models/Blackboard';
-import { DOMCache } from '../../presentation/utils/DOMCache';
+import { DOMCache } from '../../utils/DOMCache';
 import { EditorEventBus, EditorEvent } from '../../infrastructure/events/EditorEventBus';
 import { ExecutionHooksManager } from '../interfaces/IExecutionHooks';
-import type { Breakpoint } from '../../components/debugging/DebugControlPanel';
+import type { Breakpoint } from '../../types/Breakpoint';
 
 export type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
 type BlackboardVariables = Record<string, BlackboardValue>;

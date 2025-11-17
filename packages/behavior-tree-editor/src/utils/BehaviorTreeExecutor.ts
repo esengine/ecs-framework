@@ -10,7 +10,7 @@ import {
 } from '@esengine/behavior-tree';
 import type { BehaviorTreeNode } from '../stores';
 import { useExecutionStatsStore } from '../stores/ExecutionStatsStore';
-import type { Breakpoint } from '../components/debugging/DebugControlPanel';
+import type { Breakpoint } from '../types/Breakpoint';
 
 const logger = createLogger('BehaviorTreeExecutor');
 

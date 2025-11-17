@@ -291,7 +291,7 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
             items.push({ label: '', separator: true, onClick: () => {} });
         }
 
-        if (asset.type === 'directory' && fileActionRegistry) {
+        if (asset.type === 'folder' && fileActionRegistry) {
             const templates = fileActionRegistry.getCreationTemplates();
             if (templates.length > 0) {
                 items.push({ label: '', separator: true, onClick: () => {} });
@@ -302,8 +302,10 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                         onClick: async () => {
                             const fileName = `${template.defaultFileName}.${template.extension}`;
                             const filePath = `${asset.path}/${fileName}`;
-                            if (template.onCreate) {
-                                await template.onCreate(filePath);
+                            const content = await template.createContent(fileName);
+                            await TauriAPI.writeFileContent(filePath, content);
+                            if (currentPath) {
+                                await loadAssets(currentPath);
                             }
                         }
                     });

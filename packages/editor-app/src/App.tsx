@@ -856,9 +856,6 @@ function App() {
                 <PluginManagerWindow
                     pluginManager={pluginManager}
                     githubService={githubService}
-                    pluginsDir={currentProjectPath ? `${currentProjectPath}/plugins` : 'plugins'}
-                    notification={notification}
-                    dialog={dialog}
                     onClose={() => setShowPluginManager(false)}
                     locale={locale}
                     projectPath={currentProjectPath}

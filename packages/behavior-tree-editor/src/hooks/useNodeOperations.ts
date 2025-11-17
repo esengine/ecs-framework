@@ -3,7 +3,6 @@ import { NodeTemplate } from '@esengine/behavior-tree';
 import { CommandManager } from '@esengine/editor-core';
 import { Position } from '../domain/value-objects/Position';
 import { INodeFactory } from '../domain/interfaces/INodeFactory';
-import { IValidator } from '../domain/interfaces/IValidator';
 import { TreeStateAdapter } from '../application/state/BehaviorTreeDataStore';
 import { CreateNodeUseCase } from '../application/use-cases/CreateNodeUseCase';
 import { DeleteNodeUseCase } from '../application/use-cases/DeleteNodeUseCase';
@@ -15,7 +14,6 @@ import { UpdateNodeDataUseCase } from '../application/use-cases/UpdateNodeDataUs
  */
 export function useNodeOperations(
     nodeFactory: INodeFactory,
-    validator: IValidator,
     commandManager: CommandManager
 ) {
     const treeState = useMemo(() => TreeStateAdapter.getInstance(), []);
