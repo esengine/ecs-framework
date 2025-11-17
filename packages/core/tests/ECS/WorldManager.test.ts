@@ -109,12 +109,22 @@ describe('WorldManager', () => {
             expect(world.name).toBe('configured-world');
         });
 
+        test('空的World name应该抛出错误', () => {
+            expect(() => {
+                worldManager.createWorld('');
+            }).toThrow('World name不能为空');
+
+            expect(() => {
+                worldManager.createWorld('   ');
+            }).toThrow('World name不能为空');
+        });
+
         test('重复的World ID应该抛出错误', () => {
             worldManager.createWorld('duplicate-world');
 
             expect(() => {
                 worldManager.createWorld('duplicate-world');
-            }).toThrow("World ID 'duplicate-world' 已存在");
+            }).toThrow("World name 'duplicate-world' 已存在");
         });
 
         test('超出最大World数量应该抛出错误', () => {
