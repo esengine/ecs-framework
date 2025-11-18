@@ -439,7 +439,7 @@ export class BehaviorTreeExecutor {
             // 从运行时状态读取执行顺序
             if (state?.executionOrder !== undefined && !this.executionOrders.has(nodeId)) {
                 this.executionOrders.set(nodeId, state.executionOrder);
-                console.log(`[ExecutionOrder READ] ${nodeData.name} | ID: ${nodeId} | Order: ${state.executionOrder}`);
+                logger.info(`[ExecutionOrder READ] ${nodeData.name} | ID: ${nodeId} | Order: ${state.executionOrder}`);
             }
 
             // 集成执行统计记录
@@ -450,16 +450,16 @@ export class BehaviorTreeExecutor {
                     useExecutionStatsStore.getState().recordNodeStart(nodeId, executionOrder);
 
                     // 检查断点
-                    console.log(`[Breakpoint Debug] Node ${nodeData.name} (${nodeId}) started running`);
-                    console.log(`[Breakpoint Debug] Breakpoints count:`, this.breakpoints.size);
-                    console.log(`[Breakpoint Debug] Has breakpoint:`, this.breakpoints.has(nodeId));
+                    logger.info(`[Breakpoint Debug] Node ${nodeData.name} (${nodeId}) started running`);
+                    logger.info(`[Breakpoint Debug] Breakpoints count:`, this.breakpoints.size);
+                    logger.info(`[Breakpoint Debug] Has breakpoint:`, this.breakpoints.has(nodeId));
 
                     const breakpoint = this.breakpoints.get(nodeId);
                     if (breakpoint) {
-                        console.log(`[Breakpoint Debug] Breakpoint found, enabled:`, breakpoint.enabled);
+                        logger.info(`[Breakpoint Debug] Breakpoint found, enabled:`, breakpoint.enabled);
                         if (breakpoint.enabled) {
                             this.addLog(`断点触发: ${nodeData.name}`, 'warning', nodeId);
-                            console.log(`[Breakpoint Debug] Calling onBreakpointHit callback:`, !!this.onBreakpointHit);
+                            logger.info(`[Breakpoint Debug] Calling onBreakpointHit callback:`, !!this.onBreakpointHit);
                             if (this.onBreakpointHit) {
                                 this.onBreakpointHit(nodeId, nodeData.name);
                             }

@@ -1,4 +1,7 @@
 import { GlobalBlackboardConfig, BlackboardValueType, BlackboardVariable } from '@esengine/behavior-tree';
+import { createLogger } from '@esengine/ecs-framework';
+
+const logger = createLogger('GlobalBlackboardService');
 
 export type GlobalBlackboardValue =
     | string
@@ -190,7 +193,7 @@ export class GlobalBlackboardService {
             const config = JSON.parse(json) as GlobalBlackboardConfig;
             this.fromConfig(config);
         } catch (error) {
-            console.error('Failed to parse global blackboard JSON:', error);
+            logger.error('Failed to parse global blackboard JSON:', error);
             throw new Error('无效的全局黑板配置格式');
         }
     }
@@ -213,7 +216,7 @@ export class GlobalBlackboardService {
             try {
                 cb();
             } catch (error) {
-                console.error('Error in global blackboard change callback:', error);
+                logger.error('Error in global blackboard change callback:', error);
             }
         });
     }

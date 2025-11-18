@@ -1,5 +1,7 @@
-import { Core } from '@esengine/ecs-framework';
+import { Core, createLogger } from '@esengine/ecs-framework';
 import { MessageHub } from '@esengine/editor-core';
+
+const logger = createLogger('NotificationService');
 
 export class NotificationService {
     private static instance: NotificationService;
@@ -10,7 +12,7 @@ export class NotificationService {
         try {
             this.messageHub = Core.services.resolve(MessageHub);
         } catch (error) {
-            console.warn('[NotificationService] MessageHub not available, toast notifications will be disabled');
+            logger.warn('MessageHub not available, toast notifications will be disabled');
         }
     }
 
@@ -23,7 +25,7 @@ export class NotificationService {
 
     public showToast(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info'): void {
         if (!this.messageHub) {
-            console.log(`[Toast ${type}] ${message}`);
+            logger.info(`[Toast ${type}] ${message}`);
             return;
         }
 

@@ -19,6 +19,9 @@ import { createElement } from 'react';
 import { GitBranch } from 'lucide-react';
 import { createRootNode } from './domain/constants/RootNode';
 import type { IService, ServiceType } from '@esengine/ecs-framework';
+import { createLogger } from '@esengine/ecs-framework';
+
+const logger = createLogger('BehaviorTreePlugin');
 
 export class BehaviorTreePlugin implements IEditorPlugin {
     readonly name = '@esengine/behavior-tree-editor';
@@ -88,9 +91,9 @@ export class BehaviorTreePlugin implements IEditorPlugin {
             const compilerRegistry = services.resolve(CompilerRegistry);
             const compiler = new BehaviorTreeCompiler();
             compilerRegistry.register(compiler);
-            console.log('[BehaviorTreePlugin] Successfully registered BehaviorTreeCompiler');
+            logger.info('Successfully registered BehaviorTreeCompiler');
         } catch (error) {
-            console.error('[BehaviorTreePlugin] Failed to register compiler:', error);
+            logger.error('Failed to register compiler:', error);
         }
     }
 

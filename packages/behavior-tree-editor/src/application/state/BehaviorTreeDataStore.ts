@@ -7,6 +7,7 @@ import { Blackboard, BlackboardValue } from '../../domain/models/Blackboard';
 import { ITreeState } from '../commands/ITreeState';
 import { createRootNode, createRootNodeTemplate, ROOT_NODE_ID } from '../../domain/constants/RootNode';
 import { Position } from '../../domain/value-objects/Position';
+import { DEFAULT_EDITOR_CONFIG } from '../../config/editorConstants';
 
 const createInitialTree = (): BehaviorTree => {
     const rootNode = createRootNode();
@@ -273,7 +274,10 @@ export const useBehaviorTreeDataStore = create<BehaviorTreeDataState>((set, get)
             const loadedNodes: Node[] = (data.nodes || []).map((nodeObj) => {
                 // 根节点也需要保留文件中的 children 数据
                 if (nodeObj.id === ROOT_NODE_ID) {
-                    const position = new Position(nodeObj.position.x || 400, nodeObj.position.y || 100);
+                    const position = new Position(
+                        nodeObj.position.x || DEFAULT_EDITOR_CONFIG.defaultRootNodePosition.x,
+                        nodeObj.position.y || DEFAULT_EDITOR_CONFIG.defaultRootNodePosition.y
+                    );
                     return new Node(
                         ROOT_NODE_ID,
                         createRootNodeTemplate(),

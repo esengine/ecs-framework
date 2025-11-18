@@ -1,5 +1,8 @@
 import { RefObject } from 'react';
 import { Node as BehaviorTreeNode } from '../domain/models/Node';
+import { createLogger } from '@esengine/ecs-framework';
+
+const logger = createLogger('portUtils');
 
 /**
  * 获取端口在画布世界坐标系中的位置
@@ -37,7 +40,7 @@ export function getPortPosition(
 
     const portElement = canvas.querySelector(portSelector) as HTMLElement;
     if (!portElement) {
-        console.warn(`Port not found: ${portSelector}`);
+        logger.warn(`Port not found: ${portSelector}`);
         return null;
     }
 

@@ -4,6 +4,9 @@ import { BlackboardManager } from '../application/services/BlackboardManager';
 import { BehaviorTreeNode, Connection, useBehaviorTreeDataStore } from '../stores';
 import { ExecutionLog } from '../utils/BehaviorTreeExecutor';
 import { BlackboardValue } from '../domain/models/Blackboard';
+import { createLogger } from '@esengine/ecs-framework';
+
+const logger = createLogger('useExecutionController');
 
 type BlackboardVariables = Record<string, BlackboardValue>;
 
@@ -92,7 +95,7 @@ export function useExecutionController(params: UseExecutionControllerParams) {
     const handlePlay = async () => {
         try {
             sortChildrenByPosition();
-            console.log('[Execute] Sorted children by position before execution');
+            logger.info('[Execute] Sorted children by position before execution');
 
             blackboardManager.setInitialVariables(blackboardVariables);
             blackboardManager.setCurrentVariables(blackboardVariables);
@@ -103,7 +106,7 @@ export function useExecutionController(params: UseExecutionControllerParams) {
             setExecutionMode('running');
             await controller.play(nodes, blackboardVariables, connections);
         } catch (error) {
-            console.error('Failed to start execution:', error);
+            logger.error('Failed to start execution:', error);
             setExecutionMode('idle');
             onExecutingChange(false);
         }
@@ -115,7 +118,7 @@ export function useExecutionController(params: UseExecutionControllerParams) {
             const newMode = controller.getMode();
             setExecutionMode(newMode);
         } catch (error) {
-            console.error('Failed to pause/resume execution:', error);
+            logger.error('Failed to pause/resume execution:', error);
         }
     };
 
@@ -131,7 +134,7 @@ export function useExecutionController(params: UseExecutionControllerParams) {
             useBehaviorTreeDataStore.getState().clearNodeExecutionStatuses();
             onExecutingChange(false);
         } catch (error) {
-            console.error('Failed to stop execution:', error);
+            logger.error('Failed to stop execution:', error);
         }
     };
 
@@ -146,7 +149,7 @@ export function useExecutionController(params: UseExecutionControllerParams) {
             setExecutionMode('idle');
             setTickCount(0);
         } catch (error) {
-            console.error('Failed to reset execution:', error);
+            logger.error('Failed to reset execution:', error);
         }
     };
 

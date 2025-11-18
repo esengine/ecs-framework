@@ -2,6 +2,9 @@ import { Node as BehaviorTreeNode } from '../../domain/models/Node';
 import { Connection } from '../../domain/models/Connection';
 import { ExecutionLog } from '../../utils/BehaviorTreeExecutor';
 import { BlackboardValue } from '../../domain/models/Blackboard';
+import { createLogger } from '@esengine/ecs-framework';
+
+const logger = createLogger('ExecutionHooks');
 
 type BlackboardVariables = Record<string, BlackboardValue>;
 type NodeExecutionStatus = 'idle' | 'running' | 'success' | 'failure';
@@ -74,7 +77,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.beforePlay(context);
                 } catch (error) {
-                    console.error('Error in beforePlay hook:', error);
+                    logger.error('Error in beforePlay hook:', error);
                 }
             }
         }
@@ -86,7 +89,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.afterPlay(context);
                 } catch (error) {
-                    console.error('Error in afterPlay hook:', error);
+                    logger.error('Error in afterPlay hook:', error);
                 }
             }
         }
@@ -98,7 +101,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.beforePause();
                 } catch (error) {
-                    console.error('Error in beforePause hook:', error);
+                    logger.error('Error in beforePause hook:', error);
                 }
             }
         }
@@ -110,7 +113,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.afterPause();
                 } catch (error) {
-                    console.error('Error in afterPause hook:', error);
+                    logger.error('Error in afterPause hook:', error);
                 }
             }
         }
@@ -122,7 +125,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.beforeResume();
                 } catch (error) {
-                    console.error('Error in beforeResume hook:', error);
+                    logger.error('Error in beforeResume hook:', error);
                 }
             }
         }
@@ -134,7 +137,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.afterResume();
                 } catch (error) {
-                    console.error('Error in afterResume hook:', error);
+                    logger.error('Error in afterResume hook:', error);
                 }
             }
         }
@@ -146,7 +149,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.beforeStop();
                 } catch (error) {
-                    console.error('Error in beforeStop hook:', error);
+                    logger.error('Error in beforeStop hook:', error);
                 }
             }
         }
@@ -158,7 +161,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.afterStop();
                 } catch (error) {
-                    console.error('Error in afterStop hook:', error);
+                    logger.error('Error in afterStop hook:', error);
                 }
             }
         }
@@ -170,7 +173,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.beforeStep(deltaTime);
                 } catch (error) {
-                    console.error('Error in beforeStep hook:', error);
+                    logger.error('Error in beforeStep hook:', error);
                 }
             }
         }
@@ -182,7 +185,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.afterStep(deltaTime);
                 } catch (error) {
-                    console.error('Error in afterStep hook:', error);
+                    logger.error('Error in afterStep hook:', error);
                 }
             }
         }
@@ -194,7 +197,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.onTick(tickCount, deltaTime);
                 } catch (error) {
-                    console.error('Error in onTick hook:', error);
+                    logger.error('Error in onTick hook:', error);
                 }
             }
         }
@@ -206,7 +209,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.onNodeStatusChange(event);
                 } catch (error) {
-                    console.error('Error in onNodeStatusChange hook:', error);
+                    logger.error('Error in onNodeStatusChange hook:', error);
                 }
             }
         }
@@ -218,7 +221,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.onExecutionComplete(logs);
                 } catch (error) {
-                    console.error('Error in onExecutionComplete hook:', error);
+                    logger.error('Error in onExecutionComplete hook:', error);
                 }
             }
         }
@@ -230,7 +233,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.onBlackboardUpdate(variables);
                 } catch (error) {
-                    console.error('Error in onBlackboardUpdate hook:', error);
+                    logger.error('Error in onBlackboardUpdate hook:', error);
                 }
             }
         }
@@ -242,7 +245,7 @@ export class ExecutionHooksManager {
                 try {
                     await hook.onError(error, context);
                 } catch (err) {
-                    console.error('Error in onError hook:', err);
+                    logger.error('Error in onError hook:', err);
                 }
             }
         }

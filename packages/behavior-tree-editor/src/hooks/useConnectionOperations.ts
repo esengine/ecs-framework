@@ -5,6 +5,9 @@ import { IValidator } from '../domain/interfaces/IValidator';
 import { TreeStateAdapter } from '../application/state/BehaviorTreeDataStore';
 import { AddConnectionUseCase } from '../application/use-cases/AddConnectionUseCase';
 import { RemoveConnectionUseCase } from '../application/use-cases/RemoveConnectionUseCase';
+import { createLogger } from '@esengine/ecs-framework';
+
+const logger = createLogger('useConnectionOperations');
 
 /**
  * 连接操作 Hook
@@ -35,7 +38,7 @@ export function useConnectionOperations(
         try {
             return addConnectionUseCase.execute(from, to, connectionType, fromProperty, toProperty);
         } catch (error) {
-            console.error('添加连接失败:', error);
+            logger.error('添加连接失败:', error);
             throw error;
         }
     }, [addConnectionUseCase]);
@@ -49,7 +52,7 @@ export function useConnectionOperations(
         try {
             removeConnectionUseCase.execute(from, to, fromProperty, toProperty);
         } catch (error) {
-            console.error('移除连接失败:', error);
+            logger.error('移除连接失败:', error);
             throw error;
         }
     }, [removeConnectionUseCase]);

@@ -4,6 +4,9 @@ import { File, FolderTree, FolderOpen } from 'lucide-react';
 import { GlobalBlackboardTypeGenerator } from '../generators/GlobalBlackboardTypeGenerator';
 import { EditorFormatConverter, BehaviorTreeAssetSerializer } from '@esengine/behavior-tree';
 import { useBehaviorTreeDataStore } from '../application/state/BehaviorTreeDataStore';
+import { createLogger } from '@esengine/ecs-framework';
+
+const logger = createLogger('BehaviorTreeCompiler');
 
 export interface BehaviorTreeCompileOptions {
     mode: 'single' | 'workspace';
@@ -130,7 +133,7 @@ export class BehaviorTreeCompiler implements ICompiler<BehaviorTreeCompileOption
         fileSystem: IFileSystem
     ): Promise<CompileResult> {
         try {
-            console.log(`[Compiler] Reading file: ${btreePath}`);
+            logger.info(`Reading file: ${btreePath}`);
             const fileContent = await fileSystem.readFile(btreePath);
             const treeData = JSON.parse(fileContent);
 
@@ -150,11 +153,11 @@ export class BehaviorTreeCompiler implements ICompiler<BehaviorTreeCompileOption
             }
 
             const blackboardVars = treeData.blackboard || {};
-            console.log(`[Compiler] ${fileId} blackboard vars:`, blackboardVars);
+            logger.info(`${fileId} blackboard vars:`, blackboardVars);
             const typeContent = this.generateBlackboardTypes(fileId, blackboardVars);
             const typePath = `${typeOutputPath}/${fileId}.ts`;
             await fileSystem.writeFile(typePath, typeContent);
-            console.log(`[Compiler] Generated type file: ${typePath}`);
+            logger.info(`Generated type file: ${typePath}`);
 
             return {
                 success: true,

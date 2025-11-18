@@ -6,6 +6,9 @@ import { DOMCache } from '../../utils/DOMCache';
 import { EditorEventBus, EditorEvent } from '../../infrastructure/events/EditorEventBus';
 import { ExecutionHooksManager } from '../interfaces/IExecutionHooks';
 import type { Breakpoint } from '../../types/Breakpoint';
+import { createLogger } from '@esengine/ecs-framework';
+
+const logger = createLogger('ExecutionController');
 
 export type ExecutionMode = 'idle' | 'running' | 'paused';
 type BlackboardVariables = Record<string, BlackboardValue>;
@@ -216,7 +219,7 @@ export class ExecutionController {
 
         if (this.mode === 'idle') {
             if (!this.currentNodes.length) {
-                console.warn('No tree loaded for step execution');
+                logger.warn('No tree loaded for step execution');
                 return;
             }
 
@@ -416,7 +419,7 @@ export class ExecutionController {
         });
 
         const nodeName = this.currentNodes.find((n) => n.id === currentNode.nodeId)?.template.displayName || 'Unknown';
-        console.log(`[StepByStep] Displaying ${this.currentlyDisplayedIndex + 1}/${this.pendingStatusUpdates.length} | ${nodeName} | Order: ${currentNode.executionOrder} | ID: ${currentNode.nodeId}`);
+        logger.info(`[StepByStep] Displaying ${this.currentlyDisplayedIndex + 1}/${this.pendingStatusUpdates.length} | ${nodeName} | Order: ${currentNode.executionOrder} | ID: ${currentNode.nodeId}`);
         this.config.onExecutionStatusUpdate(statusMap, orderMap);
 
         this.currentlyDisplayedIndex++;
@@ -455,7 +458,7 @@ export class ExecutionController {
                     );
 
                     if (newStatuses.length > 0) {
-                        console.log(`[StepByStep] Appending ${newStatuses.length} new nodes, orders:`, newStatuses.map((s) => s.executionOrder));
+                        logger.info(`[StepByStep] Appending ${newStatuses.length} new nodes, orders:`, newStatuses.map((s) => s.executionOrder));
                         this.pendingStatusUpdates = [
                             ...this.pendingStatusUpdates,
                             ...newStatuses

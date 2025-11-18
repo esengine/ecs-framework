@@ -2,6 +2,9 @@ import { useState, RefObject } from 'react';
 import { NodeTemplate, NodeType } from '@esengine/behavior-tree';
 import { Position } from '../domain/value-objects/Position';
 import { useNodeOperations } from './useNodeOperations';
+import { createLogger } from '@esengine/ecs-framework';
+
+const logger = createLogger('useDropHandler');
 
 interface DraggedVariableData {
     variableName: string;
@@ -96,7 +99,7 @@ export function useDropHandler(params: UseDropHandlerParams) {
 
             onNodeCreate?.(template, position);
         } catch (error) {
-            console.error('Failed to create node:', error);
+            logger.error('Failed to create node:', error);
         }
     };
 

@@ -1,9 +1,11 @@
 import { singleton } from 'tsyringe';
-import { Core, IService } from '@esengine/ecs-framework';
+import { Core, IService, createLogger } from '@esengine/ecs-framework';
 import { MessageHub } from '@esengine/editor-core';
 import { useBehaviorTreeDataStore } from '../application/state/BehaviorTreeDataStore';
 import type { BehaviorTree } from '../domain/models/BehaviorTree';
 import { FileSystemService } from './FileSystemService';
+
+const logger = createLogger('BehaviorTreeService');
 
 @singleton()
 export class BehaviorTreeService implements IService {
@@ -41,7 +43,7 @@ export class BehaviorTreeService implements IService {
                 });
             }
         } catch (error) {
-            console.error('[BehaviorTreeService] Failed to load tree:', error);
+            logger.error('Failed to load tree:', error);
             throw error;
         }
     }
@@ -65,9 +67,9 @@ export class BehaviorTreeService implements IService {
             const content = store.exportToJSON(defaultMetadata);
             await fileSystem.writeBehaviorTreeFile(filePath, content);
 
-            console.log('[BehaviorTreeService] Tree saved successfully:', filePath);
+            logger.info('Tree saved successfully:', filePath);
         } catch (error) {
-            console.error('[BehaviorTreeService] Failed to save tree:', error);
+            logger.error('Failed to save tree:', error);
             throw error;
         }
     }

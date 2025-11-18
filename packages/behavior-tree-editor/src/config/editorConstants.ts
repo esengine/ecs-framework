@@ -52,5 +52,9 @@ export const DEFAULT_EDITOR_CONFIG = {
     minZoom: 0.1,
     maxZoom: 3,
     showGrid: true,
-    showMinimap: false
+    showMinimap: false,
+    defaultRootNodePosition: {
+        x: 400,
+        y: 100
+    }
 };

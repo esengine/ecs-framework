@@ -1,3 +1,7 @@
+import { createLogger } from '@esengine/ecs-framework';
+
+const logger = createLogger('EditorEventBus');
+
 type EventHandler<T = any> = (data: T) => void;
 
 interface Subscription {
@@ -90,7 +94,7 @@ export class EditorEventBus {
                 try {
                     handler(data);
                 } catch (error) {
-                    console.error(`Error in event handler for ${event}:`, error);
+                    logger.error(`Error in event handler for ${event}:`, error);
                 }
             });
         }

@@ -4,11 +4,9 @@ export default new BehaviorTreePlugin();
 
 export { BehaviorTreePlugin } from './BehaviorTreePlugin';
 export { BehaviorTreeEditorPanel } from './components/panels/BehaviorTreeEditorPanel';
-export { BehaviorTreeEditorMobX } from './components/BehaviorTreeEditorMobX';
 export * from './BehaviorTreeModule';
 export * from './services/BehaviorTreeService';
 export * from './providers/BehaviorTreeNodeInspectorProvider';
-export * from './viewmodels';
 
 export * from './domain';
 export * from './application/commands/tree';

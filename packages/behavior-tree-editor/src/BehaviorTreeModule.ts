@@ -1,10 +1,12 @@
 import { singleton } from 'tsyringe';
-import { Core } from '@esengine/ecs-framework';
+import { Core, createLogger } from '@esengine/ecs-framework';
 import { CompilerRegistry, IEditorModule, IModuleContext, PanelPosition } from '@esengine/editor-core';
 import { BehaviorTreeService } from './services/BehaviorTreeService';
 import { BehaviorTreeCompiler } from './compiler/BehaviorTreeCompiler';
 import { BehaviorTreeNodeInspectorProvider } from './providers/BehaviorTreeNodeInspectorProvider';
 import { BehaviorTreeEditorPanel } from './components/panels/BehaviorTreeEditorPanel';
+
+const logger = createLogger('BehaviorTreeModule');
 
 @singleton()
 export class BehaviorTreeModule implements IEditorModule {
@@ -13,7 +15,7 @@ export class BehaviorTreeModule implements IEditorModule {
     readonly version = '1.0.0';
 
     async load(context: IModuleContext): Promise<void> {
-        console.log('[BehaviorTreeModule] Loading behavior tree editor module...');
+        logger.info('[BehaviorTreeModule] Loading behavior tree editor module...');
 
         this.registerServices(context);
         this.registerCompilers();
@@ -22,12 +24,12 @@ export class BehaviorTreeModule implements IEditorModule {
         this.registerPanels(context);
         this.subscribeEvents(context);
 
-        console.log('[BehaviorTreeModule] Behavior tree editor module loaded');
+        logger.info('[BehaviorTreeModule] Behavior tree editor module loaded');
     }
 
     private registerServices(context: IModuleContext): void {
         context.container.register(BehaviorTreeService, { useClass: BehaviorTreeService });
-        console.log('[BehaviorTreeModule] Services registered');
+        logger.info('[BehaviorTreeModule] Services registered');
     }
 
     private registerCompilers(): void {
@@ -35,18 +37,18 @@ export class BehaviorTreeModule implements IEditorModule {
         if (compilerRegistry) {
             const compiler = new BehaviorTreeCompiler();
             compilerRegistry.register(compiler);
-            console.log('[BehaviorTreeModule] Compiler registered');
+            logger.info('[BehaviorTreeModule] Compiler registered');
         }
     }
 
     private registerInspectors(context: IModuleContext): void {
         const provider = new BehaviorTreeNodeInspectorProvider();
         context.inspectorRegistry.register(provider);
-        console.log('[BehaviorTreeModule] Inspector provider registered');
+        logger.info('[BehaviorTreeModule] Inspector provider registered');
     }
 
     async unload(): Promise<void> {
-        console.log('[BehaviorTreeModule] Unloading behavior tree editor module...');
+        logger.info('[BehaviorTreeModule] Unloading behavior tree editor module...');
     }
 
     private registerCommands(context: IModuleContext): void {
@@ -65,7 +67,7 @@ export class BehaviorTreeModule implements IEditorModule {
             label: 'Open Behavior Tree',
             icon: 'folder-open',
             execute: async () => {
-                console.log('Open behavior tree');
+                logger.info('Open behavior tree');
             }
         });
 
@@ -75,13 +77,13 @@ export class BehaviorTreeModule implements IEditorModule {
             icon: 'save',
             keybinding: { key: 'S', ctrl: true },
             execute: async () => {
-                console.log('Save behavior tree');
+                logger.info('Save behavior tree');
             }
         });
     }
 
     private registerPanels(context: IModuleContext): void {
-        console.log('[BehaviorTreeModule] Registering panels...');
+        logger.info('[BehaviorTreeModule] Registering panels...');
 
         context.panels.register({
             id: 'behavior-tree-editor',
@@ -94,7 +96,7 @@ export class BehaviorTreeModule implements IEditorModule {
             isDynamic: true
         });
 
-        console.log('[BehaviorTreeModule] Panel registered: behavior-tree-editor');
+        logger.info('[BehaviorTreeModule] Panel registered: behavior-tree-editor');
     }
 
     private subscribeEvents(_context: IModuleContext): void {

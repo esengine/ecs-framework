@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Core } from '@esengine/ecs-framework';
+import { Core, createLogger } from '@esengine/ecs-framework';
 import { MessageHub } from '@esengine/editor-core';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { useBehaviorTreeDataStore } from '../../stores';
@@ -9,6 +9,8 @@ import { showToast } from '../../services/NotificationService';
 import { FolderOpen } from 'lucide-react';
 import type { Node as BehaviorTreeNode } from '../../domain/models/Node';
 import './BehaviorTreeEditorPanel.css';
+
+const logger = createLogger('BehaviorTreeEditorPanel');
 
 /**
  * 行为树编辑器面板组件
@@ -79,7 +81,7 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
                 unsubscribe();
             };
         } catch (error) {
-            console.error('Failed to subscribe to file-opened event:', error);
+            logger.error('Failed to subscribe to file-opened event:', error);
         }
     }, []);
 
@@ -88,7 +90,7 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
             const messageHub = Core.services.resolve(MessageHub);
             messageHub.publish('behavior-tree:node-selected', { data: node });
         } catch (error) {
-            console.error('Failed to publish node selection:', error);
+            logger.error('Failed to publish node selection:', error);
         }
     }, []);
 
@@ -118,7 +120,7 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
 
             showToast(`文件已保存: ${fileName}.btree`, 'success');
         } catch (error) {
-            console.error('Failed to save file:', error);
+            logger.error('Failed to save file:', error);
             showToast(`保存失败: ${error}`, 'error');
         }
     }, [currentFilePath, projectPath, tree]);
@@ -154,7 +156,7 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
 
             showToast(`文件已打开: ${fileName}.btree`, 'success');
         } catch (error) {
-            console.error('Failed to open file:', error);
+            logger.error('Failed to open file:', error);
             showToast(`打开失败: ${error}`, 'error');
         }
     }, [hasUnsavedChanges, projectPath]);
@@ -173,7 +175,7 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
                 projectPath: projectPath || undefined
             });
         } catch (error) {
-            console.error('Failed to open export dialog:', error);
+            logger.error('Failed to open export dialog:', error);
             showToast(`无法打开导出对话框: ${error}`, 'error');
         }
     }, [onOpenExportDialog, currentFileName, projectPath]);
@@ -187,7 +189,7 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
             await navigator.clipboard.writeText(jsonContent);
             showToast('已复制到剪贴板', 'success');
         } catch (error) {
-            console.error('Failed to copy to clipboard:', error);
+            logger.error('Failed to copy to clipboard:', error);
             showToast(`复制失败: ${error}`, 'error');
         }
     }, [currentFileName]);

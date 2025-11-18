@@ -2,6 +2,9 @@ import { NodeTemplate } from '@esengine/behavior-tree';
 import { Node as BehaviorTreeNode } from '../domain/models/Node';
 import { LucideIcon } from 'lucide-react';
 import React from 'react';
+import { createLogger } from '@esengine/ecs-framework';
+
+const logger = createLogger('IEditorExtensions');
 
 export interface INodeRenderer {
     canRender(node: BehaviorTreeNode): boolean;
@@ -193,7 +196,7 @@ export class EditorExtensionRegistry {
                 const validationResults = validator.validate(nodes);
                 results.push(...validationResults);
             } catch (error) {
-                console.error(`Error in validator ${validator.name}:`, error);
+                logger.error(`Error in validator ${validator.name}:`, error);
                 results.push({
                     severity: 'error',
                     message: `Validator ${validator.name} failed: ${error}`,
