@@ -1,0 +1,333 @@
+import { useState } from 'react';
+import {
+    Settings,
+    RefreshCw,
+    Activity,
+    Tag,
+    Layers,
+    ArrowUpDown,
+    GitBranch
+} from 'lucide-react';
+import { RemoteEntity } from '../types';
+import { getProfilerService } from '../utils';
+import { ComponentItem } from '../common';
+import '../../../styles/EntityInspector.css';
+
+interface RemoteEntityInspectorProps {
+    entity: RemoteEntity;
+    details?: any;
+    autoRefresh: boolean;
+    onAutoRefreshChange: (value: boolean) => void;
+    decimalPlaces: number;
+}
+
+export function RemoteEntityInspector({
+    entity,
+    details,
+    autoRefresh,
+    onAutoRefreshChange,
+    decimalPlaces
+}: RemoteEntityInspectorProps) {
+    const handleManualRefresh = () => {
+        const profilerService = getProfilerService();
+        if (profilerService && entity?.id !== undefined) {
+            profilerService.requestEntityDetails(entity.id);
+        }
+    };
+
+    const renderRemoteProperty = (key: string, value: any) => {
+        if (value === null || value === undefined) {
+            return (
+                <div key={key} className="property-field">
+                    <label className="property-label">{key}</label>
+                    <span className="property-value-text">null</span>
+                </div>
+            );
+        }
+
+        if (Array.isArray(value)) {
+            const isComponentArray = value.length > 0 && value[0]?.typeName && value[0]?.properties;
+
+            if (isComponentArray) {
+                return (
+                    <div key={key}>
+                        {value.map((item, index) => (
+                            <ComponentItem key={index} component={item} decimalPlaces={decimalPlaces} />
+                        ))}
+                    </div>
+                );
+            }
+
+            const isStringArray = value.length > 0 && value.every((item: any) => typeof item === 'string');
+
+            if (isStringArray) {
+                return (
+                    <div key={key} className="property-field">
+                        <label className="property-label">{key}</label>
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: '4px',
+                                marginTop: '4px'
+                            }}
+                        >
+                            {value.map((item: string, index: number) => (
+                                <span
+                                    key={index}
+                                    style={{
+                                        padding: '2px 8px',
+                                        backgroundColor: '#2d4a3e',
+                                        color: '#8fbc8f',
+                                        borderRadius: '4px',
+                                        fontSize: '11px',
+                                        fontFamily: 'monospace'
+                                    }}
+                                >
+                                    {item}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div key={key} className="property-field">
+                    <label className="property-label">
+                        {key} ({value.length})
+                    </label>
+                    <span className="property-value-text">[Array]</span>
+                </div>
+            );
+        }
+
+        if (typeof value === 'object') {
+            return (
+                <div key={key} className="property-field">
+                    <label className="property-label">{key}</label>
+                    <span className="property-value-text">[Object]</span>
+                </div>
+            );
+        }
+
+        return (
+            <div key={key} className="property-field">
+                <label className="property-label">{key}</label>
+                <span className="property-value-text">{String(value)}</span>
+            </div>
+        );
+    };
+
+    return (
+        <div className="entity-inspector">
+            <div className="inspector-header">
+                <Settings size={16} />
+                <span className="entity-name">运行时实体 #{entity.id}</span>
+                {entity.destroyed && (
+                    <span
+                        style={{
+                            marginLeft: '8px',
+                            padding: '2px 6px',
+                            backgroundColor: '#dc2626',
+                            color: '#fff',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: 600
+                        }}
+                    >
+                        已销毁
+                    </span>
+                )}
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <button
+                        onClick={handleManualRefresh}
+                        title="刷新"
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#888',
+                            cursor: 'pointer',
+                            padding: '2px',
+                            borderRadius: '3px',
+                            display: 'flex',
+                            alignItems: 'center'
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#4ade80')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#888')}
+                    >
+                        <RefreshCw size={14} className={autoRefresh ? 'spin-slow' : ''} />
+                    </button>
+                    <button
+                        onClick={() => onAutoRefreshChange(!autoRefresh)}
+                        title={autoRefresh ? '关闭自动刷新' : '开启自动刷新'}
+                        style={{
+                            background: autoRefresh ? '#2d4a3e' : 'transparent',
+                            border: 'none',
+                            color: autoRefresh ? '#4ade80' : '#888',
+                            cursor: 'pointer',
+                            padding: '2px 6px',
+                            borderRadius: '3px',
+                            fontSize: '10px',
+                            fontWeight: 500
+                        }}
+                    >
+                        {autoRefresh ? '自动' : '手动'}
+                    </button>
+                </div>
+            </div>
+
+            <div className="inspector-content">
+                <div className="inspector-section">
+                    <div className="section-title">基本信息</div>
+                    <div className="property-field">
+                        <label className="property-label">Entity ID</label>
+                        <span className="property-value-text">{entity.id}</span>
+                    </div>
+                    {(entity as any).name && (
+                        <div className="property-field">
+                            <label className="property-label">Name</label>
+                            <span className="property-value-text">{(entity as any).name}</span>
+                        </div>
+                    )}
+                    <div className="property-field">
+                        <label className="property-label">
+                            <Activity size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                            Enabled
+                        </label>
+                        <span
+                            className="property-value-text"
+                            style={{
+                                color: (entity as any).enabled ? '#4ade80' : '#f87171'
+                            }}
+                        >
+                            {(entity as any).enabled ? 'true' : 'false'}
+                        </span>
+                    </div>
+                    {(entity as any).tag !== undefined && (entity as any).tag !== 0 && (
+                        <div className="property-field">
+                            <label className="property-label">
+                                <Tag size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                                Tag
+                            </label>
+                            <span
+                                className="property-value-text"
+                                style={{
+                                    fontFamily: 'monospace',
+                                    color: '#fbbf24'
+                                }}
+                            >
+                                {(entity as any).tag}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                {((entity as any).depth !== undefined ||
+                    (entity as any).updateOrder !== undefined ||
+                    (entity as any).parentId !== undefined ||
+                    (entity as any).childCount !== undefined) && (
+                    <div className="inspector-section">
+                        <div className="section-title">层级信息</div>
+                        {(entity as any).depth !== undefined && (
+                            <div className="property-field">
+                                <label className="property-label">
+                                    <Layers size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                                    深度
+                                </label>
+                                <span className="property-value-text">{(entity as any).depth}</span>
+                            </div>
+                        )}
+                        {(entity as any).updateOrder !== undefined && (
+                            <div className="property-field">
+                                <label className="property-label">
+                                    <ArrowUpDown size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                                    更新顺序
+                                </label>
+                                <span className="property-value-text">{(entity as any).updateOrder}</span>
+                            </div>
+                        )}
+                        {(entity as any).parentId !== undefined && (
+                            <div className="property-field">
+                                <label className="property-label">
+                                    <GitBranch size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                                    父实体 ID
+                                </label>
+                                <span
+                                    className="property-value-text"
+                                    style={{
+                                        color: (entity as any).parentId === null ? '#666' : '#90caf9'
+                                    }}
+                                >
+                                    {(entity as any).parentId === null ? '无' : (entity as any).parentId}
+                                </span>
+                            </div>
+                        )}
+                        {(entity as any).childCount !== undefined && (
+                            <div className="property-field">
+                                <label className="property-label">子实体数量</label>
+                                <span className="property-value-text">{(entity as any).childCount}</span>
+                            </div>
+                        )}
+                        {(entity as any).activeInHierarchy !== undefined && (
+                            <div className="property-field">
+                                <label className="property-label">层级中激活</label>
+                                <span
+                                    className="property-value-text"
+                                    style={{
+                                        color: (entity as any).activeInHierarchy ? '#4ade80' : '#f87171'
+                                    }}
+                                >
+                                    {(entity as any).activeInHierarchy ? 'true' : 'false'}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {(entity as any).componentMask !== undefined && (
+                    <div className="inspector-section">
+                        <div className="section-title">调试信息</div>
+                        <div className="property-field">
+                            <label className="property-label">Component Mask</label>
+                            <span
+                                className="property-value-text"
+                                style={{
+                                    fontFamily: 'monospace',
+                                    fontSize: '10px',
+                                    color: '#a78bfa',
+                                    wordBreak: 'break-all'
+                                }}
+                            >
+                                {(entity as any).componentMask}
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                {details &&
+                    details.components &&
+                    Array.isArray(details.components) &&
+                    details.components.length > 0 && (
+                        <div className="inspector-section">
+                            <div className="section-title">组件 ({details.components.length})</div>
+                            {details.components.map((comp: any, index: number) => (
+                                <ComponentItem key={index} component={comp} decimalPlaces={decimalPlaces} />
+                            ))}
+                        </div>
+                    )}
+
+                {details &&
+                    Object.entries(details).filter(([key]) => key !== 'components' && key !== 'componentTypes')
+                        .length > 0 && (
+                        <div className="inspector-section">
+                            <div className="section-title">其他信息</div>
+                            {Object.entries(details)
+                                .filter(([key]) => key !== 'components' && key !== 'componentTypes')
+                                .map(([key, value]) => renderRemoteProperty(key, value))}
+                        </div>
+                    )}
+            </div>
+        </div>
+    );
+}
