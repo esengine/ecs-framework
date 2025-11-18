@@ -51,6 +51,7 @@ jobs:
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
+      continue-on-error: true  # 即使失败也继续
       with:
         file: ./coverage/lcov.info
         flags: unittests
