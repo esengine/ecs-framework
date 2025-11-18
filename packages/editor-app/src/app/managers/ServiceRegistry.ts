@@ -13,7 +13,8 @@ import {
     SceneManagerService,
     FileActionRegistry,
     EditorPluginManager,
-    InspectorRegistry
+    InspectorRegistry,
+    PropertyRendererRegistry
 } from '@esengine/editor-core';
 import { TauriFileAPI } from '../../adapters/TauriFileAPI';
 import { DIContainer } from '../../core/di/DIContainer';
@@ -24,6 +25,18 @@ import type { EditorEventMap } from '../../core/events/EditorEventMap';
 import { TauriFileSystemService } from '../../services/TauriFileSystemService';
 import { TauriDialogService } from '../../services/TauriDialogService';
 import { NotificationService } from '../../services/NotificationService';
+import {
+    StringRenderer,
+    NumberRenderer,
+    BooleanRenderer,
+    NullRenderer,
+    Vector2Renderer,
+    Vector3Renderer,
+    ColorRenderer,
+    ComponentRenderer,
+    ArrayRenderer,
+    FallbackRenderer
+} from '../../infrastructure/property-renderers';
 
 export interface EditorServices {
     uiRegistry: UIRegistry;
@@ -47,6 +60,7 @@ export interface EditorServices {
     dialog: TauriDialogService;
     notification: NotificationService;
     inspectorRegistry: InspectorRegistry;
+    propertyRendererRegistry: PropertyRendererRegistry;
 }
 
 export class ServiceRegistry {
@@ -95,6 +109,20 @@ export class ServiceRegistry {
 
         Core.services.registerInstance(InspectorRegistry, inspectorRegistry);
 
+        const propertyRendererRegistry = new PropertyRendererRegistry();
+        Core.services.registerInstance(PropertyRendererRegistry, propertyRendererRegistry);
+
+        propertyRendererRegistry.register(new StringRenderer());
+        propertyRendererRegistry.register(new NumberRenderer());
+        propertyRendererRegistry.register(new BooleanRenderer());
+        propertyRendererRegistry.register(new NullRenderer());
+        propertyRendererRegistry.register(new Vector2Renderer());
+        propertyRendererRegistry.register(new Vector3Renderer());
+        propertyRendererRegistry.register(new ColorRenderer());
+        propertyRendererRegistry.register(new ComponentRenderer());
+        propertyRendererRegistry.register(new ArrayRenderer());
+        propertyRendererRegistry.register(new FallbackRenderer());
+
         return {
             uiRegistry,
             messageHub,
@@ -116,7 +144,8 @@ export class ServiceRegistry {
             fileSystem,
             dialog,
             notification,
-            inspectorRegistry
+            inspectorRegistry,
+            propertyRendererRegistry
         };
     }
 

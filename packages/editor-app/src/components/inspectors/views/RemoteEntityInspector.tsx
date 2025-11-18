@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
     Settings,
     RefreshCw,
@@ -10,7 +9,8 @@ import {
 } from 'lucide-react';
 import { RemoteEntity, EntityDetails } from '../types';
 import { getProfilerService } from '../utils';
-import { ComponentItem } from '../common';
+import { PropertyRendererRegistry, PropertyContext } from '@esengine/editor-core';
+import { Core } from '@esengine/ecs-framework';
 import '../../../styles/EntityInspector.css';
 
 interface RemoteEntityInspectorProps {
@@ -35,88 +35,21 @@ export function RemoteEntityInspector({
         }
     };
 
-    const renderRemoteProperty = (key: string, value: unknown) => {
-        if (value === null || value === undefined) {
-            return (
-                <div key={key} className="property-field">
-                    <label className="property-label">{key}</label>
-                    <span className="property-value-text">null</span>
-                </div>
-            );
+    const renderRemoteProperty = (key: string, value: any) => {
+        const registry = Core.services.resolve(PropertyRendererRegistry);
+        const context: PropertyContext = {
+            name: key,
+            decimalPlaces,
+            readonly: true,
+            depth: 0
+        };
+
+        const rendered = registry.render(value, context);
+        if (rendered) {
+            return <div key={key}>{rendered}</div>;
         }
 
-        if (Array.isArray(value)) {
-            const isComponentArray = value.length > 0 && value[0]?.typeName && value[0]?.properties;
-
-            if (isComponentArray) {
-                return (
-                    <div key={key}>
-                        {value.map((item, index) => (
-                            <ComponentItem key={index} component={item} decimalPlaces={decimalPlaces} />
-                        ))}
-                    </div>
-                );
-            }
-
-            const isStringArray = value.length > 0 && value.every((item) => typeof item === 'string');
-
-            if (isStringArray) {
-                return (
-                    <div key={key} className="property-field">
-                        <label className="property-label">{key}</label>
-                        <div
-                            style={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: '4px',
-                                marginTop: '4px'
-                            }}
-                        >
-                            {value.map((item: string, index: number) => (
-                                <span
-                                    key={index}
-                                    style={{
-                                        padding: '2px 8px',
-                                        backgroundColor: '#2d4a3e',
-                                        color: '#8fbc8f',
-                                        borderRadius: '4px',
-                                        fontSize: '11px',
-                                        fontFamily: 'monospace'
-                                    }}
-                                >
-                                    {item}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                );
-            }
-
-            return (
-                <div key={key} className="property-field">
-                    <label className="property-label">
-                        {key} ({value.length})
-                    </label>
-                    <span className="property-value-text">[Array]</span>
-                </div>
-            );
-        }
-
-        if (typeof value === 'object') {
-            return (
-                <div key={key} className="property-field">
-                    <label className="property-label">{key}</label>
-                    <span className="property-value-text">[Object]</span>
-                </div>
-            );
-        }
-
-        return (
-            <div key={key} className="property-field">
-                <label className="property-label">{key}</label>
-                <span className="property-value-text">{String(value)}</span>
-            </div>
-        );
+        return null;
     };
 
     return (
@@ -311,9 +244,18 @@ export function RemoteEntityInspector({
                     details.components.length > 0 && (
                         <div className="inspector-section">
                             <div className="section-title">组件 ({details.components.length})</div>
-                            {details.components.map((comp, index) => (
-                                <ComponentItem key={index} component={comp} decimalPlaces={decimalPlaces} />
-                            ))}
+                            {details.components.map((comp, index) => {
+                                const registry = Core.services.resolve(PropertyRendererRegistry);
+                                const context: PropertyContext = {
+                                    name: comp.typeName || `Component ${index}`,
+                                    decimalPlaces,
+                                    readonly: true,
+                                    expandByDefault: true,
+                                    depth: 0
+                                };
+                                const rendered = registry.render(comp, context);
+                                return rendered ? <div key={index}>{rendered}</div> : null;
+                            })}
                         </div>
                     )}
 

@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { PropertyValueRenderer } from './PropertyValueRenderer';
+import { PropertyContext, PropertyRendererRegistry } from '@esengine/editor-core';
+import { Core } from '@esengine/ecs-framework';
+
+interface ComponentData {
+    typeName: string;
+    properties: Record<string, any>;
+}
 
 export interface ComponentItemProps {
-    component: {
-        typeName: string;
-        properties: Record<string, unknown>;
-    };
+    component: ComponentData;
     decimalPlaces?: number;
 }
 
@@ -49,15 +52,17 @@ export function ComponentItem({ component, decimalPlaces = 4 }: ComponentItemPro
 
             {isExpanded && (
                 <div style={{ padding: '6px 8px' }}>
-                    {Object.entries(component.properties).map(([propName, propValue]) => (
-                        <PropertyValueRenderer
-                            key={propName}
-                            name={propName}
-                            value={propValue}
-                            depth={0}
-                            decimalPlaces={decimalPlaces}
-                        />
-                    ))}
+                    {Object.entries(component.properties).map(([propName, propValue]) => {
+                        const registry = Core.services.resolve(PropertyRendererRegistry);
+                        const context: PropertyContext = {
+                            name: propName,
+                            decimalPlaces,
+                            readonly: true,
+                            depth: 1
+                        };
+                        const rendered = registry.render(propValue, context);
+                        return rendered ? <div key={propName}>{rendered}</div> : null;
+                    })}
                 </div>
             )}
         </div>

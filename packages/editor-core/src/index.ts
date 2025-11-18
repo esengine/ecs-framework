@@ -31,6 +31,8 @@ export * from './Services/IDialog';
 export * from './Services/INotification';
 export * from './Services/IInspectorProvider';
 export * from './Services/InspectorRegistry';
+export * from './Services/IPropertyRenderer';
+export * from './Services/PropertyRendererRegistry';
 
 export * from './Module/IEventBus';
 export * from './Module/ICommandRegistry';

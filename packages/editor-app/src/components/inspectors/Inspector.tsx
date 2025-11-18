@@ -69,7 +69,7 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
         };
 
         const handleExtensionSelection = (data: { data: unknown }) => {
-            setTarget({ type: 'extension', data: data.data });
+            setTarget({ type: 'extension', data: data.data as Record<string, any> });
         };
 
         const handleAssetFileSelection = async (data: { fileInfo: AssetFileInfo }) => {

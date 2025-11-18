@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Settings, ChevronDown, ChevronRight, X } from 'lucide-react';
-import { Entity } from '@esengine/ecs-framework';
+import { Entity, Component } from '@esengine/ecs-framework';
 import { MessageHub } from '@esengine/editor-core';
 import { PropertyInspector } from '../../PropertyInspector';
 import '../../../styles/EntityInspector.css';
@@ -34,7 +34,7 @@ export function EntityInspector({ entity, messageHub, componentVersion }: Entity
         }
     };
 
-    const handlePropertyChange = (component: unknown, propertyName: string, value: unknown) => {
+    const handlePropertyChange = (component: Component, propertyName: string, value: unknown) => {
         messageHub.publish('component:property:changed', {
             entity,
             component,
@@ -66,7 +66,7 @@ export function EntityInspector({ entity, messageHub, componentVersion }: Entity
                 {entity.components.length > 0 && (
                     <div className="inspector-section">
                         <div className="section-title">组件</div>
-                        {entity.components.map((component, index: number) => {
+                        {entity.components.map((component: Component, index: number) => {
                             const isExpanded = expandedComponents.has(index);
                             const componentName = component.constructor?.name || 'Component';
 

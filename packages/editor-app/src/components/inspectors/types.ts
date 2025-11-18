@@ -17,11 +17,13 @@ export interface AssetFileInfo {
     isDirectory: boolean;
 }
 
+type ExtensionData = Record<string, any>;
+
 export type InspectorTarget =
     | { type: 'entity'; data: Entity }
     | { type: 'remote-entity'; data: RemoteEntity; details?: EntityDetails }
     | { type: 'asset-file'; data: AssetFileInfo; content?: string; isImage?: boolean }
-    | { type: 'extension'; data: unknown }
+    | { type: 'extension'; data: ExtensionData }
     | null;
 
 export interface RemoteEntity {
@@ -41,12 +43,12 @@ export interface RemoteEntity {
 
 export interface ComponentData {
     typeName: string;
-    properties: Record<string, unknown>;
+    properties: Record<string, any>;
 }
 
 export interface EntityDetails {
     id: number;
     components?: ComponentData[];
     componentTypes?: string[];
-    [key: string]: unknown;
+    [key: string]: any;
 }

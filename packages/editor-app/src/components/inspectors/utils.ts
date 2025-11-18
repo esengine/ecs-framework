@@ -1,3 +1,5 @@
+import { ComponentData } from './types';
+
 export function formatNumber(value: number, decimalPlaces: number): string {
     if (decimalPlaces < 0) {
         return String(value);
@@ -15,4 +17,16 @@ export interface ProfilerService {
 
 export function getProfilerService(): ProfilerService | undefined {
     return (window as any).__PROFILER_SERVICE__;
+}
+
+export function isComponentData(value: unknown): value is ComponentData {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value) &&
+        'typeName' in value &&
+        typeof (value as Record<string, unknown>).typeName === 'string' &&
+        'properties' in value &&
+        typeof (value as Record<string, unknown>).properties === 'object'
+    );
 }
