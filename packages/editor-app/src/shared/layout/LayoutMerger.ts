@@ -1,5 +1,7 @@
 import type { IJsonModel, IJsonTabNode } from 'flexlayout-react';
 import type { FlexDockPanel } from './types';
+import type { IJsonLayoutNode, IJsonBorderNode, IJsonTabsetNode } from './FlexLayoutTypes';
+import { hasChildren, isTabNode, isTabsetNode } from './FlexLayoutTypes';
 
 export class LayoutMerger {
     static merge(savedLayout: IJsonModel, defaultLayout: IJsonModel, currentPanels: FlexDockPanel[]): IJsonModel {
@@ -31,21 +33,23 @@ export class LayoutMerger {
 
     private static collectPanelIds(layout: IJsonModel): Set<string> {
         const panelIds = new Set<string>();
-        const collect = (node: any) => {
-            if (node.type === 'tab' && node.id) {
+        const collect = (node: IJsonLayoutNode) => {
+            if (isTabNode(node) && node.id) {
                 panelIds.add(node.id);
             }
-            if (node.children) {
-                node.children.forEach((child: any) => collect(child));
+            if (hasChildren(node)) {
+                node.children.forEach((child) => collect(child as IJsonLayoutNode));
             }
         };
 
-        collect(layout.layout);
+        if (layout.layout) {
+            collect(layout.layout as IJsonLayoutNode);
+        }
 
         if (layout.borders) {
-            layout.borders.forEach((border: any) => {
+            layout.borders.forEach((border: IJsonBorderNode) => {
                 if (border.children) {
-                    collect({ children: border.children });
+                    border.children.forEach((child) => collect(child as IJsonLayoutNode));
                 }
             });
         }
@@ -55,61 +59,59 @@ export class LayoutMerger {
 
     private static clearBorders(layout: IJsonModel): void {
         if (layout.borders) {
-            layout.borders = layout.borders.map((border: any) => ({
+            layout.borders = layout.borders.map((border: IJsonBorderNode) => ({
                 ...border,
                 children: []
             }));
         }
     }
 
-    private static removePanels(node: any, removedPanelIds: string[]): boolean {
-        if (!node.children) return false;
+    private static removePanels(node: IJsonLayoutNode, removedPanelIds: string[]): boolean {
+        if (!hasChildren(node)) return false;
 
-        if (node.type === 'tabset' || node.type === 'row') {
-            const originalLength = node.children.length;
-            node.children = node.children.filter((child: any) => {
-                if (child.type === 'tab') {
-                    return !removedPanelIds.includes(child.id);
-                }
-                return true;
-            });
-
-            if (node.type === 'tabset' && node.children.length < originalLength) {
-                if (node.selected >= node.children.length) {
-                    node.selected = Math.max(0, node.children.length - 1);
-                }
+        const originalLength = node.children.length;
+        node.children = node.children.filter((child) => {
+            if (isTabNode(child)) {
+                return !removedPanelIds.includes(child.id || '');
             }
+            return true;
+        }) as any;
 
-            node.children.forEach((child: any) => this.removePanels(child, removedPanelIds));
-
-            return node.children.length < originalLength;
+        if (isTabsetNode(node) && node.children.length < originalLength) {
+            if (node.selected !== undefined && node.selected >= node.children.length) {
+                node.selected = Math.max(0, node.children.length - 1);
+            }
         }
 
-        return false;
+        node.children.forEach((child) => this.removePanels(child as IJsonLayoutNode, removedPanelIds));
+
+        return node.children.length < originalLength;
     }
 
-    private static findNewPanels(node: any, newPanelIds: string[]): IJsonTabNode[] {
+    private static findNewPanels(node: IJsonLayoutNode, newPanelIds: string[]): IJsonTabNode[] {
         const newPanelTabs: IJsonTabNode[] = [];
-        const find = (n: any) => {
-            if (n.type === 'tab' && n.id && newPanelIds.includes(n.id)) {
+        const find = (n: IJsonLayoutNode) => {
+            if (isTabNode(n) && n.id && newPanelIds.includes(n.id)) {
                 newPanelTabs.push(n);
             }
-            if (n.children) {
-                n.children.forEach((child: any) => find(child));
+            if (hasChildren(n)) {
+                n.children.forEach((child) => find(child as IJsonLayoutNode));
             }
         };
         find(node);
         return newPanelTabs;
     }
 
-    private static addNewPanelsToCenter(node: any, newPanelTabs: IJsonTabNode[]): boolean {
-        if (node.type === 'tabset') {
-            const hasNonSidePanel = node.children?.some((child: any) => {
+    private static addNewPanelsToCenter(node: IJsonLayoutNode, newPanelTabs: IJsonTabNode[]): boolean {
+        if (isTabsetNode(node)) {
+            const hasNonSidePanel = node.children?.some((child) => {
                 const id = child.id || '';
-                return !id.includes('hierarchy') &&
-                       !id.includes('asset') &&
-                       !id.includes('inspector') &&
-                       !id.includes('console');
+                return (
+                    !id.includes('hierarchy') &&
+                    !id.includes('asset') &&
+                    !id.includes('inspector') &&
+                    !id.includes('console')
+                );
             });
 
             if (hasNonSidePanel && node.children) {
@@ -119,9 +121,9 @@ export class LayoutMerger {
             }
         }
 
-        if (node.children) {
+        if (hasChildren(node)) {
             for (const child of node.children) {
-                if (this.addNewPanelsToCenter(child, newPanelTabs)) {
+                if (this.addNewPanelsToCenter(child as IJsonLayoutNode, newPanelTabs)) {
                     return true;
                 }
             }
