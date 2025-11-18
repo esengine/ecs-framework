@@ -94,7 +94,7 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
                 return []; // New directory has no files
             }
             const entries = await invoke<DirectoryEntry[]>('list_directory', { path: dir });
-            const ext = pattern.replace('*', '');
+            const ext = pattern.replace(/\*/g, '');
             return entries
                 .filter(e => !e.is_dir && e.name.endsWith(ext))
                 .map(e => e.name.replace(ext, ''));
