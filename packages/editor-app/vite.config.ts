@@ -56,7 +56,13 @@ const userProjectPlugin = () => ({
     // 处理从 /@user-project/ 模块导入的相对路径
     if (importer && importer.startsWith('/@user-project/')) {
       if (id.startsWith('./') || id.startsWith('../')) {
-        const importerDir = path.dirname(importer.substring('/@user-project'.length));
+        // 移除importer中的查询参数
+        let cleanImporter = importer;
+        const queryIndex = importer.indexOf('?');
+        if (queryIndex !== -1) {
+          cleanImporter = importer.substring(0, queryIndex);
+        }
+        const importerDir = path.dirname(cleanImporter.substring('/@user-project'.length));
         let resolvedPath = path.join(importerDir, id);
         resolvedPath = resolvedPath.replace(/\\/g, '/');
 
@@ -85,7 +91,14 @@ const userProjectPlugin = () => ({
   },
   load(id: string) {
     if (id.startsWith('/@user-project/')) {
-      const relativePath = decodeURIComponent(id.substring('/@user-project'.length));
+      // 移除查询参数（用于缓存失效）
+      let cleanId = id;
+      const queryIndex = id.indexOf('?');
+      if (queryIndex !== -1) {
+        cleanId = id.substring(0, queryIndex);
+      }
+
+      const relativePath = decodeURIComponent(cleanId.substring('/@user-project'.length));
 
       let projectPath: string | null = null;
       for (const [, p] of userProjectPathMap) {
@@ -200,7 +213,13 @@ const userProjectPlugin = () => ({
                 }
               },
               scripts: {
-                build: 'tsc',
+                clean: 'rimraf bin dist tsconfig.tsbuildinfo',
+                prebuild: 'npm run clean',
+                build: 'npm run build:tsc && npm run copy:css && npm run build:rollup',
+                'build:tsc': 'tsc',
+                'copy:css': 'node scripts/copy-css.js',
+                'build:rollup': 'rollup -c',
+                dev: 'rollup -c -w',
                 watch: 'tsc --watch'
               },
               peerDependencies: {
@@ -211,7 +230,14 @@ const userProjectPlugin = () => ({
                 '@esengine/behavior-tree': `^${behaviorTreeVersion}`
               },
               devDependencies: {
-                'typescript': '^5.8.3'
+                'typescript': '^5.8.3',
+                '@rollup/plugin-commonjs': '^28.0.1',
+                '@rollup/plugin-node-resolve': '^15.3.0',
+                'rollup': '^4.28.1',
+                'rollup-plugin-copy': '^3.5.0',
+                'rollup-plugin-dts': '^6.1.1',
+                'rollup-plugin-postcss': '^4.0.2',
+                'rimraf': '^6.0.1'
               }
             };
             fs.writeFileSync(
@@ -492,6 +518,109 @@ ${pluginName}/
 \`\`\`
 `;
             fs.writeFileSync(path.join(pluginPath, 'README.md'), readme);
+
+            // 创建 scripts 目录并生成 copy-css.js
+            const scriptsDir = path.join(pluginPath, 'scripts');
+            fs.mkdirSync(scriptsDir, { recursive: true });
+
+            const copyCssJs = `import { readdirSync, statSync, copyFileSync, mkdirSync } from 'fs';
+import { join, dirname, relative } from 'path';
+
+function copyCSS(srcDir, destDir) {
+    const files = readdirSync(srcDir);
+
+    for (const file of files) {
+        const srcPath = join(srcDir, file);
+        const stat = statSync(srcPath);
+
+        if (stat.isDirectory()) {
+            copyCSS(srcPath, destDir);
+        } else if (file.endsWith('.css')) {
+            const relativePath = relative('src', srcPath);
+            const destPath = join(destDir, relativePath);
+
+            mkdirSync(dirname(destPath), { recursive: true });
+            copyFileSync(srcPath, destPath);
+            console.log(\`Copied: \${relativePath}\`);
+        }
+    }
+}
+
+copyCSS('src', 'bin');
+console.log('CSS files copied successfully!');
+`;
+            fs.writeFileSync(path.join(scriptsDir, 'copy-css.js'), copyCssJs);
+
+            // 生成 rollup.config.cjs
+            const rollupConfig = `const resolve = require('@rollup/plugin-node-resolve');
+const commonjs = require('@rollup/plugin-commonjs');
+const dts = require('rollup-plugin-dts').default;
+const postcss = require('rollup-plugin-postcss');
+
+const external = [
+    'react',
+    'react/jsx-runtime',
+    'zustand',
+    'zustand/middleware',
+    'lucide-react',
+    '@esengine/ecs-framework',
+    '@esengine/editor-core',
+    '@esengine/behavior-tree',
+    'tsyringe',
+    '@tauri-apps/api/core',
+    '@tauri-apps/plugin-dialog'
+];
+
+module.exports = [
+    // ES模块构建
+    {
+        input: 'bin/index.js',
+        output: {
+            file: 'dist/index.js',
+            format: 'es',
+            sourcemap: true,
+            exports: 'named',
+            inlineDynamicImports: true
+        },
+        plugins: [
+            resolve({
+                extensions: ['.js', '.jsx']
+            }),
+            postcss({
+                inject: true,
+                minimize: false
+            }),
+            commonjs()
+        ],
+        external,
+        onwarn(warning, warn) {
+            if (warning.code === 'CIRCULAR_DEPENDENCY' || warning.code === 'THIS_IS_UNDEFINED') {
+                return;
+            }
+            warn(warning);
+        }
+    },
+
+    // 类型定义构建
+    {
+        input: 'bin/index.d.ts',
+        output: {
+            file: 'dist/index.d.ts',
+            format: 'es'
+        },
+        plugins: [
+            dts({
+                respectExternal: true
+            })
+        ],
+        external: [
+            ...external,
+            /\\.css$/
+        ]
+    }
+];
+`;
+            fs.writeFileSync(path.join(pluginPath, 'rollup.config.cjs'), rollupConfig);
 
             res.statusCode = 200;
             res.end(JSON.stringify({ success: true, path: pluginPath }));

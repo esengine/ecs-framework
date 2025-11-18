@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Folder, File, FileCode, FileJson, FileImage, FileText, FolderOpen, Copy, Trash2, Edit3, LayoutGrid, List, ChevronsUp } from 'lucide-react';
+import { Folder, File, FileCode, FileJson, FileImage, FileText, FolderOpen, Copy, Trash2, Edit3, LayoutGrid, List, ChevronsUp, RefreshCw } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
 import { MessageHub, FileActionRegistry } from '@esengine/editor-core';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
@@ -43,6 +43,11 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
     position: { x: number; y: number };
     asset: AssetItem;
   } | null>(null);
+    const [renameDialog, setRenameDialog] = useState<{
+    asset: AssetItem;
+    newName: string;
+  } | null>(null);
+    const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<AssetItem | null>(null);
 
     const translations = {
         en: {
@@ -251,6 +256,61 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
         }
     };
 
+    const handleRename = async (asset: AssetItem, newName: string) => {
+        if (!newName.trim() || newName === asset.name) {
+            setRenameDialog(null);
+            return;
+        }
+
+        try {
+            const lastSlash = Math.max(asset.path.lastIndexOf('/'), asset.path.lastIndexOf('\\'));
+            const parentPath = asset.path.substring(0, lastSlash);
+            const newPath = `${parentPath}/${newName}`;
+
+            await TauriAPI.renameFileOrFolder(asset.path, newPath);
+
+            // 刷新当前目录
+            if (currentPath) {
+                await loadAssets(currentPath);
+            }
+
+            // 更新选中路径
+            if (selectedPath === asset.path) {
+                setSelectedPath(newPath);
+            }
+
+            setRenameDialog(null);
+        } catch (error) {
+            console.error('Failed to rename:', error);
+            alert(`重命名失败: ${error}`);
+        }
+    };
+
+    const handleDelete = async (asset: AssetItem) => {
+        try {
+            if (asset.type === 'folder') {
+                await TauriAPI.deleteFolder(asset.path);
+            } else {
+                await TauriAPI.deleteFile(asset.path);
+            }
+
+            // 刷新当前目录
+            if (currentPath) {
+                await loadAssets(currentPath);
+            }
+
+            // 清除选中状态
+            if (selectedPath === asset.path) {
+                setSelectedPath(null);
+            }
+
+            setDeleteConfirmDialog(null);
+        } catch (error) {
+            console.error('Failed to delete:', error);
+            alert(`删除失败: ${error}`);
+        }
+    };
+
     const handleContextMenu = (e: React.MouseEvent, asset: AssetItem) => {
         e.preventDefault();
         setContextMenu({
@@ -262,7 +322,6 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
     const getContextMenuItems = (asset: AssetItem): ContextMenuItem[] => {
         const items: ContextMenuItem[] = [];
 
-        // 打开
         if (asset.type === 'file') {
             items.push({
                 label: locale === 'zh' ? '打开' : 'Open',
@@ -290,6 +349,28 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
             }
 
             items.push({ label: '', separator: true, onClick: () => {} });
+        }
+
+        if (asset.type === 'folder' && fileActionRegistry) {
+            const templates = fileActionRegistry.getCreationTemplates();
+            if (templates.length > 0) {
+                items.push({ label: '', separator: true, onClick: () => {} });
+                for (const template of templates) {
+                    items.push({
+                        label: `${locale === 'zh' ? '新建' : 'New'} ${template.label}`,
+                        icon: template.icon,
+                        onClick: async () => {
+                            const fileName = `${template.defaultFileName}.${template.extension}`;
+                            const filePath = `${asset.path}/${fileName}`;
+                            const content = await template.createContent(fileName);
+                            await TauriAPI.writeFileContent(filePath, content);
+                            if (currentPath) {
+                                await loadAssets(currentPath);
+                            }
+                        }
+                    });
+                }
+            }
         }
 
         // 在文件管理器中显示
@@ -323,10 +404,13 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
             label: locale === 'zh' ? '重命名' : 'Rename',
             icon: <Edit3 size={16} />,
             onClick: () => {
-                // TODO: 实现重命名功能
-                console.log('Rename:', asset.path);
+                setRenameDialog({
+                    asset,
+                    newName: asset.name
+                });
+                setContextMenu(null);
             },
-            disabled: true
+            disabled: false
         });
 
         // 删除
@@ -334,10 +418,10 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
             label: locale === 'zh' ? '删除' : 'Delete',
             icon: <Trash2 size={16} />,
             onClick: () => {
-                // TODO: 实现删除功能
-                console.log('Delete:', asset.path);
+                setDeleteConfirmDialog(asset);
+                setContextMenu(null);
             },
-            disabled: true
+            disabled: false
         });
 
         return items;
@@ -482,6 +566,39 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                     >
                         <ChevronsUp size={14} />
                     </button>
+                    <button
+                        onClick={() => {
+                            if (currentPath) {
+                                loadAssets(currentPath);
+                            }
+                            if (showDetailView) {
+                                detailViewFileTreeRef.current?.refresh();
+                            } else {
+                                treeOnlyViewFileTreeRef.current?.refresh();
+                            }
+                        }}
+                        style={{
+                            padding: '6px 8px',
+                            background: 'transparent',
+                            border: '1px solid #3e3e3e',
+                            color: '#cccccc',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '3px'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#2a2d2e';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                        }}
+                        title="刷新资产列表"
+                    >
+                        <RefreshCw size={14} />
+                    </button>
                     <input
                         type="text"
                         className="asset-search"
@@ -604,6 +721,117 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                     position={contextMenu.position}
                     onClose={() => setContextMenu(null)}
                 />
+            )}
+
+            {/* 重命名对话框 */}
+            {renameDialog && (
+                <div className="dialog-overlay" onClick={() => setRenameDialog(null)}>
+                    <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="dialog-header">
+                            <h3>{locale === 'zh' ? '重命名' : 'Rename'}</h3>
+                        </div>
+                        <div className="dialog-body">
+                            <input
+                                type="text"
+                                value={renameDialog.newName}
+                                onChange={(e) => setRenameDialog({ ...renameDialog, newName: e.target.value })}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        handleRename(renameDialog.asset, renameDialog.newName);
+                                    } else if (e.key === 'Escape') {
+                                        setRenameDialog(null);
+                                    }
+                                }}
+                                autoFocus
+                                style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    backgroundColor: '#2d2d2d',
+                                    border: '1px solid #3e3e3e',
+                                    borderRadius: '4px',
+                                    color: '#cccccc',
+                                    fontSize: '13px'
+                                }}
+                            />
+                        </div>
+                        <div className="dialog-footer">
+                            <button
+                                onClick={() => setRenameDialog(null)}
+                                style={{
+                                    padding: '6px 16px',
+                                    backgroundColor: '#3e3e3e',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    color: '#cccccc',
+                                    cursor: 'pointer',
+                                    marginRight: '8px'
+                                }}
+                            >
+                                {locale === 'zh' ? '取消' : 'Cancel'}
+                            </button>
+                            <button
+                                onClick={() => handleRename(renameDialog.asset, renameDialog.newName)}
+                                style={{
+                                    padding: '6px 16px',
+                                    backgroundColor: '#0e639c',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    color: '#ffffff',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {locale === 'zh' ? '确定' : 'OK'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 删除确认对话框 */}
+            {deleteConfirmDialog && (
+                <div className="dialog-overlay" onClick={() => setDeleteConfirmDialog(null)}>
+                    <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="dialog-header">
+                            <h3>{locale === 'zh' ? '确认删除' : 'Confirm Delete'}</h3>
+                        </div>
+                        <div className="dialog-body">
+                            <p style={{ margin: 0, color: '#cccccc' }}>
+                                {locale === 'zh'
+                                    ? `确定要删除 "${deleteConfirmDialog.name}" 吗？此操作不可撤销。`
+                                    : `Are you sure you want to delete "${deleteConfirmDialog.name}"? This action cannot be undone.`}
+                            </p>
+                        </div>
+                        <div className="dialog-footer">
+                            <button
+                                onClick={() => setDeleteConfirmDialog(null)}
+                                style={{
+                                    padding: '6px 16px',
+                                    backgroundColor: '#3e3e3e',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    color: '#cccccc',
+                                    cursor: 'pointer',
+                                    marginRight: '8px'
+                                }}
+                            >
+                                {locale === 'zh' ? '取消' : 'Cancel'}
+                            </button>
+                            <button
+                                onClick={() => handleDelete(deleteConfirmDialog)}
+                                style={{
+                                    padding: '6px 16px',
+                                    backgroundColor: '#c53030',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    color: '#ffffff',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {locale === 'zh' ? '删除' : 'Delete'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

@@ -1,18 +1,47 @@
 import { invoke } from '@tauri-apps/api/core';
 
 /**
+ * 文件过滤器定义
+ */
+interface FileFilter {
+    name: string;
+    extensions: string[];
+}
+
+/**
  * Tauri IPC 通信层
  */
 export class TauriAPI {
-    /**
-   * 打招呼（测试命令）
-   */
-    static async greet(name: string): Promise<string> {
-        return await invoke<string>('greet', { name });
+    static async openFolderDialog(title?: string): Promise<string | null> {
+        return await invoke<string | null>('open_folder_dialog', { title });
+    }
+
+    static async openFileDialog(
+        title?: string,
+        filters?: FileFilter[],
+        multiple?: boolean
+    ): Promise<string[] | null> {
+        return await invoke<string[] | null>('open_file_dialog', {
+            title,
+            filters,
+            multiple
+        });
+    }
+
+    static async saveFileDialog(
+        title?: string,
+        defaultName?: string,
+        filters?: FileFilter[]
+    ): Promise<string | null> {
+        return await invoke<string | null>('save_file_dialog', {
+            title,
+            defaultName,
+            filters
+        });
     }
 
     static async openProjectDialog(): Promise<string | null> {
-        return await invoke<string | null>('open_project_dialog');
+        return await this.openFolderDialog('Select Project Directory');
     }
 
     static async openProject(path: string): Promise<string> {
@@ -77,7 +106,11 @@ export class TauriAPI {
    * @returns 用户选择的文件路径，取消则返回 null
    */
     static async saveSceneDialog(defaultName?: string): Promise<string | null> {
-        return await invoke<string | null>('save_scene_dialog', { defaultName });
+        return await this.saveFileDialog(
+            'Save ECS Scene',
+            defaultName,
+            [{ name: 'ECS Scene Files', extensions: ['ecs'] }]
+        );
     }
 
     /**
@@ -85,7 +118,12 @@ export class TauriAPI {
    * @returns 用户选择的文件路径，取消则返回 null
    */
     static async openSceneDialog(): Promise<string | null> {
-        return await invoke<string | null>('open_scene_dialog');
+        const result = await this.openFileDialog(
+            'Open ECS Scene',
+            [{ name: 'ECS Scene Files', extensions: ['ecs'] }],
+            false
+        );
+        return result && result[0] ? result[0] : null;
     }
 
     /**
@@ -135,13 +173,18 @@ export class TauriAPI {
    * @returns 用户选择的文件路径，取消则返回 null
    */
     static async openBehaviorTreeDialog(): Promise<string | null> {
-        return await invoke<string | null>('open_behavior_tree_dialog');
+        const result = await this.openFileDialog(
+            'Select Behavior Tree',
+            [{ name: 'Behavior Tree Files', extensions: ['btree'] }],
+            false
+        );
+        return result && result[0] ? result[0] : null;
     }
 
     /**
    * 扫描项目中的所有行为树文件
    * @param projectPath 项目路径
-   * @returns 行为树资产ID列表（相对于 .ecs/behaviors 的路径，不含扩展名）
+   * @returns 行为树资产ID列表（相对于 .ecs/behaviors 的路 径，不含扩展名）
    */
     static async scanBehaviorTrees(projectPath: string): Promise<string[]> {
         return await invoke<string[]>('scan_behavior_trees', { projectPath });
@@ -179,30 +222,39 @@ export class TauriAPI {
     static async createFile(path: string): Promise<void> {
         return await invoke<void>('create_file', { path });
     }
+
+    /**
+   * 读取文件并转换为base64
+   * @param path 文件路径
+   * @returns base64编码的文件内容
+   */
+    static async readFileAsBase64(path: string): Promise<string> {
+        return await invoke<string>('read_file_as_base64', { filePath: path });
+    }
 }
 
 export interface DirectoryEntry {
-  name: string;
-  path: string;
-  is_dir: boolean;
-  size?: number;
-  modified?: number;
+    name: string;
+    path: string;
+    is_dir: boolean;
+    size?: number;
+    modified?: number;
 }
 
 /**
  * 项目信息
  */
 export interface ProjectInfo {
-  name: string;
-  path: string;
-  version: string;
+    name: string;
+    path: string;
+    version: string;
 }
 
 /**
  * 编辑器配置
  */
 export interface EditorConfig {
-  theme: string;
-  autoSave: boolean;
-  recentProjects: string[];
+    theme: string;
+    autoSave: boolean;
+    recentProjects: string[];
 }

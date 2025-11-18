@@ -1,0 +1,493 @@
+.plugin-market-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--color-bg-primary, #1e1e1e);
+    color: var(--color-text-primary, #cccccc);
+}
+
+.plugin-market-toolbar {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid var(--color-border, #333);
+    background: var(--color-bg-secondary, #252526);
+}
+
+.plugin-market-search {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--color-bg-primary, #1e1e1e);
+    border: 1px solid var(--color-border, #333);
+    border-radius: 4px;
+}
+
+.plugin-market-search input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--color-text-primary, #cccccc);
+    font-size: 14px;
+}
+
+.plugin-market-filters {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.plugin-market-filter-select {
+    padding: 8px 12px;
+    background: var(--color-bg-primary, #1e1e1e);
+    border: 1px solid var(--color-border, #333);
+    border-radius: 4px;
+    color: var(--color-text-primary, #cccccc);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.plugin-market-filter-select:hover {
+    border-color: var(--color-accent, #0e639c);
+}
+
+.plugin-market-refresh {
+    padding: 8px 12px;
+    background: var(--color-bg-primary, #1e1e1e);
+    border: 1px solid var(--color-border, #333);
+    border-radius: 4px;
+    color: var(--color-text-primary, #cccccc);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.plugin-market-refresh:hover {
+    background: var(--color-bg-hover, #2d2d30);
+}
+
+.plugin-market-publish {
+    padding: 8px 16px;
+    background: var(--color-accent, #0e639c);
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.plugin-market-publish:hover {
+    background: var(--color-accent-hover, #1177bb);
+}
+
+.plugin-market-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.plugin-market-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+.plugin-market-card {
+    background: var(--color-bg-secondary, #252526);
+    border: 1px solid var(--color-border, #333);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.2s;
+}
+
+.plugin-market-card:hover {
+    border-color: var(--color-accent, #0e639c);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.plugin-market-card-header {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.plugin-market-card-icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-accent-bg, rgba(14, 99, 156, 0.1));
+    border-radius: 8px;
+    color: var(--color-accent, #0e639c);
+}
+
+.plugin-market-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.plugin-market-card-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.plugin-market-card-title span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.plugin-market-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.plugin-market-badge.official {
+    background: rgba(52, 199, 89, 0.15);
+    color: #34c759;
+}
+
+.plugin-market-card-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--color-text-secondary, #858585);
+}
+
+.plugin-market-card-author {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.plugin-market-card-description {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-text-secondary, #858585);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.plugin-market-card-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.plugin-market-tag {
+    padding: 4px 8px;
+    background: var(--color-bg-tertiary, #333);
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--color-text-secondary, #858585);
+}
+
+.plugin-market-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border, #333);
+}
+
+.plugin-market-card-link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--color-accent, #0e639c);
+    text-decoration: none;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.plugin-market-card-link:hover {
+    opacity: 0.8;
+}
+
+.plugin-market-card-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.plugin-market-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.plugin-market-btn.install {
+    background: var(--color-accent, #0e639c);
+    color: white;
+}
+
+.plugin-market-btn.install:hover {
+    background: var(--color-accent-hover, #1177bb);
+}
+
+.plugin-market-btn.installed {
+    background: rgba(52, 199, 89, 0.15);
+    color: #34c759;
+}
+
+.plugin-market-btn.installed:hover {
+    background: rgba(52, 199, 89, 0.25);
+}
+
+.plugin-market-btn.update {
+    background: rgba(255, 149, 0, 0.15);
+    color: #ff9500;
+}
+
+.plugin-market-btn.update:hover {
+    background: rgba(255, 149, 0, 0.25);
+}
+
+.plugin-market-btn.installing {
+    background: var(--color-bg-tertiary, #333);
+    color: var(--color-text-secondary, #858585);
+    cursor: not-allowed;
+}
+
+.plugin-market-loading,
+.plugin-market-error,
+.plugin-market-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 16px;
+    color: var(--color-text-secondary, #858585);
+}
+
+.plugin-market-error {
+    gap: 12px;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.plugin-market-error .error-icon {
+    color: #ff9500;
+    margin-bottom: 8px;
+}
+
+.plugin-market-error h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--color-text-primary, #cccccc);
+    margin: 0;
+}
+
+.plugin-market-error .error-description {
+    font-size: 14px;
+    color: var(--color-text-secondary, #858585);
+    line-height: 1.6;
+    margin: 8px 0;
+}
+
+.plugin-market-error .error-details {
+    background: rgba(255, 59, 48, 0.1);
+    border: 1px solid rgba(255, 59, 48, 0.3);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 16px 0;
+    max-width: 100%;
+}
+
+.plugin-market-error .error-message {
+    font-size: 12px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    color: #ff3b30;
+    margin: 0;
+    word-break: break-word;
+}
+
+.plugin-market-error .retry-button,
+.plugin-market-loading button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--color-accent, #0e639c);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+}
+
+.plugin-market-error .retry-button:hover,
+.plugin-market-loading button:hover {
+    background: var(--color-accent-hover, #1177bb);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(14, 99, 156, 0.3);
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.plugin-market-direct-source-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    background: rgba(14, 99, 156, 0.1);
+    border: 1px solid rgba(14, 99, 156, 0.3);
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-accent, #0e639c);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.plugin-market-direct-source-toggle:hover {
+    background: rgba(14, 99, 156, 0.15);
+    border-color: rgba(14, 99, 156, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(14, 99, 156, 0.2);
+}
+
+.plugin-market-direct-source-toggle input[type="checkbox"] {
+    position: relative;
+    width: 38px;
+    height: 20px;
+    margin: 0;
+    cursor: pointer;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.plugin-market-direct-source-toggle input[type="checkbox"]:checked {
+    background: var(--color-accent, #0e639c);
+    border-color: var(--color-accent, #0e639c);
+}
+
+.plugin-market-direct-source-toggle input[type="checkbox"]::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 1px;
+    left: 1px;
+    background: white;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.plugin-market-direct-source-toggle input[type="checkbox"]:checked::before {
+    left: 19px;
+}
+
+.plugin-market-direct-source-toggle .toggle-label {
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+/* 版本选择器 */
+.plugin-market-version-select {
+    padding: 2px 6px;
+    background: var(--color-bg-tertiary, #333);
+    border: 1px solid var(--color-border, #333);
+    border-radius: 3px;
+    color: var(--color-text-primary, #cccccc);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.plugin-market-version-select:hover {
+    border-color: var(--color-accent, #0e639c);
+    background: var(--color-bg-hover, #2d2d30);
+}
+
+.plugin-market-version-select:focus {
+    outline: none;
+    border-color: var(--color-accent, #0e639c);
+}
+
+/* 更新日志 */
+.plugin-market-version-changes {
+    margin: 8px 0;
+    padding: 8px;
+    background: rgba(14, 99, 156, 0.1);
+    border: 1px solid rgba(14, 99, 156, 0.2);
+    border-radius: 4px;
+}
+
+.plugin-market-version-changes summary {
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-accent, #0e639c);
+    padding: 4px;
+    user-select: none;
+}
+
+.plugin-market-version-changes summary:hover {
+    opacity: 0.8;
+}
+
+.plugin-market-version-changes p {
+    margin: 8px 0 0 0;
+    padding-left: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-text-secondary, #858585);
+}

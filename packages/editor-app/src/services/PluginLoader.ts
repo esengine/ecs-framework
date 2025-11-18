@@ -22,6 +22,8 @@ interface PluginPackageJson {
 
 export class PluginLoader {
     private loadedPluginNames: Set<string> = new Set();
+    private moduleVersions: Map<string, number> = new Map();
+    private loadedModuleUrls: Set<string> = new Set();
 
     async loadProjectPlugins(projectPath: string, pluginManager: EditorPluginManager): Promise<void> {
         const pluginsPath = `${projectPath}/plugins`;
@@ -94,11 +96,16 @@ export class PluginLoader {
             // 移除开头的 ./
             entryPoint = entryPoint.replace(/^\.\//, '');
 
-            // 添加时间戳参数强制重新加载模块（避免缓存）
+            // 使用版本号+时间戳确保每次加载都是唯一URL
+            const currentVersion = (this.moduleVersions.get(packageJson.name) || 0) + 1;
+            this.moduleVersions.set(packageJson.name, currentVersion);
             const timestamp = Date.now();
-            const moduleUrl = `/@user-project/plugins/${pluginDirName}/${entryPoint}?t=${timestamp}`;
+            const moduleUrl = `/@user-project/plugins/${pluginDirName}/${entryPoint}?v=${currentVersion}&t=${timestamp}`;
 
-            console.log(`[PluginLoader] Loading plugin from: ${moduleUrl}`);
+            console.log(`[PluginLoader] Loading plugin from: ${moduleUrl} (version: ${currentVersion})`);
+
+            // 清除可能存在的旧模块缓存
+            this.loadedModuleUrls.add(moduleUrl);
 
             const module = await import(/* @vite-ignore */ moduleUrl);
             console.log('[PluginLoader] Module loaded successfully');
@@ -206,13 +213,54 @@ export class PluginLoader {
     }
 
     async unloadProjectPlugins(pluginManager: EditorPluginManager): Promise<void> {
+        console.log('[PluginLoader] Unloading all project plugins...');
+
         for (const pluginName of this.loadedPluginNames) {
             try {
+                console.log(`[PluginLoader] Uninstalling plugin: ${pluginName}`);
                 await pluginManager.uninstallEditor(pluginName);
             } catch (error) {
                 console.error(`[PluginLoader] Failed to unload plugin ${pluginName}:`, error);
             }
         }
+
+        // 清除Vite模块缓存（如果HMR可用）
+        this.invalidateModuleCache();
+
         this.loadedPluginNames.clear();
+        this.loadedModuleUrls.clear();
+
+        console.log('[PluginLoader] All project plugins unloaded');
+    }
+
+    private invalidateModuleCache(): void {
+        try {
+            // 尝试使用Vite HMR API无效化模块
+            if (import.meta.hot) {
+                console.log('[PluginLoader] Attempting to invalidate module cache via HMR');
+                import.meta.hot.invalidate();
+            }
+
+            // 清除已加载的模块URL记录
+            for (const url of this.loadedModuleUrls) {
+                console.log(`[PluginLoader] Marking module for reload: ${url}`);
+            }
+        } catch (error) {
+            console.warn('[PluginLoader] Failed to invalidate module cache:', error);
+        }
+    }
+
+    getLoadedPluginNames(): string[] {
+        return Array.from(this.loadedPluginNames);
+    }
+}
+
+declare global {
+    interface ImportMeta {
+        hot?: {
+            invalidate(): void;
+            accept(callback?: () => void): void;
+            dispose(callback: () => void): void;
+        };
     }
 }

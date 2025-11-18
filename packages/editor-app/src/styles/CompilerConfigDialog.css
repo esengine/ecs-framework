@@ -1,0 +1,167 @@
+.compiler-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.compiler-dialog {
+    background: #2a2a2a;
+    border: 1px solid #404040;
+    border-radius: 8px;
+    min-width: 600px;
+    max-width: 800px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.compiler-dialog-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #404040;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.compiler-dialog-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.close-button {
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.close-button:hover {
+    background: #3a3a3a;
+    color: #fff;
+}
+
+.compiler-dialog-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.no-config {
+    color: #888;
+    text-align: center;
+    padding: 40px;
+    font-size: 14px;
+}
+
+.compile-result {
+    margin: 0 20px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.compile-result.success {
+    background: #1a3a1a;
+    border: 1px solid #2d5a2d;
+    color: #4ade80;
+}
+
+.compile-result.error {
+    background: #3a1a1a;
+    border: 1px solid #5a2d2d;
+    color: #f87171;
+}
+
+.result-message {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.output-files {
+    font-size: 12px;
+    color: #888;
+}
+
+.error-list {
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.error-item {
+    padding: 4px 0;
+    color: #fca5a5;
+}
+
+.compiler-dialog-footer {
+    padding: 16px 20px;
+    border-top: 1px solid #404040;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.cancel-button {
+    padding: 8px 20px;
+    background: #3a3a3a;
+    border: none;
+    border-radius: 4px;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.cancel-button:hover:not(:disabled) {
+    background: #4a4a4a;
+}
+
+.cancel-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.compile-button {
+    padding: 8px 24px;
+    background: #0e639c;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.compile-button:hover:not(:disabled) {
+    background: #1177bb;
+}
+
+.compile-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

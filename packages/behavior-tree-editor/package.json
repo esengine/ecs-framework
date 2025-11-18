@@ -1,0 +1,59 @@
+{
+  "name": "@esengine/behavior-tree-editor",
+  "version": "1.0.0",
+  "description": "Behavior Tree Editor Plugin for ECS Framework",
+  "type": "module",
+  "main": "dist/index.esm.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "clean": "rimraf bin dist tsconfig.tsbuildinfo",
+    "prebuild": "npm run clean",
+    "build": "npm run build:tsc && npm run copy:css && npm run build:rollup",
+    "build:tsc": "tsc",
+    "copy:css": "node scripts/copy-css.js",
+    "build:rollup": "rollup -c",
+    "dev": "rollup -c -w"
+  },
+  "keywords": [
+    "ecs",
+    "behavior-tree",
+    "editor",
+    "plugin"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@esengine/behavior-tree": "file:../behavior-tree",
+    "@esengine/ecs-framework": "file:../core",
+    "@esengine/editor-core": "file:../editor-core",
+    "@rollup/plugin-commonjs": "^28.0.1",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@types/react": "^18.3.18",
+    "lucide-react": "^0.469.0",
+    "react": "^18.3.1",
+    "rimraf": "^6.0.1",
+    "rollup": "^4.28.1",
+    "rollup-plugin-copy": "^3.5.0",
+    "rollup-plugin-dts": "^6.1.1",
+    "rollup-plugin-postcss": "^4.0.2",
+    "typescript": "^5.8.2",
+    "zustand": "^5.0.2"
+  },
+  "peerDependencies": {
+    "@esengine/behavior-tree": "*",
+    "@esengine/ecs-framework": "*",
+    "@esengine/editor-core": "*",
+    "@tauri-apps/api": "*",
+    "@tauri-apps/plugin-dialog": "*",
+    "@tauri-apps/plugin-http": "*",
+    "lucide-react": "^0.469.0",
+    "react": "^18.3.1",
+    "tsyringe": "*",
+    "zustand": "^5.0.2"
+  },
+  "dependencies": {
+    "mobx": "^6.15.0",
+    "mobx-react-lite": "^4.1.1"
+  }
+}

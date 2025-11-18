@@ -352,4 +352,114 @@ describe('Core - 核心管理系统测试', () => {
             expect(endMonitoringSpy).toHaveBeenCalled();
         });
     });
+
+    describe('Core.destroy() 生命周期', () => {
+        // 测试服务类
+        class TestGameService implements IService {
+            public disposed = false;
+            public value = 'test-value';
+
+            dispose(): void {
+                this.disposed = true;
+            }
+        }
+
+        test('destroy 后应该清理所有服务', () => {
+            // 创建 Core 并注册服务
+            Core.create({ debug: true });
+            const service = new TestGameService();
+            Core.services.registerInstance(TestGameService, service);
+
+            // 验证服务已注册
+            expect(Core.services.isRegistered(TestGameService)).toBe(true);
+
+            // 销毁 Core
+            Core.destroy();
+
+            // 验证服务的 dispose 被调用
+            expect(service.disposed).toBe(true);
+
+            // 验证 Core 实例已清空
+            expect(Core.Instance).toBeNull();
+        });
+
+        test('destroy 后重新 create 应该能够成功注册服务', () => {
+            // 第一次：创建 Core 并注册服务
+            Core.create({ debug: true });
+            Core.services.registerSingleton(TestGameService);
+
+            // 验证服务已注册
+            expect(Core.services.isRegistered(TestGameService)).toBe(true);
+            const firstService = Core.services.resolve(TestGameService);
+            expect(firstService).toBeDefined();
+            expect(firstService.value).toBe('test-value');
+
+            // 销毁 Core
+            Core.destroy();
+
+            // 第二次：重新创建 Core
+            Core.create({ debug: true });
+
+            // 应该能够重新注册相同的服务（不应该报错或 warn）
+            expect(() => {
+                Core.services.registerSingleton(TestGameService);
+            }).not.toThrow();
+
+            // 验证服务重新注册成功
+            expect(Core.services.isRegistered(TestGameService)).toBe(true);
+            const secondService = Core.services.resolve(TestGameService);
+            expect(secondService).toBeDefined();
+            expect(secondService.value).toBe('test-value');
+
+            // 两次获取的应该是不同的实例
+            expect(secondService).not.toBe(firstService);
+
+            // 第一个实例应该已经被 dispose
+            expect(firstService.disposed).toBe(true);
+        });
+
+        test('destroy 后旧的服务引用不应该影响新的 Core 实例', () => {
+            // 第一次：创建 Core 并注册服务
+            Core.create({ debug: true });
+            const firstService = new TestGameService();
+            Core.services.registerInstance(TestGameService, firstService);
+
+            // 销毁 Core
+            Core.destroy();
+
+            // 验证旧服务被 dispose
+            expect(firstService.disposed).toBe(true);
+
+            // 第二次：重新创建 Core 并注册新的服务实例
+            Core.create({ debug: true });
+            const secondService = new TestGameService();
+            Core.services.registerInstance(TestGameService, secondService);
+
+            // 验证新服务注册成功
+            const resolved = Core.services.resolve(TestGameService);
+            expect(resolved).toBe(secondService);
+            expect(resolved).not.toBe(firstService);
+
+            // 新服务应该未被 dispose
+            expect(secondService.disposed).toBe(false);
+        });
+
+        test('多次调用 destroy 应该安全', () => {
+            Core.create({ debug: true });
+            const service = new TestGameService();
+            Core.services.registerInstance(TestGameService, service);
+
+            // 第一次 destroy
+            Core.destroy();
+            expect(service.disposed).toBe(true);
+            expect(Core.Instance).toBeNull();
+
+            // 第二次 destroy（应该安全，不抛出错误）
+            expect(() => {
+                Core.destroy();
+            }).not.toThrow();
+
+            expect(Core.Instance).toBeNull();
+        });
+    });
 });

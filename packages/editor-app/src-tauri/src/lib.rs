@@ -1,9 +1,10 @@
-// ECS Editor Library
+//! ECS Editor Library
+//!
+//! Exports all public modules for the Tauri application.
 
 pub mod commands;
-pub mod project;
 pub mod profiler_ws;
+pub mod state;
 
-pub use commands::*;
-pub use project::*;
-pub use profiler_ws::*;
+// Re-export commonly used types
+pub use state::{ProfilerState, ProjectPaths};

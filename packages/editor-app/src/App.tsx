@@ -1,12 +1,24 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Core, Scene, createLogger } from '@esengine/ecs-framework';
+import { Core, createLogger, Scene } from '@esengine/ecs-framework';
 import * as ECSFramework from '@esengine/ecs-framework';
-import { EditorPluginManager, UIRegistry, MessageHub, SerializerRegistry, EntityStoreService, ComponentRegistry, LocaleService, ProjectService, ComponentDiscoveryService, PropertyMetadataService, LogService, SettingsRegistry, SceneManagerService, FileActionRegistry, PanelDescriptor } from '@esengine/editor-core';
+import {
+    EditorPluginManager,
+    UIRegistry,
+    MessageHub,
+    EntityStoreService,
+    ComponentRegistry,
+    LocaleService,
+    LogService,
+    SettingsRegistry,
+    SceneManagerService,
+    ProjectService,
+    CompilerRegistry,
+    InspectorRegistry,
+    INotification
+} from '@esengine/editor-core';
+import type { IDialogExtended } from './services/TauriDialogService';
 import { GlobalBlackboardService } from '@esengine/behavior-tree';
-import { SceneInspectorPlugin } from './plugins/SceneInspectorPlugin';
-import { ProfilerPlugin } from './plugins/ProfilerPlugin';
-import { EditorAppearancePlugin } from './plugins/EditorAppearancePlugin';
-import { BehaviorTreePlugin } from './plugins/BehaviorTreePlugin';
+import { ServiceRegistry, PluginInstaller, useDialogStore } from './app/managers';
 import { StartupPage } from './components/StartupPage';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { Inspector } from './components/Inspector';
@@ -20,13 +32,18 @@ import { AboutDialog } from './components/AboutDialog';
 import { ErrorDialog } from './components/ErrorDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { PluginGeneratorWindow } from './components/PluginGeneratorWindow';
-import { ToastProvider } from './components/Toast';
+import { ToastProvider, useToast } from './components/Toast';
 import { MenuBar } from './components/MenuBar';
+import { UserProfile } from './components/UserProfile';
+import { UserDashboard } from './components/UserDashboard';
 import { FlexLayoutDockContainer, FlexDockPanel } from './components/FlexLayoutDockContainer';
 import { TauriAPI } from './api/tauri';
-import { TauriFileAPI } from './adapters/TauriFileAPI';
 import { SettingsService } from './services/SettingsService';
 import { PluginLoader } from './services/PluginLoader';
+import { GitHubService } from './services/GitHubService';
+import { PluginPublishWizard } from './components/PluginPublishWizard';
+import { GitHubLoginDialog } from './components/GitHubLoginDialog';
+import { CompilerConfigDialog } from './components/CompilerConfigDialog';
 import { checkForUpdatesOnStartup } from './utils/updater';
 import { useLocale } from './hooks/useLocale';
 import { en, zh } from './locales';
@@ -41,12 +58,15 @@ localeService.registerTranslations('zh', zh);
 Core.services.registerInstance(LocaleService, localeService);
 
 Core.services.registerSingleton(GlobalBlackboardService);
+Core.services.registerSingleton(CompilerRegistry);
 
 const logger = createLogger('App');
 
 function App() {
     const initRef = useRef(false);
-    const pluginLoaderRef = useRef<PluginLoader>(new PluginLoader());
+    const [pluginLoader] = useState(() => new PluginLoader());
+    const [githubService] = useState(() => new GitHubService());
+    const { showToast, hideToast } = useToast();
     const [initialized, setInitialized] = useState(false);
     const [projectLoaded, setProjectLoaded] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -55,34 +75,48 @@ function App() {
     const [pluginManager, setPluginManager] = useState<EditorPluginManager | null>(null);
     const [entityStore, setEntityStore] = useState<EntityStoreService | null>(null);
     const [messageHub, setMessageHub] = useState<MessageHub | null>(null);
+    const [inspectorRegistry, setInspectorRegistry] = useState<InspectorRegistry | null>(null);
     const [logService, setLogService] = useState<LogService | null>(null);
     const [uiRegistry, setUiRegistry] = useState<UIRegistry | null>(null);
     const [settingsRegistry, setSettingsRegistry] = useState<SettingsRegistry | null>(null);
     const [sceneManager, setSceneManager] = useState<SceneManagerService | null>(null);
+    const [notification, setNotification] = useState<INotification | null>(null);
+    const [dialog, setDialog] = useState<IDialogExtended | null>(null);
     const { t, locale, changeLocale } = useLocale();
+
+    // 同步 locale 到 TauriDialogService
+    useEffect(() => {
+        if (dialog) {
+            dialog.setLocale(locale);
+        }
+    }, [locale, dialog]);
     const [status, setStatus] = useState(t('header.status.initializing'));
     const [panels, setPanels] = useState<FlexDockPanel[]>([]);
-    const [showPluginManager, setShowPluginManager] = useState(false);
-    const [showProfiler, setShowProfiler] = useState(false);
-    const [showPortManager, setShowPortManager] = useState(false);
-    const [showSettings, setShowSettings] = useState(false);
-    const [showAbout, setShowAbout] = useState(false);
-    const [showPluginGenerator, setShowPluginGenerator] = useState(false);
     const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
     const [isRemoteConnected, setIsRemoteConnected] = useState(false);
     const [isProfilerMode, setIsProfilerMode] = useState(false);
-    const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
-    const [confirmDialog, setConfirmDialog] = useState<{
-        title: string;
-        message: string;
-        confirmText: string;
-        cancelText: string;
-        onConfirm: () => void;
-            } | null>(null);
+
+    const {
+        showPluginManager, setShowPluginManager,
+        showProfiler, setShowProfiler,
+        showPortManager, setShowPortManager,
+        showSettings, setShowSettings,
+        showAbout, setShowAbout,
+        showPluginGenerator, setShowPluginGenerator,
+        errorDialog, setErrorDialog,
+        confirmDialog, setConfirmDialog
+    } = useDialogStore();
     const [activeDynamicPanels, setActiveDynamicPanels] = useState<string[]>([]);
     const [activePanelId, setActivePanelId] = useState<string | undefined>(undefined);
     const [dynamicPanelTitles, setDynamicPanelTitles] = useState<Map<string, string>>(new Map());
     const [isEditorFullscreen, setIsEditorFullscreen] = useState(false);
+    const [showLoginDialog, setShowLoginDialog] = useState(false);
+    const [showDashboard, setShowDashboard] = useState(false);
+    const [compilerDialog, setCompilerDialog] = useState<{
+        isOpen: boolean;
+        compilerId: string;
+        currentFileName?: string;
+    }>({ isOpen: false, compilerId: '' });
 
     useEffect(() => {
         // 禁用默认右键菜单
@@ -90,12 +124,22 @@ function App() {
             e.preventDefault();
         };
 
+        // 添加快捷键监听（Ctrl+R 重新加载插件）
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                e.preventDefault();
+                handleReloadPlugins();
+            }
+        };
+
         document.addEventListener('contextmenu', handleContextMenu);
+        document.addEventListener('keydown', handleKeyDown);
 
         return () => {
             document.removeEventListener('contextmenu', handleContextMenu);
+            document.removeEventListener('keydown', handleKeyDown);
         };
-    }, []);
+    }, [currentProjectPath, pluginManager, locale]);
 
     useEffect(() => {
         if (messageHub) {
@@ -107,41 +151,50 @@ function App() {
                 setPluginUpdateTrigger((prev) => prev + 1);
             });
 
+            const unsubscribeNotification = messageHub.subscribe('notification:show', (notification: { message: string; type: 'success' | 'error' | 'warning' | 'info'; timestamp: number }) => {
+                if (notification && notification.message) {
+                    showToast(notification.message, notification.type);
+                }
+            });
+
             return () => {
                 unsubscribeEnabled();
                 unsubscribeDisabled();
+                unsubscribeNotification();
             };
         }
-    }, [messageHub]);
+    }, [messageHub, showToast]);
 
     // 监听远程连接状态
     useEffect(() => {
         const checkConnection = () => {
             const profilerService = (window as any).__PROFILER_SERVICE__;
-            if (profilerService && profilerService.isConnected()) {
-                if (!isRemoteConnected) {
-                    setIsRemoteConnected(true);
-                    setStatus(t('header.status.remoteConnected'));
-                }
-            } else {
-                if (isRemoteConnected) {
-                    setIsRemoteConnected(false);
-                    if (projectLoaded) {
-                        const componentRegistry = Core.services.resolve(ComponentRegistry);
-                        const componentCount = componentRegistry?.getAllComponents().length || 0;
-                        setStatus(t('header.status.projectOpened') + (componentCount > 0 ? ` (${componentCount} components registered)` : ''));
+            const connected = profilerService && profilerService.isConnected();
+
+            setIsRemoteConnected((prevConnected) => {
+                if (connected !== prevConnected) {
+                    // 状态发生变化
+                    if (connected) {
+                        setStatus(t('header.status.remoteConnected'));
                     } else {
-                        setStatus(t('header.status.ready'));
+                        if (projectLoaded) {
+                            const componentRegistry = Core.services.resolve(ComponentRegistry);
+                            const componentCount = componentRegistry?.getAllComponents().length || 0;
+                            setStatus(t('header.status.projectOpened') + (componentCount > 0 ? ` (${componentCount} components registered)` : ''));
+                        } else {
+                            setStatus(t('header.status.ready'));
+                        }
                     }
+                    return connected;
                 }
-            }
+                return prevConnected;
+            });
         };
 
-        checkConnection();
         const interval = setInterval(checkConnection, 1000);
 
         return () => clearInterval(interval);
-    }, [projectLoaded, isRemoteConnected, t]);
+    }, [projectLoaded, t]);
 
     useEffect(() => {
         const initializeEditor = async () => {
@@ -157,53 +210,21 @@ function App() {
                 const editorScene = new Scene();
                 Core.setScene(editorScene);
 
-                const uiRegistry = new UIRegistry();
-                const messageHub = new MessageHub();
-                const serializerRegistry = new SerializerRegistry();
-                const entityStore = new EntityStoreService(messageHub);
-                const componentRegistry = new ComponentRegistry();
-                const fileAPI = new TauriFileAPI();
-                const projectService = new ProjectService(messageHub, fileAPI);
-                const componentDiscovery = new ComponentDiscoveryService(messageHub);
-                const propertyMetadata = new PropertyMetadataService();
-                const logService = new LogService();
-                const settingsRegistry = new SettingsRegistry();
-                const sceneManagerService = new SceneManagerService(messageHub, fileAPI, projectService);
-                const fileActionRegistry = new FileActionRegistry();
+                const serviceRegistry = new ServiceRegistry();
+                const services = serviceRegistry.registerAllServices(coreInstance);
 
-                // 监听远程日志事件
-                window.addEventListener('profiler:remote-log', ((event: CustomEvent) => {
-                    const { level, message, timestamp, clientId } = event.detail;
-                    logService.addRemoteLog(level, message, timestamp, clientId);
-                }) as EventListener);
+                serviceRegistry.setupRemoteLogListener(services.logService);
 
-                Core.services.registerInstance(UIRegistry, uiRegistry);
-                Core.services.registerInstance(MessageHub, messageHub);
-                Core.services.registerInstance(SerializerRegistry, serializerRegistry);
-                Core.services.registerInstance(EntityStoreService, entityStore);
-                Core.services.registerInstance(ComponentRegistry, componentRegistry);
-                Core.services.registerInstance(ProjectService, projectService);
-                Core.services.registerInstance(ComponentDiscoveryService, componentDiscovery);
-                Core.services.registerInstance(PropertyMetadataService, propertyMetadata);
-                Core.services.registerInstance(LogService, logService);
-                Core.services.registerInstance(SettingsRegistry, settingsRegistry);
-                Core.services.registerInstance(SceneManagerService, sceneManagerService);
-                Core.services.registerInstance(FileActionRegistry, fileActionRegistry);
+                const pluginInstaller = new PluginInstaller();
+                await pluginInstaller.installBuiltinPlugins(services.pluginManager);
 
-                const pluginMgr = new EditorPluginManager();
-                pluginMgr.initialize(coreInstance, Core.services);
-                Core.services.registerInstance(EditorPluginManager, pluginMgr);
+                services.notification.setCallbacks(showToast, hideToast);
+                (services.dialog as IDialogExtended).setConfirmCallback(setConfirmDialog);
 
-                await pluginMgr.installEditor(new SceneInspectorPlugin());
-                await pluginMgr.installEditor(new ProfilerPlugin());
-                await pluginMgr.installEditor(new EditorAppearancePlugin());
-                await pluginMgr.installEditor(new BehaviorTreePlugin());
-
-                messageHub.subscribe('ui:openWindow', (data: any) => {
+                services.messageHub.subscribe('ui:openWindow', (data: any) => {
                     console.log('[App] Received ui:openWindow:', data);
-                    const { windowId, ...params } = data;
+                    const { windowId } = data;
 
-                    // 内置窗口处理
                     if (windowId === 'profiler') {
                         setShowProfiler(true);
                     } else if (windowId === 'pluginManager') {
@@ -211,16 +232,17 @@ function App() {
                     }
                 });
 
-                await TauriAPI.greet('Developer');
-
                 setInitialized(true);
-                setPluginManager(pluginMgr);
-                setEntityStore(entityStore);
-                setMessageHub(messageHub);
-                setLogService(logService);
-                setUiRegistry(uiRegistry);
-                setSettingsRegistry(settingsRegistry);
-                setSceneManager(sceneManagerService);
+                setPluginManager(services.pluginManager);
+                setEntityStore(services.entityStore);
+                setMessageHub(services.messageHub);
+                setInspectorRegistry(services.inspectorRegistry);
+                setLogService(services.logService);
+                setUiRegistry(services.uiRegistry);
+                setSettingsRegistry(services.settingsRegistry);
+                setSceneManager(services.sceneManager);
+                setNotification(services.notification);
+                setDialog(services.dialog as IDialogExtended);
                 setStatus(t('header.status.ready'));
 
                 // Check for updates on startup (after 3 seconds)
@@ -266,6 +288,25 @@ function App() {
             const { fullscreen } = data;
             logger.info('Editor fullscreen state changed:', fullscreen);
             setIsEditorFullscreen(fullscreen);
+        });
+
+        return () => unsubscribe?.();
+    }, [messageHub]);
+
+    useEffect(() => {
+        if (!messageHub) return;
+
+        const unsubscribe = messageHub.subscribe('compiler:open-dialog', (data: {
+            compilerId: string;
+            currentFileName?: string;
+            projectPath?: string;
+        }) => {
+            logger.info('Opening compiler dialog:', data.compilerId);
+            setCompilerDialog({
+                isOpen: true,
+                compilerId: data.compilerId,
+                currentFileName: data.currentFileName
+            });
         });
 
         return () => unsubscribe?.();
@@ -323,7 +364,7 @@ function App() {
 
             if (pluginManager) {
                 setLoadingMessage(locale === 'zh' ? '加载项目插件...' : 'Loading project plugins...');
-                await pluginLoaderRef.current.loadProjectPlugins(projectPath, pluginManager);
+                await pluginLoader.loadProjectPlugins(projectPath, pluginManager);
             }
 
             setIsLoading(false);
@@ -520,7 +561,7 @@ function App() {
 
     const handleCloseProject = async () => {
         if (pluginManager) {
-            await pluginLoaderRef.current.unloadProjectPlugins(pluginManager);
+            await pluginLoader.unloadProjectPlugins(pluginManager);
         }
         setProjectLoaded(false);
         setCurrentProjectPath(null);
@@ -568,6 +609,48 @@ function App() {
         setShowPluginGenerator(true);
     };
 
+    const handleReloadPlugins = async () => {
+        if (currentProjectPath && pluginManager) {
+            try {
+                console.log('[App] Starting plugin hot reload...');
+
+                // 1. 关闭所有动态面板
+                console.log('[App] Closing all dynamic panels');
+                setActiveDynamicPanels([]);
+
+                // 2. 清空当前面板列表（强制卸载插件面板组件）
+                console.log('[App] Clearing plugin panels');
+                setPanels((prev) => prev.filter((p) =>
+                    ['scene-hierarchy', 'inspector', 'console', 'asset-browser'].includes(p.id)
+                ));
+
+                // 3. 等待React完成卸载
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+                // 4. 卸载所有项目插件（清理UIRegistry、调用uninstall）
+                console.log('[App] Unloading all project plugins');
+                await pluginLoader.unloadProjectPlugins(pluginManager);
+
+                // 5. 等待卸载完成
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                // 6. 重新加载插件
+                console.log('[App] Reloading project plugins');
+                await pluginLoader.loadProjectPlugins(currentProjectPath, pluginManager);
+
+                // 7. 触发面板重新渲染
+                console.log('[App] Triggering panel re-render');
+                setPluginUpdateTrigger((prev) => prev + 1);
+
+                showToast(locale === 'zh' ? '插件已重新加载' : 'Plugins reloaded', 'success');
+                console.log('[App] Plugin hot reload completed');
+            } catch (error) {
+                console.error('Failed to reload plugins:', error);
+                showToast(locale === 'zh' ? '重新加载插件失败' : 'Failed to reload plugins', 'error');
+            }
+        }
+    };
+
     useEffect(() => {
         if (projectLoaded && entityStore && messageHub && logService && uiRegistry && pluginManager) {
             let corePanels: FlexDockPanel[];
@@ -583,7 +666,7 @@ function App() {
                     {
                         id: 'inspector',
                         title: locale === 'zh' ? '检视器' : 'Inspector',
-                        content: <Inspector entityStore={entityStore} messageHub={messageHub} projectPath={currentProjectPath} />,
+                        content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} />,
                         closable: false
                     },
                     {
@@ -604,7 +687,7 @@ function App() {
                     {
                         id: 'inspector',
                         title: locale === 'zh' ? '检视器' : 'Inspector',
-                        content: <Inspector entityStore={entityStore} messageHub={messageHub} projectPath={currentProjectPath} />,
+                        content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} />,
                         closable: false
                     },
                     {
@@ -631,7 +714,6 @@ function App() {
                     if (!panelDesc.component) {
                         return false;
                     }
-                    // 过滤掉动态面板
                     if (panelDesc.isDynamic) {
                         return false;
                     }
@@ -649,7 +731,7 @@ function App() {
                     return {
                         id: panelDesc.id,
                         title: (panelDesc as any).titleZh && locale === 'zh' ? (panelDesc as any).titleZh : panelDesc.title,
-                        content: <Component projectPath={currentProjectPath} />,
+                        content: <Component key={`${panelDesc.id}-${pluginUpdateTrigger}`} projectPath={currentProjectPath} />,
                         closable: panelDesc.closable ?? true
                     };
                 });
@@ -725,8 +807,16 @@ function App() {
                         message={confirmDialog.message}
                         confirmText={confirmDialog.confirmText}
                         cancelText={confirmDialog.cancelText}
-                        onConfirm={confirmDialog.onConfirm}
-                        onCancel={() => setConfirmDialog(null)}
+                        onConfirm={() => {
+                            confirmDialog.onConfirm();
+                            setConfirmDialog(null);
+                        }}
+                        onCancel={() => {
+                            if (confirmDialog.onCancel) {
+                                confirmDialog.onCancel();
+                            }
+                            setConfirmDialog(null);
+                        }}
                     />
                 )}
             </>
@@ -756,8 +846,15 @@ function App() {
                         onToggleDevtools={handleToggleDevtools}
                         onOpenAbout={handleOpenAbout}
                         onCreatePlugin={handleCreatePlugin}
+                        onReloadPlugins={handleReloadPlugins}
                     />
                     <div className="header-right">
+                        <UserProfile
+                            githubService={githubService}
+                            onLogin={() => setShowLoginDialog(true)}
+                            onOpenDashboard={() => setShowDashboard(true)}
+                            locale={locale}
+                        />
                         <button onClick={handleLocaleChange} className="toolbar-btn locale-btn" title={locale === 'en' ? '切换到中文' : 'Switch to English'}>
                             <Globe size={14} />
                         </button>
@@ -765,6 +862,37 @@ function App() {
                     </div>
                 </div>
             )}
+
+            {showLoginDialog && (
+                <GitHubLoginDialog
+                    githubService={githubService}
+                    onClose={() => setShowLoginDialog(false)}
+                    locale={locale}
+                />
+            )}
+
+            {showDashboard && (
+                <UserDashboard
+                    githubService={githubService}
+                    onClose={() => setShowDashboard(false)}
+                    locale={locale}
+                />
+            )}
+
+            <CompilerConfigDialog
+                isOpen={compilerDialog.isOpen}
+                compilerId={compilerDialog.compilerId}
+                projectPath={currentProjectPath}
+                currentFileName={compilerDialog.currentFileName}
+                onClose={() => setCompilerDialog({ isOpen: false, compilerId: '' })}
+                onCompileComplete={(result) => {
+                    if (result.success) {
+                        showToast(result.message, 'success');
+                    } else {
+                        showToast(result.message, 'error');
+                    }
+                }}
+            />
 
             <div className="editor-content">
                 <FlexLayoutDockContainer
@@ -783,11 +911,13 @@ function App() {
                 <span>{t('footer.core')}: {t('footer.active')}</span>
             </div>
 
-            {showPluginManager && pluginManager && (
+            {showPluginManager && pluginManager && notification && dialog && (
                 <PluginManagerWindow
                     pluginManager={pluginManager}
+                    githubService={githubService}
                     onClose={() => setShowPluginManager(false)}
                     locale={locale}
+                    projectPath={currentProjectPath}
                     onOpen={() => {
                         // 同步所有插件的语言状态
                         const allPlugins = pluginManager.getAllEditorPlugins();
@@ -799,7 +929,7 @@ function App() {
                     }}
                     onRefresh={async () => {
                         if (currentProjectPath && pluginManager) {
-                            await pluginLoaderRef.current.loadProjectPlugins(currentProjectPath, pluginManager);
+                            await pluginLoader.loadProjectPlugins(currentProjectPath, pluginManager);
                         }
                     }}
                 />
@@ -828,7 +958,7 @@ function App() {
                     locale={locale}
                     onSuccess={async () => {
                         if (currentProjectPath && pluginManager) {
-                            await pluginLoaderRef.current.loadProjectPlugins(currentProjectPath, pluginManager);
+                            await pluginLoader.loadProjectPlugins(currentProjectPath, pluginManager);
                         }
                     }}
                 />
@@ -839,6 +969,25 @@ function App() {
                     title={errorDialog.title}
                     message={errorDialog.message}
                     onClose={() => setErrorDialog(null)}
+                />
+            )}
+
+            {confirmDialog && (
+                <ConfirmDialog
+                    title={confirmDialog.title}
+                    message={confirmDialog.message}
+                    confirmText={confirmDialog.confirmText}
+                    cancelText={confirmDialog.cancelText}
+                    onConfirm={() => {
+                        confirmDialog.onConfirm();
+                        setConfirmDialog(null);
+                    }}
+                    onCancel={() => {
+                        if (confirmDialog.onCancel) {
+                            confirmDialog.onCancel();
+                        }
+                        setConfirmDialog(null);
+                    }}
                 />
             )}
         </div>

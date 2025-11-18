@@ -1,5 +1,6 @@
 import { BehaviorTreeData } from './BehaviorTreeData';
 import { createLogger, IService } from '@esengine/ecs-framework';
+import { EditorToBehaviorTreeDataConverter } from '../Serialization/EditorToBehaviorTreeDataConverter';
 
 const logger = createLogger('BehaviorTreeAssetManager');
 
@@ -33,6 +34,50 @@ export class BehaviorTreeAssetManager implements IService {
         }
         this.assets.set(asset.id, asset);
         logger.info(`行为树资产已加载: ${asset.name} (${asset.nodes.size}个节点)`);
+    }
+
+    /**
+     * 从编辑器 JSON 格式加载行为树资产
+     *
+     * @param json 编辑器导出的 JSON 字符串
+     * @returns 加载的行为树数据
+     *
+     * @example
+     * ```typescript
+     * const assetManager = Core.services.resolve(BehaviorTreeAssetManager);
+     * const jsonContent = await readFile('path/to/tree.btree');
+     * const treeData = assetManager.loadFromEditorJSON(jsonContent);
+     * ```
+     */
+    loadFromEditorJSON(json: string): BehaviorTreeData {
+        try {
+            const treeData = EditorToBehaviorTreeDataConverter.fromEditorJSON(json);
+            this.loadAsset(treeData);
+            return treeData;
+        } catch (error) {
+            logger.error('从编辑器JSON加载失败:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 批量加载多个行为树资产（从编辑器JSON）
+     *
+     * @param jsonDataList JSON字符串列表
+     * @returns 成功加载的资产数量
+     */
+    loadMultipleFromEditorJSON(jsonDataList: string[]): number {
+        let successCount = 0;
+        for (const json of jsonDataList) {
+            try {
+                this.loadFromEditorJSON(json);
+                successCount++;
+            } catch (error) {
+                logger.error('批量加载时出错:', error);
+            }
+        }
+        logger.info(`批量加载完成: ${successCount}/${jsonDataList.length} 个资产`);
+        return successCount;
     }
 
     /**

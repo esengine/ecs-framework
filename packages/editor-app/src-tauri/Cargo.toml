@@ -18,6 +18,7 @@ tauri-plugin-shell = "2.0"
 tauri-plugin-dialog = "2.0"
 tauri-plugin-fs = "2.0"
 tauri-plugin-updater = "2"
+tauri-plugin-http = "2.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 glob = "0.3"
@@ -25,6 +26,8 @@ tokio = { version = "1", features = ["full"] }
 tokio-tungstenite = "0.21"
 futures-util = "0.3"
 chrono = "0.4"
+zip = "0.6"
+base64 = "0.22"
 
 [profile.dev]
 incremental = true
