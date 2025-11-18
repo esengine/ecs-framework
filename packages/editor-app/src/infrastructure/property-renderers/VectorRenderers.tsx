@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { IPropertyRenderer, PropertyContext } from '@esengine/editor-core';
 import { formatNumber } from '../../components/inspectors/utils';
