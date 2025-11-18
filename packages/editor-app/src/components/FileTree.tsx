@@ -630,10 +630,29 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             <div key={node.path}>
                 <div
                     className={`tree-node ${isSelected ? 'selected' : ''}`}
-                    style={{ paddingLeft: `${indent}px` }}
+                    style={{ paddingLeft: `${indent}px`, cursor: node.type === 'file' ? 'grab' : 'pointer' }}
                     onClick={() => !isRenaming && handleNodeClick(node)}
                     onDoubleClick={() => !isRenaming && handleNodeDoubleClick(node)}
                     onContextMenu={(e) => handleContextMenu(e, node)}
+                    draggable={node.type === 'file' && !isRenaming}
+                    onDragStart={(e) => {
+                        if (node.type === 'file' && !isRenaming) {
+                            e.dataTransfer.effectAllowed = 'copy';
+                            // 设置拖拽的数据
+                            e.dataTransfer.setData('asset-path', node.path);
+                            e.dataTransfer.setData('asset-name', node.name);
+                            const ext = node.name.includes('.') ? node.name.split('.').pop() : '';
+                            e.dataTransfer.setData('asset-extension', ext || '');
+                            e.dataTransfer.setData('text/plain', node.path);
+
+                            // 添加视觉反馈
+                            e.currentTarget.style.opacity = '0.5';
+                        }
+                    }}
+                    onDragEnd={(e) => {
+                        // 恢复透明度
+                        e.currentTarget.style.opacity = '1';
+                    }}
                 >
                     <span className="tree-arrow">
                         {node.type === 'folder' ? (

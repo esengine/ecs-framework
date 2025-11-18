@@ -7,7 +7,8 @@ import { BehaviorTreeEditor } from '../BehaviorTreeEditor';
 import { BehaviorTreeService } from '../../services/BehaviorTreeService';
 import { showToast } from '../../services/NotificationService';
 import { FolderOpen } from 'lucide-react';
-import type { Node as BehaviorTreeNode } from '../../domain/models/Node';
+import { Node as BehaviorTreeNode } from '../../domain/models/Node';
+import { BehaviorTree } from '../../domain/models/BehaviorTree';
 import './BehaviorTreeEditorPanel.css';
 
 const logger = createLogger('BehaviorTreeEditorPanel');
@@ -69,7 +70,9 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
     useEffect(() => {
         try {
             const messageHub = Core.services.resolve(MessageHub);
-            const unsubscribe = messageHub.subscribe('behavior-tree:file-opened', (data: { filePath: string; fileName: string }) => {
+
+            // 订阅文件打开事件
+            const unsubscribeFileOpened = messageHub.subscribe('behavior-tree:file-opened', (data: { filePath: string; fileName: string }) => {
                 setCurrentFilePath(data.filePath);
                 setCurrentFileName(data.fileName);
                 const loadedTree = useBehaviorTreeDataStore.getState().tree;
@@ -77,11 +80,51 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
                 setHasUnsavedChanges(false);
             });
 
+            // 订阅节点属性更改事件
+            const unsubscribePropertyChanged = messageHub.subscribe('behavior-tree:node-property-changed',
+                (data: { nodeId: string; propertyName: string; value: any }) => {
+                    const state = useBehaviorTreeDataStore.getState();
+                    const node = state.getNode(data.nodeId);
+
+                    if (node) {
+                        const newData = { ...node.data, [data.propertyName]: data.value };
+
+                        // 更新节点数据
+                        const updatedNode = new BehaviorTreeNode(
+                            node.id,
+                            node.template,
+                            newData,
+                            node.position,
+                            Array.from(node.children)
+                        );
+
+                        // 更新树
+                        const nodes = state.getNodes().map(n =>
+                            n.id === data.nodeId ? updatedNode : n
+                        );
+
+                        const newTree = new BehaviorTree(
+                            nodes,
+                            state.getConnections(),
+                            state.getBlackboard(),
+                            state.getRootNodeId()
+                        );
+
+                        state.setTree(newTree);
+                        setHasUnsavedChanges(true);
+
+                        // 强制刷新画布
+                        state.triggerForceUpdate();
+                    }
+                }
+            );
+
             return () => {
-                unsubscribe();
+                unsubscribeFileOpened();
+                unsubscribePropertyChanged();
             };
         } catch (error) {
-            logger.error('Failed to subscribe to file-opened event:', error);
+            logger.error('Failed to subscribe to events:', error);
         }
     }, []);
 

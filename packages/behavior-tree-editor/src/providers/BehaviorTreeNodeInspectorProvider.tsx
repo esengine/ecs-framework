@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { IInspectorProvider, InspectorContext, MessageHub } from '@esengine/editor-core';
+import { IInspectorProvider, InspectorContext, MessageHub, FieldEditorRegistry, FieldEditorContext } from '@esengine/editor-core';
+import { Core } from '@esengine/ecs-framework';
 import { Node as BehaviorTreeNode } from '../domain/models/Node';
 import { PropertyDefinition } from '@esengine/behavior-tree';
 
@@ -18,6 +19,49 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({ property, value, onChan
     }, [property.name, onChange]);
 
     const renderInput = () => {
+        // 特殊处理 treeAssetId 字段使用 asset 编辑器
+        if (property.name === 'treeAssetId') {
+            const fieldRegistry = Core.services.resolve(FieldEditorRegistry);
+            const assetEditor = fieldRegistry.getEditor('asset');
+
+            if (assetEditor) {
+                const context: FieldEditorContext = {
+                    readonly: false,
+                    metadata: {
+                        fileExtension: '.btree',
+                        placeholder: '拖拽或选择行为树文件'
+                    }
+                };
+
+                return assetEditor.render({
+                    label: '',
+                    value: value ?? property.defaultValue ?? null,
+                    onChange: handleChange,
+                    context
+                });
+            }
+        }
+
+        // 检查是否有特定的字段编辑器类型
+        if (property.fieldEditor) {
+            const fieldRegistry = Core.services.resolve(FieldEditorRegistry);
+            const editor = fieldRegistry.getEditor(property.fieldEditor.type);
+
+            if (editor) {
+                const context: FieldEditorContext = {
+                    readonly: false,
+                    metadata: property.fieldEditor.options
+                };
+
+                return editor.render({
+                    label: '',
+                    value: value ?? property.defaultValue,
+                    onChange: handleChange,
+                    context
+                });
+            }
+        }
+
         switch (property.type) {
             case 'number':
                 return (
