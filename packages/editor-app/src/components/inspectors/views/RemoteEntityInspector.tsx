@@ -8,14 +8,14 @@ import {
     ArrowUpDown,
     GitBranch
 } from 'lucide-react';
-import { RemoteEntity } from '../types';
+import { RemoteEntity, EntityDetails } from '../types';
 import { getProfilerService } from '../utils';
 import { ComponentItem } from '../common';
 import '../../../styles/EntityInspector.css';
 
 interface RemoteEntityInspectorProps {
     entity: RemoteEntity;
-    details?: any;
+    details?: EntityDetails;
     autoRefresh: boolean;
     onAutoRefreshChange: (value: boolean) => void;
     decimalPlaces: number;
@@ -35,7 +35,7 @@ export function RemoteEntityInspector({
         }
     };
 
-    const renderRemoteProperty = (key: string, value: any) => {
+    const renderRemoteProperty = (key: string, value: unknown) => {
         if (value === null || value === undefined) {
             return (
                 <div key={key} className="property-field">
@@ -58,7 +58,7 @@ export function RemoteEntityInspector({
                 );
             }
 
-            const isStringArray = value.length > 0 && value.every((item: any) => typeof item === 'string');
+            const isStringArray = value.length > 0 && value.every((item) => typeof item === 'string');
 
             if (isStringArray) {
                 return (
@@ -184,10 +184,10 @@ export function RemoteEntityInspector({
                         <label className="property-label">Entity ID</label>
                         <span className="property-value-text">{entity.id}</span>
                     </div>
-                    {(entity as any).name && (
+                    {entity.name && (
                         <div className="property-field">
                             <label className="property-label">Name</label>
-                            <span className="property-value-text">{(entity as any).name}</span>
+                            <span className="property-value-text">{entity.name}</span>
                         </div>
                     )}
                     <div className="property-field">
@@ -198,13 +198,13 @@ export function RemoteEntityInspector({
                         <span
                             className="property-value-text"
                             style={{
-                                color: (entity as any).enabled ? '#4ade80' : '#f87171'
+                                color: entity.enabled ? '#4ade80' : '#f87171'
                             }}
                         >
-                            {(entity as any).enabled ? 'true' : 'false'}
+                            {entity.enabled ? 'true' : 'false'}
                         </span>
                     </div>
-                    {(entity as any).tag !== undefined && (entity as any).tag !== 0 && (
+                    {entity.tag !== undefined && entity.tag !== 0 && (
                         <div className="property-field">
                             <label className="property-label">
                                 <Tag size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
@@ -217,37 +217,37 @@ export function RemoteEntityInspector({
                                     color: '#fbbf24'
                                 }}
                             >
-                                {(entity as any).tag}
+                                {entity.tag}
                             </span>
                         </div>
                     )}
                 </div>
 
-                {((entity as any).depth !== undefined ||
-                    (entity as any).updateOrder !== undefined ||
-                    (entity as any).parentId !== undefined ||
-                    (entity as any).childCount !== undefined) && (
+                {(entity.depth !== undefined ||
+                    entity.updateOrder !== undefined ||
+                    entity.parentId !== undefined ||
+                    entity.childCount !== undefined) && (
                     <div className="inspector-section">
                         <div className="section-title">层级信息</div>
-                        {(entity as any).depth !== undefined && (
+                        {entity.depth !== undefined && (
                             <div className="property-field">
                                 <label className="property-label">
                                     <Layers size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
                                     深度
                                 </label>
-                                <span className="property-value-text">{(entity as any).depth}</span>
+                                <span className="property-value-text">{entity.depth}</span>
                             </div>
                         )}
-                        {(entity as any).updateOrder !== undefined && (
+                        {entity.updateOrder !== undefined && (
                             <div className="property-field">
                                 <label className="property-label">
                                     <ArrowUpDown size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
                                     更新顺序
                                 </label>
-                                <span className="property-value-text">{(entity as any).updateOrder}</span>
+                                <span className="property-value-text">{entity.updateOrder}</span>
                             </div>
                         )}
-                        {(entity as any).parentId !== undefined && (
+                        {entity.parentId !== undefined && (
                             <div className="property-field">
                                 <label className="property-label">
                                     <GitBranch size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
@@ -256,36 +256,36 @@ export function RemoteEntityInspector({
                                 <span
                                     className="property-value-text"
                                     style={{
-                                        color: (entity as any).parentId === null ? '#666' : '#90caf9'
+                                        color: entity.parentId === null ? '#666' : '#90caf9'
                                     }}
                                 >
-                                    {(entity as any).parentId === null ? '无' : (entity as any).parentId}
+                                    {entity.parentId === null ? '无' : entity.parentId}
                                 </span>
                             </div>
                         )}
-                        {(entity as any).childCount !== undefined && (
+                        {entity.childCount !== undefined && (
                             <div className="property-field">
                                 <label className="property-label">子实体数量</label>
-                                <span className="property-value-text">{(entity as any).childCount}</span>
+                                <span className="property-value-text">{entity.childCount}</span>
                             </div>
                         )}
-                        {(entity as any).activeInHierarchy !== undefined && (
+                        {entity.activeInHierarchy !== undefined && (
                             <div className="property-field">
                                 <label className="property-label">层级中激活</label>
                                 <span
                                     className="property-value-text"
                                     style={{
-                                        color: (entity as any).activeInHierarchy ? '#4ade80' : '#f87171'
+                                        color: entity.activeInHierarchy ? '#4ade80' : '#f87171'
                                     }}
                                 >
-                                    {(entity as any).activeInHierarchy ? 'true' : 'false'}
+                                    {entity.activeInHierarchy ? 'true' : 'false'}
                                 </span>
                             </div>
                         )}
                     </div>
                 )}
 
-                {(entity as any).componentMask !== undefined && (
+                {entity.componentMask !== undefined && (
                     <div className="inspector-section">
                         <div className="section-title">调试信息</div>
                         <div className="property-field">
@@ -299,7 +299,7 @@ export function RemoteEntityInspector({
                                     wordBreak: 'break-all'
                                 }}
                             >
-                                {(entity as any).componentMask}
+                                {entity.componentMask}
                             </span>
                         </div>
                     </div>
@@ -311,7 +311,7 @@ export function RemoteEntityInspector({
                     details.components.length > 0 && (
                         <div className="inspector-section">
                             <div className="section-title">组件 ({details.components.length})</div>
-                            {details.components.map((comp: any, index: number) => (
+                            {details.components.map((comp, index) => (
                                 <ComponentItem key={index} component={comp} decimalPlaces={decimalPlaces} />
                             ))}
                         </div>

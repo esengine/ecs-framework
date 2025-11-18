@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import { Entity } from '@esengine/ecs-framework';
 import { TauriAPI } from '../../api/tauri';
 import { SettingsService } from '../../services/SettingsService';
-import { InspectorProps, InspectorTarget, AssetFileInfo } from './types';
+import { InspectorProps, InspectorTarget, AssetFileInfo, RemoteEntity } from './types';
 import { getProfilerService } from './utils';
 import {
     EmptyInspector,
@@ -41,7 +42,7 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
     }, []);
 
     useEffect(() => {
-        const handleEntitySelection = (data: { entity: any | null }) => {
+        const handleEntitySelection = (data: { entity: Entity | null }) => {
             if (data.entity) {
                 setTarget({ type: 'entity', data: data.entity });
             } else {
@@ -50,7 +51,7 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
             setComponentVersion(0);
         };
 
-        const handleRemoteEntitySelection = (data: { entity: any }) => {
+        const handleRemoteEntitySelection = (data: { entity: RemoteEntity }) => {
             setTarget({ type: 'remote-entity', data: data.entity });
             const profilerService = getProfilerService();
             if (profilerService && data.entity?.id !== undefined) {
@@ -181,7 +182,7 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
 
     if (target.type === 'remote-entity') {
         const entity = target.data;
-        const details = (target as any).details;
+        const details = target.details;
 
         return (
             <RemoteEntityInspector

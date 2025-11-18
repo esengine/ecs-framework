@@ -34,7 +34,7 @@ export function EntityInspector({ entity, messageHub, componentVersion }: Entity
         }
     };
 
-    const handlePropertyChange = (component: any, propertyName: string, value: any) => {
+    const handlePropertyChange = (component: unknown, propertyName: string, value: unknown) => {
         messageHub.publish('component:property:changed', {
             entity,
             component,
@@ -66,7 +66,7 @@ export function EntityInspector({ entity, messageHub, componentVersion }: Entity
                 {entity.components.length > 0 && (
                     <div className="inspector-section">
                         <div className="section-title">组件</div>
-                        {entity.components.map((component: any, index: number) => {
+                        {entity.components.map((component, index: number) => {
                             const isExpanded = expandedComponents.has(index);
                             const componentName = component.constructor?.name || 'Component';
 
@@ -131,7 +131,7 @@ export function EntityInspector({ entity, messageHub, componentVersion }: Entity
                                         <div style={{ padding: '6px 8px' }}>
                                             <PropertyInspector
                                                 component={component}
-                                                onChange={(propName: string, value: any) =>
+                                                onChange={(propName: string, value: unknown) =>
                                                     handlePropertyChange(component, propName, value)
                                                 }
                                             />

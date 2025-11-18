@@ -8,6 +8,11 @@ export function formatNumber(value: number, decimalPlaces: number): string {
     return value.toFixed(decimalPlaces);
 }
 
-export function getProfilerService(): any {
+export interface ProfilerService {
+    requestEntityDetails(entityId: number): void;
+    subscribe(callback: () => void): () => void;
+}
+
+export function getProfilerService(): ProfilerService | undefined {
     return (window as any).__PROFILER_SERVICE__;
 }

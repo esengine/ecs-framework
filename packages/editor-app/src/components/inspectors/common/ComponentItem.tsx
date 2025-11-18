@@ -5,7 +5,7 @@ import { PropertyValueRenderer } from './PropertyValueRenderer';
 export interface ComponentItemProps {
     component: {
         typeName: string;
-        properties: Record<string, any>;
+        properties: Record<string, unknown>;
     };
     decimalPlaces?: number;
 }

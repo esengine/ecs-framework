@@ -4,7 +4,7 @@ import { formatNumber } from '../utils';
 
 export interface PropertyValueRendererProps {
     name: string;
-    value: any;
+    value: unknown;
     depth: number;
     decimalPlaces?: number;
 }
@@ -15,18 +15,22 @@ export function PropertyValueRenderer({ name, value, depth, decimalPlaces = 4 }:
     const isExpandable = value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0;
     const isArray = Array.isArray(value);
 
-    const renderSimpleValue = (val: any): string => {
+    const renderSimpleValue = (val: unknown): string => {
         if (val === null || val === undefined) return 'null';
         if (typeof val === 'boolean') return val ? 'true' : 'false';
         if (typeof val === 'number') return formatNumber(val, decimalPlaces);
         if (typeof val === 'string') return val.length > 50 ? val.substring(0, 50) + '...' : val;
         if (Array.isArray(val)) return `Array(${val.length})`;
         if (typeof val === 'object') {
-            const keys = Object.keys(val);
+            const obj = val as Record<string, unknown>;
+            const keys = Object.keys(obj);
             if (keys.length === 0) return '{}';
             if (keys.length <= 2) {
                 const preview = keys
-                    .map((k) => `${k}: ${typeof val[k] === 'object' ? '...' : typeof val[k] === 'number' ? formatNumber(val[k], decimalPlaces) : val[k]}`)
+                    .map((k) => {
+                        const v = obj[k];
+                        return `${k}: ${typeof v === 'object' ? '...' : typeof v === 'number' ? formatNumber(v, decimalPlaces) : String(v)}`;
+                    })
                     .join(', ');
                 return `{${preview}}`;
             }
@@ -112,7 +116,7 @@ export function PropertyValueRenderer({ name, value, depth, decimalPlaces = 4 }:
                 </div>
                 {isExpanded && (
                     <div style={{ marginLeft: '8px', borderLeft: '1px solid #444', paddingLeft: '8px' }}>
-                        {value.map((item: any, index: number) => (
+                        {value.map((item, index: number) => (
                             <PropertyValueRenderer
                                 key={index}
                                 name={`[${index}]`}
