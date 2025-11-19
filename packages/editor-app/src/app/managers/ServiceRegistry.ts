@@ -14,7 +14,8 @@ import {
     FileActionRegistry,
     EditorPluginManager,
     InspectorRegistry,
-    PropertyRendererRegistry
+    PropertyRendererRegistry,
+    FieldEditorRegistry
 } from '@esengine/editor-core';
 import { TauriFileAPI } from '../../adapters/TauriFileAPI';
 import { DIContainer } from '../../core/di/DIContainer';
@@ -37,6 +38,13 @@ import {
     ArrayRenderer,
     FallbackRenderer
 } from '../../infrastructure/property-renderers';
+import {
+    AssetFieldEditor,
+    Vector2FieldEditor,
+    Vector3FieldEditor,
+    Vector4FieldEditor,
+    ColorFieldEditor
+} from '../../infrastructure/field-editors';
 
 export interface EditorServices {
     uiRegistry: UIRegistry;
@@ -61,6 +69,7 @@ export interface EditorServices {
     notification: NotificationService;
     inspectorRegistry: InspectorRegistry;
     propertyRendererRegistry: PropertyRendererRegistry;
+    fieldEditorRegistry: FieldEditorRegistry;
 }
 
 export class ServiceRegistry {
@@ -123,6 +132,15 @@ export class ServiceRegistry {
         propertyRendererRegistry.register(new ArrayRenderer());
         propertyRendererRegistry.register(new FallbackRenderer());
 
+        const fieldEditorRegistry = new FieldEditorRegistry();
+        Core.services.registerInstance(FieldEditorRegistry, fieldEditorRegistry);
+
+        fieldEditorRegistry.register(new AssetFieldEditor());
+        fieldEditorRegistry.register(new Vector2FieldEditor());
+        fieldEditorRegistry.register(new Vector3FieldEditor());
+        fieldEditorRegistry.register(new Vector4FieldEditor());
+        fieldEditorRegistry.register(new ColorFieldEditor());
+
         return {
             uiRegistry,
             messageHub,
@@ -145,7 +163,8 @@ export class ServiceRegistry {
             dialog,
             notification,
             inspectorRegistry,
-            propertyRendererRegistry
+            propertyRendererRegistry,
+            fieldEditorRegistry
         };
     }
 

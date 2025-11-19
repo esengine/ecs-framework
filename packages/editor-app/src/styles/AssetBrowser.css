@@ -252,21 +252,52 @@
   align-items: center;
   padding: 12px 8px;
   border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
+  cursor: grab;
+  transition: all 0.2s ease;
   user-select: none;
+  position: relative;
+}
+
+.asset-item[draggable="true"]:active {
+  cursor: grabbing;
 }
 
 .asset-item:hover {
   background: #2a2d2e;
+  transform: translateY(-1px);
 }
 
 .asset-item.selected {
   background: #094771;
+  box-shadow: 0 0 0 1px rgba(14, 108, 170, 0.3);
 }
 
 .asset-item.selected:hover {
   background: #0e6caa;
+}
+
+/* 拖拽中的样式 */
+.asset-item.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+/* 拖拽时的指示器 */
+.asset-item::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px dashed transparent;
+  border-radius: 6px;
+  transition: border-color 0.2s ease;
+  pointer-events: none;
+}
+
+.asset-item[draggable="true"]:hover::before {
+  border-color: rgba(74, 222, 128, 0.3);
 }
 
 .asset-icon {

@@ -70,7 +70,16 @@
   cursor: pointer;
   font-size: var(--font-size-base);
   white-space: nowrap;
-  transition: background 0.1s ease;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.tree-node[draggable="true"] {
+  cursor: grab;
+}
+
+.tree-node[draggable="true"]:active {
+  cursor: grabbing;
 }
 
 .tree-node:hover {
@@ -79,6 +88,16 @@
 
 .tree-node.selected {
   background: #37373d;
+}
+
+/* 拖拽时的样式 */
+.tree-node.dragging {
+  opacity: 0.5;
+}
+
+.tree-node[draggable="true"]:hover {
+  background: #2a2d2e;
+  box-shadow: inset 2px 0 0 rgba(74, 222, 128, 0.5);
 }
 
 .tree-arrow {

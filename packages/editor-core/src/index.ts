@@ -33,6 +33,8 @@ export * from './Services/IInspectorProvider';
 export * from './Services/InspectorRegistry';
 export * from './Services/IPropertyRenderer';
 export * from './Services/PropertyRendererRegistry';
+export * from './Services/IFieldEditor';
+export * from './Services/FieldEditorRegistry';
 
 export * from './Module/IEventBus';
 export * from './Module/ICommandRegistry';

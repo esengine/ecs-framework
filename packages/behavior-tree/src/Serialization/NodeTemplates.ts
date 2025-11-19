@@ -66,6 +66,24 @@ export interface PropertyDefinition {
     required?: boolean;
 
     /**
+     * 字段编辑器配置
+     *
+     * 指定使用哪个字段编辑器以及相关选项
+     *
+     * @example
+     * ```typescript
+     * fieldEditor: {
+     *   type: 'asset',
+     *   options: { fileExtension: '.btree' }
+     * }
+     * ```
+     */
+    fieldEditor?: {
+        type: string;
+        options?: Record<string, any>;
+    };
+
+    /**
      * 自定义渲染配置
      *
      * 用于指定编辑器如何渲染此属性

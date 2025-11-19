@@ -674,6 +674,29 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                                                 onClick={() => handleAssetClick(asset)}
                                                 onDoubleClick={() => handleAssetDoubleClick(asset)}
                                                 onContextMenu={(e) => handleContextMenu(e, asset)}
+                                                draggable={asset.type === 'file'}
+                                                onDragStart={(e) => {
+                                                    if (asset.type === 'file') {
+                                                        e.dataTransfer.effectAllowed = 'copy';
+                                                        // 设置拖拽的数据
+                                                        e.dataTransfer.setData('asset-path', asset.path);
+                                                        e.dataTransfer.setData('asset-name', asset.name);
+                                                        e.dataTransfer.setData('asset-extension', asset.extension || '');
+                                                        e.dataTransfer.setData('text/plain', asset.path);
+
+                                                        // 设置拖拽时的视觉效果
+                                                        const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+                                                        dragImage.style.position = 'absolute';
+                                                        dragImage.style.top = '-9999px';
+                                                        dragImage.style.opacity = '0.8';
+                                                        document.body.appendChild(dragImage);
+                                                        e.dataTransfer.setDragImage(dragImage, 0, 0);
+                                                        setTimeout(() => document.body.removeChild(dragImage), 0);
+                                                    }
+                                                }}
+                                                style={{
+                                                    cursor: asset.type === 'file' ? 'grab' : 'pointer'
+                                                }}
                                             >
                                                 {getFileIcon(asset)}
                                                 <div className="asset-info">
