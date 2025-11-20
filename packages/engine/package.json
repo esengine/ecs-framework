@@ -1,0 +1,37 @@
+{
+    "name": "@esengine/engine",
+    "version": "0.1.0",
+    "description": "High-performance 2D game engine built with Rust and WebAssembly | 使用Rust和WebAssembly构建的高性能2D游戏引擎",
+    "main": "pkg/es_engine.js",
+    "types": "pkg/es_engine.d.ts",
+    "files": [
+        "pkg"
+    ],
+    "scripts": {
+        "build": "wasm-pack build --target web --out-dir pkg",
+        "build:release": "wasm-pack build --target web --out-dir pkg --release",
+        "build:bundler": "wasm-pack build --target bundler --out-dir pkg",
+        "clean": "rimraf pkg target",
+        "test": "wasm-pack test --headless --firefox"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/esengine/ecs-framework.git",
+        "directory": "packages/engine"
+    },
+    "keywords": [
+        "game-engine",
+        "2d",
+        "webgl",
+        "wasm",
+        "rust",
+        "ecs",
+        "webassembly"
+    ],
+    "author": "ESEngine Team",
+    "license": "MIT",
+    "devDependencies": {
+        "rimraf": "^5.0.0"
+    },
+    "peerDependencies": {}
+}

@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
+import wasm from 'vite-plugin-wasm';
+import topLevelAwait from 'vite-plugin-top-level-await';
 import fs from 'fs';
 import path from 'path';
 
@@ -8,6 +10,34 @@ const host = process.env.TAURI_DEV_HOST;
 const userProjectPathMap = new Map<string, string>();
 const editorPackageMapping = new Map<string, string>();
 const editorPackageVersions = new Map<string, string>();
+const wasmPackages: string[] = []; // Auto-detected WASM packages
+
+/**
+ * Check if a package directory contains WASM files (non-recursive, only check root and pkg folder).
+ * 检查包目录是否包含WASM文件（非递归，只检查根目录和pkg文件夹）。
+ */
+function hasWasmFiles(dirPath: string): boolean {
+  try {
+    const files = fs.readdirSync(dirPath);
+    for (const file of files) {
+      // Only check .wasm files in root or pkg folder
+      if (file.endsWith('.wasm')) {
+        return true;
+      }
+      // Only check pkg folder (common wasm-pack output)
+      if (file === 'pkg') {
+        const pkgPath = path.join(dirPath, file);
+        const pkgFiles = fs.readdirSync(pkgPath);
+        if (pkgFiles.some(f => f.endsWith('.wasm'))) {
+          return true;
+        }
+      }
+    }
+  } catch {
+    // Ignore errors
+  }
+  return false;
+}
 
 function loadEditorPackages() {
   const packagesDir = path.resolve(__dirname, '..');
@@ -25,22 +55,88 @@ function loadEditorPackages() {
     if (fs.existsSync(packageJsonPath)) {
       try {
         const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-        if (packageJson.name && packageJson.name.startsWith('@esengine/')) {
+        const packageName = packageJson.name;
+
+        if (packageName && packageName.startsWith('@esengine/')) {
           const mainFile = packageJson.module || packageJson.main;
           if (mainFile) {
             const entryPath = path.join(packagesDir, dir, mainFile);
             if (fs.existsSync(entryPath)) {
-              editorPackageMapping.set(packageJson.name, entryPath);
+              editorPackageMapping.set(packageName, entryPath);
             }
           }
           if (packageJson.version) {
-            editorPackageVersions.set(packageJson.name, packageJson.version);
+            editorPackageVersions.set(packageName, packageJson.version);
           }
+        }
+
+        // Check for WASM files and add to wasmPackages
+        // 检查WASM文件并添加到wasmPackages
+        const packageDir = path.join(packagesDir, dir);
+        if (packageName && hasWasmFiles(packageDir)) {
+          wasmPackages.push(packageName);
+          console.log(`[Vite] Detected WASM package: ${packageName}`);
         }
       } catch (e) {
         console.error(`[Vite] Failed to read package.json for ${dir}:`, e);
       }
     }
+  }
+
+  // Also scan node_modules for WASM packages
+  // 也扫描node_modules中的WASM包
+  const nodeModulesDir = path.resolve(__dirname, 'node_modules');
+  if (fs.existsSync(nodeModulesDir)) {
+    scanNodeModulesForWasm(nodeModulesDir);
+  }
+}
+
+/**
+ * Scan node_modules for WASM packages.
+ * 扫描node_modules中的WASM包。
+ */
+function scanNodeModulesForWasm(nodeModulesDir: string) {
+  try {
+    const entries = fs.readdirSync(nodeModulesDir);
+    for (const entry of entries) {
+      // Skip .pnpm and other hidden/internal directories
+      if (entry.startsWith('.')) continue;
+
+      const entryPath = path.join(nodeModulesDir, entry);
+      const stat = fs.statSync(entryPath);
+
+      if (!stat.isDirectory()) continue;
+
+      // Handle scoped packages (@scope/package)
+      if (entry.startsWith('@')) {
+        const scopedPackages = fs.readdirSync(entryPath);
+        for (const scopedPkg of scopedPackages) {
+          const scopedPath = path.join(entryPath, scopedPkg);
+          const scopedStat = fs.statSync(scopedPath);
+          if (scopedStat.isDirectory()) {
+            checkAndAddWasmPackage(scopedPath, `${entry}/${scopedPkg}`);
+          }
+        }
+      } else {
+        checkAndAddWasmPackage(entryPath, entry);
+      }
+    }
+  } catch {
+    // Ignore errors
+  }
+}
+
+/**
+ * Check if a package has WASM files and add to wasmPackages.
+ * 检查包是否有WASM文件并添加到wasmPackages。
+ */
+function checkAndAddWasmPackage(packagePath: string, packageName: string) {
+  // Skip if already added
+  if (wasmPackages.includes(packageName)) return;
+
+  if (hasWasmFiles(packagePath)) {
+    wasmPackages.push(packageName);
+    console.log(`[Vite] Detected WASM package in node_modules: ${packageName}`);
   }
 }
 
@@ -581,6 +677,8 @@ module.exports = [
             inlineDynamicImports: true
         },
         plugins: [
+    wasm(),
+    topLevelAwait(),
             resolve({
                 extensions: ['.js', '.jsx']
             }),
@@ -607,6 +705,8 @@ module.exports = [
             format: 'es'
         },
         plugins: [
+    wasm(),
+    topLevelAwait(),
             dts({
                 respectExternal: true
             })
@@ -638,6 +738,8 @@ module.exports = [
 
 export default defineConfig({
   plugins: [
+    wasm(),
+    topLevelAwait(),
     ...react({
       tsDecorators: true,
     }),
@@ -664,5 +766,12 @@ export default defineConfig({
     target: 'es2021',
     minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
     sourcemap: !!process.env.TAURI_DEBUG,
+  },
+  optimizeDeps: {
+    // Pre-bundle common dependencies to avoid runtime re-optimization | 预打包常用依赖以避免运行时重新优化
+    include: ['tslib', 'react', 'react-dom', 'zustand', 'lucide-react'],
+    // Exclude WASM packages from pre-bundling | 排除 WASM 包不进行预打包
+    // Add user WASM plugins to wasmPackages array at top of file | 将用户 WASM 插件添加到文件顶部的 wasmPackages 数组
+    exclude: wasmPackages,
   },
 });

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, Pause, RotateCcw, Maximize2, Grid3x3, Eye, EyeOff, Activity, Box, Square } from 'lucide-react';
+import { Play, Pause, RotateCcw, Maximize2, Grid3x3, Eye, EyeOff, Activity, Box, Square, Zap } from 'lucide-react';
 import '../styles/Viewport.css';
+import { useEngine } from '../hooks/useEngine';
 
 interface ViewportProps {
   locale?: string;
@@ -14,6 +15,11 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
     const [showGizmos, setShowGizmos] = useState(true);
     const [showStats, setShowStats] = useState(false);
     const [is3D, setIs3D] = useState(true);
+    const [useRustEngine, setUseRustEngine] = useState(false);
+
+    // Rust engine hook (only active in 2D mode with engine enabled)
+    // Rust引擎钩子（仅在2D模式且启用引擎时激活）
+    const engine = useEngine('viewport-canvas', useRustEngine && !is3D);
     const animationFrameRef = useRef<number>();
     const glRef = useRef<WebGLRenderingContext | null>(null);
     const gridProgramRef = useRef<WebGLProgram | null>(null);
@@ -573,7 +579,17 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
     };
 
     const handlePlayPause = () => {
-        setIsPlaying(!isPlaying);
+        const newPlaying = !isPlaying;
+        setIsPlaying(newPlaying);
+
+        // Control Rust engine if active | 控制Rust引擎（如果激活）
+        if (useRustEngine && !is3D && engine.state.initialized) {
+            if (newPlaying) {
+                engine.start();
+            } else {
+                engine.stop();
+            }
+        }
     };
 
     const handleReset = () => {
@@ -634,6 +650,15 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
                     >
                         {is3D ? <Box size={16} /> : <Square size={16} />}
                     </button>
+                    {!is3D && (
+                        <button
+                            className={`viewport-btn ${useRustEngine ? 'active' : ''}`}
+                            onClick={() => setUseRustEngine(!useRustEngine)}
+                            title={locale === 'zh' ? 'Rust引擎' : 'Rust Engine'}
+                        >
+                            <Zap size={16} />
+                        </button>
+                    )}
                 </div>
                 <div className="viewport-toolbar-right">
                     <button
@@ -652,17 +677,33 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
                     </button>
                 </div>
             </div>
-            <canvas ref={canvasRef} className="viewport-canvas" />
+            <canvas ref={canvasRef} id="viewport-canvas" className="viewport-canvas" />
             {showStats && (
                 <div className="viewport-stats">
                     <div className="viewport-stat">
                         <span className="viewport-stat-label">FPS:</span>
-                        <span className="viewport-stat-value">{fps}</span>
+                        <span className="viewport-stat-value">
+                            {useRustEngine && !is3D ? engine.state.fps : fps}
+                        </span>
                     </div>
                     <div className="viewport-stat">
                         <span className="viewport-stat-label">Draw Calls:</span>
-                        <span className="viewport-stat-value">{drawCalls}</span>
+                        <span className="viewport-stat-value">
+                            {useRustEngine && !is3D ? engine.state.drawCalls : drawCalls}
+                        </span>
                     </div>
+                    {useRustEngine && !is3D && (
+                        <div className="viewport-stat">
+                            <span className="viewport-stat-label">Sprites:</span>
+                            <span className="viewport-stat-value">{engine.state.spriteCount}</span>
+                        </div>
+                    )}
+                    {useRustEngine && !is3D && engine.state.error && (
+                        <div className="viewport-stat viewport-stat-error">
+                            <span className="viewport-stat-label">Error:</span>
+                            <span className="viewport-stat-value">{engine.state.error}</span>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

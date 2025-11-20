@@ -24,6 +24,7 @@ import { SceneHierarchy } from './components/SceneHierarchy';
 import { Inspector } from './components/Inspector';
 import { AssetBrowser } from './components/AssetBrowser';
 import { ConsolePanel } from './components/ConsolePanel';
+import { Viewport } from './components/Viewport';
 import { PluginManagerWindow } from './components/PluginManagerWindow';
 import { ProfilerWindow } from './components/ProfilerWindow';
 import { PortManager } from './components/PortManager';
@@ -682,6 +683,12 @@ function App() {
                         id: 'scene-hierarchy',
                         title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
                         content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />,
+                        closable: false
+                    },
+                    {
+                        id: 'viewport',
+                        title: locale === 'zh' ? '视口' : 'Viewport',
+                        content: <Viewport locale={locale} />,
                         closable: false
                     },
                     {

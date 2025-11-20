@@ -1,5 +1,4 @@
 import type { Entity, Component } from '@esengine/ecs-framework';
-import type { Node } from '@esengine/behavior-tree-editor';
 
 export interface PluginEvent {
     name: string;
