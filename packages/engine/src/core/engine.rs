@@ -1,6 +1,8 @@
 //! Main engine implementation.
 //! 主引擎实现。
 
+use wasm_bindgen::prelude::*;
+
 use super::context::WebGLContext;
 use super::error::Result;
 use crate::input::InputManager;
@@ -80,6 +82,37 @@ impl Engine {
         let input_manager = InputManager::new();
 
         log::info!("Engine created successfully | 引擎创建成功");
+
+        Ok(Self {
+            context,
+            renderer,
+            texture_manager,
+            input_manager,
+            config,
+        })
+    }
+
+    /// Create a new engine instance from external WebGL context.
+    /// 从外部 WebGL 上下文创建引擎实例。
+    ///
+    /// This is designed for environments like WeChat MiniGame.
+    /// 适用于微信小游戏等环境。
+    pub fn from_external(
+        gl_context: JsValue,
+        width: u32,
+        height: u32,
+        config: EngineConfig,
+    ) -> Result<Self> {
+        let context = WebGLContext::from_external(gl_context, width, height)?;
+
+        context.set_viewport();
+        context.enable_blend();
+
+        let renderer = Renderer2D::new(context.gl(), config.max_sprites)?;
+        let texture_manager = TextureManager::new(context.gl().clone());
+        let input_manager = InputManager::new();
+
+        log::info!("Engine created from external context | 从外部上下文创建引擎");
 
         Ok(Self {
             context,

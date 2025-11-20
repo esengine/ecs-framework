@@ -24,7 +24,7 @@
     "@tauri-apps/plugin-fs": "^2.4.2",
     "@tauri-apps/plugin-http": "^2.5.4",
     "@tauri-apps/plugin-shell": "^2.0.0",
-    "es-engine": "file:../engine/pkg",
+    "@esengine/engine": "file:../engine",
     "flexlayout-react": "^0.8.17",
     "i18next": "^25.6.0",
     "json5": "^2.2.3",

@@ -89,6 +89,24 @@ impl GameEngine {
         Ok(GameEngine { engine })
     }
 
+    /// Create a new game engine from external WebGL context.
+    /// 从外部 WebGL 上下文创建引擎。
+    ///
+    /// This is designed for WeChat MiniGame and similar environments.
+    /// 适用于微信小游戏等环境。
+    #[wasm_bindgen(js_name = fromExternal)]
+    pub fn from_external(
+        gl_context: JsValue,
+        width: u32,
+        height: u32,
+    ) -> std::result::Result<GameEngine, JsValue> {
+        let config = EngineConfig::default();
+        let engine = Engine::from_external(gl_context, width, height, config)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        Ok(GameEngine { engine })
+    }
+
     /// Clear the screen with specified color.
     /// 使用指定颜色清除屏幕。
     ///

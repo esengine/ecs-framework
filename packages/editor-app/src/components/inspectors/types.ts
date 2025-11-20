@@ -1,11 +1,12 @@
 import { Entity } from '@esengine/ecs-framework';
-import { EntityStoreService, MessageHub, InspectorRegistry } from '@esengine/editor-core';
+import { EntityStoreService, MessageHub, InspectorRegistry, CommandManager } from '@esengine/editor-core';
 
 export interface InspectorProps {
     entityStore: EntityStoreService;
     messageHub: MessageHub;
     inspectorRegistry: InspectorRegistry;
     projectPath?: string | null;
+    commandManager: CommandManager;
 }
 
 export interface AssetFileInfo {

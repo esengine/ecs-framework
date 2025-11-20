@@ -5,7 +5,7 @@
 
 import { EngineBridge, SpriteComponent, EngineRenderSystem, ITransformComponent } from '@esengine/ecs-engine-bindgen';
 import { Core, Scene, Entity, Component, ECSComponent } from '@esengine/ecs-framework';
-import * as esEngine from 'es-engine';
+import * as esEngine from '@esengine/engine';
 
 /**
  * Transform component for editor entities.

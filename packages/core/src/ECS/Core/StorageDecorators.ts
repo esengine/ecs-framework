@@ -23,7 +23,6 @@ export {
     EnableSoA,
 
     // 数值类型装饰器
-    HighPrecision,
     Float64,
     Float32,
     Int32,
@@ -33,10 +32,6 @@ export {
     Int8,
     Uint8,
     Uint8Clamped,
-
-    // 自动类型推断
-    AutoTyped,
-    TypeInference,
 
     // 序列化装饰器
     SerializeMap,

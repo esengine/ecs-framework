@@ -1,6 +1,16 @@
 import { Component } from '../Component';
 import { ComponentType } from './ComponentStorage';
-import { createLogger } from '../../Utils/Logger';
+import {
+    SoATypeRegistry,
+    SupportedTypedArray,
+    TypedArrayTypeName
+} from './SoATypeRegistry';
+import { SoASerializer } from './SoASerializer';
+
+// 重新导出类型，保持向后兼容
+export { SupportedTypedArray, TypedArrayTypeName } from './SoATypeRegistry';
+export { SoATypeRegistry } from './SoATypeRegistry';
+export { SoASerializer } from './SoASerializer';
 
 /**
  * 启用SoA优化装饰器
@@ -11,18 +21,6 @@ export function EnableSoA<T extends ComponentType>(target: T): T {
     return target;
 }
 
-
-/**
- * 高精度数值装饰器
- * 标记字段需要保持完整精度，存储为复杂对象而非TypedArray
- */
-export function HighPrecision(target: any, propertyKey: string | symbol): void {
-    const key = String(propertyKey);
-    if (!target.constructor.__highPrecisionFields) {
-        target.constructor.__highPrecisionFields = new Set();
-    }
-    target.constructor.__highPrecisionFields.add(key);
-}
 
 /**
  * 64位浮点数装饰器
@@ -181,170 +179,29 @@ export function DeepCopy(target: any, propertyKey: string | symbol): void {
     target.constructor.__deepCopyFields.add(key);
 }
 
-/**
- * 自动类型推断装饰器
- * 根据字段的默认值和数值范围自动选择最优的TypedArray类型
- *
- * @param options 类型推断选项
- * @param options.minValue 数值的最小值（用于范围优化）
- * @param options.maxValue 数值的最大值（用于范围优化）
- * @param options.precision 是否需要浮点精度（true: 使用浮点数组, false: 使用整数数组）
- * @param options.signed 是否需要符号位（仅在整数模式下有效）
- */
-export function AutoTyped(options?: {
-    minValue?: number;
-    maxValue?: number;
-    precision?: boolean;
-    signed?: boolean;
-}) {
-    return function (target: any, propertyKey: string | symbol): void {
-        const key = String(propertyKey);
-        if (!target.constructor.__autoTypedFields) {
-            target.constructor.__autoTypedFields = new Map();
-        }
-        target.constructor.__autoTypedFields.set(key, options || {});
-    };
-}
-
-/**
- * 自动类型推断器
- * 根据数值类型和范围自动选择最优的TypedArray类型
- */
-export class TypeInference {
-    /**
-     * 根据数值范围推断最优的TypedArray类型
-     */
-    public static inferOptimalType(value: any, options: {
-        minValue?: number;
-        maxValue?: number;
-        precision?: boolean;
-        signed?: boolean;
-    } = {}): string {
-        const type = typeof value;
-
-        if (type === 'boolean') {
-            return 'uint8'; // 布尔值使用最小的无符号整数
-        }
-
-        if (type !== 'number') {
-            return 'float32'; // 非数值类型默认使用Float32
-        }
-
-        const { minValue, maxValue, precision, signed } = options;
-
-        // 如果显式要求精度，使用浮点数
-        if (precision === true) {
-            // 检查是否需要双精度
-            if (Math.abs(value) > 3.4028235e+38 || (minValue !== undefined && Math.abs(minValue) > 3.4028235e+38) || (maxValue !== undefined && Math.abs(maxValue) > 3.4028235e+38)) {
-                return 'float64';
-            }
-            return 'float32';
-        }
-
-        // 如果显式禁用精度，或者是整数值，尝试使用整数数组
-        if (precision === false || Number.isInteger(value)) {
-            const actualMin = minValue !== undefined ? minValue : value;
-            const actualMax = maxValue !== undefined ? maxValue : value;
-            const needsSigned = signed !== false && (actualMin < 0 || value < 0);
-
-            // 根据范围选择最小的整数类型
-            if (needsSigned) {
-                // 有符号整数
-                if (actualMin >= -128 && actualMax <= 127) {
-                    return 'int8';
-                } else if (actualMin >= -32768 && actualMax <= 32767) {
-                    return 'int16';
-                } else if (actualMin >= -2147483648 && actualMax <= 2147483647) {
-                    return 'int32';
-                } else {
-                    return 'float64'; // 超出int32范围，使用双精度浮点
-                }
-            } else {
-                // 无符号整数
-                if (actualMax <= 255) {
-                    return 'uint8';
-                } else if (actualMax <= 65535) {
-                    return 'uint16';
-                } else if (actualMax <= 4294967295) {
-                    return 'uint32';
-                } else {
-                    return 'float64'; // 超出uint32范围，使用双精度浮点
-                }
-            }
-        }
-
-        // 默认情况：检查是否为小数
-        if (!Number.isInteger(value)) {
-            return 'float32';
-        }
-
-        // 整数值，但没有指定范围，根据值的大小选择
-        if (value >= 0 && value <= 255) {
-            return 'uint8';
-        } else if (value >= -128 && value <= 127) {
-            return 'int8';
-        } else if (value >= 0 && value <= 65535) {
-            return 'uint16';
-        } else if (value >= -32768 && value <= 32767) {
-            return 'int16';
-        } else if (value >= 0 && value <= 4294967295) {
-            return 'uint32';
-        } else if (value >= -2147483648 && value <= 2147483647) {
-            return 'int32';
-        } else {
-            return 'float64';
-        }
-    }
-
-    /**
-     * 根据推断的类型名创建对应的TypedArray构造函数
-     */
-    public static getTypedArrayConstructor(typeName: string): typeof Float32Array | typeof Float64Array | typeof Int32Array | typeof Uint32Array | typeof Int16Array | typeof Uint16Array | typeof Int8Array | typeof Uint8Array | typeof Uint8ClampedArray {
-        switch (typeName) {
-            case 'float32': return Float32Array;
-            case 'float64': return Float64Array;
-            case 'int32': return Int32Array;
-            case 'uint32': return Uint32Array;
-            case 'int16': return Int16Array;
-            case 'uint16': return Uint16Array;
-            case 'int8': return Int8Array;
-            case 'uint8': return Uint8Array;
-            case 'uint8clamped': return Uint8ClampedArray;
-            default: return Float32Array;
-        }
-    }
-}
-
-/**
- * SoA存储器支持的TypedArray类型
- */
-export type SupportedTypedArray =
-    | Float32Array
-    | Float64Array
-    | Int32Array
-    | Uint32Array
-    | Int16Array
-    | Uint16Array
-    | Int8Array
-    | Uint8Array
-    | Uint8ClampedArray;
 
 /**
  * SoA存储器（需要装饰器启用）
  * 使用Structure of Arrays存储模式，在大规模批量操作时提供优异性能
  */
 export class SoAStorage<T extends Component> {
-    private static readonly _logger = createLogger('SoAStorage');
     private fields = new Map<string, SupportedTypedArray>();
-    private stringFields = new Map<string, string[]>(); // 专门存储字符串
-    private serializedFields = new Map<string, string[]>(); // 序列化存储Map/Set/Array
-    private complexFields = new Map<number, Map<string, any>>(); // 存储复杂对象
+    private stringFields = new Map<string, string[]>();
+    private serializedFields = new Map<string, string[]>();
+    private complexFields = new Map<number, Map<string, unknown>>();
     private entityToIndex = new Map<number, number>();
     private indexToEntity: number[] = [];
     private freeIndices: number[] = [];
     private _size = 0;
     private _capacity = 1000;
     public readonly type: ComponentType<T>;
+
+    // 缓存字段类型信息，避免重复创建实例
+    private fieldTypes = new Map<string, string>();
+    // 缓存装饰器元数据
+    private serializeMapFields: Set<string> = new Set();
+    private serializeSetFields: Set<string> = new Set();
+    private serializeArrayFields: Set<string> = new Set();
 
     constructor(componentType: ComponentType<T>) {
         this.type = componentType;
@@ -353,88 +210,85 @@ export class SoAStorage<T extends Component> {
 
     private initializeFields(componentType: ComponentType<T>): void {
         const instance = new componentType();
-        const highPrecisionFields = (componentType as any).__highPrecisionFields || new Set();
-        const float64Fields = (componentType as any).__float64Fields || new Set();
-        const float32Fields = (componentType as any).__float32Fields || new Set();
-        const int32Fields = (componentType as any).__int32Fields || new Set();
-        const uint32Fields = (componentType as any).__uint32Fields || new Set();
-        const int16Fields = (componentType as any).__int16Fields || new Set();
-        const uint16Fields = (componentType as any).__uint16Fields || new Set();
-        const int8Fields = (componentType as any).__int8Fields || new Set();
-        const uint8Fields = (componentType as any).__uint8Fields || new Set();
-        const uint8ClampedFields = (componentType as any).__uint8ClampedFields || new Set();
-        const autoTypedFields = (componentType as any).__autoTypedFields || new Map();
-        const serializeMapFields = (componentType as any).__serializeMapFields || new Set();
-        const serializeSetFields = (componentType as any).__serializeSetFields || new Set();
-        const serializeArrayFields = (componentType as any).__serializeArrayFields || new Set();
-        // const deepCopyFields = (componentType as any).__deepCopyFields || new Set(); // 未使用，但保留供future使用
+        const typeWithMeta = componentType as ComponentType<T> & {
+            __float64Fields?: Set<string>;
+            __float32Fields?: Set<string>;
+            __int32Fields?: Set<string>;
+            __uint32Fields?: Set<string>;
+            __int16Fields?: Set<string>;
+            __uint16Fields?: Set<string>;
+            __int8Fields?: Set<string>;
+            __uint8Fields?: Set<string>;
+            __uint8ClampedFields?: Set<string>;
+            __serializeMapFields?: Set<string>;
+            __serializeSetFields?: Set<string>;
+            __serializeArrayFields?: Set<string>;
+        };
 
-        for (const key in instance) {
-            if (instance.hasOwnProperty(key) && key !== 'id') {
-                const value = (instance as any)[key];
-                const type = typeof value;
+        const float64Fields = typeWithMeta.__float64Fields || new Set<string>();
+        const float32Fields = typeWithMeta.__float32Fields || new Set<string>();
+        const int32Fields = typeWithMeta.__int32Fields || new Set<string>();
+        const uint32Fields = typeWithMeta.__uint32Fields || new Set<string>();
+        const int16Fields = typeWithMeta.__int16Fields || new Set<string>();
+        const uint16Fields = typeWithMeta.__uint16Fields || new Set<string>();
+        const int8Fields = typeWithMeta.__int8Fields || new Set<string>();
+        const uint8Fields = typeWithMeta.__uint8Fields || new Set<string>();
+        const uint8ClampedFields = typeWithMeta.__uint8ClampedFields || new Set<string>();
 
-                if (type === 'number') {
-                    if (highPrecisionFields.has(key)) {
-                        // 标记为高精度，作为复杂对象处理
-                        // 不添加到fields，会在updateComponentAtIndex中自动添加到complexFields
-                    } else if (autoTypedFields.has(key)) {
-                        // 使用自动类型推断
-                        const options = autoTypedFields.get(key);
-                        const inferredType = TypeInference.inferOptimalType(value, options);
-                        const ArrayConstructor = TypeInference.getTypedArrayConstructor(inferredType);
-                        this.fields.set(key, new ArrayConstructor(this._capacity));
-                        SoAStorage._logger.info(`字段 ${key} 自动推断为 ${inferredType} 类型，值: ${value}, 选项:`, options);
-                    } else if (float64Fields.has(key)) {
-                        // 使用Float64Array存储（高精度浮点数）
-                        this.fields.set(key, new Float64Array(this._capacity));
-                    } else if (int32Fields.has(key)) {
-                        // 使用Int32Array存储（32位有符号整数）
-                        this.fields.set(key, new Int32Array(this._capacity));
-                    } else if (uint32Fields.has(key)) {
-                        // 使用Uint32Array存储（32位无符号整数）
-                        this.fields.set(key, new Uint32Array(this._capacity));
-                    } else if (int16Fields.has(key)) {
-                        // 使用Int16Array存储（16位有符号整数）
-                        this.fields.set(key, new Int16Array(this._capacity));
-                    } else if (uint16Fields.has(key)) {
-                        // 使用Uint16Array存储（16位无符号整数）
-                        this.fields.set(key, new Uint16Array(this._capacity));
-                    } else if (int8Fields.has(key)) {
-                        // 使用Int8Array存储（8位有符号整数）
-                        this.fields.set(key, new Int8Array(this._capacity));
-                    } else if (uint8Fields.has(key)) {
-                        // 使用Uint8Array存储（8位无符号整数）
-                        this.fields.set(key, new Uint8Array(this._capacity));
-                    } else if (uint8ClampedFields.has(key)) {
-                        // 使用Uint8ClampedArray存储（8位夹紧无符号整数）
-                        this.fields.set(key, new Uint8ClampedArray(this._capacity));
-                    } else if (float32Fields.has(key)) {
-                        // 使用Float32Array存储（32位浮点数）
-                        this.fields.set(key, new Float32Array(this._capacity));
-                    } else {
-                        // 默认使用Float32Array
-                        this.fields.set(key, new Float32Array(this._capacity));
-                    }
+        // 缓存装饰器元数据
+        this.serializeMapFields = typeWithMeta.__serializeMapFields || new Set<string>();
+        this.serializeSetFields = typeWithMeta.__serializeSetFields || new Set<string>();
+        this.serializeArrayFields = typeWithMeta.__serializeArrayFields || new Set<string>();
+
+        // 先收集所有有装饰器的字段，避免重复遍历
+        const decoratedFields = new Map<string, string>(); // fieldName -> arrayType
+
+        // 处理各类型装饰器标记的字段
+        for (const key of float64Fields) decoratedFields.set(key, 'float64');
+        for (const key of float32Fields) decoratedFields.set(key, 'float32');
+        for (const key of int32Fields) decoratedFields.set(key, 'int32');
+        for (const key of uint32Fields) decoratedFields.set(key, 'uint32');
+        for (const key of int16Fields) decoratedFields.set(key, 'int16');
+        for (const key of uint16Fields) decoratedFields.set(key, 'uint16');
+        for (const key of int8Fields) decoratedFields.set(key, 'int8');
+        for (const key of uint8Fields) decoratedFields.set(key, 'uint8');
+        for (const key of uint8ClampedFields) decoratedFields.set(key, 'uint8clamped');
+
+        // 只遍历实例自身的属性（不包括原型链），跳过 id
+        const instanceKeys = Object.keys(instance).filter(key => key !== 'id');
+
+        for (const key of instanceKeys) {
+            const value = (instance as Record<string, unknown>)[key];
+            const type = typeof value;
+
+            // 跳过函数（通常不会出现在 Object.keys 中，但以防万一）
+            if (type === 'function') continue;
+
+                // 检查装饰器类型
+                const decoratorType = decoratedFields.get(key);
+                const effectiveType = decoratorType ? 'number' : type;
+                this.fieldTypes.set(key, effectiveType);
+
+                if (decoratorType) {
+                    // 有装饰器标记的数字字段
+                    const ArrayConstructor = SoATypeRegistry.getConstructor(decoratorType as TypedArrayTypeName);
+                    this.fields.set(key, new ArrayConstructor(this._capacity));
+                } else if (type === 'number') {
+                    // 无装饰器的数字字段，默认使用 Float32Array
+                    this.fields.set(key, new Float32Array(this._capacity));
                 } else if (type === 'boolean') {
-                    // 布尔值默认使用Uint8Array存储为0/1（更节省内存）
-                    if (uint8Fields.has(key) || (!float32Fields.has(key) && !float64Fields.has(key))) {
-                        this.fields.set(key, new Uint8Array(this._capacity));
-                    } else {
-                        // 兼容性：如果显式指定浮点类型则使用原有方式
-                        this.fields.set(key, new Float32Array(this._capacity));
-                    }
+                    // 布尔值使用 Uint8Array 存储为 0/1
+                    this.fields.set(key, new Uint8Array(this._capacity));
                 } else if (type === 'string') {
                     // 字符串专门处理
                     this.stringFields.set(key, new Array(this._capacity));
                 } else if (type === 'object' && value !== null) {
                     // 处理集合类型
-                    if (serializeMapFields.has(key) || serializeSetFields.has(key) || serializeArrayFields.has(key)) {
+                    if (this.serializeMapFields.has(key) || this.serializeSetFields.has(key) || this.serializeArrayFields.has(key)) {
                         // 序列化存储
                         this.serializedFields.set(key, new Array(this._capacity));
                     }
                     // 其他对象类型会在updateComponentAtIndex中作为复杂对象处理
-                }
             }
         }
     }
@@ -497,12 +351,16 @@ export class SoAStorage<T extends Component> {
                 } else if (this.serializedFields.has(key)) {
                     // 序列化字段处理
                     const serializedArray = this.serializedFields.get(key)!;
-                    serializedArray[index] = this.serializeValue(value, key, serializeMapFields, serializeSetFields, serializeArrayFields);
+                    serializedArray[index] = SoASerializer.serialize(value, key, {
+                        isMap: serializeMapFields.has(key),
+                        isSet: serializeSetFields.has(key),
+                        isArray: serializeArrayFields.has(key)
+                    });
                 } else {
                     // 复杂字段单独存储
                     if (deepCopyFields.has(key)) {
                         // 深拷贝处理
-                        complexFieldMap.set(key, this.deepClone(value));
+                        complexFieldMap.set(key, SoASerializer.deepClone(value));
                     } else {
                         complexFieldMap.set(key, value);
                     }
@@ -516,96 +374,6 @@ export class SoAStorage<T extends Component> {
         }
     }
 
-    /**
-     * 序列化值为JSON字符串
-     */
-    private serializeValue(value: any, key: string, mapFields: Set<string>, setFields: Set<string>, arrayFields: Set<string>): string {
-        try {
-            if (mapFields.has(key) && value instanceof Map) {
-                // Map序列化为数组形式
-                return JSON.stringify(Array.from(value.entries()));
-            } else if (setFields.has(key) && value instanceof Set) {
-                // Set序列化为数组形式
-                return JSON.stringify(Array.from(value));
-            } else if (arrayFields.has(key) && Array.isArray(value)) {
-                // Array直接序列化
-                return JSON.stringify(value);
-            } else {
-                // 其他对象直接序列化
-                return JSON.stringify(value);
-            }
-        } catch (error) {
-            SoAStorage._logger.warn(`SoA序列化字段 ${key} 失败:`, error);
-            return '{}';
-        }
-    }
-
-    /**
-     * 反序列化JSON字符串为值
-     */
-    private deserializeValue(serialized: string, key: string, mapFields: Set<string>, setFields: Set<string>, arrayFields: Set<string>): any {
-        try {
-            const parsed = JSON.parse(serialized);
-
-            if (mapFields.has(key)) {
-                // 恢复Map
-                return new Map(parsed);
-            } else if (setFields.has(key)) {
-                // 恢复Set
-                return new Set(parsed);
-            } else if (arrayFields.has(key)) {
-                // 恢复Array
-                return parsed;
-            } else {
-                return parsed;
-            }
-        } catch (error) {
-            SoAStorage._logger.warn(`SoA反序列化字段 ${key} 失败:`, error);
-            return null;
-        }
-    }
-
-    /**
-     * 深拷贝对象
-     */
-    private deepClone(obj: any): any {
-        if (obj === null || typeof obj !== 'object') {
-            return obj;
-        }
-
-        if (obj instanceof Date) {
-            return new Date(obj.getTime());
-        }
-
-        if (obj instanceof Array) {
-            return obj.map((item) => this.deepClone(item));
-        }
-
-        if (obj instanceof Map) {
-            const cloned = new Map();
-            for (const [key, value] of obj.entries()) {
-                cloned.set(key, this.deepClone(value));
-            }
-            return cloned;
-        }
-
-        if (obj instanceof Set) {
-            const cloned = new Set();
-            for (const value of obj.values()) {
-                cloned.add(this.deepClone(value));
-            }
-            return cloned;
-        }
-
-        // 普通对象
-        const cloned: any = {};
-        for (const key in obj) {
-            if (obj.hasOwnProperty(key)) {
-                cloned[key] = this.deepClone(obj[key]);
-            }
-        }
-        return cloned;
-    }
 
     public getComponent(entityId: number): T | null {
         const index = this.entityToIndex.get(entityId);
@@ -613,11 +381,161 @@ export class SoAStorage<T extends Component> {
             return null;
         }
 
-        // 创建真正的组件实例以保持兼容性
+        // 返回 Proxy，直接操作底层 TypedArray
+        return this.createProxyView(entityId, index);
+    }
+
+    /**
+     * 创建组件的 Proxy 视图
+     * 读写操作直接映射到底层 TypedArray，无数据复制
+     */
+    private createProxyView(entityId: number, index: number): T {
+        const self = this;
+
+        // Proxy handler 类型定义
+        const handler: ProxyHandler<Record<string, unknown>> = {
+            get(_, prop: string | symbol) {
+                const propStr = String(prop);
+
+                // TypedArray 字段
+                const array = self.fields.get(propStr);
+                if (array) {
+                    const fieldType = self.getFieldType(propStr);
+                    if (fieldType === 'boolean') {
+                        return array[index] === 1;
+                    }
+                    return array[index];
+                }
+
+                // 字符串字段
+                const stringArray = self.stringFields.get(propStr);
+                if (stringArray) {
+                    return stringArray[index];
+                }
+
+                // 序列化字段
+                const serializedArray = self.serializedFields.get(propStr);
+                if (serializedArray) {
+                    const serialized = serializedArray[index];
+                    if (serialized) {
+                        return SoASerializer.deserialize(serialized, propStr, {
+                            isMap: self.serializeMapFields.has(propStr),
+                            isSet: self.serializeSetFields.has(propStr),
+                            isArray: self.serializeArrayFields.has(propStr)
+                        });
+                    }
+                    return undefined;
+                }
+
+                // 复杂字段
+                const complexFieldMap = self.complexFields.get(entityId);
+                if (complexFieldMap?.has(propStr)) {
+                    return complexFieldMap.get(propStr);
+                }
+
+                return undefined;
+            },
+
+            set(_, prop: string | symbol, value) {
+                const propStr = String(prop);
+
+                // entityId 是只读的
+                if (propStr === 'entityId') {
+                    return false;
+                }
+
+                // TypedArray 字段
+                const array = self.fields.get(propStr);
+                if (array) {
+                    const fieldType = self.getFieldType(propStr);
+                    if (fieldType === 'boolean') {
+                        array[index] = value ? 1 : 0;
+                    } else {
+                        array[index] = value;
+                    }
+                    return true;
+                }
+
+                // 字符串字段
+                const stringArray = self.stringFields.get(propStr);
+                if (stringArray) {
+                    stringArray[index] = String(value);
+                    return true;
+                }
+
+                // 序列化字段
+                if (self.serializedFields.has(propStr)) {
+                    const serializedArray = self.serializedFields.get(propStr)!;
+                    serializedArray[index] = SoASerializer.serialize(value, propStr, {
+                        isMap: self.serializeMapFields.has(propStr),
+                        isSet: self.serializeSetFields.has(propStr),
+                        isArray: self.serializeArrayFields.has(propStr)
+                    });
+                    return true;
+                }
+
+                // 复杂字段
+                let complexFieldMap = self.complexFields.get(entityId);
+                if (!complexFieldMap) {
+                    complexFieldMap = new Map();
+                    self.complexFields.set(entityId, complexFieldMap);
+                }
+                complexFieldMap.set(propStr, value);
+                return true;
+            },
+
+            has(_, prop) {
+                const propStr = String(prop);
+                return self.fields.has(propStr) ||
+                       self.stringFields.has(propStr) ||
+                       self.serializedFields.has(propStr) ||
+                       self.complexFields.get(entityId)?.has(propStr) || false;
+            },
+
+            ownKeys() {
+                const keys: string[] = [];
+                for (const key of self.fields.keys()) keys.push(key);
+                for (const key of self.stringFields.keys()) keys.push(key);
+                for (const key of self.serializedFields.keys()) keys.push(key);
+                const complexFieldMap = self.complexFields.get(entityId);
+                if (complexFieldMap) {
+                    for (const key of complexFieldMap.keys()) keys.push(key);
+                }
+                return keys;
+            },
+
+            getOwnPropertyDescriptor(_, prop) {
+                const propStr = String(prop);
+                if (self.fields.has(propStr) ||
+                    self.stringFields.has(propStr) ||
+                    self.serializedFields.has(propStr) ||
+                    self.complexFields.get(entityId)?.has(propStr)) {
+                    return {
+                        enumerable: true,
+                        configurable: true,
+                        // entityId 是只读的
+                        writable: propStr !== 'entityId',
+                    };
+                }
+                return undefined;
+            }
+        };
+
+        return new Proxy({} as Record<string, unknown>, handler) as unknown as T;
+    }
+
+    /**
+     * 获取组件的快照副本（用于序列化等需要独立副本的场景）
+     */
+    public getComponentSnapshot(entityId: number): T | null {
+        const index = this.entityToIndex.get(entityId);
+        if (index === undefined) {
+            return null;
+        }
+
+        // 需要 any 因为要动态写入泛型 T 的属性
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const component = new this.type() as any;
-        const serializeMapFields = (this.type as any).__serializeMapFields || new Set();
-        const serializeSetFields = (this.type as any).__serializeSetFields || new Set();
-        const serializeArrayFields = (this.type as any).__serializeArrayFields || new Set();
 
         // 恢复数值字段
         for (const [fieldName, array] of this.fields.entries()) {
@@ -640,7 +558,11 @@ export class SoAStorage<T extends Component> {
         for (const [fieldName, serializedArray] of this.serializedFields.entries()) {
             const serialized = serializedArray[index];
             if (serialized) {
-                component[fieldName] = this.deserializeValue(serialized, fieldName, serializeMapFields, serializeSetFields, serializeArrayFields);
+                component[fieldName] = SoASerializer.deserialize(serialized, fieldName, {
+                    isMap: this.serializeMapFields.has(fieldName),
+                    isSet: this.serializeSetFields.has(fieldName),
+                    isArray: this.serializeArrayFields.has(fieldName)
+                });
             }
         }
 
@@ -656,10 +578,8 @@ export class SoAStorage<T extends Component> {
     }
 
     private getFieldType(fieldName: string): string {
-        // 通过创建临时实例检查字段类型
-        const tempInstance = new this.type();
-        const value = (tempInstance as any)[fieldName];
-        return typeof value;
+        // 使用缓存的字段类型
+        return this.fieldTypes.get(fieldName) || 'unknown';
     }
 
     public hasComponent(entityId: number): boolean {
@@ -687,32 +607,7 @@ export class SoAStorage<T extends Component> {
     private resize(newCapacity: number): void {
         // 调整数值字段的TypedArray
         for (const [fieldName, oldArray] of this.fields.entries()) {
-            let newArray: SupportedTypedArray;
-
-            if (oldArray instanceof Float32Array) {
-                newArray = new Float32Array(newCapacity);
-            } else if (oldArray instanceof Float64Array) {
-                newArray = new Float64Array(newCapacity);
-            } else if (oldArray instanceof Int32Array) {
-                newArray = new Int32Array(newCapacity);
-            } else if (oldArray instanceof Uint32Array) {
-                newArray = new Uint32Array(newCapacity);
-            } else if (oldArray instanceof Int16Array) {
-                newArray = new Int16Array(newCapacity);
-            } else if (oldArray instanceof Uint16Array) {
-                newArray = new Uint16Array(newCapacity);
-            } else if (oldArray instanceof Int8Array) {
-                newArray = new Int8Array(newCapacity);
-            } else if (oldArray instanceof Uint8Array) {
-                newArray = new Uint8Array(newCapacity);
-            } else if (oldArray instanceof Uint8ClampedArray) {
-                newArray = new Uint8ClampedArray(newCapacity);
-            } else {
-                // 默认回退到Float32Array
-                newArray = new Float32Array(newCapacity);
-                SoAStorage._logger.warn(`未知的TypedArray类型用于字段 ${fieldName}，回退到Float32Array`);
-            }
-
+            const newArray = SoATypeRegistry.createSameType(oldArray, newCapacity);
             newArray.set(oldArray);
             this.fields.set(fieldName, newArray);
         }
@@ -849,42 +744,8 @@ export class SoAStorage<T extends Component> {
         const fieldStats = new Map<string, any>();
 
         for (const [fieldName, array] of this.fields.entries()) {
-            let bytesPerElement: number;
-            let typeName: string;
-
-            if (array instanceof Float32Array) {
-                bytesPerElement = 4;
-                typeName = 'float32';
-            } else if (array instanceof Float64Array) {
-                bytesPerElement = 8;
-                typeName = 'float64';
-            } else if (array instanceof Int32Array) {
-                bytesPerElement = 4;
-                typeName = 'int32';
-            } else if (array instanceof Uint32Array) {
-                bytesPerElement = 4;
-                typeName = 'uint32';
-            } else if (array instanceof Int16Array) {
-                bytesPerElement = 2;
-                typeName = 'int16';
-            } else if (array instanceof Uint16Array) {
-                bytesPerElement = 2;
-                typeName = 'uint16';
-            } else if (array instanceof Int8Array) {
-                bytesPerElement = 1;
-                typeName = 'int8';
-            } else if (array instanceof Uint8Array) {
-                bytesPerElement = 1;
-                typeName = 'uint8';
-            } else if (array instanceof Uint8ClampedArray) {
-                bytesPerElement = 1;
-                typeName = 'uint8clamped';
-            } else {
-                // 默认回退
-                bytesPerElement = 4;
-                typeName = 'unknown';
-            }
-
+            const typeName = SoATypeRegistry.getTypeName(array);
+            const bytesPerElement = SoATypeRegistry.getBytesPerElement(typeName);
             const memory = array.length * bytesPerElement;
             totalMemory += memory;
 
@@ -914,4 +775,5 @@ export class SoAStorage<T extends Component> {
         const activeIndices = this.getActiveIndices();
         operation(this.fields, activeIndices);
     }
+
 }

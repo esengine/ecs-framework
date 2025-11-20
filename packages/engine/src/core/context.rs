@@ -3,6 +3,7 @@
 
 use web_sys::{HtmlCanvasElement, WebGl2RenderingContext};
 use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
 
 use super::error::{EngineError, Result};
 
@@ -53,6 +54,44 @@ impl WebGLContext {
             "WebGL2 context created | WebGL2上下文已创建: {}x{}",
             canvas.width(),
             canvas.height()
+        );
+
+        Ok(Self { gl, canvas })
+    }
+
+    /// Create a new WebGL context from external JavaScript objects.
+    /// 从外部 JavaScript 对象创建 WebGL 上下文。
+    ///
+    /// This method is designed for environments like WeChat MiniGame
+    /// where the canvas is not a standard HTML element.
+    /// 此方法适用于微信小游戏等环境，其中 canvas 不是标准 HTML 元素。
+    pub fn from_external(
+        gl_context: JsValue,
+        canvas_width: u32,
+        canvas_height: u32,
+    ) -> Result<Self> {
+        // Convert JsValue to WebGl2RenderingContext
+        let gl = gl_context
+            .dyn_into::<WebGl2RenderingContext>()
+            .map_err(|_| EngineError::ContextCreationFailed)?;
+
+        // Create a dummy canvas for compatibility
+        // In MiniGame environment, we don't have HtmlCanvasElement
+        let window = web_sys::window().ok_or(EngineError::ContextCreationFailed)?;
+        let document = window.document().ok_or(EngineError::ContextCreationFailed)?;
+        let canvas = document
+            .create_element("canvas")
+            .map_err(|_| EngineError::ContextCreationFailed)?
+            .dyn_into::<HtmlCanvasElement>()
+            .map_err(|_| EngineError::ContextCreationFailed)?;
+
+        canvas.set_width(canvas_width);
+        canvas.set_height(canvas_height);
+
+        log::info!(
+            "WebGL2 context created from external | 从外部创建WebGL2上下文: {}x{}",
+            canvas_width,
+            canvas_height
         );
 
         Ok(Self { gl, canvas })

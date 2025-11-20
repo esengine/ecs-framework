@@ -67,6 +67,51 @@
   transition: color var(--transition-fast);
 }
 
+.view-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background-color: var(--color-bg-base);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  min-width: 24px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-xs);
+  color: #cccccc;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mode-btn svg {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  min-height: 14px;
+  color: inherit;
+  stroke: currentColor;
+}
+
+.mode-btn:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.mode-btn.active {
+  background-color: var(--color-primary);
+  color: white;
+}
+
 .remote-indicator {
   display: flex;
   align-items: center;
@@ -144,8 +189,14 @@
 }
 
 .toolbar-btn:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  color: #666;
+}
+
+.toolbar-btn.icon-only {
+  padding: var(--spacing-xs);
+  min-width: 28px;
+  justify-content: center;
 }
 
 .hierarchy-content {
@@ -339,4 +390,39 @@
     opacity: 0.6;
     transform: scale(1.05);
   }
+}
+
+/* Context menu styles */
+.context-menu {
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: var(--spacing-xs);
+  min-width: 150px;
+}
+
+.context-menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  text-align: left;
+}
+
+.context-menu button:hover {
+  background-color: var(--color-bg-hover);
+}
+
+.context-menu-divider {
+  height: 1px;
+  background-color: var(--color-border-default);
+  margin: var(--spacing-xs) 0;
 }

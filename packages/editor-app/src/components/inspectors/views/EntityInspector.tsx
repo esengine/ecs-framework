@@ -1,18 +1,24 @@
 import { useState } from 'react';
-import { Settings, ChevronDown, ChevronRight, X } from 'lucide-react';
-import { Entity, Component } from '@esengine/ecs-framework';
-import { MessageHub } from '@esengine/editor-core';
+import { Settings, ChevronDown, ChevronRight, X, Plus } from 'lucide-react';
+import { Entity, Component, Core } from '@esengine/ecs-framework';
+import { MessageHub, CommandManager, ComponentRegistry } from '@esengine/editor-core';
 import { PropertyInspector } from '../../PropertyInspector';
+import { RemoveComponentCommand, UpdateComponentCommand, AddComponentCommand } from '../../../application/commands/component';
 import '../../../styles/EntityInspector.css';
 
 interface EntityInspectorProps {
     entity: Entity;
     messageHub: MessageHub;
+    commandManager: CommandManager;
     componentVersion: number;
 }
 
-export function EntityInspector({ entity, messageHub, componentVersion }: EntityInspectorProps) {
+export function EntityInspector({ entity, messageHub, commandManager, componentVersion }: EntityInspectorProps) {
     const [expandedComponents, setExpandedComponents] = useState<Set<number>>(new Set());
+    const [showComponentMenu, setShowComponentMenu] = useState(false);
+
+    const componentRegistry = Core.services.resolve(ComponentRegistry);
+    const availableComponents = componentRegistry?.getAllComponents() || [];
 
     const toggleComponentExpanded = (index: number) => {
         setExpandedComponents((prev) => {
@@ -26,21 +32,33 @@ export function EntityInspector({ entity, messageHub, componentVersion }: Entity
         });
     };
 
+    const handleAddComponent = (ComponentClass: new () => Component) => {
+        const command = new AddComponentCommand(messageHub, entity, ComponentClass);
+        commandManager.execute(command);
+        setShowComponentMenu(false);
+    };
+
     const handleRemoveComponent = (index: number) => {
         const component = entity.components[index];
         if (component) {
-            entity.removeComponent(component);
-            messageHub.publish('component:removed', { entity, component });
+            const command = new RemoveComponentCommand(
+                messageHub,
+                entity,
+                component
+            );
+            commandManager.execute(command);
         }
     };
 
     const handlePropertyChange = (component: Component, propertyName: string, value: unknown) => {
-        messageHub.publish('component:property:changed', {
+        const command = new UpdateComponentCommand(
+            messageHub,
             entity,
             component,
             propertyName,
             value
-        });
+        );
+        commandManager.execute(command);
     };
 
     return (
@@ -63,10 +81,77 @@ export function EntityInspector({ entity, messageHub, componentVersion }: Entity
                     </div>
                 </div>
 
-                {entity.components.length > 0 && (
-                    <div className="inspector-section">
-                        <div className="section-title">组件</div>
-                        {entity.components.map((component: Component, index: number) => {
+                <div className="inspector-section">
+                    <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>组件</span>
+                        <div style={{ position: 'relative' }}>
+                            <button
+                                onClick={() => setShowComponentMenu(!showComponentMenu)}
+                                style={{
+                                    background: 'transparent',
+                                    border: '1px solid #4a4a4a',
+                                    borderRadius: '4px',
+                                    color: '#e0e0e0',
+                                    cursor: 'pointer',
+                                    padding: '2px 6px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    fontSize: '11px'
+                                }}
+                            >
+                                <Plus size={12} />
+                                添加
+                            </button>
+                            {showComponentMenu && (
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        right: 0,
+                                        marginTop: '4px',
+                                        backgroundColor: '#2a2a2a',
+                                        border: '1px solid #4a4a4a',
+                                        borderRadius: '4px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                        zIndex: 1000,
+                                        minWidth: '150px',
+                                        maxHeight: '200px',
+                                        overflowY: 'auto'
+                                    }}
+                                >
+                                    {availableComponents.length === 0 ? (
+                                        <div style={{ padding: '8px 12px', color: '#888', fontSize: '11px' }}>
+                                            没有可用组件
+                                        </div>
+                                    ) : (
+                                        availableComponents.map((info) => (
+                                            <button
+                                                key={info.name}
+                                                onClick={() => info.type && handleAddComponent(info.type)}
+                                                style={{
+                                                    display: 'block',
+                                                    width: '100%',
+                                                    padding: '6px 12px',
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    color: '#e0e0e0',
+                                                    fontSize: '12px',
+                                                    textAlign: 'left',
+                                                    cursor: 'pointer'
+                                                }}
+                                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#3a3a3a')}
+                                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                            >
+                                                {info.name}
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    {entity.components.map((component: Component, index: number) => {
                             const isExpanded = expandedComponents.has(index);
                             const componentName = component.constructor?.name || 'Component';
 
@@ -140,8 +225,7 @@ export function EntityInspector({ entity, messageHub, componentVersion }: Entity
                                 </div>
                             );
                         })}
-                    </div>
-                )}
+                </div>
             </div>
         </div>
     );
