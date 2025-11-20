@@ -1,6 +1,6 @@
-import type { EditorPluginManager, IEditorPlugin } from '@esengine/editor-core';
-import JSZip from 'jszip';
+import type { EditorPluginManager } from '@esengine/editor-core';
 import { fetch } from '@tauri-apps/plugin-http';
+import { invoke } from '@tauri-apps/api/core';
 
 export interface PluginAuthor {
     name: string;
@@ -80,7 +80,6 @@ export class PluginMarketService {
 
     setProjectPath(path: string | null): void {
         this.projectPath = path;
-        console.log(`[PluginMarketService] Project path set to: ${path}`);
     }
 
     isUsingDirectSource(): boolean {
@@ -89,14 +88,12 @@ export class PluginMarketService {
 
     setUseDirectSource(useDirect: boolean): void {
         localStorage.setItem(this.USE_DIRECT_SOURCE_KEY, String(useDirect));
-        console.log(`[PluginMarketService] Direct source ${useDirect ? 'enabled' : 'disabled'}`);
     }
 
     async fetchPluginList(bypassCache: boolean = false): Promise<PluginMarketMetadata[]> {
         const useDirectSource = this.isUsingDirectSource();
 
         if (useDirectSource) {
-            console.log('[PluginMarketService] Using direct GitHub source (bypass CDN)');
             return await this.fetchFromUrl(this.GITHUB_DIRECT_URL, bypassCache);
         }
 
@@ -131,14 +128,7 @@ export class PluginMarketService {
         if (bypassCache) {
             url += `?t=${Date.now()}`;
             if (urlIndex && totalUrls) {
-                console.log(`[PluginMarketService] Bypassing cache with timestamp (URL ${urlIndex}/${totalUrls})`);
             }
-        }
-
-        if (urlIndex && totalUrls) {
-            console.log(`[PluginMarketService] Trying URL ${urlIndex}/${totalUrls}: ${url}`);
-        } else {
-            console.log(`[PluginMarketService] Fetching from: ${url}`);
         }
 
         const response = await fetch(url, {
@@ -154,22 +144,11 @@ export class PluginMarketService {
         }
 
         const registry: PluginRegistry = await response.json();
-
-        if (urlIndex) {
-            console.log(`[PluginMarketService] Successfully loaded from URL ${urlIndex}`);
-        } else {
-            console.log(`[PluginMarketService] Successfully loaded`);
-        }
-        console.log(`[PluginMarketService] Loaded ${registry.plugins.length} plugins from registry`);
-        console.log(`[PluginMarketService] Registry generated at: ${registry.generatedAt}`);
-
         return registry.plugins;
     }
 
     async installPlugin(plugin: PluginMarketMetadata, version?: string, onReload?: () => Promise<void>): Promise<void> {
         const targetVersion = version || plugin.latestVersion;
-        console.log(`[PluginMarketService] Installing plugin: ${plugin.name} v${targetVersion}`);
-
         if (!this.projectPath) {
             throw new Error('No project opened. Please open a project first.');
         }
@@ -182,11 +161,9 @@ export class PluginMarketService {
             }
 
             // 下载 ZIP 文件
-            console.log(`[PluginMarketService] Downloading ZIP: ${versionInfo.zipUrl}`);
             const zipBlob = await this.downloadZip(versionInfo.zipUrl);
 
             // 解压到项目 plugins 目录
-            console.log(`[PluginMarketService] Extracting plugin to project...`);
             await this.extractZipToProject(zipBlob, plugin.id);
 
             // 标记为已安装
@@ -194,11 +171,8 @@ export class PluginMarketService {
 
             // 重新加载项目插件
             if (onReload) {
-                console.log(`[PluginMarketService] Reloading project plugins...`);
                 await onReload();
             }
-
-            console.log(`[PluginMarketService] Successfully installed: ${plugin.name} v${targetVersion}`);
         } catch (error) {
             console.error(`[PluginMarketService] Failed to install plugin ${plugin.name}:`, error);
             throw error;
@@ -206,8 +180,6 @@ export class PluginMarketService {
     }
 
     async uninstallPlugin(pluginId: string, onReload?: () => Promise<void>): Promise<void> {
-        console.log(`[PluginMarketService] Uninstalling plugin: ${pluginId}`);
-
         if (!this.projectPath) {
             throw new Error('No project opened');
         }
@@ -223,19 +195,14 @@ export class PluginMarketService {
                 pluginId: pluginId
             });
 
-            console.log(`[PluginMarketService] Successfully removed plugin directory`);
-
             // 从已安装列表移除
             this.installedPlugins.delete(pluginId);
             this.saveInstalledPlugins();
 
             // 重新加载项目插件
             if (onReload) {
-                console.log(`[PluginMarketService] Reloading project plugins...`);
                 await onReload();
             }
-
-            console.log(`[PluginMarketService] Successfully uninstalled: ${pluginId}`);
         } catch (error) {
             console.error(`[PluginMarketService] Failed to uninstall plugin ${pluginId}:`, error);
             throw error;
@@ -286,14 +253,11 @@ export class PluginMarketService {
             const base64Data = btoa(binary);
 
             // 调用 Tauri 后端命令进行安装
-            const { invoke } = await import('@tauri-apps/api/core');
-            const pluginDir = await invoke<string>('install_marketplace_plugin', {
+            await invoke<string>('install_marketplace_plugin', {
                 projectPath: this.projectPath,
                 pluginId: pluginId,
                 zipDataBase64: base64Data
             });
-
-            console.log(`[PluginMarketService] Successfully extracted plugin to ${pluginDir}`);
         } catch (error) {
             console.error('[PluginMarketService] Failed to extract ZIP:', error);
             throw new Error(`Failed to extract plugin: ${error instanceof Error ? error.message : String(error)}`);

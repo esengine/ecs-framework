@@ -16,11 +16,9 @@ export class SceneInspectorPlugin implements IEditorPlugin {
     readonly icon = '🔍';
 
     async install(_core: Core, _services: ServiceContainer): Promise<void> {
-        console.log('[SceneInspectorPlugin] Installed');
     }
 
     async uninstall(): Promise<void> {
-        console.log('[SceneInspectorPlugin] Uninstalled');
     }
 
     registerMenuItems(): MenuItem[] {
@@ -30,7 +28,6 @@ export class SceneInspectorPlugin implements IEditorPlugin {
                 label: 'Scene Inspector',
                 parentId: 'view',
                 onClick: () => {
-                    console.log('Toggle Scene Inspector');
                 },
                 shortcut: 'Ctrl+Shift+I',
                 order: 100
@@ -40,7 +37,6 @@ export class SceneInspectorPlugin implements IEditorPlugin {
                 label: 'Create Entity',
                 parentId: 'scene',
                 onClick: () => {
-                    console.log('Create new entity');
                 },
                 shortcut: 'Ctrl+N',
                 order: 10
@@ -56,7 +52,6 @@ export class SceneInspectorPlugin implements IEditorPlugin {
                 groupId: 'entity-tools',
                 icon: '➕',
                 onClick: () => {
-                    console.log('Create entity from toolbar');
                 },
                 order: 10
             },
@@ -66,7 +61,6 @@ export class SceneInspectorPlugin implements IEditorPlugin {
                 groupId: 'entity-tools',
                 icon: '🗑️',
                 onClick: () => {
-                    console.log('Delete entity from toolbar');
                 },
                 order: 20
             }
@@ -117,14 +111,11 @@ export class SceneInspectorPlugin implements IEditorPlugin {
     }
 
     async onEditorReady(): Promise<void> {
-        console.log('[SceneInspectorPlugin] Editor is ready');
     }
 
     async onProjectOpen(projectPath: string): Promise<void> {
-        console.log(`[SceneInspectorPlugin] Project opened: ${projectPath}`);
     }
 
     async onProjectClose(): Promise<void> {
-        console.log('[SceneInspectorPlugin] Project closed');
     }
 }

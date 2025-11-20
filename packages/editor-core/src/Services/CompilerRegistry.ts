@@ -9,12 +9,10 @@ export class CompilerRegistry implements IService {
             console.warn(`Compiler with id "${compiler.id}" is already registered. Overwriting.`);
         }
         this.compilers.set(compiler.id, compiler);
-        console.log(`[CompilerRegistry] Registered compiler: ${compiler.name} (${compiler.id})`);
     }
 
     unregister(compilerId: string): void {
         this.compilers.delete(compilerId);
-        console.log(`[CompilerRegistry] Unregistered compiler: ${compilerId}`);
     }
 
     get(compilerId: string): ICompiler | undefined {

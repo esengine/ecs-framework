@@ -111,8 +111,6 @@ const userProjectPlugin = () => ({
       }
 
       const filePath = path.join(projectPath, relativePath);
-      console.log('[Vite] Loading file:', id);
-      console.log('[Vite] Resolved path:', filePath);
 
       if (!fs.existsSync(filePath)) {
         throw new Error(`File not found: ${filePath}`);

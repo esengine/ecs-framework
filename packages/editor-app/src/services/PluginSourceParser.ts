@@ -47,8 +47,6 @@ export class PluginSourceParser {
             const packageJsonContent = await readTextFile(packageJsonPath);
             const packageJson = JSON.parse(packageJsonContent) as PluginPackageJson;
 
-            console.log('[PluginSourceParser] Parsed package.json from folder:', packageJson);
-
             return {
                 packageJson,
                 sourceType: 'folder',
@@ -86,8 +84,6 @@ export class PluginSourceParser {
             // 读取 package.json 内容
             const packageJsonContent = await packageJsonFile.async('text');
             const packageJson = JSON.parse(packageJsonContent) as PluginPackageJson;
-
-            console.log('[PluginSourceParser] Parsed package.json from ZIP:', packageJson);
 
             // 验证 ZIP 中必须包含 dist 目录
             const distFiles = Object.keys(zip.files).filter(f => f.startsWith('dist/'));

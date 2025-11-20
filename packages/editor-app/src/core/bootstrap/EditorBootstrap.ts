@@ -23,24 +23,14 @@ export class EditorBootstrap {
             throw new Error('EditorBootstrap has already been initialized');
         }
 
-        console.log('[EditorBootstrap] Starting editor initialization...');
 
         const scene = await this.createScene();
-        console.log('[EditorBootstrap] Scene created');
-
         const container = globalContainer;
 
         const eventBus = container.resolve(EditorEventBus);
-        console.log('[EditorBootstrap] EventBus initialized');
-
         const commands = container.resolve(CommandRegistry);
-        console.log('[EditorBootstrap] CommandRegistry initialized');
-
         const panels = container.resolve(PanelRegistry);
-        console.log('[EditorBootstrap] PanelRegistry initialized');
-
         this.initialized = true;
-        console.log('[EditorBootstrap] Editor initialized successfully');
 
         return {
             container,

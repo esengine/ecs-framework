@@ -48,7 +48,6 @@ export class PluginPublishService {
     }
 
     private notifyProgress(step: PublishStep, message: string, progress: number): void {
-        console.log(`[PluginPublishService] ${message} (${progress}%)`);
         this.progressCallback?.({ step, message, progress });
     }
 
@@ -59,9 +58,6 @@ export class PluginPublishService {
      * @returns Pull Request URL
      */
     async publishPlugin(publishInfo: PluginPublishInfo, zipPath: string): Promise<string> {
-        console.log('[PluginPublishService] Publishing plugin with ZIP:', zipPath);
-        console.log('[PluginPublishService] Plugin info:', publishInfo);
-
         if (!this.githubService.isAuthenticated()) {
             throw new Error('Please login to GitHub first');
         }
@@ -214,7 +210,6 @@ export class PluginPublishService {
             );
             return JSON.parse(content);
         } catch (error) {
-            console.log(`[PluginPublishService] No existing manifest found, will create new one`);
             return null;
         }
     }
@@ -543,7 +538,6 @@ ${releaseNotes}
                 throw new Error(`No files found to delete in ${pluginPath}`);
             }
 
-            console.log(`[PluginPublishService] Files to delete:`, filesToDelete.map(f => f.path));
             this.notifyProgress('uploading-files', `Deleting ${filesToDelete.length} files...`, 40);
 
             let deletedCount = 0;
@@ -551,7 +545,6 @@ ${releaseNotes}
 
             for (const file of filesToDelete) {
                 try {
-                    console.log(`[PluginPublishService] Deleting file: ${file.path} (SHA: ${file.sha}) from ${user.login}/${this.REGISTRY_REPO}:${branchName}`);
                     await this.githubService.deleteFileWithSha(
                         user.login,
                         this.REGISTRY_REPO,
@@ -561,7 +554,6 @@ ${releaseNotes}
                         branchName
                     );
                     deletedCount++;
-                    console.log(`[PluginPublishService] Successfully deleted: ${file.path}`);
                     const progress = 40 + Math.floor((deletedCount / filesToDelete.length) * 40);
                     this.notifyProgress('uploading-files', `Deleted ${deletedCount}/${filesToDelete.length} files`, progress);
                 } catch (error) {

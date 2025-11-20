@@ -31,13 +31,11 @@ export class PluginLoader {
         try {
             const exists = await TauriAPI.pathExists(pluginsPath);
             if (!exists) {
-                console.log('[PluginLoader] No plugins directory found');
                 return;
             }
 
             const entries = await TauriAPI.listDirectory(pluginsPath);
             const pluginDirs = entries.filter((entry) => entry.is_dir && !entry.name.startsWith('.'));
-            console.log('[PluginLoader] Found plugin directories:', pluginDirs.map((d) => d.name));
 
             for (const entry of pluginDirs) {
                 const pluginPath = `${pluginsPath}/${entry.name}`;
@@ -102,13 +100,10 @@ export class PluginLoader {
             const timestamp = Date.now();
             const moduleUrl = `/@user-project/plugins/${pluginDirName}/${entryPoint}?v=${currentVersion}&t=${timestamp}`;
 
-            console.log(`[PluginLoader] Loading plugin from: ${moduleUrl} (version: ${currentVersion})`);
-
             // 清除可能存在的旧模块缓存
             this.loadedModuleUrls.add(moduleUrl);
 
             const module = await import(/* @vite-ignore */ moduleUrl);
-            console.log('[PluginLoader] Module loaded successfully');
 
             let pluginInstance: IEditorPlugin | null = null;
             try {
@@ -133,7 +128,6 @@ export class PluginLoader {
                 const currentLocale = localeService.getCurrentLocale();
                 if (pluginInstance.setLocale) {
                     pluginInstance.setLocale(currentLocale);
-                    console.log(`[PluginLoader] Set locale for plugin ${packageJson.name}: ${currentLocale}`);
                 }
             } catch (error) {
                 console.warn(`[PluginLoader] Failed to set locale for plugin ${packageJson.name}:`, error);
@@ -144,12 +138,9 @@ export class PluginLoader {
                 const messageHub = Core.services.resolve(MessageHub);
                 const localeService = Core.services.resolve(LocaleService);
                 messageHub.publish('locale:changed', { locale: localeService.getCurrentLocale() });
-                console.log(`[PluginLoader] Published locale:changed event for plugin ${packageJson.name}`);
             } catch (error) {
                 console.warn('[PluginLoader] Failed to publish locale:changed event:', error);
             }
-
-            console.log(`[PluginLoader] Successfully loaded plugin: ${packageJson.name}`);
         } catch (error) {
             console.error(`[PluginLoader] Failed to load plugin from ${pluginPath}:`, error);
             if (error instanceof Error) {
@@ -159,17 +150,13 @@ export class PluginLoader {
     }
 
     private findPluginInstance(module: any): IEditorPlugin | null {
-        console.log('[PluginLoader] Module exports:', Object.keys(module));
-
         if (module.default && this.isPluginInstance(module.default)) {
-            console.log('[PluginLoader] Found plugin in default export');
             return module.default;
         }
 
         for (const key of Object.keys(module)) {
             const value = module[key];
             if (value && this.isPluginInstance(value)) {
-                console.log(`[PluginLoader] Found plugin in export: ${key}`);
                 return value;
             }
         }
@@ -192,19 +179,6 @@ export class PluginLoader {
                 typeof obj.install === 'function' &&
                 typeof obj.uninstall === 'function';
 
-            if (!hasRequiredProperties) {
-                console.log('[PluginLoader] Object is not a valid plugin:', {
-                    hasName: typeof obj.name === 'string',
-                    hasVersion: typeof obj.version === 'string',
-                    hasDisplayName: typeof obj.displayName === 'string',
-                    hasCategory: typeof obj.category === 'string',
-                    hasInstall: typeof obj.install === 'function',
-                    hasUninstall: typeof obj.uninstall === 'function',
-                    objectType: typeof obj,
-                    objectConstructor: obj?.constructor?.name
-                });
-            }
-
             return hasRequiredProperties;
         } catch (error) {
             console.error('[PluginLoader] Error in isPluginInstance:', error);
@@ -213,11 +187,8 @@ export class PluginLoader {
     }
 
     async unloadProjectPlugins(pluginManager: EditorPluginManager): Promise<void> {
-        console.log('[PluginLoader] Unloading all project plugins...');
-
         for (const pluginName of this.loadedPluginNames) {
             try {
-                console.log(`[PluginLoader] Uninstalling plugin: ${pluginName}`);
                 await pluginManager.uninstallEditor(pluginName);
             } catch (error) {
                 console.error(`[PluginLoader] Failed to unload plugin ${pluginName}:`, error);
@@ -229,21 +200,13 @@ export class PluginLoader {
 
         this.loadedPluginNames.clear();
         this.loadedModuleUrls.clear();
-
-        console.log('[PluginLoader] All project plugins unloaded');
     }
 
     private invalidateModuleCache(): void {
         try {
             // 尝试使用Vite HMR API无效化模块
             if (import.meta.hot) {
-                console.log('[PluginLoader] Attempting to invalidate module cache via HMR');
                 import.meta.hot.invalidate();
-            }
-
-            // 清除已加载的模块URL记录
-            for (const url of this.loadedModuleUrls) {
-                console.log(`[PluginLoader] Marking module for reload: ${url}`);
             }
         } catch (error) {
             console.warn('[PluginLoader] Failed to invalidate module cache:', error);

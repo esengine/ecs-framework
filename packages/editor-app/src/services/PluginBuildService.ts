@@ -56,7 +56,6 @@ export class PluginBuildService {
                 pluginFolder
             });
 
-            console.log('[PluginBuildService] Build completed, zip path:', zipPath);
             return zipPath;
         } catch (error) {
             console.error('[PluginBuildService] Build failed:', error);

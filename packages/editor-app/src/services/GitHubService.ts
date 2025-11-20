@@ -280,9 +280,6 @@ export class GitHubService {
      * 返回设备代码信息，包含用户需要访问的 URL 和输入的代码
      */
     async requestDeviceCode(): Promise<DeviceCodeResponse> {
-        console.log('[GitHubService] Requesting device code...');
-        console.log('[GitHubService] Client ID:', this.CLIENT_ID);
-
         try {
             const response = await fetch('https://github.com/login/device/code', {
                 method: 'POST',
@@ -296,9 +293,6 @@ export class GitHubService {
                 })
             });
 
-            console.log('[GitHubService] Response status:', response.status);
-            console.log('[GitHubService] Response ok:', response.ok);
-
             if (!response.ok) {
                 const error = await response.text();
                 console.error('[GitHubService] Request device code failed:', error);
@@ -306,11 +300,6 @@ export class GitHubService {
             }
 
             const data = (await response.json()) as DeviceCodeResponse;
-            console.log('[GitHubService] Device code received:', {
-                user_code: data.user_code,
-                verification_uri: data.verification_uri
-            });
-
             return data;
         } catch (error) {
             console.error('[GitHubService] Error requesting device code:', error);
@@ -518,14 +507,12 @@ export class GitHubService {
     }
 
     async deleteFile(owner: string, repo: string, path: string, message: string, branch: string): Promise<void> {
-        console.log(`[GitHubService] Getting file SHA for: ${owner}/${repo}/${path}?ref=${branch}`);
         const existing = await this.request<GitHubFileContent>(`GET /repos/${owner}/${repo}/contents/${path}?ref=${branch}`);
 
         if (!existing || !existing.sha) {
             throw new Error(`Failed to get file SHA for ${path}`);
         }
 
-        console.log(`[GitHubService] Deleting file with SHA: ${existing.sha}`);
         await this.request<void>(`DELETE /repos/${owner}/${repo}/contents/${path}`, {
             message: message,
             sha: existing.sha,
@@ -631,7 +618,6 @@ export class GitHubService {
                     if (deletedDate && pr.merged_at) {
                         const addedDate = new Date(pr.merged_at);
                         if (deletedDate > addedDate) {
-                            console.log(`[GitHubService] Plugin ${pluginName} was deleted after being added, skipping`);
                             continue;
                         }
                     }
@@ -922,12 +908,10 @@ export class GitHubService {
         try {
             const stored = localStorage.getItem(this.STORAGE_KEY);
             if (stored) {
-                console.log('[GitHubService] Loading stored token...');
                 this.accessToken = stored;
                 this.notifyUserLoadStateChange(true);
                 this.fetchUser()
                     .then((user) => {
-                        console.log('[GitHubService] User loaded from stored token:', user.login);
                         this.user = user;
                         if (this.retryTimer) {
                             clearTimeout(this.retryTimer);
@@ -940,19 +924,15 @@ export class GitHubService {
 
                         const errorMessage = error instanceof Error ? error.message : String(error);
                         if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
-                            console.log('[GitHubService] Token is invalid or expired, removing it');
                             this.accessToken = null;
                             this.user = null;
                             localStorage.removeItem(this.STORAGE_KEY);
                             this.notifyUserLoadStateChange(false);
                         } else {
-                            console.log('[GitHubService] Temporary error fetching user, will retry in 5 seconds');
                             this.scheduleRetryLoadUser();
                         }
                     });
-            } else {
-                console.log('[GitHubService] No stored token found');
-            }
+            } 
         } catch (error) {
             console.error('[GitHubService] Failed to load token:', error);
             this.notifyUserLoadStateChange(false);
@@ -965,11 +945,9 @@ export class GitHubService {
         }
 
         this.retryTimer = window.setTimeout(() => {
-            console.log('[GitHubService] Retrying to load user...');
             if (this.accessToken && !this.user) {
                 this.fetchUser()
                     .then((user) => {
-                        console.log('[GitHubService] User loaded successfully on retry:', user.login);
                         this.user = user;
                         this.retryTimer = null;
                         this.notifyUserLoadStateChange(false);
@@ -978,13 +956,11 @@ export class GitHubService {
                         console.error('[GitHubService] Retry failed:', error);
                         const errorMessage = error instanceof Error ? error.message : String(error);
                         if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
-                            console.log('[GitHubService] Token is invalid, removing it');
                             this.accessToken = null;
                             this.user = null;
                             localStorage.removeItem(this.STORAGE_KEY);
                             this.notifyUserLoadStateChange(false);
                         } else {
-                            console.log('[GitHubService] Will retry again in 10 seconds');
                             this.retryTimer = window.setTimeout(() => this.scheduleRetryLoadUser(), 10000);
                         }
                     });

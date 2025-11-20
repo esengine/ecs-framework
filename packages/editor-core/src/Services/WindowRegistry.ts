@@ -70,7 +70,6 @@ export class WindowRegistry implements IService {
             return;
         }
         this.windows.set(descriptor.id, descriptor);
-        console.log(`[WindowRegistry] Registered window: ${descriptor.id}`);
     }
 
     /**
@@ -106,7 +105,6 @@ export class WindowRegistry implements IService {
             return;
         }
 
-        console.log(`[WindowRegistry] Opening window: ${windowId}`, params);
         this.openWindows.set(windowId, {
             descriptor,
             isOpen: true,
@@ -119,7 +117,6 @@ export class WindowRegistry implements IService {
      * 关闭窗口
      */
     closeWindow(windowId: string): void {
-        console.log(`[WindowRegistry] Closing window: ${windowId}`);
         this.openWindows.delete(windowId);
         this.notifyListeners();
     }

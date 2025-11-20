@@ -18,11 +18,6 @@ export async function checkForUpdates(silent: boolean = false): Promise<UpdateCh
         const update = await check();
 
         if (update?.available) {
-            console.log(`发现新版本: ${update.version}`);
-            console.log(`当前版本: ${update.currentVersion}`);
-            console.log(`更新日期: ${update.date}`);
-            console.log(`更新说明:\n${update.body}`);
-
             if (!silent) {
                 // Tauri 会自动显示更新对话框（因为配置了 dialog: true）
                 // 用户点击确认后会自动下载并安装，安装完成后会自动重启
@@ -35,9 +30,6 @@ export async function checkForUpdates(silent: boolean = false): Promise<UpdateCh
                 currentVersion: update.currentVersion
             };
         } else {
-            if (!silent) {
-                console.log('当前已是最新版本');
-            }
             return { available: false };
         }
     } catch (error) {

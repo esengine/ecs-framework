@@ -82,18 +82,10 @@ export class FileActionRegistry implements IService {
      * 处理文件双击
      */
     async handleDoubleClick(filePath: string): Promise<boolean> {
-        const extension = this.getFileExtension(filePath);
-        console.log('[FileActionRegistry] handleDoubleClick:', filePath);
-        console.log('[FileActionRegistry] Extension:', extension);
-        console.log('[FileActionRegistry] Total handlers:', this.actionHandlers.size);
-        console.log('[FileActionRegistry] Registered extensions:', Array.from(this.actionHandlers.keys()));
-
         const handlers = this.getHandlersForFile(filePath);
-        console.log('[FileActionRegistry] Found handlers:', handlers.length);
 
         for (const handler of handlers) {
             if (handler.onDoubleClick) {
-                console.log('[FileActionRegistry] Calling handler for extensions:', handler.extensions);
                 await handler.onDoubleClick(filePath);
                 return true;
             }
