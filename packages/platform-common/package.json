@@ -1,0 +1,50 @@
+{
+  "name": "@esengine/platform-common",
+  "version": "1.0.0",
+  "description": "平台通用接口定义",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "build:npm": "npm run build",
+    "clean": "rimraf dist",
+    "type-check": "npx tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "ecs",
+    "platform",
+    "interface",
+    "common"
+  ],
+  "author": "yhh",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "rimraf": "^5.0.0",
+    "rollup": "^4.42.0",
+    "rollup-plugin-dts": "^6.2.1",
+    "typescript": "^5.8.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/esengine/ecs-framework.git",
+    "directory": "packages/platform-common"
+  }
+}

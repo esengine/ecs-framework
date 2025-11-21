@@ -2,7 +2,6 @@ import { Component } from '../../../src/ECS/Component';
 import { ComponentStorageManager } from '../../../src/ECS/Core/ComponentStorage';
 import {
     EnableSoA,
-    HighPrecision,
     Float64,
     Int32,
     SerializeMap,
@@ -50,7 +49,7 @@ class BasicTypesComponent extends Component {
 class DecoratedNumberComponent extends Component {
     public normalFloat: number;
 
-    @HighPrecision
+    @Float64
     public highPrecisionNumber: number;
 
     @Float64
@@ -143,7 +142,7 @@ class ComplexObjectComponent extends Component {
 
 @EnableSoA
 class MixedComponent extends Component {
-    @HighPrecision
+    @Float64
     public bigIntId: number;
 
     @Float64
@@ -288,7 +287,7 @@ describe('SoAStorage - SoA存储测试', () => {
     });
 
     describe('数值类型装饰器', () => {
-        test('@HighPrecision应该保持高精度数值', () => {
+        test('@Float64应该保持高精度数值', () => {
             const component = new DecoratedNumberComponent(
                 0,
                 Number.MAX_SAFE_INTEGER
@@ -336,7 +335,7 @@ describe('SoAStorage - SoA存储测试', () => {
             expect(storage.getFieldArray('normalFloat')).toBeInstanceOf(Float32Array);
             expect(storage.getFieldArray('preciseFloat')).toBeInstanceOf(Float64Array);
             expect(storage.getFieldArray('integerValue')).toBeInstanceOf(Int32Array);
-            expect(storage.getFieldArray('highPrecisionNumber')).toBeNull();
+            expect(storage.getFieldArray('highPrecisionNumber')).toBeInstanceOf(Float64Array);
         });
     });
 

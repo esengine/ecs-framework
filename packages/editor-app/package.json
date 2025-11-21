@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@esengine/behavior-tree": "file:../behavior-tree",
-    "@esengine/behavior-tree-editor": "file:../behavior-tree-editor",
+    "@esengine/ecs-engine-bindgen": "file:../ecs-engine-bindgen",
     "@esengine/ecs-framework": "file:../core",
     "@esengine/editor-core": "file:../editor-core",
     "@tauri-apps/api": "^2.2.0",
@@ -24,6 +24,7 @@
     "@tauri-apps/plugin-fs": "^2.4.2",
     "@tauri-apps/plugin-http": "^2.5.4",
     "@tauri-apps/plugin-shell": "^2.0.0",
+    "@esengine/engine": "file:../engine",
     "flexlayout-react": "^0.8.17",
     "i18next": "^25.6.0",
     "json5": "^2.2.3",
@@ -51,6 +52,8 @@
     "sharp": "^0.34.4",
     "typescript": "^5.8.3",
     "vite": "^6.0.7",
-    "vite-plugin-swc-transform": "^1.1.1"
+    "vite-plugin-swc-transform": "^1.1.1",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0"
   }
 }

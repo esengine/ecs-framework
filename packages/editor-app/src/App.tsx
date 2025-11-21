@@ -14,16 +14,18 @@ import {
     ProjectService,
     CompilerRegistry,
     InspectorRegistry,
-    INotification
+    INotification,
+    CommandManager
 } from '@esengine/editor-core';
 import type { IDialogExtended } from './services/TauriDialogService';
 import { GlobalBlackboardService } from '@esengine/behavior-tree';
 import { ServiceRegistry, PluginInstaller, useDialogStore } from './app/managers';
 import { StartupPage } from './components/StartupPage';
 import { SceneHierarchy } from './components/SceneHierarchy';
-import { Inspector } from './components/Inspector';
+import { Inspector } from './components/inspectors/Inspector';
 import { AssetBrowser } from './components/AssetBrowser';
 import { ConsolePanel } from './components/ConsolePanel';
+import { Viewport } from './components/Viewport';
 import { PluginManagerWindow } from './components/PluginManagerWindow';
 import { ProfilerWindow } from './components/ProfilerWindow';
 import { PortManager } from './components/PortManager';
@@ -82,6 +84,7 @@ function App() {
     const [sceneManager, setSceneManager] = useState<SceneManagerService | null>(null);
     const [notification, setNotification] = useState<INotification | null>(null);
     const [dialog, setDialog] = useState<IDialogExtended | null>(null);
+    const [commandManager] = useState(() => new CommandManager());
     const { t, locale, changeLocale } = useLocale();
 
     // 同步 locale 到 TauriDialogService
@@ -660,13 +663,13 @@ function App() {
                     {
                         id: 'scene-hierarchy',
                         title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
-                        content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />,
+                        content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} commandManager={commandManager} />,
                         closable: false
                     },
                     {
                         id: 'inspector',
                         title: locale === 'zh' ? '检视器' : 'Inspector',
-                        content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} />,
+                        content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} commandManager={commandManager} />,
                         closable: false
                     },
                     {
@@ -681,13 +684,19 @@ function App() {
                     {
                         id: 'scene-hierarchy',
                         title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
-                        content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} />,
+                        content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} commandManager={commandManager} />,
+                        closable: false
+                    },
+                    {
+                        id: 'viewport',
+                        title: locale === 'zh' ? '视口' : 'Viewport',
+                        content: <Viewport locale={locale} />,
                         closable: false
                     },
                     {
                         id: 'inspector',
                         title: locale === 'zh' ? '检视器' : 'Inspector',
-                        content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} />,
+                        content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} commandManager={commandManager} />,
                         closable: false
                     },
                     {

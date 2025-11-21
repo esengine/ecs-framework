@@ -1,0 +1,195 @@
+//! ES Engine - High-performance 2D game engine for web and mobile platforms.
+//! ES引擎 - 高性能2D游戏引擎，支持Web和移动平台。
+//!
+//! # Architecture | 架构
+//!
+//! The engine is designed with a modular architecture:
+//! 引擎采用模块化架构设计：
+//!
+//! - `core` - Engine lifecycle and context management | 引擎生命周期和上下文管理
+//! - `renderer` - 2D rendering with batch optimization | 2D渲染与批处理优化
+//! - `math` - Mathematical primitives (vectors, matrices) | 数学基元（向量、矩阵）
+//! - `resource` - Asset loading and management | 资源加载和管理
+//! - `input` - Keyboard, mouse, and touch input | 键盘、鼠标和触摸输入
+//! - `platform` - Platform abstraction layer | 平台抽象层
+//!
+//! # Example | 示例
+//!
+//! ```typescript
+//! import { GameEngine } from 'es-engine';
+//!
+//! const engine = new GameEngine('canvas');
+//! engine.loadTexture('player', 'assets/player.png');
+//!
+//! function gameLoop() {
+//!     engine.clear(0.0, 0.0, 0.0, 1.0);
+//!     engine.submitSpriteBatch(transforms, textureIds, uvs, colors);
+//!     engine.render();
+//!     requestAnimationFrame(gameLoop);
+//! }
+//! ```
+
+#![warn(missing_docs)]
+#![warn(rustdoc::missing_crate_level_docs)]
+
+use wasm_bindgen::prelude::*;
+
+// Module declarations | 模块声明
+pub mod core;
+pub mod math;
+pub mod platform;
+pub mod renderer;
+pub mod resource;
+pub mod input;
+
+// Re-exports | 重新导出
+pub use crate::core::{Engine, EngineConfig};
+pub use crate::core::error::{EngineError, Result};
+
+/// Initialize panic hook for better error messages in console.
+/// 初始化panic hook以在控制台显示更好的错误信息。
+#[wasm_bindgen(start)]
+pub fn init() {
+    #[cfg(feature = "console_error_panic_hook")]
+    console_error_panic_hook::set_once();
+
+    // Initialize logger | 初始化日志
+    console_log::init_with_level(log::Level::Debug)
+        .expect("Failed to initialize logger | 日志初始化失败");
+
+    log::info!("ES Engine initialized | ES引擎初始化完成");
+}
+
+/// Game engine main interface exposed to JavaScript.
+/// 暴露给JavaScript的游戏引擎主接口。
+///
+/// This is the primary entry point for the engine from TypeScript/JavaScript.
+/// 这是从TypeScript/JavaScript访问引擎的主要入口点。
+#[wasm_bindgen]
+pub struct GameEngine {
+    engine: Engine,
+}
+
+#[wasm_bindgen]
+impl GameEngine {
+    /// Create a new game engine instance.
+    /// 创建新的游戏引擎实例。
+    ///
+    /// # Arguments | 参数
+    /// * `canvas_id` - The HTML canvas element ID | HTML canvas元素ID
+    ///
+    /// # Returns | 返回
+    /// A new GameEngine instance or an error | 新的GameEngine实例或错误
+    #[wasm_bindgen(constructor)]
+    pub fn new(canvas_id: &str) -> std::result::Result<GameEngine, JsValue> {
+        let config = EngineConfig::default();
+        let engine = Engine::new(canvas_id, config)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        Ok(GameEngine { engine })
+    }
+
+    /// Create a new game engine from external WebGL context.
+    /// 从外部 WebGL 上下文创建引擎。
+    ///
+    /// This is designed for WeChat MiniGame and similar environments.
+    /// 适用于微信小游戏等环境。
+    #[wasm_bindgen(js_name = fromExternal)]
+    pub fn from_external(
+        gl_context: JsValue,
+        width: u32,
+        height: u32,
+    ) -> std::result::Result<GameEngine, JsValue> {
+        let config = EngineConfig::default();
+        let engine = Engine::from_external(gl_context, width, height, config)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        Ok(GameEngine { engine })
+    }
+
+    /// Clear the screen with specified color.
+    /// 使用指定颜色清除屏幕。
+    ///
+    /// # Arguments | 参数
+    /// * `r` - Red component (0.0-1.0) | 红色分量
+    /// * `g` - Green component (0.0-1.0) | 绿色分量
+    /// * `b` - Blue component (0.0-1.0) | 蓝色分量
+    /// * `a` - Alpha component (0.0-1.0) | 透明度分量
+    pub fn clear(&self, r: f32, g: f32, b: f32, a: f32) {
+        self.engine.clear(r, g, b, a);
+    }
+
+    /// Get canvas width.
+    /// 获取画布宽度。
+    #[wasm_bindgen(getter)]
+    pub fn width(&self) -> u32 {
+        self.engine.width()
+    }
+
+    /// Get canvas height.
+    /// 获取画布高度。
+    #[wasm_bindgen(getter)]
+    pub fn height(&self) -> u32 {
+        self.engine.height()
+    }
+
+    /// Submit sprite batch data for rendering.
+    /// 提交精灵批次数据进行渲染。
+    ///
+    /// # Arguments | 参数
+    /// * `transforms` - Float32Array [x, y, rotation, scaleX, scaleY, originX, originY] per sprite
+    ///                  每个精灵的变换数据
+    /// * `texture_ids` - Uint32Array of texture IDs | 纹理ID数组
+    /// * `uvs` - Float32Array [u0, v0, u1, v1] per sprite | 每个精灵的UV坐标
+    /// * `colors` - Uint32Array of packed RGBA colors | 打包的RGBA颜色数组
+    #[wasm_bindgen(js_name = submitSpriteBatch)]
+    pub fn submit_sprite_batch(
+        &mut self,
+        transforms: &[f32],
+        texture_ids: &[u32],
+        uvs: &[f32],
+        colors: &[u32],
+    ) -> std::result::Result<(), JsValue> {
+        self.engine
+            .submit_sprite_batch(transforms, texture_ids, uvs, colors)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Render the current frame.
+    /// 渲染当前帧。
+    pub fn render(&mut self) -> std::result::Result<(), JsValue> {
+        self.engine
+            .render()
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Load a texture from URL.
+    /// 从URL加载纹理。
+    ///
+    /// # Arguments | 参数
+    /// * `id` - Unique texture identifier | 唯一纹理标识符
+    /// * `url` - Image URL to load | 要加载的图片URL
+    #[wasm_bindgen(js_name = loadTexture)]
+    pub fn load_texture(&mut self, id: u32, url: &str) -> std::result::Result<(), JsValue> {
+        self.engine
+            .load_texture(id, url)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Check if a key is currently pressed.
+    /// 检查某个键是否当前被按下。
+    ///
+    /// # Arguments | 参数
+    /// * `key_code` - The key code to check | 要检查的键码
+    #[wasm_bindgen(js_name = isKeyDown)]
+    pub fn is_key_down(&self, key_code: &str) -> bool {
+        self.engine.is_key_down(key_code)
+    }
+
+    /// Update input state. Should be called once per frame.
+    /// 更新输入状态。应该每帧调用一次。
+    #[wasm_bindgen(js_name = updateInput)]
+    pub fn update_input(&mut self) {
+        self.engine.update_input();
+    }
+}

@@ -12,7 +12,7 @@ import {
     EntityInspector
 } from './views';
 
-export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegistry, projectPath }: InspectorProps) {
+export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegistry, projectPath, commandManager }: InspectorProps) {
     const [target, setTarget] = useState<InspectorTarget>(null);
     const [componentVersion, setComponentVersion] = useState(0);
     const [autoRefresh, setAutoRefresh] = useState(true);
@@ -196,7 +196,7 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
     }
 
     if (target.type === 'entity') {
-        return <EntityInspector entity={target.data} messageHub={messageHub} componentVersion={componentVersion} />;
+        return <EntityInspector entity={target.data} messageHub={messageHub} commandManager={commandManager} componentVersion={componentVersion} />;
     }
 
     return null;

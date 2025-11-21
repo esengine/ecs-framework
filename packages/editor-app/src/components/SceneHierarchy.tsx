@@ -1,28 +1,36 @@
 import { useState, useEffect } from 'react';
 import { Entity, Core } from '@esengine/ecs-framework';
-import { EntityStoreService, MessageHub, SceneManagerService } from '@esengine/editor-core';
+import { EntityStoreService, MessageHub, SceneManagerService, CommandManager } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
-import { Box, Layers, Wifi, Search, Plus, Trash2 } from 'lucide-react';
+import { Box, Layers, Wifi, Search, Plus, Trash2, Monitor, Globe } from 'lucide-react';
 import { ProfilerService, RemoteEntity } from '../services/ProfilerService';
 import { confirm } from '@tauri-apps/plugin-dialog';
+import { CreateEntityCommand, DeleteEntityCommand } from '../application/commands/entity';
 import '../styles/SceneHierarchy.css';
+
+type ViewMode = 'local' | 'remote';
 
 interface SceneHierarchyProps {
   entityStore: EntityStoreService;
   messageHub: MessageHub;
+  commandManager: CommandManager;
 }
 
-export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps) {
+export function SceneHierarchy({ entityStore, messageHub, commandManager }: SceneHierarchyProps) {
     const [entities, setEntities] = useState<Entity[]>([]);
     const [remoteEntities, setRemoteEntities] = useState<RemoteEntity[]>([]);
     const [isRemoteConnected, setIsRemoteConnected] = useState(false);
+    const [viewMode, setViewMode] = useState<ViewMode>('local');
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [sceneName, setSceneName] = useState<string>('Untitled');
     const [remoteSceneName, setRemoteSceneName] = useState<string | null>(null);
     const [sceneFilePath, setSceneFilePath] = useState<string | null>(null);
     const [isSceneModified, setIsSceneModified] = useState<boolean>(false);
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entityId: number | null } | null>(null);
     const { t, locale } = useLocale();
+
+    const isShowingRemote = viewMode === 'remote' && isRemoteConnected;
 
     // Subscribe to scene changes
     useEffect(() => {
@@ -182,14 +190,15 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
     };
 
     const handleCreateEntity = () => {
-        const scene = Core.scene;
-        if (!scene) return;
-
         const entityCount = entityStore.getAllEntities().length;
         const entityName = `Entity ${entityCount + 1}`;
-        const entity = scene.createEntity(entityName);
-        entityStore.addEntity(entity);
-        entityStore.selectEntity(entity);
+
+        const command = new CreateEntityCommand(
+            entityStore,
+            messageHub,
+            entityName
+        );
+        commandManager.execute(command);
     };
 
     const handleDeleteEntity = async () => {
@@ -200,8 +209,8 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
 
         const confirmed = await confirm(
             locale === 'zh'
-                ? `确定要删除实体 "${entity.name}" 吗？此操作无法撤销。`
-                : `Are you sure you want to delete entity "${entity.name}"? This action cannot be undone.`,
+                ? `确定要删除实体 "${entity.name}" 吗？`
+                : `Are you sure you want to delete entity "${entity.name}"?`,
             {
                 title: locale === 'zh' ? '删除实体' : 'Delete Entity',
                 kind: 'warning'
@@ -209,22 +218,44 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
         );
 
         if (confirmed) {
-            entity.destroy();
-            entityStore.removeEntity(entity);
+            const command = new DeleteEntityCommand(
+                entityStore,
+                messageHub,
+                entity
+            );
+            commandManager.execute(command);
         }
     };
+
+    const handleContextMenu = (e: React.MouseEvent, entityId: number | null) => {
+        e.preventDefault();
+        setContextMenu({ x: e.clientX, y: e.clientY, entityId });
+    };
+
+    const closeContextMenu = () => {
+        setContextMenu(null);
+    };
+
+    // Close context menu on click outside
+    useEffect(() => {
+        const handleClick = () => closeContextMenu();
+        if (contextMenu) {
+            window.addEventListener('click', handleClick);
+            return () => window.removeEventListener('click', handleClick);
+        }
+    }, [contextMenu]);
 
     // Listen for Delete key
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Delete' && selectedId && !isRemoteConnected) {
+            if (e.key === 'Delete' && selectedId && !isShowingRemote) {
                 handleDeleteEntity();
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedId, isRemoteConnected]);
+    }, [selectedId, isShowingRemote]);
 
     // Filter entities based on search query
     const filterRemoteEntities = (entityList: RemoteEntity[]): RemoteEntity[] => {
@@ -262,11 +293,11 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
     };
 
     // Determine which entities to display
-    const displayEntities = isRemoteConnected
+    const displayEntities = isShowingRemote
         ? filterRemoteEntities(remoteEntities)
         : filterLocalEntities(entities);
-    const showRemoteIndicator = isRemoteConnected && remoteEntities.length > 0;
-    const displaySceneName = isRemoteConnected && remoteSceneName ? remoteSceneName : sceneName;
+    const showRemoteIndicator = isShowingRemote && remoteEntities.length > 0;
+    const displaySceneName = isShowingRemote && remoteSceneName ? remoteSceneName : sceneName;
 
     return (
         <div className="scene-hierarchy">
@@ -282,6 +313,24 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
                         {displaySceneName}{!isRemoteConnected && isSceneModified ? '*' : ''}
                     </span>
                 </div>
+                {isRemoteConnected && (
+                    <div className="view-mode-toggle">
+                        <button
+                            className={`mode-btn ${viewMode === 'local' ? 'active' : ''}`}
+                            onClick={() => setViewMode('local')}
+                            title={locale === 'zh' ? '本地场景' : 'Local Scene'}
+                        >
+                            <Monitor size={14} />
+                        </button>
+                        <button
+                            className={`mode-btn ${viewMode === 'remote' ? 'active' : ''}`}
+                            onClick={() => setViewMode('remote')}
+                            title={locale === 'zh' ? '远程实体' : 'Remote Entities'}
+                        >
+                            <Globe size={14} />
+                        </button>
+                    </div>
+                )}
                 {showRemoteIndicator && (
                     <div className="remote-indicator" title="Showing remote entities">
                         <Wifi size={12} />
@@ -297,18 +346,17 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
             </div>
-            {!isRemoteConnected && (
+            {!isShowingRemote && (
                 <div className="hierarchy-toolbar">
                     <button
-                        className="toolbar-btn"
+                        className="toolbar-btn icon-only"
                         onClick={handleCreateEntity}
                         title={locale === 'zh' ? '创建实体' : 'Create Entity'}
                     >
                         <Plus size={14} />
-                        <span>{locale === 'zh' ? '创建实体' : 'Create Entity'}</span>
                     </button>
                     <button
-                        className="toolbar-btn"
+                        className="toolbar-btn icon-only"
                         onClick={handleDeleteEntity}
                         disabled={!selectedId}
                         title={locale === 'zh' ? '删除实体' : 'Delete Entity'}
@@ -317,18 +365,18 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
                     </button>
                 </div>
             )}
-            <div className="hierarchy-content scrollable">
+            <div className="hierarchy-content scrollable" onContextMenu={(e) => !isShowingRemote && handleContextMenu(e, null)}>
                 {displayEntities.length === 0 ? (
                     <div className="empty-state">
                         <Box size={48} strokeWidth={1.5} className="empty-icon" />
                         <div className="empty-title">{t('hierarchy.empty')}</div>
                         <div className="empty-hint">
-                            {isRemoteConnected
+                            {isShowingRemote
                                 ? 'No entities in remote game'
                                 : 'Create an entity to get started'}
                         </div>
                     </div>
-                ) : isRemoteConnected ? (
+                ) : isShowingRemote ? (
                     <ul className="entity-list">
                         {(displayEntities as RemoteEntity[]).map((entity) => (
                             <li
@@ -357,14 +405,45 @@ export function SceneHierarchy({ entityStore, messageHub }: SceneHierarchyProps)
                                 key={entity.id}
                                 className={`entity-item ${selectedId === entity.id ? 'selected' : ''}`}
                                 onClick={() => handleEntityClick(entity)}
+                                onContextMenu={(e) => {
+                                    e.stopPropagation();
+                                    handleEntityClick(entity);
+                                    handleContextMenu(e, entity.id);
+                                }}
                             >
                                 <Box size={14} className="entity-icon" />
-                                <span className="entity-name">Entity {entity.id}</span>
+                                <span className="entity-name">{entity.name || `Entity ${entity.id}`}</span>
                             </li>
                         ))}
                     </ul>
                 )}
             </div>
+
+            {contextMenu && !isShowingRemote && (
+                <div
+                    className="context-menu"
+                    style={{
+                        position: 'fixed',
+                        left: contextMenu.x,
+                        top: contextMenu.y,
+                        zIndex: 1000
+                    }}
+                >
+                    <button onClick={() => { handleCreateEntity(); closeContextMenu(); }}>
+                        <Plus size={12} />
+                        <span>{locale === 'zh' ? '创建实体' : 'Create Entity'}</span>
+                    </button>
+                    {contextMenu.entityId && (
+                        <>
+                            <div className="context-menu-divider" />
+                            <button onClick={() => { handleDeleteEntity(); closeContextMenu(); }}>
+                                <Trash2 size={12} />
+                                <span>{locale === 'zh' ? '删除实体' : 'Delete Entity'}</span>
+                            </button>
+                        </>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

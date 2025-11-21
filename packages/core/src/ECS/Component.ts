@@ -1,4 +1,5 @@
 import type { IComponent } from '../Types';
+import { Int32 } from './Core/SoAStorage';
 
 /**
  * 游戏组件基类
@@ -50,6 +51,7 @@ export abstract class Component implements IComponent {
      *
      * 存储实体ID而非引用，避免循环引用，符合ECS数据导向设计。
      */
+    @Int32
     public entityId: number | null = null;
 
     /**

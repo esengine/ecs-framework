@@ -1,0 +1,16 @@
+# Build output | 构建输出
+/target
+/pkg
+
+# Cargo lock (library) | Cargo锁文件（库）
+Cargo.lock
+
+# IDE | 开发环境
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files | 系统文件
+.DS_Store
+Thumbs.db
