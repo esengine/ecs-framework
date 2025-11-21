@@ -403,6 +403,17 @@ export class EngineBridge {
     }
 
     /**
+     * Set transform tool mode.
+     * 设置变换工具模式。
+     *
+     * @param mode - 0=Select, 1=Move, 2=Rotate, 3=Scale
+     */
+    setTransformMode(mode: number): void {
+        if (!this.initialized) return;
+        this.engine.set_transform_mode(mode);
+    }
+
+    /**
      * Dispose the bridge and release resources.
      * 销毁桥接并释放资源。
      */

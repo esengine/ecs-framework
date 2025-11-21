@@ -49,6 +49,7 @@ export class EngineRenderSystem extends EntitySystem {
     private transformType: TransformComponentType;
     private showGizmos = true;
     private selectedEntityIds: Set<number> = new Set();
+    private transformMode: 'select' | 'move' | 'rotate' | 'scale' = 'select';
 
     // Reusable map to avoid allocation per frame
     // 可重用的映射以避免每帧分配
@@ -218,6 +219,31 @@ export class EngineRenderSystem extends EntitySystem {
      */
     getSelectedEntityIds(): number[] {
         return Array.from(this.selectedEntityIds);
+    }
+
+    /**
+     * Set transform tool mode.
+     * 设置变换工具模式。
+     */
+    setTransformMode(mode: 'select' | 'move' | 'rotate' | 'scale'): void {
+        this.transformMode = mode;
+
+        // Convert string mode to u8 for Rust engine
+        const modeMap: Record<string, number> = {
+            'select': 0,
+            'move': 1,
+            'rotate': 2,
+            'scale': 3
+        };
+        this.bridge.setTransformMode(modeMap[mode]);
+    }
+
+    /**
+     * Get transform tool mode.
+     * 获取变换工具模式。
+     */
+    getTransformMode(): 'select' | 'move' | 'rotate' | 'scale' {
+        return this.transformMode;
     }
 
     /**

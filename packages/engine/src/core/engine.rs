@@ -6,7 +6,7 @@ use wasm_bindgen::prelude::*;
 use super::context::WebGLContext;
 use super::error::Result;
 use crate::input::InputManager;
-use crate::renderer::{Renderer2D, GridRenderer, GizmoRenderer};
+use crate::renderer::{Renderer2D, GridRenderer, GizmoRenderer, TransformMode};
 use crate::resource::TextureManager;
 
 /// Engine configuration options.
@@ -227,6 +227,18 @@ impl Engine {
         a: f32,
     ) {
         self.gizmo_renderer.add_rect(x, y, width, height, rotation, origin_x, origin_y, r, g, b, a);
+    }
+
+    /// Set transform tool mode.
+    /// 设置变换工具模式。
+    pub fn set_transform_mode(&mut self, mode: u8) {
+        let transform_mode = match mode {
+            1 => TransformMode::Move,
+            2 => TransformMode::Rotate,
+            3 => TransformMode::Scale,
+            _ => TransformMode::Select,
+        };
+        self.gizmo_renderer.set_transform_mode(transform_mode);
     }
 
     /// Load a texture from URL.

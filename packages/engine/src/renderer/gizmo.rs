@@ -30,6 +30,26 @@ void main() {
 }
 "#;
 
+/// Transform tool mode.
+/// 变换工具模式。
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TransformMode {
+    /// Selection mode - show bounds only
+    Select,
+    /// Move mode - show translation arrows
+    Move,
+    /// Rotate mode - show rotation circle
+    Rotate,
+    /// Scale mode - show scale handles
+    Scale,
+}
+
+impl Default for TransformMode {
+    fn default() -> Self {
+        TransformMode::Select
+    }
+}
+
 /// Gizmo renderer for drawing editor overlays like selection bounds.
 /// 用于绘制编辑器叠加层（如选择边界）的Gizmo渲染器。
 pub struct GizmoRenderer {
@@ -38,6 +58,8 @@ pub struct GizmoRenderer {
     /// Pending rectangle data: [x, y, width, height, rotation, origin_x, origin_y, r, g, b, a]
     /// 待渲染的矩形数据
     rects: Vec<f32>,
+    /// Current transform mode
+    transform_mode: TransformMode,
 }
 
 impl GizmoRenderer {
@@ -52,6 +74,7 @@ impl GizmoRenderer {
             program,
             vertex_buffer,
             rects: Vec::new(),
+            transform_mode: TransformMode::default(),
         })
     }
 
@@ -190,9 +213,180 @@ impl GizmoRenderer {
 
             gl.uniform4f(color_loc.as_ref(), r, g, b, a);
             gl.draw_arrays(WebGl2RenderingContext::LINE_LOOP, 0, 4);
+
+            // Draw transform handles based on mode
+            match self.transform_mode {
+                TransformMode::Select => {
+                    // Just the selection box (already drawn)
+                }
+                TransformMode::Move => {
+                    // Draw move arrows at center
+                    self.draw_move_handles(gl, &color_loc, x, y, rotation, camera);
+                }
+                TransformMode::Rotate => {
+                    // Draw rotation circle
+                    self.draw_rotate_handles(gl, &color_loc, x, y, width.max(height) * 0.6, camera);
+                }
+                TransformMode::Scale => {
+                    // Draw scale handles at corners
+                    self.draw_scale_handles(gl, &color_loc, x, y, width, height, rotation, origin_x, origin_y, camera);
+                }
+            }
         }
 
         gl.disable_vertex_attrib_array(0);
+    }
+
+    /// Set transform mode.
+    /// 设置变换模式。
+    pub fn set_transform_mode(&mut self, mode: TransformMode) {
+        self.transform_mode = mode;
+    }
+
+    /// Get transform mode.
+    /// 获取变换模式。
+    pub fn get_transform_mode(&self) -> TransformMode {
+        self.transform_mode
+    }
+
+    /// Draw move handles (arrows).
+    /// 绘制移动手柄（箭头）。
+    fn draw_move_handles(
+        &self,
+        gl: &WebGl2RenderingContext,
+        color_loc: &Option<web_sys::WebGlUniformLocation>,
+        x: f32,
+        y: f32,
+        rotation: f32,
+        camera: &Camera2D,
+    ) {
+        let arrow_length = 50.0 / camera.zoom;
+        let arrow_head = 10.0 / camera.zoom;
+        let cos = rotation.cos();
+        let sin = rotation.sin();
+
+        // X axis (red)
+        let x_end_x = x + arrow_length * cos;
+        let x_end_y = y + arrow_length * sin;
+        let x_arrow = [
+            x, y,
+            x_end_x, x_end_y,
+            x_end_x - arrow_head * cos + arrow_head * 0.3 * sin,
+            x_end_y - arrow_head * sin - arrow_head * 0.3 * cos,
+            x_end_x, x_end_y,
+            x_end_x - arrow_head * cos - arrow_head * 0.3 * sin,
+            x_end_y - arrow_head * sin + arrow_head * 0.3 * cos,
+        ];
+
+        unsafe {
+            let array = js_sys::Float32Array::view(&x_arrow);
+            gl.buffer_data_with_array_buffer_view(
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &array,
+                WebGl2RenderingContext::DYNAMIC_DRAW,
+            );
+        }
+        gl.uniform4f(color_loc.as_ref(), 1.0, 0.3, 0.3, 1.0);
+        gl.draw_arrays(WebGl2RenderingContext::LINE_STRIP, 0, 5);
+
+        // Y axis (green)
+        let y_end_x = x - arrow_length * sin;
+        let y_end_y = y + arrow_length * cos;
+        let y_arrow = [
+            x, y,
+            y_end_x, y_end_y,
+            y_end_x + arrow_head * sin + arrow_head * 0.3 * cos,
+            y_end_y - arrow_head * cos + arrow_head * 0.3 * sin,
+            y_end_x, y_end_y,
+            y_end_x + arrow_head * sin - arrow_head * 0.3 * cos,
+            y_end_y - arrow_head * cos - arrow_head * 0.3 * sin,
+        ];
+
+        unsafe {
+            let array = js_sys::Float32Array::view(&y_arrow);
+            gl.buffer_data_with_array_buffer_view(
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &array,
+                WebGl2RenderingContext::DYNAMIC_DRAW,
+            );
+        }
+        gl.uniform4f(color_loc.as_ref(), 0.3, 1.0, 0.3, 1.0);
+        gl.draw_arrays(WebGl2RenderingContext::LINE_STRIP, 0, 5);
+    }
+
+    /// Draw rotation handle (circle).
+    /// 绘制旋转手柄（圆形）。
+    fn draw_rotate_handles(
+        &self,
+        gl: &WebGl2RenderingContext,
+        color_loc: &Option<web_sys::WebGlUniformLocation>,
+        x: f32,
+        y: f32,
+        radius: f32,
+        _camera: &Camera2D,
+    ) {
+        let segments = 32;
+        let mut vertices = Vec::with_capacity(segments * 2);
+
+        for i in 0..segments {
+            let angle = (i as f32 / segments as f32) * std::f32::consts::PI * 2.0;
+            vertices.push(x + radius * angle.cos());
+            vertices.push(y + radius * angle.sin());
+        }
+
+        unsafe {
+            let array = js_sys::Float32Array::view(&vertices);
+            gl.buffer_data_with_array_buffer_view(
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &array,
+                WebGl2RenderingContext::DYNAMIC_DRAW,
+            );
+        }
+        gl.uniform4f(color_loc.as_ref(), 0.3, 0.6, 1.0, 1.0);
+        gl.draw_arrays(WebGl2RenderingContext::LINE_LOOP, 0, segments as i32);
+    }
+
+    /// Draw scale handles (squares at corners).
+    /// 绘制缩放手柄（角落的方块）。
+    fn draw_scale_handles(
+        &self,
+        gl: &WebGl2RenderingContext,
+        color_loc: &Option<web_sys::WebGlUniformLocation>,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        rotation: f32,
+        origin_x: f32,
+        origin_y: f32,
+        camera: &Camera2D,
+    ) {
+        let handle_size = 6.0 / camera.zoom;
+        let corners = self.calculate_rect_vertices(x, y, width, height, rotation, origin_x, origin_y);
+
+        // Draw a small square at each corner
+        for i in 0..4 {
+            let cx = corners[i * 2];
+            let cy = corners[i * 2 + 1];
+
+            let square = [
+                cx - handle_size, cy - handle_size,
+                cx + handle_size, cy - handle_size,
+                cx + handle_size, cy + handle_size,
+                cx - handle_size, cy + handle_size,
+            ];
+
+            unsafe {
+                let array = js_sys::Float32Array::view(&square);
+                gl.buffer_data_with_array_buffer_view(
+                    WebGl2RenderingContext::ARRAY_BUFFER,
+                    &array,
+                    WebGl2RenderingContext::DYNAMIC_DRAW,
+                );
+            }
+            gl.uniform4f(color_loc.as_ref(), 1.0, 0.8, 0.2, 1.0);
+            gl.draw_arrays(WebGl2RenderingContext::LINE_LOOP, 0, 4);
+        }
     }
 
     /// Calculate the 4 corner vertices of a rotated rectangle.

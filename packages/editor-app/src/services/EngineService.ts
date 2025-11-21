@@ -349,6 +349,24 @@ export class EngineService {
     }
 
     /**
+     * Set transform tool mode.
+     * 设置变换工具模式。
+     */
+    setTransformMode(mode: 'select' | 'move' | 'rotate' | 'scale'): void {
+        if (this.renderSystem) {
+            this.renderSystem.setTransformMode(mode);
+        }
+    }
+
+    /**
+     * Get transform tool mode.
+     * 获取变换工具模式。
+     */
+    getTransformMode(): 'select' | 'move' | 'rotate' | 'scale' {
+        return this.renderSystem?.getTransformMode() ?? 'select';
+    }
+
+    /**
      * Dispose engine resources.
      * 释放引擎资源。
      */

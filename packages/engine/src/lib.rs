@@ -263,4 +263,13 @@ impl GameEngine {
     ) {
         self.engine.add_gizmo_rect(x, y, width, height, rotation, origin_x, origin_y, r, g, b, a);
     }
+
+    /// Set transform tool mode.
+    /// 设置变换工具模式。
+    ///
+    /// # Arguments | 参数
+    /// * `mode` - 0=Select, 1=Move, 2=Rotate, 3=Scale
+    pub fn set_transform_mode(&mut self, mode: u8) {
+        self.engine.set_transform_mode(mode);
+    }
 }
