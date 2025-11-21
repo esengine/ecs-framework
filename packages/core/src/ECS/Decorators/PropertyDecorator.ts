@@ -2,6 +2,21 @@ import 'reflect-metadata';
 
 export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset';
 
+/**
+ * Action button configuration for property fields
+ * 属性字段的操作按钮配置
+ */
+export interface PropertyAction {
+    /** Action identifier | 操作标识符 */
+    id: string;
+    /** Button label | 按钮标签 */
+    label: string;
+    /** Button tooltip | 按钮提示 */
+    tooltip?: string;
+    /** Icon name from Lucide | Lucide图标名称 */
+    icon?: string;
+}
+
 export interface PropertyOptions {
     /** 属性类型 */
     type: PropertyType;
@@ -19,6 +34,8 @@ export interface PropertyOptions {
     readOnly?: boolean;
     /** 资源文件扩展名 (asset) */
     fileExtension?: string;
+    /** Action buttons for this property | 属性的操作按钮 */
+    actions?: PropertyAction[];
 }
 
 export const PROPERTY_METADATA = Symbol('property:metadata');

@@ -226,4 +226,41 @@ impl GameEngine {
         let (x, y, zoom, rotation) = self.engine.get_camera();
         vec![x, y, zoom, rotation]
     }
+
+    /// Set grid visibility.
+    /// 设置网格可见性。
+    #[wasm_bindgen(js_name = setShowGrid)]
+    pub fn set_show_grid(&mut self, show: bool) {
+        self.engine.set_show_grid(show);
+    }
+
+    /// Add a rectangle gizmo outline.
+    /// 添加矩形Gizmo边框。
+    ///
+    /// # Arguments | 参数
+    /// * `x` - Center X position | 中心X位置
+    /// * `y` - Center Y position | 中心Y位置
+    /// * `width` - Rectangle width | 矩形宽度
+    /// * `height` - Rectangle height | 矩形高度
+    /// * `rotation` - Rotation in radians | 旋转角度（弧度）
+    /// * `origin_x` - Origin X (0-1) | 原点X (0-1)
+    /// * `origin_y` - Origin Y (0-1) | 原点Y (0-1)
+    /// * `r`, `g`, `b`, `a` - Color (0.0-1.0) | 颜色
+    #[wasm_bindgen(js_name = addGizmoRect)]
+    pub fn add_gizmo_rect(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        rotation: f32,
+        origin_x: f32,
+        origin_y: f32,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+    ) {
+        self.engine.add_gizmo_rect(x, y, width, height, rotation, origin_x, origin_y, r, g, b, a);
+    }
 }

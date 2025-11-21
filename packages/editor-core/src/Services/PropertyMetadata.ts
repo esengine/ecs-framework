@@ -6,6 +6,13 @@ const logger = createLogger('PropertyMetadata');
 
 export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset';
 
+export interface PropertyAction {
+    id: string;
+    label: string;
+    tooltip?: string;
+    icon?: string;
+}
+
 export interface PropertyMetadata {
     type: PropertyType;
     label?: string;
@@ -15,6 +22,7 @@ export interface PropertyMetadata {
     options?: Array<{ label: string; value: any }>;
     readOnly?: boolean;
     fileExtension?: string;
+    actions?: PropertyAction[];
 }
 
 export interface ComponentMetadata {

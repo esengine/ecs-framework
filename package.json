@@ -65,7 +65,9 @@
     "format:check": "prettier --check \"packages/**/src/**/*.{ts,tsx,js,jsx}\"",
     "type-check": "lerna run type-check",
     "lint": "eslint \"packages/**/src/**/*.{ts,tsx,js,jsx}\"",
-    "lint:fix": "eslint \"packages/**/src/**/*.{ts,tsx,js,jsx}\" --fix"
+    "lint:fix": "eslint \"packages/**/src/**/*.{ts,tsx,js,jsx}\" --fix",
+    "build:wasm": "cd packages/engine && wasm-pack build --dev --out-dir pkg",
+    "build:wasm:release": "cd packages/engine && wasm-pack build --release --out-dir pkg"
   },
   "author": "yhh",
   "license": "MIT",

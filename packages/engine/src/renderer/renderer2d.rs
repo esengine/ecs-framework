@@ -88,7 +88,7 @@ impl Renderer2D {
 
     /// Render the current frame.
     /// 渲染当前帧。
-    pub fn render(&mut self, gl: &WebGl2RenderingContext) -> Result<()> {
+    pub fn render(&mut self, gl: &WebGl2RenderingContext, texture_manager: &TextureManager) -> Result<()> {
         if self.sprite_batch.sprite_count() == 0 {
             return Ok(());
         }
@@ -103,8 +103,21 @@ impl Renderer2D {
         // Set texture sampler | 设置纹理采样器
         self.shader.set_uniform_i32(gl, "u_texture", 0);
 
-        // Flush sprite batch | 刷新精灵批处理
-        self.sprite_batch.flush(gl);
+        // Render each texture batch | 渲染每个纹理批次
+        // Only collect non-empty batches | 只收集非空批次
+        let texture_ids: Vec<u32> = self.sprite_batch.texture_batches()
+            .iter()
+            .filter(|(_, vertices)| !vertices.is_empty())
+            .map(|(id, _)| *id)
+            .collect();
+
+        for texture_id in texture_ids {
+            // Bind texture for this batch | 绑定此批次的纹理
+            texture_manager.bind_texture(texture_id, 0);
+
+            // Flush this texture's sprites | 刷新此纹理的精灵
+            self.sprite_batch.flush_for_texture(gl, texture_id);
+        }
 
         // Clear batch for next frame | 清空批处理以供下一帧使用
         self.sprite_batch.clear();

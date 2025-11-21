@@ -216,6 +216,8 @@
 }
 
 .component-icon {
+  display: flex;
+  align-items: center;
   color: var(--color-text-secondary);
   flex-shrink: 0;
   transition: color var(--transition-fast);

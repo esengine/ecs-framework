@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Settings, ChevronDown, ChevronRight, X, Plus } from 'lucide-react';
+import { Settings, ChevronDown, ChevronRight, X, Plus, Box } from 'lucide-react';
 import { Entity, Component, Core } from '@esengine/ecs-framework';
 import { MessageHub, CommandManager, ComponentRegistry } from '@esengine/editor-core';
 import { PropertyInspector } from '../../PropertyInspector';
 import { RemoveComponentCommand, UpdateComponentCommand, AddComponentCommand } from '../../../application/commands/component';
 import '../../../styles/EntityInspector.css';
+import * as LucideIcons from 'lucide-react';
 
 interface EntityInspectorProps {
     entity: Entity;
@@ -16,6 +17,7 @@ interface EntityInspectorProps {
 export function EntityInspector({ entity, messageHub, commandManager, componentVersion }: EntityInspectorProps) {
     const [expandedComponents, setExpandedComponents] = useState<Set<number>>(new Set());
     const [showComponentMenu, setShowComponentMenu] = useState(false);
+    const [localVersion, setLocalVersion] = useState(0);
 
     const componentRegistry = Core.services.resolve(ComponentRegistry);
     const availableComponents = componentRegistry?.getAllComponents() || [];
@@ -59,6 +61,34 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
             value
         );
         commandManager.execute(command);
+    };
+
+    const handlePropertyAction = async (actionId: string, _propertyName: string, component: Component) => {
+        if (actionId === 'nativeSize' && component.constructor.name === 'SpriteComponent') {
+            const sprite = component as unknown as { texture: string; width: number; height: number };
+            if (!sprite.texture) {
+                console.warn('No texture set for sprite');
+                return;
+            }
+
+            try {
+                const { convertFileSrc } = await import('@tauri-apps/api/core');
+                const assetUrl = convertFileSrc(sprite.texture);
+
+                const img = new Image();
+                img.onload = () => {
+                    handlePropertyChange(component, 'width', img.naturalWidth);
+                    handlePropertyChange(component, 'height', img.naturalHeight);
+                    setLocalVersion(v => v + 1);
+                };
+                img.onerror = () => {
+                    console.error('Failed to load texture for native size:', sprite.texture);
+                };
+                img.src = assetUrl;
+            } catch (error) {
+                console.error('Error getting texture size:', error);
+            }
+        }
     };
 
     return (
@@ -142,6 +172,9 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                         entity.components.map((component: Component, index: number) => {
                             const isExpanded = expandedComponents.has(index);
                             const componentName = component.constructor?.name || 'Component';
+                            const componentInfo = componentRegistry?.getComponent(componentName);
+                            const iconName = (componentInfo as { icon?: string } | undefined)?.icon;
+                            const IconComponent = iconName && (LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number }>>)[iconName];
 
                             return (
                                 <div
@@ -155,6 +188,15 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                                         <span className="component-expand-icon">
                                             {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                         </span>
+                                        {IconComponent ? (
+                                            <span className="component-icon">
+                                                <IconComponent size={14} />
+                                            </span>
+                                        ) : (
+                                            <span className="component-icon">
+                                                <Box size={14} />
+                                            </span>
+                                        )}
                                         <span className="component-item-name">
                                             {componentName}
                                         </span>
@@ -174,9 +216,11 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                                         <div className="component-item-content">
                                             <PropertyInspector
                                                 component={component}
+                                                version={localVersion}
                                                 onChange={(propName: string, value: unknown) =>
                                                     handlePropertyChange(component, propName, value)
                                                 }
+                                                onAction={handlePropertyAction}
                                             />
                                         </div>
                                     )}

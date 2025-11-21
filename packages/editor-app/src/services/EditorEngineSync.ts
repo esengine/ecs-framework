@@ -65,7 +65,6 @@ export class EditorEngineSync {
         this.syncAllEntities();
 
         this.initialized = true;
-        console.log('EditorEngineSync initialized | 编辑器引擎同步服务初始化完成');
     }
 
     /**
@@ -104,6 +103,24 @@ export class EditorEngineSync {
             this.clearAllFromEngine();
         });
         this.subscriptions.push(unsubClear);
+
+        // Entity selected - update gizmo display
+        const unsubSelected = this.messageHub.subscribe('entity:selected', (data: { entity: Entity | null }) => {
+            this.updateSelectedEntity(data.entity);
+        });
+        this.subscriptions.push(unsubSelected);
+    }
+
+    /**
+     * Update selected entity for gizmo display.
+     * 更新选中的实体用于Gizmo显示。
+     */
+    private updateSelectedEntity(entity: Entity | null): void {
+        if (entity) {
+            this.engineService.setSelectedEntityIds([entity.id]);
+        } else {
+            this.engineService.setSelectedEntityIds([]);
+        }
     }
 
     /**
@@ -134,14 +151,25 @@ export class EditorEngineSync {
         }
 
         // Load texture if needed and set textureId on the sprite component
-        if (spriteComponent.texture && !spriteComponent.textureId) {
+        // Use === 0 to explicitly check for unset textureId (since 0 is falsy)
+        if (spriteComponent.texture && spriteComponent.textureId === 0) {
             const textureId = this.getOrLoadTexture(spriteComponent.texture);
             spriteComponent.textureId = textureId;
+            console.log(`Set textureId ${textureId} on sprite for entity ${entity.name} | 为实体 ${entity.name} 的精灵设置纹理ID ${textureId}`);
+        } else if (spriteComponent.texture && spriteComponent.textureId !== 0) {
+            // Texture already has ID, but might be a different texture path - check if we need to update
+            const existingId = this.loadedTextures.get(spriteComponent.texture);
+            if (existingId === undefined) {
+                // New texture path, need to load it
+                const textureId = this.getOrLoadTexture(spriteComponent.texture);
+                spriteComponent.textureId = textureId;
+                console.log(`Updated textureId ${textureId} on sprite for entity ${entity.name} | 为实体 ${entity.name} 的精灵更新纹理ID ${textureId}`);
+            }
         }
 
         // Track synced entity (no need to create duplicate)
         this.syncedEntities.set(entity.id, entity);
-        console.log(`Synced entity ${entity.name} | 已同步实体 ${entity.name}`);
+        console.log(`Synced entity ${entity.name} (texture: ${spriteComponent.texture}, textureId: ${spriteComponent.textureId}) | 已同步实体 ${entity.name}`);
     }
 
     /**

@@ -2,8 +2,6 @@
 //! 纹理加载和管理。
 
 use std::collections::HashMap;
-use std::cell::RefCell;
-use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlImageElement, WebGl2RenderingContext, WebGlTexture};
@@ -105,32 +103,30 @@ impl TextureManager {
             Some(&placeholder),
         );
 
+        // Clone texture handle for async loading before storing | 在存储前克隆纹理句柄用于异步加载
+        let texture_for_closure = texture.clone();
+
         // Store texture with placeholder size | 存储带占位符尺寸的纹理
-        self.textures.insert(id, Texture::new(texture.clone(), 1, 1));
+        self.textures.insert(id, Texture::new(texture, 1, 1));
 
         // Load actual image asynchronously | 异步加载实际图片
         let gl = self.gl.clone();
-        let texture_rc = Rc::new(RefCell::new(texture));
-        let texture_clone = Rc::clone(&texture_rc);
-
-        // We need to update the stored texture size after loading
-        // For MVP, we'll handle this through a callback mechanism
-        // 加载后需要更新存储的纹理尺寸
-        // 对于MVP，我们通过回调机制处理
 
         let image = HtmlImageElement::new()
             .map_err(|_| EngineError::TextureLoadFailed("Failed to create image element".into()))?;
+
+        // Set crossOrigin for CORS support | 设置crossOrigin以支持CORS
+        image.set_cross_origin(Some("anonymous"));
 
         // Clone image for use in closure | 克隆图片用于闭包
         let image_clone = image.clone();
 
         // Set up load callback | 设置加载回调
         let onload = Closure::wrap(Box::new(move || {
-            let tex = texture_clone.borrow();
-            gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&tex));
+            gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture_for_closure));
 
             // Use the captured image element | 使用捕获的图片元素
-            let _ = gl.tex_image_2d_with_u32_and_u32_and_html_image_element(
+            let result = gl.tex_image_2d_with_u32_and_u32_and_html_image_element(
                 WebGl2RenderingContext::TEXTURE_2D,
                 0,
                 WebGl2RenderingContext::RGBA as i32,
@@ -138,6 +134,10 @@ impl TextureManager {
                 WebGl2RenderingContext::UNSIGNED_BYTE,
                 &image_clone,
             );
+
+            if let Err(e) = result {
+                log::error!("Failed to upload texture: {:?} | 纹理上传失败: {:?}", e, e);
+            }
 
             // Set texture parameters | 设置纹理参数
             gl.tex_parameteri(
@@ -161,7 +161,6 @@ impl TextureManager {
                 WebGl2RenderingContext::LINEAR as i32,
             );
 
-            log::debug!("Texture loaded | 纹理加载完成");
         }) as Box<dyn Fn()>);
 
         image.set_onload(Some(onload.as_ref().unchecked_ref()));
@@ -196,7 +195,10 @@ impl TextureManager {
         if let Some(texture) = self.textures.get(&id) {
             self.gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture.handle));
         } else if let Some(default) = &self.default_texture {
+            log::warn!("Texture {} not found, using default | 未找到纹理 {}，使用默认纹理", id, id);
             self.gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(default));
+        } else {
+            log::error!("Texture {} not found and no default texture! | 未找到纹理 {} 且没有默认纹理！", id, id);
         }
     }
 

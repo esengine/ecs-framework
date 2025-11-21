@@ -1,17 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
 import { Component, Core } from '@esengine/ecs-framework';
-import { PropertyMetadataService, PropertyMetadata } from '@esengine/editor-core';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import { PropertyMetadataService, PropertyMetadata, PropertyAction } from '@esengine/editor-core';
+import { ChevronRight, ChevronDown, Maximize2 } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import '../styles/PropertyInspector.css';
 
 interface PropertyInspectorProps {
   component: Component;
+  version?: number;
   onChange?: (propertyName: string, value: any) => void;
+  onAction?: (actionId: string, propertyName: string, component: Component) => void;
 }
 
-export function PropertyInspector({ component, onChange }: PropertyInspectorProps) {
+export function PropertyInspector({ component, version, onChange, onAction }: PropertyInspectorProps) {
     const [properties, setProperties] = useState<Record<string, PropertyMetadata>>({});
     const [values, setValues] = useState<Record<string, any>>({});
+
+    const handleAction = (actionId: string, propertyName: string) => {
+        if (onAction) {
+            onAction(actionId, propertyName, component);
+        }
+    };
 
     useEffect(() => {
         const propertyMetadataService = Core.services.resolve(PropertyMetadataService);
@@ -26,7 +35,7 @@ export function PropertyInspector({ component, onChange }: PropertyInspectorProp
             currentValues[key] = componentAsAny[key];
         }
         setValues(currentValues);
-    }, [component]);
+    }, [component, version]);
 
     const handleChange = (propertyName: string, value: any) => {
         const componentAsAny = component as any;
@@ -59,7 +68,9 @@ export function PropertyInspector({ component, onChange }: PropertyInspectorProp
                         step={metadata.step ?? (metadata.type === 'integer' ? 1 : 0.1)}
                         isInteger={metadata.type === 'integer'}
                         readOnly={metadata.readOnly}
+                        actions={metadata.actions}
                         onChange={(newValue) => handleChange(propertyName, newValue)}
+                        onAction={(actionId) => handleAction(actionId, propertyName)}
                     />
                 );
 
@@ -164,14 +175,30 @@ interface NumberFieldProps {
   step?: number;
   isInteger?: boolean;
   readOnly?: boolean;
+  actions?: PropertyAction[];
   onChange: (value: number) => void;
+  onAction?: (actionId: string) => void;
 }
 
-function NumberField({ label, value, min, max, step = 0.1, isInteger = false, readOnly, onChange }: NumberFieldProps) {
+function NumberField({ label, value, min, max, step = 0.1, isInteger = false, readOnly, actions, onChange, onAction }: NumberFieldProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [dragStartX, setDragStartX] = useState(0);
     const [dragStartValue, setDragStartValue] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    const renderActionButton = (action: PropertyAction) => {
+        const IconComponent = action.icon ? (LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number }>>)[action.icon] : null;
+        return (
+            <button
+                key={action.id}
+                className="property-action-btn"
+                title={action.tooltip || action.label}
+                onClick={() => onAction?.(action.id)}
+            >
+                {IconComponent ? <IconComponent size={12} /> : action.label}
+            </button>
+        );
+    };
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (readOnly) return;
@@ -239,6 +266,11 @@ function NumberField({ label, value, min, max, step = 0.1, isInteger = false, re
                 }}
                 onFocus={(e) => e.target.select()}
             />
+            {actions && actions.length > 0 && (
+                <div className="property-actions">
+                    {actions.map(renderActionButton)}
+                </div>
+            )}
         </div>
     );
 }

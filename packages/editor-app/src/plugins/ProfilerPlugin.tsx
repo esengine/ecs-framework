@@ -91,8 +91,6 @@ export class ProfilerPlugin implements IEditorPlugin {
 
         // 将服务实例存储到全局，供组件访问
         (window as any).__PROFILER_SERVICE__ = this.profilerService;
-
-        console.log('[ProfilerPlugin] Installed and ProfilerService started');
     }
 
     async uninstall(): Promise<void> {
@@ -103,12 +101,9 @@ export class ProfilerPlugin implements IEditorPlugin {
         }
 
         delete (window as any).__PROFILER_SERVICE__;
-
-        console.log('[ProfilerPlugin] Uninstalled and ProfilerService stopped');
     }
 
     async onEditorReady(): Promise<void> {
-        console.log('[ProfilerPlugin] Editor is ready');
     }
 
     registerMenuItems(): MenuItem[] {
@@ -119,12 +114,10 @@ export class ProfilerPlugin implements IEditorPlugin {
                 parentId: 'window',
                 order: 100,
                 onClick: () => {
-                    console.log('[ProfilerPlugin] Menu item clicked!');
                     this.messageHub?.publish('ui:openWindow', { windowId: 'profiler' });
                 }
             }
         ];
-        console.log('[ProfilerPlugin] Registering menu items:', items);
         return items;
     }
 

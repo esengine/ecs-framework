@@ -190,6 +190,16 @@ impl Camera2D {
     pub fn set_zoom(&mut self, zoom: f32) {
         self.zoom = zoom.clamp(0.01, 100.0);
     }
+
+    #[inline]
+    pub fn viewport_width(&self) -> f32 {
+        self.width
+    }
+
+    #[inline]
+    pub fn viewport_height(&self) -> f32 {
+        self.height
+    }
 }
 
 impl Default for Camera2D {

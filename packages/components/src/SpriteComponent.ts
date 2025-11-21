@@ -23,7 +23,17 @@ export class SpriteComponent extends Component {
      * Sprite width in pixels
      */
     @Serialize()
-    @Property({ type: 'number', label: 'Width', min: 0 })
+    @Property({
+        type: 'number',
+        label: 'Width',
+        min: 0,
+        actions: [{
+            id: 'nativeSize',
+            label: 'Native',
+            tooltip: 'Set to texture native size',
+            icon: 'Maximize2'
+        }]
+    })
     public width: number = 64;
 
     /**
@@ -31,7 +41,17 @@ export class SpriteComponent extends Component {
      * Sprite height in pixels
      */
     @Serialize()
-    @Property({ type: 'number', label: 'Height', min: 0 })
+    @Property({
+        type: 'number',
+        label: 'Height',
+        min: 0,
+        actions: [{
+            id: 'nativeSize',
+            label: 'Native',
+            tooltip: 'Set to texture native size',
+            icon: 'Maximize2'
+        }]
+    })
     public height: number = 64;
 
     /**

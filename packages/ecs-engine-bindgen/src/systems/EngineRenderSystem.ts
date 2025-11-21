@@ -47,6 +47,12 @@ export class EngineRenderSystem extends EntitySystem {
     private bridge: EngineBridge;
     private batcher: RenderBatcher;
     private transformType: TransformComponentType;
+    private showGizmos = true;
+    private selectedEntityIds: Set<number> = new Set();
+
+    // Reusable map to avoid allocation per frame
+    // 可重用的映射以避免每帧分配
+    private entityRenderMap: Map<number, SpriteRenderData> = new Map();
 
     /**
      * Create a new engine render system.
@@ -97,16 +103,9 @@ export class EngineRenderSystem extends EntitySystem {
      * @param entities - Entities to process | 要处理的实体
      */
     protected override process(entities: readonly Entity[]): void {
-        // Debug: log entity info if no entities matched
-        if (entities.length === 0 && this.scene) {
-            const allEntities = this.scene.entities.buffer;
-            if (allEntities.length > 0) {
-                const entity = allEntities[0];
-                const components = entity.components.map(c => c.constructor.name);
-                console.log(`[RenderSystem] No matched entities. First entity "${entity.name}" has components: [${components.join(', ')}]`);
-                console.log(`[RenderSystem] Matcher requires: SpriteComponent + ${this.transformType.name}`);
-            }
-        }
+        // Clear and reuse map for gizmo drawing
+        // 清空并重用映射用于绘制gizmo
+        this.entityRenderMap.clear();
 
         for (const entity of entities) {
             const sprite = entity.getComponent(SpriteComponent);
@@ -137,7 +136,11 @@ export class EngineRenderSystem extends EntitySystem {
 
             // Get texture ID from sprite component
             // 从精灵组件获取纹理ID
+            // Skip sprites without valid texture ID | 跳过没有有效纹理ID的精灵
             const textureId = sprite.textureId ?? 0;
+            if (textureId === 0) {
+                continue;
+            }
 
             // Pass actual display dimensions (sprite size * transform scale)
             // 传递实际显示尺寸（sprite尺寸 * 变换缩放）
@@ -155,14 +158,66 @@ export class EngineRenderSystem extends EntitySystem {
             };
 
             this.batcher.addSprite(renderData);
+            this.entityRenderMap.set(entity.id, renderData);
         }
 
         // Submit batch and render at the end of process | 在process结束时提交批处理并渲染
         if (!this.batcher.isEmpty) {
             const sprites = this.batcher.getSprites();
             this.bridge.submitSprites(sprites);
+
+            // Draw gizmos only for selected entities | 只为选中的实体绘制Gizmo
+            if (this.showGizmos && this.selectedEntityIds.size > 0) {
+                for (const entityId of this.selectedEntityIds) {
+                    const renderData = this.entityRenderMap.get(entityId);
+                    if (renderData) {
+                        this.bridge.addGizmoRect(
+                            renderData.x,
+                            renderData.y,
+                            renderData.scaleX,
+                            renderData.scaleY,
+                            renderData.rotation,
+                            renderData.originX,
+                            renderData.originY,
+                            0.0, 1.0, 0.5, 1.0  // Green color | 绿色
+                        );
+                    }
+                }
+            }
         }
         this.bridge.render();
+    }
+
+    /**
+     * Set gizmo visibility.
+     * 设置Gizmo可见性。
+     */
+    setShowGizmos(show: boolean): void {
+        this.showGizmos = show;
+    }
+
+    /**
+     * Get gizmo visibility.
+     * 获取Gizmo可见性。
+     */
+    getShowGizmos(): boolean {
+        return this.showGizmos;
+    }
+
+    /**
+     * Set selected entity IDs.
+     * 设置选中的实体ID。
+     */
+    setSelectedEntityIds(ids: number[]): void {
+        this.selectedEntityIds = new Set(ids);
+    }
+
+    /**
+     * Get selected entity IDs.
+     * 获取选中的实体ID。
+     */
+    getSelectedEntityIds(): number[] {
+        return Array.from(this.selectedEntityIds);
     }
 
     /**

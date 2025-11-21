@@ -64,6 +64,7 @@ export class EngineBridge {
     private lastFrameTime = 0;
     private frameCount = 0;
     private fpsAccumulator = 0;
+    private debugLogged = false;
 
     /**
      * Create a new engine bridge.
@@ -220,6 +221,13 @@ export class EngineBridge {
             this.colorBuffer[i] = sprite.color;
         }
 
+        // Debug: log texture IDs only once when we have 2+ sprites (for multi-texture test)
+        if (!this.debugLogged && count >= 2) {
+            const textureIds = Array.from(this.textureIdBuffer.subarray(0, count));
+            console.log(`TS submitSprites: ${count} sprites, textureIds: [${textureIds.join(', ')}]`);
+            this.debugLogged = true;
+        }
+
         // Submit to engine (single WASM call) | 提交到引擎（单次WASM调用）
         this.engine.submitSpriteBatch(
             this.transformBuffer.subarray(0, count * 7),
@@ -350,6 +358,48 @@ export class EngineBridge {
             zoom: state[2],
             rotation: state[3]
         };
+    }
+
+    /**
+     * Set grid visibility.
+     * 设置网格可见性。
+     */
+    setShowGrid(show: boolean): void {
+        if (!this.initialized) return;
+        this.engine.setShowGrid(show);
+    }
+
+    /**
+     * Add a rectangle gizmo outline.
+     * 添加矩形Gizmo边框。
+     *
+     * @param x - Center X position | 中心X位置
+     * @param y - Center Y position | 中心Y位置
+     * @param width - Rectangle width | 矩形宽度
+     * @param height - Rectangle height | 矩形高度
+     * @param rotation - Rotation in radians | 旋转角度（弧度）
+     * @param originX - Origin X (0-1) | 原点X (0-1)
+     * @param originY - Origin Y (0-1) | 原点Y (0-1)
+     * @param r - Red (0-1) | 红色
+     * @param g - Green (0-1) | 绿色
+     * @param b - Blue (0-1) | 蓝色
+     * @param a - Alpha (0-1) | 透明度
+     */
+    addGizmoRect(
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        rotation: number,
+        originX: number,
+        originY: number,
+        r: number,
+        g: number,
+        b: number,
+        a: number
+    ): void {
+        if (!this.initialized) return;
+        this.engine.addGizmoRect(x, y, width, height, rotation, originX, originY, r, g, b, a);
     }
 
     /**

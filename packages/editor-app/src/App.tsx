@@ -225,7 +225,6 @@ function App() {
                 (services.dialog as IDialogExtended).setConfirmCallback(setConfirmDialog);
 
                 services.messageHub.subscribe('ui:openWindow', (data: any) => {
-                    console.log('[App] Received ui:openWindow:', data);
                     const { windowId } = data;
 
                     if (windowId === 'profiler') {
@@ -504,18 +503,14 @@ function App() {
     };
 
     const handleOpenSceneByPath = useCallback(async (scenePath: string) => {
-        console.log('[App] handleOpenSceneByPath called with:', scenePath);
-
         if (!sceneManager) {
             console.error('SceneManagerService not available');
             return;
         }
 
         try {
-            console.log('[App] Opening scene:', scenePath);
             await sceneManager.openScene(scenePath);
             const sceneState = sceneManager.getSceneState();
-            console.log('[App] Scene opened, state:', sceneState);
             setStatus(locale === 'zh' ? `已打开场景: ${sceneState.sceneName}` : `Scene opened: ${sceneState.sceneName}`);
         } catch (error) {
             console.error('Failed to open scene:', error);
@@ -615,14 +610,10 @@ function App() {
     const handleReloadPlugins = async () => {
         if (currentProjectPath && pluginManager) {
             try {
-                console.log('[App] Starting plugin hot reload...');
-
                 // 1. 关闭所有动态面板
-                console.log('[App] Closing all dynamic panels');
                 setActiveDynamicPanels([]);
 
                 // 2. 清空当前面板列表（强制卸载插件面板组件）
-                console.log('[App] Clearing plugin panels');
                 setPanels((prev) => prev.filter((p) =>
                     ['scene-hierarchy', 'inspector', 'console', 'asset-browser'].includes(p.id)
                 ));
@@ -631,22 +622,18 @@ function App() {
                 await new Promise(resolve => setTimeout(resolve, 200));
 
                 // 4. 卸载所有项目插件（清理UIRegistry、调用uninstall）
-                console.log('[App] Unloading all project plugins');
                 await pluginLoader.unloadProjectPlugins(pluginManager);
 
                 // 5. 等待卸载完成
                 await new Promise(resolve => setTimeout(resolve, 100));
 
                 // 6. 重新加载插件
-                console.log('[App] Reloading project plugins');
                 await pluginLoader.loadProjectPlugins(currentProjectPath, pluginManager);
 
                 // 7. 触发面板重新渲染
-                console.log('[App] Triggering panel re-render');
                 setPluginUpdateTrigger((prev) => prev + 1);
 
                 showToast(locale === 'zh' ? '插件已重新加载' : 'Plugins reloaded', 'success');
-                console.log('[App] Plugin hot reload completed');
             } catch (error) {
                 console.error('Failed to reload plugins:', error);
                 showToast(locale === 'zh' ? '重新加载插件失败' : 'Failed to reload plugins', 'error');
@@ -765,8 +752,6 @@ function App() {
                     };
                 });
 
-            console.log('[App] Loading plugin panels:', pluginPanels);
-            console.log('[App] Loading dynamic panels:', dynamicPanels);
             setPanels([...corePanels, ...pluginPanels, ...dynamicPanels]);
         }
     }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode, handleOpenSceneByPath, activeDynamicPanels, dynamicPanelTitles]);

@@ -141,6 +141,14 @@ impl WebGLContext {
             .viewport(0, 0, self.width() as i32, self.height() as i32);
     }
 
+    /// Resize the canvas and viewport.
+    /// 调整canvas和视口大小。
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.canvas.set_width(width);
+        self.canvas.set_height(height);
+        self.gl.viewport(0, 0, width as i32, height as i32);
+    }
+
     /// Enable alpha blending for transparency.
     /// 启用透明度的alpha混合。
     pub fn enable_blend(&self) {

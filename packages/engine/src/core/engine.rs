@@ -6,7 +6,7 @@ use wasm_bindgen::prelude::*;
 use super::context::WebGLContext;
 use super::error::Result;
 use crate::input::InputManager;
-use crate::renderer::Renderer2D;
+use crate::renderer::{Renderer2D, GridRenderer, GizmoRenderer};
 use crate::resource::TextureManager;
 
 /// Engine configuration options.
@@ -45,6 +45,14 @@ pub struct Engine {
     /// 2D渲染器。
     renderer: Renderer2D,
 
+    /// Grid renderer for editor.
+    /// 编辑器网格渲染器。
+    grid_renderer: GridRenderer,
+
+    /// Gizmo renderer for editor overlays.
+    /// 编辑器叠加层Gizmo渲染器。
+    gizmo_renderer: GizmoRenderer,
+
     /// Texture manager.
     /// 纹理管理器。
     texture_manager: TextureManager,
@@ -57,6 +65,10 @@ pub struct Engine {
     /// 引擎配置。
     #[allow(dead_code)]
     config: EngineConfig,
+
+    /// Whether to show grid.
+    /// 是否显示网格。
+    show_grid: bool,
 }
 
 impl Engine {
@@ -78,6 +90,8 @@ impl Engine {
 
         // Create subsystems | 创建子系统
         let renderer = Renderer2D::new(context.gl(), config.max_sprites)?;
+        let grid_renderer = GridRenderer::new(context.gl())?;
+        let gizmo_renderer = GizmoRenderer::new(context.gl())?;
         let texture_manager = TextureManager::new(context.gl().clone());
         let input_manager = InputManager::new();
 
@@ -86,9 +100,12 @@ impl Engine {
         Ok(Self {
             context,
             renderer,
+            grid_renderer,
+            gizmo_renderer,
             texture_manager,
             input_manager,
             config,
+            show_grid: true,
         })
     }
 
@@ -109,6 +126,8 @@ impl Engine {
         context.enable_blend();
 
         let renderer = Renderer2D::new(context.gl(), config.max_sprites)?;
+        let grid_renderer = GridRenderer::new(context.gl())?;
+        let gizmo_renderer = GizmoRenderer::new(context.gl())?;
         let texture_manager = TextureManager::new(context.gl().clone());
         let input_manager = InputManager::new();
 
@@ -117,9 +136,12 @@ impl Engine {
         Ok(Self {
             context,
             renderer,
+            grid_renderer,
+            gizmo_renderer,
             texture_manager,
             input_manager,
             config,
+            show_grid: true,
         })
     }
 
@@ -152,6 +174,14 @@ impl Engine {
         uvs: &[f32],
         colors: &[u32],
     ) -> Result<()> {
+        // Debug: log once
+        use std::sync::atomic::{AtomicBool, Ordering};
+        static LOGGED: AtomicBool = AtomicBool::new(false);
+        if !LOGGED.swap(true, Ordering::Relaxed) {
+            let sprite_count = texture_ids.len();
+            log::info!("Engine submit_sprite_batch: {} sprites, texture_ids: {:?}", sprite_count, texture_ids);
+        }
+
         self.renderer.submit_batch(
             transforms,
             texture_ids,
@@ -164,7 +194,39 @@ impl Engine {
     /// Render the current frame.
     /// 渲染当前帧。
     pub fn render(&mut self) -> Result<()> {
-        self.renderer.render(self.context.gl())
+        // Render grid first (background)
+        if self.show_grid {
+            self.grid_renderer.render(self.context.gl(), self.renderer.camera());
+            self.grid_renderer.render_axes(self.context.gl(), self.renderer.camera());
+        }
+
+        // Render sprites
+        self.renderer.render(self.context.gl(), &self.texture_manager)?;
+
+        // Render gizmos on top
+        self.gizmo_renderer.render(self.context.gl(), self.renderer.camera());
+        self.gizmo_renderer.clear();
+
+        Ok(())
+    }
+
+    /// Add a rectangle gizmo.
+    /// 添加矩形Gizmo。
+    pub fn add_gizmo_rect(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        rotation: f32,
+        origin_x: f32,
+        origin_y: f32,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+    ) {
+        self.gizmo_renderer.add_rect(x, y, width, height, rotation, origin_x, origin_y, r, g, b, a);
     }
 
     /// Load a texture from URL.
@@ -188,6 +250,7 @@ impl Engine {
     /// Resize viewport.
     /// 调整视口大小。
     pub fn resize(&mut self, width: f32, height: f32) {
+        self.context.resize(width as u32, height as u32);
         self.renderer.resize(width, height);
     }
 
@@ -212,5 +275,11 @@ impl Engine {
     pub fn get_camera(&self) -> (f32, f32, f32, f32) {
         let camera = self.renderer.camera();
         (camera.position.x, camera.position.y, camera.zoom, camera.rotation)
+    }
+
+    /// Set grid visibility.
+    /// 设置网格可见性。
+    pub fn set_show_grid(&mut self, show: bool) {
+        self.show_grid = show;
     }
 }

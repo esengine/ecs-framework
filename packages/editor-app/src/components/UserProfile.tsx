@@ -52,7 +52,6 @@ export function UserProfile({ githubService, onLogin, onOpenDashboard, locale }:
     useEffect(() => {
         // 监听加载状态变化
         const unsubscribe = githubService.onUserLoadStateChange((isLoading) => {
-            console.log('[UserProfile] User load state changed:', isLoading);
             setIsLoadingUser(isLoading);
         });
 
@@ -65,10 +64,8 @@ export function UserProfile({ githubService, onLogin, onOpenDashboard, locale }:
             const currentUser = githubService.getUser();
             setUser((prevUser) => {
                 if (currentUser && (!prevUser || currentUser.login !== prevUser.login)) {
-                    console.log('[UserProfile] User state changed:', currentUser.login);
                     return currentUser;
                 } else if (!currentUser && prevUser) {
-                    console.log('[UserProfile] User logged out');
                     return null;
                 }
                 return prevUser;

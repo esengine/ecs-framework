@@ -42,10 +42,8 @@ export class EngineService {
      */
     async initialize(canvasId: string): Promise<void> {
         if (this.initialized) {
-            console.log(`EngineService already initialized, skipping | EngineService已初始化，跳过`);
             return;
         }
-        console.log(`EngineService initializing with canvas: ${canvasId} | EngineService正在初始化，canvas: ${canvasId}`);
 
         try {
             // Create engine bridge | 创建引擎桥接
@@ -72,14 +70,12 @@ export class EngineService {
             // Add render system to the scene | 将渲染系统添加到场景
             this.renderSystem = new EngineRenderSystem(this.bridge, TransformComponent);
             this.scene!.addSystem(this.renderSystem);
-            console.log(`RenderSystem registered, enabled: ${this.renderSystem.enabled}, updateOrder: ${this.renderSystem.updateOrder}`);
 
             // Start the default world to enable system updates
             // 启动默认world以启用系统更新
             const defaultWorld = Core.worldManager.getWorld('__default__');
             if (defaultWorld && !defaultWorld.isActive) {
                 defaultWorld.start();
-                console.log('Started default world | 启动默认world');
             }
 
             this.initialized = true;
@@ -103,12 +99,7 @@ export class EngineService {
                 // Camera uses actual canvas pixels for correct rendering
                 // 相机使用实际canvas像素以保证正确渲染
                 this.bridge.resize(canvas.width, canvas.height);
-                console.log(`EngineService initialized with viewport: ${canvas.width}x${canvas.height} (canvas pixels)`);
-            } else {
-                console.log('EngineService initialized | 引擎服务初始化完成');
             }
-            console.log(`Scene: ${this.scene!.name}, Core.scene: ${Core.scene?.name}, same: ${this.scene === Core.scene}`);
-            console.log(`RenderSystem added to scene, systems count: ${this.scene!.systems?.length ?? 'unknown'}`);
 
             // Auto-start render loop for editor preview | 自动启动渲染循环用于编辑器预览
             this.startRenderLoop();
@@ -294,7 +285,6 @@ export class EngineService {
      */
     resize(width: number, height: number): void {
         if (this.bridge) {
-            console.log(`[EngineService] resize: ${width}x${height}`);
             this.bridge.resize(width, height);
         }
     }
@@ -318,6 +308,44 @@ export class EngineService {
             return this.bridge.getCamera();
         }
         return { x: 0, y: 0, zoom: 1, rotation: 0 };
+    }
+
+    /**
+     * Set grid visibility.
+     * 设置网格可见性。
+     */
+    setShowGrid(show: boolean): void {
+        if (this.bridge) {
+            this.bridge.setShowGrid(show);
+        }
+    }
+
+    /**
+     * Set gizmo visibility.
+     * 设置Gizmo可见性。
+     */
+    setShowGizmos(show: boolean): void {
+        if (this.renderSystem) {
+            this.renderSystem.setShowGizmos(show);
+        }
+    }
+
+    /**
+     * Get gizmo visibility.
+     * 获取Gizmo可见性。
+     */
+    getShowGizmos(): boolean {
+        return this.renderSystem?.getShowGizmos() ?? true;
+    }
+
+    /**
+     * Set selected entity IDs for gizmo display.
+     * 设置选中的实体ID用于Gizmo显示。
+     */
+    setSelectedEntityIds(ids: number[]): void {
+        if (this.renderSystem) {
+            this.renderSystem.setSelectedEntityIds(ids);
+        }
     }
 
     /**
