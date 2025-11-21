@@ -1,7 +1,6 @@
 import { Component } from '../../../src/ECS/Component';
 import {
     SoATypeRegistry,
-    SupportedTypedArray,
     TypedArrayTypeName
 } from '../../../src/ECS/Core/SoATypeRegistry';
 

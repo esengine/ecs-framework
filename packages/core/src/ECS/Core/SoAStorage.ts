@@ -390,6 +390,7 @@ export class SoAStorage<T extends Component> {
      * 读写操作直接映射到底层 TypedArray，无数据复制
      */
     private createProxyView(entityId: number, index: number): T {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         const self = this;
 
         // Proxy handler 类型定义
