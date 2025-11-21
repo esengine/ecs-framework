@@ -213,6 +213,7 @@ export class Core {
             );
 
             this._debugManager = this._serviceContainer.resolve(DebugManager);
+            this._debugManager.onInitialize();
         }
 
         this.initialize();
@@ -488,6 +489,7 @@ export class Core {
             );
 
             this._instance._debugManager = this._instance._serviceContainer.resolve(DebugManager);
+            this._instance._debugManager.onInitialize();
         }
 
         // 更新Core配置
