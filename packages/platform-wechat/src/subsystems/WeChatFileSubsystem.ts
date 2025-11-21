@@ -6,7 +6,7 @@ import type {
     IPlatformFileSubsystem,
     FileInfo
 } from '@esengine/platform-common';
-import { getWx, promisify } from '../utils';
+import { getWx } from '../utils';
 
 /**
  * 微信小游戏文件系统子系统实现

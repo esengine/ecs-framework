@@ -37,14 +37,17 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Build core package first
+      run: npm run build:core
+
+    - name: Build platform-common for type declarations
+      run: cd packages/platform-common && npm run build
+
     - name: Type check
       run: npm run type-check
 
     - name: Lint check
       run: npm run lint
-
-    - name: Build core package first
-      run: npm run build:core
 
     - name: Run tests with coverage
       run: npm run test:ci
