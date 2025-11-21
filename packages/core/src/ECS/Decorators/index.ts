@@ -20,3 +20,12 @@ export {
 } from './EntityRefDecorator';
 
 export type { EntityRefMetadata } from './EntityRefDecorator';
+
+export {
+    Property,
+    getPropertyMetadata,
+    hasPropertyMetadata,
+    PROPERTY_METADATA
+} from './PropertyDecorator';
+
+export type { PropertyOptions, PropertyType } from './PropertyDecorator';

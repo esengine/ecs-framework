@@ -274,13 +274,10 @@ impl SpriteBatch {
             let color = Color::from_packed(colors[i]);
             let color_arr = [color.r, color.g, color.b, color.a];
 
-            // Get texture size for this sprite | 获取此精灵的纹理尺寸
-            let (tex_width, tex_height) = texture_manager
-                .get_texture_size(texture_ids[i])
-                .unwrap_or((64.0, 64.0));
-
-            let width = tex_width * scale_x;
-            let height = tex_height * scale_y;
+            // scale_x and scale_y are the actual display dimensions
+            // scale_x 和 scale_y 是实际显示尺寸
+            let width = scale_x;
+            let height = scale_y;
 
             // Calculate transformed vertices | 计算变换后的顶点
             self.add_sprite_vertices(
@@ -315,22 +312,28 @@ impl SpriteBatch {
         let sin = rotation.sin();
 
         // Origin offset | 原点偏移
+        // origin (0,0) = bottom-left, (1,1) = top-right
+        // 原点 (0,0) = 左下角, (1,1) = 右上角
         let ox = origin_x * width;
         let oy = origin_y * height;
 
         // Local corner positions (relative to origin) | 局部角点位置（相对于原点）
+        // Y-up coordinate system | Y向上坐标系
         let corners = [
-            (-ox, -oy),           // Top-left | 左上
-            (width - ox, -oy),    // Top-right | 右上
-            (width - ox, height - oy), // Bottom-right | 右下
-            (-ox, height - oy),   // Bottom-left | 左下
+            (-ox, height - oy),   // Top-left | 左上
+            (width - ox, height - oy), // Top-right | 右上
+            (width - ox, -oy),    // Bottom-right | 右下
+            (-ox, -oy),           // Bottom-left | 左下
         ];
 
+        // UV coordinates match OpenGL/WebGL convention
+        // UV坐标匹配OpenGL/WebGL约定
+        // (0,0) = bottom-left of texture, (1,1) = top-right
         let tex_coords = [
-            [u0, v0], // Top-left
-            [u1, v0], // Top-right
-            [u1, v1], // Bottom-right
-            [u0, v1], // Bottom-left
+            [u0, v1], // Top-left (texture top)
+            [u1, v1], // Top-right (texture top)
+            [u1, v0], // Bottom-right (texture bottom)
+            [u0, v0], // Bottom-left (texture bottom)
         ];
 
         // Transform and add each vertex | 变换并添加每个顶点

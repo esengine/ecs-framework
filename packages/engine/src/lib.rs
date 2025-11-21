@@ -192,4 +192,38 @@ impl GameEngine {
     pub fn update_input(&mut self) {
         self.engine.update_input();
     }
+
+    /// Resize viewport.
+    /// 调整视口大小。
+    ///
+    /// # Arguments | 参数
+    /// * `width` - New viewport width | 新视口宽度
+    /// * `height` - New viewport height | 新视口高度
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.engine.resize(width as f32, height as f32);
+    }
+
+    /// Set camera position, zoom, and rotation.
+    /// 设置相机位置、缩放和旋转。
+    ///
+    /// # Arguments | 参数
+    /// * `x` - Camera X position | 相机X位置
+    /// * `y` - Camera Y position | 相机Y位置
+    /// * `zoom` - Zoom level | 缩放级别
+    /// * `rotation` - Rotation in radians | 旋转角度（弧度）
+    #[wasm_bindgen(js_name = setCamera)]
+    pub fn set_camera(&mut self, x: f32, y: f32, zoom: f32, rotation: f32) {
+        self.engine.set_camera(x, y, zoom, rotation);
+    }
+
+    /// Get camera state.
+    /// 获取相机状态。
+    ///
+    /// # Returns | 返回
+    /// Array of [x, y, zoom, rotation] | 数组 [x, y, zoom, rotation]
+    #[wasm_bindgen(js_name = getCamera)]
+    pub fn get_camera(&self) -> Vec<f32> {
+        let (x, y, zoom, rotation) = self.engine.get_camera();
+        vec![x, y, zoom, rotation]
+    }
 }

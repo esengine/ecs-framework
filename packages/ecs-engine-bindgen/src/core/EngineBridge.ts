@@ -3,7 +3,7 @@
  * TypeScript ECS与Rust引擎之间的主桥接层。
  */
 
-import type { SpriteRenderData, TextureLoadRequest, EngineStats } from '../types';
+import type { SpriteRenderData, TextureLoadRequest, EngineStats, CameraConfig } from '../types';
 
 /**
  * Engine bridge configuration.
@@ -136,7 +136,7 @@ export class EngineBridge {
 
         try {
             // Dynamic import of WASM module | 动态导入WASM模块
-            const wasmModule = await import(/* webpackIgnore: true */ wasmPath);
+            const wasmModule = await import(/* @vite-ignore */ wasmPath);
             await this.initializeWithModule(wasmModule);
         } catch (error) {
             throw new Error(`Failed to initialize engine: ${error} | 引擎初始化失败: ${error}`);
@@ -322,6 +322,34 @@ export class EngineBridge {
         if (this.engine.resize) {
             this.engine.resize(width, height);
         }
+    }
+
+    /**
+     * Set camera position, zoom, and rotation.
+     * 设置相机位置、缩放和旋转。
+     *
+     * @param config - Camera configuration | 相机配置
+     */
+    setCamera(config: CameraConfig): void {
+        if (!this.initialized) return;
+        this.engine.setCamera(config.x, config.y, config.zoom, config.rotation);
+    }
+
+    /**
+     * Get camera state.
+     * 获取相机状态。
+     */
+    getCamera(): CameraConfig {
+        if (!this.initialized) {
+            return { x: 0, y: 0, zoom: 1, rotation: 0 };
+        }
+        const state = this.engine.getCamera();
+        return {
+            x: state[0],
+            y: state[1],
+            zoom: state[2],
+            rotation: state[3]
+        };
     }
 
     /**

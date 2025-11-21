@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { Entity, Core } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub, SceneManagerService, CommandManager } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
-import { Box, Layers, Wifi, Search, Plus, Trash2, Monitor, Globe } from 'lucide-react';
+import { Box, Layers, Wifi, Search, Plus, Trash2, Monitor, Globe, Image } from 'lucide-react';
 import { ProfilerService, RemoteEntity } from '../services/ProfilerService';
 import { confirm } from '@tauri-apps/plugin-dialog';
-import { CreateEntityCommand, DeleteEntityCommand } from '../application/commands/entity';
+import { CreateEntityCommand, CreateSpriteEntityCommand, DeleteEntityCommand } from '../application/commands/entity';
 import '../styles/SceneHierarchy.css';
 
 type ViewMode = 'local' | 'remote';
@@ -194,6 +194,18 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager }: Scen
         const entityName = `Entity ${entityCount + 1}`;
 
         const command = new CreateEntityCommand(
+            entityStore,
+            messageHub,
+            entityName
+        );
+        commandManager.execute(command);
+    };
+
+    const handleCreateSpriteEntity = () => {
+        const entityCount = entityStore.getAllEntities().length;
+        const entityName = `Sprite ${entityCount + 1}`;
+
+        const command = new CreateSpriteEntityCommand(
             entityStore,
             messageHub,
             entityName
@@ -431,7 +443,11 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager }: Scen
                 >
                     <button onClick={() => { handleCreateEntity(); closeContextMenu(); }}>
                         <Plus size={12} />
-                        <span>{locale === 'zh' ? '创建实体' : 'Create Entity'}</span>
+                        <span>{locale === 'zh' ? '创建空实体' : 'Create Empty Entity'}</span>
+                    </button>
+                    <button onClick={() => { handleCreateSpriteEntity(); closeContextMenu(); }}>
+                        <Image size={12} />
+                        <span>{locale === 'zh' ? '创建 Sprite' : 'Create Sprite'}</span>
                     </button>
                     {contextMenu.entityId && (
                         <>

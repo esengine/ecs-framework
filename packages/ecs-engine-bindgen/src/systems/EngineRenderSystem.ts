@@ -4,9 +4,9 @@
  */
 
 import { EntitySystem, Matcher, Entity, ComponentType, ECSSystem, Component } from '@esengine/ecs-framework';
+import { SpriteComponent } from '@esengine/ecs-components';
 import type { EngineBridge } from '../core/EngineBridge';
 import { RenderBatcher } from '../core/RenderBatcher';
-import { SpriteComponent } from '../components/SpriteComponent';
 import type { SpriteRenderData } from '../types';
 import type { ITransformComponent } from '../core/SpriteRenderHelper';
 
@@ -78,12 +78,13 @@ export class EngineRenderSystem extends EntitySystem {
      * Called before processing entities.
      * 处理实体之前调用。
      */
-    protected begin(): void {
+    protected override onBegin(): void {
+
         // Clear the batch | 清空批处理
         this.batcher.clear();
 
-        // Clear screen | 清屏
-        this.bridge.clear(0, 0, 0, 1);
+        // Clear screen with dark background | 用深色背景清屏
+        this.bridge.clear(0.1, 0.1, 0.12, 1);
 
         // Update input | 更新输入
         this.bridge.updateInput();
@@ -95,19 +96,29 @@ export class EngineRenderSystem extends EntitySystem {
      *
      * @param entities - Entities to process | 要处理的实体
      */
-    protected process(entities: readonly Entity[]): void {
+    protected override process(entities: readonly Entity[]): void {
+        // Debug: log entity info if no entities matched
+        if (entities.length === 0 && this.scene) {
+            const allEntities = this.scene.entities.buffer;
+            if (allEntities.length > 0) {
+                const entity = allEntities[0];
+                const components = entity.components.map(c => c.constructor.name);
+                console.log(`[RenderSystem] No matched entities. First entity "${entity.name}" has components: [${components.join(', ')}]`);
+                console.log(`[RenderSystem] Matcher requires: SpriteComponent + ${this.transformType.name}`);
+            }
+        }
+
         for (const entity of entities) {
             const sprite = entity.getComponent(SpriteComponent);
             const transform = entity.getComponent(this.transformType) as unknown as ITransformComponent | null;
 
-            if (!sprite || !transform || !sprite.visible) {
+            if (!sprite || !transform) {
                 continue;
             }
 
             // Calculate UV with flip | 计算带翻转的UV
-            let uv = sprite.uv;
+            let uv: [number, number, number, number] = [0, 0, 1, 1];
             if (sprite.flipX || sprite.flipY) {
-                uv = [...sprite.uv] as [number, number, number, number];
                 if (sprite.flipX) {
                     [uv[0], uv[2]] = [uv[2], uv[0]];
                 }
@@ -116,34 +127,68 @@ export class EngineRenderSystem extends EntitySystem {
                 }
             }
 
+            // Handle rotation as number or Vector3 (use z for 2D)
+            const rotation = typeof transform.rotation === 'number'
+                ? transform.rotation
+                : transform.rotation.z;
+
+            // Convert hex color string to packed RGBA | 将十六进制颜色字符串转换为打包的RGBA
+            const color = this.hexToPackedColor(sprite.color, sprite.alpha);
+
+            // Get texture ID from sprite component
+            // 从精灵组件获取纹理ID
+            const textureId = sprite.textureId ?? 0;
+
+            // Pass actual display dimensions (sprite size * transform scale)
+            // 传递实际显示尺寸（sprite尺寸 * 变换缩放）
             const renderData: SpriteRenderData = {
                 x: transform.position.x,
                 y: transform.position.y,
-                rotation: transform.rotation,
-                scaleX: transform.scale.x,
-                scaleY: transform.scale.y,
-                originX: sprite.originX,
-                originY: sprite.originY,
-                textureId: sprite.textureId,
+                rotation,
+                scaleX: sprite.width * transform.scale.x,
+                scaleY: sprite.height * transform.scale.y,
+                originX: sprite.anchorX,
+                originY: sprite.anchorY,
+                textureId,
                 uv,
-                color: sprite.color
+                color
             };
 
             this.batcher.addSprite(renderData);
         }
-    }
 
-    /**
-     * Called after processing entities.
-     * 处理实体之后调用。
-     */
-    protected end(): void {
-        // Submit batch and render | 提交批处理并渲染
+        // Submit batch and render at the end of process | 在process结束时提交批处理并渲染
         if (!this.batcher.isEmpty) {
-            this.bridge.submitSprites(this.batcher.getSprites());
+            const sprites = this.batcher.getSprites();
+            this.bridge.submitSprites(sprites);
         }
         this.bridge.render();
     }
+
+    /**
+     * Convert hex color string to packed RGBA.
+     * 将十六进制颜色字符串转换为打包的RGBA。
+     */
+    private hexToPackedColor(hex: string, alpha: number): number {
+        // Parse hex color like "#ffffff" or "#fff"
+        let r = 255, g = 255, b = 255;
+        if (hex.startsWith('#')) {
+            const hexValue = hex.slice(1);
+            if (hexValue.length === 3) {
+                r = parseInt(hexValue[0] + hexValue[0], 16);
+                g = parseInt(hexValue[1] + hexValue[1], 16);
+                b = parseInt(hexValue[2] + hexValue[2], 16);
+            } else if (hexValue.length === 6) {
+                r = parseInt(hexValue.slice(0, 2), 16);
+                g = parseInt(hexValue.slice(2, 4), 16);
+                b = parseInt(hexValue.slice(4, 6), 16);
+            }
+        }
+        const a = Math.round(alpha * 255);
+        // Pack as 0xAABBGGRR for WebGL
+        return ((a & 0xFF) << 24) | ((b & 0xFF) << 16) | ((g & 0xFF) << 8) | (r & 0xFF);
+    }
+
 
     /**
      * Get the number of sprites rendered.

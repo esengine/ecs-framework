@@ -37,7 +37,8 @@
     "author": "ESEngine Team",
     "license": "MIT",
     "dependencies": {
-        "@esengine/ecs-framework": "file:../core"
+        "@esengine/ecs-framework": "file:../core",
+        "@esengine/ecs-components": "file:../components"
     },
     "peerDependencies": {
         "es-engine": "file:../engine/pkg"

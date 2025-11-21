@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Play, Pause, RotateCcw, Maximize2, Grid3x3, Eye, EyeOff, Activity, Box, Square, Zap } from 'lucide-react';
 import '../styles/Viewport.css';
 import { useEngine } from '../hooks/useEngine';
+import { EngineService } from '../services/EngineService';
 
 interface ViewportProps {
   locale?: string;
@@ -14,12 +15,11 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
     const [showGrid, setShowGrid] = useState(true);
     const [showGizmos, setShowGizmos] = useState(true);
     const [showStats, setShowStats] = useState(false);
-    const [is3D, setIs3D] = useState(true);
-    const [useRustEngine, setUseRustEngine] = useState(false);
+    const [is3D, setIs3D] = useState(false);
 
-    // Rust engine hook (only active in 2D mode with engine enabled)
-    // Rust引擎钩子（仅在2D模式且启用引擎时激活）
-    const engine = useEngine('viewport-canvas', useRustEngine && !is3D);
+    // Rust engine hook (only active in 2D mode)
+    // Rust引擎钩子（仅在2D模式时激活）
+    const engine = useEngine('viewport-canvas', !is3D);
     const animationFrameRef = useRef<number>();
     const glRef = useRef<WebGLRenderingContext | null>(null);
     const gridProgramRef = useRef<WebGLProgram | null>(null);
@@ -29,7 +29,7 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
     const [cameraRotation, setCameraRotation] = useState({ yaw: -Math.PI / 4, pitch: Math.PI / 6 });
     const [cameraDistance, setCameraDistance] = useState(20);
     const [camera2DOffset, setCamera2DOffset] = useState({ x: 0, y: 0 });
-    const [camera2DZoom, setCamera2DZoom] = useState(20);
+    const [camera2DZoom, setCamera2DZoom] = useState(1);
     const isDraggingRef = useRef(false);
     const lastMousePosRef = useRef({ x: 0, y: 0 });
     const [fps, setFps] = useState(0);
@@ -64,6 +64,12 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
             canvas.style.height = `${rect.height}px`;
 
             gl.viewport(0, 0, canvas.width, canvas.height);
+
+            // Notify EngineService of resize (use actual canvas pixels)
+            // 通知EngineService调整大小（使用实际canvas像素）
+            if (!is3D) {
+                EngineService.getInstance().resize(canvas.width, canvas.height);
+            }
         };
 
         resizeCanvas();
@@ -102,7 +108,7 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
             } else {
                 setCamera2DOffset((prev) => ({
                     x: prev.x - deltaX * 0.05,
-                    y: prev.y - deltaY * 0.05
+                    y: prev.y + deltaY * 0.05  // Y轴反转，因为屏幕Y向下，世界Y向上
                 }));
             }
 
@@ -121,7 +127,8 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
             if (is3D) {
                 setCameraDistance((prev) => Math.max(5, Math.min(50, prev + e.deltaY * 0.01)));
             } else {
-                setCamera2DZoom((prev) => Math.max(5, Math.min(100, prev + e.deltaY * 0.01)));
+                // zoom范围0.01-100，滚轮向上减小zoom（放大视图，物体变大）
+                setCamera2DZoom((prev) => Math.max(0.01, Math.min(100, prev - e.deltaY * 0.001)));
             }
         };
 
@@ -146,14 +153,21 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
         };
     }, [is3D]);
 
+    // Sync camera state to engine when 2D mode is active
+    // 在2D模式激活时同步相机状态到引擎
     useEffect(() => {
-        startRenderLoop();
-        return () => {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
-        };
-    }, [isPlaying, showGrid, cameraRotation, cameraDistance, camera2DOffset, camera2DZoom, is3D]);
+        if (!is3D && engine.state.initialized) {
+            EngineService.getInstance().setCamera({
+                x: camera2DOffset.x,
+                y: camera2DOffset.y,
+                zoom: camera2DZoom,
+                rotation: 0
+            });
+        }
+    }, [camera2DOffset, camera2DZoom, is3D, engine.state.initialized]);
+
+    // Note: Viewport size is synced in EngineService.initialize()
+    // 注意：视口尺寸在EngineService.initialize()中同步
 
     const initWebGL = (gl: WebGLRenderingContext) => {
         gl.clearColor(0.1, 0.1, 0.12, 1.0);
@@ -583,7 +597,7 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
         setIsPlaying(newPlaying);
 
         // Control Rust engine if active | 控制Rust引擎（如果激活）
-        if (useRustEngine && !is3D && engine.state.initialized) {
+        if (true && !is3D && engine.state.initialized) {
             if (newPlaying) {
                 engine.start();
             } else {
@@ -650,15 +664,6 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
                     >
                         {is3D ? <Box size={16} /> : <Square size={16} />}
                     </button>
-                    {!is3D && (
-                        <button
-                            className={`viewport-btn ${useRustEngine ? 'active' : ''}`}
-                            onClick={() => setUseRustEngine(!useRustEngine)}
-                            title={locale === 'zh' ? 'Rust引擎' : 'Rust Engine'}
-                        >
-                            <Zap size={16} />
-                        </button>
-                    )}
                 </div>
                 <div className="viewport-toolbar-right">
                     <button
@@ -683,22 +688,22 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
                     <div className="viewport-stat">
                         <span className="viewport-stat-label">FPS:</span>
                         <span className="viewport-stat-value">
-                            {useRustEngine && !is3D ? engine.state.fps : fps}
+                            {true && !is3D ? engine.state.fps : fps}
                         </span>
                     </div>
                     <div className="viewport-stat">
                         <span className="viewport-stat-label">Draw Calls:</span>
                         <span className="viewport-stat-value">
-                            {useRustEngine && !is3D ? engine.state.drawCalls : drawCalls}
+                            {true && !is3D ? engine.state.drawCalls : drawCalls}
                         </span>
                     </div>
-                    {useRustEngine && !is3D && (
+                    {true && !is3D && (
                         <div className="viewport-stat">
                             <span className="viewport-stat-label">Sprites:</span>
                             <span className="viewport-stat-value">{engine.state.spriteCount}</span>
                         </div>
                     )}
-                    {useRustEngine && !is3D && engine.state.error && (
+                    {true && !is3D && engine.state.error && (
                         <div className="viewport-stat viewport-stat-error">
                             <span className="viewport-stat-label">Error:</span>
                             <span className="viewport-stat-value">{engine.state.error}</span>

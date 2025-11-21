@@ -3,8 +3,16 @@
  * 使用Rust游戏引擎的React钩子。
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
+import { Core } from '@esengine/ecs-framework';
+import { MessageHub, EntityStoreService } from '@esengine/editor-core';
 import { EngineService } from '../services/EngineService';
+import { EditorEngineSync } from '../services/EditorEngineSync';
+
+// Module-level initialization tracking (outside React lifecycle)
+// 模块级别的初始化追踪（在React生命周期外部）
+let engineInitialized = false;
+let engineInitializing = false;
 
 export interface EngineState {
     initialized: boolean;
@@ -30,6 +38,38 @@ export interface UseEngineReturn {
 }
 
 /**
+ * Initialize engine once at module level
+ * 在模块级别初始化引擎一次
+ */
+async function initializeEngine(canvasId: string): Promise<void> {
+    if (engineInitialized || engineInitializing) {
+        return;
+    }
+
+    engineInitializing = true;
+
+    try {
+        const engine = EngineService.getInstance();
+        await engine.initialize(canvasId);
+
+        // Initialize sync service
+        try {
+            const messageHub = Core.services.resolve(MessageHub);
+            const entityStore = Core.services.resolve(EntityStoreService);
+            if (messageHub && entityStore) {
+                EditorEngineSync.getInstance().initialize(messageHub, entityStore);
+            }
+        } catch (syncError) {
+            console.warn('Failed to initialize sync service | 同步服务初始化失败:', syncError);
+        }
+
+        engineInitialized = true;
+    } finally {
+        engineInitializing = false;
+    }
+}
+
+/**
  * Hook for managing engine lifecycle in React components.
  * 用于在React组件中管理引擎生命周期的钩子。
  *
@@ -41,7 +81,7 @@ export function useEngine(canvasId: string, autoInit = true): UseEngineReturn {
     const statsIntervalRef = useRef<number | null>(null);
 
     const [state, setState] = useState<EngineState>({
-        initialized: false,
+        initialized: engineInitialized,
         running: false,
         fps: 0,
         drawCalls: 0,
@@ -49,25 +89,28 @@ export function useEngine(canvasId: string, autoInit = true): UseEngineReturn {
         error: null
     });
 
-    // Initialize engine | 初始化引擎
+    // Initialize engine using module-level function
+    // 使用模块级别函数初始化引擎
     useEffect(() => {
         if (!autoInit) return;
 
         const init = async () => {
             try {
-                await engineRef.current.initialize(canvasId);
+                await initializeEngine(canvasId);
                 setState(prev => ({ ...prev, initialized: true, error: null }));
 
-                // Start stats update interval | 启动统计更新间隔
-                statsIntervalRef.current = window.setInterval(() => {
-                    const stats = engineRef.current.getStats();
-                    setState(prev => ({
-                        ...prev,
-                        fps: stats.fps,
-                        drawCalls: stats.drawCalls,
-                        spriteCount: stats.spriteCount
-                    }));
-                }, 100);
+                // Start stats update interval
+                if (!statsIntervalRef.current) {
+                    statsIntervalRef.current = window.setInterval(() => {
+                        const stats = engineRef.current.getStats();
+                        setState(prev => ({
+                            ...prev,
+                            fps: stats.fps,
+                            drawCalls: stats.drawCalls,
+                            spriteCount: stats.spriteCount
+                        }));
+                    }, 100);
+                }
             } catch (error) {
                 console.error('Failed to initialize engine | 引擎初始化失败:', error);
                 setState(prev => ({
@@ -82,24 +125,24 @@ export function useEngine(canvasId: string, autoInit = true): UseEngineReturn {
         return () => {
             if (statsIntervalRef.current) {
                 clearInterval(statsIntervalRef.current);
+                statsIntervalRef.current = null;
             }
-            engineRef.current.dispose();
         };
     }, [canvasId, autoInit]);
 
-    // Start engine | 启动引擎
+    // Start engine
     const start = useCallback(() => {
         engineRef.current.start();
         setState(prev => ({ ...prev, running: true }));
     }, []);
 
-    // Stop engine | 停止引擎
+    // Stop engine
     const stop = useCallback(() => {
         engineRef.current.stop();
         setState(prev => ({ ...prev, running: false }));
     }, []);
 
-    // Create sprite entity | 创建精灵实体
+    // Create sprite entity
     const createSprite = useCallback((name: string, options?: {
         x?: number;
         y?: number;
@@ -110,7 +153,7 @@ export function useEngine(canvasId: string, autoInit = true): UseEngineReturn {
         engineRef.current.createSpriteEntity(name, options);
     }, []);
 
-    // Load texture | 加载纹理
+    // Load texture
     const loadTexture = useCallback((id: number, url: string) => {
         engineRef.current.loadTexture(id, url);
     }, []);

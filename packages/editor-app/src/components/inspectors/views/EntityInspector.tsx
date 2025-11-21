@@ -82,138 +82,96 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                 </div>
 
                 <div className="inspector-section">
-                    <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className="section-title section-title-with-action">
                         <span>组件</span>
-                        <div style={{ position: 'relative' }}>
+                        <div className="component-menu-container">
                             <button
+                                className="add-component-trigger"
                                 onClick={() => setShowComponentMenu(!showComponentMenu)}
-                                style={{
-                                    background: 'transparent',
-                                    border: '1px solid #4a4a4a',
-                                    borderRadius: '4px',
-                                    color: '#e0e0e0',
-                                    cursor: 'pointer',
-                                    padding: '2px 6px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    fontSize: '11px'
-                                }}
                             >
                                 <Plus size={12} />
                                 添加
                             </button>
                             {showComponentMenu && (
-                                <div
-                                    style={{
-                                        position: 'absolute',
-                                        top: '100%',
-                                        right: 0,
-                                        marginTop: '4px',
-                                        backgroundColor: '#2a2a2a',
-                                        border: '1px solid #4a4a4a',
-                                        borderRadius: '4px',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                                        zIndex: 1000,
-                                        minWidth: '150px',
-                                        maxHeight: '200px',
-                                        overflowY: 'auto'
-                                    }}
-                                >
-                                    {availableComponents.length === 0 ? (
-                                        <div style={{ padding: '8px 12px', color: '#888', fontSize: '11px' }}>
-                                            没有可用组件
-                                        </div>
-                                    ) : (
-                                        availableComponents.map((info) => (
-                                            <button
-                                                key={info.name}
-                                                onClick={() => info.type && handleAddComponent(info.type)}
-                                                style={{
-                                                    display: 'block',
-                                                    width: '100%',
-                                                    padding: '6px 12px',
-                                                    background: 'transparent',
-                                                    border: 'none',
-                                                    color: '#e0e0e0',
-                                                    fontSize: '12px',
-                                                    textAlign: 'left',
-                                                    cursor: 'pointer'
-                                                }}
-                                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#3a3a3a')}
-                                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                                            >
-                                                {info.name}
-                                            </button>
-                                        ))
-                                    )}
-                                </div>
+                                <>
+                                    <div className="component-dropdown-overlay" onClick={() => setShowComponentMenu(false)} />
+                                    <div className="component-dropdown">
+                                        <div className="component-dropdown-header">选择组件</div>
+                                        {availableComponents.length === 0 ? (
+                                            <div className="component-dropdown-empty">
+                                                没有可用组件
+                                            </div>
+                                        ) : (
+                                            <div className="component-dropdown-list">
+                                                {/* 按分类分组显示 */}
+                                                {(() => {
+                                                    const categories = new Map<string, typeof availableComponents>();
+                                                    availableComponents.forEach(info => {
+                                                        const cat = info.category || 'components.category.other';
+                                                        if (!categories.has(cat)) {
+                                                            categories.set(cat, []);
+                                                        }
+                                                        categories.get(cat)!.push(info);
+                                                    });
+
+                                                    return Array.from(categories.entries()).map(([category, components]) => (
+                                                        <div key={category} className="component-category-group">
+                                                            <div className="component-category-label">{category}</div>
+                                                            {components.map((info) => (
+                                                                <button
+                                                                    key={info.name}
+                                                                    className="component-dropdown-item"
+                                                                    onClick={() => info.type && handleAddComponent(info.type)}
+                                                                >
+                                                                    <span className="component-dropdown-item-name">{info.name}</span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    ));
+                                                })()}
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
                             )}
                         </div>
                     </div>
-                    {entity.components.map((component: Component, index: number) => {
+                    {entity.components.length === 0 ? (
+                        <div className="empty-state-small">暂无组件</div>
+                    ) : (
+                        entity.components.map((component: Component, index: number) => {
                             const isExpanded = expandedComponents.has(index);
                             const componentName = component.constructor?.name || 'Component';
 
                             return (
                                 <div
                                     key={`${componentName}-${index}-${componentVersion}`}
-                                    style={{
-                                        marginBottom: '2px',
-                                        backgroundColor: '#2a2a2a',
-                                        borderRadius: '4px',
-                                        overflow: 'hidden'
-                                    }}
+                                    className={`component-item-card ${isExpanded ? 'expanded' : ''}`}
                                 >
                                     <div
+                                        className="component-item-header"
                                         onClick={() => toggleComponentExpanded(index)}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            padding: '6px 8px',
-                                            backgroundColor: '#3a3a3a',
-                                            cursor: 'pointer',
-                                            userSelect: 'none',
-                                            borderBottom: isExpanded ? '1px solid #4a4a4a' : 'none'
-                                        }}
                                     >
-                                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                        <span
-                                            style={{
-                                                marginLeft: '6px',
-                                                fontSize: '12px',
-                                                fontWeight: 500,
-                                                color: '#e0e0e0',
-                                                flex: 1
-                                            }}
-                                        >
+                                        <span className="component-expand-icon">
+                                            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                        </span>
+                                        <span className="component-item-name">
                                             {componentName}
                                         </span>
                                         <button
+                                            className="component-remove-btn"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 handleRemoveComponent(index);
                                             }}
                                             title="移除组件"
-                                            style={{
-                                                background: 'transparent',
-                                                border: 'none',
-                                                color: '#888',
-                                                cursor: 'pointer',
-                                                padding: '2px',
-                                                borderRadius: '3px',
-                                                display: 'flex',
-                                                alignItems: 'center'
-                                            }}
-                                            onMouseEnter={(e) => (e.currentTarget.style.color = '#dc2626')}
-                                            onMouseLeave={(e) => (e.currentTarget.style.color = '#888')}
                                         >
                                             <X size={12} />
                                         </button>
                                     </div>
 
                                     {isExpanded && (
-                                        <div style={{ padding: '6px 8px' }}>
+                                        <div className="component-item-content">
                                             <PropertyInspector
                                                 component={component}
                                                 onChange={(propName: string, value: unknown) =>
@@ -224,7 +182,8 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                                     )}
                                 </div>
                             );
-                        })}
+                        })
+                    )}
                 </div>
             </div>
         </div>

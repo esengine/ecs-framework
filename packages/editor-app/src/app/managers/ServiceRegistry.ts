@@ -17,6 +17,16 @@ import {
     PropertyRendererRegistry,
     FieldEditorRegistry
 } from '@esengine/editor-core';
+import {
+    TransformComponent,
+    SpriteComponent,
+    TextComponent,
+    CameraComponent,
+    RigidBodyComponent,
+    BoxColliderComponent,
+    CircleColliderComponent,
+    AudioSourceComponent
+} from '@esengine/ecs-components';
 import { TauriFileAPI } from '../../adapters/TauriFileAPI';
 import { DIContainer } from '../../core/di/DIContainer';
 import { TypedEventBus } from '../../core/events/TypedEventBus';
@@ -81,6 +91,57 @@ export class ServiceRegistry {
         const serializerRegistry = new SerializerRegistry();
         const entityStore = new EntityStoreService(messageHub);
         const componentRegistry = new ComponentRegistry();
+
+        // 注册标准组件
+        componentRegistry.register({
+            name: 'Transform',
+            type: TransformComponent,
+            category: 'components.category.core',
+            description: 'components.transform.description'
+        });
+        componentRegistry.register({
+            name: 'Sprite',
+            type: SpriteComponent,
+            category: 'components.category.rendering',
+            description: 'components.sprite.description'
+        });
+        componentRegistry.register({
+            name: 'Text',
+            type: TextComponent,
+            category: 'components.category.rendering',
+            description: 'components.text.description'
+        });
+        componentRegistry.register({
+            name: 'Camera',
+            type: CameraComponent,
+            category: 'components.category.rendering',
+            description: 'components.camera.description'
+        });
+        componentRegistry.register({
+            name: 'RigidBody',
+            type: RigidBodyComponent,
+            category: 'components.category.physics',
+            description: 'components.rigidBody.description'
+        });
+        componentRegistry.register({
+            name: 'BoxCollider',
+            type: BoxColliderComponent,
+            category: 'components.category.physics',
+            description: 'components.boxCollider.description'
+        });
+        componentRegistry.register({
+            name: 'CircleCollider',
+            type: CircleColliderComponent,
+            category: 'components.category.physics',
+            description: 'components.circleCollider.description'
+        });
+        componentRegistry.register({
+            name: 'AudioSource',
+            type: AudioSourceComponent,
+            category: 'components.category.audio',
+            description: 'components.audioSource.description'
+        });
+
         const projectService = new ProjectService(messageHub, fileAPI);
         const componentDiscovery = new ComponentDiscoveryService(messageHub);
         const propertyMetadata = new PropertyMetadataService();

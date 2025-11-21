@@ -23,7 +23,7 @@ export class UpdateComponentCommand extends BaseCommand {
     execute(): void {
         (this.component as any)[this.propertyName] = this.newValue;
 
-        this.messageHub.publish('component:updated', {
+        this.messageHub.publish('component:property:changed', {
             entity: this.entity,
             component: this.component,
             propertyName: this.propertyName,
@@ -34,7 +34,7 @@ export class UpdateComponentCommand extends BaseCommand {
     undo(): void {
         (this.component as any)[this.propertyName] = this.oldValue;
 
-        this.messageHub.publish('component:updated', {
+        this.messageHub.publish('component:property:changed', {
             entity: this.entity,
             component: this.component,
             propertyName: this.propertyName,

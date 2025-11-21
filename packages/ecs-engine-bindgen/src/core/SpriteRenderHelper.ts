@@ -17,9 +17,9 @@ import type { SpriteRenderData } from '../types';
  * 你的变换组件应该实现此接口。
  */
 export interface ITransformComponent {
-    position: { x: number; y: number };
-    rotation: number;
-    scale: { x: number; y: number };
+    position: { x: number; y: number; z?: number };
+    rotation: number | { x: number; y: number; z: number };
+    scale: { x: number; y: number; z?: number };
 }
 
 /**
@@ -94,10 +94,15 @@ export class SpriteRenderHelper {
                 }
             }
 
+            // Handle rotation as number or Vector3 (use z for 2D)
+            const rotation = typeof transform.rotation === 'number'
+                ? transform.rotation
+                : transform.rotation.z;
+
             const renderData: SpriteRenderData = {
                 x: transform.position.x,
                 y: transform.position.y,
-                rotation: transform.rotation,
+                rotation,
                 scaleX: transform.scale.x,
                 scaleY: transform.scale.y,
                 originX: sprite.originX,

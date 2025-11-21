@@ -44,5 +44,37 @@
     "executionResumed": "Execution resumed",
     "resetToInitial": "Reset to initial state",
     "currentValue": "Current Value"
+  },
+  "components": {
+    "category": {
+      "core": "Core",
+      "rendering": "Rendering",
+      "physics": "Physics",
+      "audio": "Audio"
+    },
+    "transform": {
+      "description": "Transform - Position, Rotation, Scale"
+    },
+    "sprite": {
+      "description": "Sprite - 2D Image Rendering"
+    },
+    "text": {
+      "description": "Text - Text Rendering"
+    },
+    "camera": {
+      "description": "Camera - View Control"
+    },
+    "rigidBody": {
+      "description": "RigidBody - Physics Simulation"
+    },
+    "boxCollider": {
+      "description": "Box Collider"
+    },
+    "circleCollider": {
+      "description": "Circle Collider"
+    },
+    "audioSource": {
+      "description": "Audio Source"
+    }
   }
 }

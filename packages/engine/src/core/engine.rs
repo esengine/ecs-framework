@@ -184,4 +184,33 @@ impl Engine {
     pub fn update_input(&mut self) {
         self.input_manager.update();
     }
+
+    /// Resize viewport.
+    /// 调整视口大小。
+    pub fn resize(&mut self, width: f32, height: f32) {
+        self.renderer.resize(width, height);
+    }
+
+    /// Set camera position, zoom, and rotation.
+    /// 设置相机位置、缩放和旋转。
+    ///
+    /// # Arguments | 参数
+    /// * `x` - Camera X position | 相机X位置
+    /// * `y` - Camera Y position | 相机Y位置
+    /// * `zoom` - Zoom level | 缩放级别
+    /// * `rotation` - Rotation in radians | 旋转角度（弧度）
+    pub fn set_camera(&mut self, x: f32, y: f32, zoom: f32, rotation: f32) {
+        let camera = self.renderer.camera_mut();
+        camera.position.x = x;
+        camera.position.y = y;
+        camera.set_zoom(zoom);
+        camera.rotation = rotation;
+    }
+
+    /// Get camera position.
+    /// 获取相机位置。
+    pub fn get_camera(&self) -> (f32, f32, f32, f32) {
+        let camera = self.renderer.camera();
+        (camera.position.x, camera.position.y, camera.zoom, camera.rotation)
+    }
 }

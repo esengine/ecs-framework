@@ -1,12 +1,12 @@
 import { Core, Entity } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub } from '@esengine/editor-core';
-import { TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent, SpriteComponent } from '@esengine/ecs-components';
 import { BaseCommand } from '../BaseCommand';
 
 /**
- * 创建实体命令
+ * 创建带Sprite组件的实体命令
  */
-export class CreateEntityCommand extends BaseCommand {
+export class CreateSpriteEntityCommand extends BaseCommand {
     private entity: Entity | null = null;
     private entityId: number | null = null;
 
@@ -28,8 +28,9 @@ export class CreateEntityCommand extends BaseCommand {
         this.entity = scene.createEntity(this.entityName);
         this.entityId = this.entity.id;
 
-        // 自动添加Transform组件
+        // 添加Transform和Sprite组件
         this.entity.addComponent(new TransformComponent());
+        this.entity.addComponent(new SpriteComponent());
 
         if (this.parentEntity) {
             this.parentEntity.addChild(this.entity);
@@ -53,7 +54,7 @@ export class CreateEntityCommand extends BaseCommand {
     }
 
     getDescription(): string {
-        return `创建实体: ${this.entityName}`;
+        return `创建Sprite实体: ${this.entityName}`;
     }
 
     getCreatedEntity(): Entity | null {

@@ -17,6 +17,7 @@
   "dependencies": {
     "@esengine/behavior-tree": "file:../behavior-tree",
     "@esengine/ecs-engine-bindgen": "file:../ecs-engine-bindgen",
+    "@esengine/ecs-components": "file:../components",
     "@esengine/ecs-framework": "file:../core",
     "@esengine/editor-core": "file:../editor-core",
     "@tauri-apps/api": "^2.2.0",

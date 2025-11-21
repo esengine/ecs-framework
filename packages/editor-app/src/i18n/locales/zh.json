@@ -44,5 +44,37 @@
     "executionResumed": "执行已恢复",
     "resetToInitial": "重置到初始状态",
     "currentValue": "当前值"
+  },
+  "components": {
+    "category": {
+      "core": "基础",
+      "rendering": "渲染",
+      "physics": "物理",
+      "audio": "音频"
+    },
+    "transform": {
+      "description": "变换组件 - 位置、旋转、缩放"
+    },
+    "sprite": {
+      "description": "精灵组件 - 2D图像渲染"
+    },
+    "text": {
+      "description": "文本组件 - 文本渲染"
+    },
+    "camera": {
+      "description": "相机组件 - 视图控制"
+    },
+    "rigidBody": {
+      "description": "刚体组件 - 物理模拟"
+    },
+    "boxCollider": {
+      "description": "盒型碰撞器"
+    },
+    "circleCollider": {
+      "description": "圆形碰撞器"
+    },
+    "audioSource": {
+      "description": "音频源组件"
+    }
   }
 }

@@ -3,20 +3,10 @@
  * 管理Rust引擎生命周期的服务。
  */
 
-import { EngineBridge, SpriteComponent, EngineRenderSystem, ITransformComponent } from '@esengine/ecs-engine-bindgen';
-import { Core, Scene, Entity, Component, ECSComponent } from '@esengine/ecs-framework';
+import { EngineBridge, SpriteComponent as EngineSpriteComponent, EngineRenderSystem, CameraConfig } from '@esengine/ecs-engine-bindgen';
+import { Core, Scene, Entity } from '@esengine/ecs-framework';
+import { TransformComponent } from '@esengine/ecs-components';
 import * as esEngine from '@esengine/engine';
-
-/**
- * Transform component for editor entities.
- * 编辑器实体的变换组件。
- */
-@ECSComponent('Transform')
-export class TransformComponent extends Component implements ITransformComponent {
-    position = { x: 0, y: 0 };
-    rotation = 0;
-    scale = { x: 1, y: 1 };
-}
 
 /**
  * Engine service singleton for editor integration.
@@ -52,8 +42,10 @@ export class EngineService {
      */
     async initialize(canvasId: string): Promise<void> {
         if (this.initialized) {
+            console.log(`EngineService already initialized, skipping | EngineService已初始化，跳过`);
             return;
         }
+        console.log(`EngineService initializing with canvas: ${canvasId} | EngineService正在初始化，canvas: ${canvasId}`);
 
         try {
             // Create engine bridge | 创建引擎桥接
@@ -69,23 +61,99 @@ export class EngineService {
                 Core.create({ debug: false });
             }
 
-            // Create ECS scene and set it via Core | 通过Core创建并设置ECS场景
-            this.scene = new Scene({ name: 'EditorScene' });
+            // Use existing Core scene or create new one | 使用现有Core场景或创建新的
+            if (Core.scene) {
+                this.scene = Core.scene as Scene;
+            } else {
+                this.scene = new Scene({ name: 'EditorScene' });
+                Core.setScene(this.scene);
+            }
 
-            // Add render system | 添加渲染系统
+            // Add render system to the scene | 将渲染系统添加到场景
             this.renderSystem = new EngineRenderSystem(this.bridge, TransformComponent);
-            this.scene.addSystem(this.renderSystem);
+            this.scene!.addSystem(this.renderSystem);
+            console.log(`RenderSystem registered, enabled: ${this.renderSystem.enabled}, updateOrder: ${this.renderSystem.updateOrder}`);
 
-            // Set scene via Core | 通过Core设置场景
-            Core.setScene(this.scene);
+            // Start the default world to enable system updates
+            // 启动默认world以启用系统更新
+            const defaultWorld = Core.worldManager.getWorld('__default__');
+            if (defaultWorld && !defaultWorld.isActive) {
+                defaultWorld.start();
+                console.log('Started default world | 启动默认world');
+            }
 
             this.initialized = true;
-            console.log('EngineService initialized | 引擎服务初始化完成');
+
+            // Sync viewport size immediately after initialization
+            // 初始化后立即同步视口尺寸
+            const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+            if (canvas && canvas.parentElement) {
+                // Get container size in CSS pixels
+                // 获取容器尺寸（CSS像素）
+                const rect = canvas.parentElement.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+
+                // Canvas internal size uses DPR for sharpness
+                // Canvas内部尺寸使用DPR以保持清晰
+                canvas.width = Math.floor(rect.width * dpr);
+                canvas.height = Math.floor(rect.height * dpr);
+                canvas.style.width = `${rect.width}px`;
+                canvas.style.height = `${rect.height}px`;
+
+                // Camera uses actual canvas pixels for correct rendering
+                // 相机使用实际canvas像素以保证正确渲染
+                this.bridge.resize(canvas.width, canvas.height);
+                console.log(`EngineService initialized with viewport: ${canvas.width}x${canvas.height} (canvas pixels)`);
+            } else {
+                console.log('EngineService initialized | 引擎服务初始化完成');
+            }
+            console.log(`Scene: ${this.scene!.name}, Core.scene: ${Core.scene?.name}, same: ${this.scene === Core.scene}`);
+            console.log(`RenderSystem added to scene, systems count: ${this.scene!.systems?.length ?? 'unknown'}`);
+
+            // Auto-start render loop for editor preview | 自动启动渲染循环用于编辑器预览
+            this.startRenderLoop();
         } catch (error) {
             console.error('Failed to initialize engine | 引擎初始化失败:', error);
             throw error;
         }
     }
+
+    /**
+     * Start render loop (editor preview mode).
+     * 启动渲染循环（编辑器预览模式）。
+     */
+    private startRenderLoop(): void {
+        if (this.animationFrameId !== null) {
+            return;
+        }
+        this.lastTime = performance.now();
+        this.renderLoop();
+    }
+
+    private frameCount = 0;
+
+    /**
+     * Render loop for editor preview (always runs).
+     * 编辑器预览的渲染循环（始终运行）。
+     */
+    private renderLoop = (): void => {
+        const currentTime = performance.now();
+        const deltaTime = (currentTime - this.lastTime) / 1000;
+        this.lastTime = currentTime;
+
+        this.frameCount++;
+
+        // Update scene directly to ensure systems run
+        // 直接更新scene以确保systems运行
+        if (this.scene) {
+            this.scene.update();
+        }
+
+        // Update via Core (handles deltaTime internally) | 通过Core更新
+        Core.update(deltaTime);
+
+        this.animationFrameId = requestAnimationFrame(this.renderLoop);
+    };
 
     /**
      * Check if engine is initialized.
@@ -174,7 +242,7 @@ export class EngineService {
         entity.addComponent(transform);
 
         // Add sprite | 添加精灵组件
-        const sprite = new SpriteComponent();
+        const sprite = new EngineSpriteComponent();
         if (options) {
             sprite.textureId = options.textureId ?? 0;
             sprite.width = options.width ?? 64;
@@ -226,8 +294,30 @@ export class EngineService {
      */
     resize(width: number, height: number): void {
         if (this.bridge) {
+            console.log(`[EngineService] resize: ${width}x${height}`);
             this.bridge.resize(width, height);
         }
+    }
+
+    /**
+     * Set camera position, zoom, and rotation.
+     * 设置相机位置、缩放和旋转。
+     */
+    setCamera(config: CameraConfig): void {
+        if (this.bridge) {
+            this.bridge.setCamera(config);
+        }
+    }
+
+    /**
+     * Get camera state.
+     * 获取相机状态。
+     */
+    getCamera(): CameraConfig {
+        if (this.bridge) {
+            return this.bridge.getCamera();
+        }
+        return { x: 0, y: 0, zoom: 1, rotation: 0 };
     }
 
     /**
@@ -236,6 +326,12 @@ export class EngineService {
      */
     dispose(): void {
         this.stop();
+
+        // Stop render loop | 停止渲染循环
+        if (this.animationFrameId !== null) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
 
         // Scene doesn't have a destroy method, just clear reference
         // 场景没有destroy方法，只需清除引用
