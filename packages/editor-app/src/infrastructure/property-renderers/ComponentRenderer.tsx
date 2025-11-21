@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { IPropertyRenderer, PropertyContext, PropertyRendererRegistry } from '@esengine/editor-core';
 import { Core } from '@esengine/ecs-framework';
 
@@ -43,6 +43,7 @@ export class ComponentRenderer implements IPropertyRenderer<ComponentData> {
                     }}
                 >
                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    <Settings size={14} style={{ marginLeft: "4px", color: "#888" }} />
                     <span
                         style={{
                             marginLeft: '6px',

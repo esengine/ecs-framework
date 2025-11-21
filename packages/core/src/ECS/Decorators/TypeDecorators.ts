@@ -70,11 +70,14 @@ export interface SystemMetadata {
  *     }
  * }
  *
- * // 配置更新顺序
+ * // 配置更新顺序和依赖注入
  * @Injectable()
  * @ECSSystem('Physics', { updateOrder: 10 })
  * class PhysicsSystem extends EntitySystem {
- *     constructor(@Inject(CollisionSystem) private collision: CollisionSystem) {
+ *     @InjectProperty(CollisionSystem)
+ *     private collision!: CollisionSystem;
+ *
+ *     constructor() {
  *         super(Matcher.empty().all(Transform, RigidBody));
  *     }
  * }

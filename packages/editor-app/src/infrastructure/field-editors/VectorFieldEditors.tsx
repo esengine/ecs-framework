@@ -10,24 +10,17 @@ const VectorInput: React.FC<{
     value: number;
     onChange: (value: number) => void;
     readonly?: boolean;
-}> = ({ label, value, onChange, readonly }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        <span style={{ color: '#888', fontSize: '10px', minWidth: '12px' }}>{label}:</span>
+    axis: 'x' | 'y' | 'z' | 'w';
+}> = ({ label, value, onChange, readonly, axis }) => (
+    <div className="property-vector-axis-compact">
+        <span className={`property-vector-axis-label property-vector-axis-${axis}`}>{label}</span>
         <input
             type="number"
             value={value}
             onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
             disabled={readonly}
             step={0.1}
-            style={{
-                width: '60px',
-                padding: '2px 4px',
-                backgroundColor: '#2a2a2a',
-                border: '1px solid #444',
-                borderRadius: '3px',
-                color: '#e0e0e0',
-                fontSize: '11px'
-            }}
+            className="property-input property-input-number property-input-number-compact"
         />
     </div>
 );
@@ -47,18 +40,20 @@ export class Vector2FieldEditor implements IFieldEditor<Vector2> {
         return (
             <div className="property-field">
                 <label className="property-label">{label}</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div className="property-vector-compact">
                     <VectorInput
                         label="X"
                         value={v.x}
                         onChange={(x) => onChange({ ...v, x })}
                         readonly={context.readonly}
+                        axis="x"
                     />
                     <VectorInput
                         label="Y"
                         value={v.y}
                         onChange={(y) => onChange({ ...v, y })}
                         readonly={context.readonly}
+                        axis="y"
                     />
                 </div>
             </div>
@@ -81,24 +76,27 @@ export class Vector3FieldEditor implements IFieldEditor<Vector3> {
         return (
             <div className="property-field">
                 <label className="property-label">{label}</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div className="property-vector-compact">
                     <VectorInput
                         label="X"
                         value={v.x}
                         onChange={(x) => onChange({ ...v, x })}
                         readonly={context.readonly}
+                        axis="x"
                     />
                     <VectorInput
                         label="Y"
                         value={v.y}
                         onChange={(y) => onChange({ ...v, y })}
                         readonly={context.readonly}
+                        axis="y"
                     />
                     <VectorInput
                         label="Z"
                         value={v.z}
                         onChange={(z) => onChange({ ...v, z })}
                         readonly={context.readonly}
+                        axis="z"
                     />
                 </div>
             </div>
@@ -121,30 +119,34 @@ export class Vector4FieldEditor implements IFieldEditor<Vector4> {
         return (
             <div className="property-field">
                 <label className="property-label">{label}</label>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div className="property-vector-compact">
                     <VectorInput
                         label="X"
                         value={v.x}
                         onChange={(x) => onChange({ ...v, x })}
                         readonly={context.readonly}
+                        axis="x"
                     />
                     <VectorInput
                         label="Y"
                         value={v.y}
                         onChange={(y) => onChange({ ...v, y })}
                         readonly={context.readonly}
+                        axis="y"
                     />
                     <VectorInput
                         label="Z"
                         value={v.z}
                         onChange={(z) => onChange({ ...v, z })}
                         readonly={context.readonly}
+                        axis="z"
                     />
                     <VectorInput
                         label="W"
                         value={v.w}
                         onChange={(w) => onChange({ ...v, w })}
                         readonly={context.readonly}
+                        axis="w"
                     />
                 </div>
             </div>

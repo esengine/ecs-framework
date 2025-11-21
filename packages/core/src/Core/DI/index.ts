@@ -6,12 +6,11 @@
 
 export {
     Injectable,
-    Inject,
     InjectProperty,
     Updatable,
     isInjectable,
     getInjectableMetadata,
-    getInjectMetadata,
+    getPropertyInjectMetadata,
     isUpdatable,
     getUpdatableMetadata,
     createInstance,

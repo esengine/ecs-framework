@@ -612,7 +612,7 @@ export class Scene implements IScene {
      * 在场景中添加一个EntitySystem处理器
      *
      * 支持两种使用方式：
-     * 1. 传入类型（推荐）：自动使用DI创建实例，支持@Injectable和@Inject装饰器
+     * 1. 传入类型（推荐）：自动使用DI创建实例，支持@Injectable和@InjectProperty装饰器
      * 2. 传入实例：直接使用提供的实例
      *
      * @param systemTypeOrInstance 系统类型或系统实例
@@ -623,7 +623,10 @@ export class Scene implements IScene {
      * // 方式1：传入类型，自动DI（推荐）
      * @Injectable()
      * class PhysicsSystem extends EntitySystem {
-     *     constructor(@Inject(CollisionSystem) private collision: CollisionSystem) {
+     *     @InjectProperty(CollisionSystem)
+     *     private collision!: CollisionSystem;
+     *
+     *     constructor() {
      *         super(Matcher.empty().all(Transform));
      *     }
      * }
@@ -718,7 +721,10 @@ export class Scene implements IScene {
      * @Injectable()
      * @ECSSystem('Physics', { updateOrder: 10 })
      * class PhysicsSystem extends EntitySystem implements IService {
-     *     constructor(@Inject(CollisionSystem) private collision: CollisionSystem) {
+     *     @InjectProperty(CollisionSystem)
+     *     private collision!: CollisionSystem;
+     *
+     *     constructor() {
      *         super(Matcher.empty().all(Transform, RigidBody));
      *     }
      *     dispose() {}
@@ -779,7 +785,7 @@ export class Scene implements IScene {
     /**
      * 获取指定类型的EntitySystem处理器
      *
-     * @deprecated 推荐使用依赖注入代替此方法。使用 `scene.services.resolve(SystemType)` 或在System构造函数中使用 `@Inject(SystemType)` 装饰器。
+     * @deprecated 推荐使用依赖注入代替此方法。使用 `scene.services.resolve(SystemType)` 或使用 `@InjectProperty(SystemType)` 装饰器。
      *
      * @param type 处理器类型
      * @returns 处理器实例，如果未找到则返回null
@@ -788,8 +794,11 @@ export class Scene implements IScene {
      * ```typescript
      * @Injectable()
      * class MySystem extends EntitySystem {
-     *     constructor(@Inject(PhysicsSystem) private physics: PhysicsSystem) {
-     *         super();
+     *     @InjectProperty(PhysicsSystem)
+     *     private physics!: PhysicsSystem;
+     *
+     *     constructor() {
+     *         super(Matcher.empty());
      *     }
      * }
      * ```

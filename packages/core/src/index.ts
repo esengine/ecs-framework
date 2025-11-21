@@ -19,12 +19,14 @@ export * from './Plugins';
 // 依赖注入
 export {
     Injectable,
-    Inject,
+    InjectProperty,
     Updatable,
     registerInjectable,
     createInstance,
+    injectProperties,
     isUpdatable,
-    getUpdatableMetadata
+    getUpdatableMetadata,
+    getPropertyInjectMetadata
 } from './Core/DI';
 export type { InjectableMetadata, UpdatableMetadata } from './Core/DI';
 
