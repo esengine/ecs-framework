@@ -91,6 +91,19 @@ jobs:
           cd packages/behavior-tree
           npm run build
 
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+
+      - name: Build engine package (Rust WASM)
+        run: |
+          cd packages/engine
+          npm run build
+
+      - name: Build ecs-engine-bindgen package
+        run: |
+          cd packages/ecs-engine-bindgen
+          npm run build
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0.5
         env:
