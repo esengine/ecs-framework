@@ -1,5 +1,4 @@
 import React from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
 import { IPropertyRenderer, PropertyContext } from '@esengine/editor-core';
 import { formatNumber } from '../../components/inspectors/utils';
 
@@ -23,6 +22,20 @@ interface Color {
     a: number;
 }
 
+const VectorValue: React.FC<{
+    label: string;
+    value: number;
+    axis: 'x' | 'y' | 'z' | 'w';
+    decimals: number;
+}> = ({ label, value, axis, decimals }) => (
+    <div className="property-vector-axis-compact">
+        <span className={`property-vector-axis-label property-vector-axis-${axis}`}>{label}</span>
+        <span className="property-input property-input-number property-input-number-compact" style={{ cursor: 'default' }}>
+            {formatNumber(value, decimals)}
+        </span>
+    </div>
+);
+
 export class Vector2Renderer implements IPropertyRenderer<Vector2> {
     readonly id = 'app.vector2';
     readonly name = 'Vector2 Renderer';
@@ -44,9 +57,10 @@ export class Vector2Renderer implements IPropertyRenderer<Vector2> {
         return (
             <div className="property-field">
                 <label className="property-label">{context.name}</label>
-                <span className="property-value-text" style={{ color: '#9cdcfe', fontFamily: 'monospace' }}>
-                    ({formatNumber(value.x, decimals)}, {formatNumber(value.y, decimals)})
-                </span>
+                <div className="property-vector-compact">
+                    <VectorValue label="X" value={value.x} axis="x" decimals={decimals} />
+                    <VectorValue label="Y" value={value.y} axis="y" decimals={decimals} />
+                </div>
             </div>
         );
     }
@@ -74,9 +88,11 @@ export class Vector3Renderer implements IPropertyRenderer<Vector3> {
         return (
             <div className="property-field">
                 <label className="property-label">{context.name}</label>
-                <span className="property-value-text" style={{ color: '#9cdcfe', fontFamily: 'monospace' }}>
-                    ({formatNumber(value.x, decimals)}, {formatNumber(value.y, decimals)}, {formatNumber(value.z, decimals)})
-                </span>
+                <div className="property-vector-compact">
+                    <VectorValue label="X" value={value.x} axis="x" decimals={decimals} />
+                    <VectorValue label="Y" value={value.y} axis="y" decimals={decimals} />
+                    <VectorValue label="Z" value={value.z} axis="z" decimals={decimals} />
+                </div>
             </div>
         );
     }
@@ -108,18 +124,13 @@ export class ColorRenderer implements IPropertyRenderer<Color> {
         return (
             <div className="property-field">
                 <label className="property-label">{context.name}</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="property-color-wrapper">
                     <div
-                        style={{
-                            width: '20px',
-                            height: '20px',
-                            backgroundColor: colorHex,
-                            border: '1px solid #444',
-                            borderRadius: '2px'
-                        }}
+                        className="property-color-preview"
+                        style={{ backgroundColor: colorHex }}
                     />
-                    <span className="property-value-text" style={{ fontFamily: 'monospace' }}>
-                        rgba({r}, {g}, {b}, {value.a.toFixed(2)})
+                    <span className="property-input property-input-color-text" style={{ cursor: 'default' }}>
+                        {colorHex.toUpperCase()}
                     </span>
                 </div>
             </div>

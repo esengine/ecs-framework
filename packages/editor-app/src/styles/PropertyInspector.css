@@ -104,9 +104,9 @@
   background-repeat: no-repeat;
   background-position: right 6px center;
   padding-right: 24px;
-  appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  appearance: none;
 }
 
 .property-input-select:hover {
@@ -286,10 +286,13 @@
 
 .property-input-number-compact {
   flex: 1;
-  min-width: 32px;
-  text-align: center;
-  padding: 2px 4px;
-  font-size: 10px;
+  min-width: 24px;
+  max-width: 40px;
+  text-align: right;
+  padding: 1px 4px;
+  font-size: 11px;
+  height: 18px;
+  line-height: 16px;
 }
 
 .property-vector-expanded {
@@ -338,6 +341,12 @@
   border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
+.property-vector-axis-w {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
 .property-field:focus-within {
   background: rgba(255, 255, 255, 0.04);
 }
@@ -357,6 +366,7 @@
 
 input[type="number"].property-input {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 input[type="number"].property-input::-webkit-outer-spin-button,

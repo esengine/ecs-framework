@@ -1,4 +1,4 @@
-import { Injectable, Inject, isInjectable, getInjectMetadata, createInstance, registerInjectable } from '../../src/Core/DI';
+import { Injectable, InjectProperty, isInjectable, getPropertyInjectMetadata, createInstance, registerInjectable } from '../../src/Core/DI';
 import { ServiceContainer } from '../../src/Core/ServiceContainer';
 import type { IService } from '../../src/Core/ServiceContainer';
 
@@ -14,9 +14,8 @@ class SimpleService implements IService {
 
 @Injectable()
 class DependentService implements IService {
-    constructor(
-        @Inject(SimpleService) public simpleService: SimpleService
-    ) {}
+    @InjectProperty(SimpleService)
+    public simpleService!: SimpleService;
 
     dispose() {
         // 清理资源
@@ -25,10 +24,11 @@ class DependentService implements IService {
 
 @Injectable()
 class MultiDependencyService implements IService {
-    constructor(
-        @Inject(SimpleService) public service1: SimpleService,
-        @Inject(DependentService) public service2: DependentService
-    ) {}
+    @InjectProperty(SimpleService)
+    public service1!: SimpleService;
+
+    @InjectProperty(DependentService)
+    public service2!: DependentService;
 
     dispose() {
         // 清理资源
@@ -58,18 +58,18 @@ describe('DI - 依赖注入装饰器测试', () => {
         });
     });
 
-    describe('@Inject 装饰器', () => {
-        test('应该记录参数注入元数据', () => {
-            const metadata = getInjectMetadata(DependentService as any);
+    describe('@InjectProperty 装饰器', () => {
+        test('应该记录属性注入元数据', () => {
+            const metadata = getPropertyInjectMetadata(DependentService as any);
             expect(metadata.size).toBe(1);
-            expect(metadata.get(0)).toBe(SimpleService);
+            expect(metadata.get('simpleService')).toBe(SimpleService);
         });
 
-        test('应该记录多个参数的注入元数据', () => {
-            const metadata = getInjectMetadata(MultiDependencyService as any);
+        test('应该记录多个属性的注入元数据', () => {
+            const metadata = getPropertyInjectMetadata(MultiDependencyService as any);
             expect(metadata.size).toBe(2);
-            expect(metadata.get(0)).toBe(SimpleService);
-            expect(metadata.get(1)).toBe(DependentService);
+            expect(metadata.get('service1')).toBe(SimpleService);
+            expect(metadata.get('service2')).toBe(DependentService);
         });
     });
 

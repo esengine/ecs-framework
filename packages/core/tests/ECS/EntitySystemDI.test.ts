@@ -3,7 +3,7 @@ import { EntitySystem } from '../../src/ECS/Systems/EntitySystem';
 import { Entity } from '../../src/ECS/Entity';
 import { Component } from '../../src/ECS/Component';
 import { Matcher } from '../../src/ECS/Utils/Matcher';
-import { Injectable, Inject, InjectProperty } from '../../src/Core/DI';
+import { Injectable, InjectProperty } from '../../src/Core/DI';
 import { Core } from '../../src/Core';
 import type { IService } from '../../src/Core/ServiceContainer';
 import { ECSSystem } from '../../src/ECS/Decorators';
@@ -82,9 +82,10 @@ describe('EntitySystem - 依赖注入测试', () => {
             @Injectable()
             @ECSSystem('Physics')
             class PhysicsSystem extends EntitySystem implements IService {
-                constructor(
-                    @Inject(CollisionSystem) public collision: CollisionSystem
-                ) {
+                @InjectProperty(CollisionSystem)
+                public collision!: CollisionSystem;
+
+                constructor() {
                     super(Matcher.empty().all(Transform, Velocity));
                 }
 
@@ -124,7 +125,10 @@ describe('EntitySystem - 依赖注入测试', () => {
             @Injectable()
             @ECSSystem('B')
             class SystemB extends EntitySystem implements IService {
-                constructor(@Inject(SystemA) public systemA: SystemA) {
+                @InjectProperty(SystemA)
+                public systemA!: SystemA;
+
+                constructor() {
                     super(Matcher.empty());
                 }
                 override dispose() {}
@@ -133,10 +137,13 @@ describe('EntitySystem - 依赖注入测试', () => {
             @Injectable()
             @ECSSystem('C')
             class SystemC extends EntitySystem implements IService {
-                constructor(
-                    @Inject(SystemA) public systemA: SystemA,
-                    @Inject(SystemB) public systemB: SystemB
-                ) {
+                @InjectProperty(SystemA)
+                public systemA!: SystemA;
+
+                @InjectProperty(SystemB)
+                public systemB!: SystemB;
+
+                constructor() {
                     super(Matcher.empty());
                 }
                 override dispose() {}
@@ -166,7 +173,10 @@ describe('EntitySystem - 依赖注入测试', () => {
             @Injectable()
             @ECSSystem('Physics', { updateOrder: 10 })
             class PhysicsSystem extends EntitySystem implements IService {
-                constructor(@Inject(CollisionSystem) public collision: CollisionSystem) {
+                @InjectProperty(CollisionSystem)
+                public collision!: CollisionSystem;
+
+                constructor() {
                     super(Matcher.empty().all(Transform, Velocity));
                 }
                 override dispose() {}
@@ -175,7 +185,10 @@ describe('EntitySystem - 依赖注入测试', () => {
             @Injectable()
             @ECSSystem('Render', { updateOrder: 20 })
             class RenderSystem extends EntitySystem implements IService {
-                constructor(@Inject(PhysicsSystem) public physics: PhysicsSystem) {
+                @InjectProperty(PhysicsSystem)
+                public physics!: PhysicsSystem;
+
+                constructor() {
                     super(Matcher.empty().all(Transform));
                 }
                 override dispose() {}
@@ -346,7 +359,7 @@ describe('EntitySystem - 依赖注入测试', () => {
     });
 
     describe('Issue #76 场景验证', () => {
-        test('应该消除硬编码依赖，使用构造函数注入', () => {
+        test('应该消除硬编码依赖，使用属性注入', () => {
             @Injectable()
             @ECSSystem('TimeService')
             class TimeService extends EntitySystem implements IService {
@@ -378,10 +391,13 @@ describe('EntitySystem - 依赖注入测试', () => {
             @Injectable()
             @ECSSystem('Physics')
             class PhysicsSystem extends EntitySystem implements IService {
-                constructor(
-                    @Inject(TimeService) private time: TimeService,
-                    @Inject(CollisionService) private collision: CollisionService
-                ) {
+                @InjectProperty(TimeService)
+                private time!: TimeService;
+
+                @InjectProperty(CollisionService)
+                private collision!: CollisionService;
+
+                constructor() {
                     super(Matcher.empty().all(Transform, Velocity));
                 }
 
@@ -543,50 +559,6 @@ describe('EntitySystem - 依赖注入测试', () => {
             const consumer = scene.addEntityProcessor(ConsumerSystem);
 
             expect(consumer.getInitializeValue()).toBe(42);
-        });
-
-        test('属性注入可以与构造函数注入混合使用', () => {
-            @Injectable()
-            @ECSSystem('A')
-            class ServiceA extends EntitySystem implements IService {
-                public valueA = 'A';
-                constructor() {
-                    super(Matcher.empty());
-                }
-                override dispose() {}
-            }
-
-            @Injectable()
-            @ECSSystem('B')
-            class ServiceB extends EntitySystem implements IService {
-                public valueB = 'B';
-                constructor() {
-                    super(Matcher.empty());
-                }
-                override dispose() {}
-            }
-
-            @Injectable()
-            @ECSSystem('Mixed')
-            class MixedSystem extends EntitySystem implements IService {
-                @InjectProperty(ServiceB)
-                serviceB!: ServiceB;
-
-                constructor(@Inject(ServiceA) public serviceA: ServiceA) {
-                    super(Matcher.empty());
-                }
-
-                protected override onInitialize(): void {
-                    expect(this.serviceA).toBeInstanceOf(ServiceA);
-                    expect(this.serviceB).toBeInstanceOf(ServiceB);
-                    expect(this.serviceA.valueA).toBe('A');
-                    expect(this.serviceB.valueB).toBe('B');
-                }
-
-                override dispose() {}
-            }
-
-            scene.registerSystems([ServiceA, ServiceB, MixedSystem]);
         });
     });
 });

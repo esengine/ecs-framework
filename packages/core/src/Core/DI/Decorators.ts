@@ -1,7 +1,7 @@
 /**
  * 依赖注入装饰器
  *
- * 提供 @Injectable、@Inject 和 @Updatable 装饰器，用于标记可注入的类和依赖注入点
+ * 提供 @Injectable、@InjectProperty 和 @Updatable 装饰器，用于标记可注入的类和依赖注入点
  */
 
 import type { ServiceContainer } from '../ServiceContainer';
@@ -13,7 +13,6 @@ import type { IService, ServiceType } from '../ServiceContainer';
 type Constructor = abstract new (...args: unknown[]) => unknown;
 
 const injectableMetadata = new WeakMap<Constructor, InjectableMetadata>();
-const injectMetadata = new WeakMap<Constructor, Map<number, ServiceType<IService> | string | symbol>>();
 const updatableMetadata = new WeakMap<Constructor, UpdatableMetadata>();
 
 /**
@@ -67,10 +66,11 @@ export interface UpdatableMetadata {
  *
  * @Injectable()
  * class PhysicsSystem extends EntitySystem {
- *     constructor(
- *         @Inject(TimeService) private timeService: TimeService
- *     ) {
- *         super();
+ *     @InjectProperty(TimeService)
+ *     private timeService!: TimeService;
+ *
+ *     constructor() {
+ *         super(Matcher.empty());
  *     }
  * }
  * ```
@@ -136,27 +136,6 @@ export function Updatable(priority: number = 0): ClassDecorator {
 }
 
 /**
- * @Inject() 装饰器
- *
- * 标记构造函数参数需要注入的服务类型
- *
- * @param serviceType 服务类型标识符
- */
-export function Inject(serviceType: ServiceType<IService> | string | symbol): ParameterDecorator {
-    return function (target: object, _propertyKey: string | symbol | undefined, parameterIndex: number) {
-        // 获取或创建注入元数据
-        let params = injectMetadata.get(target as Constructor);
-        if (!params) {
-            params = new Map();
-            injectMetadata.set(target as Constructor, params);
-        }
-
-        // 记录参数索引和服务类型的映射
-        params.set(parameterIndex, serviceType);
-    };
-}
-
-/**
  * @InjectProperty() 装饰器
  *
  * 通过属性装饰器注入依赖
@@ -164,6 +143,27 @@ export function Inject(serviceType: ServiceType<IService> | string | symbol): Pa
  * 注入时机：在构造函数执行后、onInitialize() 调用前完成
  *
  * @param serviceType 服务类型
+ *
+ * @example
+ * ```typescript
+ * @Injectable()
+ * class PhysicsSystem extends EntitySystem {
+ *     @InjectProperty(TimeService)
+ *     private timeService!: TimeService;
+ *
+ *     @InjectProperty(CollisionService)
+ *     private collision!: CollisionService;
+ *
+ *     constructor() {
+ *         super(Matcher.empty());
+ *     }
+ *
+ *     public onInitialize(): void {
+ *         // 此时属性已注入完成，可以安全使用
+ *         console.log(this.timeService.getDeltaTime());
+ *     }
+ * }
+ * ```
  */
 export function InjectProperty(serviceType: ServiceType<IService>): PropertyDecorator {
     return function (target: object, propertyKey: string | symbol) {
@@ -207,13 +207,14 @@ export function getInjectableMetadata(target: Constructor): InjectableMetadata |
 }
 
 /**
- * 获取构造函数参数的注入元数据
+ * 获取属性注入元数据
  *
  * @param target 目标类
- * @returns 参数索引到服务类型的映射
+ * @returns 属性名到服务类型的映射
  */
-export function getInjectMetadata(target: Constructor): Map<number, ServiceType<IService> | string | symbol> {
-    return injectMetadata.get(target) || new Map();
+export function getPropertyInjectMetadata(target: Constructor): Map<string | symbol, ServiceType<IService>> {
+    const metadata = injectableMetadata.get(target);
+    return metadata?.properties || new Map();
 }
 
 /**
@@ -232,38 +233,13 @@ export function createInstance<T>(
     constructor: new (...args: any[]) => T,
     container: ServiceContainer
 ): T {
-    // 获取参数注入元数据
-    const injectParams = getInjectMetadata(constructor as Constructor);
+    // 创建实例（无参数注入）
+    const instance = new constructor();
 
-    // 解析依赖
-    const dependencies: unknown[] = [];
+    // 注入属性依赖
+    injectProperties(instance as object, container);
 
-    // 获取构造函数参数数量
-    const paramCount = constructor.length;
-
-    for (let i = 0; i < paramCount; i++) {
-        const serviceType = injectParams.get(i);
-
-        if (serviceType) {
-            // 如果有显式的@Inject标记，使用标记的类型
-            if (typeof serviceType === 'string' || typeof serviceType === 'symbol') {
-                // 字符串或Symbol类型的服务标识
-                throw new Error(
-                    'String and Symbol service identifiers are not yet supported in constructor injection. ' +
-                    `Please use class types for ${constructor.name} parameter ${i}`
-                );
-            } else {
-                // 类类型
-                dependencies.push(container.resolve(serviceType as ServiceType<IService>));
-            }
-        } else {
-            // 没有@Inject标记，传入undefined
-            dependencies.push(undefined);
-        }
-    }
-
-    // 创建实例
-    return new constructor(...dependencies);
+    return instance;
 }
 
 /**

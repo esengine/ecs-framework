@@ -100,12 +100,20 @@
 }
 
 .flexlayout__tab_button_content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
   font-size: 12px;
   font-weight: 400;
   letter-spacing: 0.3px;
 }
 
 .flexlayout__tab_button--selected .flexlayout__tab_button_content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
   font-weight: 500;
 }
 

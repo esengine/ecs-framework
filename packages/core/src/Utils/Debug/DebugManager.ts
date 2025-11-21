@@ -13,7 +13,7 @@ import type { IService } from '../../Core/ServiceContainer';
 import type { IUpdatable } from '../../Types/IUpdatable';
 import { SceneManager } from '../../ECS/SceneManager';
 import { PerformanceMonitor } from '../PerformanceMonitor';
-import { Injectable, Inject, Updatable } from '../../Core/DI/Decorators';
+import { Injectable, InjectProperty, Updatable } from '../../Core/DI/Decorators';
 import { DebugConfigService } from './DebugConfigService';
 
 /**
@@ -24,19 +24,26 @@ import { DebugConfigService } from './DebugConfigService';
 @Injectable()
 @Updatable()
 export class DebugManager implements IService, IUpdatable {
-    private config: IECSDebugConfig;
-    private webSocketManager: WebSocketManager;
-    private entityCollector: EntityDataCollector;
-    private systemCollector: SystemDataCollector;
-    private performanceCollector: PerformanceDataCollector;
-    private componentCollector: ComponentDataCollector;
-    private sceneCollector: SceneDataCollector;
-    private sceneManager: SceneManager;
-    private performanceMonitor: PerformanceMonitor;
+    private config!: IECSDebugConfig;
+    private webSocketManager!: WebSocketManager;
+    private entityCollector!: EntityDataCollector;
+    private systemCollector!: SystemDataCollector;
+    private performanceCollector!: PerformanceDataCollector;
+    private componentCollector!: ComponentDataCollector;
+    private sceneCollector!: SceneDataCollector;
+
+    @InjectProperty(SceneManager)
+    private sceneManager!: SceneManager;
+
+    @InjectProperty(PerformanceMonitor)
+    private performanceMonitor!: PerformanceMonitor;
+
+    @InjectProperty(DebugConfigService)
+    private configService!: DebugConfigService;
 
     private frameCounter: number = 0;
     private lastSendTime: number = 0;
-    private sendInterval: number;
+    private sendInterval: number = 0;
     private isRunning: boolean = false;
     private originalConsole = {
         log: console.log.bind(console),
@@ -46,14 +53,8 @@ export class DebugManager implements IService, IUpdatable {
         error: console.error.bind(console)
     };
 
-    constructor(
-        @Inject(SceneManager) sceneManager: SceneManager,
-        @Inject(PerformanceMonitor) performanceMonitor: PerformanceMonitor,
-        @Inject(DebugConfigService) configService: DebugConfigService
-    ) {
-        this.config = configService.getConfig();
-        this.sceneManager = sceneManager;
-        this.performanceMonitor = performanceMonitor;
+    public onInitialize(): void {
+        this.config = this.configService.getConfig();
 
         // 初始化数据收集器
         this.entityCollector = new EntityDataCollector();
