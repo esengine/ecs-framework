@@ -40,7 +40,7 @@
     "test:coverage": "jest --coverage --config jest.config.cjs",
     "test:ci": "jest --ci --coverage --config jest.config.cjs",
     "test:clear": "jest --clearCache",
-    "type-check": "tsc --noEmit",
+    "type-check": "npx tsc --noEmit",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix"
   },

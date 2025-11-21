@@ -78,7 +78,7 @@ export class EngineBridge {
         return {
             width: canvas.width,
             height: canvas.height,
-            getContext: (type, attrs) => canvas.getContext(type, attrs as WebGLContextAttributes),
+            getContext: (type: string, attrs: any) => canvas.getContext(type, attrs as WebGLContextAttributes),
             toDataURL: () => canvas.toDataURL(),
             toTempFilePath: () => {
                 throw new Error('Not supported');

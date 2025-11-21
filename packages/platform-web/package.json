@@ -19,7 +19,7 @@
     "build": "rollup -c",
     "build:npm": "npm run build",
     "clean": "rimraf dist",
-    "type-check": "tsc --noEmit",
+    "type-check": "npx tsc --noEmit",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
