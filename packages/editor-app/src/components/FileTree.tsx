@@ -22,7 +22,9 @@ interface TreeNode {
 interface FileTreeProps {
   rootPath: string | null;
   onSelectFile?: (path: string) => void;
+  onSelectFiles?: (paths: string[], modifiers: { ctrlKey: boolean; shiftKey: boolean }) => void;
   selectedPath?: string | null;
+  selectedPaths?: Set<string>;
   messageHub?: MessageHub;
   searchQuery?: string;
   showFiles?: boolean;
@@ -34,10 +36,27 @@ export interface FileTreeHandle {
   revealPath: (targetPath: string) => Promise<void>;
 }
 
-export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, onSelectFile, selectedPath, messageHub, searchQuery, showFiles = true }, ref) => {
+export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, onSelectFile, onSelectFiles, selectedPath, selectedPaths, messageHub, searchQuery, showFiles = true }, ref) => {
     const [tree, setTree] = useState<TreeNode[]>([]);
     const [loading, setLoading] = useState(false);
     const [internalSelectedPath, setInternalSelectedPath] = useState<string | null>(null);
+    const [lastSelectedFilePath, setLastSelectedFilePath] = useState<string | null>(null);
+
+    // Flatten visible file nodes for range selection
+    const getVisibleFilePaths = (nodes: TreeNode[]): string[] => {
+        const paths: string[] = [];
+        const traverse = (nodeList: TreeNode[]) => {
+            for (const node of nodeList) {
+                if (node.type === 'file') {
+                    paths.push(node.path);
+                } else if (node.type === 'folder' && node.expanded && node.children) {
+                    traverse(node.children);
+                }
+            }
+        };
+        traverse(nodes);
+        return paths;
+    };
     const [contextMenu, setContextMenu] = useState<{
         position: { x: number; y: number };
         node: TreeNode | null;
@@ -646,13 +665,39 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         return items;
     };
 
-    const handleNodeClick = (node: TreeNode) => {
+    const handleNodeClick = (node: TreeNode, e: React.MouseEvent) => {
         if (node.type === 'folder') {
             setInternalSelectedPath(node.path);
             onSelectFile?.(node.path);
             toggleNode(node.path);
         } else {
             setInternalSelectedPath(node.path);
+
+            // Support multi-select with Ctrl/Cmd or Shift
+            if (onSelectFiles) {
+                if (e.shiftKey && lastSelectedFilePath) {
+                    // Range select with Shift
+                    const treeToUse = searchQuery ? filteredTree : tree;
+                    const visiblePaths = getVisibleFilePaths(treeToUse);
+                    const lastIndex = visiblePaths.indexOf(lastSelectedFilePath);
+                    const currentIndex = visiblePaths.indexOf(node.path);
+                    if (lastIndex !== -1 && currentIndex !== -1) {
+                        const start = Math.min(lastIndex, currentIndex);
+                        const end = Math.max(lastIndex, currentIndex);
+                        const rangePaths = visiblePaths.slice(start, end + 1);
+                        onSelectFiles(rangePaths, { ctrlKey: false, shiftKey: true });
+                    } else {
+                        onSelectFiles([node.path], { ctrlKey: false, shiftKey: false });
+                        setLastSelectedFilePath(node.path);
+                    }
+                } else {
+                    onSelectFiles([node.path], { ctrlKey: e.ctrlKey || e.metaKey, shiftKey: false });
+                    setLastSelectedFilePath(node.path);
+                }
+            } else {
+                setLastSelectedFilePath(node.path);
+            }
+
             const extension = node.name.includes('.') ? node.name.split('.').pop() : undefined;
             messageHub?.publish('asset-file:selected', {
                 fileInfo: {
@@ -694,7 +739,9 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
     };
 
     const renderNode = (node: TreeNode, level: number = 0) => {
-        const isSelected = (internalSelectedPath || selectedPath) === node.path;
+        const isSelected = selectedPaths
+            ? selectedPaths.has(node.path)
+            : (internalSelectedPath || selectedPath) === node.path;
         const isRenaming = renamingNode === node.path;
         const indent = level * 16;
 
@@ -703,14 +750,30 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                 <div
                     className={`tree-node ${isSelected ? 'selected' : ''}`}
                     style={{ paddingLeft: `${indent}px`, cursor: node.type === 'file' ? 'grab' : 'pointer' }}
-                    onClick={() => !isRenaming && handleNodeClick(node)}
+                    onClick={(e) => !isRenaming && handleNodeClick(node, e)}
                     onDoubleClick={() => !isRenaming && handleNodeDoubleClick(node)}
                     onContextMenu={(e) => handleContextMenu(e, node)}
                     draggable={node.type === 'file' && !isRenaming}
                     onDragStart={(e) => {
                         if (node.type === 'file' && !isRenaming) {
                             e.dataTransfer.effectAllowed = 'copy';
-                            // 设置拖拽的数据
+
+                            // Get all selected files for multi-file drag
+                            const selectedFiles = selectedPaths && selectedPaths.has(node.path) && selectedPaths.size > 1
+                                ? Array.from(selectedPaths).map(p => {
+                                    const name = p.split(/[/\\]/).pop() || '';
+                                    const ext = name.includes('.') ? name.split('.').pop() : '';
+                                    return { type: 'file', path: p, name, extension: ext };
+                                })
+                                : [{
+                                    type: 'file',
+                                    path: node.path,
+                                    name: node.name,
+                                    extension: node.name.includes('.') ? node.name.split('.').pop() : ''
+                                }];
+
+                            // Set drag data as JSON array for multi-file support
+                            e.dataTransfer.setData('application/json', JSON.stringify(selectedFiles));
                             e.dataTransfer.setData('asset-path', node.path);
                             e.dataTransfer.setData('asset-name', node.name);
                             const ext = node.name.includes('.') ? node.name.split('.').pop() : '';

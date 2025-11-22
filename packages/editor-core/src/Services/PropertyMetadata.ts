@@ -4,13 +4,18 @@ import { createLogger } from '@esengine/ecs-framework';
 
 const logger = createLogger('PropertyMetadata');
 
-export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset';
+export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset' | 'animationClips';
 
 export interface PropertyAction {
     id: string;
     label: string;
     tooltip?: string;
     icon?: string;
+}
+
+export interface PropertyControl {
+    component: string;
+    property: string;
 }
 
 export interface PropertyMetadata {
@@ -23,6 +28,7 @@ export interface PropertyMetadata {
     readOnly?: boolean;
     fileExtension?: string;
     actions?: PropertyAction[];
+    controls?: PropertyControl[];
 }
 
 export interface ComponentMetadata {

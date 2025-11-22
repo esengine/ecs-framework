@@ -20,6 +20,14 @@ pub struct TextureManager {
     /// 已加载的纹理。
     textures: HashMap<u32, Texture>,
 
+    /// Path to texture ID mapping.
+    /// 路径到纹理ID的映射。
+    path_to_id: HashMap<String, u32>,
+
+    /// Next texture ID for auto-assignment.
+    /// 下一个自动分配的纹理ID。
+    next_id: u32,
+
     /// Default white texture for untextured rendering.
     /// 用于无纹理渲染的默认白色纹理。
     default_texture: Option<WebGlTexture>,
@@ -32,6 +40,8 @@ impl TextureManager {
         let mut manager = Self {
             gl,
             textures: HashMap::new(),
+            path_to_id: HashMap::new(),
+            next_id: 1, // Start from 1, 0 is reserved for default
             default_texture: None,
         };
 
@@ -223,5 +233,57 @@ impl TextureManager {
         if let Some(texture) = self.textures.remove(&id) {
             self.gl.delete_texture(Some(&texture.handle));
         }
+        // Also remove from path mapping | 同时从路径映射中移除
+        self.path_to_id.retain(|_, &mut v| v != id);
+    }
+
+    /// Load texture by path, returning texture ID.
+    /// 按路径加载纹理，返回纹理ID。
+    ///
+    /// If the texture is already loaded, returns existing ID.
+    /// 如果纹理已加载，返回现有ID。
+    pub fn load_texture_by_path(&mut self, path: &str) -> Result<u32> {
+        // Check if already loaded | 检查是否已加载
+        if let Some(&id) = self.path_to_id.get(path) {
+            return Ok(id);
+        }
+
+        // Assign new ID and load | 分配新ID并加载
+        let id = self.next_id;
+        self.next_id += 1;
+
+        // Store path mapping first | 先存储路径映射
+        self.path_to_id.insert(path.to_string(), id);
+
+        // Load texture with assigned ID | 用分配的ID加载纹理
+        self.load_texture(id, path)?;
+
+        Ok(id)
+    }
+
+    /// Get texture ID by path.
+    /// 按路径获取纹理ID。
+    ///
+    /// Returns None if texture is not loaded.
+    /// 如果纹理未加载，返回None。
+    #[inline]
+    pub fn get_texture_id_by_path(&self, path: &str) -> Option<u32> {
+        self.path_to_id.get(path).copied()
+    }
+
+    /// Get or load texture by path.
+    /// 按路径获取或加载纹理。
+    ///
+    /// If texture is already loaded, returns existing ID.
+    /// If not loaded, loads it and returns new ID.
+    /// 如果纹理已加载，返回现有ID。
+    /// 如果未加载，加载它并返回新ID。
+    pub fn get_or_load_by_path(&mut self, path: &str) -> Result<u32> {
+        // Empty path means default texture | 空路径表示默认纹理
+        if path.is_empty() {
+            return Ok(0);
+        }
+
+        self.load_texture_by_path(path)
     }
 }

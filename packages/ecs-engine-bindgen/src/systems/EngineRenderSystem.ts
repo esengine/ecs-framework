@@ -137,9 +137,15 @@ export class EngineRenderSystem extends EntitySystem {
 
             // Get texture ID from sprite component
             // 从精灵组件获取纹理ID
-            // textureId 0 will use default white texture in Rust engine
-            // textureId 0 将在 Rust 引擎中使用默认白色纹理
-            const textureId = sprite.textureId ?? 0;
+            // Use Rust engine's path-based texture loading for automatic caching
+            // 使用Rust引擎的基于路径的纹理加载实现自动缓存
+            let textureId = 0;
+            if (sprite.texture) {
+                textureId = this.bridge.getOrLoadTextureByPath(sprite.texture);
+            } else {
+                // Debug: sprite has no texture
+                console.warn(`[EngineRenderSystem] Entity ${entity.id} has no texture`);
+            }
 
             // Pass actual display dimensions (sprite size * transform scale)
             // 传递实际显示尺寸（sprite尺寸 * 变换缩放）

@@ -264,6 +264,24 @@ impl Engine {
         self.texture_manager.load_texture(id, url)
     }
 
+    /// Load texture by path, returning texture ID.
+    /// 按路径加载纹理，返回纹理ID。
+    pub fn load_texture_by_path(&mut self, path: &str) -> Result<u32> {
+        self.texture_manager.load_texture_by_path(path)
+    }
+
+    /// Get texture ID by path.
+    /// 按路径获取纹理ID。
+    pub fn get_texture_id_by_path(&self, path: &str) -> Option<u32> {
+        self.texture_manager.get_texture_id_by_path(path)
+    }
+
+    /// Get or load texture by path.
+    /// 按路径获取或加载纹理。
+    pub fn get_or_load_by_path(&mut self, path: &str) -> Result<u32> {
+        self.texture_manager.get_or_load_by_path(path)
+    }
+
     /// Check if a key is currently pressed.
     /// 检查某个键是否当前被按下。
     pub fn is_key_down(&self, key_code: &str) -> bool {

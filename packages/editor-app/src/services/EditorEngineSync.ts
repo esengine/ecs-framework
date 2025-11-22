@@ -8,10 +8,8 @@
 
 import { Entity, Component } from '@esengine/ecs-framework';
 import { MessageHub, EntityStoreService } from '@esengine/editor-core';
-import { TransformComponent, SpriteComponent } from '@esengine/ecs-components';
-import { AssetReference } from '@esengine/asset-system';
+import { TransformComponent, SpriteComponent, SpriteAnimatorComponent } from '@esengine/ecs-components';
 import { EngineService } from './EngineService';
-import { convertFileSrc } from '@tauri-apps/api/core';
 
 export class EditorEngineSync {
     private static instance: EditorEngineSync | null = null;
@@ -22,10 +20,6 @@ export class EditorEngineSync {
 
     // Track synced entities: editor entity id -> engine entity id
     private syncedEntities: Map<number, Entity> = new Map();
-
-    // Track loaded textures
-    // 跟踪已加载的纹理
-    private loadedTextures: Map<string, number> = new Map();
 
     // Subscription IDs
     private subscriptions: Array<() => void> = [];
@@ -141,42 +135,47 @@ export class EditorEngineSync {
      * Sync a single entity to engine.
      * 将单个实体同步到引擎。
      *
-     * Note: Entity is already in Core.scene, we just need to load textures.
-     * 注意：实体已经在Core.scene中，我们只需要加载纹理。
+     * Note: Texture loading is now handled automatically by EngineRenderSystem
+     * via Rust engine's path-based texture loading.
+     * 注意：纹理加载现在由EngineRenderSystem通过Rust引擎的路径加载自动处理。
      */
-    private async syncEntity(entity: Entity): Promise<void> {
+    private syncEntity(entity: Entity): void {
         // Check if entity has sprite component
         const spriteComponent = entity.getComponent(SpriteComponent);
         if (!spriteComponent) {
             return;
         }
 
-        // Load texture if needed and set textureId on the sprite component
-        // 如果需要，加载纹理并设置精灵组件的textureId
-        if (spriteComponent.texture && spriteComponent.textureId === 0) {
-            try {
-                const textureId = await this.getOrLoadTexture(spriteComponent.texture);
-                spriteComponent.textureId = textureId;
-            } catch (error) {
-                console.error(`Failed to load texture for entity ${entity.id}:`, error);
-            }
-        } else if (spriteComponent.texture && spriteComponent.textureId !== 0) {
-            // Texture already has ID, but might be a different texture path
-            // 纹理已有ID，但可能是不同的纹理路径
-            const existingId = this.loadedTextures.get(spriteComponent.texture);
-            if (existingId === undefined) {
-                // New texture path, need to load it
-                // 新纹理路径，需要加载
-                try {
-                    const textureId = await this.getOrLoadTexture(spriteComponent.texture);
-                    spriteComponent.textureId = textureId;
-                } catch (error) {
-                    console.error(`Failed to load texture for entity ${entity.id}:`, error);
+        // Preload animator textures and set first frame
+        // 预加载动画纹理并设置第一帧
+        const animator = entity.getComponent(SpriteAnimatorComponent);
+        if (animator && animator.clips) {
+            const bridge = this.engineService.getBridge();
+            if (bridge) {
+                for (const clip of animator.clips) {
+                    for (const frame of clip.frames) {
+                        if (frame.texture) {
+                            // Trigger texture loading
+                            bridge.getOrLoadTextureByPath(frame.texture);
+                        }
+                    }
+                }
+
+                // Set sprite texture to first frame (static preview in editor)
+                // 设置精灵纹理为第一帧（编辑器中的静态预览）
+                if (animator.clips && animator.clips.length > 0) {
+                    const firstClip = animator.clips[0];
+                    if (firstClip && firstClip.frames && firstClip.frames.length > 0) {
+                        const firstFrame = firstClip.frames[0];
+                        if (firstFrame && firstFrame.texture && spriteComponent) {
+                            spriteComponent.texture = firstFrame.texture;
+                        }
+                    }
                 }
             }
         }
 
-        // Track synced entity (no need to create duplicate)
+        // Track synced entity
         this.syncedEntities.set(entity.id, entity);
     }
 
@@ -209,6 +208,42 @@ export class EditorEngineSync {
             this.updateTransform(engineEntity, component);
         } else if (component instanceof SpriteComponent) {
             this.updateSprite(engineEntity, component, propertyName, value);
+        } else if (component instanceof SpriteAnimatorComponent) {
+            this.updateAnimator(engineEntity, component, propertyName);
+        }
+    }
+
+    /**
+     * Update animator - preload textures and set initial frame.
+     * 更新动画器 - 预加载纹理并设置初始帧。
+     */
+    private updateAnimator(entity: Entity, animator: SpriteAnimatorComponent, propertyName: string): void {
+        // In editor mode, only preload textures and show first frame (no animation playback)
+        // 编辑模式下只预加载纹理并显示第一帧（不播放动画）
+        const bridge = this.engineService.getBridge();
+        const sprite = entity.getComponent(SpriteComponent);
+
+        if (bridge && animator.clips) {
+            // Preload all frame textures
+            for (const clip of animator.clips) {
+                for (const frame of clip.frames) {
+                    if (frame.texture) {
+                        bridge.getOrLoadTextureByPath(frame.texture);
+                    }
+                }
+            }
+
+            // Set sprite texture to first frame if available (static preview in editor)
+            // 设置精灵纹理为第一帧（编辑器中的静态预览）
+            if (sprite && animator.clips && animator.clips.length > 0) {
+                const firstClip = animator.clips[0];
+                if (firstClip && firstClip.frames && firstClip.frames.length > 0) {
+                    const firstFrame = firstClip.frames[0];
+                    if (firstFrame && firstFrame.texture) {
+                        sprite.texture = firstFrame.texture;
+                    }
+                }
+            }
         }
     }
 
@@ -241,82 +276,13 @@ export class EditorEngineSync {
     /**
      * Update sprite in engine entity.
      * 更新引擎实体的精灵。
+     *
+     * Note: Texture loading is now handled automatically by EngineRenderSystem.
+     * 注意：纹理加载现在由EngineRenderSystem自动处理。
      */
-    private async updateSprite(entity: Entity, sprite: SpriteComponent, property: string, value: any): Promise<void> {
-        if (property === 'texture') {
-            if (value) {
-                try {
-                    const textureId = await this.getOrLoadTexture(value);
-                    sprite.textureId = textureId;
-                } catch (error) {
-                    console.error(`Failed to update texture for entity ${entity.id}:`, error);
-                    sprite.textureId = 0; // Fallback to default texture
-                }
-            } else {
-                // Texture cleared, reset to default (white texture)
-                // 纹理清除，重置为默认值（白色纹理）
-                sprite.textureId = 0;
-            }
-        }
-    }
-
-    /**
-     * Get or load texture, returning texture ID.
-     * 获取或加载纹理，返回纹理ID。
-     */
-    private async getOrLoadTexture(texturePath: string): Promise<number> {
-        // Check if already loaded in cache
-        // 检查缓存中是否已加载
-        let textureId = this.loadedTextures.get(texturePath);
-        if (textureId !== undefined) {
-            return textureId;
-        }
-
-        // Get asset system components
-        // 获取资产系统组件
-        const engineIntegration = this.engineService.getEngineIntegration();
-        if (!engineIntegration) {
-            throw new Error('Asset system not initialized | 资产系统未初始化');
-        }
-
-        try {
-            // Convert path to proper URL format for asset system
-            // 为资产系统转换路径为正确的URL格式
-            const resolvedPath = this.resolveTexturePath(texturePath);
-
-            // Load through asset system with caching and memory management
-            // 通过资产系统加载，支持缓存和内存管理
-            textureId = await engineIntegration.loadTextureForComponent(resolvedPath);
-
-            // Cache the mapping for quick lookup
-            // 缓存映射以便快速查找
-            this.loadedTextures.set(texturePath, textureId);
-
-            return textureId;
-        } catch (error) {
-            console.error(`Failed to load texture: ${texturePath}`, error);
-            throw error;
-        }
-    }
-
-    /**
-     * Resolve texture path to URL.
-     * 将纹理路径解析为URL。
-     */
-    private resolveTexturePath(path: string): string {
-        // If it's already a URL (including asset://), return as-is
-        // 如果已经是URL（包括asset://），直接返回
-        if (path.startsWith('http://') ||
-            path.startsWith('https://') ||
-            path.startsWith('data:') ||
-            path.startsWith('asset://')) {
-            return path;
-        }
-
-        // Convert file path to Tauri asset URL
-        // 将文件路径转换为Tauri资产URL
-        const assetUrl = convertFileSrc(path);
-        return assetUrl;
+    private updateSprite(entity: Entity, sprite: SpriteComponent, property: string, value: any): void {
+        // No manual texture loading needed - EngineRenderSystem handles it
+        // 不需要手动加载纹理 - EngineRenderSystem会处理
     }
 
     /**
@@ -357,7 +323,6 @@ export class EditorEngineSync {
 
         // Clear synced entities
         this.syncedEntities.clear();
-        this.loadedTextures.clear();
 
         this.initialized = false;
     }

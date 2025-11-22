@@ -1,21 +1,63 @@
 import { useState, useEffect, useRef } from 'react';
 import { Component, Core } from '@esengine/ecs-framework';
 import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub } from '@esengine/editor-core';
-import { ChevronRight, ChevronDown, Maximize2, ArrowRight, FolderOpen } from 'lucide-react';
+import { ChevronRight, ChevronDown, Maximize2, ArrowRight, FolderOpen, Lock } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import { AnimationClipsFieldEditor } from '../infrastructure/field-editors/AnimationClipsFieldEditor';
 import '../styles/PropertyInspector.css';
+
+const animationClipsEditor = new AnimationClipsFieldEditor();
 
 interface PropertyInspectorProps {
   component: Component;
+  entity?: any;
   version?: number;
   onChange?: (propertyName: string, value: any) => void;
   onAction?: (actionId: string, propertyName: string, component: Component) => void;
 }
 
-export function PropertyInspector({ component, version, onChange, onAction }: PropertyInspectorProps) {
+export function PropertyInspector({ component, entity, version, onChange, onAction }: PropertyInspectorProps) {
     const [properties, setProperties] = useState<Record<string, PropertyMetadata>>({});
+    const [controlledFields, setControlledFields] = useState<Map<string, string>>(new Map());
     // version is used implicitly - when it changes, React re-renders and getValue reads fresh values
     void version;
+
+    // Scan entity for components that control this component's properties
+    useEffect(() => {
+        if (!entity) return;
+
+        const propertyMetadataService = Core.services.resolve(PropertyMetadataService);
+        if (!propertyMetadataService) return;
+
+        const componentName = component.constructor.name;
+        const controlled = new Map<string, string>();
+
+        // Check all components on this entity
+        for (const otherComponent of entity.components) {
+            if (otherComponent === component) continue;
+
+            const otherMetadata = propertyMetadataService.getEditableProperties(otherComponent);
+            const otherComponentName = otherComponent.constructor.name;
+
+            // Check if any property has controls declaration
+            for (const [, propMeta] of Object.entries(otherMetadata)) {
+                if (propMeta.controls) {
+                    for (const control of propMeta.controls) {
+                        if (control.component === componentName ||
+                            control.component === componentName.replace('Component', '')) {
+                            controlled.set(control.property, otherComponentName.replace('Component', ''));
+                        }
+                    }
+                }
+            }
+        }
+
+        setControlledFields(controlled);
+    }, [component, entity, version]);
+
+    const getControlledBy = (propertyName: string): string | undefined => {
+        return controlledFields.get(propertyName);
+    };
 
     const handleAction = (actionId: string, propertyName: string) => {
         if (onAction) {
@@ -135,16 +177,33 @@ export function PropertyInspector({ component, version, onChange, onAction }: Pr
                     />
                 );
 
-            case 'asset':
+            case 'asset': {
+                const controlledBy = getControlledBy(propertyName);
                 return (
                     <AssetDropField
                         key={propertyName}
                         label={label}
                         value={value ?? ''}
                         fileExtension={metadata.fileExtension}
-                        readOnly={metadata.readOnly}
+                        readOnly={metadata.readOnly || !!controlledBy}
+                        controlledBy={controlledBy}
                         onChange={(newValue) => handleChange(propertyName, newValue)}
                     />
+                );
+            }
+
+            case 'animationClips':
+                return (
+                    <div key={propertyName}>
+                        {animationClipsEditor.render({
+                            label,
+                            value: value ?? [],
+                            onChange: (newValue) => handleChange(propertyName, newValue),
+                            context: {
+                                readonly: metadata.readOnly ?? false
+                            }
+                        })}
+                    </div>
                 );
 
             default:
@@ -793,10 +852,11 @@ interface AssetDropFieldProps {
   value: string;
   fileExtension?: string;
   readOnly?: boolean;
+  controlledBy?: string;
   onChange: (value: string) => void;
 }
 
-function AssetDropField({ label, value, fileExtension, readOnly, onChange }: AssetDropFieldProps) {
+function AssetDropField({ label, value, fileExtension, readOnly, controlledBy, onChange }: AssetDropFieldProps) {
     const [isDragging, setIsDragging] = useState(false);
 
     const handleDragEnter = (e: React.DragEvent) => {
@@ -859,14 +919,21 @@ function AssetDropField({ label, value, fileExtension, readOnly, onChange }: Ass
 
     return (
         <div className="property-field">
-            <label className="property-label">{label}</label>
+            <label className="property-label">
+                {label}
+                {controlledBy && (
+                    <span className="property-controlled-icon" title={`Controlled by ${controlledBy}`}>
+                        <Lock size={10} />
+                    </span>
+                )}
+            </label>
             <div
-                className={`property-asset-drop ${isDragging ? 'dragging' : ''} ${value ? 'has-value' : ''}`}
+                className={`property-asset-drop ${isDragging ? 'dragging' : ''} ${value ? 'has-value' : ''} ${controlledBy ? 'controlled' : ''}`}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
-                title={value || 'Drop asset here'}
+                title={controlledBy ? `Controlled by ${controlledBy}` : (value || 'Drop asset here')}
             >
                 <span className="property-asset-text">
                     {value ? getFileName(value) : 'None'}

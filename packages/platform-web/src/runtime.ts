@@ -8,7 +8,7 @@
 
 import { Core, Scene, SceneSerializer } from '@esengine/ecs-framework';
 import { EngineBridge, EngineRenderSystem, CameraSystem } from '@esengine/ecs-engine-bindgen';
-import { TransformComponent, SpriteComponent, CameraComponent } from '@esengine/ecs-components';
+import { TransformComponent, SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystem, CameraComponent } from '@esengine/ecs-components';
 import { AssetManager, EngineIntegration, AssetPathResolver, AssetPlatform } from '@esengine/asset-system';
 
 interface RuntimeConfig {
@@ -21,6 +21,7 @@ class BrowserRuntime {
     private bridge: EngineBridge;
     private cameraSystem: CameraSystem;
     private renderSystem: EngineRenderSystem;
+    private animatorSystem: SpriteAnimatorSystem;
     private animationId: number | null = null;
     private assetManager: AssetManager;
     private engineIntegration: EngineIntegration;
@@ -53,6 +54,10 @@ class BrowserRuntime {
         this.cameraSystem = new CameraSystem(this.bridge);
         Core.scene!.addSystem(this.cameraSystem);
 
+        // Add sprite animator system
+        this.animatorSystem = new SpriteAnimatorSystem();
+        Core.scene!.addSystem(this.animatorSystem);
+
         // Add render system
         this.renderSystem = new EngineRenderSystem(this.bridge, TransformComponent);
         Core.scene!.addSystem(this.renderSystem);
@@ -60,6 +65,17 @@ class BrowserRuntime {
 
     async initialize(wasmModule: any): Promise<void> {
         await this.bridge.initializeWithModule(wasmModule);
+
+        // Set path resolver for browser asset proxy
+        // 设置浏览器资产代理的路径解析器
+        this.bridge.setPathResolver((path: string) => {
+            // If already a URL, return as-is
+            if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('/asset?')) {
+                return path;
+            }
+            // Use asset proxy endpoint for local file paths
+            return `/asset?path=${encodeURIComponent(path)}`;
+        });
 
         // Disable editor tools for game runtime
         this.bridge.setShowGrid(false);
@@ -80,71 +96,31 @@ class BrowserRuntime {
                 preserveIds: true
             });
 
-            // Load textures for all sprites in the scene
-            // 为场景中的所有精灵加载纹理
-            await this.loadSceneTextures();
+            // Textures are now loaded automatically by EngineRenderSystem
+            // via Rust engine's path-based texture loading
+            // 纹理现在由EngineRenderSystem通过Rust引擎的路径加载自动处理
+
+            // Auto-play animations are started by SpriteAnimatorSystem.onAdded
+            // 自动播放动画由SpriteAnimatorSystem.onAdded启动
         } catch (error) {
             console.error('Failed to load scene:', error);
             throw error;
         }
     }
 
-    /**
-     * Load textures for all sprites in the scene
-     * 为场景中的所有精灵加载纹理
-     */
-    private async loadSceneTextures(): Promise<void> {
-        if (!Core.scene) return;
-
-        // Find all sprites in the scene
-        const sprites: Array<{ sprite: SpriteComponent, texturePath: string }> = [];
-
-        for (const entity of Core.scene.entities.buffer) {
-            const sprite = entity.getComponent(SpriteComponent);
-            if (sprite && sprite.texture && sprite.texture !== '') {
-                // Convert local file paths to server URLs
-                // 将本地文件路径转换为服务器URL
-                let texturePath = sprite.texture;
-
-                // If it's an absolute local path, try to convert it to a relative URL
-                // 如果是绝对本地路径，尝试转换为相对URL
-                if (texturePath.includes(':\\') || texturePath.startsWith('/')) {
-                    // Extract filename from path and serve from /assets directory
-                    // TODO: Implement asset path mapping with configurable base URL
-                    const filename = texturePath.split(/[\\\/]/).pop() || '';
-                    texturePath = `/assets/${filename}`;
-                }
-
-                sprites.push({ sprite, texturePath });
-            }
-        }
-
-        if (sprites.length === 0) {
-            return;
-        }
-
-        // Load all textures in parallel
-        const loadPromises = sprites.map(async ({ sprite, texturePath }) => {
-            try {
-                const textureId = await this.engineIntegration.loadTextureForComponent(texturePath);
-                sprite.textureId = textureId;
-            } catch (error) {
-                console.error(`Failed to load texture ${texturePath}:`, error);
-                // Set to 0 to use default white texture
-                sprite.textureId = 0;
-            }
-        });
-
-        await Promise.all(loadPromises);
-    }
-
     start(): void {
         if (this.animationId !== null) return;
 
+        let lastTime = performance.now();
         const loop = () => {
-            if (Core.scene) {
-                Core.scene.update();
-            }
+            const currentTime = performance.now();
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+
+            // Update Core (includes Time.update and all scenes)
+            // Texture loading is handled automatically by EngineRenderSystem
+            Core.update(deltaTime);
+
             this.animationId = requestAnimationFrame(loop);
         };
 
@@ -160,19 +136,6 @@ class BrowserRuntime {
 
     handleResize(width: number, height: number): void {
         this.bridge.resize(width, height);
-    }
-
-    /**
-     * Load texture for sprite
-     * 为精灵加载纹理
-     */
-    async loadTextureForSprite(sprite: SpriteComponent, texturePath: string): Promise<void> {
-        try {
-            const textureId = await this.engineIntegration.loadTextureForComponent(texturePath);
-            sprite.textureId = textureId;
-        } catch (error) {
-            console.error(`Failed to load texture ${texturePath}:`, error);
-        }
     }
 
     getAssetManager(): AssetManager {
@@ -194,5 +157,6 @@ export default {
     Core,
     TransformComponent,
     SpriteComponent,
+    SpriteAnimatorComponent,
     CameraComponent
 };

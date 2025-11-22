@@ -176,6 +176,40 @@ impl GameEngine {
             .map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
+    /// Load texture by path, returning texture ID.
+    /// 按路径加载纹理，返回纹理ID。
+    ///
+    /// # Arguments | 参数
+    /// * `path` - Image path/URL to load | 要加载的图片路径/URL
+    #[wasm_bindgen(js_name = loadTextureByPath)]
+    pub fn load_texture_by_path(&mut self, path: &str) -> std::result::Result<u32, JsValue> {
+        self.engine
+            .load_texture_by_path(path)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Get texture ID by path.
+    /// 按路径获取纹理ID。
+    ///
+    /// # Arguments | 参数
+    /// * `path` - Image path to lookup | 要查找的图片路径
+    #[wasm_bindgen(js_name = getTextureIdByPath)]
+    pub fn get_texture_id_by_path(&self, path: &str) -> Option<u32> {
+        self.engine.get_texture_id_by_path(path)
+    }
+
+    /// Get or load texture by path.
+    /// 按路径获取或加载纹理。
+    ///
+    /// # Arguments | 参数
+    /// * `path` - Image path/URL | 图片路径/URL
+    #[wasm_bindgen(js_name = getOrLoadTextureByPath)]
+    pub fn get_or_load_by_path(&mut self, path: &str) -> std::result::Result<u32, JsValue> {
+        self.engine
+            .get_or_load_by_path(path)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
     /// Check if a key is currently pressed.
     /// 检查某个键是否当前被按下。
     ///

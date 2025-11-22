@@ -38,13 +38,6 @@ export class AssetLoaderFactory implements IAssetLoaderFactory {
 
         // 二进制加载器 / Binary loader
         this._loaders.set(AssetType.Binary, new BinaryLoader());
-
-        // TODO: 添加更多默认加载器 / Add more default loaders
-        // - MeshLoader
-        // - AudioLoader
-        // - MaterialLoader
-        // - PrefabLoader
-        // - SceneLoader
     }
 
     /**

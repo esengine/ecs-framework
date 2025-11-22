@@ -144,7 +144,7 @@ export class BinaryLoader implements IAssetLoader<IBinaryAsset> {
      * Validate if the loader can handle this asset
      * 验证加载器是否可以处理此资产
      */
-    canLoad(path: string, metadata: IAssetMetadata): boolean {
+    canLoad(path: string, _metadata: IAssetMetadata): boolean {
         const ext = path.toLowerCase().substring(path.lastIndexOf('.'));
         return this.supportedExtensions.includes(ext);
     }

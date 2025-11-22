@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Settings, ChevronDown, ChevronRight, X, Plus, Box } from 'lucide-react';
-import { Entity, Component, Core } from '@esengine/ecs-framework';
+import { Entity, Component, Core, getComponentDependencies, getComponentTypeName } from '@esengine/ecs-framework';
 import { MessageHub, CommandManager, ComponentRegistry } from '@esengine/editor-core';
 import { PropertyInspector } from '../../PropertyInspector';
+import { NotificationService } from '../../../services/NotificationService';
 import { RemoveComponentCommand, UpdateComponentCommand, AddComponentCommand } from '../../../application/commands/component';
 import '../../../styles/EntityInspector.css';
 import * as LucideIcons from 'lucide-react';
@@ -42,14 +43,42 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
 
     const handleRemoveComponent = (index: number) => {
         const component = entity.components[index];
-        if (component) {
-            const command = new RemoveComponentCommand(
-                messageHub,
-                entity,
-                component
-            );
-            commandManager.execute(command);
+        if (!component) return;
+
+        const componentName = getComponentTypeName(component.constructor as any);
+        console.log('Removing component:', componentName);
+
+        // Check if any other component depends on this one
+        const dependentComponents: string[] = [];
+        for (const otherComponent of entity.components) {
+            if (otherComponent === component) continue;
+
+            const dependencies = getComponentDependencies(otherComponent.constructor as any);
+            const otherName = getComponentTypeName(otherComponent.constructor as any);
+            console.log('Checking', otherName, 'dependencies:', dependencies);
+            if (dependencies && dependencies.includes(componentName)) {
+                dependentComponents.push(otherName);
+            }
         }
+        console.log('Dependent components:', dependentComponents);
+
+        if (dependentComponents.length > 0) {
+            const notificationService = Core.services.tryResolve(NotificationService) as NotificationService | null;
+            if (notificationService) {
+                notificationService.warning(
+                    '无法删除组件',
+                    `${componentName} 被以下组件依赖: ${dependentComponents.join(', ')}。请先删除这些组件。`
+                );
+            }
+            return;
+        }
+
+        const command = new RemoveComponentCommand(
+            messageHub,
+            entity,
+            component
+        );
+        commandManager.execute(command);
     };
 
     const handlePropertyChange = (component: Component, propertyName: string, value: unknown) => {
@@ -216,6 +245,7 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                                         <div className="component-item-content">
                                             <PropertyInspector
                                                 component={component}
+                                                entity={entity}
                                                 version={componentVersion + localVersion}
                                                 onChange={(propName: string, value: unknown) =>
                                                     handlePropertyChange(component, propName, value)

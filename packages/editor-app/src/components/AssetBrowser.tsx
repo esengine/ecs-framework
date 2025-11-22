@@ -29,7 +29,8 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
     const detailViewFileTreeRef = useRef<FileTreeHandle>(null);
     const treeOnlyViewFileTreeRef = useRef<FileTreeHandle>(null);
     const [currentPath, setCurrentPath] = useState<string | null>(null);
-    const [selectedPath, setSelectedPath] = useState<string | null>(null);
+    const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
+    const [lastSelectedPath, setLastSelectedPath] = useState<string | null>(null);
     const [assets, setAssets] = useState<AssetItem[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<AssetItem[]>([]);
@@ -83,7 +84,7 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
         } else {
             setAssets([]);
             setCurrentPath(null);
-            setSelectedPath(null);
+            setSelectedPaths(new Set());
         }
     }, [projectPath]);
 
@@ -101,7 +102,7 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                     setCurrentPath(dirPath);
                     // Load assets first, then set selection after list is populated
                     await loadAssets(dirPath);
-                    setSelectedPath(filePath);
+                    setSelectedPaths(new Set([filePath]));
 
                     // Expand tree to reveal the file
                     if (showDetailView) {
@@ -219,8 +220,57 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
         loadAssets(path);
     };
 
-    const handleAssetClick = (asset: AssetItem) => {
-        setSelectedPath(asset.path);
+    const handleTreeMultiSelect = (paths: string[], modifiers: { ctrlKey: boolean; shiftKey: boolean }) => {
+        if (paths.length === 0) return;
+        const path = paths[0];
+        if (!path) return;
+
+        if (modifiers.shiftKey && paths.length > 1) {
+            // Range select - paths already contains the range from FileTree
+            setSelectedPaths(new Set(paths));
+        } else if (modifiers.ctrlKey) {
+            const newSelected = new Set(selectedPaths);
+            if (newSelected.has(path)) {
+                newSelected.delete(path);
+            } else {
+                newSelected.add(path);
+            }
+            setSelectedPaths(newSelected);
+            setLastSelectedPath(path);
+        } else {
+            setSelectedPaths(new Set([path]));
+            setLastSelectedPath(path);
+        }
+    };
+
+    const handleAssetClick = (asset: AssetItem, e: React.MouseEvent) => {
+        const filteredAssets = searchQuery.trim() ? searchResults : assets;
+
+        if (e.shiftKey && lastSelectedPath) {
+            // Range select with Shift
+            const lastIndex = filteredAssets.findIndex(a => a.path === lastSelectedPath);
+            const currentIndex = filteredAssets.findIndex(a => a.path === asset.path);
+            if (lastIndex !== -1 && currentIndex !== -1) {
+                const start = Math.min(lastIndex, currentIndex);
+                const end = Math.max(lastIndex, currentIndex);
+                const rangePaths = filteredAssets.slice(start, end + 1).map(a => a.path);
+                setSelectedPaths(new Set(rangePaths));
+            }
+        } else if (e.ctrlKey || e.metaKey) {
+            // Multi-select with Ctrl/Cmd
+            const newSelected = new Set(selectedPaths);
+            if (newSelected.has(asset.path)) {
+                newSelected.delete(asset.path);
+            } else {
+                newSelected.add(asset.path);
+            }
+            setSelectedPaths(newSelected);
+            setLastSelectedPath(asset.path);
+        } else {
+            // Single select
+            setSelectedPaths(new Set([asset.path]));
+            setLastSelectedPath(asset.path);
+        }
 
         messageHub?.publish('asset-file:selected', {
             fileInfo: {
@@ -283,8 +333,11 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
             }
 
             // 更新选中路径
-            if (selectedPath === asset.path) {
-                setSelectedPath(newPath);
+            if (selectedPaths.has(asset.path)) {
+                const newSelected = new Set(selectedPaths);
+                newSelected.delete(asset.path);
+                newSelected.add(newPath);
+                setSelectedPaths(newSelected);
             }
 
             setRenameDialog(null);
@@ -308,8 +361,10 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
             }
 
             // 清除选中状态
-            if (selectedPath === asset.path) {
-                setSelectedPath(null);
+            if (selectedPaths.has(asset.path)) {
+                const newSelected = new Set(selectedPaths);
+                newSelected.delete(asset.path);
+                setSelectedPaths(newSelected);
             }
 
             setDeleteConfirmDialog(null);
@@ -678,15 +733,30 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                                         return (
                                             <div
                                                 key={index}
-                                                className={`asset-item ${selectedPath === asset.path ? 'selected' : ''}`}
-                                                onClick={() => handleAssetClick(asset)}
+                                                className={`asset-item ${selectedPaths.has(asset.path) ? 'selected' : ''}`}
+                                                onClick={(e) => handleAssetClick(asset, e)}
                                                 onDoubleClick={() => handleAssetDoubleClick(asset)}
                                                 onContextMenu={(e) => handleContextMenu(e, asset)}
                                                 draggable={asset.type === 'file'}
                                                 onDragStart={(e) => {
                                                     if (asset.type === 'file') {
                                                         e.dataTransfer.effectAllowed = 'copy';
-                                                        // 设置拖拽的数据
+
+                                                        // Get all selected file assets
+                                                        const selectedFiles = selectedPaths.has(asset.path) && selectedPaths.size > 1
+                                                            ? Array.from(selectedPaths)
+                                                                .filter(p => {
+                                                                    const a = assets?.find(item => item.path === p);
+                                                                    return a && a.type === 'file';
+                                                                })
+                                                                .map(p => {
+                                                                    const a = assets?.find(item => item.path === p);
+                                                                    return { type: 'file', path: p, name: a?.name, extension: a?.extension };
+                                                                })
+                                                            : [{ type: 'file', path: asset.path, name: asset.name, extension: asset.extension }];
+
+                                                        // Set drag data as JSON array for multi-file support
+                                                        e.dataTransfer.setData('application/json', JSON.stringify(selectedFiles));
                                                         e.dataTransfer.setData('asset-path', asset.path);
                                                         e.dataTransfer.setData('asset-name', asset.name);
                                                         e.dataTransfer.setData('asset-extension', asset.extension || '');
@@ -697,6 +767,9 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                                                         dragImage.style.position = 'absolute';
                                                         dragImage.style.top = '-9999px';
                                                         dragImage.style.opacity = '0.8';
+                                                        if (selectedFiles.length > 1) {
+                                                            dragImage.textContent = `${selectedFiles.length} files`;
+                                                        }
                                                         document.body.appendChild(dragImage);
                                                         e.dataTransfer.setDragImage(dragImage, 0, 0);
                                                         setTimeout(() => document.body.removeChild(dragImage), 0);
@@ -738,7 +811,9 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                             ref={treeOnlyViewFileTreeRef}
                             rootPath={projectPath}
                             onSelectFile={handleFolderSelect}
-                            selectedPath={selectedPath || currentPath}
+                            onSelectFiles={handleTreeMultiSelect}
+                            selectedPath={Array.from(selectedPaths)[0] || currentPath}
+                            selectedPaths={selectedPaths}
                             messageHub={messageHub}
                             searchQuery={searchQuery}
                             showFiles={true}

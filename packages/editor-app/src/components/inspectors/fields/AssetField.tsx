@@ -1,10 +1,10 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { FileText, Search, X, FolderOpen, ArrowRight, Package } from 'lucide-react';
-import { open } from '@tauri-apps/plugin-dialog';
+import { AssetPickerDialog } from '../../../components/dialogs/AssetPickerDialog';
 import './AssetField.css';
 
 interface AssetFieldProps {
-    label: string;
+    label?: string;
     value: string | null;
     onChange: (value: string | null) => void;
     fileExtension?: string;  // 例如: '.btree'
@@ -24,6 +24,7 @@ export function AssetField({
 }: AssetFieldProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+    const [showPicker, setShowPicker] = useState(false);
     const inputRef = useRef<HTMLDivElement>(null);
 
     const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -78,25 +79,15 @@ export function AssetField({
         }
     }, [onChange, fileExtension, readonly]);
 
-    const handleBrowse = useCallback(async () => {
+    const handleBrowse = useCallback(() => {
         if (readonly) return;
+        setShowPicker(true);
+    }, [readonly]);
 
-        try {
-            const selected = await open({
-                multiple: false,
-                filters: fileExtension ? [{
-                    name: `${fileExtension} Files`,
-                    extensions: [fileExtension.replace('.', '')]
-                }] : []
-            });
-
-            if (selected) {
-                onChange(selected as string);
-            }
-        } catch (error) {
-            console.error('Failed to open file dialog:', error);
-        }
-    }, [onChange, fileExtension, readonly]);
+    const handlePickerSelect = useCallback((path: string) => {
+        onChange(path);
+        setShowPicker(false);
+    }, [onChange]);
 
     const handleClear = useCallback(() => {
         if (!readonly) {
@@ -111,7 +102,7 @@ export function AssetField({
 
     return (
         <div className="asset-field">
-            <label className="asset-field__label">{label}</label>
+            {label && <label className="asset-field__label">{label}</label>}
             <div
                 className={`asset-field__container ${isDragging ? 'dragging' : ''} ${isHovered ? 'hovered' : ''}`}
                 onMouseEnter={() => setIsHovered(true)}
@@ -193,6 +184,14 @@ export function AssetField({
                     )}
                 </div>
             </div>
+
+            <AssetPickerDialog
+                isOpen={showPicker}
+                onClose={() => setShowPicker(false)}
+                onSelect={handlePickerSelect}
+                title="Select Asset"
+                fileExtensions={fileExtension ? [fileExtension] : []}
+            />
         </div>
     );
 }

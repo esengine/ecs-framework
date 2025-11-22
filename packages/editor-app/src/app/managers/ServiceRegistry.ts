@@ -20,6 +20,7 @@ import {
 import {
     TransformComponent,
     SpriteComponent,
+    SpriteAnimatorComponent,
     TextComponent,
     CameraComponent,
     RigidBodyComponent,
@@ -53,7 +54,8 @@ import {
     Vector2FieldEditor,
     Vector3FieldEditor,
     Vector4FieldEditor,
-    ColorFieldEditor
+    ColorFieldEditor,
+    AnimationClipsFieldEditor
 } from '../../infrastructure/field-editors';
 
 export interface EditorServices {
@@ -97,6 +99,7 @@ export class ServiceRegistry {
         const standardComponents = [
             { name: 'TransformComponent', type: TransformComponent, editorName: 'Transform', category: 'components.category.core', description: 'components.transform.description' },
             { name: 'SpriteComponent', type: SpriteComponent, editorName: 'Sprite', category: 'components.category.rendering', description: 'components.sprite.description' },
+            { name: 'SpriteAnimatorComponent', type: SpriteAnimatorComponent, editorName: 'SpriteAnimator', category: 'components.category.rendering', description: 'components.spriteAnimator.description' },
             { name: 'TextComponent', type: TextComponent, editorName: 'Text', category: 'components.category.rendering', description: 'components.text.description' },
             { name: 'CameraComponent', type: CameraComponent, editorName: 'Camera', category: 'components.category.rendering', description: 'components.camera.description' },
             { name: 'RigidBodyComponent', type: RigidBodyComponent, editorName: 'RigidBody', category: 'components.category.physics', description: 'components.rigidBody.description' },
@@ -151,6 +154,8 @@ export class ServiceRegistry {
         const fileSystem = new TauriFileSystemService();
         const dialog = new TauriDialogService();
         const notification = new NotificationService();
+        Core.services.registerInstance(NotificationService, notification);
+
         const inspectorRegistry = new InspectorRegistry();
 
         Core.services.registerInstance(InspectorRegistry, inspectorRegistry);
@@ -177,6 +182,7 @@ export class ServiceRegistry {
         fieldEditorRegistry.register(new Vector3FieldEditor());
         fieldEditorRegistry.register(new Vector4FieldEditor());
         fieldEditorRegistry.register(new ColorFieldEditor());
+        fieldEditorRegistry.register(new AnimationClipsFieldEditor());
 
         return {
             uiRegistry,

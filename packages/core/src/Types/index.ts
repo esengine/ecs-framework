@@ -495,8 +495,6 @@ export interface ISceneDebugData {
     sceneEntityCount: number;
     /** 场景系统数 */
     sceneSystemCount: number;
-    /** 场景内存使用量 */
-    sceneMemory: number;
     /** 场景启动时间 */
     sceneUptime: number;
 }

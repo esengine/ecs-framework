@@ -47,8 +47,8 @@ export class Canvas2DRenderSystem extends EntitySystem {
         for (const entity of Core.scene.entities.buffer) {
             if (!entity.enabled) continue;
 
-            const transform = entity.getComponent(TransformComponent);
-            const sprite = entity.getComponent(SpriteComponent);
+            const transform = entity.getComponent(TransformComponent) as TransformComponent | null;
+            const sprite = entity.getComponent(SpriteComponent) as SpriteComponent | null;
 
             if (!transform || !sprite) continue;
 

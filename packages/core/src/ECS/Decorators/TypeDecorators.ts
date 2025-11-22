@@ -8,15 +8,29 @@ import { ComponentType } from '../../Types';
 export const COMPONENT_TYPE_NAME = Symbol('ComponentTypeName');
 
 /**
+ * 存储组件依赖的Symbol键
+ */
+export const COMPONENT_DEPENDENCIES = Symbol('ComponentDependencies');
+
+/**
  * 存储系统类型名称的Symbol键
  */
 export const SYSTEM_TYPE_NAME = Symbol('SystemTypeName');
+
+/**
+ * 组件装饰器配置选项
+ */
+export interface ComponentOptions {
+    /** 依赖的其他组件名称列表 */
+    requires?: string[];
+}
 
 /**
  * 组件类型装饰器
  * 用于为组件类指定固定的类型名称，避免在代码混淆后失效
  *
  * @param typeName 组件类型名称
+ * @param options 组件配置选项
  * @example
  * ```typescript
  * @ECSComponent('Position')
@@ -24,9 +38,15 @@ export const SYSTEM_TYPE_NAME = Symbol('SystemTypeName');
  *     x: number = 0;
  *     y: number = 0;
  * }
+ *
+ * // 带依赖声明
+ * @ECSComponent('SpriteAnimator', { requires: ['Sprite'] })
+ * class SpriteAnimatorComponent extends Component {
+ *     // ...
+ * }
  * ```
  */
-export function ECSComponent(typeName: string) {
+export function ECSComponent(typeName: string, options?: ComponentOptions) {
     return function <T extends new (...args: any[]) => Component>(target: T): T {
         if (!typeName || typeof typeName !== 'string') {
             throw new Error('ECSComponent装饰器必须提供有效的类型名称');
@@ -35,8 +55,20 @@ export function ECSComponent(typeName: string) {
         // 在构造函数上存储类型名称
         (target as any)[COMPONENT_TYPE_NAME] = typeName;
 
+        // 存储依赖关系
+        if (options?.requires) {
+            (target as any)[COMPONENT_DEPENDENCIES] = options.requires;
+        }
+
         return target;
     };
+}
+
+/**
+ * 获取组件的依赖列表
+ */
+export function getComponentDependencies(componentType: ComponentType): string[] | undefined {
+    return (componentType as any)[COMPONENT_DEPENDENCIES];
 }
 
 /**

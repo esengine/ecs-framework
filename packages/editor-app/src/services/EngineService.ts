@@ -5,7 +5,7 @@
 
 import { EngineBridge, EngineRenderSystem, CameraConfig } from '@esengine/ecs-engine-bindgen';
 import { Core, Scene, Entity, SceneSerializer } from '@esengine/ecs-framework';
-import { TransformComponent, SpriteComponent } from '@esengine/ecs-components';
+import { TransformComponent, SpriteComponent, SpriteAnimatorSystem, SpriteAnimatorComponent } from '@esengine/ecs-components';
 import { EntityStoreService, MessageHub } from '@esengine/editor-core';
 import * as esEngine from '@esengine/engine';
 import { AssetManager, EngineIntegration, AssetPathResolver, AssetPlatform } from '@esengine/asset-system';
@@ -22,6 +22,7 @@ export class EngineService {
     private bridge: EngineBridge | null = null;
     private scene: Scene | null = null;
     private renderSystem: EngineRenderSystem | null = null;
+    private animatorSystem: SpriteAnimatorSystem | null = null;
     private initialized = false;
     private running = false;
     private animationFrameId: number | null = null;
@@ -64,6 +65,19 @@ export class EngineService {
             // Initialize WASM with pre-imported module | 使用预导入模块初始化WASM
             await this.bridge.initializeWithModule(esEngine);
 
+            // Set path resolver for Tauri asset URLs | 设置Tauri资产URL的路径解析器
+            this.bridge.setPathResolver((path: string) => {
+                // If already a URL, return as-is
+                if (path.startsWith('http://') ||
+                    path.startsWith('https://') ||
+                    path.startsWith('data:') ||
+                    path.startsWith('asset://')) {
+                    return path;
+                }
+                // Convert file path to Tauri asset URL
+                return convertFileSrc(path);
+            });
+
             // Initialize Core if not already | 初始化Core（如果尚未初始化）
             if (!Core.scene) {
                 Core.create({ debug: false });
@@ -76,6 +90,12 @@ export class EngineService {
                 this.scene = new Scene({ name: 'EditorScene' });
                 Core.setScene(this.scene);
             }
+
+            // Add sprite animator system (disabled by default in editor mode)
+            // 添加精灵动画系统（编辑器模式下默认禁用）
+            this.animatorSystem = new SpriteAnimatorSystem();
+            this.animatorSystem.enabled = false;
+            this.scene!.addSystem(this.animatorSystem);
 
             // Add render system to the scene | 将渲染系统添加到场景
             this.renderSystem = new EngineRenderSystem(this.bridge, TransformComponent);
@@ -147,19 +167,13 @@ export class EngineService {
 
         this.frameCount++;
 
-        // Update scene directly to ensure systems run
-        // 直接更新scene以确保systems运行
-        if (this.scene) {
-            this.scene.update();
-        }
-
         // Update via Core (handles deltaTime internally) | 通过Core更新
         Core.update(deltaTime);
 
         // Note: Rendering is handled by EngineRenderSystem.process()
-        // Do not call bridge.render() here as it would clear the batch
+        // Texture loading is handled automatically via Rust engine's path-based loading
         // 注意：渲染由 EngineRenderSystem.process() 处理
-        // 不要在这里调用 bridge.render()，否则会清空批处理
+        // 纹理加载由Rust引擎的路径加载自动处理
 
         this.animationFrameId = requestAnimationFrame(this.renderLoop);
     };
@@ -191,7 +205,60 @@ export class EngineService {
 
         this.running = true;
         this.lastTime = performance.now();
+
+        // Enable animator system and start auto-play animations
+        // 启用动画系统并启动自动播放的动画
+        if (this.animatorSystem) {
+            this.animatorSystem.enabled = true;
+        }
+        this.startAutoPlayAnimations();
+
         this.gameLoop();
+    }
+
+    /**
+     * Start all auto-play animations.
+     * 启动所有自动播放的动画。
+     */
+    private startAutoPlayAnimations(): void {
+        if (!this.scene) return;
+
+        const entities = this.scene.entities.findEntitiesWithComponent(SpriteAnimatorComponent);
+        for (const entity of entities) {
+            const animator = entity.getComponent(SpriteAnimatorComponent);
+            if (animator && animator.autoPlay && animator.defaultAnimation) {
+                animator.play();
+            }
+        }
+    }
+
+    /**
+     * Stop all animations and reset to first frame.
+     * 停止所有动画并重置到第一帧。
+     */
+    private stopAllAnimations(): void {
+        if (!this.scene) return;
+
+        const entities = this.scene.entities.findEntitiesWithComponent(SpriteAnimatorComponent);
+        for (const entity of entities) {
+            const animator = entity.getComponent(SpriteAnimatorComponent);
+            if (animator) {
+                animator.stop();
+
+                // Reset sprite texture to first frame
+                // 重置精灵纹理到第一帧
+                const sprite = entity.getComponent(SpriteComponent);
+                if (sprite && animator.clips && animator.clips.length > 0) {
+                    const firstClip = animator.clips[0];
+                    if (firstClip && firstClip.frames && firstClip.frames.length > 0) {
+                        const firstFrame = firstClip.frames[0];
+                        if (firstFrame && firstFrame.texture) {
+                            sprite.texture = firstFrame.texture;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -200,6 +267,14 @@ export class EngineService {
      */
     stop(): void {
         this.running = false;
+
+        // Disable animator system and stop all animations
+        // 禁用动画系统并停止所有动画
+        if (this.animatorSystem) {
+            this.animatorSystem.enabled = false;
+        }
+        this.stopAllAnimations();
+
         // Note: Don't cancel animationFrameId here, as renderLoop should keep running
         // for editor preview. The renderLoop will continue but gameLoop will stop
         // because this.running is false.
@@ -408,6 +483,14 @@ export class EngineService {
      */
     getScene(): Scene | null {
         return this.scene;
+    }
+
+    /**
+     * Get the engine bridge.
+     * 获取引擎桥接。
+     */
+    getBridge(): EngineBridge | null {
+        return this.bridge;
     }
 
     /**

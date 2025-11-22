@@ -22,11 +22,32 @@ export class NotificationService implements INotification {
         }
     }
 
+    warning(title: string, message: string, duration: number = 5000): void {
+        this.show(`${title}: ${message}`, 'warning', duration);
+    }
+
+    error(title: string, message: string, duration: number = 5000): void {
+        this.show(`${title}: ${message}`, 'error', duration);
+    }
+
+    info(title: string, message: string, duration: number = 3000): void {
+        this.show(`${title}: ${message}`, 'info', duration);
+    }
+
+    success(title: string, message: string, duration: number = 3000): void {
+        this.show(`${title}: ${message}`, 'success', duration);
+    }
+
     hide(id: string): void {
         if (this.hideCallback) {
             this.hideCallback(id);
         } else {
             console.warn('[NotificationService] hideCallback not set');
         }
+    }
+
+    dispose(): void {
+        this.showCallback = undefined;
+        this.hideCallback = undefined;
     }
 }

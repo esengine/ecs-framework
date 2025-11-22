@@ -38,6 +38,21 @@
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.property-controlled-icon {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  display: flex;
+  align-items: center;
+}
+
+.property-asset-drop.controlled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .property-label-draggable {
@@ -693,4 +708,296 @@ input[type="number"].property-input::-webkit-inner-spin-button {
 
 .property-action-btn:active {
   transform: scale(0.95);
+}
+
+/* Animation Clips Editor */
+.animation-clips-editor {
+  padding: 8px;
+  background: var(--color-bg-elevated);
+  border-radius: 4px;
+}
+
+.clips-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.clips-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.add-clip-btn {
+  padding: 4px;
+  background: var(--color-bg-default);
+  border: 1px solid var(--color-border-default);
+  border-radius: 3px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.add-clip-btn:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+.clips-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.clips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clip-item {
+  background: var(--color-bg-default);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.clip-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--color-text-primary);
+  min-width: 0;
+}
+
+.clip-header:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.clip-header > svg {
+  flex-shrink: 0;
+}
+
+.clip-name-input {
+  flex: 1;
+  min-width: 40px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.clip-name-input:focus {
+  outline: none;
+  background: var(--color-bg-elevated);
+}
+
+.frame-count {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.remove-clip-btn {
+  flex-shrink: 0;
+  padding: 2px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  border-radius: 2px;
+}
+
+.remove-clip-btn:hover {
+  background: var(--color-danger);
+  color: var(--color-text-inverse);
+}
+
+.clip-content {
+  padding: 8px;
+  border-top: 1px solid var(--color-border-subtle);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.clip-settings {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+}
+
+.clip-settings label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.clip-settings input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+}
+
+.clip-settings input[type="number"] {
+  width: 50px;
+  padding: 2px 4px;
+  background: var(--color-bg-default);
+  border: 1px solid var(--color-border-default);
+  border-radius: 2px;
+  color: var(--color-text-primary);
+  font-size: 10px;
+}
+
+.frames-section {
+  margin-top: 8px;
+}
+
+.frames-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+
+.frames-header button {
+  padding: 2px 4px;
+  background: var(--color-bg-default);
+  border: 1px solid var(--color-border-default);
+  border-radius: 2px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.frames-header button:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+.frames-empty {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  padding: 8px;
+  text-align: center;
+}
+
+.frames-drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.frames-drop-zone:hover {
+  border-color: var(--color-accent);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.frames-section {
+  transition: background 0.2s;
+}
+
+.frames-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.frame-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: var(--color-bg-default);
+  border-radius: 2px;
+  font-size: 10px;
+}
+
+.frame-index {
+  width: 16px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.frame-texture-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.frame-texture-field .asset-field {
+  margin-bottom: 0;
+}
+
+.frame-texture-field .asset-field__container {
+  height: 22px;
+}
+
+.frame-texture-field .asset-field__icon {
+  width: 22px;
+  height: 20px;
+}
+
+.frame-texture-field .asset-field__input {
+  height: 20px;
+  padding: 0 4px;
+}
+
+.frame-texture-field .asset-field__value {
+  font-size: 10px;
+}
+
+.frame-texture-field .asset-field__button {
+  width: 18px;
+  height: 18px;
+}
+
+.frame-duration {
+  width: 45px;
+  padding: 2px 4px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: 2px;
+  color: var(--color-text-primary);
+  font-size: 10px;
+  text-align: right;
+}
+
+.frame-item button {
+  padding: 2px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  border-radius: 2px;
+}
+
+.frame-item button:hover {
+  background: var(--color-danger);
+  color: var(--color-text-inverse);
 }

@@ -5,7 +5,7 @@
 
 import type { SpriteRenderData, TextureLoadRequest, EngineStats, CameraConfig } from '../types';
 import type { IEngineBridge } from '@esengine/asset-system';
-import type { GameEngine } from '@esengine/engine';
+import type { GameEngine } from '../wasm/es_engine';
 
 /**
  * Engine bridge configuration.
@@ -47,6 +47,10 @@ export class EngineBridge implements IEngineBridge {
     private engine: GameEngine | null = null;
     private config: Required<EngineBridgeConfig>;
     private initialized = false;
+
+    // Path resolver for converting file paths to URLs
+    // 用于将文件路径转换为URL的路径解析器
+    private pathResolver: ((path: string) => string) | null = null;
 
     // Pre-allocated typed arrays for batch submission
     // 预分配的类型数组用于批量提交
@@ -304,6 +308,56 @@ export class EngineBridge implements IEngineBridge {
         for (const req of requests) {
             await this.loadTexture(req.id, req.url);
         }
+    }
+
+    /**
+     * Load texture by path, returning texture ID.
+     * 按路径加载纹理，返回纹理ID。
+     *
+     * @param path - Image path/URL | 图片路径/URL
+     * @returns Texture ID | 纹理ID
+     */
+    loadTextureByPath(path: string): number {
+        if (!this.initialized) return 0;
+        return this.getEngine().loadTextureByPath(path);
+    }
+
+    /**
+     * Get texture ID by path.
+     * 按路径获取纹理ID。
+     *
+     * @param path - Image path | 图片路径
+     * @returns Texture ID or undefined | 纹理ID或undefined
+     */
+    getTextureIdByPath(path: string): number | undefined {
+        if (!this.initialized) return undefined;
+        return this.getEngine().getTextureIdByPath(path);
+    }
+
+    /**
+     * Set path resolver for converting file paths to URLs.
+     * 设置路径解析器用于将文件路径转换为URL。
+     *
+     * @param resolver - Function to resolve paths | 解析路径的函数
+     */
+    setPathResolver(resolver: (path: string) => string): void {
+        this.pathResolver = resolver;
+    }
+
+    /**
+     * Get or load texture by path.
+     * 按路径获取或加载纹理。
+     *
+     * @param path - Image path/URL | 图片路径/URL
+     * @returns Texture ID | 纹理ID
+     */
+    getOrLoadTextureByPath(path: string): number {
+        if (!this.initialized) return 0;
+
+        // Resolve path if resolver is set
+        // 如果设置了解析器，则解析路径
+        const resolvedPath = this.pathResolver ? this.pathResolver(path) : path;
+        return this.getEngine().getOrLoadTextureByPath(resolvedPath);
     }
 
     /**

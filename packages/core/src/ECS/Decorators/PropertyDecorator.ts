@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 
-export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset';
+export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset' | 'animationClips';
 
 /**
  * Action button configuration for property fields
@@ -15,6 +15,17 @@ export interface PropertyAction {
     tooltip?: string;
     /** Icon name from Lucide | Lucide图标名称 */
     icon?: string;
+}
+
+/**
+ * 控制关系声明
+ * Control relationship declaration
+ */
+export interface PropertyControl {
+    /** 被控制的组件名称 | Target component name */
+    component: string;
+    /** 被控制的属性名称 | Target property name */
+    property: string;
 }
 
 export interface PropertyOptions {
@@ -36,6 +47,8 @@ export interface PropertyOptions {
     fileExtension?: string;
     /** Action buttons for this property | 属性的操作按钮 */
     actions?: PropertyAction[];
+    /** 此属性控制的其他组件属性 | Properties this field controls */
+    controls?: PropertyControl[];
 }
 
 export const PROPERTY_METADATA = Symbol('property:metadata');

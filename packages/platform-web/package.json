@@ -32,6 +32,12 @@
   ],
   "author": "yhh",
   "license": "MIT",
+  "dependencies": {
+    "@esengine/ecs-framework": "workspace:*",
+    "@esengine/ecs-engine-bindgen": "workspace:*",
+    "@esengine/ecs-components": "workspace:*",
+    "@esengine/asset-system": "workspace:*"
+  },
   "peerDependencies": {
     "@esengine/platform-common": "^1.0.0"
   },
