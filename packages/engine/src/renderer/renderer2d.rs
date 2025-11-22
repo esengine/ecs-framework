@@ -27,6 +27,10 @@ pub struct Renderer2D {
     /// 2D camera.
     /// 2D相机。
     camera: Camera2D,
+
+    /// Clear color (RGBA).
+    /// 清除颜色 (RGBA)。
+    clear_color: [f32; 4],
 }
 
 impl Renderer2D {
@@ -57,6 +61,7 @@ impl Renderer2D {
             sprite_batch,
             shader,
             camera,
+            clear_color: [0.1, 0.1, 0.12, 1.0],
         })
     }
 
@@ -137,6 +142,18 @@ impl Renderer2D {
     #[inline]
     pub fn camera(&self) -> &Camera2D {
         &self.camera
+    }
+
+    /// Set clear color (RGBA, each component 0.0-1.0).
+    /// 设置清除颜色。
+    pub fn set_clear_color(&mut self, r: f32, g: f32, b: f32, a: f32) {
+        self.clear_color = [r, g, b, a];
+    }
+
+    /// Get clear color.
+    /// 获取清除颜色。
+    pub fn get_clear_color(&self) -> [f32; 4] {
+        self.clear_color
     }
 
     /// Update camera viewport size.

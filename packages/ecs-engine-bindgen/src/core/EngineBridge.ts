@@ -370,6 +370,20 @@ export class EngineBridge {
     }
 
     /**
+     * Set clear color (background color).
+     * 设置清除颜色（背景颜色）。
+     *
+     * @param r - Red component (0.0-1.0) | 红色分量
+     * @param g - Green component (0.0-1.0) | 绿色分量
+     * @param b - Blue component (0.0-1.0) | 蓝色分量
+     * @param a - Alpha component (0.0-1.0) | 透明度分量
+     */
+    setClearColor(r: number, g: number, b: number, a: number): void {
+        if (!this.initialized) return;
+        this.engine.setClearColor(r, g, b, a);
+    }
+
+    /**
      * Add a rectangle gizmo outline.
      * 添加矩形Gizmo边框。
      *
@@ -384,6 +398,7 @@ export class EngineBridge {
      * @param g - Green (0-1) | 绿色
      * @param b - Blue (0-1) | 蓝色
      * @param a - Alpha (0-1) | 透明度
+     * @param showHandles - Whether to show transform handles | 是否显示变换手柄
      */
     addGizmoRect(
         x: number,
@@ -396,10 +411,11 @@ export class EngineBridge {
         r: number,
         g: number,
         b: number,
-        a: number
+        a: number,
+        showHandles: boolean = true
     ): void {
         if (!this.initialized) return;
-        this.engine.addGizmoRect(x, y, width, height, rotation, originX, originY, r, g, b, a);
+        this.engine.addGizmoRect(x, y, width, height, rotation, originX, originY, r, g, b, a, showHandles);
     }
 
     /**
@@ -410,7 +426,110 @@ export class EngineBridge {
      */
     setTransformMode(mode: number): void {
         if (!this.initialized) return;
-        this.engine.set_transform_mode(mode);
+        this.engine.setTransformMode(mode);
+    }
+
+    /**
+     * Set gizmo visibility.
+     * 设置辅助工具可见性。
+     */
+    setShowGizmos(show: boolean): void {
+        if (!this.initialized) return;
+        this.engine.setShowGizmos(show);
+    }
+
+    // ===== Multi-viewport API =====
+    // ===== 多视口 API =====
+
+    /**
+     * Register a new viewport.
+     * 注册新视口。
+     *
+     * @param id - Unique viewport identifier | 唯一视口标识符
+     * @param canvasId - HTML canvas element ID | HTML canvas元素ID
+     */
+    registerViewport(id: string, canvasId: string): void {
+        if (!this.initialized) return;
+        this.engine.registerViewport(id, canvasId);
+    }
+
+    /**
+     * Unregister a viewport.
+     * 注销视口。
+     */
+    unregisterViewport(id: string): void {
+        if (!this.initialized) return;
+        this.engine.unregisterViewport(id);
+    }
+
+    /**
+     * Set the active viewport.
+     * 设置活动视口。
+     */
+    setActiveViewport(id: string): boolean {
+        if (!this.initialized) return false;
+        return this.engine.setActiveViewport(id);
+    }
+
+    /**
+     * Set camera for a specific viewport.
+     * 为特定视口设置相机。
+     */
+    setViewportCamera(viewportId: string, config: CameraConfig): void {
+        if (!this.initialized) return;
+        this.engine.setViewportCamera(viewportId, config.x, config.y, config.zoom, config.rotation);
+    }
+
+    /**
+     * Get camera for a specific viewport.
+     * 获取特定视口的相机。
+     */
+    getViewportCamera(viewportId: string): CameraConfig | null {
+        if (!this.initialized) return null;
+        const state = this.engine.getViewportCamera(viewportId);
+        if (!state) return null;
+        return {
+            x: state[0],
+            y: state[1],
+            zoom: state[2],
+            rotation: state[3]
+        };
+    }
+
+    /**
+     * Set viewport configuration.
+     * 设置视口配置。
+     */
+    setViewportConfig(viewportId: string, showGrid: boolean, showGizmos: boolean): void {
+        if (!this.initialized) return;
+        this.engine.setViewportConfig(viewportId, showGrid, showGizmos);
+    }
+
+    /**
+     * Resize a specific viewport.
+     * 调整特定视口大小。
+     */
+    resizeViewport(viewportId: string, width: number, height: number): void {
+        if (!this.initialized) return;
+        this.engine.resizeViewport(viewportId, width, height);
+    }
+
+    /**
+     * Render to a specific viewport.
+     * 渲染到特定视口。
+     */
+    renderToViewport(viewportId: string): void {
+        if (!this.initialized) return;
+        this.engine.renderToViewport(viewportId);
+    }
+
+    /**
+     * Get all registered viewport IDs.
+     * 获取所有已注册的视口ID。
+     */
+    getViewportIds(): string[] {
+        if (!this.initialized) return [];
+        return this.engine.getViewportIds();
     }
 
     /**

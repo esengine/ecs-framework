@@ -3,8 +3,8 @@
  * 用于ECS的引擎渲染系统。
  */
 
-import { EntitySystem, Matcher, Entity, ComponentType, ECSSystem, Component } from '@esengine/ecs-framework';
-import { SpriteComponent } from '@esengine/ecs-components';
+import { EntitySystem, Matcher, Entity, ComponentType, ECSSystem, Component, Core } from '@esengine/ecs-framework';
+import { SpriteComponent, CameraComponent, TransformComponent } from '@esengine/ecs-components';
 import type { EngineBridge } from '../core/EngineBridge';
 import { RenderBatcher } from '../core/RenderBatcher';
 import type { SpriteRenderData } from '../types';
@@ -137,11 +137,9 @@ export class EngineRenderSystem extends EntitySystem {
 
             // Get texture ID from sprite component
             // 从精灵组件获取纹理ID
-            // Skip sprites without valid texture ID | 跳过没有有效纹理ID的精灵
+            // textureId 0 will use default white texture in Rust engine
+            // textureId 0 将在 Rust 引擎中使用默认白色纹理
             const textureId = sprite.textureId ?? 0;
-            if (textureId === 0) {
-                continue;
-            }
 
             // Pass actual display dimensions (sprite size * transform scale)
             // 传递实际显示尺寸（sprite尺寸 * 变换缩放）
@@ -166,27 +164,86 @@ export class EngineRenderSystem extends EntitySystem {
         if (!this.batcher.isEmpty) {
             const sprites = this.batcher.getSprites();
             this.bridge.submitSprites(sprites);
+        }
 
-            // Draw gizmos only for selected entities | 只为选中的实体绘制Gizmo
-            if (this.showGizmos && this.selectedEntityIds.size > 0) {
-                for (const entityId of this.selectedEntityIds) {
-                    const renderData = this.entityRenderMap.get(entityId);
-                    if (renderData) {
-                        this.bridge.addGizmoRect(
-                            renderData.x,
-                            renderData.y,
-                            renderData.scaleX,
-                            renderData.scaleY,
-                            renderData.rotation,
-                            renderData.originX,
-                            renderData.originY,
-                            0.0, 1.0, 0.5, 1.0  // Green color | 绿色
-                        );
-                    }
+        // Draw gizmos for selected entities (always, even if no sprites)
+        // 为选中的实体绘制Gizmo（始终绘制，即使没有精灵）
+        if (this.showGizmos && this.selectedEntityIds.size > 0) {
+            for (const entityId of this.selectedEntityIds) {
+                const renderData = this.entityRenderMap.get(entityId);
+                if (renderData) {
+                    this.bridge.addGizmoRect(
+                        renderData.x,
+                        renderData.y,
+                        renderData.scaleX,
+                        renderData.scaleY,
+                        renderData.rotation,
+                        renderData.originX,
+                        renderData.originY,
+                        0.0, 1.0, 0.5, 1.0,  // Green color | 绿色
+                        true  // Show transform handles for selection gizmo
+                    );
                 }
             }
         }
+
+        // Draw camera frustum gizmos
+        // 绘制相机视锥体 gizmo
+        if (this.showGizmos) {
+            this.drawCameraFrustums();
+        }
+
         this.bridge.render();
+    }
+
+    /**
+     * Draw camera frustum gizmos for all cameras in scene.
+     * 为场景中所有相机绘制视锥体 gizmo。
+     */
+    private drawCameraFrustums(): void {
+        const scene = Core.scene;
+        if (!scene) return;
+
+        const cameraEntities = scene.entities.findEntitiesWithComponent(CameraComponent);
+
+        for (const entity of cameraEntities) {
+            const camera = entity.getComponent(CameraComponent);
+            const transform = entity.getComponent(TransformComponent);
+
+            if (!camera || !transform) continue;
+
+            // Calculate frustum size based on canvas size and orthographicSize
+            // 根据 canvas 尺寸和 orthographicSize 计算视锥体大小
+            // At runtime, zoom = 1 / orthographicSize
+            // So visible area = canvas size * orthographicSize
+            const canvas = document.getElementById('viewport-canvas') as HTMLCanvasElement;
+            if (!canvas) continue;
+
+            // The actual visible world units when running
+            // 运行时实际可见的世界单位
+            const zoom = camera.orthographicSize > 0 ? 1 / camera.orthographicSize : 1;
+            const width = canvas.width / zoom;
+            const height = canvas.height / zoom;
+
+            // Handle rotation
+            const rotation = typeof transform.rotation === 'number'
+                ? transform.rotation
+                : transform.rotation.z;
+
+            // Draw frustum rectangle (white color for camera)
+            // 绘制视锥体矩形（相机用白色）
+            this.bridge.addGizmoRect(
+                transform.position.x,
+                transform.position.y,
+                width,
+                height,
+                rotation,
+                0.5,  // origin center
+                0.5,
+                1.0, 1.0, 1.0, 0.8,  // White color with some transparency
+                false  // Don't show transform handles for camera frustum
+            );
+        }
     }
 
     /**

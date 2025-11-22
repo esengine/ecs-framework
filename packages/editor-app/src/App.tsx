@@ -677,7 +677,7 @@ function App() {
                     {
                         id: 'viewport',
                         title: locale === 'zh' ? '视口' : 'Viewport',
-                        content: <Viewport locale={locale} />,
+                        content: <Viewport locale={locale} messageHub={messageHub} />,
                         closable: false
                     },
                     {

@@ -178,7 +178,7 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
 
                             return (
                                 <div
-                                    key={`${componentName}-${index}-${componentVersion}`}
+                                    key={`${componentName}-${index}`}
                                     className={`component-item-card ${isExpanded ? 'expanded' : ''}`}
                                 >
                                     <div
@@ -216,7 +216,7 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                                         <div className="component-item-content">
                                             <PropertyInspector
                                                 component={component}
-                                                version={localVersion}
+                                                version={componentVersion + localVersion}
                                                 onChange={(propName: string, value: unknown) =>
                                                     handlePropertyChange(component, propName, value)
                                                 }

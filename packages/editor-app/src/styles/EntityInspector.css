@@ -34,30 +34,28 @@
 
 .inspector-content {
   flex: 1;
-  overflow: auto;
+  overflow-y: scroll;
+  overflow-x: hidden;
   padding: var(--spacing-md);
   min-height: 0;
 }
 
 .inspector-content::-webkit-scrollbar {
-  width: 14px;
-  height: 14px;
+  width: 8px;
+  height: 8px;
 }
 
 .inspector-content::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--color-bg-base);
 }
 
 .inspector-content::-webkit-scrollbar-thumb {
   background: rgba(121, 121, 121, 0.4);
-  border-radius: 8px;
-  border: 3px solid transparent;
-  background-clip: padding-box;
+  border-radius: 4px;
 }
 
 .inspector-content::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 100, 100, 0.7);
-  background-clip: padding-box;
 }
 
 .inspector-content::-webkit-scrollbar-corner {
@@ -710,4 +708,6 @@
   padding: 8px 10px;
   border-top: 1px solid var(--color-border-default);
   background: var(--color-bg-base);
+  overflow: hidden;
+  min-width: 0;
 }

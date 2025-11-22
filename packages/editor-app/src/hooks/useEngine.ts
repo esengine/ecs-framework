@@ -6,6 +6,7 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { Core } from '@esengine/ecs-framework';
 import { MessageHub, EntityStoreService } from '@esengine/editor-core';
+import { TransformComponent, CameraComponent } from '@esengine/ecs-components';
 import { EngineService } from '../services/EngineService';
 import { EditorEngineSync } from '../services/EditorEngineSync';
 
@@ -35,6 +36,15 @@ export interface UseEngineReturn {
         height?: number;
     }) => void;
     loadTexture: (id: number, url: string) => void;
+    viewportId: string;
+}
+
+export interface UseEngineOptions {
+    viewportId: string;
+    canvasId: string;
+    showGrid?: boolean;
+    showGizmos?: boolean;
+    autoInit?: boolean;
 }
 
 /**
@@ -58,6 +68,25 @@ async function initializeEngine(canvasId: string): Promise<void> {
             const entityStore = Core.services.resolve(EntityStoreService);
             if (messageHub && entityStore) {
                 EditorEngineSync.getInstance().initialize(messageHub, entityStore);
+
+                // Create default camera if none exists
+                // 如果不存在相机则创建默认相机
+                const scene = Core.scene;
+                if (scene) {
+                    const existingCameras = scene.entities.findEntitiesWithComponent(CameraComponent);
+                    if (existingCameras.length === 0) {
+                        const cameraEntity = scene.createEntity('Main Camera');
+                        cameraEntity.addComponent(new TransformComponent());
+                        const camera = new CameraComponent();
+                        camera.orthographicSize = 1;
+                        cameraEntity.addComponent(camera);
+
+                        // Register with EntityStore so it appears in hierarchy
+                        // 注册到 EntityStore 以便在层级视图中显示
+                        entityStore.addEntity(cameraEntity);
+                        messageHub.publish('entity:added', { entity: cameraEntity });
+                    }
+                }
             }
         } catch (syncError) {
             console.warn('Failed to initialize sync service | 同步服务初始化失败:', syncError);
@@ -76,9 +105,31 @@ async function initializeEngine(canvasId: string): Promise<void> {
  * @param canvasId - Canvas element ID | Canvas元素ID
  * @param autoInit - Whether to auto-initialize | 是否自动初始化
  */
-export function useEngine(canvasId: string, autoInit = true): UseEngineReturn {
+export function useEngine(canvasId: string, autoInit?: boolean): UseEngineReturn;
+export function useEngine(options: UseEngineOptions): UseEngineReturn;
+export function useEngine(
+    canvasIdOrOptions: string | UseEngineOptions,
+    autoInit?: boolean
+): UseEngineReturn {
+    // Parse options
+    const options: UseEngineOptions = typeof canvasIdOrOptions === 'string'
+        ? {
+            viewportId: canvasIdOrOptions, // Use canvasId as viewportId for backward compatibility
+            canvasId: canvasIdOrOptions,
+            showGrid: true,
+            showGizmos: true,
+            autoInit
+        }
+        : {
+            showGrid: true,
+            showGizmos: true,
+            autoInit: true,
+            ...canvasIdOrOptions
+        };
+
     const engineRef = useRef<EngineService>(EngineService.getInstance());
     const statsIntervalRef = useRef<number | null>(null);
+    const viewportRegisteredRef = useRef(false);
 
     const [state, setState] = useState<EngineState>({
         initialized: engineInitialized,
@@ -89,15 +140,26 @@ export function useEngine(canvasId: string, autoInit = true): UseEngineReturn {
         error: null
     });
 
-    // Initialize engine using module-level function
-    // 使用模块级别函数初始化引擎
+    // Initialize engine and register viewport
     useEffect(() => {
-        if (!autoInit) return;
+        if (!options.autoInit) return;
 
         const init = async () => {
             try {
-                await initializeEngine(canvasId);
+                // Initialize engine with primary canvas (first viewport)
+                await initializeEngine(options.canvasId);
                 setState(prev => ({ ...prev, initialized: true, error: null }));
+
+                // Register this viewport
+                if (!viewportRegisteredRef.current) {
+                    engineRef.current.registerViewport(options.viewportId, options.canvasId);
+                    engineRef.current.setViewportConfig(
+                        options.viewportId,
+                        options.showGrid ?? true,
+                        options.showGizmos ?? true
+                    );
+                    viewportRegisteredRef.current = true;
+                }
 
                 // Start stats update interval
                 if (!statsIntervalRef.current) {
@@ -127,8 +189,13 @@ export function useEngine(canvasId: string, autoInit = true): UseEngineReturn {
                 clearInterval(statsIntervalRef.current);
                 statsIntervalRef.current = null;
             }
+            // Unregister viewport on cleanup
+            if (viewportRegisteredRef.current) {
+                engineRef.current.unregisterViewport(options.viewportId);
+                viewportRegisteredRef.current = false;
+            }
         };
-    }, [canvasId, autoInit]);
+    }, [options.canvasId, options.viewportId, options.autoInit, options.showGrid, options.showGizmos]);
 
     // Start engine
     const start = useCallback(() => {
@@ -163,7 +230,8 @@ export function useEngine(canvasId: string, autoInit = true): UseEngineReturn {
         start,
         stop,
         createSprite,
-        loadTexture
+        loadTexture,
+        viewportId: options.viewportId
     };
 }
 

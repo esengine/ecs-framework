@@ -55,7 +55,7 @@ impl Default for TransformMode {
 pub struct GizmoRenderer {
     program: WebGlProgram,
     vertex_buffer: WebGlBuffer,
-    /// Pending rectangle data: [x, y, width, height, rotation, origin_x, origin_y, r, g, b, a]
+    /// Pending rectangle data: [x, y, width, height, rotation, origin_x, origin_y, r, g, b, a, show_handles]
     /// 待渲染的矩形数据
     rects: Vec<f32>,
     /// Current transform mode
@@ -143,6 +143,7 @@ impl GizmoRenderer {
     /// * `origin_x` - Origin X (0-1) | 原点X (0-1)
     /// * `origin_y` - Origin Y (0-1) | 原点Y (0-1)
     /// * `r`, `g`, `b`, `a` - Color | 颜色
+    /// * `show_handles` - Whether to show transform handles | 是否显示变换手柄
     pub fn add_rect(
         &mut self,
         x: f32,
@@ -156,9 +157,10 @@ impl GizmoRenderer {
         g: f32,
         b: f32,
         a: f32,
+        show_handles: bool,
     ) {
         self.rects.extend_from_slice(&[
-            x, y, width, height, rotation, origin_x, origin_y, r, g, b, a
+            x, y, width, height, rotation, origin_x, origin_y, r, g, b, a, if show_handles { 1.0 } else { 0.0 }
         ]);
     }
 
@@ -181,8 +183,8 @@ impl GizmoRenderer {
         gl.enable_vertex_attrib_array(0);
         gl.vertex_attrib_pointer_with_i32(0, 2, WebGl2RenderingContext::FLOAT, false, 0, 0);
 
-        // Process each rectangle (11 floats per rect)
-        let rect_stride = 11;
+        // Process each rectangle (12 floats per rect)
+        let rect_stride = 12;
         let rect_count = self.rects.len() / rect_stride;
 
         for i in 0..rect_count {
@@ -198,6 +200,7 @@ impl GizmoRenderer {
             let g = self.rects[offset + 8];
             let b = self.rects[offset + 9];
             let a = self.rects[offset + 10];
+            let show_handles = self.rects[offset + 11] > 0.5;
 
             // Calculate transformed corners
             let vertices = self.calculate_rect_vertices(x, y, width, height, rotation, origin_x, origin_y);
@@ -214,22 +217,26 @@ impl GizmoRenderer {
             gl.uniform4f(color_loc.as_ref(), r, g, b, a);
             gl.draw_arrays(WebGl2RenderingContext::LINE_LOOP, 0, 4);
 
-            // Draw transform handles based on mode
-            match self.transform_mode {
-                TransformMode::Select => {
-                    // Just the selection box (already drawn)
-                }
-                TransformMode::Move => {
-                    // Draw move arrows at center
-                    self.draw_move_handles(gl, &color_loc, x, y, rotation, camera);
-                }
-                TransformMode::Rotate => {
-                    // Draw rotation circle
-                    self.draw_rotate_handles(gl, &color_loc, x, y, width.max(height) * 0.6, camera);
-                }
-                TransformMode::Scale => {
-                    // Draw scale handles at corners
-                    self.draw_scale_handles(gl, &color_loc, x, y, width, height, rotation, origin_x, origin_y, camera);
+            // Only draw transform handles if explicitly requested
+            // 只有明确请求时才绘制变换手柄
+            if show_handles {
+                // Draw transform handles based on mode
+                match self.transform_mode {
+                    TransformMode::Select => {
+                        // Just the selection box (already drawn)
+                    }
+                    TransformMode::Move => {
+                        // Draw move arrows at center
+                        self.draw_move_handles(gl, &color_loc, x, y, rotation, camera);
+                    }
+                    TransformMode::Rotate => {
+                        // Draw rotation circle
+                        self.draw_rotate_handles(gl, &color_loc, x, y, width.max(height) * 0.6, camera);
+                    }
+                    TransformMode::Scale => {
+                        // Draw scale handles at corners
+                        self.draw_scale_handles(gl, &color_loc, x, y, width, height, rotation, origin_x, origin_y, camera);
+                    }
                 }
             }
         }

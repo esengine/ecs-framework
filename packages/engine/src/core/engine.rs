@@ -6,7 +6,7 @@ use wasm_bindgen::prelude::*;
 use super::context::WebGLContext;
 use super::error::Result;
 use crate::input::InputManager;
-use crate::renderer::{Renderer2D, GridRenderer, GizmoRenderer, TransformMode};
+use crate::renderer::{Renderer2D, GridRenderer, GizmoRenderer, TransformMode, ViewportManager};
 use crate::resource::TextureManager;
 
 /// Engine configuration options.
@@ -69,6 +69,14 @@ pub struct Engine {
     /// Whether to show grid.
     /// 是否显示网格。
     show_grid: bool,
+
+    /// Viewport manager for multi-viewport rendering.
+    /// 多视口渲染的视口管理器。
+    viewport_manager: ViewportManager,
+
+    /// Whether to show gizmos.
+    /// 是否显示辅助工具。
+    show_gizmos: bool,
 }
 
 impl Engine {
@@ -106,6 +114,8 @@ impl Engine {
             input_manager,
             config,
             show_grid: true,
+            viewport_manager: ViewportManager::new(),
+            show_gizmos: true,
         })
     }
 
@@ -142,6 +152,8 @@ impl Engine {
             input_manager,
             config,
             show_grid: true,
+            viewport_manager: ViewportManager::new(),
+            show_gizmos: true,
         })
     }
 
@@ -194,6 +206,10 @@ impl Engine {
     /// Render the current frame.
     /// 渲染当前帧。
     pub fn render(&mut self) -> Result<()> {
+        // Clear background with clear color
+        let [r, g, b, a] = self.renderer.get_clear_color();
+        self.context.clear(r, g, b, a);
+
         // Render grid first (background)
         if self.show_grid {
             self.grid_renderer.render(self.context.gl(), self.renderer.camera());
@@ -225,8 +241,9 @@ impl Engine {
         g: f32,
         b: f32,
         a: f32,
+        show_handles: bool,
     ) {
-        self.gizmo_renderer.add_rect(x, y, width, height, rotation, origin_x, origin_y, r, g, b, a);
+        self.gizmo_renderer.add_rect(x, y, width, height, rotation, origin_x, origin_y, r, g, b, a, show_handles);
     }
 
     /// Set transform tool mode.
@@ -293,5 +310,134 @@ impl Engine {
     /// 设置网格可见性。
     pub fn set_show_grid(&mut self, show: bool) {
         self.show_grid = show;
+    }
+
+    /// Set gizmo visibility.
+    /// 设置辅助工具可见性。
+    pub fn set_show_gizmos(&mut self, show: bool) {
+        self.show_gizmos = show;
+    }
+
+    /// Get gizmo visibility.
+    /// 获取辅助工具可见性。
+    pub fn show_gizmos(&self) -> bool {
+        self.show_gizmos
+    }
+
+    /// Set clear color for the active viewport.
+    /// 设置活动视口的清除颜色。
+    pub fn set_clear_color(&mut self, r: f32, g: f32, b: f32, a: f32) {
+        if let Some(target) = self.viewport_manager.active_mut() {
+            target.set_clear_color(r, g, b, a);
+        } else {
+            // Fallback to primary renderer
+            self.renderer.set_clear_color(r, g, b, a);
+        }
+    }
+
+    // ===== Multi-viewport API =====
+    // ===== 多视口 API =====
+
+    /// Register a new viewport.
+    /// 注册新视口。
+    pub fn register_viewport(&mut self, id: &str, canvas_id: &str) -> Result<()> {
+        self.viewport_manager.register(id, canvas_id)
+    }
+
+    /// Unregister a viewport.
+    /// 注销视口。
+    pub fn unregister_viewport(&mut self, id: &str) {
+        self.viewport_manager.unregister(id);
+    }
+
+    /// Set the active viewport.
+    /// 设置活动视口。
+    pub fn set_active_viewport(&mut self, id: &str) -> bool {
+        self.viewport_manager.set_active(id)
+    }
+
+    /// Get active viewport ID.
+    /// 获取活动视口ID。
+    pub fn active_viewport_id(&self) -> Option<&str> {
+        self.viewport_manager.active().map(|v| v.id.as_str())
+    }
+
+    /// Set camera for a specific viewport.
+    /// 为特定视口设置相机。
+    pub fn set_viewport_camera(&mut self, viewport_id: &str, x: f32, y: f32, zoom: f32, rotation: f32) {
+        if let Some(viewport) = self.viewport_manager.get_mut(viewport_id) {
+            viewport.set_camera(x, y, zoom, rotation);
+        }
+    }
+
+    /// Get camera for a specific viewport.
+    /// 获取特定视口的相机。
+    pub fn get_viewport_camera(&self, viewport_id: &str) -> Option<(f32, f32, f32, f32)> {
+        self.viewport_manager.get(viewport_id).map(|v| v.get_camera())
+    }
+
+    /// Set viewport configuration.
+    /// 设置视口配置。
+    pub fn set_viewport_config(&mut self, viewport_id: &str, show_grid: bool, show_gizmos: bool) {
+        if let Some(viewport) = self.viewport_manager.get_mut(viewport_id) {
+            viewport.config.show_grid = show_grid;
+            viewport.config.show_gizmos = show_gizmos;
+        }
+    }
+
+    /// Resize a specific viewport.
+    /// 调整特定视口大小。
+    pub fn resize_viewport(&mut self, viewport_id: &str, width: u32, height: u32) {
+        if let Some(viewport) = self.viewport_manager.get_mut(viewport_id) {
+            viewport.resize(width, height);
+        }
+    }
+
+    /// Render to a specific viewport.
+    /// 渲染到特定视口。
+    pub fn render_to_viewport(&mut self, viewport_id: &str) -> Result<()> {
+        let viewport = match self.viewport_manager.get(viewport_id) {
+            Some(v) => v,
+            None => return Ok(()),
+        };
+
+        // Get viewport settings
+        let show_grid = viewport.config.show_grid;
+        let show_gizmos = viewport.config.show_gizmos;
+        let camera = viewport.camera.clone();
+
+        // Bind viewport and clear
+        viewport.bind();
+        viewport.clear();
+
+        // Update renderer camera to match viewport camera
+        let renderer_camera = self.renderer.camera_mut();
+        renderer_camera.position = camera.position;
+        renderer_camera.set_zoom(camera.zoom);
+        renderer_camera.rotation = camera.rotation;
+        renderer_camera.set_viewport(camera.viewport_width(), camera.viewport_height());
+
+        // Render grid if enabled
+        if show_grid {
+            self.grid_renderer.render(viewport.gl(), &camera);
+            self.grid_renderer.render_axes(viewport.gl(), &camera);
+        }
+
+        // Render sprites
+        self.renderer.render(viewport.gl(), &self.texture_manager)?;
+
+        // Render gizmos if enabled
+        if show_gizmos {
+            self.gizmo_renderer.render(viewport.gl(), &camera);
+        }
+        self.gizmo_renderer.clear();
+
+        Ok(())
+    }
+
+    /// Get all registered viewport IDs.
+    /// 获取所有已注册的视口ID。
+    pub fn viewport_ids(&self) -> Vec<String> {
+        self.viewport_manager.viewport_ids().into_iter().cloned().collect()
     }
 }

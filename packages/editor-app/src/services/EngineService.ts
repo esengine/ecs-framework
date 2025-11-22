@@ -3,9 +3,9 @@
  * 管理Rust引擎生命周期的服务。
  */
 
-import { EngineBridge, SpriteComponent as EngineSpriteComponent, EngineRenderSystem, CameraConfig } from '@esengine/ecs-engine-bindgen';
+import { EngineBridge, EngineRenderSystem, CameraConfig } from '@esengine/ecs-engine-bindgen';
 import { Core, Scene, Entity } from '@esengine/ecs-framework';
-import { TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent, SpriteComponent } from '@esengine/ecs-components';
 import * as esEngine from '@esengine/engine';
 
 /**
@@ -143,6 +143,11 @@ export class EngineService {
         // Update via Core (handles deltaTime internally) | 通过Core更新
         Core.update(deltaTime);
 
+        // Note: Rendering is handled by EngineRenderSystem.process()
+        // Do not call bridge.render() here as it would clear the batch
+        // 注意：渲染由 EngineRenderSystem.process() 处理
+        // 不要在这里调用 bridge.render()，否则会清空批处理
+
         this.animationFrameId = requestAnimationFrame(this.renderLoop);
     };
 
@@ -182,10 +187,12 @@ export class EngineService {
      */
     stop(): void {
         this.running = false;
-        if (this.animationFrameId !== null) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
+        // Note: Don't cancel animationFrameId here, as renderLoop should keep running
+        // for editor preview. The renderLoop will continue but gameLoop will stop
+        // because this.running is false.
+        // 注意：这里不要取消 animationFrameId，因为 renderLoop 应该继续运行
+        // 用于编辑器预览。renderLoop 会继续运行，但 gameLoop 会停止
+        // 因为 this.running 是 false。
     }
 
     /**
@@ -233,7 +240,7 @@ export class EngineService {
         entity.addComponent(transform);
 
         // Add sprite | 添加精灵组件
-        const sprite = new EngineSpriteComponent();
+        const sprite = new SpriteComponent();
         if (options) {
             sprite.textureId = options.textureId ?? 0;
             sprite.width = options.width ?? 64;
@@ -321,6 +328,16 @@ export class EngineService {
     }
 
     /**
+     * Set clear color (background color).
+     * 设置清除颜色（背景颜色）。
+     */
+    setClearColor(r: number, g: number, b: number, a: number = 1.0): void {
+        if (this.bridge) {
+            this.bridge.setClearColor(r, g, b, a);
+        }
+    }
+
+    /**
      * Set gizmo visibility.
      * 设置Gizmo可见性。
      */
@@ -364,6 +381,102 @@ export class EngineService {
      */
     getTransformMode(): 'select' | 'move' | 'rotate' | 'scale' {
         return this.renderSystem?.getTransformMode() ?? 'select';
+    }
+
+    // ===== Multi-viewport API =====
+    // ===== 多视口 API =====
+
+    /**
+     * Register a new viewport.
+     * 注册新视口。
+     */
+    registerViewport(id: string, canvasId: string): void {
+        if (this.bridge) {
+            this.bridge.registerViewport(id, canvasId);
+        }
+    }
+
+    /**
+     * Unregister a viewport.
+     * 注销视口。
+     */
+    unregisterViewport(id: string): void {
+        if (this.bridge) {
+            this.bridge.unregisterViewport(id);
+        }
+    }
+
+    /**
+     * Set the active viewport.
+     * 设置活动视口。
+     */
+    setActiveViewport(id: string): boolean {
+        if (this.bridge) {
+            return this.bridge.setActiveViewport(id);
+        }
+        return false;
+    }
+
+    /**
+     * Set camera for a specific viewport.
+     * 为特定视口设置相机。
+     */
+    setViewportCamera(viewportId: string, config: CameraConfig): void {
+        if (this.bridge) {
+            this.bridge.setViewportCamera(viewportId, config);
+        }
+    }
+
+    /**
+     * Get camera for a specific viewport.
+     * 获取特定视口的相机。
+     */
+    getViewportCamera(viewportId: string): CameraConfig | null {
+        if (this.bridge) {
+            return this.bridge.getViewportCamera(viewportId);
+        }
+        return null;
+    }
+
+    /**
+     * Set viewport configuration.
+     * 设置视口配置。
+     */
+    setViewportConfig(viewportId: string, showGrid: boolean, showGizmos: boolean): void {
+        if (this.bridge) {
+            this.bridge.setViewportConfig(viewportId, showGrid, showGizmos);
+        }
+    }
+
+    /**
+     * Resize a specific viewport.
+     * 调整特定视口大小。
+     */
+    resizeViewport(viewportId: string, width: number, height: number): void {
+        if (this.bridge) {
+            this.bridge.resizeViewport(viewportId, width, height);
+        }
+    }
+
+    /**
+     * Render to a specific viewport.
+     * 渲染到特定视口。
+     */
+    renderToViewport(viewportId: string): void {
+        if (this.bridge) {
+            this.bridge.renderToViewport(viewportId);
+        }
+    }
+
+    /**
+     * Get all registered viewport IDs.
+     * 获取所有已注册的视口ID。
+     */
+    getViewportIds(): string[] {
+        if (this.bridge) {
+            return this.bridge.getViewportIds();
+        }
+        return [];
     }
 
     /**

@@ -14,7 +14,8 @@ interface PropertyInspectorProps {
 
 export function PropertyInspector({ component, version, onChange, onAction }: PropertyInspectorProps) {
     const [properties, setProperties] = useState<Record<string, PropertyMetadata>>({});
-    const [values, setValues] = useState<Record<string, any>>({});
+    // version is used implicitly - when it changes, React re-renders and getValue reads fresh values
+    void version;
 
     const handleAction = (actionId: string, propertyName: string) => {
         if (onAction) {
@@ -28,31 +29,24 @@ export function PropertyInspector({ component, version, onChange, onAction }: Pr
 
         const metadata = propertyMetadataService.getEditableProperties(component);
         setProperties(metadata);
-
-        const componentAsAny = component as any;
-        const currentValues: Record<string, any> = {};
-        for (const key in metadata) {
-            currentValues[key] = componentAsAny[key];
-        }
-        setValues(currentValues);
-    }, [component, version]);
+    }, [component]);
 
     const handleChange = (propertyName: string, value: any) => {
         const componentAsAny = component as any;
         componentAsAny[propertyName] = value;
-
-        setValues((prev) => ({
-            ...prev,
-            [propertyName]: value
-        }));
 
         if (onChange) {
             onChange(propertyName, value);
         }
     };
 
+    // Read value directly from component to avoid state sync issues
+    const getValue = (propertyName: string) => {
+        return (component as any)[propertyName];
+    };
+
     const renderProperty = (propertyName: string, metadata: PropertyMetadata) => {
-        const value = values[propertyName];
+        const value = getValue(propertyName);
         const label = metadata.label || propertyName;
 
         switch (metadata.type) {
@@ -330,7 +324,9 @@ interface ColorFieldProps {
 function ColorField({ label, value, readOnly, onChange }: ColorFieldProps) {
     const [showPicker, setShowPicker] = useState(false);
     const [tempColor, setTempColor] = useState(value);
+    const [pickerPos, setPickerPos] = useState({ top: 0, left: 0 });
     const pickerRef = useRef<HTMLDivElement>(null);
+    const previewRef = useRef<HTMLDivElement>(null);
 
     // 解析十六进制颜色为 HSV
     const hexToHsv = (hex: string) => {
@@ -424,9 +420,27 @@ function ColorField({ label, value, readOnly, onChange }: ColorFieldProps) {
             <label className="property-label">{label}</label>
             <div className="property-color-wrapper">
                 <div
+                    ref={previewRef}
                     className="property-color-preview"
                     style={{ backgroundColor: value }}
-                    onClick={() => !readOnly && setShowPicker(!showPicker)}
+                    onClick={() => {
+                        if (readOnly) return;
+                        if (!showPicker && previewRef.current) {
+                            const rect = previewRef.current.getBoundingClientRect();
+                            const pickerWidth = 200;
+                            const pickerHeight = 220;
+                            let top = rect.bottom + 4;
+                            let left = rect.right - pickerWidth;
+
+                            // Ensure picker stays within viewport
+                            if (left < 8) left = 8;
+                            if (top + pickerHeight > window.innerHeight - 8) {
+                                top = rect.top - pickerHeight - 4;
+                            }
+                            setPickerPos({ top, left });
+                        }
+                        setShowPicker(!showPicker);
+                    }}
                 />
                 <input
                     type="text"
@@ -444,14 +458,23 @@ function ColorField({ label, value, readOnly, onChange }: ColorFieldProps) {
             </div>
 
             {showPicker && (
-                <div ref={pickerRef} className="color-picker-popup">
+                <div
+                    ref={pickerRef}
+                    className="color-picker-popup"
+                    style={{
+                        position: 'fixed',
+                        top: pickerPos.top,
+                        left: pickerPos.left,
+                        right: 'auto'
+                    }}
+                >
                     <div
                         className="color-picker-saturation"
                         style={{ backgroundColor: hsvToHex(hsv.h, 100, 100) }}
                         onMouseDown={(e) => {
                             handleSaturationValueChange(e);
+                            const rect = e.currentTarget.getBoundingClientRect();
                             const onMove = (ev: MouseEvent) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
                                 const s = Math.max(0, Math.min(100, ((ev.clientX - rect.left) / rect.width) * 100));
                                 const v = Math.max(0, Math.min(100, 100 - ((ev.clientY - rect.top) / rect.height) * 100));
                                 setTempColor(hsvToHex(hsv.h, s, v));
@@ -478,8 +501,8 @@ function ColorField({ label, value, readOnly, onChange }: ColorFieldProps) {
                         className="color-picker-hue"
                         onMouseDown={(e) => {
                             handleHueChange(e);
+                            const rect = e.currentTarget.getBoundingClientRect();
                             const onMove = (ev: MouseEvent) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
                                 const h = Math.max(0, Math.min(360, ((ev.clientX - rect.left) / rect.width) * 360));
                                 setTempColor(hsvToHex(h, hsv.s, hsv.v));
                             };
@@ -502,6 +525,74 @@ function ColorField({ label, value, readOnly, onChange }: ColorFieldProps) {
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+// Draggable axis input component
+interface DraggableAxisInputProps {
+    axis: 'x' | 'y' | 'z';
+    value: number;
+    readOnly?: boolean;
+    compact?: boolean;
+    onChange: (value: number) => void;
+}
+
+function DraggableAxisInput({ axis, value, readOnly, compact, onChange }: DraggableAxisInputProps) {
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStartRef = useRef({ x: 0, value: 0 });
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (readOnly) return;
+        e.preventDefault();
+        setIsDragging(true);
+        dragStartRef.current = { x: e.clientX, value: value ?? 0 };
+    };
+
+    useEffect(() => {
+        if (!isDragging) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const delta = e.clientX - dragStartRef.current.x;
+            const sensitivity = e.shiftKey ? 0.01 : 0.1;
+            const newValue = dragStartRef.current.value + delta * sensitivity;
+            onChange(Math.round(newValue * 1000) / 1000);
+        };
+
+        const handleMouseUp = () => {
+            setIsDragging(false);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging, onChange]);
+
+    const axisClass = `property-vector-axis-${axis}`;
+    const inputClass = compact ? 'property-input property-input-number-compact' : 'property-input property-input-number';
+
+    return (
+        <div className={compact ? 'property-vector-axis-compact' : 'property-vector-axis'}>
+            <span
+                className={`property-vector-axis-label ${axisClass}`}
+                onMouseDown={handleMouseDown}
+                style={{ cursor: readOnly ? 'default' : 'ew-resize' }}
+            >
+                {axis.toUpperCase()}
+            </span>
+            <input
+                type="number"
+                className={inputClass}
+                value={value ?? 0}
+                disabled={readOnly}
+                step={0.1}
+                onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+                onFocus={(e) => e.target.select()}
+            />
         </div>
     );
 }
@@ -529,57 +620,35 @@ function Vector2Field({ label, value, readOnly, onChange }: Vector2FieldProps) {
             </div>
             {isExpanded ? (
                 <div className="property-vector-expanded">
-                    <div className="property-vector-axis">
-                        <span className="property-vector-axis-label property-vector-axis-x">X</span>
-                        <input
-                            type="number"
-                            className="property-input property-input-number"
-                            value={value?.x ?? 0}
-                            disabled={readOnly}
-                            step={0.1}
-                            onChange={(e) => onChange({ ...value, x: parseFloat(e.target.value) || 0 })}
-                            onFocus={(e) => e.target.select()}
-                        />
-                    </div>
-                    <div className="property-vector-axis">
-                        <span className="property-vector-axis-label property-vector-axis-y">Y</span>
-                        <input
-                            type="number"
-                            className="property-input property-input-number"
-                            value={value?.y ?? 0}
-                            disabled={readOnly}
-                            step={0.1}
-                            onChange={(e) => onChange({ ...value, y: parseFloat(e.target.value) || 0 })}
-                            onFocus={(e) => e.target.select()}
-                        />
-                    </div>
+                    <DraggableAxisInput
+                        axis="x"
+                        value={value?.x ?? 0}
+                        readOnly={readOnly}
+                        onChange={(x) => onChange({ ...value, x })}
+                    />
+                    <DraggableAxisInput
+                        axis="y"
+                        value={value?.y ?? 0}
+                        readOnly={readOnly}
+                        onChange={(y) => onChange({ ...value, y })}
+                    />
                 </div>
             ) : (
                 <div className="property-vector-compact">
-                    <div className="property-vector-axis-compact">
-                        <span className="property-vector-axis-label property-vector-axis-x">X</span>
-                        <input
-                            type="number"
-                            className="property-input property-input-number-compact"
-                            value={value?.x ?? 0}
-                            disabled={readOnly}
-                            step={0.1}
-                            onChange={(e) => onChange({ ...value, x: parseFloat(e.target.value) || 0 })}
-                            onFocus={(e) => e.target.select()}
-                        />
-                    </div>
-                    <div className="property-vector-axis-compact">
-                        <span className="property-vector-axis-label property-vector-axis-y">Y</span>
-                        <input
-                            type="number"
-                            className="property-input property-input-number-compact"
-                            value={value?.y ?? 0}
-                            disabled={readOnly}
-                            step={0.1}
-                            onChange={(e) => onChange({ ...value, y: parseFloat(e.target.value) || 0 })}
-                            onFocus={(e) => e.target.select()}
-                        />
-                    </div>
+                    <DraggableAxisInput
+                        axis="x"
+                        value={value?.x ?? 0}
+                        readOnly={readOnly}
+                        compact
+                        onChange={(x) => onChange({ ...value, x })}
+                    />
+                    <DraggableAxisInput
+                        axis="y"
+                        value={value?.y ?? 0}
+                        readOnly={readOnly}
+                        compact
+                        onChange={(y) => onChange({ ...value, y })}
+                    />
                 </div>
             )}
         </div>
@@ -609,81 +678,48 @@ function Vector3Field({ label, value, readOnly, onChange }: Vector3FieldProps) {
             </div>
             {isExpanded ? (
                 <div className="property-vector-expanded">
-                    <div className="property-vector-axis">
-                        <span className="property-vector-axis-label property-vector-axis-x">X</span>
-                        <input
-                            type="number"
-                            className="property-input property-input-number"
-                            value={value?.x ?? 0}
-                            disabled={readOnly}
-                            step={0.1}
-                            onChange={(e) => onChange({ ...value, x: parseFloat(e.target.value) || 0 })}
-                            onFocus={(e) => e.target.select()}
-                        />
-                    </div>
-                    <div className="property-vector-axis">
-                        <span className="property-vector-axis-label property-vector-axis-y">Y</span>
-                        <input
-                            type="number"
-                            className="property-input property-input-number"
-                            value={value?.y ?? 0}
-                            disabled={readOnly}
-                            step={0.1}
-                            onChange={(e) => onChange({ ...value, y: parseFloat(e.target.value) || 0 })}
-                            onFocus={(e) => e.target.select()}
-                        />
-                    </div>
-                    <div className="property-vector-axis">
-                        <span className="property-vector-axis-label property-vector-axis-z">Z</span>
-                        <input
-                            type="number"
-                            className="property-input property-input-number"
-                            value={value?.z ?? 0}
-                            disabled={readOnly}
-                            step={0.1}
-                            onChange={(e) => onChange({ ...value, z: parseFloat(e.target.value) || 0 })}
-                            onFocus={(e) => e.target.select()}
-                        />
-                    </div>
+                    <DraggableAxisInput
+                        axis="x"
+                        value={value?.x ?? 0}
+                        readOnly={readOnly}
+                        onChange={(x) => onChange({ ...value, x })}
+                    />
+                    <DraggableAxisInput
+                        axis="y"
+                        value={value?.y ?? 0}
+                        readOnly={readOnly}
+                        onChange={(y) => onChange({ ...value, y })}
+                    />
+                    <DraggableAxisInput
+                        axis="z"
+                        value={value?.z ?? 0}
+                        readOnly={readOnly}
+                        onChange={(z) => onChange({ ...value, z })}
+                    />
                 </div>
             ) : (
                 <div className="property-vector-compact">
-                    <div className="property-vector-axis-compact">
-                        <span className="property-vector-axis-label property-vector-axis-x">X</span>
-                        <input
-                            type="number"
-                            className="property-input property-input-number-compact"
-                            value={value?.x ?? 0}
-                            disabled={readOnly}
-                            step={0.1}
-                            onChange={(e) => onChange({ ...value, x: parseFloat(e.target.value) || 0 })}
-                            onFocus={(e) => e.target.select()}
-                        />
-                    </div>
-                    <div className="property-vector-axis-compact">
-                        <span className="property-vector-axis-label property-vector-axis-y">Y</span>
-                        <input
-                            type="number"
-                            className="property-input property-input-number-compact"
-                            value={value?.y ?? 0}
-                            disabled={readOnly}
-                            step={0.1}
-                            onChange={(e) => onChange({ ...value, y: parseFloat(e.target.value) || 0 })}
-                            onFocus={(e) => e.target.select()}
-                        />
-                    </div>
-                    <div className="property-vector-axis-compact">
-                        <span className="property-vector-axis-label property-vector-axis-z">Z</span>
-                        <input
-                            type="number"
-                            className="property-input property-input-number-compact"
-                            value={value?.z ?? 0}
-                            disabled={readOnly}
-                            step={0.1}
-                            onChange={(e) => onChange({ ...value, z: parseFloat(e.target.value) || 0 })}
-                            onFocus={(e) => e.target.select()}
-                        />
-                    </div>
+                    <DraggableAxisInput
+                        axis="x"
+                        value={value?.x ?? 0}
+                        readOnly={readOnly}
+                        compact
+                        onChange={(x) => onChange({ ...value, x })}
+                    />
+                    <DraggableAxisInput
+                        axis="y"
+                        value={value?.y ?? 0}
+                        readOnly={readOnly}
+                        compact
+                        onChange={(y) => onChange({ ...value, y })}
+                    />
+                    <DraggableAxisInput
+                        axis="z"
+                        value={value?.z ?? 0}
+                        readOnly={readOnly}
+                        compact
+                        onChange={(z) => onChange({ ...value, z })}
+                    />
                 </div>
             )}
         </div>
@@ -699,29 +735,55 @@ interface EnumFieldProps {
 }
 
 function EnumField({ label, value, options, readOnly, onChange }: EnumFieldProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    const selectedOption = options.find((opt) => opt.value === value);
+    const displayLabel = selectedOption?.label || (options.length === 0 ? 'No options' : '');
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
+
     return (
         <div className="property-field">
             <label className="property-label">{label}</label>
-            <select
-                className="property-input property-input-select"
-                value={value ?? ''}
-                disabled={readOnly}
-                onChange={(e) => {
-                    const selectedOption = options.find((opt) => String(opt.value) === e.target.value);
-                    if (selectedOption) {
-                        onChange(selectedOption.value);
-                    }
-                }}
-            >
-                {options.length === 0 && (
-                    <option value="">No options</option>
+            <div className="property-dropdown" ref={dropdownRef}>
+                <button
+                    className={`property-dropdown-trigger ${isOpen ? 'open' : ''}`}
+                    onClick={() => !readOnly && setIsOpen(!isOpen)}
+                    disabled={readOnly}
+                    type="button"
+                >
+                    <span className="property-dropdown-value">{displayLabel}</span>
+                    <span className="property-dropdown-arrow">▾</span>
+                </button>
+                {isOpen && (
+                    <div className="property-dropdown-menu">
+                        {options.map((option, index) => (
+                            <button
+                                key={index}
+                                className={`property-dropdown-item ${option.value === value ? 'selected' : ''}`}
+                                onClick={() => {
+                                    onChange(option.value);
+                                    setIsOpen(false);
+                                }}
+                                type="button"
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
                 )}
-                {options.map((option, index) => (
-                    <option key={index} value={String(option.value)}>
-                        {option.label}
-                    </option>
-                ))}
-            </select>
+            </div>
         </div>
     );
 }

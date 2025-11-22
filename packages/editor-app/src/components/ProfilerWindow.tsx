@@ -36,6 +36,8 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
     const [isServerRunning, setIsServerRunning] = useState(false);
     const [port, setPort] = useState('8080');
     const animationRef = useRef<number>();
+    const frameTimesRef = useRef<number[]>([]);
+    const lastFpsRef = useRef<number>(0);
 
     useEffect(() => {
         const settings = SettingsService.getInstance();
@@ -298,7 +300,29 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
         return result;
     };
 
-    const fps = totalFrameTime > 0 ? Math.round(1000 / totalFrameTime) : 0;
+    // Calculate FPS using rolling average for stability
+    // 使用滑动平均计算 FPS 以保持稳定
+    const calculateFps = () => {
+        // Add any positive frame time
+        // 添加任何正数的帧时间
+        if (totalFrameTime > 0) {
+            frameTimesRef.current.push(totalFrameTime);
+            // Keep last 60 samples
+            if (frameTimesRef.current.length > 60) {
+                frameTimesRef.current.shift();
+            }
+        }
+
+        if (frameTimesRef.current.length > 0) {
+            const avgFrameTime = frameTimesRef.current.reduce((a, b) => a + b, 0) / frameTimesRef.current.length;
+            // Cap FPS between 0-999, and ensure avgFrameTime is reasonable
+            if (avgFrameTime > 0.01) {
+                lastFpsRef.current = Math.min(999, Math.round(1000 / avgFrameTime));
+            }
+        }
+        return lastFpsRef.current;
+    };
+    const fps = calculateFps();
     const targetFrameTime = 16.67;
     const isOverBudget = totalFrameTime > targetFrameTime;
 

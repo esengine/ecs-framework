@@ -115,6 +115,7 @@
   border-bottom: 1px solid var(--color-border-default);
   flex-shrink: 0;
   gap: 12px;
+  min-height: 48px;
 }
 
 .profiler-toolbar-left {
@@ -122,13 +123,15 @@
   align-items: center;
   gap: 12px;
   flex: 1;
-  flex-wrap: wrap;
+  min-width: 0;
+  overflow-x: auto;
 }
 
 .profiler-toolbar-right {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .profiler-mode-switch {
@@ -138,9 +141,10 @@
   background: var(--color-bg-inset);
   padding: 2px;
   border-radius: var(--radius-sm);
+  flex-shrink: 0;
 }
 
-.mode-btn {
+.profiler-window .profiler-mode-switch .mode-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -153,14 +157,19 @@
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-fast);
+  white-space: nowrap;
+  width: auto;
+  min-width: auto;
+  height: auto;
+  justify-content: flex-start;
 }
 
-.mode-btn:hover {
+.profiler-window .profiler-mode-switch .mode-btn:hover {
   background: var(--color-bg-hover);
   color: var(--color-text-primary);
 }
 
-.mode-btn.active {
+.profiler-window .profiler-mode-switch .mode-btn.active {
   background: var(--color-primary);
   color: white;
 }
@@ -257,7 +266,10 @@
 .profiler-stats-summary {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
+  flex-shrink: 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--color-border-default);
 }
 
 .summary-item {
@@ -266,6 +278,7 @@
   gap: 6px;
   font-size: 12px;
   color: var(--color-text-secondary);
+  white-space: nowrap;
 }
 
 .summary-item svg {

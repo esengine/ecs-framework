@@ -9,5 +9,4 @@ export { EngineBridge, EngineBridgeConfig } from './core/EngineBridge';
 export { RenderBatcher } from './core/RenderBatcher';
 export { SpriteRenderHelper, ITransformComponent } from './core/SpriteRenderHelper';
 export { EngineRenderSystem, type TransformComponentType } from './systems/EngineRenderSystem';
-export { SpriteComponent } from './components/SpriteComponent';
 export * from './types';

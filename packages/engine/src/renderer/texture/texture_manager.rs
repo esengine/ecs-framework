@@ -195,7 +195,11 @@ impl TextureManager {
         if let Some(texture) = self.textures.get(&id) {
             self.gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture.handle));
         } else if let Some(default) = &self.default_texture {
-            log::warn!("Texture {} not found, using default | 未找到纹理 {}，使用默认纹理", id, id);
+            // ID 0 is the default texture, no warning needed
+            // ID 0 是默认纹理，不需要警告
+            if id != 0 {
+                log::warn!("Texture {} not found, using default | 未找到纹理 {}，使用默认纹理", id, id);
+            }
             self.gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(default));
         } else {
             log::error!("Texture {} not found and no default texture! | 未找到纹理 {} 且没有默认纹理！", id, id);

@@ -19,10 +19,20 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
 
     useEffect(() => {
         const handleSelection = (data: { entity: Entity | null }) => {
-            setSelectedEntity(data.entity);
+            setSelectedEntity((prev) => {
+                // Only reset version when selecting a different entity
+                // 只在选择不同实体时重置版本
+                if (prev?.id !== data.entity?.id) {
+                    setComponentVersion(0);
+                } else {
+                    // Same entity re-selected, trigger refresh
+                    // 同一实体重新选择，触发刷新
+                    setComponentVersion((v) => v + 1);
+                }
+                return data.entity;
+            });
             setRemoteEntity(null);
             setRemoteEntityDetails(null);
-            setComponentVersion(0);
         };
 
         const handleRemoteSelection = (data: { entity: any }) => {
@@ -45,6 +55,7 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
         const unsubRemoteSelect = messageHub.subscribe('remote-entity:selected', handleRemoteSelection);
         const unsubComponentAdded = messageHub.subscribe('component:added', handleComponentChange);
         const unsubComponentRemoved = messageHub.subscribe('component:removed', handleComponentChange);
+        const unsubPropertyChanged = messageHub.subscribe('component:property:changed', handleComponentChange);
 
         window.addEventListener('profiler:entity-details', handleEntityDetails);
 
@@ -53,6 +64,7 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
             unsubRemoteSelect();
             unsubComponentAdded();
             unsubComponentRemoved();
+            unsubPropertyChanged();
             window.removeEventListener('profiler:entity-details', handleEntityDetails);
         };
     }, [messageHub]);
@@ -80,6 +92,11 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
 
     const handlePropertyChange = (component: any, propertyName: string, value: any) => {
         if (!selectedEntity) return;
+
+        // Actually update the component property
+        // 实际更新组件属性
+        component[propertyName] = value;
+
         messageHub.publish('component:property:changed', {
             entity: selectedEntity,
             component,
@@ -500,6 +517,7 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
                                             {isExpanded && (
                                                 <div className="component-properties animate-slideDown">
                                                     <PropertyInspector
+                                                        key={`${index}-${componentVersion}`}
                                                         component={component}
                                                         onChange={(propertyName, value) => handlePropertyChange(component, propertyName, value)}
                                                     />

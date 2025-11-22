@@ -6,7 +6,7 @@
 import { Entity, Component } from '@esengine/ecs-framework';
 import type { EngineBridge } from './EngineBridge';
 import { RenderBatcher } from './RenderBatcher';
-import { SpriteComponent } from '../components/SpriteComponent';
+import { SpriteComponent } from '@esengine/ecs-components';
 import type { SpriteRenderData } from '../types';
 
 /**
@@ -99,6 +99,9 @@ export class SpriteRenderHelper {
                 ? transform.rotation
                 : transform.rotation.z;
 
+            // Convert hex color string to packed RGBA
+            const color = this.hexToPackedColor(sprite.color, sprite.alpha);
+
             const renderData: SpriteRenderData = {
                 x: transform.position.x,
                 y: transform.position.y,
@@ -109,7 +112,7 @@ export class SpriteRenderHelper {
                 originY: sprite.originY,
                 textureId: sprite.textureId,
                 uv,
-                color: sprite.color
+                color
             };
 
             this.batcher.addSprite(renderData);
@@ -141,5 +144,27 @@ export class SpriteRenderHelper {
      */
     clear(): void {
         this.batcher.clear();
+    }
+
+    /**
+     * Convert hex color string to packed RGBA.
+     * 将十六进制颜色字符串转换为打包的RGBA。
+     */
+    private hexToPackedColor(hex: string, alpha: number): number {
+        let r = 255, g = 255, b = 255;
+        if (hex.startsWith('#')) {
+            const hexValue = hex.slice(1);
+            if (hexValue.length === 3) {
+                r = parseInt(hexValue[0] + hexValue[0], 16);
+                g = parseInt(hexValue[1] + hexValue[1], 16);
+                b = parseInt(hexValue[2] + hexValue[2], 16);
+            } else if (hexValue.length === 6) {
+                r = parseInt(hexValue.slice(0, 2), 16);
+                g = parseInt(hexValue.slice(2, 4), 16);
+                b = parseInt(hexValue.slice(4, 6), 16);
+            }
+        }
+        const a = Math.round(alpha * 255);
+        return ((a & 0xFF) << 24) | ((b & 0xFF) << 16) | ((g & 0xFF) << 8) | (r & 0xFF);
     }
 }
