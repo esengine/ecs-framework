@@ -3,9 +3,80 @@ import { Play, Pause, Square, RotateCcw, Maximize2, Grid3x3, Eye, EyeOff, Activi
 import '../styles/Viewport.css';
 import { useEngine } from '../hooks/useEngine';
 import { EngineService } from '../services/EngineService';
-import { Core, Entity } from '@esengine/ecs-framework';
+import { Core, Entity, SceneSerializer } from '@esengine/ecs-framework';
 import { MessageHub } from '@esengine/editor-core';
 import { TransformComponent, CameraComponent } from '@esengine/ecs-components';
+import { TauriAPI } from '../api/tauri';
+import { open } from '@tauri-apps/plugin-shell';
+import { RuntimeResolver } from '../services/RuntimeResolver';
+import { QRCodeDialog } from './QRCodeDialog';
+
+// Generate runtime HTML for browser preview
+function generateRuntimeHtml(): string {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECS Runtime Preview</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            background: #1e1e1e;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            position: fixed;
+        }
+        canvas {
+            display: block;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-user-drag: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="runtime-canvas"></canvas>
+    <script src="/runtime.browser.js"></script>
+    <script type="module">
+        import * as esEngine from '/engine.js';
+        (async function() {
+            try {
+                // Set canvas size before creating runtime
+                const canvas = document.getElementById('runtime-canvas');
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+
+                const runtime = ECSRuntime.create({
+                    canvasId: 'runtime-canvas',
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                });
+
+                await runtime.initialize(esEngine);
+                await runtime.loadScene('/scene.json?_=' + Date.now());
+                runtime.start();
+
+                window.addEventListener('resize', () => {
+                    const canvas = document.getElementById('runtime-canvas');
+                    const newWidth = window.innerWidth;
+                    const newHeight = window.innerHeight;
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
+                    runtime.handleResize(newWidth, newHeight);
+                });
+            } catch (e) {
+                console.error('Runtime error:', e);
+            }
+        })();
+    </script>
+</body>
+</html>`;
+}
 
 // Transform tool modes
 export type TransformMode = 'select' | 'move' | 'rotate' | 'scale';
@@ -25,6 +96,8 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
     const [showStats, setShowStats] = useState(false);
     const [transformMode, setTransformMode] = useState<TransformMode>('select');
     const [showRunMenu, setShowRunMenu] = useState(false);
+    const [showQRDialog, setShowQRDialog] = useState(false);
+    const [devicePreviewUrl, setDevicePreviewUrl] = useState('');
     const runMenuRef = useRef<HTMLDivElement>(null);
 
     // Store editor camera state when entering play mode
@@ -376,6 +449,8 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                 }
                 return;
             }
+            // Save scene snapshot before playing
+            EngineService.getInstance().saveSceneSnapshot();
             // Save editor camera state
             editorCameraRef.current = { x: camera2DOffset.x, y: camera2DOffset.y, zoom: camera2DZoom };
             setPlayState('playing');
@@ -401,6 +476,8 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
     const handleStop = () => {
         setPlayState('stopped');
         engine.stop();
+        // Restore scene snapshot
+        EngineService.getInstance().restoreSceneSnapshot();
         // Restore editor camera state
         setCamera2DOffset({ x: editorCameraRef.current.x, y: editorCameraRef.current.y });
         setCamera2DZoom(editorCameraRef.current.zoom);
@@ -417,27 +494,214 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         setCamera2DZoom(1);
     };
 
-    const handleRunInBrowser = () => {
+    const handleRunInBrowser = async () => {
         setShowRunMenu(false);
-        // TODO: Export and run in browser
-        console.log('Run in browser - not implemented');
-        if (messageHub) {
-            messageHub.publish('notification:info', {
+
+        try {
+            const engineService = EngineService.getInstance();
+            const scene = engineService.getScene();
+            if (!scene) {
+                messageHub?.publish('notification:error', {
+                    title: locale === 'zh' ? '错误' : 'Error',
+                    message: locale === 'zh' ? '没有可运行的场景' : 'No scene to run'
+                });
+                return;
+            }
+
+            // Serialize current scene
+            const serialized = SceneSerializer.serialize(scene, {
+                format: 'json',
+                pretty: true,
+                includeMetadata: true
+            });
+
+            // Ensure we have string data
+            const sceneData = typeof serialized === 'string'
+                ? serialized
+                : new TextDecoder().decode(serialized);
+
+            // Get temp directory and create runtime files
+            const tempDir = await TauriAPI.getTempDir();
+            const runtimeDir = `${tempDir}/ecs-runtime`;
+
+            // Create runtime directory
+            const dirExists = await TauriAPI.pathExists(runtimeDir);
+            if (!dirExists) {
+                await TauriAPI.createDirectory(runtimeDir);
+            }
+
+            // Use RuntimeResolver to copy runtime files
+            // 使用 RuntimeResolver 复制运行时文件
+            const runtimeResolver = RuntimeResolver.getInstance();
+            await runtimeResolver.initialize();
+            await runtimeResolver.prepareRuntimeFiles(runtimeDir);
+
+            // Write scene data and HTML (always update)
+            await TauriAPI.writeFileContent(`${runtimeDir}/scene.json`, sceneData);
+
+            // Copy texture assets referenced in the scene
+            // 复制场景中引用的纹理资产
+            const sceneObj = JSON.parse(sceneData);
+            const texturePathSet = new Set<string>();
+
+            // Find all texture paths in sprite components
+            if (sceneObj.entities) {
+                for (const entity of sceneObj.entities) {
+                    if (entity.components) {
+                        for (const comp of entity.components) {
+                            if (comp.type === 'Sprite' && comp.data?.texture) {
+                                texturePathSet.add(comp.data.texture);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Create assets directory and copy textures
+            const assetsDir = `${runtimeDir}\\assets`;
+            const assetsDirExists = await TauriAPI.pathExists(assetsDir);
+            if (!assetsDirExists) {
+                await TauriAPI.createDirectory(assetsDir);
+            }
+
+            for (const texturePath of texturePathSet) {
+                if (texturePath && (texturePath.includes(':\\') || texturePath.startsWith('/'))) {
+                    try {
+                        const filename = texturePath.split(/[\\\/]/).pop() || '';
+                        const destPath = `${assetsDir}\\${filename}`;
+                        const exists = await TauriAPI.pathExists(texturePath);
+                        if (exists) {
+                            await TauriAPI.copyFile(texturePath, destPath);
+                        }
+                    } catch (error) {
+                        console.error(`Failed to copy texture ${texturePath}:`, error);
+                    }
+                }
+            }
+
+            const runtimeHtml = generateRuntimeHtml();
+            await TauriAPI.writeFileContent(`${runtimeDir}/index.html`, runtimeHtml);
+
+            // Start local server and open browser
+            const serverUrl = await TauriAPI.startLocalServer(runtimeDir, 3333);
+            await open(serverUrl);
+
+            messageHub?.publish('notification:success', {
                 title: locale === 'zh' ? '浏览器运行' : 'Run in Browser',
-                message: locale === 'zh' ? '功能开发中...' : 'Feature in development...'
+                message: locale === 'zh' ? `已在浏览器中打开: ${serverUrl}` : `Opened in browser: ${serverUrl}`
+            });
+        } catch (error) {
+            console.error('Failed to run in browser:', error);
+            messageHub?.publish('notification:error', {
+                title: locale === 'zh' ? '运行失败' : 'Run Failed',
+                message: String(error)
             });
         }
     };
 
-    const handleRunOnDevice = () => {
+    const handleRunOnDevice = async () => {
         setShowRunMenu(false);
-        // TODO: Generate QR code for device testing
-        console.log('Run on device - not implemented');
-        if (messageHub) {
-            messageHub.publish('notification:info', {
-                title: locale === 'zh' ? '真机运行' : 'Run on Device',
-                message: locale === 'zh' ? '功能开发中...' : 'Feature in development...'
-            });
+
+        if (!Core.scene) {
+            if (messageHub) {
+                messageHub.publish('notification:warning', {
+                    title: locale === 'zh' ? '无场景' : 'No Scene',
+                    message: locale === 'zh' ? '请先创建场景' : 'Please create a scene first'
+                });
+            }
+            return;
+        }
+
+        try {
+            // Get scene data
+            const sceneData = SceneSerializer.serialize(Core.scene);
+
+            // Get temp directory and create runtime folder
+            const tempDir = await TauriAPI.getTempDir();
+            const runtimeDir = `${tempDir}\\ecs-device-preview`;
+
+            // Create directory
+            const dirExists = await TauriAPI.pathExists(runtimeDir);
+            if (!dirExists) {
+                await TauriAPI.createDirectory(runtimeDir);
+            }
+
+            // Use RuntimeResolver to copy runtime files
+            const runtimeResolver = RuntimeResolver.getInstance();
+            await runtimeResolver.initialize();
+            await runtimeResolver.prepareRuntimeFiles(runtimeDir);
+
+            // Write scene data and HTML
+            const sceneDataStr = typeof sceneData === 'string' ? sceneData : new TextDecoder().decode(sceneData);
+            await TauriAPI.writeFileContent(`${runtimeDir}/scene.json`, sceneDataStr);
+            await TauriAPI.writeFileContent(`${runtimeDir}/index.html`, generateRuntimeHtml());
+
+            // Copy textures referenced in scene
+            const assetsDir = `${runtimeDir}\\assets`;
+            const assetsDirExists = await TauriAPI.pathExists(assetsDir);
+            if (!assetsDirExists) {
+                await TauriAPI.createDirectory(assetsDir);
+            }
+
+            // Collect texture paths from scene data
+            const texturePathSet = new Set<string>();
+            try {
+                const entityData = JSON.parse(sceneDataStr);
+                if (entityData.entities) {
+                    for (const ent of entityData.entities) {
+                        if (ent.components) {
+                            for (const comp of ent.components) {
+                                if (comp.texture && typeof comp.texture === 'string') {
+                                    texturePathSet.add(comp.texture);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to parse scene data for textures:', e);
+            }
+
+            // Copy texture files
+            for (const texturePath of texturePathSet) {
+                if (texturePath && (texturePath.includes(':\\') || texturePath.startsWith('/'))) {
+                    try {
+                        const filename = texturePath.split(/[\\\/]/).pop() || '';
+                        const destPath = `${assetsDir}\\${filename}`;
+                        const exists = await TauriAPI.pathExists(texturePath);
+                        if (exists) {
+                            await TauriAPI.copyFile(texturePath, destPath);
+                        }
+                    } catch (error) {
+                        console.error(`Failed to copy texture ${texturePath}:`, error);
+                    }
+                }
+            }
+
+            // Get local IP and start server
+            const localIp = await TauriAPI.getLocalIp();
+            const port = 3333;
+            await TauriAPI.startLocalServer(runtimeDir, port);
+
+            // Generate preview URL
+            const previewUrl = `http://${localIp}:${port}`;
+            setDevicePreviewUrl(previewUrl);
+            setShowQRDialog(true);
+
+            if (messageHub) {
+                messageHub.publish('notification:success', {
+                    title: locale === 'zh' ? '服务器已启动' : 'Server Started',
+                    message: locale === 'zh' ? `预览地址: ${previewUrl}` : `Preview URL: ${previewUrl}`
+                });
+            }
+        } catch (error) {
+            console.error('Failed to run on device:', error);
+            if (messageHub) {
+                messageHub.publish('notification:error', {
+                    title: locale === 'zh' ? '启动失败' : 'Failed to Start',
+                    message: error instanceof Error ? error.message : String(error)
+                });
+            }
         }
     };
 
@@ -626,6 +890,12 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                     )}
                 </div>
             )}
+
+            <QRCodeDialog
+                url={devicePreviewUrl}
+                isOpen={showQRDialog}
+                onClose={() => setShowQRDialog(false)}
+            />
         </div>
     );
 }

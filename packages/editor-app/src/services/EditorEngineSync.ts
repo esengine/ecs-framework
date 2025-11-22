@@ -9,6 +9,7 @@
 import { Entity, Component } from '@esengine/ecs-framework';
 import { MessageHub, EntityStoreService } from '@esengine/editor-core';
 import { TransformComponent, SpriteComponent } from '@esengine/ecs-components';
+import { AssetReference } from '@esengine/asset-system';
 import { EngineService } from './EngineService';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
@@ -23,8 +24,8 @@ export class EditorEngineSync {
     private syncedEntities: Map<number, Entity> = new Map();
 
     // Track loaded textures
+    // 跟踪已加载的纹理
     private loadedTextures: Map<string, number> = new Map();
-    private textureIdCounter = 1;
 
     // Subscription IDs
     private subscriptions: Array<() => void> = [];
@@ -143,7 +144,7 @@ export class EditorEngineSync {
      * Note: Entity is already in Core.scene, we just need to load textures.
      * 注意：实体已经在Core.scene中，我们只需要加载纹理。
      */
-    private syncEntity(entity: Entity): void {
+    private async syncEntity(entity: Entity): Promise<void> {
         // Check if entity has sprite component
         const spriteComponent = entity.getComponent(SpriteComponent);
         if (!spriteComponent) {
@@ -151,25 +152,32 @@ export class EditorEngineSync {
         }
 
         // Load texture if needed and set textureId on the sprite component
-        // Use === 0 to explicitly check for unset textureId (since 0 is falsy)
+        // 如果需要，加载纹理并设置精灵组件的textureId
         if (spriteComponent.texture && spriteComponent.textureId === 0) {
-            const textureId = this.getOrLoadTexture(spriteComponent.texture);
-            spriteComponent.textureId = textureId;
-            console.log(`Set textureId ${textureId} on sprite for entity ${entity.name} | 为实体 ${entity.name} 的精灵设置纹理ID ${textureId}`);
+            try {
+                const textureId = await this.getOrLoadTexture(spriteComponent.texture);
+                spriteComponent.textureId = textureId;
+            } catch (error) {
+                console.error(`Failed to load texture for entity ${entity.id}:`, error);
+            }
         } else if (spriteComponent.texture && spriteComponent.textureId !== 0) {
-            // Texture already has ID, but might be a different texture path - check if we need to update
+            // Texture already has ID, but might be a different texture path
+            // 纹理已有ID，但可能是不同的纹理路径
             const existingId = this.loadedTextures.get(spriteComponent.texture);
             if (existingId === undefined) {
                 // New texture path, need to load it
-                const textureId = this.getOrLoadTexture(spriteComponent.texture);
-                spriteComponent.textureId = textureId;
-                console.log(`Updated textureId ${textureId} on sprite for entity ${entity.name} | 为实体 ${entity.name} 的精灵更新纹理ID ${textureId}`);
+                // 新纹理路径，需要加载
+                try {
+                    const textureId = await this.getOrLoadTexture(spriteComponent.texture);
+                    spriteComponent.textureId = textureId;
+                } catch (error) {
+                    console.error(`Failed to load texture for entity ${entity.id}:`, error);
+                }
             }
         }
 
         // Track synced entity (no need to create duplicate)
         this.syncedEntities.set(entity.id, entity);
-        console.log(`Synced entity ${entity.name} (texture: ${spriteComponent.texture}, textureId: ${spriteComponent.textureId}) | 已同步实体 ${entity.name}`);
     }
 
     /**
@@ -182,7 +190,6 @@ export class EditorEngineSync {
         }
         // Just remove from tracking, entity destruction is handled by the command
         this.syncedEntities.delete(entity.id);
-        console.log(`Removed entity ${entity.name} from tracking | 已从跟踪中移除实体 ${entity.name}`);
     }
 
     /**
@@ -235,11 +242,21 @@ export class EditorEngineSync {
      * Update sprite in engine entity.
      * 更新引擎实体的精灵。
      */
-    private updateSprite(entity: Entity, sprite: SpriteComponent, property: string, value: any): void {
-        if (property === 'texture' && value) {
-            const textureId = this.getOrLoadTexture(value);
-            sprite.textureId = textureId;
-            console.log(`Set textureId ${textureId} on sprite for entity ${entity.name} | 为实体 ${entity.name} 的精灵设置纹理ID ${textureId}`);
+    private async updateSprite(entity: Entity, sprite: SpriteComponent, property: string, value: any): Promise<void> {
+        if (property === 'texture') {
+            if (value) {
+                try {
+                    const textureId = await this.getOrLoadTexture(value);
+                    sprite.textureId = textureId;
+                } catch (error) {
+                    console.error(`Failed to update texture for entity ${entity.id}:`, error);
+                    sprite.textureId = 0; // Fallback to default texture
+                }
+            } else {
+                // Texture cleared, reset to default (white texture)
+                // 纹理清除，重置为默认值（白色纹理）
+                sprite.textureId = 0;
+            }
         }
     }
 
@@ -247,23 +264,39 @@ export class EditorEngineSync {
      * Get or load texture, returning texture ID.
      * 获取或加载纹理，返回纹理ID。
      */
-    private getOrLoadTexture(texturePath: string): number {
-        // Check if already loaded
+    private async getOrLoadTexture(texturePath: string): Promise<number> {
+        // Check if already loaded in cache
+        // 检查缓存中是否已加载
         let textureId = this.loadedTextures.get(texturePath);
         if (textureId !== undefined) {
             return textureId;
         }
 
-        // Assign new ID and load
-        textureId = this.textureIdCounter++;
-        this.loadedTextures.set(texturePath, textureId);
+        // Get asset system components
+        // 获取资产系统组件
+        const engineIntegration = this.engineService.getEngineIntegration();
+        if (!engineIntegration) {
+            throw new Error('Asset system not initialized | 资产系统未初始化');
+        }
 
-        // Convert relative path to URL if needed
-        const textureUrl = this.resolveTexturePath(texturePath);
-        this.engineService.loadTexture(textureId, textureUrl);
+        try {
+            // Convert path to proper URL format for asset system
+            // 为资产系统转换路径为正确的URL格式
+            const resolvedPath = this.resolveTexturePath(texturePath);
 
-        console.log(`Loaded texture ${texturePath} with ID ${textureId} | 已加载纹理 ${texturePath}，ID: ${textureId}`);
-        return textureId;
+            // Load through asset system with caching and memory management
+            // 通过资产系统加载，支持缓存和内存管理
+            textureId = await engineIntegration.loadTextureForComponent(resolvedPath);
+
+            // Cache the mapping for quick lookup
+            // 缓存映射以便快速查找
+            this.loadedTextures.set(texturePath, textureId);
+
+            return textureId;
+        } catch (error) {
+            console.error(`Failed to load texture: ${texturePath}`, error);
+            throw error;
+        }
     }
 
     /**
@@ -271,20 +304,18 @@ export class EditorEngineSync {
      * 将纹理路径解析为URL。
      */
     private resolveTexturePath(path: string): string {
-        // If it's already a URL, return as-is
-        if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+        // If it's already a URL (including asset://), return as-is
+        // 如果已经是URL（包括asset://），直接返回
+        if (path.startsWith('http://') ||
+            path.startsWith('https://') ||
+            path.startsWith('data:') ||
+            path.startsWith('asset://')) {
             return path;
         }
 
         // Convert file path to Tauri asset URL
-        // Tauri uses asset:// protocol to access local files
         // 将文件路径转换为Tauri资产URL
-        // Tauri使用asset://协议访问本地文件
-
-        // Use Tauri's convertFileSrc API
-        // 使用Tauri的convertFileSrc API
         const assetUrl = convertFileSrc(path);
-        console.log(`Converted path to asset URL: ${path} -> ${assetUrl}`);
         return assetUrl;
     }
 
@@ -295,7 +326,6 @@ export class EditorEngineSync {
     private clearAllFromEngine(): void {
         // Just clear tracking, entity destruction is handled elsewhere
         this.syncedEntities.clear();
-        console.log('Cleared all entities from tracking | 已清除所有实体跟踪');
     }
 
     /**

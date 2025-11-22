@@ -153,8 +153,10 @@ export function GameView({ locale = 'en', messageHub }: GameViewProps) {
 
     const handleRunInBrowser = () => {
         setShowRunMenu(false);
-        // TODO: Export and run in browser
-        console.log('Run in browser - not implemented');
+        // TODO: Implement browser preview
+        // 1. Export game scene and assets
+        // 2. Build runtime bundle
+        // 3. Open in external browser
         if (messageHub) {
             messageHub.publish('notification:info', {
                 title: locale === 'zh' ? '浏览器运行' : 'Run in Browser',
@@ -165,8 +167,10 @@ export function GameView({ locale = 'en', messageHub }: GameViewProps) {
 
     const handleRunOnDevice = () => {
         setShowRunMenu(false);
-        // TODO: Generate QR code for device testing
-        console.log('Run on device - not implemented');
+        // TODO: Implement mobile preview with QR code
+        // 1. Start local server on LAN IP
+        // 2. Generate QR code with preview URL
+        // 3. Show QR code in modal dialog
         if (messageHub) {
             messageHub.publish('notification:info', {
                 title: locale === 'zh' ? '真机运行' : 'Run on Device',

@@ -92,21 +92,29 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
         const messageHub = Core.services.resolve(MessageHub);
         if (!messageHub) return;
 
-        const unsubscribe = messageHub.subscribe('asset:reveal', (data: any) => {
+        const unsubscribe = messageHub.subscribe('asset:reveal', async (data: any) => {
             const filePath = data.path;
             if (filePath) {
-                setSelectedPath(filePath);
                 const lastSlashIndex = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
                 const dirPath = lastSlashIndex > 0 ? filePath.substring(0, lastSlashIndex) : null;
                 if (dirPath) {
                     setCurrentPath(dirPath);
-                    loadAssets(dirPath);
+                    // Load assets first, then set selection after list is populated
+                    await loadAssets(dirPath);
+                    setSelectedPath(filePath);
+
+                    // Expand tree to reveal the file
+                    if (showDetailView) {
+                        detailViewFileTreeRef.current?.revealPath(filePath);
+                    } else {
+                        treeOnlyViewFileTreeRef.current?.revealPath(filePath);
+                    }
                 }
             }
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [showDetailView]);
 
     const loadAssets = async (path: string) => {
         setLoading(true);
@@ -730,7 +738,7 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                             ref={treeOnlyViewFileTreeRef}
                             rootPath={projectPath}
                             onSelectFile={handleFolderSelect}
-                            selectedPath={currentPath}
+                            selectedPath={selectedPath || currentPath}
                             messageHub={messageHub}
                             searchQuery={searchQuery}
                             showFiles={true}

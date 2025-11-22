@@ -160,17 +160,21 @@ export function AssetField({
                         </button>
                     )}
 
-                    {/* 导航按钮 */}
-                    {value && onNavigate && (
+                    {/* 导航/定位按钮 */}
+                    {onNavigate && (
                         <button
                             className="asset-field__button"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onNavigate(value);
+                                if (value) {
+                                    onNavigate(value);
+                                } else {
+                                    handleBrowse();
+                                }
                             }}
-                            title="在资产浏览器中显示"
+                            title={value ? "在资产浏览器中显示" : "选择资产"}
                         >
-                            <ArrowRight size={12} />
+                            {value ? <ArrowRight size={12} /> : <FolderOpen size={12} />}
                         </button>
                     )}
 

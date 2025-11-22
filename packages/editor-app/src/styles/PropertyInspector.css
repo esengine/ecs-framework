@@ -469,6 +469,39 @@
   color: var(--color-text-secondary);
 }
 
+.property-asset-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.property-asset-btn {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  border-radius: 2px;
+  opacity: 0;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.property-asset-drop:hover .property-asset-btn {
+  opacity: 1;
+}
+
+.property-asset-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-accent);
+}
+
 .property-label-row {
   flex: 0 0 40%;
   display: flex;

@@ -202,8 +202,9 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager }: Scen
     };
 
     const handleCreateSpriteEntity = () => {
-        const entityCount = entityStore.getAllEntities().length;
-        const entityName = `Sprite ${entityCount + 1}`;
+        // Count only Sprite entities for naming
+        const spriteCount = entityStore.getAllEntities().filter(e => e.name.startsWith('Sprite ')).length;
+        const entityName = `Sprite ${spriteCount + 1}`;
 
         const command = new CreateSpriteEntityCommand(
             entityStore,

@@ -1,4 +1,4 @@
-import { Core } from '@esengine/ecs-framework';
+import { Core, ComponentRegistry as CoreComponentRegistry } from '@esengine/ecs-framework';
 import {
     UIRegistry,
     MessageHub,
@@ -92,55 +92,31 @@ export class ServiceRegistry {
         const entityStore = new EntityStoreService(messageHub);
         const componentRegistry = new ComponentRegistry();
 
-        // 注册标准组件
-        componentRegistry.register({
-            name: 'Transform',
-            type: TransformComponent,
-            category: 'components.category.core',
-            description: 'components.transform.description'
-        });
-        componentRegistry.register({
-            name: 'Sprite',
-            type: SpriteComponent,
-            category: 'components.category.rendering',
-            description: 'components.sprite.description'
-        });
-        componentRegistry.register({
-            name: 'Text',
-            type: TextComponent,
-            category: 'components.category.rendering',
-            description: 'components.text.description'
-        });
-        componentRegistry.register({
-            name: 'Camera',
-            type: CameraComponent,
-            category: 'components.category.rendering',
-            description: 'components.camera.description'
-        });
-        componentRegistry.register({
-            name: 'RigidBody',
-            type: RigidBodyComponent,
-            category: 'components.category.physics',
-            description: 'components.rigidBody.description'
-        });
-        componentRegistry.register({
-            name: 'BoxCollider',
-            type: BoxColliderComponent,
-            category: 'components.category.physics',
-            description: 'components.boxCollider.description'
-        });
-        componentRegistry.register({
-            name: 'CircleCollider',
-            type: CircleColliderComponent,
-            category: 'components.category.physics',
-            description: 'components.circleCollider.description'
-        });
-        componentRegistry.register({
-            name: 'AudioSource',
-            type: AudioSourceComponent,
-            category: 'components.category.audio',
-            description: 'components.audioSource.description'
-        });
+        // 注册标准组件到编辑器和核心注册表
+        // Register to both editor registry (for UI) and core registry (for serialization)
+        const standardComponents = [
+            { name: 'TransformComponent', type: TransformComponent, editorName: 'Transform', category: 'components.category.core', description: 'components.transform.description' },
+            { name: 'SpriteComponent', type: SpriteComponent, editorName: 'Sprite', category: 'components.category.rendering', description: 'components.sprite.description' },
+            { name: 'TextComponent', type: TextComponent, editorName: 'Text', category: 'components.category.rendering', description: 'components.text.description' },
+            { name: 'CameraComponent', type: CameraComponent, editorName: 'Camera', category: 'components.category.rendering', description: 'components.camera.description' },
+            { name: 'RigidBodyComponent', type: RigidBodyComponent, editorName: 'RigidBody', category: 'components.category.physics', description: 'components.rigidBody.description' },
+            { name: 'BoxColliderComponent', type: BoxColliderComponent, editorName: 'BoxCollider', category: 'components.category.physics', description: 'components.boxCollider.description' },
+            { name: 'CircleColliderComponent', type: CircleColliderComponent, editorName: 'CircleCollider', category: 'components.category.physics', description: 'components.circleCollider.description' },
+            { name: 'AudioSourceComponent', type: AudioSourceComponent, editorName: 'AudioSource', category: 'components.category.audio', description: 'components.audioSource.description' }
+        ];
+
+        for (const comp of standardComponents) {
+            // Register to editor registry for UI
+            componentRegistry.register({
+                name: comp.editorName,
+                type: comp.type,
+                category: comp.category,
+                description: comp.description
+            });
+
+            // Register to core registry for serialization/deserialization
+            CoreComponentRegistry.register(comp.type as any);
+        }
 
         const projectService = new ProjectService(messageHub, fileAPI);
         const componentDiscovery = new ComponentDiscoveryService(messageHub);

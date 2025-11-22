@@ -4,6 +4,8 @@
  */
 
 import type { SpriteRenderData, TextureLoadRequest, EngineStats, CameraConfig } from '../types';
+import type { IEngineBridge } from '@esengine/asset-system';
+import type { GameEngine } from '@esengine/engine';
 
 /**
  * Engine bridge configuration.
@@ -41,8 +43,8 @@ export interface EngineBridgeConfig {
  * bridge.render();
  * ```
  */
-export class EngineBridge {
-    private engine: any; // GameEngine from WASM
+export class EngineBridge implements IEngineBridge {
+    private engine: GameEngine | null = null;
     private config: Required<EngineBridgeConfig>;
     private initialized = false;
 
@@ -169,6 +171,17 @@ export class EngineBridge {
     }
 
     /**
+     * Get engine instance (throws if not initialized)
+     * 获取引擎实例（未初始化时抛出异常）
+     */
+    private getEngine(): GameEngine {
+        if (!this.engine) {
+            throw new Error('Engine not initialized. Call initialize() first.');
+        }
+        return this.engine;
+    }
+
+    /**
      * Clear the screen.
      * 清除屏幕。
      *
@@ -179,7 +192,7 @@ export class EngineBridge {
      */
     clear(r: number, g: number, b: number, a: number): void {
         if (!this.initialized) return;
-        this.engine.clear(r, g, b, a);
+        this.getEngine().clear(r, g, b, a);
     }
 
     /**
@@ -229,7 +242,7 @@ export class EngineBridge {
         }
 
         // Submit to engine (single WASM call) | 提交到引擎（单次WASM调用）
-        this.engine.submitSpriteBatch(
+        this.getEngine().submitSpriteBatch(
             this.transformBuffer.subarray(0, count * 7),
             this.textureIdBuffer.subarray(0, count),
             this.uvBuffer.subarray(0, count * 4),
@@ -247,7 +260,7 @@ export class EngineBridge {
         if (!this.initialized) return;
 
         const startTime = performance.now();
-        this.engine.render();
+        this.getEngine().render();
         const endTime = performance.now();
 
         // Update statistics | 更新统计信息
@@ -273,9 +286,12 @@ export class EngineBridge {
      * @param id - Texture ID | 纹理ID
      * @param url - Image URL | 图片URL
      */
-    loadTexture(id: number, url: string): void {
-        if (!this.initialized) return;
-        this.engine.loadTexture(id, url);
+    loadTexture(id: number, url: string): Promise<void> {
+        if (!this.initialized) return Promise.resolve();
+        this.getEngine().loadTexture(id, url);
+        // Currently synchronous, but return Promise for interface compatibility
+        // 目前是同步的，但返回Promise以兼容接口
+        return Promise.resolve();
     }
 
     /**
@@ -284,10 +300,37 @@ export class EngineBridge {
      *
      * @param requests - Texture load requests | 纹理加载请求
      */
-    loadTextures(requests: TextureLoadRequest[]): void {
+    async loadTextures(requests: Array<{ id: number; url: string }>): Promise<void> {
         for (const req of requests) {
-            this.loadTexture(req.id, req.url);
+            await this.loadTexture(req.id, req.url);
         }
+    }
+
+    /**
+     * Unload texture from GPU.
+     * 从GPU卸载纹理。
+     *
+     * @param id - Texture ID | 纹理ID
+     */
+    unloadTexture(id: number): void {
+        if (!this.initialized) return;
+        // TODO: Implement in Rust engine
+        // TODO: 在Rust引擎中实现
+        console.warn('unloadTexture not yet implemented in engine');
+    }
+
+    /**
+     * Get texture information.
+     * 获取纹理信息。
+     *
+     * @param id - Texture ID | 纹理ID
+     */
+    getTextureInfo(id: number): { width: number; height: number } | null {
+        if (!this.initialized) return null;
+        // TODO: Implement in Rust engine
+        // TODO: 在Rust引擎中实现
+        // Return default values for now / 暂时返回默认值
+        return { width: 64, height: 64 };
     }
 
     /**
@@ -298,7 +341,7 @@ export class EngineBridge {
      */
     isKeyDown(keyCode: string): boolean {
         if (!this.initialized) return false;
-        return this.engine.isKeyDown(keyCode);
+        return this.getEngine().isKeyDown(keyCode);
     }
 
     /**
@@ -307,7 +350,7 @@ export class EngineBridge {
      */
     updateInput(): void {
         if (!this.initialized) return;
-        this.engine.updateInput();
+        this.getEngine().updateInput();
     }
 
     /**
@@ -327,8 +370,9 @@ export class EngineBridge {
      */
     resize(width: number, height: number): void {
         if (!this.initialized) return;
-        if (this.engine.resize) {
-            this.engine.resize(width, height);
+        const engine = this.getEngine();
+        if (engine.resize) {
+            engine.resize(width, height);
         }
     }
 
@@ -340,7 +384,7 @@ export class EngineBridge {
      */
     setCamera(config: CameraConfig): void {
         if (!this.initialized) return;
-        this.engine.setCamera(config.x, config.y, config.zoom, config.rotation);
+        this.getEngine().setCamera(config.x, config.y, config.zoom, config.rotation);
     }
 
     /**
@@ -351,7 +395,7 @@ export class EngineBridge {
         if (!this.initialized) {
             return { x: 0, y: 0, zoom: 1, rotation: 0 };
         }
-        const state = this.engine.getCamera();
+        const state = this.getEngine().getCamera();
         return {
             x: state[0],
             y: state[1],
@@ -366,7 +410,7 @@ export class EngineBridge {
      */
     setShowGrid(show: boolean): void {
         if (!this.initialized) return;
-        this.engine.setShowGrid(show);
+        this.getEngine().setShowGrid(show);
     }
 
     /**
@@ -380,7 +424,7 @@ export class EngineBridge {
      */
     setClearColor(r: number, g: number, b: number, a: number): void {
         if (!this.initialized) return;
-        this.engine.setClearColor(r, g, b, a);
+        this.getEngine().setClearColor(r, g, b, a);
     }
 
     /**
@@ -415,7 +459,7 @@ export class EngineBridge {
         showHandles: boolean = true
     ): void {
         if (!this.initialized) return;
-        this.engine.addGizmoRect(x, y, width, height, rotation, originX, originY, r, g, b, a, showHandles);
+        this.getEngine().addGizmoRect(x, y, width, height, rotation, originX, originY, r, g, b, a, showHandles);
     }
 
     /**
@@ -426,7 +470,7 @@ export class EngineBridge {
      */
     setTransformMode(mode: number): void {
         if (!this.initialized) return;
-        this.engine.setTransformMode(mode);
+        this.getEngine().setTransformMode(mode);
     }
 
     /**
@@ -435,7 +479,7 @@ export class EngineBridge {
      */
     setShowGizmos(show: boolean): void {
         if (!this.initialized) return;
-        this.engine.setShowGizmos(show);
+        this.getEngine().setShowGizmos(show);
     }
 
     // ===== Multi-viewport API =====
@@ -450,7 +494,7 @@ export class EngineBridge {
      */
     registerViewport(id: string, canvasId: string): void {
         if (!this.initialized) return;
-        this.engine.registerViewport(id, canvasId);
+        this.getEngine().registerViewport(id, canvasId);
     }
 
     /**
@@ -459,7 +503,7 @@ export class EngineBridge {
      */
     unregisterViewport(id: string): void {
         if (!this.initialized) return;
-        this.engine.unregisterViewport(id);
+        this.getEngine().unregisterViewport(id);
     }
 
     /**
@@ -468,7 +512,7 @@ export class EngineBridge {
      */
     setActiveViewport(id: string): boolean {
         if (!this.initialized) return false;
-        return this.engine.setActiveViewport(id);
+        return this.getEngine().setActiveViewport(id);
     }
 
     /**
@@ -477,7 +521,7 @@ export class EngineBridge {
      */
     setViewportCamera(viewportId: string, config: CameraConfig): void {
         if (!this.initialized) return;
-        this.engine.setViewportCamera(viewportId, config.x, config.y, config.zoom, config.rotation);
+        this.getEngine().setViewportCamera(viewportId, config.x, config.y, config.zoom, config.rotation);
     }
 
     /**
@@ -486,7 +530,7 @@ export class EngineBridge {
      */
     getViewportCamera(viewportId: string): CameraConfig | null {
         if (!this.initialized) return null;
-        const state = this.engine.getViewportCamera(viewportId);
+        const state = this.getEngine().getViewportCamera(viewportId);
         if (!state) return null;
         return {
             x: state[0],
@@ -502,7 +546,7 @@ export class EngineBridge {
      */
     setViewportConfig(viewportId: string, showGrid: boolean, showGizmos: boolean): void {
         if (!this.initialized) return;
-        this.engine.setViewportConfig(viewportId, showGrid, showGizmos);
+        this.getEngine().setViewportConfig(viewportId, showGrid, showGizmos);
     }
 
     /**
@@ -511,7 +555,7 @@ export class EngineBridge {
      */
     resizeViewport(viewportId: string, width: number, height: number): void {
         if (!this.initialized) return;
-        this.engine.resizeViewport(viewportId, width, height);
+        this.getEngine().resizeViewport(viewportId, width, height);
     }
 
     /**
@@ -520,7 +564,7 @@ export class EngineBridge {
      */
     renderToViewport(viewportId: string): void {
         if (!this.initialized) return;
-        this.engine.renderToViewport(viewportId);
+        this.getEngine().renderToViewport(viewportId);
     }
 
     /**
@@ -529,7 +573,7 @@ export class EngineBridge {
      */
     getViewportIds(): string[] {
         if (!this.initialized) return [];
-        return this.engine.getViewportIds();
+        return this.getEngine().getViewportIds();
     }
 
     /**

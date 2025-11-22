@@ -1,11 +1,12 @@
 import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/ecs-framework';
+import type { AssetReference } from '@esengine/asset-system';
 
 /**
  * 精灵组件 - 管理2D图像渲染
  * Sprite component - manages 2D image rendering
  */
 @ECSComponent('Sprite')
-@Serializable({ version: 1, typeId: 'Sprite' })
+@Serializable({ version: 2, typeId: 'Sprite' })
 export class SpriteComponent extends Component {
     /** 纹理路径或资源ID | Texture path or asset ID */
     @Serialize()
@@ -13,10 +14,23 @@ export class SpriteComponent extends Component {
     public texture: string = '';
 
     /**
+     * 资产GUID（新的资产系统）
+     * Asset GUID for new asset system
+     */
+    @Serialize()
+    public assetGuid?: string;
+
+    /**
      * 纹理ID（运行时使用）
      * Texture ID for runtime rendering
      */
     public textureId: number = 0;
+
+    /**
+     * 资产引用（运行时，不序列化）
+     * Asset reference (runtime only, not serialized)
+     */
+    private _assetReference?: AssetReference<HTMLImageElement>;
 
     /**
      * 精灵宽度（像素）
@@ -163,5 +177,67 @@ export class SpriteComponent extends Component {
         ];
         this.width = w;
         this.height = h;
+    }
+
+    /**
+     * 设置资产引用
+     * Set asset reference
+     */
+    setAssetReference(reference: AssetReference<HTMLImageElement>): void {
+        // 释放旧引用 / Release old reference
+        if (this._assetReference) {
+            this._assetReference.release();
+        }
+        this._assetReference = reference;
+        if (reference) {
+            this.assetGuid = reference.guid;
+        }
+    }
+
+    /**
+     * 获取资产引用
+     * Get asset reference
+     */
+    getAssetReference(): AssetReference<HTMLImageElement> | undefined {
+        return this._assetReference;
+    }
+
+    /**
+     * 异步加载纹理
+     * Load texture asynchronously
+     */
+    async loadTextureAsync(): Promise<void> {
+        if (this._assetReference) {
+            try {
+                const textureAsset = await this._assetReference.loadAsync();
+                // 如果纹理资产有 textureId 属性，使用它
+                // If texture asset has textureId property, use it
+                if (textureAsset && typeof textureAsset === 'object' && 'textureId' in textureAsset) {
+                    this.textureId = (textureAsset as any).textureId;
+                }
+            } catch (error) {
+                console.error('Failed to load texture:', error);
+            }
+        }
+    }
+
+    /**
+     * 获取有效的纹理源
+     * Get effective texture source
+     */
+    getTextureSource(): string {
+        return this.assetGuid || this.texture;
+    }
+
+    /**
+     * 组件销毁时调用
+     * Called when component is destroyed
+     */
+    onDestroy(): void {
+        // 释放资产引用 / Release asset reference
+        if (this._assetReference) {
+            this._assetReference.release();
+            this._assetReference = undefined;
+        }
     }
 }

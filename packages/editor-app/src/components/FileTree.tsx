@@ -31,6 +31,7 @@ interface FileTreeProps {
 export interface FileTreeHandle {
   collapseAll: () => void;
   refresh: () => void;
+  revealPath: (targetPath: string) => Promise<void>;
 }
 
 export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, onSelectFile, selectedPath, messageHub, searchQuery, showFiles = true }, ref) => {
@@ -69,9 +70,80 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         setTree(collapsedTree);
     };
 
+    // Expand tree to reveal a specific file path
+    const revealPath = async (targetPath: string) => {
+        if (!rootPath || !targetPath.startsWith(rootPath)) return;
+
+        // Get path segments between root and target
+        const relativePath = targetPath.substring(rootPath.length).replace(/^[/\\]/, '');
+        const segments = relativePath.split(/[/\\]/);
+
+        // Build list of folder paths to expand
+        const pathsToExpand: string[] = [];
+        let currentPath = rootPath;
+        for (let i = 0; i < segments.length - 1; i++) {
+            currentPath = `${currentPath}/${segments[i]}`;
+            pathsToExpand.push(currentPath.replace(/\//g, '\\'));
+        }
+
+        // Recursively expand nodes and load children
+        const expandToPath = async (nodes: TreeNode[], pathSet: Set<string>): Promise<TreeNode[]> => {
+            const result: TreeNode[] = [];
+            for (const node of nodes) {
+                const normalizedPath = node.path.replace(/\//g, '\\');
+                if (node.type === 'folder' && pathSet.has(normalizedPath)) {
+                    // Load children if not loaded
+                    let children = node.children;
+                    if (!node.loaded || !children) {
+                        try {
+                            const entries = await TauriAPI.listDirectory(node.path);
+                            children = entries.map((entry: DirectoryEntry) => ({
+                                name: entry.name,
+                                path: entry.path,
+                                type: entry.is_dir ? 'folder' as const : 'file' as const,
+                                size: entry.size,
+                                modified: entry.modified,
+                                expanded: false,
+                                loaded: false
+                            })).sort((a, b) => {
+                                if (a.type === b.type) return a.name.localeCompare(b.name);
+                                return a.type === 'folder' ? -1 : 1;
+                            });
+                        } catch (error) {
+                            children = [];
+                        }
+                    }
+                    // Recursively expand children
+                    const expandedChildren = await expandToPath(children, pathSet);
+                    result.push({
+                        ...node,
+                        expanded: true,
+                        loaded: true,
+                        children: expandedChildren
+                    });
+                } else if (node.type === 'folder' && node.children) {
+                    // Keep existing state for non-target folders
+                    result.push({
+                        ...node,
+                        children: await expandToPath(node.children, pathSet)
+                    });
+                } else {
+                    result.push(node);
+                }
+            }
+            return result;
+        };
+
+        const pathSet = new Set(pathsToExpand);
+        const expandedTree = await expandToPath(tree, pathSet);
+        setTree(expandedTree);
+        setInternalSelectedPath(targetPath);
+    };
+
     useImperativeHandle(ref, () => ({
         collapseAll,
-        refresh: refreshTree
+        refresh: refreshTree,
+        revealPath
     }));
 
     useEffect(() => {

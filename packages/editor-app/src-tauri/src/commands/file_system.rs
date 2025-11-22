@@ -203,3 +203,20 @@ pub fn read_file_as_base64(file_path: String) -> Result<String, String> {
 
     Ok(general_purpose::STANDARD.encode(&file_content))
 }
+
+/// Copy file from source to destination
+#[tauri::command]
+pub fn copy_file(src: String, dst: String) -> Result<(), String> {
+    // Ensure parent directory exists
+    if let Some(parent) = Path::new(&dst).parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create directory {}: {}", parent.display(), e))?;
+        }
+    }
+
+    fs::copy(&src, &dst)
+        .map_err(|e| format!("Failed to copy file {} to {}: {}", src, dst, e))?;
+
+    Ok(())
+}

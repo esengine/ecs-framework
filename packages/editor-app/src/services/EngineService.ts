@@ -4,9 +4,13 @@
  */
 
 import { EngineBridge, EngineRenderSystem, CameraConfig } from '@esengine/ecs-engine-bindgen';
-import { Core, Scene, Entity } from '@esengine/ecs-framework';
+import { Core, Scene, Entity, SceneSerializer } from '@esengine/ecs-framework';
 import { TransformComponent, SpriteComponent } from '@esengine/ecs-components';
+import { EntityStoreService, MessageHub } from '@esengine/editor-core';
 import * as esEngine from '@esengine/engine';
+import { AssetManager, EngineIntegration, AssetPathResolver, AssetPlatform } from '@esengine/asset-system';
+import { convertFileSrc } from '@tauri-apps/api/core';
+import { IdGenerator } from '../utils/idGenerator';
 
 /**
  * Engine service singleton for editor integration.
@@ -22,6 +26,12 @@ export class EngineService {
     private running = false;
     private animationFrameId: number | null = null;
     private lastTime = 0;
+    private sceneSnapshot: string | null = null;
+    private assetManager: AssetManager | null = null;
+    private engineIntegration: EngineIntegration | null = null;
+    private assetPathResolver: AssetPathResolver | null = null;
+    private assetSystemInitialized = false;
+    private initializationError: Error | null = null;
 
     private constructor() {}
 
@@ -70,6 +80,9 @@ export class EngineService {
             // Add render system to the scene | 将渲染系统添加到场景
             this.renderSystem = new EngineRenderSystem(this.bridge, TransformComponent);
             this.scene!.addSystem(this.renderSystem);
+
+            // Initialize asset system | 初始化资产系统
+            await this.initializeAssetSystem();
 
             // Start the default world to enable system updates
             // 启动默认world以启用系统更新
@@ -252,6 +265,53 @@ export class EngineService {
     }
 
     /**
+     * Initialize asset system
+     * 初始化资产系统
+     */
+    private async initializeAssetSystem(): Promise<void> {
+        try {
+            // 创建资产管理器 / Create asset manager
+            this.assetManager = new AssetManager();
+
+            // 创建路径解析器 / Create path resolver
+            this.assetPathResolver = new AssetPathResolver({
+                platform: AssetPlatform.Editor,
+                pathTransformer: (path: string) => {
+                    // 编辑器平台使用Tauri的convertFileSrc
+                    // Use Tauri's convertFileSrc for editor platform
+                    if (!path.startsWith('http://') && !path.startsWith('https://') && !path.startsWith('data:')) {
+                        return convertFileSrc(path);
+                    }
+                    return path;
+                }
+            });
+
+            // 创建引擎集成 / Create engine integration
+            if (this.bridge) {
+                this.engineIntegration = new EngineIntegration(this.assetManager, this.bridge);
+            }
+
+            this.assetSystemInitialized = true;
+            this.initializationError = null;
+        } catch (error) {
+            this.assetSystemInitialized = false;
+            this.initializationError = error instanceof Error ? error : new Error(String(error));
+            console.error('Failed to initialize asset system:', error);
+
+            // Notify user of failure
+            const messageHub = Core.services.tryResolve<MessageHub>(MessageHub);
+            if (messageHub) {
+                messageHub.publish('notification:error', {
+                    title: 'Asset System Error',
+                    message: 'Failed to initialize asset system. Some features may not work properly.'
+                });
+            }
+
+            throw this.initializationError;
+        }
+    }
+
+    /**
      * Load texture.
      * 加载纹理。
      */
@@ -259,6 +319,70 @@ export class EngineService {
         if (this.renderSystem) {
             this.renderSystem.loadTexture(id, url);
         }
+    }
+
+    /**
+     * Load texture through asset system
+     * 通过资产系统加载纹理
+     */
+    async loadTextureAsset(path: string): Promise<number> {
+        // Check if asset system is properly initialized
+        if (!this.assetSystemInitialized || this.initializationError) {
+            console.warn('Asset system not initialized, using fallback texture loading');
+            const textureId = IdGenerator.nextId('texture-fallback');
+            this.loadTexture(textureId, path);
+            return textureId;
+        }
+
+        if (!this.engineIntegration) {
+            // 回退到直接加载 / Fallback to direct loading
+            const textureId = IdGenerator.nextId('texture');
+            this.loadTexture(textureId, path);
+            return textureId;
+        }
+
+        try {
+            return await this.engineIntegration.loadTextureForComponent(path);
+        } catch (error) {
+            console.error('Failed to load texture asset:', error);
+            // Return a valid fallback ID instead of 0
+            const fallbackId = IdGenerator.nextId('texture-fallback');
+
+            // Notify about texture loading failure
+            const messageHub = Core.services.tryResolve<MessageHub>(MessageHub);
+            if (messageHub) {
+                messageHub.publish('notification:warning', {
+                    title: 'Texture Loading Failed',
+                    message: `Could not load texture: ${path}`
+                });
+            }
+
+            return fallbackId;
+        }
+    }
+
+    /**
+     * Get asset manager
+     * 获取资产管理器
+     */
+    getAssetManager(): AssetManager | null {
+        return this.assetManager;
+    }
+
+    /**
+     * Get engine integration
+     * 获取引擎集成
+     */
+    getEngineIntegration(): EngineIntegration | null {
+        return this.engineIntegration;
+    }
+
+    /**
+     * Get asset path resolver
+     * 获取资产路径解析器
+     */
+    getAssetPathResolver(): AssetPathResolver | null {
+        return this.assetPathResolver;
     }
 
     /**
@@ -353,6 +477,95 @@ export class EngineService {
      */
     getShowGizmos(): boolean {
         return this.renderSystem?.getShowGizmos() ?? true;
+    }
+
+    // ===== Scene Snapshot API =====
+    // ===== 场景快照 API =====
+
+    /**
+     * Save a snapshot of the current scene state.
+     * 保存当前场景状态的快照。
+     */
+    saveSceneSnapshot(): boolean {
+        if (!this.scene) {
+            console.warn('Cannot save snapshot: no scene available');
+            return false;
+        }
+
+        try {
+            // Use SceneSerializer from core library
+            this.sceneSnapshot = SceneSerializer.serialize(this.scene, {
+                format: 'json',
+                pretty: false,
+                includeMetadata: false
+            }) as string;
+
+            return true;
+        } catch (error) {
+            console.error('Failed to save scene snapshot:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Restore scene state from saved snapshot.
+     * 从保存的快照恢复场景状态。
+     */
+    restoreSceneSnapshot(): boolean {
+        if (!this.scene || !this.sceneSnapshot) {
+            console.warn('Cannot restore snapshot: no scene or snapshot available');
+            return false;
+        }
+
+        try {
+            // Use SceneSerializer from core library
+            SceneSerializer.deserialize(this.scene, this.sceneSnapshot, {
+                strategy: 'replace',
+                preserveIds: true
+            });
+
+            // Sync EntityStore with restored scene entities
+            const entityStore = Core.services.tryResolve(EntityStoreService);
+            const messageHub = Core.services.tryResolve(MessageHub);
+            if (entityStore && messageHub) {
+                // Remember selected entity ID before clearing
+                const selectedEntity = entityStore.getSelectedEntity();
+                const selectedId = selectedEntity?.id;
+
+                // Clear old entities from store
+                entityStore.clear();
+
+                // Add restored entities to store
+                for (const entity of this.scene.entities.buffer) {
+                    entityStore.addEntity(entity);
+                }
+
+                // Re-select the same entity (now with new reference)
+                if (selectedId !== undefined) {
+                    const newEntity = entityStore.getEntity(selectedId);
+                    if (newEntity) {
+                        entityStore.selectEntity(newEntity);
+                    }
+                }
+
+                // Notify UI to refresh
+                messageHub.publish('scene:restored', {});
+            }
+
+            this.sceneSnapshot = null;
+            return true;
+        } catch (error) {
+            console.error('Failed to restore scene snapshot:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Check if a snapshot exists.
+     * 检查是否存在快照。
+     */
+    hasSnapshot(): boolean {
+        return this.sceneSnapshot !== null;
     }
 
     /**
@@ -491,6 +704,13 @@ export class EngineService {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = null;
         }
+
+        // Dispose asset system | 释放资产系统
+        if (this.assetManager) {
+            this.assetManager.dispose();
+            this.assetManager = null;
+        }
+        this.engineIntegration = null;
 
         // Scene doesn't have a destroy method, just clear reference
         // 场景没有destroy方法，只需清除引用

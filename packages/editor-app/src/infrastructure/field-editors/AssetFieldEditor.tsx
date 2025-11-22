@@ -1,5 +1,6 @@
 import React from 'react';
-import { IFieldEditor, FieldEditorProps } from '@esengine/editor-core';
+import { IFieldEditor, FieldEditorProps, MessageHub } from '@esengine/editor-core';
+import { Core } from '@esengine/ecs-framework';
 import { AssetField } from '../../components/inspectors/fields/AssetField';
 
 export class AssetFieldEditor implements IFieldEditor<string | null> {
@@ -15,6 +16,13 @@ export class AssetFieldEditor implements IFieldEditor<string | null> {
         const fileExtension = context.metadata?.fileExtension || '';
         const placeholder = context.metadata?.placeholder || '拖拽或选择资源文件';
 
+        const handleNavigate = (path: string) => {
+            const messageHub = Core.services.tryResolve(MessageHub);
+            if (messageHub) {
+                messageHub.publish('asset:reveal', { path });
+            }
+        };
+
         return (
             <AssetField
                 label={label}
@@ -23,6 +31,7 @@ export class AssetFieldEditor implements IFieldEditor<string | null> {
                 fileExtension={fileExtension}
                 placeholder={placeholder}
                 readonly={context.readonly}
+                onNavigate={handleNavigate}
             />
         );
     }

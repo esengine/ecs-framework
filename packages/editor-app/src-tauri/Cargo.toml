@@ -28,6 +28,11 @@ futures-util = "0.3"
 chrono = "0.4"
 zip = "0.6"
 base64 = "0.22"
+tiny_http = "0.12"
+once_cell = "1.19"
+urlencoding = "2.1"
+qrcode = "0.14"
+image = "0.25"
 
 [profile.dev]
 incremental = true

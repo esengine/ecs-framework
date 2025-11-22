@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Component, Core } from '@esengine/ecs-framework';
-import { PropertyMetadataService, PropertyMetadata, PropertyAction } from '@esengine/editor-core';
-import { ChevronRight, ChevronDown, Maximize2 } from 'lucide-react';
+import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub } from '@esengine/editor-core';
+import { ChevronRight, ChevronDown, Maximize2, ArrowRight, FolderOpen } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import '../styles/PropertyInspector.css';
 
@@ -847,6 +847,16 @@ function AssetDropField({ label, value, fileExtension, readOnly, onChange }: Ass
         if (!readOnly) onChange('');
     };
 
+    const handleNavigate = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (value) {
+            const messageHub = Core.services.tryResolve(MessageHub);
+            if (messageHub) {
+                messageHub.publish('asset:reveal', { path: value });
+            }
+        }
+    };
+
     return (
         <div className="property-field">
             <label className="property-label">{label}</label>
@@ -861,9 +871,20 @@ function AssetDropField({ label, value, fileExtension, readOnly, onChange }: Ass
                 <span className="property-asset-text">
                     {value ? getFileName(value) : 'None'}
                 </span>
-                {value && !readOnly && (
-                    <button className="property-asset-clear" onClick={handleClear}>×</button>
-                )}
+                <div className="property-asset-actions">
+                    {value && (
+                        <button
+                            className="property-asset-btn"
+                            onClick={handleNavigate}
+                            title="在资产浏览器中显示"
+                        >
+                            <ArrowRight size={12} />
+                        </button>
+                    )}
+                    {value && !readOnly && (
+                        <button className="property-asset-clear" onClick={handleClear}>×</button>
+                    )}
+                </div>
             </div>
         </div>
     );

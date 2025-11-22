@@ -11,10 +11,12 @@
     "tauri": "tauri",
     "kill-dev": "node scripts/kill-dev-server.js",
     "tauri:dev": "npm run kill-dev && tauri dev",
-    "tauri:build": "tauri build",
+    "bundle:runtime": "node scripts/bundle-runtime.mjs",
+    "tauri:build": "npm run bundle:runtime && tauri build",
     "version": "node scripts/sync-version.js && git add src-tauri/tauri.conf.json"
   },
   "dependencies": {
+    "@esengine/asset-system": "file:../asset-system",
     "@esengine/behavior-tree": "file:../behavior-tree",
     "@esengine/ecs-engine-bindgen": "file:../ecs-engine-bindgen",
     "@esengine/ecs-components": "file:../components",
