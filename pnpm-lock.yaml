@@ -294,6 +294,9 @@ importers:
 
   packages/components:
     dependencies:
+      '@esengine/asset-system':
+        specifier: workspace:*
+        version: link:../asset-system
       '@esengine/ecs-framework':
         specifier: ^2.2.8
         version: link:../core
