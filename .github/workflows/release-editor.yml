@@ -76,9 +76,9 @@ jobs:
         with:
           path: |
             packages/core/bin
-            packages/editor-core/dist
+            packages/editor-core/bin
             packages/behavior-tree/bin
-          key: ${{ runner.os }}-ts-build-${{ hashFiles('packages/core/src/**', 'packages/editor-core/src/**', 'packages/behavior-tree/src/**') }}
+          key: ${{ runner.os }}-ts-build-${{ hashFiles('packages/core/src/**/*.ts', 'packages/editor-core/src/**/*.ts', 'packages/behavior-tree/src/**/*.ts') }}
           restore-keys: |
             ${{ runner.os }}-ts-build-
 
