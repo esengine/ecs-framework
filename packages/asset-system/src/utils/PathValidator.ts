@@ -9,17 +9,17 @@
 export class PathValidator {
     // Dangerous path patterns
     private static readonly DANGEROUS_PATTERNS = [
-        /\.\.[\/\\]/g,  // Path traversal attempts (..)
-        /^[\/\\]/,      // Absolute paths on Unix
-        /^[a-zA-Z]:[\/\\]/,  // Absolute paths on Windows
+        /\.\.[/\\]/g,  // Path traversal attempts (..)
+        /^[/\\]/,      // Absolute paths on Unix
+        /^[a-zA-Z]:[/\\]/,  // Absolute paths on Windows
         /[<>:"|?*]/,    // Invalid characters for Windows paths
         /\0/,           // Null bytes
         /%00/,          // URL encoded null bytes
-        /\.\.%2[fF]/,   // URL encoded path traversal
+        /\.\.%2[fF]/   // URL encoded path traversal
     ];
 
     // Valid path characters (alphanumeric, dash, underscore, dot, slash)
-    private static readonly VALID_PATH_REGEX = /^[a-zA-Z0-9\-_.\/\\@]+$/;
+    private static readonly VALID_PATH_REGEX = /^[a-zA-Z0-9\-_./\\@]+$/;
 
     // Maximum path length
     private static readonly MAX_PATH_LENGTH = 260;
@@ -70,11 +70,11 @@ export class PathValidator {
         let prev;
         do {
             prev = sanitized;
-            sanitized = sanitized.replace(/\.\.[\/\\]/g, '');
+            sanitized = sanitized.replace(/\.\.[/\\]/g, '');
         } while (sanitized !== prev);
 
         // Remove leading slashes
-        sanitized = sanitized.replace(/^[\/\\]+/, '');
+        sanitized = sanitized.replace(/^[/\\]+/, '');
 
         // Remove null bytes
         sanitized = sanitized.replace(/\0/g, '');
