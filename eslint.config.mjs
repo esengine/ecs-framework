@@ -65,7 +65,8 @@ export default [
             'examples/lawn-mower-demo/**',
             'extensions/**',
             '**/*.min.js',
-            '**/*.d.ts'
+            '**/*.d.ts',
+            '**/wasm/**'
         ]
     }
 ];
