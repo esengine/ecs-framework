@@ -48,8 +48,8 @@ jobs:
     - name: Build dependent packages for type declarations
       run: |
         cd packages/platform-common && pnpm run build
-        cd ../components && pnpm run build
         cd ../asset-system && pnpm run build
+        cd ../components && pnpm run build
         cd ../ecs-engine-bindgen && pnpm run build
 
     - name: Type check
