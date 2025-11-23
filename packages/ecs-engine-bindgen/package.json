@@ -38,7 +38,8 @@
     "license": "MIT",
     "dependencies": {
         "@esengine/ecs-framework": "workspace:*",
-        "@esengine/ecs-components": "workspace:*"
+        "@esengine/ecs-components": "workspace:*",
+        "@esengine/asset-system": "workspace:*"
     },
     "optionalDependencies": {
         "es-engine": "file:../engine/pkg"

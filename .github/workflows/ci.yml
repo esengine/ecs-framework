@@ -56,12 +56,22 @@ jobs:
         cd packages/engine
         pnpm run build
 
+    - name: Copy WASM files to ecs-engine-bindgen
+      run: |
+        cp packages/engine/pkg/es_engine.js packages/ecs-engine-bindgen/src/wasm/
+        cp packages/engine/pkg/es_engine.d.ts packages/ecs-engine-bindgen/src/wasm/
+        cp packages/engine/pkg/es_engine_bg.wasm packages/ecs-engine-bindgen/src/wasm/
+        cp packages/engine/pkg/es_engine_bg.wasm.d.ts packages/ecs-engine-bindgen/src/wasm/
+
     - name: Build dependent packages for type declarations
       run: |
         cd packages/platform-common && pnpm run build
         cd ../asset-system && pnpm run build
         cd ../components && pnpm run build
-        cd ../ecs-engine-bindgen && pnpm run build
+
+    - name: Build ecs-engine-bindgen
+      run: |
+        cd packages/ecs-engine-bindgen && pnpm run build
 
     - name: Type check
       run: pnpm run type-check
