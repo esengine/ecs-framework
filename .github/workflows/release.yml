@@ -85,50 +85,12 @@ jobs:
           cd packages/${{ github.event.inputs.package }}
           pnpm run build:npm
 
-      - name: Resolve workspace dependencies
-        run: |
-          cd packages/${{ github.event.inputs.package }}/dist
-          # Replace workspace:* with actual versions from monorepo
-          node -e "
-            const fs = require('fs');
-            const path = require('path');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-
-            const resolveWorkspaceDeps = (deps) => {
-              if (!deps) return deps;
-              const resolved = {};
-              for (const [name, version] of Object.entries(deps)) {
-                if (version.startsWith('workspace:')) {
-                  // Get version from the actual package
-                  const pkgName = name.replace('@esengine/', '');
-                  const pkgPath = path.join('..', '..', pkgName, 'package.json');
-                  if (fs.existsSync(pkgPath)) {
-                    const depPkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-                    resolved[name] = '^' + depPkg.version;
-                  } else {
-                    resolved[name] = version.replace('workspace:', '');
-                  }
-                } else {
-                  resolved[name] = version;
-                }
-              }
-              return resolved;
-            };
-
-            pkg.dependencies = resolveWorkspaceDeps(pkg.dependencies);
-            pkg.devDependencies = resolveWorkspaceDeps(pkg.devDependencies);
-            pkg.peerDependencies = resolveWorkspaceDeps(pkg.peerDependencies);
-
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-            console.log('Resolved workspace dependencies');
-          "
-
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd packages/${{ github.event.inputs.package }}/dist
-          npm publish --access public
+          pnpm publish --access public --no-git-checks
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
