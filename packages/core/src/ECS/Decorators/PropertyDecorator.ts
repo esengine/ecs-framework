@@ -69,7 +69,7 @@ export const PROPERTY_METADATA = Symbol('property:metadata');
  * ```
  */
 export function Property(options: PropertyOptions): PropertyDecorator {
-    return (target: Object, propertyKey: string | symbol) => {
+    return (target: object, propertyKey: string | symbol) => {
         const constructor = target.constructor;
         const existingMetadata = Reflect.getMetadata(PROPERTY_METADATA, constructor) || {};
 

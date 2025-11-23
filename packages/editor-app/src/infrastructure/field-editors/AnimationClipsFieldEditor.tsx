@@ -196,7 +196,7 @@ function AnimationClipsEditor({ label, clips, onChange, readonly, component, onD
         const newClips = [...clips];
         const clip = newClips[clipIndex];
         if (!clip) return;
-        const newFrames = texturePaths.map(texture => ({
+        const newFrames = texturePaths.map((texture) => ({
             texture,
             duration: 0.1
         }));
@@ -371,7 +371,7 @@ function AnimationClipsEditor({ label, clips, onChange, readonly, component, onD
                                             e.stopPropagation();
                                             handlePlayPreview(clip.name);
                                         }}
-                                        title={playingClip === clip.name ? "Stop Preview" : "Preview Animation"}
+                                        title={playingClip === clip.name ? 'Stop Preview' : 'Preview Animation'}
                                     >
                                         {playingClip === clip.name ? <Square size={10} /> : <Play size={10} />}
                                     </button>
@@ -383,9 +383,9 @@ function AnimationClipsEditor({ label, clips, onChange, readonly, component, onD
                                             e.stopPropagation();
                                             setAsDefaultAnimationHandler(clip.name);
                                         }}
-                                        title={isDefaultAnimation(clip.name) ? "Current Default Animation" : "Set as Default Animation"}
+                                        title={isDefaultAnimation(clip.name) ? 'Current Default Animation' : 'Set as Default Animation'}
                                     >
-                                        <Star size={12} fill={isDefaultAnimation(clip.name) ? "currentColor" : "none"} />
+                                        <Star size={12} fill={isDefaultAnimation(clip.name) ? 'currentColor' : 'none'} />
                                     </button>
                                 )}
                                 {!readonly && (

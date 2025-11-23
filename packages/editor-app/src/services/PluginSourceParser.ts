@@ -86,7 +86,7 @@ export class PluginSourceParser {
             const packageJson = JSON.parse(packageJsonContent) as PluginPackageJson;
 
             // 验证 ZIP 中必须包含 dist 目录
-            const distFiles = Object.keys(zip.files).filter(f => f.startsWith('dist/'));
+            const distFiles = Object.keys(zip.files).filter((f) => f.startsWith('dist/'));
             if (distFiles.length === 0) {
                 throw new Error('dist/ directory not found in ZIP file. Please ensure the plugin is properly built.');
             }

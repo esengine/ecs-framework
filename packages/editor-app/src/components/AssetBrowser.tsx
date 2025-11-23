@@ -248,12 +248,12 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
 
         if (e.shiftKey && lastSelectedPath) {
             // Range select with Shift
-            const lastIndex = filteredAssets.findIndex(a => a.path === lastSelectedPath);
-            const currentIndex = filteredAssets.findIndex(a => a.path === asset.path);
+            const lastIndex = filteredAssets.findIndex((a) => a.path === lastSelectedPath);
+            const currentIndex = filteredAssets.findIndex((a) => a.path === asset.path);
             if (lastIndex !== -1 && currentIndex !== -1) {
                 const start = Math.min(lastIndex, currentIndex);
                 const end = Math.max(lastIndex, currentIndex);
-                const rangePaths = filteredAssets.slice(start, end + 1).map(a => a.path);
+                const rangePaths = filteredAssets.slice(start, end + 1).map((a) => a.path);
                 setSelectedPaths(new Set(rangePaths));
             }
         } else if (e.ctrlKey || e.metaKey) {
@@ -700,111 +700,111 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                             </div>
                         }
                         rightOrBottom={
-                        <div className="asset-browser-list">
-                            <div className="asset-browser-breadcrumb">
-                                {breadcrumbs.map((crumb, index) => (
-                                    <span key={crumb.path}>
-                                        <span
-                                            className="breadcrumb-item"
-                                            onClick={() => {
-                                                setCurrentPath(crumb.path);
-                                                loadAssets(crumb.path);
-                                            }}
-                                        >
-                                            {crumb.name}
-                                        </span>
-                                        {index < breadcrumbs.length - 1 && <span className="breadcrumb-separator"> / </span>}
-                                    </span>
-                                ))}
-                            </div>
-                            {(loading || isSearching) ? (
-                                <div className="asset-browser-loading">
-                                    <p>{isSearching ? '搜索中...' : t.loading}</p>
-                                </div>
-                            ) : filteredAssets.length === 0 ? (
-                                <div className="asset-browser-empty">
-                                    <p>{searchQuery.trim() ? '未找到匹配的资产' : t.empty}</p>
-                                </div>
-                            ) : (
-                                <div className="asset-list">
-                                    {filteredAssets.map((asset, index) => {
-                                        const relativePath = getRelativePath(asset.path);
-                                        const showPath = searchQuery.trim() && relativePath;
-                                        return (
-                                            <div
-                                                key={index}
-                                                className={`asset-item ${selectedPaths.has(asset.path) ? 'selected' : ''}`}
-                                                onClick={(e) => handleAssetClick(asset, e)}
-                                                onDoubleClick={() => handleAssetDoubleClick(asset)}
-                                                onContextMenu={(e) => handleContextMenu(e, asset)}
-                                                draggable={asset.type === 'file'}
-                                                onDragStart={(e) => {
-                                                    if (asset.type === 'file') {
-                                                        e.dataTransfer.effectAllowed = 'copy';
-
-                                                        // Get all selected file assets
-                                                        const selectedFiles = selectedPaths.has(asset.path) && selectedPaths.size > 1
-                                                            ? Array.from(selectedPaths)
-                                                                .filter(p => {
-                                                                    const a = assets?.find(item => item.path === p);
-                                                                    return a && a.type === 'file';
-                                                                })
-                                                                .map(p => {
-                                                                    const a = assets?.find(item => item.path === p);
-                                                                    return { type: 'file', path: p, name: a?.name, extension: a?.extension };
-                                                                })
-                                                            : [{ type: 'file', path: asset.path, name: asset.name, extension: asset.extension }];
-
-                                                        // Set drag data as JSON array for multi-file support
-                                                        e.dataTransfer.setData('application/json', JSON.stringify(selectedFiles));
-                                                        e.dataTransfer.setData('asset-path', asset.path);
-                                                        e.dataTransfer.setData('asset-name', asset.name);
-                                                        e.dataTransfer.setData('asset-extension', asset.extension || '');
-                                                        e.dataTransfer.setData('text/plain', asset.path);
-
-                                                        // 设置拖拽时的视觉效果
-                                                        const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
-                                                        dragImage.style.position = 'absolute';
-                                                        dragImage.style.top = '-9999px';
-                                                        dragImage.style.opacity = '0.8';
-                                                        if (selectedFiles.length > 1) {
-                                                            dragImage.textContent = `${selectedFiles.length} files`;
-                                                        }
-                                                        document.body.appendChild(dragImage);
-                                                        e.dataTransfer.setDragImage(dragImage, 0, 0);
-                                                        setTimeout(() => document.body.removeChild(dragImage), 0);
-                                                    }
-                                                }}
-                                                style={{
-                                                    cursor: asset.type === 'file' ? 'grab' : 'pointer'
+                            <div className="asset-browser-list">
+                                <div className="asset-browser-breadcrumb">
+                                    {breadcrumbs.map((crumb, index) => (
+                                        <span key={crumb.path}>
+                                            <span
+                                                className="breadcrumb-item"
+                                                onClick={() => {
+                                                    setCurrentPath(crumb.path);
+                                                    loadAssets(crumb.path);
                                                 }}
                                             >
-                                                {getFileIcon(asset)}
-                                                <div className="asset-info">
-                                                    <div className="asset-name" title={asset.path}>
-                                                        {asset.name}
-                                                    </div>
-                                                    {showPath && (
-                                                        <div className="asset-path" style={{
-                                                            fontSize: '11px',
-                                                            color: '#666',
-                                                            marginTop: '2px'
-                                                        }}>
-                                                            {relativePath}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="asset-type">
-                                                    {asset.type === 'folder' ? t.folder : (asset.extension || t.file)}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                                {crumb.name}
+                                            </span>
+                                            {index < breadcrumbs.length - 1 && <span className="breadcrumb-separator"> / </span>}
+                                        </span>
+                                    ))}
                                 </div>
-                            )}
-                        </div>
-                    }
-                />
+                                {(loading || isSearching) ? (
+                                    <div className="asset-browser-loading">
+                                        <p>{isSearching ? '搜索中...' : t.loading}</p>
+                                    </div>
+                                ) : filteredAssets.length === 0 ? (
+                                    <div className="asset-browser-empty">
+                                        <p>{searchQuery.trim() ? '未找到匹配的资产' : t.empty}</p>
+                                    </div>
+                                ) : (
+                                    <div className="asset-list">
+                                        {filteredAssets.map((asset, index) => {
+                                            const relativePath = getRelativePath(asset.path);
+                                            const showPath = searchQuery.trim() && relativePath;
+                                            return (
+                                                <div
+                                                    key={index}
+                                                    className={`asset-item ${selectedPaths.has(asset.path) ? 'selected' : ''}`}
+                                                    onClick={(e) => handleAssetClick(asset, e)}
+                                                    onDoubleClick={() => handleAssetDoubleClick(asset)}
+                                                    onContextMenu={(e) => handleContextMenu(e, asset)}
+                                                    draggable={asset.type === 'file'}
+                                                    onDragStart={(e) => {
+                                                        if (asset.type === 'file') {
+                                                            e.dataTransfer.effectAllowed = 'copy';
+
+                                                            // Get all selected file assets
+                                                            const selectedFiles = selectedPaths.has(asset.path) && selectedPaths.size > 1
+                                                                ? Array.from(selectedPaths)
+                                                                    .filter((p) => {
+                                                                        const a = assets?.find((item) => item.path === p);
+                                                                        return a && a.type === 'file';
+                                                                    })
+                                                                    .map((p) => {
+                                                                        const a = assets?.find((item) => item.path === p);
+                                                                        return { type: 'file', path: p, name: a?.name, extension: a?.extension };
+                                                                    })
+                                                                : [{ type: 'file', path: asset.path, name: asset.name, extension: asset.extension }];
+
+                                                            // Set drag data as JSON array for multi-file support
+                                                            e.dataTransfer.setData('application/json', JSON.stringify(selectedFiles));
+                                                            e.dataTransfer.setData('asset-path', asset.path);
+                                                            e.dataTransfer.setData('asset-name', asset.name);
+                                                            e.dataTransfer.setData('asset-extension', asset.extension || '');
+                                                            e.dataTransfer.setData('text/plain', asset.path);
+
+                                                            // 设置拖拽时的视觉效果
+                                                            const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+                                                            dragImage.style.position = 'absolute';
+                                                            dragImage.style.top = '-9999px';
+                                                            dragImage.style.opacity = '0.8';
+                                                            if (selectedFiles.length > 1) {
+                                                                dragImage.textContent = `${selectedFiles.length} files`;
+                                                            }
+                                                            document.body.appendChild(dragImage);
+                                                            e.dataTransfer.setDragImage(dragImage, 0, 0);
+                                                            setTimeout(() => document.body.removeChild(dragImage), 0);
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        cursor: asset.type === 'file' ? 'grab' : 'pointer'
+                                                    }}
+                                                >
+                                                    {getFileIcon(asset)}
+                                                    <div className="asset-info">
+                                                        <div className="asset-name" title={asset.path}>
+                                                            {asset.name}
+                                                        </div>
+                                                        {showPath && (
+                                                            <div className="asset-path" style={{
+                                                                fontSize: '11px',
+                                                                color: '#666',
+                                                                marginTop: '2px'
+                                                            }}>
+                                                                {relativePath}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="asset-type">
+                                                        {asset.type === 'folder' ? t.folder : (asset.extension || t.file)}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        }
+                    />
                 ) : (
                     <div className="asset-browser-tree-only">
                         <FileTree

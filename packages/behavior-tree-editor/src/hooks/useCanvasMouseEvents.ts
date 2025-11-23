@@ -181,7 +181,7 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams) {
                 return;
             }
 
-            const sourceNode = nodes.find(n => n.id === connectingFrom);
+            const sourceNode = nodes.find((n) => n.id === connectingFrom);
             if (sourceNode && !sourceNode.canAddChild()) {
                 const maxChildren = sourceNode.template.maxChildren ?? Infinity;
                 showToast?.(

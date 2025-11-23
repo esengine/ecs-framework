@@ -220,7 +220,7 @@ export class AssetManager implements IAssetManager {
         dependencies: AssetGUID[],
         options?: IAssetLoadOptions
     ): Promise<void> {
-        const promises = dependencies.map(dep => this.loadAsset(dep, options));
+        const promises = dependencies.map((dep) => this.loadAsset(dep, options));
         await Promise.all(promises);
     }
 
@@ -291,7 +291,7 @@ export class AssetManager implements IAssetManager {
         const results = new Map<AssetGUID, IAssetLoadResult>();
 
         // 并行加载所有资产 / Load all assets in parallel
-        const promises = guids.map(async guid => {
+        const promises = guids.map(async (guid) => {
             try {
                 const result = await this.loadAsset(guid, options);
                 results.set(guid, result);
@@ -437,7 +437,7 @@ export class AssetManager implements IAssetManager {
      */
     unloadAllAssets(): void {
         const guids = Array.from(this._assets.keys());
-        guids.forEach(guid => this.unloadAsset(guid));
+        guids.forEach((guid) => this.unloadAsset(guid));
     }
 
     /**
@@ -446,7 +446,7 @@ export class AssetManager implements IAssetManager {
      */
     unloadUnusedAssets(): void {
         const guids = Array.from(this._assets.keys());
-        guids.forEach(guid => {
+        guids.forEach((guid) => {
             const entry = this._assets.get(guid);
             if (entry && entry.referenceCount === 0) {
                 this.unloadAsset(guid);

@@ -69,7 +69,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         parentPath: string;
         templateExtension?: string;
         templateContent?: (fileName: string) => Promise<string>;
-    } | null>(null);
+            } | null>(null);
     const [filteredTree, setFilteredTree] = useState<TreeNode[]>([]);
     const fileActionRegistry = Core.services.resolve(FileActionRegistry);
 
@@ -85,7 +85,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             return node;
         };
 
-        const collapsedTree = tree.map(node => collapseNode(node));
+        const collapsedTree = tree.map((node) => collapseNode(node));
         setTree(collapsedTree);
     };
 
@@ -183,8 +183,8 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         const performSearch = async () => {
             const filterByFileType = (nodes: TreeNode[]): TreeNode[] => {
                 return nodes
-                    .filter(node => showFiles || node.type === 'folder')
-                    .map(node => ({
+                    .filter((node) => showFiles || node.type === 'folder')
+                    .map((node) => ({
                         ...node,
                         children: node.children ? filterByFileType(node.children) : node.children
                     }));
@@ -371,7 +371,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                             children = await loadChildren(node);
                         }
                         const restoredChildren = await Promise.all(
-                            children.map(child => restoreExpandedState(child))
+                            children.map((child) => restoreExpandedState(child))
                         );
                         return {
                             ...node,
@@ -381,7 +381,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                         };
                     } else if (node.type === 'folder' && node.children) {
                         const restoredChildren = await Promise.all(
-                            node.children.map(child => restoreExpandedState(child))
+                            node.children.map((child) => restoreExpandedState(child))
                         );
                         return {
                             ...node,
@@ -416,7 +416,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                 }
 
                 const expandedChildren = await Promise.all(
-                    children.map(child => expandNode(child))
+                    children.map((child) => expandNode(child))
                 );
 
                 return {
@@ -429,7 +429,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             return node;
         };
 
-        const expandedTree = await Promise.all(tree.map(node => expandNode(node)));
+        const expandedTree = await Promise.all(tree.map((node) => expandNode(node)));
         setTree(expandedTree);
     };
 
@@ -760,7 +760,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
 
                             // Get all selected files for multi-file drag
                             const selectedFiles = selectedPaths && selectedPaths.has(node.path) && selectedPaths.size > 1
-                                ? Array.from(selectedPaths).map(p => {
+                                ? Array.from(selectedPaths).map((p) => {
                                     const name = p.split(/[/\\]/).pop() || '';
                                     const ext = name.includes('.') ? name.split('.').pop() : '';
                                     return { type: 'file', path: p, name, extension: ext };
@@ -883,18 +883,18 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                 <PromptDialog
                     title={
                         promptDialog.type === 'create-file' ? '新建文件' :
-                        promptDialog.type === 'create-folder' ? '新建文件夹' :
-                        '新建文件'
+                            promptDialog.type === 'create-folder' ? '新建文件夹' :
+                                '新建文件'
                     }
                     message={
                         promptDialog.type === 'create-file' ? '请输入文件名:' :
-                        promptDialog.type === 'create-folder' ? '请输入文件夹名:' :
-                        `请输入文件名 (将自动添加 .${promptDialog.templateExtension} 扩展名):`
+                            promptDialog.type === 'create-folder' ? '请输入文件夹名:' :
+                                `请输入文件名 (将自动添加 .${promptDialog.templateExtension} 扩展名):`
                     }
                     placeholder={
                         promptDialog.type === 'create-file' ? '例如: config.json' :
-                        promptDialog.type === 'create-folder' ? '例如: assets' :
-                        '例如: MyFile'
+                            promptDialog.type === 'create-folder' ? '例如: assets' :
+                                '例如: MyFile'
                     }
                     confirmText="创建"
                     cancelText="取消"

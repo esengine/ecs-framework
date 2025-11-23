@@ -80,7 +80,7 @@ export class ArrayRenderer implements IPropertyRenderer<any[]> {
             );
         }
 
-        const isStringArray = value.every(item => typeof item === 'string');
+        const isStringArray = value.every((item) => typeof item === 'string');
         if (isStringArray && value.length <= 5) {
             return (
                 <div className="property-field">

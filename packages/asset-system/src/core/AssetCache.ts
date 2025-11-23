@@ -115,8 +115,8 @@ export class AssetCache {
             accessCount: number;
             lastAccessTime: number;
         }>;
-    } {
-        const entries = Array.from(this._cache.values()).map(entry => ({
+        } {
+        const entries = Array.from(this._cache.values()).map((entry) => ({
             guid: entry.guid,
             accessCount: entry.accessCount,
             lastAccessTime: entry.lastAccessTime

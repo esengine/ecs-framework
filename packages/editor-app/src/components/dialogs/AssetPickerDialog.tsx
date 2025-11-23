@@ -100,7 +100,7 @@ export function AssetPickerDialog({
         const filterNode = (node: FileNode): FileNode | null => {
             // Check file extension filter
             if (!node.isDirectory && fileExtensions.length > 0) {
-                const hasValidExtension = fileExtensions.some(ext =>
+                const hasValidExtension = fileExtensions.some((ext) =>
                     node.name.toLowerCase().endsWith(ext.toLowerCase())
                 );
                 if (!hasValidExtension) return null;
@@ -130,7 +130,7 @@ export function AssetPickerDialog({
     }, [assets, searchTerm, fileExtensions]);
 
     const toggleFolder = useCallback((path: string) => {
-        setExpandedFolders(prev => {
+        setExpandedFolders((prev) => {
             const next = new Set(prev);
             if (next.has(path)) {
                 next.delete(path);
@@ -211,7 +211,7 @@ export function AssetPickerDialog({
                 </div>
                 {node.isDirectory && isExpanded && node.children && (
                     <div className="asset-picker-children">
-                        {node.children.map(child => renderNode(child, depth + 1))}
+                        {node.children.map((child) => renderNode(child, depth + 1))}
                     </div>
                 )}
             </div>
@@ -222,7 +222,7 @@ export function AssetPickerDialog({
 
     return (
         <div className="asset-picker-overlay" onClick={onClose}>
-            <div className="asset-picker-dialog" onClick={e => e.stopPropagation()}>
+            <div className="asset-picker-dialog" onClick={(e) => e.stopPropagation()}>
                 <div className="asset-picker-header">
                     <h3>{title}</h3>
                     <button className="asset-picker-close" onClick={onClose}>
@@ -236,7 +236,7 @@ export function AssetPickerDialog({
                         type="text"
                         placeholder={placeholder}
                         value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                         autoFocus
                     />
                 </div>
@@ -248,7 +248,7 @@ export function AssetPickerDialog({
                         <div className="asset-picker-empty">No assets found</div>
                     ) : (
                         <div className="asset-picker-tree">
-                            {filteredAssets.map(node => renderNode(node))}
+                            {filteredAssets.map((node) => renderNode(node))}
                         </div>
                     )}
                 </div>

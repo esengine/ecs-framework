@@ -889,9 +889,9 @@ function AssetDropField({ label, value, fileExtension, readOnly, controlledBy, o
         const assetPath = e.dataTransfer.getData('asset-path');
         if (assetPath) {
             if (fileExtension) {
-                const extensions = fileExtension.split(',').map(ext => ext.trim().toLowerCase());
+                const extensions = fileExtension.split(',').map((ext) => ext.trim().toLowerCase());
                 const fileExt = assetPath.toLowerCase().split('.').pop();
-                if (fileExt && extensions.some(ext => ext === `.${fileExt}` || ext === fileExt)) {
+                if (fileExt && extensions.some((ext) => ext === `.${fileExt}` || ext === fileExt)) {
                     onChange(assetPath);
                 }
             } else {

@@ -117,7 +117,7 @@ export class EngineRenderSystem extends EntitySystem {
             }
 
             // Calculate UV with flip | 计算带翻转的UV
-            let uv: [number, number, number, number] = [0, 0, 1, 1];
+            const uv: [number, number, number, number] = [0, 0, 1, 1];
             if (sprite.flipX || sprite.flipY) {
                 if (sprite.flipX) {
                     [uv[0], uv[2]] = [uv[2], uv[0]];

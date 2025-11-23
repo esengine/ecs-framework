@@ -265,7 +265,7 @@ export class AssetReferenceArray<T = unknown> {
 
     constructor(guids: AssetGUID[] = [], manager?: IAssetManager) {
         this._manager = manager;
-        this._references = guids.map(guid => new AssetReference<T>(guid, manager));
+        this._references = guids.map((guid) => new AssetReference<T>(guid, manager));
     }
 
     /**
@@ -281,7 +281,7 @@ export class AssetReferenceArray<T = unknown> {
      * 移除引用
      */
     remove(guid: AssetGUID): boolean {
-        const index = this._references.findIndex(ref => ref.guid === guid);
+        const index = this._references.findIndex((ref) => ref.guid === guid);
         if (index >= 0) {
             this._references[index].release();
             this._references.splice(index, 1);
@@ -295,7 +295,7 @@ export class AssetReferenceArray<T = unknown> {
      * 加载所有资产
      */
     async loadAllAsync(options?: IAssetLoadOptions): Promise<T[]> {
-        const promises = this._references.map(ref => ref.loadAsync(options));
+        const promises = this._references.map((ref) => ref.loadAsync(options));
         return Promise.all(promises);
     }
 
@@ -304,7 +304,7 @@ export class AssetReferenceArray<T = unknown> {
      * 释放所有引用
      */
     releaseAll(): void {
-        this._references.forEach(ref => ref.release());
+        this._references.forEach((ref) => ref.release());
         this._references = [];
     }
 
@@ -314,9 +314,9 @@ export class AssetReferenceArray<T = unknown> {
      */
     getLoadedAssets(): T[] {
         return this._references
-            .filter(ref => ref.isLoaded)
-            .map(ref => ref.asset!)
-            .filter(asset => asset !== null);
+            .filter((ref) => ref.isLoaded)
+            .map((ref) => ref.asset!)
+            .filter((asset) => asset !== null);
     }
 
     /**
@@ -333,6 +333,6 @@ export class AssetReferenceArray<T = unknown> {
      */
     setManager(manager: IAssetManager): void {
         this._manager = manager;
-        this._references.forEach(ref => ref.setManager(manager));
+        this._references.forEach((ref) => ref.setManager(manager));
     }
 }

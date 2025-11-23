@@ -18,10 +18,10 @@ export const QRCodeDialog: React.FC<QRCodeDialogProps> = ({ url, isOpen, onClose
         if (isOpen && url) {
             setLoading(true);
             TauriAPI.generateQRCode(url)
-                .then(base64 => {
+                .then((base64) => {
                     setQrCodeData(`data:image/png;base64,${base64}`);
                 })
-                .catch(error => {
+                .catch((error) => {
                     console.error('Failed to generate QR code:', error);
                 })
                 .finally(() => {

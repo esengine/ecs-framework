@@ -161,7 +161,7 @@ export class AssetLoadQueue implements IAssetLoadQueue {
         waitTime: number;
     }> {
         const now = Date.now();
-        return this._queue.map(item => ({
+        return this._queue.map((item) => ({
             guid: item.guid,
             priority: item.priority,
             waitTime: now - item.timestamp

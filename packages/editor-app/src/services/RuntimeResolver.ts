@@ -11,7 +11,7 @@ import { TauriAPI } from '../api/tauri';
 // Sanitize path by removing path traversal sequences and normalizing
 const sanitizePath = (path: string): string => {
     // Split by path separators, filter out '..' and empty segments, rejoin
-    const segments = path.split(/[/\\]/).filter(segment =>
+    const segments = path.split(/[/\\]/).filter((segment) =>
         segment !== '..' && segment !== '.' && segment !== ''
     );
     return segments.join('/');
@@ -89,7 +89,7 @@ export class RuntimeResolver {
             // Check if we're in src-tauri
             if (currentPath.endsWith('src-tauri')) {
                 // Go up two levels to get to workspace root
-                const parts = currentPath.split(/[\\\/]/);
+                const parts = currentPath.split(/[/\\]/);
                 parts.pop(); // Remove src-tauri
                 parts.pop(); // Remove editor-app
                 parts.pop(); // Remove packages
@@ -110,7 +110,7 @@ export class RuntimeResolver {
             }
 
             // Go up one level
-            const parts = currentPath.split(/[\\\/]/);
+            const parts = currentPath.split(/[/\\]/);
             parts.pop();
             currentPath = parts.join('\\');
         }
@@ -185,7 +185,7 @@ export class RuntimeResolver {
         // Copy platform-web runtime
         const platformWeb = await this.getModuleFiles('platform-web');
         for (const srcFile of platformWeb.files) {
-            const filename = srcFile.split(/[\\\/]/).pop() || '';
+            const filename = srcFile.split(/[/\\]/).pop() || '';
             const dstFile = `${targetDir}\\${filename}`;
 
             if (await TauriAPI.pathExists(srcFile)) {
@@ -198,7 +198,7 @@ export class RuntimeResolver {
         // Copy engine WASM files
         const engine = await this.getModuleFiles('engine');
         for (const srcFile of engine.files) {
-            const filename = srcFile.split(/[\\\/]/).pop() || '';
+            const filename = srcFile.split(/[/\\]/).pop() || '';
             const dstFile = `${targetDir}\\${filename}`;
 
             if (await TauriAPI.pathExists(srcFile)) {

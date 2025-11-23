@@ -40,7 +40,7 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
             try {
                 const registry = Core.services.resolve(CompilerRegistry);
                 console.log('[CompilerConfigDialog] Registry resolved:', registry);
-                console.log('[CompilerConfigDialog] Available compilers:', registry.getAll().map(c => c.id));
+                console.log('[CompilerConfigDialog] Available compilers:', registry.getAll().map((c) => c.id));
                 const comp = registry.get(compilerId);
                 console.log(`[CompilerConfigDialog] Looking for compiler: ${compilerId}, found:`, comp);
                 setCompiler(comp || null);
@@ -74,7 +74,7 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
         },
         listDirectory: async (path: string): Promise<FileEntry[]> => {
             const entries = await invoke<DirectoryEntry[]>('list_directory', { path });
-            return entries.map(e => ({
+            return entries.map((e) => ({
                 name: e.name,
                 path: e.path,
                 isDirectory: e.is_dir
@@ -96,8 +96,8 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
             const entries = await invoke<DirectoryEntry[]>('list_directory', { path: dir });
             const ext = pattern.replace(/\*/g, '');
             return entries
-                .filter(e => !e.is_dir && e.name.endsWith(ext))
-                .map(e => e.name.replace(ext, ''));
+                .filter((e) => !e.is_dir && e.name.endsWith(ext))
+                .map((e) => e.name.replace(ext, ''));
         }
     });
 

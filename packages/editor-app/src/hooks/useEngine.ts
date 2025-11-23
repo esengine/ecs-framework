@@ -148,7 +148,7 @@ export function useEngine(
             try {
                 // Initialize engine with primary canvas (first viewport)
                 await initializeEngine(options.canvasId);
-                setState(prev => ({ ...prev, initialized: true, error: null }));
+                setState((prev) => ({ ...prev, initialized: true, error: null }));
 
                 // Register this viewport
                 if (!viewportRegisteredRef.current) {
@@ -165,7 +165,7 @@ export function useEngine(
                 if (!statsIntervalRef.current) {
                     statsIntervalRef.current = window.setInterval(() => {
                         const stats = engineRef.current.getStats();
-                        setState(prev => ({
+                        setState((prev) => ({
                             ...prev,
                             fps: stats.fps,
                             drawCalls: stats.drawCalls,
@@ -175,7 +175,7 @@ export function useEngine(
                 }
             } catch (error) {
                 console.error('Failed to initialize engine | 引擎初始化失败:', error);
-                setState(prev => ({
+                setState((prev) => ({
                     ...prev,
                     error: error instanceof Error ? error.message : String(error)
                 }));
@@ -200,13 +200,13 @@ export function useEngine(
     // Start engine
     const start = useCallback(() => {
         engineRef.current.start();
-        setState(prev => ({ ...prev, running: true }));
+        setState((prev) => ({ ...prev, running: true }));
     }, []);
 
     // Stop engine
     const stop = useCallback(() => {
         engineRef.current.stop();
-        setState(prev => ({ ...prev, running: false }));
+        setState((prev) => ({ ...prev, running: false }));
     }, []);
 
     // Create sprite entity

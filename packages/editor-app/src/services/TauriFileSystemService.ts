@@ -31,7 +31,7 @@ export class TauriFileSystemService implements IFileSystem {
 
     async listDirectory(path: string): Promise<FileEntry[]> {
         const entries = await invoke<Array<{ name: string; path: string; is_dir: boolean }>>('list_directory', { path });
-        return entries.map(entry => ({
+        return entries.map((entry) => ({
             name: entry.name,
             isDirectory: entry.is_dir,
             path: entry.path

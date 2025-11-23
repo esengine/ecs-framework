@@ -5,10 +5,10 @@ import { hasChildren, isTabNode, isTabsetNode } from './FlexLayoutTypes';
 
 export class LayoutMerger {
     static merge(savedLayout: IJsonModel, defaultLayout: IJsonModel, currentPanels: FlexDockPanel[]): IJsonModel {
-        const currentPanelIds = new Set(currentPanels.map(p => p.id));
+        const currentPanelIds = new Set(currentPanels.map((p) => p.id));
         const savedPanelIds = this.collectPanelIds(savedLayout);
-        const newPanelIds = Array.from(currentPanelIds).filter(id => !savedPanelIds.has(id));
-        const removedPanelIds = Array.from(savedPanelIds).filter(id => !currentPanelIds.has(id));
+        const newPanelIds = Array.from(currentPanelIds).filter((id) => !savedPanelIds.has(id));
+        const removedPanelIds = Array.from(savedPanelIds).filter((id) => !currentPanelIds.has(id));
 
         const mergedLayout = JSON.parse(JSON.stringify(savedLayout));
 

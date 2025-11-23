@@ -92,7 +92,7 @@ export class SpriteAnimatorComponent extends Component {
      */
     addClip(clip: AnimationClip): void {
         // Remove existing clip with same name
-        this.clips = this.clips.filter(c => c.name !== clip.name);
+        this.clips = this.clips.filter((c) => c.name !== clip.name);
         this.clips.push(clip);
     }
 
@@ -170,7 +170,7 @@ export class SpriteAnimatorComponent extends Component {
         loop: boolean = true
     ): AnimationClip {
         const duration = 1 / fps;
-        const frames: AnimationFrame[] = textures.map(texture => ({
+        const frames: AnimationFrame[] = textures.map((texture) => ({
             texture,
             duration
         }));
@@ -194,7 +194,7 @@ export class SpriteAnimatorComponent extends Component {
         const name = clipName || this.defaultAnimation;
         if (!name) return;
 
-        const clip = this.clips.find(c => c.name === name);
+        const clip = this.clips.find((c) => c.name === name);
         if (!clip || clip.frames.length === 0) {
             console.warn(`Animation clip not found: ${name}`);
             return;
@@ -344,7 +344,7 @@ export class SpriteAnimatorComponent extends Component {
      * Get animation clip by name
      */
     getClip(name: string): AnimationClip | undefined {
-        return this.clips.find(c => c.name === name);
+        return this.clips.find((c) => c.name === name);
     }
 
     /**
@@ -352,7 +352,7 @@ export class SpriteAnimatorComponent extends Component {
      * Remove animation clip
      */
     removeClip(name: string): void {
-        this.clips = this.clips.filter(c => c.name !== name);
+        this.clips = this.clips.filter((c) => c.name !== name);
         if (this._currentClip?.name === name) {
             this.stop();
             this._currentClip = null;
@@ -364,6 +364,6 @@ export class SpriteAnimatorComponent extends Component {
      * Get all animation names
      */
     getClipNames(): string[] {
-        return this.clips.map(c => c.name);
+        return this.clips.map((c) => c.name);
     }
 }

@@ -136,9 +136,9 @@ export class PathValidator {
      */
     static join(...segments: string[]): string {
         const validSegments = segments
-            .filter(s => s && typeof s === 'string')
-            .map(s => this.sanitize(s))
-            .filter(s => s.length > 0);
+            .filter((s) => s && typeof s === 'string')
+            .map((s) => this.sanitize(s))
+            .filter((s) => s.length > 0);
 
         if (validSegments.length === 0) {
             return '';

@@ -55,7 +55,7 @@ export function AssetField({
 
         // 处理从文件系统拖入的文件
         const files = Array.from(e.dataTransfer.files);
-        const file = files.find(f =>
+        const file = files.find((f) =>
             !fileExtension || f.name.endsWith(fileExtension)
         );
 
@@ -163,7 +163,7 @@ export function AssetField({
                                     handleBrowse();
                                 }
                             }}
-                            title={value ? "在资产浏览器中显示" : "选择资产"}
+                            title={value ? '在资产浏览器中显示' : '选择资产'}
                         >
                             {value ? <ArrowRight size={12} /> : <FolderOpen size={12} />}
                         </button>

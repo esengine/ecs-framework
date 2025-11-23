@@ -567,7 +567,7 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             for (const texturePath of texturePathSet) {
                 if (texturePath && (texturePath.includes(':\\') || texturePath.startsWith('/'))) {
                     try {
-                        const filename = texturePath.split(/[\\\/]/).pop() || '';
+                        const filename = texturePath.split(/[/\\]/).pop() || '';
                         const destPath = `${assetsDir}\\${filename}`;
                         const exists = await TauriAPI.pathExists(texturePath);
                         if (exists) {
@@ -666,7 +666,7 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             for (const texturePath of texturePathSet) {
                 if (texturePath && (texturePath.includes(':\\') || texturePath.startsWith('/'))) {
                     try {
-                        const filename = texturePath.split(/[\\\/]/).pop() || '';
+                        const filename = texturePath.split(/[/\\]/).pop() || '';
                         const destPath = `${assetsDir}\\${filename}`;
                         const exists = await TauriAPI.pathExists(texturePath);
                         if (exists) {

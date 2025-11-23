@@ -36,6 +36,9 @@ importers:
       '@commitlint/config-conventional':
         specifier: ^18.6.0
         version: 18.6.3
+      '@eslint/js':
+        specifier: ^9.39.1
+        version: 9.39.1
       '@iconify/json':
         specifier: ^2.2.388
         version: 2.2.409
@@ -132,6 +135,9 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.47.0
+        version: 8.47.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
       unplugin-icons:
         specifier: ^22.3.0
         version: 22.5.0(@vue/compiler-sfc@3.5.24)
@@ -383,6 +389,9 @@ importers:
 
   packages/ecs-engine-bindgen:
     dependencies:
+      '@esengine/asset-system':
+        specifier: workspace:*
+        version: link:../asset-system
       '@esengine/ecs-components':
         specifier: workspace:*
         version: link:../components

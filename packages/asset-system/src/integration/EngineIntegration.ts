@@ -136,7 +136,7 @@ export class EngineIntegration {
         }
 
         // 并行加载所有纹理 / Load all textures in parallel
-        const loadPromises = toLoad.map(async path => {
+        const loadPromises = toLoad.map(async (path) => {
             try {
                 const id = await this.loadTextureForComponent(path);
                 results.set(path, id);
@@ -209,7 +209,7 @@ export class EngineIntegration {
      */
     getStatistics(): {
         loadedTextures: number;
-    } {
+        } {
         return {
             loadedTextures: this._pathToTextureId.size
         };

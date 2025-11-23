@@ -347,414 +347,414 @@ export const BlackboardPanel: React.FC<BlackboardPanelProps> = ({
                         overflowY: 'auto',
                         padding: '10px'
                     }}>
-                {variableEntries.length === 0 && !isAdding && (
-                    <div style={{
-                        textAlign: 'center',
-                        color: '#666',
-                        fontSize: '12px',
-                        padding: '20px'
-                    }}>
+                        {variableEntries.length === 0 && !isAdding && (
+                            <div style={{
+                                textAlign: 'center',
+                                color: '#666',
+                                fontSize: '12px',
+                                padding: '20px'
+                            }}>
                         No variables yet
-                    </div>
-                )}
+                            </div>
+                        )}
 
-                {/* 添加新变量表单 */}
-                {isAdding && (
-                    <div style={{
-                        marginBottom: '10px',
-                        padding: '10px',
-                        backgroundColor: '#2d2d2d',
-                        borderRadius: '4px',
-                        border: '1px solid #3c3c3c'
-                    }}>
-                        <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>Name</div>
-                        <input
-                            type="text"
-                            value={newKey}
-                            onChange={(e) => setNewKey(e.target.value)}
-                            placeholder="variable.name"
-                            style={{
-                                width: '100%',
-                                padding: '6px',
-                                marginBottom: '8px',
-                                backgroundColor: '#1e1e1e',
-                                border: '1px solid #3c3c3c',
-                                borderRadius: '3px',
-                                color: '#9cdcfe',
-                                fontSize: '12px',
-                                fontFamily: 'monospace'
-                            }}
-                            autoFocus
-                        />
-                        <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>Type</div>
-                        <select
-                            value={newType}
-                            onChange={(e) => setNewType(e.target.value as SimpleBlackboardType)}
-                            style={{
-                                width: '100%',
-                                padding: '6px',
-                                marginBottom: '8px',
-                                backgroundColor: '#1e1e1e',
-                                border: '1px solid #3c3c3c',
-                                borderRadius: '3px',
-                                color: '#cccccc',
-                                fontSize: '12px'
-                            }}
-                        >
-                            <option value="string">String</option>
-                            <option value="number">Number</option>
-                            <option value="boolean">Boolean</option>
-                            <option value="object">Object (JSON)</option>
-                        </select>
-                        <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>Value</div>
-                        <textarea
-                            placeholder={
-                                newType === 'object' ? '{"key": "value"}' :
-                                    newType === 'boolean' ? 'true or false' :
-                                        newType === 'number' ? '0' : 'value'
-                            }
-                            value={newValue}
-                            onChange={(e) => setNewValue(e.target.value)}
-                            style={{
-                                width: '100%',
-                                minHeight: newType === 'object' ? '80px' : '30px',
-                                padding: '6px',
-                                marginBottom: '8px',
-                                backgroundColor: '#1e1e1e',
-                                border: '1px solid #3c3c3c',
-                                borderRadius: '3px',
-                                color: '#cccccc',
-                                fontSize: '12px',
-                                fontFamily: 'monospace',
-                                resize: 'vertical'
-                            }}
-                        />
-                        <div style={{ display: 'flex', gap: '5px' }}>
-                            <button
-                                onClick={handleAddVariable}
-                                style={{
-                                    flex: 1,
-                                    padding: '6px',
-                                    backgroundColor: '#0e639c',
-                                    border: 'none',
-                                    borderRadius: '3px',
-                                    color: '#fff',
-                                    cursor: 'pointer',
-                                    fontSize: '12px'
-                                }}
-                            >
-                                Create
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setIsAdding(false);
-                                    setNewKey('');
-                                    setNewValue('');
-                                }}
-                                style={{
-                                    flex: 1,
-                                    padding: '6px',
-                                    backgroundColor: '#3c3c3c',
-                                    border: 'none',
-                                    borderRadius: '3px',
-                                    color: '#ccc',
-                                    cursor: 'pointer',
-                                    fontSize: '12px'
-                                }}
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* 分组显示变量 */}
-                {groupNames.map((groupName) => {
-                    const isGroupCollapsed = collapsedGroups.has(groupName);
-                    const groupVars = groupedVariables[groupName];
-                    if (!groupVars) return null;
-
-                    return (
-                        <div key={groupName} style={{ marginBottom: '8px' }}>
-                            {groupName !== 'default' && (
-                                <div
-                                    onClick={() => toggleGroup(groupName)}
+                        {/* 添加新变量表单 */}
+                        {isAdding && (
+                            <div style={{
+                                marginBottom: '10px',
+                                padding: '10px',
+                                backgroundColor: '#2d2d2d',
+                                borderRadius: '4px',
+                                border: '1px solid #3c3c3c'
+                            }}>
+                                <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>Name</div>
+                                <input
+                                    type="text"
+                                    value={newKey}
+                                    onChange={(e) => setNewKey(e.target.value)}
+                                    placeholder="variable.name"
                                     style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                        padding: '4px 6px',
-                                        backgroundColor: '#252525',
+                                        width: '100%',
+                                        padding: '6px',
+                                        marginBottom: '8px',
+                                        backgroundColor: '#1e1e1e',
+                                        border: '1px solid #3c3c3c',
                                         borderRadius: '3px',
-                                        cursor: 'pointer',
-                                        marginBottom: '4px',
-                                        userSelect: 'none'
+                                        color: '#9cdcfe',
+                                        fontSize: '12px',
+                                        fontFamily: 'monospace'
+                                    }}
+                                    autoFocus
+                                />
+                                <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>Type</div>
+                                <select
+                                    value={newType}
+                                    onChange={(e) => setNewType(e.target.value as SimpleBlackboardType)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '6px',
+                                        marginBottom: '8px',
+                                        backgroundColor: '#1e1e1e',
+                                        border: '1px solid #3c3c3c',
+                                        borderRadius: '3px',
+                                        color: '#cccccc',
+                                        fontSize: '12px'
                                     }}
                                 >
-                                    {isGroupCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
-                                    <span style={{
-                                        fontSize: '11px',
-                                        fontWeight: 'bold',
-                                        color: '#888'
-                                    }}>
-                                        {groupName} ({groupVars.length})
-                                    </span>
+                                    <option value="string">String</option>
+                                    <option value="number">Number</option>
+                                    <option value="boolean">Boolean</option>
+                                    <option value="object">Object (JSON)</option>
+                                </select>
+                                <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>Value</div>
+                                <textarea
+                                    placeholder={
+                                        newType === 'object' ? '{"key": "value"}' :
+                                            newType === 'boolean' ? 'true or false' :
+                                                newType === 'number' ? '0' : 'value'
+                                    }
+                                    value={newValue}
+                                    onChange={(e) => setNewValue(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        minHeight: newType === 'object' ? '80px' : '30px',
+                                        padding: '6px',
+                                        marginBottom: '8px',
+                                        backgroundColor: '#1e1e1e',
+                                        border: '1px solid #3c3c3c',
+                                        borderRadius: '3px',
+                                        color: '#cccccc',
+                                        fontSize: '12px',
+                                        fontFamily: 'monospace',
+                                        resize: 'vertical'
+                                    }}
+                                />
+                                <div style={{ display: 'flex', gap: '5px' }}>
+                                    <button
+                                        onClick={handleAddVariable}
+                                        style={{
+                                            flex: 1,
+                                            padding: '6px',
+                                            backgroundColor: '#0e639c',
+                                            border: 'none',
+                                            borderRadius: '3px',
+                                            color: '#fff',
+                                            cursor: 'pointer',
+                                            fontSize: '12px'
+                                        }}
+                                    >
+                                Create
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setIsAdding(false);
+                                            setNewKey('');
+                                            setNewValue('');
+                                        }}
+                                        style={{
+                                            flex: 1,
+                                            padding: '6px',
+                                            backgroundColor: '#3c3c3c',
+                                            border: 'none',
+                                            borderRadius: '3px',
+                                            color: '#ccc',
+                                            cursor: 'pointer',
+                                            fontSize: '12px'
+                                        }}
+                                    >
+                                Cancel
+                                    </button>
                                 </div>
-                            )}
+                            </div>
+                        )}
 
-                            {!isGroupCollapsed && groupVars.map(({ fullKey: key, varName, value }) => {
-                                const type = getVariableType(value);
-                                const isEditing = editingKey === key;
+                        {/* 分组显示变量 */}
+                        {groupNames.map((groupName) => {
+                            const isGroupCollapsed = collapsedGroups.has(groupName);
+                            const groupVars = groupedVariables[groupName];
+                            if (!groupVars) return null;
 
-                                const handleDragStart = (e: React.DragEvent) => {
-                                    const variableData = {
-                                        variableName: key,
-                                        variableValue: value,
-                                        variableType: type
-                                    };
-                                    e.dataTransfer.setData('application/blackboard-variable', JSON.stringify(variableData));
-                                    e.dataTransfer.effectAllowed = 'copy';
-                                };
+                            return (
+                                <div key={groupName} style={{ marginBottom: '8px' }}>
+                                    {groupName !== 'default' && (
+                                        <div
+                                            onClick={() => toggleGroup(groupName)}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                padding: '4px 6px',
+                                                backgroundColor: '#252525',
+                                                borderRadius: '3px',
+                                                cursor: 'pointer',
+                                                marginBottom: '4px',
+                                                userSelect: 'none'
+                                            }}
+                                        >
+                                            {isGroupCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                                            <span style={{
+                                                fontSize: '11px',
+                                                fontWeight: 'bold',
+                                                color: '#888'
+                                            }}>
+                                                {groupName} ({groupVars.length})
+                                            </span>
+                                        </div>
+                                    )}
 
-                                const typeColor =
+                                    {!isGroupCollapsed && groupVars.map(({ fullKey: key, varName, value }) => {
+                                        const type = getVariableType(value);
+                                        const isEditing = editingKey === key;
+
+                                        const handleDragStart = (e: React.DragEvent) => {
+                                            const variableData = {
+                                                variableName: key,
+                                                variableValue: value,
+                                                variableType: type
+                                            };
+                                            e.dataTransfer.setData('application/blackboard-variable', JSON.stringify(variableData));
+                                            e.dataTransfer.effectAllowed = 'copy';
+                                        };
+
+                                        const typeColor =
                                     type === 'number' ? '#4ec9b0' :
                                         type === 'boolean' ? '#569cd6' :
                                             type === 'object' ? '#ce9178' : '#d4d4d4';
 
-                                const displayValue = type === 'object' ?
-                                    JSON.stringify(value) :
-                                    String(value);
+                                        const displayValue = type === 'object' ?
+                                            JSON.stringify(value) :
+                                            String(value);
 
-                                const truncatedValue = displayValue.length > 30 ?
-                                    displayValue.substring(0, 30) + '...' :
-                                    displayValue;
+                                        const truncatedValue = displayValue.length > 30 ?
+                                            displayValue.substring(0, 30) + '...' :
+                                            displayValue;
 
-                                return (
-                                    <div
-                                        key={key}
-                                        draggable={!isEditing}
-                                        onDragStart={handleDragStart}
-                                        style={{
-                                            marginBottom: '6px',
-                                            padding: '6px 8px',
-                                            backgroundColor: '#2d2d2d',
-                                            borderRadius: '3px',
-                                            borderLeft: `3px solid ${typeColor}`,
-                                            cursor: isEditing ? 'default' : 'grab'
-                                        }}
-                                    >
-                                        {isEditing ? (
-                                            <div>
-                                                <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>Name</div>
-                                                <input
-                                                    type="text"
-                                                    value={editingNewKey}
-                                                    onChange={(e) => setEditingNewKey(e.target.value)}
-                                                    style={{
-                                                        width: '100%',
-                                                        padding: '4px',
-                                                        marginBottom: '4px',
-                                                        backgroundColor: '#1e1e1e',
-                                                        border: '1px solid #3c3c3c',
-                                                        borderRadius: '2px',
-                                                        color: '#9cdcfe',
-                                                        fontSize: '11px',
-                                                        fontFamily: 'monospace'
-                                                    }}
-                                                />
-                                                <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>Type</div>
-                                                <select
-                                                    value={editType}
-                                                    onChange={(e) => setEditType(e.target.value as SimpleBlackboardType)}
-                                                    style={{
-                                                        width: '100%',
-                                                        padding: '4px',
-                                                        marginBottom: '4px',
-                                                        backgroundColor: '#1e1e1e',
-                                                        border: '1px solid #3c3c3c',
-                                                        borderRadius: '2px',
-                                                        color: '#cccccc',
-                                                        fontSize: '10px'
-                                                    }}
-                                                >
-                                                    <option value="string">String</option>
-                                                    <option value="number">Number</option>
-                                                    <option value="boolean">Boolean</option>
-                                                    <option value="object">Object (JSON)</option>
-                                                </select>
-                                                <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>Value</div>
-                                                <textarea
-                                                    value={editValue}
-                                                    onChange={(e) => setEditValue(e.target.value)}
-                                                    style={{
-                                                        width: '100%',
-                                                        minHeight: editType === 'object' ? '60px' : '24px',
-                                                        padding: '4px',
-                                                        backgroundColor: '#1e1e1e',
-                                                        border: '1px solid #0e639c',
-                                                        borderRadius: '2px',
-                                                        color: '#cccccc',
-                                                        fontSize: '11px',
-                                                        fontFamily: 'monospace',
-                                                        resize: 'vertical',
-                                                        marginBottom: '4px'
-                                                    }}
-                                                />
-                                                <div style={{ display: 'flex', gap: '4px' }}>
-                                                    <button
-                                                        onClick={() => handleSaveEdit(key)}
-                                                        style={{
-                                                            flex: 1,
-                                                            padding: '3px 8px',
-                                                            backgroundColor: '#0e639c',
-                                                            border: 'none',
-                                                            borderRadius: '2px',
-                                                            color: '#fff',
-                                                            cursor: 'pointer',
-                                                            fontSize: '10px'
-                                                        }}
-                                                    >
+                                        return (
+                                            <div
+                                                key={key}
+                                                draggable={!isEditing}
+                                                onDragStart={handleDragStart}
+                                                style={{
+                                                    marginBottom: '6px',
+                                                    padding: '6px 8px',
+                                                    backgroundColor: '#2d2d2d',
+                                                    borderRadius: '3px',
+                                                    borderLeft: `3px solid ${typeColor}`,
+                                                    cursor: isEditing ? 'default' : 'grab'
+                                                }}
+                                            >
+                                                {isEditing ? (
+                                                    <div>
+                                                        <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>Name</div>
+                                                        <input
+                                                            type="text"
+                                                            value={editingNewKey}
+                                                            onChange={(e) => setEditingNewKey(e.target.value)}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '4px',
+                                                                marginBottom: '4px',
+                                                                backgroundColor: '#1e1e1e',
+                                                                border: '1px solid #3c3c3c',
+                                                                borderRadius: '2px',
+                                                                color: '#9cdcfe',
+                                                                fontSize: '11px',
+                                                                fontFamily: 'monospace'
+                                                            }}
+                                                        />
+                                                        <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>Type</div>
+                                                        <select
+                                                            value={editType}
+                                                            onChange={(e) => setEditType(e.target.value as SimpleBlackboardType)}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '4px',
+                                                                marginBottom: '4px',
+                                                                backgroundColor: '#1e1e1e',
+                                                                border: '1px solid #3c3c3c',
+                                                                borderRadius: '2px',
+                                                                color: '#cccccc',
+                                                                fontSize: '10px'
+                                                            }}
+                                                        >
+                                                            <option value="string">String</option>
+                                                            <option value="number">Number</option>
+                                                            <option value="boolean">Boolean</option>
+                                                            <option value="object">Object (JSON)</option>
+                                                        </select>
+                                                        <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>Value</div>
+                                                        <textarea
+                                                            value={editValue}
+                                                            onChange={(e) => setEditValue(e.target.value)}
+                                                            style={{
+                                                                width: '100%',
+                                                                minHeight: editType === 'object' ? '60px' : '24px',
+                                                                padding: '4px',
+                                                                backgroundColor: '#1e1e1e',
+                                                                border: '1px solid #0e639c',
+                                                                borderRadius: '2px',
+                                                                color: '#cccccc',
+                                                                fontSize: '11px',
+                                                                fontFamily: 'monospace',
+                                                                resize: 'vertical',
+                                                                marginBottom: '4px'
+                                                            }}
+                                                        />
+                                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                                            <button
+                                                                onClick={() => handleSaveEdit(key)}
+                                                                style={{
+                                                                    flex: 1,
+                                                                    padding: '3px 8px',
+                                                                    backgroundColor: '#0e639c',
+                                                                    border: 'none',
+                                                                    borderRadius: '2px',
+                                                                    color: '#fff',
+                                                                    cursor: 'pointer',
+                                                                    fontSize: '10px'
+                                                                }}
+                                                            >
                                                         Save
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setEditingKey(null)}
-                                                        style={{
-                                                            flex: 1,
-                                                            padding: '3px 8px',
-                                                            backgroundColor: '#3c3c3c',
-                                                            border: 'none',
-                                                            borderRadius: '2px',
-                                                            color: '#ccc',
-                                                            cursor: 'pointer',
-                                                            fontSize: '10px'
-                                                        }}
-                                                    >
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setEditingKey(null)}
+                                                                style={{
+                                                                    flex: 1,
+                                                                    padding: '3px 8px',
+                                                                    backgroundColor: '#3c3c3c',
+                                                                    border: 'none',
+                                                                    borderRadius: '2px',
+                                                                    color: '#ccc',
+                                                                    cursor: 'pointer',
+                                                                    fontSize: '10px'
+                                                                }}
+                                                            >
                                                         Cancel
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                gap: '8px'
-                                            }}>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
                                                     <div style={{
-                                                        fontSize: '11px',
-                                                        color: '#9cdcfe',
-                                                        fontWeight: 'bold',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap',
                                                         display: 'flex',
+                                                        justifyContent: 'space-between',
                                                         alignItems: 'center',
-                                                        gap: '4px'
+                                                        gap: '8px'
                                                     }}>
-                                                        <GripVertical size={10} style={{ opacity: 0.3, flexShrink: 0 }} />
-                                                        {varName}
-                                                        <span style={{
-                                                            color: '#666',
-                                                            fontWeight: 'normal',
-                                                            fontSize: '10px'
-                                                        }}>({type})</span>
-                                                        {isModified(key) && (
-                                                            <span style={{
-                                                                fontSize: '9px',
-                                                                color: '#ff9800',
-                                                                fontWeight: 'bold'
-                                                            }}>*</span>
-                                                        )}
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <div style={{
+                                                                fontSize: '11px',
+                                                                color: '#9cdcfe',
+                                                                fontWeight: 'bold',
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px'
+                                                            }}>
+                                                                <GripVertical size={10} style={{ opacity: 0.3, flexShrink: 0 }} />
+                                                                {varName}
+                                                                <span style={{
+                                                                    color: '#666',
+                                                                    fontWeight: 'normal',
+                                                                    fontSize: '10px'
+                                                                }}>({type})</span>
+                                                                {isModified(key) && (
+                                                                    <span style={{
+                                                                        fontSize: '9px',
+                                                                        color: '#ff9800',
+                                                                        fontWeight: 'bold'
+                                                                    }}>*</span>
+                                                                )}
+                                                            </div>
+                                                            <div style={{
+                                                                fontSize: '10px',
+                                                                color: '#888',
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                                fontFamily: 'monospace'
+                                                            }}>
+                                                                {truncatedValue}
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                                                            <button
+                                                                onClick={() => handleCopyVariable(key, value)}
+                                                                style={{
+                                                                    padding: '4px',
+                                                                    backgroundColor: 'transparent',
+                                                                    border: 'none',
+                                                                    color: '#888',
+                                                                    cursor: 'pointer',
+                                                                    borderRadius: '2px'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = '#3c3c3c';
+                                                                    e.currentTarget.style.color = '#ccc';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                                    e.currentTarget.style.color = '#888';
+                                                                }}
+                                                                title="Copy"
+                                                            >
+                                                                <Copy size={11} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleStartEdit(key, value)}
+                                                                style={{
+                                                                    padding: '4px',
+                                                                    backgroundColor: 'transparent',
+                                                                    border: 'none',
+                                                                    color: '#888',
+                                                                    cursor: 'pointer',
+                                                                    borderRadius: '2px'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = '#3c3c3c';
+                                                                    e.currentTarget.style.color = '#ccc';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                                    e.currentTarget.style.color = '#888';
+                                                                }}
+                                                                title="Edit"
+                                                            >
+                                                                <Edit2 size={11} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => currentOnDelete && currentOnDelete(key)}
+                                                                style={{
+                                                                    padding: '4px',
+                                                                    backgroundColor: 'transparent',
+                                                                    border: 'none',
+                                                                    color: '#888',
+                                                                    cursor: 'pointer',
+                                                                    borderRadius: '2px'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = '#5a1a1a';
+                                                                    e.currentTarget.style.color = '#f48771';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                                    e.currentTarget.style.color = '#888';
+                                                                }}
+                                                                title="Delete"
+                                                            >
+                                                                <Trash2 size={11} />
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                    <div style={{
-                                                        fontSize: '10px',
-                                                        color: '#888',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap',
-                                                        fontFamily: 'monospace'
-                                                    }}>
-                                                        {truncatedValue}
-                                                    </div>
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-                                                    <button
-                                                        onClick={() => handleCopyVariable(key, value)}
-                                                        style={{
-                                                            padding: '4px',
-                                                            backgroundColor: 'transparent',
-                                                            border: 'none',
-                                                            color: '#888',
-                                                            cursor: 'pointer',
-                                                            borderRadius: '2px'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            e.currentTarget.style.backgroundColor = '#3c3c3c';
-                                                            e.currentTarget.style.color = '#ccc';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            e.currentTarget.style.backgroundColor = 'transparent';
-                                                            e.currentTarget.style.color = '#888';
-                                                        }}
-                                                        title="Copy"
-                                                    >
-                                                        <Copy size={11} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleStartEdit(key, value)}
-                                                        style={{
-                                                            padding: '4px',
-                                                            backgroundColor: 'transparent',
-                                                            border: 'none',
-                                                            color: '#888',
-                                                            cursor: 'pointer',
-                                                            borderRadius: '2px'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            e.currentTarget.style.backgroundColor = '#3c3c3c';
-                                                            e.currentTarget.style.color = '#ccc';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            e.currentTarget.style.backgroundColor = 'transparent';
-                                                            e.currentTarget.style.color = '#888';
-                                                        }}
-                                                        title="Edit"
-                                                    >
-                                                        <Edit2 size={11} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => currentOnDelete && currentOnDelete(key)}
-                                                        style={{
-                                                            padding: '4px',
-                                                            backgroundColor: 'transparent',
-                                                            border: 'none',
-                                                            color: '#888',
-                                                            cursor: 'pointer',
-                                                            borderRadius: '2px'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            e.currentTarget.style.backgroundColor = '#5a1a1a';
-                                                            e.currentTarget.style.color = '#f48771';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            e.currentTarget.style.backgroundColor = 'transparent';
-                                                            e.currentTarget.style.color = '#888';
-                                                        }}
-                                                        title="Delete"
-                                                    >
-                                                        <Trash2 size={11} />
-                                                    </button>
-                                                </div>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    );
-                })}
-            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })}
+                    </div>
 
                     {/* 底部信息栏 */}
                     <div style={{

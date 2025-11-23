@@ -108,7 +108,7 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                 img.onload = () => {
                     handlePropertyChange(component, 'width', img.naturalWidth);
                     handlePropertyChange(component, 'height', img.naturalHeight);
-                    setLocalVersion(v => v + 1);
+                    setLocalVersion((v) => v + 1);
                 };
                 img.onerror = () => {
                     console.error('Failed to load texture for native size:', sprite.texture);
@@ -165,7 +165,7 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                                                 {/* 按分类分组显示 */}
                                                 {(() => {
                                                     const categories = new Map<string, typeof availableComponents>();
-                                                    availableComponents.forEach(info => {
+                                                    availableComponents.forEach((info) => {
                                                         const cat = info.category || 'components.category.other';
                                                         if (!categories.has(cat)) {
                                                             categories.set(cat, []);

@@ -619,13 +619,13 @@ function App() {
                 ));
 
                 // 3. 等待React完成卸载
-                await new Promise(resolve => setTimeout(resolve, 200));
+                await new Promise((resolve) => setTimeout(resolve, 200));
 
                 // 4. 卸载所有项目插件（清理UIRegistry、调用uninstall）
                 await pluginLoader.unloadProjectPlugins(pluginManager);
 
                 // 5. 等待卸载完成
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise((resolve) => setTimeout(resolve, 100));
 
                 // 6. 重新加载插件
                 await pluginLoader.loadProjectPlugins(currentProjectPath, pluginManager);

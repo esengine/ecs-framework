@@ -40,7 +40,7 @@ export class AssetDatabase {
         this._typeToGuids.get(type)!.add(guid);
 
         // 按标签索引 / Index by labels
-        labels.forEach(label => {
+        labels.forEach((label) => {
             if (!this._labelToGuids.has(label)) {
                 this._labelToGuids.set(label, new Set());
             }
@@ -73,7 +73,7 @@ export class AssetDatabase {
         }
 
         // 清理标签索引 / Clean up label indices
-        metadata.labels.forEach(label => {
+        metadata.labels.forEach((label) => {
             const labelSet = this._labelToGuids.get(label);
             if (labelSet) {
                 labelSet.delete(guid);
@@ -178,7 +178,7 @@ export class AssetDatabase {
             } else {
                 // 交集 / Intersection
                 const intersection = new Set<AssetGUID>();
-                labelGuids.forEach(guid => {
+                labelGuids.forEach((guid) => {
                     if (result!.has(guid)) {
                         intersection.add(guid);
                     }
@@ -205,7 +205,7 @@ export class AssetDatabase {
         // 按名称过滤 / Filter by name
         if (query.name) {
             const nameLower = query.name.toLowerCase();
-            results = results.filter(guid => {
+            results = results.filter((guid) => {
                 const metadata = this._metadata.get(guid)!;
                 return metadata.name.toLowerCase().includes(nameLower);
             });
@@ -215,20 +215,20 @@ export class AssetDatabase {
         if (query.type) {
             const typeGuids = this._typeToGuids.get(query.type);
             if (!typeGuids) return [];
-            results = results.filter(guid => typeGuids.has(guid));
+            results = results.filter((guid) => typeGuids.has(guid));
         }
 
         // 按标签过滤 / Filter by labels
         if (query.labels && query.labels.length > 0) {
             const labelResults = this.findAssetsByLabels(query.labels);
             const labelSet = new Set(labelResults);
-            results = results.filter(guid => labelSet.has(guid));
+            results = results.filter((guid) => labelSet.has(guid));
         }
 
         // 按路径过滤 / Filter by path
         if (query.path) {
             const pathLower = query.path.toLowerCase();
-            results = results.filter(guid => {
+            results = results.filter((guid) => {
                 const metadata = this._metadata.get(guid)!;
                 return metadata.path.toLowerCase().includes(pathLower);
             });
@@ -316,7 +316,7 @@ export class AssetDatabase {
             this._dependencies.set(guid, new Set(newDependencies));
 
             // 更新被依赖关系 / Update dependent relations
-            newDependencies.forEach(dep => {
+            newDependencies.forEach((dep) => {
                 if (!this._dependents.has(dep)) {
                     this._dependents.set(dep, new Set());
                 }
@@ -333,7 +333,7 @@ export class AssetDatabase {
         // 清除依赖 / Clear dependencies
         const deps = this._dependencies.get(guid);
         if (deps) {
-            deps.forEach(dep => {
+            deps.forEach((dep) => {
                 const dependents = this._dependents.get(dep);
                 if (dependents) {
                     dependents.delete(guid);
@@ -348,7 +348,7 @@ export class AssetDatabase {
         // 清除被依赖 / Clear dependents
         const dependents = this._dependents.get(guid);
         if (dependents) {
-            dependents.forEach(dependent => {
+            dependents.forEach((dependent) => {
                 const dependencies = this._dependencies.get(dependent);
                 if (dependencies) {
                     dependencies.delete(guid);
@@ -371,7 +371,7 @@ export class AssetDatabase {
         totalDependencies: number;
         assetsWithDependencies: number;
         circularDependencies: number;
-    } {
+        } {
         const assetsByType = new Map<AssetType, number>();
         this._typeToGuids.forEach((guids, type) => {
             assetsByType.set(type, guids.size);
@@ -403,7 +403,7 @@ export class AssetDatabase {
     exportToCatalog(): IAssetCatalogEntry[] {
         const entries: IAssetCatalogEntry[] = [];
 
-        this._metadata.forEach(metadata => {
+        this._metadata.forEach((metadata) => {
             entries.push({
                 guid: metadata.guid,
                 path: metadata.path,

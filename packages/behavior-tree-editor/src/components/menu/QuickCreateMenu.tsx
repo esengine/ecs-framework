@@ -69,13 +69,13 @@ export const QuickCreateMenu: React.FC<QuickCreateMenuProps> = ({
     }, [filteredTemplates, expandedCategories, searchTextLower]);
 
     const flattenedTemplates = React.useMemo(() => {
-        return categoryGroups.flatMap(group =>
+        return categoryGroups.flatMap((group) =>
             group.isExpanded ? group.templates : []
         );
     }, [categoryGroups]);
 
     const toggleCategory = (category: string) => {
-        setExpandedCategories(prev => {
+        setExpandedCategories((prev) => {
             const newSet = new Set(prev);
             if (newSet.has(category)) {
                 newSet.delete(category);
@@ -88,7 +88,7 @@ export const QuickCreateMenu: React.FC<QuickCreateMenuProps> = ({
 
     useEffect(() => {
         if (allTemplates.length > 0 && expandedCategories.size === 0) {
-            const categories = new Set(allTemplates.map(t => t.category || '未分类'));
+            const categories = new Set(allTemplates.map((t) => t.category || '未分类'));
             setExpandedCategories(categories);
         }
     }, [allTemplates, expandedCategories.size]);

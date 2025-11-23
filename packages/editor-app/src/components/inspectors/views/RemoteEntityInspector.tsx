@@ -242,33 +242,33 @@ export function RemoteEntityInspector({
                     details.components &&
                     Array.isArray(details.components) &&
                     details.components.length > 0 && (
-                        <div className="inspector-section">
-                            <div className="section-title">组件 ({details.components.length})</div>
-                            {details.components.map((comp, index) => {
-                                const registry = Core.services.resolve(PropertyRendererRegistry);
-                                const context: PropertyContext = {
-                                    name: comp.typeName || `Component ${index}`,
-                                    decimalPlaces,
-                                    readonly: true,
-                                    expandByDefault: true,
-                                    depth: 0
-                                };
-                                const rendered = registry.render(comp, context);
-                                return rendered ? <div key={index}>{rendered}</div> : null;
-                            })}
-                        </div>
-                    )}
+                    <div className="inspector-section">
+                        <div className="section-title">组件 ({details.components.length})</div>
+                        {details.components.map((comp, index) => {
+                            const registry = Core.services.resolve(PropertyRendererRegistry);
+                            const context: PropertyContext = {
+                                name: comp.typeName || `Component ${index}`,
+                                decimalPlaces,
+                                readonly: true,
+                                expandByDefault: true,
+                                depth: 0
+                            };
+                            const rendered = registry.render(comp, context);
+                            return rendered ? <div key={index}>{rendered}</div> : null;
+                        })}
+                    </div>
+                )}
 
                 {details &&
                     Object.entries(details).filter(([key]) => key !== 'components' && key !== 'componentTypes')
                         .length > 0 && (
-                        <div className="inspector-section">
-                            <div className="section-title">其他信息</div>
-                            {Object.entries(details)
-                                .filter(([key]) => key !== 'components' && key !== 'componentTypes')
-                                .map(([key, value]) => renderRemoteProperty(key, value))}
-                        </div>
-                    )}
+                    <div className="inspector-section">
+                        <div className="section-title">其他信息</div>
+                        {Object.entries(details)
+                            .filter(([key]) => key !== 'components' && key !== 'componentTypes')
+                            .map(([key, value]) => renderRemoteProperty(key, value))}
+                    </div>
+                )}
             </div>
         </div>
     );
