@@ -1,6 +1,6 @@
 {
   "name": "@esengine/editor-app",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "ECS Framework Editor Application - Cross-platform desktop editor",
   "type": "module",
   "private": true,
