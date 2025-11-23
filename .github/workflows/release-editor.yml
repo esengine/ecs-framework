@@ -33,11 +33,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -57,13 +62,12 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: pnpm install
 
       - name: Update version in config files (for manual trigger)
         if: github.event_name == 'workflow_dispatch'
         run: |
           cd packages/editor-app
-          # 临时更新版本号用于构建（不提交到仓库）
           npm version ${{ github.event.inputs.version }} --no-git-tag-version
           node scripts/sync-version.js
 
@@ -79,17 +83,17 @@ jobs:
             ${{ runner.os }}-ts-build-
 
       - name: Build core package
-        run: npm run build:core
+        run: pnpm run build:core
 
       - name: Build editor-core package
         run: |
           cd packages/editor-core
-          npm run build
+          pnpm run build
 
       - name: Build behavior-tree package
         run: |
           cd packages/behavior-tree
-          npm run build
+          pnpm run build
 
       - name: Install wasm-pack
         run: cargo install wasm-pack
@@ -97,12 +101,12 @@ jobs:
       - name: Build engine package (Rust WASM)
         run: |
           cd packages/engine
-          npm run build
+          pnpm run build
 
       - name: Build ecs-engine-bindgen package
         run: |
           cd packages/ecs-engine-bindgen
-          npm run build
+          pnpm run build
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0.5

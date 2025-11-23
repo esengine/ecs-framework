@@ -17,15 +17,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: Install commitlint
         run: |
-          npm install --save-dev @commitlint/config-conventional @commitlint/cli
+          pnpm add -D @commitlint/config-conventional @commitlint/cli
 
       - name: Validate PR commits
         run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
