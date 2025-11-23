@@ -1,6 +1,6 @@
 {
   "productName": "ECS Framework Editor",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "identifier": "com.esengine.editor",
   "build": {
     "beforeDevCommand": "npm run dev",
