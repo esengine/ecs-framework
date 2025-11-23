@@ -21,6 +21,7 @@ import type { IDialogExtended } from './services/TauriDialogService';
 import { GlobalBlackboardService } from '@esengine/behavior-tree';
 import { ServiceRegistry, PluginInstaller, useDialogStore } from './app/managers';
 import { StartupPage } from './components/StartupPage';
+import { ProjectCreationWizard } from './components/ProjectCreationWizard';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { Inspector } from './components/inspectors/Inspector';
 import { AssetBrowser } from './components/AssetBrowser';
@@ -49,7 +50,8 @@ import { CompilerConfigDialog } from './components/CompilerConfigDialog';
 import { checkForUpdatesOnStartup } from './utils/updater';
 import { useLocale } from './hooks/useLocale';
 import { en, zh } from './locales';
-import { Loader2, Globe } from 'lucide-react';
+import type { Locale } from '@esengine/editor-core';
+import { Loader2, Globe, ChevronDown } from 'lucide-react';
 import './styles/App.css';
 
 const coreInstance = Core.create({ debug: true });
@@ -98,6 +100,7 @@ function App() {
     const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
     const [isRemoteConnected, setIsRemoteConnected] = useState(false);
     const [isProfilerMode, setIsProfilerMode] = useState(false);
+    const [showProjectWizard, setShowProjectWizard] = useState(false);
 
     const {
         showPluginManager, setShowPluginManager,
@@ -120,6 +123,8 @@ function App() {
         compilerId: string;
         currentFileName?: string;
     }>({ isOpen: false, compilerId: '' });
+    const [showLocaleMemu, setShowLocaleMenu] = useState(false);
+    const localeMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         // 禁用默认右键菜单
@@ -127,22 +132,56 @@ function App() {
             e.preventDefault();
         };
 
-        // 添加快捷键监听（Ctrl+R 重新加载插件）
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
-                e.preventDefault();
-                handleReloadPlugins();
-            }
-        };
-
         document.addEventListener('contextmenu', handleContextMenu);
-        document.addEventListener('keydown', handleKeyDown);
 
         return () => {
             document.removeEventListener('contextmenu', handleContextMenu);
+        };
+    }, []);
+
+    // 语言菜单点击外部关闭
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (localeMenuRef.current && !localeMenuRef.current.contains(e.target as Node)) {
+                setShowLocaleMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // 快捷键监听
+    useEffect(() => {
+        const handleKeyDown = async (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key.toLowerCase()) {
+                    case 's':
+                        e.preventDefault();
+                        if (sceneManager) {
+                            try {
+                                await sceneManager.saveScene();
+                                const sceneState = sceneManager.getSceneState();
+                                showToast(locale === 'zh' ? `已保存场景: ${sceneState.sceneName}` : `Scene saved: ${sceneState.sceneName}`, 'success');
+                            } catch (error) {
+                                console.error('Failed to save scene:', error);
+                                showToast(locale === 'zh' ? '保存场景失败' : 'Failed to save scene', 'error');
+                            }
+                        }
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        handleReloadPlugins();
+                        break;
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [currentProjectPath, pluginManager, locale]);
+    }, [sceneManager, locale, currentProjectPath, pluginManager]);
 
     useEffect(() => {
         if (messageHub) {
@@ -396,13 +435,14 @@ function App() {
         }
     };
 
-    const handleCreateProject = async () => {
-        let selectedProjectPath: string | null = null;
+    const handleCreateProject = () => {
+        setShowProjectWizard(true);
+    };
+
+    const handleCreateProjectFromWizard = async (projectName: string, projectPath: string, _templateId: string) => {
+        const fullProjectPath = `${projectPath}\\${projectName}`;
 
         try {
-            selectedProjectPath = await TauriAPI.openProjectDialog();
-            if (!selectedProjectPath) return;
-
             setIsLoading(true);
             setLoadingMessage(locale === 'zh' ? '正在创建项目...' : 'Creating project...');
 
@@ -417,19 +457,18 @@ function App() {
                 return;
             }
 
-            await projectService.createProject(selectedProjectPath);
+            await projectService.createProject(fullProjectPath);
 
             setLoadingMessage(locale === 'zh' ? '项目创建成功，正在打开...' : 'Project created, opening...');
 
-            await handleOpenRecentProject(selectedProjectPath);
+            await handleOpenRecentProject(fullProjectPath);
         } catch (error) {
             console.error('Failed to create project:', error);
             setIsLoading(false);
 
             const errorMessage = error instanceof Error ? error.message : String(error);
-            const pathToOpen = selectedProjectPath;
 
-            if (errorMessage.includes('already exists') && pathToOpen) {
+            if (errorMessage.includes('already exists')) {
                 setConfirmDialog({
                     title: locale === 'zh' ? '项目已存在' : 'Project Already Exists',
                     message: locale === 'zh'
@@ -441,7 +480,7 @@ function App() {
                         setConfirmDialog(null);
                         setIsLoading(true);
                         setLoadingMessage(locale === 'zh' ? '正在打开项目...' : 'Opening project...');
-                        handleOpenRecentProject(pathToOpen).catch((err) => {
+                        handleOpenRecentProject(fullProjectPath).catch((err) => {
                             console.error('Failed to open project:', err);
                             setIsLoading(false);
                             setErrorDialog({
@@ -465,8 +504,19 @@ function App() {
         }
     };
 
+    const handleBrowseProjectPath = async (): Promise<string | null> => {
+        try {
+            const path = await TauriAPI.openProjectDialog();
+            return path || null;
+        } catch (error) {
+            console.error('Failed to browse path:', error);
+            return null;
+        }
+    };
+
     const handleProfilerMode = async () => {
         setIsProfilerMode(true);
+        setIsRemoteConnected(true);
         setProjectLoaded(true);
         setStatus(t('header.status.profilerMode') || 'Profiler Mode - Waiting for connection...');
     };
@@ -571,8 +621,7 @@ function App() {
         window.close();
     };
 
-    const handleLocaleChange = () => {
-        const newLocale = locale === 'en' ? 'zh' : 'en';
+    const handleLocaleChange = (newLocale: Locale) => {
         changeLocale(newLocale);
 
         // 通知所有已加载的插件更新语言
@@ -650,7 +699,7 @@ function App() {
                     {
                         id: 'scene-hierarchy',
                         title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
-                        content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} commandManager={commandManager} />,
+                        content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} commandManager={commandManager} isProfilerMode={true} />,
                         closable: false
                     },
                     {
@@ -777,7 +826,15 @@ function App() {
                     onCreateProject={handleCreateProject}
                     onOpenRecentProject={handleOpenRecentProject}
                     onProfilerMode={handleProfilerMode}
+                    onLocaleChange={handleLocaleChange}
                     recentProjects={recentProjects}
+                    locale={locale}
+                />
+                <ProjectCreationWizard
+                    isOpen={showProjectWizard}
+                    onClose={() => setShowProjectWizard(false)}
+                    onCreateProject={handleCreateProjectFromWizard}
+                    onBrowsePath={handleBrowseProjectPath}
                     locale={locale}
                 />
                 {isLoading && (
@@ -817,11 +874,18 @@ function App() {
         );
     }
 
+    const projectName = currentProjectPath ? currentProjectPath.split(/[\\/]/).pop() : 'Untitled';
+
     return (
         <div className="editor-container">
             {!isEditorFullscreen && (
-                <div className={`editor-header ${isRemoteConnected ? 'remote-connected' : ''}`}>
-                    <MenuBar
+                <>
+                    <div className="editor-titlebar" data-tauri-drag-region>
+                        <span className="titlebar-project-name">{projectName}</span>
+                        <span className="titlebar-app-name">ECS Framework Editor</span>
+                    </div>
+                    <div className={`editor-header ${isRemoteConnected ? 'remote-connected' : ''}`}>
+                        <MenuBar
                         locale={locale}
                         uiRegistry={uiRegistry || undefined}
                         messageHub={messageHub || undefined}
@@ -849,12 +913,42 @@ function App() {
                             onOpenDashboard={() => setShowDashboard(true)}
                             locale={locale}
                         />
-                        <button onClick={handleLocaleChange} className="toolbar-btn locale-btn" title={locale === 'en' ? '切换到中文' : 'Switch to English'}>
-                            <Globe size={14} />
-                        </button>
+                        <div className="locale-dropdown" ref={localeMenuRef}>
+                            <button
+                                className="toolbar-btn locale-btn"
+                                onClick={() => setShowLocaleMenu(!showLocaleMemu)}
+                            >
+                                <Globe size={14} />
+                                <span className="locale-label">{locale === 'en' ? 'EN' : '中'}</span>
+                                <ChevronDown size={10} />
+                            </button>
+                            {showLocaleMemu && (
+                                <div className="locale-menu">
+                                    <button
+                                        className={`locale-menu-item ${locale === 'en' ? 'active' : ''}`}
+                                        onClick={() => {
+                                            handleLocaleChange('en');
+                                            setShowLocaleMenu(false);
+                                        }}
+                                    >
+                                        English
+                                    </button>
+                                    <button
+                                        className={`locale-menu-item ${locale === 'zh' ? 'active' : ''}`}
+                                        onClick={() => {
+                                            handleLocaleChange('zh');
+                                            setShowLocaleMenu(false);
+                                        }}
+                                    >
+                                        中文
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         <span className="status">{status}</span>
                     </div>
-                </div>
+                    </div>
+                </>
             )}
 
             {showLoginDialog && (

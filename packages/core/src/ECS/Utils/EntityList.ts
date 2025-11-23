@@ -254,6 +254,27 @@ export class EntityList {
     }
 
     /**
+     * 重新排序实体
+     * @param entityId 要移动的实体ID
+     * @param newIndex 新的索引位置
+     */
+    public reorderEntity(entityId: number, newIndex: number): void {
+        const entity = this._idToEntity.get(entityId);
+        if (!entity) return;
+
+        const currentIndex = this.buffer.indexOf(entity);
+        if (currentIndex === -1 || currentIndex === newIndex) return;
+
+        // 限制索引范围
+        const clampedIndex = Math.max(0, Math.min(newIndex, this.buffer.length - 1));
+
+        // 从当前位置移除
+        this.buffer.splice(currentIndex, 1);
+        // 插入到新位置
+        this.buffer.splice(clampedIndex, 0, entity);
+    }
+
+    /**
      * 获取实体列表的统计信息
      * @returns 统计信息
      */

@@ -1,7 +1,7 @@
 .menu-bar {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 0;
   height: 100%;
   user-select: none;
 }
@@ -11,37 +11,39 @@
 }
 
 .menu-button {
-  height: 32px;
-  padding: 0 12px;
+  height: 100%;
+  padding: 0 10px;
   background: transparent;
   border: none;
-  color: var(--color-text-primary, #cccccc);
-  font-size: 13px;
+  color: #999;
+  font-size: 12px;
   cursor: pointer;
-  transition: background-color 0.15s;
-  border-radius: 3px;
+  transition: all 0.1s;
+  border-radius: 0;
 }
 
 .menu-button:hover {
-  background-color: var(--color-bg-hover, rgba(255, 255, 255, 0.1));
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #ccc;
 }
 
 .menu-button.active {
-  background-color: var(--color-bg-active, rgba(255, 255, 255, 0.15));
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 .menu-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
-  min-width: 200px;
-  background: var(--color-bg-elevated, #252526);
-  border: 1px solid var(--color-border-default, #3e3e42);
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  min-width: 180px;
+  background: #252529;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   padding: 4px 0;
   z-index: 1000;
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 .menu-dropdown-item {
@@ -49,22 +51,23 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 16px;
+  padding: 5px 12px;
   background: transparent;
   border: none;
-  color: var(--color-text-primary, #cccccc);
-  font-size: 13px;
+  color: #ccc;
+  font-size: 11px;
   cursor: pointer;
   text-align: left;
-  transition: background-color 0.15s;
+  transition: background-color 0.1s;
 }
 
 .menu-dropdown-item:hover:not(.disabled) {
-  background-color: var(--color-bg-hover, rgba(255, 255, 255, 0.1));
+  background-color: #3b82f6;
+  color: #fff;
 }
 
 .menu-dropdown-item.disabled {
-  color: var(--color-text-disabled, #6e6e6e);
+  color: #555;
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -72,17 +75,23 @@
 .menu-item-content {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.menu-item-content svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0.7;
 }
 
 .menu-shortcut {
-  margin-left: 24px;
-  color: var(--color-text-secondary, #858585);
-  font-size: 12px;
+  margin-left: 16px;
+  color: #666;
+  font-size: 10px;
 }
 
 .menu-separator {
   height: 1px;
-  background-color: var(--color-border-default, #3e3e42);
+  background-color: rgba(255, 255, 255, 0.08);
   margin: 4px 8px;
 }

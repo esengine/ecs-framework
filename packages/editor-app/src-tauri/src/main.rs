@@ -29,6 +29,7 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_cli::init())
         // Register custom URI scheme for project files
         .register_uri_scheme_protocol("project", move |_app, request| {
             handle_project_protocol(request, &project_paths_for_protocol)

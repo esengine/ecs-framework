@@ -61,6 +61,13 @@ export class RuntimeResolver {
     async initialize(): Promise<void> {
         // Load runtime configuration
         const response = await fetch('/runtime.config.json');
+        if (!response.ok) {
+            throw new Error(`Failed to load runtime configuration: ${response.status} ${response.statusText}`);
+        }
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error(`Invalid runtime configuration response type: ${contentType}. Expected JSON but received ${await response.text().then(t => t.substring(0, 100))}`);
+        }
         this.config = await response.json();
 
         // Determine base directory based on environment

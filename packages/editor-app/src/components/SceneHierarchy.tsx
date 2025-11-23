@@ -14,13 +14,14 @@ interface SceneHierarchyProps {
   entityStore: EntityStoreService;
   messageHub: MessageHub;
   commandManager: CommandManager;
+  isProfilerMode?: boolean;
 }
 
-export function SceneHierarchy({ entityStore, messageHub, commandManager }: SceneHierarchyProps) {
+export function SceneHierarchy({ entityStore, messageHub, commandManager, isProfilerMode = false }: SceneHierarchyProps) {
     const [entities, setEntities] = useState<Entity[]>([]);
     const [remoteEntities, setRemoteEntities] = useState<RemoteEntity[]>([]);
     const [isRemoteConnected, setIsRemoteConnected] = useState(false);
-    const [viewMode, setViewMode] = useState<ViewMode>('local');
+    const [viewMode, setViewMode] = useState<ViewMode>(isProfilerMode ? 'remote' : 'local');
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [sceneName, setSceneName] = useState<string>('Untitled');
@@ -28,6 +29,8 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager }: Scen
     const [sceneFilePath, setSceneFilePath] = useState<string | null>(null);
     const [isSceneModified, setIsSceneModified] = useState<boolean>(false);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entityId: number | null } | null>(null);
+    const [draggedEntityId, setDraggedEntityId] = useState<number | null>(null);
+    const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
     const { t, locale } = useLocale();
 
     const isShowingRemote = viewMode === 'remote' && isRemoteConnected;
@@ -41,6 +44,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager }: Scen
                 const state = sceneManager.getSceneState();
                 setSceneName(state.sceneName);
                 setIsSceneModified(state.isModified);
+                setSceneFilePath(state.currentScenePath || null);
             }
         };
 
@@ -61,9 +65,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager }: Scen
         const unsubSaved = messageHub.subscribe('scene:saved', () => {
             updateSceneInfo();
         });
-        const unsubModified = messageHub.subscribe('scene:modified', () => {
-            updateSceneInfo();
-        });
+        const unsubModified = messageHub.subscribe('scene:modified', updateSceneInfo);
 
         return () => {
             unsubLoaded();
@@ -76,7 +78,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager }: Scen
     // Subscribe to local entity changes
     useEffect(() => {
         const updateEntities = () => {
-            setEntities(entityStore.getRootEntities());
+            setEntities([...entityStore.getRootEntities()]);
         };
 
         const handleSelection = (data: { entity: Entity | null }) => {
@@ -89,12 +91,18 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager }: Scen
         const unsubRemove = messageHub.subscribe('entity:removed', updateEntities);
         const unsubClear = messageHub.subscribe('entities:cleared', updateEntities);
         const unsubSelect = messageHub.subscribe('entity:selected', handleSelection);
+        const unsubSceneLoaded = messageHub.subscribe('scene:loaded', updateEntities);
+        const unsubSceneNew = messageHub.subscribe('scene:new', updateEntities);
+        const unsubReordered = messageHub.subscribe('entity:reordered', updateEntities);
 
         return () => {
             unsubAdd();
             unsubRemove();
             unsubClear();
             unsubSelect();
+            unsubSceneLoaded();
+            unsubSceneNew();
+            unsubReordered();
         };
     }, [entityStore, messageHub]);
 
@@ -160,6 +168,36 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager }: Scen
 
     const handleEntityClick = (entity: Entity) => {
         entityStore.selectEntity(entity);
+    };
+
+    const handleDragStart = (e: React.DragEvent, entityId: number) => {
+        setDraggedEntityId(entityId);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', entityId.toString());
+    };
+
+    const handleDragOver = (e: React.DragEvent, index: number) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setDropTargetIndex(index);
+    };
+
+    const handleDragLeave = () => {
+        setDropTargetIndex(null);
+    };
+
+    const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+        e.preventDefault();
+        if (draggedEntityId !== null) {
+            entityStore.reorderEntity(draggedEntityId, targetIndex);
+        }
+        setDraggedEntityId(null);
+        setDropTargetIndex(null);
+    };
+
+    const handleDragEnd = () => {
+        setDraggedEntityId(null);
+        setDropTargetIndex(null);
     };
 
     const handleRemoteEntityClick = (entity: RemoteEntity) => {
@@ -342,15 +380,24 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager }: Scen
                 <Layers size={16} className="hierarchy-header-icon" />
                 <h3>{t('hierarchy.title')}</h3>
                 <div
-                    className={`scene-name-container ${!isRemoteConnected && sceneFilePath ? 'clickable' : ''}`}
+                    className={[
+                        'scene-name-container',
+                        !isRemoteConnected && sceneFilePath && 'clickable',
+                        isSceneModified && 'modified'
+                    ].filter(Boolean).join(' ')}
                     onClick={!isRemoteConnected ? handleSceneNameClick : undefined}
-                    title={!isRemoteConnected && sceneFilePath ? `${displaySceneName} - 点击跳转到文件` : displaySceneName}
+                    title={!isRemoteConnected && sceneFilePath
+                        ? `${displaySceneName}${isSceneModified ? (locale === 'zh' ? ' (未保存 - Ctrl+S 保存)' : ' (Unsaved - Ctrl+S to save)') : ''} - ${locale === 'zh' ? '点击跳转到文件' : 'Click to reveal file'}`
+                        : displaySceneName}
                 >
                     <span className="scene-name">
-                        {displaySceneName}{!isRemoteConnected && isSceneModified ? '*' : ''}
+                        {displaySceneName}
                     </span>
+                    {!isRemoteConnected && isSceneModified && (
+                        <span className="modified-indicator">●</span>
+                    )}
                 </div>
-                {isRemoteConnected && (
+                {isRemoteConnected && !isProfilerMode && (
                     <div className="view-mode-toggle">
                         <button
                             className={`mode-btn ${viewMode === 'local' ? 'active' : ''}`}
@@ -437,11 +484,17 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager }: Scen
                     </ul>
                 ) : (
                     <ul className="entity-list">
-                        {entities.map((entity) => (
+                        {entities.map((entity, index) => (
                             <li
                                 key={entity.id}
-                                className={`entity-item ${selectedId === entity.id ? 'selected' : ''}`}
+                                className={`entity-item ${selectedId === entity.id ? 'selected' : ''} ${draggedEntityId === entity.id ? 'dragging' : ''} ${dropTargetIndex === index ? 'drop-target' : ''}`}
+                                draggable
                                 onClick={() => handleEntityClick(entity)}
+                                onDragStart={(e) => handleDragStart(e, entity.id)}
+                                onDragOver={(e) => handleDragOver(e, index)}
+                                onDragLeave={handleDragLeave}
+                                onDrop={(e) => handleDrop(e, index)}
+                                onDragEnd={handleDragEnd}
                                 onContextMenu={(e) => {
                                     e.stopPropagation();
                                     handleEntityClick(entity);

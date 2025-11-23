@@ -175,11 +175,78 @@
 }
 
 .startup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 20px 40px;
-  border-top: 1px solid #1e1e1e;
+  border-top: 1px solid #2a2a2f;
 }
 
 .startup-version {
   font-size: 11px;
   color: #6e6e6e;
+}
+
+.startup-locale-dropdown {
+  position: relative;
+}
+
+.startup-locale-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid #3e3e42;
+  border-radius: 3px;
+  color: #888;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.startup-locale-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #555;
+  color: #ccc;
+}
+
+.startup-locale-menu {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 4px;
+  min-width: 120px;
+  background: #252529;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  padding: 4px 0;
+  z-index: 1000;
+}
+
+.startup-locale-item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: #ccc;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.startup-locale-item:hover {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.startup-locale-item.active {
+  color: #3b82f6;
+}
+
+.startup-locale-item.active:hover {
+  color: #fff;
 }

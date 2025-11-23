@@ -1,7 +1,7 @@
 import { Folder, File as FileIcon, Image as ImageIcon, Clock, HardDrive } from 'lucide-react';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { AssetFileInfo } from '../types';
-import { ImagePreview } from '../common';
+import { ImagePreview, CodePreview, getLanguageFromExtension } from '../common';
 import '../../../styles/EntityInspector.css';
 
 interface AssetFileInspectorProps {
@@ -100,9 +100,13 @@ export function AssetFileInspector({ fileInfo, content, isImage }: AssetFileInsp
                 )}
 
                 {content && (
-                    <div className="inspector-section">
+                    <div className="inspector-section code-preview-section">
                         <div className="section-title">文件预览</div>
-                        <div className="file-preview-content">{content}</div>
+                        <CodePreview
+                            content={content}
+                            language={getLanguageFromExtension(fileInfo.extension)}
+                            height="100%"
+                        />
                     </div>
                 )}
 

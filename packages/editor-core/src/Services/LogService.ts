@@ -186,14 +186,6 @@ export class LogService implements IService {
      */
     public clear(): void {
         this.logs = [];
-        this.notifyListeners({
-            id: -1,
-            timestamp: new Date(),
-            level: LogLevel.Info,
-            source: 'system',
-            message: 'Logs cleared',
-            args: []
-        });
     }
 
     /**

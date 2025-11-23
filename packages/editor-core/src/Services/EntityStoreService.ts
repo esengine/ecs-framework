@@ -1,4 +1,4 @@
-import { Injectable, IService, Entity } from '@esengine/ecs-framework';
+import { Injectable, IService, Entity, Core } from '@esengine/ecs-framework';
 import { MessageHub } from './MessageHub';
 
 export interface EntityTreeNode {
@@ -14,21 +14,21 @@ export interface EntityTreeNode {
 export class EntityStoreService implements IService {
     private entities: Map<number, Entity> = new Map();
     private selectedEntity: Entity | null = null;
-    private rootEntities: Set<number> = new Set();
+    private rootEntityIds: number[] = [];
 
     constructor(private messageHub: MessageHub) {}
 
     public dispose(): void {
         this.entities.clear();
-        this.rootEntities.clear();
+        this.rootEntityIds = [];
         this.selectedEntity = null;
     }
 
     public addEntity(entity: Entity, parent?: Entity): void {
         this.entities.set(entity.id, entity);
 
-        if (!parent) {
-            this.rootEntities.add(entity.id);
+        if (!parent && !this.rootEntityIds.includes(entity.id)) {
+            this.rootEntityIds.push(entity.id);
         }
 
         this.messageHub.publish('entity:added', { entity, parent });
@@ -36,7 +36,10 @@ export class EntityStoreService implements IService {
 
     public removeEntity(entity: Entity): void {
         this.entities.delete(entity.id);
-        this.rootEntities.delete(entity.id);
+        const idx = this.rootEntityIds.indexOf(entity.id);
+        if (idx !== -1) {
+            this.rootEntityIds.splice(idx, 1);
+        }
 
         if (this.selectedEntity?.id === entity.id) {
             this.selectedEntity = null;
@@ -60,7 +63,7 @@ export class EntityStoreService implements IService {
     }
 
     public getRootEntities(): Entity[] {
-        return Array.from(this.rootEntities)
+        return this.rootEntityIds
             .map((id) => this.entities.get(id))
             .filter((e): e is Entity => e !== undefined);
     }
@@ -71,8 +74,40 @@ export class EntityStoreService implements IService {
 
     public clear(): void {
         this.entities.clear();
-        this.rootEntities.clear();
+        this.rootEntityIds = [];
         this.selectedEntity = null;
         this.messageHub.publish('entities:cleared', {});
+    }
+
+    public syncFromScene(): void {
+        const scene = Core.scene;
+        if (!scene) return;
+
+        this.entities.clear();
+        this.rootEntityIds = [];
+
+        scene.entities.forEach((entity) => {
+            this.entities.set(entity.id, entity);
+            if (!entity.parent) {
+                this.rootEntityIds.push(entity.id);
+            }
+        });
+    }
+
+    public reorderEntity(entityId: number, newIndex: number): void {
+        const idx = this.rootEntityIds.indexOf(entityId);
+        if (idx === -1 || idx === newIndex) return;
+
+        const clampedIndex = Math.max(0, Math.min(newIndex, this.rootEntityIds.length - 1));
+
+        this.rootEntityIds.splice(idx, 1);
+        this.rootEntityIds.splice(clampedIndex, 0, entityId);
+
+        const scene = Core.scene;
+        if (scene) {
+            scene.entities.reorderEntity(entityId, clampedIndex);
+        }
+
+        this.messageHub.publish('entity:reordered', { entityId, newIndex: clampedIndex });
     }
 }

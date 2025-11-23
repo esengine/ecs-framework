@@ -7,20 +7,21 @@
 .login-button {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    background: var(--color-accent, #0e639c);
+    gap: 4px;
+    padding: 3px 8px;
+    background: transparent;
     border: none;
-    border-radius: 6px;
-    color: white;
-    font-size: 13px;
+    border-radius: 2px;
+    color: #888;
+    font-size: 10px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.1s;
 }
 
 .login-button:hover:not(:disabled) {
-    background: var(--color-accent-hover, #1177bb);
+    background: rgba(255, 255, 255, 0.08);
+    color: #ccc;
 }
 
 .login-button:disabled {
@@ -44,46 +45,46 @@
 .user-avatar-button {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 12px 4px 4px;
-    background: var(--color-bg-secondary, #252526);
-    border: 1px solid var(--color-border, #333);
-    border-radius: 20px;
-    color: var(--color-text-primary, #cccccc);
-    font-size: 13px;
+    gap: 4px;
+    padding: 2px 6px 2px 2px;
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    color: #888;
+    font-size: 10px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.1s;
 }
 
 .user-avatar-button:hover {
-    background: var(--color-bg-hover, #2d2d30);
-    border-color: var(--color-accent, #0e639c);
+    background: rgba(255, 255, 255, 0.08);
+    color: #ccc;
 }
 
 .user-avatar,
 .user-avatar-placeholder {
-    width: 28px;
-    height: 28px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
 }
 
 .user-avatar {
     object-fit: cover;
-    border: 2px solid var(--color-accent, #0e639c);
+    border: none;
 }
 
 .user-avatar-placeholder {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-accent-bg, rgba(14, 99, 156, 0.2));
-    color: var(--color-accent, #0e639c);
-    border: 2px solid var(--color-accent, #0e639c);
+    background: rgba(255, 255, 255, 0.1);
+    color: #888;
+    border: none;
 }
 
 .user-name {
-    max-width: 120px;
+    max-width: 80px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

@@ -748,61 +748,55 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         <div className="viewport" ref={containerRef}>
             <div className="viewport-toolbar">
                 <div className="viewport-toolbar-left">
-                    {/* Transform tools */}
-                    <button
-                        className={`viewport-btn ${transformMode === 'select' ? 'active' : ''}`}
-                        onClick={() => setTransformMode('select')}
-                        title={locale === 'zh' ? '选择 (Q)' : 'Select (Q)'}
-                    >
-                        <MousePointer2 size={16} />
-                    </button>
-                    <button
-                        className={`viewport-btn ${transformMode === 'move' ? 'active' : ''}`}
-                        onClick={() => setTransformMode('move')}
-                        title={locale === 'zh' ? '移动 (W)' : 'Move (W)'}
-                    >
-                        <Move size={16} />
-                    </button>
-                    <button
-                        className={`viewport-btn ${transformMode === 'rotate' ? 'active' : ''}`}
-                        onClick={() => setTransformMode('rotate')}
-                        title={locale === 'zh' ? '旋转 (E)' : 'Rotate (E)'}
-                    >
-                        <RotateCw size={16} />
-                    </button>
-                    <button
-                        className={`viewport-btn ${transformMode === 'scale' ? 'active' : ''}`}
-                        onClick={() => setTransformMode('scale')}
-                        title={locale === 'zh' ? '缩放 (R)' : 'Scale (R)'}
-                    >
-                        <Scaling size={16} />
-                    </button>
+                    {/* Transform tools group */}
+                    <div className="viewport-btn-group">
+                        <button
+                            className={`viewport-btn ${transformMode === 'select' ? 'active' : ''}`}
+                            onClick={() => setTransformMode('select')}
+                            title={locale === 'zh' ? '选择 (Q)' : 'Select (Q)'}
+                        >
+                            <MousePointer2 size={14} />
+                        </button>
+                        <button
+                            className={`viewport-btn ${transformMode === 'move' ? 'active' : ''}`}
+                            onClick={() => setTransformMode('move')}
+                            title={locale === 'zh' ? '移动 (W)' : 'Move (W)'}
+                        >
+                            <Move size={14} />
+                        </button>
+                        <button
+                            className={`viewport-btn ${transformMode === 'rotate' ? 'active' : ''}`}
+                            onClick={() => setTransformMode('rotate')}
+                            title={locale === 'zh' ? '旋转 (E)' : 'Rotate (E)'}
+                        >
+                            <RotateCw size={14} />
+                        </button>
+                        <button
+                            className={`viewport-btn ${transformMode === 'scale' ? 'active' : ''}`}
+                            onClick={() => setTransformMode('scale')}
+                            title={locale === 'zh' ? '缩放 (R)' : 'Scale (R)'}
+                        >
+                            <Scaling size={14} />
+                        </button>
+                    </div>
                     <div className="viewport-divider" />
-                    {/* Playback controls */}
-                    <button
-                        className={`viewport-btn ${playState === 'playing' ? 'active' : ''}`}
-                        onClick={handlePlay}
-                        disabled={playState === 'playing'}
-                        title={locale === 'zh' ? '播放' : 'Play'}
-                    >
-                        <Play size={16} />
-                    </button>
-                    <button
-                        className={`viewport-btn ${playState === 'paused' ? 'active' : ''}`}
-                        onClick={handlePause}
-                        disabled={playState !== 'playing'}
-                        title={locale === 'zh' ? '暂停' : 'Pause'}
-                    >
-                        <Pause size={16} />
-                    </button>
-                    <button
-                        className="viewport-btn"
-                        onClick={handleStop}
-                        disabled={playState === 'stopped'}
-                        title={locale === 'zh' ? '停止' : 'Stop'}
-                    >
-                        <Square size={16} />
-                    </button>
+                    {/* View options group */}
+                    <div className="viewport-btn-group">
+                        <button
+                            className={`viewport-btn ${showGrid ? 'active' : ''}`}
+                            onClick={() => setShowGrid(!showGrid)}
+                            title={locale === 'zh' ? '显示网格' : 'Show Grid'}
+                        >
+                            <Grid3x3 size={14} />
+                        </button>
+                        <button
+                            className={`viewport-btn ${showGizmos ? 'active' : ''}`}
+                            onClick={() => setShowGizmos(!showGizmos)}
+                            title={locale === 'zh' ? '显示辅助工具' : 'Show Gizmos'}
+                        >
+                            {showGizmos ? <Eye size={14} /> : <EyeOff size={14} />}
+                        </button>
+                    </div>
                     <div className="viewport-divider" />
                     {/* Run options dropdown */}
                     <div className="viewport-dropdown" ref={runMenuRef}>
@@ -811,8 +805,8 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                             onClick={() => setShowRunMenu(!showRunMenu)}
                             title={locale === 'zh' ? '运行选项' : 'Run Options'}
                         >
-                            <Globe size={16} />
-                            <ChevronDown size={12} />
+                            <Globe size={14} />
+                            <ChevronDown size={10} />
                         </button>
                         {showRunMenu && (
                             <div className="viewport-dropdown-menu">
@@ -827,43 +821,59 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                             </div>
                         )}
                     </div>
+                </div>
+                {/* Centered playback controls */}
+                <div className="viewport-toolbar-center">
+                    <div className="viewport-playback">
+                        <button
+                            className={`viewport-btn play-btn ${playState === 'playing' ? 'active' : ''}`}
+                            onClick={handlePlay}
+                            disabled={playState === 'playing'}
+                            title={locale === 'zh' ? '播放' : 'Play'}
+                        >
+                            <Play size={16} />
+                        </button>
+                        <button
+                            className={`viewport-btn pause-btn ${playState === 'paused' ? 'active' : ''}`}
+                            onClick={handlePause}
+                            disabled={playState !== 'playing'}
+                            title={locale === 'zh' ? '暂停' : 'Pause'}
+                        >
+                            <Pause size={16} />
+                        </button>
+                        <button
+                            className="viewport-btn stop-btn"
+                            onClick={handleStop}
+                            disabled={playState === 'stopped'}
+                            title={locale === 'zh' ? '停止' : 'Stop'}
+                        >
+                            <Square size={16} />
+                        </button>
+                    </div>
+                </div>
+                <div className="viewport-toolbar-right">
+                    <span className="viewport-zoom">{Math.round(camera2DZoom * 100)}%</span>
+                    <div className="viewport-divider" />
                     <button
                         className="viewport-btn"
                         onClick={handleReset}
-                        title={locale === 'zh' ? '重置' : 'Reset'}
+                        title={locale === 'zh' ? '重置视图' : 'Reset View'}
                     >
-                        <RotateCcw size={16} />
+                        <RotateCcw size={14} />
                     </button>
-                    <div className="viewport-divider" />
-                    <button
-                        className={`viewport-btn ${showGrid ? 'active' : ''}`}
-                        onClick={() => setShowGrid(!showGrid)}
-                        title={locale === 'zh' ? '显示网格' : 'Show Grid'}
-                    >
-                        <Grid3x3 size={16} />
-                    </button>
-                    <button
-                        className={`viewport-btn ${showGizmos ? 'active' : ''}`}
-                        onClick={() => setShowGizmos(!showGizmos)}
-                        title={locale === 'zh' ? '显示辅助工具' : 'Show Gizmos'}
-                    >
-                        {showGizmos ? <Eye size={16} /> : <EyeOff size={16} />}
-                    </button>
-                </div>
-                <div className="viewport-toolbar-right">
                     <button
                         className={`viewport-btn ${showStats ? 'active' : ''}`}
                         onClick={() => setShowStats(!showStats)}
                         title={locale === 'zh' ? '显示统计信息' : 'Show Stats'}
                     >
-                        <Activity size={16} />
+                        <Activity size={14} />
                     </button>
                     <button
                         className="viewport-btn"
                         onClick={handleFullscreen}
                         title={locale === 'zh' ? '全屏' : 'Fullscreen'}
                     >
-                        <Maximize2 size={16} />
+                        <Maximize2 size={14} />
                     </button>
                 </div>
             </div>

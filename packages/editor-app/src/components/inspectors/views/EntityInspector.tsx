@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Settings, ChevronDown, ChevronRight, X, Plus, Box } from 'lucide-react';
-import { Entity, Component, Core, getComponentDependencies, getComponentTypeName } from '@esengine/ecs-framework';
+import { Entity, Component, Core, getComponentDependencies, getComponentTypeName, getComponentInstanceTypeName } from '@esengine/ecs-framework';
 import { MessageHub, CommandManager, ComponentRegistry } from '@esengine/editor-core';
 import { PropertyInspector } from '../../PropertyInspector';
 import { NotificationService } from '../../../services/NotificationService';
@@ -200,7 +200,7 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                     ) : (
                         entity.components.map((component: Component, index: number) => {
                             const isExpanded = expandedComponents.has(index);
-                            const componentName = component.constructor?.name || 'Component';
+                            const componentName = getComponentInstanceTypeName(component);
                             const componentInfo = componentRegistry?.getComponent(componentName);
                             const iconName = (componentInfo as { icon?: string } | undefined)?.icon;
                             const IconComponent = iconName && (LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number }>>)[iconName];

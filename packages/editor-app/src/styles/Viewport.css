@@ -12,66 +12,125 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px;
+  padding: 4px 6px;
   background: var(--color-bg-elevated);
   border-bottom: 1px solid var(--color-border-default);
   flex-shrink: 0;
-  gap: 8px;
+  gap: 4px;
   z-index: 10;
+  height: 36px;
 }
 
 .viewport-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+}
+
+.viewport-toolbar-center {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .viewport-toolbar-right {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
 
 .viewport-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: 3px;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.1s ease;
   padding: 0;
 }
 
 .viewport-btn:hover {
-  background: var(--color-bg-hover);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--color-text-primary);
-  border-color: var(--color-border-hover);
 }
 
 .viewport-btn.active {
   background: var(--color-primary);
   color: var(--color-text-inverse);
-  border-color: var(--color-primary);
 }
 
 .viewport-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
 .viewport-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
 .viewport-btn:disabled:hover {
   background: transparent;
   color: var(--color-text-secondary);
-  border-color: transparent;
+}
+
+/* Button group styling */
+.viewport-btn-group {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 2px;
+  gap: 1px;
+}
+
+.viewport-btn-group .viewport-btn {
+  border-radius: 2px;
+}
+
+/* Playback controls special styling */
+.viewport-playback {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 2px 4px;
+  gap: 2px;
+}
+
+.viewport-playback .viewport-btn {
+  width: 28px;
+  height: 28px;
+}
+
+.viewport-playback .viewport-btn.play-btn {
+  color: #4ade80;
+}
+
+.viewport-playback .viewport-btn.play-btn:hover {
+  background: rgba(74, 222, 128, 0.15);
+}
+
+.viewport-playback .viewport-btn.play-btn.active {
+  background: #4ade80;
+  color: #000;
+}
+
+.viewport-playback .viewport-btn.pause-btn.active {
+  background: #fbbf24;
+  color: #000;
+}
+
+.viewport-playback .viewport-btn.stop-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
 }
 
 /* Dropdown */
@@ -119,9 +178,43 @@
 
 .viewport-divider {
   width: 1px;
-  height: 24px;
-  background: var(--color-border-default);
-  margin: 0 4px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 6px;
+}
+
+/* Coordinate system indicator */
+.viewport-coord-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.viewport-coord-indicator.world {
+  color: #60a5fa;
+}
+
+.viewport-coord-indicator.local {
+  color: #fbbf24;
+}
+
+/* Zoom indicator */
+.viewport-zoom {
+  display: flex;
+  align-items: center;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .viewport-canvas {
