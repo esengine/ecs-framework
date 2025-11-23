@@ -68,7 +68,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           cd packages/editor-app
-          npm version ${{ github.event.inputs.version }} --no-git-tag-version
+          node -e "const pkg=require('./package.json'); pkg.version='${{ github.event.inputs.version }}'; require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2)+'\n')"
           node scripts/sync-version.js
 
       - name: Cache TypeScript build
@@ -143,7 +143,7 @@ jobs:
       - name: Update version files
         run: |
           cd packages/editor-app
-          npm version ${{ github.event.inputs.version }} --no-git-tag-version
+          node -e "const pkg=require('./package.json'); pkg.version='${{ github.event.inputs.version }}'; require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2)+'\n')"
           node scripts/sync-version.js
 
       - name: Create Pull Request
