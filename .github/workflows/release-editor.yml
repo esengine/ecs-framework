@@ -111,6 +111,16 @@ jobs:
           cd packages/ecs-engine-bindgen
           pnpm run build
 
+      - name: Build platform-web package
+        run: |
+          cd packages/platform-web
+          pnpm run build
+
+      - name: Bundle runtime files for Tauri
+        run: |
+          cd packages/editor-app
+          node scripts/bundle-runtime.mjs
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0.5
         env:
