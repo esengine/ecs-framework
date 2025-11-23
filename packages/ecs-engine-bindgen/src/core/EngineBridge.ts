@@ -70,7 +70,6 @@ export class EngineBridge implements IEngineBridge {
     private lastFrameTime = 0;
     private frameCount = 0;
     private fpsAccumulator = 0;
-    private debugLogged = false;
 
     /**
      * Create a new engine bridge.
@@ -236,13 +235,6 @@ export class EngineBridge implements IEngineBridge {
 
             // Color | 颜色
             this.colorBuffer[i] = sprite.color;
-        }
-
-        // Debug: log texture IDs only once when we have 2+ sprites (for multi-texture test)
-        if (!this.debugLogged && count >= 2) {
-            const textureIds = Array.from(this.textureIdBuffer.subarray(0, count));
-            console.log(`TS submitSprites: ${count} sprites, textureIds: [${textureIds.join(', ')}]`);
-            this.debugLogged = true;
         }
 
         // Submit to engine (single WASM call) | 提交到引擎（单次WASM调用）

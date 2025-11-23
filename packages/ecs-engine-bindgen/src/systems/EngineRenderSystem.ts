@@ -142,9 +142,6 @@ export class EngineRenderSystem extends EntitySystem {
             let textureId = 0;
             if (sprite.texture) {
                 textureId = this.bridge.getOrLoadTextureByPath(sprite.texture);
-            } else {
-                // Debug: sprite has no texture
-                console.warn(`[EngineRenderSystem] Entity ${entity.id} has no texture`);
             }
 
             // Pass actual display dimensions (sprite size * transform scale)
