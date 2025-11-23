@@ -58,6 +58,7 @@ jobs:
 
     - name: Copy WASM files to ecs-engine-bindgen
       run: |
+        mkdir -p packages/ecs-engine-bindgen/src/wasm
         cp packages/engine/pkg/es_engine.js packages/ecs-engine-bindgen/src/wasm/
         cp packages/engine/pkg/es_engine.d.ts packages/ecs-engine-bindgen/src/wasm/
         cp packages/engine/pkg/es_engine_bg.wasm packages/ecs-engine-bindgen/src/wasm/
