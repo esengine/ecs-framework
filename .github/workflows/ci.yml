@@ -45,8 +45,12 @@ jobs:
     - name: Build core package first
       run: pnpm run build:core
 
-    - name: Build platform-common for type declarations
-      run: cd packages/platform-common && pnpm run build
+    - name: Build dependent packages for type declarations
+      run: |
+        cd packages/platform-common && pnpm run build
+        cd ../components && pnpm run build
+        cd ../asset-system && pnpm run build
+        cd ../ecs-engine-bindgen && pnpm run build
 
     - name: Type check
       run: pnpm run type-check

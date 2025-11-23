@@ -8,15 +8,13 @@
 
 import { TauriAPI } from '../api/tauri';
 
-// Sanitize path by repeatedly removing all '../' sequences
+// Sanitize path by removing path traversal sequences and normalizing
 const sanitizePath = (path: string): string => {
-    let result = path;
-    let previous;
-    do {
-        previous = result;
-        result = result.replace(/\.\.\//g, '').replace(/\.\.\\/g, '');
-    } while (result !== previous);
-    return result;
+    // Split by path separators, filter out '..' and empty segments, rejoin
+    const segments = path.split(/[/\\]/).filter(segment =>
+        segment !== '..' && segment !== '.' && segment !== ''
+    );
+    return segments.join('/');
 };
 
 // Check if we're in development mode
