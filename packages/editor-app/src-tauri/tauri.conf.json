@@ -13,9 +13,6 @@
     "targets": "all",
     "createUpdaterArtifacts": true,
     "resources": {
-      "../../platform-web/dist/runtime.browser.js": "runtime.browser.js",
-      "../../engine/pkg/es_engine_bg.wasm": "es_engine_bg.wasm",
-      "../../engine/pkg/es_engine.js": "es_engine.js",
       "runtime/**/*": "."
     },
     "icon": [
