@@ -47,8 +47,8 @@
   "author": "yhh",
   "license": "MIT",
   "dependencies": {
-    "@esengine/ecs-framework": "file:../core",
-    "@esengine/network-shared": "file:../network-shared",
+    "@esengine/ecs-framework": "workspace:*",
+    "@esengine/network-shared": "workspace:*",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {

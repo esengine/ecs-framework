@@ -48,8 +48,8 @@
   "author": "yhh",
   "license": "MIT",
   "dependencies": {
-    "@esengine/ecs-framework": "file:../core",
-    "@esengine/network-shared": "file:../network-shared",
+    "@esengine/ecs-framework": "workspace:*",
+    "@esengine/network-shared": "workspace:*",
     "ws": "^8.18.2",
     "uuid": "^10.0.0",
     "reflect-metadata": "^0.2.2"

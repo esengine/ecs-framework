@@ -8,6 +8,17 @@
 
 import { TauriAPI } from '../api/tauri';
 
+// Sanitize path by repeatedly removing all '../' sequences
+const sanitizePath = (path: string): string => {
+    let result = path;
+    let previous;
+    do {
+        previous = result;
+        result = result.replace(/\.\.\//g, '').replace(/\.\.\\/g, '');
+    } while (result !== previous);
+    return result;
+};
+
 // Check if we're in development mode
 const isDevelopment = (): boolean => {
     try {
@@ -131,7 +142,7 @@ export class RuntimeResolver {
         if (isDev) {
             // Development mode - use relative paths from workspace root
             const devPath = moduleConfig.development.path;
-            sourcePath = `${this.baseDir}\\packages\\${devPath.replace(/\.\.\//g, '')}`;
+            sourcePath = `${this.baseDir}\\packages\\${sanitizePath(devPath)}`;
 
             if (moduleConfig.main) {
                 files.push(`${sourcePath}\\${moduleConfig.main}`);

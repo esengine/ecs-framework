@@ -49,9 +49,9 @@ logs/
 coverage/
 *.lcov
 
-# 包管理器锁文件（保留npm的，忽略其他的）
+# 包管理器锁文件（忽略yarn，保留pnpm）
 yarn.lock
-pnpm-lock.yaml
+package-lock.json
 
 # 文档生成
 docs/api/

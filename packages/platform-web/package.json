@@ -39,7 +39,7 @@
     "@esengine/asset-system": "workspace:*"
   },
   "peerDependencies": {
-    "@esengine/platform-common": "^1.0.0"
+    "@esengine/platform-common": "workspace:*"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.3",
