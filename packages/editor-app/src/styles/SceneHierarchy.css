@@ -39,13 +39,14 @@
 .scene-name-container {
   display: flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 1px 6px;
   background-color: var(--color-bg-base);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-sm);
   margin-left: auto;
   margin-right: var(--spacing-sm);
   transition: all var(--transition-fast);
+  height: 20px;
 }
 
 .scene-name-container.clickable {
@@ -59,6 +60,32 @@
 
 .scene-name-container.clickable:hover .scene-name {
   color: var(--color-primary);
+}
+
+.scene-name-container.modified {
+  background-color: rgba(251, 191, 36, 0.25);
+  border-color: rgb(251, 191, 36);
+}
+
+.scene-name-container.modified .scene-name {
+  color: rgb(251, 191, 36);
+  font-weight: 600;
+}
+
+.modified-indicator {
+  color: rgb(251, 191, 36);
+  font-size: 8px;
+  margin-left: 4px;
+  animation: pulse-modified 2s ease-in-out infinite;
+}
+
+@keyframes pulse-modified {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .scene-name {
@@ -353,6 +380,14 @@
 .entity-item.remote-entity.disabled .entity-name {
   text-decoration: line-through;
   color: var(--color-text-tertiary);
+}
+
+.entity-item.dragging {
+  opacity: 0.5;
+}
+
+.entity-item.drop-target {
+  border-top: 2px solid var(--color-primary);
 }
 
 .entity-tag {

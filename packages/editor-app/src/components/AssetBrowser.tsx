@@ -289,7 +289,9 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
             setCurrentPath(asset.path);
             loadAssets(asset.path);
         } else if (asset.type === 'file') {
-            if (asset.extension === 'ecs' && onOpenScene) {
+            const ext = asset.extension?.toLowerCase();
+            if (ext === 'ecs' && onOpenScene) {
+                console.log('[AssetBrowser] Opening scene:', asset.path);
                 onOpenScene(asset.path);
                 return;
             }
@@ -696,6 +698,7 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                                     messageHub={messageHub}
                                     searchQuery={searchQuery}
                                     showFiles={false}
+                                    onOpenScene={onOpenScene}
                                 />
                             </div>
                         }
@@ -817,6 +820,7 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                             messageHub={messageHub}
                             searchQuery={searchQuery}
                             showFiles={true}
+                            onOpenScene={onOpenScene}
                         />
                     </div>
                 )}

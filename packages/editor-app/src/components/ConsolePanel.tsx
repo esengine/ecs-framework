@@ -298,9 +298,9 @@ export function ConsolePanel({ logService }: ConsolePanelProps) {
                         <p>No logs to display</p>
                     </div>
                 ) : (
-                    filteredLogs.map((log) => (
+                    filteredLogs.map((log, index) => (
                         <LogEntryItem
-                            key={log.id}
+                            key={`${log.id}-${index}`}
                             log={log}
                             onOpenJsonViewer={setJsonViewerData}
                         />

@@ -3,6 +3,7 @@ import { Injectable, Core, createLogger, SceneSerializer, Scene } from '@esengin
 import type { MessageHub } from './MessageHub';
 import type { IFileAPI } from '../Types/IFileAPI';
 import type { ProjectService } from './ProjectService';
+import type { EntityStoreService } from './EntityStoreService';
 
 const logger = createLogger('SceneManagerService');
 
@@ -27,7 +28,8 @@ export class SceneManagerService implements IService {
     constructor(
         private messageHub: MessageHub,
         private fileAPI: IFileAPI,
-        private projectService?: ProjectService
+        private projectService?: ProjectService,
+        private entityStore?: EntityStoreService
     ) {
         this.setupAutoModificationTracking();
         logger.info('SceneManagerService initialized');
@@ -55,6 +57,7 @@ export class SceneManagerService implements IService {
             isSaved: false
         };
 
+        this.entityStore?.syncFromScene();
         await this.messageHub.publish('scene:new', {});
         logger.info('New scene created');
     }
@@ -98,6 +101,7 @@ export class SceneManagerService implements IService {
                 isSaved: true
             };
 
+            this.entityStore?.syncFromScene();
             await this.messageHub.publish('scene:loaded', {
                 path,
                 sceneName,
@@ -268,7 +272,11 @@ export class SceneManagerService implements IService {
             this.markAsModified();
         });
 
-        this.unsubscribeHandlers.push(unsubscribeEntityAdded, unsubscribeEntityRemoved);
+        const unsubscribeEntityReordered = this.messageHub.subscribe('entity:reordered', () => {
+            this.markAsModified();
+        });
+
+        this.unsubscribeHandlers.push(unsubscribeEntityAdded, unsubscribeEntityRemoved, unsubscribeEntityReordered);
 
         logger.debug('Auto modification tracking setup complete');
     }

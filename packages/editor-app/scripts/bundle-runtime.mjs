@@ -69,12 +69,23 @@ if (success) {
         config.bundle = {};
     }
     if (!config.bundle.resources) {
-        config.bundle.resources = [];
+        config.bundle.resources = {};
     }
-    if (!config.bundle.resources.includes('runtime/**/*')) {
-        config.bundle.resources.push('runtime/**/*');
-        fs.writeFileSync(tauriConfigPath, JSON.stringify(config, null, 2));
-        console.log('✓ Updated tauri.conf.json with runtime resources');
+
+    // Handle both array and object format for resources
+    if (Array.isArray(config.bundle.resources)) {
+        if (!config.bundle.resources.includes('runtime/**/*')) {
+            config.bundle.resources.push('runtime/**/*');
+            fs.writeFileSync(tauriConfigPath, JSON.stringify(config, null, 2));
+            console.log('✓ Updated tauri.conf.json with runtime resources');
+        }
+    } else if (typeof config.bundle.resources === 'object') {
+        // Object format - add runtime files if not present
+        if (!config.bundle.resources['runtime/**/*']) {
+            config.bundle.resources['runtime/**/*'] = '.';
+            fs.writeFileSync(tauriConfigPath, JSON.stringify(config, null, 2));
+            console.log('✓ Updated tauri.conf.json with runtime resources');
+        }
     }
 }
 

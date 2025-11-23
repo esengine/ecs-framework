@@ -12,6 +12,12 @@
     "active": true,
     "targets": "all",
     "createUpdaterArtifacts": true,
+    "resources": {
+      "../../platform-web/dist/runtime.browser.js": "runtime.browser.js",
+      "../../engine/pkg/es_engine_bg.wasm": "es_engine_bg.wasm",
+      "../../engine/pkg/es_engine.js": "es_engine.js",
+      "runtime/**/*": "."
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -22,8 +28,21 @@
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
-      "timestampUrl": ""
+      "timestampUrl": "",
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
     },
+    "fileAssociations": [
+      {
+        "ext": [
+          "ecs"
+        ],
+        "name": "ECS Scene File",
+        "description": "ECS Framework Scene File",
+        "role": "Editor"
+      }
+    ],
     "macOS": {
       "frameworks": [],
       "minimumSystemVersion": "10.13",
@@ -68,6 +87,7 @@
           ],
           "permissions": [
             "core:default",
+            "core:window:allow-start-dragging",
             "shell:default",
             "dialog:default",
             "updater:default",
@@ -110,6 +130,15 @@
   "plugins": {
     "shell": {
       "open": true
+    },
+    "cli": {
+      "args": [
+        {
+          "name": "file",
+          "index": 1,
+          "takesValue": true
+        }
+      ]
     },
     "fs": {
       "requireLiteralLeadingDot": false

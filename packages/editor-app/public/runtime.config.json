@@ -1,0 +1,27 @@
+{
+  "runtime": {
+    "version": "1.0.0",
+    "modules": {
+      "platform-web": {
+        "type": "javascript",
+        "main": "runtime.browser.js",
+        "development": {
+          "path": "../platform-web/dist"
+        },
+        "production": {
+          "bundled": true
+        }
+      },
+      "engine": {
+        "type": "wasm",
+        "files": ["es_engine_bg.wasm", "es_engine.js"],
+        "development": {
+          "path": "../engine/pkg"
+        },
+        "production": {
+          "bundled": true
+        }
+      }
+    }
+  }
+}

@@ -126,7 +126,7 @@ export class ServiceRegistry {
         const propertyMetadata = new PropertyMetadataService();
         const logService = new LogService();
         const settingsRegistry = new SettingsRegistry();
-        const sceneManager = new SceneManagerService(messageHub, fileAPI, projectService);
+        const sceneManager = new SceneManagerService(messageHub, fileAPI, projectService, entityStore);
         const fileActionRegistry = new FileActionRegistry();
 
         Core.services.registerInstance(UIRegistry, uiRegistry);

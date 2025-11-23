@@ -28,6 +28,7 @@ interface FileTreeProps {
   messageHub?: MessageHub;
   searchQuery?: string;
   showFiles?: boolean;
+  onOpenScene?: (scenePath: string) => void;
 }
 
 export interface FileTreeHandle {
@@ -36,7 +37,7 @@ export interface FileTreeHandle {
   revealPath: (targetPath: string) => Promise<void>;
 }
 
-export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, onSelectFile, onSelectFiles, selectedPath, selectedPaths, messageHub, searchQuery, showFiles = true }, ref) => {
+export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, onSelectFile, onSelectFiles, selectedPath, selectedPaths, messageHub, searchQuery, showFiles = true, onOpenScene }, ref) => {
     const [tree, setTree] = useState<TreeNode[]>([]);
     const [loading, setLoading] = useState(false);
     const [internalSelectedPath, setInternalSelectedPath] = useState<string | null>(null);
@@ -714,6 +715,14 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
 
     const handleNodeDoubleClick = async (node: TreeNode) => {
         if (node.type === 'file') {
+            // Handle .ecs scene files
+            const ext = node.name.split('.').pop()?.toLowerCase();
+            if (ext === 'ecs' && onOpenScene) {
+                console.log('[FileTree] Opening scene:', node.path);
+                onOpenScene(node.path);
+                return;
+            }
+
             if (fileActionRegistry) {
                 const handled = await fileActionRegistry.handleDoubleClick(node.path);
                 if (handled) {

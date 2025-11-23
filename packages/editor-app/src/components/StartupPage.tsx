@@ -1,19 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
+import { Globe, ChevronDown } from 'lucide-react';
 import '../styles/StartupPage.css';
+
+type Locale = 'en' | 'zh';
 
 interface StartupPageProps {
   onOpenProject: () => void;
   onCreateProject: () => void;
   onOpenRecentProject?: (projectPath: string) => void;
   onProfilerMode?: () => void;
+  onLocaleChange?: (locale: Locale) => void;
   recentProjects?: string[];
   locale: string;
 }
 
-export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProject, onProfilerMode, recentProjects = [], locale }: StartupPageProps) {
+const LANGUAGES = [
+    { code: 'en', name: 'English' },
+    { code: 'zh', name: '中文' }
+];
+
+export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProject, onProfilerMode, onLocaleChange, recentProjects = [], locale }: StartupPageProps) {
     const [hoveredProject, setHoveredProject] = useState<string | null>(null);
     const [appVersion, setAppVersion] = useState<string>('');
+    const [showLangMenu, setShowLangMenu] = useState(false);
+    const langMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) {
+                setShowLangMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     useEffect(() => {
         getVersion().then(setAppVersion).catch(() => setAppVersion('1.0.0'));
@@ -107,6 +128,34 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
 
             <div className="startup-footer">
                 <span className="startup-version">{versionText}</span>
+                {onLocaleChange && (
+                    <div className="startup-locale-dropdown" ref={langMenuRef}>
+                        <button
+                            className="startup-locale-btn"
+                            onClick={() => setShowLangMenu(!showLangMenu)}
+                        >
+                            <Globe size={14} />
+                            <span>{LANGUAGES.find(l => l.code === locale)?.name || 'English'}</span>
+                            <ChevronDown size={12} />
+                        </button>
+                        {showLangMenu && (
+                            <div className="startup-locale-menu">
+                                {LANGUAGES.map(lang => (
+                                    <button
+                                        key={lang.code}
+                                        className={`startup-locale-item ${locale === lang.code ? 'active' : ''}`}
+                                        onClick={() => {
+                                            onLocaleChange(lang.code as Locale);
+                                            setShowLangMenu(false);
+                                        }}
+                                    >
+                                        {lang.name}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
