@@ -27,6 +27,10 @@ pub struct Renderer2D {
     /// 2D camera.
     /// 2D相机。
     camera: Camera2D,
+
+    /// Clear color (RGBA).
+    /// 清除颜色 (RGBA)。
+    clear_color: [f32; 4],
 }
 
 impl Renderer2D {
@@ -57,6 +61,7 @@ impl Renderer2D {
             sprite_batch,
             shader,
             camera,
+            clear_color: [0.1, 0.1, 0.12, 1.0],
         })
     }
 
@@ -88,7 +93,7 @@ impl Renderer2D {
 
     /// Render the current frame.
     /// 渲染当前帧。
-    pub fn render(&mut self, gl: &WebGl2RenderingContext) -> Result<()> {
+    pub fn render(&mut self, gl: &WebGl2RenderingContext, texture_manager: &TextureManager) -> Result<()> {
         if self.sprite_batch.sprite_count() == 0 {
             return Ok(());
         }
@@ -103,8 +108,21 @@ impl Renderer2D {
         // Set texture sampler | 设置纹理采样器
         self.shader.set_uniform_i32(gl, "u_texture", 0);
 
-        // Flush sprite batch | 刷新精灵批处理
-        self.sprite_batch.flush(gl);
+        // Render each texture batch | 渲染每个纹理批次
+        // Only collect non-empty batches | 只收集非空批次
+        let texture_ids: Vec<u32> = self.sprite_batch.texture_batches()
+            .iter()
+            .filter(|(_, vertices)| !vertices.is_empty())
+            .map(|(id, _)| *id)
+            .collect();
+
+        for texture_id in texture_ids {
+            // Bind texture for this batch | 绑定此批次的纹理
+            texture_manager.bind_texture(texture_id, 0);
+
+            // Flush this texture's sprites | 刷新此纹理的精灵
+            self.sprite_batch.flush_for_texture(gl, texture_id);
+        }
 
         // Clear batch for next frame | 清空批处理以供下一帧使用
         self.sprite_batch.clear();
@@ -124,6 +142,18 @@ impl Renderer2D {
     #[inline]
     pub fn camera(&self) -> &Camera2D {
         &self.camera
+    }
+
+    /// Set clear color (RGBA, each component 0.0-1.0).
+    /// 设置清除颜色。
+    pub fn set_clear_color(&mut self, r: f32, g: f32, b: f32, a: f32) {
+        self.clear_color = [r, g, b, a];
+    }
+
+    /// Get clear color.
+    /// 获取清除颜色。
+    pub fn get_clear_color(&self) -> [f32; 4] {
+        self.clear_color
     }
 
     /// Update camera viewport size.

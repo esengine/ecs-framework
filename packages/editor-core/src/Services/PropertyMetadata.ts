@@ -1,10 +1,22 @@
 import type { IService } from '@esengine/ecs-framework';
-import { Injectable, Component } from '@esengine/ecs-framework';
+import { Injectable, Component, getPropertyMetadata } from '@esengine/ecs-framework';
 import { createLogger } from '@esengine/ecs-framework';
 
 const logger = createLogger('PropertyMetadata');
 
-export type PropertyType = 'number' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum';
+export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset' | 'animationClips';
+
+export interface PropertyAction {
+    id: string;
+    label: string;
+    tooltip?: string;
+    icon?: string;
+}
+
+export interface PropertyControl {
+    component: string;
+    property: string;
+}
 
 export interface PropertyMetadata {
     type: PropertyType;
@@ -14,6 +26,9 @@ export interface PropertyMetadata {
     step?: number;
     options?: Array<{ label: string; value: any }>;
     readOnly?: boolean;
+    fileExtension?: string;
+    actions?: PropertyAction[];
+    controls?: PropertyControl[];
 }
 
 export interface ComponentMetadata {
@@ -48,36 +63,21 @@ export class PropertyMetadataService implements IService {
      * 获取组件的所有可编辑属性
      */
     public getEditableProperties(component: Component): Record<string, PropertyMetadata> {
-        const metadata = this.metadata.get(component.constructor as new (...args: any[]) => Component);
-        if (!metadata) {
-            return this.inferProperties(component);
-        }
-        return metadata.properties;
-    }
-
-    /**
-     * 推断组件属性（当没有明确元数据时）
-     */
-    private inferProperties(component: Component): Record<string, PropertyMetadata> {
-        const properties: Record<string, PropertyMetadata> = {};
-        const componentAsAny = component as any;
-
-        for (const key in component) {
-            if (component.hasOwnProperty(key)) {
-                const value = componentAsAny[key];
-                const type = typeof value;
-
-                if (type === 'number') {
-                    properties[key] = { type: 'number' };
-                } else if (type === 'string') {
-                    properties[key] = { type: 'string' };
-                } else if (type === 'boolean') {
-                    properties[key] = { type: 'boolean' };
-                }
-            }
+        // 优先使用手动注册的元数据
+        const registeredMetadata = this.metadata.get(component.constructor as new (...args: any[]) => Component);
+        if (registeredMetadata) {
+            return registeredMetadata.properties;
         }
 
-        return properties;
+        // 然后尝试从装饰器获取元数据
+        const decoratorMetadata = getPropertyMetadata(component.constructor);
+        if (decoratorMetadata) {
+            return decoratorMetadata as Record<string, PropertyMetadata>;
+        }
+
+        // 没有元数据时返回空对象
+        logger.warn(`No property metadata found for component: ${component.constructor.name}`);
+        return {};
     }
 
     public dispose(): void {

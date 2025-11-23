@@ -40,9 +40,9 @@ export class TypedEventBus<TEvents = Record<string, unknown>> implements IEventB
     }
 
     dispose(): void {
-        this.subscriptions.forEach(sub => sub.unsubscribe());
+        this.subscriptions.forEach((sub) => sub.unsubscribe());
         this.subscriptions = [];
-        this.subjects.forEach(subject => subject.complete());
+        this.subjects.forEach((subject) => subject.complete());
         this.subjects.clear();
     }
 

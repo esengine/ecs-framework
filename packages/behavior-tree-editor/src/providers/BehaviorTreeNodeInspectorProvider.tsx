@@ -201,7 +201,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({ node, onPrope
     const [localData, setLocalData] = useState<Record<string, any>>(node.data);
 
     const handlePropertyChange = useCallback((name: string, value: any) => {
-        setLocalData(prev => ({ ...prev, [name]: value }));
+        setLocalData((prev) => ({ ...prev, [name]: value }));
         onPropertyChange?.(node.id, name, value);
     }, [node.id, onPropertyChange]);
 

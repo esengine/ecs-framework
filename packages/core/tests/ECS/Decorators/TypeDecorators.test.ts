@@ -1,12 +1,16 @@
 import { Component } from '../../../src/ECS/Component';
 import { EntitySystem } from '../../../src/ECS/Systems/EntitySystem';
-import { 
-    ECSComponent, 
-    ECSSystem, 
-    getComponentTypeName, 
+import {
+    ECSComponent,
+    ECSSystem,
+    getComponentTypeName,
     getSystemTypeName,
     getComponentInstanceTypeName,
-    getSystemInstanceTypeName 
+    getSystemInstanceTypeName,
+    getComponentDependencies,
+    Property,
+    getPropertyMetadata,
+    hasPropertyMetadata
 } from '../../../src/ECS/Decorators';
 
 describe('TypeDecorators', () => {
@@ -119,6 +123,108 @@ describe('TypeDecorators', () => {
                     protected override process(_entities: any[]): void {}
                 }
             }).toThrow('ECSSystem装饰器必须提供有效的类型名称');
+        });
+    });
+
+    describe('组件依赖', () => {
+        test('应该存储和获取组件依赖关系', () => {
+            @ECSComponent('BaseComponent')
+            class BaseComponent extends Component {}
+
+            @ECSComponent('DependentComponent', { requires: ['BaseComponent'] })
+            class DependentComponent extends Component {}
+
+            const dependencies = getComponentDependencies(DependentComponent);
+            expect(dependencies).toEqual(['BaseComponent']);
+        });
+
+        test('没有依赖的组件应该返回undefined', () => {
+            @ECSComponent('IndependentComponent')
+            class IndependentComponent extends Component {}
+
+            const dependencies = getComponentDependencies(IndependentComponent);
+            expect(dependencies).toBeUndefined();
+        });
+
+        test('应该支持多个依赖', () => {
+            @ECSComponent('MultiDependentComponent', { requires: ['ComponentA', 'ComponentB', 'ComponentC'] })
+            class MultiDependentComponent extends Component {}
+
+            const dependencies = getComponentDependencies(MultiDependentComponent);
+            expect(dependencies).toEqual(['ComponentA', 'ComponentB', 'ComponentC']);
+        });
+    });
+
+    describe('@Property 装饰器', () => {
+        test('应该为属性设置元数据', () => {
+            @ECSComponent('PropertyTestComponent')
+            class PropertyTestComponent extends Component {
+                @Property({ type: 'number', label: 'Speed' })
+                public speed: number = 10;
+            }
+
+            const metadata = getPropertyMetadata(PropertyTestComponent);
+            expect(metadata).toBeDefined();
+            expect(metadata!['speed']).toEqual({ type: 'number', label: 'Speed' });
+        });
+
+        test('应该支持多个属性装饰器', () => {
+            @ECSComponent('MultiPropertyComponent')
+            class MultiPropertyComponent extends Component {
+                @Property({ type: 'number', label: 'X Position' })
+                public x: number = 0;
+
+                @Property({ type: 'number', label: 'Y Position' })
+                public y: number = 0;
+
+                @Property({ type: 'string', label: 'Name' })
+                public name: string = '';
+            }
+
+            const metadata = getPropertyMetadata(MultiPropertyComponent);
+            expect(metadata).toBeDefined();
+            expect(metadata!['x']).toEqual({ type: 'number', label: 'X Position' });
+            expect(metadata!['y']).toEqual({ type: 'number', label: 'Y Position' });
+            expect(metadata!['name']).toEqual({ type: 'string', label: 'Name' });
+        });
+
+        test('hasPropertyMetadata 应该正确检测属性元数据', () => {
+            @ECSComponent('HasMetadataComponent')
+            class HasMetadataComponent extends Component {
+                @Property({ type: 'boolean' })
+                public active: boolean = true;
+            }
+
+            @ECSComponent('NoMetadataComponent')
+            class NoMetadataComponent extends Component {
+                public value: number = 0;
+            }
+
+            expect(hasPropertyMetadata(HasMetadataComponent)).toBe(true);
+            expect(hasPropertyMetadata(NoMetadataComponent)).toBe(false);
+        });
+
+        test('应该支持完整的属性选项', () => {
+            @ECSComponent('FullOptionsComponent')
+            class FullOptionsComponent extends Component {
+                @Property({
+                    type: 'number',
+                    label: 'Health',
+                    min: 0,
+                    max: 100,
+                    step: 1
+                })
+                public health: number = 100;
+            }
+
+            const metadata = getPropertyMetadata(FullOptionsComponent);
+            expect(metadata!['health']).toEqual({
+                type: 'number',
+                label: 'Health',
+                min: 0,
+                max: 100,
+                step: 1
+            });
         });
     });
 });

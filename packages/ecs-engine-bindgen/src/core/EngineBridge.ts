@@ -3,7 +3,9 @@
  * TypeScript ECS与Rust引擎之间的主桥接层。
  */
 
-import type { SpriteRenderData, TextureLoadRequest, EngineStats } from '../types';
+import type { SpriteRenderData, TextureLoadRequest, EngineStats, CameraConfig } from '../types';
+import type { IEngineBridge } from '@esengine/asset-system';
+import type { GameEngine } from '../wasm/es_engine';
 
 /**
  * Engine bridge configuration.
@@ -41,10 +43,14 @@ export interface EngineBridgeConfig {
  * bridge.render();
  * ```
  */
-export class EngineBridge {
-    private engine: any; // GameEngine from WASM
+export class EngineBridge implements IEngineBridge {
+    private engine: GameEngine | null = null;
     private config: Required<EngineBridgeConfig>;
     private initialized = false;
+
+    // Path resolver for converting file paths to URLs
+    // 用于将文件路径转换为URL的路径解析器
+    private pathResolver: ((path: string) => string) | null = null;
 
     // Pre-allocated typed arrays for batch submission
     // 预分配的类型数组用于批量提交
@@ -64,6 +70,7 @@ export class EngineBridge {
     private lastFrameTime = 0;
     private frameCount = 0;
     private fpsAccumulator = 0;
+    private debugLogged = false;
 
     /**
      * Create a new engine bridge.
@@ -136,7 +143,7 @@ export class EngineBridge {
 
         try {
             // Dynamic import of WASM module | 动态导入WASM模块
-            const wasmModule = await import(/* webpackIgnore: true */ wasmPath);
+            const wasmModule = await import(/* @vite-ignore */ wasmPath);
             await this.initializeWithModule(wasmModule);
         } catch (error) {
             throw new Error(`Failed to initialize engine: ${error} | 引擎初始化失败: ${error}`);
@@ -168,6 +175,17 @@ export class EngineBridge {
     }
 
     /**
+     * Get engine instance (throws if not initialized)
+     * 获取引擎实例（未初始化时抛出异常）
+     */
+    private getEngine(): GameEngine {
+        if (!this.engine) {
+            throw new Error('Engine not initialized. Call initialize() first.');
+        }
+        return this.engine;
+    }
+
+    /**
      * Clear the screen.
      * 清除屏幕。
      *
@@ -178,7 +196,7 @@ export class EngineBridge {
      */
     clear(r: number, g: number, b: number, a: number): void {
         if (!this.initialized) return;
-        this.engine.clear(r, g, b, a);
+        this.getEngine().clear(r, g, b, a);
     }
 
     /**
@@ -220,8 +238,15 @@ export class EngineBridge {
             this.colorBuffer[i] = sprite.color;
         }
 
+        // Debug: log texture IDs only once when we have 2+ sprites (for multi-texture test)
+        if (!this.debugLogged && count >= 2) {
+            const textureIds = Array.from(this.textureIdBuffer.subarray(0, count));
+            console.log(`TS submitSprites: ${count} sprites, textureIds: [${textureIds.join(', ')}]`);
+            this.debugLogged = true;
+        }
+
         // Submit to engine (single WASM call) | 提交到引擎（单次WASM调用）
-        this.engine.submitSpriteBatch(
+        this.getEngine().submitSpriteBatch(
             this.transformBuffer.subarray(0, count * 7),
             this.textureIdBuffer.subarray(0, count),
             this.uvBuffer.subarray(0, count * 4),
@@ -239,7 +264,7 @@ export class EngineBridge {
         if (!this.initialized) return;
 
         const startTime = performance.now();
-        this.engine.render();
+        this.getEngine().render();
         const endTime = performance.now();
 
         // Update statistics | 更新统计信息
@@ -265,9 +290,12 @@ export class EngineBridge {
      * @param id - Texture ID | 纹理ID
      * @param url - Image URL | 图片URL
      */
-    loadTexture(id: number, url: string): void {
-        if (!this.initialized) return;
-        this.engine.loadTexture(id, url);
+    loadTexture(id: number, url: string): Promise<void> {
+        if (!this.initialized) return Promise.resolve();
+        this.getEngine().loadTexture(id, url);
+        // Currently synchronous, but return Promise for interface compatibility
+        // 目前是同步的，但返回Promise以兼容接口
+        return Promise.resolve();
     }
 
     /**
@@ -276,10 +304,87 @@ export class EngineBridge {
      *
      * @param requests - Texture load requests | 纹理加载请求
      */
-    loadTextures(requests: TextureLoadRequest[]): void {
+    async loadTextures(requests: Array<{ id: number; url: string }>): Promise<void> {
         for (const req of requests) {
-            this.loadTexture(req.id, req.url);
+            await this.loadTexture(req.id, req.url);
         }
+    }
+
+    /**
+     * Load texture by path, returning texture ID.
+     * 按路径加载纹理，返回纹理ID。
+     *
+     * @param path - Image path/URL | 图片路径/URL
+     * @returns Texture ID | 纹理ID
+     */
+    loadTextureByPath(path: string): number {
+        if (!this.initialized) return 0;
+        return this.getEngine().loadTextureByPath(path);
+    }
+
+    /**
+     * Get texture ID by path.
+     * 按路径获取纹理ID。
+     *
+     * @param path - Image path | 图片路径
+     * @returns Texture ID or undefined | 纹理ID或undefined
+     */
+    getTextureIdByPath(path: string): number | undefined {
+        if (!this.initialized) return undefined;
+        return this.getEngine().getTextureIdByPath(path);
+    }
+
+    /**
+     * Set path resolver for converting file paths to URLs.
+     * 设置路径解析器用于将文件路径转换为URL。
+     *
+     * @param resolver - Function to resolve paths | 解析路径的函数
+     */
+    setPathResolver(resolver: (path: string) => string): void {
+        this.pathResolver = resolver;
+    }
+
+    /**
+     * Get or load texture by path.
+     * 按路径获取或加载纹理。
+     *
+     * @param path - Image path/URL | 图片路径/URL
+     * @returns Texture ID | 纹理ID
+     */
+    getOrLoadTextureByPath(path: string): number {
+        if (!this.initialized) return 0;
+
+        // Resolve path if resolver is set
+        // 如果设置了解析器，则解析路径
+        const resolvedPath = this.pathResolver ? this.pathResolver(path) : path;
+        return this.getEngine().getOrLoadTextureByPath(resolvedPath);
+    }
+
+    /**
+     * Unload texture from GPU.
+     * 从GPU卸载纹理。
+     *
+     * @param id - Texture ID | 纹理ID
+     */
+    unloadTexture(id: number): void {
+        if (!this.initialized) return;
+        // TODO: Implement in Rust engine
+        // TODO: 在Rust引擎中实现
+        console.warn('unloadTexture not yet implemented in engine');
+    }
+
+    /**
+     * Get texture information.
+     * 获取纹理信息。
+     *
+     * @param id - Texture ID | 纹理ID
+     */
+    getTextureInfo(id: number): { width: number; height: number } | null {
+        if (!this.initialized) return null;
+        // TODO: Implement in Rust engine
+        // TODO: 在Rust引擎中实现
+        // Return default values for now / 暂时返回默认值
+        return { width: 64, height: 64 };
     }
 
     /**
@@ -290,7 +395,7 @@ export class EngineBridge {
      */
     isKeyDown(keyCode: string): boolean {
         if (!this.initialized) return false;
-        return this.engine.isKeyDown(keyCode);
+        return this.getEngine().isKeyDown(keyCode);
     }
 
     /**
@@ -299,7 +404,7 @@ export class EngineBridge {
      */
     updateInput(): void {
         if (!this.initialized) return;
-        this.engine.updateInput();
+        this.getEngine().updateInput();
     }
 
     /**
@@ -319,9 +424,210 @@ export class EngineBridge {
      */
     resize(width: number, height: number): void {
         if (!this.initialized) return;
-        if (this.engine.resize) {
-            this.engine.resize(width, height);
+        const engine = this.getEngine();
+        if (engine.resize) {
+            engine.resize(width, height);
         }
+    }
+
+    /**
+     * Set camera position, zoom, and rotation.
+     * 设置相机位置、缩放和旋转。
+     *
+     * @param config - Camera configuration | 相机配置
+     */
+    setCamera(config: CameraConfig): void {
+        if (!this.initialized) return;
+        this.getEngine().setCamera(config.x, config.y, config.zoom, config.rotation);
+    }
+
+    /**
+     * Get camera state.
+     * 获取相机状态。
+     */
+    getCamera(): CameraConfig {
+        if (!this.initialized) {
+            return { x: 0, y: 0, zoom: 1, rotation: 0 };
+        }
+        const state = this.getEngine().getCamera();
+        return {
+            x: state[0],
+            y: state[1],
+            zoom: state[2],
+            rotation: state[3]
+        };
+    }
+
+    /**
+     * Set grid visibility.
+     * 设置网格可见性。
+     */
+    setShowGrid(show: boolean): void {
+        if (!this.initialized) return;
+        this.getEngine().setShowGrid(show);
+    }
+
+    /**
+     * Set clear color (background color).
+     * 设置清除颜色（背景颜色）。
+     *
+     * @param r - Red component (0.0-1.0) | 红色分量
+     * @param g - Green component (0.0-1.0) | 绿色分量
+     * @param b - Blue component (0.0-1.0) | 蓝色分量
+     * @param a - Alpha component (0.0-1.0) | 透明度分量
+     */
+    setClearColor(r: number, g: number, b: number, a: number): void {
+        if (!this.initialized) return;
+        this.getEngine().setClearColor(r, g, b, a);
+    }
+
+    /**
+     * Add a rectangle gizmo outline.
+     * 添加矩形Gizmo边框。
+     *
+     * @param x - Center X position | 中心X位置
+     * @param y - Center Y position | 中心Y位置
+     * @param width - Rectangle width | 矩形宽度
+     * @param height - Rectangle height | 矩形高度
+     * @param rotation - Rotation in radians | 旋转角度（弧度）
+     * @param originX - Origin X (0-1) | 原点X (0-1)
+     * @param originY - Origin Y (0-1) | 原点Y (0-1)
+     * @param r - Red (0-1) | 红色
+     * @param g - Green (0-1) | 绿色
+     * @param b - Blue (0-1) | 蓝色
+     * @param a - Alpha (0-1) | 透明度
+     * @param showHandles - Whether to show transform handles | 是否显示变换手柄
+     */
+    addGizmoRect(
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        rotation: number,
+        originX: number,
+        originY: number,
+        r: number,
+        g: number,
+        b: number,
+        a: number,
+        showHandles: boolean = true
+    ): void {
+        if (!this.initialized) return;
+        this.getEngine().addGizmoRect(x, y, width, height, rotation, originX, originY, r, g, b, a, showHandles);
+    }
+
+    /**
+     * Set transform tool mode.
+     * 设置变换工具模式。
+     *
+     * @param mode - 0=Select, 1=Move, 2=Rotate, 3=Scale
+     */
+    setTransformMode(mode: number): void {
+        if (!this.initialized) return;
+        this.getEngine().setTransformMode(mode);
+    }
+
+    /**
+     * Set gizmo visibility.
+     * 设置辅助工具可见性。
+     */
+    setShowGizmos(show: boolean): void {
+        if (!this.initialized) return;
+        this.getEngine().setShowGizmos(show);
+    }
+
+    // ===== Multi-viewport API =====
+    // ===== 多视口 API =====
+
+    /**
+     * Register a new viewport.
+     * 注册新视口。
+     *
+     * @param id - Unique viewport identifier | 唯一视口标识符
+     * @param canvasId - HTML canvas element ID | HTML canvas元素ID
+     */
+    registerViewport(id: string, canvasId: string): void {
+        if (!this.initialized) return;
+        this.getEngine().registerViewport(id, canvasId);
+    }
+
+    /**
+     * Unregister a viewport.
+     * 注销视口。
+     */
+    unregisterViewport(id: string): void {
+        if (!this.initialized) return;
+        this.getEngine().unregisterViewport(id);
+    }
+
+    /**
+     * Set the active viewport.
+     * 设置活动视口。
+     */
+    setActiveViewport(id: string): boolean {
+        if (!this.initialized) return false;
+        return this.getEngine().setActiveViewport(id);
+    }
+
+    /**
+     * Set camera for a specific viewport.
+     * 为特定视口设置相机。
+     */
+    setViewportCamera(viewportId: string, config: CameraConfig): void {
+        if (!this.initialized) return;
+        this.getEngine().setViewportCamera(viewportId, config.x, config.y, config.zoom, config.rotation);
+    }
+
+    /**
+     * Get camera for a specific viewport.
+     * 获取特定视口的相机。
+     */
+    getViewportCamera(viewportId: string): CameraConfig | null {
+        if (!this.initialized) return null;
+        const state = this.getEngine().getViewportCamera(viewportId);
+        if (!state) return null;
+        return {
+            x: state[0],
+            y: state[1],
+            zoom: state[2],
+            rotation: state[3]
+        };
+    }
+
+    /**
+     * Set viewport configuration.
+     * 设置视口配置。
+     */
+    setViewportConfig(viewportId: string, showGrid: boolean, showGizmos: boolean): void {
+        if (!this.initialized) return;
+        this.getEngine().setViewportConfig(viewportId, showGrid, showGizmos);
+    }
+
+    /**
+     * Resize a specific viewport.
+     * 调整特定视口大小。
+     */
+    resizeViewport(viewportId: string, width: number, height: number): void {
+        if (!this.initialized) return;
+        this.getEngine().resizeViewport(viewportId, width, height);
+    }
+
+    /**
+     * Render to a specific viewport.
+     * 渲染到特定视口。
+     */
+    renderToViewport(viewportId: string): void {
+        if (!this.initialized) return;
+        this.getEngine().renderToViewport(viewportId);
+    }
+
+    /**
+     * Get all registered viewport IDs.
+     * 获取所有已注册的视口ID。
+     */
+    getViewportIds(): string[] {
+        if (!this.initialized) return [];
+        return this.getEngine().getViewportIds();
     }
 
     /**

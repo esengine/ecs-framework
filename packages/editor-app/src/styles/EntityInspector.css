@@ -34,30 +34,28 @@
 
 .inspector-content {
   flex: 1;
-  overflow: auto;
+  overflow-y: scroll;
+  overflow-x: hidden;
   padding: var(--spacing-md);
   min-height: 0;
 }
 
 .inspector-content::-webkit-scrollbar {
-  width: 14px;
-  height: 14px;
+  width: 8px;
+  height: 8px;
 }
 
 .inspector-content::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--color-bg-base);
 }
 
 .inspector-content::-webkit-scrollbar-thumb {
   background: rgba(121, 121, 121, 0.4);
-  border-radius: 8px;
-  border: 3px solid transparent;
-  background-clip: padding-box;
+  border-radius: 4px;
 }
 
 .inspector-content::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 100, 100, 0.7);
-  background-clip: padding-box;
 }
 
 .inspector-content::-webkit-scrollbar-corner {
@@ -216,6 +214,8 @@
 }
 
 .component-icon {
+  display: flex;
+  align-items: center;
   color: var(--color-text-secondary);
   flex-shrink: 0;
   transition: color var(--transition-fast);
@@ -464,4 +464,250 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* 添加组件菜单样式 */
+.section-title-with-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.component-menu-container {
+  position: relative;
+}
+
+.add-component-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--color-primary);
+  border: none;
+  border-radius: 4px;
+  color: var(--color-text-inverse);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.add-component-trigger:hover {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.add-component-trigger:active {
+  transform: translateY(0);
+}
+
+.component-dropdown-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+}
+
+.component-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 220px;
+  max-height: 320px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  overflow: hidden;
+  animation: dropdownSlide 0.15s ease;
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.component-dropdown-header {
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--color-border-default);
+  background: var(--color-bg-base);
+}
+
+.component-dropdown-empty {
+  padding: 16px 12px;
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+}
+
+.component-dropdown-list {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.component-dropdown-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.component-dropdown-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.component-dropdown-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.component-dropdown-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.component-category-group {
+  margin-bottom: 4px;
+}
+
+.component-category-group:last-child {
+  margin-bottom: 0;
+}
+
+.component-category-label {
+  padding: 6px 12px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.component-dropdown-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.1s ease;
+}
+
+.component-dropdown-item:hover {
+  background: var(--color-bg-hover);
+}
+
+.component-dropdown-item:active {
+  background: var(--color-primary);
+}
+
+.component-dropdown-item-name {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.component-dropdown-item-desc {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+/* 组件列表项样式 */
+.component-item-card {
+  margin-bottom: 4px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: all 0.15s ease;
+}
+
+.component-item-card:hover {
+  border-color: var(--color-border-strong);
+}
+
+.component-item-card.expanded {
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.component-item-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--color-bg-base);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s ease;
+}
+
+.component-item-header:hover {
+  background: var(--color-bg-hover);
+}
+
+.component-expand-icon {
+  display: flex;
+  align-items: center;
+  color: var(--color-text-tertiary);
+  transition: color 0.1s ease;
+}
+
+.component-item-card:hover .component-expand-icon,
+.component-item-card.expanded .component-expand-icon {
+  color: var(--color-primary);
+}
+
+.component-item-name {
+  flex: 1;
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.component-item-card .component-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all 0.1s ease;
+}
+
+.component-item-header:hover .component-remove-btn {
+  opacity: 1;
+}
+
+.component-item-card .component-remove-btn:hover {
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+}
+
+.component-item-content {
+  padding: 8px 10px;
+  border-top: 1px solid var(--color-border-default);
+  background: var(--color-bg-base);
+  overflow: hidden;
+  min-width: 0;
 }

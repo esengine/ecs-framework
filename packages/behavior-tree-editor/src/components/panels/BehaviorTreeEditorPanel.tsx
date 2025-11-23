@@ -99,7 +99,7 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
                         );
 
                         // 更新树
-                        const nodes = state.getNodes().map(n =>
+                        const nodes = state.getNodes().map((n) =>
                             n.id === data.nodeId ? updatedNode : n
                         );
 

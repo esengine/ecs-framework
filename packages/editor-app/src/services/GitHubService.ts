@@ -667,7 +667,7 @@ export class GitHubService {
             }
 
             // 转换为最终结果，并对版本排序
-            const plugins: PublishedPlugin[] = Array.from(pluginVersionsMap.values()).map(plugin => {
+            const plugins: PublishedPlugin[] = Array.from(pluginVersionsMap.values()).map((plugin) => {
                 // 按版本号降序排序（最新版本在前）
                 const sortedVersions = plugin.versions.sort((a, b) => {
                     const parseVersion = (v: string) => {
@@ -714,9 +714,9 @@ export class GitHubService {
                 detailsUrl: run.html_url,
                 output: run.output
                     ? {
-                          title: run.output.title || '',
-                          summary: run.output.summary || ''
-                      }
+                        title: run.output.title || '',
+                        summary: run.output.summary || ''
+                    }
                     : undefined
             }));
         } catch (error) {
@@ -782,8 +782,8 @@ export class GitHubService {
 
             const files = await this.request<any[]>(`GET /repos/${owner}/${repo}/pulls/${prNumber}/files`);
             const conflictFiles = files
-                .filter(file => file.status === 'modified' || file.status === 'added' || file.status === 'deleted')
-                .map(file => file.filename);
+                .filter((file) => file.status === 'modified' || file.status === 'added' || file.status === 'deleted')
+                .map((file) => file.filename);
 
             return {
                 hasConflicts: true,
@@ -932,7 +932,7 @@ export class GitHubService {
                             this.scheduleRetryLoadUser();
                         }
                     });
-            } 
+            }
         } catch (error) {
             console.error('[GitHubService] Failed to load token:', error);
             this.notifyUserLoadStateChange(false);

@@ -293,7 +293,7 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 deleteReason
             );
 
-            console.log(`[UserDashboard] Delete PR created:`, prUrl);
+            console.log('[UserDashboard] Delete PR created:', prUrl);
 
             setConfirmDeletePlugin(null);
             setDeleteReason('');
@@ -407,7 +407,7 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
 
         const pluginName = removeMatch[0];
 
-        const plugin = publishedPlugins.find(p => p.name === pluginName);
+        const plugin = publishedPlugins.find((p) => p.name === pluginName);
         if (!plugin) {
             alert(t('recreatePRFailed') + ': Plugin not found in published list');
             return;
@@ -443,7 +443,7 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 true
             );
 
-            console.log(`[UserDashboard] Recreated delete PR:`, prUrl);
+            console.log('[UserDashboard] Recreated delete PR:', prUrl);
             alert(t('recreatePRSuccess'));
             await loadData();
 
@@ -482,12 +482,12 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
         if (prFilter === 'all') {
             return pendingReviews;
         }
-        return pendingReviews.filter(review => review.status === prFilter);
+        return pendingReviews.filter((review) => review.status === prFilter);
     };
 
     const handleLinkClick = (href: string) => (e: React.MouseEvent) => {
         e.preventDefault();
-        open(href).catch(err => {
+        open(href).catch((err) => {
             console.error('[UserDashboard] Failed to open link:', err);
         });
     };
@@ -568,7 +568,7 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                 {publishedPlugins.map((plugin) => {
                     const isExpanded = expandedVersions.has(plugin.id);
                     const hasMultipleVersions = plugin.versions.length > 1;
-                    const pendingPR = pendingReviews.find(pr => pr.pluginName === plugin.name && pr.status === 'open');
+                    const pendingPR = pendingReviews.find((pr) => pr.pluginName === plugin.name && pr.status === 'open');
 
                     return (
                         <div key={plugin.id} className="plugin-card">
@@ -633,55 +633,55 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                                     </div>
                                 </div>
                             )}
-                        <div className="plugin-actions">
-                            {pendingPR && (
-                                <div className="pending-pr-badge" title={t('pleaseDealWithPR').replace('{{number}}', String(pendingPR.prNumber))}>
-                                    <AlertCircle size={14} />
-                                    <span>PR #{pendingPR.prNumber} {t('statusOpen')}</span>
-                                </div>
-                            )}
-                            <button
-                                className="btn-update"
-                                onClick={() => handleUpdatePlugin(plugin)}
-                                disabled={!!pendingPR}
-                                title={pendingPR
-                                    ? t('pleaseDealWithPR').replace('{{number}}', String(pendingPR.prNumber))
-                                    : t('updatePlugin')
-                                }
-                            >
-                                <Upload size={14} />
-                                {t('updatePlugin')}
-                            </button>
-                            {plugin.repositoryUrl && (
-                                <a
-                                    href={plugin.repositoryUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="plugin-link"
+                            <div className="plugin-actions">
+                                {pendingPR && (
+                                    <div className="pending-pr-badge" title={t('pleaseDealWithPR').replace('{{number}}', String(pendingPR.prNumber))}>
+                                        <AlertCircle size={14} />
+                                        <span>PR #{pendingPR.prNumber} {t('statusOpen')}</span>
+                                    </div>
+                                )}
+                                <button
+                                    className="btn-update"
+                                    onClick={() => handleUpdatePlugin(plugin)}
+                                    disabled={!!pendingPR}
+                                    title={pendingPR
+                                        ? t('pleaseDealWithPR').replace('{{number}}', String(pendingPR.prNumber))
+                                        : t('updatePlugin')
+                                    }
                                 >
-                                    {t('viewRepo')} <ExternalLink size={14} />
-                                </a>
-                            )}
-                            {plugin.versions[0]?.prUrl && (
-                                <a
-                                    href={plugin.versions[0].prUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="plugin-link"
+                                    <Upload size={14} />
+                                    {t('updatePlugin')}
+                                </button>
+                                {plugin.repositoryUrl && (
+                                    <a
+                                        href={plugin.repositoryUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="plugin-link"
+                                    >
+                                        {t('viewRepo')} <ExternalLink size={14} />
+                                    </a>
+                                )}
+                                {plugin.versions[0]?.prUrl && (
+                                    <a
+                                        href={plugin.versions[0].prUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="plugin-link"
+                                    >
+                                        {t('viewPR')} <ExternalLink size={14} />
+                                    </a>
+                                )}
+                                <button
+                                    className="btn-delete"
+                                    onClick={() => setConfirmDeletePlugin(plugin)}
+                                    title={t('deletePlugin')}
                                 >
-                                    {t('viewPR')} <ExternalLink size={14} />
-                                </a>
-                            )}
-                            <button
-                                className="btn-delete"
-                                onClick={() => setConfirmDeletePlugin(plugin)}
-                                title={t('deletePlugin')}
-                            >
-                                <Trash2 size={14} />
-                                {t('deletePlugin')}
-                            </button>
+                                    <Trash2 size={14} />
+                                    {t('deletePlugin')}
+                                </button>
+                            </div>
                         </div>
-                    </div>
                     );
                 })}
             </div>
@@ -729,19 +729,19 @@ export function UserDashboard({ githubService, onClose, locale }: UserDashboardP
                         className={`filter-btn ${prFilter === 'open' ? 'active' : ''}`}
                         onClick={() => setPRFilter('open')}
                     >
-                        {t('filterOpen')} ({pendingReviews.filter(r => r.status === 'open').length})
+                        {t('filterOpen')} ({pendingReviews.filter((r) => r.status === 'open').length})
                     </button>
                     <button
                         className={`filter-btn ${prFilter === 'merged' ? 'active' : ''}`}
                         onClick={() => setPRFilter('merged')}
                     >
-                        {t('filterMerged')} ({pendingReviews.filter(r => r.status === 'merged').length})
+                        {t('filterMerged')} ({pendingReviews.filter((r) => r.status === 'merged').length})
                     </button>
                     <button
                         className={`filter-btn ${prFilter === 'closed' ? 'active' : ''}`}
                         onClick={() => setPRFilter('closed')}
                     >
-                        {t('filterClosed')} ({pendingReviews.filter(r => r.status === 'closed').length})
+                        {t('filterClosed')} ({pendingReviews.filter((r) => r.status === 'closed').length})
                     </button>
                 </div>
                 <div className="review-list">

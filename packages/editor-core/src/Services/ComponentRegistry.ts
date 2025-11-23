@@ -5,6 +5,7 @@ export interface ComponentTypeInfo {
   type?: new (...args: any[]) => Component;
   category?: string;
   description?: string;
+  icon?: string;
   metadata?: {
     path?: string;
     fileName?: string;

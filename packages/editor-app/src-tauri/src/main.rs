@@ -60,6 +60,7 @@ fn main() {
             commands::list_directory,
             commands::scan_directory,
             commands::read_file_as_base64,
+            commands::copy_file,
             // Dialog operations
             commands::open_folder_dialog,
             commands::open_file_dialog,
@@ -76,6 +77,13 @@ fn main() {
             commands::toggle_devtools,
             commands::open_file_with_default_app,
             commands::show_in_folder,
+            commands::get_temp_dir,
+            commands::get_app_resource_dir,
+            commands::get_current_dir,
+            commands::start_local_server,
+            commands::stop_local_server,
+            commands::get_local_ip,
+            commands::generate_qrcode,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

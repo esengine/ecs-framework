@@ -19,7 +19,6 @@ export class SceneDataCollector {
                 sceneRunTime: 0,
                 sceneEntityCount: 0,
                 sceneSystemCount: 0,
-                sceneMemory: 0,
                 sceneUptime: 0
             };
         }
@@ -36,7 +35,6 @@ export class SceneDataCollector {
             sceneRunTime: runTime,
             sceneEntityCount: entityList?.buffer?.length || 0,
             sceneSystemCount: entityProcessors?.processors?.length || 0,
-            sceneMemory: 0, // TODO: 计算实际场景内存
             sceneUptime: runTime
         };
     }

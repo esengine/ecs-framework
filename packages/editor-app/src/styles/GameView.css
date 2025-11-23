@@ -1,0 +1,234 @@
+.game-view {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.game-view-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    background: var(--color-bg-elevated);
+    border-bottom: 1px solid var(--color-border-default);
+    flex-shrink: 0;
+    gap: 8px;
+    z-index: 10;
+}
+
+.game-view-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.game-view-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.game-view-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 32px;
+    height: 32px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    padding: 0 6px;
+}
+
+.game-view-btn:hover:not(:disabled) {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-hover);
+}
+
+.game-view-btn.active {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    border-color: var(--color-primary);
+}
+
+.game-view-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.game-view-btn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.game-view-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--color-border-default);
+    margin: 0 4px;
+}
+
+.game-view-dropdown {
+    position: relative;
+}
+
+.game-view-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    min-width: 160px;
+    padding: 4px;
+    animation: dropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.game-view-dropdown-menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-xs);
+    color: var(--color-text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.game-view-dropdown-menu button:hover {
+    background: var(--color-bg-hover);
+}
+
+.game-view-canvas {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    display: block;
+    background: #000;
+    user-select: none;
+}
+
+.game-view-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+}
+
+.game-view-overlay-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: var(--color-text-secondary);
+}
+
+.game-view-overlay-content svg {
+    opacity: 0.5;
+}
+
+.game-view-overlay-content span {
+    font-size: 14px;
+}
+
+.game-view-stats {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-family: var(--font-family-mono);
+    font-size: 11px;
+    pointer-events: none;
+    z-index: 5;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.game-view-stat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.game-view-stat-label {
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.game-view-stat-value {
+    color: var(--color-primary);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.game-view:fullscreen {
+    background: #000;
+}
+
+.game-view:fullscreen .game-view-toolbar {
+    display: none;
+}
+
+.game-view:fullscreen .game-view-overlay {
+    display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .game-view-btn {
+        transition: none;
+    }
+
+    .game-view-dropdown-menu {
+        animation: none;
+    }
+}

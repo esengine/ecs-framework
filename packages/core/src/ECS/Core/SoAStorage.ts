@@ -255,7 +255,7 @@ export class SoAStorage<T extends Component> {
         for (const key of uint8ClampedFields) decoratedFields.set(key, 'uint8clamped');
 
         // 只遍历实例自身的属性（不包括原型链），跳过 id
-        const instanceKeys = Object.keys(instance).filter(key => key !== 'id');
+        const instanceKeys = Object.keys(instance).filter((key) => key !== 'id');
 
         for (const key of instanceKeys) {
             const value = (instance as Record<string, unknown>)[key];
@@ -264,31 +264,31 @@ export class SoAStorage<T extends Component> {
             // 跳过函数（通常不会出现在 Object.keys 中，但以防万一）
             if (type === 'function') continue;
 
-                // 检查装饰器类型
-                const decoratorType = decoratedFields.get(key);
-                const effectiveType = decoratorType ? 'number' : type;
-                this.fieldTypes.set(key, effectiveType);
+            // 检查装饰器类型
+            const decoratorType = decoratedFields.get(key);
+            const effectiveType = decoratorType ? 'number' : type;
+            this.fieldTypes.set(key, effectiveType);
 
-                if (decoratorType) {
-                    // 有装饰器标记的数字字段
-                    const ArrayConstructor = SoATypeRegistry.getConstructor(decoratorType as TypedArrayTypeName);
-                    this.fields.set(key, new ArrayConstructor(this._capacity));
-                } else if (type === 'number') {
-                    // 无装饰器的数字字段，默认使用 Float32Array
-                    this.fields.set(key, new Float32Array(this._capacity));
-                } else if (type === 'boolean') {
-                    // 布尔值使用 Uint8Array 存储为 0/1
-                    this.fields.set(key, new Uint8Array(this._capacity));
-                } else if (type === 'string') {
-                    // 字符串专门处理
-                    this.stringFields.set(key, new Array(this._capacity));
-                } else if (type === 'object' && value !== null) {
-                    // 处理集合类型
-                    if (this.serializeMapFields.has(key) || this.serializeSetFields.has(key) || this.serializeArrayFields.has(key)) {
-                        // 序列化存储
-                        this.serializedFields.set(key, new Array(this._capacity));
-                    }
-                    // 其他对象类型会在updateComponentAtIndex中作为复杂对象处理
+            if (decoratorType) {
+                // 有装饰器标记的数字字段
+                const ArrayConstructor = SoATypeRegistry.getConstructor(decoratorType as TypedArrayTypeName);
+                this.fields.set(key, new ArrayConstructor(this._capacity));
+            } else if (type === 'number') {
+                // 无装饰器的数字字段，默认使用 Float32Array
+                this.fields.set(key, new Float32Array(this._capacity));
+            } else if (type === 'boolean') {
+                // 布尔值使用 Uint8Array 存储为 0/1
+                this.fields.set(key, new Uint8Array(this._capacity));
+            } else if (type === 'string') {
+                // 字符串专门处理
+                this.stringFields.set(key, new Array(this._capacity));
+            } else if (type === 'object' && value !== null) {
+                // 处理集合类型
+                if (this.serializeMapFields.has(key) || this.serializeSetFields.has(key) || this.serializeArrayFields.has(key)) {
+                    // 序列化存储
+                    this.serializedFields.set(key, new Array(this._capacity));
+                }
+                // 其他对象类型会在updateComponentAtIndex中作为复杂对象处理
             }
         }
     }
@@ -515,7 +515,7 @@ export class SoAStorage<T extends Component> {
                         enumerable: true,
                         configurable: true,
                         // entityId 是只读的
-                        writable: propStr !== 'entityId',
+                        writable: propStr !== 'entityId'
                     };
                 }
                 return undefined;

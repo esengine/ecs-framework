@@ -1,6 +1,7 @@
 //! Sprite batch renderer for efficient 2D rendering.
 //! 用于高效2D渲染的精灵批处理渲染器。
 
+use std::collections::HashMap;
 use web_sys::{
     WebGl2RenderingContext, WebGlBuffer, WebGlVertexArrayObject,
 };
@@ -34,7 +35,7 @@ const UV_STRIDE: usize = 4;
 ///
 /// # Performance | 性能
 /// - Uses dynamic vertex buffer for efficient updates | 使用动态顶点缓冲区以高效更新
-/// - Minimizes state changes and draw calls | 最小化状态更改和绘制调用
+/// - Groups sprites by texture to minimize state changes | 按纹理分组精灵以最小化状态更改
 /// - Supports up to 10000+ sprites per batch | 每批次支持10000+精灵
 pub struct SpriteBatch {
     /// Vertex array object.
@@ -53,17 +54,13 @@ pub struct SpriteBatch {
     /// 最大精灵数。
     max_sprites: usize,
 
-    /// Vertex data buffer.
-    /// 顶点数据缓冲区。
-    vertices: Vec<f32>,
+    /// Per-texture vertex data buffers.
+    /// 按纹理分组的顶点数据缓冲区。
+    texture_batches: HashMap<u32, Vec<f32>>,
 
-    /// Current number of sprites in batch.
-    /// 当前批次中的精灵数。
+    /// Total sprite count across all batches.
+    /// 所有批次的总精灵数。
     sprite_count: usize,
-
-    /// Current texture ID being batched.
-    /// 当前正在批处理的纹理ID。
-    current_texture: Option<u32>,
 }
 
 impl SpriteBatch {
@@ -127,9 +124,8 @@ impl SpriteBatch {
             vbo,
             ibo,
             max_sprites,
-            vertices: Vec::with_capacity(max_sprites * VERTICES_PER_SPRITE * FLOATS_PER_VERTEX),
+            texture_batches: HashMap::new(),
             sprite_count: 0,
-            current_texture: None,
         })
     }
 
@@ -196,9 +192,10 @@ impl SpriteBatch {
     /// Clear the batch for a new frame.
     /// 为新帧清空批处理。
     pub fn clear(&mut self) {
-        self.vertices.clear();
+        for batch in self.texture_batches.values_mut() {
+            batch.clear();
+        }
         self.sprite_count = 0;
-        self.current_texture = None;
     }
 
     /// Add sprites from batch data.
@@ -209,14 +206,14 @@ impl SpriteBatch {
     /// * `texture_ids` - Texture ID for each sprite | 每个精灵的纹理ID
     /// * `uvs` - [u0, v0, u1, v1] per sprite | 每个精灵的UV坐标
     /// * `colors` - Packed RGBA color per sprite | 每个精灵的打包RGBA颜色
-    /// * `texture_manager` - Texture manager for getting texture sizes | 纹理管理器
+    /// * `_texture_manager` - Texture manager for getting texture sizes | 纹理管理器
     pub fn add_sprites(
         &mut self,
         transforms: &[f32],
         texture_ids: &[u32],
         uvs: &[f32],
         colors: &[u32],
-        texture_manager: &TextureManager,
+        _texture_manager: &TextureManager,
     ) -> Result<()> {
         let sprite_count = texture_ids.len();
 
@@ -253,7 +250,7 @@ impl SpriteBatch {
             )));
         }
 
-        // Add each sprite | 添加每个精灵
+        // Add each sprite grouped by texture | 按纹理分组添加每个精灵
         for i in 0..sprite_count {
             let t_offset = i * TRANSFORM_STRIDE;
             let uv_offset = i * UV_STRIDE;
@@ -274,16 +271,21 @@ impl SpriteBatch {
             let color = Color::from_packed(colors[i]);
             let color_arr = [color.r, color.g, color.b, color.a];
 
-            // Get texture size for this sprite | 获取此精灵的纹理尺寸
-            let (tex_width, tex_height) = texture_manager
-                .get_texture_size(texture_ids[i])
-                .unwrap_or((64.0, 64.0));
+            // scale_x and scale_y are the actual display dimensions
+            // scale_x 和 scale_y 是实际显示尺寸
+            let width = scale_x;
+            let height = scale_y;
 
-            let width = tex_width * scale_x;
-            let height = tex_height * scale_y;
+            let texture_id = texture_ids[i];
 
-            // Calculate transformed vertices | 计算变换后的顶点
-            self.add_sprite_vertices(
+            // Get or create batch for this texture | 获取或创建此纹理的批次
+            let batch = self.texture_batches
+                .entry(texture_id)
+                .or_insert_with(Vec::new);
+
+            // Calculate transformed vertices and add to batch | 计算变换后的顶点并添加到批次
+            Self::add_sprite_vertices_to_batch(
+                batch,
                 x, y, width, height, rotation, origin_x, origin_y,
                 u0, v0, u1, v1, color_arr,
             );
@@ -293,11 +295,11 @@ impl SpriteBatch {
         Ok(())
     }
 
-    /// Add vertices for a single sprite.
-    /// 为单个精灵添加顶点。
+    /// Add vertices for a single sprite to a batch.
+    /// 为单个精灵添加顶点到批次。
     #[inline]
-    fn add_sprite_vertices(
-        &mut self,
+    fn add_sprite_vertices_to_batch(
+        batch: &mut Vec<f32>,
         x: f32,
         y: f32,
         width: f32,
@@ -315,22 +317,28 @@ impl SpriteBatch {
         let sin = rotation.sin();
 
         // Origin offset | 原点偏移
+        // origin (0,0) = bottom-left, (1,1) = top-right
+        // 原点 (0,0) = 左下角, (1,1) = 右上角
         let ox = origin_x * width;
         let oy = origin_y * height;
 
         // Local corner positions (relative to origin) | 局部角点位置（相对于原点）
+        // Y-up coordinate system | Y向上坐标系
         let corners = [
-            (-ox, -oy),           // Top-left | 左上
-            (width - ox, -oy),    // Top-right | 右上
-            (width - ox, height - oy), // Bottom-right | 右下
-            (-ox, height - oy),   // Bottom-left | 左下
+            (-ox, height - oy),   // Top-left | 左上
+            (width - ox, height - oy), // Top-right | 右上
+            (width - ox, -oy),    // Bottom-right | 右下
+            (-ox, -oy),           // Bottom-left | 左下
         ];
 
+        // UV coordinates match OpenGL/WebGL convention
+        // UV坐标匹配OpenGL/WebGL约定
+        // (0,0) = bottom-left of texture, (1,1) = top-right
         let tex_coords = [
-            [u0, v0], // Top-left
-            [u1, v0], // Top-right
-            [u1, v1], // Bottom-right
-            [u0, v1], // Bottom-left
+            [u0, v1], // Top-left (texture top)
+            [u1, v1], // Top-right (texture top)
+            [u1, v0], // Bottom-right (texture bottom)
+            [u0, v0], // Bottom-left (texture bottom)
         ];
 
         // Transform and add each vertex | 变换并添加每个顶点
@@ -346,24 +354,26 @@ impl SpriteBatch {
             let py = ry + y;
 
             // Position | 位置
-            self.vertices.push(px);
-            self.vertices.push(py);
+            batch.push(px);
+            batch.push(py);
 
             // Texture coordinates | 纹理坐标
-            self.vertices.push(tex_coords[i][0]);
-            self.vertices.push(tex_coords[i][1]);
+            batch.push(tex_coords[i][0]);
+            batch.push(tex_coords[i][1]);
 
             // Color | 颜色
-            self.vertices.extend_from_slice(&color);
+            batch.extend_from_slice(&color);
         }
     }
 
-    /// Flush the batch to GPU and render.
-    /// 将批处理刷新到GPU并渲染。
-    pub fn flush(&mut self, gl: &WebGl2RenderingContext) {
-        if self.sprite_count == 0 {
+    /// Flush a specific texture batch to GPU and render.
+    /// 将特定纹理批次刷新到GPU并渲染。
+    fn flush_texture_batch(&self, gl: &WebGl2RenderingContext, vertices: &[f32]) {
+        if vertices.is_empty() {
             return;
         }
+
+        let sprite_count = vertices.len() / (VERTICES_PER_SPRITE * FLOATS_PER_VERTEX);
 
         // Bind VAO | 绑定VAO
         gl.bind_vertex_array(Some(&self.vao));
@@ -371,7 +381,7 @@ impl SpriteBatch {
         // Upload vertex data | 上传顶点数据
         gl.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&self.vbo));
         unsafe {
-            let vertex_array = js_sys::Float32Array::view(&self.vertices);
+            let vertex_array = js_sys::Float32Array::view(vertices);
             gl.buffer_sub_data_with_i32_and_array_buffer_view(
                 WebGl2RenderingContext::ARRAY_BUFFER,
                 0,
@@ -380,7 +390,7 @@ impl SpriteBatch {
         }
 
         // Draw | 绘制
-        let index_count = (self.sprite_count * INDICES_PER_SPRITE) as i32;
+        let index_count = (sprite_count * INDICES_PER_SPRITE) as i32;
         gl.draw_elements_with_i32(
             WebGl2RenderingContext::TRIANGLES,
             index_count,
@@ -390,6 +400,20 @@ impl SpriteBatch {
 
         // Unbind VAO | 解绑VAO
         gl.bind_vertex_array(None);
+    }
+
+    /// Get texture batches for rendering.
+    /// 获取用于渲染的纹理批次。
+    pub fn texture_batches(&self) -> &HashMap<u32, Vec<f32>> {
+        &self.texture_batches
+    }
+
+    /// Flush a specific texture batch.
+    /// 刷新特定纹理批次。
+    pub fn flush_for_texture(&self, gl: &WebGl2RenderingContext, texture_id: u32) {
+        if let Some(vertices) = self.texture_batches.get(&texture_id) {
+            self.flush_texture_batch(gl, vertices);
+        }
     }
 
     /// Get current sprite count.

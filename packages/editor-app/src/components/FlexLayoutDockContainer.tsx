@@ -33,11 +33,11 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId }:
     useEffect(() => {
         try {
             // 检查面板ID列表是否真的变化了（而不只是标题等属性变化）
-            const currentPanelIds = panels.map(p => p.id).sort().join(',');
+            const currentPanelIds = panels.map((p) => p.id).sort().join(',');
             const previousIds = previousPanelIdsRef.current;
 
             // 检查标题是否变化
-            const currentTitles = new Map(panels.map(p => [p.id, p.title]));
+            const currentTitles = new Map(panels.map((p) => [p.id, p.title]));
             const titleChanges: Array<{ id: string; newTitle: string }> = [];
 
             for (const panel of panels) {
@@ -66,17 +66,17 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId }:
             }
 
             // 计算新增和移除的面板
-            const prevSet = new Set(previousIds.split(',').filter(id => id));
-            const currSet = new Set(currentPanelIds.split(',').filter(id => id));
-            const newPanelIds = Array.from(currSet).filter(id => !prevSet.has(id));
-            const removedPanelIds = Array.from(prevSet).filter(id => !currSet.has(id));
+            const prevSet = new Set(previousIds.split(',').filter((id) => id));
+            const currSet = new Set(currentPanelIds.split(',').filter((id) => id));
+            const newPanelIds = Array.from(currSet).filter((id) => !prevSet.has(id));
+            const removedPanelIds = Array.from(prevSet).filter((id) => !currSet.has(id));
 
             previousPanelIdsRef.current = currentPanelIds;
 
             // 如果已经有布局且只是添加新面板，使用Action动态添加
             if (model && newPanelIds.length > 0 && removedPanelIds.length === 0 && previousIds) {
                 // 找到要添加的面板
-                const newPanels = panels.filter(p => newPanelIds.includes(p.id));
+                const newPanels = panels.filter((p) => newPanelIds.includes(p.id));
 
                 // 找到中心区域的tabset ID
                 let centerTabsetId: string | null = null;
@@ -101,7 +101,7 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId }:
 
                 if (centerTabsetId) {
                     // 动态添加tab到中心tabset
-                    newPanels.forEach(panel => {
+                    newPanels.forEach((panel) => {
                         model.doAction(Actions.addNode(
                             {
                                 type: 'tab',

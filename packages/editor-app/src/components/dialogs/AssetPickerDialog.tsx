@@ -1,0 +1,282 @@
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { X, Search, Folder, FolderOpen, File, Image, FileText, Music, Video } from 'lucide-react';
+import { Core } from '@esengine/ecs-framework';
+import { ProjectService } from '@esengine/editor-core';
+import { TauriFileSystemService } from '../../services/TauriFileSystemService';
+import './AssetPickerDialog.css';
+
+interface AssetPickerDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSelect: (path: string) => void;
+    title?: string;
+    fileExtensions?: string[];  // e.g., ['.png', '.jpg']
+    placeholder?: string;
+}
+
+interface FileNode {
+    name: string;
+    path: string;
+    isDirectory: boolean;
+    children?: FileNode[];
+}
+
+export function AssetPickerDialog({
+    isOpen,
+    onClose,
+    onSelect,
+    title = 'Select Asset',
+    fileExtensions = [],
+    placeholder = 'Search assets...'
+}: AssetPickerDialogProps) {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+    const [selectedPath, setSelectedPath] = useState<string | null>(null);
+    const [assets, setAssets] = useState<FileNode[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    // Load project assets
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const loadAssets = async () => {
+            setLoading(true);
+            try {
+                const projectService = Core.services.tryResolve(ProjectService);
+                const fileSystem = new TauriFileSystemService();
+
+                const currentProject = projectService?.getCurrentProject();
+                if (projectService && currentProject) {
+                    const projectPath = currentProject.path;
+                    const assetsPath = `${projectPath}/assets`;
+
+                    const buildTree = async (dirPath: string): Promise<FileNode[]> => {
+                        const entries = await fileSystem.listDirectory(dirPath);
+                        const nodes: FileNode[] = [];
+
+                        for (const entry of entries) {
+                            const node: FileNode = {
+                                name: entry.name,
+                                path: entry.path,
+                                isDirectory: entry.isDirectory
+                            };
+
+                            if (entry.isDirectory) {
+                                try {
+                                    node.children = await buildTree(entry.path);
+                                } catch {
+                                    node.children = [];
+                                }
+                            }
+
+                            nodes.push(node);
+                        }
+
+                        // Sort: folders first, then files, alphabetically
+                        return nodes.sort((a, b) => {
+                            if (a.isDirectory && !b.isDirectory) return -1;
+                            if (!a.isDirectory && b.isDirectory) return 1;
+                            return a.name.localeCompare(b.name);
+                        });
+                    };
+
+                    const tree = await buildTree(assetsPath);
+                    setAssets(tree);
+                }
+            } catch (error) {
+                console.error('Failed to load assets:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadAssets();
+        setSelectedPath(null);
+        setSearchTerm('');
+    }, [isOpen]);
+
+    // Filter assets based on search and file extensions
+    const filteredAssets = useMemo(() => {
+        const filterNode = (node: FileNode): FileNode | null => {
+            // Check file extension filter
+            if (!node.isDirectory && fileExtensions.length > 0) {
+                const hasValidExtension = fileExtensions.some((ext) =>
+                    node.name.toLowerCase().endsWith(ext.toLowerCase())
+                );
+                if (!hasValidExtension) return null;
+            }
+
+            // Check search term
+            const matchesSearch = !searchTerm ||
+                node.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+            if (node.isDirectory && node.children) {
+                const filteredChildren = node.children
+                    .map(filterNode)
+                    .filter((n): n is FileNode => n !== null);
+
+                if (filteredChildren.length > 0 || matchesSearch) {
+                    return { ...node, children: filteredChildren };
+                }
+                return null;
+            }
+
+            return matchesSearch ? node : null;
+        };
+
+        return assets
+            .map(filterNode)
+            .filter((n): n is FileNode => n !== null);
+    }, [assets, searchTerm, fileExtensions]);
+
+    const toggleFolder = useCallback((path: string) => {
+        setExpandedFolders((prev) => {
+            const next = new Set(prev);
+            if (next.has(path)) {
+                next.delete(path);
+            } else {
+                next.add(path);
+            }
+            return next;
+        });
+    }, []);
+
+    const handleSelect = useCallback((node: FileNode) => {
+        if (node.isDirectory) {
+            toggleFolder(node.path);
+        } else {
+            setSelectedPath(node.path);
+        }
+    }, [toggleFolder]);
+
+    const handleConfirm = useCallback(() => {
+        if (selectedPath) {
+            onSelect(selectedPath);
+            onClose();
+        }
+    }, [selectedPath, onSelect, onClose]);
+
+    const handleDoubleClick = useCallback((node: FileNode) => {
+        if (!node.isDirectory) {
+            onSelect(node.path);
+            onClose();
+        }
+    }, [onSelect, onClose]);
+
+    const getFileIcon = (name: string) => {
+        const ext = name.split('.').pop()?.toLowerCase();
+        switch (ext) {
+            case 'png':
+            case 'jpg':
+            case 'jpeg':
+            case 'gif':
+            case 'webp':
+                return <Image size={14} />;
+            case 'mp3':
+            case 'wav':
+            case 'ogg':
+                return <Music size={14} />;
+            case 'mp4':
+            case 'webm':
+                return <Video size={14} />;
+            case 'json':
+            case 'txt':
+            case 'md':
+                return <FileText size={14} />;
+            default:
+                return <File size={14} />;
+        }
+    };
+
+    const renderNode = (node: FileNode, depth: number = 0) => {
+        const isExpanded = expandedFolders.has(node.path);
+        const isSelected = selectedPath === node.path;
+
+        return (
+            <div key={node.path}>
+                <div
+                    className={`asset-picker-item ${isSelected ? 'selected' : ''}`}
+                    style={{ paddingLeft: `${depth * 16 + 8}px` }}
+                    onClick={() => handleSelect(node)}
+                    onDoubleClick={() => handleDoubleClick(node)}
+                >
+                    <span className="asset-picker-item__icon">
+                        {node.isDirectory ? (
+                            isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />
+                        ) : (
+                            getFileIcon(node.name)
+                        )}
+                    </span>
+                    <span className="asset-picker-item__name">{node.name}</span>
+                </div>
+                {node.isDirectory && isExpanded && node.children && (
+                    <div className="asset-picker-children">
+                        {node.children.map((child) => renderNode(child, depth + 1))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="asset-picker-overlay" onClick={onClose}>
+            <div className="asset-picker-dialog" onClick={(e) => e.stopPropagation()}>
+                <div className="asset-picker-header">
+                    <h3>{title}</h3>
+                    <button className="asset-picker-close" onClick={onClose}>
+                        <X size={16} />
+                    </button>
+                </div>
+
+                <div className="asset-picker-search">
+                    <Search size={14} />
+                    <input
+                        type="text"
+                        placeholder={placeholder}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        autoFocus
+                    />
+                </div>
+
+                <div className="asset-picker-content">
+                    {loading ? (
+                        <div className="asset-picker-loading">Loading assets...</div>
+                    ) : filteredAssets.length === 0 ? (
+                        <div className="asset-picker-empty">No assets found</div>
+                    ) : (
+                        <div className="asset-picker-tree">
+                            {filteredAssets.map((node) => renderNode(node))}
+                        </div>
+                    )}
+                </div>
+
+                <div className="asset-picker-footer">
+                    <div className="asset-picker-selected">
+                        {selectedPath ? (
+                            <span title={selectedPath}>
+                                {selectedPath.split(/[\\/]/).pop()}
+                            </span>
+                        ) : (
+                            <span className="placeholder">No asset selected</span>
+                        )}
+                    </div>
+                    <div className="asset-picker-actions">
+                        <button className="btn-cancel" onClick={onClose}>
+                            Cancel
+                        </button>
+                        <button
+                            className="btn-confirm"
+                            onClick={handleConfirm}
+                            disabled={!selectedPath}
+                        >
+                            Select
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

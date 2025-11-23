@@ -155,7 +155,7 @@ export class PluginMarketService {
 
         try {
             // 获取指定版本信息
-            const versionInfo = plugin.versions.find(v => v.version === targetVersion);
+            const versionInfo = plugin.versions.find((v) => v.version === targetVersion);
             if (!versionInfo) {
                 throw new Error(`Version ${targetVersion} not found for plugin ${plugin.name}`);
             }
@@ -279,7 +279,7 @@ export class PluginMarketService {
             const stored = localStorage.getItem(this.STORAGE_KEY);
             if (stored) {
                 const plugins: InstalledPluginInfo[] = JSON.parse(stored);
-                this.installedPlugins = new Map(plugins.map(p => [p.id, p]));
+                this.installedPlugins = new Map(plugins.map((p) => [p.id, p]));
             }
         } catch (error) {
             console.error('[PluginMarketService] Failed to load installed plugins:', error);

@@ -555,7 +555,7 @@ export function PluginPublishWizard({ githubService, onClose, locale, inline = f
     };
 
     const wizardContent = (
-        <div className={inline ? "plugin-publish-wizard inline" : "plugin-publish-wizard"} onClick={(e) => inline ? undefined : e.stopPropagation()}>
+        <div className={inline ? 'plugin-publish-wizard inline' : 'plugin-publish-wizard'} onClick={(e) => inline ? undefined : e.stopPropagation()}>
             <div className="plugin-publish-header">
                 <h2>{t('title')}</h2>
                 {!inline && (
@@ -566,67 +566,67 @@ export function PluginPublishWizard({ githubService, onClose, locale, inline = f
             </div>
 
             <div className="plugin-publish-content">
-                    {step === 'auth' && (
-                        <div className="publish-step">
-                            <h3>{t('stepAuth')}</h3>
-                            <GitHubAuth
-                                githubService={githubService}
-                                onSuccess={handleAuthSuccess}
-                                locale={locale}
-                            />
+                {step === 'auth' && (
+                    <div className="publish-step">
+                        <h3>{t('stepAuth')}</h3>
+                        <GitHubAuth
+                            githubService={githubService}
+                            onSuccess={handleAuthSuccess}
+                            locale={locale}
+                        />
+                    </div>
+                )}
+
+                {step === 'selectSource' && (
+                    <div className="publish-step">
+                        <h3>{t('stepSelectSource')}</h3>
+                        <p>{t('selectSourceDesc')}</p>
+
+                        <div className="source-type-selection">
+                            <button
+                                className={`source-type-btn ${sourceType === 'folder' ? 'active' : ''}`}
+                                onClick={() => handleSelectSource('folder')}
+                            >
+                                <FolderOpen size={24} />
+                                <div className="source-type-info">
+                                    <strong>{t('sourceTypeFolder')}</strong>
+                                    <p>{t('selectFolderDesc')}</p>
+                                </div>
+                            </button>
+
+                            <button
+                                className={`source-type-btn ${sourceType === 'zip' ? 'active' : ''}`}
+                                onClick={() => handleSelectSource('zip')}
+                            >
+                                <FileArchive size={24} />
+                                <div className="source-type-info">
+                                    <strong>{t('sourceTypeZip')}</strong>
+                                    <p>{t('selectZipDesc')}</p>
+                                </div>
+                            </button>
                         </div>
-                    )}
 
-                    {step === 'selectSource' && (
-                        <div className="publish-step">
-                            <h3>{t('stepSelectSource')}</h3>
-                            <p>{t('selectSourceDesc')}</p>
+                        {/* ZIP 文件要求说明 */}
+                        <details className="zip-requirements-details">
+                            <summary>
+                                <AlertCircle size={16} />
+                                {t('zipRequirements')}
+                            </summary>
+                            <div className="zip-requirements-content">
+                                <div className="requirement-section">
+                                    <h4>{t('zipStructure')}</h4>
+                                    <p>{t('zipStructureDetails')}</p>
+                                    <ul>
+                                        <li><code>package.json</code> - {t('zipFile1')}</li>
+                                        <li><code>dist/</code> - {t('zipFile2')}</li>
+                                    </ul>
+                                </div>
 
-                            <div className="source-type-selection">
-                                <button
-                                    className={`source-type-btn ${sourceType === 'folder' ? 'active' : ''}`}
-                                    onClick={() => handleSelectSource('folder')}
-                                >
-                                    <FolderOpen size={24} />
-                                    <div className="source-type-info">
-                                        <strong>{t('sourceTypeFolder')}</strong>
-                                        <p>{t('selectFolderDesc')}</p>
-                                    </div>
-                                </button>
-
-                                <button
-                                    className={`source-type-btn ${sourceType === 'zip' ? 'active' : ''}`}
-                                    onClick={() => handleSelectSource('zip')}
-                                >
-                                    <FileArchive size={24} />
-                                    <div className="source-type-info">
-                                        <strong>{t('sourceTypeZip')}</strong>
-                                        <p>{t('selectZipDesc')}</p>
-                                    </div>
-                                </button>
-                            </div>
-
-                            {/* ZIP 文件要求说明 */}
-                            <details className="zip-requirements-details">
-                                <summary>
-                                    <AlertCircle size={16} />
-                                    {t('zipRequirements')}
-                                </summary>
-                                <div className="zip-requirements-content">
-                                    <div className="requirement-section">
-                                        <h4>{t('zipStructure')}</h4>
-                                        <p>{t('zipStructureDetails')}</p>
-                                        <ul>
-                                            <li><code>package.json</code> - {t('zipFile1')}</li>
-                                            <li><code>dist/</code> - {t('zipFile2')}</li>
-                                        </ul>
-                                    </div>
-
-                                    <div className="requirement-section">
-                                        <h4>{t('zipBuildScript')}</h4>
-                                        <p>{t('zipBuildScriptDesc')}</p>
-                                        <pre className="build-script-example">
-{`npm install
+                                <div className="requirement-section">
+                                    <h4>{t('zipBuildScript')}</h4>
+                                    <p>{t('zipBuildScriptDesc')}</p>
+                                    <pre className="build-script-example">
+                                        {`npm install
 npm run build
 # 然后将 package.json 和 dist/ 目录一起压缩为 ZIP
 # ZIP 结构：
@@ -634,309 +634,309 @@ npm run build
 #   ├── package.json
 #   └── dist/
 #       └── index.esm.js`}
-                                        </pre>
-                                    </div>
-
-                                    <div className="recommendation-notice">
-                                        {t('recommendFolder')}
-                                    </div>
+                                    </pre>
                                 </div>
-                            </details>
 
-                            {parsedPluginInfo && (
-                                <div className="selected-source">
-                                    {parsedPluginInfo.sourceType === 'folder' ? (
-                                        <FolderOpen size={20} />
-                                    ) : (
-                                        <FileArchive size={20} />
-                                    )}
-                                    <div className="source-details">
-                                        <span className="source-path">{parsedPluginInfo.sourcePath}</span>
-                                        <span className="source-name">{parsedPluginInfo.packageJson.name} v{parsedPluginInfo.packageJson.version}</span>
-                                    </div>
+                                <div className="recommendation-notice">
+                                    {t('recommendFolder')}
                                 </div>
-                            )}
+                            </div>
+                        </details>
 
-                            {error && (
-                                <div className="error-message">
-                                    <AlertCircle size={16} />
-                                    {error}
+                        {parsedPluginInfo && (
+                            <div className="selected-source">
+                                {parsedPluginInfo.sourceType === 'folder' ? (
+                                    <FolderOpen size={20} />
+                                ) : (
+                                    <FileArchive size={20} />
+                                )}
+                                <div className="source-details">
+                                    <span className="source-path">{parsedPluginInfo.sourcePath}</span>
+                                    <span className="source-name">{parsedPluginInfo.packageJson.name} v{parsedPluginInfo.packageJson.version}</span>
                                 </div>
-                            )}
+                            </div>
+                        )}
 
-                            {parsedPluginInfo && (
-                                <div className="button-group">
-                                    <button className="btn-secondary" onClick={() => setStep('auth')}>
-                                        {t('back')}
+                        {error && (
+                            <div className="error-message">
+                                <AlertCircle size={16} />
+                                {error}
+                            </div>
+                        )}
+
+                        {parsedPluginInfo && (
+                            <div className="button-group">
+                                <button className="btn-secondary" onClick={() => setStep('auth')}>
+                                    {t('back')}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {step === 'info' && (
+                    <div className="publish-step">
+                        <h3>{t('stepInfo')}</h3>
+
+                        {existingPR && (
+                            <div className="existing-pr-notice">
+                                <AlertCircle size={20} />
+                                <div className="notice-content">
+                                    <strong>{t('existingPRDetected')}</strong>
+                                    <p>{t('existingPRMessage').replace('{{number}}', String(existingPR.number))}</p>
+                                    <button
+                                        className="btn-link"
+                                        onClick={() => open(existingPR.url)}
+                                    >
+                                        <ExternalLink size={16} />
+                                        {t('viewExistingPR')}
                                     </button>
                                 </div>
-                            )}
-                        </div>
-                    )}
+                            </div>
+                        )}
 
-                    {step === 'info' && (
-                        <div className="publish-step">
-                            <h3>{t('stepInfo')}</h3>
-
-                            {existingPR && (
-                                <div className="existing-pr-notice">
-                                    <AlertCircle size={20} />
-                                    <div className="notice-content">
-                                        <strong>{t('existingPRDetected')}</strong>
-                                        <p>{t('existingPRMessage').replace('{{number}}', String(existingPR.number))}</p>
+                        <div className="form-group">
+                            <label>{t('version')} *</label>
+                            {isUpdate && (
+                                <div className="version-info">
+                                    <div className="version-notice">
+                                        <CheckCircle size={16} />
+                                        <span>{t('updatePlugin')}: {existingManifest?.name} v{existingVersions[0]}</span>
+                                    </div>
+                                    {suggestedVersion && (
                                         <button
-                                            className="btn-link"
-                                            onClick={() => open(existingPR.url)}
+                                            type="button"
+                                            className="btn-version-suggest"
+                                            onClick={() => setPublishInfo({ ...publishInfo, version: suggestedVersion })}
                                         >
-                                            <ExternalLink size={16} />
-                                            {t('viewExistingPR')}
+                                            {t('suggestedVersion')}: {suggestedVersion}
                                         </button>
-                                    </div>
+                                    )}
                                 </div>
                             )}
-
-                            <div className="form-group">
-                                <label>{t('version')} *</label>
-                                {isUpdate && (
-                                    <div className="version-info">
-                                        <div className="version-notice">
-                                            <CheckCircle size={16} />
-                                            <span>{t('updatePlugin')}: {existingManifest?.name} v{existingVersions[0]}</span>
-                                        </div>
-                                        {suggestedVersion && (
-                                            <button
-                                                type="button"
-                                                className="btn-version-suggest"
-                                                onClick={() => setPublishInfo({ ...publishInfo, version: suggestedVersion })}
-                                            >
-                                                {t('suggestedVersion')}: {suggestedVersion}
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-                                <input
-                                    type="text"
-                                    value={publishInfo.version || ''}
-                                    onChange={(e) => setPublishInfo({ ...publishInfo, version: e.target.value })}
-                                    placeholder="1.0.0"
-                                />
-                                {isUpdate && (
-                                    <details className="version-history">
-                                        <summary>{t('versionHistory')} ({existingVersions.length})</summary>
-                                        <ul>
-                                            {existingVersions.map((v) => (
-                                                <li key={v}>v{v}</li>
-                                            ))}
-                                        </ul>
-                                    </details>
-                                )}
-                            </div>
-
-                            <div className="form-group">
-                                <label>{t('releaseNotes')} *</label>
-                                <textarea
-                                    rows={4}
-                                    value={publishInfo.releaseNotes || ''}
-                                    onChange={(e) => setPublishInfo({ ...publishInfo, releaseNotes: e.target.value })}
-                                    placeholder={t('releaseNotesPlaceholder')}
-                                />
-                            </div>
-
-                            {!isUpdate && (
-                                <>
-                                    <div className="form-group">
-                                        <label>{t('category')} *</label>
-                                        <select
-                                            value={publishInfo.category}
-                                            onChange={(e) =>
-                                                setPublishInfo({ ...publishInfo, category: e.target.value as 'official' | 'community' })
-                                            }
-                                        >
-                                            <option value="community">{t('community')}</option>
-                                            <option value="official">{t('official')}</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>{t('repositoryUrl')} *</label>
-                                        <input
-                                            type="text"
-                                            value={publishInfo.repositoryUrl || ''}
-                                            onChange={(e) => setPublishInfo({ ...publishInfo, repositoryUrl: e.target.value })}
-                                            placeholder={t('repositoryPlaceholder')}
-                                        />
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>{t('tags')}</label>
-                                        <input
-                                            type="text"
-                                            value={publishInfo.tags?.join(', ') || ''}
-                                            onChange={(e) =>
-                                                setPublishInfo({
-                                                    ...publishInfo,
-                                                    tags: e.target.value
-                                                        .split(',')
-                                                        .map((t) => t.trim())
-                                                        .filter(Boolean)
-                                                })
-                                            }
-                                            placeholder={t('tagsPlaceholder')}
-                                        />
-                                    </div>
-                                </>
+                            <input
+                                type="text"
+                                value={publishInfo.version || ''}
+                                onChange={(e) => setPublishInfo({ ...publishInfo, version: e.target.value })}
+                                placeholder="1.0.0"
+                            />
+                            {isUpdate && (
+                                <details className="version-history">
+                                    <summary>{t('versionHistory')} ({existingVersions.length})</summary>
+                                    <ul>
+                                        {existingVersions.map((v) => (
+                                            <li key={v}>v{v}</li>
+                                        ))}
+                                    </ul>
+                                </details>
                             )}
-
-                            {error && (
-                                <div className="error-message">
-                                    <AlertCircle size={16} />
-                                    {error}
-                                </div>
-                            )}
-
-                            <div className="button-group">
-                                <button className="btn-secondary" onClick={() => setStep('selectSource')}>
-                                    {t('back')}
-                                </button>
-                                <button className="btn-primary" onClick={handleNext}>
-                                    {sourceType === 'zip' ? t('next') : t('build')}
-                                </button>
-                            </div>
                         </div>
-                    )}
 
-                    {step === 'building' && (
-                        <div className="publish-step publishing">
-                            <Loader size={48} className="spinning" />
-                            <h3>{t('building')}</h3>
-                            <div className="build-log">
-                                {buildLog.map((log, i) => (
-                                    <div key={i} className="log-line">
-                                        <CheckCircle size={16} style={{ color: '#34c759', flexShrink: 0 }} />
-                                        <span>{log}</span>
-                                    </div>
-                                ))}
-                            </div>
+                        <div className="form-group">
+                            <label>{t('releaseNotes')} *</label>
+                            <textarea
+                                rows={4}
+                                value={publishInfo.releaseNotes || ''}
+                                onChange={(e) => setPublishInfo({ ...publishInfo, releaseNotes: e.target.value })}
+                                placeholder={t('releaseNotesPlaceholder')}
+                            />
                         </div>
-                    )}
 
-                    {step === 'confirm' && (
-                        <div className="publish-step">
-                            <h3>{t('stepConfirm')}</h3>
-
-                            <p>{t('confirmMessage')}</p>
-
-                            {existingPR && (
-                                <div className="existing-pr-notice">
-                                    <AlertCircle size={20} />
-                                    <div className="notice-content">
-                                        <strong>{t('existingPRDetected')}</strong>
-                                        <p>{t('existingPRMessage').replace('{{number}}', String(existingPR.number))}</p>
-                                        <button
-                                            className="btn-link"
-                                            onClick={() => open(existingPR.url)}
-                                        >
-                                            <ExternalLink size={16} />
-                                            {t('viewExistingPR')}
-                                        </button>
-                                    </div>
+                        {!isUpdate && (
+                            <>
+                                <div className="form-group">
+                                    <label>{t('category')} *</label>
+                                    <select
+                                        value={publishInfo.category}
+                                        onChange={(e) =>
+                                            setPublishInfo({ ...publishInfo, category: e.target.value as 'official' | 'community' })
+                                        }
+                                    >
+                                        <option value="community">{t('community')}</option>
+                                        <option value="official">{t('official')}</option>
+                                    </select>
                                 </div>
-                            )}
 
-                            <div className="confirm-details">
+                                <div className="form-group">
+                                    <label>{t('repositoryUrl')} *</label>
+                                    <input
+                                        type="text"
+                                        value={publishInfo.repositoryUrl || ''}
+                                        onChange={(e) => setPublishInfo({ ...publishInfo, repositoryUrl: e.target.value })}
+                                        placeholder={t('repositoryPlaceholder')}
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label>{t('tags')}</label>
+                                    <input
+                                        type="text"
+                                        value={publishInfo.tags?.join(', ') || ''}
+                                        onChange={(e) =>
+                                            setPublishInfo({
+                                                ...publishInfo,
+                                                tags: e.target.value
+                                                    .split(',')
+                                                    .map((t) => t.trim())
+                                                    .filter(Boolean)
+                                            })
+                                        }
+                                        placeholder={t('tagsPlaceholder')}
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        {error && (
+                            <div className="error-message">
+                                <AlertCircle size={16} />
+                                {error}
+                            </div>
+                        )}
+
+                        <div className="button-group">
+                            <button className="btn-secondary" onClick={() => setStep('selectSource')}>
+                                {t('back')}
+                            </button>
+                            <button className="btn-primary" onClick={handleNext}>
+                                {sourceType === 'zip' ? t('next') : t('build')}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {step === 'building' && (
+                    <div className="publish-step publishing">
+                        <Loader size={48} className="spinning" />
+                        <h3>{t('building')}</h3>
+                        <div className="build-log">
+                            {buildLog.map((log, i) => (
+                                <div key={i} className="log-line">
+                                    <CheckCircle size={16} style={{ color: '#34c759', flexShrink: 0 }} />
+                                    <span>{log}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {step === 'confirm' && (
+                    <div className="publish-step">
+                        <h3>{t('stepConfirm')}</h3>
+
+                        <p>{t('confirmMessage')}</p>
+
+                        {existingPR && (
+                            <div className="existing-pr-notice">
+                                <AlertCircle size={20} />
+                                <div className="notice-content">
+                                    <strong>{t('existingPRDetected')}</strong>
+                                    <p>{t('existingPRMessage').replace('{{number}}', String(existingPR.number))}</p>
+                                    <button
+                                        className="btn-link"
+                                        onClick={() => open(existingPR.url)}
+                                    >
+                                        <ExternalLink size={16} />
+                                        {t('viewExistingPR')}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="confirm-details">
+                            <div className="detail-row">
+                                <span className="detail-label">{t('selectSource')}:</span>
+                                <span className="detail-value">
+                                    {parsedPluginInfo?.sourceType === 'zip' ? t('selectedZip') : t('selectedFolder')}: {parsedPluginInfo?.sourcePath}
+                                </span>
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">{t('version')}:</span>
+                                <span className="detail-value">{publishInfo.version}</span>
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">{t('category')}:</span>
+                                <span className="detail-value">{t(publishInfo.category!)}</span>
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">{t('repositoryUrl')}:</span>
+                                <span className="detail-value">{publishInfo.repositoryUrl}</span>
+                            </div>
+                            {builtZipPath && (
                                 <div className="detail-row">
-                                    <span className="detail-label">{t('selectSource')}:</span>
-                                    <span className="detail-value">
-                                        {parsedPluginInfo?.sourceType === 'zip' ? t('selectedZip') : t('selectedFolder')}: {parsedPluginInfo?.sourcePath}
+                                    <span className="detail-label">Package Path:</span>
+                                    <span className="detail-value" style={{ fontSize: '12px', wordBreak: 'break-all' }}>
+                                        {builtZipPath}
                                     </span>
                                 </div>
-                                <div className="detail-row">
-                                    <span className="detail-label">{t('version')}:</span>
-                                    <span className="detail-value">{publishInfo.version}</span>
-                                </div>
-                                <div className="detail-row">
-                                    <span className="detail-label">{t('category')}:</span>
-                                    <span className="detail-value">{t(publishInfo.category!)}</span>
-                                </div>
-                                <div className="detail-row">
-                                    <span className="detail-label">{t('repositoryUrl')}:</span>
-                                    <span className="detail-value">{publishInfo.repositoryUrl}</span>
-                                </div>
-                                {builtZipPath && (
-                                    <div className="detail-row">
-                                        <span className="detail-label">Package Path:</span>
-                                        <span className="detail-value" style={{ fontSize: '12px', wordBreak: 'break-all' }}>
-                                            {builtZipPath}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="button-group">
-                                <button className="btn-secondary" onClick={() => setStep('info')}>
-                                    {t('back')}
-                                </button>
-                                <button className="btn-primary" onClick={handlePublish}>
-                                    {t('confirm')}
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {step === 'publishing' && (
-                        <div className="publish-step publishing">
-                            <Loader size={48} className="spinning" />
-                            <h3>{t('publishing')}</h3>
-                            {publishProgress && (
-                                <div className="publish-progress">
-                                    <div className="progress-bar">
-                                        <div
-                                            className="progress-fill"
-                                            style={{ width: `${publishProgress.progress}%` }}
-                                        />
-                                    </div>
-                                    <p className="progress-message">{publishProgress.message}</p>
-                                    <p className="progress-percent">{publishProgress.progress}%</p>
-                                </div>
                             )}
                         </div>
-                    )}
 
-                    {step === 'success' && (
-                        <div className="publish-step success">
-                            <CheckCircle size={48} style={{ color: '#34c759' }} />
-                            <h3>{t('publishSuccess')}</h3>
-                            <p>{t('prCreated')}</p>
-                            <p className="review-message">{t('reviewMessage')}</p>
-
-                            <button className="btn-link" onClick={openPR}>
-                                <ExternalLink size={14} />
-                                {t('viewPR')}
+                        <div className="button-group">
+                            <button className="btn-secondary" onClick={() => setStep('info')}>
+                                {t('back')}
                             </button>
+                            <button className="btn-primary" onClick={handlePublish}>
+                                {t('confirm')}
+                            </button>
+                        </div>
+                    </div>
+                )}
 
+                {step === 'publishing' && (
+                    <div className="publish-step publishing">
+                        <Loader size={48} className="spinning" />
+                        <h3>{t('publishing')}</h3>
+                        {publishProgress && (
+                            <div className="publish-progress">
+                                <div className="progress-bar">
+                                    <div
+                                        className="progress-fill"
+                                        style={{ width: `${publishProgress.progress}%` }}
+                                    />
+                                </div>
+                                <p className="progress-message">{publishProgress.message}</p>
+                                <p className="progress-percent">{publishProgress.progress}%</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {step === 'success' && (
+                    <div className="publish-step success">
+                        <CheckCircle size={48} style={{ color: '#34c759' }} />
+                        <h3>{t('publishSuccess')}</h3>
+                        <p>{t('prCreated')}</p>
+                        <p className="review-message">{t('reviewMessage')}</p>
+
+                        <button className="btn-link" onClick={openPR}>
+                            <ExternalLink size={14} />
+                            {t('viewPR')}
+                        </button>
+
+                        <button className="btn-primary" onClick={onClose}>
+                            {t('close')}
+                        </button>
+                    </div>
+                )}
+
+                {step === 'error' && (
+                    <div className="publish-step error">
+                        <AlertCircle size={48} style={{ color: '#ff3b30' }} />
+                        <h3>{t('publishError')}</h3>
+                        <p>{error}</p>
+
+                        <div className="button-group">
+                            <button className="btn-secondary" onClick={() => setStep('info')}>
+                                {t('back')}
+                            </button>
                             <button className="btn-primary" onClick={onClose}>
                                 {t('close')}
                             </button>
                         </div>
-                    )}
-
-                    {step === 'error' && (
-                        <div className="publish-step error">
-                            <AlertCircle size={48} style={{ color: '#ff3b30' }} />
-                            <h3>{t('publishError')}</h3>
-                            <p>{error}</p>
-
-                            <div className="button-group">
-                                <button className="btn-secondary" onClick={() => setStep('info')}>
-                                    {t('back')}
-                                </button>
-                                <button className="btn-primary" onClick={onClose}>
-                                    {t('close')}
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 

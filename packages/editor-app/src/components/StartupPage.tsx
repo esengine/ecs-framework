@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getVersion } from '@tauri-apps/api/app';
 import '../styles/StartupPage.css';
 
 interface StartupPageProps {
@@ -12,6 +13,11 @@ interface StartupPageProps {
 
 export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProject, onProfilerMode, recentProjects = [], locale }: StartupPageProps) {
     const [hoveredProject, setHoveredProject] = useState<string | null>(null);
+    const [appVersion, setAppVersion] = useState<string>('');
+
+    useEffect(() => {
+        getVersion().then(setAppVersion).catch(() => setAppVersion('1.0.0'));
+    }, []);
 
     const translations = {
         en: {
@@ -22,7 +28,6 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
             profilerMode: 'Profiler Mode',
             recentProjects: 'Recent Projects',
             noRecentProjects: 'No recent projects',
-            version: 'Version 1.0.0',
             comingSoon: 'Coming Soon'
         },
         zh: {
@@ -33,12 +38,12 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
             profilerMode: '性能分析模式',
             recentProjects: '最近的项目',
             noRecentProjects: '没有最近的项目',
-            version: '版本 1.0.0',
             comingSoon: '即将推出'
         }
     };
 
     const t = translations[locale as keyof typeof translations] || translations.en;
+    const versionText = locale === 'zh' ? `版本 ${appVersion}` : `Version ${appVersion}`;
 
     return (
         <div className="startup-page">
@@ -101,7 +106,7 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
             </div>
 
             <div className="startup-footer">
-                <span className="startup-version">{t.version}</span>
+                <span className="startup-version">{versionText}</span>
             </div>
         </div>
     );

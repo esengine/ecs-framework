@@ -176,6 +176,40 @@ impl GameEngine {
             .map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
+    /// Load texture by path, returning texture ID.
+    /// 按路径加载纹理，返回纹理ID。
+    ///
+    /// # Arguments | 参数
+    /// * `path` - Image path/URL to load | 要加载的图片路径/URL
+    #[wasm_bindgen(js_name = loadTextureByPath)]
+    pub fn load_texture_by_path(&mut self, path: &str) -> std::result::Result<u32, JsValue> {
+        self.engine
+            .load_texture_by_path(path)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Get texture ID by path.
+    /// 按路径获取纹理ID。
+    ///
+    /// # Arguments | 参数
+    /// * `path` - Image path to lookup | 要查找的图片路径
+    #[wasm_bindgen(js_name = getTextureIdByPath)]
+    pub fn get_texture_id_by_path(&self, path: &str) -> Option<u32> {
+        self.engine.get_texture_id_by_path(path)
+    }
+
+    /// Get or load texture by path.
+    /// 按路径获取或加载纹理。
+    ///
+    /// # Arguments | 参数
+    /// * `path` - Image path/URL | 图片路径/URL
+    #[wasm_bindgen(js_name = getOrLoadTextureByPath)]
+    pub fn get_or_load_by_path(&mut self, path: &str) -> std::result::Result<u32, JsValue> {
+        self.engine
+            .get_or_load_by_path(path)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
     /// Check if a key is currently pressed.
     /// 检查某个键是否当前被按下。
     ///
@@ -191,5 +225,181 @@ impl GameEngine {
     #[wasm_bindgen(js_name = updateInput)]
     pub fn update_input(&mut self) {
         self.engine.update_input();
+    }
+
+    /// Resize viewport.
+    /// 调整视口大小。
+    ///
+    /// # Arguments | 参数
+    /// * `width` - New viewport width | 新视口宽度
+    /// * `height` - New viewport height | 新视口高度
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.engine.resize(width as f32, height as f32);
+    }
+
+    /// Set camera position, zoom, and rotation.
+    /// 设置相机位置、缩放和旋转。
+    ///
+    /// # Arguments | 参数
+    /// * `x` - Camera X position | 相机X位置
+    /// * `y` - Camera Y position | 相机Y位置
+    /// * `zoom` - Zoom level | 缩放级别
+    /// * `rotation` - Rotation in radians | 旋转角度（弧度）
+    #[wasm_bindgen(js_name = setCamera)]
+    pub fn set_camera(&mut self, x: f32, y: f32, zoom: f32, rotation: f32) {
+        self.engine.set_camera(x, y, zoom, rotation);
+    }
+
+    /// Get camera state.
+    /// 获取相机状态。
+    ///
+    /// # Returns | 返回
+    /// Array of [x, y, zoom, rotation] | 数组 [x, y, zoom, rotation]
+    #[wasm_bindgen(js_name = getCamera)]
+    pub fn get_camera(&self) -> Vec<f32> {
+        let (x, y, zoom, rotation) = self.engine.get_camera();
+        vec![x, y, zoom, rotation]
+    }
+
+    /// Set grid visibility.
+    /// 设置网格可见性。
+    #[wasm_bindgen(js_name = setShowGrid)]
+    pub fn set_show_grid(&mut self, show: bool) {
+        self.engine.set_show_grid(show);
+    }
+
+    /// Set clear color (background color).
+    /// 设置清除颜色（背景颜色）。
+    ///
+    /// # Arguments | 参数
+    /// * `r`, `g`, `b`, `a` - Color components (0.0-1.0) | 颜色分量 (0.0-1.0)
+    #[wasm_bindgen(js_name = setClearColor)]
+    pub fn set_clear_color(&mut self, r: f32, g: f32, b: f32, a: f32) {
+        self.engine.set_clear_color(r, g, b, a);
+    }
+
+    /// Add a rectangle gizmo outline.
+    /// 添加矩形Gizmo边框。
+    ///
+    /// # Arguments | 参数
+    /// * `x` - Center X position | 中心X位置
+    /// * `y` - Center Y position | 中心Y位置
+    /// * `width` - Rectangle width | 矩形宽度
+    /// * `height` - Rectangle height | 矩形高度
+    /// * `rotation` - Rotation in radians | 旋转角度（弧度）
+    /// * `origin_x` - Origin X (0-1) | 原点X (0-1)
+    /// * `origin_y` - Origin Y (0-1) | 原点Y (0-1)
+    /// * `r`, `g`, `b`, `a` - Color (0.0-1.0) | 颜色
+    /// * `show_handles` - Whether to show transform handles | 是否显示变换手柄
+    #[wasm_bindgen(js_name = addGizmoRect)]
+    pub fn add_gizmo_rect(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        rotation: f32,
+        origin_x: f32,
+        origin_y: f32,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+        show_handles: bool,
+    ) {
+        self.engine.add_gizmo_rect(x, y, width, height, rotation, origin_x, origin_y, r, g, b, a, show_handles);
+    }
+
+    /// Set transform tool mode.
+    /// 设置变换工具模式。
+    ///
+    /// # Arguments | 参数
+    /// * `mode` - 0=Select, 1=Move, 2=Rotate, 3=Scale
+    #[wasm_bindgen(js_name = setTransformMode)]
+    pub fn set_transform_mode(&mut self, mode: u8) {
+        self.engine.set_transform_mode(mode);
+    }
+
+    /// Set gizmo visibility.
+    /// 设置辅助工具可见性。
+    #[wasm_bindgen(js_name = setShowGizmos)]
+    pub fn set_show_gizmos(&mut self, show: bool) {
+        self.engine.set_show_gizmos(show);
+    }
+
+    // ===== Multi-viewport API =====
+    // ===== 多视口 API =====
+
+    /// Register a new viewport.
+    /// 注册新视口。
+    ///
+    /// # Arguments | 参数
+    /// * `id` - Unique viewport identifier | 唯一视口标识符
+    /// * `canvas_id` - HTML canvas element ID | HTML canvas元素ID
+    #[wasm_bindgen(js_name = registerViewport)]
+    pub fn register_viewport(&mut self, id: &str, canvas_id: &str) -> std::result::Result<(), JsValue> {
+        self.engine
+            .register_viewport(id, canvas_id)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Unregister a viewport.
+    /// 注销视口。
+    #[wasm_bindgen(js_name = unregisterViewport)]
+    pub fn unregister_viewport(&mut self, id: &str) {
+        self.engine.unregister_viewport(id);
+    }
+
+    /// Set the active viewport.
+    /// 设置活动视口。
+    #[wasm_bindgen(js_name = setActiveViewport)]
+    pub fn set_active_viewport(&mut self, id: &str) -> bool {
+        self.engine.set_active_viewport(id)
+    }
+
+    /// Set camera for a specific viewport.
+    /// 为特定视口设置相机。
+    #[wasm_bindgen(js_name = setViewportCamera)]
+    pub fn set_viewport_camera(&mut self, viewport_id: &str, x: f32, y: f32, zoom: f32, rotation: f32) {
+        self.engine.set_viewport_camera(viewport_id, x, y, zoom, rotation);
+    }
+
+    /// Get camera for a specific viewport.
+    /// 获取特定视口的相机。
+    #[wasm_bindgen(js_name = getViewportCamera)]
+    pub fn get_viewport_camera(&self, viewport_id: &str) -> Option<Vec<f32>> {
+        self.engine
+            .get_viewport_camera(viewport_id)
+            .map(|(x, y, zoom, rotation)| vec![x, y, zoom, rotation])
+    }
+
+    /// Set viewport configuration.
+    /// 设置视口配置。
+    #[wasm_bindgen(js_name = setViewportConfig)]
+    pub fn set_viewport_config(&mut self, viewport_id: &str, show_grid: bool, show_gizmos: bool) {
+        self.engine.set_viewport_config(viewport_id, show_grid, show_gizmos);
+    }
+
+    /// Resize a specific viewport.
+    /// 调整特定视口大小。
+    #[wasm_bindgen(js_name = resizeViewport)]
+    pub fn resize_viewport(&mut self, viewport_id: &str, width: u32, height: u32) {
+        self.engine.resize_viewport(viewport_id, width, height);
+    }
+
+    /// Render to a specific viewport.
+    /// 渲染到特定视口。
+    #[wasm_bindgen(js_name = renderToViewport)]
+    pub fn render_to_viewport(&mut self, viewport_id: &str) -> std::result::Result<(), JsValue> {
+        self.engine
+            .render_to_viewport(viewport_id)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Get all registered viewport IDs.
+    /// 获取所有已注册的视口ID。
+    #[wasm_bindgen(js_name = getViewportIds)]
+    pub fn get_viewport_ids(&self) -> Vec<String> {
+        self.engine.viewport_ids()
     }
 }

@@ -221,7 +221,7 @@ export class PluginPublishService {
         manifest: Record<string, unknown>,
         publishInfo: PluginPublishInfo
     ): Promise<void> {
-        this.notifyProgress('uploading-files', `Checking for existing manifest...`, 65);
+        this.notifyProgress('uploading-files', 'Checking for existing manifest...', 65);
 
         const pluginId = this.generatePluginId(publishInfo.pluginMetadata.name);
         const existingManifest = await this.getExistingManifest(pluginId, publishInfo.category);
@@ -229,7 +229,7 @@ export class PluginPublishService {
         let finalManifest = manifest;
 
         if (existingManifest) {
-            this.notifyProgress('uploading-files', `Merging with existing manifest...`, 68);
+            this.notifyProgress('uploading-files', 'Merging with existing manifest...', 68);
             finalManifest = this.mergeManifestVersions(existingManifest, manifest, publishInfo.version);
         }
 

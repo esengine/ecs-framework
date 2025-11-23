@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square, SkipForward, RotateCcw, Trash2, Undo, Redo } from 'lucide-react';
+import { Play, Pause, Square, SkipForward, RotateCcw, Trash2, Undo, Redo, Box } from 'lucide-react';
 
 type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
 
@@ -7,6 +7,7 @@ interface EditorToolbarProps {
     executionMode: ExecutionMode;
     canUndo: boolean;
     canRedo: boolean;
+    showGizmos: boolean;
     onPlay: () => void;
     onPause: () => void;
     onStop: () => void;
@@ -16,12 +17,14 @@ interface EditorToolbarProps {
     onRedo: () => void;
     onResetView: () => void;
     onClearCanvas: () => void;
+    onToggleGizmos: () => void;
 }
 
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     executionMode,
     canUndo,
     canRedo,
+    showGizmos,
     onPlay,
     onPause,
     onStop,
@@ -30,7 +33,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     onUndo,
     onRedo,
     onResetView,
-    onClearCanvas
+    onClearCanvas,
+    onToggleGizmos
 }) => {
     return (
         <div style={{
@@ -198,6 +202,27 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             >
                 <Trash2 size={14} />
                 清空
+            </button>
+
+            {/* Gizmo 开关按钮 */}
+            <button
+                onClick={onToggleGizmos}
+                style={{
+                    padding: '8px 12px',
+                    backgroundColor: showGizmos ? '#4a9eff' : '#3c3c3c',
+                    border: 'none',
+                    borderRadius: '4px',
+                    color: showGizmos ? '#fff' : '#cccccc',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                }}
+                title="显示/隐藏选择边框 (Gizmos)"
+            >
+                <Box size={14} />
+                Gizmos
             </button>
 
             {/* 分隔符 */}

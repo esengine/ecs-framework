@@ -38,7 +38,7 @@ export function ComponentItem({ component, decimalPlaces = 4 }: ComponentItemPro
                 }}
             >
                 {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                <Settings size={14} style={{ marginLeft: "4px", color: "#888" }} />
+                <Settings size={14} style={{ marginLeft: '4px', color: '#888' }} />
                 <span
                     style={{
                         marginLeft: '6px',

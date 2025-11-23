@@ -1,56 +1,191 @@
-import { useEffect, useRef, useState } from 'react';
-import { Play, Pause, RotateCcw, Maximize2, Grid3x3, Eye, EyeOff, Activity, Box, Square, Zap } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Play, Pause, Square, RotateCcw, Maximize2, Grid3x3, Eye, EyeOff, Activity, MousePointer2, Move, RotateCw, Scaling, Globe, QrCode, ChevronDown } from 'lucide-react';
 import '../styles/Viewport.css';
 import { useEngine } from '../hooks/useEngine';
+import { EngineService } from '../services/EngineService';
+import { Core, Entity, SceneSerializer } from '@esengine/ecs-framework';
+import { MessageHub } from '@esengine/editor-core';
+import { TransformComponent, CameraComponent } from '@esengine/ecs-components';
+import { TauriAPI } from '../api/tauri';
+import { open } from '@tauri-apps/plugin-shell';
+import { RuntimeResolver } from '../services/RuntimeResolver';
+import { QRCodeDialog } from './QRCodeDialog';
+
+// Generate runtime HTML for browser preview
+function generateRuntimeHtml(): string {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECS Runtime Preview</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            background: #1e1e1e;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            position: fixed;
+        }
+        canvas {
+            display: block;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-user-drag: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="runtime-canvas"></canvas>
+    <script src="/runtime.browser.js"></script>
+    <script type="module">
+        import * as esEngine from '/engine.js';
+        (async function() {
+            try {
+                // Set canvas size before creating runtime
+                const canvas = document.getElementById('runtime-canvas');
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+
+                const runtime = ECSRuntime.create({
+                    canvasId: 'runtime-canvas',
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                });
+
+                await runtime.initialize(esEngine);
+                await runtime.loadScene('/scene.json?_=' + Date.now());
+                runtime.start();
+
+                window.addEventListener('resize', () => {
+                    const canvas = document.getElementById('runtime-canvas');
+                    const newWidth = window.innerWidth;
+                    const newHeight = window.innerHeight;
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
+                    runtime.handleResize(newWidth, newHeight);
+                });
+            } catch (e) {
+                console.error('Runtime error:', e);
+            }
+        })();
+    </script>
+</body>
+</html>`;
+}
+
+// Transform tool modes
+export type TransformMode = 'select' | 'move' | 'rotate' | 'scale';
+export type PlayState = 'stopped' | 'playing' | 'paused';
 
 interface ViewportProps {
   locale?: string;
+  messageHub?: MessageHub;
 }
 
-export function Viewport({ locale = 'en' }: ViewportProps) {
+export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
+    const [playState, setPlayState] = useState<PlayState>('stopped');
     const [showGrid, setShowGrid] = useState(true);
     const [showGizmos, setShowGizmos] = useState(true);
     const [showStats, setShowStats] = useState(false);
-    const [is3D, setIs3D] = useState(true);
-    const [useRustEngine, setUseRustEngine] = useState(false);
+    const [transformMode, setTransformMode] = useState<TransformMode>('select');
+    const [showRunMenu, setShowRunMenu] = useState(false);
+    const [showQRDialog, setShowQRDialog] = useState(false);
+    const [devicePreviewUrl, setDevicePreviewUrl] = useState('');
+    const runMenuRef = useRef<HTMLDivElement>(null);
 
-    // Rust engine hook (only active in 2D mode with engine enabled)
-    // Rust引擎钩子（仅在2D模式且启用引擎时激活）
-    const engine = useEngine('viewport-canvas', useRustEngine && !is3D);
-    const animationFrameRef = useRef<number>();
-    const glRef = useRef<WebGLRenderingContext | null>(null);
-    const gridProgramRef = useRef<WebGLProgram | null>(null);
-    const gridBufferRef = useRef<WebGLBuffer | null>(null);
-    const dynamicGridBufferRef = useRef<WebGLBuffer | null>(null);
-    const axisBufferRef = useRef<WebGLBuffer | null>(null);
-    const [cameraRotation, setCameraRotation] = useState({ yaw: -Math.PI / 4, pitch: Math.PI / 6 });
-    const [cameraDistance, setCameraDistance] = useState(20);
+    // Store editor camera state when entering play mode
+    const editorCameraRef = useRef({ x: 0, y: 0, zoom: 1 });
+    const playStateRef = useRef<PlayState>('stopped');
+
+    // Keep ref in sync with state
+    useEffect(() => {
+        playStateRef.current = playState;
+    }, [playState]);
+
+    // Rust engine hook with multi-viewport support
+    const engine = useEngine({
+        viewportId: 'editor-viewport',
+        canvasId: 'viewport-canvas',
+        showGrid: true,
+        showGizmos: true,
+        autoInit: true
+    });
+
+    // Camera state
     const [camera2DOffset, setCamera2DOffset] = useState({ x: 0, y: 0 });
-    const [camera2DZoom, setCamera2DZoom] = useState(20);
-    const isDraggingRef = useRef(false);
+    const [camera2DZoom, setCamera2DZoom] = useState(1);
+    const camera2DZoomRef = useRef(1);
+    const camera2DOffsetRef = useRef({ x: 0, y: 0 });
+    const isDraggingCameraRef = useRef(false);
+    const isDraggingTransformRef = useRef(false);
     const lastMousePosRef = useRef({ x: 0, y: 0 });
-    const [fps, setFps] = useState(0);
-    const [drawCalls, setDrawCalls] = useState(0);
-    const fpsFrameCountRef = useRef(0);
-    const fpsLastTimeRef = useRef(performance.now());
+    const selectedEntityRef = useRef<Entity | null>(null);
+    const messageHubRef = useRef<MessageHub | null>(null);
+    const transformModeRef = useRef<TransformMode>('select');
 
+    // Keep refs in sync with state
+    useEffect(() => {
+        camera2DZoomRef.current = camera2DZoom;
+    }, [camera2DZoom]);
+
+    useEffect(() => {
+        camera2DOffsetRef.current = camera2DOffset;
+    }, [camera2DOffset]);
+
+    useEffect(() => {
+        transformModeRef.current = transformMode;
+    }, [transformMode]);
+
+    // Screen to world coordinate conversion - uses refs to avoid re-registering event handlers
+    const screenToWorld = useCallback((screenX: number, screenY: number) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return { x: 0, y: 0 };
+
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+
+        // Convert to canvas pixel coordinates
+        const canvasX = (screenX - rect.left) * dpr;
+        const canvasY = (screenY - rect.top) * dpr;
+
+        // Convert to centered coordinates (Y-up)
+        const centeredX = canvasX - canvas.width / 2;
+        const centeredY = canvas.height / 2 - canvasY;
+
+        // Apply inverse zoom and add camera position - use refs for current values
+        const zoom = camera2DZoomRef.current;
+        const offset = camera2DOffsetRef.current;
+        const worldX = centeredX / zoom + offset.x;
+        const worldY = centeredY / zoom + offset.y;
+
+        return { x: worldX, y: worldY };
+    }, []);
+
+    // Subscribe to entity selection events
+    useEffect(() => {
+        const hub = Core.services.tryResolve(MessageHub);
+        if (hub) {
+            messageHubRef.current = hub;
+            const unsub = hub.subscribe('entity:selected', (data: { entity: Entity | null }) => {
+                selectedEntityRef.current = data.entity;
+            });
+            return () => unsub();
+        }
+    }, []);
+
+    // Canvas setup and input handling
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        // Set initial cursor style
         canvas.style.cursor = 'grab';
-
-        const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-        if (!gl) {
-            console.error('WebGL not supported');
-            return;
-        }
-
-        glRef.current = gl;
 
         const resizeCanvas = () => {
             if (!canvas || !containerRef.current) return;
@@ -63,7 +198,7 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
             canvas.style.width = `${rect.width}px`;
             canvas.style.height = `${rect.height}px`;
 
-            gl.viewport(0, 0, canvas.width, canvas.height);
+            EngineService.getInstance().resize(canvas.width, canvas.height);
         };
 
         resizeCanvas();
@@ -77,59 +212,141 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
             resizeObserver.observe(containerRef.current);
         }
 
-        initWebGL(gl);
-
         const handleMouseDown = (e: MouseEvent) => {
-            if (e.button === 0) {
-                isDraggingRef.current = true;
+            // Disable camera/transform manipulation in play mode
+            if (playStateRef.current === 'playing') {
+                return;
+            }
+
+            // Middle mouse button (1) or right button (2) for camera pan
+            if (e.button === 1 || e.button === 2) {
+                isDraggingCameraRef.current = true;
                 lastMousePosRef.current = { x: e.clientX, y: e.clientY };
                 canvas.style.cursor = 'grabbing';
+                e.preventDefault();
+            }
+            // Left button (0) for transform or camera pan (if no transform mode active)
+            else if (e.button === 0) {
+                if (transformModeRef.current === 'select') {
+                    // In select mode, left click pans camera
+                    isDraggingCameraRef.current = true;
+                    canvas.style.cursor = 'grabbing';
+                } else {
+                    // In transform mode, left click transforms entity
+                    isDraggingTransformRef.current = true;
+                    canvas.style.cursor = 'move';
+                }
+                lastMousePosRef.current = { x: e.clientX, y: e.clientY };
                 e.preventDefault();
             }
         };
 
         const handleMouseMove = (e: MouseEvent) => {
-            if (!isDraggingRef.current) return;
-
             const deltaX = e.clientX - lastMousePosRef.current.x;
             const deltaY = e.clientY - lastMousePosRef.current.y;
 
-            if (is3D) {
-                setCameraRotation((prev) => ({
-                    yaw: prev.yaw - deltaX * 0.005,
-                    pitch: Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, prev.pitch + deltaY * 0.005))
-                }));
-            } else {
+            if (isDraggingCameraRef.current) {
+                // Camera pan - use ref to avoid stale closure
+                const dpr = window.devicePixelRatio || 1;
+                const zoom = camera2DZoomRef.current;
                 setCamera2DOffset((prev) => ({
-                    x: prev.x - deltaX * 0.05,
-                    y: prev.y - deltaY * 0.05
+                    x: prev.x - (deltaX * dpr) / zoom,
+                    y: prev.y + (deltaY * dpr) / zoom
                 }));
+            } else if (isDraggingTransformRef.current) {
+                // Transform selected entity based on mode
+                const entity = selectedEntityRef.current;
+                if (!entity) return;
+
+                const transform = entity.getComponent(TransformComponent);
+                if (!transform) return;
+
+                const worldStart = screenToWorld(lastMousePosRef.current.x, lastMousePosRef.current.y);
+                const worldEnd = screenToWorld(e.clientX, e.clientY);
+                const worldDelta = {
+                    x: worldEnd.x - worldStart.x,
+                    y: worldEnd.y - worldStart.y
+                };
+
+                const mode = transformModeRef.current;
+                if (mode === 'move') {
+                    // Update position
+                    transform.position.x += worldDelta.x;
+                    transform.position.y += worldDelta.y;
+                } else if (mode === 'rotate') {
+                    // Horizontal mouse movement controls rotation (in radians)
+                    const rotationSpeed = 0.01; // radians per pixel
+                    transform.rotation.z += deltaX * rotationSpeed;
+                } else if (mode === 'scale') {
+                    // Scale based on distance from center
+                    const centerX = transform.position.x;
+                    const centerY = transform.position.y;
+                    const startDist = Math.sqrt((worldStart.x - centerX) ** 2 + (worldStart.y - centerY) ** 2);
+                    const endDist = Math.sqrt((worldEnd.x - centerX) ** 2 + (worldEnd.y - centerY) ** 2);
+                    if (startDist > 0) {
+                        const scaleFactor = endDist / startDist;
+                        transform.scale.x *= scaleFactor;
+                        transform.scale.y *= scaleFactor;
+                    }
+                }
+
+                // Notify system of transform change for real-time update
+                // 通知系统变换更改，用于实时更新
+                if (messageHubRef.current) {
+                    const propertyName = mode === 'move' ? 'position' : mode === 'rotate' ? 'rotation' : 'scale';
+                    messageHubRef.current.publish('component:property:changed', {
+                        entity,
+                        component: transform,
+                        propertyName,
+                        value: transform[propertyName]
+                    });
+                }
+            } else {
+                return;
             }
 
             lastMousePosRef.current = { x: e.clientX, y: e.clientY };
         };
 
         const handleMouseUp = () => {
-            if (isDraggingRef.current) {
-                isDraggingRef.current = false;
+            if (isDraggingCameraRef.current) {
+                isDraggingCameraRef.current = false;
                 canvas.style.cursor = 'grab';
             }
+            if (isDraggingTransformRef.current) {
+                isDraggingTransformRef.current = false;
+                canvas.style.cursor = 'grab';
+
+                // Notify Inspector to refresh after transform change
+                // 通知 Inspector 在变换更改后刷新
+                if (messageHubRef.current && selectedEntityRef.current) {
+                    messageHubRef.current.publish('entity:selected', {
+                        entity: selectedEntityRef.current
+                    });
+                }
+            }
+        };
+
+        // Prevent context menu on right click
+        const handleContextMenu = (e: MouseEvent) => {
+            e.preventDefault();
         };
 
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
-            if (is3D) {
-                setCameraDistance((prev) => Math.max(5, Math.min(50, prev + e.deltaY * 0.01)));
-            } else {
-                setCamera2DZoom((prev) => Math.max(5, Math.min(100, prev + e.deltaY * 0.01)));
+            // Disable zoom in play mode
+            if (playStateRef.current === 'playing') {
+                return;
             }
+            // Use multiplicative zoom for consistent feel across all zoom levels
+            // 使用乘法缩放，在所有缩放级别都有一致的感觉
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            setCamera2DZoom((prev) => Math.max(0.01, Math.min(100, prev * zoomFactor)));
         };
 
-        // Register mousedown and wheel on canvas
         canvas.addEventListener('mousedown', handleMouseDown);
         canvas.addEventListener('wheel', handleWheel, { passive: false });
-
-        // Register mousemove and mouseup globally to handle dragging outside canvas
+        canvas.addEventListener('contextmenu', handleContextMenu);
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
 
@@ -138,464 +355,353 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
             resizeObserver.disconnect();
             canvas.removeEventListener('mousedown', handleMouseDown);
             canvas.removeEventListener('wheel', handleWheel);
+            canvas.removeEventListener('contextmenu', handleContextMenu);
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
         };
-    }, [is3D]);
+    }, []);
 
+    // Sync camera state to engine
     useEffect(() => {
-        startRenderLoop();
-        return () => {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
+        if (engine.state.initialized) {
+            EngineService.getInstance().setCamera({
+                x: camera2DOffset.x,
+                y: camera2DOffset.y,
+                zoom: camera2DZoom,
+                rotation: 0
+            });
+        }
+    }, [camera2DOffset, camera2DZoom, engine.state.initialized]);
+
+    // Sync grid and gizmo visibility
+    useEffect(() => {
+        if (engine.state.initialized) {
+            EngineService.getInstance().setShowGrid(showGrid);
+            EngineService.getInstance().setShowGizmos(showGizmos);
+        }
+    }, [showGrid, showGizmos, engine.state.initialized]);
+
+    // Sync transform mode to engine
+    useEffect(() => {
+        if (engine.state.initialized) {
+            EngineService.getInstance().setTransformMode(transformMode);
+        }
+    }, [transformMode, engine.state.initialized]);
+
+    // Find player camera in scene
+    const findPlayerCamera = useCallback((): Entity | null => {
+        const scene = Core.scene;
+        if (!scene) return null;
+
+        const cameraEntities = scene.entities.findEntitiesWithComponent(CameraComponent);
+        return cameraEntities.length > 0 ? cameraEntities[0]! : null;
+    }, []);
+
+    // Sync player camera to viewport when playing
+    const syncPlayerCamera = useCallback(() => {
+        const cameraEntity = findPlayerCamera();
+        if (!cameraEntity) return;
+
+        const transform = cameraEntity.getComponent(TransformComponent);
+        const camera = cameraEntity.getComponent(CameraComponent);
+        if (transform && camera) {
+            const zoom = camera.orthographicSize > 0 ? 1 / camera.orthographicSize : 1;
+            setCamera2DOffset({ x: transform.position.x, y: transform.position.y });
+            setCamera2DZoom(zoom);
+
+            // Set background color from camera
+            const bgColor = camera.backgroundColor || '#000000';
+            const r = parseInt(bgColor.slice(1, 3), 16) / 255;
+            const g = parseInt(bgColor.slice(3, 5), 16) / 255;
+            const b = parseInt(bgColor.slice(5, 7), 16) / 255;
+            EngineService.getInstance().setClearColor(r, g, b, 1.0);
+        }
+    }, [findPlayerCamera]);
+
+    // Close run menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (runMenuRef.current && !runMenuRef.current.contains(e.target as Node)) {
+                setShowRunMenu(false);
             }
         };
-    }, [isPlaying, showGrid, cameraRotation, cameraDistance, camera2DOffset, camera2DZoom, is3D]);
 
-    const initWebGL = (gl: WebGLRenderingContext) => {
-        gl.clearColor(0.1, 0.1, 0.12, 1.0);
-        gl.enable(gl.DEPTH_TEST);
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
-        initGridProgram(gl);
-        renderFrame(gl, 0);
-    };
-
-    const initGridProgram = (gl: WebGLRenderingContext) => {
-        const vertexShaderSource = `
-      attribute vec3 position;
-      uniform mat4 projection;
-      uniform mat4 view;
-      void main() {
-        gl_Position = projection * view * vec4(position, 1.0);
-      }
-    `;
-
-        const fragmentShaderSource = `
-      precision mediump float;
-      uniform vec4 color;
-      void main() {
-        gl_FragColor = color;
-      }
-    `;
-
-        const vertexShader = gl.createShader(gl.VERTEX_SHADER)!;
-        gl.shaderSource(vertexShader, vertexShaderSource);
-        gl.compileShader(vertexShader);
-
-        if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-            console.error('Vertex shader compilation error:', gl.getShaderInfoLog(vertexShader));
-            return;
-        }
-
-        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER)!;
-        gl.shaderSource(fragmentShader, fragmentShaderSource);
-        gl.compileShader(fragmentShader);
-
-        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-            console.error('Fragment shader compilation error:', gl.getShaderInfoLog(fragmentShader));
-            return;
-        }
-
-        const program = gl.createProgram()!;
-        gl.attachShader(program, vertexShader);
-        gl.attachShader(program, fragmentShader);
-        gl.linkProgram(program);
-
-        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-            console.error('Program linking error:', gl.getProgramInfoLog(program));
-            return;
-        }
-
-        gridProgramRef.current = program;
-
-        const gridSize = 100;
-        const gridStep = 1;
-        const vertices: number[] = [];
-
-        for (let i = -gridSize; i <= gridSize; i += gridStep) {
-            vertices.push(i, 0, -gridSize, i, 0, gridSize);
-            vertices.push(-gridSize, 0, i, gridSize, 0, i);
-        }
-
-        const buffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-
-        gridBufferRef.current = buffer;
-
-        const axisLength = 5;
-        const axisVertices = [
-            0, 0, 0, axisLength, 0, 0,
-            0, 0, 0, 0, axisLength, 0,
-            0, 0, 0, 0, 0, axisLength
-        ];
-
-        const axisBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, axisBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(axisVertices), gl.STATIC_DRAW);
-
-        axisBufferRef.current = axisBuffer;
-    };
-
-    const startRenderLoop = () => {
-        const startTime = performance.now();
-
-        const render = (currentTime: number) => {
-            const elapsed = (currentTime - startTime) / 1000;
-
-            if (glRef.current) {
-                renderFrame(glRef.current, elapsed);
+    const handlePlay = () => {
+        if (playState === 'stopped') {
+            // Check if there's a camera entity
+            const cameraEntity = findPlayerCamera();
+            if (!cameraEntity) {
+                const warningMessage = locale === 'zh'
+                    ? '缺少相机: 场景中没有相机实体，请添加一个带有Camera组件的实体'
+                    : 'Missing Camera: No camera entity in scene. Please add an entity with Camera component.';
+                if (messageHub) {
+                    messageHub.publish('notification:show', {
+                        message: warningMessage,
+                        type: 'warning',
+                        timestamp: Date.now()
+                    });
+                } else {
+                    console.warn(warningMessage);
+                }
+                return;
             }
-
-            animationFrameRef.current = requestAnimationFrame(render);
-        };
-
-        animationFrameRef.current = requestAnimationFrame(render);
-    };
-
-    const renderFrame = (gl: WebGLRenderingContext, _time: number) => {
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        let currentDrawCalls = 0;
-
-        if (showGrid && gridProgramRef.current && gridBufferRef.current) {
-            drawGrid(gl);
-            currentDrawCalls += is3D ? 1 : 2;
-        }
-
-        gl.disable(gl.DEPTH_TEST);
-        if (gridProgramRef.current && axisBufferRef.current) {
-            drawAxis(gl);
-            currentDrawCalls += is3D ? 3 : 2;
-        }
-        gl.enable(gl.DEPTH_TEST);
-
-        setDrawCalls(currentDrawCalls);
-
-        fpsFrameCountRef.current++;
-        const currentTime = performance.now();
-        const deltaTime = currentTime - fpsLastTimeRef.current;
-
-        if (deltaTime >= 1000) {
-            const currentFps = Math.round((fpsFrameCountRef.current * 1000) / deltaTime);
-            setFps(currentFps);
-            fpsFrameCountRef.current = 0;
-            fpsLastTimeRef.current = currentTime;
+            // Save scene snapshot before playing
+            EngineService.getInstance().saveSceneSnapshot();
+            // Save editor camera state
+            editorCameraRef.current = { x: camera2DOffset.x, y: camera2DOffset.y, zoom: camera2DZoom };
+            setPlayState('playing');
+            // Hide grid and gizmos in play mode
+            EngineService.getInstance().setShowGrid(false);
+            EngineService.getInstance().setShowGizmos(false);
+            // Switch to player camera
+            syncPlayerCamera();
+            engine.start();
+        } else if (playState === 'paused') {
+            setPlayState('playing');
+            engine.start();
         }
     };
 
-    const createPerspectiveMatrix = (fov: number, aspect: number, near: number, far: number): Float32Array => {
-        const f = 1.0 / Math.tan(fov / 2);
-        const rangeInv = 1.0 / (near - far);
-
-        return new Float32Array([
-            f / aspect, 0, 0, 0,
-            0, f, 0, 0,
-            0, 0, (near + far) * rangeInv, -1,
-            0, 0, near * far * rangeInv * 2, 0
-        ]);
-    };
-
-    const createOrthographicMatrix = (left: number, right: number, bottom: number, top: number, near: number, far: number): Float32Array => {
-        const lr = 1 / (left - right);
-        const bt = 1 / (bottom - top);
-        const nf = 1 / (near - far);
-
-        return new Float32Array([
-            -2 * lr, 0, 0, 0,
-            0, -2 * bt, 0, 0,
-            0, 0, 2 * nf, 0,
-            (left + right) * lr, (top + bottom) * bt, (near + far) * nf, 1
-        ]);
-    };
-
-    const createLookAtMatrix = (
-        eyeX: number, eyeY: number, eyeZ: number,
-        centerX: number, centerY: number, centerZ: number,
-        upX: number, upY: number, upZ: number
-    ): Float32Array => {
-        let zx = eyeX - centerX;
-        let zy = eyeY - centerY;
-        let zz = eyeZ - centerZ;
-        const zlen = Math.sqrt(zx * zx + zy * zy + zz * zz);
-        zx /= zlen;
-        zy /= zlen;
-        zz /= zlen;
-
-        let xx = upY * zz - upZ * zy;
-        let xy = upZ * zx - upX * zz;
-        let xz = upX * zy - upY * zx;
-        const xlen = Math.sqrt(xx * xx + xy * xy + xz * xz);
-        xx /= xlen;
-        xy /= xlen;
-        xz /= xlen;
-
-        const yx = zy * xz - zz * xy;
-        const yy = zz * xx - zx * xz;
-        const yz = zx * xy - zy * xx;
-
-        return new Float32Array([
-            xx, yx, zx, 0,
-            xy, yy, zy, 0,
-            xz, yz, zz, 0,
-            -(xx * eyeX + xy * eyeY + xz * eyeZ),
-            -(yx * eyeX + yy * eyeY + yz * eyeZ),
-            -(zx * eyeX + zy * eyeY + zz * eyeZ),
-            1
-        ]);
-    };
-
-    const updateDynamicGrid = (gl: WebGLRenderingContext, zoom: number, aspect: number) => {
-        const viewWidth = zoom * aspect * 2;
-        const viewHeight = zoom * 2;
-        const maxViewSize = Math.max(viewWidth, viewHeight);
-
-        let baseGridStep;
-        if (maxViewSize > 200) {
-            baseGridStep = 100;
-        } else if (maxViewSize > 100) {
-            baseGridStep = 10;
-        } else if (maxViewSize > 50) {
-            baseGridStep = 10;
-        } else if (maxViewSize > 20) {
-            baseGridStep = 1;
-        } else if (maxViewSize > 10) {
-            baseGridStep = 1;
-        } else if (maxViewSize > 5) {
-            baseGridStep = 0.1;
-        } else {
-            baseGridStep = 0.01;
-        }
-
-        const fineGridStep = baseGridStep;
-        const coarseGridStep = baseGridStep * 10;
-
-        const gridRange = Math.ceil(maxViewSize * 0.75);
-        const vertices: number[] = [];
-        const coarseVertices: number[] = [];
-
-        const startX = Math.floor((-viewWidth / 2 - gridRange) / fineGridStep) * fineGridStep;
-        const endX = Math.ceil((viewWidth / 2 + gridRange) / fineGridStep) * fineGridStep;
-        const startZ = Math.floor((-viewHeight / 2 - gridRange) / fineGridStep) * fineGridStep;
-        const endZ = Math.ceil((viewHeight / 2 + gridRange) / fineGridStep) * fineGridStep;
-
-        for (let x = startX; x <= endX; x += fineGridStep) {
-            const roundedX = Math.round(x / fineGridStep) * fineGridStep;
-            if (Math.abs(roundedX % coarseGridStep) < 0.001) {
-                coarseVertices.push(roundedX, 0, startZ, roundedX, 0, endZ);
-            } else {
-                vertices.push(roundedX, 0, startZ, roundedX, 0, endZ);
-            }
-        }
-
-        for (let z = startZ; z <= endZ; z += fineGridStep) {
-            const roundedZ = Math.round(z / fineGridStep) * fineGridStep;
-            if (Math.abs(roundedZ % coarseGridStep) < 0.001) {
-                coarseVertices.push(startX, 0, roundedZ, endX, 0, roundedZ);
-            } else {
-                vertices.push(startX, 0, roundedZ, endX, 0, roundedZ);
-            }
-        }
-
-        if (!dynamicGridBufferRef.current) {
-            dynamicGridBufferRef.current = gl.createBuffer();
-        }
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, dynamicGridBufferRef.current);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([...vertices, ...coarseVertices]), gl.DYNAMIC_DRAW);
-
-        return {
-            fineLineCount: vertices.length / 6,
-            coarseLineCount: coarseVertices.length / 6,
-            totalLineCount: (vertices.length + coarseVertices.length) / 6
-        };
-    };
-
-    const drawGrid = (gl: WebGLRenderingContext) => {
-        const program = gridProgramRef.current;
-        if (!program) return;
-
-        gl.useProgram(program);
-
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const aspect = canvas.width / canvas.height;
-        let projectionMatrix: Float32Array;
-        let viewMatrix: Float32Array;
-
-        const projectionLocation = gl.getUniformLocation(program, 'projection');
-        const viewLocation = gl.getUniformLocation(program, 'view');
-        const colorLocation = gl.getUniformLocation(program, 'color');
-        const positionLocation = gl.getAttribLocation(program, 'position');
-
-        if (is3D) {
-            const buffer = gridBufferRef.current;
-            if (!buffer) return;
-
-            projectionMatrix = createPerspectiveMatrix(Math.PI / 4, aspect, 0.1, 100);
-
-            const eyeX = Math.cos(cameraRotation.pitch) * Math.sin(cameraRotation.yaw) * cameraDistance;
-            const eyeY = Math.sin(cameraRotation.pitch) * cameraDistance;
-            const eyeZ = Math.cos(cameraRotation.pitch) * Math.cos(cameraRotation.yaw) * cameraDistance;
-
-            viewMatrix = createLookAtMatrix(
-                eyeX, eyeY, eyeZ,
-                0, 0, 0,
-                0, 1, 0
-            );
-
-            gl.uniformMatrix4fv(projectionLocation, false, projectionMatrix);
-            gl.uniformMatrix4fv(viewLocation, false, viewMatrix);
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-            gl.enableVertexAttribArray(positionLocation);
-            gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
-
-            gl.uniform4f(colorLocation, 0.3, 0.3, 0.35, 1.0);
-
-            const gridSize = 100;
-            const gridStep = 1;
-            const lineCount = ((gridSize * 2) / gridStep + 1) * 2;
-            gl.drawArrays(gl.LINES, 0, lineCount * 2);
-        } else {
-            const zoom = camera2DZoom;
-            const gridInfo = updateDynamicGrid(gl, zoom, aspect);
-            const buffer = dynamicGridBufferRef.current;
-            if (!buffer) return;
-
-            const halfWidth = zoom * aspect;
-            const halfHeight = zoom;
-
-            projectionMatrix = createOrthographicMatrix(
-                -halfWidth, halfWidth,
-                -halfHeight, halfHeight,
-                -100, 100
-            );
-
-            viewMatrix = createLookAtMatrix(
-                camera2DOffset.x, 50, camera2DOffset.y,
-                camera2DOffset.x, 0, camera2DOffset.y,
-                0, 0, -1
-            );
-
-            gl.uniformMatrix4fv(projectionLocation, false, projectionMatrix);
-            gl.uniformMatrix4fv(viewLocation, false, viewMatrix);
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-            gl.enableVertexAttribArray(positionLocation);
-            gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
-
-            gl.uniform4f(colorLocation, 0.25, 0.25, 0.28, 1.0);
-            gl.drawArrays(gl.LINES, 0, gridInfo.fineLineCount * 2);
-
-            gl.uniform4f(colorLocation, 0.35, 0.35, 0.4, 1.0);
-            gl.drawArrays(gl.LINES, gridInfo.fineLineCount * 2, gridInfo.coarseLineCount * 2);
+    const handlePause = () => {
+        if (playState === 'playing') {
+            setPlayState('paused');
+            engine.stop();
         }
     };
 
-    const drawAxis = (gl: WebGLRenderingContext) => {
-        const program = gridProgramRef.current;
-        const buffer = axisBufferRef.current;
-        if (!program || !buffer) return;
-
-        gl.useProgram(program);
-
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const aspect = canvas.width / canvas.height;
-        let projectionMatrix: Float32Array;
-        let viewMatrix: Float32Array;
-
-        if (is3D) {
-            projectionMatrix = createPerspectiveMatrix(Math.PI / 4, aspect, 0.1, 100);
-
-            const eyeX = Math.cos(cameraRotation.pitch) * Math.sin(cameraRotation.yaw) * cameraDistance;
-            const eyeY = Math.sin(cameraRotation.pitch) * cameraDistance;
-            const eyeZ = Math.cos(cameraRotation.pitch) * Math.cos(cameraRotation.yaw) * cameraDistance;
-
-            viewMatrix = createLookAtMatrix(
-                eyeX, eyeY, eyeZ,
-                0, 0, 0,
-                0, 1, 0
-            );
-        } else {
-            const zoom = camera2DZoom;
-            const halfWidth = zoom * aspect;
-            const halfHeight = zoom;
-
-            projectionMatrix = createOrthographicMatrix(
-                -halfWidth, halfWidth,
-                -halfHeight, halfHeight,
-                -100, 100
-            );
-
-            viewMatrix = createLookAtMatrix(
-                camera2DOffset.x, 50, camera2DOffset.y,
-                camera2DOffset.x, 0, camera2DOffset.y,
-                0, 0, -1
-            );
-        }
-
-        const projectionLocation = gl.getUniformLocation(program, 'projection');
-        const viewLocation = gl.getUniformLocation(program, 'view');
-        const colorLocation = gl.getUniformLocation(program, 'color');
-
-        gl.uniformMatrix4fv(projectionLocation, false, projectionMatrix);
-        gl.uniformMatrix4fv(viewLocation, false, viewMatrix);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-
-        const positionLocation = gl.getAttribLocation(program, 'position');
-        gl.enableVertexAttribArray(positionLocation);
-        gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
-
-        gl.lineWidth(3);
-
-        if (is3D) {
-            gl.uniform4f(colorLocation, 1.0, 0.0, 0.0, 1.0);
-            gl.drawArrays(gl.LINES, 0, 2);
-
-            gl.uniform4f(colorLocation, 0.0, 1.0, 0.0, 1.0);
-            gl.drawArrays(gl.LINES, 2, 2);
-
-            gl.uniform4f(colorLocation, 0.0, 0.0, 1.0, 1.0);
-            gl.drawArrays(gl.LINES, 4, 2);
-        } else {
-            gl.uniform4f(colorLocation, 1.0, 0.0, 0.0, 1.0);
-            gl.drawArrays(gl.LINES, 0, 2);
-
-            gl.uniform4f(colorLocation, 0.0, 0.0, 1.0, 1.0);
-            gl.drawArrays(gl.LINES, 4, 2);
-        }
-
-        gl.lineWidth(1);
-    };
-
-    const handlePlayPause = () => {
-        const newPlaying = !isPlaying;
-        setIsPlaying(newPlaying);
-
-        // Control Rust engine if active | 控制Rust引擎（如果激活）
-        if (useRustEngine && !is3D && engine.state.initialized) {
-            if (newPlaying) {
-                engine.start();
-            } else {
-                engine.stop();
-            }
-        }
+    const handleStop = () => {
+        setPlayState('stopped');
+        engine.stop();
+        // Restore scene snapshot
+        EngineService.getInstance().restoreSceneSnapshot();
+        // Restore editor camera state
+        setCamera2DOffset({ x: editorCameraRef.current.x, y: editorCameraRef.current.y });
+        setCamera2DZoom(editorCameraRef.current.zoom);
+        // Restore grid and gizmos
+        EngineService.getInstance().setShowGrid(showGrid);
+        EngineService.getInstance().setShowGizmos(showGizmos);
+        // Restore editor default background color
+        EngineService.getInstance().setClearColor(0.1, 0.1, 0.12, 1.0);
     };
 
     const handleReset = () => {
-        setIsPlaying(false);
-        if (glRef.current) {
-            renderFrame(glRef.current, 0);
+        // Reset camera to origin without stopping playback
+        setCamera2DOffset({ x: 0, y: 0 });
+        setCamera2DZoom(1);
+    };
+
+    const handleRunInBrowser = async () => {
+        setShowRunMenu(false);
+
+        try {
+            const engineService = EngineService.getInstance();
+            const scene = engineService.getScene();
+            if (!scene) {
+                messageHub?.publish('notification:error', {
+                    title: locale === 'zh' ? '错误' : 'Error',
+                    message: locale === 'zh' ? '没有可运行的场景' : 'No scene to run'
+                });
+                return;
+            }
+
+            // Serialize current scene
+            const serialized = SceneSerializer.serialize(scene, {
+                format: 'json',
+                pretty: true,
+                includeMetadata: true
+            });
+
+            // Ensure we have string data
+            const sceneData = typeof serialized === 'string'
+                ? serialized
+                : new TextDecoder().decode(serialized);
+
+            // Get temp directory and create runtime files
+            const tempDir = await TauriAPI.getTempDir();
+            const runtimeDir = `${tempDir}/ecs-runtime`;
+
+            // Create runtime directory
+            const dirExists = await TauriAPI.pathExists(runtimeDir);
+            if (!dirExists) {
+                await TauriAPI.createDirectory(runtimeDir);
+            }
+
+            // Use RuntimeResolver to copy runtime files
+            // 使用 RuntimeResolver 复制运行时文件
+            const runtimeResolver = RuntimeResolver.getInstance();
+            await runtimeResolver.initialize();
+            await runtimeResolver.prepareRuntimeFiles(runtimeDir);
+
+            // Write scene data and HTML (always update)
+            await TauriAPI.writeFileContent(`${runtimeDir}/scene.json`, sceneData);
+
+            // Copy texture assets referenced in the scene
+            // 复制场景中引用的纹理资产
+            const sceneObj = JSON.parse(sceneData);
+            const texturePathSet = new Set<string>();
+
+            // Find all texture paths in sprite components
+            if (sceneObj.entities) {
+                for (const entity of sceneObj.entities) {
+                    if (entity.components) {
+                        for (const comp of entity.components) {
+                            if (comp.type === 'Sprite' && comp.data?.texture) {
+                                texturePathSet.add(comp.data.texture);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Create assets directory and copy textures
+            const assetsDir = `${runtimeDir}\\assets`;
+            const assetsDirExists = await TauriAPI.pathExists(assetsDir);
+            if (!assetsDirExists) {
+                await TauriAPI.createDirectory(assetsDir);
+            }
+
+            for (const texturePath of texturePathSet) {
+                if (texturePath && (texturePath.includes(':\\') || texturePath.startsWith('/'))) {
+                    try {
+                        const filename = texturePath.split(/[/\\]/).pop() || '';
+                        const destPath = `${assetsDir}\\${filename}`;
+                        const exists = await TauriAPI.pathExists(texturePath);
+                        if (exists) {
+                            await TauriAPI.copyFile(texturePath, destPath);
+                        }
+                    } catch (error) {
+                        console.error(`Failed to copy texture ${texturePath}:`, error);
+                    }
+                }
+            }
+
+            const runtimeHtml = generateRuntimeHtml();
+            await TauriAPI.writeFileContent(`${runtimeDir}/index.html`, runtimeHtml);
+
+            // Start local server and open browser
+            const serverUrl = await TauriAPI.startLocalServer(runtimeDir, 3333);
+            await open(serverUrl);
+
+            messageHub?.publish('notification:success', {
+                title: locale === 'zh' ? '浏览器运行' : 'Run in Browser',
+                message: locale === 'zh' ? `已在浏览器中打开: ${serverUrl}` : `Opened in browser: ${serverUrl}`
+            });
+        } catch (error) {
+            console.error('Failed to run in browser:', error);
+            messageHub?.publish('notification:error', {
+                title: locale === 'zh' ? '运行失败' : 'Run Failed',
+                message: String(error)
+            });
+        }
+    };
+
+    const handleRunOnDevice = async () => {
+        setShowRunMenu(false);
+
+        if (!Core.scene) {
+            if (messageHub) {
+                messageHub.publish('notification:warning', {
+                    title: locale === 'zh' ? '无场景' : 'No Scene',
+                    message: locale === 'zh' ? '请先创建场景' : 'Please create a scene first'
+                });
+            }
+            return;
+        }
+
+        try {
+            // Get scene data
+            const sceneData = SceneSerializer.serialize(Core.scene);
+
+            // Get temp directory and create runtime folder
+            const tempDir = await TauriAPI.getTempDir();
+            const runtimeDir = `${tempDir}\\ecs-device-preview`;
+
+            // Create directory
+            const dirExists = await TauriAPI.pathExists(runtimeDir);
+            if (!dirExists) {
+                await TauriAPI.createDirectory(runtimeDir);
+            }
+
+            // Use RuntimeResolver to copy runtime files
+            const runtimeResolver = RuntimeResolver.getInstance();
+            await runtimeResolver.initialize();
+            await runtimeResolver.prepareRuntimeFiles(runtimeDir);
+
+            // Write scene data and HTML
+            const sceneDataStr = typeof sceneData === 'string' ? sceneData : new TextDecoder().decode(sceneData);
+            await TauriAPI.writeFileContent(`${runtimeDir}/scene.json`, sceneDataStr);
+            await TauriAPI.writeFileContent(`${runtimeDir}/index.html`, generateRuntimeHtml());
+
+            // Copy textures referenced in scene
+            const assetsDir = `${runtimeDir}\\assets`;
+            const assetsDirExists = await TauriAPI.pathExists(assetsDir);
+            if (!assetsDirExists) {
+                await TauriAPI.createDirectory(assetsDir);
+            }
+
+            // Collect texture paths from scene data
+            const texturePathSet = new Set<string>();
+            try {
+                const entityData = JSON.parse(sceneDataStr);
+                if (entityData.entities) {
+                    for (const ent of entityData.entities) {
+                        if (ent.components) {
+                            for (const comp of ent.components) {
+                                if (comp.texture && typeof comp.texture === 'string') {
+                                    texturePathSet.add(comp.texture);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to parse scene data for textures:', e);
+            }
+
+            // Copy texture files
+            for (const texturePath of texturePathSet) {
+                if (texturePath && (texturePath.includes(':\\') || texturePath.startsWith('/'))) {
+                    try {
+                        const filename = texturePath.split(/[/\\]/).pop() || '';
+                        const destPath = `${assetsDir}\\${filename}`;
+                        const exists = await TauriAPI.pathExists(texturePath);
+                        if (exists) {
+                            await TauriAPI.copyFile(texturePath, destPath);
+                        }
+                    } catch (error) {
+                        console.error(`Failed to copy texture ${texturePath}:`, error);
+                    }
+                }
+            }
+
+            // Get local IP and start server
+            const localIp = await TauriAPI.getLocalIp();
+            const port = 3333;
+            await TauriAPI.startLocalServer(runtimeDir, port);
+
+            // Generate preview URL
+            const previewUrl = `http://${localIp}:${port}`;
+            setDevicePreviewUrl(previewUrl);
+            setShowQRDialog(true);
+
+            if (messageHub) {
+                messageHub.publish('notification:success', {
+                    title: locale === 'zh' ? '服务器已启动' : 'Server Started',
+                    message: locale === 'zh' ? `预览地址: ${previewUrl}` : `Preview URL: ${previewUrl}`
+                });
+            }
+        } catch (error) {
+            console.error('Failed to run on device:', error);
+            if (messageHub) {
+                messageHub.publish('notification:error', {
+                    title: locale === 'zh' ? '启动失败' : 'Failed to Start',
+                    message: error instanceof Error ? error.message : String(error)
+                });
+            }
         }
     };
 
@@ -609,17 +715,118 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
         }
     };
 
+    // Keyboard shortcuts for transform tools
+    const handleKeyDown = useCallback((e: KeyboardEvent) => {
+        // Don't handle if input is focused
+        const activeElement = document.activeElement;
+        if (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement) {
+            return;
+        }
+
+        switch (e.key.toLowerCase()) {
+            case 'q':
+                setTransformMode('select');
+                break;
+            case 'w':
+                setTransformMode('move');
+                break;
+            case 'e':
+                setTransformMode('rotate');
+                break;
+            case 'r':
+                setTransformMode('scale');
+                break;
+        }
+    }, []);
+
+    useEffect(() => {
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleKeyDown]);
+
     return (
         <div className="viewport" ref={containerRef}>
             <div className="viewport-toolbar">
                 <div className="viewport-toolbar-left">
+                    {/* Transform tools */}
                     <button
-                        className={`viewport-btn ${isPlaying ? 'active' : ''}`}
-                        onClick={handlePlayPause}
-                        title={isPlaying ? (locale === 'zh' ? '暂停' : 'Pause') : (locale === 'zh' ? '播放' : 'Play')}
+                        className={`viewport-btn ${transformMode === 'select' ? 'active' : ''}`}
+                        onClick={() => setTransformMode('select')}
+                        title={locale === 'zh' ? '选择 (Q)' : 'Select (Q)'}
                     >
-                        {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+                        <MousePointer2 size={16} />
                     </button>
+                    <button
+                        className={`viewport-btn ${transformMode === 'move' ? 'active' : ''}`}
+                        onClick={() => setTransformMode('move')}
+                        title={locale === 'zh' ? '移动 (W)' : 'Move (W)'}
+                    >
+                        <Move size={16} />
+                    </button>
+                    <button
+                        className={`viewport-btn ${transformMode === 'rotate' ? 'active' : ''}`}
+                        onClick={() => setTransformMode('rotate')}
+                        title={locale === 'zh' ? '旋转 (E)' : 'Rotate (E)'}
+                    >
+                        <RotateCw size={16} />
+                    </button>
+                    <button
+                        className={`viewport-btn ${transformMode === 'scale' ? 'active' : ''}`}
+                        onClick={() => setTransformMode('scale')}
+                        title={locale === 'zh' ? '缩放 (R)' : 'Scale (R)'}
+                    >
+                        <Scaling size={16} />
+                    </button>
+                    <div className="viewport-divider" />
+                    {/* Playback controls */}
+                    <button
+                        className={`viewport-btn ${playState === 'playing' ? 'active' : ''}`}
+                        onClick={handlePlay}
+                        disabled={playState === 'playing'}
+                        title={locale === 'zh' ? '播放' : 'Play'}
+                    >
+                        <Play size={16} />
+                    </button>
+                    <button
+                        className={`viewport-btn ${playState === 'paused' ? 'active' : ''}`}
+                        onClick={handlePause}
+                        disabled={playState !== 'playing'}
+                        title={locale === 'zh' ? '暂停' : 'Pause'}
+                    >
+                        <Pause size={16} />
+                    </button>
+                    <button
+                        className="viewport-btn"
+                        onClick={handleStop}
+                        disabled={playState === 'stopped'}
+                        title={locale === 'zh' ? '停止' : 'Stop'}
+                    >
+                        <Square size={16} />
+                    </button>
+                    <div className="viewport-divider" />
+                    {/* Run options dropdown */}
+                    <div className="viewport-dropdown" ref={runMenuRef}>
+                        <button
+                            className="viewport-btn"
+                            onClick={() => setShowRunMenu(!showRunMenu)}
+                            title={locale === 'zh' ? '运行选项' : 'Run Options'}
+                        >
+                            <Globe size={16} />
+                            <ChevronDown size={12} />
+                        </button>
+                        {showRunMenu && (
+                            <div className="viewport-dropdown-menu">
+                                <button onClick={handleRunInBrowser}>
+                                    <Globe size={14} />
+                                    {locale === 'zh' ? '浏览器运行' : 'Run in Browser'}
+                                </button>
+                                <button onClick={handleRunOnDevice}>
+                                    <QrCode size={14} />
+                                    {locale === 'zh' ? '真机运行' : 'Run on Device'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
                     <button
                         className="viewport-btn"
                         onClick={handleReset}
@@ -642,23 +849,6 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
                     >
                         {showGizmos ? <Eye size={16} /> : <EyeOff size={16} />}
                     </button>
-                    <div className="viewport-divider" />
-                    <button
-                        className={`viewport-btn ${is3D ? 'active' : ''}`}
-                        onClick={() => setIs3D(!is3D)}
-                        title={is3D ? (locale === 'zh' ? '切换到2D' : 'Switch to 2D') : (locale === 'zh' ? '切换到3D' : 'Switch to 3D')}
-                    >
-                        {is3D ? <Box size={16} /> : <Square size={16} />}
-                    </button>
-                    {!is3D && (
-                        <button
-                            className={`viewport-btn ${useRustEngine ? 'active' : ''}`}
-                            onClick={() => setUseRustEngine(!useRustEngine)}
-                            title={locale === 'zh' ? 'Rust引擎' : 'Rust Engine'}
-                        >
-                            <Zap size={16} />
-                        </button>
-                    )}
                 </div>
                 <div className="viewport-toolbar-right">
                     <button
@@ -682,23 +872,17 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
                 <div className="viewport-stats">
                     <div className="viewport-stat">
                         <span className="viewport-stat-label">FPS:</span>
-                        <span className="viewport-stat-value">
-                            {useRustEngine && !is3D ? engine.state.fps : fps}
-                        </span>
+                        <span className="viewport-stat-value">{engine.state.fps}</span>
                     </div>
                     <div className="viewport-stat">
                         <span className="viewport-stat-label">Draw Calls:</span>
-                        <span className="viewport-stat-value">
-                            {useRustEngine && !is3D ? engine.state.drawCalls : drawCalls}
-                        </span>
+                        <span className="viewport-stat-value">{engine.state.drawCalls}</span>
                     </div>
-                    {useRustEngine && !is3D && (
-                        <div className="viewport-stat">
-                            <span className="viewport-stat-label">Sprites:</span>
-                            <span className="viewport-stat-value">{engine.state.spriteCount}</span>
-                        </div>
-                    )}
-                    {useRustEngine && !is3D && engine.state.error && (
+                    <div className="viewport-stat">
+                        <span className="viewport-stat-label">Sprites:</span>
+                        <span className="viewport-stat-value">{engine.state.spriteCount}</span>
+                    </div>
+                    {engine.state.error && (
                         <div className="viewport-stat viewport-stat-error">
                             <span className="viewport-stat-label">Error:</span>
                             <span className="viewport-stat-value">{engine.state.error}</span>
@@ -706,6 +890,12 @@ export function Viewport({ locale = 'en' }: ViewportProps) {
                     )}
                 </div>
             )}
+
+            <QRCodeDialog
+                url={devicePreviewUrl}
+                isOpen={showQRDialog}
+                onClose={() => setShowQRDialog(false)}
+            />
         </div>
     );
 }

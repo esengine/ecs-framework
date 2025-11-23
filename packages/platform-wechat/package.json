@@ -32,8 +32,8 @@
   "author": "yhh",
   "license": "MIT",
   "peerDependencies": {
-    "@esengine/ecs-framework": "^2.0.0",
-    "@esengine/platform-common": "^1.0.0"
+    "@esengine/ecs-framework": "workspace:*",
+    "@esengine/platform-common": "workspace:*"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.3",

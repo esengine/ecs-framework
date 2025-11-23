@@ -868,7 +868,7 @@ function PropertyValueRenderer({ name, value, depth, decimalPlaces = 4 }: Proper
             const keys = Object.keys(val);
             if (keys.length === 0) return '{}';
             if (keys.length <= 2) {
-                const preview = keys.map(k => `${k}: ${typeof val[k] === 'object' ? '...' : (typeof val[k] === 'number' ? formatNumber(val[k], decimalPlaces) : val[k])}`).join(', ');
+                const preview = keys.map((k) => `${k}: ${typeof val[k] === 'object' ? '...' : (typeof val[k] === 'number' ? formatNumber(val[k], decimalPlaces) : val[k])}`).join(', ');
                 return `{${preview}}`;
             }
             return `{${keys.slice(0, 2).join(', ')}...}`;
@@ -996,7 +996,7 @@ function ImagePreview({ src, alt }: ImagePreviewProps) {
     const handleWheel = (e: React.WheelEvent) => {
         e.preventDefault();
         const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        setScale(prev => Math.min(Math.max(prev * delta, 0.1), 10));
+        setScale((prev) => Math.min(Math.max(prev * delta, 0.1), 10));
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {

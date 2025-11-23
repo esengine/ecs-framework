@@ -54,8 +54,8 @@ export function AssetFileInspector({ fileInfo, content, isImage }: AssetFileInsp
                             {fileInfo.isDirectory
                                 ? '文件夹'
                                 : fileInfo.extension
-                                  ? `.${fileInfo.extension}`
-                                  : '文件'}
+                                    ? `.${fileInfo.extension}`
+                                    : '文件'}
                         </span>
                     </div>
                     {fileInfo.size !== undefined && !fileInfo.isDirectory && (

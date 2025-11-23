@@ -83,12 +83,10 @@ export function MenuBar({
             });
 
             setPluginMenuItems(filteredItems);
-            console.log('[MenuBar] Updated menu items:', filteredItems);
         } else if (uiRegistry) {
             // 如果没有 pluginManager，显示所有菜单项
             const items = uiRegistry.getChildMenus('window');
             setPluginMenuItems(items);
-            console.log('[MenuBar] Updated menu items (no filter):', items);
         }
     };
 
@@ -99,17 +97,14 @@ export function MenuBar({
     useEffect(() => {
         if (messageHub) {
             const unsubscribeInstalled = messageHub.subscribe('plugin:installed', () => {
-                console.log('[MenuBar] Plugin installed, updating menu items');
                 updateMenuItems();
             });
 
             const unsubscribeEnabled = messageHub.subscribe('plugin:enabled', () => {
-                console.log('[MenuBar] Plugin enabled, updating menu items');
                 updateMenuItems();
             });
 
             const unsubscribeDisabled = messageHub.subscribe('plugin:disabled', () => {
-                console.log('[MenuBar] Plugin disabled, updating menu items');
                 updateMenuItems();
             });
 

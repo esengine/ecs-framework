@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { Entity, Core } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub, SceneManagerService, CommandManager } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
-import { Box, Layers, Wifi, Search, Plus, Trash2, Monitor, Globe } from 'lucide-react';
+import { Box, Layers, Wifi, Search, Plus, Trash2, Monitor, Globe, Image, Camera, Film } from 'lucide-react';
 import { ProfilerService, RemoteEntity } from '../services/ProfilerService';
 import { confirm } from '@tauri-apps/plugin-dialog';
-import { CreateEntityCommand, DeleteEntityCommand } from '../application/commands/entity';
+import { CreateEntityCommand, CreateSpriteEntityCommand, CreateAnimatedSpriteEntityCommand, CreateCameraEntityCommand, DeleteEntityCommand } from '../application/commands/entity';
 import '../styles/SceneHierarchy.css';
 
 type ViewMode = 'local' | 'remote';
@@ -194,6 +194,43 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager }: Scen
         const entityName = `Entity ${entityCount + 1}`;
 
         const command = new CreateEntityCommand(
+            entityStore,
+            messageHub,
+            entityName
+        );
+        commandManager.execute(command);
+    };
+
+    const handleCreateSpriteEntity = () => {
+        // Count only Sprite entities for naming
+        const spriteCount = entityStore.getAllEntities().filter((e) => e.name.startsWith('Sprite ')).length;
+        const entityName = `Sprite ${spriteCount + 1}`;
+
+        const command = new CreateSpriteEntityCommand(
+            entityStore,
+            messageHub,
+            entityName
+        );
+        commandManager.execute(command);
+    };
+
+    const handleCreateAnimatedSpriteEntity = () => {
+        const animCount = entityStore.getAllEntities().filter((e) => e.name.startsWith('AnimatedSprite ')).length;
+        const entityName = `AnimatedSprite ${animCount + 1}`;
+
+        const command = new CreateAnimatedSpriteEntityCommand(
+            entityStore,
+            messageHub,
+            entityName
+        );
+        commandManager.execute(command);
+    };
+
+    const handleCreateCameraEntity = () => {
+        const entityCount = entityStore.getAllEntities().length;
+        const entityName = `Camera ${entityCount + 1}`;
+
+        const command = new CreateCameraEntityCommand(
             entityStore,
             messageHub,
             entityName
@@ -431,7 +468,19 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager }: Scen
                 >
                     <button onClick={() => { handleCreateEntity(); closeContextMenu(); }}>
                         <Plus size={12} />
-                        <span>{locale === 'zh' ? '创建实体' : 'Create Entity'}</span>
+                        <span>{locale === 'zh' ? '创建空实体' : 'Create Empty Entity'}</span>
+                    </button>
+                    <button onClick={() => { handleCreateSpriteEntity(); closeContextMenu(); }}>
+                        <Image size={12} />
+                        <span>{locale === 'zh' ? '创建 Sprite' : 'Create Sprite'}</span>
+                    </button>
+                    <button onClick={() => { handleCreateAnimatedSpriteEntity(); closeContextMenu(); }}>
+                        <Film size={12} />
+                        <span>{locale === 'zh' ? '创建动画 Sprite' : 'Create Animated Sprite'}</span>
+                    </button>
+                    <button onClick={() => { handleCreateCameraEntity(); closeContextMenu(); }}>
+                        <Camera size={12} />
+                        <span>{locale === 'zh' ? '创建相机' : 'Create Camera'}</span>
                     </button>
                     {contextMenu.entityId && (
                         <>

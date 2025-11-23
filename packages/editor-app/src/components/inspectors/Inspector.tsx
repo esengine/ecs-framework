@@ -130,6 +130,7 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
         const unsubAssetFileSelect = messageHub.subscribe('asset-file:selected', handleAssetFileSelection);
         const unsubComponentAdded = messageHub.subscribe('component:added', handleComponentChange);
         const unsubComponentRemoved = messageHub.subscribe('component:removed', handleComponentChange);
+        const unsubPropertyChanged = messageHub.subscribe('component:property:changed', handleComponentChange);
 
         window.addEventListener('profiler:entity-details', handleEntityDetails);
 
@@ -140,6 +141,7 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
             unsubAssetFileSelect();
             unsubComponentAdded();
             unsubComponentRemoved();
+            unsubPropertyChanged();
             window.removeEventListener('profiler:entity-details', handleEntityDetails);
         };
     }, [messageHub]);

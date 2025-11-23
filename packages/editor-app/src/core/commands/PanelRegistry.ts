@@ -28,7 +28,7 @@ export class PanelRegistry implements IPanelRegistry {
         }
 
         return allPanels
-            .filter(panel => panel.category === category)
+            .filter((panel) => panel.category === category)
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     }
 }

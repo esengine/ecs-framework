@@ -451,15 +451,15 @@ export class BehaviorTreeExecutor {
 
                     // 检查断点
                     logger.info(`[Breakpoint Debug] Node ${nodeData.name} (${nodeId}) started running`);
-                    logger.info(`[Breakpoint Debug] Breakpoints count:`, this.breakpoints.size);
-                    logger.info(`[Breakpoint Debug] Has breakpoint:`, this.breakpoints.has(nodeId));
+                    logger.info('[Breakpoint Debug] Breakpoints count:', this.breakpoints.size);
+                    logger.info('[Breakpoint Debug] Has breakpoint:', this.breakpoints.has(nodeId));
 
                     const breakpoint = this.breakpoints.get(nodeId);
                     if (breakpoint) {
-                        logger.info(`[Breakpoint Debug] Breakpoint found, enabled:`, breakpoint.enabled);
+                        logger.info('[Breakpoint Debug] Breakpoint found, enabled:', breakpoint.enabled);
                         if (breakpoint.enabled) {
                             this.addLog(`断点触发: ${nodeData.name}`, 'warning', nodeId);
-                            logger.info(`[Breakpoint Debug] Calling onBreakpointHit callback:`, !!this.onBreakpointHit);
+                            logger.info('[Breakpoint Debug] Calling onBreakpointHit callback:', !!this.onBreakpointHit);
                             if (this.onBreakpointHit) {
                                 this.onBreakpointHit(nodeId, nodeData.name);
                             }

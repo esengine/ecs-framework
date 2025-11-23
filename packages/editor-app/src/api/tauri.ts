@@ -231,6 +231,73 @@ export class TauriAPI {
     static async readFileAsBase64(path: string): Promise<string> {
         return await invoke<string>('read_file_as_base64', { filePath: path });
     }
+
+    /**
+   * 复制文件
+   * @param src 源文件路径
+   * @param dst 目标文件路径
+   */
+    static async copyFile(src: string, dst: string): Promise<void> {
+        return await invoke<void>('copy_file', { src, dst });
+    }
+
+    /**
+   * 获取临时目录路径
+   * @returns 临时目录路径
+   */
+    static async getTempDir(): Promise<string> {
+        return await invoke<string>('get_temp_dir');
+    }
+
+    /**
+   * 获取应用资源目录
+   * @returns 资源目录路径
+   */
+    static async getAppResourceDir(): Promise<string> {
+        return await invoke<string>('get_app_resource_dir');
+    }
+
+    /**
+   * 获取当前工作目录
+   * @returns 当前工作目录路径
+   */
+    static async getCurrentDir(): Promise<string> {
+        return await invoke<string>('get_current_dir');
+    }
+
+    /**
+   * 启动本地HTTP服务器
+   * @param rootPath 服务器根目录
+   * @param port 端口号
+   * @returns 服务器URL
+   */
+    static async startLocalServer(rootPath: string, port: number): Promise<string> {
+        return await invoke<string>('start_local_server', { rootPath, port });
+    }
+
+    /**
+   * 停止本地HTTP服务器
+   */
+    static async stopLocalServer(): Promise<void> {
+        return await invoke<void>('stop_local_server');
+    }
+
+    /**
+   * 获取本机局域网IP地址
+   * @returns 局域网IP地址
+   */
+    static async getLocalIp(): Promise<string> {
+        return await invoke<string>('get_local_ip');
+    }
+
+    /**
+   * 生成二维码
+   * @param text 要编码的文本
+   * @returns base64编码的PNG图片
+   */
+    static async generateQRCode(text: string): Promise<string> {
+        return await invoke<string>('generate_qrcode', { text });
+    }
 }
 
 export interface DirectoryEntry {

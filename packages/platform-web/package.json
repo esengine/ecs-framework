@@ -16,7 +16,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "rollup -c",
+    "build": "rollup -c && rollup -c rollup.runtime.config.js",
+    "build:runtime": "rollup -c rollup.runtime.config.js",
     "build:npm": "npm run build",
     "clean": "rimraf dist",
     "type-check": "npx tsc --noEmit",
@@ -31,8 +32,14 @@
   ],
   "author": "yhh",
   "license": "MIT",
+  "dependencies": {
+    "@esengine/ecs-framework": "workspace:*",
+    "@esengine/ecs-engine-bindgen": "workspace:*",
+    "@esengine/ecs-components": "workspace:*",
+    "@esengine/asset-system": "workspace:*"
+  },
   "peerDependencies": {
-    "@esengine/platform-common": "^1.0.0"
+    "@esengine/platform-common": "workspace:*"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.3",

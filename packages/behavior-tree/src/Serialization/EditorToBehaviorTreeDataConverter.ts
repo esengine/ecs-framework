@@ -49,7 +49,7 @@ export class EditorToBehaviorTreeDataConverter {
      */
     static convert(editorData: EditorBehaviorTreeData): BehaviorTreeData {
         // 查找根节点
-        const rootNode = editorData.nodes.find(n =>
+        const rootNode = editorData.nodes.find((n) =>
             n.template.type === 'root' || n.data['nodeType'] === 'root'
         );
 

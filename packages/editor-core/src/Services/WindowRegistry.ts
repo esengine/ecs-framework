@@ -156,7 +156,7 @@ export class WindowRegistry implements IService {
      * 通知所有监听器
      */
     private notifyListeners(): void {
-        this.listeners.forEach(listener => listener());
+        this.listeners.forEach((listener) => listener());
     }
 
     /**

@@ -63,7 +63,7 @@ export const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
                     {onDeleteNode && (
                         <div
                             onClick={onDeleteNode}
-                            style={{...menuItemStyle, color: '#f48771'}}
+                            style={{ ...menuItemStyle, color: '#f48771' }}
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5a1a1a'}
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >

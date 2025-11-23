@@ -22,7 +22,9 @@ interface TreeNode {
 interface FileTreeProps {
   rootPath: string | null;
   onSelectFile?: (path: string) => void;
+  onSelectFiles?: (paths: string[], modifiers: { ctrlKey: boolean; shiftKey: boolean }) => void;
   selectedPath?: string | null;
+  selectedPaths?: Set<string>;
   messageHub?: MessageHub;
   searchQuery?: string;
   showFiles?: boolean;
@@ -31,12 +33,30 @@ interface FileTreeProps {
 export interface FileTreeHandle {
   collapseAll: () => void;
   refresh: () => void;
+  revealPath: (targetPath: string) => Promise<void>;
 }
 
-export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, onSelectFile, selectedPath, messageHub, searchQuery, showFiles = true }, ref) => {
+export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, onSelectFile, onSelectFiles, selectedPath, selectedPaths, messageHub, searchQuery, showFiles = true }, ref) => {
     const [tree, setTree] = useState<TreeNode[]>([]);
     const [loading, setLoading] = useState(false);
     const [internalSelectedPath, setInternalSelectedPath] = useState<string | null>(null);
+    const [lastSelectedFilePath, setLastSelectedFilePath] = useState<string | null>(null);
+
+    // Flatten visible file nodes for range selection
+    const getVisibleFilePaths = (nodes: TreeNode[]): string[] => {
+        const paths: string[] = [];
+        const traverse = (nodeList: TreeNode[]) => {
+            for (const node of nodeList) {
+                if (node.type === 'file') {
+                    paths.push(node.path);
+                } else if (node.type === 'folder' && node.expanded && node.children) {
+                    traverse(node.children);
+                }
+            }
+        };
+        traverse(nodes);
+        return paths;
+    };
     const [contextMenu, setContextMenu] = useState<{
         position: { x: number; y: number };
         node: TreeNode | null;
@@ -49,7 +69,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         parentPath: string;
         templateExtension?: string;
         templateContent?: (fileName: string) => Promise<string>;
-    } | null>(null);
+            } | null>(null);
     const [filteredTree, setFilteredTree] = useState<TreeNode[]>([]);
     const fileActionRegistry = Core.services.resolve(FileActionRegistry);
 
@@ -65,13 +85,84 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             return node;
         };
 
-        const collapsedTree = tree.map(node => collapseNode(node));
+        const collapsedTree = tree.map((node) => collapseNode(node));
         setTree(collapsedTree);
+    };
+
+    // Expand tree to reveal a specific file path
+    const revealPath = async (targetPath: string) => {
+        if (!rootPath || !targetPath.startsWith(rootPath)) return;
+
+        // Get path segments between root and target
+        const relativePath = targetPath.substring(rootPath.length).replace(/^[/\\]/, '');
+        const segments = relativePath.split(/[/\\]/);
+
+        // Build list of folder paths to expand
+        const pathsToExpand: string[] = [];
+        let currentPath = rootPath;
+        for (let i = 0; i < segments.length - 1; i++) {
+            currentPath = `${currentPath}/${segments[i]}`;
+            pathsToExpand.push(currentPath.replace(/\//g, '\\'));
+        }
+
+        // Recursively expand nodes and load children
+        const expandToPath = async (nodes: TreeNode[], pathSet: Set<string>): Promise<TreeNode[]> => {
+            const result: TreeNode[] = [];
+            for (const node of nodes) {
+                const normalizedPath = node.path.replace(/\//g, '\\');
+                if (node.type === 'folder' && pathSet.has(normalizedPath)) {
+                    // Load children if not loaded
+                    let children = node.children;
+                    if (!node.loaded || !children) {
+                        try {
+                            const entries = await TauriAPI.listDirectory(node.path);
+                            children = entries.map((entry: DirectoryEntry) => ({
+                                name: entry.name,
+                                path: entry.path,
+                                type: entry.is_dir ? 'folder' as const : 'file' as const,
+                                size: entry.size,
+                                modified: entry.modified,
+                                expanded: false,
+                                loaded: false
+                            })).sort((a, b) => {
+                                if (a.type === b.type) return a.name.localeCompare(b.name);
+                                return a.type === 'folder' ? -1 : 1;
+                            });
+                        } catch (error) {
+                            children = [];
+                        }
+                    }
+                    // Recursively expand children
+                    const expandedChildren = await expandToPath(children, pathSet);
+                    result.push({
+                        ...node,
+                        expanded: true,
+                        loaded: true,
+                        children: expandedChildren
+                    });
+                } else if (node.type === 'folder' && node.children) {
+                    // Keep existing state for non-target folders
+                    result.push({
+                        ...node,
+                        children: await expandToPath(node.children, pathSet)
+                    });
+                } else {
+                    result.push(node);
+                }
+            }
+            return result;
+        };
+
+        const pathSet = new Set(pathsToExpand);
+        const expandedTree = await expandToPath(tree, pathSet);
+        setTree(expandedTree);
+        setInternalSelectedPath(targetPath);
     };
 
     useImperativeHandle(ref, () => ({
         collapseAll,
-        refresh: refreshTree
+        refresh: refreshTree,
+        revealPath
     }));
 
     useEffect(() => {
@@ -92,8 +183,8 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         const performSearch = async () => {
             const filterByFileType = (nodes: TreeNode[]): TreeNode[] => {
                 return nodes
-                    .filter(node => showFiles || node.type === 'folder')
-                    .map(node => ({
+                    .filter((node) => showFiles || node.type === 'folder')
+                    .map((node) => ({
                         ...node,
                         children: node.children ? filterByFileType(node.children) : node.children
                     }));
@@ -280,7 +371,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                             children = await loadChildren(node);
                         }
                         const restoredChildren = await Promise.all(
-                            children.map(child => restoreExpandedState(child))
+                            children.map((child) => restoreExpandedState(child))
                         );
                         return {
                             ...node,
@@ -290,7 +381,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                         };
                     } else if (node.type === 'folder' && node.children) {
                         const restoredChildren = await Promise.all(
-                            node.children.map(child => restoreExpandedState(child))
+                            node.children.map((child) => restoreExpandedState(child))
                         );
                         return {
                             ...node,
@@ -325,7 +416,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                 }
 
                 const expandedChildren = await Promise.all(
-                    children.map(child => expandNode(child))
+                    children.map((child) => expandNode(child))
                 );
 
                 return {
@@ -338,7 +429,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             return node;
         };
 
-        const expandedTree = await Promise.all(tree.map(node => expandNode(node)));
+        const expandedTree = await Promise.all(tree.map((node) => expandNode(node)));
         setTree(expandedTree);
     };
 
@@ -574,13 +665,39 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         return items;
     };
 
-    const handleNodeClick = (node: TreeNode) => {
+    const handleNodeClick = (node: TreeNode, e: React.MouseEvent) => {
         if (node.type === 'folder') {
             setInternalSelectedPath(node.path);
             onSelectFile?.(node.path);
             toggleNode(node.path);
         } else {
             setInternalSelectedPath(node.path);
+
+            // Support multi-select with Ctrl/Cmd or Shift
+            if (onSelectFiles) {
+                if (e.shiftKey && lastSelectedFilePath) {
+                    // Range select with Shift
+                    const treeToUse = searchQuery ? filteredTree : tree;
+                    const visiblePaths = getVisibleFilePaths(treeToUse);
+                    const lastIndex = visiblePaths.indexOf(lastSelectedFilePath);
+                    const currentIndex = visiblePaths.indexOf(node.path);
+                    if (lastIndex !== -1 && currentIndex !== -1) {
+                        const start = Math.min(lastIndex, currentIndex);
+                        const end = Math.max(lastIndex, currentIndex);
+                        const rangePaths = visiblePaths.slice(start, end + 1);
+                        onSelectFiles(rangePaths, { ctrlKey: false, shiftKey: true });
+                    } else {
+                        onSelectFiles([node.path], { ctrlKey: false, shiftKey: false });
+                        setLastSelectedFilePath(node.path);
+                    }
+                } else {
+                    onSelectFiles([node.path], { ctrlKey: e.ctrlKey || e.metaKey, shiftKey: false });
+                    setLastSelectedFilePath(node.path);
+                }
+            } else {
+                setLastSelectedFilePath(node.path);
+            }
+
             const extension = node.name.includes('.') ? node.name.split('.').pop() : undefined;
             messageHub?.publish('asset-file:selected', {
                 fileInfo: {
@@ -622,7 +739,9 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
     };
 
     const renderNode = (node: TreeNode, level: number = 0) => {
-        const isSelected = (internalSelectedPath || selectedPath) === node.path;
+        const isSelected = selectedPaths
+            ? selectedPaths.has(node.path)
+            : (internalSelectedPath || selectedPath) === node.path;
         const isRenaming = renamingNode === node.path;
         const indent = level * 16;
 
@@ -631,14 +750,30 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                 <div
                     className={`tree-node ${isSelected ? 'selected' : ''}`}
                     style={{ paddingLeft: `${indent}px`, cursor: node.type === 'file' ? 'grab' : 'pointer' }}
-                    onClick={() => !isRenaming && handleNodeClick(node)}
+                    onClick={(e) => !isRenaming && handleNodeClick(node, e)}
                     onDoubleClick={() => !isRenaming && handleNodeDoubleClick(node)}
                     onContextMenu={(e) => handleContextMenu(e, node)}
                     draggable={node.type === 'file' && !isRenaming}
                     onDragStart={(e) => {
                         if (node.type === 'file' && !isRenaming) {
                             e.dataTransfer.effectAllowed = 'copy';
-                            // 设置拖拽的数据
+
+                            // Get all selected files for multi-file drag
+                            const selectedFiles = selectedPaths && selectedPaths.has(node.path) && selectedPaths.size > 1
+                                ? Array.from(selectedPaths).map((p) => {
+                                    const name = p.split(/[/\\]/).pop() || '';
+                                    const ext = name.includes('.') ? name.split('.').pop() : '';
+                                    return { type: 'file', path: p, name, extension: ext };
+                                })
+                                : [{
+                                    type: 'file',
+                                    path: node.path,
+                                    name: node.name,
+                                    extension: node.name.includes('.') ? node.name.split('.').pop() : ''
+                                }];
+
+                            // Set drag data as JSON array for multi-file support
+                            e.dataTransfer.setData('application/json', JSON.stringify(selectedFiles));
                             e.dataTransfer.setData('asset-path', node.path);
                             e.dataTransfer.setData('asset-name', node.name);
                             const ext = node.name.includes('.') ? node.name.split('.').pop() : '';
@@ -748,18 +883,18 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                 <PromptDialog
                     title={
                         promptDialog.type === 'create-file' ? '新建文件' :
-                        promptDialog.type === 'create-folder' ? '新建文件夹' :
-                        '新建文件'
+                            promptDialog.type === 'create-folder' ? '新建文件夹' :
+                                '新建文件'
                     }
                     message={
                         promptDialog.type === 'create-file' ? '请输入文件名:' :
-                        promptDialog.type === 'create-folder' ? '请输入文件夹名:' :
-                        `请输入文件名 (将自动添加 .${promptDialog.templateExtension} 扩展名):`
+                            promptDialog.type === 'create-folder' ? '请输入文件夹名:' :
+                                `请输入文件名 (将自动添加 .${promptDialog.templateExtension} 扩展名):`
                     }
                     placeholder={
                         promptDialog.type === 'create-file' ? '例如: config.json' :
-                        promptDialog.type === 'create-folder' ? '例如: assets' :
-                        '例如: MyFile'
+                            promptDialog.type === 'create-folder' ? '例如: assets' :
+                                '例如: MyFile'
                     }
                     confirmText="创建"
                     cancelText="取消"

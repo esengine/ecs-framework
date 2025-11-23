@@ -24,9 +24,9 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@esengine/behavior-tree": "file:../behavior-tree",
-    "@esengine/ecs-framework": "file:../core",
-    "@esengine/editor-core": "file:../editor-core",
+    "@esengine/behavior-tree": "workspace:*",
+    "@esengine/ecs-framework": "workspace:*",
+    "@esengine/editor-core": "workspace:*",
     "@rollup/plugin-commonjs": "^28.0.1",
     "@rollup/plugin-node-resolve": "^15.3.0",
     "@types/react": "^18.3.18",

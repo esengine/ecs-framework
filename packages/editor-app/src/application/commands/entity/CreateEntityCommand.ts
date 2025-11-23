@@ -1,5 +1,6 @@
 import { Core, Entity } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub } from '@esengine/editor-core';
+import { TransformComponent } from '@esengine/ecs-components';
 import { BaseCommand } from '../BaseCommand';
 
 /**
@@ -26,6 +27,9 @@ export class CreateEntityCommand extends BaseCommand {
 
         this.entity = scene.createEntity(this.entityName);
         this.entityId = this.entity.id;
+
+        // 自动添加Transform组件
+        this.entity.addComponent(new TransformComponent());
 
         if (this.parentEntity) {
             this.parentEntity.addChild(this.entity);

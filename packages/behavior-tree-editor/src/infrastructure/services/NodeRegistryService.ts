@@ -71,7 +71,7 @@ export class NodeRegistryService {
         const template = this.createTemplate(config, metadata);
         this.customTemplates.set(config.implementationType, template);
 
-        this.registrationCallbacks.forEach(cb => cb(template));
+        this.registrationCallbacks.forEach((cb) => cb(template));
     }
 
     /**
@@ -139,7 +139,7 @@ export class NodeRegistryService {
                 description: prop.description,
                 min: prop.min,
                 max: prop.max,
-                options: prop.options?.map(o => o.value)
+                options: prop.options?.map((o) => o.value)
             };
         }
 
@@ -218,7 +218,7 @@ export class NodeRegistryService {
             color: config.color || this.getDefaultColor(config.type),
             className: config.implementationType,
             defaultConfig,
-            properties: (config.properties || []).map(p => ({
+            properties: (config.properties || []).map((p) => ({
                 name: p.name,
                 type: p.type,
                 label: p.label,

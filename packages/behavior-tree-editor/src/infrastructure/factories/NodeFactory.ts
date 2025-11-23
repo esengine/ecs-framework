@@ -92,6 +92,6 @@ export class NodeFactory implements INodeFactory {
      */
     getTemplateByImplementationType(implementationType: string): NodeTemplate | null {
         const allTemplates = this.getAllTemplates();
-        return allTemplates.find(t => t.className === implementationType) || null;
+        return allTemplates.find((t) => t.className === implementationType) || null;
     }
 }

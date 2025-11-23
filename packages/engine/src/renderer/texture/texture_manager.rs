@@ -2,8 +2,6 @@
 //! 纹理加载和管理。
 
 use std::collections::HashMap;
-use std::cell::RefCell;
-use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlImageElement, WebGl2RenderingContext, WebGlTexture};
@@ -22,6 +20,14 @@ pub struct TextureManager {
     /// 已加载的纹理。
     textures: HashMap<u32, Texture>,
 
+    /// Path to texture ID mapping.
+    /// 路径到纹理ID的映射。
+    path_to_id: HashMap<String, u32>,
+
+    /// Next texture ID for auto-assignment.
+    /// 下一个自动分配的纹理ID。
+    next_id: u32,
+
     /// Default white texture for untextured rendering.
     /// 用于无纹理渲染的默认白色纹理。
     default_texture: Option<WebGlTexture>,
@@ -34,6 +40,8 @@ impl TextureManager {
         let mut manager = Self {
             gl,
             textures: HashMap::new(),
+            path_to_id: HashMap::new(),
+            next_id: 1, // Start from 1, 0 is reserved for default
             default_texture: None,
         };
 
@@ -105,32 +113,34 @@ impl TextureManager {
             Some(&placeholder),
         );
 
+        // Clone texture handle for async loading before storing | 在存储前克隆纹理句柄用于异步加载
+        let texture_for_closure = texture.clone();
+
         // Store texture with placeholder size | 存储带占位符尺寸的纹理
-        self.textures.insert(id, Texture::new(texture.clone(), 1, 1));
+        self.textures.insert(id, Texture::new(texture, 1, 1));
 
         // Load actual image asynchronously | 异步加载实际图片
         let gl = self.gl.clone();
-        let texture_rc = Rc::new(RefCell::new(texture));
-        let texture_clone = Rc::clone(&texture_rc);
-
-        // We need to update the stored texture size after loading
-        // For MVP, we'll handle this through a callback mechanism
-        // 加载后需要更新存储的纹理尺寸
-        // 对于MVP，我们通过回调机制处理
 
         let image = HtmlImageElement::new()
             .map_err(|_| EngineError::TextureLoadFailed("Failed to create image element".into()))?;
+
+        // Set crossOrigin for CORS support | 设置crossOrigin以支持CORS
+        image.set_cross_origin(Some("anonymous"));
 
         // Clone image for use in closure | 克隆图片用于闭包
         let image_clone = image.clone();
 
         // Set up load callback | 设置加载回调
         let onload = Closure::wrap(Box::new(move || {
-            let tex = texture_clone.borrow();
-            gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&tex));
+            gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture_for_closure));
+
+            // Flip Y axis for correct orientation (image coords vs WebGL coords)
+            // 翻转Y轴以获得正确的方向（图像坐标系 vs WebGL坐标系）
+            gl.pixel_storei(WebGl2RenderingContext::UNPACK_FLIP_Y_WEBGL, 1);
 
             // Use the captured image element | 使用捕获的图片元素
-            let _ = gl.tex_image_2d_with_u32_and_u32_and_html_image_element(
+            let result = gl.tex_image_2d_with_u32_and_u32_and_html_image_element(
                 WebGl2RenderingContext::TEXTURE_2D,
                 0,
                 WebGl2RenderingContext::RGBA as i32,
@@ -138,6 +148,10 @@ impl TextureManager {
                 WebGl2RenderingContext::UNSIGNED_BYTE,
                 &image_clone,
             );
+
+            if let Err(e) = result {
+                log::error!("Failed to upload texture: {:?} | 纹理上传失败: {:?}", e, e);
+            }
 
             // Set texture parameters | 设置纹理参数
             gl.tex_parameteri(
@@ -161,7 +175,6 @@ impl TextureManager {
                 WebGl2RenderingContext::LINEAR as i32,
             );
 
-            log::debug!("Texture loaded | 纹理加载完成");
         }) as Box<dyn Fn()>);
 
         image.set_onload(Some(onload.as_ref().unchecked_ref()));
@@ -196,7 +209,14 @@ impl TextureManager {
         if let Some(texture) = self.textures.get(&id) {
             self.gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture.handle));
         } else if let Some(default) = &self.default_texture {
+            // ID 0 is the default texture, no warning needed
+            // ID 0 是默认纹理，不需要警告
+            if id != 0 {
+                log::warn!("Texture {} not found, using default | 未找到纹理 {}，使用默认纹理", id, id);
+            }
             self.gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(default));
+        } else {
+            log::error!("Texture {} not found and no default texture! | 未找到纹理 {} 且没有默认纹理！", id, id);
         }
     }
 
@@ -213,5 +233,57 @@ impl TextureManager {
         if let Some(texture) = self.textures.remove(&id) {
             self.gl.delete_texture(Some(&texture.handle));
         }
+        // Also remove from path mapping | 同时从路径映射中移除
+        self.path_to_id.retain(|_, &mut v| v != id);
+    }
+
+    /// Load texture by path, returning texture ID.
+    /// 按路径加载纹理，返回纹理ID。
+    ///
+    /// If the texture is already loaded, returns existing ID.
+    /// 如果纹理已加载，返回现有ID。
+    pub fn load_texture_by_path(&mut self, path: &str) -> Result<u32> {
+        // Check if already loaded | 检查是否已加载
+        if let Some(&id) = self.path_to_id.get(path) {
+            return Ok(id);
+        }
+
+        // Assign new ID and load | 分配新ID并加载
+        let id = self.next_id;
+        self.next_id += 1;
+
+        // Store path mapping first | 先存储路径映射
+        self.path_to_id.insert(path.to_string(), id);
+
+        // Load texture with assigned ID | 用分配的ID加载纹理
+        self.load_texture(id, path)?;
+
+        Ok(id)
+    }
+
+    /// Get texture ID by path.
+    /// 按路径获取纹理ID。
+    ///
+    /// Returns None if texture is not loaded.
+    /// 如果纹理未加载，返回None。
+    #[inline]
+    pub fn get_texture_id_by_path(&self, path: &str) -> Option<u32> {
+        self.path_to_id.get(path).copied()
+    }
+
+    /// Get or load texture by path.
+    /// 按路径获取或加载纹理。
+    ///
+    /// If texture is already loaded, returns existing ID.
+    /// If not loaded, loads it and returns new ID.
+    /// 如果纹理已加载，返回现有ID。
+    /// 如果未加载，加载它并返回新ID。
+    pub fn get_or_load_by_path(&mut self, path: &str) -> Result<u32> {
+        // Empty path means default texture | 空路径表示默认纹理
+        if path.is_empty() {
+            return Ok(0);
+        }
+
+        self.load_texture_by_path(path)
     }
 }
