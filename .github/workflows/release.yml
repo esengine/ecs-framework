@@ -72,9 +72,9 @@ jobs:
         run: |
           cd packages/${{ github.event.inputs.package }}
           if [ "${{ github.event.inputs.version_type }}" = "custom" ]; then
-            npm version ${{ github.event.inputs.custom_version }} --no-git-tag-version --allow-same-version
+            pnpm version ${{ github.event.inputs.custom_version }} --no-git-tag-version --allow-same-version
           else
-            npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+            pnpm version ${{ github.event.inputs.version_type }} --no-git-tag-version
           fi
           NEW_VERSION=$(node -p "require('./package.json').version")
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
