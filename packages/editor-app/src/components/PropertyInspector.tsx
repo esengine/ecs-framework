@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Component, Core } from '@esengine/ecs-framework';
 import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub } from '@esengine/editor-core';
-import { ChevronRight, ChevronDown, Maximize2, ArrowRight, FolderOpen, Lock } from 'lucide-react';
+import { ChevronRight, ChevronDown, ArrowRight, Lock } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { AnimationClipsFieldEditor } from '../infrastructure/field-editors/AnimationClipsFieldEditor';
 import '../styles/PropertyInspector.css';
@@ -200,7 +200,11 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                             value: value ?? [],
                             onChange: (newValue) => handleChange(propertyName, newValue),
                             context: {
-                                readonly: metadata.readOnly ?? false
+                                readonly: metadata.readOnly ?? false,
+                                metadata: {
+                                    component,
+                                    onDefaultAnimationChange: (val: string) => handleChange('defaultAnimation', val)
+                                }
                             }
                         })}
                     </div>

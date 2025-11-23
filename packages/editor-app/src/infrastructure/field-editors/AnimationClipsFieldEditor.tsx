@@ -1,12 +1,81 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { IFieldEditor, FieldEditorProps, MessageHub } from '@esengine/editor-core';
 import { Core } from '@esengine/ecs-framework';
-import { Plus, Trash2, ChevronDown, ChevronRight, Film, Upload } from 'lucide-react';
-import type { AnimationClip, AnimationFrame } from '@esengine/ecs-components';
+import { Plus, Trash2, ChevronDown, ChevronRight, Film, Upload, Star, Play, Square } from 'lucide-react';
+import type { AnimationClip, AnimationFrame, SpriteAnimatorComponent } from '@esengine/ecs-components';
 import { AssetField } from '../../components/inspectors/fields/AssetField';
+import { EngineService } from '../../services/EngineService';
 
-interface ClipEditorState {
-    expandedClips: Set<string>;
+interface DraggableNumberProps {
+    value: number;
+    min?: number;
+    max?: number;
+    step?: number;
+    onChange: (value: number) => void;
+    disabled?: boolean;
+    label: string;
+}
+
+function DraggableNumber({ value, min = 0, max = 10, step = 0.1, onChange, disabled, label }: DraggableNumberProps) {
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStartX, setDragStartX] = useState(0);
+    const [dragStartValue, setDragStartValue] = useState(0);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (disabled) return;
+        setIsDragging(true);
+        setDragStartX(e.clientX);
+        setDragStartValue(value);
+        e.preventDefault();
+    };
+
+    useEffect(() => {
+        if (!isDragging) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const delta = e.clientX - dragStartX;
+            const sensitivity = e.shiftKey ? 0.1 : 1;
+            let newValue = dragStartValue + delta * step * sensitivity;
+
+            newValue = Math.max(min, Math.min(max, newValue));
+            newValue = parseFloat(newValue.toFixed(2));
+
+            onChange(newValue);
+        };
+
+        const handleMouseUp = () => {
+            setIsDragging(false);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging, dragStartX, dragStartValue, step, min, max, onChange]);
+
+    return (
+        <label className="clip-draggable-number">
+            <span
+                className="clip-draggable-label"
+                onMouseDown={handleMouseDown}
+                style={{ cursor: disabled ? 'default' : 'ew-resize' }}
+            >
+                {label}
+            </span>
+            <input
+                type="number"
+                value={value}
+                min={min}
+                max={max}
+                step={step}
+                onChange={(e) => onChange(parseFloat(e.target.value) || 1)}
+                disabled={disabled}
+            />
+        </label>
+    );
 }
 
 export class AnimationClipsFieldEditor implements IFieldEditor<AnimationClip[]> {
@@ -25,6 +94,8 @@ export class AnimationClipsFieldEditor implements IFieldEditor<AnimationClip[]> 
                 clips={value || []}
                 onChange={onChange}
                 readonly={context.readonly}
+                component={context.metadata?.component as SpriteAnimatorComponent}
+                onDefaultAnimationChange={context.metadata?.onDefaultAnimationChange}
             />
         );
     }
@@ -35,10 +106,13 @@ interface AnimationClipsEditorProps {
     clips: AnimationClip[];
     onChange: (clips: AnimationClip[]) => void;
     readonly?: boolean;
+    component?: SpriteAnimatorComponent;
+    onDefaultAnimationChange?: (value: string) => void;
 }
 
-function AnimationClipsEditor({ label, clips, onChange, readonly }: AnimationClipsEditorProps) {
+function AnimationClipsEditor({ label, clips, onChange, readonly, component, onDefaultAnimationChange }: AnimationClipsEditorProps) {
     const [expandedClips, setExpandedClips] = useState<Set<number>>(new Set());
+    const [playingClip, setPlayingClip] = useState<string | null>(null);
 
     const handleNavigate = useCallback((path: string) => {
         const messageHub = Core.services.tryResolve(MessageHub);
@@ -67,6 +141,15 @@ function AnimationClipsEditor({ label, clips, onChange, readonly }: AnimationCli
         };
         onChange([...clips, newClip]);
         setExpandedClips(new Set([...expandedClips, clips.length]));
+
+        // Auto-set first clip as default animation
+        if (clips.length === 0 && component && !component.defaultAnimation) {
+            component.defaultAnimation = newName;
+            setDefaultAnimation(newName);
+            if (onDefaultAnimationChange) {
+                onDefaultAnimationChange(newName);
+            }
+        }
     };
 
     const removeClip = (index: number) => {
@@ -154,6 +237,95 @@ function AnimationClipsEditor({ label, clips, onChange, readonly }: AnimationCli
         e.stopPropagation();
     }, []);
 
+    const [defaultAnimation, setDefaultAnimation] = useState(component?.defaultAnimation || '');
+
+    // Sync with component changes
+    useEffect(() => {
+        if (component) {
+            setDefaultAnimation(component.defaultAnimation || '');
+        }
+    }, [component?.defaultAnimation]);
+
+    const setAsDefaultAnimationHandler = (clipName: string) => {
+        if (component) {
+            component.defaultAnimation = clipName;
+            setDefaultAnimation(clipName);
+
+            // Notify parent to update the defaultAnimation field
+            if (onDefaultAnimationChange) {
+                onDefaultAnimationChange(clipName);
+            }
+        }
+    };
+
+    const isDefaultAnimation = (clipName: string) => {
+        return defaultAnimation === clipName;
+    };
+
+    const handlePlayPreview = (clipName: string) => {
+        if (component) {
+            const engineService = EngineService.getInstance();
+
+            // Get the actual component from scene entity (not the one passed as prop)
+            const scene = engineService.getScene();
+            const entityId = component.entityId;
+            let actualComponent = component;
+
+            if (scene && entityId !== undefined && entityId !== null) {
+                const sceneEntity = scene.findEntityById(entityId);
+                if (sceneEntity) {
+                    const sceneAnimator = sceneEntity.getComponent(component.constructor as any);
+                    if (sceneAnimator) {
+                        actualComponent = sceneAnimator as SpriteAnimatorComponent;
+                    }
+                }
+            }
+
+            if (playingClip === clipName) {
+                // Stop playing
+                actualComponent.stop();
+                setPlayingClip(null);
+                engineService.disableAnimationPreview();
+            } else {
+                // Stop previous animation if any
+                actualComponent.stop();
+
+                // Sync clips data to component before playing
+                actualComponent.clips = clips;
+
+                // Enable animation preview if not already enabled
+                if (!engineService.isAnimationPreviewEnabled()) {
+                    engineService.enableAnimationPreview();
+                }
+
+                // Play this clip
+                actualComponent.play(clipName);
+                setPlayingClip(clipName);
+            }
+        }
+    };
+
+    // Sync playingClip state with actual component state
+    useEffect(() => {
+        if (component && playingClip) {
+            // Check if component is still playing
+            if (!component.isPlaying()) {
+                setPlayingClip(null);
+            }
+        }
+    });
+
+    // Stop preview when component unmounts
+    useEffect(() => {
+        return () => {
+            if (component) {
+                component.stop();
+                const engineService = EngineService.getInstance();
+                engineService.disableAnimationPreview();
+            }
+        };
+    }, [component]);
+
     return (
         <div className="animation-clips-editor">
             <div className="clips-header">
@@ -192,6 +364,30 @@ function AnimationClipsEditor({ label, clips, onChange, readonly }: AnimationCli
                                     disabled={readonly}
                                 />
                                 <span className="frame-count">{clip.frames.length} frames</span>
+                                {component && clip.frames.length > 0 && (
+                                    <button
+                                        className={`preview-clip-btn ${playingClip === clip.name ? 'is-playing' : ''}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handlePlayPreview(clip.name);
+                                        }}
+                                        title={playingClip === clip.name ? "Stop Preview" : "Preview Animation"}
+                                    >
+                                        {playingClip === clip.name ? <Square size={10} /> : <Play size={10} />}
+                                    </button>
+                                )}
+                                {component && !readonly && (
+                                    <button
+                                        className={`set-default-btn ${isDefaultAnimation(clip.name) ? 'is-default' : ''}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setAsDefaultAnimationHandler(clip.name);
+                                        }}
+                                        title={isDefaultAnimation(clip.name) ? "Current Default Animation" : "Set as Default Animation"}
+                                    >
+                                        <Star size={12} fill={isDefaultAnimation(clip.name) ? "currentColor" : "none"} />
+                                    </button>
+                                )}
                                 {!readonly && (
                                     <button
                                         className="remove-clip-btn"
@@ -218,18 +414,15 @@ function AnimationClipsEditor({ label, clips, onChange, readonly }: AnimationCli
                                             />
                                             Loop
                                         </label>
-                                        <label>
-                                            Speed:
-                                            <input
-                                                type="number"
-                                                value={clip.speed}
-                                                min={0}
-                                                max={10}
-                                                step={0.1}
-                                                onChange={(e) => updateClip(clipIndex, { speed: parseFloat(e.target.value) || 1 })}
-                                                disabled={readonly}
-                                            />
-                                        </label>
+                                        <DraggableNumber
+                                            label="Speed:"
+                                            value={clip.speed}
+                                            min={0}
+                                            max={10}
+                                            step={0.1}
+                                            onChange={(val) => updateClip(clipIndex, { speed: val })}
+                                            disabled={readonly}
+                                        />
                                     </div>
 
                                     <div

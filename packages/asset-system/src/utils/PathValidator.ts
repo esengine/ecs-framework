@@ -66,8 +66,12 @@ export class PathValidator {
         // Remove dangerous patterns
         let sanitized = path;
 
-        // Remove path traversal
-        sanitized = sanitized.replace(/\.\.[\/\\]/g, '');
+        // Remove path traversal (apply repeatedly until fully removed)
+        let prev;
+        do {
+            prev = sanitized;
+            sanitized = sanitized.replace(/\.\.[\/\\]/g, '');
+        } while (sanitized !== prev);
 
         // Remove leading slashes
         sanitized = sanitized.replace(/^[\/\\]+/, '');

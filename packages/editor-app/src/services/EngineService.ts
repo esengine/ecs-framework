@@ -486,6 +486,37 @@ export class EngineService {
     }
 
     /**
+     * Enable animation preview in editor mode.
+     * 在编辑器模式下启用动画预览。
+     */
+    enableAnimationPreview(): void {
+        if (this.animatorSystem && !this.running) {
+            // Clear entity cache to force re-query when enabled
+            // 清除实体缓存以便启用时强制重新查询
+            this.animatorSystem.clearEntityCache();
+            this.animatorSystem.enabled = true;
+        }
+    }
+
+    /**
+     * Disable animation preview in editor mode.
+     * 在编辑器模式下禁用动画预览。
+     */
+    disableAnimationPreview(): void {
+        if (this.animatorSystem && !this.running) {
+            this.animatorSystem.enabled = false;
+        }
+    }
+
+    /**
+     * Check if animation preview is enabled.
+     * 检查动画预览是否启用。
+     */
+    isAnimationPreviewEnabled(): boolean {
+        return this.animatorSystem?.enabled ?? false;
+    }
+
+    /**
      * Get the engine bridge.
      * 获取引擎桥接。
      */

@@ -812,6 +812,95 @@ input[type="number"].property-input::-webkit-inner-spin-button {
   white-space: nowrap;
 }
 
+.preview-clip-btn {
+  flex-shrink: 0;
+  padding: 2px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.preview-clip-btn:hover {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.preview-clip-btn.is-playing {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.preview-clip-btn.is-playing:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.set-default-btn {
+  flex-shrink: 0;
+  padding: 2px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.set-default-btn:hover {
+  background: rgba(250, 204, 21, 0.2);
+  color: #facc15;
+}
+
+.set-default-btn.is-default {
+  color: #facc15;
+  background: rgba(250, 204, 21, 0.15);
+}
+
+.set-default-btn.is-default:hover {
+  background: rgba(250, 204, 21, 0.25);
+}
+
+.clip-draggable-number {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.clip-draggable-label {
+  color: var(--color-text-secondary);
+  user-select: none;
+}
+
+.clip-draggable-number input {
+  width: 50px;
+  padding: 2px 4px;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-default);
+  border-radius: 3px;
+  color: var(--color-text-primary);
+  font-size: 11px;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.clip-draggable-number input::-webkit-outer-spin-button,
+.clip-draggable-number input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.clip-draggable-number input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
 .remove-clip-btn {
   flex-shrink: 0;
   padding: 2px;

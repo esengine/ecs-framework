@@ -9,7 +9,7 @@
 import { Core, Scene, SceneSerializer } from '@esengine/ecs-framework';
 import { EngineBridge, EngineRenderSystem, CameraSystem } from '@esengine/ecs-engine-bindgen';
 import { TransformComponent, SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystem, CameraComponent } from '@esengine/ecs-components';
-import { AssetManager, EngineIntegration, AssetPathResolver, AssetPlatform } from '@esengine/asset-system';
+import { AssetManager, EngineIntegration } from '@esengine/asset-system';
 
 interface RuntimeConfig {
     canvasId: string;

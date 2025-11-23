@@ -41,17 +41,18 @@ export class SpriteAnimatorSystem extends EntitySystem {
             const animator = entity.getComponent(SpriteAnimatorComponent) as SpriteAnimatorComponent | null;
             if (!animator) continue;
 
-            animator.update(deltaTime);
+            // Only call update if playing
+            if (animator.isPlaying()) {
+                animator.update(deltaTime);
+            }
 
-            // Sync current frame to sprite component
+            // Sync current frame to sprite component (always, even if not playing)
             const sprite = entity.getComponent(SpriteComponent) as SpriteComponent | null;
             if (sprite) {
                 const frame = animator.getCurrentFrame();
                 if (frame) {
-                    // Update texture if changed
-                    if (sprite.texture !== frame.texture) {
-                        sprite.texture = frame.texture;
-                    }
+                    sprite.texture = frame.texture;
+
                     // Update UV if specified
                     if (frame.uv) {
                         sprite.uv = frame.uv;

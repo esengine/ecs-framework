@@ -131,7 +131,7 @@ export class RuntimeResolver {
         if (isDev) {
             // Development mode - use relative paths from workspace root
             const devPath = moduleConfig.development.path;
-            sourcePath = `${this.baseDir}\\packages\\${devPath.replace('../', '')}`;
+            sourcePath = `${this.baseDir}\\packages\\${devPath.replace(/\.\.\//g, '')}`;
 
             if (moduleConfig.main) {
                 files.push(`${sourcePath}\\${moduleConfig.main}`);
