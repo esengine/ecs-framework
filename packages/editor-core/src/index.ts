@@ -6,6 +6,8 @@
 
 export * from './Plugins/IEditorPlugin';
 export * from './Plugins/EditorPluginManager';
+export * from './Plugins/PluginTypes';
+export * from './Plugins/PluginRegistry';
 
 export * from './Services/UIRegistry';
 export * from './Services/MessageHub';

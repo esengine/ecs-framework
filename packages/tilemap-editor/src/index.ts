@@ -4,6 +4,7 @@
 
 // Plugin
 export { TilemapEditorPlugin, tilemapEditorPlugin } from './TilemapEditorPlugin';
+export { tilemapEditorPluginDefinition } from './TilemapEditorPluginDefinition';
 
 // Components
 export { TilemapEditorPanel } from './components/panels/TilemapEditorPanel';
