@@ -11,6 +11,28 @@ import type { SpriteRenderData } from '../types';
 import type { ITransformComponent } from '../core/SpriteRenderHelper';
 
 /**
+ * Render data from a provider
+ * 提供者的渲染数据
+ */
+export interface ProviderRenderData {
+    transforms: Float32Array;
+    textureIds: Uint32Array;
+    uvs: Float32Array;
+    colors: Uint32Array;
+    tileCount: number;
+    /** Texture path for loading (optional, used if textureId is 0) */
+    texturePath?: string;
+}
+
+/**
+ * Interface for additional render data providers (e.g., tilemap)
+ * 额外渲染数据提供者接口（如瓦片地图）
+ */
+export interface IRenderDataProvider {
+    getRenderData(): readonly ProviderRenderData[];
+}
+
+/**
  * Type for transform component constructor.
  * 变换组件构造函数类型。
  */
@@ -54,6 +76,10 @@ export class EngineRenderSystem extends EntitySystem {
     // Reusable map to avoid allocation per frame
     // 可重用的映射以避免每帧分配
     private entityRenderMap: Map<number, SpriteRenderData> = new Map();
+
+    // Additional render data providers (e.g., tilemap)
+    // 额外的渲染数据提供者（如瓦片地图）
+    private renderDataProviders: IRenderDataProvider[] = [];
 
     /**
      * Create a new engine render system.
@@ -164,6 +190,46 @@ export class EngineRenderSystem extends EntitySystem {
         }
 
         // Submit batch and render at the end of process | 在process结束时提交批处理并渲染
+        if (!this.batcher.isEmpty) {
+            const sprites = this.batcher.getSprites();
+            this.bridge.submitSprites(sprites);
+        }
+
+        // Render additional data from providers (e.g., tilemap)
+        // 渲染来自提供者的额外数据（如瓦片地图）
+        for (const provider of this.renderDataProviders) {
+            const renderDataList = provider.getRenderData();
+            for (const data of renderDataList) {
+                // Get texture ID - load from path if needed
+                let textureId = data.textureIds[0] || 0;
+                if (textureId === 0 && data.texturePath) {
+                    textureId = this.bridge.getOrLoadTextureByPath(data.texturePath);
+                }
+
+                // Convert tilemap render data to sprites
+                for (let i = 0; i < data.tileCount; i++) {
+                    const tOffset = i * 7;
+                    const uvOffset = i * 4;
+
+                    const renderData: SpriteRenderData = {
+                        x: data.transforms[tOffset],
+                        y: data.transforms[tOffset + 1],
+                        rotation: data.transforms[tOffset + 2],
+                        scaleX: data.transforms[tOffset + 3],
+                        scaleY: data.transforms[tOffset + 4],
+                        originX: data.transforms[tOffset + 5],
+                        originY: data.transforms[tOffset + 6],
+                        textureId,
+                        uv: [data.uvs[uvOffset], data.uvs[uvOffset + 1], data.uvs[uvOffset + 2], data.uvs[uvOffset + 3]],
+                        color: data.colors[i]
+                    };
+
+                    this.batcher.addSprite(renderData);
+                }
+            }
+        }
+
+        // Submit tilemap sprites
         if (!this.batcher.isEmpty) {
             const sprites = this.batcher.getSprites();
             this.bridge.submitSprites(sprites);
@@ -330,6 +396,27 @@ export class EngineRenderSystem extends EntitySystem {
         return ((a & 0xFF) << 24) | ((b & 0xFF) << 16) | ((g & 0xFF) << 8) | (r & 0xFF);
     }
 
+
+    /**
+     * Register a render data provider.
+     * 注册渲染数据提供者。
+     */
+    addRenderDataProvider(provider: IRenderDataProvider): void {
+        if (!this.renderDataProviders.includes(provider)) {
+            this.renderDataProviders.push(provider);
+        }
+    }
+
+    /**
+     * Remove a render data provider.
+     * 移除渲染数据提供者。
+     */
+    removeRenderDataProvider(provider: IRenderDataProvider): void {
+        const index = this.renderDataProviders.indexOf(provider);
+        if (index >= 0) {
+            this.renderDataProviders.splice(index, 1);
+        }
+    }
 
     /**
      * Get the number of sprites rendered.

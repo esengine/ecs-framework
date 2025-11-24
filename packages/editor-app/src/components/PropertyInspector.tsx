@@ -80,6 +80,12 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
         if (onChange) {
             onChange(propertyName, value);
         }
+
+        // Always publish scene:modified so other panels can react to changes
+        const messageHub = Core.services.resolve(MessageHub);
+        if (messageHub) {
+            messageHub.publish('scene:modified', {});
+        }
     };
 
     // Read value directly from component to avoid state sync issues

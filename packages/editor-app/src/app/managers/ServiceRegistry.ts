@@ -12,10 +12,12 @@ import {
     SettingsRegistry,
     SceneManagerService,
     FileActionRegistry,
+    EntityCreationRegistry,
     EditorPluginManager,
     InspectorRegistry,
     PropertyRendererRegistry,
-    FieldEditorRegistry
+    FieldEditorRegistry,
+    ComponentActionRegistry
 } from '@esengine/editor-core';
 import {
     TransformComponent,
@@ -128,6 +130,8 @@ export class ServiceRegistry {
         const settingsRegistry = new SettingsRegistry();
         const sceneManager = new SceneManagerService(messageHub, fileAPI, projectService, entityStore);
         const fileActionRegistry = new FileActionRegistry();
+        const entityCreationRegistry = new EntityCreationRegistry();
+        const componentActionRegistry = new ComponentActionRegistry();
 
         Core.services.registerInstance(UIRegistry, uiRegistry);
         Core.services.registerInstance(MessageHub, messageHub);
@@ -141,6 +145,8 @@ export class ServiceRegistry {
         Core.services.registerInstance(SettingsRegistry, settingsRegistry);
         Core.services.registerInstance(SceneManagerService, sceneManager);
         Core.services.registerInstance(FileActionRegistry, fileActionRegistry);
+        Core.services.registerInstance(EntityCreationRegistry, entityCreationRegistry);
+        Core.services.registerInstance(ComponentActionRegistry, componentActionRegistry);
 
         const pluginManager = new EditorPluginManager();
         pluginManager.initialize(coreInstance, Core.services);

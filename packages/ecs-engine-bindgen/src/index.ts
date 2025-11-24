@@ -8,6 +8,6 @@
 export { EngineBridge, EngineBridgeConfig } from './core/EngineBridge';
 export { RenderBatcher } from './core/RenderBatcher';
 export { SpriteRenderHelper, ITransformComponent } from './core/SpriteRenderHelper';
-export { EngineRenderSystem, type TransformComponentType } from './systems/EngineRenderSystem';
+export { EngineRenderSystem, type TransformComponentType, type IRenderDataProvider } from './systems/EngineRenderSystem';
 export { CameraSystem } from './systems/CameraSystem';
 export * from './types';

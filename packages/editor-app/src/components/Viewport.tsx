@@ -43,7 +43,7 @@ function generateRuntimeHtml(): string {
     <canvas id="runtime-canvas"></canvas>
     <script src="/runtime.browser.js"></script>
     <script type="module">
-        import * as esEngine from '/engine.js';
+        import * as esEngine from '/es_engine.js';
         (async function() {
             try {
                 // Set canvas size before creating runtime

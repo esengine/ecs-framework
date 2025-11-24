@@ -6,9 +6,10 @@
 import { EngineBridge, EngineRenderSystem, CameraConfig } from '@esengine/ecs-engine-bindgen';
 import { Core, Scene, Entity, SceneSerializer } from '@esengine/ecs-framework';
 import { TransformComponent, SpriteComponent, SpriteAnimatorSystem, SpriteAnimatorComponent } from '@esengine/ecs-components';
+import { TilemapComponent, TilemapRenderingSystem } from '@esengine/tilemap';
 import { EntityStoreService, MessageHub } from '@esengine/editor-core';
 import * as esEngine from '@esengine/engine';
-import { AssetManager, EngineIntegration, AssetPathResolver, AssetPlatform } from '@esengine/asset-system';
+import { AssetManager, EngineIntegration, AssetPathResolver, AssetPlatform, globalPathResolver } from '@esengine/asset-system';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { IdGenerator } from '../utils/idGenerator';
 
@@ -23,6 +24,7 @@ export class EngineService {
     private scene: Scene | null = null;
     private renderSystem: EngineRenderSystem | null = null;
     private animatorSystem: SpriteAnimatorSystem | null = null;
+    private tilemapSystem: TilemapRenderingSystem | null = null;
     private initialized = false;
     private running = false;
     private animationFrameId: number | null = null;
@@ -97,9 +99,18 @@ export class EngineService {
             this.animatorSystem.enabled = false;
             this.scene!.addSystem(this.animatorSystem);
 
+            // Add tilemap rendering system
+            // 添加瓦片地图渲染系统
+            this.tilemapSystem = new TilemapRenderingSystem();
+            this.scene!.addSystem(this.tilemapSystem);
+
             // Add render system to the scene | 将渲染系统添加到场景
             this.renderSystem = new EngineRenderSystem(this.bridge, TransformComponent);
             this.scene!.addSystem(this.renderSystem);
+
+            // Register tilemap system as render data provider
+            // 将瓦片地图系统注册为渲染数据提供者
+            this.renderSystem.addRenderDataProvider(this.tilemapSystem);
 
             // Initialize asset system | 初始化资产系统
             await this.initializeAssetSystem();
@@ -349,16 +360,25 @@ export class EngineService {
             this.assetManager = new AssetManager();
 
             // 创建路径解析器 / Create path resolver
+            const pathTransformerFn = (path: string) => {
+                // 编辑器平台使用Tauri的convertFileSrc
+                // Use Tauri's convertFileSrc for editor platform
+                if (!path.startsWith('http://') && !path.startsWith('https://') && !path.startsWith('data:') && !path.startsWith('asset://')) {
+                    return convertFileSrc(path);
+                }
+                return path;
+            };
+
             this.assetPathResolver = new AssetPathResolver({
                 platform: AssetPlatform.Editor,
-                pathTransformer: (path: string) => {
-                    // 编辑器平台使用Tauri的convertFileSrc
-                    // Use Tauri's convertFileSrc for editor platform
-                    if (!path.startsWith('http://') && !path.startsWith('https://') && !path.startsWith('data:')) {
-                        return convertFileSrc(path);
-                    }
-                    return path;
-                }
+                pathTransformer: pathTransformerFn
+            });
+
+            // 配置全局路径解析器，供组件使用
+            // Configure global path resolver for components to use
+            globalPathResolver.updateConfig({
+                platform: AssetPlatform.Editor,
+                pathTransformer: pathTransformerFn
             });
 
             // 创建引擎集成 / Create engine integration
@@ -632,11 +652,31 @@ export class EngineService {
         }
 
         try {
+            // Clear tilemap rendering cache before restoring
+            // 恢复前清除瓦片地图渲染缓存
+            if (this.tilemapSystem) {
+                console.log('[EngineService] Clearing tilemap cache before restore');
+                this.tilemapSystem.clearCache();
+            }
+
             // Use SceneSerializer from core library
+            console.log('[EngineService] Deserializing scene snapshot');
             SceneSerializer.deserialize(this.scene, this.sceneSnapshot, {
                 strategy: 'replace',
                 preserveIds: true
             });
+            console.log('[EngineService] Scene deserialized, entities:', this.scene.entities.buffer.length);
+
+            // Check tilemap components after restore
+            for (const entity of this.scene.entities.buffer) {
+                const tilemap = entity.components.find(c => c.constructor.name === 'TilemapComponent');
+                if (tilemap) {
+                    console.log('[EngineService] Found TilemapComponent on entity:', entity.id, entity.name);
+                    console.log('[EngineService] Tilemap _tilesetData:', (tilemap as any)._tilesetData);
+                    console.log('[EngineService] Tilemap tilesetImage:', (tilemap as any).tilesetImage);
+                    console.log('[EngineService] Tilemap tiles length:', (tilemap as any)._tiles?.length);
+                }
+            }
 
             // Sync EntityStore with restored scene entities
             const entityStore = Core.services.tryResolve(EntityStoreService);
@@ -663,6 +703,7 @@ export class EngineService {
                 }
 
                 // Notify UI to refresh
+                console.log('[EngineService] Publishing scene:restored event');
                 messageHub.publish('scene:restored', {});
             }
 

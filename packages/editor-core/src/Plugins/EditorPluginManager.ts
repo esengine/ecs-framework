@@ -8,6 +8,8 @@ import { UIRegistry } from '../Services/UIRegistry';
 import { MessageHub } from '../Services/MessageHub';
 import { SerializerRegistry } from '../Services/SerializerRegistry';
 import { FileActionRegistry } from '../Services/FileActionRegistry';
+import { EntityCreationRegistry } from '../Services/EntityCreationRegistry';
+import { ComponentActionRegistry } from '../Services/ComponentActionRegistry';
 
 const logger = createLogger('EditorPluginManager');
 
@@ -24,6 +26,8 @@ export class EditorPluginManager extends PluginManager {
     private messageHub: MessageHub | null = null;
     private serializerRegistry: SerializerRegistry | null = null;
     private fileActionRegistry: FileActionRegistry | null = null;
+    private entityCreationRegistry: EntityCreationRegistry | null = null;
+    private componentActionRegistry: ComponentActionRegistry | null = null;
 
     /**
      * 初始化编辑器插件管理器
@@ -35,6 +39,8 @@ export class EditorPluginManager extends PluginManager {
         this.messageHub = services.resolve(MessageHub);
         this.serializerRegistry = services.resolve(SerializerRegistry);
         this.fileActionRegistry = services.resolve(FileActionRegistry);
+        this.entityCreationRegistry = services.resolve(EntityCreationRegistry);
+        this.componentActionRegistry = services.resolve(ComponentActionRegistry);
 
         logger.info('EditorPluginManager initialized');
     }
@@ -106,6 +112,18 @@ export class EditorPluginManager extends PluginManager {
                 logger.debug(`Registered ${templates.length} file creation templates for ${plugin.name}`);
             }
 
+            if (plugin.registerEntityCreationTemplates && this.entityCreationRegistry) {
+                const templates = plugin.registerEntityCreationTemplates();
+                this.entityCreationRegistry.registerMany(templates);
+                logger.debug(`Registered ${templates.length} entity creation templates for ${plugin.name}`);
+            }
+
+            if (plugin.registerComponentActions && this.componentActionRegistry) {
+                const actions = plugin.registerComponentActions();
+                this.componentActionRegistry.registerMany(actions);
+                logger.debug(`Registered ${actions.length} component actions for ${plugin.name}`);
+            }
+
             if (plugin.onEditorReady) {
                 await plugin.onEditorReady();
             }
@@ -167,6 +185,20 @@ export class EditorPluginManager extends PluginManager {
                 const templates = plugin.registerFileCreationTemplates();
                 for (const template of templates) {
                     this.fileActionRegistry.unregisterCreationTemplate(template);
+                }
+            }
+
+            if (plugin.registerEntityCreationTemplates && this.entityCreationRegistry) {
+                const templates = plugin.registerEntityCreationTemplates();
+                for (const template of templates) {
+                    this.entityCreationRegistry.unregister(template.id);
+                }
+            }
+
+            if (plugin.registerComponentActions && this.componentActionRegistry) {
+                const actions = plugin.registerComponentActions();
+                for (const action of actions) {
+                    this.componentActionRegistry.unregister(action.componentName, action.id);
                 }
             }
 
@@ -363,6 +395,8 @@ export class EditorPluginManager extends PluginManager {
         this.messageHub = null;
         this.serializerRegistry = null;
         this.fileActionRegistry = null;
+        this.entityCreationRegistry = null;
+        this.componentActionRegistry = null;
 
         logger.info('EditorPluginManager disposed');
     }

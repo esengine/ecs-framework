@@ -84,4 +84,31 @@ export abstract class Component implements IComponent {
      * 虽然保留此方法，但建议将复杂的清理逻辑放在 System 中处理。
      */
     public onRemovedFromEntity(): void {}
+
+    /**
+     * 组件反序列化后的回调
+     *
+     * 当组件从场景文件加载或快照恢复后调用，可以在此方法中恢复运行时数据。
+     *
+     * @remarks
+     * 这是一个生命周期钩子，用于恢复无法序列化的运行时数据。
+     * 例如：从图片路径重新加载图片尺寸信息，重建缓存等。
+     *
+     * @example
+     * ```typescript
+     * class TilemapComponent extends Component {
+     *     public tilesetImage: string = '';
+     *     private _tilesetData: TilesetData | undefined;
+     *
+     *     public async onDeserialized(): Promise<void> {
+     *         if (this.tilesetImage) {
+     *             // 重新加载 tileset 图片并恢复运行时数据
+     *             const img = await loadImage(this.tilesetImage);
+     *             this.setTilesetInfo(img.width, img.height, ...);
+     *         }
+     *     }
+     * }
+     * ```
+     */
+    public onDeserialized(): void | Promise<void> {}
 }

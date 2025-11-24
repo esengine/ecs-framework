@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Settings, ChevronDown, ChevronRight, X, Plus, Box } from 'lucide-react';
 import { Entity, Component, Core, getComponentDependencies, getComponentTypeName, getComponentInstanceTypeName } from '@esengine/ecs-framework';
-import { MessageHub, CommandManager, ComponentRegistry } from '@esengine/editor-core';
+import { MessageHub, CommandManager, ComponentRegistry, ComponentActionRegistry } from '@esengine/editor-core';
 import { PropertyInspector } from '../../PropertyInspector';
 import { NotificationService } from '../../../services/NotificationService';
 import { RemoveComponentCommand, UpdateComponentCommand, AddComponentCommand } from '../../../application/commands/component';
@@ -21,6 +21,7 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
     const [localVersion, setLocalVersion] = useState(0);
 
     const componentRegistry = Core.services.resolve(ComponentRegistry);
+    const componentActionRegistry = Core.services.resolve(ComponentActionRegistry);
     const availableComponents = componentRegistry?.getAllComponents() || [];
 
     const toggleComponentExpanded = (index: number) => {
@@ -252,6 +253,32 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                                                 }
                                                 onAction={handlePropertyAction}
                                             />
+                                            {/* Dynamic component actions from plugins */}
+                                            {componentActionRegistry?.getActionsForComponent(componentName).map((action) => (
+                                                <button
+                                                    key={action.id}
+                                                    className="component-action-btn"
+                                                    onClick={() => action.execute(component, entity)}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        padding: '8px 12px',
+                                                        width: '100%',
+                                                        marginTop: '8px',
+                                                        border: 'none',
+                                                        borderRadius: '4px',
+                                                        background: 'var(--accent-color, #0078d4)',
+                                                        color: 'white',
+                                                        cursor: 'pointer',
+                                                        fontSize: '12px',
+                                                        fontWeight: 500,
+                                                    }}
+                                                >
+                                                    {action.icon}
+                                                    {action.label}
+                                                </button>
+                                            ))}
                                         </div>
                                     )}
                                 </div>

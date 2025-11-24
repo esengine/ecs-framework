@@ -281,6 +281,40 @@ export class SceneSerializer {
         if (serializedScene.sceneData) {
             this.deserializeSceneData(serializedScene.sceneData, scene.sceneData);
         }
+
+        // 调用所有组件的 onDeserialized 生命周期方法
+        // Call onDeserialized lifecycle method on all components
+        const deserializedPromises: Promise<void>[] = [];
+        for (const entity of entities) {
+            this.callOnDeserializedRecursively(entity, deserializedPromises);
+        }
+
+        // 如果有异步的 onDeserialized，在后台执行
+        if (deserializedPromises.length > 0) {
+            Promise.all(deserializedPromises).catch(error => {
+                console.error('Error in onDeserialized:', error);
+            });
+        }
+    }
+
+    /**
+     * 递归调用实体及其子实体所有组件的 onDeserialized 方法
+     */
+    private static callOnDeserializedRecursively(entity: Entity, promises: Promise<void>[]): void {
+        for (const component of entity.components) {
+            try {
+                const result = component.onDeserialized();
+                if (result instanceof Promise) {
+                    promises.push(result);
+                }
+            } catch (error) {
+                console.error(`Error calling onDeserialized on component ${component.constructor.name}:`, error);
+            }
+        }
+
+        for (const child of entity.children) {
+            this.callOnDeserializedRecursively(child, promises);
+        }
     }
 
     /**

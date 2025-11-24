@@ -163,3 +163,35 @@ export enum UIExtensionType {
     Inspector = 'inspector',
     StatusBar = 'statusbar'
 }
+
+/**
+ * 实体创建模板
+ */
+export interface EntityCreationTemplate {
+    /**
+     * 模板唯一标识
+     */
+    id: string;
+
+    /**
+     * 显示名称
+     */
+    label: string;
+
+    /**
+     * 图标组件
+     */
+    icon?: any;
+
+    /**
+     * 排序权重（数字越小越靠前）
+     */
+    order?: number;
+
+    /**
+     * 创建实体的函数
+     * @param parentEntityId 父实体ID（可选）
+     * @returns 创建的实体ID
+     */
+    create: (parentEntityId?: number) => number | Promise<number>;
+}
