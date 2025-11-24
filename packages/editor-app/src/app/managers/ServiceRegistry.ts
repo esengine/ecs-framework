@@ -17,7 +17,9 @@ import {
     InspectorRegistry,
     PropertyRendererRegistry,
     FieldEditorRegistry,
-    ComponentActionRegistry
+    ComponentActionRegistry,
+    IDialogService,
+    IFileSystemService
 } from '@esengine/editor-core';
 import {
     TransformComponent,
@@ -161,6 +163,8 @@ export class ServiceRegistry {
         const dialog = new TauriDialogService();
         const notification = new NotificationService();
         Core.services.registerInstance(NotificationService, notification);
+        Core.services.registerInstance(IDialogService, dialog);
+        Core.services.registerInstance(IFileSystemService, fileSystem);
 
         const inspectorRegistry = new InspectorRegistry();
 

@@ -23,6 +23,25 @@ export class AssetFieldEditor implements IFieldEditor<string | null> {
             }
         };
 
+        const handleCreate = () => {
+            const messageHub = Core.services.tryResolve(MessageHub);
+            if (messageHub) {
+                if (fileExtension === '.tilemap.json') {
+                    messageHub.publish('tilemap:create-asset', {
+                        entityId: context.metadata?.entityId,
+                        onChange
+                    });
+                } else if (fileExtension === '.btree') {
+                    messageHub.publish('behavior-tree:create-asset', {
+                        entityId: context.metadata?.entityId,
+                        onChange
+                    });
+                }
+            }
+        };
+
+        const canCreate = ['.tilemap.json', '.btree'].includes(fileExtension);
+
         return (
             <AssetField
                 label={label}
@@ -32,6 +51,7 @@ export class AssetFieldEditor implements IFieldEditor<string | null> {
                 placeholder={placeholder}
                 readonly={context.readonly}
                 onNavigate={handleNavigate}
+                onCreate={canCreate ? handleCreate : undefined}
             />
         );
     }

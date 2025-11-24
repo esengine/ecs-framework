@@ -776,6 +776,9 @@ importers:
       '@esengine/ecs-components':
         specifier: workspace:*
         version: link:../components
+      '@esengine/ecs-engine-bindgen':
+        specifier: workspace:*
+        version: link:../ecs-engine-bindgen
       '@esengine/ecs-framework':
         specifier: ^2.2.8
         version: link:../core
@@ -792,6 +795,9 @@ importers:
 
   packages/tilemap-editor:
     dependencies:
+      '@esengine/ecs-components':
+        specifier: workspace:*
+        version: link:../components
       '@esengine/ecs-framework':
         specifier: ^2.2.8
         version: link:../core

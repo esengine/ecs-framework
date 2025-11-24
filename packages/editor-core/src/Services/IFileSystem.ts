@@ -1,4 +1,5 @@
 export interface IFileSystem {
+    dispose(): void;
     readFile(path: string): Promise<string>;
     writeFile(path: string, content: string): Promise<void>;
     writeBinary(path: string, data: Uint8Array): Promise<void>;
@@ -17,3 +18,6 @@ export interface FileEntry {
     size?: number;
     modified?: Date;
 }
+
+// Service identifier for DI registration
+export const IFileSystemService = Symbol('IFileSystemService');

@@ -10,7 +10,6 @@ import { TilemapComponent } from '@esengine/tilemap';
 import { TransformComponent } from '@esengine/ecs-components';
 import { useTilemapEditorStore } from './stores/TilemapEditorStore';
 import { TilemapEditorPanel } from './components/panels/TilemapEditorPanel';
-import { TilesetPanel } from './components/panels/TilesetPanel';
 
 export const tilemapEditorPluginDefinition: EditorPluginDefinition = {
     id: '@esengine/tilemap-editor',
@@ -29,12 +28,11 @@ export const tilemapEditorPluginDefinition: EditorPluginDefinition = {
                     id: 'tilemap-edit',
                     label: '编辑 Tilemap',
                     icon: 'edit-3',
-                    execute: (_componentData, entityId) => {
+                    execute: (_componentData: unknown, entityId: number) => {
                         const messageHub = Core.services.resolve(MessageHub);
                         if (messageHub) {
                             useTilemapEditorStore.getState().setEntityId(String(entityId));
                             messageHub.publish('dynamic-panel:open', { panelId: 'tilemap-editor', title: 'Tilemap Editor' });
-                            messageHub.publish('dynamic-panel:open', { panelId: 'tileset-panel', title: 'Tileset' });
                         }
                     }
                 }
@@ -50,14 +48,6 @@ export const tilemapEditorPluginDefinition: EditorPluginDefinition = {
             defaultPosition: 'bottom',
             defaultVisible: false,
             icon: 'grid-3x3'
-        },
-        {
-            id: 'tileset-panel',
-            component: TilesetPanel,
-            title: 'Tileset',
-            defaultPosition: 'right',
-            defaultVisible: false,
-            icon: 'layers'
         }
     ],
 

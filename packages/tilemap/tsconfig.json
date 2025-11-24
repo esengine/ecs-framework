@@ -49,6 +49,9 @@
     },
     {
       "path": "../components"
+    },
+    {
+      "path": "../ecs-engine-bindgen"
     }
   ]
 }

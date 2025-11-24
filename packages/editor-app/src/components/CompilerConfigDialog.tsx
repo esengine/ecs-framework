@@ -98,7 +98,8 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
             return entries
                 .filter((e) => !e.is_dir && e.name.endsWith(ext))
                 .map((e) => e.name.replace(ext, ''));
-        }
+        },
+        dispose: () => {}
     });
 
     const createDialog = (): IDialog => ({
@@ -124,7 +125,8 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
         },
         showConfirm: async (title: string, message: string) => {
             return await tauriConfirm(message, { title });
-        }
+        },
+        dispose: () => {}
     });
 
     const createContext = (): CompilerContext => ({

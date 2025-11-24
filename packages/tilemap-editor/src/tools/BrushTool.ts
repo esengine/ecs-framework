@@ -15,6 +15,7 @@ export class BrushTool implements ITilemapTool {
     private _lastTileY = -1;
 
     onMouseDown(tileX: number, tileY: number, ctx: ToolContext): void {
+        if (ctx.layerLocked && !ctx.editingCollision) return;
         this._isDrawing = true;
         this._lastTileX = tileX;
         this._lastTileY = tileY;
@@ -22,7 +23,7 @@ export class BrushTool implements ITilemapTool {
     }
 
     onMouseMove(tileX: number, tileY: number, ctx: ToolContext): void {
-        if (!this._isDrawing) return;
+        if (!this._isDrawing || (ctx.layerLocked && !ctx.editingCollision)) return;
         if (tileX === this._lastTileX && tileY === this._lastTileY) return;
 
         // Line drawing between last and current position
@@ -62,7 +63,7 @@ export class BrushTool implements ITilemapTool {
     }
 
     private paint(tileX: number, tileY: number, ctx: ToolContext): void {
-        const { tilemap, selectedTiles, brushSize, editingCollision } = ctx;
+        const { tilemap, selectedTiles, brushSize, editingCollision, currentLayer } = ctx;
 
         if (editingCollision) {
             // Paint collision
@@ -84,7 +85,7 @@ export class BrushTool implements ITilemapTool {
                     const y = tileY + dy;
                     if (x >= 0 && x < tilemap.width && y >= 0 && y < tilemap.height) {
                         const tileIndex = selectedTiles.tiles[dy * selectedTiles.width + dx] ?? 0;
-                        tilemap.setTile(x, y, tileIndex);
+                        tilemap.setTile(currentLayer, x, y, tileIndex);
                     }
                 }
             }
@@ -96,7 +97,7 @@ export class BrushTool implements ITilemapTool {
                     const x = tileX + dx;
                     const y = tileY + dy;
                     if (x >= 0 && x < tilemap.width && y >= 0 && y < tilemap.height) {
-                        tilemap.setTile(x, y, 1);
+                        tilemap.setTile(currentLayer, x, y, 1);
                     }
                 }
             }

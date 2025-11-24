@@ -14,8 +14,12 @@ export interface SaveDialogOptions extends DialogOptions {
 }
 
 export interface IDialog {
+    dispose(): void;
     openDialog(options: OpenDialogOptions): Promise<string | string[] | null>;
     saveDialog(options: SaveDialogOptions): Promise<string | null>;
     showMessage(title: string, message: string, type?: 'info' | 'warning' | 'error'): Promise<void>;
     showConfirm(title: string, message: string): Promise<boolean>;
 }
+
+// Service identifier for DI registration
+export const IDialogService = Symbol('IDialogService');

@@ -113,6 +113,16 @@
     color: #f87171;
 }
 
+/* 创建按钮特殊样式 */
+.asset-field__button--create {
+    color: #4ade80;
+}
+
+.asset-field__button--create:hover {
+    background: #1a3a1a;
+    color: #4ade80;
+}
+
 /* 禁用状态 */
 .asset-field__container[disabled] {
     opacity: 0.6;

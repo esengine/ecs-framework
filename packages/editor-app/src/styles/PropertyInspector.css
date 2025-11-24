@@ -517,6 +517,17 @@
   color: var(--color-accent);
 }
 
+.property-asset-btn-create {
+  color: #4ade80;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.property-asset-btn-create:hover {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+}
+
 .property-label-row {
   flex: 0 0 40%;
   display: flex;

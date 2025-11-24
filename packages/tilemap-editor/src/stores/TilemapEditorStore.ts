@@ -14,6 +14,14 @@ export interface TileSelection {
     tiles: number[];
 }
 
+export interface LayerState {
+    id: string;
+    name: string;
+    visible: boolean;
+    locked: boolean;
+    opacity: number;
+}
+
 export interface TilemapEditorState {
     // Current editing target
     entityId: string | null;
@@ -41,6 +49,7 @@ export interface TilemapEditorState {
 
     // Layers
     currentLayer: number;
+    layers: LayerState[];
     editingCollision: boolean;
 
     // History
@@ -63,6 +72,13 @@ export interface TilemapEditorState {
     undo: () => Uint32Array | null;
     redo: () => Uint32Array | null;
     reset: () => void;
+
+    // Layer management
+    setLayers: (layers: LayerState[]) => void;
+    toggleLayerVisibility: (index: number) => void;
+    toggleLayerLocked: (index: number) => void;
+    setLayerOpacity: (index: number, opacity: number) => void;
+    renameLayer: (index: number, name: string) => void;
 }
 
 const initialState = {
@@ -81,6 +97,7 @@ const initialState = {
     showGrid: true,
     showCollision: false,
     currentLayer: 0,
+    layers: [] as LayerState[],
     editingCollision: false,
     undoStack: [] as Uint32Array[],
     redoStack: [] as Uint32Array[],
@@ -151,4 +168,43 @@ export const useTilemapEditorStore = create<TilemapEditorState>((set, get) => ({
     },
 
     reset: () => set(initialState),
+
+    // Layer management
+    setLayers: (layers) => set({ layers }),
+
+    toggleLayerVisibility: (index) => {
+        const { layers } = get();
+        const layer = layers[index];
+        if (!layer) return;
+        const newLayers = [...layers];
+        newLayers[index] = { ...layer, visible: !layer.visible };
+        set({ layers: newLayers });
+    },
+
+    toggleLayerLocked: (index) => {
+        const { layers } = get();
+        const layer = layers[index];
+        if (!layer) return;
+        const newLayers = [...layers];
+        newLayers[index] = { ...layer, locked: !layer.locked };
+        set({ layers: newLayers });
+    },
+
+    setLayerOpacity: (index, opacity) => {
+        const { layers } = get();
+        const layer = layers[index];
+        if (!layer) return;
+        const newLayers = [...layers];
+        newLayers[index] = { ...layer, opacity: Math.max(0, Math.min(1, opacity)) };
+        set({ layers: newLayers });
+    },
+
+    renameLayer: (index, name) => {
+        const { layers } = get();
+        const layer = layers[index];
+        if (!layer) return;
+        const newLayers = [...layers];
+        newLayers[index] = { ...layer, name };
+        set({ layers: newLayers });
+    },
 }));

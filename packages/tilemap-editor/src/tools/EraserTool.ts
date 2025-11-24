@@ -15,6 +15,7 @@ export class EraserTool implements ITilemapTool {
     private _lastTileY = -1;
 
     onMouseDown(tileX: number, tileY: number, ctx: ToolContext): void {
+        if (ctx.layerLocked && !ctx.editingCollision) return;
         this._isErasing = true;
         this._lastTileX = tileX;
         this._lastTileY = tileY;
@@ -22,7 +23,7 @@ export class EraserTool implements ITilemapTool {
     }
 
     onMouseMove(tileX: number, tileY: number, ctx: ToolContext): void {
-        if (!this._isErasing) return;
+        if (!this._isErasing || (ctx.layerLocked && !ctx.editingCollision)) return;
         if (tileX === this._lastTileX && tileY === this._lastTileY) return;
 
         this.drawLine(this._lastTileX, this._lastTileY, tileX, tileY, ctx);
@@ -50,7 +51,7 @@ export class EraserTool implements ITilemapTool {
     }
 
     private erase(tileX: number, tileY: number, ctx: ToolContext): void {
-        const { tilemap, brushSize, editingCollision } = ctx;
+        const { tilemap, brushSize, editingCollision, currentLayer } = ctx;
         const halfSize = Math.floor(brushSize / 2);
 
         for (let dy = -halfSize; dy <= halfSize; dy++) {
@@ -61,7 +62,7 @@ export class EraserTool implements ITilemapTool {
                     if (editingCollision) {
                         tilemap.setCollision(x, y, 0);
                     } else {
-                        tilemap.setTile(x, y, 0);
+                        tilemap.setTile(currentLayer, x, y, 0);
                     }
                 }
             }

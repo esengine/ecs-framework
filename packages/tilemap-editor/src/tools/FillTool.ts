@@ -11,6 +11,7 @@ export class FillTool implements ITilemapTool {
     readonly cursor = 'crosshair';
 
     onMouseDown(tileX: number, tileY: number, ctx: ToolContext): void {
+        if (ctx.layerLocked && !ctx.editingCollision) return;
         this.floodFill(tileX, tileY, ctx);
     }
 
@@ -23,7 +24,7 @@ export class FillTool implements ITilemapTool {
     }
 
     private floodFill(startX: number, startY: number, ctx: ToolContext): void {
-        const { tilemap, selectedTiles, editingCollision } = ctx;
+        const { tilemap, selectedTiles, editingCollision, currentLayer } = ctx;
 
         if (startX < 0 || startX >= tilemap.width || startY < 0 || startY >= tilemap.height) {
             return;
@@ -52,7 +53,7 @@ export class FillTool implements ITilemapTool {
             }
         } else {
             // Flood fill tiles
-            const targetTile = tilemap.getTile(startX, startY);
+            const targetTile = tilemap.getTile(currentLayer, startX, startY);
             const newTile = selectedTiles ? (selectedTiles.tiles[0] ?? 1) : 1;
 
             if (targetTile === newTile) return;
@@ -66,10 +67,10 @@ export class FillTool implements ITilemapTool {
 
                 if (visited.has(key)) continue;
                 if (x < 0 || x >= tilemap.width || y < 0 || y >= tilemap.height) continue;
-                if (tilemap.getTile(x, y) !== targetTile) continue;
+                if (tilemap.getTile(currentLayer, x, y) !== targetTile) continue;
 
                 visited.add(key);
-                tilemap.setTile(x, y, newTile);
+                tilemap.setTile(currentLayer, x, y, newTile);
 
                 stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
             }

@@ -44,10 +44,14 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
         tileWidth,
         tileHeight,
         tilesetColumns,
+        layers,
         setPan,
         setZoom,
         pushUndo,
     } = useTilemapEditorStore();
+
+    // Get layer locked state
+    const layerLocked = layers[currentLayer]?.locked ?? false;
 
     const [isPanning, setIsPanning] = useState(false);
     const [lastPanPos, setLastPanPos] = useState({ x: 0, y: 0 });
@@ -83,7 +87,7 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
 
             for (let y = 0; y < tilemap.height; y++) {
                 for (let x = 0; x < tilemap.width; x++) {
-                    const tileIndex = tilemap.getTile(x, y);
+                    const tileIndex = tilemap.getTile(currentLayer, x, y);
                     if (tileIndex > 0) {
                         // Calculate source position in tileset
                         const srcX = ((tileIndex - 1) % tilesetColumns) * tileWidth;
@@ -141,6 +145,7 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
                 tilemap,
                 selectedTiles,
                 currentLayer,
+                layerLocked,
                 brushSize,
                 editingCollision,
                 tileWidth,
@@ -158,7 +163,7 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
         }
 
         ctx.restore();
-    }, [tilemap, tilesetImage, zoom, panX, panY, showGrid, showCollision, mousePos, currentTool, selectedTiles, brushSize, currentLayer, editingCollision, tileWidth, tileHeight, tilesetColumns, canvasWidth, canvasHeight]);
+    }, [tilemap, tilesetImage, zoom, panX, panY, showGrid, showCollision, mousePos, currentTool, selectedTiles, brushSize, currentLayer, layerLocked, editingCollision, tileWidth, tileHeight, tilesetColumns, canvasWidth, canvasHeight]);
 
     // Update canvas size
     useEffect(() => {
@@ -206,7 +211,10 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
         }
 
         // Save undo state
-        pushUndo(tilemap.tileData.slice());
+        const layerData = tilemap.getLayerData(currentLayer);
+        if (layerData) {
+            pushUndo(layerData.slice());
+        }
 
         const { tileX, tileY } = screenToTile(x, y);
         const tool = tools[currentTool];
@@ -215,6 +223,7 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
                 tilemap,
                 selectedTiles,
                 currentLayer,
+                layerLocked,
                 brushSize,
                 editingCollision,
                 tileWidth,
@@ -253,6 +262,7 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
                     tilemap,
                     selectedTiles,
                     currentLayer,
+                    layerLocked,
                     brushSize,
                     editingCollision,
                     tileWidth,
@@ -285,6 +295,7 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
                 tilemap,
                 selectedTiles,
                 currentLayer,
+                layerLocked,
                 brushSize,
                 editingCollision,
                 tileWidth,

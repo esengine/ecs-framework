@@ -24,6 +24,13 @@ export interface IService {
 export type ServiceType<T extends IService> = new (...args: any[]) => T;
 
 /**
+ * 服务标识符
+ *
+ * 支持类构造函数或 Symbol 作为服务标识符
+ */
+export type ServiceIdentifier<T extends IService = IService> = ServiceType<T> | symbol;
+
+/**
  * 服务生命周期
  */
 export enum ServiceLifetime {
@@ -43,9 +50,14 @@ export enum ServiceLifetime {
  */
 interface ServiceRegistration<T extends IService> {
     /**
-     * 服务类型
+     * 服务标识符
      */
-    type: ServiceType<T>;
+    identifier: ServiceIdentifier<T>;
+
+    /**
+     * 服务类型（用于构造实例）
+     */
+    type?: ServiceType<T>;
 
     /**
      * 服务实例（单例模式）
@@ -96,12 +108,12 @@ export class ServiceContainer {
     /**
      * 服务注册表
      */
-    private _services: Map<ServiceType<IService>, ServiceRegistration<IService>> = new Map();
+    private _services: Map<ServiceIdentifier, ServiceRegistration<IService>> = new Map();
 
     /**
      * 正在解析的服务栈（用于循环依赖检测）
      */
-    private _resolving: Set<ServiceType<IService>> = new Set();
+    private _resolving: Set<ServiceIdentifier> = new Set();
 
     /**
      * 可更新的服务列表
@@ -132,12 +144,13 @@ export class ServiceContainer {
         type: ServiceType<T>,
         factory?: (container: ServiceContainer) => T
     ): void {
-        if (this._services.has(type as ServiceType<IService>)) {
+        if (this._services.has(type as ServiceIdentifier)) {
             logger.warn(`Service ${type.name} is already registered`);
             return;
         }
 
-        this._services.set(type as ServiceType<IService>, {
+        this._services.set(type as ServiceIdentifier, {
+            identifier: type as ServiceIdentifier,
             type: type as ServiceType<IService>,
             ...(factory && { factory: factory as (container: ServiceContainer) => IService }),
             lifetime: ServiceLifetime.Singleton
@@ -164,12 +177,13 @@ export class ServiceContainer {
         type: ServiceType<T>,
         factory?: (container: ServiceContainer) => T
     ): void {
-        if (this._services.has(type as ServiceType<IService>)) {
+        if (this._services.has(type as ServiceIdentifier)) {
             logger.warn(`Service ${type.name} is already registered`);
             return;
         }
 
-        this._services.set(type as ServiceType<IService>, {
+        this._services.set(type as ServiceIdentifier, {
+            identifier: type as ServiceIdentifier,
             type: type as ServiceType<IService>,
             ...(factory && { factory: factory as (container: ServiceContainer) => IService }),
             lifetime: ServiceLifetime.Transient
@@ -183,65 +197,77 @@ export class ServiceContainer {
      *
      * 直接注册已创建的实例，自动视为单例。
      *
-     * @param type - 服务类型（构造函数，仅用作标识）
+     * @param identifier - 服务标识符（构造函数或 Symbol）
      * @param instance - 服务实例
      *
      * @example
      * ```typescript
      * const config = new Config();
      * container.registerInstance(Config, config);
+     *
+     * // 使用 Symbol 作为标识符（适用于接口）
+     * const IFileSystem = Symbol('IFileSystem');
+     * container.registerInstance(IFileSystem, new TauriFileSystem());
      * ```
      */
-    public registerInstance<T extends IService>(type: ServiceType<T>, instance: T): void {
-        if (this._services.has(type as ServiceType<IService>)) {
-            logger.warn(`Service ${type.name} is already registered`);
+    public registerInstance<T extends IService>(identifier: ServiceIdentifier<T>, instance: T): void {
+        if (this._services.has(identifier)) {
+            const name = typeof identifier === 'symbol' ? identifier.description : identifier.name;
+            logger.warn(`Service ${name} is already registered`);
             return;
         }
 
-        this._services.set(type as ServiceType<IService>, {
-            type: type as ServiceType<IService>,
+        this._services.set(identifier, {
+            identifier,
             instance: instance as IService,
             lifetime: ServiceLifetime.Singleton
         });
 
         // 如果使用了@Updatable装饰器，添加到可更新列表
-        if (checkUpdatable(type)) {
-            const metadata = getUpdatableMetadata(type);
+        if (typeof identifier !== 'symbol' && checkUpdatable(identifier)) {
+            const metadata = getUpdatableMetadata(identifier);
             const priority = metadata?.priority ?? 0;
             this._updatableServices.push({ instance, priority });
 
             // 按优先级排序（数值越小越先执行）
             this._updatableServices.sort((a, b) => a.priority - b.priority);
 
-            logger.debug(`Service ${type.name} is updatable (priority: ${priority}), added to update list`);
+            logger.debug(`Service ${identifier.name} is updatable (priority: ${priority}), added to update list`);
         }
 
-        logger.debug(`Registered service instance: ${type.name}`);
+        const name = typeof identifier === 'symbol' ? identifier.description : identifier.name;
+        logger.debug(`Registered service instance: ${name}`);
     }
 
     /**
      * 解析服务
      *
-     * @param type - 服务类型
+     * @param identifier - 服务标识符（构造函数或 Symbol）
      * @returns 服务实例
      * @throws 如果服务未注册或存在循环依赖
      *
      * @example
      * ```typescript
      * const timer = container.resolve(TimerManager);
+     *
+     * // 使用 Symbol
+     * const fileSystem = container.resolve(IFileSystem);
      * ```
      */
-    public resolve<T extends IService>(type: ServiceType<T>): T {
-        const registration = this._services.get(type as ServiceType<IService>);
+    public resolve<T extends IService>(identifier: ServiceIdentifier<T>): T {
+        const registration = this._services.get(identifier);
+        const name = typeof identifier === 'symbol' ? identifier.description : identifier.name;
 
         if (!registration) {
-            throw new Error(`Service ${type.name} is not registered`);
+            throw new Error(`Service ${name} is not registered`);
         }
 
         // 检测循环依赖
-        if (this._resolving.has(type as ServiceType<IService>)) {
-            const chain = Array.from(this._resolving).map((t) => t.name).join(' -> ');
-            throw new Error(`Circular dependency detected: ${chain} -> ${type.name}`);
+        if (this._resolving.has(identifier)) {
+            const chain = Array.from(this._resolving).map((t) =>
+                typeof t === 'symbol' ? t.description : t.name
+            ).join(' -> ');
+            throw new Error(`Circular dependency detected: ${chain} -> ${name}`);
         }
 
         // 如果是单例且已经有实例，直接返回
@@ -250,7 +276,7 @@ export class ServiceContainer {
         }
 
         // 添加到解析栈
-        this._resolving.add(type as ServiceType<IService>);
+        this._resolving.add(identifier);
 
         try {
             // 创建实例
@@ -259,9 +285,11 @@ export class ServiceContainer {
             if (registration.factory) {
                 // 使用工厂函数
                 instance = registration.factory(this);
-            } else {
+            } else if (registration.type) {
                 // 直接构造
                 instance = new (registration.type)();
+            } else {
+                throw new Error(`Service ${name} has no factory or type to construct`);
             }
 
             // 如果是单例，缓存实例
@@ -269,7 +297,7 @@ export class ServiceContainer {
                 registration.instance = instance;
 
                 // 如果使用了@Updatable装饰器，添加到可更新列表
-                if (checkUpdatable(registration.type)) {
+                if (registration.type && checkUpdatable(registration.type)) {
                     const metadata = getUpdatableMetadata(registration.type);
                     const priority = metadata?.priority ?? 0;
                     this._updatableServices.push({ instance, priority });
@@ -277,14 +305,14 @@ export class ServiceContainer {
                     // 按优先级排序（数值越小越先执行）
                     this._updatableServices.sort((a, b) => a.priority - b.priority);
 
-                    logger.debug(`Service ${type.name} is updatable (priority: ${priority}), added to update list`);
+                    logger.debug(`Service ${name} is updatable (priority: ${priority}), added to update list`);
                 }
             }
 
             return instance as T;
         } finally {
             // 从解析栈移除
-            this._resolving.delete(type as ServiceType<IService>);
+            this._resolving.delete(identifier);
         }
     }
 
@@ -293,7 +321,7 @@ export class ServiceContainer {
      *
      * 如果服务未注册，返回null而不是抛出异常。
      *
-     * @param type - 服务类型
+     * @param identifier - 服务标识符（构造函数或 Symbol）
      * @returns 服务实例或null
      *
      * @example
@@ -304,9 +332,9 @@ export class ServiceContainer {
      * }
      * ```
      */
-    public tryResolve<T extends IService>(type: ServiceType<T>): T | null {
+    public tryResolve<T extends IService>(identifier: ServiceIdentifier<T>): T | null {
         try {
-            return this.resolve(type);
+            return this.resolve(identifier);
         } catch {
             return null;
         }
@@ -315,21 +343,21 @@ export class ServiceContainer {
     /**
      * 检查服务是否已注册
      *
-     * @param type - 服务类型
+     * @param identifier - 服务标识符（构造函数或 Symbol）
      * @returns 是否已注册
      */
-    public isRegistered<T extends IService>(type: ServiceType<T>): boolean {
-        return this._services.has(type as ServiceType<IService>);
+    public isRegistered<T extends IService>(identifier: ServiceIdentifier<T>): boolean {
+        return this._services.has(identifier);
     }
 
     /**
      * 注销服务
      *
-     * @param type - 服务类型
+     * @param identifier - 服务标识符（构造函数或 Symbol）
      * @returns 是否成功注销
      */
-    public unregister<T extends IService>(type: ServiceType<T>): boolean {
-        const registration = this._services.get(type as ServiceType<IService>);
+    public unregister<T extends IService>(identifier: ServiceIdentifier<T>): boolean {
+        const registration = this._services.get(identifier);
         if (!registration) {
             return false;
         }
@@ -345,8 +373,9 @@ export class ServiceContainer {
             registration.instance.dispose();
         }
 
-        this._services.delete(type as ServiceType<IService>);
-        logger.debug(`Unregistered service: ${type.name}`);
+        this._services.delete(identifier);
+        const name = typeof identifier === 'symbol' ? identifier.description : identifier.name;
+        logger.debug(`Unregistered service: ${name}`);
         return true;
     }
 
@@ -367,11 +396,11 @@ export class ServiceContainer {
     }
 
     /**
-     * 获取所有已注册的服务类型
+     * 获取所有已注册的服务标识符
      *
-     * @returns 服务类型数组
+     * @returns 服务标识符数组
      */
-    public getRegisteredServices(): ServiceType<IService>[] {
+    public getRegisteredServices(): ServiceIdentifier[] {
         return Array.from(this._services.keys());
     }
 

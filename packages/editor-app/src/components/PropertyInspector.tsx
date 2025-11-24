@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Component, Core } from '@esengine/ecs-framework';
-import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub } from '@esengine/editor-core';
+import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub, IFileSystemService } from '@esengine/editor-core';
+import type { IFileSystem } from '@esengine/editor-core';
 import { ChevronRight, ChevronDown, ArrowRight, Lock } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { AnimationClipsFieldEditor } from '../infrastructure/field-editors/AnimationClipsFieldEditor';
+import { AssetSaveDialog } from './dialogs/AssetSaveDialog';
 import '../styles/PropertyInspector.css';
 
 const animationClipsEditor = new AnimationClipsFieldEditor();
@@ -193,6 +195,7 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                         fileExtension={metadata.fileExtension}
                         readOnly={metadata.readOnly || !!controlledBy}
                         controlledBy={controlledBy}
+                        entityId={entity?.id?.toString()}
                         onChange={(newValue) => handleChange(propertyName, newValue)}
                     />
                 );
@@ -863,11 +866,90 @@ interface AssetDropFieldProps {
   fileExtension?: string;
   readOnly?: boolean;
   controlledBy?: string;
+  entityId?: string;
   onChange: (value: string) => void;
 }
 
-function AssetDropField({ label, value, fileExtension, readOnly, controlledBy, onChange }: AssetDropFieldProps) {
+function AssetDropField({ label, value, fileExtension, readOnly, controlledBy, entityId, onChange }: AssetDropFieldProps) {
     const [isDragging, setIsDragging] = useState(false);
+    const [showSaveDialog, setShowSaveDialog] = useState(false);
+
+    const canCreate = fileExtension && ['.tilemap.json', '.btree'].includes(fileExtension);
+
+    const handleCreate = () => {
+        setShowSaveDialog(true);
+    };
+
+    const handleSaveAsset = async (relativePath: string) => {
+        const fileSystem = Core.services.tryResolve<IFileSystem>(IFileSystemService);
+        const messageHub = Core.services.tryResolve(MessageHub);
+
+        if (!fileSystem) {
+            console.error('[AssetDropField] FileSystem service not available');
+            return;
+        }
+
+        try {
+            // Get absolute path from project
+            const projectService = Core.services.tryResolve(
+                (await import('@esengine/editor-core')).ProjectService
+            );
+            const currentProject = projectService?.getCurrentProject();
+            if (!currentProject) {
+                console.error('[AssetDropField] No project loaded');
+                return;
+            }
+
+            const absolutePath = `${currentProject.path}/${relativePath}`.replace(/\\/g, '/');
+
+            // Create default content based on file type
+            let defaultContent = '';
+            if (fileExtension === '.tilemap.json') {
+                defaultContent = JSON.stringify({
+                    name: 'New Tilemap',
+                    version: 2,
+                    width: 20,
+                    height: 15,
+                    tileWidth: 16,
+                    tileHeight: 16,
+                    layers: [
+                        {
+                            id: 'default',
+                            name: 'Layer 0',
+                            visible: true,
+                            opacity: 1,
+                            data: new Array(20 * 15).fill(0)
+                        }
+                    ],
+                    tilesets: []
+                }, null, 2);
+            } else if (fileExtension === '.btree') {
+                defaultContent = JSON.stringify({
+                    name: 'New Behavior Tree',
+                    version: 1,
+                    nodes: [],
+                    connections: []
+                }, null, 2);
+            }
+
+            // Write file
+            await fileSystem.writeFile(absolutePath, defaultContent);
+
+            // Update component with relative path
+            onChange(relativePath);
+
+            // Open editor panel if tilemap
+            if (messageHub && fileExtension === '.tilemap.json' && entityId) {
+                const { useTilemapEditorStore } = await import('@esengine/tilemap-editor');
+                useTilemapEditorStore.getState().setEntityId(entityId);
+                messageHub.publish('dynamic-panel:open', { panelId: 'tilemap-editor', title: 'Tilemap Editor' });
+            }
+
+            console.log('[AssetDropField] Created asset:', relativePath);
+        } catch (error) {
+            console.error('[AssetDropField] Failed to create asset:', error);
+        }
+    };
 
     const handleDragEnter = (e: React.DragEvent) => {
         e.preventDefault();
@@ -922,7 +1004,10 @@ function AssetDropField({ label, value, fileExtension, readOnly, controlledBy, o
         if (value) {
             const messageHub = Core.services.tryResolve(MessageHub);
             if (messageHub) {
+                console.log('[AssetDropField] Navigate to:', value);
                 messageHub.publish('asset:reveal', { path: value });
+            } else {
+                console.error('[AssetDropField] MessageHub not available');
             }
         }
     };
@@ -949,6 +1034,18 @@ function AssetDropField({ label, value, fileExtension, readOnly, controlledBy, o
                     {value ? getFileName(value) : 'None'}
                 </span>
                 <div className="property-asset-actions">
+                    {canCreate && !readOnly && !value && (
+                        <button
+                            className="property-asset-btn property-asset-btn-create"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleCreate();
+                            }}
+                            title="创建新资产"
+                        >
+                            +
+                        </button>
+                    )}
                     {value && (
                         <button
                             className="property-asset-btn"
@@ -963,6 +1060,16 @@ function AssetDropField({ label, value, fileExtension, readOnly, controlledBy, o
                     )}
                 </div>
             </div>
+
+            {/* Save Dialog */}
+            <AssetSaveDialog
+                isOpen={showSaveDialog}
+                onClose={() => setShowSaveDialog(false)}
+                onSave={handleSaveAsset}
+                title={fileExtension === '.tilemap.json' ? '创建 Tilemap 资产' : '创建资产'}
+                defaultFileName={fileExtension === '.tilemap.json' ? 'new-tilemap' : 'new-asset'}
+                fileExtension={fileExtension}
+            />
         </div>
     );
 }

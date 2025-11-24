@@ -38,9 +38,8 @@ export class TilemapInspectorProvider implements IInspectorProvider<TilemapInspe
             const messageHub = Core.services.resolve(MessageHub);
             messageHub?.publish('tilemap:edit', { entityId });
 
-            // Also open the panels
+            // Open the tilemap editor panel
             messageHub?.publish('dynamic-panel:open', { panelId: 'tilemap-editor', title: 'Tilemap Editor' });
-            messageHub?.publish('dynamic-panel:open', { panelId: 'tileset-panel', title: 'Tileset' });
         };
 
         return (
@@ -60,7 +59,12 @@ export class TilemapInspectorProvider implements IInspectorProvider<TilemapInspe
 
                     <div className="property-row">
                         <label>Tileset</label>
-                        <span>{component.tilesetAssetGuid || 'None'}</span>
+                        <span>{component.tilesets[0]?.source || 'None'}</span>
+                    </div>
+
+                    <div className="property-row">
+                        <label>Layers</label>
+                        <span>{component.layers.length}</span>
                     </div>
 
                     <div style={{ marginTop: '12px' }}>

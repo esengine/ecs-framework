@@ -12,19 +12,21 @@ import type {
     EntityCreationTemplate,
     ComponentAction,
 } from '@esengine/editor-core';
-import { EditorPluginCategory, PanelPosition, InspectorRegistry, EntityStoreService, MessageHub, ComponentRegistry } from '@esengine/editor-core';
+import { EditorPluginCategory, PanelPosition, InspectorRegistry, EntityStoreService, MessageHub, ComponentRegistry, IDialogService, IFileSystemService } from '@esengine/editor-core';
+import type { IDialog, IFileSystem } from '@esengine/editor-core';
 import { Edit3 } from 'lucide-react';
 import { TilemapComponent } from '@esengine/tilemap';
 import { TransformComponent } from '@esengine/ecs-components';
 import { useTilemapEditorStore } from './stores/TilemapEditorStore';
 import { TilemapEditorPanel } from './components/panels/TilemapEditorPanel';
-import { TilesetPanel } from './components/panels/TilesetPanel';
 import { TilemapInspectorProvider } from './providers/TilemapInspectorProvider';
 
 export class TilemapEditorPlugin implements IEditorPlugin {
     readonly name = '@esengine/tilemap-editor';
     readonly version = '1.0.0';
     readonly category = EditorPluginCategory.Tool;
+
+    private unsubscribers: Array<() => void> = [];
 
     get displayName(): string {
         return 'Tilemap Editor';
@@ -44,16 +46,6 @@ export class TilemapEditorPlugin implements IEditorPlugin {
                 isDynamic: true,
                 closable: true,
                 order: 50,
-            },
-            {
-                id: 'tileset-panel',
-                title: 'Tileset',
-                position: PanelPosition.Right,
-                component: TilesetPanel,
-                isDynamic: true,
-                closable: true,
-                defaultSize: 250,
-                order: 20,
             },
         ];
     }
@@ -76,10 +68,85 @@ export class TilemapEditorPlugin implements IEditorPlugin {
             });
         }
 
+        // Subscribe to tilemap:create-asset message
+        const messageHub = services.resolve(MessageHub);
+        if (messageHub) {
+            const unsubscribe = messageHub.subscribe('tilemap:create-asset', async (payload: {
+                entityId?: string;
+                onChange?: (value: string | null) => void;
+            }) => {
+                await this.handleCreateTilemapAsset(services, payload);
+            });
+            this.unsubscribers.push(unsubscribe);
+        }
+
         console.log('[TilemapEditorPlugin] Installed');
     }
 
+    private async handleCreateTilemapAsset(
+        _services: ServiceContainer,
+        payload: { entityId?: string; onChange?: (value: string | null) => void }
+    ): Promise<void> {
+        const dialog = Core.services.tryResolve<IDialog>(IDialogService);
+        const fileSystem = Core.services.tryResolve<IFileSystem>(IFileSystemService);
+        const messageHub = Core.services.tryResolve(MessageHub);
+
+        if (!dialog || !fileSystem) {
+            console.error('[TilemapEditorPlugin] Dialog or FileSystem service not available');
+            return;
+        }
+
+        // Show save dialog
+        const filePath = await dialog.saveDialog({
+            title: '创建 Tilemap 资产',
+            filters: [{ name: 'Tilemap', extensions: ['tilemap.json'] }],
+            defaultPath: 'new-tilemap.tilemap.json'
+        });
+
+        if (!filePath) {
+            return;
+        }
+
+        // Create default tilemap data
+        const defaultTilemapData = {
+            width: 20,
+            height: 15,
+            tileWidth: 16,
+            tileHeight: 16,
+            layers: [
+                {
+                    name: 'Layer 1',
+                    visible: true,
+                    opacity: 1,
+                    data: new Array(20 * 15).fill(0)
+                }
+            ],
+            tilesets: []
+        };
+
+        // Write file
+        await fileSystem.writeFile(filePath, JSON.stringify(defaultTilemapData, null, 2));
+
+        // Update component property via onChange callback
+        if (payload.onChange) {
+            payload.onChange(filePath);
+        }
+
+        // Open tilemap editor panels
+        if (messageHub && payload.entityId) {
+            useTilemapEditorStore.getState().setEntityId(payload.entityId);
+            messageHub.publish('dynamic-panel:open', { panelId: 'tilemap-editor', title: 'Tilemap Editor' });
+            messageHub.publish('dynamic-panel:open', { panelId: 'tileset-panel', title: 'Tileset' });
+        }
+
+        console.log('[TilemapEditorPlugin] Created tilemap asset:', filePath);
+    }
+
     async uninstall(): Promise<void> {
+        // Cleanup subscriptions
+        this.unsubscribers.forEach(unsub => unsub());
+        this.unsubscribers = [];
+
         console.log('[TilemapEditorPlugin] Uninstalled');
     }
 
@@ -91,13 +158,12 @@ export class TilemapEditorPlugin implements IEditorPlugin {
                 label: '编辑 Tilemap',
                 icon: React.createElement(Edit3, { size: 14 }),
                 order: 0,
-                execute: (_component, entity) => {
+                execute: (_component: unknown, entity: Entity) => {
                     const messageHub = Core.services.resolve(MessageHub);
                     if (messageHub) {
                         const entityIdStr = String(entity.id);
                         useTilemapEditorStore.getState().setEntityId(entityIdStr);
                         messageHub.publish('dynamic-panel:open', { panelId: 'tilemap-editor', title: 'Tilemap Editor' });
-                        messageHub.publish('dynamic-panel:open', { panelId: 'tileset-panel', title: 'Tileset' });
                     }
                 }
             }

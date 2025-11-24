@@ -1,36 +1,35 @@
 import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/ecs-framework';
-import type { AssetReference } from '@esengine/asset-system';
 
 /**
  * Tileset data interface
- * 瓦片集数据接口
+ * 图块集数据接口
  */
 export interface ITilesetData {
-    /** 名称 */
+    /** Tileset name | 图块集名称 */
     name: string;
-    /** 版本 */
+    /** Data format version | 数据格式版本 */
     version: number;
-    /** 纹理图像资源GUID或路径 */
+    /** Image file path | 图片文件路径 */
     image: string;
-    /** 图像宽度（像素） */
+    /** Image width in pixels | 图片宽度（像素） */
     imageWidth: number;
-    /** 图像高度（像素） */
+    /** Image height in pixels | 图片高度（像素） */
     imageHeight: number;
-    /** 瓦片宽度（像素） */
+    /** Single tile width in pixels | 单个图块宽度（像素） */
     tileWidth: number;
-    /** 瓦片高度（像素） */
+    /** Single tile height in pixels | 单个图块高度（像素） */
     tileHeight: number;
-    /** 瓦片总数 */
+    /** Total number of tiles | 图块总数 */
     tileCount: number;
-    /** 列数 */
+    /** Number of tile columns | 图块列数 */
     columns: number;
-    /** 行数 */
+    /** Number of tile rows | 图块行数 */
     rows: number;
-    /** 边距（像素） */
+    /** Margin around tileset in pixels | 图块集边距（像素） */
     margin?: number;
-    /** 间距（像素） */
+    /** Spacing between tiles in pixels | 图块间距（像素） */
     spacing?: number;
-    /** 每个瓦片的元数据 */
+    /** Individual tile metadata | 单个图块元数据 */
     tiles?: Array<{
         id: number;
         type?: string;
@@ -39,86 +38,91 @@ export interface ITilesetData {
 }
 
 /**
- * Tilemap data interface
- * 瓦片地图数据接口
+ * Layer data interface
+ * 图层数据接口
  */
-export interface ITilemapData {
-    /** 名称 */
+export interface ITilemapLayerData {
+    /** Unique layer identifier | 图层唯一标识符 */
+    id: string;
+    /** Layer display name | 图层显示名称 */
     name: string;
-    /** 版本 */
-    version: number;
-    /** 宽度（瓦片数） */
-    width: number;
-    /** 高度（瓦片数） */
-    height: number;
-    /** 瓦片宽度（像素） */
-    tileWidth: number;
-    /** 瓦片高度（像素） */
-    tileHeight: number;
-    /** 瓦片集资源GUID */
-    tileset: string;
-    /** 瓦片数据（行主序，0表示空） */
+    /** Layer visibility | 图层可见性 */
+    visible: boolean;
+    /** Layer opacity (0-1) | 图层不透明度（0-1） */
+    opacity: number;
+    /** Tile index data array (row-major order) | 图块索引数据数组（行优先顺序） */
     data: number[];
-    /** 图层（可选） */
-    layers?: Array<{
-        name: string;
-        visible: boolean;
-        opacity: number;
-        data?: number[];
-    }>;
-    /** 碰撞数据（可选） */
-    collisionData?: number[];
-    /** 自定义属性 */
+    /** Default tileset index for this layer | 此图层的默认图块集索引 */
+    tilesetIndex?: number;
+    /** Layer X offset in pixels | 图层X偏移（像素） */
+    offsetX?: number;
+    /** Layer Y offset in pixels | 图层Y偏移（像素） */
+    offsetY?: number;
+    /** Custom layer properties | 自定义图层属性 */
     properties?: Record<string, unknown>;
 }
 
 /**
+ * Tileset reference info
+ * 图块集引用信息
+ */
+export interface ITilesetRef {
+    /** Tileset image source path | 图块集图片源路径 */
+    source: string;
+    /** First global tile ID for this tileset | 此图块集的第一个全局图块ID */
+    firstGid: number;
+    /** Loaded tileset data | 已加载的图块集数据 */
+    data?: ITilesetData;
+    /** GPU texture ID for rendering | 用于渲染的GPU纹理ID */
+    textureId?: number;
+}
+
+/**
+ * Tilemap data interface
+ * 瓦片地图数据接口
+ */
+export interface ITilemapData {
+    /** Tilemap name | 瓦片地图名称 */
+    name: string;
+    /** Data format version | 数据格式版本 */
+    version: number;
+    /** Map width in tiles | 地图宽度（图块数） */
+    width: number;
+    /** Map height in tiles | 地图高度（图块数） */
+    height: number;
+    /** Single tile width in pixels | 单个图块宽度（像素） */
+    tileWidth: number;
+    /** Single tile height in pixels | 单个图块高度（像素） */
+    tileHeight: number;
+    /** Array of tileset references | 图块集引用数组 */
+    tilesets: ITilesetRef[];
+    /** Array of layer data | 图层数据数组 */
+    layers: ITilemapLayerData[];
+    /** Collision data array | 碰撞数据数组 */
+    collisionData?: number[];
+    /** Custom tilemap properties | 自定义瓦片地图属性 */
+    properties?: Record<string, unknown>;
+}
+
+/**
+ * Tilemap Component - Manages tile-based 2D map rendering
  * 瓦片地图组件 - 管理基于瓦片的2D地图渲染
- * Tilemap component - manages tile-based 2D map rendering
  */
 @ECSComponent('Tilemap')
-@Serializable({ version: 1, typeId: 'Tilemap' })
+@Serializable({ version: 2, typeId: 'Tilemap' })
 export class TilemapComponent extends Component {
-    /**
-     * 瓦片地图资源GUID
-     * Tilemap asset GUID
-     */
+    /** Tilemap asset GUID reference | 瓦片地图资源GUID引用 */
     @Serialize()
     @Property({ type: 'asset', label: 'Tilemap', fileExtension: '.tilemap.json' })
     public tilemapAssetGuid: string = '';
 
-    /**
-     * 瓦片集资源GUID
-     * Tileset asset GUID
-     */
-    @Serialize()
-    @Property({ type: 'asset', label: 'Tileset', fileExtension: '.tileset.json' })
-    public tilesetAssetGuid: string = '';
-
-    /**
-     * 瓦片集图片路径（直接使用PNG）
-     * Tileset image path (direct PNG)
-     */
-    @Serialize()
-    @Property({ type: 'asset', label: 'Tileset Image', fileExtension: '.png' })
-    public tilesetImage: string = '';
-
-    /**
-     * 地图宽度（瓦片数）- 内部存储
-     */
     @Serialize()
     private _width: number = 10;
 
-    /**
-     * 地图高度（瓦片数）- 内部存储
-     */
     @Serialize()
     private _height: number = 10;
 
-    /**
-     * 地图宽度（瓦片数）
-     * Map width in tiles
-     */
+    /** Map width in tiles | 地图宽度（图块数） */
     @Property({ type: 'integer', label: 'Width (Tiles)', min: 1 })
     public get width(): number {
         return this._width;
@@ -130,10 +134,7 @@ export class TilemapComponent extends Component {
         }
     }
 
-    /**
-     * 地图高度（瓦片数）
-     * Map height in tiles
-     */
+    /** Map height in tiles | 地图高度（图块数） */
     @Property({ type: 'integer', label: 'Height (Tiles)', min: 1 })
     public get height(): number {
         return this._height;
@@ -145,326 +146,520 @@ export class TilemapComponent extends Component {
         }
     }
 
-    /**
-     * 瓦片宽度（像素）
-     * Tile width in pixels
-     */
+    /** Single tile width in pixels | 单个图块宽度（像素） */
     @Serialize()
     @Property({ type: 'integer', label: 'Tile Width', min: 1 })
     public tileWidth: number = 32;
 
-    /**
-     * 瓦片高度（像素）
-     * Tile height in pixels
-     */
+    /** Single tile height in pixels | 单个图块高度（像素） */
     @Serialize()
     @Property({ type: 'integer', label: 'Tile Height', min: 1 })
     public tileHeight: number = 32;
 
-    /**
-     * 是否可见
-     * Whether tilemap is visible
-     */
+    /** Component visibility | 组件可见性 */
     @Serialize()
     @Property({ type: 'boolean', label: 'Visible' })
     public visible: boolean = true;
 
-    /**
-     * 渲染层级/顺序（越高越在上面）
-     * Render layer/order (higher = rendered on top)
-     */
+    /** Rendering sort order | 渲染排序顺序 */
     @Serialize()
     @Property({ type: 'integer', label: 'Sorting Order' })
     public sortingOrder: number = 0;
 
-    /**
-     * 颜色着色（十六进制）
-     * Color tint (hex string)
-     */
+    /** Tint color in hex format | 着色颜色（十六进制格式） */
     @Serialize()
     @Property({ type: 'color', label: 'Color' })
     public color: string = '#ffffff';
 
-    /**
-     * 透明度 (0-1)
-     * Alpha (0-1)
-     */
+    /** Opacity value (0-1) | 不透明度（0-1） */
     @Serialize()
     @Property({ type: 'number', label: 'Alpha', min: 0, max: 1, step: 0.01 })
     public alpha: number = 1;
 
-    // ===== 运行时数据（不序列化）=====
-
-    /**
-     * 纹理ID（运行时使用）
-     * Texture ID for runtime rendering
-     */
-    public textureId: number = 0;
-
-    /**
-     * 瓦片数据数组（序列化为普通数组）
-     * Tile data array (serialized as regular array)
-     */
-    @Serialize()
-    private _tileDataArray: number[] = [];
-
-    /**
-     * Tileset 图片宽度（序列化用于恢复 _tilesetData）
-     * Tileset image width (serialized for restoring _tilesetData)
-     */
-    @Serialize()
-    private _tilesetImageWidth: number = 0;
-
-    /**
-     * Tileset 图片高度（序列化用于恢复 _tilesetData）
-     * Tileset image height (serialized for restoring _tilesetData)
-     */
-    @Serialize()
-    private _tilesetImageHeight: number = 0;
-
-    /**
-     * 瓦片数据数组（运行时使用 Uint32Array 提高性能）
-     * Tile data array (runtime uses Uint32Array for performance)
-     */
-    private _tileData: Uint32Array = new Uint32Array(0);
-
-    /**
-     * Tilemap资产引用
-     * Tilemap asset reference
-     */
-    private _tilemapReference?: AssetReference<ITilemapData>;
-
-    /**
-     * Tileset资产引用
-     * Tileset asset reference
-     */
-    private _tilesetReference?: AssetReference<ITilesetData>;
-
-    /**
-     * 缓存的tileset数据
-     * Cached tileset data
-     */
-    private _tilesetData?: ITilesetData;
-
-    /**
-     * 渲染是否需要更新
-     * Whether rendering needs update
-     */
+    /** Flag indicating render data needs update | 标记渲染数据需要更新 */
     public renderDirty: boolean = true;
 
-    /**
-     * 碰撞数据数组（运行时）
-     * Collision data array (runtime)
-     * 0 = no collision, >0 = collision type
-     */
+    // ===== 多Tileset =====
+
+    @Serialize()
+    private _tilesets: ITilesetRef[] = [];
+
+    private _tilesetsData: Map<number, ITilesetData> = new Map();
+
+    // ===== 多图层 =====
+
+    @Serialize()
+    private _layers: ITilemapLayerData[] = [];
+
+    private _layersData: Map<string, Uint32Array> = new Map();
+
+    @Serialize()
+    private _activeLayerIndex: number = 0;
+
+    // ===== 碰撞数据 =====
+
+    @Serialize()
+    private _collisionDataArray: number[] = [];
+
     private _collisionData: Uint32Array = new Uint32Array(0);
 
-    /**
-     * 获取瓦片数据
-     * Get tile data
-     */
-    get tileData(): Uint32Array {
-        return this._tileData;
+    // ===== Getters =====
+
+    /** All tileset references | 所有图块集引用 */
+    get tilesets(): readonly ITilesetRef[] {
+        return this._tilesets;
     }
 
-    /**
-     * 获取tileset数据
-     * Get tileset data
-     */
-    get tilesetData(): ITilesetData | undefined {
-        return this._tilesetData;
+    /** All layer data | 所有图层数据 */
+    get layers(): readonly ITilemapLayerData[] {
+        return this._layers;
     }
 
-    /**
-     * 获取地图像素宽度
-     * Get map width in pixels
-     */
+    /** Current active layer index | 当前活动图层索引 */
+    get activeLayerIndex(): number {
+        return this._activeLayerIndex;
+    }
+
+    set activeLayerIndex(value: number) {
+        if (value >= 0 && value < this._layers.length) {
+            this._activeLayerIndex = value;
+        }
+    }
+
+    /** Current active layer data | 当前活动图层数据 */
+    get activeLayer(): ITilemapLayerData | undefined {
+        return this._layers[this._activeLayerIndex];
+    }
+
+    /** Total map width in pixels | 地图总宽度（像素） */
     get pixelWidth(): number {
-        return this.width * this.tileWidth;
+        return this._width * this.tileWidth;
     }
 
-    /**
-     * 获取地图像素高度
-     * Get map height in pixels
-     */
+    /** Total map height in pixels | 地图总高度（像素） */
     get pixelHeight(): number {
-        return this.height * this.tileHeight;
+        return this._height * this.tileHeight;
     }
 
-    /**
-     * 设置瓦片地图资产引用
-     * Set tilemap asset reference
-     */
-    setTilemapReference(reference: AssetReference<ITilemapData>): void {
-        if (this._tilemapReference) {
-            this._tilemapReference.release();
-        }
-        this._tilemapReference = reference;
-        if (reference) {
-            this.tilemapAssetGuid = reference.guid;
-        }
-    }
-
-    /**
-     * 设置瓦片集资产引用
-     * Set tileset asset reference
-     */
-    setTilesetReference(reference: AssetReference<ITilesetData>): void {
-        if (this._tilesetReference) {
-            this._tilesetReference.release();
-        }
-        this._tilesetReference = reference;
-        if (reference) {
-            this.tilesetAssetGuid = reference.guid;
-        }
-    }
-
-    /**
-     * 直接设置瓦片集信息（用于直接使用PNG图片时）
-     * Set tileset info directly (for using PNG images directly)
-     */
-    setTilesetInfo(
-        imageWidth: number,
-        imageHeight: number,
-        tileWidth: number,
-        tileHeight: number,
-        columns: number,
-        rows: number
-    ): void {
-        this._tilesetData = {
-            name: 'direct-tileset',
-            version: 1,
-            image: this.tilesetImage,
-            imageWidth,
-            imageHeight,
-            tileWidth,
-            tileHeight,
-            tileCount: columns * rows,
-            columns,
-            rows
-        };
-        this.tileWidth = tileWidth;
-        this.tileHeight = tileHeight;
-        // 保存图片尺寸用于序列化恢复
-        this._tilesetImageWidth = imageWidth;
-        this._tilesetImageHeight = imageHeight;
-        this.renderDirty = true;
-    }
-
-    /**
-     * 异步加载瓦片地图
-     * Load tilemap asynchronously
-     */
-    async loadTilemapAsync(): Promise<void> {
-        if (this._tilemapReference) {
-            try {
-                const tilemapData = await this._tilemapReference.loadAsync();
-                if (tilemapData) {
-                    this.applyTilemapData(tilemapData);
-                }
-            } catch (error) {
-                console.error('Failed to load tilemap:', error);
-            }
-        }
-    }
-
-    /**
-     * 异步加载瓦片集
-     * Load tileset asynchronously
-     */
-    async loadTilesetAsync(): Promise<void> {
-        if (this._tilesetReference) {
-            try {
-                const tilesetData = await this._tilesetReference.loadAsync();
-                if (tilesetData) {
-                    this._tilesetData = tilesetData;
-                    this.tileWidth = tilesetData.tileWidth;
-                    this.tileHeight = tilesetData.tileHeight;
-                    this.renderDirty = true;
-                }
-            } catch (error) {
-                console.error('Failed to load tileset:', error);
-            }
-        }
-    }
-
-    /**
-     * 应用瓦片地图数据
-     * Apply tilemap data
-     */
-    applyTilemapData(data: ITilemapData): void {
-        this.width = data.width;
-        this.height = data.height;
-        this.tileWidth = data.tileWidth;
-        this.tileHeight = data.tileHeight;
-
-        // 转换为Uint32Array
-        this._tileData = new Uint32Array(data.data);
-
-        // 加载碰撞数据
-        if (data.collisionData) {
-            this._collisionData = new Uint32Array(data.collisionData);
-        } else {
-            this._collisionData = new Uint32Array(0);
-        }
-
-        this.renderDirty = true;
-    }
-
-    /**
-     * 获取碰撞数据
-     * Get collision data
-     */
+    /** Raw collision data array | 原始碰撞数据数组 */
     get collisionData(): Uint32Array {
         return this._collisionData;
     }
 
+    // ===== Initialization | 初始化 =====
+
     /**
-     * 检查指定瓦片位置是否有碰撞
-     * Check if tile at position has collision
+     * Initialize an empty tilemap with default layer
+     * 初始化一个带有默认图层的空瓦片地图
+     * @param width Map width in tiles | 地图宽度（图块数）
+     * @param height Map height in tiles | 地图高度（图块数）
+     */
+    initializeEmpty(width: number, height: number): void {
+        this._width = width;
+        this._height = height;
+
+        const defaultLayer: ITilemapLayerData = {
+            id: 'default',
+            name: 'Layer 0',
+            visible: true,
+            opacity: 1,
+            data: new Array(width * height).fill(0)
+        };
+        this._layers = [defaultLayer];
+        this._layersData.set('default', new Uint32Array(width * height));
+        this._activeLayerIndex = 0;
+
+        this.renderDirty = true;
+    }
+
+    /**
+     * Apply tilemap data from external source
+     * 从外部数据源应用瓦片地图数据
+     * @param data Tilemap data to apply | 要应用的瓦片地图数据
+     */
+    applyTilemapData(data: ITilemapData): void {
+        this._width = data.width;
+        this._height = data.height;
+        this.tileWidth = data.tileWidth;
+        this.tileHeight = data.tileHeight;
+
+        // 加载Tilesets
+        this._tilesets = data.tilesets.map((ts) => ({ ...ts }));
+        this._tilesetsData.clear();
+
+        // 加载图层
+        this._layers = data.layers.map((layer) => ({
+            ...layer,
+            data: [...layer.data]
+        }));
+        this._layersData.clear();
+        for (const layer of this._layers) {
+            this._layersData.set(layer.id, new Uint32Array(layer.data));
+        }
+
+        // 加载碰撞数据
+        if (data.collisionData) {
+            this._collisionData = new Uint32Array(data.collisionData);
+            this._collisionDataArray = [...data.collisionData];
+        } else {
+            this._collisionData = new Uint32Array(0);
+            this._collisionDataArray = [];
+        }
+
+        this.renderDirty = true;
+    }
+
+    // ===== Tileset Methods | 图块集方法 =====
+
+    /**
+     * Add a new tileset reference
+     * 添加新的图块集引用
+     * @param source Tileset image source path | 图块集图片源路径
+     * @param firstGid Optional first global tile ID | 可选的第一个全局图块ID
+     * @returns Index of the added tileset | 添加的图块集索引
+     */
+    addTileset(source: string, firstGid?: number): number {
+        const gid = firstGid ?? this.calculateNextFirstGid();
+        this._tilesets.push({ source, firstGid: gid });
+        this.renderDirty = true;
+        return this._tilesets.length - 1;
+    }
+
+    /**
+     * Remove a tileset by index
+     * 按索引移除图块集
+     * @param index Tileset index to remove | 要移除的图块集索引
+     */
+    removeTileset(index: number): void {
+        if (index >= 0 && index < this._tilesets.length) {
+            this._tilesets.splice(index, 1);
+            this._tilesetsData.delete(index);
+            this.renderDirty = true;
+        }
+    }
+
+    /**
+     * Set tileset data for a specific index
+     * 设置指定索引的图块集数据
+     * @param index Tileset index | 图块集索引
+     * @param data Tileset data to set | 要设置的图块集数据
+     */
+    setTilesetData(index: number, data: ITilesetData): void {
+        if (index >= 0 && index < this._tilesets.length) {
+            this._tilesets[index].data = data;
+            this._tilesetsData.set(index, data);
+            this.renderDirty = true;
+        }
+    }
+
+    /**
+     * Get tileset data by index
+     * 按索引获取图块集数据
+     * @param index Tileset index | 图块集索引
+     * @returns Tileset data or undefined | 图块集数据或undefined
+     */
+    getTilesetData(index: number): ITilesetData | undefined {
+        return this._tilesetsData.get(index) || this._tilesets[index]?.data;
+    }
+
+    /**
+     * Find tileset for a global tile ID
+     * 根据全局图块ID查找图块集
+     * @param gid Global tile ID | 全局图块ID
+     * @returns Tileset info with local ID, or null if not found | 包含本地ID的图块集信息，未找到返回null
+     */
+    getTilesetForGid(gid: number): { tileset: ITilesetRef; localId: number; index: number } | null {
+        if (gid <= 0) return null;
+
+        for (let i = this._tilesets.length - 1; i >= 0; i--) {
+            const tileset = this._tilesets[i];
+            if (gid >= tileset.firstGid) {
+                return {
+                    tileset,
+                    localId: gid - tileset.firstGid + 1,
+                    index: i
+                };
+            }
+        }
+        return null;
+    }
+
+    private calculateNextFirstGid(): number {
+        if (this._tilesets.length === 0) return 1;
+
+        let maxGid = 1;
+        for (const tileset of this._tilesets) {
+            const tileCount = tileset.data?.tileCount || 256;
+            const nextGid = tileset.firstGid + tileCount;
+            if (nextGid > maxGid) maxGid = nextGid;
+        }
+        return maxGid;
+    }
+
+    // ===== Layer Methods | 图层方法 =====
+
+    /**
+     * Add a new layer to the tilemap
+     * 向瓦片地图添加新图层
+     * @param name Optional layer name | 可选的图层名称
+     * @param index Optional insertion index | 可选的插入索引
+     * @returns The created layer data | 创建的图层数据
+     */
+    addLayer(name?: string, index?: number): ITilemapLayerData {
+        const id = `layer_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+        const layerName = name || `Layer ${this._layers.length}`;
+        const data = new Array(this._width * this._height).fill(0);
+
+        const layer: ITilemapLayerData = {
+            id,
+            name: layerName,
+            visible: true,
+            opacity: 1,
+            data
+        };
+
+        if (index !== undefined && index >= 0 && index <= this._layers.length) {
+            this._layers.splice(index, 0, layer);
+        } else {
+            this._layers.push(layer);
+        }
+
+        this._layersData.set(id, new Uint32Array(data));
+        this.renderDirty = true;
+        return layer;
+    }
+
+    /**
+     * Remove a layer by index (cannot remove last layer)
+     * 按索引移除图层（不能移除最后一个图层）
+     * @param index Layer index to remove | 要移除的图层索引
+     */
+    removeLayer(index: number): void {
+        if (index >= 0 && index < this._layers.length && this._layers.length > 1) {
+            const layer = this._layers[index];
+            this._layers.splice(index, 1);
+            this._layersData.delete(layer.id);
+
+            if (this._activeLayerIndex >= this._layers.length) {
+                this._activeLayerIndex = this._layers.length - 1;
+            }
+
+            this.renderDirty = true;
+        }
+    }
+
+    /**
+     * Move a layer from one position to another
+     * 将图层从一个位置移动到另一个位置
+     * @param fromIndex Source index | 源索引
+     * @param toIndex Target index | 目标索引
+     */
+    moveLayer(fromIndex: number, toIndex: number): void {
+        if (
+            fromIndex >= 0 &&
+            fromIndex < this._layers.length &&
+            toIndex >= 0 &&
+            toIndex < this._layers.length &&
+            fromIndex !== toIndex
+        ) {
+            const [layer] = this._layers.splice(fromIndex, 1);
+            this._layers.splice(toIndex, 0, layer);
+            this.renderDirty = true;
+        }
+    }
+
+    /**
+     * Get layer data by index
+     * 按索引获取图层数据
+     */
+    getLayer(index: number): ITilemapLayerData | undefined {
+        return this._layers[index];
+    }
+
+    /**
+     * Get layer data by ID
+     * 按ID获取图层数据
+     */
+    getLayerById(id: string): ITilemapLayerData | undefined {
+        return this._layers.find((l) => l.id === id);
+    }
+
+    /**
+     * Set layer visibility
+     * 设置图层可见性
+     */
+    setLayerVisible(index: number, visible: boolean): void {
+        if (index >= 0 && index < this._layers.length) {
+            this._layers[index].visible = visible;
+            this.renderDirty = true;
+        }
+    }
+
+    /**
+     * Set layer opacity
+     * 设置图层不透明度
+     */
+    setLayerOpacity(index: number, opacity: number): void {
+        if (index >= 0 && index < this._layers.length) {
+            this._layers[index].opacity = Math.max(0, Math.min(1, opacity));
+            this.renderDirty = true;
+        }
+    }
+
+    /**
+     * Rename a layer
+     * 重命名图层
+     */
+    renameLayer(index: number, name: string): void {
+        if (index >= 0 && index < this._layers.length) {
+            this._layers[index].name = name;
+        }
+    }
+
+    // ===== Tile Operations | 瓦片操作 =====
+
+    /**
+     * Get tile index at position
+     * 获取指定位置的图块索引
+     * @param layerIndex Layer index | 图层索引
+     * @param col Column (X) | 列（X）
+     * @param row Row (Y) | 行（Y）
+     * @returns Tile index (0 = empty) | 图块索引（0表示空）
+     */
+    getTile(layerIndex: number, col: number, row: number): number {
+        if (col < 0 || col >= this._width || row < 0 || row >= this._height) {
+            return 0;
+        }
+        const layer = this._layers[layerIndex];
+        if (!layer) return 0;
+
+        const layerData = this._layersData.get(layer.id);
+        if (layerData) {
+            return layerData[row * this._width + col];
+        }
+        return layer.data[row * this._width + col] || 0;
+    }
+
+    /**
+     * Set tile index at position
+     * 设置指定位置的图块索引
+     * @param layerIndex Layer index | 图层索引
+     * @param col Column (X) | 列（X）
+     * @param row Row (Y) | 行（Y）
+     * @param tileIndex Tile index to set (0 = clear) | 要设置的图块索引（0表示清除）
+     */
+    setTile(layerIndex: number, col: number, row: number, tileIndex: number): void {
+        if (col < 0 || col >= this._width || row < 0 || row >= this._height) {
+            return;
+        }
+        const layer = this._layers[layerIndex];
+        if (!layer) return;
+
+        const index = row * this._width + col;
+        layer.data[index] = tileIndex;
+
+        let layerData = this._layersData.get(layer.id);
+        if (!layerData) {
+            layerData = new Uint32Array(layer.data);
+            this._layersData.set(layer.id, layerData);
+        }
+        layerData[index] = tileIndex;
+
+        this.renderDirty = true;
+    }
+
+    /**
+     * Get raw tile data array for a layer
+     * 获取图层的原始图块数据数组
+     * @param layerIndex Layer index | 图层索引
+     * @returns Uint32Array of tile indices | 图块索引的Uint32Array
+     */
+    getLayerData(layerIndex: number): Uint32Array | undefined {
+        const layer = this._layers[layerIndex];
+        if (!layer) return undefined;
+        return this._layersData.get(layer.id);
+    }
+
+    /**
+     * Get merged tile data from all visible layers
+     * 获取所有可见图层合并后的图块数据
+     * @returns Merged tile data array | 合并的图块数据数组
+     */
+    getMergedTileData(): Uint32Array {
+        const merged = new Uint32Array(this._width * this._height);
+
+        for (const layer of this._layers) {
+            if (!layer.visible) continue;
+
+            const layerData = this._layersData.get(layer.id);
+            if (!layerData) continue;
+
+            for (let i = 0; i < merged.length; i++) {
+                if (layerData[i] > 0) {
+                    merged[i] = layerData[i];
+                }
+            }
+        }
+
+        return merged;
+    }
+
+    // ===== Collision | 碰撞 =====
+
+    /**
+     * Check if tile has collision
+     * 检查图块是否有碰撞
+     * @param col Column (X) | 列（X）
+     * @param row Row (Y) | 行（Y）
+     * @returns True if has collision | 如果有碰撞返回true
      */
     hasCollision(col: number, row: number): boolean {
-        if (col < 0 || col >= this.width || row < 0 || row >= this.height) {
-            return true; // 边界外视为碰撞
+        if (col < 0 || col >= this._width || row < 0 || row >= this._height) {
+            return true;
         }
         if (this._collisionData.length === 0) {
             return false;
         }
-        return this._collisionData[row * this.width + col] > 0;
+        return this._collisionData[row * this._width + col] > 0;
     }
 
     /**
-     * 获取碰撞类型
-     * Get collision type at position
+     * Get collision type at tile position
+     * 获取图块位置的碰撞类型
      */
     getCollisionType(col: number, row: number): number {
-        if (col < 0 || col >= this.width || row < 0 || row >= this.height) {
+        if (col < 0 || col >= this._width || row < 0 || row >= this._height) {
             return 0;
         }
         if (this._collisionData.length === 0) {
             return 0;
         }
-        return this._collisionData[row * this.width + col];
+        return this._collisionData[row * this._width + col];
     }
 
     /**
-     * 设置碰撞数据
-     * Set collision data for a tile
+     * Set collision type at tile position
+     * 设置图块位置的碰撞类型
+     * @param col Column (X) | 列（X）
+     * @param row Row (Y) | 行（Y）
+     * @param collisionType Collision type (0 = none) | 碰撞类型（0表示无）
      */
     setCollision(col: number, row: number, collisionType: number): void {
-        if (col < 0 || col >= this.width || row < 0 || row >= this.height) {
+        if (col < 0 || col >= this._width || row < 0 || row >= this._height) {
             return;
         }
-        // 按需初始化碰撞数组
         if (this._collisionData.length === 0) {
-            this._collisionData = new Uint32Array(this.width * this.height);
+            this._collisionData = new Uint32Array(this._width * this._height);
+            this._collisionDataArray = new Array(this._width * this._height).fill(0);
         }
-        this._collisionData[row * this.width + col] = collisionType;
+        const index = row * this._width + col;
+        this._collisionData[index] = collisionType;
+        this._collisionDataArray[index] = collisionType;
     }
 
     /**
-     * 检查世界坐标是否有碰撞
-     * Check collision at world position
+     * Check collision at world coordinates
+     * 检查世界坐标处的碰撞
      */
     hasCollisionAt(worldX: number, worldY: number): boolean {
         const [col, row] = this.worldToTile(worldX, worldY);
@@ -472,9 +667,9 @@ export class TilemapComponent extends Component {
     }
 
     /**
-     * 获取AABB范围内所有碰撞瓦片
-     * Get all collision tiles within AABB bounds
-     * Returns array of [col, row, collisionType]
+     * Get all collision tiles within bounds
+     * 获取边界内的所有碰撞图块
+     * @returns Array of [col, row, type] | [列, 行, 类型]数组
      */
     getCollisionTilesInBounds(
         left: number,
@@ -489,13 +684,13 @@ export class TilemapComponent extends Component {
         }
 
         const startCol = Math.max(0, Math.floor(left / this.tileWidth));
-        const endCol = Math.min(this.width, Math.ceil(right / this.tileWidth));
+        const endCol = Math.min(this._width, Math.ceil(right / this.tileWidth));
         const startRow = Math.max(0, Math.floor(bottom / this.tileHeight));
-        const endRow = Math.min(this.height, Math.ceil(top / this.tileHeight));
+        const endRow = Math.min(this._height, Math.ceil(top / this.tileHeight));
 
         for (let row = startRow; row < endRow; row++) {
             for (let col = startCol; col < endCol; col++) {
-                const type = this._collisionData[row * this.width + col];
+                const type = this._collisionData[row * this._width + col];
                 if (type > 0) {
                     result.push([col, row, type]);
                 }
@@ -506,9 +701,9 @@ export class TilemapComponent extends Component {
     }
 
     /**
-     * 生成碰撞矩形列表（用于物理引擎）
-     * Generate collision rectangles for physics engine
-     * Returns array of {x, y, width, height, type}
+     * Generate collision rectangles for physics
+     * 为物理系统生成碰撞矩形
+     * @returns Array of collision rectangles | 碰撞矩形数组
      */
     generateCollisionRects(): Array<{
         x: number;
@@ -529,11 +724,9 @@ export class TilemapComponent extends Component {
             return rects;
         }
 
-        // 简单实现：每个碰撞瓦片生成一个矩形
-        // 高级实现可以合并相邻瓦片
-        for (let row = 0; row < this.height; row++) {
-            for (let col = 0; col < this.width; col++) {
-                const type = this._collisionData[row * this.width + col];
+        for (let row = 0; row < this._height; row++) {
+            for (let col = 0; col < this._width; col++) {
+                const type = this._collisionData[row * this._width + col];
                 if (type > 0) {
                     rects.push({
                         x: col * this.tileWidth,
@@ -549,85 +742,12 @@ export class TilemapComponent extends Component {
         return rects;
     }
 
-    /**
-     * 获取指定位置的瓦片索引
-     * Get tile index at position
-     * @param col 列
-     * @param row 行
-     * @returns 瓦片索引，0表示空
-     */
-    getTile(col: number, row: number): number {
-        if (col < 0 || col >= this.width || row < 0 || row >= this.height) {
-            return 0;
-        }
-        return this._tileData[row * this.width + col];
-    }
+    // ===== Coordinate Conversion | 坐标转换 =====
 
     /**
-     * 设置指定位置的瓦片
-     * Set tile at position
-     * @param col 列
-     * @param row 行
-     * @param tileIndex 瓦片索引
-     */
-    setTile(col: number, row: number, tileIndex: number): void {
-        if (col < 0 || col >= this.width || row < 0 || row >= this.height) {
-            return;
-        }
-        const index = row * this.width + col;
-        this._tileData[index] = tileIndex;
-        this._tileDataArray[index] = tileIndex;
-        this.renderDirty = true;
-    }
-
-    /**
-     * 初始化空白地图
-     * Initialize empty map
-     */
-    initializeEmpty(width: number, height: number): void {
-        this._width = width;
-        this._height = height;
-        this._tileData = new Uint32Array(width * height);
-        this._tileDataArray = Array.from(this._tileData);
-        this.renderDirty = true;
-    }
-
-    /**
-     * 调整地图大小（保留现有瓦片数据）
-     * Resize map (preserves existing tile data)
-     * @param newWidth 新宽度
-     * @param newHeight 新高度
-     */
-    resize(newWidth: number, newHeight: number): void {
-        if (newWidth === this._width && newHeight === this._height) {
-            return;
-        }
-
-        const newData = new Uint32Array(newWidth * newHeight);
-
-        // Copy existing data
-        const minWidth = Math.min(this._width, newWidth);
-        const minHeight = Math.min(this._height, newHeight);
-
-        for (let y = 0; y < minHeight; y++) {
-            for (let x = 0; x < minWidth; x++) {
-                newData[y * newWidth + x] = this._tileData[y * this._width + x];
-            }
-        }
-
-        this._tileData = newData;
-        this._tileDataArray = Array.from(newData);
-        this._width = newWidth;
-        this._height = newHeight;
-        this.renderDirty = true;
-    }
-
-    /**
-     * 世界坐标转换为瓦片坐标
-     * Convert world position to tile coordinates
-     * @param worldX 世界X坐标
-     * @param worldY 世界Y坐标
-     * @returns [col, row]
+     * Convert world coordinates to tile coordinates
+     * 将世界坐标转换为图块坐标
+     * @returns [col, row] | [列, 行]
      */
     worldToTile(worldX: number, worldY: number): [number, number] {
         const col = Math.floor(worldX / this.tileWidth);
@@ -636,11 +756,9 @@ export class TilemapComponent extends Component {
     }
 
     /**
-     * 瓦片坐标转换为世界坐标（返回瓦片中心）
-     * Convert tile coordinates to world position (returns tile center)
-     * @param col 列
-     * @param row 行
-     * @returns [worldX, worldY]
+     * Convert tile coordinates to world coordinates (center of tile)
+     * 将图块坐标转换为世界坐标（图块中心）
+     * @returns [worldX, worldY] | [世界X, 世界Y]
      */
     tileToWorld(col: number, row: number): [number, number] {
         const worldX = col * this.tileWidth + this.tileWidth / 2;
@@ -648,84 +766,151 @@ export class TilemapComponent extends Component {
         return [worldX, worldY];
     }
 
+    // ===== UV Calculation | UV计算 =====
+
     /**
-     * 获取瓦片在tileset中的UV坐标
-     * Get tile UV coordinates in tileset
-     * @param tileIndex 瓦片索引（从1开始，0表示空）
-     * @returns [u0, v0, u1, v1] 或 null
+     * Get UV coordinates for a tile in tileset
+     * 获取图块在图块集中的UV坐标
+     * @returns [u0, v0, u1, v1] or null | UV坐标或null
      */
-    getTileUV(tileIndex: number): [number, number, number, number] | null {
-        if (tileIndex <= 0 || !this._tilesetData) {
-            return null;
-        }
+    getTileUV(tilesetIndex: number, localTileId: number): [number, number, number, number] | null {
+        if (localTileId <= 0) return null;
 
-        const { columns, imageWidth, imageHeight, tileWidth, tileHeight, margin = 0, spacing = 0 } = this._tilesetData;
+        const tilesetData = this.getTilesetData(tilesetIndex);
+        if (!tilesetData) return null;
 
-        // 瓦片索引从1开始，转换为0开始
-        const idx = tileIndex - 1;
+        const { columns, imageWidth, imageHeight, tileWidth, tileHeight, margin = 0, spacing = 0 } = tilesetData;
+
+        const idx = localTileId - 1;
         const col = idx % columns;
         const row = Math.floor(idx / columns);
 
         const x = margin + col * (tileWidth + spacing);
         const y = margin + row * (tileHeight + spacing);
 
-        // Flip V coordinates because texture Y=0 is at bottom, but image Y=0 is at top
-        const uv: [number, number, number, number] = [
-            x / imageWidth,
-            1 - (y + tileHeight) / imageHeight,
-            (x + tileWidth) / imageWidth,
-            1 - y / imageHeight
-        ];
-
-        return uv;
+        return [x / imageWidth, 1 - (y + tileHeight) / imageHeight, (x + tileWidth) / imageWidth, 1 - y / imageHeight];
     }
 
+    // ===== Resize | 大小调整 =====
+
     /**
-     * 组件反序列化后恢复运行时数据
-     * Restore runtime data after deserialization
+     * Resize the tilemap, preserving existing data
+     * 调整瓦片地图大小，保留现有数据
+     * @param newWidth New width in tiles | 新宽度（图块数）
+     * @param newHeight New height in tiles | 新高度（图块数）
+     */
+    resize(newWidth: number, newHeight: number): void {
+        if (newWidth === this._width && newHeight === this._height) {
+            return;
+        }
+
+        const minWidth = Math.min(this._width, newWidth);
+        const minHeight = Math.min(this._height, newHeight);
+
+        // 调整所有图层
+        for (const layer of this._layers) {
+            const oldLayerData = this._layersData.get(layer.id);
+            const newLayerData = new Uint32Array(newWidth * newHeight);
+            const newDataArray = new Array(newWidth * newHeight).fill(0);
+
+            if (oldLayerData) {
+                for (let y = 0; y < minHeight; y++) {
+                    for (let x = 0; x < minWidth; x++) {
+                        const value = oldLayerData[y * this._width + x];
+                        newLayerData[y * newWidth + x] = value;
+                        newDataArray[y * newWidth + x] = value;
+                    }
+                }
+            }
+
+            this._layersData.set(layer.id, newLayerData);
+            layer.data = newDataArray;
+        }
+
+        // 调整碰撞数据
+        if (this._collisionData.length > 0) {
+            const newCollisionData = new Uint32Array(newWidth * newHeight);
+            const newCollisionArray = new Array(newWidth * newHeight).fill(0);
+
+            for (let y = 0; y < minHeight; y++) {
+                for (let x = 0; x < minWidth; x++) {
+                    const value = this._collisionData[y * this._width + x];
+                    newCollisionData[y * newWidth + x] = value;
+                    newCollisionArray[y * newWidth + x] = value;
+                }
+            }
+
+            this._collisionData = newCollisionData;
+            this._collisionDataArray = newCollisionArray;
+        }
+
+        this._width = newWidth;
+        this._height = newHeight;
+        this.renderDirty = true;
+    }
+
+    // ===== Serialization | 序列化 =====
+
+    /**
+     * Called after deserialization to restore runtime data
+     * 反序列化后调用以恢复运行时数据
      */
     override onDeserialized(): void {
-        // 从序列化数组恢复 Uint32Array
-        if (this._tileDataArray.length > 0) {
-            this._tileData = new Uint32Array(this._tileDataArray);
+        // 恢复图层运行时数据
+        for (const layer of this._layers) {
+            if (layer.data && layer.data.length > 0) {
+                this._layersData.set(layer.id, new Uint32Array(layer.data));
+            }
         }
 
-        // 从序列化的尺寸信息同步恢复 _tilesetData
-        // Synchronously restore _tilesetData from serialized size info
-        const tilesetPath = this.tilesetImage || this.tilesetAssetGuid;
-        if (tilesetPath && !this._tilesetData && this._tilesetImageWidth > 0 && this._tilesetImageHeight > 0) {
-            const columns = Math.floor(this._tilesetImageWidth / this.tileWidth);
-            const rows = Math.floor(this._tilesetImageHeight / this.tileHeight);
-
-            this._tilesetData = {
-                name: 'direct-tileset',
-                version: 1,
-                image: tilesetPath,
-                imageWidth: this._tilesetImageWidth,
-                imageHeight: this._tilesetImageHeight,
-                tileWidth: this.tileWidth,
-                tileHeight: this.tileHeight,
-                tileCount: columns * rows,
-                columns,
-                rows
-            };
-            this.renderDirty = true;
+        // 恢复Tileset缓存数据
+        for (let i = 0; i < this._tilesets.length; i++) {
+            const tileset = this._tilesets[i];
+            if (tileset.data) {
+                this._tilesetsData.set(i, tileset.data);
+            }
         }
+
+        // 恢复碰撞数据
+        if (this._collisionDataArray.length > 0) {
+            this._collisionData = new Uint32Array(this._collisionDataArray);
+        }
+
+        this.renderDirty = true;
     }
 
     /**
-     * 组件销毁时调用
-     * Called when component is destroyed
+     * Cleanup when component is destroyed
+     * 组件销毁时清理资源
      */
     onDestroy(): void {
-        if (this._tilemapReference) {
-            this._tilemapReference.release();
-            this._tilemapReference = undefined;
-        }
-        if (this._tilesetReference) {
-            this._tilesetReference.release();
-            this._tilesetReference = undefined;
-        }
-        this._tilesetData = undefined;
+        this._tilesets = [];
+        this._tilesetsData.clear();
+        this._layers = [];
+        this._layersData.clear();
+        this._collisionData = new Uint32Array(0);
+        this._collisionDataArray = [];
+    }
+
+    /**
+     * Export tilemap to data format
+     * 导出瓦片地图为数据格式
+     * @returns Tilemap data object | 瓦片地图数据对象
+     */
+    exportToData(): ITilemapData {
+        return {
+            name: 'Tilemap',
+            version: 2,
+            width: this._width,
+            height: this._height,
+            tileWidth: this.tileWidth,
+            tileHeight: this.tileHeight,
+            tilesets: this._tilesets.map((ts) => ({ ...ts })),
+            layers: this._layers.map((layer) => ({
+                ...layer,
+                data: [...layer.data]
+            })),
+            collisionData: this._collisionData.length > 0 ? Array.from(this._collisionData) : undefined
+        };
     }
 }

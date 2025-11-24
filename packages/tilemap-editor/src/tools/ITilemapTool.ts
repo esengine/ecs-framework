@@ -9,6 +9,7 @@ export interface ToolContext {
     tilemap: TilemapComponent;
     selectedTiles: TileSelection | null;
     currentLayer: number;
+    layerLocked: boolean;
     brushSize: number;
     editingCollision: boolean;
     tileWidth: number;

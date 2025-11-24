@@ -5,10 +5,18 @@
 import React, { useEffect, useCallback } from 'react';
 import { Core } from '@esengine/ecs-framework';
 import { MessageHub } from '@esengine/editor-core';
-import type { TilemapComponent } from '@esengine/tilemap';
+import { TilemapComponent, type ITilesetData } from '@esengine/tilemap';
 import { useTilemapEditorStore } from '../../stores/TilemapEditorStore';
 import { TilesetPreview } from '../TilesetPreview';
 import '../../styles/TilemapEditor.css';
+
+// Helper to convert file path to URL
+function convertFileSrc(path: string): string {
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('asset://')) {
+        return path;
+    }
+    return `asset://localhost/${encodeURIComponent(path)}`;
+}
 
 interface TilesetPanelProps {
     projectPath?: string | null;
@@ -23,7 +31,7 @@ export const TilesetPanel: React.FC<TilesetPanelProps> = () => {
         tileWidth,
         tileHeight,
         selectedTiles,
-        setTileset,
+        setTileset
     } = useTilemapEditorStore();
 
     // Load tileset from component
@@ -36,39 +44,47 @@ export const TilesetPanel: React.FC<TilesetPanelProps> = () => {
         const foundEntity = scene.findEntityById(parseInt(entityId, 10));
         if (!foundEntity) return;
 
-        const tilemapComp = foundEntity.components.find(
-            c => c.constructor.name === 'TilemapComponent'
-        ) as TilemapComponent | undefined;
+        const tilemapComp = foundEntity.getComponent(TilemapComponent);
         if (!tilemapComp) return;
 
-        const tilesetPath = (tilemapComp as any).tilesetImage || tilemapComp.tilesetAssetGuid;
-        if (!tilesetPath) return;
+        // Get tileset source from first tileset
+        const tilesetRef = tilemapComp.tilesets[0];
+        if (!tilesetRef) return;
 
-        import('@tauri-apps/api/core').then(({ convertFileSrc }) => {
-            const imageUrl = convertFileSrc(tilesetPath);
-            const currentState = useTilemapEditorStore.getState();
+        const tilesetPath = tilesetRef.source;
+        const imageUrl = convertFileSrc(tilesetPath);
+        const currentState = useTilemapEditorStore.getState();
 
-            // Check if URL or tile dimensions changed
-            const urlChanged = imageUrl !== currentState.tilesetImageUrl;
-            const dimensionsChanged = tilemapComp.tileWidth !== currentState.tileWidth ||
-                                      tilemapComp.tileHeight !== currentState.tileHeight;
+        // Check if URL or tile dimensions changed
+        const urlChanged = imageUrl !== currentState.tilesetImageUrl;
+        const dimensionsChanged =
+            tilemapComp.tileWidth !== currentState.tileWidth ||
+            tilemapComp.tileHeight !== currentState.tileHeight;
 
-            if (!urlChanged && !dimensionsChanged) return;
+        if (!urlChanged && !dimensionsChanged) return;
 
-            const img = new Image();
-            img.onload = () => {
-                const columns = Math.floor(img.width / tilemapComp.tileWidth);
-                const rows = Math.floor(img.height / tilemapComp.tileHeight);
-                // Set tileset info on component for UV calculation
-                tilemapComp.setTilesetInfo(
-                    img.width, img.height,
-                    tilemapComp.tileWidth, tilemapComp.tileHeight,
-                    columns, rows
-                );
-                setTileset(imageUrl, columns, rows, tilemapComp.tileWidth, tilemapComp.tileHeight);
+        const img = new Image();
+        img.onload = () => {
+            const columns = Math.floor(img.width / tilemapComp.tileWidth);
+            const rows = Math.floor(img.height / tilemapComp.tileHeight);
+
+            // Create tileset data and set it
+            const tilesetData: ITilesetData = {
+                name: 'tileset',
+                version: 1,
+                image: tilesetPath,
+                imageWidth: img.width,
+                imageHeight: img.height,
+                tileWidth: tilemapComp.tileWidth,
+                tileHeight: tilemapComp.tileHeight,
+                tileCount: columns * rows,
+                columns,
+                rows
             };
-            img.src = imageUrl;
-        });
+            tilemapComp.setTilesetData(0, tilesetData);
+            setTileset(imageUrl, columns, rows, tilemapComp.tileWidth, tilemapComp.tileHeight);
+        };
+        img.src = imageUrl;
     }, [entityId, setTileset]);
 
     // Load tileset when entityId is set but tilesetImageUrl is not yet loaded
@@ -97,7 +113,11 @@ export const TilesetPanel: React.FC<TilesetPanelProps> = () => {
                     <h3>Tileset</h3>
                 </div>
                 <div className="tileset-empty">
-                    <p>No tileset loaded.<br />Select a TilemapComponent to edit.</p>
+                    <p>
+                        No tileset loaded.
+                        <br />
+                        Select a TilemapComponent to edit.
+                    </p>
                 </div>
             </div>
         );
@@ -122,9 +142,7 @@ export const TilesetPanel: React.FC<TilesetPanelProps> = () => {
                     <span>
                         Selected: {selectedTiles.width}×{selectedTiles.height}
                     </span>
-                    <span>
-                        Tile: {selectedTiles.tiles[0]}
-                    </span>
+                    <span>Tile: {selectedTiles.tiles[0]}</span>
                 </div>
             )}
         </div>
