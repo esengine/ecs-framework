@@ -1,5 +1,6 @@
-import React from 'react';
-import { Trash2, Replace, Plus } from 'lucide-react';
+import { React, Icons } from '@esengine/editor-runtime';
+
+const { Trash2, Replace, Plus } = Icons;
 
 interface NodeContextMenuProps {
     visible: boolean;

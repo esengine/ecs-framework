@@ -1,4 +1,4 @@
-import { RefObject } from 'react';
+import { type RefObject, React } from '@esengine/editor-runtime';
 import { BehaviorTreeNode, Connection, ROOT_NODE_ID, useUIStore } from '../stores';
 import { PropertyDefinition } from '@esengine/behavior-tree';
 import { useConnectionOperations } from './useConnectionOperations';

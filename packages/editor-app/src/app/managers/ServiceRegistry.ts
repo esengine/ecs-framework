@@ -2,6 +2,7 @@ import { Core, ComponentRegistry as CoreComponentRegistry } from '@esengine/ecs-
 import {
     UIRegistry,
     MessageHub,
+    IMessageHub,
     SerializerRegistry,
     EntityStoreService,
     ComponentRegistry,
@@ -15,11 +16,14 @@ import {
     EntityCreationRegistry,
     EditorPluginManager,
     InspectorRegistry,
+    IInspectorRegistry,
     PropertyRendererRegistry,
     FieldEditorRegistry,
     ComponentActionRegistry,
     IDialogService,
-    IFileSystemService
+    IFileSystemService,
+    CompilerRegistry,
+    ICompilerRegistry
 } from '@esengine/editor-core';
 import {
     TransformComponent,
@@ -137,6 +141,7 @@ export class ServiceRegistry {
 
         Core.services.registerInstance(UIRegistry, uiRegistry);
         Core.services.registerInstance(MessageHub, messageHub);
+        Core.services.registerInstance(IMessageHub, messageHub);  // Symbol 注册用于跨包插件访问
         Core.services.registerInstance(SerializerRegistry, serializerRegistry);
         Core.services.registerInstance(EntityStoreService, entityStore);
         Core.services.registerInstance(ComponentRegistry, componentRegistry);
@@ -167,8 +172,8 @@ export class ServiceRegistry {
         Core.services.registerInstance(IFileSystemService, fileSystem);
 
         const inspectorRegistry = new InspectorRegistry();
-
         Core.services.registerInstance(InspectorRegistry, inspectorRegistry);
+        Core.services.registerInstance(IInspectorRegistry, inspectorRegistry);  // Symbol 注册用于跨包插件访问
 
         const propertyRendererRegistry = new PropertyRendererRegistry();
         Core.services.registerInstance(PropertyRendererRegistry, propertyRendererRegistry);

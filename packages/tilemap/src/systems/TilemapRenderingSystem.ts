@@ -120,6 +120,18 @@ export class TilemapRenderingSystem extends EntitySystem implements IRenderDataP
 
         const colorValue = this.parseColor(tilemap.color, tilemap.alpha);
 
+        // 计算旋转参数
+        // Calculate rotation parameters
+        // Note: transform.rotation.z is already in radians (set by Viewport gizmo)
+        // 注意：transform.rotation.z 已经是弧度（由 Viewport gizmo 设置）
+        const cos = Math.cos(transform.rotation.z);
+        const sin = Math.sin(transform.rotation.z);
+
+        // Tilemap 旋转中心点（左下角为原点，中心在 width/2, height/2 处）
+        // Tilemap rotation pivot (origin at bottom-left, center at width/2, height/2)
+        const pivotX = transform.position.x + (width * tileWidth * transform.scale.x) / 2;
+        const pivotY = transform.position.y + (height * tileHeight * transform.scale.y) / 2;
+
         let idx = 0;
         let texturePath: string | undefined;
 
@@ -130,7 +142,9 @@ export class TilemapRenderingSystem extends EntitySystem implements IRenderDataP
 
                 // 查找对应的 tileset
                 const tilesetInfo = tilemap.getTilesetForGid(gid);
-                if (!tilesetInfo) continue;
+                if (!tilesetInfo) {
+                    continue;
+                }
 
                 const { index: tilesetIndex, localId } = tilesetInfo;
 
@@ -139,15 +153,23 @@ export class TilemapRenderingSystem extends EntitySystem implements IRenderDataP
                     texturePath = tilemap.tilesets[tilesetIndex].source;
                 }
 
-                // 计算世界位置
-                const worldX = transform.position.x + col * tileWidth + tileWidth / 2;
-                const worldY = transform.position.y + row * tileHeight + tileHeight / 2;
+                // 计算瓦片的本地位置（相对于 tilemap 中心）
+                // Calculate tile local position (relative to tilemap center)
+                const localX = transform.position.x + col * tileWidth * transform.scale.x + (tileWidth * transform.scale.x) / 2 - pivotX;
+                const localY = transform.position.y + (height - 1 - row) * tileHeight * transform.scale.y + (tileHeight * transform.scale.y) / 2 - pivotY;
+
+                // 应用旋转变换
+                // Apply rotation transform
+                const rotatedX = localX * cos - localY * sin + pivotX;
+                const rotatedY = localX * sin + localY * cos + pivotY;
 
                 // Transform: [x, y, rotation, scaleX, scaleY, originX, originY]
+                // Each tile rotates the same angle as the tilemap, so the whole map rotates as a unit
+                // 每个 tile 旋转与 tilemap 相同的角度，这样整个地图作为一个整体旋转
                 const tOffset = idx * 7;
-                transforms[tOffset] = worldX;
-                transforms[tOffset + 1] = worldY;
-                transforms[tOffset + 2] = (transform.rotation.z * Math.PI) / 180;
+                transforms[tOffset] = rotatedX;
+                transforms[tOffset + 1] = rotatedY;
+                transforms[tOffset + 2] = transform.rotation.z; // Each tile rotates with tilemap
                 transforms[tOffset + 3] = tileWidth * transform.scale.x;
                 transforms[tOffset + 4] = tileHeight * transform.scale.y;
                 transforms[tOffset + 5] = 0.5;
@@ -199,23 +221,69 @@ export class TilemapRenderingSystem extends EntitySystem implements IRenderDataP
         const tileWidth = tilemap.tileWidth;
         const tileHeight = tilemap.tileHeight;
 
+        // 计算可见瓦片范围（与 buildRenderData 保持一致）
+        // Calculate visible tile range (consistent with buildRenderData)
+        let startCol = 0,
+            endCol = width;
+        let startRow = 0,
+            endRow = height;
+
+        if (this._viewportBounds) {
+            const bounds = this._viewportBounds;
+            const mapX = transform.position.x;
+            const mapY = transform.position.y;
+
+            startCol = Math.max(0, Math.floor((bounds.left - mapX) / tileWidth));
+            endCol = Math.min(width, Math.ceil((bounds.right - mapX) / tileWidth));
+            startRow = Math.max(0, Math.floor((bounds.bottom - mapY) / tileHeight));
+            endRow = Math.min(height, Math.ceil((bounds.top - mapY) / tileHeight));
+        }
+
+        // 计算旋转参数
+        // Calculate rotation parameters
+        // Note: transform.rotation.z is already in radians (set by Viewport gizmo)
+        // 注意：transform.rotation.z 已经是弧度（由 Viewport gizmo 设置）
+        const cos = Math.cos(transform.rotation.z);
+        const sin = Math.sin(transform.rotation.z);
+
+        // Tilemap 旋转中心点
+        // Tilemap rotation pivot
+        const pivotX = transform.position.x + (width * tileWidth * transform.scale.x) / 2;
+        const pivotY = transform.position.y + (height * tileHeight * transform.scale.y) / 2;
+
         let idx = 0;
-        for (let row = 0; row < height; row++) {
-            for (let col = 0; col < width; col++) {
+        for (let row = startRow; row < endRow; row++) {
+            for (let col = startCol; col < endCol; col++) {
                 if (mergedData[row * width + col] <= 0) continue;
 
-                const worldX = transform.position.x + col * tileWidth + tileWidth / 2;
-                const worldY = transform.position.y + row * tileHeight + tileHeight / 2;
+                // 计算瓦片的本地位置（相对于 tilemap 中心）
+                // Calculate tile local position (relative to tilemap center)
+                const localX = transform.position.x + col * tileWidth * transform.scale.x + (tileWidth * transform.scale.x) / 2 - pivotX;
+                const localY = transform.position.y + (height - 1 - row) * tileHeight * transform.scale.y + (tileHeight * transform.scale.y) / 2 - pivotY;
 
+                // 应用旋转变换
+                // Apply rotation transform
+                const rotatedX = localX * cos - localY * sin + pivotX;
+                const rotatedY = localX * sin + localY * cos + pivotY;
+
+                // Each tile rotates the same angle as the tilemap
+                // 每个 tile 旋转与 tilemap 相同的角度
                 const tOffset = idx * 7;
-                renderData.transforms[tOffset] = worldX;
-                renderData.transforms[tOffset + 1] = worldY;
-                renderData.transforms[tOffset + 2] = (transform.rotation.z * Math.PI) / 180;
+                renderData.transforms[tOffset] = rotatedX;
+                renderData.transforms[tOffset + 1] = rotatedY;
+                renderData.transforms[tOffset + 2] = transform.rotation.z;
                 renderData.transforms[tOffset + 3] = tileWidth * transform.scale.x;
                 renderData.transforms[tOffset + 4] = tileHeight * transform.scale.y;
 
                 idx++;
             }
+        }
+
+        // Update color (alpha may have changed)
+        // 更新颜色（alpha 可能已更改）
+        const colorValue = this.parseColor(tilemap.color, tilemap.alpha);
+        for (let i = 0; i < renderData.colors.length; i++) {
+            renderData.colors[i] = colorValue;
         }
 
         renderData.sortingOrder = tilemap.sortingOrder;

@@ -92,10 +92,16 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
 
     // Expand tree to reveal a specific file path
     const revealPath = async (targetPath: string) => {
-        if (!rootPath || !targetPath.startsWith(rootPath)) return;
+        if (!rootPath) return;
+
+        // Normalize paths to use forward slashes for comparison
+        const normalizedTargetPath = targetPath.replace(/\\/g, '/');
+        const normalizedRootPath = rootPath.replace(/\\/g, '/');
+
+        if (!normalizedTargetPath.startsWith(normalizedRootPath)) return;
 
         // Get path segments between root and target
-        const relativePath = targetPath.substring(rootPath.length).replace(/^[/\\]/, '');
+        const relativePath = normalizedTargetPath.substring(normalizedRootPath.length).replace(/^[/\\]/, '');
         const segments = relativePath.split(/[/\\]/);
 
         // Build list of folder paths to expand
@@ -748,9 +754,20 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
     };
 
     const renderNode = (node: TreeNode, level: number = 0) => {
-        const isSelected = selectedPaths
-            ? selectedPaths.has(node.path)
-            : (internalSelectedPath || selectedPath) === node.path;
+        // Normalize paths for comparison (handle forward/backward slashes)
+        const normalizedNodePath = node.path.replace(/\\/g, '/');
+        const normalizedInternalPath = internalSelectedPath?.replace(/\\/g, '/');
+        const normalizedSelectedPath = selectedPath?.replace(/\\/g, '/');
+
+        // Check if this node is selected, normalizing paths for comparison
+        let isSelected = false;
+        if (selectedPaths) {
+            // Check both original path and normalized path in selectedPaths set
+            isSelected = selectedPaths.has(node.path) || selectedPaths.has(normalizedNodePath);
+        } else {
+            isSelected = (normalizedInternalPath || normalizedSelectedPath) === normalizedNodePath;
+        }
+
         const isRenaming = renamingNode === node.path;
         const indent = level * 16;
 

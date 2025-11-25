@@ -1,20 +1,12 @@
 const resolve = require('@rollup/plugin-node-resolve');
 const commonjs = require('@rollup/plugin-commonjs');
+const replace = require('@rollup/plugin-replace');
 const dts = require('rollup-plugin-dts').default;
 const postcss = require('rollup-plugin-postcss');
 
 const external = [
-    'react',
-    'react/jsx-runtime',
-    'zustand',
-    'zustand/middleware',
-    'lucide-react',
-    '@esengine/ecs-framework',
-    '@esengine/editor-core',
+    '@esengine/editor-runtime',
     '@esengine/behavior-tree',
-    'tsyringe',
-    '@tauri-apps/api/core',
-    '@tauri-apps/plugin-dialog'
 ];
 
 module.exports = [
@@ -28,6 +20,10 @@ module.exports = [
             inlineDynamicImports: true
         },
         plugins: [
+            replace({
+                preventAssignment: true,
+                'process.env.NODE_ENV': JSON.stringify('production')
+            }),
             resolve({
                 extensions: ['.js', '.jsx']
             }),
@@ -60,7 +56,12 @@ module.exports = [
         ],
         external: [
             ...external,
-            /\.css$/
+            /\.css$/,
+            // 排除 React 相关类型，避免 rollup-plugin-dts 解析问题
+            'react',
+            'react-dom',
+            /^@types\//,
+            /^@esengine\//
         ]
     }
 ];

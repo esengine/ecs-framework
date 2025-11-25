@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState } from '@esengine/editor-runtime';
 import { BehaviorTreeExecutor } from '../utils/BehaviorTreeExecutor';
 
 export function useEditorState() {

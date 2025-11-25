@@ -1,12 +1,14 @@
 import { NodeTemplate, NodeType } from '@esengine/behavior-tree';
-import {
+import { Icons } from '@esengine/editor-runtime';
+import type { LucideIcon } from '@esengine/editor-runtime';
+
+const {
     List, GitBranch, Layers, Shuffle, RotateCcw,
     Repeat, CheckCircle, XCircle, CheckCheck, HelpCircle, Snowflake, Timer,
     Clock, FileText, Edit, Calculator, Code,
     Equal, Dices, Settings,
-    Database, TreePine,
-    LucideIcon
-} from 'lucide-react';
+    Database, TreePine
+} = Icons;
 
 export const ICON_MAP: Record<string, LucideIcon> = {
     List,

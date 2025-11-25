@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { React, useMemo } from '@esengine/editor-runtime';
 import { ConnectionViewData } from '../../types';
 import { Node } from '../../domain/models/Node';
 

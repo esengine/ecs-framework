@@ -20,6 +20,7 @@ import { TransformComponent } from '@esengine/ecs-components';
 import { useTilemapEditorStore } from './stores/TilemapEditorStore';
 import { TilemapEditorPanel } from './components/panels/TilemapEditorPanel';
 import { TilemapInspectorProvider } from './providers/TilemapInspectorProvider';
+import { registerTilemapGizmo } from './gizmos/TilemapGizmo';
 
 export class TilemapEditorPlugin implements IEditorPlugin {
     readonly name = '@esengine/tilemap-editor';
@@ -80,6 +81,10 @@ export class TilemapEditorPlugin implements IEditorPlugin {
             this.unsubscribers.push(unsubscribe);
         }
 
+        // Register Tilemap gizmo support
+        // 注册 Tilemap gizmo 支持
+        registerTilemapGizmo();
+
         console.log('[TilemapEditorPlugin] Installed');
     }
 
@@ -87,8 +92,8 @@ export class TilemapEditorPlugin implements IEditorPlugin {
         _services: ServiceContainer,
         payload: { entityId?: string; onChange?: (value: string | null) => void }
     ): Promise<void> {
-        const dialog = Core.services.tryResolve<IDialog>(IDialogService);
-        const fileSystem = Core.services.tryResolve<IFileSystem>(IFileSystemService);
+        const dialog = Core.services.tryResolve(IDialogService) as IDialog | null;
+        const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
         const messageHub = Core.services.tryResolve(MessageHub);
 
         if (!dialog || !fileSystem) {

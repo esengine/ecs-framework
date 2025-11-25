@@ -331,14 +331,15 @@ impl SpriteBatch {
             (-ox, -oy),           // Bottom-left | 左下
         ];
 
-        // UV coordinates match OpenGL/WebGL convention
-        // UV坐标匹配OpenGL/WebGL约定
-        // (0,0) = bottom-left of texture, (1,1) = top-right
+        // UV coordinates use image coordinate system (top-left origin, Y-down)
+        // UV坐标使用图像坐标系（左上角为原点，Y轴向下）
+        // Incoming UV: [u0, v0, u1, v1] where v0 < v1
+        // 传入的 UV：[u0, v0, u1, v1] 其中 v0 < v1
         let tex_coords = [
-            [u0, v1], // Top-left (texture top)
-            [u1, v1], // Top-right (texture top)
-            [u1, v0], // Bottom-right (texture bottom)
-            [u0, v0], // Bottom-left (texture bottom)
+            [u0, v0], // Top-left
+            [u1, v0], // Top-right
+            [u1, v1], // Bottom-right
+            [u0, v1], // Bottom-left
         ];
 
         // Transform and add each vertex | 变换并添加每个顶点

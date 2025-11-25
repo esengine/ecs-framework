@@ -1,5 +1,4 @@
-import { Core, createLogger } from '@esengine/ecs-framework';
-import { MessageHub } from '@esengine/editor-core';
+import { Core, createLogger, MessageHub } from '@esengine/editor-runtime';
 
 const logger = createLogger('NotificationService');
 

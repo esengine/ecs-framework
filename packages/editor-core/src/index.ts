@@ -40,6 +40,8 @@ export * from './Services/IFieldEditor';
 export * from './Services/FieldEditorRegistry';
 export * from './Services/ComponentActionRegistry';
 
+export * from './Gizmos';
+
 export * from './Module/IEventBus';
 export * from './Module/ICommandRegistry';
 export * from './Module/IPanelRegistry';

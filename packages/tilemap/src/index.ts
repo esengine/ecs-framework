@@ -4,9 +4,9 @@
  */
 
 // Component
-export { TilemapComponent, ITilemapData, ITilesetData } from './TilemapComponent';
+export { TilemapComponent, ITilemapData, ITilesetData, ResizeAnchor } from './TilemapComponent';
 
-// System
+// Systems
 export { TilemapRenderingSystem, TilemapRenderData, ViewportBounds } from './systems/TilemapRenderingSystem';
 
 // Loaders

@@ -95,38 +95,23 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
 
         const unsubscribe = messageHub.subscribe('asset:reveal', async (data: any) => {
             const filePath = data.path;
-            if (!filePath) {
-                console.warn('[AssetBrowser] asset:reveal called with empty path');
-                return;
-            }
-
-            if (!projectPath) {
-                console.warn('[AssetBrowser] asset:reveal called but no project loaded');
-                return;
-            }
+            if (!filePath || !projectPath) return;
 
             // Convert relative path to absolute path if needed
             let absoluteFilePath = filePath;
             if (!filePath.includes(':') && !filePath.startsWith('/')) {
-                // It's a relative path, prepend project path
                 absoluteFilePath = `${projectPath}/${filePath}`.replace(/\\/g, '/');
             }
 
-            console.log('[AssetBrowser] Revealing asset:', absoluteFilePath);
-
             const lastSlashIndex = Math.max(absoluteFilePath.lastIndexOf('/'), absoluteFilePath.lastIndexOf('\\'));
             const dirPath = lastSlashIndex > 0 ? absoluteFilePath.substring(0, lastSlashIndex) : null;
+
             if (dirPath) {
                 try {
-                    // Check if directory exists
                     const dirExists = await TauriAPI.pathExists(dirPath);
-                    if (!dirExists) {
-                        console.error(`[AssetBrowser] Directory does not exist: ${dirPath}`);
-                        return;
-                    }
+                    if (!dirExists) return;
 
                     setCurrentPath(dirPath);
-                    // Load assets first, then set selection after list is populated
                     await loadAssets(dirPath);
                     setSelectedPaths(new Set([absoluteFilePath]));
 

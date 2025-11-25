@@ -135,10 +135,6 @@ impl TextureManager {
         let onload = Closure::wrap(Box::new(move || {
             gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture_for_closure));
 
-            // Flip Y axis for correct orientation (image coords vs WebGL coords)
-            // 翻转Y轴以获得正确的方向（图像坐标系 vs WebGL坐标系）
-            gl.pixel_storei(WebGl2RenderingContext::UNPACK_FLIP_Y_WEBGL, 1);
-
             // Use the captured image element | 使用捕获的图片元素
             let result = gl.tex_image_2d_with_u32_and_u32_and_html_image_element(
                 WebGl2RenderingContext::TEXTURE_2D,

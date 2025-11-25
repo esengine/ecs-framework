@@ -5,14 +5,13 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
+    "build:sdk": "cd ../editor-runtime && pnpm build",
+    "build": "npm run build:sdk && tsc && vite build",
+    "build:watch": "vite build --watch",
     "tauri": "tauri",
-    "kill-dev": "node scripts/kill-dev-server.js",
-    "tauri:dev": "npm run kill-dev && tauri dev",
+    "tauri:dev": "npm run build:sdk && tauri dev",
     "bundle:runtime": "node scripts/bundle-runtime.mjs",
-    "tauri:build": "npm run bundle:runtime && tauri build",
+    "tauri:build": "npm run build:sdk && npm run bundle:runtime && tauri build",
     "version": "node scripts/sync-version.js && git add src-tauri/tauri.conf.json"
   },
   "dependencies": {

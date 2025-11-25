@@ -1,8 +1,7 @@
+import { React, createLogger } from '@esengine/editor-runtime';
+import type { LucideIcon } from '@esengine/editor-runtime';
 import { NodeTemplate } from '@esengine/behavior-tree';
 import { Node as BehaviorTreeNode } from '../domain/models/Node';
-import { LucideIcon } from 'lucide-react';
-import React from 'react';
-import { createLogger } from '@esengine/ecs-framework';
 
 const logger = createLogger('IEditorExtensions');
 

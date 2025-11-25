@@ -361,7 +361,8 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         };
     }, []);
 
-    // Sync camera state to engine
+    // Sync camera state to engine and publish camera:updated event
+    // 同步相机状态到引擎并发布 camera:updated 事件
     useEffect(() => {
         if (engine.state.initialized) {
             EngineService.getInstance().setCamera({
@@ -370,6 +371,17 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                 zoom: camera2DZoom,
                 rotation: 0
             });
+
+            // Publish camera update event for other systems
+            // 发布相机更新事件供其他系统使用
+            const hub = messageHubRef.current;
+            if (hub) {
+                hub.publish('camera:updated', {
+                    x: camera2DOffset.x,
+                    y: camera2DOffset.y,
+                    zoom: camera2DZoom
+                });
+            }
         }
     }, [camera2DOffset, camera2DZoom, engine.state.initialized]);
 
@@ -473,11 +485,11 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         }
     };
 
-    const handleStop = () => {
+    const handleStop = async () => {
         setPlayState('stopped');
         engine.stop();
         // Restore scene snapshot
-        EngineService.getInstance().restoreSceneSnapshot();
+        await EngineService.getInstance().restoreSceneSnapshot();
         // Restore editor camera state
         setCamera2DOffset({ x: editorCameraRef.current.x, y: editorCameraRef.current.y });
         setCamera2DZoom(editorCameraRef.current.zoom);

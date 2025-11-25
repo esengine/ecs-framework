@@ -1,6 +1,5 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, CommandManager } from '@esengine/editor-runtime';
 import { NodeTemplate } from '@esengine/behavior-tree';
-import { CommandManager } from '@esengine/editor-core';
 import { Position } from '../domain/value-objects/Position';
 import { INodeFactory } from '../domain/interfaces/INodeFactory';
 import { TreeStateAdapter } from '../application/state/BehaviorTreeDataStore';

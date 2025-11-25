@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { React, useMemo } from '@esengine/editor-runtime';
 
 interface GridBackgroundProps {
     canvasOffset: { x: number; y: number };

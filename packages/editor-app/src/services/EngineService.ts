@@ -3,13 +3,21 @@
  * 管理Rust引擎生命周期的服务。
  */
 
-import { EngineBridge, EngineRenderSystem, CameraConfig } from '@esengine/ecs-engine-bindgen';
+import { EngineBridge, EngineRenderSystem, CameraConfig, GizmoDataProviderFn, HasGizmoProviderFn } from '@esengine/ecs-engine-bindgen';
+import { GizmoRegistry } from '@esengine/editor-core';
 import { Core, Scene, Entity, SceneSerializer } from '@esengine/ecs-framework';
 import { TransformComponent, SpriteComponent, SpriteAnimatorSystem, SpriteAnimatorComponent } from '@esengine/ecs-components';
 import { TilemapComponent, TilemapRenderingSystem } from '@esengine/tilemap';
-import { EntityStoreService, MessageHub } from '@esengine/editor-core';
+import { EntityStoreService, MessageHub, SceneManagerService, ProjectService } from '@esengine/editor-core';
 import * as esEngine from '@esengine/engine';
-import { AssetManager, EngineIntegration, AssetPathResolver, AssetPlatform, globalPathResolver } from '@esengine/asset-system';
+import {
+    AssetManager,
+    EngineIntegration,
+    AssetPathResolver,
+    AssetPlatform,
+    globalPathResolver,
+    SceneResourceManager
+} from '@esengine/asset-system';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { IdGenerator } from '../utils/idGenerator';
 
@@ -32,6 +40,7 @@ export class EngineService {
     private sceneSnapshot: string | null = null;
     private assetManager: AssetManager | null = null;
     private engineIntegration: EngineIntegration | null = null;
+    private sceneResourceManager: SceneResourceManager | null = null;
     private assetPathResolver: AssetPathResolver | null = null;
     private assetSystemInitialized = false;
     private initializationError: Error | null = null;
@@ -111,6 +120,15 @@ export class EngineService {
             // Register tilemap system as render data provider
             // 将瓦片地图系统注册为渲染数据提供者
             this.renderSystem.addRenderDataProvider(this.tilemapSystem);
+
+            // Inject GizmoRegistry into render system
+            // 将 GizmoRegistry 注入渲染系统
+            this.renderSystem.setGizmoRegistry(
+                ((component, entity, isSelected) =>
+                    GizmoRegistry.getGizmoData(component, entity, isSelected)) as GizmoDataProviderFn,
+                ((component) =>
+                    GizmoRegistry.hasProvider(component.constructor as any)) as HasGizmoProviderFn
+            );
 
             // Initialize asset system | 初始化资产系统
             await this.initializeAssetSystem();
@@ -364,6 +382,20 @@ export class EngineService {
                 // 编辑器平台使用Tauri的convertFileSrc
                 // Use Tauri's convertFileSrc for editor platform
                 if (!path.startsWith('http://') && !path.startsWith('https://') && !path.startsWith('data:') && !path.startsWith('asset://')) {
+                    // 如果是相对路径，需要先转换为绝对路径
+                    // If it's a relative path, convert to absolute path first
+                    if (!path.startsWith('/') && !path.match(/^[a-zA-Z]:/)) {
+                        const projectService = Core.services.tryResolve<ProjectService>(ProjectService);
+                        if (projectService && projectService.isProjectOpen()) {
+                            const projectInfo = projectService.getCurrentProject();
+                            if (projectInfo) {
+                                const projectPath = projectInfo.path;
+                                // 规范化路径分隔符 / Normalize path separators
+                                const separator = projectPath.includes('\\') ? '\\' : '/';
+                                path = `${projectPath}${separator}${path.replace(/\//g, separator)}`;
+                            }
+                        }
+                    }
                     return convertFileSrc(path);
                 }
                 return path;
@@ -384,6 +416,17 @@ export class EngineService {
             // 创建引擎集成 / Create engine integration
             if (this.bridge) {
                 this.engineIntegration = new EngineIntegration(this.assetManager, this.bridge);
+
+                // 创建场景资源管理器 / Create scene resource manager
+                this.sceneResourceManager = new SceneResourceManager();
+                this.sceneResourceManager.setResourceLoader(this.engineIntegration);
+
+                // 将 SceneResourceManager 设置到 SceneManagerService
+                // Set SceneResourceManager to SceneManagerService
+                const sceneManagerService = Core.services.tryResolve<SceneManagerService>(SceneManagerService);
+                if (sceneManagerService) {
+                    sceneManagerService.setSceneResourceManager(this.sceneResourceManager);
+                }
             }
 
             this.assetSystemInitialized = true;
@@ -645,7 +688,7 @@ export class EngineService {
      * Restore scene state from saved snapshot.
      * 从保存的快照恢复场景状态。
      */
-    restoreSceneSnapshot(): boolean {
+    async restoreSceneSnapshot(): Promise<boolean> {
         if (!this.scene || !this.sceneSnapshot) {
             console.warn('Cannot restore snapshot: no scene or snapshot available');
             return false;
@@ -667,15 +710,11 @@ export class EngineService {
             });
             console.log('[EngineService] Scene deserialized, entities:', this.scene.entities.buffer.length);
 
-            // Check tilemap components after restore
-            for (const entity of this.scene.entities.buffer) {
-                const tilemap = entity.components.find(c => c.constructor.name === 'TilemapComponent');
-                if (tilemap) {
-                    console.log('[EngineService] Found TilemapComponent on entity:', entity.id, entity.name);
-                    console.log('[EngineService] Tilemap _tilesetData:', (tilemap as any)._tilesetData);
-                    console.log('[EngineService] Tilemap tilesetImage:', (tilemap as any).tilesetImage);
-                    console.log('[EngineService] Tilemap tiles length:', (tilemap as any)._tiles?.length);
-                }
+            // 加载场景资源 / Load scene resources
+            if (this.sceneResourceManager) {
+                await this.sceneResourceManager.loadSceneResources(this.scene);
+            } else {
+                console.warn('[EngineService] SceneResourceManager not available, skipping resource loading');
             }
 
             // Sync EntityStore with restored scene entities

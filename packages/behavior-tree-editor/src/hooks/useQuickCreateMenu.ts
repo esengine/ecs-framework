@@ -1,4 +1,4 @@
-import { useState, RefObject } from 'react';
+import { useState, type RefObject } from '@esengine/editor-runtime';
 import { NodeTemplate } from '@esengine/behavior-tree';
 import { BehaviorTreeNode, Connection, useBehaviorTreeDataStore } from '../stores';
 import { Node } from '../domain/models/Node';

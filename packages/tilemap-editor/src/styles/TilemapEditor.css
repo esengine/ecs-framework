@@ -87,12 +87,30 @@
 
 /* Sidebar */
 .tilemap-editor-sidebar {
+    position: relative;
     width: 220px;
     display: flex;
     flex-direction: column;
     border-left: 1px solid var(--border-color, #3c3c3c);
     background: var(--panel-bg, #1e1e1e);
     overflow-y: auto;
+}
+
+.sidebar-resize-handle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    cursor: ew-resize;
+    background: transparent;
+    transition: background 0.15s ease;
+    z-index: 10;
+}
+
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle.active {
+    background: var(--accent-color, #0078d4);
 }
 
 /* Section styles */
@@ -402,6 +420,16 @@
 .layer-info {
     flex: 1;
     min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.layer-active-indicator {
+    display: inline-flex;
+    align-items: center;
+    color: var(--accent-color, #0078d4);
+    flex-shrink: 0;
 }
 
 .layer-name {

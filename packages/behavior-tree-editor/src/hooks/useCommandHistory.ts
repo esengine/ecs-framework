@@ -1,5 +1,4 @@
-import { useRef, useCallback, useMemo, useEffect } from 'react';
-import { CommandManager } from '@esengine/editor-core';
+import { useRef, useCallback, useMemo, useEffect, CommandManager } from '@esengine/editor-runtime';
 
 /**
  * 撤销/重做功能 Hook

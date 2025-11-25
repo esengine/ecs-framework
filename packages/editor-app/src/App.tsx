@@ -1,6 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import * as ReactDOM from 'react-dom';
+import * as ReactJSXRuntime from 'react/jsx-runtime';
 import { Core, createLogger, Scene } from '@esengine/ecs-framework';
 import * as ECSFramework from '@esengine/ecs-framework';
+
+// 将 React 暴露到全局，供动态加载的插件使用
+// editor-runtime.js 将 React 设为 external，需要从全局获取
+(window as any).React = React;
+(window as any).ReactDOM = ReactDOM;
+(window as any).ReactJSXRuntime = ReactJSXRuntime;
 import {
     EditorPluginManager,
     UIRegistry,
@@ -13,6 +21,7 @@ import {
     SceneManagerService,
     ProjectService,
     CompilerRegistry,
+    ICompilerRegistry,
     InspectorRegistry,
     INotification,
     CommandManager
@@ -63,6 +72,11 @@ Core.services.registerInstance(LocaleService, localeService);
 
 Core.services.registerSingleton(GlobalBlackboardService);
 Core.services.registerSingleton(CompilerRegistry);
+
+// 在 CompilerRegistry 实例化后，也用 Symbol 注册，用于跨包插件访问
+// 注意：registerSingleton 会延迟实例化，所以需要在第一次使用后再注册 Symbol
+const compilerRegistryInstance = Core.services.resolve(CompilerRegistry);
+Core.services.registerInstance(ICompilerRegistry, compilerRegistryInstance);
 
 const logger = createLogger('App');
 
@@ -368,33 +382,16 @@ function App() {
 
             await projectService.openProject(projectPath);
 
-            await fetch('/@user-project-set-path', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path: projectPath })
-            });
+            // 设置 Tauri project:// 协议的基础路径（用于加载插件等项目文件）
+            await TauriAPI.setProjectBasePath(projectPath);
 
             setStatus(t('header.status.projectOpened'));
 
-            setLoadingMessage(locale === 'zh' ? '步骤 2/2: 加载场景...' : 'Step 2/2: Loading scene...');
+            setLoadingMessage(locale === 'zh' ? '步骤 2/2: 初始化场景...' : 'Step 2/2: Initializing scene...');
 
             const sceneManagerService = Core.services.resolve(SceneManagerService);
-            const scenesPath = projectService.getScenesPath();
-            if (scenesPath && sceneManagerService) {
-                try {
-                    const sceneFiles = await TauriAPI.scanDirectory(scenesPath, '*.ecs');
-
-                    if (sceneFiles.length > 0) {
-                        const defaultScenePath = projectService.getDefaultScenePath();
-                        const sceneToLoad = sceneFiles.find((f) => f === defaultScenePath) || sceneFiles[0];
-
-                        await sceneManagerService.openScene(sceneToLoad);
-                    } else {
-                        await sceneManagerService.newScene();
-                    }
-                } catch {
-                    await sceneManagerService.newScene();
-                }
+            if (sceneManagerService) {
+                await sceneManagerService.newScene();
             }
 
             const settings = SettingsService.getInstance();

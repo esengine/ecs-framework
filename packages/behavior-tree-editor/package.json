@@ -25,32 +25,21 @@
   "license": "MIT",
   "devDependencies": {
     "@esengine/behavior-tree": "workspace:*",
-    "@esengine/ecs-framework": "workspace:*",
-    "@esengine/editor-core": "workspace:*",
+    "@esengine/editor-runtime": "workspace:*",
     "@rollup/plugin-commonjs": "^28.0.1",
     "@rollup/plugin-node-resolve": "^15.3.0",
+    "@rollup/plugin-replace": "^6.0.3",
     "@types/react": "^18.3.18",
-    "lucide-react": "^0.469.0",
-    "react": "^18.3.1",
     "rimraf": "^6.0.1",
     "rollup": "^4.28.1",
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-dts": "^6.1.1",
     "rollup-plugin-postcss": "^4.0.2",
-    "typescript": "^5.8.2",
-    "zustand": "^5.0.2"
+    "typescript": "^5.8.2"
   },
   "peerDependencies": {
     "@esengine/behavior-tree": "*",
-    "@esengine/ecs-framework": "*",
-    "@esengine/editor-core": "*",
-    "@tauri-apps/api": "*",
-    "@tauri-apps/plugin-dialog": "*",
-    "@tauri-apps/plugin-http": "*",
-    "lucide-react": "^0.469.0",
-    "react": "^18.3.1",
-    "tsyringe": "*",
-    "zustand": "^5.0.2"
+    "@esengine/editor-runtime": "*"
   },
   "dependencies": {
     "mobx": "^6.15.0",

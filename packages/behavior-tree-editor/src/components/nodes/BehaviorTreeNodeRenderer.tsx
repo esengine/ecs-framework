@@ -1,7 +1,9 @@
-import React, { useMemo } from 'react';
-import * as LucideIcons from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { React, useMemo, Icons } from '@esengine/editor-runtime';
+import type { LucideIcon } from '@esengine/editor-runtime';
+
 import { NodeViewData } from '../../types';
+
+const LucideIcons = Icons;
 
 /**
  * 图标映射

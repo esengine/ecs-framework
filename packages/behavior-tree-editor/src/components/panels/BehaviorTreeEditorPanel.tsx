@@ -1,15 +1,24 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Core, createLogger } from '@esengine/ecs-framework';
-import { MessageHub } from '@esengine/editor-core';
-import { open, save } from '@tauri-apps/plugin-dialog';
+import {
+    React,
+    useState,
+    useCallback,
+    useEffect,
+    Core,
+    createLogger,
+    MessageHub,
+    open,
+    save,
+    Icons,
+} from '@esengine/editor-runtime';
 import { useBehaviorTreeDataStore } from '../../stores';
 import { BehaviorTreeEditor } from '../BehaviorTreeEditor';
 import { BehaviorTreeService } from '../../services/BehaviorTreeService';
 import { showToast } from '../../services/NotificationService';
-import { FolderOpen } from 'lucide-react';
 import { Node as BehaviorTreeNode } from '../../domain/models/Node';
 import { BehaviorTree } from '../../domain/models/BehaviorTree';
 import './BehaviorTreeEditorPanel.css';
+
+const { FolderOpen } = Icons;
 
 const logger = createLogger('BehaviorTreeEditorPanel');
 

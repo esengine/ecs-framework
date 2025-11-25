@@ -22,4 +22,5 @@ export interface IDialog {
 }
 
 // Service identifier for DI registration
-export const IDialogService = Symbol('IDialogService');
+// 使用 Symbol.for 确保跨包共享同一个 Symbol
+export const IDialogService = Symbol.for('IDialogService');

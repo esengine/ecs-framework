@@ -1,18 +1,16 @@
-import React from 'react';
-import {
-    TreePine,
-    Database,
-    AlertTriangle,
-    AlertCircle,
-    LucideIcon
-} from 'lucide-react';
+import { React, Icons } from '@esengine/editor-runtime';
+import type { LucideIcon } from '@esengine/editor-runtime';
 import { PropertyDefinition } from '@esengine/behavior-tree';
+
 import { Node as BehaviorTreeNodeType } from '../../domain/models/Node';
 import { Connection } from '../../domain/models/Connection';
 import { ROOT_NODE_ID } from '../../domain/constants/RootNode';
 import type { NodeExecutionStatus } from '../../stores';
+
 import { BehaviorTreeExecutor } from '../../utils/BehaviorTreeExecutor';
 import { BlackboardValue } from '../../domain/models/Blackboard';
+
+const { TreePine, Database, AlertTriangle, AlertCircle } = Icons;
 
 type BlackboardVariables = Record<string, BlackboardValue>;
 

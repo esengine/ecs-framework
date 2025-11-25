@@ -3,7 +3,7 @@ import { Core, IService, ServiceType } from '@esengine/ecs-framework';
 import { CompilerRegistry, ICompiler, CompilerContext, CompileResult, IFileSystem, IDialog, FileEntry } from '@esengine/editor-core';
 import { X, Play, Loader2 } from 'lucide-react';
 import { open as tauriOpen, save as tauriSave, message as tauriMessage, confirm as tauriConfirm } from '@tauri-apps/plugin-dialog';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import '../styles/CompilerConfigDialog.css';
 
 interface DirectoryEntry {
@@ -98,6 +98,9 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
             return entries
                 .filter((e) => !e.is_dir && e.name.endsWith(ext))
                 .map((e) => e.name.replace(ext, ''));
+        },
+        convertToAssetUrl: (filePath: string) => {
+            return convertFileSrc(filePath);
         },
         dispose: () => {}
     });

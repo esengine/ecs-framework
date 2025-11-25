@@ -86,11 +86,9 @@ export class AssetPathResolver {
         // 应用自定义转换器（如果提供）
         if (this.config.pathTransformer) {
             path = this.config.pathTransformer(path);
-            // Re-validate after transformation
-            const postTransform = PathValidator.validate(path);
-            if (!postTransform.valid) {
-                throw new Error(`Path transformer produced invalid path: ${postTransform.reason}`);
-            }
+            // Transformer output is trusted (may be absolute path or asset:// URL)
+            // 转换器输出是可信的（可能是绝对路径或 asset:// URL）
+            return path;
         }
 
         // Platform-specific resolution

@@ -36,10 +36,10 @@ pub async fn build_plugin(plugin_folder: String, app: AppHandle) -> Result<Strin
             .map_err(|e| format!("Failed to create .build-cache directory: {}", e))?;
     }
 
-    let npm_command = if cfg!(target_os = "windows") {
-        "npm.cmd"
+    let pnpm_command = if cfg!(target_os = "windows") {
+        "pnpm.cmd"
     } else {
-        "npm"
+        "pnpm"
     };
 
     // Step 1: Install dependencies
@@ -52,15 +52,15 @@ pub async fn build_plugin(plugin_folder: String, app: AppHandle) -> Result<Strin
     )
     .ok();
 
-    let install_output = Command::new(npm_command)
+    let install_output = Command::new(&pnpm_command)
         .args(["install"])
         .current_dir(&plugin_folder)
         .output()
-        .map_err(|e| format!("Failed to run npm install: {}", e))?;
+        .map_err(|e| format!("Failed to run pnpm install: {}", e))?;
 
     if !install_output.status.success() {
         return Err(format!(
-            "npm install failed: {}",
+            "pnpm install failed: {}",
             String::from_utf8_lossy(&install_output.stderr)
         ));
     }
@@ -75,15 +75,15 @@ pub async fn build_plugin(plugin_folder: String, app: AppHandle) -> Result<Strin
     )
     .ok();
 
-    let build_output = Command::new(npm_command)
+    let build_output = Command::new(&pnpm_command)
         .args(["run", "build"])
         .current_dir(&plugin_folder)
         .output()
-        .map_err(|e| format!("Failed to run npm run build: {}", e))?;
+        .map_err(|e| format!("Failed to run pnpm run build: {}", e))?;
 
     if !build_output.status.success() {
         return Err(format!(
-            "npm run build failed: {}",
+            "pnpm run build failed: {}",
             String::from_utf8_lossy(&build_output.stderr)
         ));
     }

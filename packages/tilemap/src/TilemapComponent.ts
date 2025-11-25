@@ -1,4 +1,15 @@
 import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/ecs-framework';
+import type { IResourceComponent, ResourceReference } from '@esengine/asset-system';
+import { UVHelper } from '@esengine/asset-system';
+
+/**
+ * Resize anchor point for tilemap expansion
+ * 瓦片地图扩展的锚点位置
+ */
+export type ResizeAnchor =
+    | 'top-left' | 'top-center' | 'top-right'
+    | 'middle-left' | 'center' | 'middle-right'
+    | 'bottom-left' | 'bottom-center' | 'bottom-right';
 
 /**
  * Tileset data interface
@@ -110,7 +121,7 @@ export interface ITilemapData {
  */
 @ECSComponent('Tilemap')
 @Serializable({ version: 2, typeId: 'Tilemap' })
-export class TilemapComponent extends Component {
+export class TilemapComponent extends Component implements IResourceComponent {
     /** Tilemap asset GUID reference | 瓦片地图资源GUID引用 */
     @Serialize()
     @Property({ type: 'asset', label: 'Tilemap', fileExtension: '.tilemap.json' })
@@ -769,43 +780,87 @@ export class TilemapComponent extends Component {
     // ===== UV Calculation | UV计算 =====
 
     /**
-     * Get UV coordinates for a tile in tileset
-     * 获取图块在图块集中的UV坐标
-     * @returns [u0, v0, u1, v1] or null | UV坐标或null
+     * Get UV coordinates for a tile
+     * 获取 tile 的 UV 坐标
+     *
+     * 使用 UVHelper 计算 OpenGL 纹理坐标。
+     * Uses UVHelper to calculate OpenGL texture coordinates.
+     *
+     * @see UVHelper.calculateTileUV for coordinate system documentation
+     * @param tilesetIndex Tileset index | Tileset 索引
+     * @param localTileId Local tile ID (1-based) | 本地 tile ID（从1开始）
+     * @returns [u0, v0, u1, v1] OpenGL UV coordinates, or null if invalid
      */
     getTileUV(tilesetIndex: number, localTileId: number): [number, number, number, number] | null {
         if (localTileId <= 0) return null;
 
         const tilesetData = this.getTilesetData(tilesetIndex);
-        if (!tilesetData) return null;
+        if (!tilesetData) {
+            console.warn('[TilemapComponent] getTileUV: No tileset data for index', tilesetIndex);
+            return null;
+        }
 
-        const { columns, imageWidth, imageHeight, tileWidth, tileHeight, margin = 0, spacing = 0 } = tilesetData;
-
-        const idx = localTileId - 1;
-        const col = idx % columns;
-        const row = Math.floor(idx / columns);
-
-        const x = margin + col * (tileWidth + spacing);
-        const y = margin + row * (tileHeight + spacing);
-
-        return [x / imageWidth, 1 - (y + tileHeight) / imageHeight, (x + tileWidth) / imageWidth, 1 - y / imageHeight];
+        // Use UVHelper for coordinate calculation
+        // 使用 UVHelper 计算坐标
+        return UVHelper.calculateTileUV(localTileId - 1, {
+            columns: tilesetData.columns,
+            tileWidth: tilesetData.tileWidth,
+            tileHeight: tilesetData.tileHeight,
+            imageWidth: tilesetData.imageWidth,
+            imageHeight: tilesetData.imageHeight,
+            margin: tilesetData.margin,
+            spacing: tilesetData.spacing
+        });
     }
 
     // ===== Resize | 大小调整 =====
 
     /**
-     * Resize the tilemap, preserving existing data
-     * 调整瓦片地图大小，保留现有数据
+     * Calculate offset based on anchor point
+     * 根据锚点计算偏移量
+     */
+    private calculateAnchorOffset(
+        oldSize: number,
+        newSize: number,
+        anchor: 'start' | 'center' | 'end'
+    ): number {
+        const delta = newSize - oldSize;
+        switch (anchor) {
+            case 'start': return 0;
+            case 'center': return Math.floor(delta / 2);
+            case 'end': return delta;
+        }
+    }
+
+    /**
+     * Resize the tilemap, preserving existing data at the specified anchor position
+     * 调整瓦片地图大小，在指定锚点位置保留现有数据
      * @param newWidth New width in tiles | 新宽度（图块数）
      * @param newHeight New height in tiles | 新高度（图块数）
+     * @param anchor Anchor point for preserving data (default: 'bottom-left' for Y-up coordinate system) | 保留数据的锚点（默认：'bottom-left'，适用于Y轴向上的坐标系）
      */
-    resize(newWidth: number, newHeight: number): void {
+    resize(newWidth: number, newHeight: number, anchor: ResizeAnchor = 'bottom-left'): void {
         if (newWidth === this._width && newHeight === this._height) {
             return;
         }
 
-        const minWidth = Math.min(this._width, newWidth);
-        const minHeight = Math.min(this._height, newHeight);
+        // Parse anchor to get X and Y alignment
+        // 解析锚点获取X和Y方向的对齐方式
+        let xAnchor: 'start' | 'center' | 'end' = 'start';
+        let yAnchor: 'start' | 'center' | 'end' = 'end'; // 'end' means bottom in Y-up system
+
+        if (anchor.includes('left')) xAnchor = 'start';
+        else if (anchor.includes('right')) xAnchor = 'end';
+        else xAnchor = 'center';
+
+        if (anchor.includes('bottom')) yAnchor = 'end';
+        else if (anchor.includes('top')) yAnchor = 'start';
+        else yAnchor = 'center';
+
+        // Calculate offsets for placing old data in new array
+        // 计算将旧数据放入新数组的偏移量
+        const offsetX = this.calculateAnchorOffset(this._width, newWidth, xAnchor);
+        const offsetY = this.calculateAnchorOffset(this._height, newHeight, yAnchor);
 
         // 调整所有图层
         for (const layer of this._layers) {
@@ -814,11 +869,17 @@ export class TilemapComponent extends Component {
             const newDataArray = new Array(newWidth * newHeight).fill(0);
 
             if (oldLayerData) {
-                for (let y = 0; y < minHeight; y++) {
-                    for (let x = 0; x < minWidth; x++) {
-                        const value = oldLayerData[y * this._width + x];
-                        newLayerData[y * newWidth + x] = value;
-                        newDataArray[y * newWidth + x] = value;
+                for (let y = 0; y < this._height; y++) {
+                    for (let x = 0; x < this._width; x++) {
+                        const newX = x + offsetX;
+                        const newY = y + offsetY;
+
+                        // Check bounds
+                        if (newX >= 0 && newX < newWidth && newY >= 0 && newY < newHeight) {
+                            const value = oldLayerData[y * this._width + x];
+                            newLayerData[newY * newWidth + newX] = value;
+                            newDataArray[newY * newWidth + newX] = value;
+                        }
                     }
                 }
             }
@@ -832,11 +893,16 @@ export class TilemapComponent extends Component {
             const newCollisionData = new Uint32Array(newWidth * newHeight);
             const newCollisionArray = new Array(newWidth * newHeight).fill(0);
 
-            for (let y = 0; y < minHeight; y++) {
-                for (let x = 0; x < minWidth; x++) {
-                    const value = this._collisionData[y * this._width + x];
-                    newCollisionData[y * newWidth + x] = value;
-                    newCollisionArray[y * newWidth + x] = value;
+            for (let y = 0; y < this._height; y++) {
+                for (let x = 0; x < this._width; x++) {
+                    const newX = x + offsetX;
+                    const newY = y + offsetY;
+
+                    if (newX >= 0 && newX < newWidth && newY >= 0 && newY < newHeight) {
+                        const value = this._collisionData[y * this._width + x];
+                        newCollisionData[newY * newWidth + newX] = value;
+                        newCollisionArray[newY * newWidth + newX] = value;
+                    }
                 }
             }
 
@@ -879,6 +945,7 @@ export class TilemapComponent extends Component {
         this.renderDirty = true;
     }
 
+
     /**
      * Cleanup when component is destroyed
      * 组件销毁时清理资源
@@ -912,5 +979,50 @@ export class TilemapComponent extends Component {
             })),
             collisionData: this._collisionData.length > 0 ? Array.from(this._collisionData) : undefined
         };
+    }
+
+    // ===== IResourceComponent 实现 =====
+
+    /**
+     * 获取此组件需要的所有资源引用
+     * Get all resource references needed by this component
+     */
+    getResourceReferences(): ResourceReference[] {
+        const refs: ResourceReference[] = [];
+
+        // 收集所有 tileset 纹理引用
+        // Collect all tileset texture references
+        for (const tileset of this._tilesets) {
+            if (tileset.source) {
+                refs.push({
+                    path: tileset.source,
+                    type: 'texture',
+                    runtimeId: tileset.textureId
+                });
+            }
+        }
+
+        return refs;
+    }
+
+    /**
+     * 设置已加载资源的运行时 ID
+     * Set runtime IDs for loaded resources
+     */
+    setResourceIds(pathToId: Map<string, number>): void {
+        // 为每个 tileset 设置纹理 ID
+        // Set texture ID for each tileset
+        for (const tileset of this._tilesets) {
+            if (tileset.source) {
+                const textureId = pathToId.get(tileset.source);
+                if (textureId !== undefined) {
+                    tileset.textureId = textureId;
+                }
+            }
+        }
+
+        // 标记渲染数据为脏，需要重新构建
+        // Mark render data as dirty, needs rebuild
+        this.renderDirty = true;
     }
 }

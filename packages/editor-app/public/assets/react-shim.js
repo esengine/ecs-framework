@@ -1,0 +1,40 @@
+// React shim - 从全局变量导出 React
+// 这个文件用于 Import Map，让插件的 import 'react' 能正确解析到主应用的 React
+const React = window.React;
+export default React;
+export const {
+    Children,
+    Component,
+    Fragment,
+    Profiler,
+    PureComponent,
+    StrictMode,
+    Suspense,
+    cloneElement,
+    createContext,
+    createElement,
+    createFactory,
+    createRef,
+    forwardRef,
+    isValidElement,
+    lazy,
+    memo,
+    startTransition,
+    unstable_act,
+    useCallback,
+    useContext,
+    useDebugValue,
+    useDeferredValue,
+    useEffect,
+    useId,
+    useImperativeHandle,
+    useInsertionEffect,
+    useLayoutEffect,
+    useMemo,
+    useReducer,
+    useRef,
+    useState,
+    useSyncExternalStore,
+    useTransition,
+    version
+} = React;

@@ -478,6 +478,7 @@ function ColorField({ label, value, readOnly, onChange }: ColorFieldProps) {
         const v = Math.max(0, Math.min(100, 100 - ((e.clientY - rect.top) / rect.height) * 100));
         const newColor = hsvToHex(hsv.h, s, v);
         setTempColor(newColor);
+        onChange(newColor); // Real-time update
     };
 
     const handleHueChange = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -485,6 +486,7 @@ function ColorField({ label, value, readOnly, onChange }: ColorFieldProps) {
         const h = Math.max(0, Math.min(360, ((e.clientX - rect.left) / rect.width) * 360));
         const newColor = hsvToHex(h, hsv.s, hsv.v);
         setTempColor(newColor);
+        onChange(newColor); // Real-time update
     };
 
     return (
@@ -978,8 +980,14 @@ function AssetDropField({ label, value, fileExtension, readOnly, controlledBy, e
         if (assetPath) {
             if (fileExtension) {
                 const extensions = fileExtension.split(',').map((ext) => ext.trim().toLowerCase());
-                const fileExt = assetPath.toLowerCase().split('.').pop();
-                if (fileExt && extensions.some((ext) => ext === `.${fileExt}` || ext === fileExt)) {
+                const lowerPath = assetPath.toLowerCase();
+                // Check if the path ends with any of the specified extensions
+                // This handles both simple extensions (.json) and compound extensions (.tilemap.json)
+                const isValidExtension = extensions.some((ext) => {
+                    const normalizedExt = ext.startsWith('.') ? ext : `.${ext}`;
+                    return lowerPath.endsWith(normalizedExt);
+                });
+                if (isValidExtension) {
                     onChange(assetPath);
                 }
             } else {
@@ -1004,10 +1012,7 @@ function AssetDropField({ label, value, fileExtension, readOnly, controlledBy, e
         if (value) {
             const messageHub = Core.services.tryResolve(MessageHub);
             if (messageHub) {
-                console.log('[AssetDropField] Navigate to:', value);
                 messageHub.publish('asset:reveal', { path: value });
-            } else {
-                console.error('[AssetDropField] MessageHub not available');
             }
         }
     };

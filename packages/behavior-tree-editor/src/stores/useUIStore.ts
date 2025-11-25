@@ -1,4 +1,6 @@
-import { create } from 'zustand';
+import { createStore } from '@esengine/editor-runtime';
+
+const create = createStore;
 
 /**
  * UI 状态 Store

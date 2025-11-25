@@ -1,4 +1,6 @@
-import { create } from 'zustand';
+import { createStore } from '@esengine/editor-runtime';
+
+const create = createStore;
 
 /**
  * 节点执行统计信息

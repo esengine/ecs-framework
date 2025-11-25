@@ -53,6 +53,9 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
     // Get layer locked state
     const layerLocked = layers[currentLayer]?.locked ?? false;
 
+    // Create a dependency key from layers state to trigger redraw when visibility/opacity changes
+    const layersKey = layers.map(l => `${l.visible}-${l.opacity}`).join(',');
+
     const [isPanning, setIsPanning] = useState(false);
     const [lastPanPos, setLastPanPos] = useState({ x: 0, y: 0 });
     const [mousePos, setMousePos] = useState<{ tileX: number; tileY: number } | null>(null);
@@ -81,28 +84,43 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
         ctx.fillStyle = '#1a1a1a';
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-        // Draw tiles
+        // Draw tiles from all visible layers (from bottom to top)
         if (tilesetImage) {
             ctx.imageSmoothingEnabled = false;
 
-            for (let y = 0; y < tilemap.height; y++) {
-                for (let x = 0; x < tilemap.width; x++) {
-                    const tileIndex = tilemap.getTile(currentLayer, x, y);
-                    if (tileIndex > 0) {
-                        // Calculate source position in tileset
-                        const srcX = ((tileIndex - 1) % tilesetColumns) * tileWidth;
-                        const srcY = Math.floor((tileIndex - 1) / tilesetColumns) * tileHeight;
+            // Draw all layers from tilemap component, respecting visibility and opacity
+            const tilemapLayers = tilemap.layers;
 
-                        // Only draw if tile is within tileset bounds
-                        if (srcX + tileWidth <= tilesetImage.width && srcY + tileHeight <= tilesetImage.height) {
-                            ctx.drawImage(
-                                tilesetImage,
-                                srcX, srcY, tileWidth, tileHeight,
-                                x * tileWidth, y * tileHeight, tileWidth, tileHeight
-                            );
+            for (let layerIndex = tilemapLayers.length - 1; layerIndex >= 0; layerIndex--) {
+                const tilemapLayer = tilemapLayers[layerIndex];
+                if (!tilemapLayer || !tilemapLayer.visible) continue; // Skip undefined or invisible layers
+
+                // Apply layer opacity
+                const savedAlpha = ctx.globalAlpha;
+                ctx.globalAlpha = tilemapLayer.opacity ?? 1;
+
+                for (let y = 0; y < tilemap.height; y++) {
+                    for (let x = 0; x < tilemap.width; x++) {
+                        const tileIndex = tilemap.getTile(layerIndex, x, y);
+                        if (tileIndex > 0) {
+                            // Calculate source position in tileset
+                            const srcX = ((tileIndex - 1) % tilesetColumns) * tileWidth;
+                            const srcY = Math.floor((tileIndex - 1) / tilesetColumns) * tileHeight;
+
+                            // Only draw if tile is within tileset bounds
+                            if (srcX + tileWidth <= tilesetImage.width && srcY + tileHeight <= tilesetImage.height) {
+                                ctx.drawImage(
+                                    tilesetImage,
+                                    srcX, srcY, tileWidth, tileHeight,
+                                    x * tileWidth, y * tileHeight, tileWidth, tileHeight
+                                );
+                            }
                         }
                     }
                 }
+
+                // Restore opacity
+                ctx.globalAlpha = savedAlpha;
             }
         }
 
@@ -163,7 +181,7 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
         }
 
         ctx.restore();
-    }, [tilemap, tilesetImage, zoom, panX, panY, showGrid, showCollision, mousePos, currentTool, selectedTiles, brushSize, currentLayer, layerLocked, editingCollision, tileWidth, tileHeight, tilesetColumns, canvasWidth, canvasHeight]);
+    }, [tilemap, tilesetImage, zoom, panX, panY, showGrid, showCollision, mousePos, currentTool, selectedTiles, brushSize, currentLayer, layerLocked, editingCollision, tileWidth, tileHeight, tilesetColumns, canvasWidth, canvasHeight, layersKey]);
 
     // Update canvas size
     useEffect(() => {

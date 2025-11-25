@@ -1,5 +1,6 @@
 import type { IService } from '@esengine/ecs-framework';
 import { Injectable, Core, createLogger, SceneSerializer, Scene } from '@esengine/ecs-framework';
+import type { SceneResourceManager } from '@esengine/asset-system';
 import type { MessageHub } from './MessageHub';
 import type { IFileAPI } from '../Types/IFileAPI';
 import type { ProjectService } from './ProjectService';
@@ -24,6 +25,7 @@ export class SceneManagerService implements IService {
     };
 
     private unsubscribeHandlers: Array<() => void> = [];
+    private sceneResourceManager: SceneResourceManager | null = null;
 
     constructor(
         private messageHub: MessageHub,
@@ -33,6 +35,14 @@ export class SceneManagerService implements IService {
     ) {
         this.setupAutoModificationTracking();
         logger.info('SceneManagerService initialized');
+    }
+
+    /**
+     * 设置场景资源管理器
+     * Set scene resource manager
+     */
+    public setSceneResourceManager(manager: SceneResourceManager | null): void {
+        this.sceneResourceManager = manager;
     }
 
     public async newScene(): Promise<void> {
@@ -90,6 +100,13 @@ export class SceneManagerService implements IService {
             scene.deserialize(jsonData, {
                 strategy: 'replace'
             });
+
+            // 加载场景资源 / Load scene resources
+            if (this.sceneResourceManager) {
+                await this.sceneResourceManager.loadSceneResources(scene);
+            } else {
+                logger.warn('[SceneManagerService] SceneResourceManager not available, skipping resource loading');
+            }
 
             const fileName = path.split(/[/\\]/).pop() || 'Untitled';
             const sceneName = fileName.replace('.ecs', '');

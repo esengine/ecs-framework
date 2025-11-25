@@ -26,11 +26,13 @@ import {
     Folder,
     FolderOpen,
     File,
-    Image as ImageIcon
+    Image as ImageIcon,
+    Save,
+    Scaling
 } from 'lucide-react';
 import { Core, Entity } from '@esengine/ecs-framework';
 import { MessageHub, ProjectService, IFileSystemService, type IFileSystem } from '@esengine/editor-core';
-import { TilemapComponent, type ITilesetData } from '@esengine/tilemap';
+import { TilemapComponent, type ITilesetData, type ResizeAnchor } from '@esengine/tilemap';
 import { useTilemapEditorStore, type TilemapToolType, type LayerState } from '../../stores/TilemapEditorStore';
 import { TilemapCanvas } from '../TilemapCanvas';
 import { TilesetPreview } from '../TilesetPreview';
@@ -80,9 +82,12 @@ function AssetPickerDialog({
             setPreviewPosition({ x: rect.right + 10, y: rect.top - 50 });
             setPreviewPath(node.path);
 
-            // Use Tauri's asset protocol format
-            const normalizedPath = node.path.replace(/\\/g, '/');
-            setPreviewSrc(`https://asset.localhost/${normalizedPath}`);
+            // Use FileSystem service to convert local path to asset URL
+            const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
+            if (fileSystem) {
+                const assetUrl = fileSystem.convertToAssetUrl(node.path);
+                setPreviewSrc(assetUrl);
+            }
         }
     };
 
@@ -98,7 +103,7 @@ function AssetPickerDialog({
             setLoading(true);
             try {
                 const projectService = Core.services.tryResolve(ProjectService);
-                const fileSystem = Core.services.tryResolve<IFileSystem>(IFileSystemService);
+                const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
 
                 const currentProject = projectService?.getCurrentProject();
                 if (projectService && currentProject && fileSystem) {
@@ -355,14 +360,194 @@ function AssetPickerDialog({
     );
 }
 
-// Helper to convert file path to URL
+// Resize Map Dialog component
+interface ResizeMapDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: (width: number, height: number, anchor: ResizeAnchor) => void;
+    currentWidth: number;
+    currentHeight: number;
+}
+
+function ResizeMapDialog({
+    isOpen,
+    onClose,
+    onConfirm,
+    currentWidth,
+    currentHeight
+}: ResizeMapDialogProps) {
+    const [newWidth, setNewWidth] = useState(currentWidth);
+    const [newHeight, setNewHeight] = useState(currentHeight);
+    const [anchor, setAnchor] = useState<ResizeAnchor>('bottom-left');
+
+    useEffect(() => {
+        if (isOpen) {
+            setNewWidth(currentWidth);
+            setNewHeight(currentHeight);
+        }
+    }, [isOpen, currentWidth, currentHeight]);
+
+    if (!isOpen) return null;
+
+    const anchorPositions: ResizeAnchor[] = [
+        'top-left', 'top-center', 'top-right',
+        'middle-left', 'center', 'middle-right',
+        'bottom-left', 'bottom-center', 'bottom-right'
+    ];
+
+    const handleConfirm = () => {
+        if (newWidth > 0 && newHeight > 0) {
+            onConfirm(newWidth, newHeight, anchor);
+            onClose();
+        }
+    };
+
+    return (
+        <div className="asset-picker-overlay" onClick={onClose}>
+            <div className="asset-picker-dialog resize-dialog" onClick={(e) => e.stopPropagation()} style={{ width: '320px' }}>
+                <div className="asset-picker-header">
+                    <h3>调整地图大小</h3>
+                    <button className="asset-picker-close" onClick={onClose}>
+                        <X size={16} />
+                    </button>
+                </div>
+
+                <div className="resize-dialog-content" style={{ padding: '16px' }}>
+                    {/* Size inputs */}
+                    <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                        <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#888' }}>
+                                宽度 (tiles)
+                            </label>
+                            <input
+                                type="number"
+                                value={newWidth}
+                                onChange={(e) => setNewWidth(Math.max(1, parseInt(e.target.value) || 1))}
+                                min={1}
+                                style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    backgroundColor: '#1e1e1e',
+                                    border: '1px solid #444',
+                                    borderRadius: '4px',
+                                    color: '#e0e0e0'
+                                }}
+                            />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#888' }}>
+                                高度 (tiles)
+                            </label>
+                            <input
+                                type="number"
+                                value={newHeight}
+                                onChange={(e) => setNewHeight(Math.max(1, parseInt(e.target.value) || 1))}
+                                min={1}
+                                style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    backgroundColor: '#1e1e1e',
+                                    border: '1px solid #444',
+                                    borderRadius: '4px',
+                                    color: '#e0e0e0'
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Anchor selector */}
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', color: '#888' }}>
+                            锚点位置 (原有内容保留在此处)
+                        </label>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
+                            gap: '4px',
+                            width: '120px',
+                            margin: '0 auto'
+                        }}>
+                            {anchorPositions.map((pos) => (
+                                <button
+                                    key={pos}
+                                    onClick={() => setAnchor(pos)}
+                                    style={{
+                                        width: '36px',
+                                        height: '36px',
+                                        backgroundColor: anchor === pos ? '#0078d4' : '#2a2a2a',
+                                        border: '1px solid #444',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                    title={pos}
+                                >
+                                    <div style={{
+                                        width: '8px',
+                                        height: '8px',
+                                        backgroundColor: anchor === pos ? '#fff' : '#666',
+                                        borderRadius: '50%'
+                                    }} />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Preview */}
+                    <div style={{
+                        backgroundColor: '#1a1a1a',
+                        border: '1px solid #333',
+                        borderRadius: '4px',
+                        padding: '12px',
+                        marginBottom: '16px'
+                    }}>
+                        <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>
+                            当前: {currentWidth} × {currentHeight} → 新: {newWidth} × {newHeight}
+                        </div>
+                        <div style={{ fontSize: '11px', color: newWidth !== currentWidth || newHeight !== currentHeight ? '#4fc3f7' : '#666' }}>
+                            {newWidth > currentWidth && `右侧增加 ${newWidth - currentWidth} 列`}
+                            {newWidth < currentWidth && `右侧减少 ${currentWidth - newWidth} 列`}
+                            {newWidth !== currentWidth && newHeight !== currentHeight && ' | '}
+                            {newHeight > currentHeight && `顶部增加 ${newHeight - currentHeight} 行`}
+                            {newHeight < currentHeight && `顶部减少 ${currentHeight - newHeight} 行`}
+                            {newWidth === currentWidth && newHeight === currentHeight && '无变化'}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="asset-picker-footer">
+                    <div className="asset-picker-actions">
+                        <button className="btn-cancel" onClick={onClose}>
+                            取消
+                        </button>
+                        <button
+                            className="btn-confirm"
+                            onClick={handleConfirm}
+                            disabled={newWidth === currentWidth && newHeight === currentHeight}
+                        >
+                            确定
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Helper to convert file path to URL using FileSystem service
 function convertFileSrc(path: string): string {
-    // In Tauri, use convertFileSrc from @tauri-apps/api/core
-    // For now, use a simple file:// protocol or asset protocol
-    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('asset://')) {
+    // Use FileSystem service to convert local path to asset URL
+    const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
+    if (fileSystem) {
+        return fileSystem.convertToAssetUrl(path);
+    }
+    // Fallback for already-converted URLs
+    if (path.startsWith('http://') || path.startsWith('https://')) {
         return path;
     }
-    return `asset://localhost/${encodeURIComponent(path)}`;
+    return path;
 }
 
 interface TilemapEditorPanelProps {
@@ -378,8 +563,11 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
     const [showTilesetPanel, setShowTilesetPanel] = useState(true);
     const [showSidebar, setShowSidebar] = useState(true);
     const [tilesetHeight, setTilesetHeight] = useState(200);
+    const [sidebarWidth, setSidebarWidth] = useState(220);
     const [isResizing, setIsResizing] = useState(false);
+    const [isResizingWidth, setIsResizingWidth] = useState(false);
     const [showAssetPicker, setShowAssetPicker] = useState(false);
+    const [showResizeDialog, setShowResizeDialog] = useState(false);
     const sidebarRef = useRef<HTMLDivElement>(null);
 
     const messageHub = propMessageHub || Core.services.resolve(MessageHub);
@@ -430,32 +618,59 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         }
 
         const tilesetPath = tilesetRef.source;
-        const imageUrl = convertFileSrc(tilesetPath);
-        const img = new Image();
-        img.onload = () => {
-            const columns = Math.floor(img.width / tilemapComp.tileWidth);
-            const rows = Math.floor(img.height / tilemapComp.tileHeight);
 
-            // Create tileset data and set it
-            const tilesetData: ITilesetData = {
-                name: 'tileset',
-                version: 1,
-                image: tilesetPath,
-                imageWidth: img.width,
-                imageHeight: img.height,
-                tileWidth: tilemapComp.tileWidth,
-                tileHeight: tilemapComp.tileHeight,
-                tileCount: columns * rows,
-                columns,
-                rows
+        // Convert relative path to absolute path
+        const projectService = Core.services.tryResolve(ProjectService);
+        const currentProject = projectService?.getCurrentProject();
+        let absolutePath = tilesetPath;
+        if (currentProject && !tilesetPath.startsWith('/') && !tilesetPath.match(/^[a-zA-Z]:/)) {
+            // It's a relative path, convert to absolute
+            const projectPath = currentProject.path.replace(/\\/g, '/');
+            absolutePath = `${projectPath}/${tilesetPath}`.replace(/\\/g, '/');
+        }
+
+        const imageUrl = convertFileSrc(absolutePath);
+
+        // Use existing tileset data if available, otherwise load from image
+        if (tilesetRef.data) {
+            const tilesetData = tilesetRef.data;
+            console.log('[TilemapEditor] Using saved tileset data:', {
+                columns: tilesetData.columns,
+                rows: tilesetData.rows,
+                tileWidth: tilesetData.tileWidth,
+                tileHeight: tilesetData.tileHeight,
+                imageWidth: tilesetData.imageWidth,
+                imageHeight: tilesetData.imageHeight
+            });
+            setTileset(imageUrl, tilesetData.columns, tilesetData.rows, tilesetData.tileWidth, tilesetData.tileHeight);
+        } else {
+            // Fallback: calculate from image dimensions
+            const img = new Image();
+            img.onload = () => {
+                const columns = Math.floor(img.width / tilemapComp.tileWidth);
+                const rows = Math.floor(img.height / tilemapComp.tileHeight);
+
+                // Create tileset data and set it
+                const tilesetData: ITilesetData = {
+                    name: 'tileset',
+                    version: 1,
+                    image: tilesetPath,
+                    imageWidth: img.width,
+                    imageHeight: img.height,
+                    tileWidth: tilemapComp.tileWidth,
+                    tileHeight: tilemapComp.tileHeight,
+                    tileCount: columns * rows,
+                    columns,
+                    rows
+                };
+                tilemapComp.setTilesetData(0, tilesetData);
+                setTileset(imageUrl, columns, rows, tilemapComp.tileWidth, tilemapComp.tileHeight);
             };
-            tilemapComp.setTilesetData(0, tilesetData);
-            setTileset(imageUrl, columns, rows, tilemapComp.tileWidth, tilemapComp.tileHeight);
-        };
-        img.onerror = () => {
-            setTileset(null, 0, 0, tilemapComp.tileWidth, tilemapComp.tileHeight);
-        };
-        img.src = imageUrl;
+            img.onerror = () => {
+                setTileset(null, 0, 0, tilemapComp.tileWidth, tilemapComp.tileHeight);
+            };
+            img.src = imageUrl;
+        }
     };
 
     // Load tilemap component when entityId changes
@@ -536,6 +751,82 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
     const handleTilemapChange = () => {
         messageHub?.publish('scene:modified', {});
     };
+
+    const handleSaveTilemap = useCallback(async () => {
+        if (!tilemap || !entity) return;
+
+        try {
+            // Export tilemap data
+            const tilemapData = tilemap.exportToData();
+            const jsonContent = JSON.stringify(tilemapData, null, 2);
+
+            // Get the tilemap asset path from component
+            let tilemapAssetPath = tilemap.tilemapAssetGuid;
+            if (!tilemapAssetPath) {
+                console.warn('Tilemap asset path not set, cannot save');
+                return;
+            }
+
+            // Convert to absolute path if it's a relative path
+            const projectService = Core.services.tryResolve(ProjectService);
+            const currentProject = projectService?.getCurrentProject();
+            if (!currentProject) {
+                console.warn('No project loaded, cannot save tilemap');
+                return;
+            }
+
+            // Normalize paths
+            const normalizedAssetPath = tilemapAssetPath.replace(/\\/g, '/');
+            const normalizedProjectPath = currentProject.path.replace(/\\/g, '/');
+
+            // Check if path is already absolute (starts with drive letter or /)
+            let absolutePath: string;
+            if (normalizedAssetPath.match(/^[a-zA-Z]:/) || normalizedAssetPath.startsWith('/')) {
+                // Already absolute path
+                absolutePath = normalizedAssetPath;
+            } else {
+                // Relative path, combine with project path
+                absolutePath = `${normalizedProjectPath}/${normalizedAssetPath}`;
+            }
+
+            // Save using FileSystem service
+            const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
+            if (fileSystem) {
+                await fileSystem.writeFile(absolutePath, jsonContent);
+
+                // Show success notification
+                messageHub?.publish('notification:show', {
+                    type: 'success',
+                    message: 'Tilemap 保存成功',
+                    duration: 2000
+                });
+            }
+        } catch (error) {
+            console.error('Failed to save tilemap:', error);
+
+            // Show error notification
+            messageHub?.publish('notification:show', {
+                type: 'error',
+                message: `保存失败: ${error instanceof Error ? error.message : String(error)}`,
+                duration: 3000
+            });
+        }
+    }, [tilemap, entity]);
+
+    // Handle keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ctrl+S to save tilemap
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSaveTilemap();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown, { capture: true });
+        return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+    }, [handleSaveTilemap]);
 
     const handleToolChange = (tool: TilemapToolType) => {
         setCurrentTool(tool);
@@ -638,6 +929,30 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         document.addEventListener('mouseup', handleMouseUp);
     };
 
+    // Handle sidebar width resize
+    const handleSidebarResizeStart = (e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsResizingWidth(true);
+
+        const startX = e.clientX;
+        const startWidth = sidebarWidth;
+
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+            const delta = startX - moveEvent.clientX; // Reverse delta because we're dragging from right to left
+            const newWidth = Math.max(180, Math.min(400, startWidth + delta));
+            setSidebarWidth(newWidth);
+        };
+
+        const handleMouseUp = () => {
+            setIsResizingWidth(false);
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    };
+
     const handleRemoveTileset = (index: number) => {
         if (!tilemap) return;
         tilemap.removeTileset(index);
@@ -648,6 +963,14 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         }
         handleTilemapChange();
     };
+
+    // Handle resize map
+    const handleResizeMap = useCallback((newWidth: number, newHeight: number, anchor: ResizeAnchor) => {
+        if (!tilemap) return;
+        tilemap.resize(newWidth, newHeight, anchor);
+        setTilemapKey(`${newWidth}-${newHeight}-${Date.now()}`);
+        handleTilemapChange();
+    }, [tilemap, handleTilemapChange]);
 
     if (!tilemap) {
         return (
@@ -690,6 +1013,25 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
                         title="Fill (G)"
                     >
                         <PaintBucket size={16} />
+                    </button>
+                </div>
+
+                <div className="separator" />
+
+                <div className="tool-group">
+                    <button
+                        className="tool-btn"
+                        onClick={handleSaveTilemap}
+                        title="Save Tilemap (Ctrl+S)"
+                    >
+                        <Save size={16} />
+                    </button>
+                    <button
+                        className="tool-btn"
+                        onClick={() => setShowResizeDialog(true)}
+                        title="Resize Map"
+                    >
+                        <Scaling size={16} />
                     </button>
                 </div>
 
@@ -754,7 +1096,12 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
 
                 {/* Right sidebar with tileset and layers */}
                 {showSidebar && (
-                    <div className="tilemap-editor-sidebar" ref={sidebarRef}>
+                    <div className="tilemap-editor-sidebar" ref={sidebarRef} style={{ width: `${sidebarWidth}px` }}>
+                        {/* Sidebar width resize handle */}
+                        <div
+                            className={`sidebar-resize-handle ${isResizingWidth ? 'active' : ''}`}
+                            onMouseDown={handleSidebarResizeStart}
+                        />
                         {/* Tileset Section */}
                         <div className="tileset-section">
                             <div
@@ -849,6 +1196,15 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
                 onSelect={handleTilesetSelected}
                 title="Select Tileset Image"
                 fileExtensions={['.png', '.jpg', '.jpeg', '.webp']}
+            />
+
+            {/* Resize Map Dialog */}
+            <ResizeMapDialog
+                isOpen={showResizeDialog}
+                onClose={() => setShowResizeDialog(false)}
+                onConfirm={handleResizeMap}
+                currentWidth={tilemap.width}
+                currentHeight={tilemap.height}
             />
         </div>
     );

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, ChevronUp, ChevronDown, Paintbrush } from 'lucide-react';
 import { useTilemapEditorStore, type LayerState } from '../../stores/TilemapEditorStore';
 import type { TilemapComponent } from '@esengine/tilemap';
 
@@ -142,6 +142,11 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                         </div>
 
                         <div className="layer-info">
+                            {index === currentLayer && (
+                                <span className="layer-active-indicator" title="当前绘制图层">
+                                    <Paintbrush size={14} />
+                                </span>
+                            )}
                             {editingIndex === index ? (
                                 <input
                                     type="text"

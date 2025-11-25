@@ -20,6 +20,8 @@ export interface ProviderRenderData {
     uvs: Float32Array;
     colors: Uint32Array;
     tileCount: number;
+    /** Sorting order for render ordering | 渲染排序顺序 */
+    sortingOrder: number;
     /** Texture path for loading (optional, used if textureId is 0) */
     texturePath?: string;
 }
@@ -31,6 +33,63 @@ export interface ProviderRenderData {
 export interface IRenderDataProvider {
     getRenderData(): readonly ProviderRenderData[];
 }
+
+/**
+ * Internal gizmo color interface (duck-typed, compatible with editor-core GizmoColor)
+ * 内部 gizmo 颜色接口（鸭子类型，与 editor-core GizmoColor 兼容）
+ * @internal
+ */
+interface GizmoColorInternal {
+    r: number;
+    g: number;
+    b: number;
+    a: number;
+}
+
+/**
+ * Internal gizmo render data type (duck-typed, compatible with editor-core types)
+ * 内部 gizmo 渲染数据类型（鸭子类型，与 editor-core 类型兼容）
+ * @internal
+ */
+interface GizmoRenderDataInternal {
+    type: 'rect' | 'circle' | 'line' | 'grid';
+    color: GizmoColorInternal;
+    // Rect specific
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    rotation?: number;
+    originX?: number;
+    originY?: number;
+    showHandles?: boolean;
+    // Circle specific
+    radius?: number;
+    // Line specific
+    points?: Array<{ x: number; y: number }>;
+    closed?: boolean;
+    // Grid specific
+    cols?: number;
+    rows?: number;
+}
+
+/**
+ * Function type for getting gizmo data from a component.
+ * Used to inject GizmoRegistry functionality from editor layer.
+ * 从组件获取 gizmo 数据的函数类型。
+ * 用于从编辑器层注入 GizmoRegistry 功能。
+ */
+export type GizmoDataProviderFn = (
+    component: Component,
+    entity: Entity,
+    isSelected: boolean
+) => GizmoRenderDataInternal[];
+
+/**
+ * Function type for checking if a component has gizmo provider.
+ * 检查组件是否有 gizmo 提供者的函数类型。
+ */
+export type HasGizmoProviderFn = (component: Component) => boolean;
 
 /**
  * Type for transform component constructor.
@@ -81,6 +140,11 @@ export class EngineRenderSystem extends EntitySystem {
     // 额外的渲染数据提供者（如瓦片地图）
     private renderDataProviders: IRenderDataProvider[] = [];
 
+    // Gizmo registry functions (injected from editor layer)
+    // Gizmo 注册表函数（从编辑器层注入）
+    private gizmoDataProvider: GizmoDataProviderFn | null = null;
+    private hasGizmoProvider: HasGizmoProviderFn | null = null;
+
     /**
      * Create a new engine render system.
      * 创建新的引擎渲染系统。
@@ -112,7 +176,6 @@ export class EngineRenderSystem extends EntitySystem {
      * 处理实体之前调用。
      */
     protected override onBegin(): void {
-
         // Clear the batch | 清空批处理
         this.batcher.clear();
 
@@ -134,6 +197,12 @@ export class EngineRenderSystem extends EntitySystem {
         // 清空并重用映射用于绘制gizmo
         this.entityRenderMap.clear();
 
+        // Collect all render items with sorting order
+        // 收集所有渲染项及其排序顺序
+        const renderItems: Array<{ sortingOrder: number; sprites: SpriteRenderData[] }> = [];
+
+        // Collect sprites from entities
+        // 收集实体的 sprites
         for (const entity of entities) {
             const sprite = entity.getComponent(SpriteComponent);
             const transform = entity.getComponent(this.transformType) as unknown as ITransformComponent | null;
@@ -185,18 +254,12 @@ export class EngineRenderSystem extends EntitySystem {
                 color
             };
 
-            this.batcher.addSprite(renderData);
+            renderItems.push({ sortingOrder: sprite.sortingOrder, sprites: [renderData] });
             this.entityRenderMap.set(entity.id, renderData);
         }
 
-        // Submit batch and render at the end of process | 在process结束时提交批处理并渲染
-        if (!this.batcher.isEmpty) {
-            const sprites = this.batcher.getSprites();
-            this.bridge.submitSprites(sprites);
-        }
-
-        // Render additional data from providers (e.g., tilemap)
-        // 渲染来自提供者的额外数据（如瓦片地图）
+        // Collect render data from providers (e.g., tilemap)
+        // 收集来自提供者的渲染数据（如瓦片地图）
         for (const provider of this.renderDataProviders) {
             const renderDataList = provider.getRenderData();
             for (const data of renderDataList) {
@@ -207,6 +270,7 @@ export class EngineRenderSystem extends EntitySystem {
                 }
 
                 // Convert tilemap render data to sprites
+                const tilemapSprites: SpriteRenderData[] = [];
                 for (let i = 0; i < data.tileCount; i++) {
                     const tOffset = i * 7;
                     const uvOffset = i * 4;
@@ -224,36 +288,42 @@ export class EngineRenderSystem extends EntitySystem {
                         color: data.colors[i]
                     };
 
-                    this.batcher.addSprite(renderData);
+                    tilemapSprites.push(renderData);
+                }
+
+                if (tilemapSprites.length > 0) {
+                    renderItems.push({ sortingOrder: data.sortingOrder, sprites: tilemapSprites });
                 }
             }
         }
 
-        // Submit tilemap sprites
+        // Sort by sortingOrder (lower values render first, appear behind)
+        // 按 sortingOrder 排序（值越小越先渲染，显示在后面）
+        renderItems.sort((a, b) => a.sortingOrder - b.sortingOrder);
+
+        // Submit all sprites in sorted order
+        // 按排序顺序提交所有 sprites
+        for (const item of renderItems) {
+            for (const sprite of item.sprites) {
+                this.batcher.addSprite(sprite);
+            }
+        }
+
         if (!this.batcher.isEmpty) {
             const sprites = this.batcher.getSprites();
             this.bridge.submitSprites(sprites);
         }
 
+        // Draw gizmos for all entities with IGizmoProvider components
+        // 为所有具有 IGizmoProvider 组件的实体绘制 Gizmo
+        if (this.showGizmos) {
+            this.drawComponentGizmos();
+        }
+
         // Draw gizmos for selected entities (always, even if no sprites)
         // 为选中的实体绘制Gizmo（始终绘制，即使没有精灵）
         if (this.showGizmos && this.selectedEntityIds.size > 0) {
-            for (const entityId of this.selectedEntityIds) {
-                const renderData = this.entityRenderMap.get(entityId);
-                if (renderData) {
-                    this.bridge.addGizmoRect(
-                        renderData.x,
-                        renderData.y,
-                        renderData.scaleX,
-                        renderData.scaleY,
-                        renderData.rotation,
-                        renderData.originX,
-                        renderData.originY,
-                        0.0, 1.0, 0.5, 1.0,  // Green color | 绿色
-                        true  // Show transform handles for selection gizmo
-                    );
-                }
-            }
+            this.drawSelectedEntityGizmos();
         }
 
         // Draw camera frustum gizmos
@@ -263,6 +333,296 @@ export class EngineRenderSystem extends EntitySystem {
         }
 
         this.bridge.render();
+    }
+
+    /**
+     * Draw gizmos from components that have registered gizmo providers.
+     * 绘制已注册 gizmo 提供者的组件的 gizmo。
+     */
+    private drawComponentGizmos(): void {
+        const scene = Core.scene;
+        if (!scene || !this.gizmoDataProvider || !this.hasGizmoProvider) return;
+
+        // Iterate all entities in the scene
+        // 遍历场景中的所有实体
+        for (const entity of scene.entities.buffer) {
+            const isSelected = this.selectedEntityIds.has(entity.id);
+
+            // Check each component for gizmo provider
+            // 检查每个组件是否有 gizmo 提供者
+            for (const component of entity.components) {
+                if (this.hasGizmoProvider(component)) {
+                    try {
+                        const gizmoDataArray = this.gizmoDataProvider(component, entity, isSelected);
+                        for (const gizmoData of gizmoDataArray) {
+                            this.renderGizmoData(gizmoData);
+                        }
+                    } catch (e) {
+                        // Silently ignore errors from gizmo providers
+                        // 静默忽略 gizmo 提供者的错误
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Render a single gizmo data item.
+     * 渲染单个 gizmo 数据项。
+     */
+    private renderGizmoData(data: GizmoRenderDataInternal): void {
+        const { r, g, b, a } = data.color;
+
+        switch (data.type) {
+            case 'rect':
+                if (data.x !== undefined && data.y !== undefined &&
+                    data.width !== undefined && data.height !== undefined) {
+                    this.bridge.addGizmoRect(
+                        data.x,
+                        data.y,
+                        data.width,
+                        data.height,
+                        data.rotation ?? 0,
+                        data.originX ?? 0.5,
+                        data.originY ?? 0.5,
+                        r, g, b, a,
+                        data.showHandles ?? false
+                    );
+                }
+                break;
+
+            case 'grid':
+                // Render grid as multiple line segments
+                // 将网格渲染为多条线段
+                if (data.x !== undefined && data.y !== undefined &&
+                    data.width !== undefined && data.height !== undefined &&
+                    data.cols !== undefined && data.rows !== undefined) {
+                    this.renderGridGizmo(data.x, data.y, data.width, data.height, data.cols, data.rows, r, g, b, a);
+                }
+                break;
+
+            case 'line':
+                // Lines are rendered as connected rect segments (thin)
+                // 线条渲染为连接的细矩形段
+                if (data.points && data.points.length >= 2) {
+                    this.renderLineGizmo(data.points, data.closed ?? false, r, g, b, a);
+                }
+                break;
+
+            case 'circle':
+                // Circle rendered as polygon approximation
+                // 圆形渲染为多边形近似
+                if (data.x !== undefined && data.y !== undefined && data.radius !== undefined) {
+                    this.renderCircleGizmo(data.x, data.y, data.radius, r, g, b, a);
+                }
+                break;
+        }
+    }
+
+    /**
+     * Render a grid gizmo using line segments.
+     * 使用线段渲染网格 gizmo。
+     */
+    private renderGridGizmo(
+        x: number, y: number, width: number, height: number,
+        cols: number, rows: number,
+        r: number, g: number, b: number, a: number
+    ): void {
+        const cellWidth = width / cols;
+        const cellHeight = height / rows;
+        const lineThickness = 1;
+
+        // Vertical lines | 垂直线
+        for (let col = 0; col <= cols; col++) {
+            const lineX = x + col * cellWidth;
+            this.bridge.addGizmoRect(
+                lineX, y + height / 2,
+                lineThickness, height,
+                0, 0.5, 0.5,
+                r, g, b, a,
+                false
+            );
+        }
+
+        // Horizontal lines | 水平线
+        for (let row = 0; row <= rows; row++) {
+            const lineY = y + row * cellHeight;
+            this.bridge.addGizmoRect(
+                x + width / 2, lineY,
+                width, lineThickness,
+                0, 0.5, 0.5,
+                r, g, b, a,
+                false
+            );
+        }
+    }
+
+    /**
+     * Render a line gizmo.
+     * 渲染线条 gizmo。
+     */
+    private renderLineGizmo(
+        points: Array<{ x: number; y: number }>,
+        closed: boolean,
+        r: number, g: number, b: number, a: number
+    ): void {
+        const lineThickness = 2;
+        const count = closed ? points.length : points.length - 1;
+
+        for (let i = 0; i < count; i++) {
+            const p1 = points[i];
+            const p2 = points[(i + 1) % points.length];
+
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+
+            // Draw line segment as thin rect
+            // 将线段绘制为细矩形
+            this.bridge.addGizmoRect(
+                (p1.x + p2.x) / 2,
+                (p1.y + p2.y) / 2,
+                length, lineThickness,
+                angle, 0.5, 0.5,
+                r, g, b, a,
+                false
+            );
+        }
+    }
+
+    /**
+     * Render a circle gizmo as polygon.
+     * 将圆形 gizmo 渲染为多边形。
+     */
+    private renderCircleGizmo(
+        x: number, y: number, radius: number,
+        r: number, g: number, b: number, a: number
+    ): void {
+        const segments = 32;
+        const points: Array<{ x: number; y: number }> = [];
+
+        for (let i = 0; i < segments; i++) {
+            const angle = (i / segments) * Math.PI * 2;
+            points.push({
+                x: x + Math.cos(angle) * radius,
+                y: y + Math.sin(angle) * radius
+            });
+        }
+
+        this.renderLineGizmo(points, true, r, g, b, a);
+    }
+
+    /**
+     * Draw gizmos for selected entities with transform handles.
+     * 为选中的实体绘制带有变换手柄的 gizmo。
+     *
+     * This method ensures that selected entities show transform handles
+     * regardless of whether they have sprite data in entityRenderMap.
+     * 此方法确保选中的实体显示变换手柄，无论它们是否在 entityRenderMap 中有精灵数据。
+     */
+    private drawSelectedEntityGizmos(): void {
+        const scene = Core.scene;
+        if (!scene) return;
+
+        // Determine if we should show handles based on transform mode
+        // 根据变换模式确定是否显示手柄
+        const shouldShowHandles = this.transformMode !== 'select';
+
+        for (const entityId of this.selectedEntityIds) {
+            // Find the entity
+            // 查找实体
+            const entity = scene.entities.findEntityById(entityId);
+            if (!entity) continue;
+
+            // Get transform component
+            // 获取变换组件
+            const transform = entity.getComponent(TransformComponent);
+            if (!transform) continue;
+
+            // First check if we have sprite data from entityRenderMap
+            // 首先检查是否有来自 entityRenderMap 的精灵数据
+            const spriteData = this.entityRenderMap.get(entityId);
+            if (spriteData) {
+                // Use sprite data for selection gizmo
+                // 使用精灵数据绘制选择 gizmo
+                this.bridge.addGizmoRect(
+                    spriteData.x,
+                    spriteData.y,
+                    spriteData.scaleX,
+                    spriteData.scaleY,
+                    spriteData.rotation,
+                    spriteData.originX,
+                    spriteData.originY,
+                    0.0, 0.8, 1.0, 1.0,  // Selection color (cyan)
+                    shouldShowHandles
+                );
+                continue;
+            }
+
+            // For entities without sprite data, try to get gizmo data from components via registry
+            // 对于没有精灵数据的实体，尝试通过注册表从组件获取 gizmo 数据
+            let foundGizmo = false;
+            if (this.gizmoDataProvider && this.hasGizmoProvider) {
+                for (const component of entity.components) {
+                    if (this.hasGizmoProvider(component)) {
+                        try {
+                            const gizmoDataArray = this.gizmoDataProvider(component, entity, true);
+                            // Use the first rect gizmo for selection handles
+                            // 使用第一个矩形 gizmo 来绘制选择手柄
+                            for (const gizmoData of gizmoDataArray) {
+                                if (gizmoData.type === 'rect' &&
+                                    gizmoData.x !== undefined && gizmoData.y !== undefined &&
+                                    gizmoData.width !== undefined && gizmoData.height !== undefined) {
+
+                                    // Draw selection gizmo with handles
+                                    // 绘制带手柄的选择 gizmo
+                                    this.bridge.addGizmoRect(
+                                        gizmoData.x,
+                                        gizmoData.y,
+                                        gizmoData.width,
+                                        gizmoData.height,
+                                        gizmoData.rotation ?? 0,
+                                        gizmoData.originX ?? 0.5,
+                                        gizmoData.originY ?? 0.5,
+                                        0.0, 0.8, 1.0, 1.0,  // Selection color (cyan)
+                                        shouldShowHandles
+                                    );
+                                    foundGizmo = true;
+                                    break;
+                                }
+                            }
+                            if (foundGizmo) break;
+                        } catch (e) {
+                            // Silently ignore errors
+                            // 静默忽略错误
+                        }
+                    }
+                }
+            }
+
+            // If no gizmo provider found, draw a default gizmo at transform position
+            // 如果没有找到 gizmo 提供者，在变换位置绘制默认 gizmo
+            if (!foundGizmo) {
+                const rotation = typeof transform.rotation === 'number'
+                    ? transform.rotation
+                    : transform.rotation.z;
+
+                // Draw a small default gizmo at entity position
+                // 在实体位置绘制一个小的默认 gizmo
+                this.bridge.addGizmoRect(
+                    transform.position.x,
+                    transform.position.y,
+                    32,  // Default size
+                    32,
+                    rotation,
+                    0.5,
+                    0.5,
+                    0.0, 0.8, 1.0, 1.0,  // Selection color (cyan)
+                    shouldShowHandles
+                );
+            }
+        }
     }
 
     /**
@@ -313,6 +673,26 @@ export class EngineRenderSystem extends EntitySystem {
                 false  // Don't show transform handles for camera frustum
             );
         }
+    }
+
+    /**
+     * Set gizmo registry functions.
+     * 设置 gizmo 注册表函数。
+     *
+     * This allows the editor layer to inject GizmoRegistry functionality
+     * without creating a direct dependency from engine to editor.
+     * 这允许编辑器层注入 GizmoRegistry 功能，
+     * 而不会创建从引擎到编辑器的直接依赖。
+     *
+     * @param provider - Function to get gizmo data from a component
+     * @param hasProvider - Function to check if a component has a gizmo provider
+     */
+    setGizmoRegistry(
+        provider: GizmoDataProviderFn,
+        hasProvider: HasGizmoProviderFn
+    ): void {
+        this.gizmoDataProvider = provider;
+        this.hasGizmoProvider = hasProvider;
     }
 
     /**
