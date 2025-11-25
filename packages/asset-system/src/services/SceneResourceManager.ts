@@ -146,7 +146,7 @@ export class SceneResourceManager {
      *
      * @param scene 要卸载资源的场景 / The scene to unload resources for
      */
-    async unloadSceneResources(scene: Scene): Promise<void> {
+    async unloadSceneResources(_scene: Scene): Promise<void> {
         // TODO: 实现资源卸载 / Implement resource unloading
         // 需要跟踪资源引用计数，仅在不再使用时卸载
         // Need to track resource reference counts and only unload when no longer used
