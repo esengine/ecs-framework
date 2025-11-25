@@ -6,6 +6,7 @@
 import { AssetManager } from '../core/AssetManager';
 import { AssetGUID } from '../types/AssetTypes';
 import { ITextureAsset } from '../interfaces/IAssetLoader';
+import { globalPathResolver } from '../core/AssetPathResolver';
 
 /**
  * Engine bridge interface
@@ -63,24 +64,35 @@ export class EngineIntegration {
     /**
      * Load texture for component
      * 为组件加载纹理
+     *
+     * 统一的路径解析入口：相对路径会被转换为 Tauri 可用的 asset:// URL
+     * Unified path resolution entry: relative paths will be converted to Tauri-compatible asset:// URLs
      */
     async loadTextureForComponent(texturePath: string): Promise<number> {
-        // 检查是否已有纹理ID / Check if texture ID exists
+        // 检查缓存（使用原始路径作为键）
+        // Check cache (using original path as key)
         const existingId = this._pathToTextureId.get(texturePath);
         if (existingId) {
             return existingId;
         }
 
-        // 通过资产系统加载 / Load through asset system
-        const result = await this._assetManager.loadAssetByPath<ITextureAsset>(texturePath);
+        // 使用 globalPathResolver 转换路径
+        // Use globalPathResolver to transform the path
+        const resolvedPath = globalPathResolver.resolve(texturePath);
+
+        // 通过资产系统加载（使用解析后的路径）
+        // Load through asset system (using resolved path)
+        const result = await this._assetManager.loadAssetByPath<ITextureAsset>(resolvedPath);
         const textureAsset = result.asset;
 
-        // 如果有引擎桥接，上传到GPU / Upload to GPU if bridge exists
+        // 如果有引擎桥接，上传到GPU（使用解析后的路径）
+        // Upload to GPU if bridge exists (using resolved path)
         if (this._engineBridge && textureAsset.data) {
-            await this._engineBridge.loadTexture(textureAsset.textureId, texturePath);
+            await this._engineBridge.loadTexture(textureAsset.textureId, resolvedPath);
         }
 
-        // 缓存映射 / Cache mapping
+        // 缓存映射（使用原始路径作为键，避免重复解析）
+        // Cache mapping (using original path as key to avoid re-resolving)
         this._pathToTextureId.set(texturePath, textureAsset.textureId);
 
         return textureAsset.textureId;
@@ -148,6 +160,25 @@ export class EngineIntegration {
 
         await Promise.all(loadPromises);
         return results;
+    }
+
+    /**
+     * 批量加载资源（通用方法，支持 IResourceLoader 接口）
+     * Load resources in batch (generic method for IResourceLoader interface)
+     *
+     * @param paths 资源路径数组 / Array of resource paths
+     * @param type 资源类型 / Resource type
+     * @returns 路径到运行时 ID 的映射 / Map of paths to runtime IDs
+     */
+    async loadResourcesBatch(paths: string[], type: 'texture' | 'audio' | 'font' | 'data'): Promise<Map<string, number>> {
+        // 目前只支持纹理 / Currently only supports textures
+        if (type === 'texture') {
+            return this.loadTexturesBatch(paths);
+        }
+
+        // 其他资源类型暂未实现 / Other resource types not yet implemented
+        console.warn(`[EngineIntegration] Resource type '${type}' not yet supported`);
+        return new Map();
     }
 
     /**

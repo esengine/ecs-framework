@@ -1,6 +1,4 @@
-import { singleton } from 'tsyringe';
-import { invoke } from '@tauri-apps/api/core';
-import { IService } from '@esengine/ecs-framework';
+import { singleton, invoke, type IService } from '@esengine/editor-runtime';
 
 /**
  * 文件系统服务

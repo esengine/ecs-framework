@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Entity, Core } from '@esengine/ecs-framework';
-import { EntityStoreService, MessageHub, SceneManagerService, CommandManager } from '@esengine/editor-core';
+import { EntityStoreService, MessageHub, SceneManagerService, CommandManager, EntityCreationRegistry, EntityCreationTemplate } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
 import { Box, Layers, Wifi, Search, Plus, Trash2, Monitor, Globe, Image, Camera, Film } from 'lucide-react';
 import { ProfilerService, RemoteEntity } from '../services/ProfilerService';
@@ -31,9 +31,31 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entityId: number | null } | null>(null);
     const [draggedEntityId, setDraggedEntityId] = useState<number | null>(null);
     const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
+    const [pluginTemplates, setPluginTemplates] = useState<EntityCreationTemplate[]>([]);
     const { t, locale } = useLocale();
 
     const isShowingRemote = viewMode === 'remote' && isRemoteConnected;
+
+    // Get entity creation templates from plugins
+    useEffect(() => {
+        const updateTemplates = () => {
+            const registry = Core.services.resolve(EntityCreationRegistry);
+            if (registry) {
+                setPluginTemplates(registry.getAll());
+            }
+        };
+
+        updateTemplates();
+
+        // Update when plugins are installed
+        const unsubInstalled = messageHub.subscribe('plugin:installed', updateTemplates);
+        const unsubUninstalled = messageHub.subscribe('plugin:uninstalled', updateTemplates);
+
+        return () => {
+            unsubInstalled();
+            unsubUninstalled();
+        };
+    }, [messageHub]);
 
     // Subscribe to scene changes
     useEffect(() => {
@@ -535,6 +557,23 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                         <Camera size={12} />
                         <span>{locale === 'zh' ? '创建相机' : 'Create Camera'}</span>
                     </button>
+                    {pluginTemplates.length > 0 && (
+                        <>
+                            <div className="context-menu-divider" />
+                            {pluginTemplates.map((template) => (
+                                <button
+                                    key={template.id}
+                                    onClick={async () => {
+                                        await template.create(contextMenu.entityId ?? undefined);
+                                        closeContextMenu();
+                                    }}
+                                >
+                                    {template.icon || <Plus size={12} />}
+                                    <span>{template.label}</span>
+                                </button>
+                            ))}
+                        </>
+                    )}
                     {contextMenu.entityId && (
                         <>
                             <div className="context-menu-divider" />

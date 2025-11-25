@@ -101,6 +101,10 @@ fn handle_project_protocol(
     let uri = request.uri();
     let path = uri.path();
 
+    // Debug logging
+    println!("[project://] Full URI: {}", uri);
+    println!("[project://] Path: {}", path);
+
     let file_path = {
         let paths = match project_paths.lock() {
             Ok(p) => p,

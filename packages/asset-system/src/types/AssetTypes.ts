@@ -59,6 +59,10 @@ export enum AssetType {
     AnimationClip = 'animation',
     /** 行为树 */
     BehaviorTree = 'behaviortree',
+    /** 瓦片地图 */
+    Tilemap = 'tilemap',
+    /** 瓦片集 */
+    Tileset = 'tileset',
     /** JSON数据 */
     Json = 'json',
     /** 文本 */

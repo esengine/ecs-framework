@@ -9,6 +9,7 @@
         "outDir": "./bin",
         "rootDir": "./src",
         "strict": true,
+        "composite": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,

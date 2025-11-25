@@ -1,9 +1,14 @@
-import { singleton } from 'tsyringe';
-import { Core, IService, createLogger } from '@esengine/ecs-framework';
-import { MessageHub } from '@esengine/editor-core';
+import {
+    singleton,
+    type IService,
+    createLogger,
+    MessageHub,
+    IMessageHub,
+} from '@esengine/editor-runtime';
 import { useBehaviorTreeDataStore } from '../application/state/BehaviorTreeDataStore';
 import type { BehaviorTree } from '../domain/models/BehaviorTree';
 import { FileSystemService } from './FileSystemService';
+import { PluginContext } from '../PluginContext';
 
 const logger = createLogger('BehaviorTreeService');
 
@@ -15,8 +20,10 @@ export class BehaviorTreeService implements IService {
 
     async loadFromFile(filePath: string): Promise<void> {
         try {
+            const services = PluginContext.getServices();
+
             // 运行时解析 FileSystemService
-            const fileSystem = Core.services.resolve(FileSystemService);
+            const fileSystem = services.resolve(FileSystemService);
             if (!fileSystem) {
                 throw new Error('FileSystemService not found. Please ensure the BehaviorTreePlugin is properly installed.');
             }
@@ -29,7 +36,7 @@ export class BehaviorTreeService implements IService {
             // 在 store 中保存文件信息，Panel 挂载时读取
             store.setCurrentFile(filePath, fileName);
 
-            const messageHub = Core.services.resolve(MessageHub);
+            const messageHub = services.resolve<MessageHub>(IMessageHub);
             if (messageHub) {
                 messageHub.publish('dynamic-panel:open', {
                     panelId: 'behavior-tree-editor',
@@ -50,8 +57,10 @@ export class BehaviorTreeService implements IService {
 
     async saveToFile(filePath: string, metadata?: { name: string; description: string }): Promise<void> {
         try {
+            const services = PluginContext.getServices();
+
             // 运行时解析 FileSystemService
-            const fileSystem = Core.services.resolve(FileSystemService);
+            const fileSystem = services.resolve(FileSystemService);
             if (!fileSystem) {
                 throw new Error('FileSystemService not found. Please ensure the BehaviorTreePlugin is properly installed.');
             }

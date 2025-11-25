@@ -6,6 +6,8 @@
 
 export * from './Plugins/IEditorPlugin';
 export * from './Plugins/EditorPluginManager';
+export * from './Plugins/PluginTypes';
+export * from './Plugins/PluginRegistry';
 
 export * from './Services/UIRegistry';
 export * from './Services/MessageHub';
@@ -20,6 +22,7 @@ export * from './Services/LogService';
 export * from './Services/SettingsRegistry';
 export * from './Services/SceneManagerService';
 export * from './Services/FileActionRegistry';
+export * from './Services/EntityCreationRegistry';
 export * from './Services/CompilerRegistry';
 export * from './Services/ICompiler';
 export * from './Services/ICommand';
@@ -35,6 +38,9 @@ export * from './Services/IPropertyRenderer';
 export * from './Services/PropertyRendererRegistry';
 export * from './Services/IFieldEditor';
 export * from './Services/FieldEditorRegistry';
+export * from './Services/ComponentActionRegistry';
+
+export * from './Gizmos';
 
 export * from './Module/IEventBus';
 export * from './Module/ICommandRegistry';

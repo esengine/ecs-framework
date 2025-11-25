@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, createLogger } from '@esengine/editor-runtime';
 import { ExecutionController, ExecutionMode } from '../application/services/ExecutionController';
 import { BlackboardManager } from '../application/services/BlackboardManager';
 import { BehaviorTreeNode, Connection, useBehaviorTreeDataStore } from '../stores';
 import { ExecutionLog } from '../utils/BehaviorTreeExecutor';
 import { BlackboardValue } from '../domain/models/Blackboard';
-import { createLogger } from '@esengine/ecs-framework';
 
 const logger = createLogger('useExecutionController');
 

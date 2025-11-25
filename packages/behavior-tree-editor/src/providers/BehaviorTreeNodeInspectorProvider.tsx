@@ -1,6 +1,14 @@
-import React, { useState, useCallback } from 'react';
-import { IInspectorProvider, InspectorContext, MessageHub, FieldEditorRegistry, FieldEditorContext } from '@esengine/editor-core';
-import { Core } from '@esengine/ecs-framework';
+import {
+    React,
+    useState,
+    useCallback,
+    type IInspectorProvider,
+    type InspectorContext,
+    MessageHub,
+    FieldEditorRegistry,
+    type FieldEditorContext,
+    Core,
+} from '@esengine/editor-runtime';
 import { Node as BehaviorTreeNode } from '../domain/models/Node';
 import { PropertyDefinition } from '@esengine/behavior-tree';
 

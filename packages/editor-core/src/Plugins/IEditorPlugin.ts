@@ -1,5 +1,6 @@
 import type { IPlugin } from '@esengine/ecs-framework';
-import type { MenuItem, ToolbarItem, PanelDescriptor } from '../Types/UITypes';
+import type { MenuItem, ToolbarItem, PanelDescriptor, EntityCreationTemplate } from '../Types/UITypes';
+import type { ComponentAction } from '../Services/ComponentActionRegistry';
 import type { ReactNode } from 'react';
 
 /**
@@ -227,6 +228,16 @@ export interface IEditorPlugin extends IPlugin {
      * 注册文件创建模板
      */
     registerFileCreationTemplates?(): FileCreationTemplate[];
+
+    /**
+     * 注册实体创建模板
+     */
+    registerEntityCreationTemplates?(): EntityCreationTemplate[];
+
+    /**
+     * 注册组件操作
+     */
+    registerComponentActions?(): ComponentAction[];
 }
 
 /**

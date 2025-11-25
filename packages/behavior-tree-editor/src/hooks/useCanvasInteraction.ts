@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, React } from '@esengine/editor-runtime';
 import { useBehaviorTreeDataStore, useUIStore } from '../stores';
 
 /**

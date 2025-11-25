@@ -3,12 +3,21 @@
  * 管理Rust引擎生命周期的服务。
  */
 
-import { EngineBridge, EngineRenderSystem, CameraConfig } from '@esengine/ecs-engine-bindgen';
+import { EngineBridge, EngineRenderSystem, CameraConfig, GizmoDataProviderFn, HasGizmoProviderFn } from '@esengine/ecs-engine-bindgen';
+import { GizmoRegistry } from '@esengine/editor-core';
 import { Core, Scene, Entity, SceneSerializer } from '@esengine/ecs-framework';
 import { TransformComponent, SpriteComponent, SpriteAnimatorSystem, SpriteAnimatorComponent } from '@esengine/ecs-components';
-import { EntityStoreService, MessageHub } from '@esengine/editor-core';
+import { TilemapComponent, TilemapRenderingSystem } from '@esengine/tilemap';
+import { EntityStoreService, MessageHub, SceneManagerService, ProjectService } from '@esengine/editor-core';
 import * as esEngine from '@esengine/engine';
-import { AssetManager, EngineIntegration, AssetPathResolver, AssetPlatform } from '@esengine/asset-system';
+import {
+    AssetManager,
+    EngineIntegration,
+    AssetPathResolver,
+    AssetPlatform,
+    globalPathResolver,
+    SceneResourceManager
+} from '@esengine/asset-system';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { IdGenerator } from '../utils/idGenerator';
 
@@ -23,6 +32,7 @@ export class EngineService {
     private scene: Scene | null = null;
     private renderSystem: EngineRenderSystem | null = null;
     private animatorSystem: SpriteAnimatorSystem | null = null;
+    private tilemapSystem: TilemapRenderingSystem | null = null;
     private initialized = false;
     private running = false;
     private animationFrameId: number | null = null;
@@ -30,6 +40,7 @@ export class EngineService {
     private sceneSnapshot: string | null = null;
     private assetManager: AssetManager | null = null;
     private engineIntegration: EngineIntegration | null = null;
+    private sceneResourceManager: SceneResourceManager | null = null;
     private assetPathResolver: AssetPathResolver | null = null;
     private assetSystemInitialized = false;
     private initializationError: Error | null = null;
@@ -97,9 +108,27 @@ export class EngineService {
             this.animatorSystem.enabled = false;
             this.scene!.addSystem(this.animatorSystem);
 
+            // Add tilemap rendering system
+            // 添加瓦片地图渲染系统
+            this.tilemapSystem = new TilemapRenderingSystem();
+            this.scene!.addSystem(this.tilemapSystem);
+
             // Add render system to the scene | 将渲染系统添加到场景
             this.renderSystem = new EngineRenderSystem(this.bridge, TransformComponent);
             this.scene!.addSystem(this.renderSystem);
+
+            // Register tilemap system as render data provider
+            // 将瓦片地图系统注册为渲染数据提供者
+            this.renderSystem.addRenderDataProvider(this.tilemapSystem);
+
+            // Inject GizmoRegistry into render system
+            // 将 GizmoRegistry 注入渲染系统
+            this.renderSystem.setGizmoRegistry(
+                ((component, entity, isSelected) =>
+                    GizmoRegistry.getGizmoData(component, entity, isSelected)) as GizmoDataProviderFn,
+                ((component) =>
+                    GizmoRegistry.hasProvider(component.constructor as any)) as HasGizmoProviderFn
+            );
 
             // Initialize asset system | 初始化资产系统
             await this.initializeAssetSystem();
@@ -349,21 +378,55 @@ export class EngineService {
             this.assetManager = new AssetManager();
 
             // 创建路径解析器 / Create path resolver
+            const pathTransformerFn = (path: string) => {
+                // 编辑器平台使用Tauri的convertFileSrc
+                // Use Tauri's convertFileSrc for editor platform
+                if (!path.startsWith('http://') && !path.startsWith('https://') && !path.startsWith('data:') && !path.startsWith('asset://')) {
+                    // 如果是相对路径，需要先转换为绝对路径
+                    // If it's a relative path, convert to absolute path first
+                    if (!path.startsWith('/') && !path.match(/^[a-zA-Z]:/)) {
+                        const projectService = Core.services.tryResolve<ProjectService>(ProjectService);
+                        if (projectService && projectService.isProjectOpen()) {
+                            const projectInfo = projectService.getCurrentProject();
+                            if (projectInfo) {
+                                const projectPath = projectInfo.path;
+                                // 规范化路径分隔符 / Normalize path separators
+                                const separator = projectPath.includes('\\') ? '\\' : '/';
+                                path = `${projectPath}${separator}${path.replace(/\//g, separator)}`;
+                            }
+                        }
+                    }
+                    return convertFileSrc(path);
+                }
+                return path;
+            };
+
             this.assetPathResolver = new AssetPathResolver({
                 platform: AssetPlatform.Editor,
-                pathTransformer: (path: string) => {
-                    // 编辑器平台使用Tauri的convertFileSrc
-                    // Use Tauri's convertFileSrc for editor platform
-                    if (!path.startsWith('http://') && !path.startsWith('https://') && !path.startsWith('data:')) {
-                        return convertFileSrc(path);
-                    }
-                    return path;
-                }
+                pathTransformer: pathTransformerFn
+            });
+
+            // 配置全局路径解析器，供组件使用
+            // Configure global path resolver for components to use
+            globalPathResolver.updateConfig({
+                platform: AssetPlatform.Editor,
+                pathTransformer: pathTransformerFn
             });
 
             // 创建引擎集成 / Create engine integration
             if (this.bridge) {
                 this.engineIntegration = new EngineIntegration(this.assetManager, this.bridge);
+
+                // 创建场景资源管理器 / Create scene resource manager
+                this.sceneResourceManager = new SceneResourceManager();
+                this.sceneResourceManager.setResourceLoader(this.engineIntegration);
+
+                // 将 SceneResourceManager 设置到 SceneManagerService
+                // Set SceneResourceManager to SceneManagerService
+                const sceneManagerService = Core.services.tryResolve<SceneManagerService>(SceneManagerService);
+                if (sceneManagerService) {
+                    sceneManagerService.setSceneResourceManager(this.sceneResourceManager);
+                }
             }
 
             this.assetSystemInitialized = true;
@@ -625,18 +688,34 @@ export class EngineService {
      * Restore scene state from saved snapshot.
      * 从保存的快照恢复场景状态。
      */
-    restoreSceneSnapshot(): boolean {
+    async restoreSceneSnapshot(): Promise<boolean> {
         if (!this.scene || !this.sceneSnapshot) {
             console.warn('Cannot restore snapshot: no scene or snapshot available');
             return false;
         }
 
         try {
+            // Clear tilemap rendering cache before restoring
+            // 恢复前清除瓦片地图渲染缓存
+            if (this.tilemapSystem) {
+                console.log('[EngineService] Clearing tilemap cache before restore');
+                this.tilemapSystem.clearCache();
+            }
+
             // Use SceneSerializer from core library
+            console.log('[EngineService] Deserializing scene snapshot');
             SceneSerializer.deserialize(this.scene, this.sceneSnapshot, {
                 strategy: 'replace',
                 preserveIds: true
             });
+            console.log('[EngineService] Scene deserialized, entities:', this.scene.entities.buffer.length);
+
+            // 加载场景资源 / Load scene resources
+            if (this.sceneResourceManager) {
+                await this.sceneResourceManager.loadSceneResources(this.scene);
+            } else {
+                console.warn('[EngineService] SceneResourceManager not available, skipping resource loading');
+            }
 
             // Sync EntityStore with restored scene entities
             const entityStore = Core.services.tryResolve(EntityStoreService);
@@ -663,6 +742,7 @@ export class EngineService {
                 }
 
                 // Notify UI to refresh
+                console.log('[EngineService] Publishing scene:restored event');
                 messageHub.publish('scene:restored', {});
             }
 

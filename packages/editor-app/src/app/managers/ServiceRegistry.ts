@@ -2,6 +2,7 @@ import { Core, ComponentRegistry as CoreComponentRegistry } from '@esengine/ecs-
 import {
     UIRegistry,
     MessageHub,
+    IMessageHub,
     SerializerRegistry,
     EntityStoreService,
     ComponentRegistry,
@@ -12,10 +13,17 @@ import {
     SettingsRegistry,
     SceneManagerService,
     FileActionRegistry,
+    EntityCreationRegistry,
     EditorPluginManager,
     InspectorRegistry,
+    IInspectorRegistry,
     PropertyRendererRegistry,
-    FieldEditorRegistry
+    FieldEditorRegistry,
+    ComponentActionRegistry,
+    IDialogService,
+    IFileSystemService,
+    CompilerRegistry,
+    ICompilerRegistry
 } from '@esengine/editor-core';
 import {
     TransformComponent,
@@ -128,9 +136,12 @@ export class ServiceRegistry {
         const settingsRegistry = new SettingsRegistry();
         const sceneManager = new SceneManagerService(messageHub, fileAPI, projectService, entityStore);
         const fileActionRegistry = new FileActionRegistry();
+        const entityCreationRegistry = new EntityCreationRegistry();
+        const componentActionRegistry = new ComponentActionRegistry();
 
         Core.services.registerInstance(UIRegistry, uiRegistry);
         Core.services.registerInstance(MessageHub, messageHub);
+        Core.services.registerInstance(IMessageHub, messageHub);  // Symbol 注册用于跨包插件访问
         Core.services.registerInstance(SerializerRegistry, serializerRegistry);
         Core.services.registerInstance(EntityStoreService, entityStore);
         Core.services.registerInstance(ComponentRegistry, componentRegistry);
@@ -141,6 +152,8 @@ export class ServiceRegistry {
         Core.services.registerInstance(SettingsRegistry, settingsRegistry);
         Core.services.registerInstance(SceneManagerService, sceneManager);
         Core.services.registerInstance(FileActionRegistry, fileActionRegistry);
+        Core.services.registerInstance(EntityCreationRegistry, entityCreationRegistry);
+        Core.services.registerInstance(ComponentActionRegistry, componentActionRegistry);
 
         const pluginManager = new EditorPluginManager();
         pluginManager.initialize(coreInstance, Core.services);
@@ -155,10 +168,12 @@ export class ServiceRegistry {
         const dialog = new TauriDialogService();
         const notification = new NotificationService();
         Core.services.registerInstance(NotificationService, notification);
+        Core.services.registerInstance(IDialogService, dialog);
+        Core.services.registerInstance(IFileSystemService, fileSystem);
 
         const inspectorRegistry = new InspectorRegistry();
-
         Core.services.registerInstance(InspectorRegistry, inspectorRegistry);
+        Core.services.registerInstance(IInspectorRegistry, inspectorRegistry);  // Symbol 注册用于跨包插件访问
 
         const propertyRendererRegistry = new PropertyRendererRegistry();
         Core.services.registerInstance(PropertyRendererRegistry, propertyRendererRegistry);

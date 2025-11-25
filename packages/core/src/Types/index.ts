@@ -24,6 +24,8 @@ export interface IComponent {
     onAddedToEntity(): void;
     /** 组件从实体移除时的回调 */
     onRemovedFromEntity(): void;
+    /** 组件反序列化后的回调 */
+    onDeserialized(): void | Promise<void>;
 }
 
 /**

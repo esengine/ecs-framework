@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { FileText, Search, X, FolderOpen, ArrowRight, Package } from 'lucide-react';
+import { FileText, Search, X, FolderOpen, ArrowRight, Package, Plus } from 'lucide-react';
 import { AssetPickerDialog } from '../../../components/dialogs/AssetPickerDialog';
 import './AssetField.css';
 
@@ -11,6 +11,7 @@ interface AssetFieldProps {
     placeholder?: string;
     readonly?: boolean;
     onNavigate?: (path: string) => void;  // 导航到资产
+    onCreate?: () => void;  // 创建新资产
 }
 
 export function AssetField({
@@ -20,7 +21,8 @@ export function AssetField({
     fileExtension = '',
     placeholder = 'None',
     readonly = false,
-    onNavigate
+    onNavigate,
+    onCreate
 }: AssetFieldProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
@@ -137,6 +139,20 @@ export function AssetField({
 
                 {/* 操作按钮组 */}
                 <div className="asset-field__actions">
+                    {/* 创建按钮 */}
+                    {onCreate && !readonly && !value && (
+                        <button
+                            className="asset-field__button asset-field__button--create"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onCreate();
+                            }}
+                            title="创建新资产"
+                        >
+                            <Plus size={12} />
+                        </button>
+                    )}
+
                     {/* 浏览按钮 */}
                     {!readonly && (
                         <button

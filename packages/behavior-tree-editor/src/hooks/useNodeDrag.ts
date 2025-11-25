@@ -1,4 +1,4 @@
-import { useRef, useCallback, RefObject } from 'react';
+import { useRef, useCallback, type RefObject, React } from '@esengine/editor-runtime';
 import { BehaviorTreeNode, ROOT_NODE_ID } from '../stores';
 import { Position } from '../domain/value-objects/Position';
 import { useNodeOperations } from './useNodeOperations';

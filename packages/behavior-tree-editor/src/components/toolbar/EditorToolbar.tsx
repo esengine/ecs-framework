@@ -1,5 +1,6 @@
-import React from 'react';
-import { Play, Pause, Square, SkipForward, Undo, Redo, ZoomIn, Save, FolderOpen, Download, Clipboard, Home } from 'lucide-react';
+import { React, Icons } from '@esengine/editor-runtime';
+
+const { Play, Pause, Square, SkipForward, Undo, Redo, ZoomIn, Save, FolderOpen, Download, Clipboard, Home } = Icons;
 
 type ExecutionMode = 'idle' | 'running' | 'paused';
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { React, useEffect, useMemo, useRef, useState, useCallback } from '@esengine/editor-runtime';
 import { NodeTemplate, BlackboardValueType } from '@esengine/behavior-tree';
 import { useBehaviorTreeDataStore, BehaviorTreeNode, ROOT_NODE_ID } from '../stores';
 import { useUIStore } from '../stores';

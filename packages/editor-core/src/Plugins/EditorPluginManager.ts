@@ -8,6 +8,10 @@ import { UIRegistry } from '../Services/UIRegistry';
 import { MessageHub } from '../Services/MessageHub';
 import { SerializerRegistry } from '../Services/SerializerRegistry';
 import { FileActionRegistry } from '../Services/FileActionRegistry';
+import { EntityCreationRegistry } from '../Services/EntityCreationRegistry';
+import { ComponentActionRegistry } from '../Services/ComponentActionRegistry';
+import { pluginRegistry } from './PluginRegistry';
+import type { EditorPluginDefinition } from './PluginTypes';
 
 const logger = createLogger('EditorPluginManager');
 
@@ -24,6 +28,8 @@ export class EditorPluginManager extends PluginManager {
     private messageHub: MessageHub | null = null;
     private serializerRegistry: SerializerRegistry | null = null;
     private fileActionRegistry: FileActionRegistry | null = null;
+    private entityCreationRegistry: EntityCreationRegistry | null = null;
+    private componentActionRegistry: ComponentActionRegistry | null = null;
 
     /**
      * 初始化编辑器插件管理器
@@ -35,6 +41,8 @@ export class EditorPluginManager extends PluginManager {
         this.messageHub = services.resolve(MessageHub);
         this.serializerRegistry = services.resolve(SerializerRegistry);
         this.fileActionRegistry = services.resolve(FileActionRegistry);
+        this.entityCreationRegistry = services.resolve(EntityCreationRegistry);
+        this.componentActionRegistry = services.resolve(ComponentActionRegistry);
 
         logger.info('EditorPluginManager initialized');
     }
@@ -106,6 +114,18 @@ export class EditorPluginManager extends PluginManager {
                 logger.debug(`Registered ${templates.length} file creation templates for ${plugin.name}`);
             }
 
+            if (plugin.registerEntityCreationTemplates && this.entityCreationRegistry) {
+                const templates = plugin.registerEntityCreationTemplates();
+                this.entityCreationRegistry.registerMany(templates);
+                logger.debug(`Registered ${templates.length} entity creation templates for ${plugin.name}`);
+            }
+
+            if (plugin.registerComponentActions && this.componentActionRegistry) {
+                const actions = plugin.registerComponentActions();
+                this.componentActionRegistry.registerMany(actions);
+                logger.debug(`Registered ${actions.length} component actions for ${plugin.name}`);
+            }
+
             if (plugin.onEditorReady) {
                 await plugin.onEditorReady();
             }
@@ -167,6 +187,20 @@ export class EditorPluginManager extends PluginManager {
                 const templates = plugin.registerFileCreationTemplates();
                 for (const template of templates) {
                     this.fileActionRegistry.unregisterCreationTemplate(template);
+                }
+            }
+
+            if (plugin.registerEntityCreationTemplates && this.entityCreationRegistry) {
+                const templates = plugin.registerEntityCreationTemplates();
+                for (const template of templates) {
+                    this.entityCreationRegistry.unregister(template.id);
+                }
+            }
+
+            if (plugin.registerComponentActions && this.componentActionRegistry) {
+                const actions = plugin.registerComponentActions();
+                for (const action of actions) {
+                    this.componentActionRegistry.unregister(action.componentName, action.id);
                 }
             }
 
@@ -352,6 +386,80 @@ export class EditorPluginManager extends PluginManager {
     }
 
     /**
+     * 使用声明式 API 注册插件
+     * Register plugin using declarative API
+     */
+    public async registerPlugin(definition: EditorPluginDefinition): Promise<void> {
+        logger.info(`Registering plugin with declarative API: ${definition.id}`);
+
+        try {
+            // 使用 PluginRegistry 注册
+            await pluginRegistry.register(definition);
+
+            // 同步到旧的元数据系统以保持兼容性
+            const metadata: IEditorPluginMetadata = {
+                name: definition.id,
+                displayName: definition.name,
+                version: definition.version || '1.0.0',
+                category: EditorPluginCategory.Tool,
+                description: definition.description,
+                enabled: true,
+                installedAt: Date.now()
+            };
+            this.pluginMetadata.set(definition.id, metadata);
+
+            // 注册实体创建模板
+            if (definition.entityTemplates && this.entityCreationRegistry) {
+                for (const template of definition.entityTemplates) {
+                    this.entityCreationRegistry.register({
+                        id: `${definition.id}:${template.id}`,
+                        label: template.label,
+                        icon: template.icon,
+                        order: template.priority,
+                        create: template.create
+                    });
+                }
+            }
+
+            // 注册组件操作
+            if (definition.components && this.componentActionRegistry) {
+                for (const comp of definition.components) {
+                    if (comp.actions) {
+                        for (const action of comp.actions) {
+                            this.componentActionRegistry.register({
+                                id: action.id,
+                                componentName: comp.type.name,
+                                label: action.label,
+                                icon: action.icon,
+                                execute: action.execute as unknown as (component: any, entity: any) => void | Promise<void>
+                            });
+                        }
+                    }
+                }
+            }
+
+            await this.messageHub?.publish('plugin:installed', {
+                name: definition.id,
+                displayName: definition.name,
+                category: EditorPluginCategory.Tool
+            });
+
+            logger.info(`Plugin ${definition.id} registered successfully`);
+        } catch (error) {
+            logger.error(`Failed to register plugin ${definition.id}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * 获取 PluginRegistry 实例
+     * Get PluginRegistry instance
+     */
+    public getPluginRegistry() {
+        return pluginRegistry;
+    }
+
+    /**
      * 释放资源
      */
     public override dispose(): void {
@@ -363,6 +471,8 @@ export class EditorPluginManager extends PluginManager {
         this.messageHub = null;
         this.serializerRegistry = null;
         this.fileActionRegistry = null;
+        this.entityCreationRegistry = null;
+        this.componentActionRegistry = null;
 
         logger.info('EditorPluginManager disposed');
     }

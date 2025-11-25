@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, forwardRef, useState, useEffect } from 'react';
+import { React, useRef, useCallback, forwardRef, useState, useEffect } from '@esengine/editor-runtime';
 import { useCanvasInteraction } from '../../hooks/useCanvasInteraction';
 import { EditorConfig } from '../../types';
 import { GridBackground } from './GridBackground';

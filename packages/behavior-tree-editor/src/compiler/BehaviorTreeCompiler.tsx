@@ -1,10 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { ICompiler, CompileResult, CompilerContext, IFileSystem } from '@esengine/editor-core';
-import { File, FolderTree, FolderOpen } from 'lucide-react';
+import {
+    React,
+    useState,
+    useEffect,
+    type ICompiler,
+    type CompileResult,
+    type CompilerContext,
+    type IFileSystem,
+    Icons,
+    createLogger,
+} from '@esengine/editor-runtime';
 import { GlobalBlackboardTypeGenerator } from '../generators/GlobalBlackboardTypeGenerator';
 import { EditorFormatConverter, BehaviorTreeAssetSerializer } from '@esengine/behavior-tree';
 import { useBehaviorTreeDataStore } from '../application/state/BehaviorTreeDataStore';
-import { createLogger } from '@esengine/ecs-framework';
+
+const { File, FolderTree, FolderOpen } = Icons;
 
 const logger = createLogger('BehaviorTreeCompiler');
 

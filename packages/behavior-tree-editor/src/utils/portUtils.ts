@@ -1,6 +1,5 @@
-import { RefObject } from 'react';
+import { type RefObject, createLogger } from '@esengine/editor-runtime';
 import { Node as BehaviorTreeNode } from '../domain/models/Node';
-import { createLogger } from '@esengine/ecs-framework';
 
 const logger = createLogger('portUtils');
 

@@ -1,11 +1,9 @@
-import { useCallback, useMemo } from 'react';
-import { CommandManager } from '@esengine/editor-core';
+import { useCallback, useMemo, CommandManager, createLogger } from '@esengine/editor-runtime';
 import { ConnectionType } from '../domain/models/Connection';
 import { IValidator } from '../domain/interfaces/IValidator';
 import { TreeStateAdapter } from '../application/state/BehaviorTreeDataStore';
 import { AddConnectionUseCase } from '../application/use-cases/AddConnectionUseCase';
 import { RemoveConnectionUseCase } from '../application/use-cases/RemoveConnectionUseCase';
-import { createLogger } from '@esengine/ecs-framework';
 
 const logger = createLogger('useConnectionOperations');
 

@@ -215,6 +215,8 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
             propertyName,
             value
         });
+        // Also publish scene:modified so other panels can react to changes
+        messageHub.publish('scene:modified', {});
     };
 
     const renderRemoteProperty = (key: string, value: any) => {

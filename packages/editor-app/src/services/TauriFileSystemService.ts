@@ -1,9 +1,13 @@
 import { singleton } from 'tsyringe';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import type { IFileSystem, FileEntry } from '@esengine/editor-core';
 
 @singleton()
 export class TauriFileSystemService implements IFileSystem {
+    dispose(): void {
+        // No cleanup needed
+    }
+
     async readFile(path: string): Promise<string> {
         return await invoke<string>('read_file_content', { path });
     }
@@ -48,5 +52,9 @@ export class TauriFileSystemService implements IFileSystem {
 
     async scanFiles(basePath: string, pattern: string): Promise<string[]> {
         return await invoke<string[]>('scan_files', { basePath, pattern });
+    }
+
+    convertToAssetUrl(filePath: string): string {
+        return convertFileSrc(filePath);
     }
 }

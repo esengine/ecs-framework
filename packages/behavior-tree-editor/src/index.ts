@@ -3,6 +3,7 @@ import { BehaviorTreePlugin } from './BehaviorTreePlugin';
 export default new BehaviorTreePlugin();
 
 export { BehaviorTreePlugin } from './BehaviorTreePlugin';
+export { PluginContext } from './PluginContext';
 export { BehaviorTreeEditorPanel } from './components/panels/BehaviorTreeEditorPanel';
 export * from './BehaviorTreeModule';
 export * from './services/BehaviorTreeService';

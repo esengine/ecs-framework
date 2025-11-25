@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useRef } from 'react';
+import { type RefObject, useEffect, useRef, React } from '@esengine/editor-runtime';
 import { BehaviorTreeNode, ROOT_NODE_ID } from '../stores';
 
 interface QuickCreateMenuState {

@@ -149,19 +149,34 @@ export function AssetPickerDialog({
         }
     }, [toggleFolder]);
 
+    // Convert absolute path to relative path based on project root
+    const toRelativePath = useCallback((absolutePath: string): string => {
+        const projectService = Core.services.tryResolve(ProjectService);
+        const currentProject = projectService?.getCurrentProject();
+        if (currentProject) {
+            const projectPath = currentProject.path.replace(/\\/g, '/');
+            const normalizedAbsolute = absolutePath.replace(/\\/g, '/');
+            if (normalizedAbsolute.startsWith(projectPath)) {
+                // Return relative path from project root
+                return normalizedAbsolute.substring(projectPath.length + 1);
+            }
+        }
+        return absolutePath;
+    }, []);
+
     const handleConfirm = useCallback(() => {
         if (selectedPath) {
-            onSelect(selectedPath);
+            onSelect(toRelativePath(selectedPath));
             onClose();
         }
-    }, [selectedPath, onSelect, onClose]);
+    }, [selectedPath, onSelect, onClose, toRelativePath]);
 
     const handleDoubleClick = useCallback((node: FileNode) => {
         if (!node.isDirectory) {
-            onSelect(node.path);
+            onSelect(toRelativePath(node.path));
             onClose();
         }
-    }, [onSelect, onClose]);
+    }, [onSelect, onClose, toRelativePath]);
 
     const getFileIcon = (name: string) => {
         const ext = name.split('.').pop()?.toLowerCase();

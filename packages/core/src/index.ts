@@ -6,7 +6,7 @@
 // 核心模块
 export { Core } from './Core';
 export { ServiceContainer, ServiceLifetime } from './Core/ServiceContainer';
-export type { IService, ServiceType } from './Core/ServiceContainer';
+export type { IService, ServiceType, ServiceIdentifier } from './Core/ServiceContainer';
 
 // 插件系统
 export { PluginManager } from './Core/PluginManager';

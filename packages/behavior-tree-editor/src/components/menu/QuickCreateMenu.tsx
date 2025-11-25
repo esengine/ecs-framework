@@ -1,7 +1,9 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import { React, useRef, useEffect, useState, useMemo, Icons } from '@esengine/editor-runtime';
+import type { LucideIcon } from '@esengine/editor-runtime';
 import { NodeTemplate } from '@esengine/behavior-tree';
-import { Search, X, LucideIcon, ChevronDown, ChevronRight } from 'lucide-react';
 import { NodeFactory } from '../../infrastructure/factories/NodeFactory';
+
+const { Search, X, ChevronDown, ChevronRight } = Icons;
 
 interface QuickCreateMenuProps {
     visible: boolean;

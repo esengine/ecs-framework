@@ -21,6 +21,10 @@ export class TauriDialogService implements IDialogExtended {
     private showConfirmCallback?: (data: ConfirmDialogData) => void;
     private locale: string = 'zh';
 
+    dispose(): void {
+        this.showConfirmCallback = undefined;
+    }
+
     setConfirmCallback(callback: (data: ConfirmDialogData) => void): void {
         this.showConfirmCallback = callback;
     }

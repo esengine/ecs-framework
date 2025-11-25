@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 
 /**
  * 文件过滤器定义
@@ -297,6 +297,19 @@ export class TauriAPI {
    */
     static async generateQRCode(text: string): Promise<string> {
         return await invoke<string>('generate_qrcode', { text });
+    }
+
+    /**
+   * 将本地文件路径转换为 Tauri 可访问的 asset URL
+   * @param filePath 本地文件路径
+   * @param protocol 协议类型 (默认: 'asset')
+   * @returns 转换后的 URL，可用于 img src、audio src 等
+   * @example
+   * const url = TauriAPI.convertFileSrc('C:\\Users\\...\\image.png');
+   * // 返回: 'https://asset.localhost/C:/Users/.../image.png'
+   */
+    static convertFileSrc(filePath: string, protocol?: string): string {
+        return convertFileSrc(filePath, protocol);
     }
 }
 

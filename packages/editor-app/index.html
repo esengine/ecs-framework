@@ -4,9 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ECS Framework Editor</title>
+    <!-- ES Module Shims: 为不支持 Import Maps 的浏览器提供 polyfill -->
+    <script async src="https://ga.jspm.io/npm:es-module-shims@1.10.0/dist/es-module-shims.js"></script>
   </head>
   <body>
     <div id="root"></div>
+    <!-- Import Map 将由 PluginLoader 在运行时动态注入 -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

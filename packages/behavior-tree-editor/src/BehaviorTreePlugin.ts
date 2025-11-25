@@ -1,25 +1,32 @@
-import type { Core, ServiceContainer } from '@esengine/ecs-framework';
 import {
-    IEditorPlugin,
+    type Core,
+    type ServiceContainer,
+    type IService,
+    type ServiceType,
+    type IEditorPlugin,
     EditorPluginCategory,
     CompilerRegistry,
+    ICompilerRegistry,
     InspectorRegistry,
+    IInspectorRegistry,
     PanelPosition,
     type FileCreationTemplate,
     type FileActionHandler,
-    type PanelDescriptor
-} from '@esengine/editor-core';
+    type PanelDescriptor,
+    createElement,
+    Icons,
+    createLogger,
+} from '@esengine/editor-runtime';
 import { BehaviorTreeService } from './services/BehaviorTreeService';
 import { FileSystemService } from './services/FileSystemService';
 import { BehaviorTreeCompiler } from './compiler/BehaviorTreeCompiler';
 import { BehaviorTreeNodeInspectorProvider } from './providers/BehaviorTreeNodeInspectorProvider';
 import { BehaviorTreeEditorPanel } from './components/panels/BehaviorTreeEditorPanel';
 import { useBehaviorTreeDataStore } from './stores';
-import { createElement } from 'react';
-import { GitBranch } from 'lucide-react';
 import { createRootNode } from './domain/constants/RootNode';
-import type { IService, ServiceType } from '@esengine/ecs-framework';
-import { createLogger } from '@esengine/ecs-framework';
+import { PluginContext } from './PluginContext';
+
+const { GitBranch } = Icons;
 
 const logger = createLogger('BehaviorTreePlugin');
 
@@ -38,6 +45,8 @@ export class BehaviorTreePlugin implements IEditorPlugin {
 
     async install(core: Core, services: ServiceContainer): Promise<void> {
         this.services = services;
+        // 设置插件上下文，让内部服务可以访问服务容器
+        PluginContext.setServices(services);
         this.registerServices(services);
         this.registerCompilers(services);
         this.registerInspectors(services);
@@ -53,6 +62,7 @@ export class BehaviorTreePlugin implements IEditorPlugin {
 
         this.registeredServices.clear();
         useBehaviorTreeDataStore.getState().reset();
+        PluginContext.clear();
         this.services = undefined;
     }
 
@@ -88,7 +98,7 @@ export class BehaviorTreePlugin implements IEditorPlugin {
 
     private registerCompilers(services: ServiceContainer): void {
         try {
-            const compilerRegistry = services.resolve(CompilerRegistry);
+            const compilerRegistry = services.resolve<CompilerRegistry>(ICompilerRegistry);
             const compiler = new BehaviorTreeCompiler();
             compilerRegistry.register(compiler);
             logger.info('Successfully registered BehaviorTreeCompiler');
@@ -98,10 +108,14 @@ export class BehaviorTreePlugin implements IEditorPlugin {
     }
 
     private registerInspectors(services: ServiceContainer): void {
-        const inspectorRegistry = services.resolve(InspectorRegistry);
-        if (inspectorRegistry) {
-            const provider = new BehaviorTreeNodeInspectorProvider();
-            inspectorRegistry.register(provider);
+        try {
+            const inspectorRegistry = services.resolve<InspectorRegistry>(IInspectorRegistry);
+            if (inspectorRegistry) {
+                const provider = new BehaviorTreeNodeInspectorProvider();
+                inspectorRegistry.register(provider);
+            }
+        } catch (error) {
+            logger.error('Failed to register inspector:', error);
         }
     }
 

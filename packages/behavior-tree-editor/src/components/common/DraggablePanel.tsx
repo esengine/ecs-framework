@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect, ReactNode } from 'react';
-import { GripVertical } from 'lucide-react';
+import { React, useState, useRef, useEffect, type ReactNode, Icons } from '@esengine/editor-runtime';
+
+const { GripVertical } = Icons;
 
 interface DraggablePanelProps {
     title: string | ReactNode;

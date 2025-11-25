@@ -1,4 +1,6 @@
-import { create } from 'zustand';
+import { createStore } from '@esengine/editor-runtime';
+
+const create = createStore;
 import { NodeTemplates, NodeTemplate } from '@esengine/behavior-tree';
 import { BehaviorTree } from '../../domain/models/BehaviorTree';
 import { Node } from '../../domain/models/Node';

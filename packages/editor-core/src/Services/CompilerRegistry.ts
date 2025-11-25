@@ -31,3 +31,7 @@ export class CompilerRegistry implements IService {
         this.clear();
     }
 }
+
+// Service identifier for DI registration (用于跨包插件访问)
+// 使用 Symbol.for 确保跨包共享同一个 Symbol
+export const ICompilerRegistry = Symbol.for('ICompilerRegistry');

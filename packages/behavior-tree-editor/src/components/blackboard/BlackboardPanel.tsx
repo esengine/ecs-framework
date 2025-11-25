@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Clipboard, Edit2, Trash2, ChevronDown, ChevronRight, Globe, GripVertical, ChevronLeft, Plus, Copy } from 'lucide-react';
+import { React, useState, Icons } from '@esengine/editor-runtime';
+
+const { Clipboard, Edit2, Trash2, ChevronDown, ChevronRight, Globe, GripVertical, ChevronLeft, Plus, Copy } = Icons;
 
 type SimpleBlackboardType = 'number' | 'string' | 'boolean' | 'object';
 

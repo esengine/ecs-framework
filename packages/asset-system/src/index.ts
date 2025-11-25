@@ -9,6 +9,7 @@ export * from './types/AssetTypes';
 // Interfaces
 export * from './interfaces/IAssetLoader';
 export * from './interfaces/IAssetManager';
+export * from './interfaces/IResourceComponent';
 
 // Core
 export { AssetManager } from './core/AssetManager';
@@ -29,6 +30,13 @@ export { BinaryLoader } from './loaders/BinaryLoader';
 // Integration
 export { EngineIntegration } from './integration/EngineIntegration';
 export type { IEngineBridge } from './integration/EngineIntegration';
+
+// Services
+export { SceneResourceManager } from './services/SceneResourceManager';
+export type { IResourceLoader } from './services/SceneResourceManager';
+
+// Utils
+export { UVHelper } from './utils/UVHelper';
 
 // Default instance
 import { AssetManager } from './core/AssetManager';
