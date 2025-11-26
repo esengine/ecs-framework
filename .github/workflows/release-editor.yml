@@ -155,13 +155,7 @@ jobs:
           cd packages/tilemap-editor
           pnpm run build
 
-      # ===== 第六层：依赖 editor-runtime 的包 =====
-      - name: Build behavior-tree-editor package
-        run: |
-          cd packages/behavior-tree-editor
-          pnpm run build
-
-      # ===== 第七层：平台包 =====
+      # ===== 第六层：平台包 =====
       - name: Build platform-web package
         run: |
           cd packages/platform-web
