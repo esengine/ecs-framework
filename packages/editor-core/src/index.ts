@@ -39,6 +39,7 @@ export * from './Services/PropertyRendererRegistry';
 export * from './Services/IFieldEditor';
 export * from './Services/FieldEditorRegistry';
 export * from './Services/ComponentActionRegistry';
+export * from './Services/ComponentInspectorRegistry';
 
 export * from './Gizmos';
 

@@ -761,7 +761,7 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
             const jsonContent = JSON.stringify(tilemapData, null, 2);
 
             // Get the tilemap asset path from component
-            let tilemapAssetPath = tilemap.tilemapAssetGuid;
+            const tilemapAssetPath = tilemap.tilemapAssetGuid;
             if (!tilemapAssetPath) {
                 console.warn('Tilemap asset path not set, cannot save');
                 return;

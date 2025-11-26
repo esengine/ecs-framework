@@ -1,35 +1,12 @@
-import type { IService } from '@esengine/ecs-framework';
+import type { IService, PropertyOptions, PropertyAction, PropertyControl, AssetType, EnumOption } from '@esengine/ecs-framework';
 import { Injectable, Component, getPropertyMetadata } from '@esengine/ecs-framework';
 import { createLogger } from '@esengine/ecs-framework';
 
 const logger = createLogger('PropertyMetadata');
 
+export type { PropertyOptions, PropertyAction, PropertyControl, AssetType, EnumOption };
+export type PropertyMetadata = PropertyOptions;
 export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset' | 'animationClips';
-
-export interface PropertyAction {
-    id: string;
-    label: string;
-    tooltip?: string;
-    icon?: string;
-}
-
-export interface PropertyControl {
-    component: string;
-    property: string;
-}
-
-export interface PropertyMetadata {
-    type: PropertyType;
-    label?: string;
-    min?: number;
-    max?: number;
-    step?: number;
-    options?: Array<{ label: string; value: any }>;
-    readOnly?: boolean;
-    fileExtension?: string;
-    actions?: PropertyAction[];
-    controls?: PropertyControl[];
-}
 
 export interface ComponentMetadata {
     properties: Record<string, PropertyMetadata>;

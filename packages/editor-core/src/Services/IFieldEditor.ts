@@ -33,8 +33,12 @@ export interface IFieldEditorRegistry {
 export interface FieldMetadata {
     type: string;
     options?: {
-        fileExtension?: string;
-        enumValues?: Array<{ value: string; label: string }>;
+        /** 资源类型 | Asset type */
+        assetType?: string;
+        /** 文件扩展名过滤 | File extension filter */
+        extensions?: string[];
+        /** 枚举选项 | Enum values */
+        enumValues?: Array<string | { value: string; label: string }>;
         min?: number;
         max?: number;
         step?: number;

@@ -239,7 +239,6 @@ export function MenuBar({
         help: [
             { label: t('documentation'), disabled: true },
             { separator: true },
-            { label: t('checkForUpdates'), onClick: onOpenAbout },
             { label: t('about'), onClick: onOpenAbout }
         ]
     };

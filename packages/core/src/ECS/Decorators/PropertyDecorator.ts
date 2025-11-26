@@ -3,6 +3,18 @@ import 'reflect-metadata';
 export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset' | 'animationClips';
 
 /**
+ * 资源类型
+ * Asset type for asset properties
+ */
+export type AssetType = 'texture' | 'audio' | 'scene' | 'prefab' | 'animation' | 'any';
+
+/**
+ * 枚举选项 - 支持简单字符串或带标签的对象
+ * Enum option - supports simple string or labeled object
+ */
+export type EnumOption = string | { label: string; value: any };
+
+/**
  * Action button configuration for property fields
  * 属性字段的操作按钮配置
  */
@@ -28,28 +40,111 @@ export interface PropertyControl {
     property: string;
 }
 
-export interface PropertyOptions {
-    /** 属性类型 */
-    type: PropertyType;
-    /** 显示标签 */
+/**
+ * 属性基础选项
+ * Base property options shared by all types
+ */
+interface PropertyOptionsBase {
+    /** 显示标签 | Display label */
     label?: string;
-    /** 最小值 (number/integer) */
-    min?: number;
-    /** 最大值 (number/integer) */
-    max?: number;
-    /** 步进值 (number/integer) */
-    step?: number;
-    /** 枚举选项 (enum) */
-    options?: Array<{ label: string; value: any }>;
-    /** 是否只读 */
+    /** 是否只读 | Read-only flag */
     readOnly?: boolean;
-    /** 资源文件扩展名 (asset) */
-    fileExtension?: string;
-    /** Action buttons for this property | 属性的操作按钮 */
+    /** Action buttons | 操作按钮 */
     actions?: PropertyAction[];
     /** 此属性控制的其他组件属性 | Properties this field controls */
     controls?: PropertyControl[];
 }
+
+/**
+ * 数值类型属性选项
+ * Number property options
+ */
+interface NumberPropertyOptions extends PropertyOptionsBase {
+    type: 'number' | 'integer';
+    min?: number;
+    max?: number;
+    step?: number;
+}
+
+/**
+ * 字符串类型属性选项
+ * String property options
+ */
+interface StringPropertyOptions extends PropertyOptionsBase {
+    type: 'string';
+    /** 多行文本 | Multiline text */
+    multiline?: boolean;
+}
+
+/**
+ * 布尔类型属性选项
+ * Boolean property options
+ */
+interface BooleanPropertyOptions extends PropertyOptionsBase {
+    type: 'boolean';
+}
+
+/**
+ * 颜色类型属性选项
+ * Color property options
+ */
+interface ColorPropertyOptions extends PropertyOptionsBase {
+    type: 'color';
+    /** 是否包含透明度 | Include alpha channel */
+    alpha?: boolean;
+}
+
+/**
+ * 向量类型属性选项
+ * Vector property options
+ */
+interface VectorPropertyOptions extends PropertyOptionsBase {
+    type: 'vector2' | 'vector3';
+}
+
+/**
+ * 枚举类型属性选项
+ * Enum property options
+ */
+interface EnumPropertyOptions extends PropertyOptionsBase {
+    type: 'enum';
+    /** 枚举选项列表 | Enum options list */
+    options: EnumOption[];
+}
+
+/**
+ * 资源类型属性选项
+ * Asset property options
+ */
+interface AssetPropertyOptions extends PropertyOptionsBase {
+    type: 'asset';
+    /** 资源类型 | Asset type */
+    assetType?: AssetType;
+    /** 文件扩展名过滤 | File extension filter */
+    extensions?: string[];
+}
+
+/**
+ * 动画剪辑类型属性选项
+ * Animation clips property options
+ */
+interface AnimationClipsPropertyOptions extends PropertyOptionsBase {
+    type: 'animationClips';
+}
+
+/**
+ * 属性选项联合类型
+ * Property options union type
+ */
+export type PropertyOptions =
+    | NumberPropertyOptions
+    | StringPropertyOptions
+    | BooleanPropertyOptions
+    | ColorPropertyOptions
+    | VectorPropertyOptions
+    | EnumPropertyOptions
+    | AssetPropertyOptions
+    | AnimationClipsPropertyOptions;
 
 export const PROPERTY_METADATA = Symbol('property:metadata');
 

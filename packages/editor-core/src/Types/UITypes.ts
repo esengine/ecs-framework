@@ -184,6 +184,11 @@ export interface EntityCreationTemplate {
     icon?: any;
 
     /**
+     * 分类 (如 'basic', 'rendering', 'ui', 'physics' 等)
+     */
+    category?: string;
+
+    /**
      * 排序权重（数字越小越靠前）
      */
     order?: number;

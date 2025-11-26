@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Entity, Core } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub, SceneManagerService, CommandManager, EntityCreationRegistry, EntityCreationTemplate } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
-import { Box, Layers, Wifi, Search, Plus, Trash2, Monitor, Globe, Image, Camera, Film } from 'lucide-react';
+import { Box, Layers, Wifi, Search, Plus, Trash2, Monitor, Globe, Image, Camera, Film, ChevronRight } from 'lucide-react';
 import { ProfilerService, RemoteEntity } from '../services/ProfilerService';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { CreateEntityCommand, CreateSpriteEntityCommand, CreateAnimatedSpriteEntityCommand, CreateCameraEntityCommand, DeleteEntityCommand } from '../application/commands/entity';
@@ -532,58 +532,163 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
             </div>
 
             {contextMenu && !isShowingRemote && (
-                <div
-                    className="context-menu"
-                    style={{
-                        position: 'fixed',
-                        left: contextMenu.x,
-                        top: contextMenu.y,
-                        zIndex: 1000
+                <ContextMenuWithSubmenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    locale={locale}
+                    entityId={contextMenu.entityId}
+                    pluginTemplates={pluginTemplates}
+                    onCreateEmpty={() => { handleCreateEntity(); closeContextMenu(); }}
+                    onCreateSprite={() => { handleCreateSpriteEntity(); closeContextMenu(); }}
+                    onCreateAnimatedSprite={() => { handleCreateAnimatedSpriteEntity(); closeContextMenu(); }}
+                    onCreateCamera={() => { handleCreateCameraEntity(); closeContextMenu(); }}
+                    onCreateFromTemplate={async (template) => {
+                        await template.create(contextMenu.entityId ?? undefined);
+                        closeContextMenu();
                     }}
+                    onDelete={() => { handleDeleteEntity(); closeContextMenu(); }}
+                    onClose={closeContextMenu}
+                />
+            )}
+        </div>
+    );
+}
+
+interface ContextMenuWithSubmenuProps {
+    x: number;
+    y: number;
+    locale: string;
+    entityId: number | null;
+    pluginTemplates: EntityCreationTemplate[];
+    onCreateEmpty: () => void;
+    onCreateSprite: () => void;
+    onCreateAnimatedSprite: () => void;
+    onCreateCamera: () => void;
+    onCreateFromTemplate: (template: EntityCreationTemplate) => void;
+    onDelete: () => void;
+    onClose: () => void;
+}
+
+function ContextMenuWithSubmenu({
+    x, y, locale, entityId, pluginTemplates,
+    onCreateEmpty, onCreateSprite, onCreateAnimatedSprite, onCreateCamera,
+    onCreateFromTemplate, onDelete
+}: ContextMenuWithSubmenuProps) {
+    const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
+    const [submenuPosition, setSubmenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    const categoryLabels: Record<string, { zh: string; en: string }> = {
+        'basic': { zh: '基础', en: 'Basic' },
+        'rendering': { zh: '渲染', en: 'Rendering' },
+        'ui': { zh: 'UI', en: 'UI' },
+        'physics': { zh: '物理', en: 'Physics' },
+        'audio': { zh: '音频', en: 'Audio' },
+        'other': { zh: '其他', en: 'Other' },
+    };
+
+    const getCategoryLabel = (category: string) => {
+        const labels = categoryLabels[category];
+        return labels ? (locale === 'zh' ? labels.zh : labels.en) : category;
+    };
+
+    const templatesByCategory = pluginTemplates.reduce((acc, template) => {
+        const cat = template.category || 'other';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(template);
+        return acc;
+    }, {} as Record<string, EntityCreationTemplate[]>);
+
+    const hasPluginCategories = Object.keys(templatesByCategory).length > 0;
+
+    const handleSubmenuEnter = (category: string, e: React.MouseEvent) => {
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setSubmenuPosition({ x: rect.right - 4, y: rect.top });
+        setActiveSubmenu(category);
+    };
+
+    return (
+        <div
+            ref={menuRef}
+            className="context-menu"
+            style={{ position: 'fixed', left: x, top: y, zIndex: 1000 }}
+        >
+            <button onClick={onCreateEmpty}>
+                <Plus size={12} />
+                <span>{locale === 'zh' ? '创建空实体' : 'Create Empty Entity'}</span>
+            </button>
+
+            <div className="context-menu-divider" />
+
+            <div
+                className="context-menu-item-with-submenu"
+                onMouseEnter={(e) => handleSubmenuEnter('rendering', e)}
+                onMouseLeave={() => setActiveSubmenu(null)}
+            >
+                <button>
+                    <Image size={12} />
+                    <span>{locale === 'zh' ? '2D 对象' : '2D Objects'}</span>
+                    <ChevronRight size={12} className="submenu-arrow" />
+                </button>
+                {activeSubmenu === 'rendering' && (
+                    <div
+                        className="context-submenu"
+                        style={{ left: submenuPosition.x, top: submenuPosition.y }}
+                        onMouseEnter={() => setActiveSubmenu('rendering')}
+                    >
+                        <button onClick={onCreateSprite}>
+                            <Image size={12} />
+                            <span>Sprite</span>
+                        </button>
+                        <button onClick={onCreateAnimatedSprite}>
+                            <Film size={12} />
+                            <span>{locale === 'zh' ? '动画 Sprite' : 'Animated Sprite'}</span>
+                        </button>
+                        <button onClick={onCreateCamera}>
+                            <Camera size={12} />
+                            <span>{locale === 'zh' ? '相机' : 'Camera'}</span>
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {hasPluginCategories && Object.entries(templatesByCategory).map(([category, templates]) => (
+                <div
+                    key={category}
+                    className="context-menu-item-with-submenu"
+                    onMouseEnter={(e) => handleSubmenuEnter(category, e)}
+                    onMouseLeave={() => setActiveSubmenu(null)}
                 >
-                    <button onClick={() => { handleCreateEntity(); closeContextMenu(); }}>
-                        <Plus size={12} />
-                        <span>{locale === 'zh' ? '创建空实体' : 'Create Empty Entity'}</span>
+                    <button>
+                        {templates[0]?.icon || <Plus size={12} />}
+                        <span>{getCategoryLabel(category)}</span>
+                        <ChevronRight size={12} className="submenu-arrow" />
                     </button>
-                    <button onClick={() => { handleCreateSpriteEntity(); closeContextMenu(); }}>
-                        <Image size={12} />
-                        <span>{locale === 'zh' ? '创建 Sprite' : 'Create Sprite'}</span>
-                    </button>
-                    <button onClick={() => { handleCreateAnimatedSpriteEntity(); closeContextMenu(); }}>
-                        <Film size={12} />
-                        <span>{locale === 'zh' ? '创建动画 Sprite' : 'Create Animated Sprite'}</span>
-                    </button>
-                    <button onClick={() => { handleCreateCameraEntity(); closeContextMenu(); }}>
-                        <Camera size={12} />
-                        <span>{locale === 'zh' ? '创建相机' : 'Create Camera'}</span>
-                    </button>
-                    {pluginTemplates.length > 0 && (
-                        <>
-                            <div className="context-menu-divider" />
-                            {pluginTemplates.map((template) => (
-                                <button
-                                    key={template.id}
-                                    onClick={async () => {
-                                        await template.create(contextMenu.entityId ?? undefined);
-                                        closeContextMenu();
-                                    }}
-                                >
+                    {activeSubmenu === category && (
+                        <div
+                            className="context-submenu"
+                            style={{ left: submenuPosition.x, top: submenuPosition.y }}
+                            onMouseEnter={() => setActiveSubmenu(category)}
+                        >
+                            {templates.map((template) => (
+                                <button key={template.id} onClick={() => onCreateFromTemplate(template)}>
                                     {template.icon || <Plus size={12} />}
                                     <span>{template.label}</span>
                                 </button>
                             ))}
-                        </>
-                    )}
-                    {contextMenu.entityId && (
-                        <>
-                            <div className="context-menu-divider" />
-                            <button onClick={() => { handleDeleteEntity(); closeContextMenu(); }}>
-                                <Trash2 size={12} />
-                                <span>{locale === 'zh' ? '删除实体' : 'Delete Entity'}</span>
-                            </button>
-                        </>
+                        </div>
                     )}
                 </div>
+            ))}
+
+            {entityId && (
+                <>
+                    <div className="context-menu-divider" />
+                    <button onClick={onDelete} className="context-menu-danger">
+                        <Trash2 size={12} />
+                        <span>{locale === 'zh' ? '删除实体' : 'Delete Entity'}</span>
+                    </button>
+                </>
             )}
         </div>
     );

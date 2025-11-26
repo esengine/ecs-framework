@@ -10,7 +10,7 @@ import type { AssetReference } from '@esengine/asset-system';
 export class SpriteComponent extends Component {
     /** 纹理路径或资源ID | Texture path or asset ID */
     @Serialize()
-    @Property({ type: 'asset', label: 'Texture', fileExtension: '.png' })
+    @Property({ type: 'asset', label: 'Texture', assetType: 'texture' })
     public texture: string = '';
 
     /**
