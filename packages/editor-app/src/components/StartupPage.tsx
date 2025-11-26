@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
-import { Globe, ChevronDown } from 'lucide-react';
+import { Globe, ChevronDown, Download, X, Loader2 } from 'lucide-react';
+import { checkForUpdatesOnStartup, installUpdate, type UpdateCheckResult } from '../utils/updater';
+import { StartupLogo } from './StartupLogo';
 import '../styles/StartupPage.css';
 
 type Locale = 'en' | 'zh';
@@ -21,9 +23,13 @@ const LANGUAGES = [
 ];
 
 export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProject, onProfilerMode, onLocaleChange, recentProjects = [], locale }: StartupPageProps) {
+    const [showLogo, setShowLogo] = useState(true);
     const [hoveredProject, setHoveredProject] = useState<string | null>(null);
     const [appVersion, setAppVersion] = useState<string>('');
     const [showLangMenu, setShowLangMenu] = useState(false);
+    const [updateInfo, setUpdateInfo] = useState<UpdateCheckResult | null>(null);
+    const [showUpdateBanner, setShowUpdateBanner] = useState(false);
+    const [isInstalling, setIsInstalling] = useState(false);
     const langMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -40,6 +46,16 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
         getVersion().then(setAppVersion).catch(() => setAppVersion('1.0.0'));
     }, []);
 
+    // 启动时检查更新
+    useEffect(() => {
+        checkForUpdatesOnStartup().then((result) => {
+            if (result.available) {
+                setUpdateInfo(result);
+                setShowUpdateBanner(true);
+            }
+        });
+    }, []);
+
     const translations = {
         en: {
             title: 'ECS Framework Editor',
@@ -49,7 +65,11 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
             profilerMode: 'Profiler Mode',
             recentProjects: 'Recent Projects',
             noRecentProjects: 'No recent projects',
-            comingSoon: 'Coming Soon'
+            comingSoon: 'Coming Soon',
+            updateAvailable: 'New version available',
+            updateNow: 'Update Now',
+            installing: 'Installing...',
+            later: 'Later'
         },
         zh: {
             title: 'ECS 框架编辑器',
@@ -59,15 +79,33 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
             profilerMode: '性能分析模式',
             recentProjects: '最近的项目',
             noRecentProjects: '没有最近的项目',
-            comingSoon: '即将推出'
+            comingSoon: '即将推出',
+            updateAvailable: '发现新版本',
+            updateNow: '立即更新',
+            installing: '正在安装...',
+            later: '稍后'
         }
+    };
+
+    const handleInstallUpdate = async () => {
+        setIsInstalling(true);
+        const success = await installUpdate();
+        if (!success) {
+            setIsInstalling(false);
+        }
+        // 如果成功，应用会重启，不需要处理
     };
 
     const t = translations[locale as keyof typeof translations] || translations.en;
     const versionText = locale === 'zh' ? `版本 ${appVersion}` : `Version ${appVersion}`;
 
+    const handleLogoComplete = () => {
+        setShowLogo(false);
+    };
+
     return (
         <div className="startup-page">
+            {showLogo && <StartupLogo onAnimationComplete={handleLogoComplete} />}
             <div className="startup-header">
                 <h1 className="startup-title">{t.title}</h1>
                 <p className="startup-subtitle">{t.subtitle}</p>
@@ -125,6 +163,40 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                     )}
                 </div>
             </div>
+
+            {/* 更新提示条 */}
+            {showUpdateBanner && updateInfo?.available && (
+                <div className="startup-update-banner">
+                    <div className="update-banner-content">
+                        <Download size={16} />
+                        <span className="update-banner-text">
+                            {t.updateAvailable}: v{updateInfo.version}
+                        </span>
+                        <button
+                            className="update-banner-btn primary"
+                            onClick={handleInstallUpdate}
+                            disabled={isInstalling}
+                        >
+                            {isInstalling ? (
+                                <>
+                                    <Loader2 size={14} className="animate-spin" />
+                                    {t.installing}
+                                </>
+                            ) : (
+                                t.updateNow
+                            )}
+                        </button>
+                        <button
+                            className="update-banner-close"
+                            onClick={() => setShowUpdateBanner(false)}
+                            disabled={isInstalling}
+                            title={t.later}
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div className="startup-footer">
                 <span className="startup-version">{versionText}</span>

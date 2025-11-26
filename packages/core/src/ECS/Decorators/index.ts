@@ -30,4 +30,4 @@ export {
     PROPERTY_METADATA
 } from './PropertyDecorator';
 
-export type { PropertyOptions, PropertyType, PropertyControl } from './PropertyDecorator';
+export type { PropertyOptions, PropertyType, PropertyControl, PropertyAction, AssetType, EnumOption } from './PropertyDecorator';

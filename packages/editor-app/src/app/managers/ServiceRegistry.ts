@@ -20,6 +20,7 @@ import {
     PropertyRendererRegistry,
     FieldEditorRegistry,
     ComponentActionRegistry,
+    ComponentInspectorRegistry,
     IDialogService,
     IFileSystemService,
     CompilerRegistry,
@@ -138,6 +139,7 @@ export class ServiceRegistry {
         const fileActionRegistry = new FileActionRegistry();
         const entityCreationRegistry = new EntityCreationRegistry();
         const componentActionRegistry = new ComponentActionRegistry();
+        const componentInspectorRegistry = new ComponentInspectorRegistry();
 
         Core.services.registerInstance(UIRegistry, uiRegistry);
         Core.services.registerInstance(MessageHub, messageHub);
@@ -154,6 +156,7 @@ export class ServiceRegistry {
         Core.services.registerInstance(FileActionRegistry, fileActionRegistry);
         Core.services.registerInstance(EntityCreationRegistry, entityCreationRegistry);
         Core.services.registerInstance(ComponentActionRegistry, componentActionRegistry);
+        Core.services.registerInstance(ComponentInspectorRegistry, componentInspectorRegistry);
 
         const pluginManager = new EditorPluginManager();
         pluginManager.initialize(coreInstance, Core.services);

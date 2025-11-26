@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, RefreshCw, Check, AlertCircle, Download } from 'lucide-react';
-import { checkForUpdates } from '../utils/updater';
+import { X, RefreshCw, Check, AlertCircle, Download, Loader2 } from 'lucide-react';
+import { checkForUpdates, installUpdate } from '../utils/updater';
 import { getVersion } from '@tauri-apps/api/app';
 import { open } from '@tauri-apps/plugin-shell';
 import '../styles/AboutDialog.css';
@@ -12,7 +12,8 @@ interface AboutDialogProps {
 
 export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
     const [checking, setChecking] = useState(false);
-    const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'latest' | 'error'>('idle');
+    const [installing, setInstalling] = useState(false);
+    const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'latest' | 'error' | 'installing'>('idle');
     const [version, setVersion] = useState<string>('1.0.0');
     const [newVersion, setNewVersion] = useState<string>('');
 
@@ -40,7 +41,8 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
                 updateAvailable: 'New version available',
                 latest: 'You are using the latest version',
                 error: 'Failed to check for updates',
-                download: 'Download Update',
+                download: 'Download & Install',
+                installing: 'Installing...',
                 close: 'Close',
                 copyright: '© 2025 ESEngine. All rights reserved.',
                 website: 'Website',
@@ -55,7 +57,8 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
                 updateAvailable: '发现新版本',
                 latest: '您正在使用最新版本',
                 error: '检查更新失败',
-                download: '下载更新',
+                download: '下载并安装',
+                installing: '正在安装...',
                 close: '关闭',
                 copyright: '© 2025 ESEngine. 保留所有权利。',
                 website: '官网',
@@ -73,8 +76,8 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
             const currentVersion = await getVersion();
             setVersion(currentVersion);
 
-            // 使用我们的 updater 工具检查更新
-            const result = await checkForUpdates(false);
+            // 使用我们的 updater 工具检查更新（仅检查，不自动安装）
+            const result = await checkForUpdates();
 
             if (result.error) {
                 setUpdateStatus('error');
@@ -94,12 +97,32 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
         }
     };
 
+    const handleInstallUpdate = async () => {
+        setInstalling(true);
+        setUpdateStatus('installing');
+
+        try {
+            const success = await installUpdate();
+            if (!success) {
+                setUpdateStatus('error');
+                setInstalling(false);
+            }
+            // 如果成功，应用会重启，不需要处理
+        } catch (error) {
+            console.error('Install update failed:', error);
+            setUpdateStatus('error');
+            setInstalling(false);
+        }
+    };
+
     const getStatusIcon = () => {
         switch (updateStatus) {
             case 'checking':
                 return <RefreshCw size={16} className="animate-spin" />;
             case 'available':
                 return <Download size={16} className="status-available" />;
+            case 'installing':
+                return <Loader2 size={16} className="animate-spin" />;
             case 'latest':
                 return <Check size={16} className="status-latest" />;
             case 'error':
@@ -115,6 +138,8 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
                 return t('checking');
             case 'available':
                 return `${t('updateAvailable')} (v${newVersion})`;
+            case 'installing':
+                return t('installing');
             case 'latest':
                 return t('latest');
             case 'error':
@@ -161,7 +186,7 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
                         <button
                             className="update-btn"
                             onClick={handleCheckUpdate}
-                            disabled={checking}
+                            disabled={checking || installing}
                         >
                             {checking ? (
                                 <>
@@ -181,6 +206,26 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
                                 {getStatusIcon()}
                                 <span>{getStatusText()}</span>
                             </div>
+                        )}
+
+                        {updateStatus === 'available' && (
+                            <button
+                                className="update-btn install-btn"
+                                onClick={handleInstallUpdate}
+                                disabled={installing}
+                            >
+                                {installing ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" />
+                                        <span>{t('installing')}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Download size={16} />
+                                        <span>{t('download')}</span>
+                                    </>
+                                )}
+                            </button>
                         )}
                     </div>
 

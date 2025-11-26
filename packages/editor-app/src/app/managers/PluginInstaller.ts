@@ -4,6 +4,7 @@ import { ProfilerPlugin } from '../../plugins/ProfilerPlugin';
 import { EditorAppearancePlugin } from '../../plugins/EditorAppearancePlugin';
 import { GizmoPlugin } from '../../plugins/GizmoPlugin';
 import { TilemapEditorPlugin } from '@esengine/tilemap-editor';
+import { UIEditorPlugin } from '@esengine/ui-editor';
 
 export class PluginInstaller {
     async installBuiltinPlugins(pluginManager: EditorPluginManager): Promise<void> {
@@ -12,7 +13,8 @@ export class PluginInstaller {
             new SceneInspectorPlugin(),
             new ProfilerPlugin(),
             new EditorAppearancePlugin(),
-            new TilemapEditorPlugin()
+            new TilemapEditorPlugin(),
+            new UIEditorPlugin()
         ];
 
         for (const plugin of plugins) {

@@ -8,6 +8,7 @@ import { GizmoRegistry } from '@esengine/editor-core';
 import { Core, Scene, Entity, SceneSerializer } from '@esengine/ecs-framework';
 import { TransformComponent, SpriteComponent, SpriteAnimatorSystem, SpriteAnimatorComponent } from '@esengine/ecs-components';
 import { TilemapComponent, TilemapRenderingSystem } from '@esengine/tilemap';
+import { UIRenderDataProvider } from '@esengine/ui';
 import { EntityStoreService, MessageHub, SceneManagerService, ProjectService } from '@esengine/editor-core';
 import * as esEngine from '@esengine/engine';
 import {
@@ -33,6 +34,7 @@ export class EngineService {
     private renderSystem: EngineRenderSystem | null = null;
     private animatorSystem: SpriteAnimatorSystem | null = null;
     private tilemapSystem: TilemapRenderingSystem | null = null;
+    private uiRenderProvider: UIRenderDataProvider | null = null;
     private initialized = false;
     private running = false;
     private animationFrameId: number | null = null;
@@ -120,6 +122,17 @@ export class EngineService {
             // Register tilemap system as render data provider
             // 将瓦片地图系统注册为渲染数据提供者
             this.renderSystem.addRenderDataProvider(this.tilemapSystem);
+
+            // Register UI render data provider
+            // 注册 UI 渲染数据提供者
+            this.uiRenderProvider = new UIRenderDataProvider();
+            this.renderSystem.addRenderDataProvider(this.uiRenderProvider);
+
+            // Set up texture callback for UI text rendering
+            // 设置 UI 文本渲染的纹理回调
+            this.uiRenderProvider.setTextureCallback((id: number, dataUrl: string) => {
+                this.bridge!.loadTexture(id, dataUrl);
+            });
 
             // Inject GizmoRegistry into render system
             // 将 GizmoRegistry 注入渲染系统
@@ -700,6 +713,13 @@ export class EngineService {
             if (this.tilemapSystem) {
                 console.log('[EngineService] Clearing tilemap cache before restore');
                 this.tilemapSystem.clearCache();
+            }
+
+            // Clear UI text cache before restoring
+            // 恢复前清除 UI 文本缓存
+            if (this.uiRenderProvider) {
+                console.log('[EngineService] Clearing UI text cache before restore');
+                this.uiRenderProvider.clearTextCache();
             }
 
             // Use SceneSerializer from core library

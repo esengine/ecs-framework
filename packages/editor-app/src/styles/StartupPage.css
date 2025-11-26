@@ -250,3 +250,99 @@
 .startup-locale-item.active:hover {
   color: #fff;
 }
+
+/* 更新提示条样式 */
+.startup-update-banner {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+}
+
+.update-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #1e5a2f 0%, #1a4a28 100%);
+  border: 1px solid #2e8b4a;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  color: #ffffff;
+  font-size: 13px;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.update-banner-content svg {
+  color: #4ade80;
+  flex-shrink: 0;
+}
+
+.update-banner-text {
+  white-space: nowrap;
+}
+
+.update-banner-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.update-banner-btn.primary {
+  background: #22c55e;
+  color: #ffffff;
+}
+
+.update-banner-btn.primary:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.update-banner-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.update-banner-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.update-banner-close:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.update-banner-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

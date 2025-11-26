@@ -1,12 +1,20 @@
-import { useState } from 'react';
-import { Settings, ChevronDown, ChevronRight, X, Plus, Box } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Settings, ChevronDown, ChevronRight, X, Plus, Box, Search } from 'lucide-react';
 import { Entity, Component, Core, getComponentDependencies, getComponentTypeName, getComponentInstanceTypeName } from '@esengine/ecs-framework';
-import { MessageHub, CommandManager, ComponentRegistry, ComponentActionRegistry } from '@esengine/editor-core';
+import { MessageHub, CommandManager, ComponentRegistry, ComponentActionRegistry, ComponentInspectorRegistry } from '@esengine/editor-core';
 import { PropertyInspector } from '../../PropertyInspector';
 import { NotificationService } from '../../../services/NotificationService';
 import { RemoveComponentCommand, UpdateComponentCommand, AddComponentCommand } from '../../../application/commands/component';
 import '../../../styles/EntityInspector.css';
 import * as LucideIcons from 'lucide-react';
+
+interface ComponentInfo {
+    name: string;
+    type?: new () => Component;
+    category?: string;
+    description?: string;
+    icon?: string;
+}
 
 interface EntityInspectorProps {
     entity: Entity;
@@ -19,10 +27,66 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
     const [expandedComponents, setExpandedComponents] = useState<Set<number>>(new Set());
     const [showComponentMenu, setShowComponentMenu] = useState(false);
     const [localVersion, setLocalVersion] = useState(0);
+    const [dropdownPosition, setDropdownPosition] = useState<{ top: number; right: number } | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+    const addButtonRef = useRef<HTMLButtonElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     const componentRegistry = Core.services.resolve(ComponentRegistry);
     const componentActionRegistry = Core.services.resolve(ComponentActionRegistry);
-    const availableComponents = componentRegistry?.getAllComponents() || [];
+    const componentInspectorRegistry = Core.services.resolve(ComponentInspectorRegistry);
+    const availableComponents = (componentRegistry?.getAllComponents() || []) as ComponentInfo[];
+
+    useEffect(() => {
+        if (showComponentMenu && addButtonRef.current) {
+            const rect = addButtonRef.current.getBoundingClientRect();
+            setDropdownPosition({
+                top: rect.bottom + 4,
+                right: window.innerWidth - rect.right
+            });
+            setSearchQuery('');
+            setTimeout(() => searchInputRef.current?.focus(), 50);
+        }
+    }, [showComponentMenu]);
+
+    const categoryLabels: Record<string, string> = {
+        'components.category.core': '核心',
+        'components.category.rendering': '渲染',
+        'components.category.physics': '物理',
+        'components.category.audio': '音频',
+        'components.category.ui': 'UI',
+        'components.category.ui.core': 'UI 核心',
+        'components.category.ui.widgets': 'UI 控件',
+        'components.category.other': '其他',
+    };
+
+    const filteredAndGroupedComponents = useMemo(() => {
+        const query = searchQuery.toLowerCase().trim();
+        const filtered = query
+            ? availableComponents.filter(c =>
+                c.name.toLowerCase().includes(query) ||
+                (c.description && c.description.toLowerCase().includes(query))
+            )
+            : availableComponents;
+
+        const grouped = new Map<string, ComponentInfo[]>();
+        filtered.forEach((info) => {
+            const cat = info.category || 'components.category.other';
+            if (!grouped.has(cat)) grouped.set(cat, []);
+            grouped.get(cat)!.push(info);
+        });
+        return grouped;
+    }, [availableComponents, searchQuery]);
+
+    const toggleCategory = (category: string) => {
+        setCollapsedCategories(prev => {
+            const next = new Set(prev);
+            if (next.has(category)) next.delete(category);
+            else next.add(category);
+            return next;
+        });
+    };
 
     const toggleComponentExpanded = (index: number) => {
         setExpandedComponents((prev) => {
@@ -146,49 +210,65 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                         <span>组件</span>
                         <div className="component-menu-container">
                             <button
+                                ref={addButtonRef}
                                 className="add-component-trigger"
                                 onClick={() => setShowComponentMenu(!showComponentMenu)}
                             >
                                 <Plus size={12} />
                                 添加
                             </button>
-                            {showComponentMenu && (
+                            {showComponentMenu && dropdownPosition && (
                                 <>
                                     <div className="component-dropdown-overlay" onClick={() => setShowComponentMenu(false)} />
-                                    <div className="component-dropdown">
-                                        <div className="component-dropdown-header">选择组件</div>
-                                        {availableComponents.length === 0 ? (
+                                    <div
+                                        className="component-dropdown"
+                                        style={{ top: dropdownPosition.top, right: dropdownPosition.right }}
+                                    >
+                                        <div className="component-dropdown-search">
+                                            <Search size={14} />
+                                            <input
+                                                ref={searchInputRef}
+                                                type="text"
+                                                placeholder="搜索组件..."
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                            />
+                                        </div>
+                                        {filteredAndGroupedComponents.size === 0 ? (
                                             <div className="component-dropdown-empty">
-                                                没有可用组件
+                                                {searchQuery ? '未找到匹配的组件' : '没有可用组件'}
                                             </div>
                                         ) : (
                                             <div className="component-dropdown-list">
-                                                {/* 按分类分组显示 */}
-                                                {(() => {
-                                                    const categories = new Map<string, typeof availableComponents>();
-                                                    availableComponents.forEach((info) => {
-                                                        const cat = info.category || 'components.category.other';
-                                                        if (!categories.has(cat)) {
-                                                            categories.set(cat, []);
-                                                        }
-                                                        categories.get(cat)!.push(info);
-                                                    });
-
-                                                    return Array.from(categories.entries()).map(([category, components]) => (
+                                                {Array.from(filteredAndGroupedComponents.entries()).map(([category, components]) => {
+                                                    const isCollapsed = collapsedCategories.has(category) && !searchQuery;
+                                                    const label = categoryLabels[category] || category;
+                                                    return (
                                                         <div key={category} className="component-category-group">
-                                                            <div className="component-category-label">{category}</div>
-                                                            {components.map((info) => (
-                                                                <button
-                                                                    key={info.name}
-                                                                    className="component-dropdown-item"
-                                                                    onClick={() => info.type && handleAddComponent(info.type)}
-                                                                >
-                                                                    <span className="component-dropdown-item-name">{info.name}</span>
-                                                                </button>
-                                                            ))}
+                                                            <button
+                                                                className="component-category-header"
+                                                                onClick={() => toggleCategory(category)}
+                                                            >
+                                                                {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                                                                <span>{label}</span>
+                                                                <span className="component-category-count">{components.length}</span>
+                                                            </button>
+                                                            {!isCollapsed && components.map((info) => {
+                                                                const IconComp = info.icon && (LucideIcons as any)[info.icon];
+                                                                return (
+                                                                    <button
+                                                                        key={info.name}
+                                                                        className="component-dropdown-item"
+                                                                        onClick={() => info.type && handleAddComponent(info.type)}
+                                                                    >
+                                                                        {IconComp ? <IconComp size={14} /> : <Box size={14} />}
+                                                                        <span className="component-dropdown-item-name">{info.name}</span>
+                                                                    </button>
+                                                                );
+                                                            })}
                                                         </div>
-                                                    ));
-                                                })()}
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
@@ -244,15 +324,25 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
 
                                     {isExpanded && (
                                         <div className="component-item-content">
-                                            <PropertyInspector
-                                                component={component}
-                                                entity={entity}
-                                                version={componentVersion + localVersion}
-                                                onChange={(propName: string, value: unknown) =>
-                                                    handlePropertyChange(component, propName, value)
-                                                }
-                                                onAction={handlePropertyAction}
-                                            />
+                                            {componentInspectorRegistry?.hasInspector(component)
+                                                ? componentInspectorRegistry.render({
+                                                    component,
+                                                    entity,
+                                                    version: componentVersion + localVersion,
+                                                    onChange: (propName: string, value: unknown) =>
+                                                        handlePropertyChange(component, propName, value),
+                                                    onAction: handlePropertyAction
+                                                })
+                                                : <PropertyInspector
+                                                    component={component}
+                                                    entity={entity}
+                                                    version={componentVersion + localVersion}
+                                                    onChange={(propName: string, value: unknown) =>
+                                                        handlePropertyChange(component, propName, value)
+                                                    }
+                                                    onAction={handlePropertyAction}
+                                                />
+                                            }
                                             {/* Dynamic component actions from plugins */}
                                             {componentActionRegistry?.getActionsForComponent(componentName).map((action) => (
                                                 <button

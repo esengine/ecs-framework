@@ -6,6 +6,7 @@ import { EngineService } from '../services/EngineService';
 import { Core, Entity, SceneSerializer } from '@esengine/ecs-framework';
 import { MessageHub } from '@esengine/editor-core';
 import { TransformComponent, CameraComponent } from '@esengine/ecs-components';
+import { UITransformComponent } from '@esengine/ui';
 import { TauriAPI } from '../api/tauri';
 import { open } from '@tauri-apps/plugin-shell';
 import { RuntimeResolver } from '../services/RuntimeResolver';
@@ -258,9 +259,6 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                 const entity = selectedEntityRef.current;
                 if (!entity) return;
 
-                const transform = entity.getComponent(TransformComponent);
-                if (!transform) return;
-
                 const worldStart = screenToWorld(lastMousePosRef.current.x, lastMousePosRef.current.y);
                 const worldEnd = screenToWorld(e.clientX, e.clientY);
                 const worldDelta = {
@@ -269,37 +267,71 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                 };
 
                 const mode = transformModeRef.current;
-                if (mode === 'move') {
-                    // Update position
-                    transform.position.x += worldDelta.x;
-                    transform.position.y += worldDelta.y;
-                } else if (mode === 'rotate') {
-                    // Horizontal mouse movement controls rotation (in radians)
-                    const rotationSpeed = 0.01; // radians per pixel
-                    transform.rotation.z += deltaX * rotationSpeed;
-                } else if (mode === 'scale') {
-                    // Scale based on distance from center
-                    const centerX = transform.position.x;
-                    const centerY = transform.position.y;
-                    const startDist = Math.sqrt((worldStart.x - centerX) ** 2 + (worldStart.y - centerY) ** 2);
-                    const endDist = Math.sqrt((worldEnd.x - centerX) ** 2 + (worldEnd.y - centerY) ** 2);
-                    if (startDist > 0) {
-                        const scaleFactor = endDist / startDist;
-                        transform.scale.x *= scaleFactor;
-                        transform.scale.y *= scaleFactor;
+
+                // Try standard TransformComponent first
+                const transform = entity.getComponent(TransformComponent);
+                if (transform) {
+                    if (mode === 'move') {
+                        transform.position.x += worldDelta.x;
+                        transform.position.y += worldDelta.y;
+                    } else if (mode === 'rotate') {
+                        const rotationSpeed = 0.01;
+                        transform.rotation.z += deltaX * rotationSpeed;
+                    } else if (mode === 'scale') {
+                        const centerX = transform.position.x;
+                        const centerY = transform.position.y;
+                        const startDist = Math.sqrt((worldStart.x - centerX) ** 2 + (worldStart.y - centerY) ** 2);
+                        const endDist = Math.sqrt((worldEnd.x - centerX) ** 2 + (worldEnd.y - centerY) ** 2);
+                        if (startDist > 0) {
+                            const scaleFactor = endDist / startDist;
+                            transform.scale.x *= scaleFactor;
+                            transform.scale.y *= scaleFactor;
+                        }
+                    }
+
+                    if (messageHubRef.current) {
+                        const propertyName = mode === 'move' ? 'position' : mode === 'rotate' ? 'rotation' : 'scale';
+                        messageHubRef.current.publish('component:property:changed', {
+                            entity,
+                            component: transform,
+                            propertyName,
+                            value: transform[propertyName]
+                        });
                     }
                 }
 
-                // Notify system of transform change for real-time update
-                // 通知系统变换更改，用于实时更新
-                if (messageHubRef.current) {
-                    const propertyName = mode === 'move' ? 'position' : mode === 'rotate' ? 'rotation' : 'scale';
-                    messageHubRef.current.publish('component:property:changed', {
-                        entity,
-                        component: transform,
-                        propertyName,
-                        value: transform[propertyName]
-                    });
+                // Try UITransformComponent
+                const uiTransform = entity.getComponent(UITransformComponent);
+                if (uiTransform) {
+                    if (mode === 'move') {
+                        uiTransform.x += worldDelta.x;
+                        uiTransform.y += worldDelta.y;
+                    } else if (mode === 'rotate') {
+                        const rotationSpeed = 0.01;
+                        uiTransform.rotation += deltaX * rotationSpeed;
+                    } else if (mode === 'scale') {
+                        const width = uiTransform.width * uiTransform.scaleX;
+                        const height = uiTransform.height * uiTransform.scaleY;
+                        const centerX = uiTransform.x + width * uiTransform.pivotX;
+                        const centerY = uiTransform.y + height * uiTransform.pivotY;
+                        const startDist = Math.sqrt((worldStart.x - centerX) ** 2 + (worldStart.y - centerY) ** 2);
+                        const endDist = Math.sqrt((worldEnd.x - centerX) ** 2 + (worldEnd.y - centerY) ** 2);
+                        if (startDist > 0) {
+                            const scaleFactor = endDist / startDist;
+                            uiTransform.scaleX *= scaleFactor;
+                            uiTransform.scaleY *= scaleFactor;
+                        }
+                    }
+
+                    if (messageHubRef.current) {
+                        const propertyName = mode === 'move' ? 'x' : mode === 'rotate' ? 'rotation' : 'scaleX';
+                        messageHubRef.current.publish('component:property:changed', {
+                            entity,
+                            component: uiTransform,
+                            propertyName,
+                            value: uiTransform[propertyName]
+                        });
+                    }
                 }
             } else {
                 return;

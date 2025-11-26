@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Component, Core } from '@esengine/ecs-framework';
+import { Component, Core, getComponentInstanceTypeName } from '@esengine/ecs-framework';
 import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub, IFileSystemService } from '@esengine/editor-core';
 import type { IFileSystem } from '@esengine/editor-core';
 import { ChevronRight, ChevronDown, ArrowRight, Lock } from 'lucide-react';
@@ -31,7 +31,7 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
         const propertyMetadataService = Core.services.resolve(PropertyMetadataService);
         if (!propertyMetadataService) return;
 
-        const componentName = component.constructor.name;
+        const componentName = getComponentInstanceTypeName(component);
         const controlled = new Map<string, string>();
 
         // Check all components on this entity
@@ -39,7 +39,7 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
             if (otherComponent === component) continue;
 
             const otherMetadata = propertyMetadataService.getEditableProperties(otherComponent);
-            const otherComponentName = otherComponent.constructor.name;
+            const otherComponentName = getComponentInstanceTypeName(otherComponent);
 
             // Check if any property has controls declaration
             for (const [, propMeta] of Object.entries(otherMetadata)) {
@@ -140,16 +140,26 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                     />
                 );
 
-            case 'color':
+            case 'color': {
+                // Convert numeric color (0xRRGGBB) to hex string (#RRGGBB)
+                let colorValue = value ?? '#ffffff';
+                if (typeof colorValue === 'number') {
+                    colorValue = '#' + colorValue.toString(16).padStart(6, '0');
+                }
                 return (
                     <ColorField
                         key={propertyName}
                         label={label}
-                        value={value ?? '#ffffff'}
+                        value={colorValue}
                         readOnly={metadata.readOnly}
-                        onChange={(newValue) => handleChange(propertyName, newValue)}
+                        onChange={(newValue) => {
+                            // Convert hex string back to number for storage
+                            const numericValue = parseInt(newValue.slice(1), 16);
+                            handleChange(propertyName, numericValue);
+                        }}
                     />
                 );
+            }
 
             case 'vector2':
                 return (
@@ -187,12 +197,14 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
 
             case 'asset': {
                 const controlledBy = getControlledBy(propertyName);
+                const assetMeta = metadata as { assetType?: string; extensions?: string[] };
                 return (
                     <AssetDropField
                         key={propertyName}
                         label={label}
                         value={value ?? ''}
-                        fileExtension={metadata.fileExtension}
+                        assetType={assetMeta.assetType}
+                        extensions={assetMeta.extensions}
                         readOnly={metadata.readOnly || !!controlledBy}
                         controlledBy={controlledBy}
                         entityId={entity?.id?.toString()}
@@ -800,20 +812,31 @@ function Vector3Field({ label, value, readOnly, onChange }: Vector3FieldProps) {
     );
 }
 
+type EnumOptionInput = string | { label: string; value: any };
+
 interface EnumFieldProps {
   label: string;
   value: any;
-  options: Array<{ label: string; value: any }>;
+  options: EnumOptionInput[];
   readOnly?: boolean;
   onChange: (value: any) => void;
+}
+
+function normalizeEnumOption(opt: EnumOptionInput): { label: string; value: any } {
+    if (typeof opt === 'string') {
+        return { label: opt, value: opt };
+    }
+    return opt;
 }
 
 function EnumField({ label, value, options, readOnly, onChange }: EnumFieldProps) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    const selectedOption = options.find((opt) => opt.value === value);
-    const displayLabel = selectedOption?.label || (options.length === 0 ? 'No options' : '');
+    // Ensure options is always an array and normalize them
+    const safeOptions = Array.isArray(options) ? options.map(normalizeEnumOption) : [];
+    const selectedOption = safeOptions.find((opt) => opt.value === value);
+    const displayLabel = selectedOption?.label || (safeOptions.length === 0 ? 'No options' : '');
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -842,7 +865,7 @@ function EnumField({ label, value, options, readOnly, onChange }: EnumFieldProps
                 </button>
                 {isOpen && (
                     <div className="property-dropdown-menu">
-                        {options.map((option, index) => (
+                        {safeOptions.map((option, index) => (
                             <button
                                 key={index}
                                 className={`property-dropdown-item ${option.value === value ? 'selected' : ''}`}
@@ -865,18 +888,22 @@ function EnumField({ label, value, options, readOnly, onChange }: EnumFieldProps
 interface AssetDropFieldProps {
   label: string;
   value: string;
-  fileExtension?: string;
+  assetType?: string;
+  extensions?: string[];
   readOnly?: boolean;
   controlledBy?: string;
   entityId?: string;
   onChange: (value: string) => void;
 }
 
-function AssetDropField({ label, value, fileExtension, readOnly, controlledBy, entityId, onChange }: AssetDropFieldProps) {
+function AssetDropField({ label, value, assetType, extensions, readOnly, controlledBy, entityId, onChange }: AssetDropFieldProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [showSaveDialog, setShowSaveDialog] = useState(false);
 
-    const canCreate = fileExtension && ['.tilemap.json', '.btree'].includes(fileExtension);
+    // Determine if this asset type can be created
+    const creatableExtensions = ['.tilemap.json', '.btree'];
+    const canCreate = extensions?.some(ext => creatableExtensions.includes(ext));
+    const fileExtension = extensions?.[0];
 
     const handleCreate = () => {
         setShowSaveDialog(true);
