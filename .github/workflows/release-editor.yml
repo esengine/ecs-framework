@@ -116,6 +116,7 @@ jobs:
           pnpm run build
 
       - name: Copy WASM files to ecs-engine-bindgen
+        shell: bash
         run: |
           mkdir -p packages/ecs-engine-bindgen/src/wasm
           cp packages/engine/pkg/es_engine.js packages/ecs-engine-bindgen/src/wasm/
