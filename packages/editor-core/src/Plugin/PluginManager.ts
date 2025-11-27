@@ -4,7 +4,7 @@
  */
 
 import { createLogger, ComponentRegistry } from '@esengine/ecs-framework';
-import type { Scene, ServiceContainer, IService } from '@esengine/ecs-framework';
+import type { IScene, ServiceContainer, IService } from '@esengine/ecs-framework';
 import type {
     PluginDescriptor,
     PluginState,
@@ -329,7 +329,7 @@ export class PluginManager implements IService {
      * 为场景创建系统
      * Create systems for scene
      */
-    createSystemsForScene(scene: Scene, context: SystemContext): void {
+    createSystemsForScene(scene: IScene, context: SystemContext): void {
         logger.info('Creating systems for scene...');
 
         const sortedPlugins = this.sortByLoadingPhase('runtime');

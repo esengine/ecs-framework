@@ -15,9 +15,9 @@ export { WebWASMSubsystem } from './subsystems/WebWASMSubsystem';
 
 // 运行时系统配置
 export {
-    registerAvailableModules,
+    registerAvailablePlugins,
     initializeRuntime,
-    initializeModulesForProject,
+    initializePluginsForProject,
     createRuntimeSystems
 } from './RuntimeSystems';
 export type { RuntimeSystems, RuntimeModuleConfig } from './RuntimeSystems';

@@ -31,8 +31,5 @@ export * from './Services/GlobalBlackboardService';
 export type { BlackboardTypeDefinition } from './Blackboard/BlackboardTypes';
 export { BlackboardTypes } from './Blackboard/BlackboardTypes';
 
-// Module (for ModuleRegistry)
-export { BehaviorTreeModule } from './BehaviorTreeModule';
-
 // Plugin (for PluginManager) - from editor/index.ts which includes editorModule
 export { BehaviorTreePlugin, BehaviorTreeRuntimeModule } from './editor/index';

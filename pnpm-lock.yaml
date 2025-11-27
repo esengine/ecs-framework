@@ -569,6 +569,9 @@ importers:
       '@esengine/editor-core':
         specifier: workspace:*
         version: link:../editor-core
+      '@esengine/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@tauri-apps/api':
         specifier: ^2.2.0
         version: 2.9.0

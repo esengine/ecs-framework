@@ -86,6 +86,14 @@ export class GameEngine {
    */
   addGizmoRect(x: number, y: number, width: number, height: number, rotation: number, origin_x: number, origin_y: number, r: number, g: number, b: number, a: number, show_handles: boolean): void;
   /**
+   * Render sprites as overlay (without clearing screen).
+   * 渲染精灵作为叠加层（不清除屏幕）。
+   *
+   * This is used for UI rendering on top of the world content.
+   * 用于在世界内容上渲染 UI。
+   */
+  renderOverlay(): void;
+  /**
    * Resize a specific viewport.
    * 调整特定视口大小。
    */
@@ -259,6 +267,7 @@ export interface InitOutput {
   readonly gameengine_new: (a: number, b: number) => [number, number, number];
   readonly gameengine_registerViewport: (a: number, b: number, c: number, d: number, e: number) => [number, number];
   readonly gameengine_render: (a: number) => [number, number];
+  readonly gameengine_renderOverlay: (a: number) => [number, number];
   readonly gameengine_renderToViewport: (a: number, b: number, c: number) => [number, number];
   readonly gameengine_resize: (a: number, b: number, c: number) => void;
   readonly gameengine_resizeViewport: (a: number, b: number, c: number, d: number, e: number) => void;

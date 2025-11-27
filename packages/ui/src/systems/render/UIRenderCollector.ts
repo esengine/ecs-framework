@@ -4,6 +4,14 @@
  *
  * This collector is used by all UI render systems to submit render data.
  * 此收集器被所有 UI 渲染系统用于提交渲染数据。
+ *
+ * Render mode is controlled by EngineRenderSystem.previewMode:
+ * - Editor mode (previewMode=false): UI renders in world space with sprites
+ * - Preview mode (previewMode=true): UI renders as screen overlay
+ *
+ * 渲染模式由 EngineRenderSystem.previewMode 控制：
+ * - 编辑器模式 (previewMode=false): UI 与精灵一起在世界空间渲染
+ * - 预览模式 (previewMode=true): UI 作为屏幕叠加层渲染
  */
 
 /**
@@ -82,8 +90,10 @@ export interface ProviderRenderData {
  * 从所有 UI 渲染系统收集渲染原语，并转换为 EngineRenderSystem 期望的格式。
  */
 export class UIRenderCollector {
+    /** Collected primitives | 收集的原语 */
     private primitives: UIRenderPrimitive[] = [];
-    private sortedCache: ProviderRenderData[] | null = null;
+
+    private cache: ProviderRenderData[] | null = null;
 
     /**
      * Clear all collected primitives (call at start of frame)
@@ -91,7 +101,7 @@ export class UIRenderCollector {
      */
     clear(): void {
         this.primitives.length = 0;
-        this.sortedCache = null;
+        this.cache = null;
     }
 
     /**
@@ -122,7 +132,7 @@ export class UIRenderCollector {
         const a = Math.round(alpha * 255);
         const packedColor = ((a & 0xFF) << 24) | ((b & 0xFF) << 16) | ((g & 0xFF) << 8) | (r & 0xFF);
 
-        this.primitives.push({
+        const primitive: UIRenderPrimitive = {
             x,
             y,
             width,
@@ -135,9 +145,10 @@ export class UIRenderCollector {
             textureId: options?.textureId,
             texturePath: options?.texturePath,
             uv: options?.uv
-        });
+        };
 
-        this.sortedCache = null;
+        this.primitives.push(primitive);
+        this.cache = null;
     }
 
     /**
@@ -146,32 +157,40 @@ export class UIRenderCollector {
      */
     addPrimitive(primitive: UIRenderPrimitive): void {
         this.primitives.push(primitive);
-        this.sortedCache = null;
+        this.cache = null;
     }
 
     /**
-     * Get render data in the format expected by EngineRenderSystem
-     * 获取 EngineRenderSystem 期望格式的渲染数据
+     * Get render data
+     * 获取渲染数据
      */
     getRenderData(): readonly ProviderRenderData[] {
-        if (this.sortedCache) {
-            return this.sortedCache;
+        if (this.cache) {
+            return this.cache;
         }
 
-        if (this.primitives.length === 0) {
-            this.sortedCache = [];
-            return this.sortedCache;
+        this.cache = this.buildRenderData(this.primitives);
+        return this.cache;
+    }
+
+    /**
+     * Build render data from primitives
+     * 从原语构建渲染数据
+     */
+    private buildRenderData(primitives: UIRenderPrimitive[]): ProviderRenderData[] {
+        if (primitives.length === 0) {
+            return [];
         }
 
         // Sort by sortOrder
         // 按 sortOrder 排序
-        this.primitives.sort((a, b) => a.sortOrder - b.sortOrder);
+        primitives.sort((a, b) => a.sortOrder - b.sortOrder);
 
         // Group by texture (primitives with same texture can be batched)
         // 按纹理分组（相同纹理的原语可以批处理）
         const groups = new Map<string, UIRenderPrimitive[]>();
 
-        for (const prim of this.primitives) {
+        for (const prim of primitives) {
             // Use texture path or 'solid' for solid color rects
             const key = prim.texturePath ?? (prim.textureId?.toString() ?? 'solid');
             let group = groups.get(key);
@@ -198,19 +217,16 @@ export class UIRenderCollector {
                 const tOffset = i * 7;
                 const uvOffset = i * 4;
 
-                // Transform format compatible with EngineRenderSystem:
-                // [x, y, rotation, scaleX(width), scaleY(height), originX(pivotX), originY(pivotY)]
-                // Note: EngineRenderSystem uses scaleX/scaleY as pixel dimensions, not scale factors
-                // 变换格式（兼容 EngineRenderSystem）：
-                // [x, y, rotation, scaleX(宽度), scaleY(高度), originX(pivotX), originY(pivotY)]
-                // 注意：EngineRenderSystem 使用 scaleX/scaleY 作为像素尺寸，而不是缩放因子
+                // Unified render transform format (same as SpriteRenderData):
+                // [x, y, rotation, width(pixels), height(pixels), pivotX(0-1), pivotY(0-1)]
+                // 统一渲染变换格式（与 SpriteRenderData 相同）
                 transforms[tOffset] = p.x;
                 transforms[tOffset + 1] = p.y;
                 transforms[tOffset + 2] = p.rotation;
-                transforms[tOffset + 3] = p.width;      // maps to scaleX (pixel width)
-                transforms[tOffset + 4] = p.height;     // maps to scaleY (pixel height)
-                transforms[tOffset + 5] = p.pivotX;     // maps to originX
-                transforms[tOffset + 6] = p.pivotY;     // maps to originY
+                transforms[tOffset + 3] = p.width;
+                transforms[tOffset + 4] = p.height;
+                transforms[tOffset + 5] = p.pivotX;
+                transforms[tOffset + 6] = p.pivotY;
 
                 textureIds[i] = p.textureId ?? 0;
 
@@ -253,13 +269,12 @@ export class UIRenderCollector {
         // Sort result by sortingOrder
         result.sort((a, b) => a.sortingOrder - b.sortingOrder);
 
-        this.sortedCache = result;
         return result;
     }
 
     /**
-     * Get the number of primitives collected
-     * 获取收集的原语数量
+     * Get the total number of primitives collected
+     * 获取收集的原语总数量
      */
     get count(): number {
         return this.primitives.length;

@@ -3,7 +3,7 @@
  * Plugin loader interfaces
  */
 
-import type { Scene, ServiceContainer, ComponentRegistry } from '@esengine/ecs-framework';
+import type { IScene, ServiceContainer, ComponentRegistry } from '@esengine/ecs-framework';
 import type { PluginDescriptor } from './PluginDescriptor';
 
 /**
@@ -45,7 +45,7 @@ export interface IRuntimeModuleLoader {
      * 为场景创建系统
      * Create systems for scene
      */
-    createSystems?(scene: Scene, context: SystemContext): void;
+    createSystems?(scene: IScene, context: SystemContext): void;
 
     /**
      * 模块初始化完成回调

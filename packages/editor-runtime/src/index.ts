@@ -237,6 +237,90 @@ export type { LucideIcon } from 'lucide-react';
 export { PluginAPI } from './PluginAPI';
 
 // =============================================================================
+// UI System
+// =============================================================================
+export {
+    // Components - Core
+    UITransformComponent,
+    AnchorPreset,
+    UIRenderComponent,
+    UIRenderType,
+    UIInteractableComponent,
+    UITextComponent,
+    UILayoutComponent,
+    UILayoutType,
+    UIJustifyContent,
+    UIAlignItems,
+    // Components - Widgets
+    UIButtonComponent,
+    UIProgressBarComponent,
+    UIProgressDirection,
+    UIProgressFillMode,
+    UISliderComponent,
+    UISliderOrientation,
+    UIScrollViewComponent,
+    UIScrollbarVisibility,
+    // Systems - Core
+    UILayoutSystem,
+    UIInputSystem,
+    MouseButton,
+    UIAnimationSystem,
+    Easing,
+    UIRenderDataProvider,
+    // Systems - Render
+    UIRenderCollector,
+    getUIRenderCollector,
+    resetUIRenderCollector,
+    invalidateUIRenderCaches,
+    UIRenderBeginSystem,
+    UIRectRenderSystem,
+    UITextRenderSystem,
+    UIButtonRenderSystem,
+    UIProgressBarRenderSystem,
+    UISliderRenderSystem,
+    UIScrollViewRenderSystem,
+    // Rendering
+    WebGLUIRenderer,
+    TextRenderer,
+    // Builder API
+    UIBuilder,
+    // Plugin
+    UIPlugin,
+    UIRuntimeModule,
+} from '@esengine/ui';
+
+export type {
+    // Types from UI
+    UIBorderStyle,
+    UIShadowStyle,
+    UICursorType,
+    UITextAlign,
+    UITextVerticalAlign,
+    UITextOverflow,
+    UIFontWeight,
+    UIPadding,
+    UIButtonStyle,
+    UIButtonDisplayMode,
+    UIInputEvent,
+    EasingFunction,
+    EasingName,
+    UIRenderPrimitive,
+    ProviderRenderData as UIProviderRenderData,
+    IRenderDataProvider as UIIRenderDataProvider,
+    IUIRenderDataProvider,
+    TextMeasurement,
+    TextRenderOptions,
+    UIBaseConfig,
+    UIButtonConfig,
+    UITextConfig,
+    UIImageConfig,
+    UIProgressBarConfig,
+    UISliderConfig,
+    UIPanelConfig,
+    UIScrollViewConfig,
+} from '@esengine/ui';
+
+// =============================================================================
 // SDK Metadata
 // =============================================================================
 export const SDK_VERSION = '1.0.0';

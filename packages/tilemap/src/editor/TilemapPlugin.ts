@@ -6,7 +6,7 @@
  * Integrates runtime and editor modules
  */
 
-import type { Scene, ServiceContainer } from '@esengine/ecs-framework';
+import type { IScene, ServiceContainer } from '@esengine/ecs-framework';
 import { ComponentRegistry } from '@esengine/ecs-framework';
 import type {
     IPluginLoader,
@@ -63,7 +63,7 @@ export class TilemapRuntimeModule implements IRuntimeModuleLoader {
         registry.register(TilemapComponent);
     }
 
-    createSystems(scene: Scene, context: SystemContext): void {
+    createSystems(scene: IScene, context: SystemContext): void {
         const tilemapSystem = new TilemapRenderingSystem();
         scene.addSystem(tilemapSystem);
 

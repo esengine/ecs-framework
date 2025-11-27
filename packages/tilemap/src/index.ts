@@ -22,8 +22,5 @@ export type { ITilesetAsset } from './loaders/TilesetLoader';
 export { TiledConverter } from './loaders/TiledConverter';
 export type { ITiledMap, ITiledConversionResult } from './loaders/TiledConverter';
 
-// Module (for ModuleRegistry)
-export { TilemapModule } from './TilemapModule';
-
 // Plugin (for PluginManager)
 export { TilemapPlugin, TilemapRuntimeModule } from './editor/TilemapPlugin';

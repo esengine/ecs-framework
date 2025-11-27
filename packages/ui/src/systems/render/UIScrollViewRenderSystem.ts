@@ -9,7 +9,7 @@
 
 import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/ecs-framework';
 import { UITransformComponent } from '../../components/UITransformComponent';
-import { UIScrollViewComponent, UIScrollbarVisibility } from '../../components/widgets/UIScrollViewComponent';
+import { UIScrollViewComponent } from '../../components/widgets/UIScrollViewComponent';
 import { getUIRenderCollector } from './UIRenderCollector';
 
 /**

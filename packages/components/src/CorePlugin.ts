@@ -6,7 +6,7 @@
  * 这是一个核心插件，不可禁用
  */
 
-import type { ComponentRegistry as ComponentRegistryType, Scene, ServiceContainer } from '@esengine/ecs-framework';
+import type { ComponentRegistry as ComponentRegistryType, IScene, ServiceContainer } from '@esengine/ecs-framework';
 
 // Components
 import { TransformComponent } from './TransformComponent';
@@ -59,7 +59,7 @@ export interface PluginDescriptor {
 export interface IRuntimeModuleLoader {
     registerComponents(registry: typeof ComponentRegistryType): void;
     registerServices?(services: ServiceContainer): void;
-    createSystems?(scene: Scene, context: SystemContext): void;
+    createSystems?(scene: IScene, context: SystemContext): void;
     onInitialize?(): Promise<void>;
     onDestroy?(): void;
 }
@@ -84,7 +84,7 @@ export class CoreRuntimeModule implements IRuntimeModuleLoader {
         registry.register(CameraComponent);
     }
 
-    createSystems(scene: Scene, context: SystemContext): void {
+    createSystems(scene: IScene, context: SystemContext): void {
         const animatorSystem = new SpriteAnimatorSystem();
 
         if (context.isEditor) {

@@ -146,7 +146,9 @@ export type PropertyOptions =
     | AssetPropertyOptions
     | AnimationClipsPropertyOptions;
 
-export const PROPERTY_METADATA = Symbol('property:metadata');
+// 使用 Symbol.for 创建全局 Symbol，确保跨包共享元数据
+// Use Symbol.for to create a global Symbol to ensure metadata sharing across packages
+export const PROPERTY_METADATA = Symbol.for('@esengine/property:metadata');
 
 /**
  * 属性装饰器 - 声明组件属性的编辑器元数据

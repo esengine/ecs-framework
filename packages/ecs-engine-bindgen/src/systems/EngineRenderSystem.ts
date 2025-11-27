@@ -35,6 +35,22 @@ export interface IRenderDataProvider {
 }
 
 /**
+ * Interface for UI render data providers
+ * UI 渲染数据提供者接口
+ *
+ * All UI is rendered in Screen Space with independent orthographic projection.
+ * 所有 UI 都在屏幕空间渲染，使用独立的正交投影。
+ */
+export interface IUIRenderDataProvider extends IRenderDataProvider {
+    /** Get UI render data | 获取 UI 渲染数据 */
+    getRenderData(): readonly ProviderRenderData[];
+    /** @deprecated Use getRenderData() instead */
+    getScreenSpaceRenderData?(): readonly ProviderRenderData[];
+    /** @deprecated World space UI is no longer supported */
+    getWorldSpaceRenderData?(): readonly ProviderRenderData[];
+}
+
+/**
  * Internal gizmo color interface (duck-typed, compatible with editor-core GizmoColor)
  * 内部 gizmo 颜色接口（鸭子类型，与 editor-core GizmoColor 兼容）
  * @internal
@@ -151,6 +167,16 @@ export class EngineRenderSystem extends EntitySystem {
     private uiCanvasHeight: number = 0;
     private showUICanvasBoundary: boolean = true;
 
+    // UI render data provider (supports screen space and world space)
+    // UI 渲染数据提供者（支持屏幕空间和世界空间）
+    private uiRenderDataProvider: IUIRenderDataProvider | null = null;
+
+    // Preview mode flag: when true, UI uses screen space overlay projection
+    // when false (editor mode), UI renders in world space following editor camera
+    // 预览模式标志：为 true 时，UI 使用屏幕空间叠加投影
+    // 为 false（编辑器模式）时，UI 在世界空间渲染，跟随编辑器相机
+    private previewMode: boolean = false;
+
     /**
      * Create a new engine render system.
      * 创建新的引擎渲染系统。
@@ -196,12 +222,25 @@ export class EngineRenderSystem extends EntitySystem {
      * Process all matched entities.
      * 处理所有匹配的实体。
      *
+     * Rendering is done in two passes:
+     * 1. World Pass: World sprites, tilemaps, gizmos (affected by world camera)
+     * 2. UI Pass: Screen space UI (independent orthographic projection, overlaid on world)
+     *
+     * 渲染分两个阶段进行：
+     * 1. 世界阶段：世界 Sprite、瓦片地图、Gizmo（受世界相机影响）
+     * 2. UI 阶段：屏幕空间 UI（独立正交投影，叠加在世界之上）
+     *
      * @param entities - Entities to process | 要处理的实体
      */
     protected override process(entities: readonly Entity[]): void {
         // Clear and reuse map for gizmo drawing
         // 清空并重用映射用于绘制gizmo
         this.entityRenderMap.clear();
+
+        // ===== Pass 1: World Space Rendering =====
+        // ===== 阶段 1：世界空间渲染 =====
+        // This includes world sprites, tilemaps, and world space UI
+        // 包括世界 Sprite、瓦片地图和世界空间 UI
 
         // Collect all render items with sorting order
         // 收集所有渲染项及其排序顺序
@@ -302,6 +341,18 @@ export class EngineRenderSystem extends EntitySystem {
             }
         }
 
+        // Collect UI render data if in editor mode (renders in world space)
+        // 如果在编辑器模式，收集 UI 渲染数据（在世界空间渲染）
+        if (!this.previewMode && this.uiRenderDataProvider) {
+            const uiRenderData = this.uiRenderDataProvider.getRenderData();
+            for (const data of uiRenderData) {
+                const uiSprites = this.convertProviderDataToSprites(data);
+                if (uiSprites.length > 0) {
+                    renderItems.push({ sortingOrder: data.sortingOrder, sprites: uiSprites });
+                }
+            }
+        }
+
         // Sort by sortingOrder (lower values render first, appear behind)
         // 按 sortingOrder 排序（值越小越先渲染，显示在后面）
         renderItems.sort((a, b) => a.sortingOrder - b.sortingOrder);
@@ -343,7 +394,121 @@ export class EngineRenderSystem extends EntitySystem {
             this.drawUICanvasBoundary();
         }
 
+        // ===== World Pass: Render world content =====
+        // ===== 世界阶段：渲染世界内容 =====
         this.bridge.render();
+
+        // ===== Pass 2: Screen Space UI Rendering (Preview Mode Only) =====
+        // ===== 阶段 2：屏幕空间 UI 渲染（仅预览模式）=====
+        // UI is rendered on top of world content with independent projection
+        // UI 使用独立投影渲染在世界内容之上
+        // Only in preview mode - in editor mode, UI is rendered in world space above
+        // 仅在预览模式 - 在编辑器模式，UI 在上面的世界空间渲染
+        if (this.previewMode) {
+            this.renderScreenSpaceUI();
+        }
+    }
+
+    /**
+     * Render screen space UI with fixed orthographic projection.
+     * 使用固定正交投影渲染屏幕空间 UI。
+     *
+     * Screen space UI is rendered with an independent orthographic projection
+     * based on the UI canvas size, not affected by the world camera.
+     * 屏幕空间 UI 使用基于 UI 画布尺寸的独立正交投影渲染，不受世界相机影响。
+     */
+    private renderScreenSpaceUI(): void {
+        if (!this.uiRenderDataProvider) {
+            return;
+        }
+
+        // Get all UI render data (now only screen space)
+        // 获取所有 UI 渲染数据（现在只有屏幕空间）
+        const uiRenderData = this.uiRenderDataProvider.getRenderData();
+        if (uiRenderData.length === 0) {
+            return;
+        }
+
+        // Switch to screen space projection
+        // 切换到屏幕空间投影
+        // Use UI canvas size for the orthographic projection
+        // 使用 UI 画布尺寸进行正交投影
+        const canvasWidth = this.uiCanvasWidth > 0 ? this.uiCanvasWidth : 1920;
+        const canvasHeight = this.uiCanvasHeight > 0 ? this.uiCanvasHeight : 1080;
+
+        // Save current camera state and switch to screen space mode
+        // 保存当前相机状态并切换到屏幕空间模式
+        this.bridge.pushScreenSpaceMode(canvasWidth, canvasHeight);
+
+        // Clear batcher for screen space content
+        this.batcher.clear();
+
+        // Collect screen space UI render items
+        const screenSpaceItems: Array<{ sortingOrder: number; sprites: SpriteRenderData[] }> = [];
+
+        for (const data of uiRenderData) {
+            const uiSprites = this.convertProviderDataToSprites(data);
+            if (uiSprites.length > 0) {
+                screenSpaceItems.push({ sortingOrder: data.sortingOrder, sprites: uiSprites });
+            }
+        }
+
+        // Sort by sortingOrder
+        screenSpaceItems.sort((a, b) => a.sortingOrder - b.sortingOrder);
+
+        // Submit screen space UI sprites
+        for (const item of screenSpaceItems) {
+            for (const sprite of item.sprites) {
+                this.batcher.addSprite(sprite);
+            }
+        }
+
+        if (!this.batcher.isEmpty) {
+            const sprites = this.batcher.getSprites();
+            this.bridge.submitSprites(sprites);
+            // Render overlay (without clearing screen)
+            // 渲染叠加层（不清屏）
+            this.bridge.renderOverlay();
+        }
+
+        // Restore world space camera
+        // 恢复世界空间相机
+        this.bridge.popScreenSpaceMode();
+    }
+
+    /**
+     * Convert provider render data to sprite render data array.
+     * 将提供者渲染数据转换为 Sprite 渲染数据数组。
+     */
+    private convertProviderDataToSprites(data: ProviderRenderData): SpriteRenderData[] {
+        // Get texture ID - load from path if needed
+        let textureId = data.textureIds[0] || 0;
+        if (textureId === 0 && data.texturePath) {
+            textureId = this.bridge.getOrLoadTextureByPath(data.texturePath);
+        }
+
+        const sprites: SpriteRenderData[] = [];
+        for (let i = 0; i < data.tileCount; i++) {
+            const tOffset = i * 7;
+            const uvOffset = i * 4;
+
+            const renderData: SpriteRenderData = {
+                x: data.transforms[tOffset],
+                y: data.transforms[tOffset + 1],
+                rotation: data.transforms[tOffset + 2],
+                scaleX: data.transforms[tOffset + 3],
+                scaleY: data.transforms[tOffset + 4],
+                originX: data.transforms[tOffset + 5],
+                originY: data.transforms[tOffset + 6],
+                textureId,
+                uv: [data.uvs[uvOffset], data.uvs[uvOffset + 1], data.uvs[uvOffset + 2], data.uvs[uvOffset + 3]],
+                color: data.colors[i]
+            };
+
+            sprites.push(renderData);
+        }
+
+        return sprites;
     }
 
     /**
@@ -915,6 +1080,51 @@ export class EngineRenderSystem extends EntitySystem {
         if (index >= 0) {
             this.renderDataProviders.splice(index, 1);
         }
+    }
+
+    /**
+     * Set the UI render data provider.
+     * 设置 UI 渲染数据提供者。
+     *
+     * The UI render data provider supports both screen space and world space UI.
+     * UI 渲染数据提供者支持屏幕空间和世界空间 UI。
+     *
+     * @param provider - UI render data provider | UI 渲染数据提供者
+     */
+    setUIRenderDataProvider(provider: IUIRenderDataProvider | null): void {
+        this.uiRenderDataProvider = provider;
+    }
+
+    /**
+     * Get the UI render data provider.
+     * 获取 UI 渲染数据提供者。
+     */
+    getUIRenderDataProvider(): IUIRenderDataProvider | null {
+        return this.uiRenderDataProvider;
+    }
+
+    /**
+     * Set preview mode.
+     * 设置预览模式。
+     *
+     * In preview mode (true): UI uses screen space overlay projection, independent of world camera.
+     * In editor mode (false): UI renders in world space, following the editor camera.
+     *
+     * 预览模式（true）：UI 使用屏幕空间叠加投影，独立于世界相机。
+     * 编辑器模式（false）：UI 在世界空间渲染，跟随编辑器相机。
+     *
+     * @param mode - True for preview mode, false for editor mode
+     */
+    setPreviewMode(mode: boolean): void {
+        this.previewMode = mode;
+    }
+
+    /**
+     * Get preview mode.
+     * 获取预览模式。
+     */
+    isPreviewMode(): boolean {
+        return this.previewMode;
     }
 
     /**

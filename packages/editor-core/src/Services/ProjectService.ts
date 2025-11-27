@@ -15,6 +15,17 @@ export interface ProjectInfo {
     configPath?: string;
 }
 
+/**
+ * UI 设计分辨率配置
+ * UI Design Resolution Configuration
+ */
+export interface UIDesignResolution {
+    /** 设计宽度 / Design width */
+    width: number;
+    /** 设计高度 / Design height */
+    height: number;
+}
+
 export interface ProjectConfig {
     projectType?: ProjectType;
     componentsPath?: string;
@@ -22,8 +33,8 @@ export interface ProjectConfig {
     buildOutput?: string;
     scenesPath?: string;
     defaultScene?: string;
-    /** 启用的模块 ID 列表 */
-    enabledModules?: string[];
+    /** UI 设计分辨率 / UI design resolution */
+    uiDesignResolution?: UIDesignResolution;
 }
 
 @Injectable()
@@ -54,8 +65,7 @@ export class ProjectService implements IService {
                 componentPattern: '**/*.ts',
                 buildOutput: 'temp/editor-components',
                 scenesPath: 'scenes',
-                defaultScene: 'main.ecs',
-                enabledModules: []
+                defaultScene: 'main.ecs'
             };
 
             await this.fileAPI.writeFileContent(configPath, JSON.stringify(config, null, 2));
@@ -198,7 +208,7 @@ export class ProjectService implements IService {
                 buildOutput: config.buildOutput || 'temp/editor-components',
                 scenesPath: config.scenesPath || 'scenes',
                 defaultScene: config.defaultScene || 'main.ecs',
-                enabledModules: config.enabledModules
+                uiDesignResolution: config.uiDesignResolution
             };
         } catch (error) {
             logger.warn('Failed to load config, using defaults', error);
@@ -251,17 +261,23 @@ export class ProjectService implements IService {
     }
 
     /**
-     * 获取启用的模块列表
+     * 获取 UI 设计分辨率
+     * Get UI design resolution
+     *
+     * @returns UI design resolution, defaults to 1920x1080 if not set
      */
-    public getEnabledModules(): string[] {
-        return this.projectConfig?.enabledModules || [];
+    public getUIDesignResolution(): UIDesignResolution {
+        return this.projectConfig?.uiDesignResolution || { width: 1920, height: 1080 };
     }
 
     /**
-     * 设置启用的模块列表
+     * 设置 UI 设计分辨率
+     * Set UI design resolution
+     *
+     * @param resolution - The new design resolution
      */
-    public async setEnabledModules(moduleIds: string[]): Promise<void> {
-        await this.updateConfig({ enabledModules: moduleIds });
+    public async setUIDesignResolution(resolution: UIDesignResolution): Promise<void> {
+        await this.updateConfig({ uiDesignResolution: resolution });
     }
 
     public dispose(): void {

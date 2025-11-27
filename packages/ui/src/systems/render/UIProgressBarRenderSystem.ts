@@ -9,7 +9,7 @@
 
 import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/ecs-framework';
 import { UITransformComponent } from '../../components/UITransformComponent';
-import { UIProgressBarComponent, UIProgressDirection, UIProgressFillMode } from '../../components/widgets/UIProgressBarComponent';
+import { UIProgressBarComponent, UIProgressDirection } from '../../components/widgets/UIProgressBarComponent';
 import { getUIRenderCollector } from './UIRenderCollector';
 
 /**

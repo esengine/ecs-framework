@@ -23,6 +23,14 @@
  * - UIProgressBarRenderSystem: 进度条
  * - UISliderRenderSystem: 滑块
  * - UIScrollViewRenderSystem: 滚动视图
+ *
+ * Render mode is controlled by EngineRenderSystem.previewMode:
+ * - Editor mode (previewMode=false): UI renders in world space with sprites
+ * - Preview mode (previewMode=true): UI renders as screen overlay
+ *
+ * 渲染模式由 EngineRenderSystem.previewMode 控制：
+ * - 编辑器模式 (previewMode=false): UI 与精灵一起在世界空间渲染
+ * - 预览模式 (previewMode=true): UI 作为屏幕叠加层渲染
  */
 
 import { getUIRenderCollector, type ProviderRenderData } from './render/UIRenderCollector';
@@ -37,6 +45,15 @@ export { type ProviderRenderData } from './render/UIRenderCollector';
  */
 export interface IRenderDataProvider {
     getRenderData(): readonly ProviderRenderData[];
+}
+
+/**
+ * Interface for UI render data providers
+ * UI 渲染数据提供者接口
+ */
+export interface IUIRenderDataProvider extends IRenderDataProvider {
+    /** Check if there is content to render | 检查是否有内容需要渲染 */
+    hasContent(): boolean;
 }
 
 /**
@@ -60,17 +77,23 @@ export interface IRenderDataProvider {
  * 2. 将此提供者注册到 EngineRenderSystem
  * 3. 渲染系统填充收集器，此提供者返回数据
  */
-export class UIRenderDataProvider implements IRenderDataProvider {
+export class UIRenderDataProvider implements IUIRenderDataProvider {
     /**
      * Get render data from the collector
      * 从收集器获取渲染数据
-     *
-     * Note: The UI render systems must have run before this is called.
-     * 注意：在调用此方法之前，UI 渲染系统必须已运行。
      */
     getRenderData(): readonly ProviderRenderData[] {
         const collector = getUIRenderCollector();
         return collector.getRenderData();
+    }
+
+    /**
+     * Check if there is content to render
+     * 检查是否有内容需要渲染
+     */
+    hasContent(): boolean {
+        const collector = getUIRenderCollector();
+        return !collector.isEmpty;
     }
 
     /**

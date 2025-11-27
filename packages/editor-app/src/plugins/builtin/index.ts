@@ -8,3 +8,4 @@ export { SceneInspectorPlugin } from './SceneInspectorPlugin';
 export { ProfilerPlugin } from './ProfilerPlugin';
 export { EditorAppearancePlugin } from './EditorAppearancePlugin';
 export { PluginConfigPlugin } from './PluginConfigPlugin';
+export { ProjectSettingsPlugin } from './ProjectSettingsPlugin';

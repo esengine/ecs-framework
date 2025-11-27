@@ -399,9 +399,13 @@ function App() {
                 throw new Error(locale === 'zh' ? '引擎初始化超时' : 'Engine initialization timeout');
             }
 
-            // 根据项目配置初始化模块系统
-            const enabledModules = projectService.getEnabledModules();
-            await engineService.initializeModuleSystems(enabledModules);
+            // 初始化模块系统（所有插件的 runtimeModule 会在 PluginManager 安装时自动注册）
+            await engineService.initializeModuleSystems();
+
+            // 应用项目的 UI 设计分辨率
+            // Apply project's UI design resolution
+            const uiResolution = projectService.getUIDesignResolution();
+            engineService.setUICanvasSize(uiResolution.width, uiResolution.height);
 
             setStatus(t('header.status.projectOpened'));
 

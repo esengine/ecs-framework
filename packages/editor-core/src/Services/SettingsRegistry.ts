@@ -1,6 +1,6 @@
 import { Injectable, IService } from '@esengine/ecs-framework';
 
-export type SettingType = 'string' | 'number' | 'boolean' | 'select' | 'color' | 'range' | 'moduleList' | 'pluginList';
+export type SettingType = 'string' | 'number' | 'boolean' | 'select' | 'color' | 'range' | 'pluginList';
 
 export interface SettingOption {
   label: string;

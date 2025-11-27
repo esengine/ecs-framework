@@ -235,6 +235,18 @@ impl Engine {
         Ok(())
     }
 
+    /// Render sprites only without clearing the screen.
+    /// 仅渲染精灵，不清除屏幕。
+    ///
+    /// This is used for overlay rendering (e.g., UI layer on top of world).
+    /// 用于叠加渲染（例如，UI 层叠加在世界上）。
+    pub fn render_overlay(&mut self) -> Result<()> {
+        // Render sprites without clearing
+        // 渲染精灵但不清屏
+        self.renderer.render(self.context.gl(), &self.texture_manager)?;
+        Ok(())
+    }
+
     /// Add a rectangle gizmo.
     /// 添加矩形Gizmo。
     pub fn add_gizmo_rect(

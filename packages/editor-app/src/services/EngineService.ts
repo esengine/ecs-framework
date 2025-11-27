@@ -4,13 +4,12 @@
  */
 
 import { EngineBridge, EngineRenderSystem, GizmoDataProviderFn, HasGizmoProviderFn, CameraConfig, CameraSystem } from '@esengine/ecs-engine-bindgen';
-import { GizmoRegistry, EntityStoreService, MessageHub, SceneManagerService, ProjectService } from '@esengine/editor-core';
-import { Core, Scene, Entity, SceneSerializer, ModuleRegistry, ComponentRegistry, type ModuleSystemContext } from '@esengine/ecs-framework';
+import { GizmoRegistry, EntityStoreService, MessageHub, SceneManagerService, ProjectService, PluginManager, IPluginManager, type SystemContext } from '@esengine/editor-core';
+import { Core, Scene, Entity, SceneSerializer, ComponentRegistry } from '@esengine/ecs-framework';
 import { TransformComponent, SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystem } from '@esengine/ecs-components';
 import { TilemapComponent, TilemapRenderingSystem } from '@esengine/tilemap';
 import { BehaviorTreeExecutionSystem } from '@esengine/behavior-tree';
 import { UIRenderDataProvider, invalidateUIRenderCaches } from '@esengine/ui';
-import { registerAvailableModules, initializeModulesForProject } from '@esengine/platform-web';
 import * as esEngine from '@esengine/engine';
 import {
     AssetManager,
@@ -123,10 +122,6 @@ export class EngineService {
                 Core.create({ debug: false });
             }
 
-            // 仅注册模块（用于设置界面显示模块列表）
-            // 模块的组件和服务初始化将在项目打开后进行
-            registerAvailableModules();
-
             // 使用现有 Core 场景或创建新的
             if (Core.scene) {
                 this.scene = Core.scene as Scene;
@@ -151,8 +146,8 @@ export class EngineService {
                     GizmoRegistry.hasProvider(component.constructor as any)) as HasGizmoProviderFn
             );
 
-            // Set default UI canvas size (1920x1080 design resolution)
-            // 设置默认 UI 画布尺寸（1920x1080 设计分辨率）
+            // Set initial UI canvas size (will be updated from ProjectService when project opens)
+            // 设置初始 UI 画布尺寸（项目打开后会从 ProjectService 更新为项目配置的分辨率）
             this.renderSystem.setUICanvasSize(1920, 1080);
 
             // Initialize asset system | 初始化资产系统
@@ -198,11 +193,12 @@ export class EngineService {
 
     /**
      * 初始化模块系统
-     * 根据项目配置初始化已启用的模块，并创建相应的系统
+     * Initialize module systems for all enabled plugins
      *
-     * @param enabledModules 启用的模块 ID 列表
+     * 通过 PluginManager 初始化所有插件的运行时模块
+     * Initialize all plugin runtime modules via PluginManager
      */
-    async initializeModuleSystems(enabledModules: string[]): Promise<void> {
+    async initializeModuleSystems(): Promise<void> {
         if (!this.initialized) {
             console.error('Engine not initialized. Call initialize() first.');
             return;
@@ -213,48 +209,50 @@ export class EngineService {
             return;
         }
 
-
         // 如果之前已经初始化过模块，先清理
         if (this.modulesInitialized) {
             this.clearModuleSystems();
         }
 
-        // 设置 ComponentRegistry 实例，确保所有模块使用 editor-app 导入的同一个实例
-        // 这解决了 Vite 打包时多个 @esengine/ecs-framework 实例导致 ComponentRegistry 不共享的问题
-        ModuleRegistry.setComponentRegistry(ComponentRegistry);
+        // 获取 PluginManager
+        const pluginManager = Core.services.tryResolve<PluginManager>(IPluginManager);
+        if (!pluginManager) {
+            console.error('PluginManager not available.');
+            return;
+        }
 
-        // 不使用 platform-web 的 initializeModulesForProject，因为它可能使用不同的 ModuleRegistry 实例
-        // 直接在这里调用 ModuleRegistry 的方法，确保使用 editor-app 导入的实例
-        // await initializeModulesForProject(Core, enabledModules, this.modulesInitialized);
+        // 初始化所有插件的运行时模块（注册组件和服务）
+        // Initialize all plugin runtime modules (register components and services)
+        await pluginManager.initializeRuntime(Core.services);
 
-        // 确保模块已注册
-        registerAvailableModules();
-
-        // 加载项目的模块配置
-        ModuleRegistry.loadConfig({ enabledModules });
-
-        // 初始化模块（注册组件和服务）
-        await ModuleRegistry.initialize(Core, this.modulesInitialized);
-
-
-        // 创建模块系统上下文
-        const context: ModuleSystemContext = {
+        // 创建系统上下文
+        // Create system context
+        const context: SystemContext = {
             core: Core,
             engineBridge: this.bridge,
             renderSystem: this.renderSystem,
             isEditor: true
         };
 
-        // 让模块创建系统
-        ModuleRegistry.createSystemsForScene(this.scene, context);
+        // 让插件为场景创建系统
+        // Let plugins create systems for scene
+        pluginManager.createSystemsForScene(this.scene, context);
 
-        // 保存模块创建的系统引用
+        // 保存插件创建的系统引用
+        // Save system references created by plugins
         this.animatorSystem = context.animatorSystem as SpriteAnimatorSystem | undefined ?? null;
         this.tilemapSystem = context.tilemapSystem as TilemapRenderingSystem | undefined ?? null;
         this.behaviorTreeSystem = context.behaviorTreeSystem as BehaviorTreeExecutionSystem | undefined ?? null;
         this.uiRenderProvider = context.uiRenderProvider as UIRenderDataProvider | undefined ?? null;
 
+        // 设置 UI 渲染数据提供者到 EngineRenderSystem
+        // Set UI render data provider to EngineRenderSystem
+        if (this.uiRenderProvider && this.renderSystem) {
+            this.renderSystem.setUIRenderDataProvider(this.uiRenderProvider);
+        }
+
         // 在编辑器模式下，动画和行为树系统默认禁用
+        // In editor mode, animation and behavior tree systems are disabled by default
         if (this.animatorSystem) {
             this.animatorSystem.enabled = false;
         }
@@ -268,13 +266,18 @@ export class EngineService {
     /**
      * 清理模块系统
      * 用于项目关闭或切换时
+     * Clear module systems, used when project closes or switches
      */
     clearModuleSystems(): void {
-
-        // 清理 ModuleRegistry 的场景系统引用
-        ModuleRegistry.clearSceneSystems();
+        // 通过 PluginManager 清理场景系统
+        // Clear scene systems via PluginManager
+        const pluginManager = Core.services.tryResolve<PluginManager>(IPluginManager);
+        if (pluginManager) {
+            pluginManager.clearSceneSystems();
+        }
 
         // 清空本地引用（系统的实际清理由场景管理）
+        // Clear local references (actual system cleanup is managed by scene)
         this.animatorSystem = null;
         this.tilemapSystem = null;
         this.behaviorTreeSystem = null;
@@ -353,6 +356,12 @@ export class EngineService {
         this.running = true;
         this.lastTime = performance.now();
 
+        // Enable preview mode for UI rendering (screen space overlay)
+        // 启用预览模式用于 UI 渲染（屏幕空间叠加）
+        if (this.renderSystem) {
+            this.renderSystem.setPreviewMode(true);
+        }
+
         // Enable animator system and start auto-play animations
         // 启用动画系统并启动自动播放的动画
         if (this.animatorSystem) {
@@ -419,6 +428,12 @@ export class EngineService {
      */
     stop(): void {
         this.running = false;
+
+        // Disable preview mode for UI rendering (back to world space)
+        // 禁用预览模式用于 UI 渲染（返回世界空间）
+        if (this.renderSystem) {
+            this.renderSystem.setPreviewMode(false);
+        }
 
         // Disable animator system and stop all animations
         // 禁用动画系统并停止所有动画

@@ -11,6 +11,7 @@ import { SceneInspectorPlugin } from '../../plugins/builtin/SceneInspectorPlugin
 import { ProfilerPlugin } from '../../plugins/builtin/ProfilerPlugin';
 import { EditorAppearancePlugin } from '../../plugins/builtin/EditorAppearancePlugin';
 import { PluginConfigPlugin } from '../../plugins/builtin/PluginConfigPlugin';
+import { ProjectSettingsPlugin } from '../../plugins/builtin/ProjectSettingsPlugin';
 
 // 统一模块插件（CSS 已内联到 JS 中，导入时自动注入）
 import { TilemapPlugin } from '@esengine/tilemap';
@@ -29,6 +30,7 @@ export class PluginInstaller {
             { name: 'ProfilerPlugin', plugin: ProfilerPlugin },
             { name: 'EditorAppearancePlugin', plugin: EditorAppearancePlugin },
             { name: 'PluginConfigPlugin', plugin: PluginConfigPlugin },
+            { name: 'ProjectSettingsPlugin', plugin: ProjectSettingsPlugin },
         ];
 
         for (const { name, plugin } of builtinPlugins) {

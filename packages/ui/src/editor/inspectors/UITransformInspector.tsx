@@ -181,6 +181,66 @@ const BooleanRow: React.FC<{
     </div>
 );
 
+const EnumRow: React.FC<{
+    label: string;
+    value: string;
+    options: { label: string; value: string }[];
+    onChange: (value: string) => void;
+    readOnly?: boolean;
+}> = ({ label, value, options, onChange, readOnly }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    const selectedOption = options.find((opt) => opt.value === value);
+    const displayLabel = selectedOption?.label || '';
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
+
+    return (
+        <div className="property-field">
+            <label className="property-label">{label}</label>
+            <div className="property-dropdown" ref={dropdownRef}>
+                <button
+                    className={`property-dropdown-trigger ${isOpen ? 'open' : ''}`}
+                    onClick={() => !readOnly && setIsOpen(!isOpen)}
+                    disabled={readOnly}
+                    type="button"
+                >
+                    <span className="property-dropdown-value">{displayLabel}</span>
+                    <span className="property-dropdown-arrow">▾</span>
+                </button>
+                {isOpen && (
+                    <div className="property-dropdown-menu">
+                        {options.map((option, index) => (
+                            <button
+                                key={index}
+                                className={`property-dropdown-item ${option.value === value ? 'selected' : ''}`}
+                                onClick={() => {
+                                    onChange(option.value);
+                                    setIsOpen(false);
+                                }}
+                                type="button"
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const AnchorPresetGrid: React.FC<{
     currentPreset: string;
     onSelect: (preset: AnchorPreset) => void;
@@ -310,7 +370,7 @@ export class UITransformInspector implements IComponentInspector<UITransformComp
         const transform = context.component as UITransformComponent;
         const onChange = context.onChange;
 
-        const handleChange = (prop: string, value: number | boolean) => {
+        const handleChange = (prop: string, value: number | boolean | string) => {
             onChange?.(prop, value);
         };
 

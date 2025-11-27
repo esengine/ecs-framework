@@ -123,7 +123,7 @@ export {
 export { UILayoutSystem } from './systems/UILayoutSystem';
 export { UIInputSystem, MouseButton, type UIInputEvent } from './systems/UIInputSystem';
 export { UIAnimationSystem, Easing, type EasingFunction, type EasingName } from './systems/UIAnimationSystem';
-export { UIRenderDataProvider } from './systems/UIRenderDataProvider';
+export { UIRenderDataProvider, type IRenderDataProvider, type IUIRenderDataProvider } from './systems/UIRenderDataProvider';
 
 // Systems - Render (ECS-compliant render systems)
 export {
@@ -160,9 +160,6 @@ export {
     type UIPanelConfig,
     type UIScrollViewConfig
 } from './UIBuilder';
-
-// Module (for ModuleRegistry)
-export { UIModule } from './UIModule';
 
 // Plugin (for PluginManager)
 export { UIPlugin, UIRuntimeModule } from './editor/UIPlugin';

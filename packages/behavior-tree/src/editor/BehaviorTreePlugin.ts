@@ -3,7 +3,7 @@
  * 行为树统一插件
  */
 
-import type { Scene, ServiceContainer } from '@esengine/ecs-framework';
+import type { IScene, ServiceContainer } from '@esengine/ecs-framework';
 import { ComponentRegistry, Core } from '@esengine/ecs-framework';
 import type {
     IPluginLoader,
@@ -68,7 +68,7 @@ export class BehaviorTreeRuntimeModule implements IRuntimeModuleLoader {
         }
     }
 
-    createSystems(scene: Scene, context: SystemContext): void {
+    createSystems(scene: IScene, context: SystemContext): void {
         const behaviorTreeSystem = new BehaviorTreeExecutionSystem(Core);
 
         // 编辑器模式下默认禁用
