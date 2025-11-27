@@ -33,6 +33,7 @@
     },
     "peerDependencies": {
         "@esengine/ecs-framework": ">=2.0.0",
+        "@esengine/ecs-components": "workspace:*",
         "@esengine/editor-core": "workspace:*",
         "lucide-react": "^0.545.0",
         "react": "^18.3.1"

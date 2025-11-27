@@ -8,11 +8,7 @@ export default defineConfig({
             include: ['src'],
             outDir: 'dist',
             rollupTypes: false,
-            compilerOptions: {
-                noEmit: false,
-                declaration: true,
-                declarationMap: true
-            }
+            tsconfigPath: './tsconfig.json'
         })
     ],
     define: {
