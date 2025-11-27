@@ -72,6 +72,8 @@ jobs:
         cd ../editor-core && pnpm run build
         cd ../ui && pnpm run build
         cd ../editor-runtime && pnpm run build
+        cd ../behavior-tree && pnpm run build
+        cd ../tilemap && pnpm run build
 
     - name: Build ecs-engine-bindgen
       run: |
