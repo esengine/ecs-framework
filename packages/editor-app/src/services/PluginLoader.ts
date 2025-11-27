@@ -224,7 +224,7 @@ export class PluginLoader {
      * 清理插件名称为有效的 key
      */
     private sanitizePluginKey(pluginName: string): string {
-        return pluginName.replace(/[@/\-\.]/g, '_');
+        return pluginName.replace(/[@/\-.]/g, '_');
     }
 
     /**
