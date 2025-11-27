@@ -1,6 +1,6 @@
 {
   "productName": "ESEngine Editor",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "identifier": "com.esengine.editor",
   "build": {
     "beforeDevCommand": "npm run build:watch",
