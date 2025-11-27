@@ -5,6 +5,7 @@ import type { MessageHub } from './MessageHub';
 import type { IFileAPI } from '../Types/IFileAPI';
 import type { ProjectService } from './ProjectService';
 import type { EntityStoreService } from './EntityStoreService';
+import { SceneTemplateRegistry } from './SceneTemplateRegistry';
 
 const logger = createLogger('SceneManagerService');
 
@@ -45,7 +46,13 @@ export class SceneManagerService implements IService {
         this.sceneResourceManager = manager;
     }
 
-    public async newScene(): Promise<void> {
+    /**
+     * 创建新场景
+     * Create a new scene
+     *
+     * @param templateName - 场景模板名称，不传则使用默认模板 / Scene template name, uses default if not specified
+     */
+    public async newScene(templateName?: string): Promise<void> {
         if (!await this.canClose()) {
             return;
         }
@@ -54,11 +61,15 @@ export class SceneManagerService implements IService {
         if (!scene) {
             throw new Error('No active scene');
         }
+
+        // 只移除实体，保留系统（系统由模块管理）
+        // Only remove entities, preserve systems (systems managed by modules)
         scene.entities.removeAllEntities();
-        const systems = [...scene.systems];
-        for (const system of systems) {
-            scene.removeEntityProcessor(system);
-        }
+
+        // 使用场景模板创建默认实体
+        // Create default entities using scene template
+        const createdEntities = SceneTemplateRegistry.createDefaultEntities(scene, templateName);
+        logger.debug(`Created ${createdEntities.length} default entities from template`);
 
         this.sceneState = {
             currentScenePath: null,
@@ -67,7 +78,16 @@ export class SceneManagerService implements IService {
             isSaved: false
         };
 
+        // 同步到 EntityStore
+        // Sync to EntityStore
         this.entityStore?.syncFromScene();
+
+        // 通知创建的实体
+        // Notify about created entities
+        for (const entity of createdEntities) {
+            await this.messageHub.publish('entity:added', { entity });
+        }
+
         await this.messageHub.publish('scene:new', {});
         logger.info('New scene created');
     }

@@ -6,13 +6,24 @@ import type { IFileAPI } from '../Types/IFileAPI';
 
 const logger = createLogger('ProjectService');
 
-export type ProjectType = 'cocos' | 'laya' | 'unknown';
+export type ProjectType = 'esengine' | 'unknown';
 
 export interface ProjectInfo {
     path: string;
     type: ProjectType;
     name: string;
     configPath?: string;
+}
+
+/**
+ * UI 设计分辨率配置
+ * UI Design Resolution Configuration
+ */
+export interface UIDesignResolution {
+    /** 设计宽度 / Design width */
+    width: number;
+    /** 设计高度 / Design height */
+    height: number;
 }
 
 export interface ProjectConfig {
@@ -22,6 +33,8 @@ export interface ProjectConfig {
     buildOutput?: string;
     scenesPath?: string;
     defaultScene?: string;
+    /** UI 设计分辨率 / UI design resolution */
+    uiDesignResolution?: UIDesignResolution;
 }
 
 @Injectable()
@@ -47,11 +60,11 @@ export class ProjectService implements IService {
             }
 
             const config: ProjectConfig = {
-                projectType: 'cocos',
+                projectType: 'esengine',
                 componentsPath: 'components',
                 componentPattern: '**/*.ts',
                 buildOutput: 'temp/editor-components',
-                scenesPath: 'ecs-scenes',
+                scenesPath: 'scenes',
                 defaultScene: 'main.ecs'
             };
 
@@ -176,7 +189,7 @@ export class ProjectService implements IService {
 
         try {
             projectInfo.configPath = configPath;
-            projectInfo.type = 'cocos';
+            projectInfo.type = 'esengine';
         } catch (error) {
             logger.warn('No ecs-editor.config.json found, using defaults');
         }
@@ -185,14 +198,86 @@ export class ProjectService implements IService {
     }
 
     private async loadConfig(configPath: string): Promise<ProjectConfig> {
-        return {
-            projectType: 'cocos',
-            componentsPath: '',
-            componentPattern: '**/*.ts',
-            buildOutput: 'temp/editor-components',
-            scenesPath: 'ecs-scenes',
-            defaultScene: 'main.ecs'
+        try {
+            const content = await this.fileAPI.readFileContent(configPath);
+            const config = JSON.parse(content) as ProjectConfig;
+            return {
+                projectType: config.projectType || 'esengine',
+                componentsPath: config.componentsPath || '',
+                componentPattern: config.componentPattern || '**/*.ts',
+                buildOutput: config.buildOutput || 'temp/editor-components',
+                scenesPath: config.scenesPath || 'scenes',
+                defaultScene: config.defaultScene || 'main.ecs',
+                uiDesignResolution: config.uiDesignResolution
+            };
+        } catch (error) {
+            logger.warn('Failed to load config, using defaults', error);
+            return {
+                projectType: 'esengine',
+                componentsPath: '',
+                componentPattern: '**/*.ts',
+                buildOutput: 'temp/editor-components',
+                scenesPath: 'scenes',
+                defaultScene: 'main.ecs'
+            };
+        }
+    }
+
+    /**
+     * 保存项目配置
+     */
+    public async saveConfig(): Promise<void> {
+        if (!this.currentProject?.configPath || !this.projectConfig) {
+            logger.warn('No project or config to save');
+            return;
+        }
+
+        try {
+            const content = JSON.stringify(this.projectConfig, null, 2);
+            await this.fileAPI.writeFileContent(this.currentProject.configPath, content);
+            logger.info('Project config saved');
+        } catch (error) {
+            logger.error('Failed to save project config', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 更新项目配置
+     */
+    public async updateConfig(updates: Partial<ProjectConfig>): Promise<void> {
+        if (!this.projectConfig) {
+            logger.warn('No project config to update');
+            return;
+        }
+
+        this.projectConfig = {
+            ...this.projectConfig,
+            ...updates
         };
+
+        await this.saveConfig();
+        await this.messageHub.publish('project:configUpdated', { config: this.projectConfig });
+    }
+
+    /**
+     * 获取 UI 设计分辨率
+     * Get UI design resolution
+     *
+     * @returns UI design resolution, defaults to 1920x1080 if not set
+     */
+    public getUIDesignResolution(): UIDesignResolution {
+        return this.projectConfig?.uiDesignResolution || { width: 1920, height: 1080 };
+    }
+
+    /**
+     * 设置 UI 设计分辨率
+     * Set UI design resolution
+     *
+     * @param resolution - The new design resolution
+     */
+    public async setUIDesignResolution(resolution: UIDesignResolution): Promise<void> {
+        await this.updateConfig({ uiDesignResolution: resolution });
     }
 
     public dispose(): void {

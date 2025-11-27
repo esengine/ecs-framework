@@ -176,7 +176,7 @@
   border: 1px solid var(--color-border-default);
   border-radius: 3px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
+  z-index: var(--z-index-dropdown);
   max-height: 200px;
   overflow-y: auto;
 }
@@ -327,7 +327,7 @@
   border: 1px solid var(--color-border-default);
   border-radius: 6px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  z-index: 1000;
+  z-index: var(--z-index-dropdown);
 }
 
 .color-picker-saturation {

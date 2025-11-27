@@ -88,70 +88,8 @@ export interface ToolbarItem {
     order?: number;
 }
 
-/**
- * 面板位置
- */
-export enum PanelPosition {
-    Left = 'left',
-    Right = 'right',
-    Bottom = 'bottom',
-    Center = 'center'
-}
-
-/**
- * 面板描述符
- */
-export interface PanelDescriptor {
-    /**
-     * 面板唯一标识
-     */
-    id: string;
-
-    /**
-     * 显示标题
-     */
-    title: string;
-
-    /**
-     * 面板位置
-     */
-    position: PanelPosition;
-
-    /**
-     * 渲染组件或HTML
-     */
-    component?: any;
-
-    /**
-     * 默认宽度/高度（像素）
-     */
-    defaultSize?: number;
-
-    /**
-     * 是否可调整大小
-     */
-    resizable?: boolean;
-
-    /**
-     * 是否可关闭
-     */
-    closable?: boolean;
-
-    /**
-     * 图标
-     */
-    icon?: string;
-
-    /**
-     * 排序权重
-     */
-    order?: number;
-
-    /**
-     * 是否为动态面板（不默认显示，需要手动打开）
-     */
-    isDynamic?: boolean;
-}
+// Re-export PanelPosition and PanelDescriptor from Plugin system
+export { PanelPosition, type PanelDescriptor } from '../Plugin/IPluginLoader';
 
 /**
  * UI 扩展点类型
@@ -164,39 +102,5 @@ export enum UIExtensionType {
     StatusBar = 'statusbar'
 }
 
-/**
- * 实体创建模板
- */
-export interface EntityCreationTemplate {
-    /**
-     * 模板唯一标识
-     */
-    id: string;
-
-    /**
-     * 显示名称
-     */
-    label: string;
-
-    /**
-     * 图标组件
-     */
-    icon?: any;
-
-    /**
-     * 分类 (如 'basic', 'rendering', 'ui', 'physics' 等)
-     */
-    category?: string;
-
-    /**
-     * 排序权重（数字越小越靠前）
-     */
-    order?: number;
-
-    /**
-     * 创建实体的函数
-     * @param parentEntityId 父实体ID（可选）
-     * @returns 创建的实体ID
-     */
-    create: (parentEntityId?: number) => number | Promise<number>;
-}
+// Re-export EntityCreationTemplate from Plugin system
+export type { EntityCreationTemplate } from '../Plugin/IPluginLoader';

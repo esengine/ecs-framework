@@ -94,14 +94,10 @@ export type {
 // Runtime exports from editor-core
 export {
     // Enums
-    EditorPluginCategory,
     PanelPosition,
     UIExtensionType,
 
     // Classes
-    EditorPluginManager,
-    PluginRegistry,
-    pluginRegistry,
     UIRegistry,
     MessageHub,
     SerializerRegistry,
@@ -123,6 +119,9 @@ export {
     BaseCommand,
     PropertyMetadataService,
 
+    // Plugin system
+    PluginManager,
+
     // Gizmo exports
     GizmoRegistry,
     GizmoColors,
@@ -141,22 +140,17 @@ export {
 // Type-only exports from editor-core
 export type {
     // Plugin types
-    IEditorPlugin,
-    IEditorPluginMetadata,
     ISerializer,
-    FileContextMenuItem,
     FileCreationTemplate,
     FileActionHandler,
-    EditorPluginDefinition,
     RegisteredPlugin,
-    MenuTreeNode,
-    ComponentRegistration,
-    MenuItemRegistration,
-    PanelRegistration,
-    ToolbarItemRegistration,
-    EntityTemplateRegistration,
-    AssetHandlerRegistration,
-    ComponentActionDefinition,
+    PluginConfig,
+    PluginCategory,
+    LoadingPhase,
+    ModuleType,
+    ModuleDescriptor,
+    PluginDependency,
+    PluginState,
 
     // Service interfaces
     IFileSystem,
@@ -191,6 +185,7 @@ export type {
     IGizmoRenderData,
     IGizmoProvider,
     GizmoProviderFn,
+    GizmoProviderRegistration,
 
     // UI types
     MenuItem,
@@ -199,6 +194,17 @@ export type {
     EntityCreationTemplate,
     IFileAPI,
     PropertyMetadata,
+    MenuItemDescriptor,
+    ToolbarItemDescriptor,
+    ComponentAction,
+
+    // Plugin system types
+    IPluginLoader,
+    IRuntimeModuleLoader,
+    IEditorModuleLoader,
+    PluginDescriptor,
+    SystemContext,
+    ComponentInspectorProviderDef,
 } from '@esengine/editor-core';
 
 
@@ -224,6 +230,95 @@ export {
 import * as Icons from 'lucide-react';
 export { Icons };
 export type { LucideIcon } from 'lucide-react';
+
+// =============================================================================
+// Plugin API
+// =============================================================================
+export { PluginAPI } from './PluginAPI';
+
+// =============================================================================
+// UI System
+// =============================================================================
+export {
+    // Components - Core
+    UITransformComponent,
+    AnchorPreset,
+    UIRenderComponent,
+    UIRenderType,
+    UIInteractableComponent,
+    UITextComponent,
+    UILayoutComponent,
+    UILayoutType,
+    UIJustifyContent,
+    UIAlignItems,
+    // Components - Widgets
+    UIButtonComponent,
+    UIProgressBarComponent,
+    UIProgressDirection,
+    UIProgressFillMode,
+    UISliderComponent,
+    UISliderOrientation,
+    UIScrollViewComponent,
+    UIScrollbarVisibility,
+    // Systems - Core
+    UILayoutSystem,
+    UIInputSystem,
+    MouseButton,
+    UIAnimationSystem,
+    Easing,
+    UIRenderDataProvider,
+    // Systems - Render
+    UIRenderCollector,
+    getUIRenderCollector,
+    resetUIRenderCollector,
+    invalidateUIRenderCaches,
+    UIRenderBeginSystem,
+    UIRectRenderSystem,
+    UITextRenderSystem,
+    UIButtonRenderSystem,
+    UIProgressBarRenderSystem,
+    UISliderRenderSystem,
+    UIScrollViewRenderSystem,
+    // Rendering
+    WebGLUIRenderer,
+    TextRenderer,
+    // Builder API
+    UIBuilder,
+    // Plugin
+    UIPlugin,
+    UIRuntimeModule,
+} from '@esengine/ui';
+
+export type {
+    // Types from UI
+    UIBorderStyle,
+    UIShadowStyle,
+    UICursorType,
+    UITextAlign,
+    UITextVerticalAlign,
+    UITextOverflow,
+    UIFontWeight,
+    UIPadding,
+    UIButtonStyle,
+    UIButtonDisplayMode,
+    UIInputEvent,
+    EasingFunction,
+    EasingName,
+    UIRenderPrimitive,
+    ProviderRenderData as UIProviderRenderData,
+    IRenderDataProvider as UIIRenderDataProvider,
+    IUIRenderDataProvider,
+    TextMeasurement,
+    TextRenderOptions,
+    UIBaseConfig,
+    UIButtonConfig,
+    UITextConfig,
+    UIImageConfig,
+    UIProgressBarConfig,
+    UISliderConfig,
+    UIPanelConfig,
+    UIScrollViewConfig,
+} from '@esengine/ui';
 
 // =============================================================================
 // SDK Metadata

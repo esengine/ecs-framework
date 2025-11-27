@@ -10,8 +10,13 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./runtime": {
+      "default": "./dist/runtime.browser.js"
     }
   },
+  "unpkg": "dist/runtime.browser.js",
+  "jsdelivr": "dist/runtime.browser.js",
   "files": [
     "dist"
   ],
@@ -32,18 +37,21 @@
   ],
   "author": "yhh",
   "license": "MIT",
-  "dependencies": {
-    "@esengine/ecs-framework": "workspace:*",
-    "@esengine/ecs-engine-bindgen": "workspace:*",
-    "@esengine/ecs-components": "workspace:*",
-    "@esengine/asset-system": "workspace:*"
-  },
   "peerDependencies": {
-    "@esengine/platform-common": "workspace:*"
+    "@esengine/asset-system": "workspace:*",
+    "@esengine/behavior-tree": "workspace:*",
+    "@esengine/ecs-components": "workspace:*",
+    "@esengine/ecs-engine-bindgen": "workspace:*",
+    "@esengine/ecs-framework": "workspace:*",
+    "@esengine/platform-common": "workspace:*",
+    "@esengine/tilemap": "workspace:*",
+    "@esengine/ui": "workspace:*"
   },
   "devDependencies": {
+    "@rollup/plugin-alias": "^6.0.0",
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-replace": "^6.0.3",
     "@rollup/plugin-typescript": "^11.1.6",
     "rimraf": "^5.0.0",
     "rollup": "^4.42.0",

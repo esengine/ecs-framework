@@ -1,7 +1,7 @@
 import type { IService } from '@esengine/ecs-framework';
 import { Injectable } from '@esengine/ecs-framework';
 import { createLogger } from '@esengine/ecs-framework';
-import type { ISerializer } from '../Plugins/IEditorPlugin';
+import type { ISerializer } from '../Plugin/IPluginLoader';
 
 const logger = createLogger('SerializerRegistry');
 

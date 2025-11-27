@@ -1,4 +1,9 @@
-import { useCallback, useRef, useEffect, useState } from 'react';
+/**
+ * FlexLayoutDockContainer - Dockable panel container based on FlexLayout
+ * FlexLayoutDockContainer - 基于 FlexLayout 的可停靠面板容器
+ */
+
+import { useCallback, useRef, useEffect, useState, useMemo } from 'react';
 import { Layout, Model, TabNode, IJsonModel, Actions, Action, DockLocation } from 'flexlayout-react';
 import 'flexlayout-react/style/light.css';
 import '../styles/FlexLayoutDock.css';
@@ -6,10 +11,86 @@ import { LayoutMerger, LayoutBuilder, FlexDockPanel } from '../shared/layout';
 
 export type { FlexDockPanel };
 
+/**
+ * Panel IDs that should persist in DOM when switching tabs.
+ * These panels contain WebGL canvas or other stateful content that cannot be unmounted.
+ * 切换 tab 时需要保持 DOM 存在的面板 ID。
+ * 这些面板包含 WebGL canvas 或其他不能卸载的有状态内容。
+ */
+const PERSISTENT_PANEL_IDS = ['viewport'];
+
+/** Tab header height in pixels | Tab 标签栏高度（像素） */
+const TAB_HEADER_HEIGHT = 28;
+
+interface PanelRect {
+    domRect: DOMRect;
+    isSelected: boolean;
+    isVisible?: boolean;
+}
+
+/**
+ * Get panel rectangle from FlexLayout model.
+ * 从 FlexLayout 模型获取面板矩形。
+ */
+function getPanelRectFromModel(model: Model, panelId: string): PanelRect | null {
+    const node = model.getNodeById(panelId);
+    if (!node || node.getType() !== 'tab') return null;
+
+    const parent = node.getParent();
+    if (!parent || parent.getType() !== 'tabset') return null;
+
+    const tabset = parent as any;
+    const selectedNode = tabset.getSelectedNode();
+    const isSelected = selectedNode?.getId() === panelId;
+    const tabsetRect = tabset.getRect();
+
+    if (!tabsetRect) return null;
+
+    return {
+        domRect: new DOMRect(
+            tabsetRect.x,
+            tabsetRect.y + TAB_HEADER_HEIGHT,
+            tabsetRect.width,
+            tabsetRect.height - TAB_HEADER_HEIGHT
+        ),
+        isSelected
+    };
+}
+
+/**
+ * Get panel rectangle from DOM placeholder element.
+ * 从 DOM 占位符元素获取面板矩形。
+ */
+function getPanelRectFromDOM(panelId: string): PanelRect | null {
+    const placeholder = document.querySelector(`[data-panel-id="${panelId}"]`);
+    if (!placeholder) return null;
+
+    const placeholderRect = placeholder.getBoundingClientRect();
+    if (placeholderRect.width <= 0 || placeholderRect.height <= 0) return null;
+
+    const container = document.querySelector('.flexlayout-dock-container');
+    if (!container) return null;
+
+    const containerRect = container.getBoundingClientRect();
+    const parentTab = placeholder.closest('.flexlayout__tabset_content');
+    const isVisible = parentTab ? (parentTab as HTMLElement).offsetParent !== null : false;
+
+    return {
+        domRect: new DOMRect(
+            placeholderRect.x - containerRect.x,
+            placeholderRect.y - containerRect.y,
+            placeholderRect.width,
+            placeholderRect.height
+        ),
+        isSelected: false,
+        isVisible
+    };
+}
+
 interface FlexLayoutDockContainerProps {
-  panels: FlexDockPanel[];
-  onPanelClose?: (panelId: string) => void;
-  activePanelId?: string;
+    panels: FlexDockPanel[];
+    onPanelClose?: (panelId: string) => void;
+    activePanelId?: string;
 }
 
 export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId }: FlexLayoutDockContainerProps) {
@@ -17,6 +98,17 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId }:
     const previousLayoutJsonRef = useRef<string | null>(null);
     const previousPanelIdsRef = useRef<string>('');
     const previousPanelTitlesRef = useRef<Map<string, string>>(new Map());
+
+    // Persistent panel state | 持久化面板状态
+    const [persistentPanelRects, setPersistentPanelRects] = useState<Map<string, DOMRect>>(new Map());
+    const [visiblePersistentPanels, setVisiblePersistentPanels] = useState<Set<string>>(
+        () => new Set(PERSISTENT_PANEL_IDS)
+    );
+
+    const persistentPanels = useMemo(
+        () => panels.filter((p) => PERSISTENT_PANEL_IDS.includes(p.id)),
+        [panels]
+    );
 
     const createDefaultLayout = useCallback((): IJsonModel => {
         return LayoutBuilder.createDefaultLayout(panels, activePanelId);
@@ -155,10 +247,80 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId }:
         }
     }, [createDefaultLayout, panels]);
 
+    /**
+     * Track persistent panel positions and visibility.
+     * Uses FlexLayout model to determine if panel tab is selected,
+     * falls back to DOM measurement if model data unavailable.
+     * 追踪持久化面板的位置和可见性。
+     * 使用 FlexLayout 模型判断面板 tab 是否被选中，
+     * 如果模型数据不可用则回退到 DOM 测量。
+     */
+    useEffect(() => {
+        if (!model) return;
+
+        const updatePersistentPanelPositions = () => {
+            const newRects = new Map<string, DOMRect>();
+            const newVisible = new Set<string>();
+
+            for (const panelId of PERSISTENT_PANEL_IDS) {
+                // Try to get position from FlexLayout model
+                const rect = getPanelRectFromModel(model, panelId);
+                if (rect) {
+                    newRects.set(panelId, rect.domRect);
+                    if (rect.isSelected) {
+                        newVisible.add(panelId);
+                    }
+                    continue;
+                }
+
+                // Fallback: measure placeholder element in DOM
+                const placeholderRect = getPanelRectFromDOM(panelId);
+                if (placeholderRect) {
+                    newRects.set(panelId, placeholderRect.domRect);
+                    if (placeholderRect.isVisible) {
+                        newVisible.add(panelId);
+                    }
+                }
+            }
+
+            setPersistentPanelRects(newRects);
+            setVisiblePersistentPanels(newVisible);
+        };
+
+        // Initial update after DOM render
+        requestAnimationFrame(updatePersistentPanelPositions);
+
+        // Observe layout changes
+        const container = document.querySelector('.flexlayout-dock-container');
+        if (!container) return;
+
+        const mutationObserver = new MutationObserver(() => {
+            requestAnimationFrame(updatePersistentPanelPositions);
+        });
+        mutationObserver.observe(container, { childList: true, subtree: true, attributes: true });
+
+        const resizeObserver = new ResizeObserver(() => {
+            requestAnimationFrame(updatePersistentPanelPositions);
+        });
+        resizeObserver.observe(container);
+
+        return () => {
+            mutationObserver.disconnect();
+            resizeObserver.disconnect();
+        };
+    }, [model]);
+
     const factory = useCallback((node: TabNode) => {
-        const component = node.getComponent();
-        const panel = panels.find((p) => p.id === component);
-        return panel?.content || <div>Panel not found</div>;
+        const componentId = node.getComponent() || '';
+
+        // Persistent panels render as placeholder, actual content is in overlay
+        // 持久化面板渲染为占位符，实际内容在覆盖层中
+        if (PERSISTENT_PANEL_IDS.includes(componentId)) {
+            return <div className="persistent-panel-placeholder" data-panel-id={componentId} />;
+        }
+
+        const panel = panels.find((p) => p.id === componentId);
+        return panel?.content ?? <div>Panel not found</div>;
     }, [panels]);
 
     const onAction = useCallback((action: Action) => {
@@ -186,6 +348,52 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId }:
                 onAction={onAction}
                 onModelChange={onModelChange}
             />
+
+            {/* Persistent panel overlay - always mounted, visibility controlled by CSS */}
+            {/* 持久化面板覆盖层 - 始终挂载，通过 CSS 控制可见性 */}
+            {persistentPanels.map((panel) => (
+                <PersistentPanelContainer
+                    key={panel.id}
+                    panel={panel}
+                    rect={persistentPanelRects.get(panel.id)}
+                    isVisible={visiblePersistentPanels.has(panel.id)}
+                />
+            ))}
+        </div>
+    );
+}
+
+/**
+ * Container for persistent panel content.
+ * 持久化面板内容容器。
+ */
+function PersistentPanelContainer({
+    panel,
+    rect,
+    isVisible
+}: {
+    panel: FlexDockPanel;
+    rect?: DOMRect;
+    isVisible: boolean;
+}) {
+    const hasValidRect = rect && rect.width > 0 && rect.height > 0;
+
+    return (
+        <div
+            className="persistent-panel-container"
+            style={{
+                position: 'absolute',
+                left: hasValidRect ? rect.x : 0,
+                top: hasValidRect ? rect.y : 0,
+                width: hasValidRect ? rect.width : '100%',
+                height: hasValidRect ? rect.height : '100%',
+                visibility: isVisible ? 'visible' : 'hidden',
+                pointerEvents: isVisible ? 'auto' : 'none',
+                zIndex: isVisible ? 1 : -1,
+                overflow: 'hidden'
+            }}
+        >
+            {panel.content}
         </div>
     );
 }

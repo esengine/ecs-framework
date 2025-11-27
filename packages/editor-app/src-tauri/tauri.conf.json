@@ -1,5 +1,5 @@
 {
-  "productName": "ECS Framework Editor",
+  "productName": "ESEngine Editor",
   "version": "1.0.9",
   "identifier": "com.esengine.editor",
   "build": {
@@ -35,7 +35,7 @@
           "ecs"
         ],
         "name": "ECS Scene File",
-        "description": "ECS Framework Scene File",
+        "description": "ESEngine Scene File",
         "role": "Editor"
       }
     ],
@@ -51,7 +51,7 @@
   "app": {
     "windows": [
       {
-        "title": "ECS Framework Editor",
+        "title": "ESEngine Editor",
         "width": 1280,
         "height": 800,
         "minWidth": 800,

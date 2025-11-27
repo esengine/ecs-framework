@@ -3,13 +3,13 @@
  * 管理Rust引擎生命周期的服务。
  */
 
-import { EngineBridge, EngineRenderSystem, CameraConfig, GizmoDataProviderFn, HasGizmoProviderFn } from '@esengine/ecs-engine-bindgen';
-import { GizmoRegistry } from '@esengine/editor-core';
+import { EngineBridge, EngineRenderSystem, GizmoDataProviderFn, HasGizmoProviderFn, CameraConfig, CameraSystem } from '@esengine/ecs-engine-bindgen';
+import { GizmoRegistry, EntityStoreService, MessageHub, SceneManagerService, ProjectService, PluginManager, IPluginManager, type SystemContext } from '@esengine/editor-core';
 import { Core, Scene, Entity, SceneSerializer } from '@esengine/ecs-framework';
-import { TransformComponent, SpriteComponent, SpriteAnimatorSystem, SpriteAnimatorComponent } from '@esengine/ecs-components';
+import { TransformComponent, SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystem } from '@esengine/ecs-components';
 import { TilemapComponent, TilemapRenderingSystem } from '@esengine/tilemap';
-import { UIRenderDataProvider } from '@esengine/ui';
-import { EntityStoreService, MessageHub, SceneManagerService, ProjectService } from '@esengine/editor-core';
+import { BehaviorTreeExecutionSystem } from '@esengine/behavior-tree';
+import { UIRenderDataProvider, invalidateUIRenderCaches } from '@esengine/ui';
 import * as esEngine from '@esengine/engine';
 import {
     AssetManager,
@@ -32,10 +32,13 @@ export class EngineService {
     private bridge: EngineBridge | null = null;
     private scene: Scene | null = null;
     private renderSystem: EngineRenderSystem | null = null;
+    private cameraSystem: CameraSystem | null = null;
     private animatorSystem: SpriteAnimatorSystem | null = null;
     private tilemapSystem: TilemapRenderingSystem | null = null;
+    private behaviorTreeSystem: BehaviorTreeExecutionSystem | null = null;
     private uiRenderProvider: UIRenderDataProvider | null = null;
     private initialized = false;
+    private modulesInitialized = false;
     private running = false;
     private animationFrameId: number | null = null;
     private lastTime = 0;
@@ -46,6 +49,7 @@ export class EngineService {
     private assetPathResolver: AssetPathResolver | null = null;
     private assetSystemInitialized = false;
     private initializationError: Error | null = null;
+    private canvasId: string | null = null;
 
     private constructor() {}
 
@@ -61,13 +65,35 @@ export class EngineService {
     }
 
     /**
+     * 等待引擎初始化完成
+     * @param timeout 超时时间（毫秒），默认 10 秒
+     */
+    async waitForInitialization(timeout = 10000): Promise<boolean> {
+        if (this.initialized) {
+            return true;
+        }
+
+        const startTime = Date.now();
+        while (!this.initialized && Date.now() - startTime < timeout) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+        return this.initialized;
+    }
+
+    /**
      * Initialize the engine with canvas.
      * 使用canvas初始化引擎。
+     *
+     * 注意：此方法只初始化引擎基础设施（Core、渲染系统等），
+     * 模块的初始化需要在项目打开后调用 initializeModuleSystems()
      */
     async initialize(canvasId: string): Promise<void> {
         if (this.initialized) {
             return;
         }
+
+        this.canvasId = canvasId;
 
         try {
             // Create engine bridge | 创建引擎桥接
@@ -96,7 +122,7 @@ export class EngineService {
                 Core.create({ debug: false });
             }
 
-            // Use existing Core scene or create new one | 使用现有Core场景或创建新的
+            // 使用现有 Core 场景或创建新的
             if (Core.scene) {
                 this.scene = Core.scene as Scene;
             } else {
@@ -104,44 +130,25 @@ export class EngineService {
                 Core.setScene(this.scene);
             }
 
-            // Add sprite animator system (disabled by default in editor mode)
-            // 添加精灵动画系统（编辑器模式下默认禁用）
-            this.animatorSystem = new SpriteAnimatorSystem();
-            this.animatorSystem.enabled = false;
-            this.scene!.addSystem(this.animatorSystem);
+            // Add camera system (基础系统，始终需要)
+            this.cameraSystem = new CameraSystem(this.bridge);
+            this.scene.addSystem(this.cameraSystem);
 
-            // Add tilemap rendering system
-            // 添加瓦片地图渲染系统
-            this.tilemapSystem = new TilemapRenderingSystem();
-            this.scene!.addSystem(this.tilemapSystem);
-
-            // Add render system to the scene | 将渲染系统添加到场景
+            // Add render system to the scene (基础系统，始终需要)
             this.renderSystem = new EngineRenderSystem(this.bridge, TransformComponent);
-            this.scene!.addSystem(this.renderSystem);
-
-            // Register tilemap system as render data provider
-            // 将瓦片地图系统注册为渲染数据提供者
-            this.renderSystem.addRenderDataProvider(this.tilemapSystem);
-
-            // Register UI render data provider
-            // 注册 UI 渲染数据提供者
-            this.uiRenderProvider = new UIRenderDataProvider();
-            this.renderSystem.addRenderDataProvider(this.uiRenderProvider);
-
-            // Set up texture callback for UI text rendering
-            // 设置 UI 文本渲染的纹理回调
-            this.uiRenderProvider.setTextureCallback((id: number, dataUrl: string) => {
-                this.bridge!.loadTexture(id, dataUrl);
-            });
+            this.scene.addSystem(this.renderSystem);
 
             // Inject GizmoRegistry into render system
-            // 将 GizmoRegistry 注入渲染系统
             this.renderSystem.setGizmoRegistry(
                 ((component, entity, isSelected) =>
                     GizmoRegistry.getGizmoData(component, entity, isSelected)) as GizmoDataProviderFn,
                 ((component) =>
                     GizmoRegistry.hasProvider(component.constructor as any)) as HasGizmoProviderFn
             );
+
+            // Set initial UI canvas size (will be updated from ProjectService when project opens)
+            // 设置初始 UI 画布尺寸（项目打开后会从 ProjectService 更新为项目配置的分辨率）
+            this.renderSystem.setUICanvasSize(1920, 1080);
 
             // Initialize asset system | 初始化资产系统
             await this.initializeAssetSystem();
@@ -182,6 +189,107 @@ export class EngineService {
             console.error('Failed to initialize engine | 引擎初始化失败:', error);
             throw error;
         }
+    }
+
+    /**
+     * 初始化模块系统
+     * Initialize module systems for all enabled plugins
+     *
+     * 通过 PluginManager 初始化所有插件的运行时模块
+     * Initialize all plugin runtime modules via PluginManager
+     */
+    async initializeModuleSystems(): Promise<void> {
+        if (!this.initialized) {
+            console.error('Engine not initialized. Call initialize() first.');
+            return;
+        }
+
+        if (!this.scene || !this.renderSystem || !this.bridge) {
+            console.error('Scene or render system not available.');
+            return;
+        }
+
+        // 如果之前已经初始化过模块，先清理
+        if (this.modulesInitialized) {
+            this.clearModuleSystems();
+        }
+
+        // 获取 PluginManager
+        const pluginManager = Core.services.tryResolve<PluginManager>(IPluginManager);
+        if (!pluginManager) {
+            console.error('PluginManager not available.');
+            return;
+        }
+
+        // 初始化所有插件的运行时模块（注册组件和服务）
+        // Initialize all plugin runtime modules (register components and services)
+        await pluginManager.initializeRuntime(Core.services);
+
+        // 创建系统上下文
+        // Create system context
+        const context: SystemContext = {
+            core: Core,
+            engineBridge: this.bridge,
+            renderSystem: this.renderSystem,
+            isEditor: true
+        };
+
+        // 让插件为场景创建系统
+        // Let plugins create systems for scene
+        pluginManager.createSystemsForScene(this.scene, context);
+
+        // 保存插件创建的系统引用
+        // Save system references created by plugins
+        this.animatorSystem = context.animatorSystem as SpriteAnimatorSystem | undefined ?? null;
+        this.tilemapSystem = context.tilemapSystem as TilemapRenderingSystem | undefined ?? null;
+        this.behaviorTreeSystem = context.behaviorTreeSystem as BehaviorTreeExecutionSystem | undefined ?? null;
+        this.uiRenderProvider = context.uiRenderProvider as UIRenderDataProvider | undefined ?? null;
+
+        // 设置 UI 渲染数据提供者到 EngineRenderSystem
+        // Set UI render data provider to EngineRenderSystem
+        if (this.uiRenderProvider && this.renderSystem) {
+            this.renderSystem.setUIRenderDataProvider(this.uiRenderProvider);
+        }
+
+        // 在编辑器模式下，动画和行为树系统默认禁用
+        // In editor mode, animation and behavior tree systems are disabled by default
+        if (this.animatorSystem) {
+            this.animatorSystem.enabled = false;
+        }
+        if (this.behaviorTreeSystem) {
+            this.behaviorTreeSystem.enabled = false;
+        }
+
+        this.modulesInitialized = true;
+    }
+
+    /**
+     * 清理模块系统
+     * 用于项目关闭或切换时
+     * Clear module systems, used when project closes or switches
+     */
+    clearModuleSystems(): void {
+        // 通过 PluginManager 清理场景系统
+        // Clear scene systems via PluginManager
+        const pluginManager = Core.services.tryResolve<PluginManager>(IPluginManager);
+        if (pluginManager) {
+            pluginManager.clearSceneSystems();
+        }
+
+        // 清空本地引用（系统的实际清理由场景管理）
+        // Clear local references (actual system cleanup is managed by scene)
+        this.animatorSystem = null;
+        this.tilemapSystem = null;
+        this.behaviorTreeSystem = null;
+        this.uiRenderProvider = null;
+        this.modulesInitialized = false;
+    }
+
+    /**
+     * 检查模块系统是否已初始化
+     */
+    isModulesInitialized(): boolean {
+        return this.modulesInitialized;
     }
 
     /**
@@ -248,10 +356,21 @@ export class EngineService {
         this.running = true;
         this.lastTime = performance.now();
 
+        // Enable preview mode for UI rendering (screen space overlay)
+        // 启用预览模式用于 UI 渲染（屏幕空间叠加）
+        if (this.renderSystem) {
+            this.renderSystem.setPreviewMode(true);
+        }
+
         // Enable animator system and start auto-play animations
         // 启用动画系统并启动自动播放的动画
         if (this.animatorSystem) {
             this.animatorSystem.enabled = true;
+        }
+        // Enable behavior tree system for preview
+        // 启用行为树系统用于预览
+        if (this.behaviorTreeSystem) {
+            this.behaviorTreeSystem.enabled = true;
         }
         this.startAutoPlayAnimations();
 
@@ -310,10 +429,21 @@ export class EngineService {
     stop(): void {
         this.running = false;
 
+        // Disable preview mode for UI rendering (back to world space)
+        // 禁用预览模式用于 UI 渲染（返回世界空间）
+        if (this.renderSystem) {
+            this.renderSystem.setPreviewMode(false);
+        }
+
         // Disable animator system and stop all animations
         // 禁用动画系统并停止所有动画
         if (this.animatorSystem) {
             this.animatorSystem.enabled = false;
+        }
+        // Disable behavior tree system
+        // 禁用行为树系统
+        if (this.behaviorTreeSystem) {
+            this.behaviorTreeSystem.enabled = false;
         }
         this.stopAllAnimations();
 
@@ -669,6 +799,42 @@ export class EngineService {
         return this.renderSystem?.getShowGizmos() ?? true;
     }
 
+    /**
+     * Set UI canvas size for boundary display.
+     * 设置 UI 画布尺寸以显示边界。
+     */
+    setUICanvasSize(width: number, height: number): void {
+        if (this.renderSystem) {
+            this.renderSystem.setUICanvasSize(width, height);
+        }
+    }
+
+    /**
+     * Get UI canvas size.
+     * 获取 UI 画布尺寸。
+     */
+    getUICanvasSize(): { width: number; height: number } {
+        return this.renderSystem?.getUICanvasSize() ?? { width: 0, height: 0 };
+    }
+
+    /**
+     * Set UI canvas boundary visibility.
+     * 设置 UI 画布边界可见性。
+     */
+    setShowUICanvasBoundary(show: boolean): void {
+        if (this.renderSystem) {
+            this.renderSystem.setShowUICanvasBoundary(show);
+        }
+    }
+
+    /**
+     * Get UI canvas boundary visibility.
+     * 获取 UI 画布边界可见性。
+     */
+    getShowUICanvasBoundary(): boolean {
+        return this.renderSystem?.getShowUICanvasBoundary() ?? true;
+    }
+
     // ===== Scene Snapshot API =====
     // ===== 场景快照 API =====
 
@@ -711,24 +877,18 @@ export class EngineService {
             // Clear tilemap rendering cache before restoring
             // 恢复前清除瓦片地图渲染缓存
             if (this.tilemapSystem) {
-                console.log('[EngineService] Clearing tilemap cache before restore');
                 this.tilemapSystem.clearCache();
             }
 
-            // Clear UI text cache before restoring
-            // 恢复前清除 UI 文本缓存
-            if (this.uiRenderProvider) {
-                console.log('[EngineService] Clearing UI text cache before restore');
-                this.uiRenderProvider.clearTextCache();
-            }
+            // Clear UI render caches before restoring
+            // 恢复前清除 UI 渲染缓存
+            invalidateUIRenderCaches();
 
             // Use SceneSerializer from core library
-            console.log('[EngineService] Deserializing scene snapshot');
             SceneSerializer.deserialize(this.scene, this.sceneSnapshot, {
                 strategy: 'replace',
                 preserveIds: true
             });
-            console.log('[EngineService] Scene deserialized, entities:', this.scene.entities.buffer.length);
 
             // 加载场景资源 / Load scene resources
             if (this.sceneResourceManager) {
@@ -762,7 +922,6 @@ export class EngineService {
                 }
 
                 // Notify UI to refresh
-                console.log('[EngineService] Publishing scene:restored event');
                 messageHub.publish('scene:restored', {});
             }
 

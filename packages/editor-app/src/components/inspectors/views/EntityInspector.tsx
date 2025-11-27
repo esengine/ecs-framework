@@ -111,7 +111,6 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
         if (!component) return;
 
         const componentName = getComponentTypeName(component.constructor as any);
-        console.log('Removing component:', componentName);
 
         // Check if any other component depends on this one
         const dependentComponents: string[] = [];
@@ -120,12 +119,10 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
 
             const dependencies = getComponentDependencies(otherComponent.constructor as any);
             const otherName = getComponentTypeName(otherComponent.constructor as any);
-            console.log('Checking', otherName, 'dependencies:', dependencies);
             if (dependencies && dependencies.includes(componentName)) {
                 dependentComponents.push(otherName);
             }
         }
-        console.log('Dependent components:', dependentComponents);
 
         if (dependentComponents.length > 0) {
             const notificationService = Core.services.tryResolve(NotificationService) as NotificationService | null;

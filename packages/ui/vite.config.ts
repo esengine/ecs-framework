@@ -1,24 +1,37 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import dts from 'vite-plugin-dts';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
     plugins: [
+        react(),
         dts({
             include: ['src'],
             outDir: 'dist',
-            rollupTypes: true
+            rollupTypes: false
         })
     ],
+    esbuild: {
+        jsx: 'automatic',
+    },
     build: {
         lib: {
-            entry: resolve(__dirname, 'src/index.ts'),
+            entry: {
+                index: resolve(__dirname, 'src/index.ts'),
+                runtime: resolve(__dirname, 'src/runtime.ts'),
+                'editor/index': resolve(__dirname, 'src/editor/index.ts')
+            },
             formats: ['es'],
-            fileName: () => 'index.js'
+            fileName: (format, entryName) => `${entryName}.js`
         },
         rollupOptions: {
             external: [
                 '@esengine/ecs-framework',
+                '@esengine/editor-core',
+                'react',
+                'react/jsx-runtime',
+                'lucide-react',
                 /^@esengine\//
             ],
             output: {

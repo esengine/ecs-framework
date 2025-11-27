@@ -276,6 +276,18 @@ export class EngineBridge implements IEngineBridge {
     }
 
     /**
+     * Render sprites as overlay without clearing the screen.
+     * 渲染精灵作为叠加层，不清除屏幕。
+     *
+     * This is used for UI rendering on top of world content.
+     * 用于在世界内容上渲染 UI。
+     */
+    renderOverlay(): void {
+        if (!this.initialized) return;
+        this.getEngine().renderOverlay();
+    }
+
+    /**
      * Load a texture.
      * 加载纹理。
      *
@@ -620,6 +632,109 @@ export class EngineBridge implements IEngineBridge {
     getViewportIds(): string[] {
         if (!this.initialized) return [];
         return this.getEngine().getViewportIds();
+    }
+
+    // ===== Screen Space Mode API =====
+    // ===== 屏幕空间模式 API =====
+
+    // Saved world space camera state
+    // 保存的世界空间相机状态
+    private savedWorldCamera: CameraConfig | null = null;
+
+    /**
+     * Push screen space rendering mode.
+     * 进入屏幕空间渲染模式。
+     *
+     * Saves the current world camera and switches to a fixed orthographic projection
+     * centered at (0, 0) with the specified canvas size.
+     * 保存当前世界相机并切换到以 (0, 0) 为中心的固定正交投影。
+     *
+     * @param canvasWidth - UI canvas width (design resolution) | UI 画布宽度（设计分辨率）
+     * @param canvasHeight - UI canvas height (design resolution) | UI 画布高度（设计分辨率）
+     */
+    pushScreenSpaceMode(canvasWidth: number, canvasHeight: number): void {
+        if (!this.initialized) return;
+
+        // Save current world camera state
+        // 保存当前世界相机状态
+        this.savedWorldCamera = this.getCamera();
+
+        // Switch to screen space camera:
+        // - Position at origin (0, 0)
+        // - Zoom = 1 (1 pixel = 1 world unit)
+        // - No rotation
+        // 切换到屏幕空间相机：
+        // - 位置在原点 (0, 0)
+        // - 缩放 = 1（1 像素 = 1 世界单位）
+        // - 无旋转
+        //
+        // For screen space UI, we want the camera to show exactly canvasWidth x canvasHeight pixels
+        // centered at (0, 0). This means the visible area is:
+        // X: [-canvasWidth/2, canvasWidth/2]
+        // Y: [-canvasHeight/2, canvasHeight/2]
+        // 对于屏幕空间 UI，我们希望相机精确显示 canvasWidth x canvasHeight 像素
+        // 以 (0, 0) 为中心。这意味着可见区域是：
+        // X: [-canvasWidth/2, canvasWidth/2]
+        // Y: [-canvasHeight/2, canvasHeight/2]
+
+        // Get current viewport size to calculate proper zoom
+        // 获取当前视口尺寸以计算正确的缩放
+        // Note: This assumes canvas.width/height match actual rendering size
+        // 注意：这假设 canvas.width/height 与实际渲染尺寸匹配
+        const canvas = document.getElementById(this.config.canvasId) as HTMLCanvasElement;
+        if (canvas) {
+            // Calculate zoom so that canvasWidth x canvasHeight fits exactly in the viewport
+            // 计算缩放使 canvasWidth x canvasHeight 正好适合视口
+            // zoom = viewport_size / world_visible_size
+            // For UI, we want 1 UI unit = 1 pixel on screen when canvas matches viewport
+            // 对于 UI，当画布与视口匹配时，我们希望 1 UI 单位 = 1 屏幕像素
+            const viewportWidth = canvas.width;
+            const viewportHeight = canvas.height;
+
+            // Calculate zoom based on the design canvas size vs actual viewport
+            // 根据设计画布尺寸与实际视口计算缩放
+            // This scales UI to fit the viewport while maintaining aspect ratio
+            const zoomX = viewportWidth / canvasWidth;
+            const zoomY = viewportHeight / canvasHeight;
+
+            // Use minimum to ensure entire canvas is visible (letterbox if needed)
+            // 使用最小值确保整个画布可见（如需要则显示黑边）
+            const zoom = Math.min(zoomX, zoomY);
+
+            this.setCamera({
+                x: 0,
+                y: 0,
+                zoom: zoom,
+                rotation: 0
+            });
+        } else {
+            // Fallback: use zoom = 1
+            // 回退：使用 zoom = 1
+            this.setCamera({
+                x: 0,
+                y: 0,
+                zoom: 1,
+                rotation: 0
+            });
+        }
+    }
+
+    /**
+     * Pop screen space rendering mode.
+     * 退出屏幕空间渲染模式。
+     *
+     * Restores the previously saved world camera.
+     * 恢复之前保存的世界相机。
+     */
+    popScreenSpaceMode(): void {
+        if (!this.initialized) return;
+
+        // Restore world camera
+        // 恢复世界相机
+        if (this.savedWorldCamera) {
+            this.setCamera(this.savedWorldCamera);
+            this.savedWorldCamera = null;
+        }
     }
 
     /**

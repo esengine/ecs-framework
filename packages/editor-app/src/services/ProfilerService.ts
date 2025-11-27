@@ -183,7 +183,11 @@ export class ProfilerService {
             await invoke<string>('start_profiler_server', { port });
             this.isServerRunning = true;
         } catch (error) {
-            console.error('[ProfilerService] Failed to start server:', error);
+            // Ignore "already running" error - it's expected in some cases
+            const errorMessage = String(error);
+            if (!errorMessage.includes('already running')) {
+                console.error('[ProfilerService] Failed to start server:', error);
+            }
         }
     }
 

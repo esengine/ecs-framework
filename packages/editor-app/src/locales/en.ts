@@ -2,7 +2,7 @@ import type { Translations } from '@esengine/editor-core';
 
 export const en: Translations = {
     app: {
-        title: 'ECS Framework Editor'
+        title: 'ESEngine Editor'
     },
     header: {
         toolbar: {

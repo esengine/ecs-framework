@@ -4,10 +4,8 @@
  * Plugin-based editor framework for ECS Framework
  */
 
-export * from './Plugins/IEditorPlugin';
-export * from './Plugins/EditorPluginManager';
-export * from './Plugins/PluginTypes';
-export * from './Plugins/PluginRegistry';
+// 新插件系统 | New plugin system
+export * from './Plugin';
 
 export * from './Services/UIRegistry';
 export * from './Services/MessageHub';
@@ -21,6 +19,7 @@ export * from './Services/ComponentDiscoveryService';
 export * from './Services/LogService';
 export * from './Services/SettingsRegistry';
 export * from './Services/SceneManagerService';
+export * from './Services/SceneTemplateRegistry';
 export * from './Services/FileActionRegistry';
 export * from './Services/EntityCreationRegistry';
 export * from './Services/CompilerRegistry';
@@ -38,8 +37,8 @@ export * from './Services/IPropertyRenderer';
 export * from './Services/PropertyRendererRegistry';
 export * from './Services/IFieldEditor';
 export * from './Services/FieldEditorRegistry';
-export * from './Services/ComponentActionRegistry';
 export * from './Services/ComponentInspectorRegistry';
+export * from './Services/ComponentActionRegistry';
 
 export * from './Gizmos';
 
@@ -49,5 +48,5 @@ export * from './Module/IPanelRegistry';
 export * from './Module/IModuleContext';
 export * from './Module/IEditorModule';
 
-export * from './Types/UITypes';
 export * from './Types/IFileAPI';
+export * from './Types/UITypes';

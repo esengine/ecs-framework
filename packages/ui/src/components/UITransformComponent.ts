@@ -103,7 +103,7 @@ export class UITransformComponent extends Component {
      */
     @Serialize()
     @Property({ type: 'number', label: 'Anchor Min X', min: 0, max: 1, step: 0.01 })
-    public anchorMinX: number = 0;
+    public anchorMinX: number = 0.5;
 
     /**
      * 锚点 Y 最小值 (0-1)，相对于父元素
@@ -111,7 +111,7 @@ export class UITransformComponent extends Component {
      */
     @Serialize()
     @Property({ type: 'number', label: 'Anchor Min Y', min: 0, max: 1, step: 0.01 })
-    public anchorMinY: number = 0;
+    public anchorMinY: number = 0.5;
 
     /**
      * 锚点 X 最大值 (0-1)，相对于父元素
@@ -119,7 +119,7 @@ export class UITransformComponent extends Component {
      */
     @Serialize()
     @Property({ type: 'number', label: 'Anchor Max X', min: 0, max: 1, step: 0.01 })
-    public anchorMaxX: number = 0;
+    public anchorMaxX: number = 0.5;
 
     /**
      * 锚点 Y 最大值 (0-1)，相对于父元素
@@ -127,7 +127,7 @@ export class UITransformComponent extends Component {
      */
     @Serialize()
     @Property({ type: 'number', label: 'Anchor Max Y', min: 0, max: 1, step: 0.01 })
-    public anchorMaxY: number = 0;
+    public anchorMaxY: number = 0.5;
 
     // ===== 轴心 Pivot =====
 

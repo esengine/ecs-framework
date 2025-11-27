@@ -1,21 +1,29 @@
 {
   "name": "@esengine/behavior-tree",
   "version": "1.0.1",
-  "description": "完全ECS化的行为树系统，基于组件和实体的行为树实现",
-  "main": "bin/index.js",
-  "types": "bin/index.d.ts",
+  "description": "ECS-based AI behavior tree system with visual editor and runtime execution",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
   "exports": {
     ".": {
-      "types": "./bin/index.d.ts",
-      "import": "./bin/index.js",
-      "development": {
-        "types": "./src/index.ts",
-        "import": "./src/index.ts"
-      }
-    }
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "import": "./dist/runtime.js"
+    },
+    "./editor": {
+      "types": "./dist/editor/index.d.ts",
+      "import": "./dist/editor/index.js"
+    },
+    "./plugin.json": "./plugin.json"
   },
   "files": [
-    "bin/**/*"
+    "dist",
+    "plugin.json"
   ],
   "keywords": [
     "ecs",
@@ -25,40 +33,52 @@
     "entity-component-system"
   ],
   "scripts": {
-    "clean": "rimraf bin dist tsconfig.tsbuildinfo",
-    "build:ts": "tsc",
-    "prebuild": "npm run clean",
-    "build": "npm run build:ts",
-    "build:esm": "vite build",
-    "build:watch": "tsc --watch",
-    "rebuild": "npm run clean && npm run build",
-    "build:npm": "npm run build && node build-rollup.cjs",
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "build": "vite build",
+    "build:watch": "vite build --watch",
+    "type-check": "tsc --noEmit",
     "test": "jest --config jest.config.cjs",
     "test:watch": "jest --watch --config jest.config.cjs"
   },
   "author": "yhh",
   "license": "MIT",
   "peerDependencies": {
-    "@esengine/ecs-framework": "^2.2.8"
+    "@esengine/ecs-framework": ">=2.0.0",
+    "@esengine/ecs-components": "workspace:*",
+    "@esengine/editor-runtime": "workspace:*",
+    "lucide-react": "^0.545.0",
+    "react": "^18.3.1",
+    "zustand": "^4.5.2"
+  },
+  "peerDependenciesMeta": {
+    "@esengine/ecs-components": {
+      "optional": true
+    },
+    "@esengine/editor-runtime": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "lucide-react": {
+      "optional": true
+    },
+    "zustand": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "@babel/core": "^7.28.3",
-    "@babel/plugin-transform-nullish-coalescing-operator": "^7.27.1",
-    "@babel/plugin-transform-optional-chaining": "^7.27.1",
-    "@babel/preset-env": "^7.28.3",
-    "@rollup/plugin-babel": "^6.0.4",
-    "@rollup/plugin-commonjs": "^28.0.3",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-terser": "^0.4.4",
+    "@tauri-apps/plugin-fs": "^2.4.2",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.19.17",
+    "@types/react": "^18.3.12",
+    "@vitejs/plugin-react": "^4.7.0",
     "jest": "^29.7.0",
     "rimraf": "^5.0.0",
-    "rollup": "^4.42.0",
-    "rollup-plugin-dts": "^6.2.1",
     "ts-jest": "^29.4.0",
     "typescript": "^5.8.3",
-    "vite": "^6.0.7"
+    "vite": "^6.0.7",
+    "vite-plugin-dts": "^3.7.0"
   },
   "dependencies": {
     "tslib": "^2.8.1"

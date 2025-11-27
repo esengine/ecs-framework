@@ -58,7 +58,7 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
 
     const translations = {
         en: {
-            title: 'ECS Framework Editor',
+            title: 'ESEngine Editor',
             subtitle: 'Professional Game Development Tool',
             openProject: 'Open Project',
             createProject: 'Create Project',
@@ -72,7 +72,7 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
             later: 'Later'
         },
         zh: {
-            title: 'ECS 框架编辑器',
+            title: 'ESEngine 编辑器',
             subtitle: '专业游戏开发工具',
             openProject: '打开项目',
             createProject: '创建新项目',

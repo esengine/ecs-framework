@@ -10,10 +10,20 @@
         ".": {
             "types": "./dist/index.d.ts",
             "import": "./dist/index.js"
-        }
+        },
+        "./runtime": {
+            "types": "./dist/runtime.d.ts",
+            "import": "./dist/runtime.js"
+        },
+        "./editor": {
+            "types": "./dist/editor/index.d.ts",
+            "import": "./dist/editor/index.js"
+        },
+        "./plugin.json": "./plugin.json"
     },
     "files": [
-        "dist"
+        "dist",
+        "plugin.json"
     ],
     "scripts": {
         "build": "vite build",
@@ -21,17 +31,31 @@
         "type-check": "tsc --noEmit",
         "clean": "rimraf dist"
     },
-    "dependencies": {
-        "@esengine/ecs-framework": "workspace:*"
-    },
     "peerDependencies": {
-        "@esengine/ecs-framework": ">=2.0.0"
+        "@esengine/ecs-framework": ">=2.0.0",
+        "@esengine/ecs-components": "workspace:*",
+        "@esengine/editor-core": "workspace:*",
+        "lucide-react": "^0.545.0",
+        "react": "^18.3.1"
+    },
+    "peerDependenciesMeta": {
+        "@esengine/editor-core": {
+            "optional": true
+        },
+        "react": {
+            "optional": true
+        },
+        "lucide-react": {
+            "optional": true
+        }
     },
     "devDependencies": {
+        "@types/react": "^18.3.12",
+        "@vitejs/plugin-react": "^4.7.0",
+        "rimraf": "^5.0.5",
         "typescript": "^5.3.3",
         "vite": "^5.0.0",
-        "vite-plugin-dts": "^3.7.0",
-        "rimraf": "^5.0.5"
+        "vite-plugin-dts": "^3.7.0"
     },
     "keywords": [
         "ecs",

@@ -6,7 +6,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { Core } from '@esengine/ecs-framework';
 import { MessageHub, EntityStoreService } from '@esengine/editor-core';
-import { TransformComponent, CameraComponent } from '@esengine/ecs-components';
 import { EngineService } from '../services/EngineService';
 import { EditorEngineSync } from '../services/EditorEngineSync';
 
@@ -63,30 +62,12 @@ async function initializeEngine(canvasId: string): Promise<void> {
         await engine.initialize(canvasId);
 
         // Initialize sync service
+        // 初始化同步服务
         try {
             const messageHub = Core.services.resolve(MessageHub);
             const entityStore = Core.services.resolve(EntityStoreService);
             if (messageHub && entityStore) {
                 EditorEngineSync.getInstance().initialize(messageHub, entityStore);
-
-                // Create default camera if none exists
-                // 如果不存在相机则创建默认相机
-                const scene = Core.scene;
-                if (scene) {
-                    const existingCameras = scene.entities.findEntitiesWithComponent(CameraComponent);
-                    if (existingCameras.length === 0) {
-                        const cameraEntity = scene.createEntity('Main Camera');
-                        cameraEntity.addComponent(new TransformComponent());
-                        const camera = new CameraComponent();
-                        camera.orthographicSize = 1;
-                        cameraEntity.addComponent(camera);
-
-                        // Register with EntityStore so it appears in hierarchy
-                        // 注册到 EntityStore 以便在层级视图中显示
-                        entityStore.addEntity(cameraEntity);
-                        messageHub.publish('entity:added', { entity: cameraEntity });
-                    }
-                }
             }
         } catch (syncError) {
             console.warn('Failed to initialize sync service | 同步服务初始化失败:', syncError);
@@ -189,11 +170,7 @@ export function useEngine(
                 clearInterval(statsIntervalRef.current);
                 statsIntervalRef.current = null;
             }
-            // Unregister viewport on cleanup
-            if (viewportRegisteredRef.current) {
-                engineRef.current.unregisterViewport(options.viewportId);
-                viewportRegisteredRef.current = false;
-            }
+            // 注意：Viewport 现在是持久化的，不会被卸载，所以不需要 unregisterViewport
         };
     }, [options.canvasId, options.viewportId, options.autoInit, options.showGrid, options.showGizmos]);
 

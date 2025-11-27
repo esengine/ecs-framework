@@ -220,9 +220,30 @@ impl Engine {
         self.renderer.render(self.context.gl(), &self.texture_manager)?;
 
         // Render gizmos on top
-        self.gizmo_renderer.render(self.context.gl(), self.renderer.camera());
+        if self.show_gizmos {
+            self.gizmo_renderer.render(self.context.gl(), self.renderer.camera());
+            // Render axis indicator in corner (always visible when gizmos are on)
+            // 在角落渲染坐标轴指示器（当 gizmos 开启时始终可见）
+            self.gizmo_renderer.render_axis_indicator(
+                self.context.gl(),
+                self.context.width() as f32,
+                self.context.height() as f32,
+            );
+        }
         self.gizmo_renderer.clear();
 
+        Ok(())
+    }
+
+    /// Render sprites only without clearing the screen.
+    /// 仅渲染精灵，不清除屏幕。
+    ///
+    /// This is used for overlay rendering (e.g., UI layer on top of world).
+    /// 用于叠加渲染（例如，UI 层叠加在世界上）。
+    pub fn render_overlay(&mut self) -> Result<()> {
+        // Render sprites without clearing
+        // 渲染精灵但不清屏
+        self.renderer.render(self.context.gl(), &self.texture_manager)?;
         Ok(())
     }
 
@@ -447,6 +468,14 @@ impl Engine {
         // Render gizmos if enabled
         if show_gizmos {
             self.gizmo_renderer.render(viewport.gl(), &camera);
+            // Render axis indicator in corner
+            // 在角落渲染坐标轴指示器
+            let (vp_width, vp_height) = viewport.dimensions();
+            self.gizmo_renderer.render_axis_indicator(
+                viewport.gl(),
+                vp_width as f32,
+                vp_height as f32,
+            );
         }
         self.gizmo_renderer.clear();
 

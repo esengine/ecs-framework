@@ -8,7 +8,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 10000;
+    z-index: var(--z-index-modal);
 }
 
 .user-dashboard {
@@ -455,7 +455,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 10001;
+    z-index: var(--z-index-popover);
 }
 
 .confirm-dialog {

@@ -1,5 +1,5 @@
 import { NodeType } from '../Types/TaskStatus';
-import { NodeMetadataRegistry, ConfigFieldDefinition, NodeMetadata } from '../Runtime/NodeMetadata';
+import { NodeMetadataRegistry, ConfigFieldDefinition, NodeMetadata } from '../execution/NodeMetadata';
 
 /**
  * 节点数据JSON格式

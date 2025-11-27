@@ -4,14 +4,26 @@
  */
 
 // Component
-export { TilemapComponent, ITilemapData, ITilesetData, ResizeAnchor } from './TilemapComponent';
+export { TilemapComponent } from './TilemapComponent';
+export type { ITilemapData, ITilesetData } from './TilemapComponent';
+export type { ResizeAnchor } from './TilemapComponent';
 
 // Systems
-export { TilemapRenderingSystem, TilemapRenderData, ViewportBounds } from './systems/TilemapRenderingSystem';
+export { TilemapRenderingSystem } from './systems/TilemapRenderingSystem';
+export type { TilemapRenderData, ViewportBounds } from './systems/TilemapRenderingSystem';
 
 // Loaders
-export { TilemapLoader, ITilemapAsset } from './loaders/TilemapLoader';
-export { TilesetLoader, ITilesetAsset } from './loaders/TilesetLoader';
+export { TilemapLoader } from './loaders/TilemapLoader';
+export type { ITilemapAsset } from './loaders/TilemapLoader';
+export { TilesetLoader } from './loaders/TilesetLoader';
+export type { ITilesetAsset } from './loaders/TilesetLoader';
 
 // Tiled converter
-export { TiledConverter, ITiledMap, ITiledConversionResult } from './loaders/TiledConverter';
+export { TiledConverter } from './loaders/TiledConverter';
+export type { ITiledMap, ITiledConversionResult } from './loaders/TiledConverter';
+
+// Runtime module (no editor dependencies)
+export { TilemapRuntimeModule } from './TilemapRuntimeModule';
+
+// Plugin (for PluginManager - includes editor dependencies)
+export { TilemapPlugin } from './editor/TilemapPlugin';

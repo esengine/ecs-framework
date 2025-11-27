@@ -1,4 +1,4 @@
-import { BehaviorTreeData, BehaviorNodeData } from './Runtime/BehaviorTreeData';
+import { BehaviorTreeData, BehaviorNodeData } from './execution/BehaviorTreeData';
 import { NodeType } from './Types/TaskStatus';
 
 /**

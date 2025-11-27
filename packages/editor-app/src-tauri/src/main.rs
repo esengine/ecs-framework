@@ -1,4 +1,4 @@
-//! ECS Framework Editor - Tauri Backend
+//! ESEngine Editor - Tauri Backend
 //!
 //! Clean entry point that handles application setup and command registration.
 

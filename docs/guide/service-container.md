@@ -33,6 +33,26 @@ class MyService implements IService {
 }
 ```
 
+#### 服务标识符（ServiceIdentifier）
+
+服务标识符用于在容器中唯一标识一个服务，支持两种类型：
+
+- **类构造函数**: 直接使用服务类作为标识符，适用于具体实现类
+- **Symbol**: 使用 Symbol 作为标识符，适用于接口抽象（推荐用于插件和跨包场景）
+
+```typescript
+// 方式1: 使用类作为标识符
+Core.services.registerSingleton(DataService);
+const data = Core.services.resolve(DataService);
+
+// 方式2: 使用 Symbol 作为标识符（推荐用于接口）
+const IFileSystem = Symbol.for('IFileSystem');
+Core.services.registerInstance(IFileSystem, new TauriFileSystem());
+const fs = Core.services.resolve<IFileSystem>(IFileSystem);
+```
+
+> **提示**: 使用 `Symbol.for()` 而非 `Symbol()` 可确保跨包/跨模块共享同一个标识符。详见[高级用法 - 接口与 Symbol 标识符模式](#接口与-symbol-标识符模式)。
+
 #### 生命周期
 
 服务容器支持两种生命周期：
@@ -333,27 +353,55 @@ class GameService implements IService {
 }
 ```
 
-### @Inject 装饰器
+### @InjectProperty 装饰器
 
-在构造函数中注入依赖：
+通过属性装饰器注入依赖。注入时机是在构造函数执行后、`onInitialize()` 调用前完成：
 
 ```typescript
-import { Injectable, Inject, IService } from '@esengine/ecs-framework';
+import { Injectable, InjectProperty, IService } from '@esengine/ecs-framework';
 
 @Injectable()
 class PlayerService implements IService {
-    constructor(
-        @Inject(DataService) private data: DataService,
-        @Inject(GameService) private game: GameService
-    ) {
-        // data 和 game 会自动从容器中解析
-    }
+    @InjectProperty(DataService)
+    private data!: DataService;
+
+    @InjectProperty(GameService)
+    private game!: GameService;
 
     dispose(): void {
         // 清理资源
     }
 }
 ```
+
+在 EntitySystem 中使用属性注入：
+
+```typescript
+@Injectable()
+class CombatSystem extends EntitySystem {
+    @InjectProperty(TimeService)
+    private timeService!: TimeService;
+
+    @InjectProperty(AudioService)
+    private audio!: AudioService;
+
+    constructor() {
+        super(Matcher.all(Health, Attack));
+    }
+
+    onInitialize(): void {
+        // 此时属性已注入完成，可以安全使用
+        console.log('Delta time:', this.timeService.getDeltaTime());
+    }
+
+    processEntity(entity: Entity): void {
+        // 使用注入的服务
+        this.audio.playSound('attack');
+    }
+}
+```
+
+> **注意**: 属性声明时使用 `!` 断言（如 `private data!: DataService`），表示该属性会在使用前被注入。
 
 ### 注册可注入服务
 
@@ -362,10 +410,10 @@ class PlayerService implements IService {
 ```typescript
 import { registerInjectable } from '@esengine/ecs-framework';
 
-// 注册服务（会自动解析@Inject依赖）
+// 注册服务（会自动解析 @InjectProperty 依赖）
 registerInjectable(Core.services, PlayerService);
 
-// 解析时会自动注入依赖
+// 解析时会自动注入属性依赖
 const player = Core.services.resolve(PlayerService);
 ```
 
@@ -493,22 +541,164 @@ registerInjectable(Core.services, NetworkService);
 
 ## 高级用法
 
-### 服务替换（测试）
+### 接口与 Symbol 标识符模式
 
-在测试中替换真实服务为模拟服务：
+在大型项目或需要跨平台适配的游戏中，推荐使用"接口 + Symbol.for 标识符"模式。这种模式实现了真正的依赖倒置，让代码依赖于抽象而非具体实现。
+
+#### 为什么使用 Symbol.for
+
+- **跨包共享**: `Symbol.for('key')` 在全局 Symbol 注册表中创建/获取 Symbol，确保不同包中使用相同的标识符
+- **接口解耦**: 消费者只依赖接口定义，不依赖具体实现类
+- **可替换实现**: 可以在运行时注入不同的实现（如测试 Mock、不同平台适配）
+
+#### 定义接口和标识符
+
+以音频服务为例，游戏需要在不同平台（Web、微信小游戏、原生App）使用不同的音频实现：
 
 ```typescript
-// 测试代码
-class MockDataService implements IService {
-    getData(key: string) {
-        return 'mock data';
-    }
-
-    dispose(): void {}
+// IAudioService.ts - 定义接口和标识符
+export interface IAudioService {
+    dispose(): void;
+    playSound(id: string): void;
+    playMusic(id: string, loop?: boolean): void;
+    stopMusic(): void;
+    setVolume(volume: number): void;
+    preload(id: string, url: string): Promise<void>;
 }
 
-// 注册模拟服务（用于测试）
-Core.services.registerInstance(DataService, new MockDataService());
+// 使用 Symbol.for 确保跨包共享同一个 Symbol
+export const IAudioService = Symbol.for('IAudioService');
+```
+
+#### 实现接口
+
+```typescript
+// WebAudioService.ts - Web 平台实现
+import { IAudioService } from './IAudioService';
+
+export class WebAudioService implements IAudioService {
+    private audioContext: AudioContext;
+    private sounds: Map<string, AudioBuffer> = new Map();
+
+    constructor() {
+        this.audioContext = new AudioContext();
+    }
+
+    playSound(id: string): void {
+        const buffer = this.sounds.get(id);
+        if (buffer) {
+            const source = this.audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(this.audioContext.destination);
+            source.start();
+        }
+    }
+
+    async preload(id: string, url: string): Promise<void> {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+        this.sounds.set(id, audioBuffer);
+    }
+
+    // ... 其他方法实现
+
+    dispose(): void {
+        this.audioContext.close();
+        this.sounds.clear();
+    }
+}
+```
+
+```typescript
+// WechatAudioService.ts - 微信小游戏平台实现
+export class WechatAudioService implements IAudioService {
+    private innerAudioContexts: Map<string, WechatMinigame.InnerAudioContext> = new Map();
+
+    playSound(id: string): void {
+        const ctx = this.innerAudioContexts.get(id);
+        if (ctx) {
+            ctx.play();
+        }
+    }
+
+    async preload(id: string, url: string): Promise<void> {
+        const ctx = wx.createInnerAudioContext();
+        ctx.src = url;
+        this.innerAudioContexts.set(id, ctx);
+    }
+
+    // ... 其他方法实现
+
+    dispose(): void {
+        for (const ctx of this.innerAudioContexts.values()) {
+            ctx.destroy();
+        }
+        this.innerAudioContexts.clear();
+    }
+}
+```
+
+#### 注册和使用
+
+```typescript
+import { IAudioService } from './IAudioService';
+import { WebAudioService } from './WebAudioService';
+import { WechatAudioService } from './WechatAudioService';
+
+// 根据平台注册不同实现
+if (typeof wx !== 'undefined') {
+    Core.services.registerInstance(IAudioService, new WechatAudioService());
+} else {
+    Core.services.registerInstance(IAudioService, new WebAudioService());
+}
+
+// 业务代码中使用 - 不关心具体实现
+const audio = Core.services.resolve<IAudioService>(IAudioService);
+await audio.preload('explosion', '/sounds/explosion.mp3');
+audio.playSound('explosion');
+```
+
+#### 跨模块使用
+
+```typescript
+// 在游戏系统中使用
+import { IAudioService } from '@mygame/core';
+
+class CombatSystem extends EntitySystem {
+    private audio: IAudioService;
+
+    initialize(): void {
+        // 获取音频服务，不需要知道具体实现
+        this.audio = this.scene.services.resolve<IAudioService>(IAudioService);
+    }
+
+    onEntityDeath(entity: Entity): void {
+        this.audio.playSound('death');
+    }
+}
+```
+
+#### Symbol vs Symbol.for
+
+```typescript
+// Symbol() - 每次创建唯一的 Symbol
+const sym1 = Symbol('test');
+const sym2 = Symbol('test');
+console.log(sym1 === sym2); // false - 不同的 Symbol
+
+// Symbol.for() - 在全局注册表中共享
+const sym3 = Symbol.for('test');
+const sym4 = Symbol.for('test');
+console.log(sym3 === sym4); // true - 同一个 Symbol
+
+// 跨包场景
+// package-a/index.ts
+export const IMyService = Symbol.for('IMyService');
+
+// package-b/index.ts (不同的包)
+const IMyService = Symbol.for('IMyService');
+// 与 package-a 中的是同一个 Symbol！
 ```
 
 ### 循环依赖检测

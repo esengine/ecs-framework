@@ -1,0 +1,50 @@
+{
+  "id": "@esengine/ui",
+  "name": "UI System",
+  "version": "1.0.0",
+  "description": "游戏 UI 系统，支持布局、交互、动画等 | Game UI system with layout, interaction, animation support",
+  "author": "ESEngine Team",
+  "license": "MIT",
+  "category": "ui",
+  "tags": ["ui", "layout", "widgets", "interaction"],
+  "icon": "LayoutGrid",
+  "enabledByDefault": true,
+  "canContainContent": false,
+  "isEnginePlugin": true,
+  "isCore": false,
+  "modules": [
+    {
+      "name": "UIRuntime",
+      "type": "runtime",
+      "loadingPhase": "default",
+      "entry": "./src/index.ts",
+      "components": [
+        "UITransformComponent",
+        "UIRenderComponent",
+        "UIInteractableComponent",
+        "UITextComponent",
+        "UILayoutComponent",
+        "UIButtonComponent",
+        "UIProgressBarComponent",
+        "UISliderComponent",
+        "UIScrollViewComponent"
+      ],
+      "systems": ["UIRenderingSystem", "UILayoutSystem", "UIInteractionSystem"]
+    },
+    {
+      "name": "UIEditor",
+      "type": "editor",
+      "loadingPhase": "default",
+      "entry": "./src/editor/index.ts",
+      "inspectors": ["UITransformInspector"],
+      "gizmoProviders": ["UITransformGizmoProvider"]
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "@esengine/core",
+      "version": "^1.0.0"
+    }
+  ],
+  "platforms": ["web", "desktop"]
+}

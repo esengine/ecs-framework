@@ -1,0 +1,41 @@
+{
+  "id": "@esengine/tilemap",
+  "name": "Tilemap System",
+  "version": "1.0.0",
+  "description": "瓦片地图系统，支持 Tiled 格式导入和高效渲染 | Tilemap system with Tiled format import and efficient rendering",
+  "author": "ESEngine Team",
+  "license": "MIT",
+  "category": "rendering",
+  "tags": ["tilemap", "tiled", "2d", "rendering"],
+  "icon": "Grid3X3",
+  "enabledByDefault": true,
+  "canContainContent": true,
+  "isEnginePlugin": true,
+  "isCore": false,
+  "modules": [
+    {
+      "name": "TilemapRuntime",
+      "type": "runtime",
+      "loadingPhase": "default",
+      "entry": "./src/index.ts",
+      "components": ["TilemapComponent"],
+      "systems": ["TilemapRenderingSystem"]
+    },
+    {
+      "name": "TilemapEditor",
+      "type": "editor",
+      "loadingPhase": "default",
+      "entry": "./src/editor/index.ts",
+      "panels": ["tilemap-editor"],
+      "inspectors": ["TilemapInspectorProvider"],
+      "gizmoProviders": ["TilemapGizmoProvider"]
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "@esengine/core",
+      "version": "^1.0.0"
+    }
+  ],
+  "platforms": ["web", "desktop"]
+}

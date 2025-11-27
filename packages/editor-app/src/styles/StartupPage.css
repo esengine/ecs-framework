@@ -222,7 +222,7 @@
   border-radius: 3px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   padding: 4px 0;
-  z-index: 1000;
+  z-index: var(--z-index-dropdown);
 }
 
 .startup-locale-item {
@@ -257,7 +257,7 @@
   bottom: 60px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 1000;
+  z-index: var(--z-index-sticky);
 }
 
 .update-banner-content {

@@ -7,7 +7,8 @@ export default defineConfig({
         dts({
             include: ['src'],
             outDir: 'dist',
-            rollupTypes: true
+            rollupTypes: false,
+            tsconfigPath: './tsconfig.json'
         })
     ],
     define: {
@@ -24,8 +25,21 @@ export default defineConfig({
             fileName: () => 'editor-runtime.js'
         },
         rollupOptions: {
-            // 将 React 设为外部依赖，使用主应用提供的 React
-            external: ['react', 'react-dom', 'react/jsx-runtime'],
+            // 将 React 和核心 ECS 框架设为外部依赖
+            // 这确保整个应用使用同一个 ComponentRegistry 实例
+            external: [
+                'react',
+                'react-dom',
+                'react/jsx-runtime',
+                '@esengine/ecs-framework',
+                '@esengine/ecs-components',
+                '@esengine/tilemap',
+                '@esengine/ui',
+                '@esengine/behavior-tree',
+                '@esengine/platform-web',
+                '@esengine/ecs-engine-bindgen',
+                '@esengine/asset-system',
+            ],
             output: {
                 exports: 'named',
                 inlineDynamicImports: true,

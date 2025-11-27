@@ -12,9 +12,11 @@ import {
     LogService,
     SettingsRegistry,
     SceneManagerService,
+    SceneTemplateRegistry,
     FileActionRegistry,
     EntityCreationRegistry,
-    EditorPluginManager,
+    PluginManager,
+    IPluginManager,
     InspectorRegistry,
     IInspectorRegistry,
     PropertyRendererRegistry,
@@ -37,6 +39,7 @@ import {
     CircleColliderComponent,
     AudioSourceComponent
 } from '@esengine/ecs-components';
+import { BehaviorTreeRuntimeComponent } from '@esengine/behavior-tree';
 import { TauriFileAPI } from '../../adapters/TauriFileAPI';
 import { DIContainer } from '../../core/di/DIContainer';
 import { TypedEventBus } from '../../core/events/TypedEventBus';
@@ -80,7 +83,7 @@ export interface EditorServices {
     settingsRegistry: SettingsRegistry;
     sceneManager: SceneManagerService;
     fileActionRegistry: FileActionRegistry;
-    pluginManager: EditorPluginManager;
+    pluginManager: PluginManager;
     diContainer: DIContainer;
     eventBus: TypedEventBus<EditorEventMap>;
     commandRegistry: CommandRegistry;
@@ -106,15 +109,16 @@ export class ServiceRegistry {
         // 注册标准组件到编辑器和核心注册表
         // Register to both editor registry (for UI) and core registry (for serialization)
         const standardComponents = [
-            { name: 'TransformComponent', type: TransformComponent, editorName: 'Transform', category: 'components.category.core', description: 'components.transform.description' },
-            { name: 'SpriteComponent', type: SpriteComponent, editorName: 'Sprite', category: 'components.category.rendering', description: 'components.sprite.description' },
-            { name: 'SpriteAnimatorComponent', type: SpriteAnimatorComponent, editorName: 'SpriteAnimator', category: 'components.category.rendering', description: 'components.spriteAnimator.description' },
-            { name: 'TextComponent', type: TextComponent, editorName: 'Text', category: 'components.category.rendering', description: 'components.text.description' },
-            { name: 'CameraComponent', type: CameraComponent, editorName: 'Camera', category: 'components.category.rendering', description: 'components.camera.description' },
-            { name: 'RigidBodyComponent', type: RigidBodyComponent, editorName: 'RigidBody', category: 'components.category.physics', description: 'components.rigidBody.description' },
-            { name: 'BoxColliderComponent', type: BoxColliderComponent, editorName: 'BoxCollider', category: 'components.category.physics', description: 'components.boxCollider.description' },
-            { name: 'CircleColliderComponent', type: CircleColliderComponent, editorName: 'CircleCollider', category: 'components.category.physics', description: 'components.circleCollider.description' },
-            { name: 'AudioSourceComponent', type: AudioSourceComponent, editorName: 'AudioSource', category: 'components.category.audio', description: 'components.audioSource.description' }
+            { name: 'TransformComponent', type: TransformComponent, editorName: 'Transform', category: 'components.category.core', description: 'components.transform.description', icon: 'Move3d' },
+            { name: 'SpriteComponent', type: SpriteComponent, editorName: 'Sprite', category: 'components.category.rendering', description: 'components.sprite.description', icon: 'Image' },
+            { name: 'SpriteAnimatorComponent', type: SpriteAnimatorComponent, editorName: 'SpriteAnimator', category: 'components.category.rendering', description: 'components.spriteAnimator.description', icon: 'Film' },
+            { name: 'TextComponent', type: TextComponent, editorName: 'Text', category: 'components.category.rendering', description: 'components.text.description', icon: 'Type' },
+            { name: 'CameraComponent', type: CameraComponent, editorName: 'Camera', category: 'components.category.rendering', description: 'components.camera.description', icon: 'Camera' },
+            { name: 'RigidBodyComponent', type: RigidBodyComponent, editorName: 'RigidBody', category: 'components.category.physics', description: 'components.rigidBody.description', icon: 'Atom' },
+            { name: 'BoxColliderComponent', type: BoxColliderComponent, editorName: 'BoxCollider', category: 'components.category.physics', description: 'components.boxCollider.description', icon: 'Square' },
+            { name: 'CircleColliderComponent', type: CircleColliderComponent, editorName: 'CircleCollider', category: 'components.category.physics', description: 'components.circleCollider.description', icon: 'Circle' },
+            { name: 'AudioSourceComponent', type: AudioSourceComponent, editorName: 'AudioSource', category: 'components.category.audio', description: 'components.audioSource.description', icon: 'Volume2' },
+            { name: 'BehaviorTreeRuntimeComponent', type: BehaviorTreeRuntimeComponent, editorName: 'BehaviorTreeRuntime', category: 'components.category.ai', description: 'components.behaviorTreeRuntime.description', icon: 'GitBranch' }
         ];
 
         for (const comp of standardComponents) {
@@ -123,7 +127,8 @@ export class ServiceRegistry {
                 name: comp.editorName,
                 type: comp.type,
                 category: comp.category,
-                description: comp.description
+                description: comp.description,
+                icon: comp.icon
             });
 
             // Register to core registry for serialization/deserialization
@@ -158,9 +163,8 @@ export class ServiceRegistry {
         Core.services.registerInstance(ComponentActionRegistry, componentActionRegistry);
         Core.services.registerInstance(ComponentInspectorRegistry, componentInspectorRegistry);
 
-        const pluginManager = new EditorPluginManager();
-        pluginManager.initialize(coreInstance, Core.services);
-        Core.services.registerInstance(EditorPluginManager, pluginManager);
+        const pluginManager = new PluginManager();
+        Core.services.registerInstance(IPluginManager, pluginManager);
 
         const diContainer = new DIContainer();
         const eventBus = new TypedEventBus<EditorEventMap>();
@@ -202,6 +206,10 @@ export class ServiceRegistry {
         fieldEditorRegistry.register(new ColorFieldEditor());
         fieldEditorRegistry.register(new AnimationClipsFieldEditor());
 
+        // 注册默认场景模板 - 创建默认相机
+        // Register default scene template - creates default camera
+        this.registerDefaultSceneTemplate();
+
         return {
             uiRegistry,
             messageHub,
@@ -234,5 +242,32 @@ export class ServiceRegistry {
             const { level, message, timestamp, clientId } = event.detail;
             logService.addRemoteLog(level, message, timestamp, clientId);
         }) as EventListener);
+    }
+
+    /**
+     * 注册默认场景模板
+     * Register default scene template with default entities
+     */
+    private registerDefaultSceneTemplate(): void {
+        // 注册默认相机创建器
+        // Register default camera creator
+        SceneTemplateRegistry.registerDefaultEntity((scene) => {
+            // 检查是否已存在相机
+            // Check if camera already exists
+            const existingCameras = scene.entities.findEntitiesWithComponent(CameraComponent);
+            if (existingCameras.length > 0) {
+                return null;
+            }
+
+            // 创建默认相机实体
+            // Create default camera entity
+            const cameraEntity = scene.createEntity('Main Camera');
+            cameraEntity.addComponent(new TransformComponent());
+            const camera = new CameraComponent();
+            camera.orthographicSize = 1;
+            cameraEntity.addComponent(camera);
+
+            return cameraEntity;
+        });
     }
 }

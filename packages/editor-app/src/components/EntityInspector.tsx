@@ -91,9 +91,7 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
     };
 
     const handlePropertyChange = (component: any, propertyName: string, value: any) => {
-        console.log('[EntityInspector] handlePropertyChange called:', propertyName, value);
         if (!selectedEntity) {
-            console.log('[EntityInspector] No selectedEntity, returning');
             return;
         }
 
@@ -109,7 +107,6 @@ export function EntityInspector({ entityStore: _entityStore, messageHub }: Entit
         });
 
         // Also publish scene:modified so other panels can react
-        console.log('[EntityInspector] Publishing scene:modified');
         messageHub.publish('scene:modified', {});
     };
 

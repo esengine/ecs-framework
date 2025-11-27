@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { UIRegistry, MessageHub, EditorPluginManager } from '@esengine/editor-core';
+import { UIRegistry, MessageHub, PluginManager } from '@esengine/editor-core';
 import type { MenuItem as PluginMenuItem } from '@esengine/editor-core';
 import * as LucideIcons from 'lucide-react';
 import '../styles/MenuBar.css';
@@ -18,7 +18,7 @@ interface MenuBarProps {
   locale?: string;
   uiRegistry?: UIRegistry;
   messageHub?: MessageHub;
-  pluginManager?: EditorPluginManager;
+  pluginManager?: PluginManager;
   onNewScene?: () => void;
   onOpenScene?: () => void;
   onSaveScene?: () => void;
@@ -62,29 +62,7 @@ export function MenuBar({
     const menuRef = useRef<HTMLDivElement>(null);
 
     const updateMenuItems = () => {
-        if (uiRegistry && pluginManager) {
-            const items = uiRegistry.getChildMenus('window');
-            // 过滤掉被禁用插件的菜单项
-            const enabledPlugins = pluginManager.getAllPluginMetadata()
-                .filter((p) => p.enabled)
-                .map((p) => p.name);
-
-            // 只显示启用插件的菜单项
-            const filteredItems = items.filter((item) => {
-                // 检查菜单项是否属于某个插件
-                return enabledPlugins.some((pluginName) => {
-                    const plugin = pluginManager.getEditorPlugin(pluginName);
-                    if (plugin && plugin.registerMenuItems) {
-                        const pluginMenus = plugin.registerMenuItems();
-                        return pluginMenus.some((m) => m.id === item.id);
-                    }
-                    return false;
-                });
-            });
-
-            setPluginMenuItems(filteredItems);
-        } else if (uiRegistry) {
-            // 如果没有 pluginManager，显示所有菜单项
+        if (uiRegistry) {
             const items = uiRegistry.getChildMenus('window');
             setPluginMenuItems(items);
         }

@@ -12,10 +12,12 @@
         "types": "./src/index.ts",
         "import": "./src/index.ts"
       }
-    }
+    },
+    "./plugin.json": "./plugin.json"
   },
   "files": [
-    "bin/**/*"
+    "bin/**/*",
+    "plugin.json"
   ],
   "keywords": [
     "ecs",

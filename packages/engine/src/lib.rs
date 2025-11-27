@@ -163,6 +163,18 @@ impl GameEngine {
             .map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
+    /// Render sprites as overlay (without clearing screen).
+    /// 渲染精灵作为叠加层（不清除屏幕）。
+    ///
+    /// This is used for UI rendering on top of the world content.
+    /// 用于在世界内容上渲染 UI。
+    #[wasm_bindgen(js_name = renderOverlay)]
+    pub fn render_overlay(&mut self) -> std::result::Result<(), JsValue> {
+        self.engine
+            .render_overlay()
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
     /// Load a texture from URL.
     /// 从URL加载纹理。
     ///

@@ -91,14 +91,31 @@
   --transition-slow: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-bounce: 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-  /* Z-index 层级 */
+  /* Z-index 层级 / Z-index Layers
+   * 层级规范 / Layer specification:
+   * - base (1): 基础元素 / Base elements
+   * - above (5): 略高于基础 / Slightly above base
+   * - dropdown (100): 下拉菜单 / Dropdown menus
+   * - sticky (200): 固定定位元素 / Sticky positioned elements
+   * - header (300): 标题栏、工具栏 / Header, toolbar
+   * - overlay (500): 遮罩层 / Overlay backdrop
+   * - modal (600): 模态框 / Modal dialogs
+   * - popover (700): 弹出框、上下文菜单 / Popover, context menu
+   * - tooltip (800): 提示框 / Tooltips
+   * - toast (900): 通知提示 / Toast notifications
+   * - max (1000): 最高层级（启动画面等）/ Maximum (startup screen)
+   */
   --z-index-base: 1;
-  --z-index-dropdown: 10;
-  --z-index-sticky: 20;
-  --z-index-overlay: 30;
-  --z-index-modal: 40;
-  --z-index-popover: 50;
-  --z-index-tooltip: 60;
+  --z-index-above: 5;
+  --z-index-dropdown: 100;
+  --z-index-sticky: 200;
+  --z-index-header: 300;
+  --z-index-overlay: 500;
+  --z-index-modal: 600;
+  --z-index-popover: 700;
+  --z-index-tooltip: 800;
+  --z-index-toast: 900;
+  --z-index-max: 1000;
 
   /* 尺寸 */
   --size-icon-sm: 14px;

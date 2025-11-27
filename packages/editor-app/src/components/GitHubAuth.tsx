@@ -71,28 +71,21 @@ export function GitHubAuth({ githubService, onSuccess, locale }: GitHubAuthProps
         setError('');
 
         try {
-            console.log('[GitHubAuth] Starting OAuth login...');
-
             const deviceCodeResp = await githubService.requestDeviceCode();
-            console.log('[GitHubAuth] Device code received:', deviceCodeResp.user_code);
 
             setUserCode(deviceCodeResp.user_code);
             setVerificationUri(deviceCodeResp.verification_uri);
 
-            console.log('[GitHubAuth] Opening browser...');
             await open(deviceCodeResp.verification_uri);
 
-            console.log('[GitHubAuth] Starting authentication polling...');
             await githubService.authenticateWithDeviceFlow(
                 deviceCodeResp.device_code,
                 deviceCodeResp.interval,
                 (status) => {
-                    console.log('[GitHubAuth] Auth status changed:', status);
                     setAuthStatus(status === 'pending' ? 'pending' : status === 'authorized' ? 'authorized' : 'error');
                 }
             );
 
-            console.log('[GitHubAuth] Authorization successful!');
             setAuthStatus('authorized');
             setTimeout(() => {
                 onSuccess();

@@ -17,3 +17,7 @@ export { CircleColliderComponent } from './CircleColliderComponent';
 
 // 音频
 export { AudioSourceComponent } from './AudioSourceComponent';
+
+// Plugin (unified plugin system)
+export { CorePlugin, CoreRuntimeModule } from './CorePlugin';
+export type { SystemContext, PluginDescriptor, IRuntimeModuleLoader, IPluginLoader } from './CorePlugin';

@@ -59,7 +59,7 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
   transition: all 0.3s ease;
-  z-index: 100;
+  z-index: var(--z-index-dropdown);
   position: relative;
 }
 
@@ -170,7 +170,7 @@
   border-radius: 3px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   padding: 4px 0;
-  z-index: 1000;
+  z-index: var(--z-index-dropdown);
 }
 
 .locale-menu-item {
@@ -281,7 +281,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: var(--z-index-overlay);
   backdrop-filter: blur(4px);
 }
 

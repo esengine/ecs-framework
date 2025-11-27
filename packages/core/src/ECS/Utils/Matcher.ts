@@ -11,6 +11,7 @@ export interface QueryCondition {
     tag?: number;           // 按标签查询
     name?: string;          // 按名称查询
     component?: ComponentType; // 单组件查询
+    matchNothing?: boolean; // 不匹配任何实体
 }
 
 /**
@@ -105,6 +106,34 @@ export class Matcher {
      */
     public static empty(): Matcher {
         return new Matcher();
+    }
+
+    /**
+     * 创建不匹配任何实体的匹配器
+     * 用于只需要 onBegin/onEnd 生命周期方法但不需要处理实体的系统
+     *
+     * @example
+     * ```typescript
+     * // 创建一个只在帧开始时执行的系统
+     * class FrameBeginSystem extends EntitySystem {
+     *     constructor() {
+     *         super(Matcher.nothing());
+     *     }
+     *
+     *     protected onBegin(): void {
+     *         // 每帧开始时执行
+     *     }
+     *
+     *     protected process(entities: readonly Entity[]): void {
+     *         // 永远不会被调用，因为没有实体匹配
+     *     }
+     * }
+     * ```
+     */
+    public static nothing(): Matcher {
+        const matcher = new Matcher();
+        matcher.condition.matchNothing = true;
+        return matcher;
     }
 
     /**
@@ -211,12 +240,14 @@ export class Matcher {
             none: [...this.condition.none],
             ...(this.condition.tag !== undefined && { tag: this.condition.tag }),
             ...(this.condition.name !== undefined && { name: this.condition.name }),
-            ...(this.condition.component !== undefined && { component: this.condition.component })
+            ...(this.condition.component !== undefined && { component: this.condition.component }),
+            ...(this.condition.matchNothing && { matchNothing: true })
         };
     }
 
     /**
      * 检查是否为空条件
+     * 注意：matchNothing 不算空条件，因为它是明确的"不匹配任何实体"语义
      */
     public isEmpty(): boolean {
         return this.condition.all.length === 0 &&
@@ -224,7 +255,15 @@ export class Matcher {
                this.condition.none.length === 0 &&
                this.condition.tag === undefined &&
                this.condition.name === undefined &&
-               this.condition.component === undefined;
+               this.condition.component === undefined &&
+               !this.condition.matchNothing;
+    }
+
+    /**
+     * 检查是否为"不匹配任何实体"的匹配器
+     */
+    public isNothing(): boolean {
+        return this.condition.matchNothing === true;
     }
 
     /**
@@ -237,6 +276,7 @@ export class Matcher {
         delete this.condition.tag;
         delete this.condition.name;
         delete this.condition.component;
+        delete this.condition.matchNothing;
         return this;
     }
 
@@ -257,6 +297,9 @@ export class Matcher {
         if (this.condition.component !== undefined) {
             cloned.condition.component = this.condition.component;
         }
+        if (this.condition.matchNothing) {
+            cloned.condition.matchNothing = true;
+        }
         return cloned;
     }
 
@@ -264,6 +307,10 @@ export class Matcher {
      * 字符串表示
      */
     public toString(): string {
+        if (this.condition.matchNothing) {
+            return 'Matcher[nothing]';
+        }
+
         const parts: string[] = [];
 
         if (this.condition.all.length > 0) {

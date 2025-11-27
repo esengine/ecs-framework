@@ -2,7 +2,7 @@
     "compilerOptions": {
         "target": "ES2020",
         "module": "ES2020",
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
         "allowImportingTsExtensions": false,
         "lib": ["ES2020", "DOM"],
         "outDir": "./dist",
@@ -17,8 +17,15 @@
         "declarationMap": true,
         "sourceMap": true,
         "experimentalDecorators": true,
-        "emitDecoratorMetadata": true
+        "emitDecoratorMetadata": true,
+        "jsx": "react-jsx",
+        "resolveJsonModule": true
     },
-    "include": ["src/**/*"],
-    "exclude": ["node_modules", "dist"]
+    "include": ["src/**/*", "plugin.json"],
+    "exclude": ["node_modules", "dist"],
+    "references": [
+        { "path": "../core" },
+        { "path": "../components" },
+        { "path": "../editor-core" }
+    ]
 }

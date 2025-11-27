@@ -1,7 +1,7 @@
 import { Entity, Core } from '@esengine/ecs-framework';
-import { BehaviorTreeData } from './Runtime/BehaviorTreeData';
-import { BehaviorTreeRuntimeComponent } from './Runtime/BehaviorTreeRuntimeComponent';
-import { BehaviorTreeAssetManager } from './Runtime/BehaviorTreeAssetManager';
+import { BehaviorTreeData } from './execution/BehaviorTreeData';
+import { BehaviorTreeRuntimeComponent } from './execution/BehaviorTreeRuntimeComponent';
+import { BehaviorTreeAssetManager } from './execution/BehaviorTreeAssetManager';
 
 /**
  * 行为树启动辅助类

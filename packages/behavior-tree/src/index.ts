@@ -1,30 +1,38 @@
 /**
  * @esengine/behavior-tree
  *
- * 行为树系统
+ * AI Behavior Tree System with runtime execution and visual editor support
+ * AI 行为树系统，支持运行时执行和可视化编辑
  *
  * @packageDocumentation
  */
 
-// 类型定义
+// Types
 export * from './Types/TaskStatus';
 
-// Runtime
-export * from './Runtime';
+// Execution (runtime core)
+export * from './execution';
 
-// 辅助工具
+// Utilities
 export * from './BehaviorTreeStarter';
 export * from './BehaviorTreeBuilder';
 
-// 序列化
+// Serialization
 export * from './Serialization/NodeTemplates';
 export * from './Serialization/BehaviorTreeAsset';
 export * from './Serialization/EditorFormatConverter';
 export * from './Serialization/BehaviorTreeAssetSerializer';
 export * from './Serialization/EditorToBehaviorTreeDataConverter';
 
-// 服务
+// Services
 export * from './Services/GlobalBlackboardService';
 
-// 插件
-export * from './BehaviorTreePlugin';
+// Blackboard types (excluding BlackboardValueType which is already exported from TaskStatus)
+export type { BlackboardTypeDefinition } from './Blackboard/BlackboardTypes';
+export { BlackboardTypes } from './Blackboard/BlackboardTypes';
+
+// Runtime module (no editor dependencies)
+export { BehaviorTreeRuntimeModule } from './BehaviorTreeRuntimeModule';
+
+// Plugin (for PluginManager - includes editor dependencies)
+export { BehaviorTreePlugin } from './editor/index';

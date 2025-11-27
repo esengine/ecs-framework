@@ -7,7 +7,6 @@ interface ErrorDialogData {
 }
 
 interface DialogState {
-    showPluginManager: boolean;
     showProfiler: boolean;
     showPortManager: boolean;
     showSettings: boolean;
@@ -16,7 +15,6 @@ interface DialogState {
     errorDialog: ErrorDialogData | null;
     confirmDialog: ConfirmDialogData | null;
 
-    setShowPluginManager: (show: boolean) => void;
     setShowProfiler: (show: boolean) => void;
     setShowPortManager: (show: boolean) => void;
     setShowSettings: (show: boolean) => void;
@@ -28,7 +26,6 @@ interface DialogState {
 }
 
 export const useDialogStore = create<DialogState>((set) => ({
-    showPluginManager: false,
     showProfiler: false,
     showPortManager: false,
     showSettings: false,
@@ -37,7 +34,6 @@ export const useDialogStore = create<DialogState>((set) => ({
     errorDialog: null,
     confirmDialog: null,
 
-    setShowPluginManager: (show) => set({ showPluginManager: show }),
     setShowProfiler: (show) => set({ showProfiler: show }),
     setShowPortManager: (show) => set({ showPortManager: show }),
     setShowSettings: (show) => set({ showSettings: show }),
@@ -47,7 +43,6 @@ export const useDialogStore = create<DialogState>((set) => ({
     setConfirmDialog: (data) => set({ confirmDialog: data }),
 
     closeAllDialogs: () => set({
-        showPluginManager: false,
         showProfiler: false,
         showPortManager: false,
         showSettings: false,

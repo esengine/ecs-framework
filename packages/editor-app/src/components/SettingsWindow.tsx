@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
 import { X, Settings as SettingsIcon, ChevronRight } from 'lucide-react';
+import { Core } from '@esengine/ecs-framework';
 import { SettingsService } from '../services/SettingsService';
-import { SettingsRegistry, SettingCategory, SettingDescriptor } from '@esengine/editor-core';
+import { SettingsRegistry, SettingCategory, SettingDescriptor, ProjectService, PluginManager, IPluginManager } from '@esengine/editor-core';
+import { PluginListSetting } from './PluginListSetting';
 import '../styles/SettingsWindow.css';
 
 interface SettingsWindowProps {
   onClose: () => void;
   settingsRegistry: SettingsRegistry;
+  initialCategoryId?: string;
 }
 
-export function SettingsWindow({ onClose, settingsRegistry }: SettingsWindowProps) {
+export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }: SettingsWindowProps) {
     const [categories, setCategories] = useState<SettingCategory[]>([]);
-    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId || null);
     const [values, setValues] = useState<Map<string, any>>(new Map());
     const [errors, setErrors] = useState<Map<string, string>>(new Map());
 
@@ -20,19 +23,42 @@ export function SettingsWindow({ onClose, settingsRegistry }: SettingsWindowProp
         setCategories(allCategories);
 
         if (allCategories.length > 0 && !selectedCategoryId) {
-            const firstCategory = allCategories[0];
-            if (firstCategory) {
-                setSelectedCategoryId(firstCategory.id);
+            // 如果有 initialCategoryId，尝试使用它
+            if (initialCategoryId && allCategories.some(c => c.id === initialCategoryId)) {
+                setSelectedCategoryId(initialCategoryId);
+            } else {
+                const firstCategory = allCategories[0];
+                if (firstCategory) {
+                    setSelectedCategoryId(firstCategory.id);
+                }
             }
         }
 
         const settings = SettingsService.getInstance();
+        const projectService = Core.services.tryResolve<ProjectService>(ProjectService);
         const allSettings = settingsRegistry.getAllSettings();
         const initialValues = new Map<string, any>();
 
         for (const [key, descriptor] of allSettings.entries()) {
-            const value = settings.get(key, descriptor.defaultValue);
-            initialValues.set(key, value);
+            // Project-scoped settings are loaded from ProjectService
+            if (key.startsWith('project.') && projectService) {
+                if (key === 'project.uiDesignResolution.width') {
+                    const resolution = projectService.getUIDesignResolution();
+                    initialValues.set(key, resolution.width);
+                } else if (key === 'project.uiDesignResolution.height') {
+                    const resolution = projectService.getUIDesignResolution();
+                    initialValues.set(key, resolution.height);
+                } else if (key === 'project.uiDesignResolution.preset') {
+                    const resolution = projectService.getUIDesignResolution();
+                    initialValues.set(key, `${resolution.width}x${resolution.height}`);
+                } else {
+                    // For other project settings, use default
+                    initialValues.set(key, descriptor.defaultValue);
+                }
+            } else {
+                const value = settings.get(key, descriptor.defaultValue);
+                initialValues.set(key, value);
+            }
         }
 
         setValues(initialValues);
@@ -52,17 +78,48 @@ export function SettingsWindow({ onClose, settingsRegistry }: SettingsWindowProp
         setErrors(newErrors);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (errors.size > 0) {
             return;
         }
 
         const settings = SettingsService.getInstance();
+        const projectService = Core.services.tryResolve<ProjectService>(ProjectService);
         const changedSettings: Record<string, any> = {};
 
+        // Track UI resolution changes for batch saving
+        let uiResolutionChanged = false;
+        let newWidth = 1920;
+        let newHeight = 1080;
+
         for (const [key, value] of values.entries()) {
-            settings.set(key, value);
-            changedSettings[key] = value;
+            // Project-scoped settings are saved to ProjectService
+            if (key.startsWith('project.') && projectService) {
+                if (key === 'project.uiDesignResolution.width') {
+                    newWidth = value;
+                    uiResolutionChanged = true;
+                } else if (key === 'project.uiDesignResolution.height') {
+                    newHeight = value;
+                    uiResolutionChanged = true;
+                } else if (key === 'project.uiDesignResolution.preset') {
+                    // Preset changes width and height together
+                    const [w, h] = value.split('x').map(Number);
+                    if (w && h) {
+                        newWidth = w;
+                        newHeight = h;
+                        uiResolutionChanged = true;
+                    }
+                }
+                changedSettings[key] = value;
+            } else {
+                settings.set(key, value);
+                changedSettings[key] = value;
+            }
+        }
+
+        // Save UI resolution if changed
+        if (uiResolutionChanged && projectService) {
+            await projectService.setUIDesignResolution({ width: newWidth, height: newHeight });
         }
 
         window.dispatchEvent(new CustomEvent('settings:changed', {
@@ -215,6 +272,23 @@ export function SettingsWindow({ onClose, settingsRegistry }: SettingsWindowProp
                         {error && <span className="settings-error">{error}</span>}
                     </div>
                 );
+
+            case 'pluginList': {
+                const pluginManager = Core.services.tryResolve<PluginManager>(IPluginManager);
+                if (!pluginManager) {
+                    return (
+                        <div className="settings-field settings-field-full">
+                            <p className="settings-error">PluginManager 不可用</p>
+                        </div>
+                    );
+                }
+                return (
+                    <div className="settings-field settings-field-full">
+                        <PluginListSetting pluginManager={pluginManager} />
+                        {error && <span className="settings-error">{error}</span>}
+                    </div>
+                );
+            }
 
             default:
                 return null;

@@ -2,7 +2,7 @@ import type { Translations } from '@esengine/editor-core';
 
 export const zh: Translations = {
     app: {
-        title: 'ECS 框架编辑器'
+        title: 'ESEngine 编辑器'
     },
     header: {
         toolbar: {

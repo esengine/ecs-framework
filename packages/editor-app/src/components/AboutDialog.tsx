@@ -3,6 +3,7 @@ import { X, RefreshCw, Check, AlertCircle, Download, Loader2 } from 'lucide-reac
 import { checkForUpdates, installUpdate } from '../utils/updater';
 import { getVersion } from '@tauri-apps/api/app';
 import { open } from '@tauri-apps/plugin-shell';
+import { MiniParticleLogo } from './MiniParticleLogo';
 import '../styles/AboutDialog.css';
 
 interface AboutDialogProps {
@@ -33,9 +34,9 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
     const t = (key: string) => {
         const translations: Record<string, Record<string, string>> = {
             en: {
-                title: 'About ECS Framework Editor',
+                title: 'About ESEngine Editor',
                 version: 'Version',
-                description: 'High-performance ECS framework editor for game development',
+                description: 'High-performance game editor for ECS-based game development',
                 checkUpdate: 'Check for Updates',
                 checking: 'Checking...',
                 updateAvailable: 'New version available',
@@ -49,9 +50,9 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
                 github: 'GitHub'
             },
             zh: {
-                title: '关于 ECS Framework Editor',
+                title: '关于 ESEngine Editor',
                 version: '版本',
-                description: '高性能 ECS 框架编辑器，用于游戏开发',
+                description: '高性能游戏编辑器，基于 ECS 架构',
                 checkUpdate: '检查更新',
                 checking: '检查中...',
                 updateAvailable: '发现新版本',
@@ -169,11 +170,11 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
 
                 <div className="about-content">
                     <div className="about-logo">
-                        <div className="logo-placeholder">ECS</div>
+                        <MiniParticleLogo text="ESEngine" width={360} height={60} fontSize={42} />
                     </div>
 
                     <div className="about-info">
-                        <h3>ECS Framework Editor</h3>
+                        <h3>ESEngine Editor</h3>
                         <p className="about-version">
                             {t('version')}: Editor {version}
                         </p>

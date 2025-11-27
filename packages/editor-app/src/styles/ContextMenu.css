@@ -6,7 +6,7 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   padding: 4px 0;
   min-width: 180px;
-  z-index: 10000;
+  z-index: var(--z-index-popover);
   font-size: 13px;
 }
 
