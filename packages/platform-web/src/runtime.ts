@@ -21,8 +21,10 @@ class BrowserRuntime {
     private animationId: number | null = null;
     private assetManager: AssetManager;
     private engineIntegration: EngineIntegration;
+    private canvasId: string;
 
     constructor(config: RuntimeConfig) {
+        this.canvasId = config.canvasId;
         if (!Core.Instance) {
             Core.create();
         }
@@ -58,8 +60,10 @@ class BrowserRuntime {
         // 初始化模块系统
         await initializeRuntime(Core);
 
-        // 创建运行时系统
-        this.systems = createRuntimeSystems(Core.scene!, this.bridge);
+        // 创建运行时系统（传入 canvasId 用于 UI 输入绑定）
+        this.systems = createRuntimeSystems(Core.scene!, this.bridge, {
+            canvasId: this.canvasId
+        });
     }
 
     async loadScene(sceneUrl: string): Promise<void> {

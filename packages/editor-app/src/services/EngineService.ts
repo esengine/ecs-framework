@@ -9,7 +9,7 @@ import { Core, Scene, Entity, SceneSerializer } from '@esengine/ecs-framework';
 import { TransformComponent, SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystem } from '@esengine/ecs-components';
 import { TilemapComponent, TilemapRenderingSystem } from '@esengine/tilemap';
 import { BehaviorTreeExecutionSystem } from '@esengine/behavior-tree';
-import { UIRenderDataProvider, invalidateUIRenderCaches } from '@esengine/ui';
+import { UIRenderDataProvider, invalidateUIRenderCaches, UIInputSystem } from '@esengine/ui';
 import * as esEngine from '@esengine/engine';
 import {
     AssetManager,
@@ -37,6 +37,7 @@ export class EngineService {
     private tilemapSystem: TilemapRenderingSystem | null = null;
     private behaviorTreeSystem: BehaviorTreeExecutionSystem | null = null;
     private uiRenderProvider: UIRenderDataProvider | null = null;
+    private uiInputSystem: UIInputSystem | null = null;
     private initialized = false;
     private modulesInitialized = false;
     private running = false;
@@ -244,6 +245,7 @@ export class EngineService {
         this.tilemapSystem = context.tilemapSystem as TilemapRenderingSystem | undefined ?? null;
         this.behaviorTreeSystem = context.behaviorTreeSystem as BehaviorTreeExecutionSystem | undefined ?? null;
         this.uiRenderProvider = context.uiRenderProvider as UIRenderDataProvider | undefined ?? null;
+        this.uiInputSystem = context.uiInputSystem as UIInputSystem | undefined ?? null;
 
         // 设置 UI 渲染数据提供者到 EngineRenderSystem
         // Set UI render data provider to EngineRenderSystem
@@ -276,12 +278,19 @@ export class EngineService {
             pluginManager.clearSceneSystems();
         }
 
+        // Unbind UI input system before clearing
+        // 清理前解绑 UI 输入系统
+        if (this.uiInputSystem) {
+            this.uiInputSystem.unbind();
+        }
+
         // 清空本地引用（系统的实际清理由场景管理）
         // Clear local references (actual system cleanup is managed by scene)
         this.animatorSystem = null;
         this.tilemapSystem = null;
         this.behaviorTreeSystem = null;
         this.uiRenderProvider = null;
+        this.uiInputSystem = null;
         this.modulesInitialized = false;
     }
 
@@ -362,6 +371,15 @@ export class EngineService {
             this.renderSystem.setPreviewMode(true);
         }
 
+        // Bind UI input system to canvas for event handling
+        // 绑定 UI 输入系统到 canvas 以处理事件
+        if (this.uiInputSystem && this.canvasId) {
+            const canvas = document.getElementById(this.canvasId) as HTMLCanvasElement;
+            if (canvas) {
+                this.uiInputSystem.bindToCanvas(canvas);
+            }
+        }
+
         // Enable animator system and start auto-play animations
         // 启用动画系统并启动自动播放的动画
         if (this.animatorSystem) {
@@ -433,6 +451,12 @@ export class EngineService {
         // 禁用预览模式用于 UI 渲染（返回世界空间）
         if (this.renderSystem) {
             this.renderSystem.setPreviewMode(false);
+        }
+
+        // Unbind UI input system from canvas
+        // 从 canvas 解绑 UI 输入系统
+        if (this.uiInputSystem) {
+            this.uiInputSystem.unbind();
         }
 
         // Disable animator system and stop all animations

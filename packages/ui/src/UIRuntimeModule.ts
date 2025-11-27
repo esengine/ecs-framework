@@ -20,6 +20,7 @@ import {
 } from './components';
 import { UILayoutSystem } from './systems/UILayoutSystem';
 import { UIInputSystem } from './systems/UIInputSystem';
+import { UIAnimationSystem } from './systems/UIAnimationSystem';
 import { UIRenderDataProvider } from './systems/UIRenderDataProvider';
 import {
     UIRenderBeginSystem,
@@ -52,6 +53,9 @@ export class UIRuntimeModule implements IRuntimeModuleLoader {
         const layoutSystem = new UILayoutSystem();
         scene.addSystem(layoutSystem);
 
+        const animationSystem = new UIAnimationSystem();
+        scene.addSystem(animationSystem);
+
         const renderBeginSystem = new UIRenderBeginSystem();
         scene.addSystem(renderBeginSystem);
 
@@ -81,6 +85,7 @@ export class UIRuntimeModule implements IRuntimeModuleLoader {
 
         const uiRenderProvider = new UIRenderDataProvider();
         const inputSystem = new UIInputSystem();
+        inputSystem.setLayoutSystem(layoutSystem);
         scene.addSystem(inputSystem);
 
         context.uiLayoutSystem = layoutSystem;
