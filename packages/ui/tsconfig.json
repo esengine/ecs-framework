@@ -25,6 +25,7 @@
     "exclude": ["node_modules", "dist"],
     "references": [
         { "path": "../core" },
+        { "path": "../components" },
         { "path": "../editor-core" }
     ]
 }
