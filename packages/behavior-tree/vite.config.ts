@@ -82,7 +82,8 @@ export default defineConfig({
                 'react/jsx-runtime',
                 'lucide-react',
                 'zustand',
-                /^@esengine\//
+                /^@esengine\//,
+                /^@tauri-apps\//
             ],
             output: {
                 exports: 'named',
