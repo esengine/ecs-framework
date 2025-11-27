@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "ES2020",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowImportingTsExtensions": false,
     "lib": ["ES2020", "DOM"],
     "outDir": "./dist",
@@ -31,6 +31,8 @@
   "references": [
     { "path": "../core" },
     { "path": "../components" },
+    { "path": "../editor-core" },
+    { "path": "../ui" },
     { "path": "../editor-runtime" }
   ]
 }
