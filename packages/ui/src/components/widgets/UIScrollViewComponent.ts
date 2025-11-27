@@ -52,12 +52,16 @@ export class UIScrollViewComponent extends Component {
      * 内容宽度
      * Content width
      */
+    @Serialize()
+    @Property({ type: 'number', label: 'Content Width', min: 0 })
     public contentWidth: number = 0;
 
     /**
      * 内容高度
      * Content height
      */
+    @Serialize()
+    @Property({ type: 'number', label: 'Content Height', min: 0 })
     public contentHeight: number = 0;
 
     // ===== 滚动配置 Scroll Configuration =====

@@ -135,8 +135,8 @@ export type EasingName = keyof typeof Easing;
 @ECSSystem('UIAnimation')
 export class UIAnimationSystem extends EntitySystem {
     constructor() {
-        // 匹配任何可能有动画的组件
-        super(Matcher.empty());
+        // 匹配有任何动画组件的实体
+        super(Matcher.empty().any(UIButtonComponent, UIProgressBarComponent, UISliderComponent));
     }
 
     /**
