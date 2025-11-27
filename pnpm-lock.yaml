@@ -197,6 +197,9 @@ importers:
         specifier: ^4.5.2
         version: 4.5.7(@types/react@18.3.27)(react@18.3.1)
     devDependencies:
+      '@tauri-apps/plugin-fs':
+        specifier: ^2.4.2
+        version: 2.4.4
       '@types/jest':
         specifier: ^29.5.14
         version: 29.5.14
@@ -825,6 +828,9 @@ importers:
 
   packages/ui:
     dependencies:
+      '@esengine/ecs-components':
+        specifier: workspace:*
+        version: link:../components
       '@esengine/ecs-framework':
         specifier: '>=2.0.0'
         version: link:../core

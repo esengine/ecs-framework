@@ -68,6 +68,7 @@
     }
   },
   "devDependencies": {
+    "@tauri-apps/plugin-fs": "^2.4.2",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.19.17",
     "@types/react": "^18.3.12",
