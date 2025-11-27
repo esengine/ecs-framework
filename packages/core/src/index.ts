@@ -67,3 +67,6 @@ export { ComponentPool, ComponentPoolManager } from './ECS/Core/Storage';
 
 // 平台适配
 export * from './Platform';
+
+// 模块系统
+export * from './Core/ModuleSystem';

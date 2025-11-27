@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Folder, File, FileCode, FileJson, FileImage, FileText, FolderOpen, Copy, Trash2, Edit3, LayoutGrid, List, ChevronsUp, RefreshCw } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
+import { Folder, File, FileCode, FileJson, FileImage, FileText, FolderOpen, Copy, Trash2, Edit3, LayoutGrid, List, ChevronsUp, RefreshCw, Plus } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
 import { MessageHub, FileActionRegistry } from '@esengine/editor-core';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
@@ -7,6 +8,19 @@ import { FileTree, FileTreeHandle } from './FileTree';
 import { ResizablePanel } from './ResizablePanel';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import '../styles/AssetBrowser.css';
+
+/**
+ * 根据图标名称获取 Lucide 图标组件
+ */
+function getIconComponent(iconName: string | undefined, size: number = 16): React.ReactNode {
+    if (!iconName) return <Plus size={size} />;
+    const icons = LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number }>>;
+    const IconComponent = icons[iconName];
+    if (IconComponent) {
+        return <IconComponent size={size} />;
+    }
+    return <Plus size={size} />;
+}
 
 interface AssetItem {
   name: string;
@@ -304,21 +318,15 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
         } else if (asset.type === 'file') {
             const ext = asset.extension?.toLowerCase();
             if (ext === 'ecs' && onOpenScene) {
-                console.log('[AssetBrowser] Opening scene:', asset.path);
                 onOpenScene(asset.path);
                 return;
             }
 
             if (fileActionRegistry) {
-                console.log('[AssetBrowser] Handling double click for:', asset.path);
-                console.log('[AssetBrowser] Extension:', asset.extension);
                 const handled = await fileActionRegistry.handleDoubleClick(asset.path);
-                console.log('[AssetBrowser] Handled by plugin:', handled);
                 if (handled) {
                     return;
                 }
-            } else {
-                console.log('[AssetBrowser] FileActionRegistry not available');
             }
 
             try {
@@ -436,12 +444,11 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                 for (const template of templates) {
                     items.push({
                         label: `${locale === 'zh' ? '新建' : 'New'} ${template.label}`,
-                        icon: template.icon,
+                        icon: getIconComponent(template.icon, 16),
                         onClick: async () => {
-                            const fileName = `${template.defaultFileName}.${template.extension}`;
+                            const fileName = `new_${template.id}.${template.extension}`;
                             const filePath = `${asset.path}/${fileName}`;
-                            const content = await template.createContent(fileName);
-                            await TauriAPI.writeFileContent(filePath, content);
+                            await template.create(filePath);
                             if (currentPath) {
                                 await loadAssets(currentPath);
                             }

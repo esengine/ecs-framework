@@ -2,11 +2,41 @@ import { useState, useEffect, useRef } from 'react';
 import { Entity, Core } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub, SceneManagerService, CommandManager, EntityCreationRegistry, EntityCreationTemplate } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
-import { Box, Layers, Wifi, Search, Plus, Trash2, Monitor, Globe, Image, Camera, Film, ChevronRight } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
+import { Box, Layers, Wifi, Search, Plus, Trash2, Monitor, Globe, ChevronRight } from 'lucide-react';
 import { ProfilerService, RemoteEntity } from '../services/ProfilerService';
 import { confirm } from '@tauri-apps/plugin-dialog';
-import { CreateEntityCommand, CreateSpriteEntityCommand, CreateAnimatedSpriteEntityCommand, CreateCameraEntityCommand, DeleteEntityCommand } from '../application/commands/entity';
+import { CreateEntityCommand, DeleteEntityCommand } from '../application/commands/entity';
 import '../styles/SceneHierarchy.css';
+
+/**
+ * 根据图标名称获取 Lucide 图标组件
+ */
+function getIconComponent(iconName: string | undefined, size: number = 12): React.ReactNode {
+    if (!iconName) return <Plus size={size} />;
+
+    // 获取图标组件
+    const icons = LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number }>>;
+    const IconComponent = icons[iconName];
+    if (IconComponent) {
+        return <IconComponent size={size} />;
+    }
+
+    // 回退到 Plus 图标
+    return <Plus size={size} />;
+}
+
+/**
+ * 类别图标映射
+ */
+const categoryIconMap: Record<string, string> = {
+    'rendering': 'Image',
+    'ui': 'LayoutGrid',
+    'physics': 'Box',
+    'audio': 'Volume2',
+    'basic': 'Plus',
+    'other': 'MoreHorizontal',
+};
 
 type ViewMode = 'local' | 'remote';
 
@@ -261,43 +291,6 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         commandManager.execute(command);
     };
 
-    const handleCreateSpriteEntity = () => {
-        // Count only Sprite entities for naming
-        const spriteCount = entityStore.getAllEntities().filter((e) => e.name.startsWith('Sprite ')).length;
-        const entityName = `Sprite ${spriteCount + 1}`;
-
-        const command = new CreateSpriteEntityCommand(
-            entityStore,
-            messageHub,
-            entityName
-        );
-        commandManager.execute(command);
-    };
-
-    const handleCreateAnimatedSpriteEntity = () => {
-        const animCount = entityStore.getAllEntities().filter((e) => e.name.startsWith('AnimatedSprite ')).length;
-        const entityName = `AnimatedSprite ${animCount + 1}`;
-
-        const command = new CreateAnimatedSpriteEntityCommand(
-            entityStore,
-            messageHub,
-            entityName
-        );
-        commandManager.execute(command);
-    };
-
-    const handleCreateCameraEntity = () => {
-        const entityCount = entityStore.getAllEntities().length;
-        const entityName = `Camera ${entityCount + 1}`;
-
-        const command = new CreateCameraEntityCommand(
-            entityStore,
-            messageHub,
-            entityName
-        );
-        commandManager.execute(command);
-    };
-
     const handleDeleteEntity = async () => {
         if (!selectedId) return;
 
@@ -539,9 +532,6 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                     entityId={contextMenu.entityId}
                     pluginTemplates={pluginTemplates}
                     onCreateEmpty={() => { handleCreateEntity(); closeContextMenu(); }}
-                    onCreateSprite={() => { handleCreateSpriteEntity(); closeContextMenu(); }}
-                    onCreateAnimatedSprite={() => { handleCreateAnimatedSpriteEntity(); closeContextMenu(); }}
-                    onCreateCamera={() => { handleCreateCameraEntity(); closeContextMenu(); }}
                     onCreateFromTemplate={async (template) => {
                         await template.create(contextMenu.entityId ?? undefined);
                         closeContextMenu();
@@ -561,9 +551,6 @@ interface ContextMenuWithSubmenuProps {
     entityId: number | null;
     pluginTemplates: EntityCreationTemplate[];
     onCreateEmpty: () => void;
-    onCreateSprite: () => void;
-    onCreateAnimatedSprite: () => void;
-    onCreateCamera: () => void;
     onCreateFromTemplate: (template: EntityCreationTemplate) => void;
     onDelete: () => void;
     onClose: () => void;
@@ -571,8 +558,7 @@ interface ContextMenuWithSubmenuProps {
 
 function ContextMenuWithSubmenu({
     x, y, locale, entityId, pluginTemplates,
-    onCreateEmpty, onCreateSprite, onCreateAnimatedSprite, onCreateCamera,
-    onCreateFromTemplate, onDelete
+    onCreateEmpty, onCreateFromTemplate, onDelete
 }: ContextMenuWithSubmenuProps) {
     const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
     const [submenuPosition, setSubmenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -580,7 +566,7 @@ function ContextMenuWithSubmenu({
 
     const categoryLabels: Record<string, { zh: string; en: string }> = {
         'basic': { zh: '基础', en: 'Basic' },
-        'rendering': { zh: '渲染', en: 'Rendering' },
+        'rendering': { zh: '2D 对象', en: '2D Objects' },
         'ui': { zh: 'UI', en: 'UI' },
         'physics': { zh: '物理', en: 'Physics' },
         'audio': { zh: '音频', en: 'Audio' },
@@ -592,6 +578,7 @@ function ContextMenuWithSubmenu({
         return labels ? (locale === 'zh' ? labels.zh : labels.en) : category;
     };
 
+    // 将模板按类别分组（所有模板现在都来自插件）
     const templatesByCategory = pluginTemplates.reduce((acc, template) => {
         const cat = template.category || 'other';
         if (!acc[cat]) acc[cat] = [];
@@ -599,13 +586,24 @@ function ContextMenuWithSubmenu({
         return acc;
     }, {} as Record<string, EntityCreationTemplate[]>);
 
-    const hasPluginCategories = Object.keys(templatesByCategory).length > 0;
+    // 按顺序排序每个类别内的模板
+    Object.values(templatesByCategory).forEach(templates => {
+        templates.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
+    });
 
     const handleSubmenuEnter = (category: string, e: React.MouseEvent) => {
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         setSubmenuPosition({ x: rect.right - 4, y: rect.top });
         setActiveSubmenu(category);
     };
+
+    // 定义类别显示顺序
+    const categoryOrder = ['rendering', 'ui', 'physics', 'audio', 'basic', 'other'];
+    const sortedCategories = Object.entries(templatesByCategory).sort(([a], [b]) => {
+        const orderA = categoryOrder.indexOf(a);
+        const orderB = categoryOrder.indexOf(b);
+        return (orderA === -1 ? 999 : orderA) - (orderB === -1 ? 999 : orderB);
+    });
 
     return (
         <div
@@ -618,41 +616,10 @@ function ContextMenuWithSubmenu({
                 <span>{locale === 'zh' ? '创建空实体' : 'Create Empty Entity'}</span>
             </button>
 
-            <div className="context-menu-divider" />
+            {sortedCategories.length > 0 && <div className="context-menu-divider" />}
 
-            <div
-                className="context-menu-item-with-submenu"
-                onMouseEnter={(e) => handleSubmenuEnter('rendering', e)}
-                onMouseLeave={() => setActiveSubmenu(null)}
-            >
-                <button>
-                    <Image size={12} />
-                    <span>{locale === 'zh' ? '2D 对象' : '2D Objects'}</span>
-                    <ChevronRight size={12} className="submenu-arrow" />
-                </button>
-                {activeSubmenu === 'rendering' && (
-                    <div
-                        className="context-submenu"
-                        style={{ left: submenuPosition.x, top: submenuPosition.y }}
-                        onMouseEnter={() => setActiveSubmenu('rendering')}
-                    >
-                        <button onClick={onCreateSprite}>
-                            <Image size={12} />
-                            <span>Sprite</span>
-                        </button>
-                        <button onClick={onCreateAnimatedSprite}>
-                            <Film size={12} />
-                            <span>{locale === 'zh' ? '动画 Sprite' : 'Animated Sprite'}</span>
-                        </button>
-                        <button onClick={onCreateCamera}>
-                            <Camera size={12} />
-                            <span>{locale === 'zh' ? '相机' : 'Camera'}</span>
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            {hasPluginCategories && Object.entries(templatesByCategory).map(([category, templates]) => (
+            {/* 按类别渲染所有模板 */}
+            {sortedCategories.map(([category, templates]) => (
                 <div
                     key={category}
                     className="context-menu-item-with-submenu"
@@ -660,7 +627,7 @@ function ContextMenuWithSubmenu({
                     onMouseLeave={() => setActiveSubmenu(null)}
                 >
                     <button>
-                        {templates[0]?.icon || <Plus size={12} />}
+                        {getIconComponent(categoryIconMap[category], 12)}
                         <span>{getCategoryLabel(category)}</span>
                         <ChevronRight size={12} className="submenu-arrow" />
                     </button>
@@ -672,7 +639,7 @@ function ContextMenuWithSubmenu({
                         >
                             {templates.map((template) => (
                                 <button key={template.id} onClick={() => onCreateFromTemplate(template)}>
-                                    {template.icon || <Plus size={12} />}
+                                    {getIconComponent(template.icon as string, 12)}
                                     <span>{template.label}</span>
                                 </button>
                             ))}

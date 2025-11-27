@@ -14,14 +14,23 @@ import './Executors';
  */
 @ECSSystem('BehaviorTreeExecution')
 export class BehaviorTreeExecutionSystem extends EntitySystem {
-    private assetManager: BehaviorTreeAssetManager;
+    private assetManager: BehaviorTreeAssetManager | null = null;
     private executorRegistry: NodeExecutorRegistry;
+    private coreInstance: typeof Core | null = null;
 
-    constructor() {
+    constructor(coreInstance?: typeof Core) {
         super(Matcher.empty().all(BehaviorTreeRuntimeComponent));
-        this.assetManager = Core.services.resolve(BehaviorTreeAssetManager);
+        this.coreInstance = coreInstance || null;
         this.executorRegistry = new NodeExecutorRegistry();
         this.registerBuiltInExecutors();
+    }
+
+    private getAssetManager(): BehaviorTreeAssetManager {
+        if (!this.assetManager) {
+            const core = this.coreInstance || Core;
+            this.assetManager = core.services.resolve(BehaviorTreeAssetManager);
+        }
+        return this.assetManager;
     }
 
     /**
@@ -55,7 +64,7 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
                 continue;
             }
 
-            const treeData = this.assetManager.getAsset(runtime.treeAssetId);
+            const treeData = this.getAssetManager().getAsset(runtime.treeAssetId);
             if (!treeData) {
                 this.logger.warn(`未找到行为树资产: ${runtime.treeAssetId}`);
                 continue;

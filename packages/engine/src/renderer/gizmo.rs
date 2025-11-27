@@ -164,6 +164,221 @@ impl GizmoRenderer {
         ]);
     }
 
+    /// Render axis indicator at top-right corner of the viewport.
+    /// 在视口右上角渲染坐标轴指示器。
+    ///
+    /// This is drawn in screen space and is not affected by camera pan/zoom.
+    /// 这是在屏幕空间绘制的，不受相机平移/缩放影响。
+    pub fn render_axis_indicator(
+        &self,
+        gl: &WebGl2RenderingContext,
+        viewport_width: f32,
+        viewport_height: f32,
+    ) {
+        // Skip if viewport is too small
+        if viewport_width < 100.0 || viewport_height < 100.0 {
+            return;
+        }
+
+        gl.use_program(Some(&self.program));
+
+        // Disable depth test for screen-space UI
+        gl.disable(WebGl2RenderingContext::DEPTH_TEST);
+
+        // Create orthographic projection for screen space (NDC: -1 to 1)
+        let half_w = viewport_width / 2.0;
+        let half_h = viewport_height / 2.0;
+
+        let projection = [
+            1.0 / half_w, 0.0, 0.0,
+            0.0, 1.0 / half_h, 0.0,
+            0.0, 0.0, 1.0,
+        ];
+
+        let proj_loc = gl.get_uniform_location(&self.program, "u_projection");
+        gl.uniform_matrix3fv_with_f32_array(proj_loc.as_ref(), false, &projection);
+
+        let color_loc = gl.get_uniform_location(&self.program, "u_color");
+
+        gl.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&self.vertex_buffer));
+        gl.enable_vertex_attrib_array(0);
+        gl.vertex_attrib_pointer_with_i32(0, 2, WebGl2RenderingContext::FLOAT, false, 0, 0);
+
+        // Position in top-right corner (increased padding to prevent X label clipping)
+        // 位置在右上角（增加边距防止 X 标签被裁剪）
+        let padding_x = 70.0;  // More padding on X for the label
+        let padding_y = 55.0;
+        let center_x = half_w - padding_x;
+        let center_y = half_h - padding_y;
+        let axis_length = 30.0;  // Longer axes for better visibility
+        let arrow_size = 8.0;
+        let label_offset = 10.0;
+        let label_size = 4.0;
+
+        // Draw semi-transparent background circle for better visibility
+        // 绘制半透明背景圆以提高可见性
+        let bg_segments = 32;
+        let bg_radius = 45.0;
+        let mut bg_vertices = Vec::with_capacity((bg_segments + 1) * 2);
+        bg_vertices.push(center_x);
+        bg_vertices.push(center_y);
+        for i in 0..=bg_segments {
+            let angle = (i as f32 / bg_segments as f32) * std::f32::consts::PI * 2.0;
+            bg_vertices.push(center_x + bg_radius * angle.cos());
+            bg_vertices.push(center_y + bg_radius * angle.sin());
+        }
+
+        unsafe {
+            let array = js_sys::Float32Array::view(&bg_vertices);
+            gl.buffer_data_with_array_buffer_view(
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &array,
+                WebGl2RenderingContext::DYNAMIC_DRAW,
+            );
+        }
+        gl.uniform4f(color_loc.as_ref(), 0.1, 0.1, 0.1, 0.7);
+        gl.draw_arrays(WebGl2RenderingContext::TRIANGLE_FAN, 0, (bg_segments + 2) as i32);
+
+        // Draw origin point (filled circle)
+        // 绘制原点（实心圆）
+        let origin_segments = 12;
+        let origin_radius = 3.0;
+        let mut origin_vertices = Vec::with_capacity((origin_segments + 1) * 2);
+        origin_vertices.push(center_x);
+        origin_vertices.push(center_y);
+        for i in 0..=origin_segments {
+            let angle = (i as f32 / origin_segments as f32) * std::f32::consts::PI * 2.0;
+            origin_vertices.push(center_x + origin_radius * angle.cos());
+            origin_vertices.push(center_y + origin_radius * angle.sin());
+        }
+
+        unsafe {
+            let array = js_sys::Float32Array::view(&origin_vertices);
+            gl.buffer_data_with_array_buffer_view(
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &array,
+                WebGl2RenderingContext::DYNAMIC_DRAW,
+            );
+        }
+        gl.uniform4f(color_loc.as_ref(), 0.8, 0.8, 0.8, 1.0);
+        gl.draw_arrays(WebGl2RenderingContext::TRIANGLE_FAN, 0, (origin_segments + 2) as i32);
+
+        // X axis (red, pointing right)
+        let x_end_x = center_x + axis_length;
+        let x_end_y = center_y;
+
+        // X axis line (thicker effect with multiple lines)
+        let x_axis = [
+            center_x + origin_radius, center_y,
+            x_end_x - arrow_size * 0.3, x_end_y,
+        ];
+        unsafe {
+            let array = js_sys::Float32Array::view(&x_axis);
+            gl.buffer_data_with_array_buffer_view(
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &array,
+                WebGl2RenderingContext::DYNAMIC_DRAW,
+            );
+        }
+        gl.uniform4f(color_loc.as_ref(), 1.0, 0.4, 0.4, 1.0);
+        gl.draw_arrays(WebGl2RenderingContext::LINES, 0, 2);
+
+        // X arrow head (filled triangle)
+        let x_arrow = [
+            x_end_x, x_end_y,
+            x_end_x - arrow_size, x_end_y + arrow_size * 0.4,
+            x_end_x - arrow_size, x_end_y - arrow_size * 0.4,
+        ];
+        unsafe {
+            let array = js_sys::Float32Array::view(&x_arrow);
+            gl.buffer_data_with_array_buffer_view(
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &array,
+                WebGl2RenderingContext::DYNAMIC_DRAW,
+            );
+        }
+        gl.draw_arrays(WebGl2RenderingContext::TRIANGLES, 0, 3);
+
+        // X label
+        let lx = x_end_x + label_offset;
+        let ly = x_end_y;
+        let x_label = [
+            lx - label_size, ly + label_size,
+            lx + label_size, ly - label_size,
+            lx - label_size, ly - label_size,
+            lx + label_size, ly + label_size,
+        ];
+        unsafe {
+            let array = js_sys::Float32Array::view(&x_label);
+            gl.buffer_data_with_array_buffer_view(
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &array,
+                WebGl2RenderingContext::DYNAMIC_DRAW,
+            );
+        }
+        gl.draw_arrays(WebGl2RenderingContext::LINES, 0, 4);
+
+        // Y axis (green, pointing up)
+        let y_end_x = center_x;
+        let y_end_y = center_y + axis_length;
+
+        // Y axis line
+        let y_axis = [
+            center_x, center_y + origin_radius,
+            y_end_x, y_end_y - arrow_size * 0.3,
+        ];
+        unsafe {
+            let array = js_sys::Float32Array::view(&y_axis);
+            gl.buffer_data_with_array_buffer_view(
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &array,
+                WebGl2RenderingContext::DYNAMIC_DRAW,
+            );
+        }
+        gl.uniform4f(color_loc.as_ref(), 0.4, 1.0, 0.4, 1.0);
+        gl.draw_arrays(WebGl2RenderingContext::LINES, 0, 2);
+
+        // Y arrow head (filled triangle)
+        let y_arrow = [
+            y_end_x, y_end_y,
+            y_end_x - arrow_size * 0.4, y_end_y - arrow_size,
+            y_end_x + arrow_size * 0.4, y_end_y - arrow_size,
+        ];
+        unsafe {
+            let array = js_sys::Float32Array::view(&y_arrow);
+            gl.buffer_data_with_array_buffer_view(
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &array,
+                WebGl2RenderingContext::DYNAMIC_DRAW,
+            );
+        }
+        gl.draw_arrays(WebGl2RenderingContext::TRIANGLES, 0, 3);
+
+        // Y label
+        let lx = y_end_x;
+        let ly = y_end_y + label_offset;
+        let y_label = [
+            lx - label_size, ly + label_size,
+            lx, ly,
+            lx + label_size, ly + label_size,
+            lx, ly,
+            lx, ly,
+            lx, ly - label_size * 0.8,
+        ];
+        unsafe {
+            let array = js_sys::Float32Array::view(&y_label);
+            gl.buffer_data_with_array_buffer_view(
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &array,
+                WebGl2RenderingContext::DYNAMIC_DRAW,
+            );
+        }
+        gl.draw_arrays(WebGl2RenderingContext::LINES, 0, 6);
+
+        // Cleanup
+        gl.disable_vertex_attrib_array(0);
+    }
+
     /// Render all pending gizmos.
     /// 渲染所有待渲染的Gizmo。
     pub fn render(&mut self, gl: &WebGl2RenderingContext, camera: &Camera2D) {

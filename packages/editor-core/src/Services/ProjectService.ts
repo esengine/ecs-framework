@@ -6,7 +6,7 @@ import type { IFileAPI } from '../Types/IFileAPI';
 
 const logger = createLogger('ProjectService');
 
-export type ProjectType = 'cocos' | 'laya' | 'unknown';
+export type ProjectType = 'esengine' | 'unknown';
 
 export interface ProjectInfo {
     path: string;
@@ -22,6 +22,8 @@ export interface ProjectConfig {
     buildOutput?: string;
     scenesPath?: string;
     defaultScene?: string;
+    /** 启用的模块 ID 列表 */
+    enabledModules?: string[];
 }
 
 @Injectable()
@@ -47,12 +49,13 @@ export class ProjectService implements IService {
             }
 
             const config: ProjectConfig = {
-                projectType: 'cocos',
+                projectType: 'esengine',
                 componentsPath: 'components',
                 componentPattern: '**/*.ts',
                 buildOutput: 'temp/editor-components',
-                scenesPath: 'ecs-scenes',
-                defaultScene: 'main.ecs'
+                scenesPath: 'scenes',
+                defaultScene: 'main.ecs',
+                enabledModules: []
             };
 
             await this.fileAPI.writeFileContent(configPath, JSON.stringify(config, null, 2));
@@ -176,7 +179,7 @@ export class ProjectService implements IService {
 
         try {
             projectInfo.configPath = configPath;
-            projectInfo.type = 'cocos';
+            projectInfo.type = 'esengine';
         } catch (error) {
             logger.warn('No ecs-editor.config.json found, using defaults');
         }
@@ -185,14 +188,80 @@ export class ProjectService implements IService {
     }
 
     private async loadConfig(configPath: string): Promise<ProjectConfig> {
-        return {
-            projectType: 'cocos',
-            componentsPath: '',
-            componentPattern: '**/*.ts',
-            buildOutput: 'temp/editor-components',
-            scenesPath: 'ecs-scenes',
-            defaultScene: 'main.ecs'
+        try {
+            const content = await this.fileAPI.readFileContent(configPath);
+            const config = JSON.parse(content) as ProjectConfig;
+            return {
+                projectType: config.projectType || 'esengine',
+                componentsPath: config.componentsPath || '',
+                componentPattern: config.componentPattern || '**/*.ts',
+                buildOutput: config.buildOutput || 'temp/editor-components',
+                scenesPath: config.scenesPath || 'scenes',
+                defaultScene: config.defaultScene || 'main.ecs',
+                enabledModules: config.enabledModules
+            };
+        } catch (error) {
+            logger.warn('Failed to load config, using defaults', error);
+            return {
+                projectType: 'esengine',
+                componentsPath: '',
+                componentPattern: '**/*.ts',
+                buildOutput: 'temp/editor-components',
+                scenesPath: 'scenes',
+                defaultScene: 'main.ecs'
+            };
+        }
+    }
+
+    /**
+     * 保存项目配置
+     */
+    public async saveConfig(): Promise<void> {
+        if (!this.currentProject?.configPath || !this.projectConfig) {
+            logger.warn('No project or config to save');
+            return;
+        }
+
+        try {
+            const content = JSON.stringify(this.projectConfig, null, 2);
+            await this.fileAPI.writeFileContent(this.currentProject.configPath, content);
+            logger.info('Project config saved');
+        } catch (error) {
+            logger.error('Failed to save project config', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 更新项目配置
+     */
+    public async updateConfig(updates: Partial<ProjectConfig>): Promise<void> {
+        if (!this.projectConfig) {
+            logger.warn('No project config to update');
+            return;
+        }
+
+        this.projectConfig = {
+            ...this.projectConfig,
+            ...updates
         };
+
+        await this.saveConfig();
+        await this.messageHub.publish('project:configUpdated', { config: this.projectConfig });
+    }
+
+    /**
+     * 获取启用的模块列表
+     */
+    public getEnabledModules(): string[] {
+        return this.projectConfig?.enabledModules || [];
+    }
+
+    /**
+     * 设置启用的模块列表
+     */
+    public async setEnabledModules(moduleIds: string[]): Promise<void> {
+        await this.updateConfig({ enabledModules: moduleIds });
     }
 
     public dispose(): void {

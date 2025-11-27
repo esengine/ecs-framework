@@ -3,7 +3,17 @@ import commonjs from '@rollup/plugin-commonjs';
 import typescript from '@rollup/plugin-typescript';
 import dts from 'rollup-plugin-dts';
 
-const external = ['@esengine/platform-common'];
+// 所有 @esengine/* 包设为 external，避免多实例问题
+const external = [
+    '@esengine/platform-common',
+    '@esengine/ecs-framework',
+    '@esengine/ecs-components',
+    '@esengine/tilemap',
+    '@esengine/ui',
+    '@esengine/behavior-tree',
+    '@esengine/ecs-engine-bindgen',
+    '@esengine/asset-system',
+];
 
 export default [
     {

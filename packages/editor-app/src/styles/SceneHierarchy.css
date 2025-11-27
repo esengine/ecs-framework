@@ -503,7 +503,7 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   padding: var(--spacing-xs);
   min-width: 150px;
-  z-index: 1001;
+  z-index: var(--z-index-popover);
 }
 
 .context-submenu button {

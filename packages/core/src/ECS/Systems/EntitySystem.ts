@@ -284,6 +284,11 @@ export abstract class EntitySystem implements ISystemBase, IService {
         const querySystem = this.scene.querySystem;
         let currentEntities: readonly Entity[] = [];
 
+        // matchNothing 条件返回空数组（用于只需要生命周期方法的系统）
+        if (this._matcher.isNothing()) {
+            return [];
+        }
+
         // 空条件返回所有实体
         if (this._matcher.isEmpty()) {
             currentEntities = querySystem.getAllEntities();

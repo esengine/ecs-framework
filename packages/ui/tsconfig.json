@@ -17,8 +17,14 @@
         "declarationMap": true,
         "sourceMap": true,
         "experimentalDecorators": true,
-        "emitDecoratorMetadata": true
+        "emitDecoratorMetadata": true,
+        "jsx": "react-jsx",
+        "resolveJsonModule": true
     },
-    "include": ["src/**/*"],
-    "exclude": ["node_modules", "dist"]
+    "include": ["src/**/*", "plugin.json"],
+    "exclude": ["node_modules", "dist"],
+    "references": [
+        { "path": "../core" },
+        { "path": "../editor-core" }
+    ]
 }

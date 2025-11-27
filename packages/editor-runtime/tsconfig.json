@@ -5,7 +5,6 @@
     "moduleResolution": "bundler",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "strict": true,
-    "noEmit": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -14,13 +13,14 @@
     "jsx": "react-jsx",
     "declaration": true,
     "declarationMap": true,
+    "declarationDir": "dist",
+    "emitDeclarationOnly": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
   "include": ["src"],
   "references": [
     { "path": "../core" },
-    { "path": "../editor-core" },
-    { "path": "../behavior-tree" }
+    { "path": "../editor-core" }
   ]
 }

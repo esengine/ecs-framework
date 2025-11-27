@@ -4,6 +4,8 @@
  *
  * Resolves runtime module paths based on environment and configuration
  * 根据环境和配置解析运行时模块路径
+ *
+ * 运行时文件打包在编辑器内，离线可用
  */
 
 import { TauriAPI } from '../api/tauri';
@@ -14,7 +16,8 @@ const sanitizePath = (path: string): string => {
     const segments = path.split(/[/\\]/).filter((segment) =>
         segment !== '..' && segment !== '.' && segment !== ''
     );
-    return segments.join('/');
+    // Use Windows backslash for consistency
+    return segments.join('\\');
 };
 
 // Check if we're in development mode
@@ -44,6 +47,7 @@ export class RuntimeResolver {
     private static instance: RuntimeResolver;
     private config: RuntimeConfig | null = null;
     private baseDir: string = '';
+    private isDev: boolean = false;  // Store dev mode state at initialization time
 
     private constructor() {}
 
@@ -71,7 +75,9 @@ export class RuntimeResolver {
         this.config = await response.json();
 
         // Determine base directory based on environment
-        if (isDevelopment()) {
+        this.isDev = isDevelopment();
+
+        if (this.isDev) {
             // In development, use the project root
             // We need to go up from src-tauri to get the actual project root
             const currentDir = await TauriAPI.getCurrentDir();
@@ -140,14 +146,14 @@ export class RuntimeResolver {
             throw new Error(`Runtime module ${moduleName} not found in configuration`);
         }
 
-        const isDev = isDevelopment();
         const files: string[] = [];
         let sourcePath: string;
 
-        if (isDev) {
+        if (this.isDev) {
             // Development mode - use relative paths from workspace root
             const devPath = moduleConfig.development.path;
-            sourcePath = `${this.baseDir}\\packages\\${sanitizePath(devPath)}`;
+            const sanitizedPath = sanitizePath(devPath);
+            sourcePath = `${this.baseDir}\\packages\\${sanitizedPath}`;
 
             if (moduleConfig.main) {
                 files.push(`${sourcePath}\\${moduleConfig.main}`);
@@ -181,6 +187,9 @@ export class RuntimeResolver {
     /**
      * Prepare runtime files for browser preview
      * 为浏览器预览准备运行时文件
+     *
+     * 开发模式：从本地 workspace 复制
+     * 生产模式：从编辑器内置资源复制
      */
     async prepareRuntimeFiles(targetDir: string): Promise<void> {
         // Ensure target directory exists

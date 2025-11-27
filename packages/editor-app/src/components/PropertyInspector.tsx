@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Component, Core, getComponentInstanceTypeName } from '@esengine/ecs-framework';
-import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub, IFileSystemService } from '@esengine/editor-core';
-import type { IFileSystem } from '@esengine/editor-core';
-import { ChevronRight, ChevronDown, ArrowRight, Lock } from 'lucide-react';
+import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub } from '@esengine/editor-core';
+import { ChevronRight, ChevronDown, Lock } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { AnimationClipsFieldEditor } from '../infrastructure/field-editors/AnimationClipsFieldEditor';
-import { AssetSaveDialog } from './dialogs/AssetSaveDialog';
+import { AssetField } from './inspectors/fields/AssetField';
 import '../styles/PropertyInspector.css';
 
 const animationClipsEditor = new AnimationClipsFieldEditor();
@@ -198,18 +197,55 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
             case 'asset': {
                 const controlledBy = getControlledBy(propertyName);
                 const assetMeta = metadata as { assetType?: string; extensions?: string[] };
+                const fileExtension = assetMeta.extensions?.[0] || '';
+
+                const handleNavigate = (path: string) => {
+                    const messageHub = Core.services.tryResolve(MessageHub);
+                    if (messageHub) {
+                        messageHub.publish('asset:reveal', { path });
+                    }
+                };
+
+                const handleCreate = () => {
+                    const messageHub = Core.services.tryResolve(MessageHub);
+                    if (messageHub) {
+                        if (fileExtension === '.tilemap.json') {
+                            messageHub.publish('tilemap:create-asset', {
+                                entityId: entity?.id,
+                                onChange: (newValue: string) => handleChange(propertyName, newValue)
+                            });
+                        } else if (fileExtension === '.btree') {
+                            messageHub.publish('behavior-tree:create-asset', {
+                                entityId: entity?.id,
+                                onChange: (newValue: string) => handleChange(propertyName, newValue)
+                            });
+                        }
+                    }
+                };
+
+                const creatableExtensions = ['.tilemap.json', '.btree'];
+                const canCreate = assetMeta.extensions?.some(ext => creatableExtensions.includes(ext));
+
                 return (
-                    <AssetDropField
-                        key={propertyName}
-                        label={label}
-                        value={value ?? ''}
-                        assetType={assetMeta.assetType}
-                        extensions={assetMeta.extensions}
-                        readOnly={metadata.readOnly || !!controlledBy}
-                        controlledBy={controlledBy}
-                        entityId={entity?.id?.toString()}
-                        onChange={(newValue) => handleChange(propertyName, newValue)}
-                    />
+                    <div key={propertyName} className="property-field">
+                        <label className="property-label">
+                            {label}
+                            {controlledBy && (
+                                <span className="property-controlled-icon" title={`Controlled by ${controlledBy}`}>
+                                    <Lock size={10} />
+                                </span>
+                            )}
+                        </label>
+                        <AssetField
+                            value={value ?? null}
+                            onChange={(newValue) => handleChange(propertyName, newValue || '')}
+                            fileExtension={fileExtension}
+                            placeholder="拖拽或选择资源"
+                            readonly={metadata.readOnly || !!controlledBy}
+                            onNavigate={handleNavigate}
+                            onCreate={canCreate ? handleCreate : undefined}
+                        />
+                    </div>
                 );
             }
 
@@ -885,223 +921,3 @@ function EnumField({ label, value, options, readOnly, onChange }: EnumFieldProps
     );
 }
 
-interface AssetDropFieldProps {
-  label: string;
-  value: string;
-  assetType?: string;
-  extensions?: string[];
-  readOnly?: boolean;
-  controlledBy?: string;
-  entityId?: string;
-  onChange: (value: string) => void;
-}
-
-function AssetDropField({ label, value, assetType, extensions, readOnly, controlledBy, entityId, onChange }: AssetDropFieldProps) {
-    const [isDragging, setIsDragging] = useState(false);
-    const [showSaveDialog, setShowSaveDialog] = useState(false);
-
-    // Determine if this asset type can be created
-    const creatableExtensions = ['.tilemap.json', '.btree'];
-    const canCreate = extensions?.some(ext => creatableExtensions.includes(ext));
-    const fileExtension = extensions?.[0];
-
-    const handleCreate = () => {
-        setShowSaveDialog(true);
-    };
-
-    const handleSaveAsset = async (relativePath: string) => {
-        const fileSystem = Core.services.tryResolve<IFileSystem>(IFileSystemService);
-        const messageHub = Core.services.tryResolve(MessageHub);
-
-        if (!fileSystem) {
-            console.error('[AssetDropField] FileSystem service not available');
-            return;
-        }
-
-        try {
-            // Get absolute path from project
-            const projectService = Core.services.tryResolve(
-                (await import('@esengine/editor-core')).ProjectService
-            );
-            const currentProject = projectService?.getCurrentProject();
-            if (!currentProject) {
-                console.error('[AssetDropField] No project loaded');
-                return;
-            }
-
-            const absolutePath = `${currentProject.path}/${relativePath}`.replace(/\\/g, '/');
-
-            // Create default content based on file type
-            let defaultContent = '';
-            if (fileExtension === '.tilemap.json') {
-                defaultContent = JSON.stringify({
-                    name: 'New Tilemap',
-                    version: 2,
-                    width: 20,
-                    height: 15,
-                    tileWidth: 16,
-                    tileHeight: 16,
-                    layers: [
-                        {
-                            id: 'default',
-                            name: 'Layer 0',
-                            visible: true,
-                            opacity: 1,
-                            data: new Array(20 * 15).fill(0)
-                        }
-                    ],
-                    tilesets: []
-                }, null, 2);
-            } else if (fileExtension === '.btree') {
-                defaultContent = JSON.stringify({
-                    name: 'New Behavior Tree',
-                    version: 1,
-                    nodes: [],
-                    connections: []
-                }, null, 2);
-            }
-
-            // Write file
-            await fileSystem.writeFile(absolutePath, defaultContent);
-
-            // Update component with relative path
-            onChange(relativePath);
-
-            // Open editor panel if tilemap
-            if (messageHub && fileExtension === '.tilemap.json' && entityId) {
-                const { useTilemapEditorStore } = await import('@esengine/tilemap-editor');
-                useTilemapEditorStore.getState().setEntityId(entityId);
-                messageHub.publish('dynamic-panel:open', { panelId: 'tilemap-editor', title: 'Tilemap Editor' });
-            }
-
-            console.log('[AssetDropField] Created asset:', relativePath);
-        } catch (error) {
-            console.error('[AssetDropField] Failed to create asset:', error);
-        }
-    };
-
-    const handleDragEnter = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!readOnly) setIsDragging(true);
-    };
-
-    const handleDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-        if (readOnly) return;
-
-        const assetPath = e.dataTransfer.getData('asset-path');
-        if (assetPath) {
-            if (fileExtension) {
-                const extensions = fileExtension.split(',').map((ext) => ext.trim().toLowerCase());
-                const lowerPath = assetPath.toLowerCase();
-                // Check if the path ends with any of the specified extensions
-                // This handles both simple extensions (.json) and compound extensions (.tilemap.json)
-                const isValidExtension = extensions.some((ext) => {
-                    const normalizedExt = ext.startsWith('.') ? ext : `.${ext}`;
-                    return lowerPath.endsWith(normalizedExt);
-                });
-                if (isValidExtension) {
-                    onChange(assetPath);
-                }
-            } else {
-                onChange(assetPath);
-            }
-        }
-    };
-
-    const getFileName = (path: string) => {
-        if (!path) return '';
-        const parts = path.split(/[\\/]/);
-        return parts[parts.length - 1];
-    };
-
-    const handleClear = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (!readOnly) onChange('');
-    };
-
-    const handleNavigate = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (value) {
-            const messageHub = Core.services.tryResolve(MessageHub);
-            if (messageHub) {
-                messageHub.publish('asset:reveal', { path: value });
-            }
-        }
-    };
-
-    return (
-        <div className="property-field">
-            <label className="property-label">
-                {label}
-                {controlledBy && (
-                    <span className="property-controlled-icon" title={`Controlled by ${controlledBy}`}>
-                        <Lock size={10} />
-                    </span>
-                )}
-            </label>
-            <div
-                className={`property-asset-drop ${isDragging ? 'dragging' : ''} ${value ? 'has-value' : ''} ${controlledBy ? 'controlled' : ''}`}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                title={controlledBy ? `Controlled by ${controlledBy}` : (value || 'Drop asset here')}
-            >
-                <span className="property-asset-text">
-                    {value ? getFileName(value) : 'None'}
-                </span>
-                <div className="property-asset-actions">
-                    {canCreate && !readOnly && !value && (
-                        <button
-                            className="property-asset-btn property-asset-btn-create"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleCreate();
-                            }}
-                            title="创建新资产"
-                        >
-                            +
-                        </button>
-                    )}
-                    {value && (
-                        <button
-                            className="property-asset-btn"
-                            onClick={handleNavigate}
-                            title="在资产浏览器中显示"
-                        >
-                            <ArrowRight size={12} />
-                        </button>
-                    )}
-                    {value && !readOnly && (
-                        <button className="property-asset-clear" onClick={handleClear}>×</button>
-                    )}
-                </div>
-            </div>
-
-            {/* Save Dialog */}
-            <AssetSaveDialog
-                isOpen={showSaveDialog}
-                onClose={() => setShowSaveDialog(false)}
-                onSave={handleSaveAsset}
-                title={fileExtension === '.tilemap.json' ? '创建 Tilemap 资产' : '创建资产'}
-                defaultFileName={fileExtension === '.tilemap.json' ? 'new-tilemap' : 'new-asset'}
-                fileExtension={fileExtension}
-            />
-        </div>
-    );
-}

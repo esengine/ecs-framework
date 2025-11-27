@@ -1,5 +1,8 @@
 import { IService } from '@esengine/ecs-framework';
-import { FileActionHandler, FileCreationTemplate } from '../Plugins/IEditorPlugin';
+import type { FileActionHandler, FileCreationTemplate } from '../Plugin/IPluginLoader';
+
+// Re-export for backwards compatibility
+export type { FileCreationTemplate } from '../Plugin/IPluginLoader';
 
 /**
  * 文件操作注册表服务

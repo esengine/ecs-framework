@@ -15,22 +15,24 @@
     "dist/**/*"
   ],
   "scripts": {
-    "build": "vite build",
+    "build": "tsc && vite build",
     "build:watch": "vite build --watch",
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@esengine/ecs-framework": "workspace:*",
-    "@esengine/editor-core": "workspace:*",
     "@tauri-apps/api": "^2.2.0",
     "@tauri-apps/plugin-dialog": "^2.4.0",
     "@tauri-apps/plugin-fs": "^2.4.2",
+    "tsyringe": "^4.10.0",
+    "reflect-metadata": "^0.2.2"
+  },
+  "peerDependencies": {
+    "@esengine/ecs-framework": "workspace:*",
+    "@esengine/editor-core": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^5.0.8",
-    "lucide-react": "^0.545.0",
-    "tsyringe": "^4.10.0",
-    "reflect-metadata": "^0.2.2"
+    "lucide-react": "^0.545.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",

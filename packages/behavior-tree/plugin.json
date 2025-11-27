@@ -1,0 +1,30 @@
+{
+    "id": "@esengine/behavior-tree",
+    "name": "Behavior Tree System",
+    "version": "1.0.0",
+    "description": "AI behavior tree system with visual editor and runtime execution",
+    "category": "ai",
+    "loadingPhase": "default",
+    "enabledByDefault": true,
+    "canContainContent": false,
+    "isEnginePlugin": false,
+    "modules": [
+        {
+            "name": "BehaviorTreeRuntime",
+            "type": "runtime",
+            "entry": "./src/index.ts"
+        },
+        {
+            "name": "BehaviorTreeEditor",
+            "type": "editor",
+            "entry": "./src/editor/index.ts"
+        }
+    ],
+    "dependencies": [
+        {
+            "id": "@esengine/core",
+            "version": ">=1.0.0"
+        }
+    ],
+    "icon": "GitBranch"
+}

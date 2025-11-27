@@ -1,6 +1,7 @@
 /* 资产选择框 */
 .asset-field {
     margin-bottom: 6px;
+    min-width: 0;  /* 允许在flex容器中收缩 */
 }
 
 .asset-field__label {
@@ -18,6 +19,8 @@
     border-radius: 4px;
     transition: all 0.15s ease;
     position: relative;
+    min-width: 0;  /* 允许在flex容器中收缩 */
+    overflow: hidden;  /* 防止内容溢出 */
 }
 
 .asset-field__container.hovered {
@@ -40,6 +43,7 @@
     background: #262626;
     border-right: 1px solid #333;
     color: #888;
+    flex-shrink: 0;  /* 图标不收缩 */
 }
 
 .asset-field__container.hovered .asset-field__icon {
@@ -55,7 +59,8 @@
     align-items: center;
     cursor: pointer;
     user-select: none;
-    min-width: 0;
+    min-width: 0;  /* 关键：允许flex项收缩到小于内容宽度 */
+    overflow: hidden;  /* 配合min-width: 0防止溢出 */
 }
 
 .asset-field__input:hover {
@@ -68,6 +73,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-width: 100%;  /* 确保不超出父容器 */
+    display: block;  /* 让text-overflow生效 */
 }
 
 .asset-field__input.empty .asset-field__value {
@@ -81,6 +88,7 @@
     align-items: center;
     gap: 1px;
     padding: 0 1px;
+    flex-shrink: 0;  /* 操作按钮不收缩 */
 }
 
 .asset-field__button {

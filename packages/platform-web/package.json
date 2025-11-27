@@ -10,8 +10,13 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./runtime": {
+      "default": "./dist/runtime.browser.js"
     }
   },
+  "unpkg": "dist/runtime.browser.js",
+  "jsdelivr": "dist/runtime.browser.js",
   "files": [
     "dist"
   ],
@@ -32,13 +37,13 @@
   ],
   "author": "yhh",
   "license": "MIT",
-  "dependencies": {
+  "peerDependencies": {
     "@esengine/ecs-framework": "workspace:*",
     "@esengine/ecs-engine-bindgen": "workspace:*",
     "@esengine/ecs-components": "workspace:*",
-    "@esengine/asset-system": "workspace:*"
-  },
-  "peerDependencies": {
+    "@esengine/asset-system": "workspace:*",
+    "@esengine/ui": "workspace:*",
+    "@esengine/tilemap": "workspace:*",
     "@esengine/platform-common": "workspace:*"
   },
   "devDependencies": {

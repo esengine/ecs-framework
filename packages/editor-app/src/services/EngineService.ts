@@ -3,13 +3,14 @@
  * 管理Rust引擎生命周期的服务。
  */
 
-import { EngineBridge, EngineRenderSystem, CameraConfig, GizmoDataProviderFn, HasGizmoProviderFn } from '@esengine/ecs-engine-bindgen';
-import { GizmoRegistry } from '@esengine/editor-core';
-import { Core, Scene, Entity, SceneSerializer } from '@esengine/ecs-framework';
-import { TransformComponent, SpriteComponent, SpriteAnimatorSystem, SpriteAnimatorComponent } from '@esengine/ecs-components';
+import { EngineBridge, EngineRenderSystem, GizmoDataProviderFn, HasGizmoProviderFn, CameraConfig, CameraSystem } from '@esengine/ecs-engine-bindgen';
+import { GizmoRegistry, EntityStoreService, MessageHub, SceneManagerService, ProjectService } from '@esengine/editor-core';
+import { Core, Scene, Entity, SceneSerializer, ModuleRegistry, ComponentRegistry, type ModuleSystemContext } from '@esengine/ecs-framework';
+import { TransformComponent, SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystem } from '@esengine/ecs-components';
 import { TilemapComponent, TilemapRenderingSystem } from '@esengine/tilemap';
-import { UIRenderDataProvider } from '@esengine/ui';
-import { EntityStoreService, MessageHub, SceneManagerService, ProjectService } from '@esengine/editor-core';
+import { BehaviorTreeExecutionSystem } from '@esengine/behavior-tree';
+import { UIRenderDataProvider, invalidateUIRenderCaches } from '@esengine/ui';
+import { registerAvailableModules, initializeModulesForProject } from '@esengine/platform-web';
 import * as esEngine from '@esengine/engine';
 import {
     AssetManager,
@@ -32,10 +33,13 @@ export class EngineService {
     private bridge: EngineBridge | null = null;
     private scene: Scene | null = null;
     private renderSystem: EngineRenderSystem | null = null;
+    private cameraSystem: CameraSystem | null = null;
     private animatorSystem: SpriteAnimatorSystem | null = null;
     private tilemapSystem: TilemapRenderingSystem | null = null;
+    private behaviorTreeSystem: BehaviorTreeExecutionSystem | null = null;
     private uiRenderProvider: UIRenderDataProvider | null = null;
     private initialized = false;
+    private modulesInitialized = false;
     private running = false;
     private animationFrameId: number | null = null;
     private lastTime = 0;
@@ -46,6 +50,7 @@ export class EngineService {
     private assetPathResolver: AssetPathResolver | null = null;
     private assetSystemInitialized = false;
     private initializationError: Error | null = null;
+    private canvasId: string | null = null;
 
     private constructor() {}
 
@@ -61,13 +66,35 @@ export class EngineService {
     }
 
     /**
+     * 等待引擎初始化完成
+     * @param timeout 超时时间（毫秒），默认 10 秒
+     */
+    async waitForInitialization(timeout = 10000): Promise<boolean> {
+        if (this.initialized) {
+            return true;
+        }
+
+        const startTime = Date.now();
+        while (!this.initialized && Date.now() - startTime < timeout) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+        return this.initialized;
+    }
+
+    /**
      * Initialize the engine with canvas.
      * 使用canvas初始化引擎。
+     *
+     * 注意：此方法只初始化引擎基础设施（Core、渲染系统等），
+     * 模块的初始化需要在项目打开后调用 initializeModuleSystems()
      */
     async initialize(canvasId: string): Promise<void> {
         if (this.initialized) {
             return;
         }
+
+        this.canvasId = canvasId;
 
         try {
             // Create engine bridge | 创建引擎桥接
@@ -96,7 +123,11 @@ export class EngineService {
                 Core.create({ debug: false });
             }
 
-            // Use existing Core scene or create new one | 使用现有Core场景或创建新的
+            // 仅注册模块（用于设置界面显示模块列表）
+            // 模块的组件和服务初始化将在项目打开后进行
+            registerAvailableModules();
+
+            // 使用现有 Core 场景或创建新的
             if (Core.scene) {
                 this.scene = Core.scene as Scene;
             } else {
@@ -104,44 +135,25 @@ export class EngineService {
                 Core.setScene(this.scene);
             }
 
-            // Add sprite animator system (disabled by default in editor mode)
-            // 添加精灵动画系统（编辑器模式下默认禁用）
-            this.animatorSystem = new SpriteAnimatorSystem();
-            this.animatorSystem.enabled = false;
-            this.scene!.addSystem(this.animatorSystem);
+            // Add camera system (基础系统，始终需要)
+            this.cameraSystem = new CameraSystem(this.bridge);
+            this.scene.addSystem(this.cameraSystem);
 
-            // Add tilemap rendering system
-            // 添加瓦片地图渲染系统
-            this.tilemapSystem = new TilemapRenderingSystem();
-            this.scene!.addSystem(this.tilemapSystem);
-
-            // Add render system to the scene | 将渲染系统添加到场景
+            // Add render system to the scene (基础系统，始终需要)
             this.renderSystem = new EngineRenderSystem(this.bridge, TransformComponent);
-            this.scene!.addSystem(this.renderSystem);
-
-            // Register tilemap system as render data provider
-            // 将瓦片地图系统注册为渲染数据提供者
-            this.renderSystem.addRenderDataProvider(this.tilemapSystem);
-
-            // Register UI render data provider
-            // 注册 UI 渲染数据提供者
-            this.uiRenderProvider = new UIRenderDataProvider();
-            this.renderSystem.addRenderDataProvider(this.uiRenderProvider);
-
-            // Set up texture callback for UI text rendering
-            // 设置 UI 文本渲染的纹理回调
-            this.uiRenderProvider.setTextureCallback((id: number, dataUrl: string) => {
-                this.bridge!.loadTexture(id, dataUrl);
-            });
+            this.scene.addSystem(this.renderSystem);
 
             // Inject GizmoRegistry into render system
-            // 将 GizmoRegistry 注入渲染系统
             this.renderSystem.setGizmoRegistry(
                 ((component, entity, isSelected) =>
                     GizmoRegistry.getGizmoData(component, entity, isSelected)) as GizmoDataProviderFn,
                 ((component) =>
                     GizmoRegistry.hasProvider(component.constructor as any)) as HasGizmoProviderFn
             );
+
+            // Set default UI canvas size (1920x1080 design resolution)
+            // 设置默认 UI 画布尺寸（1920x1080 设计分辨率）
+            this.renderSystem.setUICanvasSize(1920, 1080);
 
             // Initialize asset system | 初始化资产系统
             await this.initializeAssetSystem();
@@ -182,6 +194,99 @@ export class EngineService {
             console.error('Failed to initialize engine | 引擎初始化失败:', error);
             throw error;
         }
+    }
+
+    /**
+     * 初始化模块系统
+     * 根据项目配置初始化已启用的模块，并创建相应的系统
+     *
+     * @param enabledModules 启用的模块 ID 列表
+     */
+    async initializeModuleSystems(enabledModules: string[]): Promise<void> {
+        if (!this.initialized) {
+            console.error('Engine not initialized. Call initialize() first.');
+            return;
+        }
+
+        if (!this.scene || !this.renderSystem || !this.bridge) {
+            console.error('Scene or render system not available.');
+            return;
+        }
+
+
+        // 如果之前已经初始化过模块，先清理
+        if (this.modulesInitialized) {
+            this.clearModuleSystems();
+        }
+
+        // 设置 ComponentRegistry 实例，确保所有模块使用 editor-app 导入的同一个实例
+        // 这解决了 Vite 打包时多个 @esengine/ecs-framework 实例导致 ComponentRegistry 不共享的问题
+        ModuleRegistry.setComponentRegistry(ComponentRegistry);
+
+        // 不使用 platform-web 的 initializeModulesForProject，因为它可能使用不同的 ModuleRegistry 实例
+        // 直接在这里调用 ModuleRegistry 的方法，确保使用 editor-app 导入的实例
+        // await initializeModulesForProject(Core, enabledModules, this.modulesInitialized);
+
+        // 确保模块已注册
+        registerAvailableModules();
+
+        // 加载项目的模块配置
+        ModuleRegistry.loadConfig({ enabledModules });
+
+        // 初始化模块（注册组件和服务）
+        await ModuleRegistry.initialize(Core, this.modulesInitialized);
+
+
+        // 创建模块系统上下文
+        const context: ModuleSystemContext = {
+            core: Core,
+            engineBridge: this.bridge,
+            renderSystem: this.renderSystem,
+            isEditor: true
+        };
+
+        // 让模块创建系统
+        ModuleRegistry.createSystemsForScene(this.scene, context);
+
+        // 保存模块创建的系统引用
+        this.animatorSystem = context.animatorSystem as SpriteAnimatorSystem | undefined ?? null;
+        this.tilemapSystem = context.tilemapSystem as TilemapRenderingSystem | undefined ?? null;
+        this.behaviorTreeSystem = context.behaviorTreeSystem as BehaviorTreeExecutionSystem | undefined ?? null;
+        this.uiRenderProvider = context.uiRenderProvider as UIRenderDataProvider | undefined ?? null;
+
+        // 在编辑器模式下，动画和行为树系统默认禁用
+        if (this.animatorSystem) {
+            this.animatorSystem.enabled = false;
+        }
+        if (this.behaviorTreeSystem) {
+            this.behaviorTreeSystem.enabled = false;
+        }
+
+        this.modulesInitialized = true;
+    }
+
+    /**
+     * 清理模块系统
+     * 用于项目关闭或切换时
+     */
+    clearModuleSystems(): void {
+
+        // 清理 ModuleRegistry 的场景系统引用
+        ModuleRegistry.clearSceneSystems();
+
+        // 清空本地引用（系统的实际清理由场景管理）
+        this.animatorSystem = null;
+        this.tilemapSystem = null;
+        this.behaviorTreeSystem = null;
+        this.uiRenderProvider = null;
+        this.modulesInitialized = false;
+    }
+
+    /**
+     * 检查模块系统是否已初始化
+     */
+    isModulesInitialized(): boolean {
+        return this.modulesInitialized;
     }
 
     /**
@@ -253,6 +358,11 @@ export class EngineService {
         if (this.animatorSystem) {
             this.animatorSystem.enabled = true;
         }
+        // Enable behavior tree system for preview
+        // 启用行为树系统用于预览
+        if (this.behaviorTreeSystem) {
+            this.behaviorTreeSystem.enabled = true;
+        }
         this.startAutoPlayAnimations();
 
         this.gameLoop();
@@ -314,6 +424,11 @@ export class EngineService {
         // 禁用动画系统并停止所有动画
         if (this.animatorSystem) {
             this.animatorSystem.enabled = false;
+        }
+        // Disable behavior tree system
+        // 禁用行为树系统
+        if (this.behaviorTreeSystem) {
+            this.behaviorTreeSystem.enabled = false;
         }
         this.stopAllAnimations();
 
@@ -669,6 +784,42 @@ export class EngineService {
         return this.renderSystem?.getShowGizmos() ?? true;
     }
 
+    /**
+     * Set UI canvas size for boundary display.
+     * 设置 UI 画布尺寸以显示边界。
+     */
+    setUICanvasSize(width: number, height: number): void {
+        if (this.renderSystem) {
+            this.renderSystem.setUICanvasSize(width, height);
+        }
+    }
+
+    /**
+     * Get UI canvas size.
+     * 获取 UI 画布尺寸。
+     */
+    getUICanvasSize(): { width: number; height: number } {
+        return this.renderSystem?.getUICanvasSize() ?? { width: 0, height: 0 };
+    }
+
+    /**
+     * Set UI canvas boundary visibility.
+     * 设置 UI 画布边界可见性。
+     */
+    setShowUICanvasBoundary(show: boolean): void {
+        if (this.renderSystem) {
+            this.renderSystem.setShowUICanvasBoundary(show);
+        }
+    }
+
+    /**
+     * Get UI canvas boundary visibility.
+     * 获取 UI 画布边界可见性。
+     */
+    getShowUICanvasBoundary(): boolean {
+        return this.renderSystem?.getShowUICanvasBoundary() ?? true;
+    }
+
     // ===== Scene Snapshot API =====
     // ===== 场景快照 API =====
 
@@ -711,24 +862,18 @@ export class EngineService {
             // Clear tilemap rendering cache before restoring
             // 恢复前清除瓦片地图渲染缓存
             if (this.tilemapSystem) {
-                console.log('[EngineService] Clearing tilemap cache before restore');
                 this.tilemapSystem.clearCache();
             }
 
-            // Clear UI text cache before restoring
-            // 恢复前清除 UI 文本缓存
-            if (this.uiRenderProvider) {
-                console.log('[EngineService] Clearing UI text cache before restore');
-                this.uiRenderProvider.clearTextCache();
-            }
+            // Clear UI render caches before restoring
+            // 恢复前清除 UI 渲染缓存
+            invalidateUIRenderCaches();
 
             // Use SceneSerializer from core library
-            console.log('[EngineService] Deserializing scene snapshot');
             SceneSerializer.deserialize(this.scene, this.sceneSnapshot, {
                 strategy: 'replace',
                 preserveIds: true
             });
-            console.log('[EngineService] Scene deserialized, entities:', this.scene.entities.buffer.length);
 
             // 加载场景资源 / Load scene resources
             if (this.sceneResourceManager) {
@@ -762,7 +907,6 @@ export class EngineService {
                 }
 
                 // Notify UI to refresh
-                console.log('[EngineService] Publishing scene:restored event');
                 messageHub.publish('scene:restored', {});
             }
 

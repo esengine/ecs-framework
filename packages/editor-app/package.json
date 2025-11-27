@@ -1,7 +1,7 @@
 {
   "name": "@esengine/editor-app",
   "version": "1.0.8",
-  "description": "ECS Framework Editor Application - Cross-platform desktop editor",
+  "description": "ESEngine Editor Application - Cross-platform desktop editor",
   "type": "module",
   "private": true,
   "scripts": {
@@ -17,11 +17,10 @@
   "dependencies": {
     "@esengine/asset-system": "workspace:*",
     "@esengine/behavior-tree": "workspace:*",
+    "@esengine/editor-runtime": "workspace:*",
     "@esengine/ecs-components": "workspace:*",
     "@esengine/tilemap": "workspace:*",
-    "@esengine/tilemap-editor": "workspace:*",
     "@esengine/ui": "workspace:*",
-    "@esengine/ui-editor": "workspace:*",
     "@esengine/ecs-engine-bindgen": "workspace:*",
     "@esengine/ecs-framework": "workspace:*",
     "@esengine/editor-core": "workspace:*",

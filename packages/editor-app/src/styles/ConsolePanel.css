@@ -403,7 +403,7 @@
   cursor: pointer;
   box-shadow: var(--shadow-md);
   transition: all var(--transition-fast);
-  z-index: 10;
+  z-index: var(--z-index-above);
 }
 
 .console-scroll-to-bottom:hover {

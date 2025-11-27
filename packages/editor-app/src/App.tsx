@@ -10,7 +10,7 @@ import * as ECSFramework from '@esengine/ecs-framework';
 (window as any).ReactDOM = ReactDOM;
 (window as any).ReactJSXRuntime = ReactJSXRuntime;
 import {
-    EditorPluginManager,
+    PluginManager,
     UIRegistry,
     MessageHub,
     EntityStoreService,
@@ -36,7 +36,6 @@ import { Inspector } from './components/inspectors/Inspector';
 import { AssetBrowser } from './components/AssetBrowser';
 import { ConsolePanel } from './components/ConsolePanel';
 import { Viewport } from './components/Viewport';
-import { PluginManagerWindow } from './components/PluginManagerWindow';
 import { ProfilerWindow } from './components/ProfilerWindow';
 import { PortManager } from './components/PortManager';
 import { SettingsWindow } from './components/SettingsWindow';
@@ -46,15 +45,11 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { PluginGeneratorWindow } from './components/PluginGeneratorWindow';
 import { ToastProvider, useToast } from './components/Toast';
 import { MenuBar } from './components/MenuBar';
-import { UserProfile } from './components/UserProfile';
-import { UserDashboard } from './components/UserDashboard';
 import { FlexLayoutDockContainer, FlexDockPanel } from './components/FlexLayoutDockContainer';
 import { TauriAPI } from './api/tauri';
 import { SettingsService } from './services/SettingsService';
 import { PluginLoader } from './services/PluginLoader';
-import { GitHubService } from './services/GitHubService';
-import { PluginPublishWizard } from './components/PluginPublishWizard';
-import { GitHubLoginDialog } from './components/GitHubLoginDialog';
+import { EngineService } from './services/EngineService';
 import { CompilerConfigDialog } from './components/CompilerConfigDialog';
 import { checkForUpdatesOnStartup } from './utils/updater';
 import { useLocale } from './hooks/useLocale';
@@ -83,14 +78,13 @@ const logger = createLogger('App');
 function App() {
     const initRef = useRef(false);
     const [pluginLoader] = useState(() => new PluginLoader());
-    const [githubService] = useState(() => new GitHubService());
     const { showToast, hideToast } = useToast();
     const [initialized, setInitialized] = useState(false);
     const [projectLoaded, setProjectLoaded] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
     const [currentProjectPath, setCurrentProjectPath] = useState<string | null>(null);
-    const [pluginManager, setPluginManager] = useState<EditorPluginManager | null>(null);
+    const [pluginManager, setPluginManager] = useState<PluginManager | null>(null);
     const [entityStore, setEntityStore] = useState<EntityStoreService | null>(null);
     const [messageHub, setMessageHub] = useState<MessageHub | null>(null);
     const [inspectorRegistry, setInspectorRegistry] = useState<InspectorRegistry | null>(null);
@@ -117,7 +111,6 @@ function App() {
     const [showProjectWizard, setShowProjectWizard] = useState(false);
 
     const {
-        showPluginManager, setShowPluginManager,
         showProfiler, setShowProfiler,
         showPortManager, setShowPortManager,
         showSettings, setShowSettings,
@@ -126,12 +119,11 @@ function App() {
         errorDialog, setErrorDialog,
         confirmDialog, setConfirmDialog
     } = useDialogStore();
+    const [settingsInitialCategory, setSettingsInitialCategory] = useState<string | undefined>(undefined);
     const [activeDynamicPanels, setActiveDynamicPanels] = useState<string[]>([]);
     const [activePanelId, setActivePanelId] = useState<string | undefined>(undefined);
     const [dynamicPanelTitles, setDynamicPanelTitles] = useState<Map<string, string>>(new Map());
     const [isEditorFullscreen, setIsEditorFullscreen] = useState(false);
-    const [showLoginDialog, setShowLoginDialog] = useState(false);
-    const [showDashboard, setShowDashboard] = useState(false);
     const [compilerDialog, setCompilerDialog] = useState<{
         isOpen: boolean;
         compilerId: string;
@@ -274,6 +266,9 @@ function App() {
                 const pluginInstaller = new PluginInstaller();
                 await pluginInstaller.installBuiltinPlugins(services.pluginManager);
 
+                // 初始化编辑器模块（安装设置、面板等）
+                await services.pluginManager.initializeEditor(Core.services);
+
                 services.notification.setCallbacks(showToast, hideToast);
                 (services.dialog as IDialogExtended).setConfirmCallback(setConfirmDialog);
 
@@ -283,7 +278,9 @@ function App() {
                     if (windowId === 'profiler') {
                         setShowProfiler(true);
                     } else if (windowId === 'pluginManager') {
-                        setShowPluginManager(true);
+                        // 插件管理现在整合到设置窗口中
+                        setSettingsInitialCategory('plugins');
+                        setShowSettings(true);
                     }
                 });
 
@@ -370,7 +367,7 @@ function App() {
     const handleOpenRecentProject = async (projectPath: string) => {
         try {
             setIsLoading(true);
-            setLoadingMessage(locale === 'zh' ? '步骤 1/2: 打开项目配置...' : 'Step 1/2: Opening project config...');
+            setLoadingMessage(locale === 'zh' ? '步骤 1/3: 打开项目配置...' : 'Step 1/3: Opening project config...');
 
             const projectService = Core.services.resolve(ProjectService);
 
@@ -385,20 +382,35 @@ function App() {
             // 设置 Tauri project:// 协议的基础路径（用于加载插件等项目文件）
             await TauriAPI.setProjectBasePath(projectPath);
 
+            const settings = SettingsService.getInstance();
+            settings.addRecentProject(projectPath);
+
+            setCurrentProjectPath(projectPath);
+            // 设置 projectLoaded 为 true，触发主界面渲染（包括 Viewport）
+            setProjectLoaded(true);
+
+            // 等待引擎初始化完成（Viewport 渲染后会触发引擎初始化）
+            setLoadingMessage(locale === 'zh' ? '步骤 2/3: 初始化引擎和模块...' : 'Step 2/3: Initializing engine and modules...');
+            const engineService = EngineService.getInstance();
+
+            // 等待引擎初始化（最多等待 30 秒，因为需要等待 Viewport 渲染）
+            const engineReady = await engineService.waitForInitialization(30000);
+            if (!engineReady) {
+                throw new Error(locale === 'zh' ? '引擎初始化超时' : 'Engine initialization timeout');
+            }
+
+            // 根据项目配置初始化模块系统
+            const enabledModules = projectService.getEnabledModules();
+            await engineService.initializeModuleSystems(enabledModules);
+
             setStatus(t('header.status.projectOpened'));
 
-            setLoadingMessage(locale === 'zh' ? '步骤 2/2: 初始化场景...' : 'Step 2/2: Initializing scene...');
+            setLoadingMessage(locale === 'zh' ? '步骤 3/3: 初始化场景...' : 'Step 3/3: Initializing scene...');
 
             const sceneManagerService = Core.services.resolve(SceneManagerService);
             if (sceneManagerService) {
                 await sceneManagerService.newScene();
             }
-
-            const settings = SettingsService.getInstance();
-            settings.addRecentProject(projectPath);
-
-            setCurrentProjectPath(projectPath);
-            setProjectLoaded(true);
 
             if (pluginManager) {
                 setLoadingMessage(locale === 'zh' ? '加载项目插件...' : 'Loading project plugins...');
@@ -605,9 +617,21 @@ function App() {
     };
 
     const handleCloseProject = async () => {
+        // 卸载项目插件
         if (pluginManager) {
             await pluginLoader.unloadProjectPlugins(pluginManager);
         }
+
+        // 清理模块系统
+        const engineService = EngineService.getInstance();
+        engineService.clearModuleSystems();
+
+        // 关闭 ProjectService 中的项目
+        const projectService = Core.services.tryResolve(ProjectService);
+        if (projectService) {
+            await projectService.closeProject();
+        }
+
         setProjectLoaded(false);
         setCurrentProjectPath(null);
         setIsProfilerMode(false);
@@ -623,12 +647,7 @@ function App() {
 
         // 通知所有已加载的插件更新语言
         if (pluginManager) {
-            const allPlugins = pluginManager.getAllEditorPlugins();
-            allPlugins.forEach((plugin) => {
-                if (plugin.setLocale) {
-                    plugin.setLocale(newLocale);
-                }
-            });
+            pluginManager.setLocale(newLocale);
 
             // 通过 MessageHub 通知需要重新获取节点模板
             if (messageHub) {
@@ -747,10 +766,7 @@ function App() {
                 ];
             }
 
-            const enabledPlugins = pluginManager.getAllPluginMetadata()
-                .filter((p) => p.enabled)
-                .map((p) => p.name);
-
+            // 获取启用的插件面板
             const pluginPanels: FlexDockPanel[] = uiRegistry.getAllPanels()
                 .filter((panelDesc) => {
                     if (!panelDesc.component) {
@@ -759,14 +775,7 @@ function App() {
                     if (panelDesc.isDynamic) {
                         return false;
                     }
-                    return enabledPlugins.some((pluginName) => {
-                        const plugin = pluginManager.getEditorPlugin(pluginName);
-                        if (plugin && plugin.registerPanels) {
-                            const pluginPanels = plugin.registerPanels();
-                            return pluginPanels.some((p) => p.id === panelDesc.id);
-                        }
-                        return false;
-                    });
+                    return true;
                 })
                 .map((panelDesc) => {
                     const Component = panelDesc.component;
@@ -879,7 +888,7 @@ function App() {
                 <>
                     <div className="editor-titlebar" data-tauri-drag-region>
                         <span className="titlebar-project-name">{projectName}</span>
-                        <span className="titlebar-app-name">ECS Framework Editor</span>
+                        <span className="titlebar-app-name">ESEngine Editor</span>
                     </div>
                     <div className={`editor-header ${isRemoteConnected ? 'remote-connected' : ''}`}>
                         <MenuBar
@@ -894,7 +903,10 @@ function App() {
                         onOpenProject={handleOpenProject}
                         onCloseProject={handleCloseProject}
                         onExit={handleExit}
-                        onOpenPluginManager={() => setShowPluginManager(true)}
+                        onOpenPluginManager={() => {
+                            setSettingsInitialCategory('plugins');
+                            setShowSettings(true);
+                        }}
                         onOpenProfiler={() => setShowProfiler(true)}
                         onOpenPortManager={() => setShowPortManager(true)}
                         onOpenSettings={() => setShowSettings(true)}
@@ -904,12 +916,6 @@ function App() {
                         onReloadPlugins={handleReloadPlugins}
                     />
                     <div className="header-right">
-                        <UserProfile
-                            githubService={githubService}
-                            onLogin={() => setShowLoginDialog(true)}
-                            onOpenDashboard={() => setShowDashboard(true)}
-                            locale={locale}
-                        />
                         <div className="locale-dropdown" ref={localeMenuRef}>
                             <button
                                 className="toolbar-btn locale-btn"
@@ -948,22 +954,6 @@ function App() {
                 </>
             )}
 
-            {showLoginDialog && (
-                <GitHubLoginDialog
-                    githubService={githubService}
-                    onClose={() => setShowLoginDialog(false)}
-                    locale={locale}
-                />
-            )}
-
-            {showDashboard && (
-                <UserDashboard
-                    githubService={githubService}
-                    onClose={() => setShowDashboard(false)}
-                    locale={locale}
-                />
-            )}
-
             <CompilerConfigDialog
                 isOpen={compilerDialog.isOpen}
                 compilerId={compilerDialog.compilerId}
@@ -991,34 +981,11 @@ function App() {
             </div>
 
             <div className="editor-footer">
-                <span>{t('footer.plugins')}: {pluginManager?.getAllEditorPlugins().length ?? 0}</span>
+                <span>{t('footer.plugins')}: {pluginManager?.getAllPlugins().length ?? 0}</span>
                 <span>{t('footer.entities')}: {entityStore?.getAllEntities().length ?? 0}</span>
                 <span>{t('footer.core')}: {t('footer.active')}</span>
             </div>
 
-            {showPluginManager && pluginManager && notification && dialog && (
-                <PluginManagerWindow
-                    pluginManager={pluginManager}
-                    githubService={githubService}
-                    onClose={() => setShowPluginManager(false)}
-                    locale={locale}
-                    projectPath={currentProjectPath}
-                    onOpen={() => {
-                        // 同步所有插件的语言状态
-                        const allPlugins = pluginManager.getAllEditorPlugins();
-                        allPlugins.forEach((plugin) => {
-                            if (plugin.setLocale) {
-                                plugin.setLocale(locale);
-                            }
-                        });
-                    }}
-                    onRefresh={async () => {
-                        if (currentProjectPath && pluginManager) {
-                            await pluginLoader.loadProjectPlugins(currentProjectPath, pluginManager);
-                        }
-                    }}
-                />
-            )}
 
             {showProfiler && (
                 <ProfilerWindow onClose={() => setShowProfiler(false)} />
@@ -1029,7 +996,14 @@ function App() {
             )}
 
             {showSettings && settingsRegistry && (
-                <SettingsWindow onClose={() => setShowSettings(false)} settingsRegistry={settingsRegistry} />
+                <SettingsWindow
+                    onClose={() => {
+                        setShowSettings(false);
+                        setSettingsInitialCategory(undefined);
+                    }}
+                    settingsRegistry={settingsRegistry}
+                    initialCategoryId={settingsInitialCategory}
+                />
             )}
 
             {showAbout && (

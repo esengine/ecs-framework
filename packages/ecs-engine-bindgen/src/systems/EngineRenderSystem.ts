@@ -145,6 +145,12 @@ export class EngineRenderSystem extends EntitySystem {
     private gizmoDataProvider: GizmoDataProviderFn | null = null;
     private hasGizmoProvider: HasGizmoProviderFn | null = null;
 
+    // UI Canvas boundary settings
+    // UI 画布边界设置
+    private uiCanvasWidth: number = 0;
+    private uiCanvasHeight: number = 0;
+    private showUICanvasBoundary: boolean = true;
+
     /**
      * Create a new engine render system.
      * 创建新的引擎渲染系统。
@@ -259,7 +265,6 @@ export class EngineRenderSystem extends EntitySystem {
         }
 
         // Collect render data from providers (e.g., tilemap)
-        // 收集来自提供者的渲染数据（如瓦片地图）
         for (const provider of this.renderDataProviders) {
             const renderDataList = provider.getRenderData();
             for (const data of renderDataList) {
@@ -330,6 +335,12 @@ export class EngineRenderSystem extends EntitySystem {
         // 绘制相机视锥体 gizmo
         if (this.showGizmos) {
             this.drawCameraFrustums();
+        }
+
+        // Draw UI canvas boundary
+        // 绘制 UI 画布边界
+        if (this.showGizmos && this.showUICanvasBoundary && this.uiCanvasWidth > 0 && this.uiCanvasHeight > 0) {
+            this.drawUICanvasBoundary();
         }
 
         this.bridge.render();
@@ -676,6 +687,78 @@ export class EngineRenderSystem extends EntitySystem {
     }
 
     /**
+     * Draw UI canvas boundary.
+     * 绘制 UI 画布边界。
+     *
+     * Shows the design resolution boundary of the UI canvas.
+     * 显示 UI 画布的设计分辨率边界。
+     */
+    private drawUICanvasBoundary(): void {
+        const w = this.uiCanvasWidth;
+        const h = this.uiCanvasHeight;
+
+        // Canvas is centered at (0, 0) in Y-up coordinate system
+        // 画布以 (0, 0) 为中心，Y 轴向上坐标系
+        // Bottom-left: (-w/2, -h/2), Top-right: (w/2, h/2)
+
+        // Draw the boundary as a rectangle
+        // 绘制边界矩形
+        // Using origin (0, 0) means position is bottom-left corner
+        // 使用 origin (0, 0) 表示位置是左下角
+        this.bridge.addGizmoRect(
+            -w / 2,     // x: left edge
+            -h / 2,     // y: bottom edge (in Y-up system)
+            w,          // width
+            h,          // height
+            0,          // rotation
+            0,          // originX: left
+            0,          // originY: bottom
+            0.5, 0.8, 1.0, 0.6,  // Light blue color for UI canvas boundary
+            false       // Don't show transform handles
+        );
+
+        // Draw corner markers for better visibility
+        // 绘制角标记以提高可见性
+        const markerSize = 20;
+        const markerColor = { r: 0.5, g: 0.8, b: 1.0, a: 1.0 };
+
+        // Top-left corner marker (L shape)
+        const corners = [
+            // Top-left
+            { x: -w / 2, y: h / 2 - markerSize, ex: -w / 2, ey: h / 2 },
+            { x: -w / 2, y: h / 2, ex: -w / 2 + markerSize, ey: h / 2 },
+            // Top-right
+            { x: w / 2 - markerSize, y: h / 2, ex: w / 2, ey: h / 2 },
+            { x: w / 2, y: h / 2, ex: w / 2, ey: h / 2 - markerSize },
+            // Bottom-right
+            { x: w / 2, y: -h / 2 + markerSize, ex: w / 2, ey: -h / 2 },
+            { x: w / 2, y: -h / 2, ex: w / 2 - markerSize, ey: -h / 2 },
+            // Bottom-left
+            { x: -w / 2 + markerSize, y: -h / 2, ex: -w / 2, ey: -h / 2 },
+            { x: -w / 2, y: -h / 2, ex: -w / 2, ey: -h / 2 + markerSize },
+        ];
+
+        for (const line of corners) {
+            const dx = line.ex - line.x;
+            const dy = line.ey - line.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+
+            this.bridge.addGizmoRect(
+                (line.x + line.ex) / 2,
+                (line.y + line.ey) / 2,
+                length,
+                2,  // Line thickness
+                angle,
+                0.5,
+                0.5,
+                markerColor.r, markerColor.g, markerColor.b, markerColor.a,
+                false
+            );
+        }
+    }
+
+    /**
      * Set gizmo registry functions.
      * 设置 gizmo 注册表函数。
      *
@@ -709,6 +792,42 @@ export class EngineRenderSystem extends EntitySystem {
      */
     getShowGizmos(): boolean {
         return this.showGizmos;
+    }
+
+    /**
+     * Set UI canvas size for boundary display.
+     * 设置 UI 画布尺寸以显示边界。
+     *
+     * @param width - Canvas width (design resolution) | 画布宽度（设计分辨率）
+     * @param height - Canvas height (design resolution) | 画布高度（设计分辨率）
+     */
+    setUICanvasSize(width: number, height: number): void {
+        this.uiCanvasWidth = width;
+        this.uiCanvasHeight = height;
+    }
+
+    /**
+     * Get UI canvas size.
+     * 获取 UI 画布尺寸。
+     */
+    getUICanvasSize(): { width: number; height: number } {
+        return { width: this.uiCanvasWidth, height: this.uiCanvasHeight };
+    }
+
+    /**
+     * Set UI canvas boundary visibility.
+     * 设置 UI 画布边界可见性。
+     */
+    setShowUICanvasBoundary(show: boolean): void {
+        this.showUICanvasBoundary = show;
+    }
+
+    /**
+     * Get UI canvas boundary visibility.
+     * 获取 UI 画布边界可见性。
+     */
+    getShowUICanvasBoundary(): boolean {
+        return this.showUICanvasBoundary;
     }
 
     /**

@@ -36,7 +36,7 @@
     ],
     "author": "ESEngine Team",
     "license": "MIT",
-    "dependencies": {
+    "peerDependencies": {
         "@esengine/ecs-framework": "workspace:*",
         "@esengine/ecs-components": "workspace:*",
         "@esengine/asset-system": "workspace:*"

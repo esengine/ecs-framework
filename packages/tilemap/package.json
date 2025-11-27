@@ -2,20 +2,24 @@
   "name": "@esengine/tilemap",
   "version": "1.0.0",
   "description": "Tilemap system for ECS Framework - supports Tiled editor import",
-  "main": "bin/index.js",
-  "types": "bin/index.d.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
   "exports": {
     ".": {
-      "types": "./bin/index.d.ts",
-      "import": "./bin/index.js",
-      "development": {
-        "types": "./src/index.ts",
-        "import": "./src/index.ts"
-      }
-    }
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./editor": {
+      "types": "./dist/editor/index.d.ts",
+      "import": "./dist/editor/index.js"
+    },
+    "./plugin.json": "./plugin.json"
   },
   "files": [
-    "bin/**/*"
+    "dist",
+    "plugin.json"
   ],
   "keywords": [
     "ecs",
@@ -26,24 +30,45 @@
     "typescript"
   ],
   "scripts": {
-    "clean": "rimraf bin dist tsconfig.tsbuildinfo",
-    "build:ts": "tsc",
-    "prebuild": "npm run clean",
-    "build": "npm run build:ts",
-    "build:watch": "tsc --watch",
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "build": "vite build",
+    "build:watch": "vite build --watch",
+    "type-check": "tsc --noEmit",
     "rebuild": "npm run clean && npm run build"
   },
   "author": "yhh",
   "license": "MIT",
   "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@vitejs/plugin-react": "^4.7.0",
     "rimraf": "^5.0.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vite": "^6.0.7",
+    "vite-plugin-dts": "^3.7.0"
   },
   "peerDependencies": {
     "@esengine/ecs-framework": "^2.2.8",
     "@esengine/asset-system": "workspace:*",
     "@esengine/ecs-components": "workspace:*",
-    "@esengine/ecs-engine-bindgen": "workspace:*"
+    "@esengine/ecs-engine-bindgen": "workspace:*",
+    "@esengine/editor-core": "workspace:*",
+    "react": "^18.3.1",
+    "zustand": "^5.0.8",
+    "lucide-react": "^0.545.0"
+  },
+  "peerDependenciesMeta": {
+    "@esengine/editor-core": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "zustand": {
+      "optional": true
+    },
+    "lucide-react": {
+      "optional": true
+    }
   },
   "dependencies": {
     "tslib": "^2.8.1"

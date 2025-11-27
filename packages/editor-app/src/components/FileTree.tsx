@@ -1,5 +1,6 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { Folder, ChevronRight, ChevronDown, File, Edit3, Trash2, FolderOpen, Copy, FileText, FolderPlus, ChevronsDown, ChevronsUp } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
+import { Folder, ChevronRight, ChevronDown, File, Edit3, Trash2, FolderOpen, Copy, FileText, FolderPlus, ChevronsDown, ChevronsUp, Plus } from 'lucide-react';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { MessageHub, FileActionRegistry } from '@esengine/editor-core';
 import { Core } from '@esengine/ecs-framework';
@@ -7,6 +8,19 @@ import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PromptDialog } from './PromptDialog';
 import '../styles/FileTree.css';
+
+/**
+ * 根据图标名称获取 Lucide 图标组件
+ */
+function getIconComponent(iconName: string | undefined, size: number = 16): React.ReactNode {
+    if (!iconName) return <Plus size={size} />;
+    const icons = LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number }>>;
+    const IconComponent = icons[iconName];
+    if (IconComponent) {
+        return <IconComponent size={size} />;
+    }
+    return <Plus size={size} />;
+}
 
 interface TreeNode {
   name: string;
@@ -557,7 +571,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                     for (const template of templates) {
                         baseItems.push({
                             label: template.label,
-                            icon: template.icon,
+                            icon: getIconComponent(template.icon, 16),
                             onClick: () => handleCreateTemplateFileClick(rootPath, template)
                         });
                     }
@@ -639,7 +653,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                     for (const template of templates) {
                         items.push({
                             label: template.label,
-                            icon: template.icon,
+                            icon: getIconComponent(template.icon, 16),
                             onClick: () => handleCreateTemplateFileClick(node.path, template)
                         });
                     }
@@ -724,7 +738,6 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             // Handle .ecs scene files
             const ext = node.name.split('.').pop()?.toLowerCase();
             if (ext === 'ecs' && onOpenScene) {
-                console.log('[FileTree] Opening scene:', node.path);
                 onOpenScene(node.path);
                 return;
             }

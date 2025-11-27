@@ -4,6 +4,17 @@
     "description": "High-performance 2D game engine built with Rust and WebAssembly | 使用Rust和WebAssembly构建的高性能2D游戏引擎",
     "main": "pkg/es_engine.js",
     "types": "pkg/es_engine.d.ts",
+    "exports": {
+        ".": {
+            "import": "./pkg/es_engine.js",
+            "types": "./pkg/es_engine.d.ts"
+        },
+        "./wasm": {
+            "default": "./pkg/es_engine_bg.wasm"
+        }
+    },
+    "unpkg": "pkg/es_engine.js",
+    "jsdelivr": "pkg/es_engine.js",
     "files": [
         "pkg"
     ],

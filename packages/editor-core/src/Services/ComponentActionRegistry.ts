@@ -5,17 +5,10 @@
  */
 
 import { injectable } from 'tsyringe';
-import type { IService, Component, Entity } from '@esengine/ecs-framework';
-import type { ReactNode } from 'react';
-
-export interface ComponentAction {
-    id: string;
-    componentName: string;
-    label: string;
-    icon?: ReactNode;
-    order?: number;
-    execute: (component: Component, entity: Entity) => void | Promise<void>;
-}
+import type { IService } from '@esengine/ecs-framework';
+import type { ComponentAction } from '../Plugin/IPluginLoader';
+// Re-export ComponentAction type from Plugin system
+export type { ComponentAction } from '../Plugin/IPluginLoader';
 
 @injectable()
 export class ComponentActionRegistry implements IService {

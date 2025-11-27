@@ -242,6 +242,18 @@ export class TauriAPI {
     }
 
     /**
+   * 写入二进制文件
+   * @param filePath 文件路径
+   * @param content 二进制数据
+   */
+    static async writeBinaryFile(filePath: string, content: Uint8Array): Promise<void> {
+        return await invoke<void>('write_binary_file', {
+            filePath,
+            content: Array.from(content)
+        });
+    }
+
+    /**
    * 获取临时目录路径
    * @returns 临时目录路径
    */

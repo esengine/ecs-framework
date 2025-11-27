@@ -32,10 +32,12 @@
     "downlevelIteration": true,
     "isolatedModules": false,
     "allowJs": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "jsx": "react-jsx"
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "plugin.json"
   ],
   "exclude": [
     "node_modules",
@@ -52,6 +54,9 @@
     },
     {
       "path": "../ecs-engine-bindgen"
+    },
+    {
+      "path": "../editor-core"
     }
   ]
 }

@@ -39,10 +39,7 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
         if (isOpen && compilerId) {
             try {
                 const registry = Core.services.resolve(CompilerRegistry);
-                console.log('[CompilerConfigDialog] Registry resolved:', registry);
-                console.log('[CompilerConfigDialog] Available compilers:', registry.getAll().map((c) => c.id));
                 const comp = registry.get(compilerId);
-                console.log(`[CompilerConfigDialog] Looking for compiler: ${compilerId}, found:`, comp);
                 setCompiler(comp || null);
             } catch (error) {
                 console.error('[CompilerConfigDialog] Failed to resolve CompilerRegistry:', error);

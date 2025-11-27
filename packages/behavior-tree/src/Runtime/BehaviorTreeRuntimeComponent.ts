@@ -1,4 +1,4 @@
-import { Component, ECSComponent } from '@esengine/ecs-framework';
+import { Component, ECSComponent, Property } from '@esengine/ecs-framework';
 import { Serializable, Serialize, IgnoreSerialization } from '@esengine/ecs-framework';
 import { NodeRuntimeState, createDefaultRuntimeState } from './BehaviorTreeData';
 import { TaskStatus } from '../Types/TaskStatus';
@@ -30,12 +30,14 @@ export class BehaviorTreeRuntimeComponent extends Component {
      * 引用的行为树资产ID（可序列化）
      */
     @Serialize()
+    @Property({ type: 'asset', label: 'Behavior Tree', extensions: ['.btree'] })
     treeAssetId: string = '';
 
     /**
      * 是否自动启动
      */
     @Serialize()
+    @Property({ type: 'boolean', label: 'Auto Start' })
     autoStart: boolean = true;
 
     /**
