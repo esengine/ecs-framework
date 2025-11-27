@@ -23,8 +23,11 @@ const sanitizePath = (path: string): string => {
 // Check if we're in development mode
 const isDevelopment = (): boolean => {
     try {
-        // Vite environment variable
-        return (import.meta as any).env?.DEV === true;
+        // Vite environment variable - this is the most reliable check
+        const viteDev = (import.meta as any).env?.DEV === true;
+        // Also check if MODE is 'development'
+        const viteMode = (import.meta as any).env?.MODE === 'development';
+        return viteDev || viteMode;
     } catch {
         return false;
     }
@@ -74,19 +77,33 @@ export class RuntimeResolver {
         }
         this.config = await response.json();
 
-        // Determine base directory based on environment
-        this.isDev = isDevelopment();
+        // 查找 workspace 根目录
+        const currentDir = await TauriAPI.getCurrentDir();
+        const workspaceRoot = await this.findWorkspaceRoot(currentDir);
 
-        if (this.isDev) {
-            // In development, use the project root
-            // We need to go up from src-tauri to get the actual project root
-            const currentDir = await TauriAPI.getCurrentDir();
-            // currentDir might be src-tauri, so we need to find the actual workspace root
-            this.baseDir = await this.findWorkspaceRoot(currentDir);
+        // 优先使用 workspace 中的开发文件（如果存在）
+        // Prefer workspace dev files if they exist
+        if (await this.hasRuntimeFilesInWorkspace(workspaceRoot)) {
+            this.baseDir = workspaceRoot;
+            this.isDev = true;
+            console.log(`[RuntimeResolver] Using workspace dev files: ${this.baseDir}`);
         } else {
-            // In production, use the resource directory
+            // 回退到打包的资源目录（生产模式）
             this.baseDir = await TauriAPI.getAppResourceDir();
+            this.isDev = false;
+            console.log(`[RuntimeResolver] Using bundled resource dir: ${this.baseDir}`);
         }
+    }
+
+    /**
+     * Check if runtime files exist in workspace
+     * 检查 workspace 中是否存在运行时文件
+     */
+    private async hasRuntimeFilesInWorkspace(workspaceRoot: string): Promise<boolean> {
+        const runtimePath = `${workspaceRoot}\\packages\\platform-web\\dist\\runtime.browser.js`;
+        const exists = await TauriAPI.pathExists(runtimePath);
+        console.log(`[RuntimeResolver] Checking workspace runtime: ${runtimePath} -> ${exists}`);
+        return exists;
     }
 
     /**
@@ -192,6 +209,9 @@ export class RuntimeResolver {
      * 生产模式：从编辑器内置资源复制
      */
     async prepareRuntimeFiles(targetDir: string): Promise<void> {
+        console.log(`[RuntimeResolver] Preparing runtime files to: ${targetDir}`);
+        console.log(`[RuntimeResolver] isDev: ${this.isDev}, baseDir: ${this.baseDir}`);
+
         // Ensure target directory exists
         const dirExists = await TauriAPI.pathExists(targetDir);
         if (!dirExists) {
@@ -200,12 +220,16 @@ export class RuntimeResolver {
 
         // Copy platform-web runtime
         const platformWeb = await this.getModuleFiles('platform-web');
+        console.log(`[RuntimeResolver] platform-web files:`, platformWeb.files);
         for (const srcFile of platformWeb.files) {
             const filename = srcFile.split(/[/\\]/).pop() || '';
             const dstFile = `${targetDir}\\${filename}`;
 
-            if (await TauriAPI.pathExists(srcFile)) {
+            const srcExists = await TauriAPI.pathExists(srcFile);
+            console.log(`[RuntimeResolver] Copying ${srcFile} -> ${dstFile} (src exists: ${srcExists})`);
+            if (srcExists) {
                 await TauriAPI.copyFile(srcFile, dstFile);
+                console.log(`[RuntimeResolver] Copied ${filename}`);
             } else {
                 throw new Error(`Runtime file not found: ${srcFile}`);
             }
@@ -213,16 +237,22 @@ export class RuntimeResolver {
 
         // Copy engine WASM files
         const engine = await this.getModuleFiles('engine');
+        console.log(`[RuntimeResolver] engine files:`, engine.files);
         for (const srcFile of engine.files) {
             const filename = srcFile.split(/[/\\]/).pop() || '';
             const dstFile = `${targetDir}\\${filename}`;
 
-            if (await TauriAPI.pathExists(srcFile)) {
+            const srcExists = await TauriAPI.pathExists(srcFile);
+            console.log(`[RuntimeResolver] Copying ${srcFile} -> ${dstFile} (src exists: ${srcExists})`);
+            if (srcExists) {
                 await TauriAPI.copyFile(srcFile, dstFile);
+                console.log(`[RuntimeResolver] Copied ${filename}`);
             } else {
                 throw new Error(`Engine file not found: ${srcFile}`);
             }
         }
+
+        console.log(`[RuntimeResolver] Runtime files prepared successfully`);
     }
 
     /**

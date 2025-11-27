@@ -13,9 +13,9 @@ import type {
 } from '@esengine/editor-runtime';
 
 // Runtime imports
-import { BehaviorTreeRuntimeComponent } from '../Runtime/BehaviorTreeRuntimeComponent';
-import { BehaviorTreeExecutionSystem } from '../Runtime/BehaviorTreeExecutionSystem';
-import { BehaviorTreeAssetManager } from '../Runtime/BehaviorTreeAssetManager';
+import { BehaviorTreeRuntimeComponent } from '../execution/BehaviorTreeRuntimeComponent';
+import { BehaviorTreeExecutionSystem } from '../execution/BehaviorTreeExecutionSystem';
+import { BehaviorTreeAssetManager } from '../execution/BehaviorTreeAssetManager';
 import { GlobalBlackboardService } from '../Services/GlobalBlackboardService';
 
 /**

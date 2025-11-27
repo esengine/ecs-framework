@@ -424,7 +424,6 @@ describe('EntitySystem', () => {
 
             // 先触发更新来跟踪现有实体
             trackingSystem.update();
-            const initialCount = trackingSystem.addedEntities.length;
 
             // 移除组件
             const comp = entity.getComponent(TestComponent);

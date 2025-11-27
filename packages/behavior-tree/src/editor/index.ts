@@ -24,7 +24,7 @@ import {
 } from '@esengine/editor-runtime';
 
 // Runtime imports (relative paths since we're in the same package)
-import { BehaviorTreeRuntimeComponent } from '../Runtime/BehaviorTreeRuntimeComponent';
+import { BehaviorTreeRuntimeComponent } from '../execution/BehaviorTreeRuntimeComponent';
 
 // Editor components and services
 import { BehaviorTreeService } from './services/BehaviorTreeService';

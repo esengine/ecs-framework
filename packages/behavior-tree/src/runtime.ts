@@ -1,10 +1,11 @@
 /**
- * @esengine/behavior-tree
+ * @esengine/behavior-tree Runtime Entry Point
  *
- * AI Behavior Tree System with runtime execution and visual editor support
- * AI 行为树系统，支持运行时执行和可视化编辑
+ * This entry point exports only runtime-related code without any editor dependencies.
+ * Use this for standalone game runtime builds.
  *
- * @packageDocumentation
+ * 此入口点仅导出运行时相关代码，不包含任何编辑器依赖。
+ * 用于独立游戏运行时构建。
  */
 
 // Types
@@ -31,8 +32,5 @@ export * from './Services/GlobalBlackboardService';
 export type { BlackboardTypeDefinition } from './Blackboard/BlackboardTypes';
 export { BlackboardTypes } from './Blackboard/BlackboardTypes';
 
-// Runtime module (no editor dependencies)
+// Runtime module
 export { BehaviorTreeRuntimeModule } from './BehaviorTreeRuntimeModule';
-
-// Plugin (for PluginManager - includes editor dependencies)
-export { BehaviorTreePlugin } from './editor/index';

@@ -68,6 +68,7 @@ export default defineConfig({
         lib: {
             entry: {
                 index: resolve(__dirname, 'src/index.ts'),
+                runtime: resolve(__dirname, 'src/runtime.ts'),
                 'editor/index': resolve(__dirname, 'src/editor/index.ts')
             },
             formats: ['es'],

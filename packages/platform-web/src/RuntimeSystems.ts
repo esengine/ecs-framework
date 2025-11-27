@@ -8,9 +8,10 @@ import type { IScene } from '@esengine/ecs-framework';
 import { EngineBridge, EngineRenderSystem, CameraSystem } from '@esengine/ecs-engine-bindgen';
 import { TransformComponent, SpriteAnimatorSystem, CoreRuntimeModule } from '@esengine/ecs-components';
 import type { SystemContext, IPluginLoader, IRuntimeModuleLoader, PluginDescriptor } from '@esengine/ecs-components';
-import { UIRuntimeModule, UIRenderDataProvider } from '@esengine/ui';
-import { TilemapRuntimeModule, TilemapRenderingSystem } from '@esengine/tilemap';
-import { BehaviorTreeRuntimeModule, BehaviorTreeExecutionSystem } from '@esengine/behavior-tree';
+// Import from /runtime entry points to avoid editor dependencies (React, etc.)
+import { UIRuntimeModule, UIRenderDataProvider } from '@esengine/ui/runtime';
+import { TilemapRuntimeModule, TilemapRenderingSystem } from '@esengine/tilemap/runtime';
+import { BehaviorTreeRuntimeModule, BehaviorTreeExecutionSystem } from '@esengine/behavior-tree/runtime';
 
 /**
  * 运行时系统集合
@@ -98,7 +99,9 @@ class RuntimePluginManager {
 
         // 注册组件
         for (const [id, plugin] of this.plugins) {
-            if (!this.enabledPlugins.has(id)) continue;
+            if (!this.enabledPlugins.has(id)) {
+                continue;
+            }
             const runtimeModule = plugin.runtimeModule;
             if (runtimeModule) {
                 try {
@@ -243,10 +246,29 @@ const behaviorTreeDescriptor: PluginDescriptor = {
  * 仅注册插件描述信息，不初始化组件和服务
  */
 export function registerAvailablePlugins(): void {
-    runtimePluginManager.register(createRuntimeOnlyPlugin(coreDescriptor, new CoreRuntimeModule()));
-    runtimePluginManager.register(createRuntimeOnlyPlugin(uiDescriptor, new UIRuntimeModule()));
-    runtimePluginManager.register(createRuntimeOnlyPlugin(tilemapDescriptor, new TilemapRuntimeModule()));
-    runtimePluginManager.register(createRuntimeOnlyPlugin(behaviorTreeDescriptor, new BehaviorTreeRuntimeModule()));
+    try {
+        runtimePluginManager.register(createRuntimeOnlyPlugin(coreDescriptor, new CoreRuntimeModule()));
+    } catch (e) {
+        console.error('[RuntimeSystems] Failed to register CoreRuntimeModule:', e);
+    }
+
+    try {
+        runtimePluginManager.register(createRuntimeOnlyPlugin(uiDescriptor, new UIRuntimeModule()));
+    } catch (e) {
+        console.error('[RuntimeSystems] Failed to register UIRuntimeModule:', e);
+    }
+
+    try {
+        runtimePluginManager.register(createRuntimeOnlyPlugin(tilemapDescriptor, new TilemapRuntimeModule()));
+    } catch (e) {
+        console.error('[RuntimeSystems] Failed to register TilemapRuntimeModule:', e);
+    }
+
+    try {
+        runtimePluginManager.register(createRuntimeOnlyPlugin(behaviorTreeDescriptor, new BehaviorTreeRuntimeModule()));
+    } catch (e) {
+        console.error('[RuntimeSystems] Failed to register BehaviorTreeRuntimeModule:', e);
+    }
 }
 
 /**
@@ -315,6 +337,18 @@ export function createRuntimeSystems(
     };
 
     runtimePluginManager.createSystemsForScene(scene, context);
+
+    // 注册 UI 渲染提供者到渲染系统
+    // Register UI render provider to render system
+    if (context.uiRenderProvider) {
+        renderSystem.setUIRenderDataProvider(context.uiRenderProvider);
+    }
+
+    // 独立运行时始终使用预览模式（屏幕空间 UI）
+    // Standalone runtime always uses preview mode (screen space UI)
+    if (!isEditor) {
+        renderSystem.setPreviewMode(true);
+    }
 
     scene.addSystem(renderSystem);
 
