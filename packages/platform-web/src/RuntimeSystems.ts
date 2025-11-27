@@ -9,7 +9,7 @@ import { EngineBridge, EngineRenderSystem, CameraSystem } from '@esengine/ecs-en
 import { TransformComponent, SpriteAnimatorSystem, CoreRuntimeModule } from '@esengine/ecs-components';
 import type { SystemContext, IPluginLoader, IRuntimeModuleLoader, PluginDescriptor } from '@esengine/ecs-components';
 // Import from /runtime entry points to avoid editor dependencies (React, etc.)
-import { UIRuntimeModule, UIRenderDataProvider } from '@esengine/ui/runtime';
+import { UIRuntimeModule, UIRenderDataProvider, UIInputSystem } from '@esengine/ui/runtime';
 import { TilemapRuntimeModule, TilemapRenderingSystem } from '@esengine/tilemap/runtime';
 import { BehaviorTreeRuntimeModule, BehaviorTreeExecutionSystem } from '@esengine/behavior-tree/runtime';
 
@@ -33,6 +33,8 @@ export interface RuntimeModuleConfig {
     enabledPlugins?: string[];
     /** 是否为编辑器模式 */
     isEditor?: boolean;
+    /** Canvas ID 用于 UI 输入绑定 */
+    canvasId?: string;
 }
 
 /**
@@ -351,6 +353,15 @@ export function createRuntimeSystems(
     }
 
     scene.addSystem(renderSystem);
+
+    // 绑定 UIInputSystem 到 canvas（用于 UI 交互）
+    // Bind UIInputSystem to canvas (for UI interaction)
+    if (config?.canvasId && context.uiInputSystem) {
+        const canvas = document.getElementById(config.canvasId) as HTMLCanvasElement;
+        if (canvas) {
+            (context.uiInputSystem as UIInputSystem).bindToCanvas(canvas);
+        }
+    }
 
     return {
         cameraSystem,
