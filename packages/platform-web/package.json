@@ -39,6 +39,7 @@
   "license": "MIT",
   "peerDependencies": {
     "@esengine/asset-system": "workspace:*",
+    "@esengine/behavior-tree": "workspace:*",
     "@esengine/ecs-components": "workspace:*",
     "@esengine/ecs-engine-bindgen": "workspace:*",
     "@esengine/ecs-framework": "workspace:*",

@@ -696,6 +696,9 @@ importers:
       '@esengine/asset-system':
         specifier: workspace:*
         version: link:../asset-system
+      '@esengine/behavior-tree':
+        specifier: workspace:*
+        version: link:../behavior-tree
       '@esengine/ecs-components':
         specifier: workspace:*
         version: link:../components
