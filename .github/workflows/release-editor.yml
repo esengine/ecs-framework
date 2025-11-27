@@ -96,16 +96,6 @@ jobs:
           cd packages/components
           pnpm run build
 
-      - name: Build behavior-tree package
-        run: |
-          cd packages/behavior-tree
-          pnpm run build
-
-      - name: Build UI package
-        run: |
-          cd packages/ui
-          pnpm run build
-
       # ===== 第三层：Rust WASM 引擎 =====
       - name: Install wasm-pack
         run: cargo install wasm-pack
@@ -129,10 +119,16 @@ jobs:
           cd packages/ecs-engine-bindgen
           pnpm run build
 
-      # ===== 第四层：依赖 asset-system 的包 =====
+      # ===== 第四层：依赖 ecs-engine-bindgen/asset-system 的包 =====
       - name: Build editor-core package
         run: |
           cd packages/editor-core
+          pnpm run build
+
+      # ===== 第五层：依赖 editor-core 的包 =====
+      - name: Build UI package
+        run: |
+          cd packages/ui
           pnpm run build
 
       - name: Build tilemap package
@@ -140,23 +136,18 @@ jobs:
           cd packages/tilemap
           pnpm run build
 
-      # ===== 第五层：依赖 editor-core 的包 =====
       - name: Build editor-runtime package
         run: |
           cd packages/editor-runtime
           pnpm run build
 
-      - name: Build UI editor package
+      # ===== 第六层：依赖 editor-runtime 的包 =====
+      - name: Build behavior-tree package
         run: |
-          cd packages/ui-editor
+          cd packages/behavior-tree
           pnpm run build
 
-      - name: Build tilemap-editor package
-        run: |
-          cd packages/tilemap-editor
-          pnpm run build
-
-      # ===== 第六层：平台包 =====
+      # ===== 第七层：平台包（依赖 ui, tilemap） =====
       - name: Build platform-web package
         run: |
           cd packages/platform-web

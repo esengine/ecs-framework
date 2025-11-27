@@ -485,6 +485,59 @@ describe('Matcher', () => {
         });
     });
     
+    describe('nothing() 匹配器', () => {
+        test('nothing() 应该创建不匹配任何实体的匹配器', () => {
+            const matcher = Matcher.nothing();
+            const condition = matcher.getCondition();
+
+            expect(condition.matchNothing).toBe(true);
+            expect(condition.all).toHaveLength(0);
+            expect(condition.any).toHaveLength(0);
+            expect(condition.none).toHaveLength(0);
+        });
+
+        test('isNothing() 应该正确判断 nothing 匹配器', () => {
+            const nothingMatcher = Matcher.nothing();
+            expect(nothingMatcher.isNothing()).toBe(true);
+
+            const normalMatcher = Matcher.all(Position);
+            expect(normalMatcher.isNothing()).toBe(false);
+
+            const emptyMatcher = Matcher.empty();
+            expect(emptyMatcher.isNothing()).toBe(false);
+        });
+
+        test('isEmpty() 不应该将 nothing 匹配器视为空', () => {
+            const nothingMatcher = Matcher.nothing();
+            // nothing 匹配器有明确的语义，不应该算作空
+            expect(nothingMatcher.isEmpty()).toBe(false);
+        });
+
+        test('toString() 应该正确处理 nothing 匹配器', () => {
+            const matcher = Matcher.nothing();
+            const str = matcher.toString();
+
+            expect(str).toBe('Matcher[nothing]');
+        });
+
+        test('clone() 应该正确复制 nothing 匹配器', () => {
+            const original = Matcher.nothing();
+            const cloned = original.clone();
+
+            expect(cloned.isNothing()).toBe(true);
+            expect(cloned.getCondition().matchNothing).toBe(true);
+        });
+
+        test('reset() 应该清除 matchNothing 标志', () => {
+            const matcher = Matcher.nothing();
+            expect(matcher.isNothing()).toBe(true);
+
+            matcher.reset();
+            expect(matcher.isNothing()).toBe(false);
+            expect(matcher.isEmpty()).toBe(true);
+        });
+    });
+
     describe('类型安全性', () => {
         test('ComponentType 应该正确工作', () => {
             // 这个测试主要是确保类型编译正确

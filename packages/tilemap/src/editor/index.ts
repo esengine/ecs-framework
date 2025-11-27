@@ -4,7 +4,6 @@
  */
 
 import React from 'react';
-import { Grid3X3, Edit3 } from 'lucide-react';
 import type { ServiceContainer, Entity } from '@esengine/ecs-framework';
 import { Core } from '@esengine/ecs-framework';
 import type {

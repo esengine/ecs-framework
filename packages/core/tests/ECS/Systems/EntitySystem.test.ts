@@ -266,4 +266,359 @@ describe('EntitySystem', () => {
         });
     });
 
+    describe('nothing 匹配器与系统', () => {
+        class NothingSystem extends EntitySystem {
+            public onBeginCallCount = 0;
+            public processCallCount = 0;
+            public onEndCallCount = 0;
+
+            constructor() {
+                super(Matcher.nothing());
+            }
+
+            protected override onBegin(): void {
+                this.onBeginCallCount++;
+            }
+
+            protected override process(entities: readonly Entity[]): void {
+                this.processCallCount++;
+                // nothing 匹配器不应该有任何实体
+                expect(entities).toHaveLength(0);
+            }
+
+            protected override onEnd(): void {
+                this.onEndCallCount++;
+            }
+        }
+
+        it('使用 nothing 匹配器的系统应该正常运行生命周期方法', () => {
+            const nothingSystem = new NothingSystem();
+            scene.addSystem(nothingSystem);
+
+            // 手动触发更新
+            nothingSystem.update();
+            nothingSystem.lateUpdate();
+
+            // 生命周期方法应该被调用
+            expect(nothingSystem.onBeginCallCount).toBe(1);
+            expect(nothingSystem.processCallCount).toBe(1);
+            expect(nothingSystem.onEndCallCount).toBe(1);
+
+            // 清理
+            scene.removeSystem(nothingSystem);
+        });
+
+        it('nothing 匹配器系统的 entities 应该为空', () => {
+            const nothingSystem = new NothingSystem();
+            scene.addSystem(nothingSystem);
+
+            // 即使场景中有实体，entities 也应该为空
+            expect(nothingSystem.entities).toHaveLength(0);
+
+            scene.removeSystem(nothingSystem);
+        });
+    });
+
+    describe('系统更新顺序', () => {
+        it('setUpdateOrder 应该能够设置更新顺序', () => {
+            const plainSystem = new PlainEntitySystem();
+            scene.addSystem(plainSystem);
+
+            expect(plainSystem.updateOrder).toBe(0);
+
+            plainSystem.setUpdateOrder(10);
+            expect(plainSystem.updateOrder).toBe(10);
+
+            plainSystem.updateOrder = 20;
+            expect(plainSystem.updateOrder).toBe(20);
+
+            scene.removeSystem(plainSystem);
+        });
+
+        it('设置相同的 updateOrder 不应该触发重排序', () => {
+            const plainSystem = new PlainEntitySystem();
+            scene.addSystem(plainSystem);
+
+            plainSystem.setUpdateOrder(10);
+            // 设置相同的值不应该有问题
+            plainSystem.setUpdateOrder(10);
+
+            expect(plainSystem.updateOrder).toBe(10);
+
+            scene.removeSystem(plainSystem);
+        });
+    });
+
+    describe('系统启用/禁用', () => {
+        it('禁用系统时不应该调用 process', () => {
+            const plainSystem = new PlainEntitySystem();
+            scene.addSystem(plainSystem);
+
+            plainSystem.enabled = false;
+            plainSystem.update();
+
+            expect(plainSystem.processCallCount).toBe(0);
+
+            scene.removeSystem(plainSystem);
+        });
+
+        it('重新启用系统后应该正常调用 process', () => {
+            const plainSystem = new PlainEntitySystem();
+            scene.addSystem(plainSystem);
+
+            plainSystem.enabled = false;
+            plainSystem.update();
+            expect(plainSystem.processCallCount).toBe(0);
+
+            plainSystem.enabled = true;
+            plainSystem.update();
+            expect(plainSystem.processCallCount).toBe(1);
+
+            scene.removeSystem(plainSystem);
+        });
+    });
+
+    describe('实体跟踪回调', () => {
+        class TrackingSystem extends EntitySystem {
+            public addedEntities: Entity[] = [];
+            public removedEntities: Entity[] = [];
+
+            constructor() {
+                super(Matcher.all(TestComponent));
+            }
+
+            protected override process(entities: readonly Entity[]): void {
+                // 处理实体
+            }
+
+            protected override onAdded(entity: Entity): void {
+                this.addedEntities.push(entity);
+            }
+
+            protected override onRemoved(entity: Entity): void {
+                this.removedEntities.push(entity);
+            }
+        }
+
+        it('当实体添加组件后应该触发 onAdded', () => {
+            const trackingSystem = new TrackingSystem();
+            scene.addSystem(trackingSystem);
+
+            // 创建新实体并添加组件
+            const newEntity = scene.createEntity('new_entity');
+            newEntity.addComponent(new TestComponent(5));
+            scene.addEntity(newEntity);
+
+            // 触发更新以检测变化
+            trackingSystem.update();
+
+            // 应该检测到新实体
+            expect(trackingSystem.addedEntities.length).toBeGreaterThan(0);
+
+            scene.removeSystem(trackingSystem);
+        });
+
+        it('当实体移除组件后应该触发 onRemoved', () => {
+            const trackingSystem = new TrackingSystem();
+            scene.addSystem(trackingSystem);
+
+            // 先触发更新来跟踪现有实体
+            trackingSystem.update();
+            const initialCount = trackingSystem.addedEntities.length;
+
+            // 移除组件
+            const comp = entity.getComponent(TestComponent);
+            if (comp) {
+                entity.removeComponent(comp);
+            }
+
+            // 再次更新
+            trackingSystem.update();
+
+            // 应该检测到实体被移除
+            expect(trackingSystem.removedEntities.length).toBeGreaterThan(0);
+
+            scene.removeSystem(trackingSystem);
+        });
+    });
+
+    describe('reset 方法', () => {
+        it('reset 后系统应该可以重新初始化', () => {
+            const plainSystem = new PlainEntitySystem();
+            scene.addSystem(plainSystem);
+
+            // 调用 reset
+            plainSystem.reset();
+
+            // 验证系统被重置
+            expect(plainSystem.scene).toBeNull();
+        });
+
+        it('已销毁的系统调用 reset 不应该执行任何操作', () => {
+            const plainSystem = new PlainEntitySystem();
+            scene.addSystem(plainSystem);
+
+            // 先销毁系统
+            plainSystem.destroy();
+
+            // reset 不应该有任何效果
+            plainSystem.reset();
+
+            // onDestroy 只应被调用一次
+            expect(plainSystem.onDestroyCallCount).toBe(1);
+        });
+    });
+
+    describe('辅助方法', () => {
+        class HelperSystem extends EntitySystem {
+            constructor() {
+                super(Matcher.all(TestComponent));
+            }
+
+            protected override process(entities: readonly Entity[]): void {}
+
+            // 暴露 protected 方法供测试
+            public testRequireComponent<T extends new (...args: any[]) => Component>(
+                entity: Entity,
+                componentType: T
+            ): InstanceType<T> {
+                return this.requireComponent(entity, componentType) as InstanceType<T>;
+            }
+
+            public testForEach(
+                entities: readonly Entity[],
+                processor: (entity: Entity, index: number) => void
+            ): void {
+                this.forEach(entities, processor);
+            }
+
+            public testFilterEntities(
+                entities: readonly Entity[],
+                predicate: (entity: Entity, index: number) => boolean
+            ): Entity[] {
+                return this.filterEntities(entities, predicate);
+            }
+
+            public testFindEntity(
+                entities: readonly Entity[],
+                predicate: (entity: Entity, index: number) => boolean
+            ): Entity | undefined {
+                return this.findEntity(entities, predicate);
+            }
+
+            public testSomeEntity(
+                entities: readonly Entity[],
+                predicate: (entity: Entity, index: number) => boolean
+            ): boolean {
+                return this.someEntity(entities, predicate);
+            }
+
+            public testEveryEntity(
+                entities: readonly Entity[],
+                predicate: (entity: Entity, index: number) => boolean
+            ): boolean {
+                return this.everyEntity(entities, predicate);
+            }
+        }
+
+        let helperSystem: HelperSystem;
+
+        beforeEach(() => {
+            helperSystem = new HelperSystem();
+            scene.addSystem(helperSystem);
+        });
+
+        afterEach(() => {
+            scene.removeSystem(helperSystem);
+        });
+
+        it('requireComponent 应该返回存在的组件', () => {
+            const component = helperSystem.testRequireComponent(entity, TestComponent);
+            expect(component).toBeDefined();
+            expect(component.value).toBe(10);
+        });
+
+        it('requireComponent 应该在组件不存在时抛出错误', () => {
+            class NonExistentComponent extends Component {}
+
+            expect(() => {
+                helperSystem.testRequireComponent(entity, NonExistentComponent);
+            }).toThrow();
+        });
+
+        it('forEach 应该遍历所有实体', () => {
+            const entities = [entity];
+            const visited: Entity[] = [];
+
+            helperSystem.testForEach(entities, (e) => {
+                visited.push(e);
+            });
+
+            expect(visited).toHaveLength(1);
+            expect(visited[0]).toBe(entity);
+        });
+
+        it('filterEntities 应该正确过滤实体', () => {
+            const entity2 = scene.createEntity('entity2');
+            entity2.addComponent(new TestComponent(20));
+            scene.addEntity(entity2);
+
+            const entities = [entity, entity2];
+
+            const filtered = helperSystem.testFilterEntities(entities, (e) => {
+                const comp = e.getComponent(TestComponent);
+                return comp !== null && comp.value > 15;
+            });
+
+            expect(filtered).toHaveLength(1);
+            expect(filtered[0]).toBe(entity2);
+        });
+
+        it('findEntity 应该返回第一个匹配的实体', () => {
+            const entities = [entity];
+
+            const found = helperSystem.testFindEntity(entities, (e) => {
+                const comp = e.getComponent(TestComponent);
+                return comp !== null && comp.value === 10;
+            });
+
+            expect(found).toBe(entity);
+        });
+
+        it('findEntity 应该在未找到时返回 undefined', () => {
+            const entities = [entity];
+
+            const found = helperSystem.testFindEntity(entities, () => false);
+
+            expect(found).toBeUndefined();
+        });
+
+        it('someEntity 应该正确判断是否存在匹配实体', () => {
+            const entities = [entity];
+
+            const hasMatch = helperSystem.testSomeEntity(entities, (e) => {
+                const comp = e.getComponent(TestComponent);
+                return comp !== null && comp.value === 10;
+            });
+
+            expect(hasMatch).toBe(true);
+
+            const noMatch = helperSystem.testSomeEntity(entities, () => false);
+            expect(noMatch).toBe(false);
+        });
+
+        it('everyEntity 应该正确判断是否所有实体都匹配', () => {
+            const entities = [entity];
+
+            const allMatch = helperSystem.testEveryEntity(entities, (e) => {
+                return e.getComponent(TestComponent) !== null;
+            });
+
+            expect(allMatch).toBe(true);
+
+            const notAllMatch = helperSystem.testEveryEntity(entities, () => false);
+            expect(notAllMatch).toBe(false);
+        });
+    });
+
 });

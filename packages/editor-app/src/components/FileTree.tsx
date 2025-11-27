@@ -1,6 +1,6 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { Folder, ChevronRight, ChevronDown, File, Edit3, Trash2, FolderOpen, Copy, FileText, FolderPlus, ChevronsDown, ChevronsUp, Plus } from 'lucide-react';
+import { Folder, ChevronRight, ChevronDown, File, Edit3, Trash2, FolderOpen, Copy, FileText, FolderPlus, Plus } from 'lucide-react';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { MessageHub, FileActionRegistry } from '@esengine/editor-core';
 import { Core } from '@esengine/ecs-framework';

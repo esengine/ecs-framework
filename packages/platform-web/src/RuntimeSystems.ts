@@ -6,7 +6,7 @@
 import { Core, ComponentRegistry, ServiceContainer } from '@esengine/ecs-framework';
 import type { IScene } from '@esengine/ecs-framework';
 import { EngineBridge, EngineRenderSystem, CameraSystem } from '@esengine/ecs-engine-bindgen';
-import { TransformComponent, SpriteAnimatorSystem, CorePlugin, CoreRuntimeModule } from '@esengine/ecs-components';
+import { TransformComponent, SpriteAnimatorSystem, CoreRuntimeModule } from '@esengine/ecs-components';
 import type { SystemContext, IPluginLoader, IRuntimeModuleLoader, PluginDescriptor } from '@esengine/ecs-components';
 import { UIRuntimeModule, UIRenderDataProvider } from '@esengine/ui';
 import { TilemapRuntimeModule, TilemapRenderingSystem } from '@esengine/tilemap';

@@ -3,7 +3,7 @@
  * Project Plugin Loader
  */
 
-import { PluginManager, LocaleService, MessageHub, UIRegistry } from '@esengine/editor-core';
+import { PluginManager, LocaleService, MessageHub } from '@esengine/editor-core';
 import type { IPluginLoader, PluginDescriptor } from '@esengine/editor-core';
 import { Core } from '@esengine/ecs-framework';
 import { TauriAPI } from '../api/tauri';
@@ -328,7 +328,7 @@ export class PluginLoader {
      * 卸载所有已加载的插件
      */
     async unloadProjectPlugins(_pluginManager: PluginManager): Promise<void> {
-        for (const [pluginName, meta] of this.loadedPlugins) {
+        for (const pluginName of this.loadedPlugins.keys()) {
             // 清理全局容器中的插件
             const pluginKey = this.sanitizePluginKey(pluginName);
             if (window.__ESENGINE_PLUGINS__?.[pluginKey]) {

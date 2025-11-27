@@ -5,7 +5,7 @@
 
 import { EngineBridge, EngineRenderSystem, GizmoDataProviderFn, HasGizmoProviderFn, CameraConfig, CameraSystem } from '@esengine/ecs-engine-bindgen';
 import { GizmoRegistry, EntityStoreService, MessageHub, SceneManagerService, ProjectService, PluginManager, IPluginManager, type SystemContext } from '@esengine/editor-core';
-import { Core, Scene, Entity, SceneSerializer, ComponentRegistry } from '@esengine/ecs-framework';
+import { Core, Scene, Entity, SceneSerializer } from '@esengine/ecs-framework';
 import { TransformComponent, SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystem } from '@esengine/ecs-components';
 import { TilemapComponent, TilemapRenderingSystem } from '@esengine/tilemap';
 import { BehaviorTreeExecutionSystem } from '@esengine/behavior-tree';
