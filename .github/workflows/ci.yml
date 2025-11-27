@@ -70,6 +70,7 @@ jobs:
         cd ../asset-system && pnpm run build
         cd ../components && pnpm run build
         cd ../editor-core && pnpm run build
+        cd ../ui && pnpm run build
         cd ../editor-runtime && pnpm run build
 
     - name: Build ecs-engine-bindgen
