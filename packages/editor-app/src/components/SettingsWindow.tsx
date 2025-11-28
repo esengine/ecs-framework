@@ -290,6 +290,23 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                 );
             }
 
+            case 'collisionMatrix': {
+                // 碰撞矩阵设置使用自定义渲染器
+                const CustomRenderer = setting.customRenderer as React.ComponentType<any> | undefined;
+                if (CustomRenderer) {
+                    return (
+                        <div className="settings-field settings-field-full">
+                            <CustomRenderer />
+                        </div>
+                    );
+                }
+                return (
+                    <div className="settings-field settings-field-full">
+                        <p className="settings-hint">碰撞矩阵编辑器未配置</p>
+                    </div>
+                );
+            }
+
             default:
                 return null;
         }

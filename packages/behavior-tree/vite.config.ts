@@ -3,51 +3,53 @@ import { resolve } from 'path';
 import dts from 'vite-plugin-dts';
 import react from '@vitejs/plugin-react';
 
-// 自定义插件：将 CSS 内联到 JS 中
-function inlineCSS(): any {
+/**
+ * 自定义插件：将 CSS 转换为自执行的样式注入代码
+ * Custom plugin: Convert CSS to self-executing style injection code
+ *
+ * 当用户写 `import './styles.css'` 时，这个插件会：
+ * 1. 在构建时将 CSS 内容转换为 JS 代码
+ * 2. JS 代码在模块导入时自动执行，将样式注入到 DOM
+ * 3. 使用唯一 ID 防止重复注入
+ */
+function injectCSSPlugin(): any {
+    const cssIdMap = new Map<string, string>();
+    let cssCounter = 0;
+
     return {
-        name: 'inline-css',
+        name: 'inject-css-plugin',
         enforce: 'post' as const,
-        // 在生成 bundle 时注入 CSS
         generateBundle(_options: any, bundle: any) {
             const bundleKeys = Object.keys(bundle);
 
-            // 找到 CSS 文件
-            const cssFile = bundleKeys.find(key => key.endsWith('.css'));
-            if (!cssFile || !bundle[cssFile]) {
-                return;
+            // 找到所有 CSS 文件
+            const cssFiles = bundleKeys.filter(key => key.endsWith('.css'));
+
+            for (const cssFile of cssFiles) {
+                const cssChunk = bundle[cssFile];
+                if (!cssChunk || !cssChunk.source) continue;
+
+                const cssContent = cssChunk.source;
+                const styleId = `esengine-behavior-tree-style-${cssCounter++}`;
+                cssIdMap.set(cssFile, styleId);
+
+                // 生成样式注入代码
+                const injectCode = `(function(){if(typeof document!=='undefined'){var s=document.createElement('style');s.id='${styleId}';if(!document.getElementById(s.id)){s.textContent=${JSON.stringify(cssContent)};document.head.appendChild(s);}}})();`;
+
+                // 注入到 editor/index.js 或共享 chunk
+                for (const jsKey of bundleKeys) {
+                    if (!jsKey.endsWith('.js')) continue;
+                    const jsChunk = bundle[jsKey];
+                    if (!jsChunk || jsChunk.type !== 'chunk' || !jsChunk.code) continue;
+
+                    if (jsKey === 'editor/index.js' || jsKey.match(/^index-[^/]+\.js$/)) {
+                        jsChunk.code = injectCode + '\n' + jsChunk.code;
+                    }
+                }
+
+                // 删除独立的 CSS 文件
+                delete bundle[cssFile];
             }
-
-            const cssContent = bundle[cssFile].source;
-            if (!cssContent) return;
-
-            // 找到包含编辑器代码的主要 JS 文件
-            // 优先查找 editor/index.js，然后是带 hash 的 index-*.js
-            const mainJsFile = bundleKeys.find(key =>
-                (key === 'editor/index.js' || key.includes('index-')) &&
-                key.endsWith('.js') &&
-                bundle[key].type === 'chunk' &&
-                bundle[key].code
-            );
-
-            if (mainJsFile && bundle[mainJsFile]) {
-                const injectCode = `
-(function() {
-    if (typeof document !== 'undefined') {
-        var style = document.createElement('style');
-        style.id = 'esengine-behavior-tree-styles';
-        if (!document.getElementById(style.id)) {
-            style.textContent = ${JSON.stringify(cssContent)};
-            document.head.appendChild(style);
-        }
-    }
-})();
-`;
-                bundle[mainJsFile].code = injectCode + bundle[mainJsFile].code;
-            }
-
-            // 删除独立的 CSS 文件（已内联）
-            delete bundle[cssFile];
         }
     };
 }
@@ -60,7 +62,7 @@ export default defineConfig({
             outDir: 'dist',
             rollupTypes: false
         }),
-        inlineCSS()
+        injectCSSPlugin()
     ],
     esbuild: {
         jsx: 'automatic',

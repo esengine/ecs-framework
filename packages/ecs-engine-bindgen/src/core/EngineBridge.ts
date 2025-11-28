@@ -521,6 +521,58 @@ export class EngineBridge implements IEngineBridge {
     }
 
     /**
+     * Add a circle outline gizmo (native rendering).
+     * 添加圆形边框Gizmo（原生渲染）。
+     */
+    addGizmoCircle(
+        x: number,
+        y: number,
+        radius: number,
+        r: number,
+        g: number,
+        b: number,
+        a: number
+    ): void {
+        if (!this.initialized) return;
+        this.getEngine().addGizmoCircle(x, y, radius, r, g, b, a);
+    }
+
+    /**
+     * Add a line gizmo (native rendering).
+     * 添加线条Gizmo（原生渲染）。
+     */
+    addGizmoLine(
+        points: number[],
+        r: number,
+        g: number,
+        b: number,
+        a: number,
+        closed: boolean
+    ): void {
+        if (!this.initialized) return;
+        this.getEngine().addGizmoLine(new Float32Array(points), r, g, b, a, closed);
+    }
+
+    /**
+     * Add a capsule outline gizmo (native rendering).
+     * 添加胶囊边框Gizmo（原生渲染）。
+     */
+    addGizmoCapsule(
+        x: number,
+        y: number,
+        radius: number,
+        halfHeight: number,
+        rotation: number,
+        r: number,
+        g: number,
+        b: number,
+        a: number
+    ): void {
+        if (!this.initialized) return;
+        this.getEngine().addGizmoCapsule(x, y, radius, halfHeight, rotation, r, g, b, a);
+    }
+
+    /**
      * Set transform tool mode.
      * 设置变换工具模式。
      *

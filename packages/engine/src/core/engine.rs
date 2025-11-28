@@ -267,6 +267,52 @@ impl Engine {
         self.gizmo_renderer.add_rect(x, y, width, height, rotation, origin_x, origin_y, r, g, b, a, show_handles);
     }
 
+    /// Add a circle gizmo.
+    /// 添加圆形Gizmo。
+    pub fn add_gizmo_circle(
+        &mut self,
+        x: f32,
+        y: f32,
+        radius: f32,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+    ) {
+        self.gizmo_renderer.add_circle(x, y, radius, r, g, b, a);
+    }
+
+    /// Add a line gizmo.
+    /// 添加线条Gizmo。
+    pub fn add_gizmo_line(
+        &mut self,
+        points: Vec<f32>,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+        closed: bool,
+    ) {
+        self.gizmo_renderer.add_line(points, r, g, b, a, closed);
+    }
+
+    /// Add a capsule gizmo.
+    /// 添加胶囊Gizmo。
+    pub fn add_gizmo_capsule(
+        &mut self,
+        x: f32,
+        y: f32,
+        radius: f32,
+        half_height: f32,
+        rotation: f32,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+    ) {
+        self.gizmo_renderer.add_capsule(x, y, radius, half_height, rotation, r, g, b, a);
+    }
+
     /// Set transform tool mode.
     /// 设置变换工具模式。
     pub fn set_transform_mode(&mut self, mode: u8) {

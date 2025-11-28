@@ -8,14 +8,20 @@
  * 用于独立游戏运行时构建。
  */
 
-// Component
+// Components
 export { TilemapComponent } from './TilemapComponent';
 export type { ITilemapData, ITilesetData } from './TilemapComponent';
 export type { ResizeAnchor } from './TilemapComponent';
 
+export { TilemapCollider2DComponent, TilemapColliderMode } from './physics/TilemapCollider2DComponent';
+export type { CollisionRect } from './physics/TilemapCollider2DComponent';
+
 // Systems
 export { TilemapRenderingSystem } from './systems/TilemapRenderingSystem';
 export type { TilemapRenderData, ViewportBounds } from './systems/TilemapRenderingSystem';
+
+export { TilemapPhysicsSystem } from './physics/TilemapPhysicsSystem';
+export type { IPhysicsWorld, IPhysics2DSystem } from './physics/TilemapPhysicsSystem';
 
 // Loaders
 export { TilemapLoader } from './loaders/TilemapLoader';

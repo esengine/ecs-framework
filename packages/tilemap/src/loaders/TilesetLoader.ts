@@ -4,13 +4,13 @@
  */
 
 import {
-    AssetType,
     IAssetLoadOptions,
     IAssetMetadata,
     IAssetLoadResult,
     AssetLoadError,
     IAssetLoader
 } from '@esengine/asset-system';
+import { TilesetAssetType } from '../index';
 
 /**
  * Tileset data interface
@@ -54,7 +54,7 @@ export interface ITilesetAsset {
  * 瓦片集加载器实现
  */
 export class TilesetLoader implements IAssetLoader<ITilesetAsset> {
-    readonly supportedType = AssetType.Tileset;
+    readonly supportedType = TilesetAssetType;
     readonly supportedExtensions = ['.tileset.json', '.tileset'];
 
     /**
@@ -104,7 +104,7 @@ export class TilesetLoader implements IAssetLoader<ITilesetAsset> {
                 throw new AssetLoadError(
                     `Failed to load tileset: ${error.message}`,
                     metadata.guid,
-                    AssetType.Tileset,
+                    TilesetAssetType,
                     error
                 );
             }

@@ -36,14 +36,14 @@ import { useBehaviorTreeDataStore } from './stores';
 import { createRootNode } from './domain/constants/RootNode';
 import { PluginContext } from './PluginContext';
 
-// Import runtime module and descriptor
-import { BehaviorTreeRuntimeModule, descriptor } from './BehaviorTreePlugin';
+// Import descriptor from local file, runtime module from main module
+import { descriptor } from './BehaviorTreePlugin';
+import { BehaviorTreeRuntimeModule } from '../BehaviorTreeRuntimeModule';
 
-// 导入编辑器 CSS 样式
+// 导入编辑器 CSS 样式（会被 vite 自动处理并注入到 DOM）
+// Import editor CSS styles (automatically handled and injected by vite)
 import './styles/BehaviorTreeNode.css';
-import './styles/Toast.css';
 import './components/panels/BehaviorTreeEditorPanel.css';
-import './components/panels/BehaviorTreePropertiesPanel.css';
 
 const logger = createLogger('BehaviorTreeEditorModule');
 

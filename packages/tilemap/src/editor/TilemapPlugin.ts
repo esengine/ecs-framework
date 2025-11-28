@@ -6,18 +6,10 @@
  * Integrates runtime and editor modules
  */
 
-import type { IScene, ServiceContainer } from '@esengine/ecs-framework';
-import { ComponentRegistry } from '@esengine/ecs-framework';
-import type {
-    IPluginLoader,
-    IRuntimeModuleLoader,
-    PluginDescriptor,
-    SystemContext
-} from '@esengine/editor-core';
+import type { IPluginLoader, PluginDescriptor } from '@esengine/editor-core';
 
-// Runtime imports
-import { TilemapComponent } from '../TilemapComponent';
-import { TilemapRenderingSystem } from '../systems/TilemapRenderingSystem';
+// Runtime module
+import { TilemapRuntimeModule } from '../TilemapRuntimeModule';
 
 // Editor imports
 import { TilemapEditorModule } from './index';
@@ -49,32 +41,11 @@ const descriptor: PluginDescriptor = {
         }
     ],
     dependencies: [
-        { id: '@esengine/core', version: '^1.0.0' }
+        { id: '@esengine/core', version: '^1.0.0' },
+        { id: '@esengine/physics-rapier2d', version: '^1.0.0', optional: true }
     ],
     icon: 'Grid3X3'
 };
-
-/**
- * Tilemap 运行时模块
- * Tilemap runtime module
- */
-export class TilemapRuntimeModule implements IRuntimeModuleLoader {
-    registerComponents(registry: typeof ComponentRegistry): void {
-        registry.register(TilemapComponent);
-    }
-
-    createSystems(scene: IScene, context: SystemContext): void {
-        const tilemapSystem = new TilemapRenderingSystem();
-        scene.addSystem(tilemapSystem);
-
-        if (context.renderSystem) {
-            context.renderSystem.addRenderDataProvider(tilemapSystem);
-        }
-
-        // 保存引用供其他系统使用 | Save reference for other systems
-        context.tilemapSystem = tilemapSystem;
-    }
-}
 
 /**
  * Tilemap 插件加载器

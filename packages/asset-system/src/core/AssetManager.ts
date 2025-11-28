@@ -135,7 +135,19 @@ export class AssetManager implements IAssetManager {
         }
 
         // 创建加载器 / Create loader
-        const loader = this._loaderFactory.createLoader(metadata.type);
+        let loader = this._loaderFactory.createLoader(metadata.type);
+
+        // 如果没有找到 loader 且类型是 Custom，尝试重新解析类型
+        // If no loader found and type is Custom, try to re-resolve the type
+        if (!loader && metadata.type === AssetType.Custom) {
+            const newType = this.resolveAssetType(metadata.path);
+            if (newType !== AssetType.Custom) {
+                // 更新 metadata 类型 / Update metadata type
+                this._database.updateAsset(guid, { type: newType });
+                loader = this._loaderFactory.createLoader(newType);
+            }
+        }
+
         if (!loader) {
             throw AssetLoadError.unsupportedType(guid, metadata.type);
         }
@@ -238,17 +250,7 @@ export class AssetManager implements IAssetManager {
             let metadata = this._database.getMetadataByPath(path);
             if (!metadata) {
                 // 动态创建元数据 / Create metadata dynamically
-                const fileExt = path.substring(path.lastIndexOf('.')).toLowerCase();
-                let assetType = AssetType.Custom;
-
-                // 根据文件扩展名确定资产类型 / Determine asset type by file extension
-                if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'].includes(fileExt)) {
-                    assetType = AssetType.Texture;
-                } else if (['.json'].includes(fileExt)) {
-                    assetType = AssetType.Json;
-                } else if (['.txt', '.md', '.xml', '.yaml'].includes(fileExt)) {
-                    assetType = AssetType.Text;
-                }
+                const assetType = this.resolveAssetType(path);
 
                 // 生成唯一GUID / Generate unique GUID
                 const dynamicGuid = `dynamic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -271,13 +273,57 @@ export class AssetManager implements IAssetManager {
                 this._database.addAsset(metadata);
                 this._pathToGuid.set(path, metadata.guid);
             } else {
+                // 如果之前缓存的类型是 Custom，检查是否现在有注册的 loader 可以处理
+                // If previously cached as Custom, check if a registered loader can now handle it
+                if (metadata.type === AssetType.Custom) {
+                    const newType = this.resolveAssetType(path);
+                    if (newType !== AssetType.Custom) {
+                        metadata.type = newType;
+                    }
+                }
                 this._pathToGuid.set(path, metadata.guid);
             }
 
             return this.loadAsset<T>(metadata.guid, options);
         }
 
+        // 同样检查已缓存的资产，如果类型是 Custom 但现在有 loader 可以处理
+        // Also check cached assets, if type is Custom but now a loader can handle it
+        const entry = this._assets.get(guid);
+        if (entry && entry.metadata.type === AssetType.Custom) {
+            const newType = this.resolveAssetType(path);
+            if (newType !== AssetType.Custom) {
+                entry.metadata.type = newType;
+            }
+        }
+
         return this.loadAsset<T>(guid, options);
+    }
+
+    /**
+     * Resolve asset type from path
+     * 从路径解析资产类型
+     */
+    private resolveAssetType(path: string): AssetType {
+        // 首先尝试从已注册的加载器获取资产类型 / First try to get asset type from registered loaders
+        const loaderType = (this._loaderFactory as AssetLoaderFactory).getAssetTypeByPath(path);
+        if (loaderType !== null) {
+            return loaderType;
+        }
+
+        // 如果没有找到匹配的加载器，使用默认的扩展名映射 / Fallback to default extension mapping
+        const fileExt = path.substring(path.lastIndexOf('.')).toLowerCase();
+
+        // 默认支持的基础类型 / Default supported basic types
+        if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'].includes(fileExt)) {
+            return AssetType.Texture;
+        } else if (['.json'].includes(fileExt)) {
+            return AssetType.Json;
+        } else if (['.txt', '.md', '.xml', '.yaml'].includes(fileExt)) {
+            return AssetType.Text;
+        }
+
+        return AssetType.Custom;
     }
 
     /**

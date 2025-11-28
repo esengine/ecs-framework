@@ -11,6 +11,32 @@ function copyPluginModulesPlugin(): Plugin {
     { name: 'behavior-tree', path: path.resolve(__dirname, '../behavior-tree/dist') },
   ];
 
+  /**
+   * 递归复制目录中的 JS 文件
+   */
+  function copyJsFilesRecursively(srcDir: string, destDir: string, relativePath: string = '') {
+    const entries = fs.readdirSync(srcDir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const srcPath = path.join(srcDir, entry.name);
+      const relPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+
+      if (entry.isDirectory()) {
+        // 递归复制子目录
+        const subDestDir = path.join(destDir, entry.name);
+        if (!fs.existsSync(subDestDir)) {
+          fs.mkdirSync(subDestDir, { recursive: true });
+        }
+        copyJsFilesRecursively(srcPath, subDestDir, relPath);
+      } else if (entry.name.endsWith('.js')) {
+        // 复制 JS 文件
+        const destPath = path.join(destDir, entry.name);
+        fs.copyFileSync(srcPath, destPath);
+        console.log(`[copy-plugin-modules] Copied ${relPath}`);
+      }
+    }
+  }
+
   return {
     name: 'copy-plugin-modules',
     writeBundle(options) {
@@ -26,15 +52,7 @@ function copyPluginModulesPlugin(): Plugin {
           console.warn(`[copy-plugin-modules] ${mod.name} dist not found: ${mod.path}`);
           continue;
         }
-        const files = fs.readdirSync(mod.path);
-        for (const file of files) {
-          if (file.endsWith('.js')) {
-            const src = path.join(mod.path, file);
-            const dest = path.join(assetsDir, file);
-            fs.copyFileSync(src, dest);
-            console.log(`[copy-plugin-modules] Copied ${file}`);
-          }
-        }
+        copyJsFilesRecursively(mod.path, assetsDir);
       }
     }
   };

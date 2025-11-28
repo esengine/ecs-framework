@@ -314,9 +314,10 @@ export class Physics2DSystem extends EntitySystem {
         // 收集并创建碰撞体
         const colliderHandles: number[] = [];
         const colliders = this._getColliders(entity);
+        const scale: Vector2 = { x: transform.scale.x, y: transform.scale.y };
 
         for (const collider of colliders) {
-            const colliderHandle = this._world.createCollider(entity.id, collider, bodyHandle);
+            const colliderHandle = this._world.createCollider(entity.id, collider, bodyHandle, scale);
             if (colliderHandle !== null) {
                 colliderHandles.push(colliderHandle);
             }
@@ -379,6 +380,7 @@ export class Physics2DSystem extends EntitySystem {
 
             // 检查碰撞体是否需要重建
             const colliders = this._getColliders(entity);
+            const scale: Vector2 = { x: transform.scale.x, y: transform.scale.y };
             for (const collider of colliders) {
                 if (collider._needsRebuild) {
                     // 移除旧碰撞体
@@ -391,7 +393,7 @@ export class Physics2DSystem extends EntitySystem {
                     }
 
                     // 创建新碰撞体
-                    const newHandle = this._world.createCollider(entity.id, collider, mapping.bodyHandle);
+                    const newHandle = this._world.createCollider(entity.id, collider, mapping.bodyHandle, scale);
                     if (newHandle !== null) {
                         mapping.colliderHandles.push(newHandle);
                     }

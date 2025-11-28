@@ -35,19 +35,41 @@ export enum CapsuleDirection2D {
 @ECSComponent('CapsuleCollider2D')
 @Serializable({ version: 1, typeId: 'CapsuleCollider2D' })
 export class CapsuleCollider2DComponent extends Collider2DBase {
+    private _radius: number = 3;
+    private _height: number = 10;
+    private _direction: CapsuleDirection2D = CapsuleDirection2D.Vertical;
+
     /**
      * 胶囊半径
      */
     @Serialize()
     @Property({ type: 'number', label: 'Radius', min: 0.01, step: 0.1 })
-    public radius: number = 3;
+    public get radius(): number {
+        return this._radius;
+    }
+
+    public set radius(value: number) {
+        if (this._radius !== value) {
+            this._radius = value;
+            this._needsRebuild = true;
+        }
+    }
 
     /**
      * 胶囊总高度（包括两端的半圆）
      */
     @Serialize()
     @Property({ type: 'number', label: 'Height', min: 0.01, step: 0.1 })
-    public height: number = 10;
+    public get height(): number {
+        return this._height;
+    }
+
+    public set height(value: number) {
+        if (this._height !== value) {
+            this._height = value;
+            this._needsRebuild = true;
+        }
+    }
 
     /**
      * 胶囊方向
@@ -61,7 +83,16 @@ export class CapsuleCollider2DComponent extends Collider2DBase {
             { label: 'Horizontal', value: 1 }
         ]
     })
-    public direction: CapsuleDirection2D = CapsuleDirection2D.Vertical;
+    public get direction(): CapsuleDirection2D {
+        return this._direction;
+    }
+
+    public set direction(value: CapsuleDirection2D) {
+        if (this._direction !== value) {
+            this._direction = value;
+            this._needsRebuild = true;
+        }
+    }
 
     /**
      * 获取半高度（中间矩形部分的一半）
@@ -103,7 +134,6 @@ export class CapsuleCollider2DComponent extends Collider2DBase {
     public setSize(radius: number, height: number): void {
         this.radius = radius;
         this.height = height;
-        this._needsRebuild = true;
     }
 
     /**
@@ -112,6 +142,5 @@ export class CapsuleCollider2DComponent extends Collider2DBase {
      */
     public setDirection(direction: CapsuleDirection2D): void {
         this.direction = direction;
-        this._needsRebuild = true;
     }
 }

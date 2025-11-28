@@ -1,4 +1,5 @@
 import { EntitySystem, Matcher, Entity, Time, Core, ECSSystem } from '@esengine/ecs-framework';
+import type { AssetManager } from '@esengine/asset-system';
 import { BehaviorTreeRuntimeComponent } from './BehaviorTreeRuntimeComponent';
 import { BehaviorTreeAssetManager } from './BehaviorTreeAssetManager';
 import { NodeExecutorRegistry, NodeExecutionContext } from './NodeExecutor';
@@ -14,9 +15,12 @@ import './Executors';
  */
 @ECSSystem('BehaviorTreeExecution')
 export class BehaviorTreeExecutionSystem extends EntitySystem {
-    private assetManager: BehaviorTreeAssetManager | null = null;
+    private btAssetManager: BehaviorTreeAssetManager | null = null;
     private executorRegistry: NodeExecutorRegistry;
     private coreInstance: typeof Core | null = null;
+
+    /** 引用 asset-system 的 AssetManager（由 BehaviorTreeRuntimeModule 设置） */
+    private _assetManager: AssetManager | null = null;
 
     constructor(coreInstance?: typeof Core) {
         super(Matcher.empty().all(BehaviorTreeRuntimeComponent));
@@ -25,12 +29,102 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
         this.registerBuiltInExecutors();
     }
 
-    private getAssetManager(): BehaviorTreeAssetManager {
-        if (!this.assetManager) {
-            const core = this.coreInstance || Core;
-            this.assetManager = core.services.resolve(BehaviorTreeAssetManager);
+    /**
+     * 设置 AssetManager 引用
+     * Set AssetManager reference
+     */
+    setAssetManager(assetManager: AssetManager | null): void {
+        this._assetManager = assetManager;
+    }
+
+    /**
+     * 启动所有 autoStart 的行为树（用于预览模式）
+     * Start all autoStart behavior trees (for preview mode)
+     *
+     * 由于编辑器模式下系统默认禁用，实体添加时 onAdded 不会处理自动启动。
+     * 预览开始时需要手动调用此方法来启动所有需要自动启动的行为树。
+     */
+    startAllAutoStartTrees(): void {
+        if (!this.scene) {
+            this.logger.warn('Scene not available, cannot start auto-start trees');
+            return;
         }
-        return this.assetManager;
+
+        const entities = this.scene.entities.findEntitiesWithComponent(BehaviorTreeRuntimeComponent);
+        for (const entity of entities) {
+            const runtime = entity.getComponent(BehaviorTreeRuntimeComponent);
+            if (runtime && runtime.autoStart && runtime.treeAssetId && !runtime.isRunning) {
+                this.ensureAssetLoaded(runtime.treeAssetId).then(() => {
+                    if (runtime && runtime.autoStart && !runtime.isRunning) {
+                        runtime.start();
+                        this.logger.debug(`Auto-started behavior tree for entity: ${entity.name}`);
+                    }
+                }).catch(e => {
+                    this.logger.error(`Failed to load behavior tree for entity ${entity.name}:`, e);
+                });
+            }
+        }
+    }
+
+    /**
+     * 当实体添加到系统时，处理自动启动
+     * Handle auto-start when entity is added to system
+     */
+    protected override onAdded(entity: Entity): void {
+        // 只有在系统启用时才自动启动
+        // Only auto-start when system is enabled
+        if (!this.enabled) return;
+
+        const runtime = entity.getComponent(BehaviorTreeRuntimeComponent);
+        if (runtime && runtime.autoStart && runtime.treeAssetId && !runtime.isRunning) {
+            // 先尝试加载资产（如果是文件路径）
+            this.ensureAssetLoaded(runtime.treeAssetId).then(() => {
+                // 检查实体是否仍然有效
+                if (runtime && runtime.autoStart && !runtime.isRunning) {
+                    runtime.start();
+                    this.logger.debug(`Auto-started behavior tree for entity: ${entity.name}`);
+                }
+            }).catch(e => {
+                this.logger.error(`Failed to load behavior tree for entity ${entity.name}:`, e);
+            });
+        }
+    }
+
+    /**
+     * 确保行为树资产已加载
+     * Ensure behavior tree asset is loaded
+     */
+    private async ensureAssetLoaded(assetIdOrPath: string): Promise<void> {
+        const btAssetManager = this.getBTAssetManager();
+
+        // 如果资产已存在，直接返回
+        if (btAssetManager.hasAsset(assetIdOrPath)) {
+            return;
+        }
+
+        // 使用 AssetManager 加载（必须通过 setAssetManager 设置）
+        // Use AssetManager (must be set via setAssetManager)
+        if (!this._assetManager) {
+            this.logger.warn(`AssetManager not set, cannot load: ${assetIdOrPath}`);
+            return;
+        }
+
+        try {
+            const result = await this._assetManager.loadAssetByPath(assetIdOrPath);
+            if (result && result.asset) {
+                this.logger.debug(`Behavior tree loaded via AssetManager: ${assetIdOrPath}`);
+            }
+        } catch (e) {
+            this.logger.warn(`Failed to load via AssetManager: ${assetIdOrPath}`, e);
+        }
+    }
+
+    private getBTAssetManager(): BehaviorTreeAssetManager {
+        if (!this.btAssetManager) {
+            const core = this.coreInstance || Core;
+            this.btAssetManager = core.services.resolve(BehaviorTreeAssetManager);
+        }
+        return this.btAssetManager;
     }
 
     /**
@@ -64,7 +158,7 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
                 continue;
             }
 
-            const treeData = this.getAssetManager().getAsset(runtime.treeAssetId);
+            const treeData = this.getBTAssetManager().getAsset(runtime.treeAssetId);
             if (!treeData) {
                 this.logger.warn(`未找到行为树资产: ${runtime.treeAssetId}`);
                 continue;
@@ -74,6 +168,12 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
             if (runtime.needsReset) {
                 runtime.resetAllStates();
                 runtime.needsReset = false;
+            }
+
+            // 初始化黑板变量（如果行为树定义了默认值）
+            // Initialize blackboard variables from tree definition
+            if (treeData.blackboardVariables && treeData.blackboardVariables.size > 0) {
+                runtime.initializeBlackboard(treeData.blackboardVariables);
             }
 
             this.executeTree(entity, runtime, treeData);

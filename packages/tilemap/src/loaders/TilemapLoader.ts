@@ -4,13 +4,13 @@
  */
 
 import {
-    AssetType,
     IAssetLoadOptions,
     IAssetMetadata,
     IAssetLoadResult,
     AssetLoadError,
     IAssetLoader
 } from '@esengine/asset-system';
+import { TilemapAssetType } from '../index';
 
 /**
  * Tilemap data interface
@@ -51,7 +51,7 @@ export interface ITilemapAsset {
  * 瓦片地图加载器实现
  */
 export class TilemapLoader implements IAssetLoader<ITilemapAsset> {
-    readonly supportedType = AssetType.Tilemap;
+    readonly supportedType = TilemapAssetType;
     readonly supportedExtensions = ['.tilemap.json', '.tilemap'];
 
     /**
@@ -90,7 +90,7 @@ export class TilemapLoader implements IAssetLoader<ITilemapAsset> {
                 throw new AssetLoadError(
                     `Failed to load tilemap: ${error.message}`,
                     metadata.guid,
-                    AssetType.Tilemap,
+                    TilemapAssetType,
                     error
                 );
             }

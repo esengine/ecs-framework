@@ -58,8 +58,28 @@ pub struct GizmoRenderer {
     /// Pending rectangle data: [x, y, width, height, rotation, origin_x, origin_y, r, g, b, a, show_handles]
     /// 待渲染的矩形数据
     rects: Vec<f32>,
+    /// Pending circle data: [x, y, radius, r, g, b, a, segments]
+    /// 待渲染的圆形数据
+    circles: Vec<f32>,
+    /// Pending line data: stored as separate line commands
+    /// 待渲染的线条数据
+    lines: Vec<LineGizmo>,
+    /// Pending capsule data: [x, y, radius, half_height, rotation, r, g, b, a]
+    /// 待渲染的胶囊数据
+    capsules: Vec<f32>,
     /// Current transform mode
     transform_mode: TransformMode,
+}
+
+/// Line gizmo data
+/// 线条 gizmo 数据
+struct LineGizmo {
+    points: Vec<f32>,
+    r: f32,
+    g: f32,
+    b: f32,
+    a: f32,
+    closed: bool,
 }
 
 impl GizmoRenderer {
@@ -74,6 +94,9 @@ impl GizmoRenderer {
             program,
             vertex_buffer,
             rects: Vec::new(),
+            circles: Vec::new(),
+            lines: Vec::new(),
+            capsules: Vec::new(),
             transform_mode: TransformMode::default(),
         })
     }
@@ -129,6 +152,9 @@ impl GizmoRenderer {
     /// 清空所有待渲染的Gizmo。
     pub fn clear(&mut self) {
         self.rects.clear();
+        self.circles.clear();
+        self.lines.clear();
+        self.capsules.clear();
     }
 
     /// Add a rectangle outline gizmo.
@@ -162,6 +188,55 @@ impl GizmoRenderer {
         self.rects.extend_from_slice(&[
             x, y, width, height, rotation, origin_x, origin_y, r, g, b, a, if show_handles { 1.0 } else { 0.0 }
         ]);
+    }
+
+    /// Add a circle outline gizmo.
+    /// 添加圆形边框Gizmo。
+    pub fn add_circle(
+        &mut self,
+        x: f32,
+        y: f32,
+        radius: f32,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+    ) {
+        self.circles.extend_from_slice(&[x, y, radius, r, g, b, a, 32.0]);
+    }
+
+    /// Add a line gizmo.
+    /// 添加线条Gizmo。
+    pub fn add_line(
+        &mut self,
+        points: Vec<f32>,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+        closed: bool,
+    ) {
+        self.lines.push(LineGizmo { points, r, g, b, a, closed });
+    }
+
+    /// Add a capsule outline gizmo.
+    /// 添加胶囊边框Gizmo。
+    ///
+    /// Capsule is defined by center position, radius, half-height (distance from center to cap centers), and rotation.
+    /// 胶囊由中心位置、半径、半高度（从中心到端帽圆心的距离）和旋转定义。
+    pub fn add_capsule(
+        &mut self,
+        x: f32,
+        y: f32,
+        radius: f32,
+        half_height: f32,
+        rotation: f32,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+    ) {
+        self.capsules.extend_from_slice(&[x, y, radius, half_height, rotation, r, g, b, a]);
     }
 
     /// Render axis indicator at top-right corner of the viewport.
@@ -382,7 +457,7 @@ impl GizmoRenderer {
     /// Render all pending gizmos.
     /// 渲染所有待渲染的Gizmo。
     pub fn render(&mut self, gl: &WebGl2RenderingContext, camera: &Camera2D) {
-        if self.rects.is_empty() {
+        if self.rects.is_empty() && self.circles.is_empty() && self.lines.is_empty() && self.capsules.is_empty() {
             return;
         }
 
@@ -398,7 +473,23 @@ impl GizmoRenderer {
         gl.enable_vertex_attrib_array(0);
         gl.vertex_attrib_pointer_with_i32(0, 2, WebGl2RenderingContext::FLOAT, false, 0, 0);
 
-        // Process each rectangle (12 floats per rect)
+        // Render rectangles
+        self.render_rects(gl, &color_loc, camera);
+
+        // Render circles
+        self.render_circles(gl, &color_loc);
+
+        // Render lines
+        self.render_lines(gl, &color_loc);
+
+        // Render capsules
+        self.render_capsules(gl, &color_loc);
+
+        gl.disable_vertex_attrib_array(0);
+    }
+
+    /// Render all pending rectangles.
+    fn render_rects(&self, gl: &WebGl2RenderingContext, color_loc: &Option<web_sys::WebGlUniformLocation>, camera: &Camera2D) {
         let rect_stride = 12;
         let rect_count = self.rects.len() / rect_stride;
 
@@ -417,7 +508,6 @@ impl GizmoRenderer {
             let a = self.rects[offset + 10];
             let show_handles = self.rects[offset + 11] > 0.5;
 
-            // Calculate transformed corners
             let vertices = self.calculate_rect_vertices(x, y, width, height, rotation, origin_x, origin_y);
 
             unsafe {
@@ -432,31 +522,157 @@ impl GizmoRenderer {
             gl.uniform4f(color_loc.as_ref(), r, g, b, a);
             gl.draw_arrays(WebGl2RenderingContext::LINE_LOOP, 0, 4);
 
-            // Only draw transform handles if explicitly requested
-            // 只有明确请求时才绘制变换手柄
             if show_handles {
-                // Draw transform handles based on mode
                 match self.transform_mode {
-                    TransformMode::Select => {
-                        // Just the selection box (already drawn)
-                    }
+                    TransformMode::Select => {}
                     TransformMode::Move => {
-                        // Draw move arrows at center
-                        self.draw_move_handles(gl, &color_loc, x, y, rotation, camera);
+                        self.draw_move_handles(gl, color_loc, x, y, rotation, camera);
                     }
                     TransformMode::Rotate => {
-                        // Draw rotation circle
-                        self.draw_rotate_handles(gl, &color_loc, x, y, width.max(height) * 0.6, camera);
+                        self.draw_rotate_handles(gl, color_loc, x, y, width.max(height) * 0.6, camera);
                     }
                     TransformMode::Scale => {
-                        // Draw scale handles at corners
-                        self.draw_scale_handles(gl, &color_loc, x, y, width, height, rotation, origin_x, origin_y, camera);
+                        self.draw_scale_handles(gl, color_loc, x, y, width, height, rotation, origin_x, origin_y, camera);
                     }
                 }
             }
         }
+    }
 
-        gl.disable_vertex_attrib_array(0);
+    /// Render all pending circles.
+    fn render_circles(&self, gl: &WebGl2RenderingContext, color_loc: &Option<web_sys::WebGlUniformLocation>) {
+        let circle_stride = 8;
+        let circle_count = self.circles.len() / circle_stride;
+
+        for i in 0..circle_count {
+            let offset = i * circle_stride;
+            let x = self.circles[offset];
+            let y = self.circles[offset + 1];
+            let radius = self.circles[offset + 2];
+            let r = self.circles[offset + 3];
+            let g = self.circles[offset + 4];
+            let b = self.circles[offset + 5];
+            let a = self.circles[offset + 6];
+            let segments = self.circles[offset + 7] as usize;
+
+            let mut vertices = Vec::with_capacity(segments * 2);
+            for j in 0..segments {
+                let angle = (j as f32 / segments as f32) * std::f32::consts::PI * 2.0;
+                vertices.push(x + radius * angle.cos());
+                vertices.push(y + radius * angle.sin());
+            }
+
+            unsafe {
+                let array = js_sys::Float32Array::view(&vertices);
+                gl.buffer_data_with_array_buffer_view(
+                    WebGl2RenderingContext::ARRAY_BUFFER,
+                    &array,
+                    WebGl2RenderingContext::DYNAMIC_DRAW,
+                );
+            }
+
+            gl.uniform4f(color_loc.as_ref(), r, g, b, a);
+            gl.draw_arrays(WebGl2RenderingContext::LINE_LOOP, 0, segments as i32);
+        }
+    }
+
+    /// Render all pending lines.
+    fn render_lines(&self, gl: &WebGl2RenderingContext, color_loc: &Option<web_sys::WebGlUniformLocation>) {
+        for line in &self.lines {
+            if line.points.len() < 4 {
+                continue;
+            }
+
+            unsafe {
+                let array = js_sys::Float32Array::view(&line.points);
+                gl.buffer_data_with_array_buffer_view(
+                    WebGl2RenderingContext::ARRAY_BUFFER,
+                    &array,
+                    WebGl2RenderingContext::DYNAMIC_DRAW,
+                );
+            }
+
+            gl.uniform4f(color_loc.as_ref(), line.r, line.g, line.b, line.a);
+            let point_count = (line.points.len() / 2) as i32;
+            if line.closed {
+                gl.draw_arrays(WebGl2RenderingContext::LINE_LOOP, 0, point_count);
+            } else {
+                gl.draw_arrays(WebGl2RenderingContext::LINE_STRIP, 0, point_count);
+            }
+        }
+    }
+
+    /// Render all pending capsules.
+    fn render_capsules(&self, gl: &WebGl2RenderingContext, color_loc: &Option<web_sys::WebGlUniformLocation>) {
+        let capsule_stride = 9;
+        let capsule_count = self.capsules.len() / capsule_stride;
+        let segments = 16;
+
+        for i in 0..capsule_count {
+            let offset = i * capsule_stride;
+            let cx = self.capsules[offset];
+            let cy = self.capsules[offset + 1];
+            let radius = self.capsules[offset + 2];
+            let half_height = self.capsules[offset + 3];
+            let rotation = self.capsules[offset + 4];
+            let r = self.capsules[offset + 5];
+            let g = self.capsules[offset + 6];
+            let b = self.capsules[offset + 7];
+            let a = self.capsules[offset + 8];
+
+            let cos_r = rotation.cos();
+            let sin_r = rotation.sin();
+
+            let mut vertices = Vec::with_capacity((segments * 2 + 4) * 2);
+
+            // Draw capsule in local space then rotate:
+            // - Top semicircle at y = +half_height, arc from angle 0 to PI
+            // - Right line from top-right to bottom-right
+            // - Bottom semicircle at y = -half_height, arc from angle PI to 2*PI
+            // - Left line from bottom-left to top-left (closed by LINE_LOOP)
+
+            // Top semicircle (arc curving upward)
+            for j in 0..=segments {
+                let angle = (j as f32 / segments as f32) * std::f32::consts::PI;
+                // Local coordinates: semicircle centered at (0, half_height)
+                // angle 0 -> (radius, half_height), angle PI -> (-radius, half_height)
+                // We want it to curve UP, so use cos for x, sin for y offset
+                let lx = radius * angle.cos();
+                let ly = half_height + radius * angle.sin();
+                // Rotate and translate to world
+                let wx = cx + lx * cos_r - ly * sin_r;
+                let wy = cy + lx * sin_r + ly * cos_r;
+                vertices.push(wx);
+                vertices.push(wy);
+            }
+
+            // Bottom semicircle (arc curving downward)
+            for j in 0..=segments {
+                let angle = (j as f32 / segments as f32) * std::f32::consts::PI;
+                // Local coordinates: semicircle centered at (0, -half_height)
+                // angle 0 -> (-radius, -half_height), angle PI -> (radius, -half_height)
+                // We want it to curve DOWN, so negate both cos and sin offset
+                let lx = -radius * angle.cos();
+                let ly = -half_height - radius * angle.sin();
+                // Rotate and translate to world
+                let wx = cx + lx * cos_r - ly * sin_r;
+                let wy = cy + lx * sin_r + ly * cos_r;
+                vertices.push(wx);
+                vertices.push(wy);
+            }
+
+            unsafe {
+                let array = js_sys::Float32Array::view(&vertices);
+                gl.buffer_data_with_array_buffer_view(
+                    WebGl2RenderingContext::ARRAY_BUFFER,
+                    &array,
+                    WebGl2RenderingContext::DYNAMIC_DRAW,
+                );
+            }
+
+            gl.uniform4f(color_loc.as_ref(), r, g, b, a);
+            gl.draw_arrays(WebGl2RenderingContext::LINE_LOOP, 0, ((segments + 1) * 2) as i32);
+        }
     }
 
     /// Set transform mode.

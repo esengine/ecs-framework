@@ -205,8 +205,17 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
+        let rafId: number | null = null;
         const resizeObserver = new ResizeObserver(() => {
-            resizeCanvas();
+            // 使用 requestAnimationFrame 避免 ResizeObserver loop 错误
+            // Use requestAnimationFrame to avoid ResizeObserver loop errors
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
+            rafId = requestAnimationFrame(() => {
+                resizeCanvas();
+                rafId = null;
+            });
         });
 
         if (containerRef.current) {
@@ -383,6 +392,9 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         document.addEventListener('mouseup', handleMouseUp);
 
         return () => {
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
             window.removeEventListener('resize', resizeCanvas);
             resizeObserver.disconnect();
             canvas.removeEventListener('mousedown', handleMouseDown);

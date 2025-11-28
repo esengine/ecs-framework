@@ -322,6 +322,55 @@ impl GameEngine {
         self.engine.add_gizmo_rect(x, y, width, height, rotation, origin_x, origin_y, r, g, b, a, show_handles);
     }
 
+    /// Add a circle gizmo outline.
+    /// 添加圆形Gizmo边框。
+    #[wasm_bindgen(js_name = addGizmoCircle)]
+    pub fn add_gizmo_circle(
+        &mut self,
+        x: f32,
+        y: f32,
+        radius: f32,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+    ) {
+        self.engine.add_gizmo_circle(x, y, radius, r, g, b, a);
+    }
+
+    /// Add a line gizmo.
+    /// 添加线条Gizmo。
+    #[wasm_bindgen(js_name = addGizmoLine)]
+    pub fn add_gizmo_line(
+        &mut self,
+        points: Vec<f32>,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+        closed: bool,
+    ) {
+        self.engine.add_gizmo_line(points, r, g, b, a, closed);
+    }
+
+    /// Add a capsule gizmo outline.
+    /// 添加胶囊Gizmo边框。
+    #[wasm_bindgen(js_name = addGizmoCapsule)]
+    pub fn add_gizmo_capsule(
+        &mut self,
+        x: f32,
+        y: f32,
+        radius: f32,
+        half_height: f32,
+        rotation: f32,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+    ) {
+        self.engine.add_gizmo_capsule(x, y, radius, half_height, rotation, r, g, b, a);
+    }
+
     /// Set transform tool mode.
     /// 设置变换工具模式。
     ///

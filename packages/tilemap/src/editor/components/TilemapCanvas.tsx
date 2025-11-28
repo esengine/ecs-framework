@@ -189,14 +189,33 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
         const container = containerRef.current;
         if (!canvas || !container) return;
 
+        let rafId: number | null = null;
+
         const resizeObserver = new ResizeObserver(() => {
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
-            draw();
+            // 使用 requestAnimationFrame 避免 ResizeObserver loop 错误
+            // Use requestAnimationFrame to avoid ResizeObserver loop errors
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
+            rafId = requestAnimationFrame(() => {
+                const newWidth = container.clientWidth;
+                const newHeight = container.clientHeight;
+                if (canvas.width !== newWidth || canvas.height !== newHeight) {
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
+                    draw();
+                }
+                rafId = null;
+            });
         });
 
         resizeObserver.observe(container);
-        return () => resizeObserver.disconnect();
+        return () => {
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
+            resizeObserver.disconnect();
+        };
     }, [draw]);
 
     useEffect(() => {

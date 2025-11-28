@@ -150,6 +150,8 @@ class RuntimePluginManager {
      * 为场景创建系统
      */
     createSystemsForScene(scene: IScene, context: SystemContext): void {
+        // Phase 1: 创建所有系统
+        // Phase 1: Create all systems
         for (const [id, plugin] of this.plugins) {
             if (!this.enabledPlugins.has(id)) continue;
             const runtimeModule = plugin.runtimeModule;
@@ -158,6 +160,20 @@ class RuntimePluginManager {
                     runtimeModule.createSystems(scene, context);
                 } catch (e) {
                     console.error(`Failed to create systems for ${id}:`, e);
+                }
+            }
+        }
+
+        // Phase 2: 连接跨插件依赖
+        // Phase 2: Wire cross-plugin dependencies
+        for (const [id, plugin] of this.plugins) {
+            if (!this.enabledPlugins.has(id)) continue;
+            const runtimeModule = plugin.runtimeModule;
+            if (runtimeModule?.onSystemsCreated) {
+                try {
+                    runtimeModule.onSystemsCreated(scene, context);
+                } catch (e) {
+                    console.error(`Failed to wire dependencies for ${id}:`, e);
                 }
             }
         }

@@ -22,12 +22,23 @@ import type { Vector2 } from '../types/Physics2DTypes';
 @ECSComponent('CircleCollider2D')
 @Serializable({ version: 1, typeId: 'CircleCollider2D' })
 export class CircleCollider2DComponent extends Collider2DBase {
+    private _radius: number = 5;
+
     /**
      * 圆的半径
      */
     @Serialize()
     @Property({ type: 'number', label: 'Radius', min: 0.01, step: 0.1 })
-    public radius: number = 5;
+    public get radius(): number {
+        return this._radius;
+    }
+
+    public set radius(value: number) {
+        if (this._radius !== value) {
+            this._radius = value;
+            this._needsRebuild = true;
+        }
+    }
 
     public override getShapeType(): string {
         return 'circle';
@@ -50,6 +61,5 @@ export class CircleCollider2DComponent extends Collider2DBase {
      */
     public setRadius(radius: number): void {
         this.radius = radius;
-        this._needsRebuild = true;
     }
 }

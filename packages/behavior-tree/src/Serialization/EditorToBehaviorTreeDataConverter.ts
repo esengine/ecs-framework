@@ -16,6 +16,17 @@ interface EditorNode {
 }
 
 /**
+ * 编辑器连接数据接口
+ */
+interface EditorConnection {
+    from: string;
+    to: string;
+    connectionType: 'node' | 'property';
+    fromProperty?: string;
+    toProperty?: string;
+}
+
+/**
  * 编辑器行为树数据接口
  */
 interface EditorBehaviorTreeData {
@@ -27,6 +38,7 @@ interface EditorBehaviorTreeData {
         modifiedAt?: string;
     };
     nodes: EditorNode[];
+    connections?: EditorConnection[];
     blackboard?: Record<string, any>;
 }
 
@@ -57,10 +69,18 @@ export class EditorToBehaviorTreeDataConverter {
             throw new Error('Behavior tree must have a root node');
         }
 
-        // 转换所有节点
+        // 构建属性绑定映射：nodeId -> { propertyName -> blackboardKey }
+        const propertyBindingsMap = this.buildPropertyBindingsMap(editorData);
+
+        // 转换所有节点（过滤掉不可执行的节点，如黑板变量节点）
         const nodesMap = new Map<string, BehaviorNodeData>();
         for (const editorNode of editorData.nodes) {
-            const behaviorNodeData = this.convertNode(editorNode);
+            // 跳过黑板变量节点，它们只用于编辑器的可视化绑定
+            if (this.isNonExecutableNode(editorNode)) {
+                continue;
+            }
+            const propertyBindings = propertyBindingsMap.get(editorNode.id);
+            const behaviorNodeData = this.convertNode(editorNode, propertyBindings);
             nodesMap.set(behaviorNodeData.id, behaviorNodeData);
         }
 
@@ -79,24 +99,144 @@ export class EditorToBehaviorTreeDataConverter {
     }
 
     /**
-     * 转换单个节点
+     * 从连接数据构建属性绑定映射
+     * 处理 connectionType === 'property' 的连接，将黑板变量节点连接到目标节点的属性
      */
-    private static convertNode(editorNode: EditorNode): BehaviorNodeData {
+    private static buildPropertyBindingsMap(
+        editorData: EditorBehaviorTreeData
+    ): Map<string, Record<string, string>> {
+        const bindingsMap = new Map<string, Record<string, string>>();
+
+        if (!editorData.connections) {
+            return bindingsMap;
+        }
+
+        // 构建节点 ID 到变量名的映射（用于黑板变量节点）
+        const nodeToVariableMap = new Map<string, string>();
+        for (const node of editorData.nodes) {
+            if (node.data['nodeType'] === 'blackboard-variable' && node.data['variableName']) {
+                nodeToVariableMap.set(node.id, node.data['variableName']);
+            }
+        }
+
+        // 处理属性连接
+        for (const conn of editorData.connections) {
+            if (conn.connectionType === 'property' && conn.toProperty) {
+                const variableName = nodeToVariableMap.get(conn.from);
+                if (variableName) {
+                    // 获取或创建目标节点的绑定记录
+                    let bindings = bindingsMap.get(conn.to);
+                    if (!bindings) {
+                        bindings = {};
+                        bindingsMap.set(conn.to, bindings);
+                    }
+                    // 将属性绑定到黑板变量
+                    bindings[conn.toProperty] = variableName;
+                }
+            }
+        }
+
+        return bindingsMap;
+    }
+
+    /**
+     * 转换单个节点
+     * @param editorNode 编辑器节点数据
+     * @param propertyBindings 从连接中提取的属性绑定（可选）
+     */
+    private static convertNode(
+        editorNode: EditorNode,
+        propertyBindings?: Record<string, string>
+    ): BehaviorNodeData {
         const nodeType = this.mapNodeType(editorNode.template.type);
         const config = this.extractConfig(editorNode.data);
-        const bindings = this.extractBindings(editorNode.data);
+        // 从节点数据中提取绑定
+        const dataBindings = this.extractBindings(editorNode.data);
+        // 合并连接绑定和数据绑定（连接绑定优先）
+        const bindings = { ...dataBindings, ...propertyBindings };
         const abortType = this.extractAbortType(editorNode.data);
+
+        // 获取 implementationType：优先从 template.className，其次从 data 中的类型字段
+        let implementationType: string | undefined = editorNode.template.className;
+        if (!implementationType) {
+            // 尝试从 data 中提取类型
+            implementationType = this.extractImplementationType(editorNode.data, nodeType);
+        }
+
+        if (!implementationType) {
+            console.warn(`[EditorToBehaviorTreeDataConverter] Node ${editorNode.id} has no implementationType, using fallback`);
+            // 根据节点类型使用默认实现
+            implementationType = this.getDefaultImplementationType(nodeType);
+        }
 
         return {
             id: editorNode.id,
-            name: editorNode.template.displayName || editorNode.template.className,
+            name: editorNode.template.displayName || editorNode.template.className || implementationType,
             nodeType,
-            implementationType: editorNode.template.className,
+            implementationType,
             children: editorNode.children || [],
             config,
             ...(Object.keys(bindings).length > 0 && { bindings }),
             ...(abortType && { abortType })
         };
+    }
+
+    /**
+     * 检查是否为不可执行的节点（如黑板变量节点）
+     * 这些节点只在编辑器中使用，不参与运行时执行
+     */
+    private static isNonExecutableNode(editorNode: EditorNode): boolean {
+        const nodeType = editorNode.data['nodeType'];
+        // 黑板变量节点不需要执行，只用于可视化绑定
+        return nodeType === 'blackboard-variable';
+    }
+
+    /**
+     * 从节点数据中提取实现类型
+     *
+     * 优先级：
+     * 1. template.className（标准方式）
+     * 2. data 中的类型字段（compositeType, actionType 等）
+     * 3. 特殊节点类型的默认值（如 Root）
+     */
+    private static extractImplementationType(data: Record<string, any>, nodeType: NodeType): string | undefined {
+        // 节点类型到数据字段的映射
+        const typeFieldMap: Record<NodeType, string> = {
+            [NodeType.Composite]: 'compositeType',
+            [NodeType.Decorator]: 'decoratorType',
+            [NodeType.Action]: 'actionType',
+            [NodeType.Condition]: 'conditionType',
+            [NodeType.Root]: '', // Root 没有对应的数据字段
+        };
+
+        const field = typeFieldMap[nodeType];
+        if (field && data[field]) {
+            return data[field];
+        }
+
+        // Root 节点的特殊处理
+        if (nodeType === NodeType.Root) {
+            return 'Root';
+        }
+
+        return undefined;
+    }
+
+    /**
+     * 获取节点类型的默认实现
+     * 当无法确定具体实现类型时使用
+     */
+    private static getDefaultImplementationType(nodeType: NodeType): string {
+        // 节点类型到默认实现的映射
+        const defaultImplementations: Record<NodeType, string> = {
+            [NodeType.Root]: 'Root',
+            [NodeType.Composite]: 'Sequence',
+            [NodeType.Decorator]: 'Inverter',
+            [NodeType.Action]: 'Wait',
+            [NodeType.Condition]: 'AlwaysTrue',
+        };
+
+        return defaultImplementations[nodeType] || 'Unknown';
     }
 
     /**

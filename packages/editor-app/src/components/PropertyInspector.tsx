@@ -5,6 +5,7 @@ import { ChevronRight, ChevronDown, Lock } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { AnimationClipsFieldEditor } from '../infrastructure/field-editors/AnimationClipsFieldEditor';
 import { AssetField } from './inspectors/fields/AssetField';
+import { CollisionLayerField } from './inspectors/fields/CollisionLayerField';
 import '../styles/PropertyInspector.css';
 
 const animationClipsEditor = new AnimationClipsFieldEditor();
@@ -140,9 +141,9 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                 );
 
             case 'color': {
-                // Convert numeric color (0xRRGGBB) to hex string (#RRGGBB)
                 let colorValue = value ?? '#ffffff';
-                if (typeof colorValue === 'number') {
+                const wasNumber = typeof colorValue === 'number';
+                if (wasNumber) {
                     colorValue = '#' + colorValue.toString(16).padStart(6, '0');
                 }
                 return (
@@ -152,9 +153,12 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                         value={colorValue}
                         readOnly={metadata.readOnly}
                         onChange={(newValue) => {
-                            // Convert hex string back to number for storage
-                            const numericValue = parseInt(newValue.slice(1), 16);
-                            handleChange(propertyName, numericValue);
+                            if (wasNumber) {
+                                const numericValue = parseInt(newValue.slice(1), 16);
+                                handleChange(propertyName, numericValue);
+                            } else {
+                                handleChange(propertyName, newValue);
+                            }
                         }}
                     />
                 );
@@ -265,6 +269,30 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                             }
                         })}
                     </div>
+                );
+
+            case 'collisionLayer':
+                return (
+                    <CollisionLayerField
+                        key={propertyName}
+                        label={label}
+                        value={value ?? 1}
+                        multiple={false}
+                        readOnly={metadata.readOnly}
+                        onChange={(newValue) => handleChange(propertyName, newValue)}
+                    />
+                );
+
+            case 'collisionMask':
+                return (
+                    <CollisionLayerField
+                        key={propertyName}
+                        label={label}
+                        value={value ?? 0xFFFF}
+                        multiple={true}
+                        readOnly={metadata.readOnly}
+                        onChange={(newValue) => handleChange(propertyName, newValue)}
+                    />
                 );
 
             default:

@@ -634,14 +634,6 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         // Use existing tileset data if available, otherwise load from image
         if (tilesetRef.data) {
             const tilesetData = tilesetRef.data;
-            console.log('[TilemapEditor] Using saved tileset data:', {
-                columns: tilesetData.columns,
-                rows: tilesetData.rows,
-                tileWidth: tilesetData.tileWidth,
-                tileHeight: tilesetData.tileHeight,
-                imageWidth: tilesetData.imageWidth,
-                imageHeight: tilesetData.imageHeight
-            });
             setTileset(imageUrl, tilesetData.columns, tilesetData.rows, tilesetData.tileWidth, tilesetData.tileHeight);
         } else {
             // Fallback: calculate from image dimensions

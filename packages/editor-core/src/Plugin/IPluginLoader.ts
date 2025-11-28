@@ -48,6 +48,13 @@ export interface IRuntimeModuleLoader {
     createSystems?(scene: IScene, context: SystemContext): void;
 
     /**
+     * 所有系统创建完成后调用
+     * 用于处理跨插件的系统依赖关系
+     * Called after all systems are created, used for cross-plugin system dependencies
+     */
+    onSystemsCreated?(scene: IScene, context: SystemContext): void;
+
+    /**
      * 模块初始化完成回调
      * Module initialization complete callback
      */

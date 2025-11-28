@@ -28,10 +28,15 @@ import { TransformComponent } from '@esengine/ecs-components';
 
 // Local imports
 import { TilemapComponent } from '../TilemapComponent';
+import { TilemapCollider2DComponent } from '../physics/TilemapCollider2DComponent';
 import { TilemapEditorPanel } from './components/panels/TilemapEditorPanel';
 import { TilemapInspectorProvider } from './providers/TilemapInspectorProvider';
 import { registerTilemapGizmo } from './gizmos/TilemapGizmo';
 import { useTilemapEditorStore } from './stores/TilemapEditorStore';
+
+// 导入编辑器 CSS 样式（会被 vite 自动处理并注入到 DOM）
+// Import editor CSS styles (automatically handled and injected by vite)
+import './styles/TilemapEditor.css';
 
 // Re-exports
 export { TilemapEditorPanel } from './components/panels/TilemapEditorPanel';
@@ -70,6 +75,14 @@ export class TilemapEditorModule implements IEditorModuleLoader {
                 description: 'Tilemap component for tile-based levels',
                 icon: 'Grid3X3'
             });
+
+            componentRegistry.register({
+                name: 'TilemapCollider2D',
+                type: TilemapCollider2DComponent,
+                category: 'components.category.physics',
+                description: 'Generates physics colliders from tilemap collision data',
+                icon: 'Shield'
+            });
         }
 
         // 订阅 tilemap:create-asset 消息 | Subscribe to tilemap:create-asset message
@@ -89,6 +102,7 @@ export class TilemapEditorModule implements IEditorModuleLoader {
     }
 
     async uninstall(): Promise<void> {
+        // 清理订阅 | Clean up subscriptions
         this.unsubscribers.forEach(unsub => unsub());
         this.unsubscribers = [];
     }
@@ -242,5 +256,5 @@ export class TilemapEditorModule implements IEditorModuleLoader {
 export const tilemapEditorModule = new TilemapEditorModule();
 
 // Plugin exports
-export { TilemapPlugin, TilemapRuntimeModule } from './TilemapPlugin';
+export { TilemapPlugin } from './TilemapPlugin';
 export default tilemapEditorModule;

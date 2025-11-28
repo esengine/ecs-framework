@@ -60,6 +60,12 @@ export interface IRuntimeModuleLoader {
     registerComponents(registry: typeof ComponentRegistryType): void;
     registerServices?(services: ServiceContainer): void;
     createSystems?(scene: IScene, context: SystemContext): void;
+    /**
+     * 所有系统创建完成后调用
+     * 用于处理跨插件的系统依赖关系
+     * Called after all systems are created, used for cross-plugin system dependencies
+     */
+    onSystemsCreated?(scene: IScene, context: SystemContext): void;
     onInitialize?(): Promise<void>;
     onDestroy?(): void;
 }

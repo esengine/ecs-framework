@@ -33,45 +33,50 @@ export enum AssetState {
 }
 
 /**
- * Asset types supported by the system
- * 系统支持的资产类型
+ * Asset type - string based for extensibility
+ * 资产类型 - 使用字符串以支持插件扩展
+ *
+ * Plugins can define their own asset types by using custom strings.
+ * Built-in types are provided as constants below.
+ * 插件可以通过使用自定义字符串定义自己的资产类型。
+ * 内置类型作为常量提供如下。
  */
-export enum AssetType {
+export type AssetType = string;
+
+/**
+ * Built-in asset types provided by asset-system
+ * asset-system 提供的内置资产类型
+ */
+export const AssetType = {
     /** 纹理 */
-    Texture = 'texture',
+    Texture: 'texture',
     /** 网格 */
-    Mesh = 'mesh',
+    Mesh: 'mesh',
     /** 材质 */
-    Material = 'material',
+    Material: 'material',
     /** 着色器 */
-    Shader = 'shader',
+    Shader: 'shader',
     /** 音频 */
-    Audio = 'audio',
+    Audio: 'audio',
     /** 字体 */
-    Font = 'font',
+    Font: 'font',
     /** 预制体 */
-    Prefab = 'prefab',
+    Prefab: 'prefab',
     /** 场景 */
-    Scene = 'scene',
+    Scene: 'scene',
     /** 脚本 */
-    Script = 'script',
+    Script: 'script',
     /** 动画片段 */
-    AnimationClip = 'animation',
-    /** 行为树 */
-    BehaviorTree = 'behaviortree',
-    /** 瓦片地图 */
-    Tilemap = 'tilemap',
-    /** 瓦片集 */
-    Tileset = 'tileset',
+    AnimationClip: 'animation',
     /** JSON数据 */
-    Json = 'json',
+    Json: 'json',
     /** 文本 */
-    Text = 'text',
+    Text: 'text',
     /** 二进制 */
-    Binary = 'binary',
+    Binary: 'binary',
     /** 自定义 */
-    Custom = 'custom'
-}
+    Custom: 'custom'
+} as const;
 
 /**
  * Platform variants for assets

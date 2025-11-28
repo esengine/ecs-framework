@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 
-export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset' | 'animationClips';
+export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset' | 'animationClips' | 'collisionLayer' | 'collisionMask';
 
 /**
  * 资源类型
@@ -133,6 +133,22 @@ interface AnimationClipsPropertyOptions extends PropertyOptionsBase {
 }
 
 /**
+ * 碰撞层属性选项
+ * Collision layer property options
+ */
+interface CollisionLayerPropertyOptions extends PropertyOptionsBase {
+    type: 'collisionLayer';
+}
+
+/**
+ * 碰撞掩码属性选项
+ * Collision mask property options
+ */
+interface CollisionMaskPropertyOptions extends PropertyOptionsBase {
+    type: 'collisionMask';
+}
+
+/**
  * 属性选项联合类型
  * Property options union type
  */
@@ -144,7 +160,9 @@ export type PropertyOptions =
     | VectorPropertyOptions
     | EnumPropertyOptions
     | AssetPropertyOptions
-    | AnimationClipsPropertyOptions;
+    | AnimationClipsPropertyOptions
+    | CollisionLayerPropertyOptions
+    | CollisionMaskPropertyOptions;
 
 // 使用 Symbol.for 创建全局 Symbol，确保跨包共享元数据
 // Use Symbol.for to create a global Symbol to ensure metadata sharing across packages

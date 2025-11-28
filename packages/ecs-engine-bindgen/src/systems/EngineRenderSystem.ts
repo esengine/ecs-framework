@@ -68,7 +68,7 @@ interface GizmoColorInternal {
  * @internal
  */
 interface GizmoRenderDataInternal {
-    type: 'rect' | 'circle' | 'line' | 'grid';
+    type: 'rect' | 'circle' | 'line' | 'grid' | 'capsule';
     color: GizmoColorInternal;
     // Rect specific
     x?: number;
@@ -87,6 +87,8 @@ interface GizmoRenderDataInternal {
     // Grid specific
     cols?: number;
     rows?: number;
+    // Capsule specific
+    halfHeight?: number;
 }
 
 /**
@@ -568,8 +570,6 @@ export class EngineRenderSystem extends EntitySystem {
                 break;
 
             case 'grid':
-                // Render grid as multiple line segments
-                // 将网格渲染为多条线段
                 if (data.x !== undefined && data.y !== undefined &&
                     data.width !== undefined && data.height !== undefined &&
                     data.cols !== undefined && data.rows !== undefined) {
@@ -578,18 +578,32 @@ export class EngineRenderSystem extends EntitySystem {
                 break;
 
             case 'line':
-                // Lines are rendered as connected rect segments (thin)
-                // 线条渲染为连接的细矩形段
                 if (data.points && data.points.length >= 2) {
-                    this.renderLineGizmo(data.points, data.closed ?? false, r, g, b, a);
+                    const flatPoints: number[] = [];
+                    for (const p of data.points) {
+                        flatPoints.push(p.x, p.y);
+                    }
+                    this.bridge.addGizmoLine(flatPoints, r, g, b, a, data.closed ?? false);
                 }
                 break;
 
             case 'circle':
-                // Circle rendered as polygon approximation
-                // 圆形渲染为多边形近似
                 if (data.x !== undefined && data.y !== undefined && data.radius !== undefined) {
-                    this.renderCircleGizmo(data.x, data.y, data.radius, r, g, b, a);
+                    this.bridge.addGizmoCircle(data.x, data.y, data.radius, r, g, b, a);
+                }
+                break;
+
+            case 'capsule':
+                if (data.x !== undefined && data.y !== undefined &&
+                    data.radius !== undefined && data.halfHeight !== undefined) {
+                    this.bridge.addGizmoCapsule(
+                        data.x,
+                        data.y,
+                        data.radius,
+                        data.halfHeight,
+                        data.rotation ?? 0,
+                        r, g, b, a
+                    );
                 }
                 break;
         }
@@ -1041,9 +1055,9 @@ export class EngineRenderSystem extends EntitySystem {
      * 将十六进制颜色字符串转换为打包的RGBA。
      */
     private hexToPackedColor(hex: string, alpha: number): number {
-        // Parse hex color like "#ffffff" or "#fff"
         let r = 255, g = 255, b = 255;
-        if (hex.startsWith('#')) {
+
+        if (typeof hex === 'string' && hex.startsWith('#')) {
             const hexValue = hex.slice(1);
             if (hexValue.length === 3) {
                 r = parseInt(hexValue[0] + hexValue[0], 16);
@@ -1055,6 +1069,7 @@ export class EngineRenderSystem extends EntitySystem {
                 b = parseInt(hexValue.slice(4, 6), 16);
             }
         }
+
         const a = Math.round(alpha * 255);
         // Pack as 0xAABBGGRR for WebGL
         return ((a & 0xFF) << 24) | ((b & 0xFF) << 16) | ((g & 0xFF) << 8) | (r & 0xFF);

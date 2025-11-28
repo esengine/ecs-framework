@@ -234,6 +234,7 @@ export class EngineService {
             core: Core,
             engineBridge: this.bridge,
             renderSystem: this.renderSystem,
+            assetManager: this.assetManager,
             isEditor: true
         };
 
@@ -396,6 +397,9 @@ export class EngineService {
         // 启用行为树系统用于预览
         if (this.behaviorTreeSystem) {
             this.behaviorTreeSystem.enabled = true;
+            // 启动所有自动启动的行为树（因为在编辑器模式下 onAdded 不会处理）
+            // Start all auto-start behavior trees (since onAdded doesn't handle them in editor mode)
+            this.behaviorTreeSystem.startAllAutoStartTrees();
         }
         // Enable physics system for preview
         // 启用物理系统用于预览
