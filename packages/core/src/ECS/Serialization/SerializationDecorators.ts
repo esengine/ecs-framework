@@ -80,17 +80,26 @@ export function Serializable(options: SerializableOptions) {
             throw new Error('Serializable装饰器必须提供有效的版本号');
         }
 
-        // 初始化或获取现有元数据
-        let metadata: SerializationMetadata = (target as any)[SERIALIZABLE_METADATA];
-        if (!metadata) {
+        // 检查是否有自己的元数据（不是从父类继承的）
+        const hasOwnMetadata = Object.prototype.hasOwnProperty.call(target, SERIALIZABLE_METADATA);
+
+        let metadata: SerializationMetadata;
+
+        if (hasOwnMetadata) {
+            // 已有自己的元数据，更新 options
+            metadata = (target as any)[SERIALIZABLE_METADATA];
+            metadata.options = options;
+        } else {
+            // 没有自己的元数据，检查是否有继承的元数据
+            const inheritedMetadata: SerializationMetadata | undefined = (target as any)[SERIALIZABLE_METADATA];
+
+            // 创建新的元数据对象（从继承的元数据复制字段，但使用新的 options）
             metadata = {
                 options,
-                fields: new Map(),
-                ignoredFields: new Set()
+                fields: inheritedMetadata ? new Map(inheritedMetadata.fields) : new Map(),
+                ignoredFields: inheritedMetadata ? new Set(inheritedMetadata.ignoredFields) : new Set()
             };
             (target as any)[SERIALIZABLE_METADATA] = metadata;
-        } else {
-            metadata.options = options;
         }
 
         return target;
@@ -117,13 +126,22 @@ export function Serialize(options?: FieldSerializeOptions) {
     return function (target: any, propertyKey: string | symbol) {
         const constructor = target.constructor;
 
-        // 获取或创建元数据
-        let metadata: SerializationMetadata = constructor[SERIALIZABLE_METADATA];
-        if (!metadata) {
+        // 检查是否有自己的元数据（不是从父类继承的）
+        const hasOwnMetadata = Object.prototype.hasOwnProperty.call(constructor, SERIALIZABLE_METADATA);
+        let metadata: SerializationMetadata;
+
+        if (hasOwnMetadata) {
+            // 已有自己的元数据
+            metadata = constructor[SERIALIZABLE_METADATA];
+        } else {
+            // 没有自己的元数据，检查是否有继承的元数据
+            const inheritedMetadata: SerializationMetadata | undefined = constructor[SERIALIZABLE_METADATA];
+
+            // 创建新的元数据对象（从继承的元数据复制）
             metadata = {
-                options: { version: 1 }, // 默认版本
-                fields: new Map(),
-                ignoredFields: new Set()
+                options: inheritedMetadata ? { ...inheritedMetadata.options } : { version: 1 },
+                fields: inheritedMetadata ? new Map(inheritedMetadata.fields) : new Map(),
+                ignoredFields: inheritedMetadata ? new Set(inheritedMetadata.ignoredFields) : new Set()
             };
             constructor[SERIALIZABLE_METADATA] = metadata;
         }
@@ -208,13 +226,22 @@ export function IgnoreSerialization() {
     return function (target: any, propertyKey: string | symbol) {
         const constructor = target.constructor;
 
-        // 获取或创建元数据
-        let metadata: SerializationMetadata = constructor[SERIALIZABLE_METADATA];
-        if (!metadata) {
+        // 检查是否有自己的元数据（不是从父类继承的）
+        const hasOwnMetadata = Object.prototype.hasOwnProperty.call(constructor, SERIALIZABLE_METADATA);
+        let metadata: SerializationMetadata;
+
+        if (hasOwnMetadata) {
+            // 已有自己的元数据
+            metadata = constructor[SERIALIZABLE_METADATA];
+        } else {
+            // 没有自己的元数据，检查是否有继承的元数据
+            const inheritedMetadata: SerializationMetadata | undefined = constructor[SERIALIZABLE_METADATA];
+
+            // 创建新的元数据对象（从继承的元数据复制）
             metadata = {
-                options: { version: 1 },
-                fields: new Map(),
-                ignoredFields: new Set()
+                options: inheritedMetadata ? { ...inheritedMetadata.options } : { version: 1 },
+                fields: inheritedMetadata ? new Map(inheritedMetadata.fields) : new Map(),
+                ignoredFields: inheritedMetadata ? new Set(inheritedMetadata.ignoredFields) : new Set()
             };
             constructor[SERIALIZABLE_METADATA] = metadata;
         }

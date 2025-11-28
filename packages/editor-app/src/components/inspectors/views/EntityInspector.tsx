@@ -341,31 +341,37 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                                                 />
                                             }
                                             {/* Dynamic component actions from plugins */}
-                                            {componentActionRegistry?.getActionsForComponent(componentName).map((action) => (
-                                                <button
-                                                    key={action.id}
-                                                    className="component-action-btn"
-                                                    onClick={() => action.execute(component, entity)}
-                                                    style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '6px',
-                                                        padding: '8px 12px',
-                                                        width: '100%',
-                                                        marginTop: '8px',
-                                                        border: 'none',
-                                                        borderRadius: '4px',
-                                                        background: 'var(--accent-color, #0078d4)',
-                                                        color: 'white',
-                                                        cursor: 'pointer',
-                                                        fontSize: '12px',
-                                                        fontWeight: 500,
-                                                    }}
-                                                >
-                                                    {action.icon}
-                                                    {action.label}
-                                                </button>
-                                            ))}
+                                            {componentActionRegistry?.getActionsForComponent(componentName).map((action) => {
+                                                // 解析图标：支持字符串（Lucide 图标名）或 React 元素
+                                                const ActionIcon = typeof action.icon === 'string'
+                                                    ? (LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number }>>)[action.icon]
+                                                    : null;
+                                                return (
+                                                    <button
+                                                        key={action.id}
+                                                        className="component-action-btn"
+                                                        onClick={() => action.execute(component, entity)}
+                                                        style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
+                                                            padding: '8px 12px',
+                                                            width: '100%',
+                                                            marginTop: '8px',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            background: 'var(--accent-color, #0078d4)',
+                                                            color: 'white',
+                                                            cursor: 'pointer',
+                                                            fontSize: '12px',
+                                                            fontWeight: 500,
+                                                        }}
+                                                    >
+                                                        {ActionIcon ? <ActionIcon size={14} /> : action.icon}
+                                                        {action.label}
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>

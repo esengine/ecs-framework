@@ -795,18 +795,27 @@ function App() {
             const dynamicPanels: FlexDockPanel[] = activeDynamicPanels
                 .filter((panelId) => {
                     const panelDesc = uiRegistry.getPanel(panelId);
-                    return panelDesc && panelDesc.component;
+                    return panelDesc && (panelDesc.component || panelDesc.render);
                 })
                 .map((panelId) => {
                     const panelDesc = uiRegistry.getPanel(panelId)!;
-                    const Component = panelDesc.component;
                     // 优先使用动态标题，否则使用默认标题
                     const customTitle = dynamicPanelTitles.get(panelId);
                     const defaultTitle = (panelDesc as any).titleZh && locale === 'zh' ? (panelDesc as any).titleZh : panelDesc.title;
+
+                    // 支持 component 或 render 两种方式
+                    let content: React.ReactNode;
+                    if (panelDesc.component) {
+                        const Component = panelDesc.component;
+                        content = <Component projectPath={currentProjectPath} />;
+                    } else if (panelDesc.render) {
+                        content = panelDesc.render();
+                    }
+
                     return {
                         id: panelDesc.id,
                         title: customTitle || defaultTitle,
-                        content: <Component projectPath={currentProjectPath} />,
+                        content,
                         closable: panelDesc.closable ?? true
                     };
                 });

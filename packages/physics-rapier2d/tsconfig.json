@@ -1,0 +1,30 @@
+{
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "ES2020",
+        "moduleResolution": "bundler",
+        "allowImportingTsExtensions": false,
+        "lib": ["ES2020", "DOM"],
+        "outDir": "./dist",
+        "rootDir": "./src",
+        "strict": true,
+        "composite": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "resolveJsonModule": true,
+        "jsx": "react-jsx"
+    },
+    "include": ["src/**/*", "plugin.json"],
+    "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"],
+    "references": [
+        { "path": "../core" },
+        { "path": "../components" }
+    ]
+}

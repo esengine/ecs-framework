@@ -99,7 +99,9 @@ export class TilemapEditorModule implements IEditorModuleLoader {
                 id: 'tilemap-editor',
                 title: 'Tilemap Editor',
                 position: PanelPosition.Center,
-                render: () => React.createElement(TilemapEditorPanel),
+                closable: true,
+                component: TilemapEditorPanel,
+                isDynamic: true
             },
         ];
     }
