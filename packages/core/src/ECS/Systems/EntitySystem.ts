@@ -246,6 +246,17 @@ export abstract class EntitySystem implements ISystemBase, IService {
     }
 
     /**
+     * 完全重置实体跟踪状态
+     * 清除所有缓存和跟踪的实体，强制下次 update 时重新扫描所有实体并触发 onAdded
+     * 用于场景重载/预览重置等场景
+     */
+    public resetEntityTracking(): void {
+        this._entityCache.clearAll();
+        this._entityIdMap = null;
+        this._entityIdMapVersion = -1;
+    }
+
+    /**
      * 重置系统状态
      *
      * 当系统从场景中移除时调用，重置初始化状态以便重新添加时能正确初始化。

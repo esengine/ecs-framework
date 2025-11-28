@@ -34,9 +34,6 @@ import {
     SpriteAnimatorComponent,
     TextComponent,
     CameraComponent,
-    RigidBodyComponent,
-    BoxColliderComponent,
-    CircleColliderComponent,
     AudioSourceComponent
 } from '@esengine/ecs-components';
 import { BehaviorTreeRuntimeComponent } from '@esengine/behavior-tree';
@@ -114,9 +111,6 @@ export class ServiceRegistry {
             { name: 'SpriteAnimatorComponent', type: SpriteAnimatorComponent, editorName: 'SpriteAnimator', category: 'components.category.rendering', description: 'components.spriteAnimator.description', icon: 'Film' },
             { name: 'TextComponent', type: TextComponent, editorName: 'Text', category: 'components.category.rendering', description: 'components.text.description', icon: 'Type' },
             { name: 'CameraComponent', type: CameraComponent, editorName: 'Camera', category: 'components.category.rendering', description: 'components.camera.description', icon: 'Camera' },
-            { name: 'RigidBodyComponent', type: RigidBodyComponent, editorName: 'RigidBody', category: 'components.category.physics', description: 'components.rigidBody.description', icon: 'Atom' },
-            { name: 'BoxColliderComponent', type: BoxColliderComponent, editorName: 'BoxCollider', category: 'components.category.physics', description: 'components.boxCollider.description', icon: 'Square' },
-            { name: 'CircleColliderComponent', type: CircleColliderComponent, editorName: 'CircleCollider', category: 'components.category.physics', description: 'components.circleCollider.description', icon: 'Circle' },
             { name: 'AudioSourceComponent', type: AudioSourceComponent, editorName: 'AudioSource', category: 'components.category.audio', description: 'components.audioSource.description', icon: 'Volume2' },
             { name: 'BehaviorTreeRuntimeComponent', type: BehaviorTreeRuntimeComponent, editorName: 'BehaviorTreeRuntime', category: 'components.category.ai', description: 'components.behaviorTreeRuntime.description', icon: 'GitBranch' }
         ];

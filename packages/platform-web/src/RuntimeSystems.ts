@@ -8,10 +8,12 @@ import type { IScene } from '@esengine/ecs-framework';
 import { EngineBridge, EngineRenderSystem, CameraSystem } from '@esengine/ecs-engine-bindgen';
 import { TransformComponent, SpriteAnimatorSystem, CoreRuntimeModule } from '@esengine/ecs-components';
 import type { SystemContext, IPluginLoader, IRuntimeModuleLoader, PluginDescriptor } from '@esengine/ecs-components';
-// Import from /runtime entry points to avoid editor dependencies (React, etc.)
+// Import runtime modules
+// 注意：这些模块需要从各自包的 runtime 入口点导入，以避免编辑器依赖（React 等）
 import { UIRuntimeModule, UIRenderDataProvider, UIInputSystem } from '@esengine/ui/runtime';
 import { TilemapRuntimeModule, TilemapRenderingSystem } from '@esengine/tilemap/runtime';
 import { BehaviorTreeRuntimeModule, BehaviorTreeExecutionSystem } from '@esengine/behavior-tree/runtime';
+import { PhysicsRuntimeModule, Physics2DSystem } from '@esengine/physics-rapier2d/runtime';
 
 /**
  * 运行时系统集合
@@ -21,6 +23,7 @@ export interface RuntimeSystems {
     animatorSystem?: SpriteAnimatorSystem;
     tilemapSystem?: TilemapRenderingSystem;
     behaviorTreeSystem?: BehaviorTreeExecutionSystem;
+    physicsSystem?: Physics2DSystem;
     renderSystem: EngineRenderSystem;
     uiRenderProvider?: UIRenderDataProvider;
 }
@@ -243,6 +246,16 @@ const behaviorTreeDescriptor: PluginDescriptor = {
     modules: [{ name: 'BehaviorTreeRuntime', type: 'runtime', entry: './src/index.ts' }]
 };
 
+const physicsDescriptor: PluginDescriptor = {
+    id: '@esengine/physics-rapier2d',
+    name: 'Rapier 2D Physics',
+    version: '1.0.0',
+    category: 'physics',
+    enabledByDefault: true,
+    isEnginePlugin: true,
+    modules: [{ name: 'PhysicsRuntime', type: 'runtime', entry: './src/runtime.ts' }]
+};
+
 /**
  * 注册所有可用插件
  * 仅注册插件描述信息，不初始化组件和服务
@@ -270,6 +283,12 @@ export function registerAvailablePlugins(): void {
         runtimePluginManager.register(createRuntimeOnlyPlugin(behaviorTreeDescriptor, new BehaviorTreeRuntimeModule()));
     } catch (e) {
         console.error('[RuntimeSystems] Failed to register BehaviorTreeRuntimeModule:', e);
+    }
+
+    try {
+        runtimePluginManager.register(createRuntimeOnlyPlugin(physicsDescriptor, new PhysicsRuntimeModule()));
+    } catch (e) {
+        console.error('[RuntimeSystems] Failed to register PhysicsRuntimeModule:', e);
     }
 }
 

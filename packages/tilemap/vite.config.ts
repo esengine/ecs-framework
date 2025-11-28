@@ -21,10 +21,11 @@ function inlineCSS(): any {
             const cssContent = bundle[cssFile].source;
             if (!cssContent) return;
 
-            // 找到包含编辑器代码的主要 JS 文件（带 hash 的 chunk）
+            // 找到包含编辑器代码的主要 JS 文件
+            // 优先查找 editor/index.js，然后是带 hash 的 index-*.js
             const mainJsFile = bundleKeys.find(key =>
+                (key === 'editor/index.js' || key.includes('index-')) &&
                 key.endsWith('.js') &&
-                key.includes('index-') &&
                 bundle[key].type === 'chunk' &&
                 bundle[key].code
             );

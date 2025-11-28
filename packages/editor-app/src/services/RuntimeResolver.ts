@@ -86,12 +86,10 @@ export class RuntimeResolver {
         if (await this.hasRuntimeFilesInWorkspace(workspaceRoot)) {
             this.baseDir = workspaceRoot;
             this.isDev = true;
-            console.log(`[RuntimeResolver] Using workspace dev files: ${this.baseDir}`);
         } else {
             // 回退到打包的资源目录（生产模式）
             this.baseDir = await TauriAPI.getAppResourceDir();
             this.isDev = false;
-            console.log(`[RuntimeResolver] Using bundled resource dir: ${this.baseDir}`);
         }
     }
 
@@ -101,9 +99,7 @@ export class RuntimeResolver {
      */
     private async hasRuntimeFilesInWorkspace(workspaceRoot: string): Promise<boolean> {
         const runtimePath = `${workspaceRoot}\\packages\\platform-web\\dist\\runtime.browser.js`;
-        const exists = await TauriAPI.pathExists(runtimePath);
-        console.log(`[RuntimeResolver] Checking workspace runtime: ${runtimePath} -> ${exists}`);
-        return exists;
+        return await TauriAPI.pathExists(runtimePath);
     }
 
     /**
@@ -209,9 +205,6 @@ export class RuntimeResolver {
      * 生产模式：从编辑器内置资源复制
      */
     async prepareRuntimeFiles(targetDir: string): Promise<void> {
-        console.log(`[RuntimeResolver] Preparing runtime files to: ${targetDir}`);
-        console.log(`[RuntimeResolver] isDev: ${this.isDev}, baseDir: ${this.baseDir}`);
-
         // Ensure target directory exists
         const dirExists = await TauriAPI.pathExists(targetDir);
         if (!dirExists) {
@@ -220,16 +213,13 @@ export class RuntimeResolver {
 
         // Copy platform-web runtime
         const platformWeb = await this.getModuleFiles('platform-web');
-        console.log(`[RuntimeResolver] platform-web files:`, platformWeb.files);
         for (const srcFile of platformWeb.files) {
             const filename = srcFile.split(/[/\\]/).pop() || '';
             const dstFile = `${targetDir}\\${filename}`;
 
             const srcExists = await TauriAPI.pathExists(srcFile);
-            console.log(`[RuntimeResolver] Copying ${srcFile} -> ${dstFile} (src exists: ${srcExists})`);
             if (srcExists) {
                 await TauriAPI.copyFile(srcFile, dstFile);
-                console.log(`[RuntimeResolver] Copied ${filename}`);
             } else {
                 throw new Error(`Runtime file not found: ${srcFile}`);
             }
@@ -237,22 +227,17 @@ export class RuntimeResolver {
 
         // Copy engine WASM files
         const engine = await this.getModuleFiles('engine');
-        console.log(`[RuntimeResolver] engine files:`, engine.files);
         for (const srcFile of engine.files) {
             const filename = srcFile.split(/[/\\]/).pop() || '';
             const dstFile = `${targetDir}\\${filename}`;
 
             const srcExists = await TauriAPI.pathExists(srcFile);
-            console.log(`[RuntimeResolver] Copying ${srcFile} -> ${dstFile} (src exists: ${srcExists})`);
             if (srcExists) {
                 await TauriAPI.copyFile(srcFile, dstFile);
-                console.log(`[RuntimeResolver] Copied ${filename}`);
             } else {
                 throw new Error(`Engine file not found: ${srcFile}`);
             }
         }
-
-        console.log(`[RuntimeResolver] Runtime files prepared successfully`);
     }
 
     /**

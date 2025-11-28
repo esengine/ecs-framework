@@ -369,6 +369,9 @@ importers:
       '@esengine/engine':
         specifier: workspace:*
         version: link:../engine
+      '@esengine/physics-rapier2d':
+        specifier: workspace:*
+        version: link:../physics-rapier2d
       '@esengine/tilemap':
         specifier: workspace:*
         version: link:../tilemap
@@ -667,6 +670,43 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
+  packages/physics-rapier2d:
+    dependencies:
+      '@dimforge/rapier2d-compat':
+        specifier: ^0.14.0
+        version: 0.14.0
+      '@esengine/ecs-components':
+        specifier: workspace:*
+        version: link:../components
+      '@esengine/ecs-framework':
+        specifier: '>=2.0.0'
+        version: link:../core
+      '@esengine/editor-core':
+        specifier: workspace:*
+        version: link:../editor-core
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.12
+        version: 18.3.27
+      '@vitejs/plugin-react':
+        specifier: ^4.7.0
+        version: 4.7.0(vite@6.4.1(@types/node@20.19.25)(jiti@2.6.1)(terser@5.44.1)(yaml@2.8.1))
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.7
+        version: 6.4.1(@types/node@20.19.25)(jiti@2.6.1)(terser@5.44.1)(yaml@2.8.1)
+      vite-plugin-dts:
+        specifier: ^4.5.0
+        version: 4.5.4(@types/node@20.19.25)(rollup@4.53.3)(typescript@5.9.3)(vite@6.4.1(@types/node@20.19.25)(jiti@2.6.1)(terser@5.44.1)(yaml@2.8.1))
+
   packages/platform-common:
     devDependencies:
       '@rollup/plugin-commonjs':
@@ -708,6 +748,9 @@ importers:
       '@esengine/ecs-framework':
         specifier: workspace:*
         version: link:../core
+      '@esengine/physics-rapier2d':
+        specifier: workspace:*
+        version: link:../physics-rapier2d
       '@esengine/platform-common':
         specifier: workspace:*
         version: link:../platform-common
@@ -1617,6 +1660,9 @@ packages:
   '@commitlint/types@18.6.1':
     resolution: {integrity: sha512-gwRLBLra/Dozj2OywopeuHj2ac26gjGkz2cZ+86cTJOdtWfiRRr4+e77ZDAGc6MDWxaWheI+mAV5TLWWRwqrFg==}
     engines: {node: '>=v18'}
+
+  '@dimforge/rapier2d-compat@0.14.0':
+    resolution: {integrity: sha512-sljQVPstRS63hVLnVNphsZUjH51TZoptVM0XlglKAdZ8CT+kWnmA6olwjkF7omPWYrlKMd/nHORxOUdJDOSoAQ==}
 
   '@docsearch/css@3.8.2':
     resolution: {integrity: sha512-y05ayQFyUmCXze79+56v/4HpycYF3uFqB78pLPrSV5ZKAlDuIAAJNhaRi8tTdRNXh05yxX/TyNnzD6LwSM89vQ==}
@@ -9060,6 +9106,8 @@ snapshots:
   '@commitlint/types@18.6.1':
     dependencies:
       chalk: 4.1.2
+
+  '@dimforge/rapier2d-compat@0.14.0': {}
 
   '@docsearch/css@3.8.2': {}
 

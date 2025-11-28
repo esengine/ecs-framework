@@ -10,10 +10,8 @@ export { CameraComponent, CameraProjection } from './CameraComponent';
 // 系统
 export { SpriteAnimatorSystem } from './systems/SpriteAnimatorSystem';
 
-// 物理
-export { RigidBodyComponent, BodyType } from './RigidBodyComponent';
-export { BoxColliderComponent } from './BoxColliderComponent';
-export { CircleColliderComponent } from './CircleColliderComponent';
+// 物理组件已移至 @esengine/physics-rapier2d 包
+// Physics components have been moved to @esengine/physics-rapier2d package
 
 // 音频
 export { AudioSourceComponent } from './AudioSourceComponent';

@@ -29,7 +29,9 @@ export default {
             browser: true,
             preferBuiltins: false,
             // Only resolve main/module fields, not source
-            mainFields: ['module', 'main']
+            mainFields: ['module', 'main'],
+            // Support package.json exports field for subpath imports
+            exportConditions: ['import', 'module', 'default']
         }),
         commonjs(),
         typescript({

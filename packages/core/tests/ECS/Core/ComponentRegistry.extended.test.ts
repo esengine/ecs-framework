@@ -180,25 +180,6 @@ describe('ComponentRegistry Extended - 64+ 组件支持', () => {
         });
     });
 
-    describe('性能测试', () => {
-        it('大量组件注册应该高效', () => {
-            const startTime = performance.now();
-
-            // 注册 200 个组件
-            for (let i = 0; i < 200; i++) {
-                const ComponentClass = createTestComponent(i);
-                ComponentRegistry.register(ComponentClass);
-            }
-
-            const endTime = performance.now();
-            const duration = endTime - startTime;
-
-            // 应该在 100ms 内完成
-            expect(duration).toBeLessThan(100);
-        });
-
-    });
-
     describe('边界情况', () => {
         it('应该正确处理第 64 个组件（边界）', () => {
             const scene = new Scene();

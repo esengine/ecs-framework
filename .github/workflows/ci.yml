@@ -74,6 +74,7 @@ jobs:
         cd ../editor-runtime && pnpm run build
         cd ../behavior-tree && pnpm run build
         cd ../tilemap && pnpm run build
+        cd ../physics-rapier2d && pnpm run build
 
     - name: Build ecs-engine-bindgen
       run: |

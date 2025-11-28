@@ -34,6 +34,14 @@ export class ComponentRegistry {
             return existingIndex;
         }
 
+        // 检查是否有同名但不同类的组件已注册
+        if (this.componentNameToType.has(typeName)) {
+            const existingType = this.componentNameToType.get(typeName);
+            if (existingType !== componentType) {
+                console.warn(`[ComponentRegistry] Component name conflict: "${typeName}" already registered with different class. Existing: ${existingType?.name}, New: ${componentType.name}`);
+            }
+        }
+
         const bitIndex = this.nextBitIndex++;
         this.componentTypes.set(componentType, bitIndex);
         this.bitIndexToType.set(bitIndex, componentType);

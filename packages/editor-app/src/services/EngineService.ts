@@ -10,6 +10,7 @@ import { TransformComponent, SpriteComponent, SpriteAnimatorComponent, SpriteAni
 import { TilemapComponent, TilemapRenderingSystem } from '@esengine/tilemap';
 import { BehaviorTreeExecutionSystem } from '@esengine/behavior-tree';
 import { UIRenderDataProvider, invalidateUIRenderCaches, UIInputSystem } from '@esengine/ui';
+import { Physics2DSystem } from '@esengine/physics-rapier2d';
 import * as esEngine from '@esengine/engine';
 import {
     AssetManager,
@@ -36,6 +37,7 @@ export class EngineService {
     private animatorSystem: SpriteAnimatorSystem | null = null;
     private tilemapSystem: TilemapRenderingSystem | null = null;
     private behaviorTreeSystem: BehaviorTreeExecutionSystem | null = null;
+    private physicsSystem: Physics2DSystem | null = null;
     private uiRenderProvider: UIRenderDataProvider | null = null;
     private uiInputSystem: UIInputSystem | null = null;
     private initialized = false;
@@ -244,6 +246,7 @@ export class EngineService {
         this.animatorSystem = context.animatorSystem as SpriteAnimatorSystem | undefined ?? null;
         this.tilemapSystem = context.tilemapSystem as TilemapRenderingSystem | undefined ?? null;
         this.behaviorTreeSystem = context.behaviorTreeSystem as BehaviorTreeExecutionSystem | undefined ?? null;
+        this.physicsSystem = context.physicsSystem as Physics2DSystem | undefined ?? null;
         this.uiRenderProvider = context.uiRenderProvider as UIRenderDataProvider | undefined ?? null;
         this.uiInputSystem = context.uiInputSystem as UIInputSystem | undefined ?? null;
 
@@ -253,13 +256,16 @@ export class EngineService {
             this.renderSystem.setUIRenderDataProvider(this.uiRenderProvider);
         }
 
-        // 在编辑器模式下，动画和行为树系统默认禁用
-        // In editor mode, animation and behavior tree systems are disabled by default
+        // 在编辑器模式下，动画、行为树和物理系统默认禁用
+        // In editor mode, animation, behavior tree and physics systems are disabled by default
         if (this.animatorSystem) {
             this.animatorSystem.enabled = false;
         }
         if (this.behaviorTreeSystem) {
             this.behaviorTreeSystem.enabled = false;
+        }
+        if (this.physicsSystem) {
+            this.physicsSystem.enabled = false;
         }
 
         this.modulesInitialized = true;
@@ -289,6 +295,7 @@ export class EngineService {
         this.animatorSystem = null;
         this.tilemapSystem = null;
         this.behaviorTreeSystem = null;
+        this.physicsSystem = null;
         this.uiRenderProvider = null;
         this.uiInputSystem = null;
         this.modulesInitialized = false;
@@ -390,6 +397,11 @@ export class EngineService {
         if (this.behaviorTreeSystem) {
             this.behaviorTreeSystem.enabled = true;
         }
+        // Enable physics system for preview
+        // 启用物理系统用于预览
+        if (this.physicsSystem) {
+            this.physicsSystem.enabled = true;
+        }
         this.startAutoPlayAnimations();
 
         this.gameLoop();
@@ -468,6 +480,14 @@ export class EngineService {
         // 禁用行为树系统
         if (this.behaviorTreeSystem) {
             this.behaviorTreeSystem.enabled = false;
+        }
+        // Disable and reset physics system
+        // 禁用并重置物理系统
+        if (this.physicsSystem) {
+            this.physicsSystem.enabled = false;
+            // Reset physics world state to prepare for next preview
+            // 重置物理世界状态，为下次预览做准备
+            this.physicsSystem.reset();
         }
         this.stopAllAnimations();
 

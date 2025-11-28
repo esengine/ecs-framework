@@ -1,0 +1,22 @@
+{
+    "id": "@esengine/physics-rapier2d",
+    "name": "Rapier 2D Physics",
+    "version": "1.0.0",
+    "description": "Deterministic 2D physics engine based on Rapier2D with enhanced-determinism support",
+    "category": "physics",
+    "loadingPhase": "default",
+    "enabledByDefault": true,
+    "canContainContent": false,
+    "isEnginePlugin": true,
+    "modules": [
+        {
+            "name": "PhysicsRuntime",
+            "type": "runtime",
+            "entry": "./src/runtime.ts"
+        }
+    ],
+    "dependencies": [
+        "@esengine/ecs-framework",
+        "@esengine/ecs-components"
+    ]
+}

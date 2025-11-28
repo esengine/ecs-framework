@@ -19,6 +19,7 @@
     "@esengine/behavior-tree": "workspace:*",
     "@esengine/editor-runtime": "workspace:*",
     "@esengine/ecs-components": "workspace:*",
+    "@esengine/physics-rapier2d": "workspace:*",
     "@esengine/tilemap": "workspace:*",
     "@esengine/ui": "workspace:*",
     "@esengine/ecs-engine-bindgen": "workspace:*",

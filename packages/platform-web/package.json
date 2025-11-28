@@ -43,6 +43,7 @@
     "@esengine/ecs-components": "workspace:*",
     "@esengine/ecs-engine-bindgen": "workspace:*",
     "@esengine/ecs-framework": "workspace:*",
+    "@esengine/physics-rapier2d": "workspace:*",
     "@esengine/platform-common": "workspace:*",
     "@esengine/tilemap": "workspace:*",
     "@esengine/ui": "workspace:*"
