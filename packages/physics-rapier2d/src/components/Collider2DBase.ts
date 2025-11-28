@@ -3,7 +3,7 @@
  * 2D 碰撞体基类组件
  */
 
-import { Component, Property, Serialize, ECSComponent } from '@esengine/ecs-framework';
+import { Component, Property, Serialize } from '@esengine/ecs-framework';
 import { Vector2, CollisionLayer2D } from '../types/Physics2DTypes';
 
 /**

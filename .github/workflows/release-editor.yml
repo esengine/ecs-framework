@@ -147,7 +147,12 @@ jobs:
           cd packages/behavior-tree
           pnpm run build
 
-      # ===== 第七层：平台包（依赖 ui, tilemap） =====
+      - name: Build physics-rapier2d package
+        run: |
+          cd packages/physics-rapier2d
+          pnpm run build
+
+      # ===== 第七层：平台包（依赖 ui, tilemap, behavior-tree, physics-rapier2d） =====
       - name: Build platform-web package
         run: |
           cd packages/platform-web
