@@ -121,6 +121,65 @@ class CombatSystem extends EntitySystem {
 }
 ```
 
+#### nothing() - 不匹配任何实体
+
+用于创建只需要生命周期方法（`onBegin`、`onEnd`）但不需要处理实体的系统。
+
+```typescript
+class FrameTimerSystem extends EntitySystem {
+    constructor() {
+        // 不匹配任何实体
+        super(Matcher.nothing());
+    }
+
+    protected onBegin(): void {
+        // 每帧开始时执行
+        Performance.markFrameStart();
+    }
+
+    protected process(entities: readonly Entity[]): void {
+        // 永远不会被调用，因为没有匹配的实体
+    }
+
+    protected onEnd(): void {
+        // 每帧结束时执行
+        Performance.markFrameEnd();
+    }
+}
+```
+
+#### empty() vs nothing() 的区别
+
+| 方法 | 行为 | 使用场景 |
+|------|------|----------|
+| `Matcher.empty()` | 匹配**所有**实体 | 需要处理场景中所有实体 |
+| `Matcher.nothing()` | 不匹配**任何**实体 | 只需要生命周期回调，不处理实体 |
+
+```typescript
+// empty() - 返回场景中的所有实体
+class AllEntitiesSystem extends EntitySystem {
+    constructor() {
+        super(Matcher.empty());
+    }
+
+    protected process(entities: readonly Entity[]): void {
+        // entities 包含场景中的所有实体
+        console.log(`场景中共有 ${entities.length} 个实体`);
+    }
+}
+
+// nothing() - 不返回任何实体
+class NoEntitiesSystem extends EntitySystem {
+    constructor() {
+        super(Matcher.nothing());
+    }
+
+    protected process(entities: readonly Entity[]): void {
+        // entities 永远是空数组，此方法不会被调用
+    }
+}
+```
+
 ### 按标签查询
 
 ```typescript
@@ -491,6 +550,65 @@ const matcher2 = matcher.any(VelocityComponent);
 
 // matcher 本身不变
 console.log(matcher === matcher2); // false
+```
+
+## Matcher API 快速参考
+
+### 静态创建方法
+
+| 方法 | 说明 | 示例 |
+|------|------|------|
+| `Matcher.all(...types)` | 必须包含所有指定组件 | `Matcher.all(Position, Velocity)` |
+| `Matcher.any(...types)` | 至少包含一个指定组件 | `Matcher.any(Health, Shield)` |
+| `Matcher.none(...types)` | 不能包含任何指定组件 | `Matcher.none(Dead)` |
+| `Matcher.byTag(tag)` | 按标签查询 | `Matcher.byTag(1)` |
+| `Matcher.byName(name)` | 按名称查询 | `Matcher.byName("Player")` |
+| `Matcher.byComponent(type)` | 按单个组件查询 | `Matcher.byComponent(Health)` |
+| `Matcher.empty()` | 创建空匹配器（匹配所有实体） | `Matcher.empty()` |
+| `Matcher.nothing()` | 不匹配任何实体 | `Matcher.nothing()` |
+| `Matcher.complex()` | 创建复杂查询构建器 | `Matcher.complex()` |
+
+### 链式方法
+
+| 方法 | 说明 | 示例 |
+|------|------|------|
+| `.all(...types)` | 添加必须包含的组件 | `.all(Position)` |
+| `.any(...types)` | 添加可选组件（至少一个） | `.any(Weapon, Magic)` |
+| `.none(...types)` | 添加排除的组件 | `.none(Dead)` |
+| `.exclude(...types)` | `.none()` 的别名 | `.exclude(Disabled)` |
+| `.one(...types)` | `.any()` 的别名 | `.one(Player, Enemy)` |
+| `.withTag(tag)` | 添加标签条件 | `.withTag(1)` |
+| `.withName(name)` | 添加名称条件 | `.withName("Boss")` |
+| `.withComponent(type)` | 添加单组件条件 | `.withComponent(Health)` |
+
+### 实用方法
+
+| 方法 | 说明 |
+|------|------|
+| `.getCondition()` | 获取查询条件（只读） |
+| `.isEmpty()` | 检查是否为空条件 |
+| `.isNothing()` | 检查是否为 nothing 匹配器 |
+| `.clone()` | 克隆匹配器 |
+| `.reset()` | 重置所有条件 |
+| `.toString()` | 获取字符串表示 |
+
+### 常用组合示例
+
+```typescript
+// 基础移动系统
+Matcher.all(Position, Velocity)
+
+// 可攻击的活着的实体
+Matcher.all(Position, Health)
+    .any(Weapon, Magic)
+    .none(Dead, Disabled)
+
+// 所有带标签的敌人
+Matcher.byTag(Tags.ENEMY)
+    .all(AIComponent)
+
+// 只需要生命周期的系统
+Matcher.nothing()
 ```
 
 ## 相关 API

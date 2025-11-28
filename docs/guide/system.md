@@ -157,7 +157,44 @@ const nameMatcher = Matcher.byName("Player"); // 匹配名称为 "Player" 的实
 
 // 单组件匹配
 const componentMatcher = Matcher.byComponent(Health); // 匹配拥有 Health 组件的实体
+
+// 不匹配任何实体
+const nothingMatcher = Matcher.nothing(); // 用于只需要生命周期回调的系统
 ```
+
+### 空匹配器 vs Nothing 匹配器
+
+```typescript
+// empty() - 空条件，匹配所有实体
+const emptyMatcher = Matcher.empty();
+
+// nothing() - 不匹配任何实体，用于只需要生命周期方法的系统
+const nothingMatcher = Matcher.nothing();
+
+// 使用场景：只需要 onBegin/onEnd 生命周期的系统
+@ECSSystem('FrameTimer')
+class FrameTimerSystem extends EntitySystem {
+  constructor() {
+    super(Matcher.nothing()); // 不处理任何实体
+  }
+
+  protected onBegin(): void {
+    // 每帧开始时执行，例如：记录帧开始时间
+    console.log('帧开始');
+  }
+
+  protected process(entities: readonly Entity[]): void {
+    // 永远不会被调用，因为没有匹配的实体
+  }
+
+  protected onEnd(): void {
+    // 每帧结束时执行
+    console.log('帧结束');
+  }
+}
+```
+
+> 💡 **提示**：更多关于 Matcher 和实体查询的详细用法，请参考 [实体查询系统](/guide/entity-query) 文档。
 
 ## 系统生命周期
 
@@ -563,9 +600,28 @@ class GameSystem extends EntitySystem {
 }
 ```
 
-### 2. 使用装饰器
+### 2. 使用 @ECSSystem 装饰器
 
-**必须使用 `@ECSSystem` 装饰器**：
+`@ECSSystem` 是系统类必须使用的装饰器，它为系统提供类型标识和元数据管理。
+
+#### 为什么必须使用
+
+| 功能 | 说明 |
+|------|------|
+| **类型识别** | 提供稳定的系统名称，代码混淆后仍能正确识别 |
+| **调试支持** | 在性能监控、日志和调试工具中显示可读的系统名称 |
+| **系统管理** | 通过名称查找和管理系统 |
+| **序列化支持** | 场景序列化时可以记录系统配置 |
+
+#### 基本语法
+
+```typescript
+@ECSSystem(systemName: string)
+```
+
+- `systemName`: 系统的名称，建议使用描述性的名称
+
+#### 使用示例
 
 ```typescript
 // ✅ 正确的用法
@@ -574,10 +630,39 @@ class PhysicsSystem extends EntitySystem {
   // 系统实现
 }
 
+// ✅ 推荐：使用描述性的名称
+@ECSSystem('PlayerMovement')
+class PlayerMovementSystem extends EntitySystem {
+  constructor() {
+    super(Matcher.all(Player, Position, Velocity));
+  }
+}
+
 // ❌ 错误的用法 - 没有装饰器
 class BadSystem extends EntitySystem {
-  // 这样定义的系统可能在生产环境出现问题
+  // 这样定义的系统可能在生产环境出现问题：
+  // 1. 代码压缩后类名变化，无法正确识别
+  // 2. 性能监控和调试工具显示不正确的名称
 }
+```
+
+#### 系统名称的作用
+
+```typescript
+@ECSSystem('Combat')
+class CombatSystem extends EntitySystem {
+  protected onInitialize(): void {
+    // 使用 systemName 属性访问系统名称
+    console.log(`系统 ${this.systemName} 已初始化`);  // 输出: 系统 Combat 已初始化
+  }
+}
+
+// 通过名称查找系统
+const combat = scene.getSystemByName('Combat');
+
+// 性能监控中会显示系统名称
+const perfData = combatSystem.getPerformanceData();
+console.log(`${combatSystem.systemName} 执行时间: ${perfData?.executionTime}ms`);
 ```
 
 ### 3. 合理的更新顺序

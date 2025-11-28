@@ -55,25 +55,92 @@ class Health extends Component {
 }
 ```
 
-### 组件装饰器
+### @ECSComponent 装饰器
 
-**必须使用 `@ECSComponent` 装饰器**，这确保了：
-- 组件在代码混淆后仍能正确识别
-- 提供稳定的类型名称用于序列化和调试
-- 框架能正确管理组件注册
+`@ECSComponent` 是组件类必须使用的装饰器，它为组件提供了类型标识和元数据管理。
+
+#### 为什么必须使用
+
+| 功能 | 说明 |
+|------|------|
+| **类型识别** | 提供稳定的类型名称，代码混淆后仍能正确识别 |
+| **序列化支持** | 序列化/反序列化时使用该名称作为类型标识 |
+| **组件注册** | 自动注册到 ComponentRegistry，分配唯一的位掩码 |
+| **调试支持** | 在调试工具和日志中显示可读的组件名称 |
+
+#### 基本语法
 
 ```typescript
-// 正确的用法
+@ECSComponent(typeName: string)
+```
+
+- `typeName`: 组件的类型名称，建议使用与类名相同或相近的名称
+
+#### 使用示例
+
+```typescript
+// ✅ 正确的用法
 @ECSComponent('Velocity')
 class Velocity extends Component {
   dx: number = 0;
   dy: number = 0;
 }
 
-// 错误的用法 - 没有装饰器
-class BadComponent extends Component {
-  // 这样定义的组件可能在生产环境出现问题
+// ✅ 推荐：类型名与类名保持一致
+@ECSComponent('PlayerController')
+class PlayerController extends Component {
+  speed: number = 5;
 }
+
+// ❌ 错误的用法 - 没有装饰器
+class BadComponent extends Component {
+  // 这样定义的组件可能在生产环境出现问题：
+  // 1. 代码压缩后类名变化，无法正确序列化
+  // 2. 组件未注册到框架，查询和匹配可能失效
+}
+```
+
+#### 与 @Serializable 配合使用
+
+当组件需要支持序列化时，`@ECSComponent` 和 `@Serializable` 需要一起使用：
+
+```typescript
+import { Component, ECSComponent, Serializable, Serialize } from '@esengine/ecs-framework';
+
+@ECSComponent('Player')
+@Serializable({ version: 1 })
+class PlayerComponent extends Component {
+  @Serialize()
+  name: string = '';
+
+  @Serialize()
+  level: number = 1;
+
+  // 不使用 @Serialize() 的字段不会被序列化
+  private _cachedData: any = null;
+}
+```
+
+> **注意**：`@ECSComponent` 的 `typeName` 和 `@Serializable` 的 `typeId` 可以不同。如果 `@Serializable` 没有指定 `typeId`，则默认使用 `@ECSComponent` 的 `typeName`。
+
+#### 组件类型名的唯一性
+
+每个组件的类型名应该是唯一的：
+
+```typescript
+// ❌ 错误：两个组件使用相同的类型名
+@ECSComponent('Health')
+class HealthComponent extends Component { }
+
+@ECSComponent('Health')  // 冲突！
+class EnemyHealthComponent extends Component { }
+
+// ✅ 正确：使用不同的类型名
+@ECSComponent('PlayerHealth')
+class PlayerHealthComponent extends Component { }
+
+@ECSComponent('EnemyHealth')
+class EnemyHealthComponent extends Component { }
 ```
 
 ## 组件生命周期

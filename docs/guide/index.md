@@ -13,6 +13,9 @@
 ### [系统架构 (System)](./system.md)
 掌握系统的编写方法，实现游戏逻辑的处理。
 
+### [实体查询与 Matcher](./entity-query.md)
+学习使用 Matcher 进行实体筛选和查询，掌握 `all`、`any`、`none`、`nothing` 等匹配条件。
+
 ### [场景管理 (Scene)](./scene.md)
 了解场景的生命周期、系统管理和实体容器功能。
 
