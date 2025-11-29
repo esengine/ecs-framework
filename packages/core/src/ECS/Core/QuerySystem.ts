@@ -923,10 +923,6 @@ export class QuerySystem {
         return this._archetypeSystem.getEntityArchetype(entity);
     }
 
-    // ============================================================
-    // 响应式查询支持(内部智能缓存)
-    // ============================================================
-
     /**
      * 响应式查询集合(内部使用,作为智能缓存)
      * 传统查询API(queryAll/queryAny/queryNone)内部自动使用响应式查询优化性能

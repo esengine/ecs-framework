@@ -91,13 +91,15 @@ interface AdvancedProfilerData {
     };
 }
 
+interface ProfilerServiceInterface {
+    subscribeAdvanced: (listener: (data: { advancedProfiler?: AdvancedProfilerData; performance?: unknown; systems?: unknown }) => void) => () => void;
+    isConnected: () => boolean;
+    requestAdvancedProfilerData?: () => void;
+    setProfilerSelectedFunction?: (name: string | null) => void;
+}
+
 interface AdvancedProfilerProps {
-    profilerService: {
-        subscribeAdvanced: (listener: (data: any) => void) => () => void;
-        isConnected: () => boolean;
-        requestAdvancedProfilerData?: () => void;
-        setProfilerSelectedFunction?: (name: string | null) => void;
-    } | null;
+    profilerService: ProfilerServiceInterface | null;
 }
 
 type SortColumn = 'name' | 'incTime' | 'incPercent' | 'excTime' | 'excPercent' | 'calls' | 'avgTime' | 'framePercent';
@@ -135,7 +137,7 @@ export function AdvancedProfiler({ profilerService }: AdvancedProfilerProps) {
     useEffect(() => {
         if (!profilerService) return;
 
-        const unsubscribe = profilerService.subscribeAdvanced((rawData: any) => {
+        const unsubscribe = profilerService.subscribeAdvanced((rawData: { advancedProfiler?: AdvancedProfilerData; performance?: unknown; systems?: unknown }) => {
             if (isPaused) return;
 
             // 解析高级性能数据
@@ -204,7 +206,7 @@ export function AdvancedProfiler({ profilerService }: AdvancedProfilerProps) {
         if (history.length < 2) return;
 
         // 计算最大值
-        const maxTime = Math.max(...history.map(h => h.duration), 33.33);
+        const maxTime = Math.max(...history.map((h) => h.duration), 33.33);
         const targetLine = 16.67; // 60 FPS
 
         // 绘制网格线
@@ -276,7 +278,7 @@ export function AdvancedProfiler({ profilerService }: AdvancedProfilerProps) {
 
     const handleSort = (column: SortColumn) => {
         if (sortColumn === column) {
-            setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+            setSortDirection((d) => d === 'asc' ? 'desc' : 'asc');
         } else {
             setSortColumn(column);
             setSortDirection('desc');
@@ -284,7 +286,7 @@ export function AdvancedProfiler({ profilerService }: AdvancedProfilerProps) {
     };
 
     const toggleCategory = (category: string) => {
-        setExpandedCategories(prev => {
+        setExpandedCategories((prev) => {
             const next = new Set(prev);
             if (next.has(category)) {
                 next.delete(category);

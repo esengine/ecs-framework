@@ -90,33 +90,10 @@ export class Core {
      */
     private _serviceContainer: ServiceContainer;
 
-    /**
-     * 定时器管理器
-     *
-     * 负责管理所有的游戏定时器。
-     */
-    public _timerManager: TimerManager;
-
-    /**
-     * 性能监控器
-     *
-     * 监控游戏性能并提供优化建议。
-     */
-    public _performanceMonitor: PerformanceMonitor;
-
-    /**
-     * 对象池管理器
-     *
-     * 管理所有对象池的生命周期。
-     */
-    public _poolManager: PoolManager;
-
-    /**
-     * 调试管理器
-     *
-     * 负责收集和发送调试数据。
-     */
-    public _debugManager?: DebugManager;
+    private _timerManager: TimerManager;
+    private _performanceMonitor: PerformanceMonitor;
+    private _poolManager: PoolManager;
+    private _debugManager?: DebugManager;
 
     /**
      * 场景管理器

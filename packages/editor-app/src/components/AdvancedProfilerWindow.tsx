@@ -8,12 +8,16 @@ interface AdvancedProfilerWindowProps {
     onClose: () => void;
 }
 
+interface WindowWithProfiler extends Window {
+    __PROFILER_SERVICE__?: ProfilerService;
+}
+
 export function AdvancedProfilerWindow({ onClose }: AdvancedProfilerWindowProps) {
     const [profilerService, setProfilerService] = useState<ProfilerService | null>(null);
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
-        const service = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
+        const service = (window as WindowWithProfiler).__PROFILER_SERVICE__;
         if (service) {
             setProfilerService(service);
         }

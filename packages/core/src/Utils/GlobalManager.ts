@@ -2,10 +2,7 @@
  * 全局管理器的基类。所有全局管理器都应该从此类继承。
  */
 export class GlobalManager {
-    /**
-     * 表示管理器是否启用
-     */
-    public _enabled: boolean = false;
+    private _enabled: boolean = false;
 
     /**
      * 获取或设置管理器是否启用

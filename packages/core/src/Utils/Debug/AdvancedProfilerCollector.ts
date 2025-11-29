@@ -15,6 +15,22 @@ import {
 import { Time } from '../Time';
 
 /**
+ * 旧版 PerformanceMonitor 接口 (用于兼容)
+ */
+export interface ILegacyPerformanceMonitor {
+    getAllSystemStats?: () => Map<string, {
+        averageTime: number;
+        minTime?: number;
+        maxTime?: number;
+        executionCount?: number;
+    }>;
+    getAllSystemData?: () => Map<string, {
+        executionTime: number;
+        entityCount?: number;
+    }>;
+}
+
+/**
  * 高级性能数据接口
  */
 export interface IAdvancedProfilerData {
@@ -126,7 +142,7 @@ export class AdvancedProfilerCollector {
     /**
      * 收集高级性能数据
      */
-    public collectAdvancedData(performanceMonitor?: any): IAdvancedProfilerData {
+    public collectAdvancedData(performanceMonitor?: ILegacyPerformanceMonitor): IAdvancedProfilerData {
         const frameHistory = ProfilerSDK.getFrameHistory();
         const currentFrame = ProfilerSDK.getCurrentFrame();
         const report = ProfilerSDK.getReport(300);
@@ -151,7 +167,7 @@ export class AdvancedProfilerCollector {
     /**
      * 从现有 PerformanceMonitor 数据构建兼容格式
      */
-    public collectFromLegacyMonitor(performanceMonitor: any): IAdvancedProfilerData {
+    public collectFromLegacyMonitor(performanceMonitor: ILegacyPerformanceMonitor | null): IAdvancedProfilerData {
         if (!performanceMonitor) {
             return this.createEmptyData();
         }

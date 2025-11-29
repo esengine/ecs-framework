@@ -12,10 +12,7 @@
   },
   "references": [
     { "path": "./packages/core" },
-    { "path": "./packages/math" },
-    { "path": "./packages/network-client" },
-    { "path": "./packages/network-server" },
-    { "path": "./packages/network-shared" }
+    { "path": "./packages/math" }
   ],
   "files": []
 }

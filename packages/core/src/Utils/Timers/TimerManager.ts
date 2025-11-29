@@ -11,7 +11,7 @@ import { Updatable } from '../../Core/DI';
  */
 @Updatable()
 export class TimerManager implements IService, IUpdatable {
-    public _timers: Array<Timer<unknown>> = [];
+    private _timers: Array<Timer<unknown>> = [];
 
     public update() {
         for (let i = this._timers.length - 1; i >= 0; i --){

@@ -915,8 +915,6 @@ export class Scene implements IScene {
         SceneSerializer.deserialize(this, saveData, options);
     }
 
-    // ==================== 增量序列化 API ====================
-
     /** 增量序列化的基础快照 */
     private _incrementalBaseSnapshot?: unknown;
 

@@ -121,8 +121,6 @@ export class World {
         this._services = new ServiceContainer();
     }
 
-    // ===== 服务容器 =====
-
     /**
      * World级别的服务容器
      * 用于管理World范围内的全局服务
@@ -130,8 +128,6 @@ export class World {
     public get services(): ServiceContainer {
         return this._services;
     }
-
-    // ===== Scene管理 =====
 
     /**
      * 创建并添加Scene到World
@@ -267,8 +263,6 @@ export class World {
         return this._activeScenes.size;
     }
 
-    // ===== 全局System管理 =====
-
     /**
      * 添加全局System
      * 全局System会在所有激活Scene之前更新
@@ -316,8 +310,6 @@ export class World {
         }
         return null;
     }
-
-    // ===== World生命周期 =====
 
     /**
      * 启动World
@@ -435,8 +427,6 @@ export class World {
         this._activeScenes.clear();
     }
 
-    // ===== 状态信息 =====
-
     /**
      * 获取World状态
      */
@@ -484,8 +474,6 @@ export class World {
         return stats;
     }
 
-    // ===== 私有方法 =====
-
     /**
      * 检查是否应该执行自动清理
      */
@@ -527,8 +515,6 @@ export class World {
             }
         }
     }
-
-    // ===== 访问器 =====
 
     /**
      * 检查World是否激活

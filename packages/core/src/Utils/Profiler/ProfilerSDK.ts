@@ -74,8 +74,6 @@ export class ProfilerSDK {
         }
     }
 
-    // ==================== 静态便捷方法 ====================
-
     /**
      * 开始采样
      */
@@ -187,8 +185,6 @@ export class ProfilerSDK {
     public static reset(): void {
         ProfilerSDK.getInstance().reset();
     }
-
-    // ==================== 实例方法 ====================
 
     /**
      * 开始采样
@@ -431,7 +427,7 @@ export class ProfilerSDK {
             return this.createEmptyReport();
         }
 
-        const frameTimes = frames.map(f => f.duration);
+        const frameTimes = frames.map((f) => f.duration);
         const sortedTimes = [...frameTimes].sort((a, b) => a - b);
 
         const aggregatedStats = this.aggregateSampleStats(frames);
@@ -456,7 +452,7 @@ export class ProfilerSDK {
             hotspots,
             callGraph: new Map(this.callGraph),
             categoryBreakdown,
-            memoryTrend: frames.map(f => f.memory),
+            memoryTrend: frames.map((f) => f.memory),
             longTasks: [...this.longTasks]
         };
     }
@@ -500,8 +496,6 @@ export class ProfilerSDK {
         }
         this.reset();
     }
-
-    // ==================== 私有方法 ====================
 
     private captureMemory(): MemorySnapshot {
         const now = performance.now();
@@ -579,7 +573,7 @@ export class ProfilerSDK {
 
         for (const sample of this.currentFrame.samples) {
             if (sample.parentId) {
-                const parentSample = this.currentFrame.samples.find(s => s.id === sample.parentId);
+                const parentSample = this.currentFrame.samples.find((s) => s.id === sample.parentId);
                 if (parentSample) {
                     const parentStats = sampleMap.get(parentSample.name);
                     if (parentStats) {
@@ -663,7 +657,7 @@ export class ProfilerSDK {
                 callerData.totalTime += duration;
                 node.callers.set(parentHandle.name, callerData);
 
-                let parentNode = this.callGraph.get(parentHandle.name);
+                const parentNode = this.callGraph.get(parentHandle.name);
                 if (parentNode) {
                     const calleeData = parentNode.callees.get(name) || { count: 0, totalTime: 0 };
                     calleeData.count++;
