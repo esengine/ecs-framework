@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Settings, ChevronDown, ChevronRight, X, Plus, Box, Search, Lock, Unlock, Star } from 'lucide-react';
+import { Settings, ChevronDown, ChevronRight, X, Plus, Box, Search, Lock, Unlock } from 'lucide-react';
 import { Entity, Component, Core, getComponentDependencies, getComponentTypeName, getComponentInstanceTypeName } from '@esengine/ecs-framework';
 import { MessageHub, CommandManager, ComponentRegistry, ComponentActionRegistry, ComponentInspectorRegistry } from '@esengine/editor-core';
 import { PropertyInspector } from '../../PropertyInspector';

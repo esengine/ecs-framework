@@ -9,10 +9,7 @@ import {
     Search,
     Settings as SettingsIcon,
     ChevronDown,
-    ChevronRight,
-    Download,
-    Upload,
-    RotateCcw
+    ChevronRight
 } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
 import { SettingsService } from '../services/SettingsService';
@@ -36,7 +33,6 @@ interface MainCategory {
 export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }: SettingsWindowProps) {
     const [categories, setCategories] = useState<SettingCategory[]>([]);
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId || null);
-    const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<string | null>(null);
     const [values, setValues] = useState<Map<string, any>>(new Map());
     const [errors, setErrors] = useState<Map<string, string>>(new Map());
     const [searchTerm, setSearchTerm] = useState('');

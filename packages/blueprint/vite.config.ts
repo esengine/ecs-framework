@@ -7,6 +7,18 @@ import react from '@vitejs/plugin-react';
  * 自定义插件：将 CSS 转换为自执行的样式注入代码
  * Custom plugin: Convert CSS to self-executing style injection code
  */
+function escapeUnsafeChars(str: string): string {
+    const charMap: Record<string, string> = {
+        '<': '\\u003C',
+        '>': '\\u003E',
+        '/': '\\u002F',
+        '\\': '\\\\',
+        '\u2028': '\\u2028',
+        '\u2029': '\\u2029'
+    };
+    return str.replace(/[<>\\/\u2028\u2029]/g, (x) => charMap[x] || x);
+}
+
 function injectCSSPlugin(): any {
     const cssIdMap = new Map<string, string>();
     let cssCounter = 0;
@@ -29,7 +41,7 @@ function injectCSSPlugin(): any {
                 cssIdMap.set(cssFile, styleId);
 
                 // 生成样式注入代码
-                const injectCode = `(function(){if(typeof document!=='undefined'){var s=document.createElement('style');s.id='${styleId}';if(!document.getElementById(s.id)){s.textContent=${JSON.stringify(cssContent)};document.head.appendChild(s);}}})();`;
+                const injectCode = `(function(){if(typeof document!=='undefined'){var s=document.createElement('style');s.id='${styleId}';if(!document.getElementById(s.id)){s.textContent=${escapeUnsafeChars(JSON.stringify(cssContent))};document.head.appendChild(s);}}})();`;
 
                 // 注入到 editor/index.js 或共享 chunk
                 for (const jsKey of bundleKeys) {

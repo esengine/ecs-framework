@@ -128,6 +128,7 @@ interface ColorPropertyProps {
     label: string;
     value: string;
     onChange: (value: string) => void;
+    showReset?: boolean;
 }
 
 const ColorProperty: React.FC<ColorPropertyProps> = ({ label, value, onChange }) => {

@@ -4,8 +4,8 @@ import { EntityStoreService, MessageHub, SceneManagerService, CommandManager, En
 import { useLocale } from '../hooks/useLocale';
 import * as LucideIcons from 'lucide-react';
 import {
-    Box, Layers, Wifi, Search, Plus, Trash2, Monitor, Globe, ChevronRight, ChevronDown,
-    Eye, Star, Lock, Settings, Filter, Folder, FolderOpen, Sun, Cloud, Mountain, Flag,
+    Box, Wifi, Search, Plus, Trash2, Monitor, Globe, ChevronRight, ChevronDown,
+    Eye, Star, Lock, Settings, Filter, Folder, Sun, Cloud, Mountain, Flag,
     SquareStack
 } from 'lucide-react';
 import { ProfilerService, RemoteEntity } from '../services/ProfilerService';

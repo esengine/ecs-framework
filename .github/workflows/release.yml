@@ -11,6 +11,10 @@ on:
           - core
           - behavior-tree
           - editor-core
+          - node-editor
+          - blueprint
+          - tilemap
+          - physics-rapier2d
       version_type:
         description: '版本更新类型'
         required: true
@@ -57,9 +61,15 @@ jobs:
         run: pnpm install
 
       - name: Build core package (if needed)
-        if: ${{ github.event.inputs.package == 'behavior-tree' || github.event.inputs.package == 'editor-core' }}
+        if: ${{ github.event.inputs.package != 'core' && github.event.inputs.package != 'node-editor' }}
         run: |
           cd packages/core
+          pnpm run build
+
+      - name: Build node-editor package (if needed for blueprint)
+        if: ${{ github.event.inputs.package == 'blueprint' }}
+        run: |
+          cd packages/node-editor
           pnpm run build
 
       # - name: Run tests

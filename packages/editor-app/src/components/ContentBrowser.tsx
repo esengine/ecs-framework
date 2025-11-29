@@ -118,7 +118,7 @@ export function ContentBrowser({
     const [collectionsExpanded, setCollectionsExpanded] = useState(true);
 
     // Favorites (stored paths)
-    const [favorites, setFavorites] = useState<string[]>([]);
+    const [favorites] = useState<string[]>([]);
 
     // Dialog states
     const [contextMenu, setContextMenu] = useState<{
