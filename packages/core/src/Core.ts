@@ -513,6 +513,15 @@ export class Core {
     }
 
     /**
+     * 获取性能监视器实例
+     *
+     * @returns 性能监视器，如果Core未初始化则返回null
+     */
+    public static get performanceMonitor(): PerformanceMonitor | null {
+        return this._instance?._performanceMonitor || null;
+    }
+
+    /**
      * 安装插件
      *
      * @param plugin - 插件实例
