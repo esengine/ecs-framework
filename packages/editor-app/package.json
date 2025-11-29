@@ -1,6 +1,6 @@
 {
   "name": "@esengine/editor-app",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "ESEngine Editor Application - Cross-platform desktop editor",
   "type": "module",
   "private": true,
