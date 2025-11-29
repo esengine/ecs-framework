@@ -156,13 +156,11 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
                 return;
             }
 
-            const coreInstance = Core.Instance;
-            if (!coreInstance || !coreInstance._performanceMonitor?.isEnabled) {
+            const performanceMonitor = Core.performanceMonitor;
+            if (!performanceMonitor?.isEnabled) {
                 animationRef.current = requestAnimationFrame(updateProfilerData);
                 return;
             }
-
-            const performanceMonitor = coreInstance._performanceMonitor;
             const systemDataMap = performanceMonitor.getAllSystemData();
             const systemStatsMap = performanceMonitor.getAllSystemStats();
 
@@ -219,10 +217,7 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
 
     const handleReset = () => {
         if (dataSource === 'local') {
-            const coreInstance = Core.Instance;
-            if (coreInstance && coreInstance._performanceMonitor) {
-                coreInstance._performanceMonitor.reset();
-            }
+            Core.performanceMonitor?.reset();
         } else {
             // Reset remote data
             setSystems([]);

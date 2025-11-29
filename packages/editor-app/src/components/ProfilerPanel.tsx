@@ -27,13 +27,11 @@ export function ProfilerPanel() {
                 return;
             }
 
-            const coreInstance = Core.Instance;
-            if (!coreInstance || !coreInstance._performanceMonitor?.isEnabled) {
+            const performanceMonitor = Core.performanceMonitor;
+            if (!performanceMonitor?.isEnabled) {
                 animationRef.current = requestAnimationFrame(updateProfilerData);
                 return;
             }
-
-            const performanceMonitor = coreInstance._performanceMonitor;
             const systemDataMap = performanceMonitor.getAllSystemData();
             const systemStatsMap = performanceMonitor.getAllSystemStats();
 
@@ -91,10 +89,7 @@ export function ProfilerPanel() {
     }, [isPaused, sortBy]);
 
     const handleReset = () => {
-        const coreInstance = Core.Instance;
-        if (coreInstance && coreInstance._performanceMonitor) {
-            coreInstance._performanceMonitor.reset();
-        }
+        Core.performanceMonitor?.reset();
     };
 
     const fps = totalFrameTime > 0 ? Math.round(1000 / totalFrameTime) : 0;
