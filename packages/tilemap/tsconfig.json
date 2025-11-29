@@ -57,6 +57,9 @@
     },
     {
       "path": "../editor-core"
+    },
+    {
+      "path": "../asset-system"
     }
   ]
 }

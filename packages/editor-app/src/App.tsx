@@ -44,8 +44,10 @@ import { ErrorDialog } from './components/ErrorDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { PluginGeneratorWindow } from './components/PluginGeneratorWindow';
 import { ToastProvider, useToast } from './components/Toast';
-import { MenuBar } from './components/MenuBar';
+import { TitleBar } from './components/TitleBar';
+import { MainToolbar } from './components/MainToolbar';
 import { FlexLayoutDockContainer, FlexDockPanel } from './components/FlexLayoutDockContainer';
+import { StatusBar } from './components/StatusBar';
 import { TauriAPI } from './api/tauri';
 import { SettingsService } from './services/SettingsService';
 import { PluginLoader } from './services/PluginLoader';
@@ -55,7 +57,7 @@ import { checkForUpdatesOnStartup } from './utils/updater';
 import { useLocale } from './hooks/useLocale';
 import { en, zh } from './locales';
 import type { Locale } from '@esengine/editor-core';
-import { Loader2, Globe, ChevronDown } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import './styles/App.css';
 
 const coreInstance = Core.create({ debug: true });
@@ -129,8 +131,6 @@ function App() {
         compilerId: string;
         currentFileName?: string;
     }>({ isOpen: false, compilerId: '' });
-    const [showLocaleMemu, setShowLocaleMenu] = useState(false);
-    const localeMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         // 禁用默认右键菜单
@@ -143,17 +143,6 @@ function App() {
         return () => {
             document.removeEventListener('contextmenu', handleContextMenu);
         };
-    }, []);
-
-    // 语言菜单点击外部关闭
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (localeMenuRef.current && !localeMenuRef.current.contains(e.target as Node)) {
-                setShowLocaleMenu(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     // 快捷键监听
@@ -727,12 +716,6 @@ function App() {
                         title: locale === 'zh' ? '检视器' : 'Inspector',
                         content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} commandManager={commandManager} />,
                         closable: false
-                    },
-                    {
-                        id: 'console',
-                        title: locale === 'zh' ? '控制台' : 'Console',
-                        content: <ConsolePanel logService={logService} />,
-                        closable: false
                     }
                 ];
             } else {
@@ -753,18 +736,6 @@ function App() {
                         id: 'inspector',
                         title: locale === 'zh' ? '检视器' : 'Inspector',
                         content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} commandManager={commandManager} />,
-                        closable: false
-                    },
-                    {
-                        id: 'assets',
-                        title: locale === 'zh' ? '资产' : 'Assets',
-                        content: <AssetBrowser projectPath={currentProjectPath} locale={locale} onOpenScene={handleOpenSceneByPath} />,
-                        closable: false
-                    },
-                    {
-                        id: 'console',
-                        title: locale === 'zh' ? '控制台' : 'Console',
-                        content: <ConsolePanel logService={logService} />,
                         closable: false
                     }
                 ];
@@ -899,12 +870,8 @@ function App() {
         <div className="editor-container">
             {!isEditorFullscreen && (
                 <>
-                    <div className="editor-titlebar" data-tauri-drag-region>
-                        <span className="titlebar-project-name">{projectName}</span>
-                        <span className="titlebar-app-name">ESEngine Editor</span>
-                    </div>
-                    <div className={`editor-header ${isRemoteConnected ? 'remote-connected' : ''}`}>
-                        <MenuBar
+                    <TitleBar
+                        projectName={projectName}
                         locale={locale}
                         uiRegistry={uiRegistry || undefined}
                         messageHub={messageHub || undefined}
@@ -928,42 +895,13 @@ function App() {
                         onCreatePlugin={handleCreatePlugin}
                         onReloadPlugins={handleReloadPlugins}
                     />
-                    <div className="header-right">
-                        <div className="locale-dropdown" ref={localeMenuRef}>
-                            <button
-                                className="toolbar-btn locale-btn"
-                                onClick={() => setShowLocaleMenu(!showLocaleMemu)}
-                            >
-                                <Globe size={14} />
-                                <span className="locale-label">{locale === 'en' ? 'EN' : '中'}</span>
-                                <ChevronDown size={10} />
-                            </button>
-                            {showLocaleMemu && (
-                                <div className="locale-menu">
-                                    <button
-                                        className={`locale-menu-item ${locale === 'en' ? 'active' : ''}`}
-                                        onClick={() => {
-                                            handleLocaleChange('en');
-                                            setShowLocaleMenu(false);
-                                        }}
-                                    >
-                                        English
-                                    </button>
-                                    <button
-                                        className={`locale-menu-item ${locale === 'zh' ? 'active' : ''}`}
-                                        onClick={() => {
-                                            handleLocaleChange('zh');
-                                            setShowLocaleMenu(false);
-                                        }}
-                                    >
-                                        中文
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                        <span className="status">{status}</span>
-                    </div>
-                    </div>
+                    <MainToolbar
+                        locale={locale}
+                        messageHub={messageHub || undefined}
+                        commandManager={commandManager}
+                        onSaveScene={handleSaveScene}
+                        onOpenScene={handleOpenScene}
+                    />
                 </>
             )}
 
@@ -986,6 +924,7 @@ function App() {
                 <FlexLayoutDockContainer
                     panels={panels}
                     activePanelId={activePanelId}
+                    messageHub={messageHub}
                     onPanelClose={(panelId) => {
                         logger.info('Panel closed:', panelId);
                         setActiveDynamicPanels((prev) => prev.filter((id) => id !== panelId));
@@ -993,11 +932,15 @@ function App() {
                 />
             </div>
 
-            <div className="editor-footer">
-                <span>{t('footer.plugins')}: {pluginManager?.getAllPlugins().length ?? 0}</span>
-                <span>{t('footer.entities')}: {entityStore?.getAllEntities().length ?? 0}</span>
-                <span>{t('footer.core')}: {t('footer.active')}</span>
-            </div>
+            <StatusBar
+                pluginCount={pluginManager?.getAllPlugins().length ?? 0}
+                entityCount={entityStore?.getAllEntities().length ?? 0}
+                messageHub={messageHub}
+                logService={logService}
+                locale={locale}
+                projectPath={currentProjectPath}
+                onOpenScene={handleOpenSceneByPath}
+            />
 
 
             {showProfiler && (

@@ -8,6 +8,140 @@
   overflow: hidden;
 }
 
+/* Viewport Internal Toolbar */
+.viewport-internal-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  padding: 0 8px;
+  background: rgba(30, 30, 30, 0.85);
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+  z-index: 20;
+}
+
+.viewport-internal-toolbar-left,
+.viewport-internal-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.viewport-snap-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #888;
+  font-size: 12px;
+}
+
+.viewport-snap-dropdown {
+  position: relative;
+}
+
+.viewport-snap-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: #aaa;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  height: 22px;
+}
+
+.viewport-snap-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* Zoom display */
+.viewport-zoom-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  color: #888;
+  font-size: 11px;
+  font-family: var(--font-family-mono);
+}
+
+.viewport-view-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: #aaa;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.viewport-view-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.viewport-more-btn {
+  padding: 2px 4px;
+}
+
+.viewport-snap-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 80px;
+  background: #2d2d2d;
+  border: 1px solid #444;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.viewport-snap-menu-right {
+  left: auto;
+  right: 0;
+  min-width: 140px;
+}
+
+.viewport-snap-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: #ccc;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.viewport-snap-menu button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.viewport-snap-menu button.active {
+  background: rgba(0, 120, 212, 0.3);
+  color: #fff;
+}
+
 .viewport-toolbar {
   display: flex;
   align-items: center;
@@ -183,39 +317,6 @@
   margin: 0 6px;
 }
 
-/* Coordinate system indicator */
-.viewport-coord-indicator {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.viewport-coord-indicator.world {
-  color: #60a5fa;
-}
-
-.viewport-coord-indicator.local {
-  color: #fbbf24;
-}
-
-/* Zoom indicator */
-.viewport-zoom {
-  display: flex;
-  align-items: center;
-  padding: 2px 6px;
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  font-variant-numeric: tabular-nums;
-}
 
 .viewport-canvas {
   flex: 1;

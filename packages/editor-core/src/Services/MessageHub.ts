@@ -10,12 +10,25 @@ const logger = createLogger('MessageHub');
 export type MessageHandler<T = any> = (data: T) => void | Promise<void>;
 
 /**
+ * 请求处理器类型（支持返回值）
+ */
+export type RequestHandler<TRequest = any, TResponse = any> = (data: TRequest) => TResponse | Promise<TResponse>;
+
+/**
  * 消息订阅
  */
 interface MessageSubscription {
     topic: string;
     handler: MessageHandler;
     once: boolean;
+}
+
+/**
+ * 请求订阅
+ */
+interface RequestSubscription {
+    topic: string;
+    handler: RequestHandler;
 }
 
 /**
@@ -26,6 +39,7 @@ interface MessageSubscription {
 @Injectable()
 export class MessageHub implements IService {
     private subscriptions: Map<string, MessageSubscription[]> = new Map();
+    private requestHandlers: Map<string, RequestSubscription> = new Map();
     private subscriptionId: number = 0;
 
     /**
@@ -208,10 +222,111 @@ export class MessageHub implements IService {
     }
 
     /**
+     * 注册请求处理器（用于请求-响应模式）
+     *
+     * @param topic - 请求主题
+     * @param handler - 请求处理器，可以返回响应数据
+     * @returns 取消注册的函数
+     */
+    public onRequest<TRequest = any, TResponse = any>(
+        topic: string,
+        handler: RequestHandler<TRequest, TResponse>
+    ): () => void {
+        if (this.requestHandlers.has(topic)) {
+            logger.warn(`Request handler for topic "${topic}" already exists, replacing...`);
+        }
+
+        const subscription: RequestSubscription = {
+            topic,
+            handler
+        };
+
+        this.requestHandlers.set(topic, subscription);
+        logger.debug(`Registered request handler for topic: ${topic}`);
+
+        return () => {
+            if (this.requestHandlers.get(topic) === subscription) {
+                this.requestHandlers.delete(topic);
+                logger.debug(`Unregistered request handler for topic: ${topic}`);
+            }
+        };
+    }
+
+    /**
+     * 发送请求并等待响应（请求-响应模式）
+     *
+     * @param topic - 请求主题
+     * @param data - 请求数据
+     * @param timeout - 超时时间（毫秒），默认 5000ms
+     * @returns 响应数据
+     * @throws 如果没有处理器或超时则抛出错误
+     */
+    public async request<TRequest = any, TResponse = any>(
+        topic: string,
+        data?: TRequest,
+        timeout: number = 5000
+    ): Promise<TResponse> {
+        const subscription = this.requestHandlers.get(topic);
+
+        if (!subscription) {
+            throw new Error(`No request handler registered for topic: ${topic}`);
+        }
+
+        logger.debug(`Sending request to topic: ${topic}`);
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => {
+                reject(new Error(`Request to topic "${topic}" timed out after ${timeout}ms`));
+            }, timeout);
+        });
+
+        const responsePromise = Promise.resolve(subscription.handler(data));
+
+        return Promise.race([responsePromise, timeoutPromise]);
+    }
+
+    /**
+     * 尝试发送请求（如果有处理器则发送，否则返回 undefined）
+     *
+     * @param topic - 请求主题
+     * @param data - 请求数据
+     * @param timeout - 超时时间（毫秒），默认 5000ms
+     * @returns 响应数据或 undefined
+     */
+    public async tryRequest<TRequest = any, TResponse = any>(
+        topic: string,
+        data?: TRequest,
+        timeout: number = 5000
+    ): Promise<TResponse | undefined> {
+        if (!this.requestHandlers.has(topic)) {
+            logger.debug(`No request handler for topic: ${topic}, returning undefined`);
+            return undefined;
+        }
+
+        try {
+            return await this.request<TRequest, TResponse>(topic, data, timeout);
+        } catch (error) {
+            logger.warn(`Request to topic "${topic}" failed:`, error);
+            return undefined;
+        }
+    }
+
+    /**
+     * 检查是否有请求处理器
+     *
+     * @param topic - 请求主题
+     * @returns 是否有处理器
+     */
+    public hasRequestHandler(topic: string): boolean {
+        return this.requestHandlers.has(topic);
+    }
+
+    /**
      * 释放资源
      */
     public dispose(): void {
         this.subscriptions.clear();
+        this.requestHandlers.clear();
         logger.info('MessageHub disposed');
     }
 }

@@ -19,6 +19,11 @@ import {
     IInspectorRegistry,
     MessageHub,
     IMessageHub,
+    FileActionRegistry,
+    IDialogService,
+    IFileSystemService,
+    type IDialog,
+    type IFileSystem,
     createLogger,
     PluginAPI,
 } from '@esengine/editor-runtime';
@@ -53,6 +58,7 @@ const logger = createLogger('BehaviorTreeEditorModule');
  */
 export class BehaviorTreeEditorModule implements IEditorModuleLoader {
     private services?: ServiceContainer;
+    private unsubscribers: Array<() => void> = [];
 
     async install(services: ServiceContainer): Promise<void> {
         this.services = services;
@@ -69,10 +75,102 @@ export class BehaviorTreeEditorModule implements IEditorModuleLoader {
         // 注册节点检视器
         this.registerInspectorProviders(services);
 
+        // 注册资产创建消息映射
+        this.registerAssetCreationMappings(services);
+
+        // 订阅创建资产消息
+        this.subscribeToMessages(services);
+
         logger.info('BehaviorTree editor module installed');
     }
 
+    private registerAssetCreationMappings(services: ServiceContainer): void {
+        try {
+            const fileActionRegistry = services.resolve(FileActionRegistry);
+            if (fileActionRegistry) {
+                fileActionRegistry.registerAssetCreationMapping({
+                    extension: '.btree',
+                    createMessage: 'behavior-tree:create-asset'
+                });
+            }
+        } catch (error) {
+            logger.warn('FileActionRegistry not available:', error);
+        }
+    }
+
+    private subscribeToMessages(services: ServiceContainer): void {
+        try {
+            const messageHub = services.resolve<MessageHub>(IMessageHub);
+            if (messageHub) {
+                const unsubscribe = messageHub.subscribe('behavior-tree:create-asset', async (payload: {
+                    entityId?: string;
+                    onChange?: (value: string | null) => void;
+                }) => {
+                    await this.handleCreateBehaviorTreeAsset(services, payload);
+                });
+                this.unsubscribers.push(unsubscribe);
+            }
+        } catch (error) {
+            logger.warn('MessageHub not available:', error);
+        }
+    }
+
+    private async handleCreateBehaviorTreeAsset(
+        services: ServiceContainer,
+        payload: { entityId?: string; onChange?: (value: string | null) => void }
+    ): Promise<void> {
+        try {
+            const dialog = services.resolve<IDialog>(IDialogService);
+            const fileSystem = services.resolve<IFileSystem>(IFileSystemService);
+            const messageHub = services.resolve<MessageHub>(IMessageHub);
+
+            if (!dialog || !fileSystem) {
+                logger.error('Dialog or FileSystem service not available');
+                return;
+            }
+
+            const filePath = await dialog.saveDialog({
+                title: 'Create Behavior Tree Asset',
+                filters: [{ name: 'Behavior Tree', extensions: ['btree'] }],
+                defaultPath: 'new-behavior-tree.btree'
+            });
+
+            if (!filePath) {
+                return;
+            }
+
+            // 获取默认行为树内容
+            const templates = this.getFileCreationTemplates();
+            const btreeTemplate = templates.find(t => t.extension === 'btree');
+            const content = btreeTemplate
+                ? await btreeTemplate.getContent(filePath.split(/[\\/]/).pop() || 'new-behavior-tree.btree')
+                : '{}';
+
+            await fileSystem.writeFile(filePath, content);
+
+            if (payload.onChange) {
+                payload.onChange(filePath);
+            }
+
+            // 打开行为树编辑器
+            if (messageHub) {
+                messageHub.publish('dynamic-panel:open', {
+                    panelId: 'behavior-tree-editor',
+                    title: `Behavior Tree - ${filePath.split(/[\\/]/).pop()}`
+                });
+            }
+
+            logger.info('Created behavior tree asset:', filePath);
+        } catch (error) {
+            logger.error('Failed to create behavior tree asset:', error);
+        }
+    }
+
     async uninstall(): Promise<void> {
+        // 清理订阅
+        this.unsubscribers.forEach(unsub => unsub());
+        this.unsubscribers = [];
+
         if (this.services) {
             this.services.unregister(FileSystemService);
             this.services.unregister(BehaviorTreeService);

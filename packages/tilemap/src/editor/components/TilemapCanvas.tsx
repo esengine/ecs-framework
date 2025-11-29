@@ -59,6 +59,7 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
     const [isPanning, setIsPanning] = useState(false);
     const [lastPanPos, setLastPanPos] = useState({ x: 0, y: 0 });
     const [mousePos, setMousePos] = useState<{ tileX: number; tileY: number } | null>(null);
+    const [spacePressed, setSpacePressed] = useState(false);
 
     // Get canvas size
     const canvasWidth = tilemap.width * tileWidth;
@@ -222,6 +223,50 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
         draw();
     }, [draw]);
 
+    // Center view on first mount
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        // Only center if pan is at default position (0, 0)
+        if (panX === 0 && panY === 0) {
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            const mapPixelWidth = canvasWidth * zoom;
+            const mapPixelHeight = canvasHeight * zoom;
+
+            const centerX = (containerWidth - mapPixelWidth) / 2;
+            const centerY = (containerHeight - mapPixelHeight) / 2;
+
+            setPan(centerX, centerY);
+        }
+    }, []); // Only run on mount
+
+    // Space key for panning mode
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.code === 'Space' && !e.repeat) {
+                e.preventDefault();
+                setSpacePressed(true);
+            }
+        };
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.code === 'Space') {
+                setSpacePressed(false);
+                setIsPanning(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, []);
+
     // Convert screen coordinates to tile coordinates
     const screenToTile = useCallback((screenX: number, screenY: number) => {
         const x = (screenX - panX) / zoom;
@@ -240,8 +285,8 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        // Middle mouse button or space+left click for panning
-        if (e.button === 1 || (e.button === 0 && e.altKey)) {
+        // Middle mouse button, Alt+left click, or Space+left click for panning
+        if (e.button === 1 || (e.button === 0 && (e.altKey || spacePressed))) {
             setIsPanning(true);
             setLastPanPos({ x: e.clientX, y: e.clientY });
             return;
@@ -365,6 +410,13 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
         setZoom(newZoom);
     };
 
+    // Determine cursor style
+    const getCursor = () => {
+        if (isPanning) return 'grabbing';
+        if (spacePressed) return 'grab';
+        return tools[currentTool]?.cursor || 'crosshair';
+    };
+
     return (
         <div ref={containerRef} className="tilemap-canvas-container">
             <canvas
@@ -376,7 +428,7 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
                 onMouseLeave={handleMouseLeave}
                 onWheel={handleWheel}
                 onContextMenu={(e) => e.preventDefault()}
-                style={{ cursor: isPanning ? 'grabbing' : tools[currentTool]?.cursor || 'default' }}
+                style={{ cursor: getCursor() }}
             />
         </div>
     );

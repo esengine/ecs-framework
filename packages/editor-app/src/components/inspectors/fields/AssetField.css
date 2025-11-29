@@ -1,198 +1,147 @@
-/* 资产选择框 */
+/* Asset Field - Design System Style */
 .asset-field {
-    margin-bottom: 6px;
-    min-width: 0;  /* 允许在flex容器中收缩 */
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
 }
 
 .asset-field__label {
-    display: block;
     font-size: 11px;
     color: #999;
-    margin-bottom: 4px;
 }
 
-.asset-field__container {
+/* Main content container */
+.asset-field__content {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+}
+
+/* Thumbnail Preview */
+.asset-field__thumbnail {
+    width: 44px;
+    height: 44px;
     background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 4px;
-    transition: all 0.15s ease;
-    position: relative;
-    min-width: 0;  /* 允许在flex容器中收缩 */
-    overflow: hidden;  /* 防止内容溢出 */
-}
-
-.asset-field__container.hovered {
-    border-color: #444;
-}
-
-.asset-field__container.dragging {
-    border-color: #4ade80;
-    background: #1a2a1a;
-    box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.2);
-}
-
-/* 资产图标区域 */
-.asset-field__icon {
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 26px;
-    background: #262626;
-    border-right: 1px solid #333;
-    color: #888;
-    flex-shrink: 0;  /* 图标不收缩 */
+    overflow: hidden;
+    transition: border-color 0.15s ease;
 }
 
-.asset-field__container.hovered .asset-field__icon {
-    color: #aaa;
+.asset-field__thumbnail:hover {
+    border-color: #4a4a4a;
 }
 
-/* 资产输入区域 */
-.asset-field__input {
+.asset-field__thumbnail.dragging {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.asset-field__thumbnail img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.asset-field__thumbnail-icon {
+    color: #555;
+}
+
+/* Right side container */
+.asset-field__right {
     flex: 1;
-    padding: 0 8px;
-    height: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+/* Dropdown selector */
+.asset-field__dropdown {
     display: flex;
     align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
     cursor: pointer;
-    user-select: none;
-    min-width: 0;  /* 关键：允许flex项收缩到小于内容宽度 */
-    overflow: hidden;  /* 配合min-width: 0防止溢出 */
+    transition: border-color 0.15s ease;
+    min-width: 0;
 }
 
-.asset-field__input:hover {
-    background: rgba(255, 255, 255, 0.02);
+.asset-field__dropdown:hover {
+    border-color: #4a4a4a;
+}
+
+.asset-field__dropdown.dragging {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
 }
 
 .asset-field__value {
+    flex: 1;
     font-size: 11px;
-    color: #e0e0e0;
+    color: #888;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;  /* 确保不超出父容器 */
-    display: block;  /* 让text-overflow生效 */
-}
-
-.asset-field__input.empty .asset-field__value {
-    color: #666;
     font-style: italic;
 }
 
-/* 操作按钮组 */
+.asset-field__dropdown.has-value .asset-field__value {
+    color: #ddd;
+    font-style: normal;
+}
+
+.asset-field__dropdown-arrow {
+    color: #666;
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+
+/* Action buttons row */
 .asset-field__actions {
     display: flex;
     align-items: center;
-    gap: 1px;
-    padding: 0 1px;
-    flex-shrink: 0;  /* 操作按钮不收缩 */
+    gap: 2px;
 }
 
-.asset-field__button {
+.asset-field__btn {
+    width: 20px;
+    height: 20px;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
-    background: transparent;
-    border: none;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
     border-radius: 2px;
     color: #888;
     cursor: pointer;
     transition: all 0.15s ease;
-    padding: 0;
 }
 
-.asset-field__button:hover {
-    background: #333;
-    color: #e0e0e0;
+.asset-field__btn:hover {
+    background: #3a3a3a;
+    border-color: #4a4a4a;
+    color: #ccc;
 }
 
-.asset-field__button:active {
-    background: #444;
-}
-
-/* 清除按钮特殊样式 */
-.asset-field__button--clear:hover {
+.asset-field__btn--clear:hover {
     background: #4a2020;
+    border-color: #5a3030;
     color: #f87171;
 }
 
-/* 创建按钮特殊样式 */
-.asset-field__button--create {
-    color: #4ade80;
-}
-
-.asset-field__button--create:hover {
-    background: #1a3a1a;
-    color: #4ade80;
-}
-
-/* 禁用状态 */
-.asset-field__container[disabled] {
+/* Disabled state */
+.asset-field[disabled] {
     opacity: 0.6;
     pointer-events: none;
-}
-
-/* 下拉菜单样式（如果需要） */
-.asset-field__dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    margin-top: 2px;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 1000;
-}
-
-.asset-field__dropdown-item {
-    padding: 6px 8px;
-    font-size: 11px;
-    color: #e0e0e0;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.asset-field__dropdown-item:hover {
-    background: #262626;
-}
-
-.asset-field__dropdown-item-icon {
-    color: #888;
-}
-
-/* 动画效果 */
-@keyframes highlight {
-    0% {
-        box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4);
-    }
-    100% {
-        box-shadow: 0 0 0 4px rgba(74, 222, 128, 0);
-    }
-}
-
-.asset-field__container.dragging {
-    animation: highlight 0.5s ease;
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-    .asset-field__button {
-        width: 20px;
-        height: 20px;
-    }
-
-    .asset-field__icon {
-        width: 26px;
-    }
 }

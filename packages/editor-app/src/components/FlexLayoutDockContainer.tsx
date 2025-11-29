@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useRef, useEffect, useState, useMemo } from 'react';
-import { Layout, Model, TabNode, IJsonModel, Actions, Action, DockLocation } from 'flexlayout-react';
+import { Layout, Model, TabNode, TabSetNode, IJsonModel, Actions, Action, DockLocation } from 'flexlayout-react';
 import 'flexlayout-react/style/light.css';
 import '../styles/FlexLayoutDock.css';
 import { LayoutMerger, LayoutBuilder, FlexDockPanel } from '../shared/layout';
@@ -91,9 +91,10 @@ interface FlexLayoutDockContainerProps {
     panels: FlexDockPanel[];
     onPanelClose?: (panelId: string) => void;
     activePanelId?: string;
+    messageHub?: { subscribe: (event: string, callback: (data: any) => void) => () => void } | null;
 }
 
-export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId }: FlexLayoutDockContainerProps) {
+export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId, messageHub }: FlexLayoutDockContainerProps) {
     const layoutRef = useRef<Layout>(null);
     const previousLayoutJsonRef = useRef<string | null>(null);
     const previousPanelIdsRef = useRef<string>('');
@@ -104,6 +105,7 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId }:
     const [visiblePersistentPanels, setVisiblePersistentPanels] = useState<Set<string>>(
         () => new Set(PERSISTENT_PANEL_IDS)
     );
+    const [isAnyTabsetMaximized, setIsAnyTabsetMaximized] = useState(false);
 
     const persistentPanels = useMemo(
         () => panels.filter((p) => PERSISTENT_PANEL_IDS.includes(p.id)),
@@ -337,7 +339,33 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId }:
         // 保存布局状态以便在panels变化时恢复
         const layoutJson = newModel.toJson();
         previousLayoutJsonRef.current = JSON.stringify(layoutJson);
+
+        // Check if any tabset is maximized
+        let hasMaximized = false;
+        newModel.visitNodes((node) => {
+            if (node.getType() === 'tabset') {
+                const tabset = node as TabSetNode;
+                if (tabset.isMaximized()) {
+                    hasMaximized = true;
+                }
+            }
+        });
+        setIsAnyTabsetMaximized(hasMaximized);
     }, []);
+
+    useEffect(() => {
+        if (!messageHub || !model) return;
+
+        const unsubscribe = messageHub.subscribe('panel:select', (data: { panelId: string }) => {
+            const { panelId } = data;
+            const node = model.getNodeById(panelId);
+            if (node && node.getType() === 'tab') {
+                model.doAction(Actions.selectTab(panelId));
+            }
+        });
+
+        return () => unsubscribe?.();
+    }, [messageHub, model]);
 
     return (
         <div className="flexlayout-dock-container">
@@ -357,6 +385,7 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId }:
                     panel={panel}
                     rect={persistentPanelRects.get(panel.id)}
                     isVisible={visiblePersistentPanels.has(panel.id)}
+                    isMaximized={isAnyTabsetMaximized}
                 />
             ))}
         </div>
@@ -370,13 +399,19 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId }:
 function PersistentPanelContainer({
     panel,
     rect,
-    isVisible
+    isVisible,
+    isMaximized
 }: {
     panel: FlexDockPanel;
     rect?: DOMRect;
     isVisible: boolean;
+    isMaximized: boolean;
 }) {
     const hasValidRect = rect && rect.width > 0 && rect.height > 0;
+
+    // Hide persistent panel completely when another tabset is maximized
+    // (unless this panel itself is in the maximized tabset)
+    const shouldHide = isMaximized && !isVisible;
 
     return (
         <div
@@ -387,9 +422,10 @@ function PersistentPanelContainer({
                 top: hasValidRect ? rect.y : 0,
                 width: hasValidRect ? rect.width : '100%',
                 height: hasValidRect ? rect.height : '100%',
-                visibility: isVisible ? 'visible' : 'hidden',
-                pointerEvents: isVisible ? 'auto' : 'none',
-                zIndex: isVisible ? 1 : -1,
+                visibility: (isVisible && !shouldHide) ? 'visible' : 'hidden',
+                pointerEvents: (isVisible && !shouldHide) ? 'auto' : 'none',
+                // 使用较低的 z-index，确保不会遮挡 FlexLayout 的 tab bar
+                zIndex: 0,
                 overflow: 'hidden'
             }}
         >

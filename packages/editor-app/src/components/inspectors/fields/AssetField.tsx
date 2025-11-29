@@ -1,5 +1,8 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { FileText, Search, X, FolderOpen, ArrowRight, Package, Plus } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Image, X, Navigation, ChevronDown, Copy } from 'lucide-react';
+import { convertFileSrc } from '@tauri-apps/api/core';
+import { Core } from '@esengine/ecs-framework';
+import { ProjectService } from '@esengine/editor-core';
 import { AssetPickerDialog } from '../../../components/dialogs/AssetPickerDialog';
 import './AssetField.css';
 
@@ -7,11 +10,11 @@ interface AssetFieldProps {
     label?: string;
     value: string | null;
     onChange: (value: string | null) => void;
-    fileExtension?: string;  // 例如: '.btree'
+    fileExtension?: string;
     placeholder?: string;
     readonly?: boolean;
-    onNavigate?: (path: string) => void;  // 导航到资产
-    onCreate?: () => void;  // 创建新资产
+    onNavigate?: (path: string) => void;
+    onCreate?: () => void;
 }
 
 export function AssetField({
@@ -25,9 +28,50 @@ export function AssetField({
     onCreate
 }: AssetFieldProps) {
     const [isDragging, setIsDragging] = useState(false);
-    const [isHovered, setIsHovered] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
+    const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
     const inputRef = useRef<HTMLDivElement>(null);
+
+    // 检测是否是图片资源
+    const isImageAsset = useCallback((path: string | null) => {
+        if (!path) return false;
+        return ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'].some(ext =>
+            path.toLowerCase().endsWith(ext)
+        );
+    }, []);
+
+    // 加载缩略图
+    useEffect(() => {
+        if (value && isImageAsset(value)) {
+            // 获取项目路径并构建完整路径
+            const projectService = Core.services.tryResolve(ProjectService);
+            const projectPath = projectService?.getCurrentProject()?.path;
+
+            if (projectPath) {
+                // 构建完整的文件路径
+                const fullPath = value.startsWith('/') || value.includes(':')
+                    ? value
+                    : `${projectPath}/${value}`;
+
+                try {
+                    const url = convertFileSrc(fullPath);
+                    setThumbnailUrl(url);
+                } catch {
+                    setThumbnailUrl(null);
+                }
+            } else {
+                // 没有项目路径时，尝试直接使用 value
+                try {
+                    const url = convertFileSrc(value);
+                    setThumbnailUrl(url);
+                } catch {
+                    setThumbnailUrl(null);
+                }
+            }
+        } else {
+            setThumbnailUrl(null);
+        }
+    }, [value, isImageAsset]);
 
     const handleDragEnter = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -55,26 +99,22 @@ export function AssetField({
 
         if (readonly) return;
 
-        // 处理从文件系统拖入的文件
         const files = Array.from(e.dataTransfer.files);
         const file = files.find((f) =>
             !fileExtension || f.name.endsWith(fileExtension)
         );
 
         if (file) {
-            // Web File API 没有 path 属性，使用 name
             onChange(file.name);
             return;
         }
 
-        // 处理从资产面板拖入的文件路径
         const assetPath = e.dataTransfer.getData('asset-path');
         if (assetPath && (!fileExtension || assetPath.endsWith(fileExtension))) {
             onChange(assetPath);
             return;
         }
 
-        // 兼容纯文本拖拽
         const text = e.dataTransfer.getData('text/plain');
         if (text && (!fileExtension || text.endsWith(fileExtension))) {
             onChange(text);
@@ -105,99 +145,85 @@ export function AssetField({
     return (
         <div className="asset-field">
             {label && <label className="asset-field__label">{label}</label>}
-            <div
-                className={`asset-field__container ${isDragging ? 'dragging' : ''} ${isHovered ? 'hovered' : ''}`}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-            >
-                {/* 资产图标 */}
-                <div className="asset-field__icon">
-                    {value ? (
-                        fileExtension === '.btree' ?
-                            <FileText size={14} /> :
-                            <Package size={14} />
-                    ) : (
-                        <Package size={14} style={{ opacity: 0.5 }} />
-                    )}
-                </div>
-
-                {/* 资产选择框 */}
+            <div className="asset-field__content">
+                {/* 缩略图预览 */}
                 <div
-                    ref={inputRef}
-                    className={`asset-field__input ${value ? 'has-value' : 'empty'}`}
+                    className={`asset-field__thumbnail ${isDragging ? 'dragging' : ''}`}
                     onDragEnter={handleDragEnter}
                     onDragLeave={handleDragLeave}
                     onDragOver={handleDragOver}
                     onDrop={handleDrop}
-                    onClick={!readonly ? handleBrowse : undefined}
-                    title={value || placeholder}
                 >
-                    <span className="asset-field__value">
-                        {value ? getFileName(value) : placeholder}
-                    </span>
+                    {thumbnailUrl ? (
+                        <img src={thumbnailUrl} alt="" />
+                    ) : (
+                        <Image size={18} className="asset-field__thumbnail-icon" />
+                    )}
                 </div>
 
-                {/* 操作按钮组 */}
-                <div className="asset-field__actions">
-                    {/* 创建按钮 */}
-                    {onCreate && !readonly && !value && (
-                        <button
-                            className="asset-field__button asset-field__button--create"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onCreate();
-                            }}
-                            title="创建新资产"
-                        >
-                            <Plus size={12} />
-                        </button>
-                    )}
+                {/* 右侧区域 */}
+                <div className="asset-field__right">
+                    {/* 下拉选择框 */}
+                    <div
+                        ref={inputRef}
+                        className={`asset-field__dropdown ${value ? 'has-value' : ''} ${isDragging ? 'dragging' : ''}`}
+                        onClick={!readonly ? handleBrowse : undefined}
+                        onDragEnter={handleDragEnter}
+                        onDragLeave={handleDragLeave}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        title={value || placeholder}
+                    >
+                        <span className="asset-field__value">
+                            {value ? getFileName(value) : placeholder}
+                        </span>
+                        <ChevronDown size={12} className="asset-field__dropdown-arrow" />
+                    </div>
 
-                    {/* 浏览按钮 */}
-                    {!readonly && (
-                        <button
-                            className="asset-field__button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleBrowse();
-                            }}
-                            title="浏览..."
-                        >
-                            <Search size={12} />
-                        </button>
-                    )}
-
-                    {/* 导航/定位按钮 */}
-                    {onNavigate && (
-                        <button
-                            className="asset-field__button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (value) {
+                    {/* 操作按钮行 */}
+                    <div className="asset-field__actions">
+                        {/* 定位按钮 */}
+                        {value && onNavigate && (
+                            <button
+                                className="asset-field__btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
                                     onNavigate(value);
-                                } else {
-                                    handleBrowse();
-                                }
-                            }}
-                            title={value ? '在资产浏览器中显示' : '选择资产'}
-                        >
-                            {value ? <ArrowRight size={12} /> : <FolderOpen size={12} />}
-                        </button>
-                    )}
+                                }}
+                                title="Locate in Asset Browser"
+                            >
+                                <Navigation size={12} />
+                            </button>
+                        )}
 
-                    {/* 清除按钮 */}
-                    {value && !readonly && (
-                        <button
-                            className="asset-field__button asset-field__button--clear"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleClear();
-                            }}
-                            title="清除"
-                        >
-                            <X size={12} />
-                        </button>
-                    )}
+                        {/* 复制路径按钮 */}
+                        {value && (
+                            <button
+                                className="asset-field__btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(value);
+                                }}
+                                title="Copy Path"
+                            >
+                                <Copy size={12} />
+                            </button>
+                        )}
+
+                        {/* 清除按钮 */}
+                        {value && !readonly && (
+                            <button
+                                className="asset-field__btn asset-field__btn--clear"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleClear();
+                                }}
+                                title="Clear"
+                            >
+                                <X size={12} />
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 

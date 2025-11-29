@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Play, Pause, Square, RotateCcw, Maximize2, Grid3x3, Eye, EyeOff, Activity, MousePointer2, Move, RotateCw, Scaling, Globe, QrCode, ChevronDown } from 'lucide-react';
+import {
+    RotateCcw, Maximize2, Grid3x3, Eye, EyeOff, Activity,
+    MousePointer2, Move, RotateCw, Scaling, Globe, QrCode, ChevronDown,
+    Magnet, ZoomIn
+} from 'lucide-react';
 import '../styles/Viewport.css';
 import { useEngine } from '../hooks/useEngine';
 import { EngineService } from '../services/EngineService';
@@ -101,6 +105,18 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
     const [devicePreviewUrl, setDevicePreviewUrl] = useState('');
     const runMenuRef = useRef<HTMLDivElement>(null);
 
+    // Snap settings
+    const [snapEnabled, setSnapEnabled] = useState(true);
+    const [gridSnapValue, setGridSnapValue] = useState(10);
+    const [rotationSnapValue, setRotationSnapValue] = useState(15);
+    const [scaleSnapValue, setScaleSnapValue] = useState(0.25);
+    const [showGridSnapMenu, setShowGridSnapMenu] = useState(false);
+    const [showRotationSnapMenu, setShowRotationSnapMenu] = useState(false);
+    const [showScaleSnapMenu, setShowScaleSnapMenu] = useState(false);
+    const gridSnapMenuRef = useRef<HTMLDivElement>(null);
+    const rotationSnapMenuRef = useRef<HTMLDivElement>(null);
+    const scaleSnapMenuRef = useRef<HTMLDivElement>(null);
+
     // Store editor camera state when entering play mode
     const editorCameraRef = useRef({ x: 0, y: 0, zoom: 1 });
     const playStateRef = useRef<PlayState>('stopped');
@@ -130,6 +146,10 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
     const selectedEntityRef = useRef<Entity | null>(null);
     const messageHubRef = useRef<MessageHub | null>(null);
     const transformModeRef = useRef<TransformMode>('select');
+    const snapEnabledRef = useRef(true);
+    const gridSnapRef = useRef(10);
+    const rotationSnapRef = useRef(15);
+    const scaleSnapRef = useRef(0.25);
 
     // Keep refs in sync with state
     useEffect(() => {
@@ -143,6 +163,40 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
     useEffect(() => {
         transformModeRef.current = transformMode;
     }, [transformMode]);
+
+    useEffect(() => {
+        snapEnabledRef.current = snapEnabled;
+    }, [snapEnabled]);
+
+    useEffect(() => {
+        gridSnapRef.current = gridSnapValue;
+    }, [gridSnapValue]);
+
+    useEffect(() => {
+        rotationSnapRef.current = rotationSnapValue;
+    }, [rotationSnapValue]);
+
+    useEffect(() => {
+        scaleSnapRef.current = scaleSnapValue;
+    }, [scaleSnapValue]);
+
+    // Snap helper functions
+    const snapToGrid = useCallback((value: number): number => {
+        if (!snapEnabledRef.current || gridSnapRef.current <= 0) return value;
+        return Math.round(value / gridSnapRef.current) * gridSnapRef.current;
+    }, []);
+
+    const snapRotation = useCallback((value: number): number => {
+        if (!snapEnabledRef.current || rotationSnapRef.current <= 0) return value;
+        const degrees = (value * 180) / Math.PI;
+        const snappedDegrees = Math.round(degrees / rotationSnapRef.current) * rotationSnapRef.current;
+        return (snappedDegrees * Math.PI) / 180;
+    }, []);
+
+    const snapScale = useCallback((value: number): number => {
+        if (!snapEnabledRef.current || scaleSnapRef.current <= 0) return value;
+        return Math.round(value / scaleSnapRef.current) * scaleSnapRef.current;
+    }, []);
 
     // Screen to world coordinate conversion - uses refs to avoid re-registering event handlers
     const screenToWorld = useCallback((screenX: number, screenY: number) => {
@@ -358,8 +412,38 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                 isDraggingTransformRef.current = false;
                 canvas.style.cursor = 'grab';
 
+                // Apply snap on mouse up
+                const entity = selectedEntityRef.current;
+                if (entity && snapEnabledRef.current) {
+                    const mode = transformModeRef.current;
+                    const transform = entity.getComponent(TransformComponent);
+                    if (transform) {
+                        if (mode === 'move') {
+                            transform.position.x = snapToGrid(transform.position.x);
+                            transform.position.y = snapToGrid(transform.position.y);
+                        } else if (mode === 'rotate') {
+                            transform.rotation.z = snapRotation(transform.rotation.z);
+                        } else if (mode === 'scale') {
+                            transform.scale.x = snapScale(transform.scale.x);
+                            transform.scale.y = snapScale(transform.scale.y);
+                        }
+                    }
+
+                    const uiTransform = entity.getComponent(UITransformComponent);
+                    if (uiTransform) {
+                        if (mode === 'move') {
+                            uiTransform.x = snapToGrid(uiTransform.x);
+                            uiTransform.y = snapToGrid(uiTransform.y);
+                        } else if (mode === 'rotate') {
+                            uiTransform.rotation = snapRotation(uiTransform.rotation);
+                        } else if (mode === 'scale') {
+                            uiTransform.scaleX = snapScale(uiTransform.scaleX);
+                            uiTransform.scaleY = snapScale(uiTransform.scaleY);
+                        }
+                    }
+                }
+
                 // Notify Inspector to refresh after transform change
-                // 通知 Inspector 在变换更改后刷新
                 if (messageHubRef.current && selectedEntityRef.current) {
                     messageHubRef.current.publish('entity:selected', {
                         entity: selectedEntityRef.current
@@ -549,6 +633,16 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         setCamera2DOffset({ x: 0, y: 0 });
         setCamera2DZoom(1);
     };
+
+    // Store handlers in refs to avoid dependency issues
+    const handlePlayRef = useRef(handlePlay);
+    const handlePauseRef = useRef(handlePause);
+    const handleStopRef = useRef(handleStop);
+    const handleRunInBrowserRef = useRef<(() => void) | null>(null);
+    const handleRunOnDeviceRef = useRef<(() => void) | null>(null);
+    handlePlayRef.current = handlePlay;
+    handlePauseRef.current = handlePause;
+    handleStopRef.current = handleStop;
 
     const handleRunInBrowser = async () => {
         setShowRunMenu(false);
@@ -761,6 +855,51 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         }
     };
 
+    // Update refs after function definitions
+    handleRunInBrowserRef.current = handleRunInBrowser;
+    handleRunOnDeviceRef.current = handleRunOnDevice;
+
+    // Subscribe to MainToolbar events
+    useEffect(() => {
+        if (!messageHub) return;
+
+        const unsubscribeStart = messageHub.subscribe('preview:start', () => {
+            handlePlayRef.current();
+            messageHub.publish('preview:started', {});
+        });
+
+        const unsubscribePause = messageHub.subscribe('preview:pause', () => {
+            handlePauseRef.current();
+            messageHub.publish('preview:paused', {});
+        });
+
+        const unsubscribeStop = messageHub.subscribe('preview:stop', () => {
+            handleStopRef.current();
+            messageHub.publish('preview:stopped', {});
+        });
+
+        const unsubscribeStep = messageHub.subscribe('preview:step', () => {
+            engine.step();
+        });
+
+        const unsubscribeRunBrowser = messageHub.subscribe('viewport:run-in-browser', () => {
+            handleRunInBrowserRef.current?.();
+        });
+
+        const unsubscribeRunDevice = messageHub.subscribe('viewport:run-on-device', () => {
+            handleRunOnDeviceRef.current?.();
+        });
+
+        return () => {
+            unsubscribeStart();
+            unsubscribePause();
+            unsubscribeStop();
+            unsubscribeStep();
+            unsubscribeRunBrowser();
+            unsubscribeRunDevice();
+        };
+    }, [messageHub]);
+
     const handleFullscreen = () => {
         if (containerRef.current) {
             if (document.fullscreenElement) {
@@ -800,11 +939,44 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleKeyDown]);
 
+    const gridSnapOptions = [1, 5, 10, 25, 50, 100];
+    const rotationSnapOptions = [5, 10, 15, 30, 45, 90];
+    const scaleSnapOptions = [0.1, 0.25, 0.5, 1];
+
+    const closeAllSnapMenus = useCallback(() => {
+        setShowGridSnapMenu(false);
+        setShowRotationSnapMenu(false);
+        setShowScaleSnapMenu(false);
+        setShowRunMenu(false);
+    }, []);
+
+    // Close menus when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            const target = e.target as Node;
+            if (gridSnapMenuRef.current && !gridSnapMenuRef.current.contains(target)) {
+                setShowGridSnapMenu(false);
+            }
+            if (rotationSnapMenuRef.current && !rotationSnapMenuRef.current.contains(target)) {
+                setShowRotationSnapMenu(false);
+            }
+            if (scaleSnapMenuRef.current && !scaleSnapMenuRef.current.contains(target)) {
+                setShowScaleSnapMenu(false);
+            }
+            if (runMenuRef.current && !runMenuRef.current.contains(target)) {
+                setShowRunMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     return (
         <div className="viewport" ref={containerRef}>
-            <div className="viewport-toolbar">
-                <div className="viewport-toolbar-left">
-                    {/* Transform tools group */}
+            {/* Internal Overlay Toolbar */}
+            <div className="viewport-internal-toolbar">
+                <div className="viewport-internal-toolbar-left">
+                    {/* Transform tools */}
                     <div className="viewport-btn-group">
                         <button
                             className={`viewport-btn ${transformMode === 'select' ? 'active' : ''}`}
@@ -835,37 +1007,165 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                             <Scaling size={14} />
                         </button>
                     </div>
+
                     <div className="viewport-divider" />
-                    {/* View options group */}
-                    <div className="viewport-btn-group">
+
+                    {/* Snap toggle */}
+                    <button
+                        className={`viewport-btn ${snapEnabled ? 'active' : ''}`}
+                        onClick={() => setSnapEnabled(!snapEnabled)}
+                        title={locale === 'zh' ? '吸附开关' : 'Toggle Snap'}
+                    >
+                        <Magnet size={14} />
+                    </button>
+
+                    {/* Grid Snap Value */}
+                    <div className="viewport-snap-dropdown" ref={gridSnapMenuRef}>
                         <button
-                            className={`viewport-btn ${showGrid ? 'active' : ''}`}
-                            onClick={() => setShowGrid(!showGrid)}
-                            title={locale === 'zh' ? '显示网格' : 'Show Grid'}
+                            className="viewport-snap-btn"
+                            onClick={() => { closeAllSnapMenus(); setShowGridSnapMenu(!showGridSnapMenu); }}
+                            title={locale === 'zh' ? '网格吸附' : 'Grid Snap'}
                         >
-                            <Grid3x3 size={14} />
+                            <Grid3x3 size={12} />
+                            <span>{gridSnapValue}</span>
+                            <ChevronDown size={10} />
                         </button>
-                        <button
-                            className={`viewport-btn ${showGizmos ? 'active' : ''}`}
-                            onClick={() => setShowGizmos(!showGizmos)}
-                            title={locale === 'zh' ? '显示辅助工具' : 'Show Gizmos'}
-                        >
-                            {showGizmos ? <Eye size={14} /> : <EyeOff size={14} />}
-                        </button>
+                        {showGridSnapMenu && (
+                            <div className="viewport-snap-menu">
+                                {gridSnapOptions.map((val) => (
+                                    <button
+                                        key={val}
+                                        className={gridSnapValue === val ? 'active' : ''}
+                                        onClick={() => { setGridSnapValue(val); setShowGridSnapMenu(false); }}
+                                    >
+                                        {val}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                    <div className="viewport-divider" />
-                    {/* Run options dropdown */}
-                    <div className="viewport-dropdown" ref={runMenuRef}>
+
+                    {/* Rotation Snap Value */}
+                    <div className="viewport-snap-dropdown" ref={rotationSnapMenuRef}>
                         <button
-                            className="viewport-btn"
-                            onClick={() => setShowRunMenu(!showRunMenu)}
+                            className="viewport-snap-btn"
+                            onClick={() => { closeAllSnapMenus(); setShowRotationSnapMenu(!showRotationSnapMenu); }}
+                            title={locale === 'zh' ? '旋转吸附' : 'Rotation Snap'}
+                        >
+                            <RotateCw size={12} />
+                            <span>{rotationSnapValue}°</span>
+                            <ChevronDown size={10} />
+                        </button>
+                        {showRotationSnapMenu && (
+                            <div className="viewport-snap-menu">
+                                {rotationSnapOptions.map((val) => (
+                                    <button
+                                        key={val}
+                                        className={rotationSnapValue === val ? 'active' : ''}
+                                        onClick={() => { setRotationSnapValue(val); setShowRotationSnapMenu(false); }}
+                                    >
+                                        {val}°
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Scale Snap Value */}
+                    <div className="viewport-snap-dropdown" ref={scaleSnapMenuRef}>
+                        <button
+                            className="viewport-snap-btn"
+                            onClick={() => { closeAllSnapMenus(); setShowScaleSnapMenu(!showScaleSnapMenu); }}
+                            title={locale === 'zh' ? '缩放吸附' : 'Scale Snap'}
+                        >
+                            <Scaling size={12} />
+                            <span>{scaleSnapValue}</span>
+                            <ChevronDown size={10} />
+                        </button>
+                        {showScaleSnapMenu && (
+                            <div className="viewport-snap-menu">
+                                {scaleSnapOptions.map((val) => (
+                                    <button
+                                        key={val}
+                                        className={scaleSnapValue === val ? 'active' : ''}
+                                        onClick={() => { setScaleSnapValue(val); setShowScaleSnapMenu(false); }}
+                                    >
+                                        {val}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="viewport-internal-toolbar-right">
+                    {/* View options */}
+                    <button
+                        className={`viewport-btn ${showGrid ? 'active' : ''}`}
+                        onClick={() => setShowGrid(!showGrid)}
+                        title={locale === 'zh' ? '显示网格' : 'Show Grid'}
+                    >
+                        <Grid3x3 size={14} />
+                    </button>
+                    <button
+                        className={`viewport-btn ${showGizmos ? 'active' : ''}`}
+                        onClick={() => setShowGizmos(!showGizmos)}
+                        title={locale === 'zh' ? '显示辅助线' : 'Show Gizmos'}
+                    >
+                        {showGizmos ? <Eye size={14} /> : <EyeOff size={14} />}
+                    </button>
+
+                    <div className="viewport-divider" />
+
+                    {/* Zoom display */}
+                    <div className="viewport-zoom-display">
+                        <ZoomIn size={12} />
+                        <span>{Math.round(camera2DZoom * 100)}%</span>
+                    </div>
+
+                    <div className="viewport-divider" />
+
+                    {/* Stats toggle */}
+                    <button
+                        className={`viewport-btn ${showStats ? 'active' : ''}`}
+                        onClick={() => setShowStats(!showStats)}
+                        title={locale === 'zh' ? '统计信息' : 'Stats'}
+                    >
+                        <Activity size={14} />
+                    </button>
+
+                    {/* Reset view */}
+                    <button
+                        className="viewport-btn"
+                        onClick={handleReset}
+                        title={locale === 'zh' ? '重置视图' : 'Reset View'}
+                    >
+                        <RotateCcw size={14} />
+                    </button>
+
+                    {/* Fullscreen */}
+                    <button
+                        className="viewport-btn"
+                        onClick={handleFullscreen}
+                        title={locale === 'zh' ? '全屏' : 'Fullscreen'}
+                    >
+                        <Maximize2 size={14} />
+                    </button>
+
+                    <div className="viewport-divider" />
+
+                    {/* Run options */}
+                    <div className="viewport-snap-dropdown" ref={runMenuRef}>
+                        <button
+                            className="viewport-snap-btn"
+                            onClick={() => { closeAllSnapMenus(); setShowRunMenu(!showRunMenu); }}
                             title={locale === 'zh' ? '运行选项' : 'Run Options'}
                         >
                             <Globe size={14} />
                             <ChevronDown size={10} />
                         </button>
                         {showRunMenu && (
-                            <div className="viewport-dropdown-menu">
+                            <div className="viewport-snap-menu viewport-snap-menu-right">
                                 <button onClick={handleRunInBrowser}>
                                     <Globe size={14} />
                                     {locale === 'zh' ? '浏览器运行' : 'Run in Browser'}
@@ -878,62 +1178,10 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                         )}
                     </div>
                 </div>
-                {/* Centered playback controls */}
-                <div className="viewport-toolbar-center">
-                    <div className="viewport-playback">
-                        <button
-                            className={`viewport-btn play-btn ${playState === 'playing' ? 'active' : ''}`}
-                            onClick={handlePlay}
-                            disabled={playState === 'playing'}
-                            title={locale === 'zh' ? '播放' : 'Play'}
-                        >
-                            <Play size={16} />
-                        </button>
-                        <button
-                            className={`viewport-btn pause-btn ${playState === 'paused' ? 'active' : ''}`}
-                            onClick={handlePause}
-                            disabled={playState !== 'playing'}
-                            title={locale === 'zh' ? '暂停' : 'Pause'}
-                        >
-                            <Pause size={16} />
-                        </button>
-                        <button
-                            className="viewport-btn stop-btn"
-                            onClick={handleStop}
-                            disabled={playState === 'stopped'}
-                            title={locale === 'zh' ? '停止' : 'Stop'}
-                        >
-                            <Square size={16} />
-                        </button>
-                    </div>
-                </div>
-                <div className="viewport-toolbar-right">
-                    <span className="viewport-zoom">{Math.round(camera2DZoom * 100)}%</span>
-                    <div className="viewport-divider" />
-                    <button
-                        className="viewport-btn"
-                        onClick={handleReset}
-                        title={locale === 'zh' ? '重置视图' : 'Reset View'}
-                    >
-                        <RotateCcw size={14} />
-                    </button>
-                    <button
-                        className={`viewport-btn ${showStats ? 'active' : ''}`}
-                        onClick={() => setShowStats(!showStats)}
-                        title={locale === 'zh' ? '显示统计信息' : 'Show Stats'}
-                    >
-                        <Activity size={14} />
-                    </button>
-                    <button
-                        className="viewport-btn"
-                        onClick={handleFullscreen}
-                        title={locale === 'zh' ? '全屏' : 'Fullscreen'}
-                    >
-                        <Maximize2 size={14} />
-                    </button>
-                </div>
             </div>
+
             <canvas ref={canvasRef} id="viewport-canvas" className="viewport-canvas" />
+
             {showStats && (
                 <div className="viewport-stats">
                     <div className="viewport-stat">

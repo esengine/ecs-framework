@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Component, Core, getComponentInstanceTypeName } from '@esengine/ecs-framework';
-import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub } from '@esengine/editor-core';
+import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub, FileActionRegistry } from '@esengine/editor-core';
 import { ChevronRight, ChevronDown, Lock } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { AnimationClipsFieldEditor } from '../infrastructure/field-editors/AnimationClipsFieldEditor';
@@ -210,25 +210,30 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                     }
                 };
 
+                // 从 FileActionRegistry 获取资产创建消息映射
+                const fileActionRegistry = Core.services.tryResolve(FileActionRegistry);
+                const getCreationMapping = () => {
+                    if (!fileActionRegistry || !assetMeta.extensions) return null;
+                    for (const ext of assetMeta.extensions) {
+                        const mapping = fileActionRegistry.getAssetCreationMapping(ext);
+                        if (mapping) return mapping;
+                    }
+                    return null;
+                };
+
+                const creationMapping = getCreationMapping();
+
                 const handleCreate = () => {
                     const messageHub = Core.services.tryResolve(MessageHub);
-                    if (messageHub) {
-                        if (fileExtension === '.tilemap.json') {
-                            messageHub.publish('tilemap:create-asset', {
-                                entityId: entity?.id,
-                                onChange: (newValue: string) => handleChange(propertyName, newValue)
-                            });
-                        } else if (fileExtension === '.btree') {
-                            messageHub.publish('behavior-tree:create-asset', {
-                                entityId: entity?.id,
-                                onChange: (newValue: string) => handleChange(propertyName, newValue)
-                            });
-                        }
+                    if (messageHub && creationMapping) {
+                        messageHub.publish(creationMapping.createMessage, {
+                            entityId: entity?.id,
+                            onChange: (newValue: string) => handleChange(propertyName, newValue)
+                        });
                     }
                 };
 
-                const creatableExtensions = ['.tilemap.json', '.btree'];
-                const canCreate = assetMeta.extensions?.some(ext => creatableExtensions.includes(ext));
+                const canCreate = creationMapping !== null;
 
                 return (
                     <div key={propertyName} className="property-field">

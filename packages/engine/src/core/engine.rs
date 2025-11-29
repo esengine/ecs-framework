@@ -222,8 +222,8 @@ impl Engine {
         // Render gizmos on top
         if self.show_gizmos {
             self.gizmo_renderer.render(self.context.gl(), self.renderer.camera());
-            // Render axis indicator in corner (always visible when gizmos are on)
-            // 在角落渲染坐标轴指示器（当 gizmos 开启时始终可见）
+            // Render axis indicator in corner
+            // 在角落渲染坐标轴指示器
             self.gizmo_renderer.render_axis_indicator(
                 self.context.gl(),
                 self.context.width() as f32,

@@ -12,7 +12,9 @@ import type {
     EntityCreationTemplate,
     ComponentAction,
     ComponentInspectorProviderDef,
-    GizmoProviderRegistration
+    GizmoProviderRegistration,
+    FileActionHandler,
+    FileCreationTemplate
 } from '@esengine/editor-core';
 import {
     PanelPosition,
@@ -21,7 +23,9 @@ import {
     MessageHub,
     ComponentRegistry,
     IDialogService,
-    IFileSystemService
+    IFileSystemService,
+    UIRegistry,
+    FileActionRegistry
 } from '@esengine/editor-core';
 import type { IDialog, IFileSystem } from '@esengine/editor-core';
 import { TransformComponent } from '@esengine/ecs-components';
@@ -95,6 +99,19 @@ export class TilemapEditorModule implements IEditorModuleLoader {
                 await this.handleCreateTilemapAsset(services, payload);
             });
             this.unsubscribers.push(unsubscribe);
+        }
+
+        // 注册资产创建消息映射 | Register asset creation message mappings
+        const fileActionRegistry = services.resolve(FileActionRegistry);
+        if (fileActionRegistry) {
+            fileActionRegistry.registerAssetCreationMapping({
+                extension: '.tilemap',
+                createMessage: 'tilemap:create-asset'
+            });
+            fileActionRegistry.registerAssetCreationMapping({
+                extension: '.tileset',
+                createMessage: 'tileset:create-asset'
+            });
         }
 
         // 注册 Tilemap Gizmo | Register Tilemap gizmo
@@ -182,19 +199,101 @@ export class TilemapEditorModule implements IEditorModuleLoader {
     }
 
     getComponentActions(): ComponentAction[] {
+        // 移除编辑按钮，改为双击 tilemap 文件打开编辑器
+        return [];
+    }
+
+    getFileActionHandlers(): FileActionHandler[] {
         return [
             {
-                id: 'tilemap-edit',
-                componentName: 'Tilemap',
-                label: '编辑 Tilemap',
-                icon: 'Edit3',
-                execute: (_component: unknown, entity: Entity) => {
+                extensions: ['tilemap', 'json'],
+                onDoubleClick: (filePath: string) => {
+                    // 只处理 .tilemap 和 .tilemap.json 文件
+                    const lowerPath = filePath.toLowerCase();
+                    if (!lowerPath.endsWith('.tilemap') && !lowerPath.endsWith('.tilemap.json')) {
+                        return;
+                    }
+
+                    // 先设置待打开的文件路径到 store
+                    useTilemapEditorStore.getState().setPendingFilePath(filePath);
+
                     const messageHub = Core.services.resolve(MessageHub);
                     if (messageHub) {
-                        const entityIdStr = String(entity.id);
-                        useTilemapEditorStore.getState().setEntityId(entityIdStr);
-                        messageHub.publish('dynamic-panel:open', { panelId: 'tilemap-editor', title: 'Tilemap Editor' });
+                        // 打开 tilemap 编辑器面板（面板挂载后会从 store 读取 pendingFilePath）
+                        messageHub.publish('dynamic-panel:open', {
+                            panelId: 'tilemap-editor',
+                            title: `Tilemap Editor - ${filePath.split(/[\\/]/).pop()}`
+                        });
                     }
+                }
+            },
+            {
+                extensions: ['tileset', 'json'],
+                onDoubleClick: (filePath: string) => {
+                    // 只处理 .tileset 和 .tileset.json 文件
+                    const lowerPath = filePath.toLowerCase();
+                    if (!lowerPath.endsWith('.tileset') && !lowerPath.endsWith('.tileset.json')) {
+                        return;
+                    }
+
+                    const messageHub = Core.services.resolve(MessageHub);
+                    if (messageHub) {
+                        // 发送消息打开 tileset 预览
+                        messageHub.publish('tileset:open-file', { filePath });
+                        messageHub.publish('dynamic-panel:open', {
+                            panelId: 'tilemap-editor',
+                            title: `Tileset - ${filePath.split(/[\\/]/).pop()}`
+                        });
+                    }
+                }
+            }
+        ];
+    }
+
+    getFileCreationTemplates(): FileCreationTemplate[] {
+        return [
+            {
+                id: 'create-tilemap',
+                label: 'Tilemap',
+                extension: 'tilemap',
+                icon: 'Grid3X3',
+                category: 'tilemap',
+                getContent: (_fileName: string) => {
+                    const defaultTilemapData = {
+                        width: 20,
+                        height: 15,
+                        tileWidth: 16,
+                        tileHeight: 16,
+                        layers: [
+                            {
+                                name: 'Layer 1',
+                                visible: true,
+                                opacity: 1,
+                                data: new Array(20 * 15).fill(0)
+                            }
+                        ],
+                        tilesets: []
+                    };
+                    return JSON.stringify(defaultTilemapData, null, 2);
+                }
+            },
+            {
+                id: 'create-tileset',
+                label: 'Tileset',
+                extension: 'tileset',
+                icon: 'LayoutGrid',
+                category: 'tilemap',
+                getContent: (_fileName: string) => {
+                    const defaultTilesetData = {
+                        name: 'New Tileset',
+                        tileWidth: 16,
+                        tileHeight: 16,
+                        spacing: 0,
+                        margin: 0,
+                        imageSource: '',
+                        tiles: []
+                    };
+                    return JSON.stringify(defaultTilesetData, null, 2);
                 }
             }
         ];
@@ -215,8 +314,8 @@ export class TilemapEditorModule implements IEditorModuleLoader {
 
         const filePath = await dialog.saveDialog({
             title: '创建 Tilemap 资产',
-            filters: [{ name: 'Tilemap', extensions: ['tilemap.json'] }],
-            defaultPath: 'new-tilemap.tilemap.json'
+            filters: [{ name: 'Tilemap', extensions: ['tilemap'] }],
+            defaultPath: 'new-tilemap.tilemap'
         });
 
         if (!filePath) {

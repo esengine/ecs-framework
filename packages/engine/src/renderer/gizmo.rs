@@ -239,8 +239,8 @@ impl GizmoRenderer {
         self.capsules.extend_from_slice(&[x, y, radius, half_height, rotation, r, g, b, a]);
     }
 
-    /// Render axis indicator at top-right corner of the viewport.
-    /// 在视口右上角渲染坐标轴指示器。
+    /// Render axis indicator at bottom-left corner of the viewport.
+    /// 在视口左下角渲染坐标轴指示器。
     ///
     /// This is drawn in screen space and is not affected by camera pan/zoom.
     /// 这是在屏幕空间绘制的，不受相机平移/缩放影响。
@@ -279,72 +279,23 @@ impl GizmoRenderer {
         gl.enable_vertex_attrib_array(0);
         gl.vertex_attrib_pointer_with_i32(0, 2, WebGl2RenderingContext::FLOAT, false, 0, 0);
 
-        // Position in top-right corner (increased padding to prevent X label clipping)
-        // 位置在右上角（增加边距防止 X 标签被裁剪）
-        let padding_x = 70.0;  // More padding on X for the label
-        let padding_y = 55.0;
-        let center_x = half_w - padding_x;
-        let center_y = half_h - padding_y;
-        let axis_length = 30.0;  // Longer axes for better visibility
-        let arrow_size = 8.0;
-        let label_offset = 10.0;
-        let label_size = 4.0;
-
-        // Draw semi-transparent background circle for better visibility
-        // 绘制半透明背景圆以提高可见性
-        let bg_segments = 32;
-        let bg_radius = 45.0;
-        let mut bg_vertices = Vec::with_capacity((bg_segments + 1) * 2);
-        bg_vertices.push(center_x);
-        bg_vertices.push(center_y);
-        for i in 0..=bg_segments {
-            let angle = (i as f32 / bg_segments as f32) * std::f32::consts::PI * 2.0;
-            bg_vertices.push(center_x + bg_radius * angle.cos());
-            bg_vertices.push(center_y + bg_radius * angle.sin());
-        }
-
-        unsafe {
-            let array = js_sys::Float32Array::view(&bg_vertices);
-            gl.buffer_data_with_array_buffer_view(
-                WebGl2RenderingContext::ARRAY_BUFFER,
-                &array,
-                WebGl2RenderingContext::DYNAMIC_DRAW,
-            );
-        }
-        gl.uniform4f(color_loc.as_ref(), 0.1, 0.1, 0.1, 0.7);
-        gl.draw_arrays(WebGl2RenderingContext::TRIANGLE_FAN, 0, (bg_segments + 2) as i32);
-
-        // Draw origin point (filled circle)
-        // 绘制原点（实心圆）
-        let origin_segments = 12;
-        let origin_radius = 3.0;
-        let mut origin_vertices = Vec::with_capacity((origin_segments + 1) * 2);
-        origin_vertices.push(center_x);
-        origin_vertices.push(center_y);
-        for i in 0..=origin_segments {
-            let angle = (i as f32 / origin_segments as f32) * std::f32::consts::PI * 2.0;
-            origin_vertices.push(center_x + origin_radius * angle.cos());
-            origin_vertices.push(center_y + origin_radius * angle.sin());
-        }
-
-        unsafe {
-            let array = js_sys::Float32Array::view(&origin_vertices);
-            gl.buffer_data_with_array_buffer_view(
-                WebGl2RenderingContext::ARRAY_BUFFER,
-                &array,
-                WebGl2RenderingContext::DYNAMIC_DRAW,
-            );
-        }
-        gl.uniform4f(color_loc.as_ref(), 0.8, 0.8, 0.8, 1.0);
-        gl.draw_arrays(WebGl2RenderingContext::TRIANGLE_FAN, 0, (origin_segments + 2) as i32);
+        // Position in bottom-left corner
+        // 位置在左下角
+        let padding = 35.0;
+        let center_x = -half_w + padding;
+        let center_y = -half_h + padding;
+        let axis_length = 25.0;
+        let arrow_size = 6.0;
+        let label_offset = 8.0;
+        let label_size = 3.5;
 
         // X axis (red, pointing right)
         let x_end_x = center_x + axis_length;
         let x_end_y = center_y;
 
-        // X axis line (thicker effect with multiple lines)
+        // X axis line
         let x_axis = [
-            center_x + origin_radius, center_y,
+            center_x, center_y,
             x_end_x - arrow_size * 0.3, x_end_y,
         ];
         unsafe {
@@ -355,14 +306,14 @@ impl GizmoRenderer {
                 WebGl2RenderingContext::DYNAMIC_DRAW,
             );
         }
-        gl.uniform4f(color_loc.as_ref(), 1.0, 0.4, 0.4, 1.0);
+        gl.uniform4f(color_loc.as_ref(), 0.9, 0.2, 0.2, 1.0);
         gl.draw_arrays(WebGl2RenderingContext::LINES, 0, 2);
 
         // X arrow head (filled triangle)
         let x_arrow = [
             x_end_x, x_end_y,
-            x_end_x - arrow_size, x_end_y + arrow_size * 0.4,
-            x_end_x - arrow_size, x_end_y - arrow_size * 0.4,
+            x_end_x - arrow_size, x_end_y + arrow_size * 0.35,
+            x_end_x - arrow_size, x_end_y - arrow_size * 0.35,
         ];
         unsafe {
             let array = js_sys::Float32Array::view(&x_arrow);
@@ -399,7 +350,7 @@ impl GizmoRenderer {
 
         // Y axis line
         let y_axis = [
-            center_x, center_y + origin_radius,
+            center_x, center_y,
             y_end_x, y_end_y - arrow_size * 0.3,
         ];
         unsafe {
@@ -410,14 +361,14 @@ impl GizmoRenderer {
                 WebGl2RenderingContext::DYNAMIC_DRAW,
             );
         }
-        gl.uniform4f(color_loc.as_ref(), 0.4, 1.0, 0.4, 1.0);
+        gl.uniform4f(color_loc.as_ref(), 0.26, 0.63, 0.28, 1.0);
         gl.draw_arrays(WebGl2RenderingContext::LINES, 0, 2);
 
         // Y arrow head (filled triangle)
         let y_arrow = [
             y_end_x, y_end_y,
-            y_end_x - arrow_size * 0.4, y_end_y - arrow_size,
-            y_end_x + arrow_size * 0.4, y_end_y - arrow_size,
+            y_end_x - arrow_size * 0.35, y_end_y - arrow_size,
+            y_end_x + arrow_size * 0.35, y_end_y - arrow_size,
         ];
         unsafe {
             let array = js_sys::Float32Array::view(&y_arrow);

@@ -10,11 +10,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px;
+  padding: 0 8px;
   background: var(--color-bg-elevated);
   border-bottom: 1px solid var(--color-border-default);
   flex-shrink: 0;
   gap: 8px;
+  height: 26px;
 }
 
 .console-toolbar-left {
