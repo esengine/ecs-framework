@@ -141,6 +141,11 @@ jobs:
           cd packages/editor-runtime
           pnpm run build
 
+      - name: Build node-editor package
+        run: |
+          cd packages/node-editor
+          pnpm run build
+
       # ===== 第六层：依赖 editor-runtime 的包 =====
       - name: Build behavior-tree package
         run: |
@@ -150,6 +155,11 @@ jobs:
       - name: Build physics-rapier2d package
         run: |
           cd packages/physics-rapier2d
+          pnpm run build
+
+      - name: Build blueprint package
+        run: |
+          cd packages/blueprint
           pnpm run build
 
       # ===== 第七层：平台包（依赖 ui, tilemap, behavior-tree, physics-rapier2d） =====

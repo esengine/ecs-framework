@@ -122,6 +122,14 @@ class ProfilerEditorModule implements IEditorModuleLoader {
                 execute: () => {
                     this.messageHub?.publish('ui:openWindow', { windowId: 'profiler' });
                 }
+            },
+            {
+                id: 'window.advancedProfiler',
+                label: 'Advanced Profiler',
+                parentId: 'window',
+                execute: () => {
+                    this.messageHub?.publish('ui:openWindow', { windowId: 'advancedProfiler' });
+                }
             }
         ];
     }

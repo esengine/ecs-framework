@@ -4,6 +4,7 @@ import { SystemDataCollector } from './SystemDataCollector';
 import { PerformanceDataCollector } from './PerformanceDataCollector';
 import { ComponentDataCollector } from './ComponentDataCollector';
 import { SceneDataCollector } from './SceneDataCollector';
+import { AdvancedProfilerCollector } from './AdvancedProfilerCollector';
 import { WebSocketManager } from './WebSocketManager';
 import { Component } from '../../ECS/Component';
 import { ComponentPoolManager } from '../../ECS/Core/ComponentPool';
@@ -15,6 +16,7 @@ import { SceneManager } from '../../ECS/SceneManager';
 import { PerformanceMonitor } from '../PerformanceMonitor';
 import { Injectable, InjectProperty, Updatable } from '../../Core/DI/Decorators';
 import { DebugConfigService } from './DebugConfigService';
+import { ProfilerSDK } from '../Profiler/ProfilerSDK';
 
 /**
  * 调试管理器
@@ -31,6 +33,7 @@ export class DebugManager implements IService, IUpdatable {
     private performanceCollector!: PerformanceDataCollector;
     private componentCollector!: ComponentDataCollector;
     private sceneCollector!: SceneDataCollector;
+    private advancedProfilerCollector!: AdvancedProfilerCollector;
 
     @InjectProperty(SceneManager)
     private sceneManager!: SceneManager;
@@ -62,6 +65,10 @@ export class DebugManager implements IService, IUpdatable {
         this.performanceCollector = new PerformanceDataCollector();
         this.componentCollector = new ComponentDataCollector();
         this.sceneCollector = new SceneDataCollector();
+        this.advancedProfilerCollector = new AdvancedProfilerCollector();
+
+        // 启用高级性能分析器
+        ProfilerSDK.setEnabled(true);
 
         // 初始化WebSocket管理器
         this.webSocketManager = new WebSocketManager(
@@ -290,6 +297,14 @@ export class DebugManager implements IService, IUpdatable {
                     this.handleGetEntityDetailsRequest(message);
                     break;
 
+                case 'get_advanced_profiler_data':
+                    this.handleGetAdvancedProfilerDataRequest(message);
+                    break;
+
+                case 'set_profiler_selected_function':
+                    this.handleSetProfilerSelectedFunction(message);
+                    break;
+
                 case 'ping':
                     this.webSocketManager.send({
                         type: 'pong',
@@ -436,6 +451,54 @@ export class DebugManager implements IService, IUpdatable {
         }
     }
 
+
+    /**
+     * 处理获取高级性能分析数据请求
+     */
+    private handleGetAdvancedProfilerDataRequest(message: any): void {
+        try {
+            const { requestId } = message;
+
+            // 收集高级性能数据
+            const advancedData = ProfilerSDK.isEnabled()
+                ? this.advancedProfilerCollector.collectAdvancedData(this.performanceMonitor)
+                : this.advancedProfilerCollector.collectFromLegacyMonitor(this.performanceMonitor);
+
+            this.webSocketManager.send({
+                type: 'get_advanced_profiler_data_response',
+                requestId,
+                data: advancedData
+            });
+        } catch (error) {
+            this.webSocketManager.send({
+                type: 'get_advanced_profiler_data_response',
+                requestId: message.requestId,
+                error: error instanceof Error ? error.message : String(error)
+            });
+        }
+    }
+
+    /**
+     * 处理设置性能分析器选中函数请求
+     */
+    private handleSetProfilerSelectedFunction(message: any): void {
+        try {
+            const { functionName, requestId } = message;
+            this.advancedProfilerCollector.setSelectedFunction(functionName || null);
+
+            this.webSocketManager.send({
+                type: 'set_profiler_selected_function_response',
+                requestId,
+                success: true
+            });
+        } catch (error) {
+            this.webSocketManager.send({
+                type: 'set_profiler_selected_function_response',
+                requestId: message.requestId,
+                error: error instanceof Error ? error.message : String(error)
+            });
+        }
+    }
 
     /**
      * 处理内存快照请求

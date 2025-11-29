@@ -6,3 +6,5 @@ export { SceneDataCollector } from './SceneDataCollector';
 export { WebSocketManager } from './WebSocketManager';
 export { DebugManager } from './DebugManager';
 export { DebugConfigService } from './DebugConfigService';
+export { AdvancedProfilerCollector } from './AdvancedProfilerCollector';
+export type { IAdvancedProfilerData } from './AdvancedProfilerCollector';
