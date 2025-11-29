@@ -234,6 +234,49 @@ importers:
         specifier: ^3.7.0
         version: 3.9.1(@types/node@20.19.25)(rollup@4.53.3)(typescript@5.9.3)(vite@6.4.1(@types/node@20.19.25)(jiti@2.6.1)(terser@5.44.1)(yaml@2.8.1))
 
+  packages/blueprint:
+    dependencies:
+      '@esengine/ecs-framework':
+        specifier: '>=2.0.0'
+        version: link:../core
+      '@esengine/editor-runtime':
+        specifier: workspace:*
+        version: link:../editor-runtime
+      '@esengine/node-editor':
+        specifier: workspace:*
+        version: link:../node-editor
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      tslib:
+        specifier: ^2.8.1
+        version: 2.8.1
+      zustand:
+        specifier: ^4.5.2
+        version: 4.5.7(@types/react@18.3.27)(react@18.3.1)
+    devDependencies:
+      '@types/node':
+        specifier: ^20.19.17
+        version: 20.19.25
+      '@types/react':
+        specifier: ^18.3.12
+        version: 18.3.27
+      '@vitejs/plugin-react':
+        specifier: ^4.7.0
+        version: 4.7.0(vite@6.4.1(@types/node@20.19.25)(jiti@2.6.1)(terser@5.44.1)(yaml@2.8.1))
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.7
+        version: 6.4.1(@types/node@20.19.25)(jiti@2.6.1)(terser@5.44.1)(yaml@2.8.1)
+      vite-plugin-dts:
+        specifier: ^3.7.0
+        version: 3.9.1(@types/node@20.19.25)(rollup@4.53.3)(typescript@5.9.3)(vite@6.4.1(@types/node@20.19.25)(jiti@2.6.1)(terser@5.44.1)(yaml@2.8.1))
+
   packages/components:
     dependencies:
       '@esengine/asset-system':
@@ -354,6 +397,9 @@ importers:
       '@esengine/behavior-tree':
         specifier: workspace:*
         version: link:../behavior-tree
+      '@esengine/blueprint':
+        specifier: workspace:*
+        version: link:../blueprint
       '@esengine/ecs-components':
         specifier: workspace:*
         version: link:../components
@@ -672,6 +718,40 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
+
+  packages/node-editor:
+    dependencies:
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      tslib:
+        specifier: ^2.8.1
+        version: 2.8.1
+      zustand:
+        specifier: ^4.5.2
+        version: 4.5.7(@types/react@18.3.27)(react@18.3.1)
+    devDependencies:
+      '@types/node':
+        specifier: ^20.19.17
+        version: 20.19.25
+      '@types/react':
+        specifier: ^18.3.12
+        version: 18.3.27
+      '@vitejs/plugin-react':
+        specifier: ^4.7.0
+        version: 4.7.0(vite@6.4.1(@types/node@20.19.25)(jiti@2.6.1)(terser@5.44.1)(yaml@2.8.1))
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.7
+        version: 6.4.1(@types/node@20.19.25)(jiti@2.6.1)(terser@5.44.1)(yaml@2.8.1)
+      vite-plugin-dts:
+        specifier: ^3.7.0
+        version: 3.9.1(@types/node@20.19.25)(rollup@4.53.3)(typescript@5.9.3)(vite@6.4.1(@types/node@20.19.25)(jiti@2.6.1)(terser@5.44.1)(yaml@2.8.1))
 
   packages/physics-rapier2d:
     dependencies:

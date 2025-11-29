@@ -209,10 +209,11 @@ export type {
 
 
 // =============================================================================
-// Tauri API
+// Tauri API (低级 API，建议使用 FileSystem 封装)
 // =============================================================================
 export { invoke, convertFileSrc } from '@tauri-apps/api/core';
 export { open, save, message, ask, confirm } from '@tauri-apps/plugin-dialog';
+// 注意：以下 API 可能有权限问题，建议使用 FileSystem 替代
 export {
     readTextFile,
     writeTextFile,
@@ -223,6 +224,12 @@ export {
     rename,
     copyFile
 } from '@tauri-apps/plugin-fs';
+
+// =============================================================================
+// FileSystem API (推荐使用)
+// 通过后端命令实现，避免前端权限问题
+// =============================================================================
+export { FileSystem, type DirectoryEntry } from './FileSystem';
 
 // =============================================================================
 // Icons (Lucide React)

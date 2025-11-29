@@ -155,7 +155,7 @@ export class BehaviorTreeEditorModule implements IEditorModuleLoader {
             label: 'Behavior Tree',
             extension: 'btree',
             icon: 'GitBranch',
-            create: async (filePath: string) => {
+            getContent: (fileName: string) => {
                 const rootNode = createRootNode();
                 const rootNodeData = {
                     id: rootNode.id,
@@ -170,16 +170,13 @@ export class BehaviorTreeEditorModule implements IEditorModuleLoader {
                 };
 
                 const emptyTree = {
-                    name: filePath.replace(/.*[/\\]/, '').replace('.btree', ''),
+                    name: fileName.replace('.btree', ''),
                     nodes: [rootNodeData],
                     connections: [],
                     variables: {}
                 };
 
-                const content = JSON.stringify(emptyTree, null, 2);
-                // Write using Tauri FS API
-                const { writeTextFile } = await import('@tauri-apps/plugin-fs');
-                await writeTextFile(filePath, content);
+                return JSON.stringify(emptyTree, null, 2);
             }
         }];
     }

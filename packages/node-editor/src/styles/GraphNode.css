@@ -1,0 +1,265 @@
+/**
+ * Graph Node Styles
+ * 图节点样式
+ */
+
+/* ==================== Node Container 节点容器 ==================== */
+.ne-node {
+    position: absolute;
+    min-width: var(--ne-node-min-width);
+    max-width: var(--ne-node-max-width);
+    background: var(--ne-node-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--ne-node-border);
+    border-radius: var(--ne-node-border-radius);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    font-family: var(--ne-font-family);
+    user-select: none;
+    cursor: grab;
+    transition: box-shadow var(--ne-transition-normal),
+                border-color var(--ne-transition-normal);
+}
+
+.ne-node:hover {
+    border-color: rgba(80, 80, 100, 0.6);
+}
+
+.ne-node.selected {
+    border-color: var(--ne-node-border-selected);
+    box-shadow: 0 0 0 1px var(--ne-node-border-selected),
+                0 0 16px rgba(229, 160, 32, 0.4),
+                0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.ne-node.dragging {
+    cursor: grabbing;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    z-index: var(--ne-z-dragging);
+}
+
+/* ==================== Node Header 节点头部 ==================== */
+.ne-node-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    min-height: var(--ne-node-header-height);
+    border-radius: calc(var(--ne-node-border-radius) - 1px) calc(var(--ne-node-border-radius) - 1px) 0 0;
+    color: var(--ne-text-title);
+    font-size: var(--ne-font-size-title);
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Gradient overlay for header */
+.ne-node-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0.15;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+    pointer-events: none;
+}
+
+/* Node category header colors */
+.ne-node-header.event {
+    background: linear-gradient(90deg, var(--ne-category-event) 0%, var(--ne-category-event-dark) 100%);
+}
+
+.ne-node-header.function {
+    background: linear-gradient(90deg, var(--ne-category-function) 0%, var(--ne-category-function-dark) 100%);
+}
+
+.ne-node-header.pure {
+    background: linear-gradient(90deg, var(--ne-category-pure) 0%, var(--ne-category-pure-dark) 100%);
+}
+
+.ne-node-header.flow {
+    background: linear-gradient(90deg, var(--ne-category-flow) 0%, var(--ne-category-flow-dark) 100%);
+}
+
+.ne-node-header.variable {
+    background: linear-gradient(90deg, var(--ne-category-variable) 0%, var(--ne-category-variable-dark) 100%);
+}
+
+.ne-node-header.literal {
+    background: linear-gradient(90deg, var(--ne-category-literal) 0%, var(--ne-category-literal-dark) 100%);
+}
+
+.ne-node-header.comment {
+    background: linear-gradient(90deg, var(--ne-category-comment) 0%, var(--ne-category-comment-dark) 100%);
+}
+
+.ne-node-header.custom {
+    background: linear-gradient(90deg, var(--ne-category-custom) 0%, var(--ne-category-custom-dark) 100%);
+}
+
+/* Header icon - diamond shape for events */
+.ne-node-header-icon {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ne-node-header.event .ne-node-header-icon::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: #fff;
+    transform: rotate(45deg);
+    border-radius: 1px;
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+}
+
+.ne-node-header-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    letter-spacing: 0.2px;
+}
+
+.ne-node-header-subtitle {
+    font-size: var(--ne-font-size-small);
+    font-weight: 400;
+    opacity: 0.7;
+    margin-left: 4px;
+}
+
+/* Header exec pin */
+.ne-node-header-exec {
+    width: 10px;
+    height: 10px;
+    background: transparent;
+    border: 2px solid #a04040;
+    cursor: pointer;
+    transition: all var(--ne-transition-fast);
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.ne-node-header-exec:hover {
+    border-color: #ff6060;
+    box-shadow: 0 0 6px rgba(255, 96, 96, 0.6);
+}
+
+.ne-node-header-exec.connected {
+    background: #c04040;
+    border-color: #c04040;
+}
+
+/* ==================== Node Body 节点主体 ==================== */
+.ne-node-body {
+    padding: 6px 0;
+    background: var(--ne-node-bg-body);
+    border-radius: 0 0 calc(var(--ne-node-border-radius) - 1px) calc(var(--ne-node-border-radius) - 1px);
+}
+
+.ne-node-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+/* ==================== Pin Row 引脚行 ==================== */
+.ne-pin-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 20px;
+    padding: 1px 0;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ne-pin-row.input {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding-left: 10px;
+    padding-right: 16px;
+}
+
+.ne-pin-row.output {
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+    padding-right: 10px;
+    padding-left: 16px;
+}
+
+.ne-pin-label {
+    font-size: 11px;
+    color: #b0b0b0;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.ne-pin-row.output .ne-pin-label {
+    text-align: right;
+}
+
+/* ==================== Collapsed State 折叠状态 ==================== */
+.ne-node.collapsed .ne-node-body {
+    display: none;
+}
+
+.ne-node.collapsed .ne-node-header {
+    border-radius: calc(var(--ne-node-border-radius) - 1px);
+}
+
+/* ==================== Comment Node 注释节点 ==================== */
+.ne-node.comment {
+    background: rgba(50, 70, 50, 0.4);
+    border: 1px dashed rgba(100, 140, 100, 0.6);
+    min-width: 200px;
+    min-height: 100px;
+}
+
+.ne-node.comment .ne-node-header {
+    background: transparent;
+    color: #90a090;
+}
+
+.ne-node.comment .ne-node-body {
+    background: transparent;
+    color: #80a080;
+    font-style: italic;
+}
+
+/* ==================== Execution States 执行状态 ==================== */
+.ne-node.running {
+    border-color: var(--ne-state-running);
+    box-shadow: 0 0 0 1px var(--ne-state-running),
+                0 0 12px rgba(255, 167, 38, 0.5);
+    animation: ne-pulse 1s ease-in-out infinite;
+}
+
+.ne-node.success {
+    border-color: var(--ne-state-success);
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+}
+
+.ne-node.error {
+    border-color: var(--ne-state-error);
+    box-shadow: 0 0 8px rgba(244, 67, 54, 0.4);
+}
+
+@keyframes ne-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 1px var(--ne-state-running),
+                    0 0 12px rgba(255, 167, 38, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 0 2px var(--ne-state-running),
+                    0 0 20px rgba(255, 167, 38, 0.7);
+    }
+}

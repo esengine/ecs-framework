@@ -1,0 +1,30 @@
+{
+  "id": "@esengine/blueprint",
+  "name": "Blueprint System",
+  "version": "1.0.0",
+  "description": "Visual scripting system for creating game logic without code",
+  "category": "scripting",
+  "loadingPhase": "default",
+  "enabledByDefault": true,
+  "canContainContent": true,
+  "isEnginePlugin": false,
+  "modules": [
+    {
+      "name": "BlueprintRuntime",
+      "type": "runtime",
+      "entry": "./src/runtime.ts"
+    },
+    {
+      "name": "BlueprintEditor",
+      "type": "editor",
+      "entry": "./src/editor/index.ts"
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "@esengine/core",
+      "version": ">=1.0.0"
+    }
+  ],
+  "icon": "Workflow"
+}

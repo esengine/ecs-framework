@@ -29,10 +29,11 @@ const categoryLabels: Record<PluginCategory, { zh: string; en: string }> = {
     audio: { zh: '音频', en: 'Audio' },
     networking: { zh: '网络', en: 'Networking' },
     tools: { zh: '工具', en: 'Tools' },
+    scripting: { zh: '脚本', en: 'Scripting' },
     content: { zh: '内容', en: 'Content' }
 };
 
-const categoryOrder: PluginCategory[] = ['core', 'rendering', 'ui', 'ai', 'physics', 'audio', 'networking', 'tools'];
+const categoryOrder: PluginCategory[] = ['core', 'rendering', 'ui', 'ai', 'scripting', 'physics', 'audio', 'networking', 'tools', 'content'];
 
 export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
     const [plugins, setPlugins] = useState<RegisteredPlugin[]>([]);

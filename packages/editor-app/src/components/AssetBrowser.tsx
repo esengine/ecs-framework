@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { Folder, File, FileCode, FileJson, FileImage, FileText, FolderOpen, Copy, Trash2, Edit3, LayoutGrid, List, ChevronsUp, RefreshCw, Plus } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
-import { MessageHub, FileActionRegistry } from '@esengine/editor-core';
+import { MessageHub, FileActionRegistry, type FileCreationTemplate } from '@esengine/editor-core';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { FileTree, FileTreeHandle } from './FileTree';
 import { ResizablePanel } from './ResizablePanel';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
+import { PromptDialog } from './PromptDialog';
 import '../styles/AssetBrowser.css';
 
 /**
@@ -63,6 +64,10 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
     newName: string;
   } | null>(null);
     const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<AssetItem | null>(null);
+    const [createFileDialog, setCreateFileDialog] = useState<{
+        parentPath: string;
+        template: FileCreationTemplate;
+    } | null>(null);
 
     const translations = {
         en: {
@@ -445,13 +450,12 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                     items.push({
                         label: `${locale === 'zh' ? '新建' : 'New'} ${template.label}`,
                         icon: getIconComponent(template.icon, 16),
-                        onClick: async () => {
-                            const fileName = `new_${template.id}.${template.extension}`;
-                            const filePath = `${asset.path}/${fileName}`;
-                            await template.create(filePath);
-                            if (currentPath) {
-                                await loadAssets(currentPath);
-                            }
+                        onClick: () => {
+                            setContextMenu(null);
+                            setCreateFileDialog({
+                                parentPath: asset.path,
+                                template
+                            });
                         }
                     });
                 }
@@ -962,6 +966,41 @@ export function AssetBrowser({ projectPath, locale, onOpenScene }: AssetBrowserP
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* 创建文件对话框 */}
+            {createFileDialog && (
+                <PromptDialog
+                    title={locale === 'zh' ? `新建 ${createFileDialog.template.label}` : `New ${createFileDialog.template.label}`}
+                    message={locale === 'zh'
+                        ? `请输入文件名 (将自动添加 .${createFileDialog.template.extension} 扩展名):`
+                        : `Enter file name (.${createFileDialog.template.extension} will be added automatically):`}
+                    placeholder={locale === 'zh' ? '例如: my_file' : 'e.g. my_file'}
+                    confirmText={locale === 'zh' ? '创建' : 'Create'}
+                    cancelText={locale === 'zh' ? '取消' : 'Cancel'}
+                    onConfirm={async (value) => {
+                        const { parentPath, template } = createFileDialog;
+                        setCreateFileDialog(null);
+
+                        let fileName = value;
+                        if (!fileName.endsWith(`.${template.extension}`)) {
+                            fileName = `${fileName}.${template.extension}`;
+                        }
+                        const filePath = `${parentPath}/${fileName}`;
+
+                        try {
+                            const content = await template.getContent(fileName);
+                            await TauriAPI.writeFileContent(filePath, content);
+                            if (currentPath) {
+                                await loadAssets(currentPath);
+                            }
+                        } catch (error) {
+                            console.error('Failed to create file:', error);
+                            alert(`${locale === 'zh' ? '创建文件失败' : 'Failed to create file'}: ${error}`);
+                        }
+                    }}
+                    onCancel={() => setCreateFileDialog(null)}
+                />
             )}
         </div>
     );

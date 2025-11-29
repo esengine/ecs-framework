@@ -1,0 +1,290 @@
+/**
+ * Context Menu Styles
+ * 上下文菜单样式
+ */
+
+/* ==================== Menu Container 菜单容器 ==================== */
+.ne-context-menu {
+    position: fixed;
+    z-index: var(--ne-z-menu);
+    min-width: 300px;
+    max-width: 400px;
+    max-height: 500px;
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    font-family: var(--ne-font-family);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==================== Menu Header 菜单头部 ==================== */
+.ne-context-menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: #252525;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+.ne-context-menu-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: #c0c0c0;
+}
+
+.ne-context-menu-options {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ne-context-menu-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #909090;
+    cursor: pointer;
+}
+
+.ne-context-menu-checkbox input {
+    width: 12px;
+    height: 12px;
+    margin: 0;
+}
+
+/* ==================== Search Box 搜索框 ==================== */
+.ne-context-menu-search {
+    padding: 6px 8px;
+    border-bottom: 1px solid #303030;
+    background: #1e1e1e;
+}
+
+.ne-context-menu-search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.ne-context-menu-search-input {
+    width: 100%;
+    padding: 6px 28px 6px 8px;
+    font-size: 12px;
+    font-family: var(--ne-font-family);
+    background: #0a0a0a;
+    border: 1px solid #404040;
+    border-radius: 2px;
+    color: #e0e0e0;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.ne-context-menu-search-input::placeholder {
+    color: #606060;
+}
+
+.ne-context-menu-search-input:focus {
+    border-color: #5080c0;
+}
+
+.ne-context-menu-search-clear {
+    position: absolute;
+    right: 6px;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: #606060;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+}
+
+.ne-context-menu-search-clear:hover {
+    color: #a0a0a0;
+}
+
+/* ==================== Content Area 内容区域 ==================== */
+.ne-context-menu-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 0;
+}
+
+.ne-context-menu-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.ne-context-menu-content::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.ne-context-menu-content::-webkit-scrollbar-thumb {
+    background: #404040;
+    border-radius: 4px;
+}
+
+.ne-context-menu-content::-webkit-scrollbar-thumb:hover {
+    background: #505050;
+}
+
+/* ==================== Category Section 分类区域 ==================== */
+.ne-context-menu-category {
+    user-select: none;
+}
+
+.ne-context-menu-category-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: #808080;
+    cursor: pointer;
+}
+
+.ne-context-menu-category-header:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.ne-context-menu-category-chevron {
+    width: 12px;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    transition: transform 0.15s ease;
+}
+
+.ne-context-menu-category.expanded .ne-context-menu-category-chevron {
+    transform: rotate(90deg);
+}
+
+.ne-context-menu-category-title {
+    flex: 1;
+}
+
+.ne-context-menu-category-items {
+    display: none;
+}
+
+.ne-context-menu-category.expanded .ne-context-menu-category-items {
+    display: block;
+}
+
+/* ==================== Menu Item 菜单项 ==================== */
+.ne-context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px 4px 24px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.ne-context-menu-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.ne-context-menu-item.highlighted {
+    background: #264f78;
+}
+
+.ne-context-menu-item-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ne-context-menu-item-icon-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.ne-context-menu-item-icon-dot.event { background: var(--ne-category-event); }
+.ne-context-menu-item-icon-dot.function { background: var(--ne-category-function); }
+.ne-context-menu-item-icon-dot.pure { background: var(--ne-category-pure); }
+.ne-context-menu-item-icon-dot.flow { background: var(--ne-category-flow); }
+.ne-context-menu-item-icon-dot.variable { background: var(--ne-category-variable); }
+.ne-context-menu-item-icon-dot.literal { background: var(--ne-category-literal); }
+.ne-context-menu-item-icon-dot.comment { background: var(--ne-category-comment); }
+.ne-context-menu-item-icon-dot.custom { background: var(--ne-category-custom); }
+
+/* Function icon - f */
+.ne-context-menu-item-icon-func {
+    font-size: 11px;
+    font-weight: bold;
+    font-style: italic;
+    color: var(--ne-category-function);
+}
+
+.ne-context-menu-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ne-context-menu-item-title {
+    font-size: 12px;
+    color: #d0d0d0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ne-context-menu-item-title .highlight {
+    background: #4a6a2a;
+    color: #90ff90;
+    padding: 0 1px;
+    border-radius: 1px;
+}
+
+.ne-context-menu-item-description {
+    font-size: 10px;
+    color: #707070;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+}
+
+/* ==================== Empty State 空状态 ==================== */
+.ne-context-menu-empty {
+    padding: 20px;
+    text-align: center;
+    color: #606060;
+    font-size: 12px;
+}
+
+/* ==================== Footer 底部 ==================== */
+.ne-context-menu-footer {
+    padding: 6px 10px;
+    border-top: 1px solid #303030;
+    background: #1e1e1e;
+    font-size: 10px;
+    color: #606060;
+    display: flex;
+    gap: 12px;
+}
+
+.ne-context-menu-footer kbd {
+    display: inline-block;
+    padding: 1px 4px;
+    font-family: var(--ne-font-family-mono);
+    font-size: 9px;
+    background: #303030;
+    border-radius: 2px;
+    margin-right: 2px;
+}

@@ -345,6 +345,9 @@ export interface IPluginLoader {
 /**
  * 文件创建模板
  * File creation template
+ *
+ * 插件通过 getContent 提供文件内容，编辑器负责写入文件。
+ * 这样可以避免插件直接访问文件系统带来的权限问题。
  */
 export interface FileCreationTemplate {
     /** 模板ID | Template ID */
@@ -357,6 +360,10 @@ export interface FileCreationTemplate {
     icon?: string;
     /** 分类 | Category */
     category?: string;
-    /** 创建函数 | Create function */
-    create: (filePath: string) => Promise<void>;
+    /**
+     * 获取文件内容 | Get file content
+     * @param fileName 文件名（不含路径，含扩展名）
+     * @returns 文件内容字符串
+     */
+    getContent: (fileName: string) => string | Promise<string>;
 }

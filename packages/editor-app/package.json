@@ -17,6 +17,7 @@
   "dependencies": {
     "@esengine/asset-system": "workspace:*",
     "@esengine/behavior-tree": "workspace:*",
+    "@esengine/blueprint": "workspace:*",
     "@esengine/editor-runtime": "workspace:*",
     "@esengine/ecs-components": "workspace:*",
     "@esengine/physics-rapier2d": "workspace:*",
