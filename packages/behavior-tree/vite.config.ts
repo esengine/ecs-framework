@@ -24,14 +24,14 @@ function escapeUnsafeChars(str: string): string {
     return str.replace(/[<>\\/\u2028\u2029]/g, (x) => charMap[x] || x);
 }
 
-function injectCSSPlugin(): any {
+function injectCSSPlugin(): unknown {
     const cssIdMap = new Map<string, string>();
     let cssCounter = 0;
 
     return {
         name: 'inject-css-plugin',
         enforce: 'post' as const,
-        generateBundle(_options: any, bundle: any) {
+        generateBundle(_options: unknown, bundle: Record<string, { type?: string; source?: string; code?: string }>) {
             const bundleKeys = Object.keys(bundle);
 
             // 找到所有 CSS 文件
