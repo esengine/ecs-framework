@@ -36,11 +36,10 @@ describe('Timer - 定时器测试', () => {
 
         it('应该能够初始化定时器', () => {
             timer.initialize(1.0, false, mockContext, mockCallback);
-            
+
             expect(timer.context).toBe(mockContext);
-            expect(timer._timeInSeconds).toBe(1.0);
-            expect(timer._repeats).toBe(false);
-            expect(timer._onTime).toBeDefined();
+            expect(timer.isDone).toBe(false);
+            expect(timer.elapsedTime).toBe(0);
         });
 
         it('应该能够获取泛型上下文', () => {
@@ -190,11 +189,10 @@ describe('Timer - 定时器测试', () => {
     describe('内存管理', () => {
         it('unload应该清空对象引用', () => {
             timer.initialize(1.0, false, mockContext, mockCallback);
-            
+
             timer.unload();
-            
+
             expect(timer.context).toBeNull();
-            expect(timer._onTime).toBeNull();
         });
     });
 

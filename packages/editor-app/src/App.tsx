@@ -37,6 +37,7 @@ import { AssetBrowser } from './components/AssetBrowser';
 import { ConsolePanel } from './components/ConsolePanel';
 import { Viewport } from './components/Viewport';
 import { ProfilerWindow } from './components/ProfilerWindow';
+import { AdvancedProfilerWindow } from './components/AdvancedProfilerWindow';
 import { PortManager } from './components/PortManager';
 import { SettingsWindow } from './components/SettingsWindow';
 import { AboutDialog } from './components/AboutDialog';
@@ -114,6 +115,7 @@ function App() {
 
     const {
         showProfiler, setShowProfiler,
+        showAdvancedProfiler, setShowAdvancedProfiler,
         showPortManager, setShowPortManager,
         showSettings, setShowSettings,
         showAbout, setShowAbout,
@@ -266,6 +268,8 @@ function App() {
 
                     if (windowId === 'profiler') {
                         setShowProfiler(true);
+                    } else if (windowId === 'advancedProfiler') {
+                        setShowAdvancedProfiler(true);
                     } else if (windowId === 'pluginManager') {
                         // 插件管理现在整合到设置窗口中
                         setSettingsInitialCategory('plugins');
@@ -945,6 +949,10 @@ function App() {
 
             {showProfiler && (
                 <ProfilerWindow onClose={() => setShowProfiler(false)} />
+            )}
+
+            {showAdvancedProfiler && (
+                <AdvancedProfilerWindow onClose={() => setShowAdvancedProfiler(false)} />
             )}
 
             {showPortManager && (

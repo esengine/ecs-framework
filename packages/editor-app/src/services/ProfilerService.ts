@@ -56,15 +56,28 @@ export interface ProfilerData {
 
 type ProfilerDataListener = (data: ProfilerData) => void;
 
+/**
+ * 高级性能数据结构（用于高级性能分析器）
+ */
+export interface AdvancedProfilerDataPayload {
+    advancedProfiler?: any;
+    performance?: any;
+    systems?: any;
+}
+
+type AdvancedProfilerDataListener = (data: AdvancedProfilerDataPayload) => void;
+
 export class ProfilerService {
     private ws: WebSocket | null = null;
     private isServerRunning = false;
     private wsPort: string;
     private listeners: Set<ProfilerDataListener> = new Set();
+    private advancedListeners: Set<AdvancedProfilerDataListener> = new Set();
     private currentData: ProfilerData | null = null;
+    private lastRawData: AdvancedProfilerDataPayload | null = null;
     private checkServerInterval: NodeJS.Timeout | null = null;
     private reconnectTimeout: NodeJS.Timeout | null = null;
-    private clientIdMap: Map<string, string> = new Map(); // 客户端地址 -> 客户端ID映射
+    private clientIdMap: Map<string, string> = new Map();
     private autoStart: boolean;
 
     constructor() {
@@ -120,6 +133,61 @@ export class ProfilerService {
         return () => {
             this.listeners.delete(listener);
         };
+    }
+
+    /**
+     * 订阅高级性能数据（用于 AdvancedProfiler 组件）
+     */
+    public subscribeAdvanced(listener: AdvancedProfilerDataListener): () => void {
+        this.advancedListeners.add(listener);
+
+        // 如果已有数据，立即发送给新订阅者
+        if (this.lastRawData) {
+            listener(this.lastRawData);
+        }
+
+        return () => {
+            this.advancedListeners.delete(listener);
+        };
+    }
+
+    /**
+     * 请求高级性能分析数据
+     */
+    public requestAdvancedProfilerData(): void {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        try {
+            const request = {
+                type: 'get_advanced_profiler_data',
+                requestId: `advanced_profiler_${Date.now()}`
+            };
+            this.ws.send(JSON.stringify(request));
+        } catch (error) {
+            console.error('[ProfilerService] Failed to request advanced profiler data:', error);
+        }
+    }
+
+    /**
+     * 设置性能分析器选中的函数（用于调用关系视图）
+     */
+    public setProfilerSelectedFunction(functionName: string | null): void {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        try {
+            const request = {
+                type: 'set_profiler_selected_function',
+                requestId: `set_function_${Date.now()}`,
+                functionName
+            };
+            this.ws.send(JSON.stringify(request));
+        } catch (error) {
+            console.error('[ProfilerService] Failed to set selected function:', error);
+        }
     }
 
     public isConnected(): boolean {
@@ -237,6 +305,8 @@ export class ProfilerService {
                         this.handleRawEntityListResponse(message.data);
                     } else if (message.type === 'get_entity_details_response' && message.data) {
                         this.handleEntityDetailsResponse(message.data);
+                    } else if (message.type === 'get_advanced_profiler_data_response' && message.data) {
+                        this.handleAdvancedProfilerData(message.data);
                     } else if (message.type === 'log' && message.data) {
                         this.handleRemoteLog(message.data);
                     }
@@ -310,8 +380,29 @@ export class ProfilerService {
 
         this.notifyListeners(this.currentData);
 
+        // 通知高级监听器原始数据
+        this.lastRawData = {
+            performance: debugData.performance,
+            systems: {
+                systemsInfo: systems.map(sys => ({
+                    name: sys.name,
+                    executionTime: sys.executionTime,
+                    entityCount: sys.entityCount,
+                    averageTime: sys.averageTime
+                }))
+            }
+        };
+        this.notifyAdvancedListeners(this.lastRawData);
+
         // 请求完整的实体列表
         this.requestRawEntityList();
+    }
+
+    private handleAdvancedProfilerData(data: any): void {
+        this.lastRawData = {
+            advancedProfiler: data
+        };
+        this.notifyAdvancedListeners(this.lastRawData);
     }
 
     private requestRawEntityList(): void {
@@ -437,6 +528,16 @@ export class ProfilerService {
         });
     }
 
+    private notifyAdvancedListeners(data: AdvancedProfilerDataPayload): void {
+        this.advancedListeners.forEach((listener) => {
+            try {
+                listener(data);
+            } catch (error) {
+                console.error('[ProfilerService] Error in advanced listener:', error);
+            }
+        });
+    }
+
     private disconnect(): void {
         const hadConnection = this.ws !== null;
 
@@ -465,6 +566,8 @@ export class ProfilerService {
         }
 
         this.listeners.clear();
+        this.advancedListeners.clear();
         this.currentData = null;
+        this.lastRawData = null;
     }
 }

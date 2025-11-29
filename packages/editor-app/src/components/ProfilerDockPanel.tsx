@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Activity, Cpu, Layers, Package, Wifi, WifiOff, Maximize2, Pause, Play } from 'lucide-react';
+import { Activity, Cpu, Layers, Package, Wifi, WifiOff, Maximize2, Pause, Play, BarChart3 } from 'lucide-react';
 import { ProfilerService, ProfilerData } from '../services/ProfilerService';
 import { SettingsService } from '../services/SettingsService';
 import { Core } from '@esengine/ecs-framework';
@@ -77,6 +77,13 @@ export function ProfilerDockPanel() {
         }
     };
 
+    const handleOpenAdvancedProfiler = () => {
+        const messageHub = Core.services.resolve(MessageHub);
+        if (messageHub) {
+            messageHub.publish('ui:openWindow', { windowId: 'advancedProfiler' });
+        }
+    };
+
     const handleTogglePause = () => {
         setIsPaused(!isPaused);
     };
@@ -94,6 +101,13 @@ export function ProfilerDockPanel() {
                                 title={isPaused ? 'Resume data updates' : 'Pause data updates'}
                             >
                                 {isPaused ? <Play size={14} /> : <Pause size={14} />}
+                            </button>
+                            <button
+                                className="profiler-dock-details-btn"
+                                onClick={handleOpenAdvancedProfiler}
+                                title="Open advanced profiler"
+                            >
+                                <BarChart3 size={14} />
                             </button>
                             <button
                                 className="profiler-dock-details-btn"

@@ -6,11 +6,11 @@ import { Time } from '../Time';
  */
 export class Timer<TContext = unknown> implements ITimer<TContext>{
     public context!: TContext;
-    public _timeInSeconds: number = 0;
-    public _repeats: boolean = false;
-    public _onTime!: (timer: ITimer<TContext>) => void;
-    public _isDone: boolean = false;
-    public _elapsedTime: number = 0;
+    private _timeInSeconds: number = 0;
+    private _repeats: boolean = false;
+    private _onTime!: (timer: ITimer<TContext>) => void;
+    private _isDone: boolean = false;
+    private _elapsedTime: number = 0;
 
     public getContext<T>(): T {
         return this.context as unknown as T;

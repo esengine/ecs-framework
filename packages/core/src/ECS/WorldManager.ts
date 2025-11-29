@@ -87,8 +87,6 @@ export class WorldManager implements IService {
         });
     }
 
-    // ===== World管理 =====
-
     /**
      * 创建新World
      */
@@ -183,8 +181,6 @@ export class WorldManager implements IService {
         const world = this._worlds.get(worldName);
         return world?.isActive ?? false;
     }
-
-    // ===== 批量操作 =====
 
     /**
      * 更新所有活跃的World
@@ -292,8 +288,6 @@ export class WorldManager implements IService {
         return null;
     }
 
-    // ===== 统计和监控 =====
-
     /**
      * 获取WorldManager统计信息
      */
@@ -341,8 +335,6 @@ export class WorldManager implements IService {
             }))
         };
     }
-
-    // ===== 生命周期管理 =====
 
     /**
      * 清理空World
@@ -396,8 +388,6 @@ export class WorldManager implements IService {
         this.destroy();
     }
 
-    // ===== 私有方法 =====
-
     /**
      * 判断World是否应该被清理
      * 清理策略：
@@ -422,8 +412,6 @@ export class WorldManager implements IService {
         const hasEntities = allScenes.some((scene) => scene.entities && scene.entities.count > 0);
         return !hasEntities && isOldEnough;
     }
-
-    // ===== 访问器 =====
 
     /**
      * 获取World总数

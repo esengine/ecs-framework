@@ -7,3 +7,4 @@ export { Time } from './Time';
 export * from './Debug';
 export * from './Logger';
 export * from './BinarySerializer';
+export * from './Profiler';

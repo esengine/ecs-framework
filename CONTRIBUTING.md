@@ -37,9 +37,6 @@ This project follows the [Conventional Commits](https://www.conventionalcommits.
 
 - **core**: 核心包 @esengine/ecs-framework
 - **math**: 数学库包
-- **network-client**: 网络客户端包
-- **network-server**: 网络服务端包
-- **network-shared**: 网络共享包
 - **editor**: 编辑器
 - **docs**: 文档
 

@@ -2,6 +2,9 @@ import { Core } from '../src/Core';
 import { Scene } from '../src/ECS/Scene';
 import { DebugManager } from '../src/Utils/Debug/DebugManager';
 import { DebugConfigService } from '../src/Utils/Debug/DebugConfigService';
+import { AdvancedProfilerCollector } from '../src/Utils/Debug/AdvancedProfilerCollector';
+import { ProfilerSDK } from '../src/Utils/Profiler/ProfilerSDK';
+import { ProfileCategory } from '../src/Utils/Profiler/ProfilerTypes';
 import { IECSDebugConfig } from '../src/Types';
 import { createLogger } from '../src/Utils/Logger';
 
@@ -663,6 +666,146 @@ describe('DebugManager DI Architecture Tests', () => {
             const debugManager2 = Core.services.resolve(DebugManager);
 
             expect(debugManager1).toBe(debugManager2);
+        });
+    });
+
+    describe('DebugManager - Advanced Profiler Integration', () => {
+        beforeEach(() => {
+            ProfilerSDK.reset();
+        });
+
+        afterEach(() => {
+            ProfilerSDK.reset();
+        });
+
+        test('should initialize AdvancedProfilerCollector', () => {
+            const debugConfig: IECSDebugConfig = {
+                enabled: true,
+                websocketUrl: 'ws://localhost:9229',
+                debugFrameRate: 30,
+                autoReconnect: true,
+                channels: {
+                    entities: true,
+                    systems: true,
+                    performance: true,
+                    components: true,
+                    scenes: true
+                }
+            };
+
+            const core = Core.create({ debug: true, debugConfig: debugConfig });
+            const debugManager = (core as any)._debugManager as DebugManager;
+            const advancedProfilerCollector = (debugManager as any).advancedProfilerCollector;
+
+            expect(advancedProfilerCollector).toBeDefined();
+            expect(advancedProfilerCollector).toBeInstanceOf(AdvancedProfilerCollector);
+        });
+
+        test('should enable ProfilerSDK when debug manager initializes', () => {
+            const debugConfig: IECSDebugConfig = {
+                enabled: true,
+                websocketUrl: 'ws://localhost:9229',
+                debugFrameRate: 30,
+                autoReconnect: true,
+                channels: {
+                    entities: true,
+                    systems: true,
+                    performance: true,
+                    components: true,
+                    scenes: true
+                }
+            };
+
+            Core.create({ debug: true, debugConfig: debugConfig });
+
+            expect(ProfilerSDK.isEnabled()).toBe(true);
+        });
+
+        test('should collect advanced profiler data', () => {
+            const debugConfig: IECSDebugConfig = {
+                enabled: true,
+                websocketUrl: 'ws://localhost:9229',
+                debugFrameRate: 30,
+                autoReconnect: true,
+                channels: {
+                    entities: true,
+                    systems: true,
+                    performance: true,
+                    components: true,
+                    scenes: true
+                }
+            };
+
+            const core = Core.create({ debug: true, debugConfig: debugConfig });
+            const debugManager = (core as any)._debugManager as DebugManager;
+            const advancedProfilerCollector = (debugManager as any).advancedProfilerCollector as AdvancedProfilerCollector;
+
+            // Generate some profiler data
+            ProfilerSDK.beginFrame();
+            ProfilerSDK.measure('TestSystem', () => {
+                let sum = 0;
+                for (let i = 0; i < 100; i++) sum += i;
+            }, ProfileCategory.ECS);
+            ProfilerSDK.endFrame();
+
+            const data = advancedProfilerCollector.collectAdvancedData();
+
+            expect(data).toBeDefined();
+            expect(data.currentFrame).toBeDefined();
+            expect(data.categoryStats).toBeDefined();
+            expect(data.hotspots).toBeDefined();
+            expect(data.summary).toBeDefined();
+        });
+
+        test('should set selected function for call graph', () => {
+            const debugConfig: IECSDebugConfig = {
+                enabled: true,
+                websocketUrl: 'ws://localhost:9229',
+                debugFrameRate: 30,
+                autoReconnect: true,
+                channels: {
+                    entities: true,
+                    systems: true,
+                    performance: true,
+                    components: true,
+                    scenes: true
+                }
+            };
+
+            const core = Core.create({ debug: true, debugConfig: debugConfig });
+            const debugManager = (core as any)._debugManager as DebugManager;
+            const advancedProfilerCollector = (debugManager as any).advancedProfilerCollector as AdvancedProfilerCollector;
+
+            advancedProfilerCollector.setSelectedFunction('TestFunction');
+
+            ProfilerSDK.beginFrame();
+            ProfilerSDK.measure('TestFunction', () => {}, ProfileCategory.Script);
+            ProfilerSDK.endFrame();
+
+            const data = advancedProfilerCollector.collectAdvancedData();
+
+            expect(data.callGraph.currentFunction).toBe('TestFunction');
+        });
+
+        test('should handle legacy monitor data when profiler disabled', () => {
+            ProfilerSDK.setEnabled(false);
+
+            const collector = new AdvancedProfilerCollector();
+
+            const mockMonitor = {
+                getAllSystemStats: () => new Map([
+                    ['System1', { averageTime: 5, executionCount: 10 }]
+                ]),
+                getAllSystemData: () => new Map([
+                    ['System1', { executionTime: 5, entityCount: 100 }]
+                ])
+            };
+
+            const data = collector.collectFromLegacyMonitor(mockMonitor);
+
+            expect(data).toBeDefined();
+            expect(data.categoryStats.length).toBeGreaterThan(0);
+            expect(data.hotspots.length).toBeGreaterThan(0);
         });
     });
 });

@@ -8,6 +8,7 @@ interface ErrorDialogData {
 
 interface DialogState {
     showProfiler: boolean;
+    showAdvancedProfiler: boolean;
     showPortManager: boolean;
     showSettings: boolean;
     showAbout: boolean;
@@ -16,6 +17,7 @@ interface DialogState {
     confirmDialog: ConfirmDialogData | null;
 
     setShowProfiler: (show: boolean) => void;
+    setShowAdvancedProfiler: (show: boolean) => void;
     setShowPortManager: (show: boolean) => void;
     setShowSettings: (show: boolean) => void;
     setShowAbout: (show: boolean) => void;
@@ -27,6 +29,7 @@ interface DialogState {
 
 export const useDialogStore = create<DialogState>((set) => ({
     showProfiler: false,
+    showAdvancedProfiler: false,
     showPortManager: false,
     showSettings: false,
     showAbout: false,
@@ -35,6 +38,7 @@ export const useDialogStore = create<DialogState>((set) => ({
     confirmDialog: null,
 
     setShowProfiler: (show) => set({ showProfiler: show }),
+    setShowAdvancedProfiler: (show) => set({ showAdvancedProfiler: show }),
     setShowPortManager: (show) => set({ showPortManager: show }),
     setShowSettings: (show) => set({ showSettings: show }),
     setShowAbout: (show) => set({ showAbout: show }),
@@ -44,6 +48,7 @@ export const useDialogStore = create<DialogState>((set) => ({
 
     closeAllDialogs: () => set({
         showProfiler: false,
+        showAdvancedProfiler: false,
         showPortManager: false,
         showSettings: false,
         showAbout: false,

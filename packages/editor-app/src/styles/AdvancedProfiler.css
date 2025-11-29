@@ -1,0 +1,705 @@
+/* ==================== Advanced Profiler ==================== */
+.advanced-profiler {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: #1a1a1a;
+    color: #ccc;
+    font-size: 11px;
+    overflow: hidden;
+}
+
+/* ==================== Top Toolbar ==================== */
+.profiler-top-bar {
+    display: flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 8px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #1a1a1a;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.profiler-thread-selector {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.profiler-thread-btn {
+    padding: 2px 8px;
+    background: #3a3a3a;
+    border: 1px solid #4a4a4a;
+    border-radius: 3px;
+    color: #ccc;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.profiler-thread-btn.active {
+    background: #4a9eff;
+    border-color: #4a9eff;
+    color: #fff;
+}
+
+.profiler-frame-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    font-family: 'Consolas', monospace;
+}
+
+.profiler-frame-time-label {
+    color: #888;
+}
+
+.profiler-frame-time-value {
+    color: #4ade80;
+    font-weight: 600;
+}
+
+.profiler-frame-time-value.warning {
+    color: #fbbf24;
+}
+
+.profiler-frame-time-value.critical {
+    color: #ef4444;
+}
+
+.profiler-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.profiler-control-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.profiler-control-btn:hover {
+    background: #3a3a3a;
+    color: #ccc;
+}
+
+.profiler-control-btn.active {
+    color: #4a9eff;
+}
+
+/* ==================== Main Layout ==================== */
+.profiler-main {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ==================== Left Panel (Stats Groups) ==================== */
+.profiler-left-panel {
+    width: 200px;
+    min-width: 150px;
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    background: #222;
+    border-right: 1px solid #1a1a1a;
+    flex-shrink: 0;
+}
+
+.profiler-search-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.profiler-search-box input {
+    flex: 1;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 3px;
+    padding: 4px 8px;
+    color: #ccc;
+    font-size: 11px;
+}
+
+.profiler-search-box input:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.profiler-search-box svg {
+    color: #666;
+    flex-shrink: 0;
+}
+
+.profiler-group-controls {
+    display: flex;
+    gap: 4px;
+    padding: 6px 8px;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.profiler-group-select {
+    flex: 1;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 3px;
+    padding: 2px 4px;
+    color: #ccc;
+    font-size: 10px;
+}
+
+.profiler-type-filters {
+    display: flex;
+    gap: 2px;
+    padding: 4px 8px;
+    border-bottom: 1px solid #1a1a1a;
+    flex-wrap: wrap;
+}
+
+.profiler-type-filter {
+    padding: 2px 6px;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 3px;
+    color: #888;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.profiler-type-filter:hover {
+    background: #3a3a3a;
+    color: #ccc;
+}
+
+.profiler-type-filter.active {
+    background: #4a9eff;
+    border-color: #4a9eff;
+    color: #fff;
+}
+
+.profiler-type-filter.hier { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+.profiler-type-filter.float { background: #22c55e; border-color: #22c55e; color: #fff; }
+.profiler-type-filter.int { background: #f59e0b; border-color: #f59e0b; color: #000; }
+.profiler-type-filter.mem { background: #ef4444; border-color: #ef4444; color: #fff; }
+
+.profiler-groups-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.profiler-groups-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.profiler-groups-list::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.profiler-groups-list::-webkit-scrollbar-thumb {
+    background: #3a3a3a;
+    border-radius: 3px;
+}
+
+.profiler-group-item {
+    display: flex;
+    align-items: center;
+    padding: 3px 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.profiler-group-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.profiler-group-item.selected {
+    background: rgba(74, 158, 255, 0.2);
+}
+
+.profiler-group-checkbox {
+    width: 12px;
+    height: 12px;
+    margin-right: 6px;
+    accent-color: #4a9eff;
+}
+
+.profiler-group-name {
+    flex: 1;
+    font-size: 11px;
+    color: #ccc;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.profiler-group-count {
+    font-size: 10px;
+    color: #666;
+    margin-left: 4px;
+}
+
+/* ==================== Right Content Area ==================== */
+.profiler-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* ==================== Graph View ==================== */
+.profiler-graph-section {
+    height: 120px;
+    min-height: 80px;
+    max-height: 200px;
+    border-bottom: 1px solid #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.profiler-graph-header {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    background: #262626;
+    border-bottom: 1px solid #1a1a1a;
+    gap: 8px;
+}
+
+.profiler-graph-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #888;
+}
+
+.profiler-graph-stats {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+    font-family: 'Consolas', monospace;
+    font-size: 10px;
+}
+
+.profiler-graph-stat {
+    display: flex;
+    gap: 4px;
+}
+
+.profiler-graph-stat-label {
+    color: #666;
+}
+
+.profiler-graph-stat-value {
+    color: #ccc;
+}
+
+.profiler-graph-canvas {
+    flex: 1;
+    background: #1e1e1e;
+    position: relative;
+    overflow: hidden;
+}
+
+.profiler-graph-canvas canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.profiler-graph-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.profiler-graph-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    border-top: 1px dashed #333;
+}
+
+.profiler-graph-line-label {
+    position: absolute;
+    right: 4px;
+    transform: translateY(-50%);
+    font-size: 9px;
+    color: #555;
+    background: #1e1e1e;
+    padding: 0 2px;
+}
+
+/* ==================== Call Graph Section ==================== */
+.profiler-callgraph-section {
+    height: 140px;
+    min-height: 100px;
+    border-bottom: 1px solid #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.profiler-callgraph-header {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    background: #262626;
+    border-bottom: 1px solid #1a1a1a;
+    gap: 8px;
+}
+
+.profiler-callgraph-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.profiler-callgraph-type-select {
+    padding: 2px 6px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 3px;
+    color: #ccc;
+    font-size: 10px;
+}
+
+.profiler-callgraph-view-mode {
+    display: flex;
+    gap: 2px;
+}
+
+.profiler-callgraph-view-btn {
+    padding: 2px 6px;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 3px;
+    color: #888;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.profiler-callgraph-view-btn.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
+}
+
+.profiler-callgraph-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.profiler-callgraph-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #1a1a1a;
+    overflow: hidden;
+}
+
+.profiler-callgraph-column:last-child {
+    border-right: none;
+}
+
+.profiler-callgraph-column-header {
+    padding: 4px 8px;
+    background: #222;
+    font-size: 10px;
+    font-weight: 600;
+    color: #888;
+    text-align: center;
+    border-bottom: 1px solid #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.profiler-callgraph-column-header svg {
+    color: #666;
+}
+
+.profiler-callgraph-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2px 0;
+}
+
+.profiler-callgraph-item {
+    display: flex;
+    align-items: center;
+    padding: 3px 8px;
+    cursor: pointer;
+    gap: 6px;
+}
+
+.profiler-callgraph-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.profiler-callgraph-item.current {
+    background: rgba(74, 158, 255, 0.2);
+}
+
+.profiler-callgraph-item-name {
+    flex: 1;
+    font-size: 11px;
+    color: #ccc;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.profiler-callgraph-item-percent {
+    font-size: 10px;
+    color: #888;
+    font-family: 'Consolas', monospace;
+}
+
+.profiler-callgraph-item-time {
+    font-size: 10px;
+    color: #4ade80;
+    font-family: 'Consolas', monospace;
+}
+
+/* ==================== Data Table Section ==================== */
+.profiler-table-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 150px;
+    overflow: hidden;
+}
+
+.profiler-table-header {
+    display: flex;
+    background: #2d2d2d;
+    border-bottom: 1px solid #1a1a1a;
+    font-size: 10px;
+    font-weight: 600;
+    color: #888;
+    flex-shrink: 0;
+}
+
+.profiler-table-header-cell {
+    padding: 6px 8px;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-right: 1px solid #1a1a1a;
+}
+
+.profiler-table-header-cell:hover {
+    background: #3a3a3a;
+    color: #ccc;
+}
+
+.profiler-table-header-cell:last-child {
+    border-right: none;
+}
+
+.profiler-table-header-cell.sorted {
+    color: #4a9eff;
+}
+
+.profiler-table-header-cell.sorted svg {
+    color: #4a9eff;
+}
+
+.profiler-table-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.profiler-table-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.profiler-table-body::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.profiler-table-body::-webkit-scrollbar-thumb {
+    background: #3a3a3a;
+    border-radius: 4px;
+}
+
+.profiler-table-row {
+    display: flex;
+    border-bottom: 1px solid #222;
+    cursor: pointer;
+}
+
+.profiler-table-row:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.profiler-table-row.selected {
+    background: rgba(74, 158, 255, 0.15);
+}
+
+.profiler-table-row.expanded {
+    background: rgba(74, 158, 255, 0.1);
+}
+
+.profiler-table-cell {
+    padding: 4px 8px;
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-right: 1px solid #222;
+}
+
+.profiler-table-cell:last-child {
+    border-right: none;
+}
+
+.profiler-table-cell.name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.profiler-table-cell.name .expand-icon {
+    color: #666;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.profiler-table-cell.name .category-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.profiler-table-cell.numeric {
+    text-align: right;
+    font-family: 'Consolas', monospace;
+    color: #ccc;
+}
+
+.profiler-table-cell.percent {
+    text-align: right;
+    font-family: 'Consolas', monospace;
+}
+
+.profiler-table-cell .bar-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.profiler-table-cell .bar {
+    height: 10px;
+    background: #4a9eff;
+    border-radius: 2px;
+    min-width: 2px;
+}
+
+.profiler-table-cell .bar.warning {
+    background: #fbbf24;
+}
+
+.profiler-table-cell .bar.critical {
+    background: #ef4444;
+}
+
+/* Column widths */
+.col-name { flex: 2; min-width: 150px; }
+.col-inc-time { width: 80px; flex-shrink: 0; }
+.col-inc-percent { width: 80px; flex-shrink: 0; }
+.col-exc-time { width: 80px; flex-shrink: 0; }
+.col-exc-percent { width: 80px; flex-shrink: 0; }
+.col-calls { width: 60px; flex-shrink: 0; }
+.col-avg-calls { width: 70px; flex-shrink: 0; }
+.col-thread-percent { width: 80px; flex-shrink: 0; }
+.col-frame-percent { width: 80px; flex-shrink: 0; }
+
+/* Category colors */
+.category-ecs { background-color: #3b82f6; }
+.category-rendering { background-color: #8b5cf6; }
+.category-physics { background-color: #f59e0b; }
+.category-audio { background-color: #ec4899; }
+.category-network { background-color: #14b8a6; }
+.category-script { background-color: #84cc16; }
+.category-memory { background-color: #ef4444; }
+.category-animation { background-color: #f97316; }
+.category-ai { background-color: #6366f1; }
+.category-input { background-color: #06b6d4; }
+.category-loading { background-color: #a855f7; }
+.category-custom { background-color: #64748b; }
+
+/* ==================== Empty State ==================== */
+.profiler-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #666;
+    text-align: center;
+    padding: 32px;
+}
+
+.profiler-empty-state svg {
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.profiler-empty-state-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.profiler-empty-state-hint {
+    font-size: 12px;
+    color: #555;
+}
+
+/* ==================== Resize Handle ==================== */
+.profiler-resize-handle {
+    width: 4px;
+    cursor: col-resize;
+    background: transparent;
+    transition: background 0.15s;
+}
+
+.profiler-resize-handle:hover {
+    background: #4a9eff;
+}
+
+.profiler-resize-handle-h {
+    height: 4px;
+    cursor: row-resize;
+    background: transparent;
+    transition: background 0.15s;
+}
+
+.profiler-resize-handle-h:hover {
+    background: #4a9eff;
+}
