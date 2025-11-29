@@ -78,7 +78,7 @@ class BlueprintEditorModule implements IEditorModuleLoader {
     }
 
     getFileActionHandlers(): FileActionHandler[] {
-        const self = this;
+        const services = this.services;
         return [
             {
                 extensions: ['bp'],
@@ -93,8 +93,8 @@ class BlueprintEditorModule implements IEditorModuleLoader {
                             logger.info('Loaded blueprint:', filePath);
 
                             // 打开蓝图编辑器面板
-                            if (self.services) {
-                                const messageHub = self.services.resolve<MessageHub>(IMessageHub);
+                            if (services) {
+                                const messageHub = services.resolve<MessageHub>(IMessageHub);
                                 if (messageHub) {
                                     const fileName = filePath.split(/[\\/]/).pop() || 'Blueprint';
                                     messageHub.publish('dynamic-panel:open', {

@@ -255,7 +255,6 @@ export function ContentBrowser({
             buildFolderTree(projectPath).then(setFolderTree);
         }
         // Only run on mount, not on every projectPath change
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Handle projectPath change after initial mount

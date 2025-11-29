@@ -198,7 +198,7 @@ export const useBlueprintEditorStore = create<BlueprintEditorState>((set, get) =
             c => c.toNodeId === connection.toNodeId && c.toPin === connection.toPin
         );
 
-        let newConnections = [...blueprint.connections];
+        const newConnections = [...blueprint.connections];
         if (existingIndex >= 0) {
             // Replace existing connection (替换现有连接)
             newConnections[existingIndex] = newConnection;
