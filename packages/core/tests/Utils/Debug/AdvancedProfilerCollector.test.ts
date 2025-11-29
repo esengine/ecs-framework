@@ -1,4 +1,4 @@
-import { AdvancedProfilerCollector, IAdvancedProfilerData } from '../../../src/Utils/Debug/AdvancedProfilerCollector';
+import { AdvancedProfilerCollector } from '../../../src/Utils/Debug/AdvancedProfilerCollector';
 import { ProfilerSDK } from '../../../src/Utils/Profiler/ProfilerSDK';
 import { ProfileCategory } from '../../../src/Utils/Profiler/ProfilerTypes';
 
@@ -311,15 +311,15 @@ describe('AdvancedProfilerCollector', () => {
             ProfilerSDK.beginFrame();
             ProfilerSDK.endFrame();
 
-            const data1 = collector.collectAdvancedData();
+            collector.collectAdvancedData();
 
             ProfilerSDK.beginFrame();
             ProfilerSDK.endFrame();
 
-            const data2 = collector.collectAdvancedData();
+            const data = collector.collectAdvancedData();
 
             // Peak should be maintained or increased
-            expect(data2.summary.peakMemoryMB).toBeGreaterThanOrEqual(0);
+            expect(data.summary.peakMemoryMB).toBeGreaterThanOrEqual(0);
         });
 
         test('should handle multiple frames with varying data', () => {
