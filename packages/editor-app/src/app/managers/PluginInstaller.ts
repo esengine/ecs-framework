@@ -18,6 +18,7 @@ import { TilemapPlugin } from '@esengine/tilemap';
 import { UIPlugin } from '@esengine/ui';
 import { BehaviorTreePlugin } from '@esengine/behavior-tree';
 import { Physics2DPlugin } from '@esengine/physics-rapier2d';
+import { BlueprintPlugin } from '@esengine/blueprint/editor';
 
 export class PluginInstaller {
     /**
@@ -52,6 +53,7 @@ export class PluginInstaller {
             { name: 'UIPlugin', plugin: UIPlugin },
             { name: 'BehaviorTreePlugin', plugin: BehaviorTreePlugin },
             { name: 'Physics2DPlugin', plugin: Physics2DPlugin },
+            { name: 'BlueprintPlugin', plugin: BlueprintPlugin },
         ];
 
         for (const { name, plugin } of modulePlugins) {

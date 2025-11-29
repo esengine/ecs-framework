@@ -73,6 +73,18 @@ export interface IAssetLoaderFactory {
      * 检查类型是否有加载器
      */
     hasLoader(type: AssetType): boolean;
+
+    /**
+     * Get asset type by file extension
+     * 根据文件扩展名获取资产类型
+     */
+    getAssetTypeByExtension(extension: string): AssetType | null;
+
+    /**
+     * Get asset type by file path
+     * 根据文件路径获取资产类型
+     */
+    getAssetTypeByPath(path: string): AssetType | null;
 }
 
 /**

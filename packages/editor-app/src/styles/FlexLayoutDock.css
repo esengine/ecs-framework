@@ -1,372 +1,386 @@
+/* ==================== Container ==================== */
 .flexlayout-dock-container {
-  width: 100%;
-  height: 100%;
-  background: #1e1e1e;
-  position: relative;
-  overflow: hidden;
+    width: 100%;
+    height: 100%;
+    background: #1a1a1a;
+    position: relative;
 }
 
 .flexlayout__layout {
-  background: #1e1e1e;
-  position: absolute !important;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+    background: #1a1a1a;
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
 }
 
+/* ==================== Tabset (Panel Container) ==================== */
 .flexlayout__tabset {
-  background: #252526;
-}
-
-.flexlayout__tabset_header {
-  background: #252526;
-  border-bottom: 1px solid #1e1e1e;
-  height: 28px;
-  min-height: 28px;
-}
-
-.flexlayout__tab {
-  background: transparent;
-  color: #969696;
-  border: none;
-  padding: 0 16px;
-  height: 28px;
-  line-height: 28px;
-  cursor: default;
-  transition: all 0.1s ease;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  position: relative;
-}
-
-.flexlayout__tab::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: transparent;
-  transition: background-color 0.1s ease;
-}
-
-.flexlayout__tab:hover {
-  background: rgba(255, 255, 255, 0.03);
-  color: #e0e0e0;
-}
-
-.flexlayout__tab_button {
-  background: transparent !important;
-  color: #969696;
-  border: none !important;
-  border-right: none !important;
-  padding: 0 16px;
-  height: 28px;
-  cursor: pointer;
-  transition: all 0.1s ease;
-  position: relative;
-}
-
-.flexlayout__tab_button::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: transparent;
-  transition: background-color 0.1s ease;
-}
-
-.flexlayout__tab_button:hover {
-  background: rgba(255, 255, 255, 0.03) !important;
-  color: #e0e0e0;
-}
-
-.flexlayout__tab_button--selected {
-  background: transparent !important;
-  color: #ffffff !important;
-  border-bottom: none !important;
-}
-
-.flexlayout__tab_button--selected::after {
-  background: #007acc;
-}
-
-.flexlayout__tab_button_leading {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.flexlayout__tab_button_content {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 120px;
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.3px;
-}
-
-.flexlayout__tab_button--selected .flexlayout__tab_button_content {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 120px;
-  font-weight: 500;
-}
-
-.flexlayout__tab_button_trailing {
-  margin-left: 8px;
-  opacity: 0.6;
-  transition: opacity 0.15s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
-  border-radius: 3px;
-}
-
-.flexlayout__tab_button:hover .flexlayout__tab_button_trailing,
-.flexlayout__tab:hover .flexlayout__tab_button_trailing {
-  opacity: 1;
-}
-
-.flexlayout__tab_button_trailing:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.flexlayout__tab_button_trailing svg {
-  width: 12px;
-  height: 12px;
-  color: #cccccc;
-}
-
-.flexlayout__tab_button_trailing:hover svg {
-  color: #ffffff;
-}
-
-.flexlayout__tabset_tabbar_outer {
-  background: #2d2d30;
-}
-
-/* 标签栏滚动条样式 */
-.flexlayout__tab_moveable::-webkit-scrollbar {
-  width: 14px;
-  height: 14px;
-}
-
-.flexlayout__tab_moveable::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.flexlayout__tab_moveable::-webkit-scrollbar-thumb {
-  background: rgba(121, 121, 121, 0.4);
-  border-radius: 8px;
-  border: 3px solid transparent;
-  background-clip: padding-box;
-}
-
-.flexlayout__tab_moveable::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 100, 100, 0.7);
-  background-clip: padding-box;
-}
-
-.flexlayout__tab_moveable::-webkit-scrollbar-corner {
-  background: transparent;
+    background: #242424;
+    border-radius: 0;
 }
 
 .flexlayout__tabset-selected {
-  background: #1e1e1e;
+    background: #242424;
 }
 
+.flexlayout__tabset_header {
+    background: #2a2a2a;
+    border-bottom: 1px solid #1a1a1a;
+    height: 26px;
+    min-height: 26px;
+}
+
+.flexlayout__tabset_tabbar_outer {
+    background: #2a2a2a;
+}
+
+/* ==================== Tab Buttons ==================== */
+.flexlayout__tab {
+    background: transparent;
+    color: #888888;
+    border: none;
+    padding: 0 12px;
+    height: 26px;
+    line-height: 26px;
+    cursor: default;
+    transition: color 0.1s ease;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    font-size: 11px;
+    position: relative;
+}
+
+.flexlayout__tab:hover {
+    color: #cccccc;
+    background: transparent;
+}
+
+.flexlayout__tab::after {
+    display: none;
+}
+
+.flexlayout__tab_button {
+    background: transparent !important;
+    color: #888888;
+    border: none !important;
+    border-right: none !important;
+    padding: 0 12px;
+    height: 26px;
+    cursor: pointer;
+    transition: color 0.1s ease;
+    position: relative;
+    font-size: 11px;
+}
+
+.flexlayout__tab_button::after {
+    display: none;
+}
+
+.flexlayout__tab_button:hover {
+    background: transparent !important;
+    color: #cccccc;
+}
+
+.flexlayout__tab_button--selected {
+    background: transparent !important;
+    color: #ffffff !important;
+    border-bottom: none !important;
+}
+
+.flexlayout__tab_button_leading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.flexlayout__tab_button_content {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 140px;
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.flexlayout__tab_button--selected .flexlayout__tab_button_content {
+    font-weight: 400;
+}
+
+/* Tab close button */
+.flexlayout__tab_button_trailing {
+    margin-left: 6px;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border-radius: 2px;
+}
+
+.flexlayout__tab_button:hover .flexlayout__tab_button_trailing {
+    opacity: 0.6;
+}
+
+.flexlayout__tab_button_trailing:hover {
+    opacity: 1 !important;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.flexlayout__tab_button_trailing svg {
+    width: 10px;
+    height: 10px;
+    color: #999999;
+}
+
+.flexlayout__tab_button_trailing:hover svg {
+    color: #ffffff;
+}
+
+/* ==================== Splitter (Divider between panels) ==================== */
 .flexlayout__splitter {
-  background: linear-gradient(to right, transparent, #3e3e42 40%, #3e3e42 60%, transparent);
-  transition: all 0.15s ease;
-}
-
-.flexlayout__splitter_horz {
-  background: linear-gradient(to bottom, transparent, #3e3e42 40%, #3e3e42 60%, transparent);
+    background: #1a1a1a !important;
+    transition: background 0.15s ease;
 }
 
 .flexlayout__splitter:hover {
-  background: #007acc;
+    background: #4a9eff !important;
+}
+
+.flexlayout__splitter_horz {
+    cursor: row-resize !important;
+}
+
+.flexlayout__splitter_vert {
+    cursor: col-resize !important;
 }
 
 .flexlayout__splitter_border {
-  background: #1e1e1e;
+    background: #1a1a1a !important;
 }
 
-.flexlayout__outline_rect {
-  border: 2px solid #007acc;
-  box-shadow: 0 0 20px rgba(0, 122, 204, 0.5);
-  background: rgba(0, 122, 204, 0.1);
-}
-
-.flexlayout__edge_rect {
-  background: rgba(0, 122, 204, 0.3);
-  border: 2px solid #007acc;
-}
-
-.flexlayout__drag_rect {
-  border: 2px solid #007acc;
-  background: rgba(0, 122, 204, 0.2);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-}
-
+/* ==================== Panel Content ==================== */
 .flexlayout__tabset_content {
-  background: #1e1e1e;
-  overflow: auto;
+    background: #242424;
+    overflow: auto;
 }
 
 .flexlayout__tabset_content * {
-  cursor: default !important;
+    cursor: default !important;
 }
 
 .flexlayout__tabset_content button,
 .flexlayout__tabset_content a,
-.flexlayout__tabset_content [role="button"] {
-  cursor: pointer !important;
+.flexlayout__tabset_content [role="button"],
+.flexlayout__tabset_content input,
+.flexlayout__tabset_content select,
+.flexlayout__tabset_content textarea {
+    cursor: pointer !important;
 }
 
+/* ==================== Drag & Drop ==================== */
+.flexlayout__outline_rect {
+    border: 1px solid #4a9eff;
+    box-shadow: 0 0 12px rgba(74, 158, 255, 0.3);
+    background: rgba(74, 158, 255, 0.08);
+    border-radius: 2px;
+}
+
+.flexlayout__edge_rect {
+    background: rgba(74, 158, 255, 0.15);
+    border: 1px solid #4a9eff;
+}
+
+.flexlayout__drag_rect {
+    border: 1px solid #4a9eff;
+    background: rgba(74, 158, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-radius: 2px;
+}
+
+/* ==================== Tab Toolbar ==================== */
 .flexlayout__tab_toolbar {
-  display: flex !important;
-  align-items: center;
-  gap: 4px;
-  padding: 0 8px;
-  visibility: visible !important;
-  opacity: 1 !important;
+    display: flex !important;
+    align-items: center;
+    gap: 2px;
+    padding: 0 4px;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .flexlayout__tab_toolbar_button {
-  background: transparent;
-  border: none;
-  color: #cccccc;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 3px;
-  transition: background-color 0.15s ease;
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
+    background: transparent;
+    border: none;
+    color: #666666;
+    cursor: pointer;
+    padding: 3px;
+    border-radius: 2px;
+    transition: all 0.1s ease;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
 }
 
 .flexlayout__tab_toolbar_button:hover {
-  background: #383838;
-  color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+    color: #cccccc;
 }
 
 .flexlayout__tab_toolbar_button svg {
-  width: 14px;
-  height: 14px;
+    width: 12px;
+    height: 12px;
 }
 
-/* 确保最小化和最大化按钮可见 */
 .flexlayout__tab_toolbar_button-min,
 .flexlayout__tab_toolbar_button-max {
-  display: flex !important;
-  visibility: visible !important;
+    display: flex !important;
+    visibility: visible !important;
 }
 
+/* Maximized tabset styling */
+.flexlayout__tabset_maximized .flexlayout__tab_toolbar_button-max {
+    color: #4a9eff;
+}
+
+.flexlayout__tabset_maximized .flexlayout__tab_toolbar_button-max:hover {
+    background: rgba(74, 158, 255, 0.2);
+    color: #ffffff;
+}
+
+/* ==================== Popup Menu ==================== */
 .flexlayout__popup_menu {
-  background: #252526;
-  border: 1px solid #454545;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  border-radius: 3px;
+    background: #2d2d2d;
+    border: 1px solid #3a3a3a;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    border-radius: 4px;
+    padding: 4px 0;
 }
 
 .flexlayout__popup_menu_item {
-  color: #cccccc;
-  padding: 8px 16px;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
+    color: #cccccc;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    font-size: 11px;
 }
 
 .flexlayout__popup_menu_item:hover {
-  background: #2a2d2e;
-  color: #ffffff;
+    background: #3a3a3a;
+    color: #ffffff;
 }
 
 .flexlayout__popup_menu_item:active {
-  background: #094771;
+    background: #4a9eff;
 }
 
+/* ==================== Border Panels ==================== */
 .flexlayout__border {
-  background: #252526;
-  border: 1px solid #1e1e1e;
+    background: #242424;
+    border: none;
 }
 
 .flexlayout__border_top,
 .flexlayout__border_bottom {
-  border-left: none;
-  border-right: none;
+    border-left: none;
+    border-right: none;
 }
 
 .flexlayout__border_left,
 .flexlayout__border_right {
-  border-top: none;
-  border-bottom: none;
+    border-top: none;
+    border-bottom: none;
 }
 
 .flexlayout__border_button {
-  background: transparent;
-  color: #969696;
-  border: none;
-  border-bottom: 1px solid #1e1e1e;
-  padding: 8px 12px;
-  cursor: pointer;
-  transition: all 0.1s ease;
-  position: relative;
+    background: transparent;
+    color: #888888;
+    border: none;
+    border-bottom: none;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: color 0.1s ease;
+    position: relative;
+    font-size: 11px;
 }
 
 .flexlayout__border_button::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: transparent;
-  transition: background-color 0.1s ease;
+    display: none;
 }
 
 .flexlayout__border_button:hover {
-  background: rgba(255, 255, 255, 0.03);
-  color: #e0e0e0;
+    background: transparent;
+    color: #cccccc;
 }
 
 .flexlayout__border_button--selected {
-  background: transparent;
-  color: #ffffff;
+    background: transparent;
+    color: #ffffff;
 }
 
-.flexlayout__border_button--selected::after {
-  background: #007acc;
-}
-
+/* ==================== Error Boundary ==================== */
 .flexlayout__error_boundary_container {
-  background: #1e1e1e;
-  color: #f48771;
-  padding: 16px;
-  font-family: monospace;
+    background: #242424;
+    color: #f48771;
+    padding: 16px;
+    font-family: monospace;
 }
 
 .flexlayout__error_boundary_message {
-  margin-bottom: 8px;
-  font-weight: 600;
+    margin-bottom: 8px;
+    font-weight: 600;
 }
 
-/* 持久化面板占位符 */
+/* ==================== Scrollbar ==================== */
+.flexlayout__tabset_content::-webkit-scrollbar,
+.flexlayout__tab_moveable::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.flexlayout__tabset_content::-webkit-scrollbar-track,
+.flexlayout__tab_moveable::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.flexlayout__tabset_content::-webkit-scrollbar-thumb,
+.flexlayout__tab_moveable::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+
+.flexlayout__tabset_content::-webkit-scrollbar-thumb:hover,
+.flexlayout__tab_moveable::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.flexlayout__tabset_content::-webkit-scrollbar-corner,
+.flexlayout__tab_moveable::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* ==================== Persistent Panels ==================== */
 .persistent-panel-placeholder {
-  width: 100%;
-  height: 100%;
-  background: transparent;
+    width: 100%;
+    height: 100%;
+    background: transparent;
 }
 
-/* 持久化面板容器 */
 .persistent-panel-container {
-  background: #1e1e1e;
+    background: #242424;
+}
+
+/* 确保 tabset header 在 persistent panel 之上 */
+.flexlayout__tabset_header,
+.flexlayout__tabset_tabbar_outer {
+    position: relative;
+    z-index: 10;
+}
+
+/* 最大化时确保 tab bar 可见 */
+.flexlayout__tabset_maximized .flexlayout__tabset_header,
+.flexlayout__tabset_maximized .flexlayout__tabset_tabbar_outer {
+    z-index: 100;
 }

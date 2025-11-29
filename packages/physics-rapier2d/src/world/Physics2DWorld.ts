@@ -480,12 +480,13 @@ export class Physics2DWorld {
      * @param entityId 实体 ID
      * @param collider 碰撞体组件
      * @param bodyHandle 关联的刚体句柄（可选）
+     * @param scale Transform 的缩放值（可选）
      */
-    public createCollider(entityId: number, collider: Collider2DBase, bodyHandle?: number): number | null {
+    public createCollider(entityId: number, collider: Collider2DBase, bodyHandle?: number, scale?: Vector2): number | null {
         if (!this._world || !this._rapier) return null;
 
         // 创建碰撞体描述
-        const colliderDesc = this._createColliderDesc(collider);
+        const colliderDesc = this._createColliderDesc(collider, scale);
         if (!colliderDesc) return null;
 
         // 创建碰撞体
@@ -504,6 +505,83 @@ export class Physics2DWorld {
         // 记录映射
         this._colliderMap.set(handle, { entityId, colliderComponent: collider });
         collider._colliderHandle = handle;
+
+        return handle;
+    }
+
+    /**
+     * 创建静态碰撞体（不需要刚体）
+     * 用于 Tilemap 等静态碰撞场景
+     *
+     * @param entityId 实体 ID
+     * @param position 碰撞体中心位置
+     * @param halfExtents 半宽高
+     * @param collisionLayer 碰撞层
+     * @param collisionMask 碰撞掩码
+     * @param friction 摩擦系数
+     * @param restitution 弹性系数
+     * @param isTrigger 是否为触发器
+     */
+    public createStaticCollider(
+        entityId: number,
+        position: Vector2,
+        halfExtents: Vector2,
+        collisionLayer: number,
+        collisionMask: number,
+        friction: number,
+        restitution: number,
+        isTrigger: boolean
+    ): number | null {
+        if (!this._world || !this._rapier) return null;
+
+        // 创建固定刚体（用于静态碰撞体）
+        const bodyDesc = this._rapier.RigidBodyDesc.fixed()
+            .setTranslation(position.x, position.y);
+        const body = this._world.createRigidBody(bodyDesc);
+
+        // 创建碰撞体描述
+        const colliderDesc = this._rapier.ColliderDesc.cuboid(halfExtents.x, halfExtents.y)
+            .setFriction(friction)
+            .setRestitution(restitution)
+            .setSensor(isTrigger)
+            .setCollisionGroups(this._createCollisionGroups(collisionLayer, collisionMask))
+            .setActiveEvents(this._rapier.ActiveEvents.COLLISION_EVENTS);
+
+        // 创建碰撞体
+        const collider = this._world.createCollider(colliderDesc, body);
+        const handle = collider.handle;
+
+        // 创建虚拟的碰撞体映射（用于事件处理）
+        // 注意：这里我们没有实际的 Collider2DBase 组件
+        const dummyCollider = {
+            _colliderHandle: handle,
+            _attachedBodyEntityId: null,
+            _needsRebuild: false,
+            isTrigger,
+            collisionLayer,
+            collisionMask,
+            friction,
+            restitution,
+            density: 1,
+            offset: { x: 0, y: 0 },
+            rotationOffset: 0,
+            getShapeType: () => 'box',
+            calculateArea: () => halfExtents.x * halfExtents.y * 4,
+            calculateAABB: () => ({
+                min: { x: position.x - halfExtents.x, y: position.y - halfExtents.y },
+                max: { x: position.x + halfExtents.x, y: position.y + halfExtents.y }
+            }),
+            setLayer: () => {},
+            addLayer: () => {},
+            removeLayer: () => {},
+            isInLayer: () => false,
+            setCollisionMask: () => {},
+            canCollideWith: () => true,
+            markNeedsRebuild: () => {},
+            onRemovedFromEntity: () => {},
+        } as unknown as Collider2DBase;
+
+        this._colliderMap.set(handle, { entityId, colliderComponent: dummyCollider });
 
         return handle;
     }
@@ -791,6 +869,30 @@ export class Physics2DWorld {
     }
 
     /**
+     * 更新物理配置
+     */
+    public updateConfig(config: Partial<Physics2DConfig>): void {
+        if (config.gravity !== undefined) {
+            this.setGravity(config.gravity);
+        }
+        if (config.timestep !== undefined) {
+            this._config.timestep = config.timestep;
+        }
+        if (config.maxSubsteps !== undefined) {
+            this._config.maxSubsteps = config.maxSubsteps;
+        }
+        if (config.velocityIterations !== undefined) {
+            this._config.velocityIterations = config.velocityIterations;
+        }
+        if (config.positionIterations !== undefined) {
+            this._config.positionIterations = config.positionIterations;
+        }
+        if (config.allowSleep !== undefined) {
+            this._config.allowSleep = config.allowSleep;
+        }
+    }
+
+    /**
      * 获取状态
      */
     public getState(): Readonly<Physics2DWorldState> {
@@ -869,34 +971,37 @@ export class Physics2DWorld {
     /**
      * 创建碰撞体描述
      */
-    private _createColliderDesc(collider: Collider2DBase): RAPIER.ColliderDesc | null {
+    private _createColliderDesc(collider: Collider2DBase, scale?: Vector2): RAPIER.ColliderDesc | null {
         if (!this._rapier) return null;
 
+        const sx = scale?.x ?? 1;
+        const sy = scale?.y ?? 1;
         const shapeType = collider.getShapeType();
         let colliderDesc: RAPIER.ColliderDesc | null = null;
 
         switch (shapeType) {
             case 'box': {
                 const box = collider as BoxCollider2DComponent;
-                colliderDesc = this._rapier.ColliderDesc.cuboid(box.halfWidth, box.halfHeight);
+                colliderDesc = this._rapier.ColliderDesc.cuboid(box.halfWidth * sx, box.halfHeight * sy);
                 break;
             }
             case 'circle': {
                 const circle = collider as CircleCollider2DComponent;
-                colliderDesc = this._rapier.ColliderDesc.ball(circle.radius);
+                const uniformScale = Math.max(Math.abs(sx), Math.abs(sy));
+                colliderDesc = this._rapier.ColliderDesc.ball(circle.radius * uniformScale);
                 break;
             }
             case 'capsule': {
                 const capsule = collider as CapsuleCollider2DComponent;
-                colliderDesc = this._rapier.ColliderDesc.capsule(capsule.halfHeight, capsule.radius);
+                colliderDesc = this._rapier.ColliderDesc.capsule(capsule.halfHeight * sy, capsule.radius * sx);
                 break;
             }
             case 'polygon': {
                 const polygon = collider as PolygonCollider2DComponent;
                 const vertices = new Float32Array(polygon.vertices.length * 2);
                 for (let i = 0; i < polygon.vertices.length; i++) {
-                    vertices[i * 2] = polygon.vertices[i].x;
-                    vertices[i * 2 + 1] = polygon.vertices[i].y;
+                    vertices[i * 2] = polygon.vertices[i].x * sx;
+                    vertices[i * 2 + 1] = polygon.vertices[i].y * sy;
                 }
                 colliderDesc = this._rapier.ColliderDesc.convexHull(vertices);
                 break;
@@ -910,7 +1015,7 @@ export class Physics2DWorld {
 
         // 配置碰撞体属性
         colliderDesc
-            .setTranslation(collider.offset.x, collider.offset.y)
+            .setTranslation(collider.offset.x * sx, collider.offset.y * sy)
             .setRotation(collider.rotationOffset)
             .setFriction(collider.friction)
             .setRestitution(collider.restitution)

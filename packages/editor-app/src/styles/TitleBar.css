@@ -1,0 +1,213 @@
+/* ==================== Title Bar Container ==================== */
+.titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 32px;
+    background: linear-gradient(180deg, #3a3a3f 0%, #2d2d32 100%);
+    border-bottom: 1px solid #1a1a1d;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+/* ==================== Left Section: Logo + Menus ==================== */
+.titlebar-left {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.titlebar-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.titlebar-logo-text {
+    font-size: 14px;
+    font-weight: 700;
+    color: #4a9eff;
+    text-shadow: 0 0 8px rgba(74, 158, 255, 0.8),
+                 0 0 16px rgba(74, 158, 255, 0.5),
+                 0 0 24px rgba(74, 158, 255, 0.3);
+    letter-spacing: 1px;
+}
+
+/* ==================== Menu Bar ==================== */
+.titlebar-menus {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.titlebar-menu-item {
+    position: relative;
+    height: 100%;
+}
+
+.titlebar-menu-button {
+    height: 100%;
+    padding: 0 12px;
+    background: transparent;
+    border: none;
+    color: #a0a0a0;
+    font-size: 12px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.titlebar-menu-button:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #d0d0d0;
+}
+
+.titlebar-menu-button.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+/* ==================== Dropdown Menu ==================== */
+.titlebar-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 200px;
+    background: #252528;
+    border: 1px solid #3a3a3d;
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    padding: 4px 0;
+    z-index: 10000;
+    animation: dropdown-fade-in 0.1s ease;
+}
+
+@keyframes dropdown-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.titlebar-dropdown-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 6px 12px;
+    background: transparent;
+    border: none;
+    color: #c0c0c0;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.titlebar-dropdown-item:hover:not(.disabled) {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.titlebar-dropdown-item.disabled {
+    color: #505050;
+    cursor: not-allowed;
+}
+
+.titlebar-dropdown-item-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.titlebar-dropdown-item-content svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.7;
+}
+
+.titlebar-dropdown-shortcut {
+    color: #606060;
+    font-size: 11px;
+    margin-left: 24px;
+}
+
+.titlebar-dropdown-item:hover:not(.disabled) .titlebar-dropdown-shortcut {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.titlebar-dropdown-separator {
+    height: 1px;
+    background: #3a3a3d;
+    margin: 4px 8px;
+}
+
+/* ==================== Center Section: Draggable Area ==================== */
+.titlebar-center {
+    flex: 1;
+    height: 100%;
+    -webkit-app-region: drag;
+}
+
+/* ==================== Right Section: Project Name + Window Controls ==================== */
+.titlebar-right {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.titlebar-project-name {
+    font-size: 12px;
+    font-weight: 400;
+    color: #707070;
+    padding: 0 16px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    -webkit-app-region: drag;
+}
+
+.titlebar-window-controls {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.titlebar-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 100%;
+    background: transparent;
+    border: none;
+    color: #808080;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.titlebar-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.titlebar-button:active {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.titlebar-button-close:hover {
+    background: #e81123;
+    color: #ffffff;
+}
+
+.titlebar-button svg {
+    flex-shrink: 0;
+}

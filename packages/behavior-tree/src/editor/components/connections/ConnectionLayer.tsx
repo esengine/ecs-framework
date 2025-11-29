@@ -11,6 +11,9 @@ interface ConnectionLayerProps {
     getPortPosition: (nodeId: string, propertyName?: string, portType?: 'input' | 'output') => { x: number; y: number } | null;
     onConnectionClick?: (e: React.MouseEvent, fromId: string, toId: string) => void;
     onConnectionContextMenu?: (e: React.MouseEvent, fromId: string, toId: string) => void;
+    /** 用于强制刷新连线（当 canvasScale 等变化时） */
+    /** Used to force refresh connections (when canvasScale etc. changes) */
+    refreshKey?: number;
 }
 export const ConnectionLayer: React.FC<ConnectionLayerProps> = ({
     connections,

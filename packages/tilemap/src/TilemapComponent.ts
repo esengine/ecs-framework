@@ -124,7 +124,7 @@ export interface ITilemapData {
 export class TilemapComponent extends Component implements IResourceComponent {
     /** Tilemap asset GUID reference | 瓦片地图资源GUID引用 */
     @Serialize()
-    @Property({ type: 'asset', label: 'Tilemap', extensions: ['.tilemap.json'] })
+    @Property({ type: 'asset', label: 'Tilemap', extensions: ['.tilemap', '.tilemap.json'] })
     public tilemapAssetGuid: string = '';
 
     @Serialize()

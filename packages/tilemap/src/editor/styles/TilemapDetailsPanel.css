@@ -1,0 +1,518 @@
+/* ==================== Tilemap Details Panel Styles ==================== */
+
+.tilemap-details-panel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    background: #252526;
+    user-select: none;
+}
+
+/* ==================== Header ==================== */
+.details-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 32px;
+    padding: 0 10px;
+    background: #2d2d30;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.details-header-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #c0c0c0;
+}
+
+.details-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.details-search-inline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: #1e1e1e;
+    border: 1px solid #3c3c3c;
+    border-radius: 3px;
+}
+
+.details-search-inline svg {
+    color: #666;
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+}
+
+.details-search-inline input {
+    border: none;
+    background: transparent;
+    color: #c0c0c0;
+    font-size: 11px;
+    width: 60px;
+    outline: none;
+}
+
+.details-search-inline input::placeholder {
+    color: #555;
+}
+
+.details-settings-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.details-settings-btn:hover {
+    background: #3c3c3c;
+    color: #e0e0e0;
+}
+
+/* ==================== Content ==================== */
+.details-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.details-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #555;
+    font-size: 12px;
+}
+
+/* ==================== Section Styles ==================== */
+.details-section {
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.details-section-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #c0c0c0;
+    background: #2a2a2a;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.details-section-header:hover {
+    background: #333;
+}
+
+.details-section-header svg {
+    color: #888;
+    width: 12px;
+    height: 12px;
+}
+
+.details-section-content {
+    padding: 6px 0;
+    background: #252526;
+}
+
+/* ==================== Property Row ==================== */
+.property-row {
+    display: flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 10px 0 20px;
+}
+
+.property-row:hover {
+    background: #2a2a2a;
+}
+
+.property-row.indented {
+    padding-left: 32px;
+}
+
+.property-row label {
+    flex: 0 0 100px;
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.property-value {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+}
+
+/* ==================== Layer Count Badge ==================== */
+.layer-count-badge {
+    font-size: 11px;
+    color: #4fc3f7;
+    background: rgba(79, 195, 247, 0.15);
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: 500;
+}
+
+/* ==================== Input Styles ==================== */
+.property-row input[type="number"],
+.property-row input[type="text"],
+.property-row select {
+    width: 100%;
+    height: 22px;
+    padding: 0 6px;
+    background: #1e1e1e;
+    border: 1px solid #3c3c3c;
+    border-radius: 2px;
+    color: #c0c0c0;
+    font-size: 11px;
+    outline: none;
+}
+
+.property-row input[type="number"]:focus,
+.property-row input[type="text"]:focus,
+.property-row select:focus {
+    border-color: #0078d4;
+}
+
+/* ==================== Toggle Row ==================== */
+.toggle-row {
+    justify-content: space-between;
+}
+
+/* ==================== Property Toggle - Unified Style ==================== */
+.property-toggle {
+    position: relative;
+    width: 36px;
+    height: 18px;
+    border-radius: 9px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.property-toggle-off {
+    background: #2a2a2a;
+    border: 1px solid #444;
+}
+
+.property-toggle-off:hover:not(:disabled) {
+    background: #333;
+    border-color: #555;
+}
+
+.property-toggle-on {
+    background: #3b82f6;
+    border: 1px solid #3b82f6;
+}
+
+.property-toggle-on:hover:not(:disabled) {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+.property-toggle:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.property-toggle-thumb {
+    position: absolute;
+    top: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: white;
+    transition: transform 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.property-toggle-off .property-toggle-thumb {
+    left: 2px;
+    transform: translateX(0);
+}
+
+.property-toggle-on .property-toggle-thumb {
+    left: 2px;
+    transform: translateX(18px);
+}
+
+/* Color Field */
+.property-color-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    position: relative;
+}
+
+.property-color-preview {
+    width: 32px;
+    height: 22px;
+    border-radius: 2px;
+    border: 1px solid #3a3a3a;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.property-color-preview:hover {
+    border-color: #555;
+}
+
+.property-input-color {
+    width: 0;
+    height: 0;
+    opacity: 0;
+    position: absolute;
+    pointer-events: none;
+}
+
+.property-input-color-text {
+    flex: 1;
+    min-width: 60px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: 'Consolas', 'Monaco', monospace;
+    text-align: left;
+}
+
+.property-input {
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    padding: 0 6px;
+    color: #ddd;
+    font-size: 11px;
+    height: 22px;
+}
+
+.property-input:hover {
+    border-color: #4a4a4a;
+}
+
+.property-input:focus {
+    outline: none;
+    border-color: #d4a029;
+}
+
+/* ==================== Asset Dropdown Button ==================== */
+.asset-dropdown {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 22px;
+    padding: 0 6px;
+    background: #1e1e1e;
+    border: 1px solid #3c3c3c;
+    border-radius: 2px;
+    color: #c0c0c0;
+    font-size: 11px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.asset-dropdown:hover {
+    border-color: #555;
+}
+
+.asset-dropdown span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.asset-dropdown svg {
+    width: 10px;
+    height: 10px;
+    color: #888;
+}
+
+/* ==================== Layer List ==================== */
+.layer-list-container {
+    margin: 4px 10px 4px 20px;
+    background: #1e1e1e;
+    border: 1px solid #3c3c3c;
+    border-radius: 2px;
+    max-height: 100px;
+    overflow-y: auto;
+}
+
+.layer-list-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 8px;
+    font-size: 11px;
+    color: #c0c0c0;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.layer-list-item:hover {
+    background: #2a2a2a;
+}
+
+.layer-list-item.selected {
+    background: #094771;
+    color: #fff;
+}
+
+.layer-list-item .layer-icon {
+    font-size: 9px;
+    color: #4fc3f7;
+}
+
+/* ==================== Layer Visibility Button ==================== */
+.layer-visibility-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    color: #4fc3f7;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    flex-shrink: 0;
+}
+
+.layer-visibility-btn:hover {
+    background: rgba(79, 195, 247, 0.2);
+}
+
+.layer-visibility-btn.hidden {
+    color: #555;
+}
+
+.layer-visibility-btn.hidden:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #888;
+}
+
+.layer-list-item.selected .layer-visibility-btn {
+    color: #fff;
+}
+
+.layer-list-item.selected .layer-visibility-btn.hidden {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* ==================== Layer Action Buttons ==================== */
+.layer-actions-row {
+    display: flex;
+    gap: 2px;
+    padding: 4px 10px 6px 20px;
+}
+
+.layer-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: #2d2d30;
+    border: 1px solid #3c3c3c;
+    border-radius: 2px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.layer-action-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+.layer-action-btn:hover:not(:disabled) {
+    background: #3c3c3c;
+    color: #e0e0e0;
+}
+
+.layer-action-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.layer-action-btn.add {
+    background: #1a3a1a;
+    border-color: #2a5a2a;
+    color: #5cb85c;
+}
+
+.layer-action-btn.add:hover {
+    background: #2a5a2a;
+    color: #7cd87c;
+}
+
+.layer-action-btn.danger:hover:not(:disabled) {
+    background: #5a2020;
+    border-color: #7a3030;
+    color: #f06060;
+}
+
+/* ==================== Selected Layer Name ==================== */
+.selected-layer-name {
+    font-size: 11px;
+    font-weight: 500;
+    color: #c0c0c0;
+}
+
+/* ==================== Select Dropdown ==================== */
+.property-row select {
+    appearance: none;
+    padding-right: 20px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    cursor: pointer;
+}
+
+/* ==================== Scrollbar ==================== */
+.details-content::-webkit-scrollbar,
+.layer-list-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.details-content::-webkit-scrollbar-track,
+.layer-list-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.details-content::-webkit-scrollbar-thumb,
+.layer-list-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.details-content::-webkit-scrollbar-thumb:hover,
+.layer-list-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}

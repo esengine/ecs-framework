@@ -1,5 +1,5 @@
 import React from 'react';
-import { IFieldEditor, FieldEditorProps, MessageHub } from '@esengine/editor-core';
+import { IFieldEditor, FieldEditorProps, MessageHub, FileActionRegistry } from '@esengine/editor-core';
 import { Core } from '@esengine/ecs-framework';
 import { AssetField } from '../../components/inspectors/fields/AssetField';
 
@@ -23,24 +23,21 @@ export class AssetFieldEditor implements IFieldEditor<string | null> {
             }
         };
 
+        // 从 FileActionRegistry 获取资产创建消息映射
+        const fileActionRegistry = Core.services.tryResolve(FileActionRegistry);
+        const creationMapping = fileActionRegistry?.getAssetCreationMapping(fileExtension);
+
         const handleCreate = () => {
             const messageHub = Core.services.tryResolve(MessageHub);
-            if (messageHub) {
-                if (fileExtension === '.tilemap.json') {
-                    messageHub.publish('tilemap:create-asset', {
-                        entityId: context.metadata?.entityId,
-                        onChange
-                    });
-                } else if (fileExtension === '.btree') {
-                    messageHub.publish('behavior-tree:create-asset', {
-                        entityId: context.metadata?.entityId,
-                        onChange
-                    });
-                }
+            if (messageHub && creationMapping) {
+                messageHub.publish(creationMapping.createMessage, {
+                    entityId: context.metadata?.entityId,
+                    onChange
+                });
             }
         };
 
-        const canCreate = ['.tilemap.json', '.btree'].includes(fileExtension);
+        const canCreate = creationMapping !== null && creationMapping !== undefined;
 
         return (
             <AssetField

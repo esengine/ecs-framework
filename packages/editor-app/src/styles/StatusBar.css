@@ -1,0 +1,323 @@
+.status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 24px;
+    background: #2d2d2d;
+    border-top: 1px solid #1a1a1a;
+    padding: 0;
+    flex-shrink: 0;
+    font-size: 11px;
+    user-select: none;
+    z-index: 1000;
+}
+
+.status-bar-left {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    flex: 1;
+}
+
+.status-bar-right {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.status-bar-divider {
+    width: 1px;
+    height: 14px;
+    background: #444;
+    margin: 0 2px;
+}
+
+
+/* Tab Buttons */
+.status-bar-tab {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    padding: 0 8px;
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.status-bar-tab:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ccc;
+}
+
+.status-bar-tab.active {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+    border-bottom: 2px solid #0078d4;
+}
+
+/* Console Input */
+.status-bar-console-input {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    height: 100%;
+    padding: 0 8px;
+    color: #666;
+}
+
+.console-prompt {
+    color: #666;
+    margin-right: 4px;
+}
+
+.status-bar-console-input input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 11px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    outline: none;
+}
+
+.status-bar-console-input input::placeholder {
+    color: #555;
+}
+
+/* Right Side Indicators */
+.status-bar-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    padding: 0 8px;
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.status-bar-indicator:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ccc;
+}
+
+/* Icon Group */
+.status-bar-icon-group {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.status-bar-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 100%;
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+}
+
+.status-bar-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ccc;
+}
+
+/* Info Items */
+.status-bar-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    padding: 0 8px;
+    color: #888;
+    font-size: 11px;
+}
+
+.status-bar-info svg {
+    color: #4ade80;
+}
+
+/* Generic button reset */
+.status-bar-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.status-bar-btn:hover {
+    color: #ccc;
+}
+
+/* ==================== Drawer Common Styles ==================== */
+
+.drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 24px;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 998;
+}
+
+.drawer-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 24px;
+    background: #1e1e1e;
+    border-top: 2px solid #3b82f6;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    transition: height 0.15s ease;
+}
+
+.drawer-panel:not(.open) {
+    height: 0 !important;
+    border-top: none;
+    box-shadow: none;
+}
+
+.drawer-panel:not(.open) .drawer-header,
+.drawer-panel:not(.open) .drawer-body,
+.drawer-panel:not(.open) .drawer-resize-handle,
+.drawer-panel:not(.open) .output-log-toolbar {
+    display: none;
+}
+
+.drawer-resize-handle {
+    position: absolute;
+    top: -4px;
+    left: 0;
+    right: 0;
+    height: 8px;
+    cursor: ns-resize;
+    z-index: 10;
+}
+
+.drawer-resize-handle::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 3px;
+    background: #4c4c4c;
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.drawer-resize-handle:hover::before {
+    opacity: 1;
+}
+
+.drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 28px;
+    padding: 0 8px 0 12px;
+    background: #252526;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+.drawer-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #e0e0e0;
+}
+
+.drawer-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    border-radius: 3px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.drawer-close:hover {
+    background: #3c3c3c;
+    color: #e0e0e0;
+}
+
+.drawer-body {
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Content Drawer Specific */
+.content-drawer-panel .drawer-body .content-browser {
+    height: 100%;
+}
+
+.content-drawer-panel .drawer-body .content-browser.is-drawer {
+    border-top: none;
+}
+
+/* Drawer Toggle Button */
+.drawer-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+    padding: 0 10px;
+    background: #3a3a3a;
+    border: none;
+    border-right: 1px solid #1a1a1a;
+    color: #ccc;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.drawer-toggle-btn:hover {
+    background: #444;
+    color: #fff;
+}
+
+.drawer-toggle-btn.active {
+    background: #4a4a4a;
+    color: #fff;
+}
+
+/* ==================== Output Log Drawer ==================== */
+
+.output-log-body {
+    background: #1a1a1a;
+}
+
+.output-log-body .output-log-panel {
+    height: 100%;
+}

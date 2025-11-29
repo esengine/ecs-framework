@@ -2,20 +2,55 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #1a1a1f;
-  color: var(--color-text-primary);
+  background-color: #262626;
+  color: #ccc;
   position: relative;
+  font-size: 11px;
 }
 
 .inspector-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 32px;
-  padding: 0 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background-color: #252529;
+  gap: 6px;
+  height: 24px;
+  padding: 0 6px;
+  border-bottom: 1px solid #1a1a1a;
+  background-color: #2d2d2d;
   flex-shrink: 0;
+}
+
+.inspector-header-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.inspector-lock-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+}
+
+.inspector-lock-btn:hover {
+  color: #999;
+}
+
+.inspector-lock-btn.locked {
+  color: #f59e0b;
+}
+
+.inspector-object-count {
+  font-size: 11px;
+  color: #888;
+  margin-left: auto;
 }
 
 .inspector-header-icon {
@@ -32,13 +67,84 @@
   letter-spacing: 0.05em;
 }
 
+/* Search Box */
+.inspector-search {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: #262626;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.inspector-search svg {
+  color: #555;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+
+.inspector-search input {
+  flex: 1;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 2px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #ccc;
+  height: 18px;
+}
+
+.inspector-search input:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.inspector-search input::placeholder {
+  color: #555;
+}
+
+/* Category Tabs */
+.inspector-category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px 6px;
+  background: #262626;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.inspector-category-tab {
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 400;
+  color: #888;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  height: 18px;
+}
+
+.inspector-category-tab:hover {
+  background: #333;
+  color: #ccc;
+}
+
+.inspector-category-tab.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
 .inspector-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: scroll;
+  overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px;
+  padding: 0;
   min-height: 0;
 }
 
@@ -65,14 +171,10 @@
 }
 
 .inspector-section {
-  margin-bottom: 8px;
+  margin-bottom: 0;
   padding: 0;
   background-color: transparent;
   border-radius: 0;
-}
-
-.inspector-section:last-child {
-  margin-bottom: 0;
 }
 
 .section-header {
@@ -122,7 +224,7 @@
 }
 
 .section-content {
-  padding: var(--spacing-sm) 0;
+  padding: 0;
 }
 
 .info-row {
@@ -319,10 +421,10 @@
   color: #888;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin: 0 0 6px 0;
-  padding: 6px 8px;
+  margin: 0;
+  padding: 3px 6px;
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 .property-field {
@@ -485,8 +587,8 @@
 .add-component-trigger {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 3px 6px;
+  gap: 2px;
+  padding: 2px 5px;
   background: #3b82f6;
   border: none;
   border-radius: 2px;
@@ -495,6 +597,7 @@
   font-size: 10px;
   font-weight: 500;
   transition: all 0.1s ease;
+  height: 18px;
 }
 
 .add-component-trigger:hover {
@@ -688,67 +791,57 @@
 
 /* 组件列表项样式 */
 .component-item-card {
-  margin-bottom: 2px;
-  background: #2a2a2f;
+  margin-bottom: 0;
+  background: #262626;
   border: none;
-  border-radius: 0;
+  border-bottom: 1px solid #1a1a1a;
   overflow: visible;
-  transition: none;
-  border-left: 3px solid #4a4a50;
-}
-
-.component-item-card:hover {
-  background: #2e2e33;
 }
 
 .component-item-card.expanded {
-  border-left-color: #3b82f6;
-  background: #252529;
+  background: #262626;
 }
 
 .component-item-header {
   display: flex;
   align-items: center;
-  padding: 6px 8px;
-  background: transparent;
+  padding: 0 8px;
+  background: #2d2d2d;
   cursor: pointer;
   user-select: none;
-  transition: background 0.1s ease;
-  min-height: 28px;
+  height: 26px;
+  gap: 6px;
 }
 
 .component-item-header:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: #333;
 }
 
 .component-expand-icon {
   display: flex;
   align-items: center;
-  color: #666;
-  transition: color 0.1s ease;
-  width: 14px;
+  color: #888;
+  width: 12px;
+  height: 12px;
 }
 
-.component-item-card:hover .component-expand-icon,
 .component-item-card.expanded .component-expand-icon {
-  color: #3b82f6;
+  color: #ccc;
 }
 
 .component-icon {
   display: flex;
   align-items: center;
-  color: #666;
-  margin-left: 4px;
-  margin-right: 6px;
+  color: #888;
 }
 
 .component-item-card.expanded .component-icon {
-  color: #3b82f6;
+  color: #ccc;
 }
 
 .component-item-name {
   flex: 1;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: #ccc;
 }
@@ -765,10 +858,8 @@
   border: none;
   color: #555;
   cursor: pointer;
-  padding: 3px;
-  border-radius: 2px;
+  padding: 2px;
   opacity: 0;
-  transition: all 0.1s ease;
 }
 
 .component-item-header:hover .component-remove-btn {
@@ -776,14 +867,12 @@
 }
 
 .component-item-card .component-remove-btn:hover {
-  background: #ef4444;
-  color: #fff;
+  color: #ef4444;
 }
 
 .component-item-content {
-  padding: 6px 8px 8px 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  background: #1e1e23;
+  padding: 0;
+  background: #262626;
   overflow: visible;
   min-width: 0;
 }
@@ -827,4 +916,289 @@
   height: 100%;
   color: #888;
   font-size: 12px;
+}
+
+/* ==================== Transform Component (UE5 Style) ==================== */
+.transform-section {
+  background: #262626;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.transform-section-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  background: #2d2d2d;
+  cursor: pointer;
+  user-select: none;
+  height: 24px;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.transform-section-header:hover {
+  background: #333;
+}
+
+.transform-section-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  transition: transform 0.15s ease;
+  width: 14px;
+  height: 14px;
+}
+
+.transform-section-expand.expanded {
+  transform: rotate(90deg);
+}
+
+.transform-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ccc;
+  flex: 1;
+}
+
+.transform-section-content {
+  padding: 4px 0;
+}
+
+/* Transform Row */
+.transform-row {
+  display: flex;
+  align-items: center;
+  padding: 3px 8px;
+  min-height: 22px;
+  gap: 4px;
+}
+
+.transform-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Transform Row Label */
+.transform-row-label {
+  display: flex;
+  align-items: center;
+  width: 64px;
+  min-width: 64px;
+  flex-shrink: 0;
+}
+
+.transform-label-text {
+  font-size: 11px;
+  color: #999;
+  font-weight: 400;
+}
+
+/* Transform Row Inputs Container */
+.transform-row-inputs {
+  display: flex;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+
+.transform-row-inputs.rotation-single {
+  /* Single rotation input takes full width */
+}
+
+/* Transform Axis Input */
+.transform-axis-input {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 2px;
+  height: 18px;
+  overflow: hidden;
+}
+
+.transform-axis-input:hover {
+  border-color: #4a4a4a;
+  background: #222;
+}
+
+.transform-axis-input:focus-within {
+  border-color: #4a9eff;
+}
+
+.transform-axis-input.dragging {
+  border-color: #4a9eff;
+}
+
+/* Color bar indicator inside input */
+.transform-axis-bar {
+  width: 3px;
+  height: 100%;
+  flex-shrink: 0;
+  cursor: ew-resize;
+  transition: width 0.1s ease;
+}
+
+.transform-axis-bar:hover {
+  width: 4px;
+}
+
+.transform-axis-bar.x {
+  background: #c83232;
+}
+
+.transform-axis-bar.y {
+  background: #32a852;
+}
+
+.transform-axis-bar.z {
+  background: #3264c8;
+}
+
+.transform-axis-input input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 4px;
+  background: transparent;
+  border: none;
+  font-size: 10px;
+  font-family: 'Consolas', 'Monaco', 'Menlo', monospace;
+  color: #ddd;
+  text-align: left;
+  -moz-appearance: textfield;
+}
+
+.transform-axis-input input::-webkit-outer-spin-button,
+.transform-axis-input input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.transform-axis-input input:focus {
+  outline: none;
+  background: rgba(74, 158, 255, 0.05);
+}
+
+/* Suffix (like degree symbol) */
+.transform-axis-suffix {
+  font-size: 9px;
+  color: #666;
+  padding-right: 4px;
+  flex-shrink: 0;
+}
+
+/* Lock Button */
+.transform-lock-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: transparent;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+.transform-lock-btn:hover {
+  color: #888;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.transform-lock-btn.locked {
+  color: #f59e0b;
+}
+
+/* Reset Button */
+.transform-reset-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: transparent;
+  border: none;
+  color: #444;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.transform-row:hover .transform-reset-btn {
+  opacity: 1;
+}
+
+.transform-reset-btn:hover {
+  color: #888;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Mobility Row */
+.transform-mobility-row {
+  display: flex;
+  align-items: center;
+  padding: 3px 8px;
+  min-height: 22px;
+  gap: 4px;
+  margin-top: 4px;
+  border-top: 1px solid #333;
+}
+
+.transform-mobility-label {
+  font-size: 11px;
+  color: #999;
+  width: 64px;
+  min-width: 64px;
+  flex-shrink: 0;
+}
+
+.transform-mobility-buttons {
+  display: flex;
+  gap: 0;
+  flex: 1;
+}
+
+.transform-mobility-btn {
+  flex: 1;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 400;
+  color: #888;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  cursor: pointer;
+  height: 18px;
+  transition: all 0.1s ease;
+}
+
+.transform-mobility-btn:first-child {
+  border-radius: 2px 0 0 2px;
+}
+
+.transform-mobility-btn:last-child {
+  border-radius: 0 2px 2px 0;
+}
+
+.transform-mobility-btn:not(:first-child) {
+  border-left: none;
+}
+
+.transform-mobility-btn:hover {
+  background: #3a3a3a;
+  color: #ccc;
+}
+
+.transform-mobility-btn.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
 }

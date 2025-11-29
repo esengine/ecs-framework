@@ -331,20 +331,43 @@ export class PluginManager implements IService {
      */
     createSystemsForScene(scene: IScene, context: SystemContext): void {
         logger.info('Creating systems for scene...');
+        console.log('[PluginManager] createSystemsForScene called, context.assetManager:', context.assetManager ? 'exists' : 'null');
 
         const sortedPlugins = this.sortByLoadingPhase('runtime');
+        console.log('[PluginManager] Sorted plugins for runtime:', sortedPlugins);
 
+        // 第一阶段：创建所有系统
+        // Phase 1: Create all systems
         for (const pluginId of sortedPlugins) {
             const plugin = this.plugins.get(pluginId);
+            console.log(`[PluginManager] Plugin ${pluginId}: enabled=${plugin?.enabled}, state=${plugin?.state}, hasRuntimeModule=${!!plugin?.loader.runtimeModule}`);
             if (!plugin?.enabled || plugin.state === 'error') continue;
 
             const runtimeModule = plugin.loader.runtimeModule;
             if (runtimeModule?.createSystems) {
                 try {
+                    console.log(`[PluginManager] Calling createSystems for: ${pluginId}`);
                     runtimeModule.createSystems(scene, context);
                     logger.debug(`Systems created for: ${pluginId}`);
                 } catch (e) {
                     logger.error(`Failed to create systems for ${pluginId}:`, e);
+                }
+            }
+        }
+
+        // 第二阶段：系统创建完成后的回调（用于跨插件依赖连接）
+        // Phase 2: Post-creation callbacks (for cross-plugin dependency wiring)
+        for (const pluginId of sortedPlugins) {
+            const plugin = this.plugins.get(pluginId);
+            if (!plugin?.enabled || plugin.state === 'error') continue;
+
+            const runtimeModule = plugin.loader.runtimeModule;
+            if (runtimeModule?.onSystemsCreated) {
+                try {
+                    runtimeModule.onSystemsCreated(scene, context);
+                    logger.debug(`Systems wired for: ${pluginId}`);
+                } catch (e) {
+                    logger.error(`Failed to wire systems for ${pluginId}:`, e);
                 }
             }
         }

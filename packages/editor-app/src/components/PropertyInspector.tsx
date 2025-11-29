@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Component, Core, getComponentInstanceTypeName } from '@esengine/ecs-framework';
-import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub } from '@esengine/editor-core';
+import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub, FileActionRegistry } from '@esengine/editor-core';
 import { ChevronRight, ChevronDown, Lock } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { AnimationClipsFieldEditor } from '../infrastructure/field-editors/AnimationClipsFieldEditor';
 import { AssetField } from './inspectors/fields/AssetField';
+import { CollisionLayerField } from './inspectors/fields/CollisionLayerField';
 import '../styles/PropertyInspector.css';
 
 const animationClipsEditor = new AnimationClipsFieldEditor();
@@ -140,9 +141,9 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                 );
 
             case 'color': {
-                // Convert numeric color (0xRRGGBB) to hex string (#RRGGBB)
                 let colorValue = value ?? '#ffffff';
-                if (typeof colorValue === 'number') {
+                const wasNumber = typeof colorValue === 'number';
+                if (wasNumber) {
                     colorValue = '#' + colorValue.toString(16).padStart(6, '0');
                 }
                 return (
@@ -152,9 +153,12 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                         value={colorValue}
                         readOnly={metadata.readOnly}
                         onChange={(newValue) => {
-                            // Convert hex string back to number for storage
-                            const numericValue = parseInt(newValue.slice(1), 16);
-                            handleChange(propertyName, numericValue);
+                            if (wasNumber) {
+                                const numericValue = parseInt(newValue.slice(1), 16);
+                                handleChange(propertyName, numericValue);
+                            } else {
+                                handleChange(propertyName, newValue);
+                            }
                         }}
                     />
                 );
@@ -206,25 +210,30 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                     }
                 };
 
+                // 从 FileActionRegistry 获取资产创建消息映射
+                const fileActionRegistry = Core.services.tryResolve(FileActionRegistry);
+                const getCreationMapping = () => {
+                    if (!fileActionRegistry || !assetMeta.extensions) return null;
+                    for (const ext of assetMeta.extensions) {
+                        const mapping = fileActionRegistry.getAssetCreationMapping(ext);
+                        if (mapping) return mapping;
+                    }
+                    return null;
+                };
+
+                const creationMapping = getCreationMapping();
+
                 const handleCreate = () => {
                     const messageHub = Core.services.tryResolve(MessageHub);
-                    if (messageHub) {
-                        if (fileExtension === '.tilemap.json') {
-                            messageHub.publish('tilemap:create-asset', {
-                                entityId: entity?.id,
-                                onChange: (newValue: string) => handleChange(propertyName, newValue)
-                            });
-                        } else if (fileExtension === '.btree') {
-                            messageHub.publish('behavior-tree:create-asset', {
-                                entityId: entity?.id,
-                                onChange: (newValue: string) => handleChange(propertyName, newValue)
-                            });
-                        }
+                    if (messageHub && creationMapping) {
+                        messageHub.publish(creationMapping.createMessage, {
+                            entityId: entity?.id,
+                            onChange: (newValue: string) => handleChange(propertyName, newValue)
+                        });
                     }
                 };
 
-                const creatableExtensions = ['.tilemap.json', '.btree'];
-                const canCreate = assetMeta.extensions?.some(ext => creatableExtensions.includes(ext));
+                const canCreate = creationMapping !== null;
 
                 return (
                     <div key={propertyName} className="property-field">
@@ -265,6 +274,30 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                             }
                         })}
                     </div>
+                );
+
+            case 'collisionLayer':
+                return (
+                    <CollisionLayerField
+                        key={propertyName}
+                        label={label}
+                        value={value ?? 1}
+                        multiple={false}
+                        readOnly={metadata.readOnly}
+                        onChange={(newValue) => handleChange(propertyName, newValue)}
+                    />
+                );
+
+            case 'collisionMask':
+                return (
+                    <CollisionLayerField
+                        key={propertyName}
+                        label={label}
+                        value={value ?? 0xFFFF}
+                        multiple={true}
+                        readOnly={metadata.readOnly}
+                        onChange={(newValue) => handleChange(propertyName, newValue)}
+                    />
                 );
 
             default:

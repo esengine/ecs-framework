@@ -70,6 +70,11 @@ export class GameEngine {
    */
   setShowGrid(show: boolean): void;
   /**
+   * Add a line gizmo.
+   * 添加线条Gizmo。
+   */
+  addGizmoLine(points: Float32Array, r: number, g: number, b: number, a: number, closed: boolean): void;
+  /**
    * Add a rectangle gizmo outline.
    * 添加矩形Gizmo边框。
    *
@@ -112,10 +117,20 @@ export class GameEngine {
    */
   setShowGizmos(show: boolean): void;
   /**
+   * Add a circle gizmo outline.
+   * 添加圆形Gizmo边框。
+   */
+  addGizmoCircle(x: number, y: number, radius: number, r: number, g: number, b: number, a: number): void;
+  /**
    * Get all registered viewport IDs.
    * 获取所有已注册的视口ID。
    */
   getViewportIds(): string[];
+  /**
+   * Add a capsule gizmo outline.
+   * 添加胶囊Gizmo边框。
+   */
+  addGizmoCapsule(x: number, y: number, radius: number, half_height: number, rotation: number, r: number, g: number, b: number, a: number): void;
   /**
    * Register a new viewport.
    * 注册新视口。
@@ -252,6 +267,9 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_gameengine_free: (a: number, b: number) => void;
+  readonly gameengine_addGizmoCapsule: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => void;
+  readonly gameengine_addGizmoCircle: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
+  readonly gameengine_addGizmoLine: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
   readonly gameengine_addGizmoRect: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number) => void;
   readonly gameengine_clear: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly gameengine_fromExternal: (a: any, b: number, c: number) => [number, number, number];

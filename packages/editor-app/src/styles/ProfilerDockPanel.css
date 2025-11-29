@@ -10,9 +10,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 0 8px;
   border-bottom: 1px solid var(--color-border-default);
   flex-shrink: 0;
+  height: 26px;
 }
 
 .profiler-dock-header h3 {

@@ -1,0 +1,528 @@
+.output-log-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #1a1a1a;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+}
+
+/* ==================== Toolbar ==================== */
+.output-log-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 36px;
+    padding: 0 8px;
+    background: #252526;
+    border-bottom: 1px solid #3c3c3c;
+    flex-shrink: 0;
+}
+
+.output-log-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.output-log-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Search Box */
+.output-log-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    max-width: 300px;
+    height: 26px;
+    padding: 0 10px;
+    background: #3c3c3c;
+    border: 1px solid #4a4a4a;
+    border-radius: 4px;
+    color: #888;
+    transition: all 0.15s ease;
+}
+
+.output-log-search:focus-within {
+    border-color: #3b82f6;
+    background: #2d2d2d;
+}
+
+.output-log-search input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #e0e0e0;
+    font-size: 12px;
+}
+
+.output-log-search input::placeholder {
+    color: #666;
+}
+
+.output-log-search-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    background: #555;
+    border: none;
+    border-radius: 50%;
+    color: #ccc;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.output-log-search-clear:hover {
+    background: #666;
+    color: #fff;
+}
+
+/* Toolbar Buttons */
+.output-log-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 10px;
+    background: transparent;
+    border: 1px solid #4a4a4a;
+    border-radius: 4px;
+    color: #ccc;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.output-log-btn:hover {
+    background: #3c3c3c;
+    border-color: #555;
+}
+
+.output-log-btn.active {
+    background: #3c3c3c;
+    border-color: #3b82f6;
+}
+
+.output-log-btn.has-filter {
+    border-color: #3b82f6;
+}
+
+.filter-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    background: #3b82f6;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.output-log-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 26px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.output-log-icon-btn:hover {
+    background: #3c3c3c;
+    color: #e0e0e0;
+}
+
+.output-log-icon-btn.active {
+    background: #3c3c3c;
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+
+.output-log-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 26px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-left: 4px;
+}
+
+.output-log-close-btn:hover {
+    background: #3c3c3c;
+    color: #e0e0e0;
+}
+
+/* ==================== Dropdown Menu ==================== */
+.output-log-dropdown {
+    position: relative;
+}
+
+.output-log-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 200px;
+    background: #2d2d2d;
+    border: 1px solid #4a4a4a;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    padding: 6px 0;
+    z-index: 100;
+}
+
+.output-log-menu.settings-menu {
+    min-width: 180px;
+}
+
+.output-log-menu-header {
+    padding: 6px 12px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.output-log-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.output-log-menu-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.output-log-menu-item input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    accent-color: #3b82f6;
+    cursor: pointer;
+}
+
+.output-log-menu-item span {
+    flex: 1;
+    color: #e0e0e0;
+    font-size: 12px;
+}
+
+.output-log-menu-item .level-count {
+    color: #888;
+    font-size: 11px;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.level-icon {
+    flex-shrink: 0;
+}
+
+.level-icon.debug {
+    color: #858585;
+}
+
+.level-icon.info {
+    color: #4a9eff;
+}
+
+.level-icon.warn {
+    color: #ffc107;
+}
+
+.level-icon.error {
+    color: #f44336;
+}
+
+.level-icon.remote {
+    color: #10b981;
+}
+
+.output-log-menu-divider {
+    height: 1px;
+    background: #4a4a4a;
+    margin: 6px 0;
+}
+
+.output-log-menu-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 12px;
+    background: transparent;
+    border: none;
+    color: #e0e0e0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.output-log-menu-action:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.output-log-menu-action svg {
+    color: #888;
+}
+
+/* ==================== Log Content ==================== */
+.output-log-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.output-log-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.output-log-content::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.output-log-content::-webkit-scrollbar-thumb {
+    background: #4a4a4a;
+    border-radius: 5px;
+    border: 2px solid #1a1a1a;
+}
+
+.output-log-content::-webkit-scrollbar-thumb:hover {
+    background: #5a5a5a;
+}
+
+/* Hide timestamp/source based on settings */
+.output-log-content.hide-timestamp .output-log-entry-time {
+    display: none;
+}
+
+.output-log-content.hide-source .output-log-entry-source {
+    display: none;
+}
+
+/* Empty State */
+.output-log-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #666;
+    gap: 12px;
+}
+
+.output-log-empty p {
+    margin: 0;
+    font-size: 13px;
+}
+
+/* ==================== Log Entry ==================== */
+.output-log-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 4px 12px;
+    border-bottom: 1px solid #2a2a2a;
+    line-height: 1.4;
+    transition: background 0.1s ease;
+}
+
+.output-log-entry:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.output-log-entry-icon {
+    display: flex;
+    align-items: center;
+    padding-top: 2px;
+    flex-shrink: 0;
+}
+
+.output-log-entry-time {
+    color: #666;
+    font-size: 11px;
+    white-space: nowrap;
+    padding-top: 2px;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.output-log-entry-source {
+    color: #888;
+    font-size: 11px;
+    white-space: nowrap;
+    padding-top: 2px;
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.output-log-entry-source.source-remote {
+    color: #4a9eff;
+    opacity: 1;
+    font-weight: 600;
+}
+
+.output-log-entry-client {
+    color: #10b981;
+    font-size: 10px;
+    white-space: nowrap;
+    padding: 1px 6px;
+    flex-shrink: 0;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+.output-log-entry-message {
+    flex: 1;
+    color: #e0e0e0;
+    word-break: break-word;
+    padding-top: 2px;
+}
+
+.output-log-message-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.output-log-message-text {
+    flex: 1;
+}
+
+.output-log-message-preview {
+    opacity: 0.9;
+}
+
+.output-log-expand-btn {
+    display: inline;
+    margin-left: 8px;
+    padding: 2px 6px;
+    background: #3c3c3c;
+    border: 1px solid #4a4a4a;
+    border-radius: 3px;
+    color: #3b82f6;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.output-log-expand-btn:hover {
+    background: #4a4a4a;
+    border-color: #3b82f6;
+}
+
+.output-log-json-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    background: #3b82f6;
+    border: none;
+    border-radius: 3px;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: all 0.1s ease;
+    flex-shrink: 0;
+}
+
+.output-log-json-btn:hover {
+    opacity: 1;
+}
+
+/* Log Level Styles */
+.output-log-entry-debug {
+    color: #858585;
+}
+
+.output-log-entry-debug .output-log-entry-icon {
+    color: #858585;
+}
+
+.output-log-entry-info .output-log-entry-icon {
+    color: #4a9eff;
+}
+
+.output-log-entry-warn {
+    background: rgba(255, 193, 7, 0.05);
+}
+
+.output-log-entry-warn .output-log-entry-icon {
+    color: #ffc107;
+}
+
+.output-log-entry-error {
+    background: rgba(244, 67, 54, 0.08);
+}
+
+.output-log-entry-error .output-log-entry-icon {
+    color: #f44336;
+}
+
+.log-entry-remote {
+    border-left: 2px solid #4a9eff;
+    background: rgba(74, 158, 255, 0.03);
+}
+
+/* ==================== Status Bar ==================== */
+.output-log-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 24px;
+    padding: 0 12px;
+    background: #252526;
+    border-top: 1px solid #3c3c3c;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #888;
+}
+
+.output-log-scroll-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: #3b82f6;
+    border: none;
+    border-radius: 3px;
+    color: #fff;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.output-log-scroll-btn:hover {
+    background: #2563eb;
+}

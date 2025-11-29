@@ -12,7 +12,9 @@ import type {
     EntityCreationTemplate,
     ComponentAction,
     ComponentInspectorProviderDef,
-    GizmoProviderRegistration
+    GizmoProviderRegistration,
+    FileActionHandler,
+    FileCreationTemplate
 } from '@esengine/editor-core';
 import {
     PanelPosition,
@@ -21,17 +23,24 @@ import {
     MessageHub,
     ComponentRegistry,
     IDialogService,
-    IFileSystemService
+    IFileSystemService,
+    UIRegistry,
+    FileActionRegistry
 } from '@esengine/editor-core';
 import type { IDialog, IFileSystem } from '@esengine/editor-core';
 import { TransformComponent } from '@esengine/ecs-components';
 
 // Local imports
 import { TilemapComponent } from '../TilemapComponent';
+import { TilemapCollider2DComponent } from '../physics/TilemapCollider2DComponent';
 import { TilemapEditorPanel } from './components/panels/TilemapEditorPanel';
 import { TilemapInspectorProvider } from './providers/TilemapInspectorProvider';
 import { registerTilemapGizmo } from './gizmos/TilemapGizmo';
 import { useTilemapEditorStore } from './stores/TilemapEditorStore';
+
+// 导入编辑器 CSS 样式（会被 vite 自动处理并注入到 DOM）
+// Import editor CSS styles (automatically handled and injected by vite)
+import './styles/TilemapEditor.css';
 
 // Re-exports
 export { TilemapEditorPanel } from './components/panels/TilemapEditorPanel';
@@ -70,6 +79,14 @@ export class TilemapEditorModule implements IEditorModuleLoader {
                 description: 'Tilemap component for tile-based levels',
                 icon: 'Grid3X3'
             });
+
+            componentRegistry.register({
+                name: 'TilemapCollider2D',
+                type: TilemapCollider2DComponent,
+                category: 'components.category.physics',
+                description: 'Generates physics colliders from tilemap collision data',
+                icon: 'Shield'
+            });
         }
 
         // 订阅 tilemap:create-asset 消息 | Subscribe to tilemap:create-asset message
@@ -84,11 +101,25 @@ export class TilemapEditorModule implements IEditorModuleLoader {
             this.unsubscribers.push(unsubscribe);
         }
 
+        // 注册资产创建消息映射 | Register asset creation message mappings
+        const fileActionRegistry = services.resolve(FileActionRegistry);
+        if (fileActionRegistry) {
+            fileActionRegistry.registerAssetCreationMapping({
+                extension: '.tilemap',
+                createMessage: 'tilemap:create-asset'
+            });
+            fileActionRegistry.registerAssetCreationMapping({
+                extension: '.tileset',
+                createMessage: 'tileset:create-asset'
+            });
+        }
+
         // 注册 Tilemap Gizmo | Register Tilemap gizmo
         registerTilemapGizmo();
     }
 
     async uninstall(): Promise<void> {
+        // 清理订阅 | Clean up subscriptions
         this.unsubscribers.forEach(unsub => unsub());
         this.unsubscribers = [];
     }
@@ -168,19 +199,101 @@ export class TilemapEditorModule implements IEditorModuleLoader {
     }
 
     getComponentActions(): ComponentAction[] {
+        // 移除编辑按钮，改为双击 tilemap 文件打开编辑器
+        return [];
+    }
+
+    getFileActionHandlers(): FileActionHandler[] {
         return [
             {
-                id: 'tilemap-edit',
-                componentName: 'Tilemap',
-                label: '编辑 Tilemap',
-                icon: 'Edit3',
-                execute: (_component: unknown, entity: Entity) => {
+                extensions: ['tilemap', 'json'],
+                onDoubleClick: (filePath: string) => {
+                    // 只处理 .tilemap 和 .tilemap.json 文件
+                    const lowerPath = filePath.toLowerCase();
+                    if (!lowerPath.endsWith('.tilemap') && !lowerPath.endsWith('.tilemap.json')) {
+                        return;
+                    }
+
+                    // 先设置待打开的文件路径到 store
+                    useTilemapEditorStore.getState().setPendingFilePath(filePath);
+
                     const messageHub = Core.services.resolve(MessageHub);
                     if (messageHub) {
-                        const entityIdStr = String(entity.id);
-                        useTilemapEditorStore.getState().setEntityId(entityIdStr);
-                        messageHub.publish('dynamic-panel:open', { panelId: 'tilemap-editor', title: 'Tilemap Editor' });
+                        // 打开 tilemap 编辑器面板（面板挂载后会从 store 读取 pendingFilePath）
+                        messageHub.publish('dynamic-panel:open', {
+                            panelId: 'tilemap-editor',
+                            title: `Tilemap Editor - ${filePath.split(/[\\/]/).pop()}`
+                        });
                     }
+                }
+            },
+            {
+                extensions: ['tileset', 'json'],
+                onDoubleClick: (filePath: string) => {
+                    // 只处理 .tileset 和 .tileset.json 文件
+                    const lowerPath = filePath.toLowerCase();
+                    if (!lowerPath.endsWith('.tileset') && !lowerPath.endsWith('.tileset.json')) {
+                        return;
+                    }
+
+                    const messageHub = Core.services.resolve(MessageHub);
+                    if (messageHub) {
+                        // 发送消息打开 tileset 预览
+                        messageHub.publish('tileset:open-file', { filePath });
+                        messageHub.publish('dynamic-panel:open', {
+                            panelId: 'tilemap-editor',
+                            title: `Tileset - ${filePath.split(/[\\/]/).pop()}`
+                        });
+                    }
+                }
+            }
+        ];
+    }
+
+    getFileCreationTemplates(): FileCreationTemplate[] {
+        return [
+            {
+                id: 'create-tilemap',
+                label: 'Tilemap',
+                extension: 'tilemap',
+                icon: 'Grid3X3',
+                category: 'tilemap',
+                getContent: (_fileName: string) => {
+                    const defaultTilemapData = {
+                        width: 20,
+                        height: 15,
+                        tileWidth: 16,
+                        tileHeight: 16,
+                        layers: [
+                            {
+                                name: 'Layer 1',
+                                visible: true,
+                                opacity: 1,
+                                data: new Array(20 * 15).fill(0)
+                            }
+                        ],
+                        tilesets: []
+                    };
+                    return JSON.stringify(defaultTilemapData, null, 2);
+                }
+            },
+            {
+                id: 'create-tileset',
+                label: 'Tileset',
+                extension: 'tileset',
+                icon: 'LayoutGrid',
+                category: 'tilemap',
+                getContent: (_fileName: string) => {
+                    const defaultTilesetData = {
+                        name: 'New Tileset',
+                        tileWidth: 16,
+                        tileHeight: 16,
+                        spacing: 0,
+                        margin: 0,
+                        imageSource: '',
+                        tiles: []
+                    };
+                    return JSON.stringify(defaultTilesetData, null, 2);
                 }
             }
         ];
@@ -201,8 +314,8 @@ export class TilemapEditorModule implements IEditorModuleLoader {
 
         const filePath = await dialog.saveDialog({
             title: '创建 Tilemap 资产',
-            filters: [{ name: 'Tilemap', extensions: ['tilemap.json'] }],
-            defaultPath: 'new-tilemap.tilemap.json'
+            filters: [{ name: 'Tilemap', extensions: ['tilemap'] }],
+            defaultPath: 'new-tilemap.tilemap'
         });
 
         if (!filePath) {
@@ -242,5 +355,5 @@ export class TilemapEditorModule implements IEditorModuleLoader {
 export const tilemapEditorModule = new TilemapEditorModule();
 
 // Plugin exports
-export { TilemapPlugin, TilemapRuntimeModule } from './TilemapPlugin';
+export { TilemapPlugin } from './TilemapPlugin';
 export default tilemapEditorModule;

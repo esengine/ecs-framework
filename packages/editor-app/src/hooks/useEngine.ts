@@ -27,6 +27,7 @@ export interface UseEngineReturn {
     state: EngineState;
     start: () => void;
     stop: () => void;
+    step: () => void;
     createSprite: (name: string, options?: {
         x?: number;
         y?: number;
@@ -186,6 +187,12 @@ export function useEngine(
         setState((prev) => ({ ...prev, running: false }));
     }, []);
 
+    // Step single frame (advance one frame when paused)
+    const step = useCallback(() => {
+        // Execute a single frame update via Core
+        Core.update(1 / 60); // Use fixed 60fps timestep for step
+    }, []);
+
     // Create sprite entity
     const createSprite = useCallback((name: string, options?: {
         x?: number;
@@ -206,6 +213,7 @@ export function useEngine(
         state,
         start,
         stop,
+        step,
         createSprite,
         loadTexture,
         viewportId: options.viewportId

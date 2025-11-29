@@ -48,6 +48,13 @@ export interface IRuntimeModuleLoader {
     createSystems?(scene: IScene, context: SystemContext): void;
 
     /**
+     * 所有系统创建完成后调用
+     * 用于处理跨插件的系统依赖关系
+     * Called after all systems are created, used for cross-plugin system dependencies
+     */
+    onSystemsCreated?(scene: IScene, context: SystemContext): void;
+
+    /**
      * 模块初始化完成回调
      * Module initialization complete callback
      */
@@ -338,6 +345,9 @@ export interface IPluginLoader {
 /**
  * 文件创建模板
  * File creation template
+ *
+ * 插件通过 getContent 提供文件内容，编辑器负责写入文件。
+ * 这样可以避免插件直接访问文件系统带来的权限问题。
  */
 export interface FileCreationTemplate {
     /** 模板ID | Template ID */
@@ -350,6 +360,10 @@ export interface FileCreationTemplate {
     icon?: string;
     /** 分类 | Category */
     category?: string;
-    /** 创建函数 | Create function */
-    create: (filePath: string) => Promise<void>;
+    /**
+     * 获取文件内容 | Get file content
+     * @param fileName 文件名（不含路径，含扩展名）
+     * @returns 文件内容字符串
+     */
+    getContent: (fileName: string) => string | Promise<string>;
 }

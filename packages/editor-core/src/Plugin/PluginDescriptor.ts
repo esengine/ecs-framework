@@ -16,6 +16,7 @@ export type PluginCategory =
     | 'audio'       // 音频系统 | Audio
     | 'networking'  // 网络功能 | Networking
     | 'tools'       // 工具/编辑器扩展 | Tools/Editor extensions
+    | 'scripting'   // 脚本/蓝图 | Scripting/Blueprint
     | 'content';    // 内容/资源 | Content/Assets
 
 /**

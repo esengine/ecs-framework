@@ -1,9 +1,11 @@
 .file-tree-toolbar {
   display: flex;
+  align-items: center;
   gap: 4px;
-  padding: 4px 8px;
+  padding: 0 8px;
   background: #252526;
   border-bottom: 1px solid #3e3e3e;
+  height: 26px;
 }
 
 .file-tree-toolbar-btn {

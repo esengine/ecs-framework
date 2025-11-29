@@ -1,0 +1,244 @@
+/* Transform Component Inspector - Custom Design */
+.tf-inspector {
+    padding: 4px 0;
+}
+
+/* Divider between rows */
+.tf-divider {
+    height: 1px;
+    background: #3a3a3a;
+    margin: 0 8px;
+}
+
+/* Transform Row */
+.tf-row {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    min-height: 24px;
+    gap: 4px;
+}
+
+.tf-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Label Button with dropdown arrow */
+.tf-label-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 70px;
+    min-width: 70px;
+    padding: 0 8px;
+    background: #333;
+    border: 1px solid #444;
+    border-radius: 2px;
+    color: #ccc;
+    font-size: 11px;
+    cursor: pointer;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.tf-label-btn:hover {
+    background: #3a3a3a;
+    border-color: #4a4a4a;
+}
+
+.tf-label-btn svg {
+    color: #888;
+    flex-shrink: 0;
+}
+
+/* Inputs Container */
+.tf-inputs {
+    display: flex;
+    flex: 1;
+    gap: 2px;
+    min-width: 0;
+}
+
+/* Axis Input */
+.tf-axis-input {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 2px;
+    height: 20px;
+    overflow: hidden;
+}
+
+.tf-axis-input:hover {
+    border-color: #555;
+    background: #1e1e1e;
+}
+
+.tf-axis-input:focus-within {
+    border-color: #4a9eff;
+}
+
+.tf-axis-input.dragging {
+    border-color: #4a9eff;
+}
+
+/* Color bar */
+.tf-axis-bar {
+    width: 4px;
+    height: 100%;
+    flex-shrink: 0;
+    cursor: ew-resize;
+}
+
+.tf-axis-bar.tf-axis-x {
+    background: #c04040;
+}
+
+.tf-axis-bar.tf-axis-y {
+    background: #40a040;
+}
+
+.tf-axis-bar.tf-axis-z {
+    background: #4060c0;
+}
+
+.tf-axis-input input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0 4px;
+    background: transparent;
+    border: none;
+    font-size: 11px;
+    font-family: 'Consolas', 'Monaco', 'Menlo', monospace;
+    color: #ddd;
+    text-align: left;
+    -moz-appearance: textfield;
+}
+
+.tf-axis-input input::-webkit-outer-spin-button,
+.tf-axis-input input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.tf-axis-input input:focus {
+    outline: none;
+    background: rgba(74, 158, 255, 0.05);
+}
+
+/* Suffix */
+.tf-axis-suffix {
+    font-size: 10px;
+    color: #666;
+    padding-right: 4px;
+    flex-shrink: 0;
+}
+
+/* Lock Button */
+.tf-lock-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: transparent;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    border-radius: 2px;
+}
+
+.tf-lock-btn:hover {
+    color: #999;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.tf-lock-btn.locked {
+    color: #ccc;
+}
+
+/* Reset Button */
+.tf-reset-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: transparent;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    border-radius: 2px;
+}
+
+.tf-reset-btn:hover {
+    color: #999;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Mobility Row */
+.tf-mobility-row {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    min-height: 24px;
+    gap: 4px;
+}
+
+.tf-mobility-label {
+    font-size: 11px;
+    color: #999;
+    width: 70px;
+    min-width: 70px;
+    flex-shrink: 0;
+    padding-left: 8px;
+}
+
+.tf-mobility-buttons {
+    display: flex;
+    gap: 0;
+    flex: 1;
+}
+
+.tf-mobility-btn {
+    flex: 1;
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 400;
+    color: #999;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    cursor: pointer;
+    height: 20px;
+    transition: all 0.1s ease;
+}
+
+.tf-mobility-btn:first-child {
+    border-radius: 2px 0 0 2px;
+}
+
+.tf-mobility-btn:last-child {
+    border-radius: 0 2px 2px 0;
+}
+
+.tf-mobility-btn:not(:first-child) {
+    border-left: none;
+}
+
+.tf-mobility-btn:hover {
+    background: #333;
+    color: #ccc;
+}
+
+.tf-mobility-btn.active {
+    background: #444;
+    color: #fff;
+}

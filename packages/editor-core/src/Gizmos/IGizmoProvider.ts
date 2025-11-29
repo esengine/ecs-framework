@@ -14,7 +14,7 @@ import type { Entity } from '@esengine/ecs-framework';
  * Gizmo type enumeration
  * Gizmo 类型枚举
  */
-export type GizmoType = 'rect' | 'circle' | 'line' | 'grid';
+export type GizmoType = 'rect' | 'circle' | 'line' | 'grid' | 'capsule';
 
 /**
  * Color in RGBA format (0-1 range)
@@ -106,10 +106,30 @@ export interface IGridGizmoData {
 }
 
 /**
+ * Capsule gizmo data
+ * 胶囊 gizmo 数据
+ */
+export interface ICapsuleGizmoData {
+    type: 'capsule';
+    /** Center X position | 中心 X 位置 */
+    x: number;
+    /** Center Y position | 中心 Y 位置 */
+    y: number;
+    /** Capsule radius | 胶囊半径 */
+    radius: number;
+    /** Half height (distance from center to cap centers) | 半高度（从中心到端帽圆心的距离） */
+    halfHeight: number;
+    /** Rotation in radians | 旋转角度（弧度） */
+    rotation: number;
+    /** Color | 颜色 */
+    color: GizmoColor;
+}
+
+/**
  * Union type for all gizmo data
  * 所有 gizmo 数据的联合类型
  */
-export type IGizmoRenderData = IRectGizmoData | ICircleGizmoData | ILineGizmoData | IGridGizmoData;
+export type IGizmoRenderData = IRectGizmoData | ICircleGizmoData | ILineGizmoData | IGridGizmoData | ICapsuleGizmoData;
 
 /**
  * Gizmo Provider Interface

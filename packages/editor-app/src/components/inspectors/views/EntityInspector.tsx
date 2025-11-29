@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { Settings, ChevronDown, ChevronRight, X, Plus, Box, Search } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Settings, ChevronDown, ChevronRight, X, Plus, Box, Search, Lock, Unlock } from 'lucide-react';
 import { Entity, Component, Core, getComponentDependencies, getComponentTypeName, getComponentInstanceTypeName } from '@esengine/ecs-framework';
 import { MessageHub, CommandManager, ComponentRegistry, ComponentActionRegistry, ComponentInspectorRegistry } from '@esengine/editor-core';
 import { PropertyInspector } from '../../PropertyInspector';
@@ -7,6 +7,20 @@ import { NotificationService } from '../../../services/NotificationService';
 import { RemoveComponentCommand, UpdateComponentCommand, AddComponentCommand } from '../../../application/commands/component';
 import '../../../styles/EntityInspector.css';
 import * as LucideIcons from 'lucide-react';
+
+type CategoryFilter = 'all' | 'general' | 'transform' | 'rendering' | 'physics' | 'audio' | 'other';
+
+// 从 ComponentRegistry category 到 CategoryFilter 的映射
+const categoryKeyMap: Record<string, CategoryFilter> = {
+    'components.category.core': 'general',
+    'components.category.rendering': 'rendering',
+    'components.category.physics': 'physics',
+    'components.category.audio': 'audio',
+    'components.category.ui': 'rendering',
+    'components.category.ui.core': 'rendering',
+    'components.category.ui.widgets': 'rendering',
+    'components.category.other': 'other',
+};
 
 interface ComponentInfo {
     name: string;
@@ -24,12 +38,18 @@ interface EntityInspectorProps {
 }
 
 export function EntityInspector({ entity, messageHub, commandManager, componentVersion }: EntityInspectorProps) {
-    const [expandedComponents, setExpandedComponents] = useState<Set<number>>(new Set());
+    const [expandedComponents, setExpandedComponents] = useState<Set<number>>(() => {
+        // 默认展开所有组件
+        return new Set(entity.components.map((_, index) => index));
+    });
     const [showComponentMenu, setShowComponentMenu] = useState(false);
     const [localVersion, setLocalVersion] = useState(0);
     const [dropdownPosition, setDropdownPosition] = useState<{ top: number; right: number } | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+    const [isLocked, setIsLocked] = useState(false);
+    const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
+    const [propertySearchQuery, setPropertySearchQuery] = useState('');
     const addButtonRef = useRef<HTMLButtonElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -37,6 +57,18 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
     const componentActionRegistry = Core.services.resolve(ComponentActionRegistry);
     const componentInspectorRegistry = Core.services.resolve(ComponentInspectorRegistry);
     const availableComponents = (componentRegistry?.getAllComponents() || []) as ComponentInfo[];
+
+    // 当 entity 变化或组件数量变化时，更新展开状态（新组件默认展开）
+    useEffect(() => {
+        setExpandedComponents((prev) => {
+            const newSet = new Set(prev);
+            // 添加所有当前组件的索引（保留已有的展开状态）
+            entity.components.forEach((_, index) => {
+                newSet.add(index);
+            });
+            return newSet;
+        });
+    }, [entity, entity.components.length, componentVersion]);
 
     useEffect(() => {
         if (showComponentMenu && addButtonRef.current) {
@@ -182,25 +214,89 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
         }
     };
 
+    const categoryTabs: { key: CategoryFilter; label: string }[] = [
+        { key: 'general', label: 'General' },
+        { key: 'transform', label: 'Transform' },
+        { key: 'rendering', label: 'Rendering' },
+        { key: 'physics', label: 'Physics' },
+        { key: 'audio', label: 'Audio' },
+        { key: 'other', label: 'Other' },
+        { key: 'all', label: 'All' }
+    ];
+
+    const getComponentCategory = useCallback((componentName: string): CategoryFilter => {
+        const componentInfo = componentRegistry?.getComponent(componentName);
+        if (componentInfo?.category) {
+            return categoryKeyMap[componentInfo.category] || 'general';
+        }
+        return 'general';
+    }, [componentRegistry]);
+
+    const filteredComponents = useMemo(() => {
+        return entity.components.filter((component: Component) => {
+            const componentName = getComponentInstanceTypeName(component);
+
+            if (categoryFilter !== 'all') {
+                const category = getComponentCategory(componentName);
+                if (category !== categoryFilter) {
+                    return false;
+                }
+            }
+
+            if (propertySearchQuery.trim()) {
+                const query = propertySearchQuery.toLowerCase();
+                if (!componentName.toLowerCase().includes(query)) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    }, [entity.components, categoryFilter, propertySearchQuery, getComponentCategory]);
+
     return (
         <div className="entity-inspector">
+            {/* Header */}
             <div className="inspector-header">
-                <Settings size={16} />
-                <span className="entity-name">{entity.name || `Entity #${entity.id}`}</span>
+                <div className="inspector-header-left">
+                    <button
+                        className={`inspector-lock-btn ${isLocked ? 'locked' : ''}`}
+                        onClick={() => setIsLocked(!isLocked)}
+                        title={isLocked ? '解锁检视器' : '锁定检视器'}
+                    >
+                        {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
+                    </button>
+                    <Settings size={14} color="#666" />
+                    <span className="entity-name">{entity.name || `Entity #${entity.id}`}</span>
+                </div>
+                <span className="inspector-object-count">1 object</span>
+            </div>
+
+            {/* Search Box */}
+            <div className="inspector-search">
+                <Search size={14} />
+                <input
+                    type="text"
+                    placeholder="Search..."
+                    value={propertySearchQuery}
+                    onChange={(e) => setPropertySearchQuery(e.target.value)}
+                />
+            </div>
+
+            {/* Category Tabs */}
+            <div className="inspector-category-tabs">
+                {categoryTabs.map((tab) => (
+                    <button
+                        key={tab.key}
+                        className={`inspector-category-tab ${categoryFilter === tab.key ? 'active' : ''}`}
+                        onClick={() => setCategoryFilter(tab.key)}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
             </div>
 
             <div className="inspector-content">
-                <div className="inspector-section">
-                    <div className="section-title">基本信息</div>
-                    <div className="property-field">
-                        <label className="property-label">Entity ID</label>
-                        <span className="property-value-text">{entity.id}</span>
-                    </div>
-                    <div className="property-field">
-                        <label className="property-label">Enabled</label>
-                        <span className="property-value-text">{entity.enabled ? 'true' : 'false'}</span>
-                    </div>
-                </div>
 
                 <div className="inspector-section">
                     <div className="section-title section-title-with-action">
@@ -273,11 +369,14 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                             )}
                         </div>
                     </div>
-                    {entity.components.length === 0 ? (
-                        <div className="empty-state-small">暂无组件</div>
+                    {filteredComponents.length === 0 ? (
+                        <div className="empty-state-small">
+                            {entity.components.length === 0 ? '暂无组件' : '没有匹配的组件'}
+                        </div>
                     ) : (
-                        entity.components.map((component: Component, index: number) => {
-                            const isExpanded = expandedComponents.has(index);
+                        filteredComponents.map((component: Component) => {
+                            const originalIndex = entity.components.indexOf(component);
+                            const isExpanded = expandedComponents.has(originalIndex);
                             const componentName = getComponentInstanceTypeName(component);
                             const componentInfo = componentRegistry?.getComponent(componentName);
                             const iconName = (componentInfo as { icon?: string } | undefined)?.icon;
@@ -285,12 +384,12 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
 
                             return (
                                 <div
-                                    key={`${componentName}-${index}`}
+                                    key={`${componentName}-${originalIndex}`}
                                     className={`component-item-card ${isExpanded ? 'expanded' : ''}`}
                                 >
                                     <div
                                         className="component-item-header"
-                                        onClick={() => toggleComponentExpanded(index)}
+                                        onClick={() => toggleComponentExpanded(originalIndex)}
                                     >
                                         <span className="component-expand-icon">
                                             {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -311,7 +410,7 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                                             className="component-remove-btn"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleRemoveComponent(index);
+                                                handleRemoveComponent(originalIndex);
                                             }}
                                             title="移除组件"
                                         >

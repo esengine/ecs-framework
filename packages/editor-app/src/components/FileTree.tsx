@@ -83,8 +83,8 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         type: 'create-file' | 'create-folder' | 'create-template';
         parentPath: string;
         templateExtension?: string;
-        templateContent?: (fileName: string) => Promise<string>;
-            } | null>(null);
+        templateGetContent?: (fileName: string) => string | Promise<string>;
+    } | null>(null);
     const [filteredTree, setFilteredTree] = useState<TreeNode[]>([]);
     const fileActionRegistry = Core.services.resolve(FileActionRegistry);
 
@@ -515,14 +515,14 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             type: 'create-template',
             parentPath,
             templateExtension: template.extension,
-            templateContent: template.createContent
+            templateGetContent: template.getContent
         });
     };
 
     const handlePromptConfirm = async (value: string) => {
         if (!promptDialog) return;
 
-        const { type, parentPath, templateExtension, templateContent } = promptDialog;
+        const { type, parentPath, templateExtension, templateGetContent } = promptDialog;
         setPromptDialog(null);
 
         let fileName = value;
@@ -533,13 +533,13 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                 await TauriAPI.createFile(targetPath);
             } else if (type === 'create-folder') {
                 await TauriAPI.createDirectory(targetPath);
-            } else if (type === 'create-template' && templateExtension && templateContent) {
+            } else if (type === 'create-template' && templateExtension && templateGetContent) {
                 if (!fileName.endsWith(`.${templateExtension}`)) {
                     fileName = `${fileName}.${templateExtension}`;
                     targetPath = `${parentPath}/${fileName}`;
                 }
-
-                const content = await templateContent(fileName);
+                // 获取内容并通过后端 API 写入文件
+                const content = await templateGetContent(fileName);
                 await TauriAPI.writeFileContent(targetPath, content);
             }
             await refreshTree();

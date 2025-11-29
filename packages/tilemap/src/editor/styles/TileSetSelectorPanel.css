@@ -1,0 +1,293 @@
+/* ==================== Tile Set Selector Panel Styles ==================== */
+
+.tileset-selector-panel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    background: #252526;
+    user-select: none;
+}
+
+/* ==================== Tool Buttons Row ==================== */
+.tileset-tools {
+    display: flex;
+    padding: 8px;
+    gap: 4px;
+    border-bottom: 1px solid #1a1a1a;
+    background: #2d2d30;
+}
+
+.tileset-tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: 1;
+    padding: 8px 4px;
+    background: #252526;
+    border: 1px solid #3c3c3c;
+    border-radius: 3px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tileset-tool-btn span {
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.tileset-tool-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.tileset-tool-btn:hover {
+    background: #3c3c3c;
+    color: #e0e0e0;
+    border-color: #4c4c4c;
+}
+
+.tileset-tool-btn.active {
+    background: linear-gradient(180deg, #ffc107 0%, #e6a800 100%);
+    border-color: #cc9600;
+    color: #1a1a1a;
+}
+
+.tileset-tool-btn.active:hover {
+    background: linear-gradient(180deg, #ffd54f 0%, #ffca28 100%);
+}
+
+.tileset-tool-btn.active svg {
+    color: #1a1a1a;
+}
+
+/* ==================== Tileset Selector Section ==================== */
+.tileset-selector {
+    padding: 8px;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.tileset-selector-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.tileset-selector label {
+    font-size: 11px;
+    color: #888;
+}
+
+.tileset-selector-actions {
+    display: flex;
+    gap: 2px;
+}
+
+.tileset-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.tileset-action-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.tileset-action-btn:hover {
+    background: #3c3c3c;
+    color: #e0e0e0;
+}
+
+/* ==================== Tileset Dropdown ==================== */
+.tileset-dropdown-wrapper {
+    position: relative;
+}
+
+.tileset-dropdown-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 26px;
+    padding: 0 8px;
+    background: #1e1e1e;
+    border: 1px solid #3c3c3c;
+    border-radius: 3px;
+    color: #c0c0c0;
+    font-size: 11px;
+    cursor: pointer;
+    transition: border-color 0.1s ease;
+}
+
+.tileset-dropdown-btn:hover {
+    border-color: #555;
+}
+
+.tileset-dropdown-btn span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tileset-dropdown-btn svg {
+    width: 12px;
+    height: 12px;
+    color: #888;
+    flex-shrink: 0;
+}
+
+.tileset-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 2px;
+    background: #252526;
+    border: 1px solid #3c3c3c;
+    border-radius: 3px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.tileset-dropdown-item {
+    display: block;
+    width: 100%;
+    height: 28px;
+    padding: 0 10px;
+    background: transparent;
+    border: none;
+    color: #c0c0c0;
+    font-size: 11px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    line-height: 28px;
+}
+
+.tileset-dropdown-item:hover {
+    background: #3c3c3c;
+}
+
+.tileset-dropdown-item.selected {
+    background: #094771;
+    color: #fff;
+}
+
+.tileset-dropdown-item.add-new {
+    color: #4fc3f7;
+}
+
+.tileset-dropdown-divider {
+    height: 1px;
+    background: #3c3c3c;
+    margin: 4px 0;
+}
+
+/* ==================== Header with Zoom and Title ==================== */
+.tileset-header {
+    display: flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 8px;
+    background: #2a2a2a;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.tileset-zoom-label {
+    font-size: 10px;
+    color: #666;
+    margin-right: 8px;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.tileset-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: #a0a0a0;
+}
+
+/* ==================== Preview Area ==================== */
+.tileset-preview-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    overflow: auto;
+    background: #1a1a1a;
+}
+
+.tileset-empty-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.tileset-select-btn {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px dashed #444;
+    border-radius: 3px;
+    color: #4fc3f7;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tileset-select-btn:hover {
+    background: rgba(79, 195, 247, 0.1);
+    border-color: #4fc3f7;
+}
+
+/* ==================== Selection Info ==================== */
+.tileset-selection-info {
+    height: 24px;
+    padding: 0 8px;
+    font-size: 10px;
+    color: #888;
+    line-height: 24px;
+    text-align: center;
+    border-top: 1px solid #1a1a1a;
+    background: #2d2d30;
+}
+
+/* ==================== Scrollbar ==================== */
+.tileset-preview-area::-webkit-scrollbar,
+.tileset-dropdown-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tileset-preview-area::-webkit-scrollbar-track,
+.tileset-dropdown-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tileset-preview-area::-webkit-scrollbar-thumb,
+.tileset-dropdown-menu::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.tileset-preview-area::-webkit-scrollbar-thumb:hover,
+.tileset-dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}

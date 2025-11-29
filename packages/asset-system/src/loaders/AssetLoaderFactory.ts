@@ -73,6 +73,57 @@ export class AssetLoaderFactory implements IAssetLoaderFactory {
     }
 
     /**
+     * Get asset type by file extension
+     * 根据文件扩展名获取资产类型
+     *
+     * @param extension - File extension including dot (e.g., '.btree', '.png')
+     * @returns Asset type if a loader supports this extension, null otherwise
+     */
+    getAssetTypeByExtension(extension: string): AssetType | null {
+        const ext = extension.toLowerCase();
+        for (const [type, loader] of this._loaders) {
+            if (loader.supportedExtensions.some(e => e.toLowerCase() === ext)) {
+                return type;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get asset type by file path
+     * 根据文件路径获取资产类型
+     *
+     * Checks for compound extensions (like .tilemap.json) first, then simple extensions
+     *
+     * @param path - File path
+     * @returns Asset type if a loader supports this file, null otherwise
+     */
+    getAssetTypeByPath(path: string): AssetType | null {
+        const lowerPath = path.toLowerCase();
+
+        // First check compound extensions (e.g., .tilemap.json)
+        for (const [type, loader] of this._loaders) {
+            for (const ext of loader.supportedExtensions) {
+                if (ext.includes('.') && ext.split('.').length > 2) {
+                    // This is a compound extension like .tilemap.json
+                    if (lowerPath.endsWith(ext.toLowerCase())) {
+                        return type;
+                    }
+                }
+            }
+        }
+
+        // Then check simple extensions
+        const lastDot = path.lastIndexOf('.');
+        if (lastDot !== -1) {
+            const ext = path.substring(lastDot).toLowerCase();
+            return this.getAssetTypeByExtension(ext);
+        }
+
+        return null;
+    }
+
+    /**
      * Get all registered loaders
      * 获取所有注册的加载器
      */

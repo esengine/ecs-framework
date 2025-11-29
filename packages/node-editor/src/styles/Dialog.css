@@ -1,0 +1,191 @@
+/**
+ * Dialog Styles
+ * 对话框样式
+ */
+
+/* ==================== Overlay 遮罩层 ==================== */
+.ne-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: var(--ne-z-dialog);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: ne-dialog-fade-in 0.15s ease;
+}
+
+@keyframes ne-dialog-fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* ==================== Dialog Container 对话框容器 ==================== */
+.ne-dialog {
+    min-width: 320px;
+    max-width: 450px;
+    background: #1e1e1e;
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    font-family: var(--ne-font-family);
+    animation: ne-dialog-slide-in 0.15s ease;
+    overflow: hidden;
+}
+
+@keyframes ne-dialog-slide-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* ==================== Dialog Header 对话框头部 ==================== */
+.ne-dialog-header {
+    padding: 12px 16px;
+    background: #252525;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+.ne-dialog-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #e0e0e0;
+}
+
+/* Type-specific header colors */
+.ne-dialog-danger .ne-dialog-header {
+    background: linear-gradient(90deg, #4a1a1a 0%, #252525 100%);
+}
+
+.ne-dialog-warning .ne-dialog-header {
+    background: linear-gradient(90deg, #4a3a1a 0%, #252525 100%);
+}
+
+.ne-dialog-info .ne-dialog-header {
+    background: linear-gradient(90deg, #1a3a4a 0%, #252525 100%);
+}
+
+/* ==================== Dialog Body 对话框主体 ==================== */
+.ne-dialog-body {
+    padding: 16px;
+}
+
+.ne-dialog-message {
+    margin: 0;
+    font-size: 13px;
+    color: #b0b0b0;
+    line-height: 1.5;
+}
+
+/* ==================== Dialog Footer 对话框底部 ==================== */
+.ne-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #1a1a1a;
+    border-top: 1px solid #303030;
+}
+
+/* ==================== Dialog Buttons 对话框按钮 ==================== */
+.ne-dialog-btn {
+    padding: 6px 16px;
+    font-size: 12px;
+    font-family: var(--ne-font-family);
+    font-weight: 500;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ne-dialog-btn:focus {
+    outline: none;
+}
+
+.ne-dialog-btn-cancel {
+    background: #2a2a2a;
+    border-color: #404040;
+    color: #b0b0b0;
+}
+
+.ne-dialog-btn-cancel:hover {
+    background: #353535;
+    border-color: #505050;
+    color: #d0d0d0;
+}
+
+.ne-dialog-btn-cancel:active {
+    background: #252525;
+}
+
+.ne-dialog-btn-confirm {
+    color: #fff;
+}
+
+.ne-dialog-btn-danger {
+    background: #8b2a2a;
+    border-color: #a03030;
+}
+
+.ne-dialog-btn-danger:hover {
+    background: #9b3535;
+    border-color: #b04040;
+}
+
+.ne-dialog-btn-danger:active {
+    background: #7b2525;
+}
+
+.ne-dialog-btn-danger:focus {
+    box-shadow: 0 0 0 2px rgba(160, 48, 48, 0.4);
+}
+
+.ne-dialog-btn-warning {
+    background: #8b6a2a;
+    border-color: #a08030;
+}
+
+.ne-dialog-btn-warning:hover {
+    background: #9b7535;
+    border-color: #b09040;
+}
+
+.ne-dialog-btn-warning:active {
+    background: #7b5a25;
+}
+
+.ne-dialog-btn-warning:focus {
+    box-shadow: 0 0 0 2px rgba(160, 128, 48, 0.4);
+}
+
+.ne-dialog-btn-info {
+    background: #2a5a8b;
+    border-color: #3070a0;
+}
+
+.ne-dialog-btn-info:hover {
+    background: #356a9b;
+    border-color: #4080b0;
+}
+
+.ne-dialog-btn-info:active {
+    background: #254a7b;
+}
+
+.ne-dialog-btn-info:focus {
+    box-shadow: 0 0 0 2px rgba(48, 112, 160, 0.4);
+}

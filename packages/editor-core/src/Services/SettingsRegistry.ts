@@ -1,6 +1,6 @@
 import { Injectable, IService } from '@esengine/ecs-framework';
 
-export type SettingType = 'string' | 'number' | 'boolean' | 'select' | 'color' | 'range' | 'pluginList';
+export type SettingType = 'string' | 'number' | 'boolean' | 'select' | 'color' | 'range' | 'pluginList' | 'collisionMatrix';
 
 export interface SettingOption {
   label: string;
@@ -24,6 +24,8 @@ export interface SettingDescriptor {
   min?: number;
   max?: number;
   step?: number;
+  /** 自定义渲染器组件（用于 collisionMatrix 等复杂类型） */
+  customRenderer?: React.ComponentType<any>;
 }
 
 export interface SettingSection {

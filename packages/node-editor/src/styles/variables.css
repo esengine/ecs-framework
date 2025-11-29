@@ -1,0 +1,136 @@
+/**
+ * Node Editor Theme Variables
+ * 节点编辑器主题变量
+ */
+
+:root {
+    /* ==================== Background Colors 背景颜色 ==================== */
+    --ne-canvas-bg: #141419;
+    --ne-canvas-grid: #1a1a22;
+    --ne-canvas-grid-major: #222230;
+
+    --ne-node-bg: rgba(12, 12, 16, 0.75);
+    --ne-node-bg-body: rgba(8, 8, 12, 0.85);
+    --ne-node-border: rgba(40, 40, 50, 0.6);
+    --ne-node-border-selected: #e5a020;
+
+    /* ==================== Node Category Colors 节点类别颜色 ==================== */
+    /* Event - Red gradient (like UE BeginOverlap) */
+    --ne-category-event: #b81c1c;
+    --ne-category-event-dark: #6b1010;
+
+    /* Function - Blue gradient */
+    --ne-category-function: #1b6eb5;
+    --ne-category-function-dark: #0d3d66;
+
+    /* Pure - Green/Teal gradient */
+    --ne-category-pure: #3d8b3d;
+    --ne-category-pure-dark: #1f5a1f;
+
+    /* Flow - Gray gradient */
+    --ne-category-flow: #4a4a4a;
+    --ne-category-flow-dark: #2a2a2a;
+
+    /* Variable - Purple gradient */
+    --ne-category-variable: #7b3d9b;
+    --ne-category-variable-dark: #4a1f66;
+
+    /* Literal - Gold/Orange gradient */
+    --ne-category-literal: #9a7020;
+    --ne-category-literal-dark: #5a4010;
+
+    /* Comment - Green gradient */
+    --ne-category-comment: #3d6b3d;
+    --ne-category-comment-dark: #2a4a2a;
+
+    /* Custom - Dark Gray gradient */
+    --ne-category-custom: #3a3a3a;
+    --ne-category-custom-dark: #1a1a1a;
+
+    /* ==================== Pin Type Colors 引脚类型颜色 ==================== */
+    --ne-pin-exec: #ffffff;
+    --ne-pin-bool: #8c0000;
+    --ne-pin-int: #1cc4c4;
+    --ne-pin-float: #7ecd32;
+    --ne-pin-string: #e060e0;
+    --ne-pin-vector2: #f0c030;
+    --ne-pin-vector3: #f0c030;
+    --ne-pin-vector4: #f0c030;
+    --ne-pin-color: #e08030;
+    --ne-pin-object: #00a0e0;
+    --ne-pin-array: #7030c0;
+    --ne-pin-map: #e060a0;
+    --ne-pin-struct: #3060c0;
+    --ne-pin-enum: #10a090;
+    --ne-pin-delegate: #c01030;
+    --ne-pin-any: #707070;
+
+    /* ==================== Connection Colors 连接线颜色 ==================== */
+    --ne-connection-exec: #ffffff;
+    --ne-connection-data: #888888;
+    --ne-connection-hover: #00aaff;
+    --ne-connection-selected: #ffcc00;
+    --ne-connection-invalid: #ff4444;
+    --ne-connection-preview: rgba(255, 255, 255, 0.5);
+
+    /* ==================== Text Colors 文字颜色 ==================== */
+    --ne-text-primary: #c0c0c0;
+    --ne-text-secondary: #909090;
+    --ne-text-muted: #606060;
+    --ne-text-title: #ffffff;
+    --ne-text-subtitle: #cccccc;
+
+    /* ==================== State Colors 状态颜色 ==================== */
+    --ne-state-success: #4caf50;
+    --ne-state-warning: #ff9800;
+    --ne-state-error: #f44336;
+    --ne-state-info: #2196f3;
+    --ne-state-running: #ffa726;
+
+    /* ==================== Shadow 阴影 ==================== */
+    --ne-shadow-node: 0 4px 12px rgba(0, 0, 0, 0.5),
+                      0 0 0 1px rgba(0, 0, 0, 0.8),
+                      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --ne-shadow-node-hover: 0 6px 16px rgba(0, 0, 0, 0.6);
+    --ne-shadow-node-selected: 0 0 0 2px var(--ne-node-border-selected),
+                               0 0 20px rgba(245, 166, 35, 0.3);
+    --ne-shadow-pin: 0 0 4px rgba(0, 0, 0, 0.5);
+    --ne-shadow-pin-hover: 0 0 8px currentColor;
+
+    /* ==================== Sizing 尺寸 ==================== */
+    --ne-node-min-width: 200px;
+    --ne-node-max-width: 350px;
+    --ne-node-border-radius: 6px;
+    --ne-node-header-height: 28px;
+    --ne-node-padding: 8px 0;
+
+    --ne-pin-size: 10px;
+    --ne-pin-size-exec: 12px;
+    --ne-pin-spacing: 22px;
+    --ne-pin-hit-area: 24px;
+
+    --ne-connection-width: 2px;
+    --ne-connection-width-hover: 3px;
+    --ne-connection-width-exec: 3px;
+
+    /* ==================== Typography 字体 ==================== */
+    --ne-font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    --ne-font-family-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
+    --ne-font-size-title: 12px;
+    --ne-font-size-body: 11px;
+    --ne-font-size-small: 10px;
+
+    /* ==================== Animation 动画 ==================== */
+    --ne-transition-fast: 0.1s ease;
+    --ne-transition-normal: 0.15s ease;
+    --ne-transition-slow: 0.3s ease;
+
+    /* ==================== Z-Index 层级 ==================== */
+    --ne-z-grid: 0;
+    --ne-z-connections: 1;
+    --ne-z-nodes: 2;
+    --ne-z-dragging: 100;
+    --ne-z-menu: 1000;
+    --ne-z-tooltip: 1001;
+    --ne-z-dialog: 2000;
+}

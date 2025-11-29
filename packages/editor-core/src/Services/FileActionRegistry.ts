@@ -5,6 +5,21 @@ import type { FileActionHandler, FileCreationTemplate } from '../Plugin/IPluginL
 export type { FileCreationTemplate } from '../Plugin/IPluginLoader';
 
 /**
+ * 资产创建消息映射
+ * Asset creation message mapping
+ *
+ * 定义扩展名到创建消息的映射，用于 PropertyInspector 中的资产字段创建按钮
+ */
+export interface AssetCreationMapping {
+    /** 文件扩展名（包含点号，如 '.tilemap'）| File extension (with dot) */
+    extension: string;
+    /** 创建资产时发送的消息名 | Message name to publish when creating asset */
+    createMessage: string;
+    /** 是否支持创建（可选，默认 true）| Whether creation is supported */
+    canCreate?: boolean;
+}
+
+/**
  * 文件操作注册表服务
  *
  * 管理插件注册的文件操作处理器和文件创建模板
@@ -12,6 +27,7 @@ export type { FileCreationTemplate } from '../Plugin/IPluginLoader';
 export class FileActionRegistry implements IService {
     private actionHandlers: Map<string, FileActionHandler[]> = new Map();
     private creationTemplates: FileCreationTemplate[] = [];
+    private assetCreationMappings: Map<string, AssetCreationMapping> = new Map();
 
     /**
      * 注册文件操作处理器
@@ -111,11 +127,65 @@ export class FileActionRegistry implements IService {
     }
 
     /**
+     * 注册资产创建消息映射
+     * Register asset creation message mapping
+     */
+    registerAssetCreationMapping(mapping: AssetCreationMapping): void {
+        const normalizedExt = mapping.extension.startsWith('.')
+            ? mapping.extension.toLowerCase()
+            : `.${mapping.extension.toLowerCase()}`;
+        this.assetCreationMappings.set(normalizedExt, {
+            ...mapping,
+            extension: normalizedExt
+        });
+    }
+
+    /**
+     * 注销资产创建消息映射
+     * Unregister asset creation message mapping
+     */
+    unregisterAssetCreationMapping(extension: string): void {
+        const normalizedExt = extension.startsWith('.')
+            ? extension.toLowerCase()
+            : `.${extension.toLowerCase()}`;
+        this.assetCreationMappings.delete(normalizedExt);
+    }
+
+    /**
+     * 获取扩展名对应的资产创建消息映射
+     * Get asset creation mapping for extension
+     */
+    getAssetCreationMapping(extension: string): AssetCreationMapping | undefined {
+        const normalizedExt = extension.startsWith('.')
+            ? extension.toLowerCase()
+            : `.${extension.toLowerCase()}`;
+        return this.assetCreationMappings.get(normalizedExt);
+    }
+
+    /**
+     * 检查扩展名是否支持创建资产
+     * Check if extension supports asset creation
+     */
+    canCreateAsset(extension: string): boolean {
+        const mapping = this.getAssetCreationMapping(extension);
+        return mapping?.canCreate !== false;
+    }
+
+    /**
+     * 获取所有资产创建映射
+     * Get all asset creation mappings
+     */
+    getAllAssetCreationMappings(): AssetCreationMapping[] {
+        return Array.from(this.assetCreationMappings.values());
+    }
+
+    /**
      * 清空所有注册
      */
     clear(): void {
         this.actionHandlers.clear();
         this.creationTemplates = [];
+        this.assetCreationMappings.clear();
     }
 
     /**

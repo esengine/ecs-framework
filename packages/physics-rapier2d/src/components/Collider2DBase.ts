@@ -54,7 +54,7 @@ export abstract class Collider2DBase extends Component {
      * 使用位掩码，可以属于多个层
      */
     @Serialize()
-    @Property({ type: 'integer', label: 'Collision Layer', min: 0 })
+    @Property({ type: 'collisionLayer', label: 'Collision Layer' })
     public collisionLayer: number = CollisionLayer2D.Default;
 
     /**
@@ -62,7 +62,7 @@ export abstract class Collider2DBase extends Component {
      * 使用位掩码
      */
     @Serialize()
-    @Property({ type: 'integer', label: 'Collision Mask', min: 0 })
+    @Property({ type: 'collisionMask', label: 'Collision Mask' })
     public collisionMask: number = CollisionLayer2D.All;
 
     // ==================== 偏移 ====================

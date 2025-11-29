@@ -3,32 +3,28 @@ import { Entity, Core } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub, SceneManagerService, CommandManager, EntityCreationRegistry, EntityCreationTemplate } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
 import * as LucideIcons from 'lucide-react';
-import { Box, Layers, Wifi, Search, Plus, Trash2, Monitor, Globe, ChevronRight } from 'lucide-react';
+import {
+    Box, Wifi, Search, Plus, Trash2, Monitor, Globe, ChevronRight, ChevronDown,
+    Eye, Star, Lock, Settings, Filter, Folder, Sun, Cloud, Mountain, Flag,
+    SquareStack
+} from 'lucide-react';
 import { ProfilerService, RemoteEntity } from '../services/ProfilerService';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { CreateEntityCommand, DeleteEntityCommand } from '../application/commands/entity';
 import '../styles/SceneHierarchy.css';
 
-/**
- * 根据图标名称获取 Lucide 图标组件
- */
-function getIconComponent(iconName: string | undefined, size: number = 12): React.ReactNode {
-    if (!iconName) return <Plus size={size} />;
+function getIconComponent(iconName: string | undefined, size: number = 14): React.ReactNode {
+    if (!iconName) return <Box size={size} />;
 
-    // 获取图标组件
     const icons = LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number }>>;
     const IconComponent = icons[iconName];
     if (IconComponent) {
         return <IconComponent size={size} />;
     }
 
-    // 回退到 Plus 图标
-    return <Plus size={size} />;
+    return <Box size={size} />;
 }
 
-/**
- * 类别图标映射
- */
 const categoryIconMap: Record<string, string> = {
     'rendering': 'Image',
     'ui': 'LayoutGrid',
@@ -38,13 +34,35 @@ const categoryIconMap: Record<string, string> = {
     'other': 'MoreHorizontal',
 };
 
+// 实体类型到图标的映射
+const entityTypeIcons: Record<string, React.ReactNode> = {
+    'World': <Mountain size={14} className="entity-type-icon world" />,
+    'Folder': <Folder size={14} className="entity-type-icon folder" />,
+    'DirectionalLight': <Sun size={14} className="entity-type-icon light" />,
+    'SkyLight': <Sun size={14} className="entity-type-icon light" />,
+    'SkyAtmosphere': <Cloud size={14} className="entity-type-icon atmosphere" />,
+    'VolumetricCloud': <Cloud size={14} className="entity-type-icon cloud" />,
+    'StaticMeshActor': <SquareStack size={14} className="entity-type-icon mesh" />,
+    'PlayerStart': <Flag size={14} className="entity-type-icon player" />,
+    'ExponentialHeightFog': <Cloud size={14} className="entity-type-icon fog" />,
+};
+
 type ViewMode = 'local' | 'remote';
+type SortColumn = 'name' | 'type';
+type SortDirection = 'asc' | 'desc';
 
 interface SceneHierarchyProps {
-  entityStore: EntityStoreService;
-  messageHub: MessageHub;
-  commandManager: CommandManager;
-  isProfilerMode?: boolean;
+    entityStore: EntityStoreService;
+    messageHub: MessageHub;
+    commandManager: CommandManager;
+    isProfilerMode?: boolean;
+}
+
+interface EntityNode {
+    entity: Entity;
+    children: EntityNode[];
+    isExpanded: boolean;
+    depth: number;
 }
 
 export function SceneHierarchy({ entityStore, messageHub, commandManager, isProfilerMode = false }: SceneHierarchyProps) {
@@ -52,7 +70,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
     const [remoteEntities, setRemoteEntities] = useState<RemoteEntity[]>([]);
     const [isRemoteConnected, setIsRemoteConnected] = useState(false);
     const [viewMode, setViewMode] = useState<ViewMode>(isProfilerMode ? 'remote' : 'local');
-    const [selectedId, setSelectedId] = useState<number | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [searchQuery, setSearchQuery] = useState('');
     const [sceneName, setSceneName] = useState<string>('Untitled');
     const [remoteSceneName, setRemoteSceneName] = useState<string | null>(null);
@@ -62,9 +80,14 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
     const [draggedEntityId, setDraggedEntityId] = useState<number | null>(null);
     const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
     const [pluginTemplates, setPluginTemplates] = useState<EntityCreationTemplate[]>([]);
+    const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set());
+    const [sortColumn, setSortColumn] = useState<SortColumn>('name');
+    const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+    const [showFilterMenu, setShowFilterMenu] = useState(false);
     const { t, locale } = useLocale();
 
     const isShowingRemote = viewMode === 'remote' && isRemoteConnected;
+    const selectedId = selectedIds.size > 0 ? Array.from(selectedIds)[0] : null;
 
     // Get entity creation templates from plugins
     useEffect(() => {
@@ -77,7 +100,6 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
 
         updateTemplates();
 
-        // Update when plugins are installed
         const unsubInstalled = messageHub.subscribe('plugin:installed', updateTemplates);
         const unsubUninstalled = messageHub.subscribe('plugin:uninstalled', updateTemplates);
 
@@ -134,7 +156,11 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         };
 
         const handleSelection = (data: { entity: Entity | null }) => {
-            setSelectedId(data.entity?.id ?? null);
+            if (data.entity) {
+                setSelectedIds(new Set([data.entity.id]));
+            } else {
+                setSelectedIds(new Set());
+            }
         };
 
         updateEntities();
@@ -174,25 +200,22 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
             setIsRemoteConnected(connected);
 
             if (connected && data.entities && data.entities.length > 0) {
-                // 只在实体列表发生实质性变化时才更新
                 setRemoteEntities((prev) => {
                     if (prev.length !== data.entities!.length) {
                         return data.entities!;
                     }
 
-                    // 检查实体ID和名称是否变化
                     const hasChanged = data.entities!.some((entity, index) => {
                         const prevEntity = prev[index];
                         return !prevEntity ||
-                   prevEntity.id !== entity.id ||
-                   prevEntity.name !== entity.name ||
-                   prevEntity.componentCount !== entity.componentCount;
+                            prevEntity.id !== entity.id ||
+                            prevEntity.name !== entity.name ||
+                            prevEntity.componentCount !== entity.componentCount;
                     });
 
                     return hasChanged ? data.entities! : prev;
                 });
 
-                // 请求第一个实体的详情以获取场景名称
                 if (!remoteSceneName && data.entities.length > 0 && data.entities[0]) {
                     profilerService.requestEntityDetails(data.entities[0].id);
                 }
@@ -218,8 +241,21 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         return () => window.removeEventListener('profiler:entity-details', handleEntityDetails);
     }, []);
 
-    const handleEntityClick = (entity: Entity) => {
-        entityStore.selectEntity(entity);
+    const handleEntityClick = (entity: Entity, e: React.MouseEvent) => {
+        if (e.ctrlKey || e.metaKey) {
+            setSelectedIds(prev => {
+                const next = new Set(prev);
+                if (next.has(entity.id)) {
+                    next.delete(entity.id);
+                } else {
+                    next.add(entity.id);
+                }
+                return next;
+            });
+        } else {
+            setSelectedIds(new Set([entity.id]));
+            entityStore.selectEntity(entity);
+        }
     };
 
     const handleDragStart = (e: React.DragEvent, entityId: number) => {
@@ -253,15 +289,13 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
     };
 
     const handleRemoteEntityClick = (entity: RemoteEntity) => {
-        setSelectedId(entity.id);
+        setSelectedIds(new Set([entity.id]));
 
-        // 请求完整的实体详情（包含组件属性）
         const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
         if (profilerService) {
             profilerService.requestEntityDetails(entity.id);
         }
 
-        // 先发布基本信息，详细信息稍后通过 ProfilerService 异步返回
         messageHub.publish('remote-entity:selected', {
             entity: {
                 id: entity.id,
@@ -271,12 +305,6 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                 componentTypes: entity.componentTypes
             }
         });
-    };
-
-    const handleSceneNameClick = () => {
-        if (sceneFilePath) {
-            messageHub.publish('asset:reveal', { path: sceneFilePath });
-        }
     };
 
     const handleCreateEntity = () => {
@@ -326,7 +354,6 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         setContextMenu(null);
     };
 
-    // Close context menu on click outside
     useEffect(() => {
         const handleClick = () => closeContextMenu();
         if (contextMenu) {
@@ -335,7 +362,6 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         }
     }, [contextMenu]);
 
-    // Listen for Delete key
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Delete' && selectedId && !isShowingRemote) {
@@ -347,6 +373,42 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [selectedId, isShowingRemote]);
 
+    const toggleFolderExpand = (entityId: number) => {
+        setExpandedFolders(prev => {
+            const next = new Set(prev);
+            if (next.has(entityId)) {
+                next.delete(entityId);
+            } else {
+                next.add(entityId);
+            }
+            return next;
+        });
+    };
+
+    const handleSortClick = (column: SortColumn) => {
+        if (sortColumn === column) {
+            setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortColumn(column);
+            setSortDirection('asc');
+        }
+    };
+
+    // Get entity type for display
+    const getEntityType = (entity: Entity): string => {
+        const components = entity.components || [];
+        if (components.length > 0) {
+            const firstComponent = components[0];
+            return firstComponent?.constructor?.name || 'Entity';
+        }
+        return 'Entity';
+    };
+
+    // Get icon for entity type
+    const getEntityIcon = (entityType: string): React.ReactNode => {
+        return entityTypeIcons[entityType] || <Box size={14} className="entity-type-icon default" />;
+    };
+
     // Filter entities based on search query
     const filterRemoteEntities = (entityList: RemoteEntity[]): RemoteEntity[] => {
         if (!searchQuery.trim()) return entityList;
@@ -356,12 +418,10 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
             const name = entity.name;
             const id = entity.id.toString();
 
-            // Search by name or ID
             if (name.toLowerCase().includes(query) || id.includes(query)) {
                 return true;
             }
 
-            // Search by component types
             if (Array.isArray(entity.componentTypes)) {
                 return entity.componentTypes.some((type) =>
                     type.toLowerCase().includes(query)
@@ -377,41 +437,64 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
 
         const query = searchQuery.toLowerCase();
         return entityList.filter((entity) => {
+            const name = entity.name || '';
             const id = entity.id.toString();
-            return id.includes(query);
+            return name.toLowerCase().includes(query) || id.includes(query);
         });
     };
 
-    // Determine which entities to display
     const displayEntities = isShowingRemote
         ? filterRemoteEntities(remoteEntities)
         : filterLocalEntities(entities);
     const showRemoteIndicator = isShowingRemote && remoteEntities.length > 0;
     const displaySceneName = isShowingRemote && remoteSceneName ? remoteSceneName : sceneName;
 
+    const totalCount = displayEntities.length;
+    const selectedCount = selectedIds.size;
+
     return (
-        <div className="scene-hierarchy">
-            <div className="hierarchy-header">
-                <Layers size={16} className="hierarchy-header-icon" />
-                <h3>{t('hierarchy.title')}</h3>
-                <div
-                    className={[
-                        'scene-name-container',
-                        !isRemoteConnected && sceneFilePath && 'clickable',
-                        isSceneModified && 'modified'
-                    ].filter(Boolean).join(' ')}
-                    onClick={!isRemoteConnected ? handleSceneNameClick : undefined}
-                    title={!isRemoteConnected && sceneFilePath
-                        ? `${displaySceneName}${isSceneModified ? (locale === 'zh' ? ' (未保存 - Ctrl+S 保存)' : ' (Unsaved - Ctrl+S to save)') : ''} - ${locale === 'zh' ? '点击跳转到文件' : 'Click to reveal file'}`
-                        : displaySceneName}
-                >
-                    <span className="scene-name">
-                        {displaySceneName}
-                    </span>
-                    {!isRemoteConnected && isSceneModified && (
-                        <span className="modified-indicator">●</span>
-                    )}
+        <div className="scene-hierarchy outliner">
+            {/* Toolbar */}
+            <div className="outliner-toolbar">
+                <div className="outliner-toolbar-left">
+                    <button
+                        className="outliner-filter-btn"
+                        onClick={() => setShowFilterMenu(!showFilterMenu)}
+                    >
+                        <Filter size={14} />
+                        <ChevronDown size={10} />
+                    </button>
                 </div>
+
+                <div className="outliner-search">
+                    <Search size={14} />
+                    <input
+                        type="text"
+                        placeholder={locale === 'zh' ? '搜索...' : 'Search...'}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <ChevronDown size={12} className="search-dropdown" />
+                </div>
+
+                <div className="outliner-toolbar-right">
+                    {!isShowingRemote && (
+                        <button
+                            className="outliner-action-btn"
+                            onClick={handleCreateEntity}
+                            title={locale === 'zh' ? '添加' : 'Add'}
+                        >
+                            <Plus size={14} />
+                        </button>
+                    )}
+                    <button
+                        className="outliner-action-btn"
+                        title={locale === 'zh' ? '设置' : 'Settings'}
+                    >
+                        <Settings size={14} />
+                    </button>
+                </div>
+
                 {isRemoteConnected && !isProfilerMode && (
                     <div className="view-mode-toggle">
                         <button
@@ -430,97 +513,139 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                         </button>
                     </div>
                 )}
+
                 {showRemoteIndicator && (
                     <div className="remote-indicator" title="Showing remote entities">
                         <Wifi size={12} />
                     </div>
                 )}
             </div>
-            <div className="hierarchy-search">
-                <Search size={14} />
-                <input
-                    type="text"
-                    placeholder={t('hierarchy.search') || 'Search entities...'}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-            </div>
-            {!isShowingRemote && (
-                <div className="hierarchy-toolbar">
-                    <button
-                        className="toolbar-btn icon-only"
-                        onClick={handleCreateEntity}
-                        title={locale === 'zh' ? '创建实体' : 'Create Entity'}
-                    >
-                        <Plus size={14} />
-                    </button>
-                    <button
-                        className="toolbar-btn icon-only"
-                        onClick={handleDeleteEntity}
-                        disabled={!selectedId}
-                        title={locale === 'zh' ? '删除实体' : 'Delete Entity'}
-                    >
-                        <Trash2 size={14} />
-                    </button>
+
+            {/* Column Headers */}
+            <div className="outliner-header">
+                <div className="outliner-header-icons">
+                    <span title={locale === 'zh' ? '可见性' : 'Visibility'}><Eye size={12} className="header-icon" /></span>
+                    <span title={locale === 'zh' ? '收藏' : 'Favorite'}><Star size={12} className="header-icon" /></span>
+                    <span title={locale === 'zh' ? '锁定' : 'Lock'}><Lock size={12} className="header-icon" /></span>
                 </div>
-            )}
-            <div className="hierarchy-content scrollable" onContextMenu={(e) => !isShowingRemote && handleContextMenu(e, null)}>
+                <div
+                    className={`outliner-header-label ${sortColumn === 'name' ? 'sorted' : ''}`}
+                    onClick={() => handleSortClick('name')}
+                >
+                    <span>Item Label</span>
+                    {sortColumn === 'name' && (
+                        <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                    )}
+                </div>
+                <div
+                    className={`outliner-header-type ${sortColumn === 'type' ? 'sorted' : ''}`}
+                    onClick={() => handleSortClick('type')}
+                >
+                    <span>Type</span>
+                    {sortColumn === 'type' && (
+                        <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                    )}
+                </div>
+            </div>
+
+            {/* Entity List */}
+            <div className="outliner-content" onContextMenu={(e) => !isShowingRemote && handleContextMenu(e, null)}>
                 {displayEntities.length === 0 ? (
                     <div className="empty-state">
-                        <Box size={48} strokeWidth={1.5} className="empty-icon" />
-                        <div className="empty-title">{t('hierarchy.empty')}</div>
+                        <Box size={32} strokeWidth={1.5} className="empty-icon" />
                         <div className="empty-hint">
                             {isShowingRemote
-                                ? 'No entities in remote game'
-                                : 'Create an entity to get started'}
+                                ? (locale === 'zh' ? '远程游戏中没有实体' : 'No entities in remote game')
+                                : (locale === 'zh' ? '创建实体开始使用' : 'Create an entity to get started')}
                         </div>
                     </div>
                 ) : isShowingRemote ? (
-                    <ul className="entity-list">
+                    <div className="outliner-list">
                         {(displayEntities as RemoteEntity[]).map((entity) => (
-                            <li
+                            <div
                                 key={entity.id}
-                                className={`entity-item remote-entity ${selectedId === entity.id ? 'selected' : ''} ${!entity.enabled ? 'disabled' : ''}`}
-                                title={`${entity.name} - ${entity.componentTypes.join(', ')}`}
+                                className={`outliner-item ${selectedIds.has(entity.id) ? 'selected' : ''} ${!entity.enabled ? 'disabled' : ''}`}
                                 onClick={() => handleRemoteEntityClick(entity)}
                             >
-                                <Box size={14} className="entity-icon" />
-                                <span className="entity-name">{entity.name}</span>
-                                {entity.tag !== 0 && (
-                                    <span className="entity-tag" title={`Tag: ${entity.tag}`}>
-                    #{entity.tag}
-                                    </span>
-                                )}
-                                {entity.componentCount > 0 && (
-                                    <span className="component-count">{entity.componentCount}</span>
-                                )}
-                            </li>
+                                <div className="outliner-item-icons">
+                                    <Eye size={12} className="item-icon visibility" />
+                                </div>
+                                <div className="outliner-item-content">
+                                    <span className="outliner-item-expand" />
+                                    {getEntityIcon(entity.componentTypes?.[0] || 'Entity')}
+                                    <span className="outliner-item-name">{entity.name}</span>
+                                </div>
+                                <div className="outliner-item-type">
+                                    {entity.componentTypes?.[0] || 'Entity'}
+                                </div>
+                            </div>
                         ))}
-                    </ul>
+                    </div>
                 ) : (
-                    <ul className="entity-list">
-                        {entities.map((entity, index) => (
-                            <li
-                                key={entity.id}
-                                className={`entity-item ${selectedId === entity.id ? 'selected' : ''} ${draggedEntityId === entity.id ? 'dragging' : ''} ${dropTargetIndex === index ? 'drop-target' : ''}`}
-                                draggable
-                                onClick={() => handleEntityClick(entity)}
-                                onDragStart={(e) => handleDragStart(e, entity.id)}
-                                onDragOver={(e) => handleDragOver(e, index)}
-                                onDragLeave={handleDragLeave}
-                                onDrop={(e) => handleDrop(e, index)}
-                                onDragEnd={handleDragEnd}
-                                onContextMenu={(e) => {
-                                    e.stopPropagation();
-                                    handleEntityClick(entity);
-                                    handleContextMenu(e, entity.id);
-                                }}
-                            >
-                                <Box size={14} className="entity-icon" />
-                                <span className="entity-name">{entity.name || `Entity ${entity.id}`}</span>
-                            </li>
-                        ))}
-                    </ul>
+                    <div className="outliner-list">
+                        {/* World/Scene Root */}
+                        <div
+                            className={`outliner-item world-item ${expandedFolders.has(-1) ? 'expanded' : ''}`}
+                            onClick={() => toggleFolderExpand(-1)}
+                        >
+                            <div className="outliner-item-icons">
+                                <Eye size={12} className="item-icon visibility" />
+                            </div>
+                            <div className="outliner-item-content">
+                                <span
+                                    className="outliner-item-expand"
+                                    onClick={(e) => { e.stopPropagation(); toggleFolderExpand(-1); }}
+                                >
+                                    {expandedFolders.has(-1) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                </span>
+                                <Mountain size={14} className="entity-type-icon world" />
+                                <span className="outliner-item-name">{displaySceneName} (Editor)</span>
+                            </div>
+                            <div className="outliner-item-type">World</div>
+                        </div>
+
+                        {/* Entity Items */}
+                        {expandedFolders.has(-1) && entities.map((entity, index) => {
+                            const entityType = getEntityType(entity);
+                            return (
+                                <div
+                                    key={entity.id}
+                                    className={`outliner-item ${selectedIds.has(entity.id) ? 'selected' : ''} ${draggedEntityId === entity.id ? 'dragging' : ''} ${dropTargetIndex === index ? 'drop-target' : ''}`}
+                                    style={{ paddingLeft: '32px' }}
+                                    draggable
+                                    onClick={(e) => handleEntityClick(entity, e)}
+                                    onDragStart={(e) => handleDragStart(e, entity.id)}
+                                    onDragOver={(e) => handleDragOver(e, index)}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={(e) => handleDrop(e, index)}
+                                    onDragEnd={handleDragEnd}
+                                    onContextMenu={(e) => {
+                                        e.stopPropagation();
+                                        handleEntityClick(entity, e);
+                                        handleContextMenu(e, entity.id);
+                                    }}
+                                >
+                                    <div className="outliner-item-icons">
+                                        <Eye size={12} className="item-icon visibility" />
+                                    </div>
+                                    <div className="outliner-item-content">
+                                        <span className="outliner-item-expand" />
+                                        {getEntityIcon(entityType)}
+                                        <span className="outliner-item-name">{entity.name || `Entity ${entity.id}`}</span>
+                                    </div>
+                                    <div className="outliner-item-type">{entityType}</div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* Status Bar */}
+            <div className="outliner-status">
+                <span>{totalCount} {locale === 'zh' ? '个对象' : 'actors'}</span>
+                {selectedCount > 0 && (
+                    <span> ({selectedCount} {locale === 'zh' ? '个已选中' : 'selected'})</span>
                 )}
             </div>
 
@@ -578,7 +703,6 @@ function ContextMenuWithSubmenu({
         return labels ? (locale === 'zh' ? labels.zh : labels.en) : category;
     };
 
-    // 将模板按类别分组（所有模板现在都来自插件）
     const templatesByCategory = pluginTemplates.reduce((acc, template) => {
         const cat = template.category || 'other';
         if (!acc[cat]) acc[cat] = [];
@@ -586,7 +710,6 @@ function ContextMenuWithSubmenu({
         return acc;
     }, {} as Record<string, EntityCreationTemplate[]>);
 
-    // 按顺序排序每个类别内的模板
     Object.values(templatesByCategory).forEach(templates => {
         templates.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
     });
@@ -597,7 +720,6 @@ function ContextMenuWithSubmenu({
         setActiveSubmenu(category);
     };
 
-    // 定义类别显示顺序
     const categoryOrder = ['rendering', 'ui', 'physics', 'audio', 'basic', 'other'];
     const sortedCategories = Object.entries(templatesByCategory).sort(([a], [b]) => {
         const orderA = categoryOrder.indexOf(a);
@@ -618,7 +740,6 @@ function ContextMenuWithSubmenu({
 
             {sortedCategories.length > 0 && <div className="context-menu-divider" />}
 
-            {/* 按类别渲染所有模板 */}
             {sortedCategories.map(([category, templates]) => (
                 <div
                     key={category}

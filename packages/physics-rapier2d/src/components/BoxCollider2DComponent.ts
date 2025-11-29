@@ -23,19 +23,40 @@ import type { Vector2 } from '../types/Physics2DTypes';
 @ECSComponent('BoxCollider2D')
 @Serializable({ version: 1, typeId: 'BoxCollider2D' })
 export class BoxCollider2DComponent extends Collider2DBase {
+    private _width: number = 10;
+    private _height: number = 10;
+
     /**
      * 矩形宽度（半宽度的2倍）
      */
     @Serialize()
     @Property({ type: 'number', label: 'Width', min: 0.01, step: 0.1 })
-    public width: number = 10;
+    public get width(): number {
+        return this._width;
+    }
+
+    public set width(value: number) {
+        if (this._width !== value) {
+            this._width = value;
+            this._needsRebuild = true;
+        }
+    }
 
     /**
      * 矩形高度（半高度的2倍）
      */
     @Serialize()
     @Property({ type: 'number', label: 'Height', min: 0.01, step: 0.1 })
-    public height: number = 10;
+    public get height(): number {
+        return this._height;
+    }
+
+    public set height(value: number) {
+        if (this._height !== value) {
+            this._height = value;
+            this._needsRebuild = true;
+        }
+    }
 
     /**
      * 获取半宽度
@@ -78,6 +99,5 @@ export class BoxCollider2DComponent extends Collider2DBase {
     public setSize(width: number, height: number): void {
         this.width = width;
         this.height = height;
-        this._needsRebuild = true;
     }
 }

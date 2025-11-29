@@ -1,0 +1,262 @@
+/**
+ * Canvas Styles
+ * 画布样式
+ */
+
+/* ==================== Canvas Container 画布容器 ==================== */
+.ne-canvas {
+    background: var(--ne-canvas-bg);
+    touch-action: none;
+}
+
+.ne-canvas:focus {
+    outline: none;
+}
+
+/* ==================== Canvas Content 画布内容 ==================== */
+.ne-canvas-content {
+    will-change: transform;
+}
+
+/* ==================== Canvas Grid 画布网格 ==================== */
+.ne-canvas-grid {
+    z-index: var(--ne-z-grid);
+}
+
+/* ==================== Selection Box 选择框 ==================== */
+.ne-selection-box {
+    position: absolute;
+    border: 1px dashed var(--ne-node-border-selected);
+    background: rgba(0, 120, 212, 0.1);
+    pointer-events: none;
+    z-index: var(--ne-z-dragging);
+}
+
+/* ==================== Minimap 小地图 ==================== */
+.ne-minimap {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    width: 200px;
+    height: 150px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--ne-node-border);
+    border-radius: 4px;
+    overflow: hidden;
+    z-index: var(--ne-z-menu);
+}
+
+.ne-minimap-viewport {
+    position: absolute;
+    border: 2px solid var(--ne-node-border-selected);
+    background: rgba(0, 120, 212, 0.2);
+    cursor: move;
+}
+
+.ne-minimap-node {
+    position: absolute;
+    background: var(--ne-node-bg);
+    border-radius: 2px;
+}
+
+/* ==================== Zoom Controls 缩放控制 ==================== */
+.ne-zoom-controls {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: var(--ne-z-menu);
+}
+
+.ne-zoom-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--ne-node-border);
+    background: var(--ne-node-bg);
+    color: var(--ne-text-primary);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: background var(--ne-transition-fast),
+                border-color var(--ne-transition-fast);
+}
+
+.ne-zoom-btn:hover {
+    background: var(--ne-node-bg-hover);
+    border-color: var(--ne-node-border-selected);
+}
+
+.ne-zoom-btn:active {
+    background: var(--ne-node-bg-selected);
+}
+
+.ne-zoom-level {
+    padding: 4px 8px;
+    font-size: var(--ne-font-size-small);
+    color: var(--ne-text-secondary);
+    text-align: center;
+    background: var(--ne-node-bg);
+    border: 1px solid var(--ne-node-border);
+    border-radius: 4px;
+}
+
+/* ==================== Context Menu 右键菜单 ==================== */
+.ne-context-menu {
+    position: fixed;
+    min-width: 180px;
+    background: var(--ne-node-bg);
+    border: 1px solid var(--ne-node-border);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    padding: 4px 0;
+    z-index: var(--ne-z-menu);
+    font-family: var(--ne-font-family);
+    font-size: var(--ne-font-size-body);
+}
+
+.ne-context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    color: var(--ne-text-primary);
+    cursor: pointer;
+    transition: background var(--ne-transition-fast);
+}
+
+.ne-context-menu-item:hover {
+    background: var(--ne-node-bg-hover);
+}
+
+.ne-context-menu-item.disabled {
+    color: var(--ne-text-muted);
+    cursor: not-allowed;
+}
+
+.ne-context-menu-item.disabled:hover {
+    background: transparent;
+}
+
+.ne-context-menu-item-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.8;
+}
+
+.ne-context-menu-item-label {
+    flex: 1;
+}
+
+.ne-context-menu-item-shortcut {
+    color: var(--ne-text-muted);
+    font-size: var(--ne-font-size-small);
+}
+
+.ne-context-menu-separator {
+    height: 1px;
+    background: var(--ne-node-border);
+    margin: 4px 0;
+}
+
+.ne-context-menu-submenu {
+    position: relative;
+}
+
+.ne-context-menu-submenu::after {
+    content: '▶';
+    position: absolute;
+    right: 8px;
+    font-size: 10px;
+    color: var(--ne-text-muted);
+}
+
+/* ==================== Search Popup 搜索弹窗 ==================== */
+.ne-search-popup {
+    position: fixed;
+    width: 300px;
+    max-height: 400px;
+    background: var(--ne-node-bg);
+    border: 1px solid var(--ne-node-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    z-index: var(--ne-z-menu);
+    overflow: hidden;
+}
+
+.ne-search-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    border-bottom: 1px solid var(--ne-node-border);
+    background: transparent;
+    color: var(--ne-text-primary);
+    font-size: var(--ne-font-size-title);
+    font-family: var(--ne-font-family);
+    outline: none;
+}
+
+.ne-search-input::placeholder {
+    color: var(--ne-text-muted);
+}
+
+.ne-search-results {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.ne-search-category {
+    padding: 8px 16px 4px;
+    color: var(--ne-text-muted);
+    font-size: var(--ne-font-size-small);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ne-search-result {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background var(--ne-transition-fast);
+}
+
+.ne-search-result:hover,
+.ne-search-result.selected {
+    background: var(--ne-node-bg-hover);
+}
+
+.ne-search-result-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ne-search-result-info {
+    flex: 1;
+}
+
+.ne-search-result-name {
+    color: var(--ne-text-primary);
+    font-weight: 500;
+}
+
+.ne-search-result-path {
+    color: var(--ne-text-muted);
+    font-size: var(--ne-font-size-small);
+}
+
+.ne-search-empty {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--ne-text-muted);
+}

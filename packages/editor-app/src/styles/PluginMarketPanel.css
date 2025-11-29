@@ -8,10 +8,12 @@
 
 .plugin-market-toolbar {
     display: flex;
-    gap: 12px;
-    padding: 16px;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
     border-bottom: 1px solid var(--color-border, #333);
     background: var(--color-bg-secondary, #252526);
+    height: 26px;
 }
 
 .plugin-market-search {

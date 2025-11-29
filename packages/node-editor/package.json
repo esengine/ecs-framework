@@ -1,0 +1,71 @@
+{
+  "name": "@esengine/node-editor",
+  "version": "1.0.0",
+  "description": "Universal node-based visual editor for blueprint, shader graph, and state machine",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles": {
+      "import": "./dist/styles/index.css"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "build": "vite build",
+    "build:watch": "vite build --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "node-editor",
+    "visual-programming",
+    "blueprint",
+    "shader-graph",
+    "state-machine",
+    "ecs",
+    "game-engine"
+  ],
+  "author": "yhh",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "zustand": "^4.5.2"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": false
+    },
+    "zustand": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.17",
+    "@types/react": "^18.3.12",
+    "@vitejs/plugin-react": "^4.7.0",
+    "rimraf": "^5.0.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.0.7",
+    "vite-plugin-dts": "^3.7.0"
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/esengine/ecs-framework.git",
+    "directory": "packages/node-editor"
+  }
+}

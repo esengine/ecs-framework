@@ -9,6 +9,12 @@
 import type { IPluginLoader, PluginDescriptor } from '@esengine/editor-core';
 import { Physics2DEditorModule } from './index';
 import { PhysicsRuntimeModule } from '../PhysicsRuntimeModule';
+import { CollisionLayerConfig } from '../services/CollisionLayerConfig';
+
+// 暴露 CollisionLayerConfig 到全局，供 CollisionLayerField 访问
+(window as any).__PHYSICS_RAPIER2D__ = {
+    CollisionLayerConfig
+};
 
 /**
  * 插件描述符

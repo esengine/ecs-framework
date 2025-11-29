@@ -462,8 +462,13 @@ export const BehaviorTreeEditor: React.FC<BehaviorTreeEditorProps> = ({
         handleNodeMouseUp();
     };
 
-    const getPortPosition = (nodeId: string, propertyName?: string, portType: 'input' | 'output' = 'output') =>
-        getPortPositionUtil(canvasRef, canvasOffset, canvasScale, nodes, nodeId, propertyName, portType, draggingNodeId, dragDelta, selectedNodeIds);
+    // 使用 useCallback 包装 getPortPosition，确保在 canvasScale/canvasOffset 变化时更新
+    // Use useCallback to wrap getPortPosition to ensure updates when canvasScale/canvasOffset changes
+    const getPortPosition = useCallback(
+        (nodeId: string, propertyName?: string, portType: 'input' | 'output' = 'output') =>
+            getPortPositionUtil(canvasRef, canvasOffset, canvasScale, nodes, nodeId, propertyName, portType, draggingNodeId, dragDelta, selectedNodeIds),
+        [canvasOffset, canvasScale, nodes, draggingNodeId, dragDelta, selectedNodeIds]
+    );
 
     stopExecutionRef.current = handleStop;
 

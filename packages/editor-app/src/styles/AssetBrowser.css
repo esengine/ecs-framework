@@ -9,9 +9,12 @@
 }
 
 .asset-browser-header {
-  padding: 12px 15px;
+  padding: 0 8px;
   background: #252526;
   border-bottom: 1px solid #333;
+  height: 26px;
+  display: flex;
+  align-items: center;
 }
 
 .asset-browser-header h3 {

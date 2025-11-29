@@ -66,6 +66,7 @@ import {
     ColorFieldEditor,
     AnimationClipsFieldEditor
 } from '../../infrastructure/field-editors';
+import { TransformComponentInspector } from '../../components/inspectors/component-inspectors/TransformComponentInspector';
 
 export interface EditorServices {
     uiRegistry: UIRegistry;
@@ -199,6 +200,10 @@ export class ServiceRegistry {
         fieldEditorRegistry.register(new Vector4FieldEditor());
         fieldEditorRegistry.register(new ColorFieldEditor());
         fieldEditorRegistry.register(new AnimationClipsFieldEditor());
+
+        // 注册组件检查器
+        // Register component inspectors
+        componentInspectorRegistry.register(new TransformComponentInspector());
 
         // 注册默认场景模板 - 创建默认相机
         // Register default scene template - creates default camera

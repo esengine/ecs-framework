@@ -2,10 +2,8 @@
  * Physics 2D Gizmo Implementation
  * 2D 物理 Gizmo 实现
  *
- * Registers gizmo providers for physics components using the GizmoRegistry.
- * Rendered via Rust WebGL engine for optimal performance.
  * 使用 GizmoRegistry 为物理组件注册 gizmo 提供者。
- * 通过 Rust WebGL 引擎渲染以获得最佳性能。
+ * 通过 Rust WebGL 引擎渲染。
  */
 
 import type { Entity } from '@esengine/ecs-framework';
@@ -14,9 +12,10 @@ import type {
     IRectGizmoData,
     ICircleGizmoData,
     ILineGizmoData,
+    ICapsuleGizmoData,
     GizmoColor
 } from '@esengine/editor-core';
-import { GizmoColors, GizmoRegistry } from '@esengine/editor-core';
+import { GizmoRegistry } from '@esengine/editor-core';
 import { TransformComponent } from '@esengine/ecs-components';
 
 import { BoxCollider2DComponent } from '../../components/BoxCollider2DComponent';
@@ -27,36 +26,75 @@ import { Rigidbody2DComponent } from '../../components/Rigidbody2DComponent';
 import { RigidbodyType2D } from '../../types/Physics2DTypes';
 
 /**
- * Collider gizmo color based on selection state
- * 根据选择状态设置碰撞体 gizmo 颜色
+ * 物理 Gizmo 颜色配置
+ */
+const PhysicsGizmoColors = {
+    collider: { r: 0.0, g: 0.8, b: 0.0, a: 1.0 } as GizmoColor,
+    trigger: { r: 1.0, g: 0.6, b: 0.0, a: 1.0 } as GizmoColor,
+    selected: { r: 0.0, g: 1.0, b: 1.0, a: 1.0 } as GizmoColor,
+    dynamicBody: { r: 0.2, g: 0.6, b: 1.0, a: 0.9 } as GizmoColor,
+    kinematicBody: { r: 0.8, g: 0.3, b: 1.0, a: 0.9 } as GizmoColor,
+    staticBody: { r: 0.5, g: 0.5, b: 0.5, a: 0.7 } as GizmoColor,
+    velocity: { r: 1.0, g: 0.2, b: 0.2, a: 0.9 } as GizmoColor,
+    centerMark: { r: 1.0, g: 1.0, b: 1.0, a: 0.8 } as GizmoColor,
+};
+
+/**
+ * 获取碰撞体 Gizmo 颜色
  */
 function getColliderColor(isSelected: boolean, isTrigger: boolean): GizmoColor {
-    if (isTrigger) {
-        return isSelected
-            ? { r: 1, g: 0.5, b: 0, a: 0.8 }   // Orange for selected trigger
-            : { r: 1, g: 0.5, b: 0, a: 0.4 };  // Semi-transparent orange for unselected trigger
+    if (isSelected) {
+        return PhysicsGizmoColors.selected;
     }
-    return isSelected
-        ? GizmoColors.collider                  // Cyan for selected collider
-        : { ...GizmoColors.collider, a: 0.4 }; // Semi-transparent cyan for unselected
+    if (isTrigger) {
+        return PhysicsGizmoColors.trigger;
+    }
+    return PhysicsGizmoColors.collider;
 }
 
 /**
- * Rigidbody indicator color based on body type
- * 根据刚体类型设置指示器颜色
+ * 获取刚体类型颜色
  */
 function getRigidbodyColor(bodyType: RigidbodyType2D, isSelected: boolean): GizmoColor {
-    const alpha = isSelected ? 0.8 : 0.4;
+    const baseAlpha = isSelected ? 1.0 : 0.7;
+
     switch (bodyType) {
         case RigidbodyType2D.Dynamic:
-            return { r: 0, g: 0.8, b: 1, a: alpha };    // Light blue for dynamic
+            return { ...PhysicsGizmoColors.dynamicBody, a: baseAlpha };
         case RigidbodyType2D.Kinematic:
-            return { r: 1, g: 0.8, b: 0, a: alpha };    // Yellow for kinematic
+            return { ...PhysicsGizmoColors.kinematicBody, a: baseAlpha };
         case RigidbodyType2D.Static:
-            return { r: 0.5, g: 0.5, b: 0.5, a: alpha }; // Gray for static
+            return { ...PhysicsGizmoColors.staticBody, a: baseAlpha };
         default:
-            return { r: 1, g: 1, b: 1, a: alpha };
+            return { r: 1, g: 1, b: 1, a: baseAlpha };
     }
+}
+
+/**
+ * 创建中心点标记 Gizmo (十字形)
+ */
+function createCenterMarkGizmo(x: number, y: number, size: number, color: GizmoColor): ILineGizmoData[] {
+    const halfSize = size / 2;
+    return [
+        {
+            type: 'line',
+            points: [
+                { x: x - halfSize, y: y },
+                { x: x + halfSize, y: y }
+            ],
+            color,
+            closed: false
+        },
+        {
+            type: 'line',
+            points: [
+                { x: x, y: y - halfSize },
+                { x: x, y: y + halfSize }
+            ],
+            color,
+            closed: false
+        }
+    ];
 }
 
 /**
@@ -74,28 +112,36 @@ function boxCollider2DGizmoProvider(
     const gizmos: IGizmoRenderData[] = [];
     const color = getColliderColor(isSelected, collider.isTrigger);
 
-    // Get rotation (handle both number and Vector3)
     const rotation = typeof transform.rotation === 'number'
         ? transform.rotation
         : transform.rotation.z;
 
-    // Calculate world position with offset
     const worldX = transform.position.x + collider.offset.x * transform.scale.x;
     const worldY = transform.position.y + collider.offset.y * transform.scale.y;
+    const scaledWidth = collider.width * transform.scale.x;
+    const scaledHeight = collider.height * transform.scale.y;
+    const totalRotation = rotation + collider.rotationOffset;
 
+    // 主要矩形边框
     const rectGizmo: IRectGizmoData = {
         type: 'rect',
         x: worldX,
         y: worldY,
-        width: collider.width * transform.scale.x,
-        height: collider.height * transform.scale.y,
-        rotation: rotation + collider.rotationOffset,
+        width: scaledWidth,
+        height: scaledHeight,
+        rotation: totalRotation,
         originX: 0.5,
         originY: 0.5,
         color,
         showHandles: false
     };
     gizmos.push(rectGizmo);
+
+    // 选中时显示中心点标记
+    if (isSelected) {
+        const centerMarkSize = Math.min(scaledWidth, scaledHeight) * 0.1;
+        gizmos.push(...createCenterMarkGizmo(worldX, worldY, centerMarkSize, PhysicsGizmoColors.centerMark));
+    }
 
     return gizmos;
 }
@@ -115,21 +161,53 @@ function circleCollider2DGizmoProvider(
     const gizmos: IGizmoRenderData[] = [];
     const color = getColliderColor(isSelected, collider.isTrigger);
 
-    // Calculate world position with offset
     const worldX = transform.position.x + collider.offset.x * transform.scale.x;
     const worldY = transform.position.y + collider.offset.y * transform.scale.y;
-
-    // Use the larger scale for radius (circles should remain circular)
     const scale = Math.max(Math.abs(transform.scale.x), Math.abs(transform.scale.y));
+    const scaledRadius = collider.radius * scale;
 
+    // 主要圆形边框
     const circleGizmo: ICircleGizmoData = {
         type: 'circle',
         x: worldX,
         y: worldY,
-        radius: collider.radius * scale,
+        radius: scaledRadius,
         color
     };
     gizmos.push(circleGizmo);
+
+    // 选中时显示额外信息
+    if (isSelected) {
+        // 中心点标记
+        const centerMarkSize = scaledRadius * 0.15;
+        gizmos.push(...createCenterMarkGizmo(worldX, worldY, centerMarkSize, PhysicsGizmoColors.centerMark));
+
+        // 半径指示线 (从中心到右边缘)
+        const rotation = typeof transform.rotation === 'number'
+            ? transform.rotation
+            : transform.rotation.z;
+        const cos = Math.cos(rotation);
+        const sin = Math.sin(rotation);
+
+        gizmos.push({
+            type: 'line',
+            points: [
+                { x: worldX, y: worldY },
+                { x: worldX + scaledRadius * cos, y: worldY + scaledRadius * sin }
+            ],
+            color: PhysicsGizmoColors.selected,
+            closed: false
+        } as ILineGizmoData);
+
+        // 边缘小圆点
+        gizmos.push({
+            type: 'circle',
+            x: worldX + scaledRadius * cos,
+            y: worldY + scaledRadius * sin,
+            radius: scaledRadius * 0.08,
+            color: PhysicsGizmoColors.selected
+        } as ICircleGizmoData);
+    }
 
     return gizmos;
 }
@@ -149,73 +227,32 @@ function capsuleCollider2DGizmoProvider(
     const gizmos: IGizmoRenderData[] = [];
     const color = getColliderColor(isSelected, collider.isTrigger);
 
-    // Get rotation
     const rotation = typeof transform.rotation === 'number'
         ? transform.rotation
         : transform.rotation.z;
     const totalRotation = rotation + collider.rotationOffset;
 
-    // Calculate world position with offset
     const worldX = transform.position.x + collider.offset.x * transform.scale.x;
     const worldY = transform.position.y + collider.offset.y * transform.scale.y;
 
     const radius = collider.radius * transform.scale.x;
     const halfHeight = collider.halfHeight * transform.scale.y;
 
-    // Draw capsule as two circles and connecting lines
-    // 绘制胶囊体为两个圆和连接线
-    const cos = Math.cos(totalRotation);
-    const sin = Math.sin(totalRotation);
-
-    // Top circle center
-    const topCenterX = worldX - sin * halfHeight;
-    const topCenterY = worldY + cos * halfHeight;
-
-    // Bottom circle center
-    const bottomCenterX = worldX + sin * halfHeight;
-    const bottomCenterY = worldY - cos * halfHeight;
-
-    // Top semicircle
+    // 使用原生胶囊 Gizmo 类型
     gizmos.push({
-        type: 'circle',
-        x: topCenterX,
-        y: topCenterY,
+        type: 'capsule',
+        x: worldX,
+        y: worldY,
         radius,
+        halfHeight,
+        rotation: totalRotation,
         color
-    } as ICircleGizmoData);
+    } as ICapsuleGizmoData);
 
-    // Bottom semicircle
-    gizmos.push({
-        type: 'circle',
-        x: bottomCenterX,
-        y: bottomCenterY,
-        radius,
-        color
-    } as ICircleGizmoData);
-
-    // Connecting lines (left and right sides)
-    const perpX = cos * radius;
-    const perpY = sin * radius;
-
-    gizmos.push({
-        type: 'line',
-        points: [
-            { x: topCenterX - perpX, y: topCenterY - perpY },
-            { x: bottomCenterX - perpX, y: bottomCenterY - perpY }
-        ],
-        color,
-        closed: false
-    } as ILineGizmoData);
-
-    gizmos.push({
-        type: 'line',
-        points: [
-            { x: topCenterX + perpX, y: topCenterY + perpY },
-            { x: bottomCenterX + perpX, y: bottomCenterY + perpY }
-        ],
-        color,
-        closed: false
-    } as ILineGizmoData);
+    if (isSelected) {
+        const centerMarkSize = radius * 0.15;
+        gizmos.push(...createCenterMarkGizmo(worldX, worldY, centerMarkSize, PhysicsGizmoColors.centerMark));
+    }
 
     return gizmos;
 }
@@ -237,7 +274,6 @@ function polygonCollider2DGizmoProvider(
     const gizmos: IGizmoRenderData[] = [];
     const color = getColliderColor(isSelected, collider.isTrigger);
 
-    // Get rotation
     const rotation = typeof transform.rotation === 'number'
         ? transform.rotation
         : transform.rotation.z;
@@ -245,20 +281,17 @@ function polygonCollider2DGizmoProvider(
     const cos = Math.cos(totalRotation);
     const sin = Math.sin(totalRotation);
 
-    // Transform vertices to world space
-    const worldPoints = collider.vertices.map(v => {
-        // Apply scale
-        const scaledX = (v.x + collider.offset.x) * transform.scale.x;
-        const scaledY = (v.y + collider.offset.y) * transform.scale.y;
+    const worldX = transform.position.x + collider.offset.x * transform.scale.x;
+    const worldY = transform.position.y + collider.offset.y * transform.scale.y;
 
-        // Apply rotation
+    const worldPoints = collider.vertices.map(v => {
+        const scaledX = v.x * transform.scale.x;
+        const scaledY = v.y * transform.scale.y;
         const rotatedX = scaledX * cos - scaledY * sin;
         const rotatedY = scaledX * sin + scaledY * cos;
-
-        // Apply translation
         return {
-            x: transform.position.x + rotatedX,
-            y: transform.position.y + rotatedY
+            x: worldX + rotatedX,
+            y: worldY + rotatedY
         };
     });
 
@@ -269,12 +302,30 @@ function polygonCollider2DGizmoProvider(
         closed: true
     } as ILineGizmoData);
 
+    if (isSelected) {
+        // 中心点标记
+        const centerMarkSize = 0.5;
+        gizmos.push(...createCenterMarkGizmo(worldX, worldY, centerMarkSize, PhysicsGizmoColors.centerMark));
+
+        // 顶点标记
+        const vertexSize = 0.15;
+        for (const point of worldPoints) {
+            gizmos.push({
+                type: 'circle',
+                x: point.x,
+                y: point.y,
+                radius: vertexSize,
+                color: PhysicsGizmoColors.selected
+            } as ICircleGizmoData);
+        }
+    }
+
     return gizmos;
 }
 
 /**
- * Rigidbody2D gizmo provider - shows velocity indicator when playing
- * 刚体 gizmo 提供者 - 播放时显示速度指示器
+ * Rigidbody2D gizmo provider
+ * 刚体 gizmo 提供者
  */
 function rigidbody2DGizmoProvider(
     rigidbody: Rigidbody2DComponent,
@@ -285,42 +336,71 @@ function rigidbody2DGizmoProvider(
     if (!transform) return [];
 
     const gizmos: IGizmoRenderData[] = [];
+    const bodyColor = getRigidbodyColor(rigidbody.bodyType, isSelected);
 
-    // Only show velocity indicator when selected and has significant velocity
     if (isSelected) {
+        // 刚体类型标记
+        gizmos.push({
+            type: 'circle',
+            x: transform.position.x,
+            y: transform.position.y,
+            radius: 0.3,
+            color: bodyColor
+        } as ICircleGizmoData);
+
+        // 速度向量
         const velMagnitude = Math.sqrt(
             rigidbody.velocity.x * rigidbody.velocity.x +
             rigidbody.velocity.y * rigidbody.velocity.y
         );
 
-        // Draw velocity indicator if moving
         if (velMagnitude > 0.1) {
-            const color = getRigidbodyColor(rigidbody.bodyType, isSelected);
-            const scale = 0.5; // Scale factor for velocity visualization
+            const scale = 0.5;
+            const endX = transform.position.x + rigidbody.velocity.x * scale;
+            const endY = transform.position.y + rigidbody.velocity.y * scale;
 
+            // 速度线
             gizmos.push({
                 type: 'line',
                 points: [
                     { x: transform.position.x, y: transform.position.y },
+                    { x: endX, y: endY }
+                ],
+                color: PhysicsGizmoColors.velocity,
+                closed: false
+            } as ILineGizmoData);
+
+            // 箭头
+            const arrowSize = 0.3;
+            const angle = Math.atan2(rigidbody.velocity.y, rigidbody.velocity.x);
+            const arrowAngle = Math.PI / 6;
+
+            gizmos.push({
+                type: 'line',
+                points: [
+                    { x: endX, y: endY },
                     {
-                        x: transform.position.x + rigidbody.velocity.x * scale,
-                        y: transform.position.y + rigidbody.velocity.y * scale
+                        x: endX - arrowSize * Math.cos(angle - arrowAngle),
+                        y: endY - arrowSize * Math.sin(angle - arrowAngle)
                     }
                 ],
-                color,
+                color: PhysicsGizmoColors.velocity,
+                closed: false
+            } as ILineGizmoData);
+
+            gizmos.push({
+                type: 'line',
+                points: [
+                    { x: endX, y: endY },
+                    {
+                        x: endX - arrowSize * Math.cos(angle + arrowAngle),
+                        y: endY - arrowSize * Math.sin(angle + arrowAngle)
+                    }
+                ],
+                color: PhysicsGizmoColors.velocity,
                 closed: false
             } as ILineGizmoData);
         }
-
-        // Show body type indicator as small marker
-        const markerColor = getRigidbodyColor(rigidbody.bodyType, true);
-        gizmos.push({
-            type: 'circle',
-            x: transform.position.x,
-            y: transform.position.y,
-            radius: 0.1,
-            color: markerColor
-        } as ICircleGizmoData);
     }
 
     return gizmos;

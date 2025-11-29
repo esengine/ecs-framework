@@ -1,0 +1,260 @@
+/* ==================== Main Toolbar Container ==================== */
+.main-toolbar {
+    display: flex;
+    align-items: center;
+    height: 36px;
+    background: linear-gradient(180deg, #3a3a3f 0%, #2d2d32 100%);
+    border-bottom: 1px solid #1a1a1d;
+    padding: 0 8px;
+    gap: 4px;
+    user-select: none;
+    flex-shrink: 0;
+    position: relative;
+    z-index: var(--z-index-header);
+}
+
+/* ==================== Toolbar Groups ==================== */
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.toolbar-center {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    padding: 2px 4px;
+}
+
+/* Absolutely centered play controls */
+.toolbar-center-wrapper {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+}
+
+.toolbar-center-wrapper > * {
+    pointer-events: auto;
+}
+
+/* Right section for preview indicator */
+.toolbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    min-width: 100px;
+    justify-content: flex-end;
+}
+
+/* ==================== Toolbar Separator ==================== */
+.toolbar-separator {
+    width: 1px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 0 4px;
+}
+
+/* ==================== Tool Buttons ==================== */
+.toolbar-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: none;
+    border-radius: 3px;
+    color: #888888;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.toolbar-button:hover:not(.disabled) {
+    background: rgba(255, 255, 255, 0.08);
+    color: #cccccc;
+}
+
+.toolbar-button:active:not(.disabled) {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.toolbar-button.active {
+    background: rgba(74, 158, 255, 0.2);
+    color: #4a9eff;
+}
+
+.toolbar-button.active:hover {
+    background: rgba(74, 158, 255, 0.3);
+}
+
+.toolbar-button.disabled {
+    color: #444444;
+    cursor: not-allowed;
+}
+
+.toolbar-button svg {
+    flex-shrink: 0;
+}
+
+/* Play button special styling */
+.toolbar-center .toolbar-button {
+    width: 32px;
+    height: 28px;
+}
+
+.toolbar-center .toolbar-button:first-child {
+    color: #4ade80;
+}
+
+.toolbar-center .toolbar-button:first-child:hover:not(.disabled) {
+    background: rgba(74, 222, 128, 0.15);
+    color: #4ade80;
+}
+
+.toolbar-center .toolbar-button:nth-child(2) {
+    color: #f87171;
+}
+
+.toolbar-center .toolbar-button:nth-child(2):hover:not(.disabled) {
+    background: rgba(248, 113, 113, 0.15);
+}
+
+.toolbar-center .toolbar-button:nth-child(2).disabled {
+    color: #444444;
+}
+
+/* ==================== Preview Mode Indicator ==================== */
+.preview-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(74, 222, 128, 0.15);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    border-radius: 4px;
+    color: #4ade80;
+    font-size: 11px;
+    font-weight: 500;
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow: 0 0 4px rgba(74, 222, 128, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
+    }
+}
+
+.preview-indicator svg {
+    flex-shrink: 0;
+}
+
+/* ==================== Dropdown Menus (for future use) ==================== */
+.toolbar-dropdown {
+    position: relative;
+}
+
+.toolbar-dropdown-button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 3px;
+    color: #888888;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.toolbar-dropdown-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #cccccc;
+}
+
+.toolbar-dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 6px 12px;
+    background: transparent;
+    border: none;
+    color: #c0c0c0;
+    font-size: 11px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.toolbar-dropdown-item:hover {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+/* ==================== Toolbar Dropdown ==================== */
+.toolbar-dropdown {
+    position: relative;
+}
+
+.toolbar-dropdown-trigger {
+    display: flex !important;
+    align-items: center;
+    gap: 4px;
+    width: auto !important;
+    padding: 0 8px !important;
+}
+
+.toolbar-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    min-width: 160px;
+    background: #252528;
+    border: 1px solid #3a3a3d;
+    border-radius: 4px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    padding: 4px 0;
+    z-index: var(--z-index-popover);
+    animation: dropdown-fade-in 0.1s ease;
+}
+
+@keyframes dropdown-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.toolbar-dropdown-menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    color: #c0c0c0;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.toolbar-dropdown-menu button:hover {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.toolbar-dropdown-menu button svg {
+    flex-shrink: 0;
+}

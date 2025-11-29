@@ -1,3 +1,4 @@
+export { RootExecutor } from './RootExecutor';
 export { SequenceExecutor } from './SequenceExecutor';
 export { SelectorExecutor } from './SelectorExecutor';
 export { ParallelExecutor } from './ParallelExecutor';

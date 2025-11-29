@@ -1,0 +1,104 @@
+/**
+ * Node Pin Styles
+ * 节点引脚样式
+ */
+
+/* ==================== Pin Base 引脚基础 ==================== */
+.ne-pin {
+    position: relative;
+    width: 12px;
+    height: 12px;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ne-pin:hover {
+    transform: scale(1.2);
+}
+
+.ne-pin.compatible {
+    animation: ne-pin-pulse 0.5s ease-in-out infinite;
+}
+
+/* ==================== Pin Type Colors 引脚类型颜色 ==================== */
+.ne-pin.exec { color: var(--ne-pin-exec); }
+.ne-pin.bool { color: var(--ne-pin-bool); }
+.ne-pin.int { color: var(--ne-pin-int); }
+.ne-pin.float { color: var(--ne-pin-float); }
+.ne-pin.string { color: var(--ne-pin-string); }
+.ne-pin.vector2 { color: var(--ne-pin-vector2); }
+.ne-pin.vector3 { color: var(--ne-pin-vector3); }
+.ne-pin.vector4 { color: var(--ne-pin-vector4); }
+.ne-pin.color { color: var(--ne-pin-color); }
+.ne-pin.object { color: var(--ne-pin-object); }
+.ne-pin.array { color: var(--ne-pin-array); }
+.ne-pin.map { color: var(--ne-pin-map); }
+.ne-pin.struct { color: var(--ne-pin-struct); }
+.ne-pin.enum { color: var(--ne-pin-enum); }
+.ne-pin.delegate { color: var(--ne-pin-delegate); }
+.ne-pin.any { color: var(--ne-pin-any); }
+
+/* ==================== Pin States 引脚状态 ==================== */
+.ne-pin.dragging-from {
+    transform: scale(1.3);
+}
+
+.ne-pin.drop-target {
+    transform: scale(1.4);
+}
+
+.ne-pin.invalid-target {
+    opacity: 0.3;
+}
+
+/* ==================== Pin Animations 引脚动画 ==================== */
+@keyframes ne-pin-pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.25);
+    }
+}
+
+/* ==================== Pin Value Input 引脚值输入 ==================== */
+.ne-pin-value {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ne-pin-value-input {
+    width: 50px;
+    padding: 2px 4px;
+    font-size: 10px;
+    font-family: var(--ne-font-family-mono);
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    color: #c0c0c0;
+    outline: none;
+}
+
+.ne-pin-value-input:focus {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.ne-pin-value-checkbox {
+    width: 12px;
+    height: 12px;
+    accent-color: var(--ne-pin-bool);
+}
+
+.ne-pin-value-color {
+    width: 20px;
+    height: 12px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    cursor: pointer;
+}

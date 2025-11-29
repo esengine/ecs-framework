@@ -1,12 +1,10 @@
 /**
- * Tilemap Editor Panel - Main editing panel
+ * Tilemap Editor Panel - Main editing panel with 3-column layout
+ * Tilemap 编辑器面板 - 三栏布局的主编辑面板
  */
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
-    Paintbrush,
-    Eraser,
-    PaintBucket,
     Grid3x3,
     Eye,
     EyeOff,
@@ -14,29 +12,35 @@ import {
     ZoomOut,
     RotateCcw,
     Map,
-    Shield,
-    Plus,
-    Trash2,
-    ChevronDown,
-    ChevronRight,
-    PanelRightClose,
-    PanelRightOpen,
+    Save,
+    Scaling,
     X,
     Search,
     Folder,
     FolderOpen,
     File,
     Image as ImageIcon,
-    Save,
-    Scaling
+    MousePointer2,
+    Move,
+    RotateCw,
+    Maximize2,
+    Minimize2,
+    ChevronDown,
+    Magnet,
+    AlertTriangle,
+    SunDim,
+    Layers,
+    Box,
+    View,
+    Sidebar
 } from 'lucide-react';
 import { Core, Entity } from '@esengine/ecs-framework';
-import { MessageHub, ProjectService, IFileSystemService, type IFileSystem } from '@esengine/editor-core';
+import { MessageHub, ProjectService, IFileSystemService, type IFileSystem, IDialogService, type IDialog } from '@esengine/editor-core';
 import { TilemapComponent, type ITilesetData, type ResizeAnchor } from '../../../TilemapComponent';
 import { useTilemapEditorStore, type TilemapToolType, type LayerState } from '../../stores/TilemapEditorStore';
 import { TilemapCanvas } from '../TilemapCanvas';
-import { TilesetPreview } from '../TilesetPreview';
-import { LayerPanel } from './LayerPanel';
+import { TileSetSelectorPanel } from './TileSetSelectorPanel';
+import { TilemapDetailsPanel } from './TilemapDetailsPanel';
 import '../../styles/TilemapEditor.css';
 
 // Asset Picker Dialog component
@@ -59,7 +63,7 @@ function AssetPickerDialog({
     isOpen,
     onClose,
     onSelect,
-    title = 'Select Asset',
+    title = '选择资产',
     fileExtensions = []
 }: AssetPickerDialogProps) {
     const [searchTerm, setSearchTerm] = useState('');
@@ -82,7 +86,6 @@ function AssetPickerDialog({
             setPreviewPosition({ x: rect.right + 10, y: rect.top - 50 });
             setPreviewPath(node.path);
 
-            // Use FileSystem service to convert local path to asset URL
             const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
             if (fileSystem) {
                 const assetUrl = fileSystem.convertToAssetUrl(node.path);
@@ -292,7 +295,7 @@ function AssetPickerDialog({
                     <Search size={14} />
                     <input
                         type="text"
-                        placeholder="Search assets..."
+                        placeholder="搜索资产..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         autoFocus
@@ -301,9 +304,9 @@ function AssetPickerDialog({
 
                 <div className="asset-picker-content">
                     {loading ? (
-                        <div className="asset-picker-loading">Loading assets...</div>
+                        <div className="asset-picker-loading">加载资产中...</div>
                     ) : filteredAssets.length === 0 ? (
-                        <div className="asset-picker-empty">No assets found</div>
+                        <div className="asset-picker-empty">未找到资产</div>
                     ) : (
                         <div className="asset-picker-tree">
                             {filteredAssets.map((node) => renderNode(node))}
@@ -318,24 +321,23 @@ function AssetPickerDialog({
                                 {selectedPath.split(/[\\/]/).pop()}
                             </span>
                         ) : (
-                            <span className="placeholder">No asset selected</span>
+                            <span className="placeholder">未选择资产</span>
                         )}
                     </div>
                     <div className="asset-picker-actions">
                         <button className="btn-cancel" onClick={onClose}>
-                            Cancel
+                            取消
                         </button>
                         <button
                             className="btn-confirm"
                             onClick={handleConfirm}
                             disabled={!selectedPath}
                         >
-                            Select
+                            选择
                         </button>
                     </div>
                 </div>
 
-                {/* Image Preview Tooltip */}
                 {previewPath && previewSrc && (
                     <div
                         className="asset-picker-preview"
@@ -349,7 +351,6 @@ function AssetPickerDialog({
                             alt="Preview"
                             style={{ maxWidth: '200px', maxHeight: '200px', objectFit: 'contain' }}
                             onError={(e) => {
-                                console.error('Preview image load error:', previewPath);
                                 (e.target as HTMLImageElement).style.display = 'none';
                             }}
                         />
@@ -413,11 +414,10 @@ function ResizeMapDialog({
                 </div>
 
                 <div className="resize-dialog-content" style={{ padding: '16px' }}>
-                    {/* Size inputs */}
                     <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
                         <div style={{ flex: 1 }}>
                             <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#888' }}>
-                                宽度 (tiles)
+                                宽度 (瓦片)
                             </label>
                             <input
                                 type="number"
@@ -436,7 +436,7 @@ function ResizeMapDialog({
                         </div>
                         <div style={{ flex: 1 }}>
                             <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#888' }}>
-                                高度 (tiles)
+                                高度 (瓦片)
                             </label>
                             <input
                                 type="number"
@@ -455,10 +455,9 @@ function ResizeMapDialog({
                         </div>
                     </div>
 
-                    {/* Anchor selector */}
                     <div style={{ marginBottom: '16px' }}>
                         <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', color: '#888' }}>
-                            锚点位置 (原有内容保留在此处)
+                            锚点位置
                         </label>
                         <div style={{
                             display: 'grid',
@@ -494,27 +493,6 @@ function ResizeMapDialog({
                             ))}
                         </div>
                     </div>
-
-                    {/* Preview */}
-                    <div style={{
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
-                        borderRadius: '4px',
-                        padding: '12px',
-                        marginBottom: '16px'
-                    }}>
-                        <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>
-                            当前: {currentWidth} × {currentHeight} → 新: {newWidth} × {newHeight}
-                        </div>
-                        <div style={{ fontSize: '11px', color: newWidth !== currentWidth || newHeight !== currentHeight ? '#4fc3f7' : '#666' }}>
-                            {newWidth > currentWidth && `右侧增加 ${newWidth - currentWidth} 列`}
-                            {newWidth < currentWidth && `右侧减少 ${currentWidth - newWidth} 列`}
-                            {newWidth !== currentWidth && newHeight !== currentHeight && ' | '}
-                            {newHeight > currentHeight && `顶部增加 ${newHeight - currentHeight} 行`}
-                            {newHeight < currentHeight && `顶部减少 ${currentHeight - newHeight} 行`}
-                            {newWidth === currentWidth && newHeight === currentHeight && '无变化'}
-                        </div>
-                    </div>
                 </div>
 
                 <div className="asset-picker-footer">
@@ -527,7 +505,7 @@ function ResizeMapDialog({
                             onClick={handleConfirm}
                             disabled={newWidth === currentWidth && newHeight === currentHeight}
                         >
-                            确定
+                            调整大小
                         </button>
                     </div>
                 </div>
@@ -536,14 +514,12 @@ function ResizeMapDialog({
     );
 }
 
-// Helper to convert file path to URL using FileSystem service
+// Helper to convert file path to URL
 function convertFileSrc(path: string): string {
-    // Use FileSystem service to convert local path to asset URL
     const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
     if (fileSystem) {
         return fileSystem.convertToAssetUrl(path);
     }
-    // Fallback for already-converted URLs
     if (path.startsWith('http://') || path.startsWith('https://')) {
         return path;
     }
@@ -555,25 +531,84 @@ interface TilemapEditorPanelProps {
     messageHub?: MessageHub;
 }
 
+// Resizable Panel Divider Component
+interface PanelDividerProps {
+    onDrag: (delta: number) => void;
+    direction: 'horizontal' | 'vertical';
+}
+
+const PanelDivider: React.FC<PanelDividerProps> = ({ onDrag, direction }) => {
+    const isDraggingRef = useRef(false);
+    const lastPosRef = useRef(0);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        isDraggingRef.current = true;
+        lastPosRef.current = direction === 'horizontal' ? e.clientX : e.clientY;
+        document.body.style.cursor = direction === 'horizontal' ? 'col-resize' : 'row-resize';
+        document.body.style.userSelect = 'none';
+
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+            if (!isDraggingRef.current) return;
+            const currentPos = direction === 'horizontal' ? moveEvent.clientX : moveEvent.clientY;
+            const delta = currentPos - lastPosRef.current;
+            lastPosRef.current = currentPos;
+            onDrag(delta);
+        };
+
+        const handleMouseUp = () => {
+            isDraggingRef.current = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    };
+
+    return (
+        <div
+            className={`panel-divider ${direction}`}
+            onMouseDown={handleMouseDown}
+        />
+    );
+};
+
 export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageHub: propMessageHub }) => {
     const [tilemap, setTilemap] = useState<TilemapComponent | null>(null);
     const [entity, setEntity] = useState<Entity | null>(null);
+
+    // Panel widths for resizable layout - smaller defaults to give viewport more space
+    const [leftPanelWidth, setLeftPanelWidth] = useState(180);
+    const [rightPanelWidth, setRightPanelWidth] = useState(220);
+
+    const handleLeftDividerDrag = useCallback((delta: number) => {
+        setLeftPanelWidth(prev => Math.max(120, Math.min(350, prev + delta)));
+    }, []);
+
+    const handleRightDividerDrag = useCallback((delta: number) => {
+        setRightPanelWidth(prev => Math.max(180, Math.min(400, prev - delta)));
+    }, []);
     const [tilesetImage, setTilesetImage] = useState<HTMLImageElement | null>(null);
     const [tilemapKey, setTilemapKey] = useState('');
-    const [showTilesetPanel, setShowTilesetPanel] = useState(true);
-    const [showSidebar, setShowSidebar] = useState(true);
-    const [tilesetHeight, setTilesetHeight] = useState(200);
-    const [sidebarWidth, setSidebarWidth] = useState(220);
-    const [isResizing, setIsResizing] = useState(false);
-    const [isResizingWidth, setIsResizingWidth] = useState(false);
     const [showAssetPicker, setShowAssetPicker] = useState(false);
     const [showResizeDialog, setShowResizeDialog] = useState(false);
-    const sidebarRef = useRef<HTMLDivElement>(null);
+    const [activeTilesetIndex, setActiveTilesetIndex] = useState(0);
+
+    // Viewport state
+    const [viewMode, setViewMode] = useState<'right' | 'left' | 'top' | 'bottom'>('right');
+    const [litMode, setLitMode] = useState(true);
+    const [showViewOptions, setShowViewOptions] = useState(false);
+    const [transformMode, setTransformMode] = useState<'select' | 'move' | 'rotate' | 'scale'>('select');
 
     const messageHub = propMessageHub || Core.services.resolve(MessageHub);
 
     const {
         entityId,
+        pendingFilePath,
+        currentFilePath,
         currentTool,
         zoom,
         showGrid,
@@ -584,8 +619,9 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         tilesetImageUrl,
         tilesetColumns,
         tilesetRows,
-        selectedTiles,
         setEntityId,
+        setPendingFilePath,
+        setCurrentFilePath,
         setCurrentTool,
         setZoom,
         setShowGrid,
@@ -597,21 +633,9 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         setCurrentLayer
     } = useTilemapEditorStore();
 
-    // Listen for tilemap edit requests
-    useEffect(() => {
-        if (!messageHub) return;
-
-        const unsubscribe = messageHub.subscribe('tilemap:edit', (data: { entityId: string }) => {
-            setEntityId(data.entityId);
-        });
-
-        return unsubscribe;
-    }, [messageHub, setEntityId]);
-
-    // Helper to load tileset from component
-    const loadTilesetFromComponent = (tilemapComp: TilemapComponent) => {
-        // Get tileset source from first tileset
-        const tilesetRef = tilemapComp.tilesets[0];
+    // Load tileset from component (defined early for use in effects)
+    const loadTilesetFromComponent = useCallback((tilemapComp: TilemapComponent) => {
+        const tilesetRef = tilemapComp.tilesets[activeTilesetIndex];
         if (!tilesetRef) {
             setTileset(null, 0, 0, tilemapComp.tileWidth, tilemapComp.tileHeight);
             return;
@@ -619,38 +643,25 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
 
         const tilesetPath = tilesetRef.source;
 
-        // Convert relative path to absolute path
         const projectService = Core.services.tryResolve(ProjectService);
         const currentProject = projectService?.getCurrentProject();
         let absolutePath = tilesetPath;
         if (currentProject && !tilesetPath.startsWith('/') && !tilesetPath.match(/^[a-zA-Z]:/)) {
-            // It's a relative path, convert to absolute
             const projectPath = currentProject.path.replace(/\\/g, '/');
             absolutePath = `${projectPath}/${tilesetPath}`.replace(/\\/g, '/');
         }
 
         const imageUrl = convertFileSrc(absolutePath);
 
-        // Use existing tileset data if available, otherwise load from image
         if (tilesetRef.data) {
             const tilesetData = tilesetRef.data;
-            console.log('[TilemapEditor] Using saved tileset data:', {
-                columns: tilesetData.columns,
-                rows: tilesetData.rows,
-                tileWidth: tilesetData.tileWidth,
-                tileHeight: tilesetData.tileHeight,
-                imageWidth: tilesetData.imageWidth,
-                imageHeight: tilesetData.imageHeight
-            });
             setTileset(imageUrl, tilesetData.columns, tilesetData.rows, tilesetData.tileWidth, tilesetData.tileHeight);
         } else {
-            // Fallback: calculate from image dimensions
             const img = new Image();
             img.onload = () => {
                 const columns = Math.floor(img.width / tilemapComp.tileWidth);
                 const rows = Math.floor(img.height / tilemapComp.tileHeight);
 
-                // Create tileset data and set it
                 const tilesetData: ITilesetData = {
                     name: 'tileset',
                     version: 1,
@@ -663,7 +674,7 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
                     columns,
                     rows
                 };
-                tilemapComp.setTilesetData(0, tilesetData);
+                tilemapComp.setTilesetData(activeTilesetIndex, tilesetData);
                 setTileset(imageUrl, columns, rows, tilemapComp.tileWidth, tilemapComp.tileHeight);
             };
             img.onerror = () => {
@@ -671,13 +682,91 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
             };
             img.src = imageUrl;
         }
-    };
+    }, [activeTilesetIndex, setTileset]);
+
+    // Load file from pendingFilePath on mount (for file-based editing via double-click)
+    useEffect(() => {
+        if (!pendingFilePath) return;
+
+        const loadTilemapFile = async () => {
+            try {
+                const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
+                if (!fileSystem) {
+                    console.error('[TilemapEditorPanel] FileSystem service not available');
+                    return;
+                }
+
+                // Clear entity-based editing state
+                setEntityId('');
+                setEntity(null);
+
+                // Load tilemap data from file
+                const content = await fileSystem.readFile(pendingFilePath);
+                const tilemapData = JSON.parse(content);
+
+                // Create a standalone TilemapComponent
+                const tilemapComp = new TilemapComponent();
+                tilemapComp.applyTilemapData(tilemapData);
+                tilemapComp.tilemapAssetGuid = pendingFilePath;
+
+                setCurrentFilePath(pendingFilePath);
+                setTilemap(tilemapComp);
+
+                // Load tileset
+                loadTilesetFromComponent(tilemapComp);
+
+                // Set up layers
+                const layerStates: LayerState[] = tilemapComp.layers.map((layer) => ({
+                    id: layer.id,
+                    name: layer.name,
+                    visible: layer.visible,
+                    locked: false,
+                    opacity: layer.opacity
+                }));
+                setLayers(layerStates);
+                setCurrentLayer(0);
+
+                setTilemapKey(`file-${Date.now()}`);
+
+                // Clear pending file after loading
+                setPendingFilePath(null);
+
+                console.log('[TilemapEditorPanel] Loaded tilemap from file:', pendingFilePath);
+            } catch (error) {
+                console.error('[TilemapEditorPanel] Failed to load tilemap file:', error);
+                setPendingFilePath(null);
+                messageHub?.publish('notification:show', {
+                    type: 'error',
+                    message: `Failed to load tilemap: ${error instanceof Error ? error.message : String(error)}`,
+                    duration: 3000
+                });
+            }
+        };
+
+        loadTilemapFile();
+    }, [pendingFilePath, setEntityId, setCurrentFilePath, setPendingFilePath, setLayers, setCurrentLayer, loadTilesetFromComponent, messageHub]);
+
+    // Listen for tilemap edit requests (entity-based)
+    useEffect(() => {
+        if (!messageHub) return;
+
+        const unsubscribe = messageHub.subscribe('tilemap:edit', (data: { entityId: string }) => {
+            // Clear file-based editing state when switching to entity mode
+            setCurrentFilePath(null);
+            setEntityId(data.entityId);
+        });
+
+        return unsubscribe;
+    }, [messageHub, setEntityId, setCurrentFilePath]);
 
     // Load tilemap component when entityId changes
     useEffect(() => {
         if (!entityId) {
-            setTilemap(null);
-            setEntity(null);
+            // Don't clear tilemap if we're in file-based editing mode
+            if (!currentFilePath) {
+                setTilemap(null);
+                setEntity(null);
+            }
             return;
         }
 
@@ -694,7 +783,6 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         setTilemap(tilemapComp);
         loadTilesetFromComponent(tilemapComp);
 
-        // Sync layers to store
         const layerStates: LayerState[] = tilemapComp.layers.map((layer) => ({
             id: layer.id,
             name: layer.name,
@@ -704,7 +792,7 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         }));
         setLayers(layerStates);
         setCurrentLayer(0);
-    }, [entityId, setTileset, setLayers, setCurrentLayer]);
+    }, [entityId, currentFilePath, loadTilesetFromComponent, setLayers, setCurrentLayer]);
 
     // Listen for scene modifications
     useEffect(() => {
@@ -734,7 +822,7 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
             unsubscribeModified();
             unsubscribeRestored();
         };
-    }, [messageHub, tilemap, tilesetImageUrl, setTileset, entityId]);
+    }, [messageHub, tilemap, entityId, loadTilesetFromComponent]);
 
     // Load tileset image
     useEffect(() => {
@@ -748,75 +836,60 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         img.src = tilesetImageUrl;
     }, [tilesetImageUrl]);
 
-    const handleTilemapChange = () => {
+    const handleTilemapChange = useCallback(() => {
         messageHub?.publish('scene:modified', {});
-    };
+    }, [messageHub]);
 
     const handleSaveTilemap = useCallback(async () => {
         if (!tilemap || !entity) return;
 
         try {
-            // Export tilemap data
             const tilemapData = tilemap.exportToData();
             const jsonContent = JSON.stringify(tilemapData, null, 2);
 
-            // Get the tilemap asset path from component
             const tilemapAssetPath = tilemap.tilemapAssetGuid;
             if (!tilemapAssetPath) {
-                console.warn('Tilemap asset path not set, cannot save');
+                console.warn('Tilemap asset path not set');
                 return;
             }
 
-            // Convert to absolute path if it's a relative path
             const projectService = Core.services.tryResolve(ProjectService);
             const currentProject = projectService?.getCurrentProject();
-            if (!currentProject) {
-                console.warn('No project loaded, cannot save tilemap');
-                return;
-            }
+            if (!currentProject) return;
 
-            // Normalize paths
             const normalizedAssetPath = tilemapAssetPath.replace(/\\/g, '/');
             const normalizedProjectPath = currentProject.path.replace(/\\/g, '/');
 
-            // Check if path is already absolute (starts with drive letter or /)
             let absolutePath: string;
             if (normalizedAssetPath.match(/^[a-zA-Z]:/) || normalizedAssetPath.startsWith('/')) {
-                // Already absolute path
                 absolutePath = normalizedAssetPath;
             } else {
-                // Relative path, combine with project path
                 absolutePath = `${normalizedProjectPath}/${normalizedAssetPath}`;
             }
 
-            // Save using FileSystem service
             const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
             if (fileSystem) {
                 await fileSystem.writeFile(absolutePath, jsonContent);
 
-                // Show success notification
                 messageHub?.publish('notification:show', {
                     type: 'success',
-                    message: 'Tilemap 保存成功',
+                    message: 'Tilemap saved',
                     duration: 2000
                 });
             }
         } catch (error) {
             console.error('Failed to save tilemap:', error);
-
-            // Show error notification
             messageHub?.publish('notification:show', {
                 type: 'error',
-                message: `保存失败: ${error instanceof Error ? error.message : String(error)}`,
+                message: `Save failed: ${error instanceof Error ? error.message : String(error)}`,
                 duration: 3000
             });
         }
-    }, [tilemap, entity]);
+    }, [tilemap, entity, messageHub]);
 
-    // Handle keyboard shortcuts
+    // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Ctrl+S to save tilemap
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 e.preventDefault();
                 e.stopPropagation();
@@ -828,10 +901,6 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
     }, [handleSaveTilemap]);
 
-    const handleToolChange = (tool: TilemapToolType) => {
-        setCurrentTool(tool);
-    };
-
     const handleZoomIn = () => setZoom(Math.min(10, zoom * 1.2));
     const handleZoomOut = () => setZoom(Math.max(0.1, zoom / 1.2));
     const handleResetView = () => {
@@ -839,8 +908,13 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         setPan(0, 0);
     };
 
+    // 退出全屏模式
+    const handleExitFullscreen = useCallback(() => {
+        messageHub?.publish('editor:fullscreen', { fullscreen: false });
+    }, [messageHub]);
+
     // Layer operations
-    const handleAddLayer = () => {
+    const handleAddLayer = useCallback(() => {
         if (!tilemap) return;
         tilemap.addLayer(`Layer ${tilemap.layers.length + 1}`);
         const layerStates: LayerState[] = tilemap.layers.map((layer) => ({
@@ -854,9 +928,9 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         setCurrentLayer(tilemap.layers.length - 1);
         tilemap.renderDirty = true;
         handleTilemapChange();
-    };
+    }, [tilemap, setLayers, setCurrentLayer, handleTilemapChange]);
 
-    const handleRemoveLayer = (index: number) => {
+    const handleRemoveLayer = useCallback((index: number) => {
         if (!tilemap || tilemap.layers.length <= 1) return;
         tilemap.removeLayer(index);
         const layerStates: LayerState[] = tilemap.layers.map((layer) => ({
@@ -873,9 +947,9 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         }
         tilemap.renderDirty = true;
         handleTilemapChange();
-    };
+    }, [tilemap, setLayers, setCurrentLayer, handleTilemapChange]);
 
-    const handleMoveLayer = (fromIndex: number, toIndex: number) => {
+    const handleMoveLayer = useCallback((fromIndex: number, toIndex: number) => {
         if (!tilemap) return;
         if (toIndex < 0 || toIndex >= tilemap.layers.length) return;
         tilemap.moveLayer(fromIndex, toIndex);
@@ -890,81 +964,30 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         setCurrentLayer(toIndex);
         tilemap.renderDirty = true;
         handleTilemapChange();
-    };
+    }, [tilemap, setLayers, setCurrentLayer, handleTilemapChange]);
 
     // Tileset operations
-    const handleAddTileset = () => {
+    const handleAddTileset = useCallback(() => {
         if (!tilemap) return;
         setShowAssetPicker(true);
-    };
+    }, [tilemap]);
 
-    const handleTilesetSelected = (path: string) => {
+    const handleTilesetSelected = useCallback((path: string) => {
         if (!tilemap) return;
         tilemap.addTileset(path);
+        setActiveTilesetIndex(tilemap.tilesets.length - 1);
         loadTilesetFromComponent(tilemap);
         handleTilemapChange();
-    };
+    }, [tilemap, loadTilesetFromComponent, handleTilemapChange]);
 
-    // Handle resize
-    const handleResizeStart = (e: React.MouseEvent) => {
-        e.preventDefault();
-        setIsResizing(true);
-
-        const startY = e.clientY;
-        const startHeight = tilesetHeight;
-
-        const handleMouseMove = (moveEvent: MouseEvent) => {
-            const delta = moveEvent.clientY - startY;
-            const newHeight = Math.max(100, Math.min(400, startHeight + delta));
-            setTilesetHeight(newHeight);
-        };
-
-        const handleMouseUp = () => {
-            setIsResizing(false);
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-    };
-
-    // Handle sidebar width resize
-    const handleSidebarResizeStart = (e: React.MouseEvent) => {
-        e.preventDefault();
-        setIsResizingWidth(true);
-
-        const startX = e.clientX;
-        const startWidth = sidebarWidth;
-
-        const handleMouseMove = (moveEvent: MouseEvent) => {
-            const delta = startX - moveEvent.clientX; // Reverse delta because we're dragging from right to left
-            const newWidth = Math.max(180, Math.min(400, startWidth + delta));
-            setSidebarWidth(newWidth);
-        };
-
-        const handleMouseUp = () => {
-            setIsResizingWidth(false);
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-    };
-
-    const handleRemoveTileset = (index: number) => {
-        if (!tilemap) return;
-        tilemap.removeTileset(index);
-        if (tilemap.tilesets.length === 0) {
-            setTileset(null, 0, 0, tilemap.tileWidth, tilemap.tileHeight);
-        } else {
+    const handleTilesetChange = useCallback((index: number) => {
+        setActiveTilesetIndex(index);
+        if (tilemap) {
             loadTilesetFromComponent(tilemap);
         }
-        handleTilemapChange();
-    };
+    }, [tilemap, loadTilesetFromComponent]);
 
-    // Handle resize map
+    // Resize map
     const handleResizeMap = useCallback((newWidth: number, newHeight: number, anchor: ResizeAnchor) => {
         if (!tilemap) return;
         tilemap.resize(newWidth, newHeight, anchor);
@@ -972,16 +995,23 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         handleTilemapChange();
     }, [tilemap, handleTilemapChange]);
 
+    // Get tileset list
+    const tilesetOptions = tilemap?.tilesets.map((t, i) => ({
+        name: t.data?.name || `Tileset ${i + 1}`,
+        path: t.source
+    })) || [];
+
+    // Empty state
     if (!tilemap) {
         return (
             <div className="tilemap-editor-panel">
                 <div className="tilemap-editor-empty">
                     <Map size={48} />
-                    <h3>No Tilemap Selected</h3>
+                    <h3>未选择瓦片地图</h3>
                     <p>
-                        Select an entity with a TilemapComponent
+                        选择带有 TilemapComponent 的实体
                         <br />
-                        and click "Edit Tilemap" to start editing.
+                        并点击"编辑瓦片地图"开始编辑。
                     </p>
                 </div>
             </div>
@@ -990,215 +1020,190 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
 
     return (
         <div className="tilemap-editor-panel">
-            {/* Toolbar */}
-            <div className="tilemap-editor-toolbar">
-                <div className="tool-group">
-                    <button
-                        className={`tool-btn ${currentTool === 'brush' ? 'active' : ''}`}
-                        onClick={() => handleToolChange('brush')}
-                        title="Brush (B)"
-                    >
-                        <Paintbrush size={16} />
-                    </button>
-                    <button
-                        className={`tool-btn ${currentTool === 'eraser' ? 'active' : ''}`}
-                        onClick={() => handleToolChange('eraser')}
-                        title="Eraser (E)"
-                    >
-                        <Eraser size={16} />
-                    </button>
-                    <button
-                        className={`tool-btn ${currentTool === 'fill' ? 'active' : ''}`}
-                        onClick={() => handleToolChange('fill')}
-                        title="Fill (G)"
-                    >
-                        <PaintBucket size={16} />
-                    </button>
-                </div>
-
-                <div className="separator" />
-
-                <div className="tool-group">
-                    <button
-                        className="tool-btn"
-                        onClick={handleSaveTilemap}
-                        title="Save Tilemap (Ctrl+S)"
-                    >
-                        <Save size={16} />
-                    </button>
-                    <button
-                        className="tool-btn"
-                        onClick={() => setShowResizeDialog(true)}
-                        title="Resize Map"
-                    >
-                        <Scaling size={16} />
-                    </button>
-                </div>
-
-                <div className="separator" />
-
-                <div className="tool-group">
-                    <button
-                        className={`tool-btn ${showGrid ? 'active' : ''}`}
-                        onClick={() => setShowGrid(!showGrid)}
-                        title="Toggle Grid"
-                    >
-                        <Grid3x3 size={16} />
-                    </button>
-                    <button
-                        className={`tool-btn ${showCollision ? 'active' : ''}`}
-                        onClick={() => setShowCollision(!showCollision)}
-                        title="Show Collision"
-                    >
-                        {showCollision ? <Eye size={16} /> : <EyeOff size={16} />}
-                    </button>
-                    <button
-                        className={`tool-btn ${editingCollision ? 'active' : ''}`}
-                        onClick={() => setEditingCollision(!editingCollision)}
-                        title="Edit Collision Layer"
-                    >
-                        <Shield size={16} />
-                    </button>
-                </div>
-
-                <div className="zoom-control">
-                    <button className="tool-btn" onClick={handleZoomOut} title="Zoom Out">
-                        <ZoomOut size={16} />
-                    </button>
-                    <span>{Math.round(zoom * 100)}%</span>
-                    <button className="tool-btn" onClick={handleZoomIn} title="Zoom In">
-                        <ZoomIn size={16} />
-                    </button>
-                    <button className="tool-btn" onClick={handleResetView} title="Reset View">
-                        <RotateCcw size={16} />
-                    </button>
-                </div>
+            {/* Left Panel - Tile Set Selector */}
+            <div style={{ width: leftPanelWidth, flexShrink: 0 }}>
+                <TileSetSelectorPanel
+                    tilesets={tilesetOptions}
+                    activeTilesetIndex={activeTilesetIndex}
+                    onTilesetChange={handleTilesetChange}
+                    onAddTileset={handleAddTileset}
+                />
             </div>
 
-            {/* Main content area */}
-            <div className="tilemap-editor-content">
-                {/* Canvas */}
-                <TilemapCanvas
-                    key={tilemapKey}
-                    tilemap={tilemap}
-                    tilesetImage={tilesetImage}
-                    onTilemapChange={handleTilemapChange}
-                />
+            {/* Left Divider */}
+            <PanelDivider direction="horizontal" onDrag={handleLeftDividerDrag} />
 
-                {/* Sidebar toggle button */}
-                <button
-                    className="sidebar-toggle"
-                    onClick={() => setShowSidebar(!showSidebar)}
-                    title={showSidebar ? 'Hide Sidebar' : 'Show Sidebar'}
-                >
-                    {showSidebar ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-                </button>
-
-                {/* Right sidebar with tileset and layers */}
-                {showSidebar && (
-                    <div className="tilemap-editor-sidebar" ref={sidebarRef} style={{ width: `${sidebarWidth}px` }}>
-                        {/* Sidebar width resize handle */}
-                        <div
-                            className={`sidebar-resize-handle ${isResizingWidth ? 'active' : ''}`}
-                            onMouseDown={handleSidebarResizeStart}
-                        />
-                        {/* Tileset Section */}
-                        <div className="tileset-section">
-                            <div
-                                className="section-header"
-                                onClick={() => setShowTilesetPanel(!showTilesetPanel)}
+            {/* Center - Viewport */}
+            <div className="tilemap-viewport">
+                {/* Viewport top toolbar */}
+                <div className="viewport-toolbar">
+                    <div className="viewport-toolbar-left">
+                        {/* View mode buttons */}
+                        <div className="viewport-btn-group">
+                            <button
+                                className={`viewport-btn icon ${viewMode === 'right' ? 'active' : ''}`}
+                                onClick={() => setViewMode('right')}
+                                title="右视图"
                             >
-                                {showTilesetPanel ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                <span>Tileset</span>
-                                <div className="section-actions">
-                                    <button
-                                        className="section-btn"
-                                        onClick={(e) => { e.stopPropagation(); handleAddTileset(); }}
-                                        title="Add Tileset"
-                                    >
-                                        <Plus size={12} />
-                                    </button>
-                                    {tilemap.tilesets.length > 0 && (
-                                        <button
-                                            className="section-btn"
-                                            onClick={(e) => { e.stopPropagation(); handleRemoveTileset(0); }}
-                                            title="Remove Tileset"
-                                        >
-                                            <Trash2 size={12} />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                            {showTilesetPanel && (
-                                <div className="tileset-content" style={{ height: tilesetHeight }}>
-                                    {tilesetImageUrl ? (
-                                        <>
-                                            <TilesetPreview
-                                                imageUrl={tilesetImageUrl}
-                                                tileWidth={tileWidth}
-                                                tileHeight={tileHeight}
-                                                columns={tilesetColumns}
-                                                rows={tilesetRows}
-                                            />
-                                            {selectedTiles && (
-                                                <div className="tileset-info">
-                                                    Selected: {selectedTiles.width}×{selectedTiles.height}
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="tileset-empty-state">
-                                            <p>No tileset</p>
-                                            <button onClick={handleAddTileset}>
-                                                <Plus size={14} />
-                                                Add Tileset
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                            {/* Resize handle */}
-                            {showTilesetPanel && (
-                                <div
-                                    className={`resize-handle ${isResizing ? 'active' : ''}`}
-                                    onMouseDown={handleResizeStart}
-                                />
-                            )}
+                                <Box size={14} />
+                            </button>
+                            <button
+                                className={`viewport-btn icon ${litMode ? 'active' : ''}`}
+                                onClick={() => setLitMode(!litMode)}
+                                title="光照模式"
+                            >
+                                <SunDim size={14} />
+                            </button>
+                            <button
+                                className="viewport-btn icon"
+                                onClick={() => setShowViewOptions(!showViewOptions)}
+                                title="显示选项"
+                            >
+                                <Layers size={14} />
+                                <ChevronDown size={10} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="viewport-toolbar-center">
+                        {/* Transform tools */}
+                        <div className="viewport-btn-group">
+                            <button
+                                className={`viewport-btn icon ${transformMode === 'select' ? 'active' : ''}`}
+                                onClick={() => setTransformMode('select')}
+                                title="选择"
+                            >
+                                <MousePointer2 size={14} />
+                            </button>
+                            <button
+                                className={`viewport-btn icon ${transformMode === 'move' ? 'active' : ''}`}
+                                onClick={() => setTransformMode('move')}
+                                title="移动"
+                            >
+                                <Move size={14} />
+                            </button>
+                            <button
+                                className={`viewport-btn icon ${transformMode === 'rotate' ? 'active' : ''}`}
+                                onClick={() => setTransformMode('rotate')}
+                                title="旋转"
+                            >
+                                <RotateCw size={14} />
+                            </button>
+                            <button
+                                className={`viewport-btn icon ${transformMode === 'scale' ? 'active' : ''}`}
+                                onClick={() => setTransformMode('scale')}
+                                title="缩放"
+                            >
+                                <Maximize2 size={14} />
+                            </button>
                         </div>
 
-                        {/* Layer Panel */}
-                        <LayerPanel
-                            tilemap={tilemap}
-                            onAddLayer={handleAddLayer}
-                            onRemoveLayer={handleRemoveLayer}
-                            onMoveLayer={handleMoveLayer}
-                        />
+                        <div className="viewport-separator" />
+
+                        {/* Grid/snap controls */}
+                        <div className="viewport-btn-group">
+                            <button
+                                className={`viewport-btn icon ${showGrid ? 'active' : ''}`}
+                                onClick={() => setShowGrid(!showGrid)}
+                                title="切换网格"
+                            >
+                                <Grid3x3 size={14} />
+                            </button>
+                            <button className="viewport-btn snap-btn" title="位置吸附">
+                                <Magnet size={12} />
+                                10
+                            </button>
+                            <button className="viewport-btn snap-btn" title="旋转吸附">
+                                <RotateCw size={12} />
+                                10°
+                            </button>
+                            <button className="viewport-btn snap-btn" title="缩放吸附">
+                                <Scaling size={12} />
+                                0.25
+                            </button>
+                        </div>
                     </div>
-                )}
+
+                    <div className="viewport-toolbar-right">
+                        {/* Zoom controls */}
+                        <div className="viewport-btn-group">
+                            <button className="viewport-btn icon" onClick={handleZoomOut} title="缩小">
+                                <ZoomOut size={14} />
+                            </button>
+                            <span className="zoom-display">{Math.round(zoom * 100)}%</span>
+                            <button className="viewport-btn icon" onClick={handleZoomIn} title="放大">
+                                <ZoomIn size={14} />
+                            </button>
+                            <button className="viewport-btn icon" onClick={handleResetView} title="重置视图">
+                                <RotateCcw size={14} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Info overlay */}
+                <div className="viewport-info-overlay">
+                    <div className="info-item">
+                        <strong>碰撞几何体 (烘焙)</strong>
+                    </div>
+                    <div className="info-item warning">
+                        <AlertTriangle size={12} />
+                        警告: 碰撞已启用但没有形状
+                    </div>
+                    <div className="info-item">
+                        <strong>渲染几何体 (烘焙)</strong>
+                    </div>
+                    <div className="info-item">区段: 0</div>
+                    <div className="info-item">三角形: 0 (遮罩)</div>
+                    <div className="info-item">近似大小: {tilemap.width * tilemap.tileWidth}x{tilemap.height * tilemap.tileHeight}</div>
+                </div>
+
+                {/* Canvas */}
+                <div className="viewport-canvas-container">
+                    <TilemapCanvas
+                        key={tilemapKey}
+                        tilemap={tilemap}
+                        tilesetImage={tilesetImage}
+                        onTilemapChange={handleTilemapChange}
+                    />
+                </div>
+
+                {/* Scale ruler - width represents 100 pixels at current zoom */}
+                <div className="viewport-ruler">
+                    <div className="ruler-marker">
+                        <div className="ruler-line" style={{ width: 100 * zoom }} />
+                        <span>{(100 / zoom / tilemap.tileWidth).toFixed(1)} 格</span>
+                    </div>
+                </div>
+
+                {/* Beta preview watermark */}
+                <div className="viewport-watermark">测试预览</div>
             </div>
 
-            {/* Info bar */}
-            <div className="tilemap-info-bar">
-                <span>
-                    Size: {tilemap.width}×{tilemap.height}
-                </span>
-                <span>
-                    Tile: {tileWidth}×{tileHeight}
-                </span>
-                {entity && <span>Entity: {entity.name}</span>}
-                {editingCollision && <span style={{ color: '#ff6b6b' }}>Editing Collision</span>}
+            {/* Right Divider */}
+            <PanelDivider direction="horizontal" onDrag={handleRightDividerDrag} />
+
+            {/* Right Panel - Details */}
+            <div style={{ width: rightPanelWidth, flexShrink: 0 }}>
+                <TilemapDetailsPanel
+                    tilemap={tilemap}
+                    onAddLayer={handleAddLayer}
+                    onRemoveLayer={handleRemoveLayer}
+                    onMoveLayer={handleMoveLayer}
+                    onTilemapChange={handleTilemapChange}
+                    onOpenAssetPicker={() => setShowAssetPicker(true)}
+                />
             </div>
 
-            {/* Asset Picker Dialog */}
+            {/* Dialogs */}
             <AssetPickerDialog
                 isOpen={showAssetPicker}
                 onClose={() => setShowAssetPicker(false)}
                 onSelect={handleTilesetSelected}
-                title="Select Tileset Image"
+                title="选择瓦片集图片"
                 fileExtensions={['.png', '.jpg', '.jpeg', '.webp']}
             />
 
-            {/* Resize Map Dialog */}
             <ResizeMapDialog
                 isOpen={showResizeDialog}
                 onClose={() => setShowResizeDialog(false)}

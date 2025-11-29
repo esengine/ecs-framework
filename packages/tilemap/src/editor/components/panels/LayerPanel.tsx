@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, ChevronUp, ChevronDown, Paintbrush } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, ChevronUp, ChevronDown, Paintbrush, Shield, Grid3X3 } from 'lucide-react';
 import { useTilemapEditorStore, type LayerState } from '../../stores/TilemapEditorStore';
 import type { TilemapComponent } from '../../../TilemapComponent';
 
@@ -29,6 +29,10 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
         toggleLayerLocked,
         setLayerOpacity,
         renameLayer,
+        showCollision,
+        setShowCollision,
+        editingCollision,
+        setEditingCollision,
     } = useTilemapEditorStore();
 
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -112,11 +116,54 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
             </div>
 
             <div className="layer-list">
+                {/* Collision Layer - Special layer */}
+                <div
+                    className={`layer-item collision-layer ${editingCollision ? 'selected' : ''}`}
+                    onClick={() => {
+                        setEditingCollision(true);
+                        // Auto-show collision when editing
+                        if (!showCollision) {
+                            setShowCollision(true);
+                        }
+                    }}
+                >
+                    <div className="layer-controls">
+                        <button
+                            className="icon-button small"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowCollision(!showCollision);
+                            }}
+                            title={showCollision ? '隐藏碰撞层' : '显示碰撞层'}
+                        >
+                            {showCollision ? <Eye size={12} /> : <EyeOff size={12} />}
+                        </button>
+                    </div>
+                    <div className="layer-info">
+                        {editingCollision && (
+                            <span className="layer-active-indicator" title="当前编辑碰撞">
+                                <Shield size={14} />
+                            </span>
+                        )}
+                        <span className="layer-name collision-name">
+                            <Shield size={12} style={{ marginRight: 4, opacity: 0.7 }} />
+                            碰撞层
+                        </span>
+                    </div>
+                </div>
+
+                {/* Separator */}
+                <div className="layer-separator" />
+
+                {/* Tile Layers */}
                 {layers.map((layer, index) => (
                     <div
                         key={layer.id}
-                        className={`layer-item ${index === currentLayer ? 'selected' : ''} ${layer.locked ? 'locked' : ''}`}
-                        onClick={() => setCurrentLayer(index)}
+                        className={`layer-item ${index === currentLayer && !editingCollision ? 'selected' : ''} ${layer.locked ? 'locked' : ''}`}
+                        onClick={() => {
+                            setEditingCollision(false);
+                            setCurrentLayer(index);
+                        }}
                     >
                         <div className="layer-controls">
                             <button

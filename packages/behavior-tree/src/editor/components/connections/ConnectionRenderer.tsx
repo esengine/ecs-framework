@@ -1,4 +1,4 @@
-import { React, useMemo } from '@esengine/editor-runtime';
+import { React } from '@esengine/editor-runtime';
 import { ConnectionViewData } from '../../types';
 import { Node } from '../../domain/models/Node';
 
@@ -20,45 +20,40 @@ const ConnectionRendererComponent: React.FC<ConnectionRendererProps> = ({
 }) => {
     const { connection, isSelected } = connectionData;
 
-    const pathData = useMemo(() => {
-        let fromPos, toPos;
+    // 直接计算路径数据，不使用 useMemo
+    // getPortPosition 使用节点数据直接计算，不依赖缩放状态
+    let fromPos, toPos;
 
-        if (connection.connectionType === 'property') {
-            // 属性连接：使用 fromProperty 和 toProperty
-            fromPos = getPortPosition(connection.from, connection.fromProperty);
-            toPos = getPortPosition(connection.to, connection.toProperty);
-        } else {
-            // 节点连接：使用输出和输入端口
-            fromPos = getPortPosition(connection.from, undefined, 'output');
-            toPos = getPortPosition(connection.to, undefined, 'input');
-        }
+    if (connection.connectionType === 'property') {
+        fromPos = getPortPosition(connection.from, connection.fromProperty);
+        toPos = getPortPosition(connection.to, connection.toProperty);
+    } else {
+        fromPos = getPortPosition(connection.from, undefined, 'output');
+        toPos = getPortPosition(connection.to, undefined, 'input');
+    }
 
-        if (!fromPos || !toPos) {
-            return null;
-        }
+    if (!fromPos || !toPos) {
+        return null;
+    }
 
-        const x1 = fromPos.x;
-        const y1 = fromPos.y;
-        const x2 = toPos.x;
-        const y2 = toPos.y;
+    const x1 = fromPos.x;
+    const y1 = fromPos.y;
+    const x2 = toPos.x;
+    const y2 = toPos.y;
 
-        let pathD: string;
+    let pathD: string;
 
-        if (connection.connectionType === 'property') {
-            const controlX1 = x1 + (x2 - x1) * 0.5;
-            const controlX2 = x1 + (x2 - x1) * 0.5;
-            pathD = `M ${x1} ${y1} C ${controlX1} ${y1}, ${controlX2} ${y2}, ${x2} ${y2}`;
-        } else {
-            const controlY = y1 + (y2 - y1) * 0.5;
-            pathD = `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`;
-        }
+    if (connection.connectionType === 'property') {
+        const controlX1 = x1 + (x2 - x1) * 0.5;
+        const controlX2 = x1 + (x2 - x1) * 0.5;
+        pathD = `M ${x1} ${y1} C ${controlX1} ${y1}, ${controlX2} ${y2}, ${x2} ${y2}`;
+    } else {
+        const controlY = y1 + (y2 - y1) * 0.5;
+        pathD = `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`;
+    }
 
-        return {
-            path: pathD,
-            midX: (x1 + x2) / 2,
-            midY: (y1 + y2) / 2
-        };
-    }, [connection, fromNode, toNode, getPortPosition]);
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
 
     const isPropertyConnection = connection.connectionType === 'property';
 
@@ -69,11 +64,6 @@ const ConnectionRendererComponent: React.FC<ConnectionRendererProps> = ({
 
     const gradientId = `gradient-${connection.from}-${connection.to}`;
 
-    if (!pathData) {
-        return null;
-    }
-
-    const pathD = pathData.path;
     const endPosMatch = pathD.match(/C [0-9.-]+ [0-9.-]+, [0-9.-]+ [0-9.-]+, ([0-9.-]+) ([0-9.-]+)/);
     const endX = endPosMatch ? parseFloat(endPosMatch[1]) : 0;
     const endY = endPosMatch ? parseFloat(endPosMatch[2]) : 0;
@@ -106,14 +96,14 @@ const ConnectionRendererComponent: React.FC<ConnectionRendererProps> = ({
             </defs>
 
             <path
-                d={pathData.path}
+                d={pathD}
                 fill="none"
                 stroke="transparent"
                 strokeWidth={24}
             />
 
             <path
-                d={pathData.path}
+                d={pathD}
                 fill="none"
                 stroke={glowColor}
                 strokeWidth={strokeWidth + 2}
@@ -122,7 +112,7 @@ const ConnectionRendererComponent: React.FC<ConnectionRendererProps> = ({
             />
 
             <path
-                d={pathData.path}
+                d={pathD}
                 fill="none"
                 stroke={`url(#${gradientId})`}
                 strokeWidth={strokeWidth}
@@ -141,15 +131,15 @@ const ConnectionRendererComponent: React.FC<ConnectionRendererProps> = ({
             {isSelected && (
                 <>
                     <circle
-                        cx={pathData.midX}
-                        cy={pathData.midY}
+                        cx={midX}
+                        cy={midY}
                         r="8"
                         fill={strokeColor}
                         opacity="0.3"
                     />
                     <circle
-                        cx={pathData.midX}
-                        cy={pathData.midY}
+                        cx={midX}
+                        cy={midY}
                         r="5"
                         fill={strokeColor}
                         stroke="rgba(0, 0, 0, 0.5)"

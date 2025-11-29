@@ -26,6 +26,11 @@ export interface TilemapEditorState {
     // Current editing target
     entityId: string | null;
 
+    // Pending file to open (for file-based editing)
+    pendingFilePath: string | null;
+    // Current file being edited (for file-based editing)
+    currentFilePath: string | null;
+
     // Tileset
     tilesetImageUrl: string | null;
     tilesetColumns: number;
@@ -58,6 +63,9 @@ export interface TilemapEditorState {
 
     // Actions
     setEntityId: (id: string | null) => void;
+    setPendingFilePath: (path: string | null) => void;
+    setCurrentFilePath: (path: string | null) => void;
+    clearPendingFile: () => void;
     setTileset: (url: string | null, columns: number, rows: number, tileWidth: number, tileHeight: number) => void;
     setSelectedTiles: (selection: TileSelection | null) => void;
     setCurrentTool: (tool: TilemapToolType) => void;
@@ -83,6 +91,8 @@ export interface TilemapEditorState {
 
 const initialState = {
     entityId: null,
+    pendingFilePath: null,
+    currentFilePath: null,
     tilesetImageUrl: null,
     tilesetColumns: 0,
     tilesetRows: 0,
@@ -107,6 +117,12 @@ export const useTilemapEditorStore = create<TilemapEditorState>((set, get) => ({
     ...initialState,
 
     setEntityId: (id) => set({ entityId: id }),
+
+    setPendingFilePath: (path) => set({ pendingFilePath: path }),
+
+    setCurrentFilePath: (path) => set({ currentFilePath: path }),
+
+    clearPendingFile: () => set({ pendingFilePath: null }),
 
     setTileset: (url, columns, rows, tileWidth, tileHeight) => set({
         tilesetImageUrl: url,

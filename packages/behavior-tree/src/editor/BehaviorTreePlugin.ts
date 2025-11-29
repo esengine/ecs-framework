@@ -1,22 +1,9 @@
 /**
- * Behavior Tree Unified Plugin
- * 行为树统一插件
+ * Behavior Tree Plugin Descriptor
+ * 行为树插件描述符
  */
 
-import type { IScene, ServiceContainer } from '@esengine/ecs-framework';
-import { ComponentRegistry, Core } from '@esengine/ecs-framework';
-import type {
-    IPluginLoader,
-    IRuntimeModuleLoader,
-    PluginDescriptor,
-    SystemContext
-} from '@esengine/editor-runtime';
-
-// Runtime imports
-import { BehaviorTreeRuntimeComponent } from '../execution/BehaviorTreeRuntimeComponent';
-import { BehaviorTreeExecutionSystem } from '../execution/BehaviorTreeExecutionSystem';
-import { BehaviorTreeAssetManager } from '../execution/BehaviorTreeAssetManager';
-import { GlobalBlackboardService } from '../Services/GlobalBlackboardService';
+import type { PluginDescriptor } from '@esengine/editor-runtime';
 
 /**
  * 插件描述符
@@ -49,50 +36,3 @@ export const descriptor: PluginDescriptor = {
     ],
     icon: 'GitBranch'
 };
-
-/**
- * Behavior Tree Runtime Module
- * 行为树运行时模块
- */
-export class BehaviorTreeRuntimeModule implements IRuntimeModuleLoader {
-    registerComponents(registry: typeof ComponentRegistry): void {
-        registry.register(BehaviorTreeRuntimeComponent);
-    }
-
-    registerServices(services: ServiceContainer): void {
-        if (!services.isRegistered(GlobalBlackboardService)) {
-            services.registerSingleton(GlobalBlackboardService);
-        }
-        if (!services.isRegistered(BehaviorTreeAssetManager)) {
-            services.registerSingleton(BehaviorTreeAssetManager);
-        }
-    }
-
-    createSystems(scene: IScene, context: SystemContext): void {
-        const behaviorTreeSystem = new BehaviorTreeExecutionSystem(Core);
-
-        // 编辑器模式下默认禁用
-        if (context.isEditor) {
-            behaviorTreeSystem.enabled = false;
-        }
-
-        scene.addSystem(behaviorTreeSystem);
-
-        // 保存引用
-        context.behaviorTreeSystem = behaviorTreeSystem;
-    }
-}
-
-/**
- * Behavior Tree Plugin Loader
- * 行为树插件加载器
- *
- * 注意：editorModule 在 ./index.ts 中通过 createBehaviorTreePlugin() 设置
- */
-export const BehaviorTreePlugin: IPluginLoader = {
-    descriptor,
-    runtimeModule: new BehaviorTreeRuntimeModule(),
-    // editorModule 将在 index.ts 中设置
-};
-
-export default BehaviorTreePlugin;

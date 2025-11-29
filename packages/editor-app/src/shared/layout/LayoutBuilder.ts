@@ -1,18 +1,29 @@
 import type { IJsonModel, IJsonTabSetNode, IJsonRowNode } from 'flexlayout-react';
 import type { FlexDockPanel } from './types';
 
+// 固定宽度配置（像素）| Fixed width configuration (pixels)
+const RIGHT_PANEL_WIDTH = 320;
+const RIGHT_HIERARCHY_HEIGHT_RATIO = 40;
+const RIGHT_INSPECTOR_HEIGHT_RATIO = 60;
+
 export class LayoutBuilder {
     static createDefaultLayout(panels: FlexDockPanel[], activePanelId?: string): IJsonModel {
+        const viewportPanels = panels.filter((p) => p.id === 'viewport');
         const hierarchyPanels = panels.filter((p) => p.id.includes('hierarchy'));
-        const assetPanels = panels.filter((p) => p.id.includes('asset'));
-        const rightPanels = panels.filter((p) => p.id.includes('inspector'));
-        const bottomPanels = panels.filter((p) => p.id.includes('console'));
-        const centerPanels = panels.filter((p) =>
-            !hierarchyPanels.includes(p) && !assetPanels.includes(p) && !rightPanels.includes(p) && !bottomPanels.includes(p)
+        const inspectorPanels = panels.filter((p) => p.id.includes('inspector'));
+        const pluginPanels = panels.filter((p) =>
+            !viewportPanels.includes(p) &&
+            !hierarchyPanels.includes(p) &&
+            !inspectorPanels.includes(p)
         );
 
-        const centerColumnChildren = this.buildCenterColumn(centerPanels, bottomPanels, activePanelId);
-        const mainRowChildren = this.buildMainRow(hierarchyPanels, assetPanels, centerColumnChildren, rightPanels);
+        const mainRowChildren = this.buildLayout(
+            viewportPanels,
+            pluginPanels,
+            hierarchyPanels,
+            inspectorPanels,
+            activePanelId
+        );
 
         return {
             global: {
@@ -21,7 +32,9 @@ export class LayoutBuilder {
                 tabSetEnableMaximize: true,
                 borderSize: 200,
                 tabSetMinWidth: 100,
-                tabSetMinHeight: 100
+                tabSetMinHeight: 100,
+                splitterSize: 6,
+                splitterExtra: 4
             },
             borders: [],
             layout: {
@@ -32,28 +45,31 @@ export class LayoutBuilder {
         };
     }
 
-    private static buildCenterColumn(
-        centerPanels: FlexDockPanel[],
-        bottomPanels: FlexDockPanel[],
+    private static buildLayout(
+        viewportPanels: FlexDockPanel[],
+        pluginPanels: FlexDockPanel[],
+        hierarchyPanels: FlexDockPanel[],
+        inspectorPanels: FlexDockPanel[],
         activePanelId?: string
     ): (IJsonTabSetNode | IJsonRowNode)[] {
-        const children: (IJsonTabSetNode | IJsonRowNode)[] = [];
+        const mainRowChildren: (IJsonTabSetNode | IJsonRowNode)[] = [];
 
-        if (centerPanels.length > 0) {
+        const leftPanels = [...viewportPanels, ...pluginPanels];
+        if (leftPanels.length > 0) {
             let activeTabIndex = 0;
             if (activePanelId) {
-                const index = centerPanels.findIndex((p) => p.id === activePanelId);
+                const index = leftPanels.findIndex((p) => p.id === activePanelId);
                 if (index !== -1) {
                     activeTabIndex = index;
                 }
             }
 
-            children.push({
+            mainRowChildren.push({
                 type: 'tabset',
-                weight: 70,
+                weight: 100, // 占据剩余空间
                 selected: activeTabIndex,
                 enableMaximize: true,
-                children: centerPanels.map((p) => ({
+                children: leftPanels.map((p) => ({
                     type: 'tab',
                     name: p.title,
                     id: p.id,
@@ -63,73 +79,12 @@ export class LayoutBuilder {
             });
         }
 
-        if (bottomPanels.length > 0) {
-            children.push({
-                type: 'tabset',
-                weight: 30,
-                enableMaximize: true,
-                children: bottomPanels.map((p) => ({
-                    type: 'tab',
-                    name: p.title,
-                    id: p.id,
-                    component: p.id,
-                    enableClose: p.closable !== false
-                }))
-            });
-        }
-
-        return children;
-    }
-
-    private static buildMainRow(
-        hierarchyPanels: FlexDockPanel[],
-        assetPanels: FlexDockPanel[],
-        centerColumnChildren: (IJsonTabSetNode | IJsonRowNode)[],
-        rightPanels: FlexDockPanel[]
-    ): (IJsonTabSetNode | IJsonRowNode)[] {
-        const mainRowChildren: (IJsonTabSetNode | IJsonRowNode)[] = [];
-
-        if (hierarchyPanels.length > 0 || assetPanels.length > 0) {
-            const leftColumnChildren = this.buildLeftColumn(hierarchyPanels, assetPanels);
-            mainRowChildren.push({
-                type: 'row',
-                weight: 20,
-                children: leftColumnChildren
-            });
-        }
-
-        if (centerColumnChildren.length > 0) {
-            this.addCenterColumn(mainRowChildren, centerColumnChildren);
-        }
-
-        if (rightPanels.length > 0) {
-            mainRowChildren.push({
-                type: 'tabset',
-                weight: 20,
-                enableMaximize: true,
-                children: rightPanels.map((p) => ({
-                    type: 'tab',
-                    name: p.title,
-                    id: p.id,
-                    component: p.id,
-                    enableClose: p.closable !== false
-                }))
-            });
-        }
-
-        return mainRowChildren;
-    }
-
-    private static buildLeftColumn(
-        hierarchyPanels: FlexDockPanel[],
-        assetPanels: FlexDockPanel[]
-    ): IJsonTabSetNode[] {
-        const leftColumnChildren: IJsonTabSetNode[] = [];
+        const rightColumnChildren: IJsonTabSetNode[] = [];
 
         if (hierarchyPanels.length > 0) {
-            leftColumnChildren.push({
+            rightColumnChildren.push({
                 type: 'tabset',
-                weight: 50,
+                weight: RIGHT_HIERARCHY_HEIGHT_RATIO,
                 enableMaximize: true,
                 children: hierarchyPanels.map((p) => ({
                     type: 'tab',
@@ -141,12 +96,12 @@ export class LayoutBuilder {
             });
         }
 
-        if (assetPanels.length > 0) {
-            leftColumnChildren.push({
+        if (inspectorPanels.length > 0) {
+            rightColumnChildren.push({
                 type: 'tabset',
-                weight: 50,
+                weight: RIGHT_INSPECTOR_HEIGHT_RATIO,
                 enableMaximize: true,
-                children: assetPanels.map((p) => ({
+                children: inspectorPanels.map((p) => ({
                     type: 'tab',
                     name: p.title,
                     id: p.id,
@@ -156,35 +111,14 @@ export class LayoutBuilder {
             });
         }
 
-        return leftColumnChildren;
-    }
-
-    private static addCenterColumn(
-        mainRowChildren: (IJsonTabSetNode | IJsonRowNode)[],
-        centerColumnChildren: (IJsonTabSetNode | IJsonRowNode)[]
-    ): void {
-        if (centerColumnChildren.length === 1) {
-            const centerChild = centerColumnChildren[0];
-            if (centerChild && centerChild.type === 'tabset') {
-                mainRowChildren.push({
-                    type: 'tabset',
-                    weight: 60,
-                    enableMaximize: true,
-                    children: centerChild.children
-                } as IJsonTabSetNode);
-            } else if (centerChild) {
-                mainRowChildren.push({
-                    type: 'row',
-                    weight: 60,
-                    children: centerChild.children
-                } as IJsonRowNode);
-            }
-        } else {
+        if (rightColumnChildren.length > 0) {
             mainRowChildren.push({
                 type: 'row',
-                weight: 60,
-                children: centerColumnChildren
-            });
+                width: RIGHT_PANEL_WIDTH, // 使用固定宽度而不是权重
+                children: rightColumnChildren
+            } as IJsonRowNode);
         }
+
+        return mainRowChildren;
     }
 }

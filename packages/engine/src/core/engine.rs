@@ -222,8 +222,8 @@ impl Engine {
         // Render gizmos on top
         if self.show_gizmos {
             self.gizmo_renderer.render(self.context.gl(), self.renderer.camera());
-            // Render axis indicator in corner (always visible when gizmos are on)
-            // 在角落渲染坐标轴指示器（当 gizmos 开启时始终可见）
+            // Render axis indicator in corner
+            // 在角落渲染坐标轴指示器
             self.gizmo_renderer.render_axis_indicator(
                 self.context.gl(),
                 self.context.width() as f32,
@@ -265,6 +265,52 @@ impl Engine {
         show_handles: bool,
     ) {
         self.gizmo_renderer.add_rect(x, y, width, height, rotation, origin_x, origin_y, r, g, b, a, show_handles);
+    }
+
+    /// Add a circle gizmo.
+    /// 添加圆形Gizmo。
+    pub fn add_gizmo_circle(
+        &mut self,
+        x: f32,
+        y: f32,
+        radius: f32,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+    ) {
+        self.gizmo_renderer.add_circle(x, y, radius, r, g, b, a);
+    }
+
+    /// Add a line gizmo.
+    /// 添加线条Gizmo。
+    pub fn add_gizmo_line(
+        &mut self,
+        points: Vec<f32>,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+        closed: bool,
+    ) {
+        self.gizmo_renderer.add_line(points, r, g, b, a, closed);
+    }
+
+    /// Add a capsule gizmo.
+    /// 添加胶囊Gizmo。
+    pub fn add_gizmo_capsule(
+        &mut self,
+        x: f32,
+        y: f32,
+        radius: f32,
+        half_height: f32,
+        rotation: f32,
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+    ) {
+        self.gizmo_renderer.add_capsule(x, y, radius, half_height, rotation, r, g, b, a);
     }
 
     /// Set transform tool mode.
