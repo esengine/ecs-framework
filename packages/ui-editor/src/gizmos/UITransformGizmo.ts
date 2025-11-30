@@ -21,24 +21,33 @@ function uiTransformGizmoProvider(
     // 否则回退到本地坐标
     const x = transform.worldX ?? transform.x;
     const y = transform.worldY ?? transform.y;
-    const width = (transform.computedWidth ?? transform.width) * transform.scaleX;
-    const height = (transform.computedHeight ?? transform.height) * transform.scaleY;
+    // Use world scale for proper hierarchical transform inheritance
+    // 使用世界缩放以正确继承层级变换
+    const scaleX = transform.worldScaleX ?? transform.scaleX;
+    const scaleY = transform.worldScaleY ?? transform.scaleY;
+    const width = (transform.computedWidth ?? transform.width) * scaleX;
+    const height = (transform.computedHeight ?? transform.height) * scaleY;
+    // Use world rotation for proper hierarchical transform inheritance
+    // 使用世界旋转以正确继承层级变换
+    const rotation = transform.worldRotation ?? transform.rotation;
+    // 使用 transform 的 pivot 作为旋转/缩放中心
+    const pivotX = transform.pivotX;
+    const pivotY = transform.pivotY;
+    // 渲染位置 = 左下角 + pivot 偏移
+    const renderX = x + width * pivotX;
+    const renderY = y + height * pivotY;
 
-    // Use bottom-left position with origin at (0, 0)
-    // x, y is bottom-left corner in UITransform coordinate system (Y-up)
-    // This matches Gizmo origin=(0,0) which means reference point is at bottom-left
-    // 使用左下角位置，原点在 (0, 0)
-    // UITransform 坐标系中 x, y 是左下角（Y 向上）
-    // 这与 Gizmo origin=(0,0) 匹配，表示参考点在左下角
+    // Use pivot position with transform's pivot values as origin
+    // 使用 transform 的 pivot 值作为 gizmo 的原点
     const gizmo: IRectGizmoData = {
         type: 'rect',
-        x,
-        y,
+        x: renderX,
+        y: renderY,
         width,
         height,
-        rotation: transform.rotation,
-        originX: 0,
-        originY: 0,
+        rotation,
+        originX: pivotX,
+        originY: pivotY,
         color: isSelected ? UI_GIZMO_COLOR : UI_GIZMO_COLOR_UNSELECTED,
         showHandles: isSelected
     };

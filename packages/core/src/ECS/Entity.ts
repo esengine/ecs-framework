@@ -37,12 +37,14 @@ export class EntityComparer {
  *
  * ECS架构中的实体（Entity），作为组件的容器。
  * 实体本身不包含游戏逻辑，所有功能都通过组件来实现。
- * 支持父子关系，可以构建实体层次结构。
+ *
+ * 层级关系通过 HierarchyComponent 和 HierarchySystem 管理，
+ * 而非 Entity 内置属性，符合 ECS 组合原则。
  *
  * @example
  * ```typescript
  * // 创建实体
- * const entity = new Entity("Player", 1);
+ * const entity = scene.createEntity("Player");
  *
  * // 添加组件
  * const healthComponent = entity.addComponent(new HealthComponent(100));
@@ -50,12 +52,9 @@ export class EntityComparer {
  * // 获取组件
  * const health = entity.getComponent(HealthComponent);
  *
- * // 添加位置组件
- * entity.addComponent(new PositionComponent(100, 200));
- *
- * // 添加子实体
- * const weapon = new Entity("Weapon", 2);
- * entity.addChild(weapon);
+ * // 层级关系使用 HierarchySystem
+ * const hierarchySystem = scene.getSystem(HierarchySystem);
+ * hierarchySystem.setParent(childEntity, parentEntity);
  * ```
  */
 export class Entity {
@@ -88,16 +87,6 @@ export class Entity {
      * 销毁状态标志
      */
     private _isDestroyed: boolean = false;
-
-    /**
-     * 父实体引用
-     */
-    private _parent: Entity | null = null;
-
-    /**
-     * 子实体集合
-     */
-    private _children: Entity[] = [];
 
     /**
      * 激活状态
@@ -202,32 +191,6 @@ export class Entity {
     }
 
     /**
-     * 获取父实体
-     * @returns 父实体，如果没有父实体则返回null
-     */
-    public get parent(): Entity | null {
-        return this._parent;
-    }
-
-    /**
-     * 获取子实体数组的只读副本
-     *
-     * @returns 子实体数组的副本
-     */
-    public get children(): readonly Entity[] {
-        return [...this._children];
-    }
-
-    /**
-     * 获取子实体数量
-     *
-     * @returns 子实体的数量
-     */
-    public get childCount(): number {
-        return this._children.length;
-    }
-
-    /**
      * 获取活跃状态
      *
      * @returns 如果实体处于活跃状态则返回true
@@ -239,8 +202,6 @@ export class Entity {
     /**
      * 设置活跃状态
      *
-     * 设置实体的活跃状态，会影响子实体的有效活跃状态。
-     *
      * @param value - 新的活跃状态
      */
     public set active(value: boolean) {
@@ -248,19 +209,6 @@ export class Entity {
             this._active = value;
             this.onActiveChanged();
         }
-    }
-
-    /**
-     * 获取实体的有效活跃状态
-     *
-     * 考虑父实体的活跃状态，只有当实体本身和所有父实体都处于活跃状态时才返回true。
-     *
-     * @returns 有效的活跃状态
-     */
-    public get activeInHierarchy(): boolean {
-        if (!this._active) return false;
-        if (this._parent) return this._parent.activeInHierarchy;
-        return true;
     }
 
     /**
@@ -691,185 +639,6 @@ export class Entity {
     }
 
     /**
-     * 添加子实体
-     *
-     * @param child - 要添加的子实体
-     * @returns 添加的子实体
-     */
-    public addChild(child: Entity): Entity {
-        if (child === this) {
-            throw new Error('Entity cannot be its own child');
-        }
-
-        if (child._parent === this) {
-            return child; // 已经是子实体
-        }
-
-        if (child._parent) {
-            child._parent.removeChild(child);
-        }
-
-        child._parent = this;
-        this._children.push(child);
-
-        if (!child.scene && this.scene) {
-            child.scene = this.scene;
-            this.scene.addEntity(child);
-        }
-
-        return child;
-    }
-
-    /**
-     * 移除子实体
-     *
-     * @param child - 要移除的子实体
-     * @returns 是否成功移除
-     */
-    public removeChild(child: Entity): boolean {
-        const index = this._children.indexOf(child);
-        if (index === -1) {
-            return false;
-        }
-
-        this._children.splice(index, 1);
-        child._parent = null;
-
-        return true;
-    }
-
-    /**
-     * 移除所有子实体
-     */
-    public removeAllChildren(): void {
-        const childrenToRemove = [...this._children];
-
-        for (const child of childrenToRemove) {
-            this.removeChild(child);
-        }
-    }
-
-    /**
-     * 根据名称查找子实体
-     *
-     * @param name - 子实体名称
-     * @param recursive - 是否递归查找
-     * @returns 找到的子实体或null
-     */
-    public findChild(name: string, recursive: boolean = false): Entity | null {
-        for (const child of this._children) {
-            if (child.name === name) {
-                return child;
-            }
-        }
-
-        if (recursive) {
-            for (const child of this._children) {
-                const found = child.findChild(name, true);
-                if (found) {
-                    return found;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * 根据标签查找子实体
-     *
-     * @param tag - 标签
-     * @param recursive - 是否递归查找
-     * @returns 找到的子实体数组
-     */
-    public findChildrenByTag(tag: number, recursive: boolean = false): Entity[] {
-        const result: Entity[] = [];
-
-        for (const child of this._children) {
-            if (child.tag === tag) {
-                result.push(child);
-            }
-        }
-
-        if (recursive) {
-            for (const child of this._children) {
-                result.push(...child.findChildrenByTag(tag, true));
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * 获取根实体
-     *
-     * @returns 层次结构的根实体
-     */
-    public getRoot(): Entity {
-        if (!this._parent) {
-            return this;
-        }
-        return this._parent.getRoot();
-    }
-
-    /**
-     * 检查是否是指定实体的祖先
-     *
-     * @param entity - 要检查的实体
-     * @returns 如果是祖先则返回true
-     */
-    public isAncestorOf(entity: Entity): boolean {
-        let current = entity._parent;
-        while (current) {
-            if (current === this) {
-                return true;
-            }
-            current = current._parent;
-        }
-        return false;
-    }
-
-    /**
-     * 检查是否是指定实体的后代
-     *
-     * @param entity - 要检查的实体
-     * @returns 如果是后代则返回true
-     */
-    public isDescendantOf(entity: Entity): boolean {
-        return entity.isAncestorOf(this);
-    }
-
-    /**
-     * 获取层次深度
-     *
-     * @returns 在层次结构中的深度（根实体为0）
-     */
-    public getDepth(): number {
-        let depth = 0;
-        let current = this._parent;
-        while (current) {
-            depth++;
-            current = current._parent;
-        }
-        return depth;
-    }
-
-    /**
-     * 遍历所有子实体（深度优先）
-     *
-     * @param callback - 对每个子实体执行的回调函数
-     * @param recursive - 是否递归遍历
-     */
-    public forEachChild(callback: (child: Entity, index: number) => void, recursive: boolean = false): void {
-        this._children.forEach((child, index) => {
-            callback(child, index);
-            if (recursive) {
-                child.forEachChild(callback, true);
-            }
-        });
-    }
-
-    /**
      * 活跃状态改变时的回调
      */
     private onActiveChanged(): void {
@@ -882,8 +651,7 @@ export class Entity {
         if (this.scene && this.scene.eventSystem) {
             this.scene.eventSystem.emitSync('entity:activeChanged', {
                 entity: this,
-                active: this._active,
-                activeInHierarchy: this.activeInHierarchy
+                active: this._active
             });
         }
     }
@@ -891,7 +659,8 @@ export class Entity {
     /**
      * 销毁实体
      *
-     * 移除所有组件、子实体并标记为已销毁
+     * 移除所有组件并标记为已销毁。
+     * 层级关系的清理由 HierarchySystem 处理。
      */
     public destroy(): void {
         if (this._isDestroyed) {
@@ -905,15 +674,6 @@ export class Entity {
             this.scene.referenceTracker.unregisterEntityScene(this.id);
         }
 
-        const childrenToDestroy = [...this._children];
-        for (const child of childrenToDestroy) {
-            child.destroy();
-        }
-
-        if (this._parent) {
-            this._parent.removeChild(this);
-        }
-
         this.removeAllComponents();
 
         if (this.scene) {
@@ -925,43 +685,6 @@ export class Entity {
                 this.scene.entities.remove(this);
             }
         }
-    }
-
-    /**
-     * 批量销毁所有子实体
-     */
-    public destroyAllChildren(): void {
-        if (this._children.length === 0) return;
-
-        const scene = this.scene;
-        const toDestroy: Entity[] = [];
-
-        const collectChildren = (entity: Entity) => {
-            for (const child of entity._children) {
-                toDestroy.push(child);
-                collectChildren(child);
-            }
-        };
-        collectChildren(this);
-
-        for (const entity of toDestroy) {
-            entity.setDestroyedState(true);
-        }
-
-        for (const entity of toDestroy) {
-            entity.removeAllComponents();
-        }
-
-        if (scene) {
-            for (const entity of toDestroy) {
-                scene.entities.remove(entity);
-                scene.querySystem.removeEntity(entity);
-            }
-
-            scene.clearSystemEntityCaches();
-        }
-
-        this._children.length = 0;
     }
 
     /**
@@ -993,31 +716,21 @@ export class Entity {
         id: number;
         enabled: boolean;
         active: boolean;
-        activeInHierarchy: boolean;
         destroyed: boolean;
         componentCount: number;
         componentTypes: string[];
         componentMask: string;
-        parentId: number | null;
-        childCount: number;
-        childIds: number[];
-        depth: number;
         cacheBuilt: boolean;
-        } {
+    } {
         return {
             name: this.name,
             id: this.id,
             enabled: this._enabled,
             active: this._active,
-            activeInHierarchy: this.activeInHierarchy,
             destroyed: this._isDestroyed,
             componentCount: this.components.length,
             componentTypes: this.components.map((c) => getComponentInstanceTypeName(c)),
-            componentMask: BitMask64Utils.toString(this._componentMask, 2), // 二进制表示
-            parentId: this._parent?.id || null,
-            childCount: this._children.length,
-            childIds: this._children.map((c) => c.id),
-            depth: this.getDepth(),
+            componentMask: BitMask64Utils.toString(this._componentMask, 2),
             cacheBuilt: this._componentCache !== null
         };
     }

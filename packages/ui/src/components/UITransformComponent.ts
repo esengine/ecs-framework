@@ -233,6 +233,32 @@ export class UITransformComponent extends Component {
     public worldAlpha: number = 1;
 
     /**
+     * 计算后的世界旋转（弧度，考虑父元素旋转）
+     * Computed world rotation in radians (considering parent rotation)
+     */
+    public worldRotation: number = 0;
+
+    /**
+     * 计算后的世界 X 缩放（考虑父元素缩放）
+     * Computed world X scale (considering parent scale)
+     */
+    public worldScaleX: number = 1;
+
+    /**
+     * 计算后的世界 Y 缩放（考虑父元素缩放）
+     * Computed world Y scale (considering parent scale)
+     */
+    public worldScaleY: number = 1;
+
+    /**
+     * 本地到世界的 2D 变换矩阵（只读，由 UILayoutSystem 计算）
+     * Local to world 2D transformation matrix (readonly, computed by UILayoutSystem)
+     */
+    public localToWorldMatrix: { a: number; b: number; c: number; d: number; tx: number; ty: number } = {
+        a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0
+    };
+
+    /**
      * 布局是否需要更新
      * Flag indicating layout needs update
      */

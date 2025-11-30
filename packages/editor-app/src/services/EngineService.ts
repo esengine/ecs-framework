@@ -5,8 +5,8 @@
 
 import { EngineBridge, EngineRenderSystem, GizmoDataProviderFn, HasGizmoProviderFn, CameraConfig, CameraSystem } from '@esengine/ecs-engine-bindgen';
 import { GizmoRegistry, EntityStoreService, MessageHub, SceneManagerService, ProjectService, PluginManager, IPluginManager, type SystemContext } from '@esengine/editor-core';
-import { Core, Scene, Entity, SceneSerializer } from '@esengine/ecs-framework';
-import { TransformComponent, SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystem } from '@esengine/ecs-components';
+import { Core, Scene, Entity, SceneSerializer, HierarchySystem } from '@esengine/ecs-framework';
+import { TransformComponent, TransformSystem, SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystem } from '@esengine/ecs-components';
 import { TilemapComponent, TilemapRenderingSystem } from '@esengine/tilemap';
 import { BehaviorTreeExecutionSystem } from '@esengine/behavior-tree';
 import { UIRenderDataProvider, invalidateUIRenderCaches, UIInputSystem } from '@esengine/ui';
@@ -132,6 +132,12 @@ export class EngineService {
                 this.scene = new Scene({ name: 'EditorScene' });
                 Core.setScene(this.scene);
             }
+
+            // Add hierarchy system (基础系统，管理实体层级关系)
+            this.scene.addSystem(new HierarchySystem());
+
+            // Add transform system (基础系统，计算世界变换)
+            this.scene.addSystem(new TransformSystem());
 
             // Add camera system (基础系统，始终需要)
             this.cameraSystem = new CameraSystem(this.bridge);
@@ -953,13 +959,8 @@ export class EngineService {
                 const selectedEntity = entityStore.getSelectedEntity();
                 const selectedId = selectedEntity?.id;
 
-                // Clear old entities from store
-                entityStore.clear();
-
-                // Add restored entities to store
-                for (const entity of this.scene.entities.buffer) {
-                    entityStore.addEntity(entity);
-                }
+                // 使用 syncFromScene 正确同步实体（会检查 HierarchyComponent 确定根实体）
+                entityStore.syncFromScene();
 
                 // Re-select the same entity (now with new reference)
                 if (selectedId !== undefined) {

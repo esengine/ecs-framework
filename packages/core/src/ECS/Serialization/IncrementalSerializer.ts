@@ -11,6 +11,8 @@ import { ComponentSerializer, SerializedComponent } from './ComponentSerializer'
 import { SerializedEntity } from './EntitySerializer';
 import { ComponentType } from '../Core/ComponentStorage';
 import { BinarySerializer } from '../../Utils/BinarySerializer';
+import { HierarchyComponent } from '../Components/HierarchyComponent';
+import { HierarchySystem } from '../Systems/HierarchySystem';
 
 /**
  * 变更操作类型
@@ -196,6 +198,10 @@ export class IncrementalSerializer {
         for (const entity of scene.entities.buffer) {
             snapshot.entityIds.add(entity.id);
 
+            // 获取层级信息
+            const hierarchy = entity.getComponent(HierarchyComponent);
+            const parentId = hierarchy?.parentId;
+
             // 存储实体基本信息
             snapshot.entities.set(entity.id, {
                 name: entity.name,
@@ -203,7 +209,7 @@ export class IncrementalSerializer {
                 active: entity.active,
                 enabled: entity.enabled,
                 updateOrder: entity.updateOrder,
-                ...(entity.parent && { parentId: entity.parent.id })
+                ...(parentId !== null && parentId !== undefined && { parentId })
             });
 
             // 快照组件
@@ -272,6 +278,10 @@ export class IncrementalSerializer {
         for (const entity of scene.entities.buffer) {
             currentEntityIds.add(entity.id);
 
+            // 获取层级信息
+            const hierarchy = entity.getComponent(HierarchyComponent);
+            const parentId = hierarchy?.parentId;
+
             if (!baseSnapshot.entityIds.has(entity.id)) {
                 // 新增实体
                 incremental.entityChanges.push({
@@ -285,7 +295,7 @@ export class IncrementalSerializer {
                         active: entity.active,
                         enabled: entity.enabled,
                         updateOrder: entity.updateOrder,
-                        ...(entity.parent && { parentId: entity.parent.id }),
+                        ...(parentId !== null && parentId !== undefined && { parentId }),
                         components: [],
                         children: []
                     }
@@ -312,7 +322,7 @@ export class IncrementalSerializer {
                     oldData.active !== entity.active ||
                     oldData.enabled !== entity.enabled ||
                     oldData.updateOrder !== entity.updateOrder ||
-                    oldData.parentId !== entity.parent?.id;
+                    oldData.parentId !== parentId;
 
                 if (entityChanged) {
                     incremental.entityChanges.push({
@@ -324,7 +334,7 @@ export class IncrementalSerializer {
                             active: entity.active,
                             enabled: entity.enabled,
                             updateOrder: entity.updateOrder,
-                            ...(entity.parent && { parentId: entity.parent.id })
+                            ...(parentId !== null && parentId !== undefined && { parentId })
                         }
                     });
                 }
@@ -539,16 +549,20 @@ export class IncrementalSerializer {
         if (change.entityData.enabled !== undefined) entity.enabled = change.entityData.enabled;
         if (change.entityData.updateOrder !== undefined) entity.updateOrder = change.entityData.updateOrder;
 
-        if (change.entityData.parentId !== undefined) {
-            const newParent = scene.entities.findEntityById(change.entityData.parentId);
-            if (newParent && entity.parent !== newParent) {
-                if (entity.parent) {
-                    entity.parent.removeChild(entity);
+        // 使用 HierarchySystem 更新层级关系
+        const hierarchySystem = scene.getSystem(HierarchySystem);
+        if (hierarchySystem) {
+            const hierarchy = entity.getComponent(HierarchyComponent);
+            const currentParentId = hierarchy?.parentId;
+
+            if (change.entityData.parentId !== undefined) {
+                const newParent = scene.entities.findEntityById(change.entityData.parentId);
+                if (newParent && currentParentId !== change.entityData.parentId) {
+                    hierarchySystem.setParent(entity, newParent);
                 }
-                newParent.addChild(entity);
+            } else if (currentParentId !== null && currentParentId !== undefined) {
+                hierarchySystem.setParent(entity, null);
             }
-        } else if (entity.parent) {
-            entity.parent.removeChild(entity);
         }
     }
 

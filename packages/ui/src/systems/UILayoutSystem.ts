@@ -1,6 +1,19 @@
-import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/ecs-framework';
+import { EntitySystem, Matcher, Entity, ECSSystem, HierarchyComponent } from '@esengine/ecs-framework';
 import { UITransformComponent } from '../components/UITransformComponent';
 import { UILayoutComponent, UILayoutType, UIJustifyContent, UIAlignItems } from '../components/UILayoutComponent';
+
+/**
+ * 2D 变换矩阵类型
+ * 2D transformation matrix type
+ */
+interface Matrix2D {
+    a: number;   // scaleX * cos(rotation)
+    b: number;   // scaleX * sin(rotation)
+    c: number;   // scaleY * -sin(rotation)
+    d: number;   // scaleY * cos(rotation)
+    tx: number;  // translateX
+    ty: number;  // translateY
+}
 
 /**
  * UI 布局系统
@@ -8,6 +21,9 @@ import { UILayoutComponent, UILayoutType, UIJustifyContent, UIAlignItems } from 
  *
  * 计算 UI 元素的世界坐标和尺寸
  * Computes world coordinates and sizes for UI elements
+ *
+ * 使用矩阵乘法计算世界变换：worldMatrix = parentMatrix * localMatrix
+ * Uses matrix multiplication for world transforms: worldMatrix = parentMatrix * localMatrix
  *
  * 注意：canvasWidth/canvasHeight 是 UI 设计的参考尺寸，不是实际渲染视口大小
  * Note: canvasWidth/canvasHeight is the UI design reference size, not the actual render viewport size
@@ -60,7 +76,14 @@ export class UILayoutSystem extends EntitySystem {
 
     protected process(entities: readonly Entity[]): void {
         // 首先处理根元素（没有父元素的）
-        const rootEntities = entities.filter(e => !e.parent || !e.parent.hasComponent(UITransformComponent));
+        const rootEntities = entities.filter(e => {
+            const hierarchy = e.getComponent(HierarchyComponent);
+            if (!hierarchy || hierarchy.parentId === null) {
+                return true;
+            }
+            const parent = this.scene?.findEntityById(hierarchy.parentId);
+            return !parent || !parent.hasComponent(UITransformComponent);
+        });
 
         // 画布中心为原点，Y 轴向上为正
         // Canvas center is origin, Y axis points up
@@ -69,8 +92,11 @@ export class UILayoutSystem extends EntitySystem {
         const parentX = -this.canvasWidth / 2;
         const parentY = this.canvasHeight / 2;  // Y 轴向上，所以顶部是正值
 
+        // 根元素使用单位矩阵作为父矩阵
+        const identityMatrix: Matrix2D = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
+
         for (const entity of rootEntities) {
-            this.layoutEntity(entity, parentX, parentY, this.canvasWidth, this.canvasHeight, 1);
+            this.layoutEntity(entity, parentX, parentY, this.canvasWidth, this.canvasHeight, 1, identityMatrix);
         }
     }
 
@@ -84,7 +110,8 @@ export class UILayoutSystem extends EntitySystem {
         parentY: number,
         parentWidth: number,
         parentHeight: number,
-        parentAlpha: number
+        parentAlpha: number,
+        parentMatrix: Matrix2D
     ): void {
         const transform = entity.getComponent(UITransformComponent);
         if (!transform) return;
@@ -160,19 +187,23 @@ export class UILayoutSystem extends EntitySystem {
             worldY = anchorMaxY - transform.y;
         }
 
-        // 更新计算后的值
+        // 更新布局计算的值
         transform.worldX = worldX;
         transform.worldY = worldY;
         transform.computedWidth = width;
         transform.computedHeight = height;
         transform.worldAlpha = parentAlpha * transform.alpha;
+
+        // 使用矩阵乘法计算世界变换
+        this.updateWorldMatrix(transform, parentMatrix);
+
         transform.layoutDirty = false;
 
         // 如果元素不可见，跳过子元素
         if (!transform.visible) return;
 
         // 处理子元素布局
-        const children = entity.children.filter(c => c.hasComponent(UITransformComponent));
+        const children = this.getUIChildren(entity);
         if (children.length === 0) return;
 
         // 计算子元素的父容器边界
@@ -192,7 +223,8 @@ export class UILayoutSystem extends EntitySystem {
                     childParentY,
                     width,
                     height,
-                    transform.worldAlpha
+                    transform.worldAlpha,
+                    transform.localToWorldMatrix
                 );
             }
         }
@@ -234,7 +266,8 @@ export class UILayoutSystem extends EntitySystem {
                         parentTopY,
                         parentTransform.computedWidth,
                         parentTransform.computedHeight,
-                        parentTransform.worldAlpha
+                        parentTransform.worldAlpha,
+                        parentTransform.localToWorldMatrix
                     );
                 }
         }
@@ -328,6 +361,8 @@ export class UILayoutSystem extends EntitySystem {
             childTransform.computedWidth = size.width;
             childTransform.computedHeight = childHeight;
             childTransform.worldAlpha = parentTransform.worldAlpha * childTransform.alpha;
+            // 使用矩阵乘法计算世界旋转和缩放
+            this.updateWorldMatrix(childTransform, parentTransform.localToWorldMatrix);
             childTransform.layoutDirty = false;
 
             // 递归处理子元素的子元素
@@ -424,6 +459,8 @@ export class UILayoutSystem extends EntitySystem {
             childTransform.computedWidth = childWidth;
             childTransform.computedHeight = size.height;
             childTransform.worldAlpha = parentTransform.worldAlpha * childTransform.alpha;
+            // 使用矩阵乘法计算世界旋转和缩放
+            this.updateWorldMatrix(childTransform, parentTransform.localToWorldMatrix);
             childTransform.layoutDirty = false;
 
             this.processChildrenRecursive(child, childTransform);
@@ -478,6 +515,8 @@ export class UILayoutSystem extends EntitySystem {
             childTransform.computedWidth = cellWidth;
             childTransform.computedHeight = cellHeight;
             childTransform.worldAlpha = parentTransform.worldAlpha * childTransform.alpha;
+            // 使用矩阵乘法计算世界旋转和缩放
+            this.updateWorldMatrix(childTransform, parentTransform.localToWorldMatrix);
             childTransform.layoutDirty = false;
 
             this.processChildrenRecursive(child, childTransform);
@@ -485,11 +524,40 @@ export class UILayoutSystem extends EntitySystem {
     }
 
     /**
+     * 获取具有 UITransformComponent 的子实体
+     * Get child entities that have UITransformComponent
+     *
+     * 优先使用 HierarchyComponent，如果没有则返回空数组
+     */
+    private getUIChildren(entity: Entity): Entity[] {
+        const hierarchy = entity.getComponent(HierarchyComponent);
+
+        // 如果没有 HierarchyComponent，返回空数组
+        // UI 实体应该通过 UIBuilder 创建，会自动添加 HierarchyComponent
+        if (!hierarchy) {
+            return [];
+        }
+
+        if (hierarchy.childIds.length === 0) {
+            return [];
+        }
+
+        const children: Entity[] = [];
+        for (const childId of hierarchy.childIds) {
+            const child = this.scene?.findEntityById(childId);
+            if (child && child.hasComponent(UITransformComponent)) {
+                children.push(child);
+            }
+        }
+        return children;
+    }
+
+    /**
      * 递归处理子元素
      * Recursively process children
      */
     private processChildrenRecursive(entity: Entity, parentTransform: UITransformComponent): void {
-        const children = entity.children.filter(c => c.hasComponent(UITransformComponent));
+        const children = this.getUIChildren(entity);
         if (children.length === 0) return;
 
         // 计算子元素的父容器顶部 Y（worldY 是底部，顶部 = 底部 + 高度）
@@ -506,9 +574,129 @@ export class UILayoutSystem extends EntitySystem {
                     parentTopY,
                     parentTransform.computedWidth,
                     parentTransform.computedHeight,
-                    parentTransform.worldAlpha
+                    parentTransform.worldAlpha,
+                    parentTransform.localToWorldMatrix
                 );
             }
         }
+    }
+
+    // ===== 矩阵计算方法 Matrix calculation methods =====
+
+    /**
+     * 计算本地变换矩阵
+     * Calculate local transformation matrix
+     *
+     * @param pivotX - 轴心点 X (0-1)
+     * @param pivotY - 轴心点 Y (0-1)
+     * @param width - 元素宽度
+     * @param height - 元素高度
+     * @param rotation - 旋转角度（弧度）
+     * @param scaleX - X 缩放
+     * @param scaleY - Y 缩放
+     * @param x - 元素世界 X 位置
+     * @param y - 元素世界 Y 位置
+     */
+    private calculateLocalMatrix(
+        pivotX: number,
+        pivotY: number,
+        width: number,
+        height: number,
+        rotation: number,
+        scaleX: number,
+        scaleY: number,
+        x: number,
+        y: number
+    ): Matrix2D {
+        const cos = Math.cos(rotation);
+        const sin = Math.sin(rotation);
+
+        // 轴心点相对于元素左下角的偏移
+        const px = width * pivotX;
+        const py = height * pivotY;
+
+        // 构建变换矩阵: Translate(-pivot) -> Scale -> Rotate -> Translate(position + pivot)
+        // 最终矩阵将轴心点作为旋转/缩放中心
+        return {
+            a: scaleX * cos,
+            b: scaleX * sin,
+            c: scaleY * -sin,
+            d: scaleY * cos,
+            tx: x + px - (scaleX * cos * px - scaleY * sin * py),
+            ty: y + py - (scaleX * sin * px + scaleY * cos * py)
+        };
+    }
+
+    /**
+     * 矩阵乘法: result = a * b
+     * Matrix multiplication: result = a * b
+     */
+    private multiplyMatrices(a: Matrix2D, b: Matrix2D): Matrix2D {
+        return {
+            a: a.a * b.a + a.c * b.b,
+            b: a.b * b.a + a.d * b.b,
+            c: a.a * b.c + a.c * b.d,
+            d: a.b * b.c + a.d * b.d,
+            tx: a.a * b.tx + a.c * b.ty + a.tx,
+            ty: a.b * b.tx + a.d * b.ty + a.ty
+        };
+    }
+
+    /**
+     * 从世界矩阵分解出旋转和缩放
+     * Decompose rotation and scale from world matrix
+     */
+    private decomposeMatrix(m: Matrix2D): { rotation: number; scaleX: number; scaleY: number } {
+        // 计算缩放
+        const scaleX = Math.sqrt(m.a * m.a + m.b * m.b);
+        const scaleY = Math.sqrt(m.c * m.c + m.d * m.d);
+
+        // 检测负缩放（通过行列式符号）
+        const det = m.a * m.d - m.b * m.c;
+        const sign = det < 0 ? -1 : 1;
+
+        // 计算旋转（从归一化的矩阵）
+        let rotation = 0;
+        if (scaleX > 1e-10) {
+            rotation = Math.atan2(m.b / scaleX, m.a / scaleX);
+        }
+
+        return {
+            rotation,
+            scaleX,
+            scaleY: scaleY * sign
+        };
+    }
+
+    /**
+     * 更新元素的世界变换矩阵
+     * Update element's world transformation matrix
+     */
+    private updateWorldMatrix(transform: UITransformComponent, parentMatrix: Matrix2D | null): void {
+        // 计算本地矩阵
+        const localMatrix = this.calculateLocalMatrix(
+            transform.pivotX,
+            transform.pivotY,
+            transform.computedWidth,
+            transform.computedHeight,
+            transform.rotation,
+            transform.scaleX,
+            transform.scaleY,
+            transform.worldX,
+            transform.worldY
+        );
+
+        // 计算世界矩阵
+        if (parentMatrix) {
+            transform.localToWorldMatrix = this.multiplyMatrices(parentMatrix, localMatrix);
+        } else {
+            transform.localToWorldMatrix = localMatrix;
+        }
+
+        // 从世界矩阵分解出世界旋转和缩放
+        const decomposed = this.decomposeMatrix(transform.localToWorldMatrix);
+        transform.worldRotation = decomposed.rotation;
+        transform.worldScaleX = decomposed.scaleX;
+        transform.worldScaleY = decomposed.scaleY;
     }
 }

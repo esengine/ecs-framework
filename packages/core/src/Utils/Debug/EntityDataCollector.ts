@@ -3,6 +3,8 @@ import { Entity } from '../../ECS/Entity';
 import { Component } from '../../ECS/Component';
 import { getComponentInstanceTypeName } from '../../ECS/Decorators';
 import { IScene } from '../../ECS/IScene';
+import { HierarchyComponent } from '../../ECS/Components/HierarchyComponent';
+import { HierarchySystem } from '../../ECS/Systems/HierarchySystem';
 
 /**
  * 实体数据收集器
@@ -75,20 +77,28 @@ export class EntityDataCollector {
         const entityList = (scene as any).entities;
         if (!entityList?.buffer) return [];
 
-        return entityList.buffer.map((entity: Entity) => ({
-            id: entity.id,
-            name: entity.name || `Entity_${entity.id}`,
-            active: entity.active !== false,
-            enabled: entity.enabled !== false,
-            activeInHierarchy: entity.activeInHierarchy !== false,
-            componentCount: entity.components.length,
-            componentTypes: entity.components.map((component: Component) => getComponentInstanceTypeName(component)),
-            parentId: entity.parent?.id || null,
-            childIds: entity.children?.map((child: Entity) => child.id) || [],
-            depth: entity.getDepth ? entity.getDepth() : 0,
-            tag: entity.tag || 0,
-            updateOrder: entity.updateOrder || 0
-        }));
+        const hierarchySystem = scene.getSystem(HierarchySystem);
+
+        return entityList.buffer.map((entity: Entity) => {
+            const hierarchy = entity.getComponent(HierarchyComponent);
+            const bActiveInHierarchy = hierarchySystem?.isActiveInHierarchy(entity) ?? entity.active;
+            const depth = hierarchySystem?.getDepth(entity) ?? 0;
+
+            return {
+                id: entity.id,
+                name: entity.name || `Entity_${entity.id}`,
+                active: entity.active !== false,
+                enabled: entity.enabled !== false,
+                activeInHierarchy: bActiveInHierarchy,
+                componentCount: entity.components.length,
+                componentTypes: entity.components.map((component: Component) => getComponentInstanceTypeName(component)),
+                parentId: hierarchy?.parentId ?? null,
+                childIds: hierarchy?.childIds ?? [],
+                depth,
+                tag: entity.tag || 0,
+                updateOrder: entity.updateOrder || 0
+            };
+        });
     }
 
     /**
@@ -200,7 +210,7 @@ export class EntityDataCollector {
             pendingRemove: stats.pendingRemove || 0,
             entitiesPerArchetype: archetypeData.distribution,
             topEntitiesByComponents: archetypeData.topEntities,
-            entityHierarchy: this.buildEntityHierarchyTree(entityList),
+            entityHierarchy: this.buildEntityHierarchyTree(entityList, scene),
             entityDetailsMap: this.buildEntityDetailsMap(entityList, scene)
         };
     }
@@ -534,7 +544,10 @@ export class EntityDataCollector {
         }
     }
 
-    private buildEntityHierarchyTree(entityList: { buffer?: Entity[] }): Array<{
+    private buildEntityHierarchyTree(
+        entityList: { buffer?: Entity[] },
+        scene?: IScene | null
+    ): Array<{
         id: number;
         name: string;
         active: boolean;
@@ -550,11 +563,14 @@ export class EntityDataCollector {
     }> {
         if (!entityList?.buffer) return [];
 
+        const hierarchySystem = scene?.getSystem(HierarchySystem);
         const rootEntities: any[] = [];
 
         entityList.buffer.forEach((entity: Entity) => {
-            if (!entity.parent) {
-                const hierarchyNode = this.buildEntityHierarchyNode(entity);
+            const hierarchy = entity.getComponent(HierarchyComponent);
+            const bHasNoParent = hierarchy?.parentId === null || hierarchy?.parentId === undefined;
+            if (bHasNoParent) {
+                const hierarchyNode = this.buildEntityHierarchyNode(entity, hierarchySystem);
                 rootEntities.push(hierarchyNode);
             }
         });
@@ -572,25 +588,32 @@ export class EntityDataCollector {
     /**
      * 构建实体层次结构节点
      */
-    private buildEntityHierarchyNode(entity: Entity): any {
+    private buildEntityHierarchyNode(entity: Entity, hierarchySystem?: HierarchySystem | null): any {
+        const hierarchy = entity.getComponent(HierarchyComponent);
+        const bActiveInHierarchy = hierarchySystem?.isActiveInHierarchy(entity) ?? entity.active;
+        const depth = hierarchySystem?.getDepth(entity) ?? 0;
+
         let node = {
             id: entity.id,
             name: entity.name || `Entity_${entity.id}`,
             active: entity.active !== false,
             enabled: entity.enabled !== false,
-            activeInHierarchy: entity.activeInHierarchy !== false,
+            activeInHierarchy: bActiveInHierarchy,
             componentCount: entity.components.length,
             componentTypes: entity.components.map((component: Component) => getComponentInstanceTypeName(component)),
-            parentId: entity.parent?.id || null,
+            parentId: hierarchy?.parentId ?? null,
             children: [] as any[],
-            depth: entity.getDepth ? entity.getDepth() : 0,
+            depth,
             tag: entity.tag || 0,
             updateOrder: entity.updateOrder || 0
         };
 
         // 递归构建子实体节点
-        if (entity.children && entity.children.length > 0) {
-            node.children = entity.children.map((child: Entity) => this.buildEntityHierarchyNode(child));
+        if (hierarchySystem) {
+            const children = hierarchySystem.getChildren(entity);
+            if (children.length > 0) {
+                node.children = children.map((child: Entity) => this.buildEntityHierarchyNode(child, hierarchySystem));
+            }
         }
 
         // 优先使用Entity的getDebugInfo方法
@@ -616,6 +639,7 @@ export class EntityDataCollector {
     private buildEntityDetailsMap(entityList: { buffer?: Entity[] }, scene?: IScene | null): Record<number, any> {
         if (!entityList?.buffer) return {};
 
+        const hierarchySystem = scene?.getSystem(HierarchySystem);
         const entityDetailsMap: Record<number, any> = {};
         const entities = entityList.buffer;
         const batchSize = 100;
@@ -626,7 +650,7 @@ export class EntityDataCollector {
             batch.forEach((entity: Entity) => {
                 const baseDebugInfo = entity.getDebugInfo
                     ? entity.getDebugInfo()
-                    : this.buildFallbackEntityInfo(entity, scene);
+                    : this.buildFallbackEntityInfo(entity, scene, hierarchySystem);
 
                 const componentCacheStats = (entity as any).getComponentCacheStats
                     ? (entity as any).getComponentCacheStats()
@@ -634,9 +658,13 @@ export class EntityDataCollector {
 
                 const componentDetails = this.extractComponentDetails(entity.components);
 
+                // 获取父实体名称
+                const parent = hierarchySystem?.getParent(entity);
+                const parentName = parent?.name ?? null;
+
                 entityDetailsMap[entity.id] = {
                     ...baseDebugInfo,
-                    parentName: entity.parent?.name || null,
+                    parentName,
                     components: componentDetails,
                     componentTypes: baseDebugInfo.componentTypes || componentDetails.map((comp) => comp.typeName),
                     cachePerformance: componentCacheStats
@@ -656,15 +684,22 @@ export class EntityDataCollector {
     /**
      * 构建实体基础信息
      */
-    private buildFallbackEntityInfo(entity: Entity, scene?: IScene | null): any {
+    private buildFallbackEntityInfo(
+        entity: Entity,
+        scene?: IScene | null,
+        hierarchySystem?: HierarchySystem | null
+    ): any {
         const sceneInfo = this.getSceneInfo(scene);
+        const hierarchy = entity.getComponent(HierarchyComponent);
+        const bActiveInHierarchy = hierarchySystem?.isActiveInHierarchy(entity) ?? entity.active;
+        const depth = hierarchySystem?.getDepth(entity) ?? 0;
 
         return {
             name: entity.name || `Entity_${entity.id}`,
             id: entity.id,
             enabled: entity.enabled !== false,
             active: entity.active !== false,
-            activeInHierarchy: entity.activeInHierarchy !== false,
+            activeInHierarchy: bActiveInHierarchy,
             destroyed: entity.isDestroyed || false,
             scene: sceneInfo.name,
             sceneName: sceneInfo.name,
@@ -672,10 +707,10 @@ export class EntityDataCollector {
             componentCount: entity.components.length,
             componentTypes: entity.components.map((component: Component) => getComponentInstanceTypeName(component)),
             componentMask: entity.componentMask?.toString() || '0',
-            parentId: entity.parent?.id || null,
-            childCount: entity.children?.length || 0,
-            childIds: entity.children.map((child: Entity) => child.id) || [],
-            depth: entity.getDepth ? entity.getDepth() : 0,
+            parentId: hierarchy?.parentId ?? null,
+            childCount: hierarchy?.childIds?.length ?? 0,
+            childIds: hierarchy?.childIds ?? [],
+            depth,
             tag: entity.tag || 0,
             updateOrder: entity.updateOrder || 0
         };

@@ -1,4 +1,4 @@
-import { Core, Entity } from '@esengine/ecs-framework';
+import { Core, Entity, HierarchySystem, HierarchyComponent } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub } from '@esengine/editor-core';
 import { TransformComponent } from '@esengine/ecs-components';
 import { TilemapComponent } from '@esengine/tilemap';
@@ -48,8 +48,9 @@ export class CreateTilemapEntityCommand extends BaseCommand {
         this.entity = scene.createEntity(this.entityName);
         this.entityId = this.entity.id;
 
-        // 添加Transform组件
+        // 添加 Transform 和 Hierarchy 组件
         this.entity.addComponent(new TransformComponent());
+        this.entity.addComponent(new HierarchyComponent());
 
         // 创建并配置Tilemap组件
         const tilemapComponent = new TilemapComponent();
@@ -79,7 +80,8 @@ export class CreateTilemapEntityCommand extends BaseCommand {
         this.entity.addComponent(tilemapComponent);
 
         if (this.parentEntity) {
-            this.parentEntity.addChild(this.entity);
+            const hierarchySystem = scene.getSystem(HierarchySystem);
+            hierarchySystem?.setParent(this.entity, this.parentEntity);
         }
 
         this.entityStore.addEntity(this.entity, this.parentEntity);

@@ -4,4 +4,5 @@ export { CreateAnimatedSpriteEntityCommand } from './CreateAnimatedSpriteEntityC
 export { CreateCameraEntityCommand } from './CreateCameraEntityCommand';
 export { CreateTilemapEntityCommand } from './CreateTilemapEntityCommand';
 export { DeleteEntityCommand } from './DeleteEntityCommand';
+export { ReparentEntityCommand, DropPosition } from './ReparentEntityCommand';
 

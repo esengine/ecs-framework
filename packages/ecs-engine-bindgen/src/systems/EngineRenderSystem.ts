@@ -269,10 +269,12 @@ export class EngineRenderSystem extends EntitySystem {
                 }
             }
 
-            // Handle rotation as number or Vector3 (use z for 2D)
-            const rotation = typeof transform.rotation === 'number'
-                ? transform.rotation
-                : transform.rotation.z;
+            // 使用世界变换（由 TransformSystem 计算，考虑父级变换），回退到本地变换
+            const pos = transform.worldPosition ?? transform.position;
+            const scl = transform.worldScale ?? transform.scale;
+            const rot = transform.worldRotation
+                ? transform.worldRotation.z
+                : (typeof transform.rotation === 'number' ? transform.rotation : transform.rotation.z);
 
             // Convert hex color string to packed RGBA | 将十六进制颜色字符串转换为打包的RGBA
             const color = this.hexToPackedColor(sprite.color, sprite.alpha);
@@ -286,14 +288,14 @@ export class EngineRenderSystem extends EntitySystem {
                 textureId = this.bridge.getOrLoadTextureByPath(sprite.texture);
             }
 
-            // Pass actual display dimensions (sprite size * transform scale)
-            // 传递实际显示尺寸（sprite尺寸 * 变换缩放）
+            // Pass actual display dimensions (sprite size * world transform scale)
+            // 传递实际显示尺寸（sprite尺寸 * 世界变换缩放）
             const renderData: SpriteRenderData = {
-                x: transform.position.x,
-                y: transform.position.y,
-                rotation,
-                scaleX: sprite.width * transform.scale.x,
-                scaleY: sprite.height * transform.scale.y,
+                x: pos.x,
+                y: pos.y,
+                rotation: rot,
+                scaleX: sprite.width * scl.x,
+                scaleY: sprite.height * scl.y,
                 originX: sprite.anchorX,
                 originY: sprite.anchorY,
                 textureId,

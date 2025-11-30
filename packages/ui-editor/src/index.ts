@@ -402,4 +402,27 @@ export class UIEditorModule implements IEditorModuleLoader {
 
 export const uiEditorModule = new UIEditorModule();
 
+// 从 @esengine/ui 导入运行时模块
+import { UIRuntimeModule } from '@esengine/ui';
+import type { IPlugin, PluginDescriptor } from '@esengine/editor-core';
+
+const descriptor: PluginDescriptor = {
+    id: '@esengine/ui',
+    name: 'UI',
+    version: '1.0.0',
+    description: 'ECS-based UI system with editor support',
+    category: 'ui',
+    enabledByDefault: true
+};
+
+/**
+ * 完整的 UI 插件（运行时 + 编辑器）
+ * Complete UI Plugin (runtime + editor)
+ */
+export const UIPlugin: IPlugin = {
+    descriptor,
+    runtimeModule: new UIRuntimeModule(),
+    editorModule: uiEditorModule
+};
+
 export default uiEditorModule;

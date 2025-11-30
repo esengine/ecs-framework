@@ -45,10 +45,20 @@ export class UISliderRenderSystem extends EntitySystem {
 
             const x = transform.worldX ?? transform.x;
             const y = transform.worldY ?? transform.y;
-            const width = (transform.computedWidth ?? transform.width) * transform.scaleX;
-            const height = (transform.computedHeight ?? transform.height) * transform.scaleY;
+            // 使用世界缩放
+            const scaleX = transform.worldScaleX ?? transform.scaleX;
+            const scaleY = transform.worldScaleY ?? transform.scaleY;
+            const rotation = transform.worldRotation ?? transform.rotation;
+            const width = (transform.computedWidth ?? transform.width) * scaleX;
+            const height = (transform.computedHeight ?? transform.height) * scaleY;
             const alpha = transform.worldAlpha ?? transform.alpha;
             const baseOrder = 100 + transform.zIndex;
+            // 使用 transform 的 pivot 计算中心位置
+            const pivotX = transform.pivotX;
+            const pivotY = transform.pivotY;
+            // 渲染位置 = 左下角 + pivot 偏移
+            const renderX = x + width * pivotX;
+            const renderY = y + height * pivotY;
 
             const isHorizontal = slider.orientation === UISliderOrientation.Horizontal;
             const progress = slider.getProgress();
@@ -58,10 +68,10 @@ export class UISliderRenderSystem extends EntitySystem {
             const trackLength = isHorizontal ? width : height;
             const trackThickness = slider.trackThickness;
 
-            // Calculate center position (x, y is top-left corner)
-            // 计算中心位置（x, y 是左上角）
-            const centerX = x + width / 2;
-            const centerY = y + height / 2;
+            // Calculate center position based on pivot
+            // 基于 pivot 计算中心位置
+            const centerX = renderX;
+            const centerY = renderY;
 
             // Render track (using center position with pivot 0.5)
             // 渲染轨道（使用中心位置，pivot 0.5）
@@ -73,7 +83,7 @@ export class UISliderRenderSystem extends EntitySystem {
                         slider.trackColor,
                         slider.trackAlpha * alpha,
                         baseOrder,
-                        { pivotX: 0.5, pivotY: 0.5 }
+                        { rotation, pivotX: 0.5, pivotY: 0.5 }
                     );
                 } else {
                     collector.addRect(
@@ -82,7 +92,7 @@ export class UISliderRenderSystem extends EntitySystem {
                         slider.trackColor,
                         slider.trackAlpha * alpha,
                         baseOrder,
-                        { pivotX: 0.5, pivotY: 0.5 }
+                        { rotation, pivotX: 0.5, pivotY: 0.5 }
                     );
                 }
             }
@@ -101,7 +111,7 @@ export class UISliderRenderSystem extends EntitySystem {
                         slider.fillColor,
                         slider.fillAlpha * alpha,
                         baseOrder + 0.1,
-                        { pivotX: 0.5, pivotY: 0.5 }
+                        { rotation, pivotX: 0.5, pivotY: 0.5 }
                     );
                 } else {
                     // Fill from bottom
@@ -112,7 +122,7 @@ export class UISliderRenderSystem extends EntitySystem {
                         slider.fillColor,
                         slider.fillAlpha * alpha,
                         baseOrder + 0.1,
-                        { pivotX: 0.5, pivotY: 0.5 }
+                        { rotation, pivotX: 0.5, pivotY: 0.5 }
                     );
                 }
             }
@@ -124,7 +134,7 @@ export class UISliderRenderSystem extends EntitySystem {
                     collector, centerX, centerY,
                     trackLength, trackThickness,
                     slider, alpha, baseOrder + 0.05,
-                    isHorizontal
+                    isHorizontal, rotation
                 );
             }
 
@@ -147,7 +157,7 @@ export class UISliderRenderSystem extends EntitySystem {
                     0x000000,
                     0.3 * alpha,
                     baseOrder + 0.15,
-                    { pivotX: 0.5, pivotY: 0.5 }
+                    { rotation, pivotX: 0.5, pivotY: 0.5 }
                 );
             }
 
@@ -159,7 +169,7 @@ export class UISliderRenderSystem extends EntitySystem {
                 handleColor,
                 alpha,
                 baseOrder + 0.2,
-                { pivotX: 0.5, pivotY: 0.5 }
+                { rotation, pivotX: 0.5, pivotY: 0.5 }
             );
 
             // Handle border (if any)
@@ -172,7 +182,8 @@ export class UISliderRenderSystem extends EntitySystem {
                     slider.handleBorderWidth,
                     slider.handleBorderColor,
                     alpha,
-                    baseOrder + 0.25
+                    baseOrder + 0.25,
+                    rotation
                 );
             }
         }
@@ -189,7 +200,8 @@ export class UISliderRenderSystem extends EntitySystem {
         slider: UISliderComponent,
         alpha: number,
         sortOrder: number,
-        isHorizontal: boolean
+        isHorizontal: boolean,
+        rotation: number
     ): void {
         const tickCount = slider.tickCount + 2; // Include start and end ticks
         const tickSize = slider.tickSize;
@@ -220,7 +232,7 @@ export class UISliderRenderSystem extends EntitySystem {
                 slider.tickColor,
                 alpha,
                 sortOrder,
-                { pivotX: 0.5, pivotY: 0.5 }
+                { rotation, pivotX: 0.5, pivotY: 0.5 }
             );
         }
     }
@@ -236,7 +248,8 @@ export class UISliderRenderSystem extends EntitySystem {
         borderWidth: number,
         borderColor: number,
         alpha: number,
-        sortOrder: number
+        sortOrder: number,
+        rotation: number
     ): void {
         const halfW = width / 2;
         const halfH = height / 2;
@@ -247,7 +260,7 @@ export class UISliderRenderSystem extends EntitySystem {
             x, y - halfH + halfB,
             width, borderWidth,
             borderColor, alpha, sortOrder,
-            { pivotX: 0.5, pivotY: 0.5 }
+            { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
         // Bottom
@@ -255,7 +268,7 @@ export class UISliderRenderSystem extends EntitySystem {
             x, y + halfH - halfB,
             width, borderWidth,
             borderColor, alpha, sortOrder,
-            { pivotX: 0.5, pivotY: 0.5 }
+            { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
         // Left
@@ -263,7 +276,7 @@ export class UISliderRenderSystem extends EntitySystem {
             x - halfW + halfB, y,
             borderWidth, height - borderWidth * 2,
             borderColor, alpha, sortOrder,
-            { pivotX: 0.5, pivotY: 0.5 }
+            { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
         // Right
@@ -271,7 +284,7 @@ export class UISliderRenderSystem extends EntitySystem {
             x + halfW - halfB, y,
             borderWidth, height - borderWidth * 2,
             borderColor, alpha, sortOrder,
-            { pivotX: 0.5, pivotY: 0.5 }
+            { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
     }
 }

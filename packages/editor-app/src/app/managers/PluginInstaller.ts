@@ -20,7 +20,7 @@ import { ProjectSettingsPlugin } from '../../plugins/builtin/ProjectSettingsPlug
 import { BehaviorTreePlugin } from '@esengine/behavior-tree-editor';
 import { Physics2DPlugin } from '@esengine/physics-rapier2d';
 import { TilemapPlugin } from '@esengine/tilemap-editor';
-import { UIPlugin } from '@esengine/ui';
+import { UIPlugin } from '@esengine/ui-editor';
 import { BlueprintPlugin } from '@esengine/blueprint-editor';
 
 export class PluginInstaller {

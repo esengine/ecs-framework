@@ -1,5 +1,5 @@
 // Re-exports for backward compatibility
-export { TransformComponent, type Vector3 } from '@esengine/engine-core';
+export { TransformComponent, TransformSystem, type Vector3, type Matrix2D } from '@esengine/engine-core';
 export { CameraComponent, ECameraProjection, CameraProjection } from '@esengine/camera';
 export { SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystem } from '@esengine/sprite';
 export type { AnimationFrame, AnimationClip } from '@esengine/sprite';

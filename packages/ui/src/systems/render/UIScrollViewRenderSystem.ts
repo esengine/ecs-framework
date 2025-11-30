@@ -46,15 +46,24 @@ export class UIScrollViewRenderSystem extends EntitySystem {
 
             const x = transform.worldX ?? transform.x;
             const y = transform.worldY ?? transform.y;
-            const width = (transform.computedWidth ?? transform.width) * transform.scaleX;
-            const height = (transform.computedHeight ?? transform.height) * transform.scaleY;
+            // 使用世界缩放
+            const scaleX = transform.worldScaleX ?? transform.scaleX;
+            const scaleY = transform.worldScaleY ?? transform.scaleY;
+            const rotation = transform.worldRotation ?? transform.rotation;
+            const width = (transform.computedWidth ?? transform.width) * scaleX;
+            const height = (transform.computedHeight ?? transform.height) * scaleY;
             const alpha = transform.worldAlpha ?? transform.alpha;
             const baseOrder = 100 + transform.zIndex;
+            // 使用 transform 的 pivot 计算位置
+            const pivotX = transform.pivotX;
+            const pivotY = transform.pivotY;
+            // 渲染位置 = 左下角 + pivot 偏移
+            const renderX = x + width * pivotX;
+            const renderY = y + height * pivotY;
 
-            // x, y is already top-left corner
-            // x, y 已经是左上角
-            const baseX = x;
-            const baseY = y;
+            // 计算边界
+            const baseX = renderX - width * pivotX;
+            const baseY = renderY - height * pivotY;
 
             // Render vertical scrollbar
             // 渲染垂直滚动条
@@ -62,7 +71,7 @@ export class UIScrollViewRenderSystem extends EntitySystem {
                 this.renderVerticalScrollbar(
                     collector,
                     baseX, baseY, width, height,
-                    scrollView, alpha, baseOrder
+                    scrollView, alpha, baseOrder, rotation
                 );
             }
 
@@ -72,7 +81,7 @@ export class UIScrollViewRenderSystem extends EntitySystem {
                 this.renderHorizontalScrollbar(
                     collector,
                     baseX, baseY, width, height,
-                    scrollView, alpha, baseOrder
+                    scrollView, alpha, baseOrder, rotation
                 );
             }
         }
@@ -88,7 +97,8 @@ export class UIScrollViewRenderSystem extends EntitySystem {
         viewWidth: number, viewHeight: number,
         scrollView: UIScrollViewComponent,
         alpha: number,
-        baseOrder: number
+        baseOrder: number,
+        rotation: number
     ): void {
         const scrollbarWidth = scrollView.scrollbarWidth;
         const hasHorizontal = scrollView.needsHorizontalScrollbar(viewWidth);
@@ -108,7 +118,7 @@ export class UIScrollViewRenderSystem extends EntitySystem {
                 scrollView.scrollbarTrackColor,
                 scrollView.scrollbarTrackAlpha * alpha,
                 baseOrder + 0.5,
-                { pivotX: 0.5, pivotY: 0.5 }
+                { rotation, pivotX: 0.5, pivotY: 0.5 }
             );
         }
 
@@ -131,7 +141,7 @@ export class UIScrollViewRenderSystem extends EntitySystem {
             scrollView.scrollbarColor,
             handleAlpha * alpha,
             baseOrder + 0.6,
-            { pivotX: 0.5, pivotY: 0.5 }
+            { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
     }
 
@@ -145,7 +155,8 @@ export class UIScrollViewRenderSystem extends EntitySystem {
         viewWidth: number, viewHeight: number,
         scrollView: UIScrollViewComponent,
         alpha: number,
-        baseOrder: number
+        baseOrder: number,
+        rotation: number
     ): void {
         const scrollbarWidth = scrollView.scrollbarWidth;
         const hasVertical = scrollView.needsVerticalScrollbar(viewHeight);
@@ -165,7 +176,7 @@ export class UIScrollViewRenderSystem extends EntitySystem {
                 scrollView.scrollbarTrackColor,
                 scrollView.scrollbarTrackAlpha * alpha,
                 baseOrder + 0.5,
-                { pivotX: 0.5, pivotY: 0.5 }
+                { rotation, pivotX: 0.5, pivotY: 0.5 }
             );
         }
 
@@ -188,7 +199,7 @@ export class UIScrollViewRenderSystem extends EntitySystem {
             scrollView.scrollbarColor,
             handleAlpha * alpha,
             baseOrder + 0.6,
-            { pivotX: 0.5, pivotY: 0.5 }
+            { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
     }
 }

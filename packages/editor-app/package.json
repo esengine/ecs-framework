@@ -26,6 +26,7 @@
     "@esengine/tilemap": "workspace:*",
     "@esengine/tilemap-editor": "workspace:*",
     "@esengine/ui": "workspace:*",
+    "@esengine/ui-editor": "workspace:*",
     "@esengine/ecs-engine-bindgen": "workspace:*",
     "@esengine/ecs-framework": "workspace:*",
     "@esengine/editor-core": "workspace:*",

@@ -55,11 +55,12 @@ export class Canvas2DRenderSystem extends EntitySystem {
 
             this.ctx.save();
 
-            const x = (transform.position.x || 0) + this.canvas.width / 2;
-            const y = this.canvas.height / 2 - (transform.position.y || 0);
-            const width = (sprite.width || 64) * (transform.scale.x || 1);
-            const height = (sprite.height || 64) * (transform.scale.y || 1);
-            const rotation = -(transform.rotation.z || 0) * Math.PI / 180;
+            // 使用世界变换（由 TransformSystem 计算，考虑父级变换）
+            const x = (transform.worldPosition.x || 0) + this.canvas.width / 2;
+            const y = this.canvas.height / 2 - (transform.worldPosition.y || 0);
+            const width = (sprite.width || 64) * (transform.worldScale.x || 1);
+            const height = (sprite.height || 64) * (transform.worldScale.y || 1);
+            const rotation = -(transform.worldRotation.z || 0) * Math.PI / 180;
 
             this.ctx.translate(x, y);
             this.ctx.rotate(rotation);

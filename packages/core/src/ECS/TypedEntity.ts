@@ -8,6 +8,7 @@ import { Entity } from './Entity';
 import type { Component } from './Component';
 import type { ComponentType } from './Core/ComponentStorage';
 import type { ComponentConstructor, ComponentInstance } from '../Types/TypeHelpers';
+import { HierarchySystem } from './Systems/HierarchySystem';
 
 /**
  * 获取组件，如果不存在则抛出错误
@@ -277,7 +278,8 @@ export class TypedEntityBuilder {
      * 添加子实体
      */
     withChild(child: Entity): this {
-        this._entity.addChild(child);
+        const hierarchySystem = this._entity.scene?.getSystem(HierarchySystem);
+        hierarchySystem?.setParent(child, this._entity);
         return this;
     }
 

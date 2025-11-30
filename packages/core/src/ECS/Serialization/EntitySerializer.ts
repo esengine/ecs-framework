@@ -8,6 +8,8 @@ import { Entity } from '../Entity';
 import { ComponentType } from '../Core/ComponentStorage';
 import { ComponentSerializer, SerializedComponent } from './ComponentSerializer';
 import { IScene } from '../IScene';
+import { HierarchyComponent } from '../Components/HierarchyComponent';
+import { HierarchySystem } from '../Systems/HierarchySystem';
 
 /**
  * 序列化后的实体数据
@@ -68,9 +70,14 @@ export class EntitySerializer {
      *
      * @param entity 要序列化的实体
      * @param includeChildren 是否包含子实体（默认true）
+     * @param hierarchySystem 层级系统（可选，用于获取层级信息）
      * @returns 序列化后的实体数据
      */
-    public static serialize(entity: Entity, includeChildren: boolean = true): SerializedEntity {
+    public static serialize(
+        entity: Entity,
+        includeChildren: boolean = true,
+        hierarchySystem?: HierarchySystem
+    ): SerializedEntity {
         const serializedComponents = ComponentSerializer.serializeComponents(
             Array.from(entity.components)
         );
@@ -86,15 +93,24 @@ export class EntitySerializer {
             children: []
         };
 
-        // 序列化父实体引用
-        if (entity.parent) {
-            serializedEntity.parentId = entity.parent.id;
+        // 通过 HierarchyComponent 获取层级信息
+        const hierarchy = entity.getComponent(HierarchyComponent);
+        if (hierarchy?.parentId !== null && hierarchy?.parentId !== undefined) {
+            serializedEntity.parentId = hierarchy.parentId;
         }
 
         // 序列化子实体
-        if (includeChildren) {
-            for (const child of entity.children) {
-                serializedEntity.children.push(this.serialize(child, true));
+        // 直接使用 HierarchyComponent.childIds 获取子实体
+        if (includeChildren && hierarchy && hierarchy.childIds.length > 0) {
+            // 获取场景引用：优先从 hierarchySystem，否则从 entity.scene
+            const scene = hierarchySystem?.scene ?? entity.scene;
+            if (scene) {
+                for (const childId of hierarchy.childIds) {
+                    const child = scene.findEntityById(childId);
+                    if (child) {
+                        serializedEntity.children.push(this.serialize(child, true, hierarchySystem));
+                    }
+                }
             }
         }
 
@@ -109,6 +125,7 @@ export class EntitySerializer {
      * @param idGenerator 实体ID生成器（用于生成新ID或保持原ID）
      * @param preserveIds 是否保持原始ID（默认false）
      * @param scene 目标场景（可选，用于设置entity.scene以支持添加组件）
+     * @param hierarchySystem 层级系统（可选，用于建立层级关系）
      * @returns 反序列化后的实体
      */
     public static deserialize(
@@ -116,11 +133,16 @@ export class EntitySerializer {
         componentRegistry: Map<string, ComponentType>,
         idGenerator: () => number,
         preserveIds: boolean = false,
-        scene?: IScene
+        scene?: IScene,
+        hierarchySystem?: HierarchySystem | null,
+        allEntities?: Map<number, Entity>
     ): Entity {
         // 创建实体（使用原始ID或新生成的ID）
         const entityId = preserveIds ? serializedEntity.id : idGenerator();
         const entity = new Entity(serializedEntity.name, entityId);
+
+        // 将实体添加到收集 Map 中（用于后续添加到场景）
+        allEntities?.set(entity.id, entity);
 
         // 如果提供了scene，先设置entity.scene以支持添加组件
         if (scene) {
@@ -143,16 +165,28 @@ export class EntitySerializer {
             entity.addComponent(component);
         }
 
-        // 反序列化子实体
+        // 重要：清除 HierarchyComponent 中的旧 ID
+        // 当 preserveIds=false 时，序列化的 parentId 和 childIds 是旧 ID，需要重新建立
+        // 通过 hierarchySystem.setParent 会正确设置新的 ID
+        const hierarchy = entity.getComponent(HierarchyComponent);
+        if (hierarchy) {
+            hierarchy.parentId = null;
+            hierarchy.childIds = [];
+        }
+
+        // 反序列化子实体并建立层级关系
         for (const childData of serializedEntity.children) {
             const childEntity = this.deserialize(
                 childData,
                 componentRegistry,
                 idGenerator,
                 preserveIds,
-                scene
+                scene,
+                hierarchySystem,
+                allEntities
             );
-            entity.addChild(childEntity);
+            // 使用 HierarchySystem 建立层级关系
+            hierarchySystem?.setParent(childEntity, entity);
         }
 
         return entity;
@@ -163,19 +197,23 @@ export class EntitySerializer {
      *
      * @param entities 实体数组
      * @param includeChildren 是否包含子实体
+     * @param hierarchySystem 层级系统（可选，用于获取层级信息）
      * @returns 序列化后的实体数据数组
      */
     public static serializeEntities(
         entities: Entity[],
-        includeChildren: boolean = true
+        includeChildren: boolean = true,
+        hierarchySystem?: HierarchySystem
     ): SerializedEntity[] {
         const result: SerializedEntity[] = [];
 
         for (const entity of entities) {
             // 只序列化顶层实体（没有父实体的实体）
             // 子实体会在父实体序列化时一并处理
-            if (!entity.parent || !includeChildren) {
-                result.push(this.serialize(entity, includeChildren));
+            const hierarchy = entity.getComponent(HierarchyComponent);
+            const bHasParent = hierarchy?.parentId !== null && hierarchy?.parentId !== undefined;
+            if (!bHasParent || !includeChildren) {
+                result.push(this.serialize(entity, includeChildren, hierarchySystem));
             }
         }
 
@@ -190,6 +228,7 @@ export class EntitySerializer {
      * @param idGenerator 实体ID生成器
      * @param preserveIds 是否保持原始ID
      * @param scene 目标场景（可选，用于设置entity.scene以支持添加组件）
+     * @param hierarchySystem 层级系统（可选，用于建立层级关系）
      * @returns 反序列化后的实体数组
      */
     public static deserializeEntities(
@@ -197,9 +236,11 @@ export class EntitySerializer {
         componentRegistry: Map<string, ComponentType>,
         idGenerator: () => number,
         preserveIds: boolean = false,
-        scene?: IScene
-    ): Entity[] {
-        const result: Entity[] = [];
+        scene?: IScene,
+        hierarchySystem?: HierarchySystem | null
+    ): { rootEntities: Entity[]; allEntities: Map<number, Entity> } {
+        const rootEntities: Entity[] = [];
+        const allEntities = new Map<number, Entity>();
 
         for (const serialized of serializedEntities) {
             const entity = this.deserialize(
@@ -207,12 +248,14 @@ export class EntitySerializer {
                 componentRegistry,
                 idGenerator,
                 preserveIds,
-                scene
+                scene,
+                hierarchySystem,
+                allEntities
             );
-            result.push(entity);
+            rootEntities.push(entity);
         }
 
-        return result;
+        return { rootEntities, allEntities };
     }
 
     /**
