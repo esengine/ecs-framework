@@ -6,7 +6,7 @@
 import { Core, Entity } from '@esengine/ecs-framework';
 import type { ServiceContainer } from '@esengine/ecs-framework';
 import type {
-    IPluginLoader,
+    IPlugin,
     IEditorModuleLoader,
     PluginDescriptor,
     PanelDescriptor,
@@ -186,14 +186,12 @@ const descriptor: PluginDescriptor = {
         {
             name: 'SceneInspectorEditor',
             type: 'editor',
-            loadingPhase: 'default',
-            panels: ['panel-scene-hierarchy', 'panel-entity-inspector'],
-            inspectors: ['EntityInspector']
+            loadingPhase: 'default'
         }
     ]
 };
 
-export const SceneInspectorPlugin: IPluginLoader = {
+export const SceneInspectorPlugin: IPlugin = {
     descriptor,
     editorModule: new SceneInspectorEditorModule()
 };

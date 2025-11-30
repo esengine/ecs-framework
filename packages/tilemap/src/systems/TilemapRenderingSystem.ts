@@ -1,5 +1,5 @@
 import { EntitySystem, Matcher, ECSSystem, Entity } from '@esengine/ecs-framework';
-import { TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
 import type { IRenderDataProvider } from '@esengine/ecs-engine-bindgen';
 import { TilemapComponent } from '../TilemapComponent';
 

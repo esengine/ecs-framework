@@ -1,0 +1,30 @@
+{
+    "name": "@esengine/build-config",
+    "version": "1.0.0",
+    "description": "Shared build configuration for ES Engine packages",
+    "type": "module",
+    "main": "src/index.ts",
+    "exports": {
+        ".": "./src/index.ts",
+        "./presets": "./src/presets/index.ts",
+        "./presets/tsup": "./src/presets/plugin-tsup.ts",
+        "./plugins": "./src/plugins/index.ts"
+    },
+    "scripts": {
+        "type-check": "tsc --noEmit"
+    },
+    "keywords": [
+        "build",
+        "tsup",
+        "config"
+    ],
+    "author": "yhh",
+    "license": "MIT",
+    "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.8.3"
+    },
+    "peerDependencies": {
+        "tsup": "^8.0.0"
+    }
+}

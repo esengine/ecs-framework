@@ -4,7 +4,8 @@
  */
 
 import { Component, Property, Serialize } from '@esengine/ecs-framework';
-import { Vector2, CollisionLayer2D } from '../types/Physics2DTypes';
+import { CollisionLayer2D } from '../types/Physics2DTypes';
+import type { Vector2 } from '../types/Physics2DTypes';
 
 /**
  * 2D 碰撞体基类

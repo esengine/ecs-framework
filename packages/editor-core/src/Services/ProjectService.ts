@@ -26,6 +26,15 @@ export interface UIDesignResolution {
     height: number;
 }
 
+/**
+ * 插件配置
+ * Plugin Configuration
+ */
+export interface PluginSettings {
+    /** 启用的插件 ID 列表 / Enabled plugin IDs */
+    enabledPlugins: string[];
+}
+
 export interface ProjectConfig {
     projectType?: ProjectType;
     componentsPath?: string;
@@ -35,6 +44,8 @@ export interface ProjectConfig {
     defaultScene?: string;
     /** UI 设计分辨率 / UI design resolution */
     uiDesignResolution?: UIDesignResolution;
+    /** 插件配置 / Plugin settings */
+    plugins?: PluginSettings;
 }
 
 @Injectable()
@@ -200,16 +211,21 @@ export class ProjectService implements IService {
     private async loadConfig(configPath: string): Promise<ProjectConfig> {
         try {
             const content = await this.fileAPI.readFileContent(configPath);
+            logger.debug('Raw config content:', content);
             const config = JSON.parse(content) as ProjectConfig;
-            return {
+            logger.debug('Parsed config plugins:', config.plugins);
+            const result = {
                 projectType: config.projectType || 'esengine',
                 componentsPath: config.componentsPath || '',
                 componentPattern: config.componentPattern || '**/*.ts',
                 buildOutput: config.buildOutput || 'temp/editor-components',
                 scenesPath: config.scenesPath || 'scenes',
                 defaultScene: config.defaultScene || 'main.ecs',
-                uiDesignResolution: config.uiDesignResolution
+                uiDesignResolution: config.uiDesignResolution,
+                plugins: config.plugins
             };
+            logger.debug('Loaded config result:', result);
+            return result;
         } catch (error) {
             logger.warn('Failed to load config, using defaults', error);
             return {
@@ -278,6 +294,60 @@ export class ProjectService implements IService {
      */
     public async setUIDesignResolution(resolution: UIDesignResolution): Promise<void> {
         await this.updateConfig({ uiDesignResolution: resolution });
+    }
+
+    /**
+     * 获取启用的插件列表
+     * Get enabled plugins list
+     */
+    public getEnabledPlugins(): string[] {
+        return this.projectConfig?.plugins?.enabledPlugins || [];
+    }
+
+    /**
+     * 获取插件配置
+     * Get plugin settings
+     */
+    public getPluginSettings(): PluginSettings | null {
+        logger.debug('getPluginSettings called, projectConfig:', this.projectConfig);
+        logger.debug('getPluginSettings plugins:', this.projectConfig?.plugins);
+        return this.projectConfig?.plugins || null;
+    }
+
+    /**
+     * 设置启用的插件列表
+     * Set enabled plugins list
+     *
+     * @param enabledPlugins - Array of enabled plugin IDs
+     */
+    public async setEnabledPlugins(enabledPlugins: string[]): Promise<void> {
+        await this.updateConfig({
+            plugins: {
+                enabledPlugins
+            }
+        });
+        await this.messageHub.publish('project:pluginsChanged', { enabledPlugins });
+        logger.info('Plugin settings saved', { count: enabledPlugins.length });
+    }
+
+    /**
+     * 启用插件
+     * Enable a plugin
+     */
+    public async enablePlugin(pluginId: string): Promise<void> {
+        const current = this.getEnabledPlugins();
+        if (!current.includes(pluginId)) {
+            await this.setEnabledPlugins([...current, pluginId]);
+        }
+    }
+
+    /**
+     * 禁用插件
+     * Disable a plugin
+     */
+    public async disablePlugin(pluginId: string): Promise<void> {
+        const current = this.getEnabledPlugins();
+        await this.setEnabledPlugins(current.filter(id => id !== pluginId));
     }
 
     public dispose(): void {

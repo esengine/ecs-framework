@@ -1,0 +1,7 @@
+import { defineConfig } from 'tsup';
+import { pluginPreset } from '@esengine/build-config/presets/tsup';
+
+export default defineConfig({
+    ...pluginPreset(),
+    tsconfig: 'tsconfig.build.json'
+});

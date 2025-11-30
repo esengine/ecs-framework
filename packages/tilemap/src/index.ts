@@ -3,10 +3,8 @@
  * ECS框架的瓦片地图系统
  */
 
-// Asset type constants for tilemap
-// 瓦片地图资产类型常量
-export const TilemapAssetType = 'tilemap' as const;
-export const TilesetAssetType = 'tileset' as const;
+// Constants
+export { TilemapAssetType, TilesetAssetType } from './constants';
 
 // Component
 export { TilemapComponent } from './TilemapComponent';
@@ -33,8 +31,5 @@ export type { ITilesetAsset } from './loaders/TilesetLoader';
 export { TiledConverter } from './loaders/TiledConverter';
 export type { ITiledMap, ITiledConversionResult } from './loaders/TiledConverter';
 
-// Runtime module (no editor dependencies)
-export { TilemapRuntimeModule } from './TilemapRuntimeModule';
-
-// Plugin (for PluginManager - includes editor dependencies)
-export { TilemapPlugin } from './editor/TilemapPlugin';
+// Runtime module and plugin
+export { TilemapRuntimeModule, TilemapPlugin, type TilemapSystemContext } from './TilemapRuntimeModule';

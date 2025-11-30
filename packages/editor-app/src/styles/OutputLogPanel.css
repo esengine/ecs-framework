@@ -318,15 +318,6 @@
     background: #5a5a5a;
 }
 
-/* Hide timestamp/source based on settings */
-.output-log-content.hide-timestamp .output-log-entry-time {
-    display: none;
-}
-
-.output-log-content.hide-source .output-log-entry-source {
-    display: none;
-}
-
 /* Empty State */
 .output-log-empty {
     display: flex;
@@ -345,17 +336,25 @@
 
 /* ==================== Log Entry ==================== */
 .output-log-entry {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 4px 12px;
     border-bottom: 1px solid #2a2a2a;
-    line-height: 1.4;
     transition: background 0.1s ease;
 }
 
 .output-log-entry:hover {
     background: rgba(255, 255, 255, 0.02);
+}
+
+.output-log-entry.expanded {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.output-log-entry-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 12px;
+    line-height: 1.4;
+    cursor: pointer;
 }
 
 .output-log-entry-icon {
@@ -389,76 +388,67 @@
     font-weight: 600;
 }
 
-.output-log-entry-client {
-    color: #10b981;
-    font-size: 10px;
-    white-space: nowrap;
-    padding: 1px 6px;
-    flex-shrink: 0;
-    background: rgba(16, 185, 129, 0.15);
-    border: 1px solid rgba(16, 185, 129, 0.4);
-    border-radius: 3px;
-    font-weight: 600;
-}
-
 .output-log-entry-message {
     flex: 1;
     color: #e0e0e0;
     word-break: break-word;
     padding-top: 2px;
+    white-space: pre-wrap;
 }
 
-.output-log-message-container {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-}
-
-.output-log-message-text {
-    flex: 1;
-}
-
-.output-log-message-preview {
-    opacity: 0.9;
-}
-
-.output-log-expand-btn {
-    display: inline;
-    margin-left: 8px;
-    padding: 2px 6px;
-    background: #3c3c3c;
-    border: 1px solid #4a4a4a;
-    border-radius: 3px;
-    color: #3b82f6;
-    font-size: 10px;
-    cursor: pointer;
-    transition: all 0.1s ease;
-}
-
-.output-log-expand-btn:hover {
-    background: #4a4a4a;
-    border-color: #3b82f6;
-}
-
-.output-log-json-btn {
+.output-log-entry-copy {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2px 6px;
-    background: #3b82f6;
-    border: none;
-    border-radius: 3px;
-    color: #fff;
-    font-size: 10px;
-    font-weight: 600;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #666;
     cursor: pointer;
-    opacity: 0.8;
-    transition: all 0.1s ease;
+    opacity: 0;
+    transition: all 0.15s ease;
     flex-shrink: 0;
 }
 
-.output-log-json-btn:hover {
+.output-log-entry:hover .output-log-entry-copy {
     opacity: 1;
+}
+
+.output-log-entry-copy:hover {
+    background: #3c3c3c;
+    border-color: #5a5a5a;
+    color: #e0e0e0;
+}
+
+/* Stack Trace (expanded) */
+.output-log-entry-stack {
+    padding: 8px 12px 12px 42px;
+    background: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid #2a2a2a;
+}
+
+.output-log-stack-header {
+    color: #888;
+    font-size: 11px;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.output-log-stack-line {
+    color: #888;
+    font-size: 11px;
+    line-height: 1.6;
+    white-space: pre;
+    padding-left: 12px;
+}
+
+.output-log-stack-line:hover {
+    color: #4a9eff;
+    background: rgba(74, 158, 255, 0.1);
+    cursor: pointer;
 }
 
 /* Log Level Styles */

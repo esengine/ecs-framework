@@ -22,5 +22,5 @@ export * from './services';
 // Systems (type only for editor usage)
 export type { Physics2DSystem } from './systems/Physics2DSystem';
 
-// Plugin (for editor, no WASM dependency)
-export { Physics2DPlugin } from './editor/Physics2DPlugin';
+// Editor plugin (no WASM dependency)
+export { Physics2DPlugin } from './PhysicsEditorPlugin';

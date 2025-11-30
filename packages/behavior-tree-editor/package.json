@@ -1,0 +1,51 @@
+{
+    "name": "@esengine/behavior-tree-editor",
+    "version": "1.0.0",
+    "description": "Editor support for @esengine/behavior-tree - visual editor, inspectors, and tools",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "build:watch": "tsup --watch",
+        "type-check": "tsc --noEmit",
+        "clean": "rimraf dist"
+    },
+    "dependencies": {
+        "@esengine/behavior-tree": "workspace:*"
+    },
+    "peerDependencies": {
+        "@esengine/ecs-framework": ">=2.0.0",
+        "@esengine/ecs-components": "workspace:*",
+        "@esengine/editor-core": "workspace:*",
+        "@esengine/editor-runtime": "workspace:*",
+        "@esengine/node-editor": "workspace:*",
+        "lucide-react": "^0.545.0",
+        "react": "^18.3.1",
+        "zustand": "^5.0.8"
+    },
+    "devDependencies": {
+        "@esengine/build-config": "workspace:*",
+        "@types/react": "^18.3.12",
+        "rimraf": "^5.0.5",
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.3"
+    },
+    "keywords": [
+        "ecs",
+        "behavior-tree",
+        "editor"
+    ],
+    "author": "",
+    "license": "MIT"
+}

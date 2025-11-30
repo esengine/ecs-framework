@@ -66,6 +66,7 @@
   "peerDependencies": {
     "@esengine/asset-system": "*",
     "@esengine/ecs-framework": "^2.2.8",
+    "@esengine/engine-core": "workspace:*",
     "react": "^18.2.0",
     "rxjs": "^7.8.0",
     "tsyringe": "^4.8.0"

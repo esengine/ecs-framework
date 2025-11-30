@@ -1,0 +1,17 @@
+/**
+ * @esengine/{{name}} Runtime Entry Point
+ *
+ * 运行时入口 - 仅导出运行时代码，不包含任何编辑器依赖
+ * Runtime entry - exports only runtime code without any editor dependencies
+ *
+ * IMPORTANT: Do not import React or any editor packages here!
+ */
+
+// Components
+// export { MyComponent } from './components/MyComponent';
+
+// Systems
+// export { MySystem } from './systems/MySystem';
+
+// Runtime Module
+export { {{name}}RuntimeModule } from './{{name}}RuntimeModule';

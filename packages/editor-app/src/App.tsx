@@ -372,6 +372,9 @@ function App() {
 
             await projectService.openProject(projectPath);
 
+            // 注意：插件配置会在引擎初始化后加载和激活
+            // Note: Plugin config will be loaded and activated after engine initialization
+
             // 设置 Tauri project:// 协议的基础路径（用于加载插件等项目文件）
             await TauriAPI.setProjectBasePath(projectPath);
 
@@ -390,6 +393,19 @@ function App() {
             const engineReady = await engineService.waitForInitialization(30000);
             if (!engineReady) {
                 throw new Error(locale === 'zh' ? '引擎初始化超时' : 'Engine initialization timeout');
+            }
+
+            // 加载项目插件配置并激活插件（在引擎初始化后、模块系统初始化前）
+            // Load project plugin config and activate plugins (after engine init, before module system init)
+            if (pluginManager) {
+                const pluginSettings = projectService.getPluginSettings();
+                console.log('[App] Plugin settings from project:', pluginSettings);
+                if (pluginSettings && pluginSettings.enabledPlugins.length > 0) {
+                    console.log('[App] Loading plugin config:', pluginSettings.enabledPlugins);
+                    await pluginManager.loadConfig({ enabledPlugins: pluginSettings.enabledPlugins });
+                } else {
+                    console.log('[App] No plugin settings found in project config');
+                }
             }
 
             // 初始化模块系统（所有插件的 runtimeModule 会在 PluginManager 安装时自动注册）

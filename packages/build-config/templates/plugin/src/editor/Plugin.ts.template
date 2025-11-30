@@ -1,0 +1,34 @@
+/**
+ * {{displayName}} Plugin
+ *
+ * 插件定义 - 注册编辑器模块（Inspector、工具等）
+ */
+
+import type { IPluginLoader, PluginDescriptor, IEditorModuleLoader } from '@esengine/ecs-components';
+import { {{name}}RuntimeModule } from '../{{name}}RuntimeModule';
+
+class {{name}}EditorModule implements IEditorModuleLoader {
+    registerInspectors(registry: any): void {
+        // 注册组件 Inspector
+        // registry.register('MyComponent', MyComponentInspector);
+    }
+}
+
+const descriptor: PluginDescriptor = {
+    id: '@esengine/{{name}}',
+    name: '{{displayName}}',
+    version: '1.0.0',
+    category: '{{category}}',
+    enabledByDefault: true,
+    isEnginePlugin: false,
+    modules: [
+        { name: '{{name}}Runtime', type: 'runtime', entry: './src/runtime.ts' },
+        { name: '{{name}}Editor', type: 'editor', entry: './src/editor/index.ts' }
+    ]
+};
+
+export const {{name}}Plugin: IPluginLoader = {
+    descriptor,
+    runtimeModule: new {{name}}RuntimeModule(),
+    editorModule: new {{name}}EditorModule()
+};

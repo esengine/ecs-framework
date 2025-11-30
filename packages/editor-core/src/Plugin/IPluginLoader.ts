@@ -1,71 +1,29 @@
 /**
- * 插件加载器接口
- * Plugin loader interfaces
+ * 编辑器模块接口
+ * Editor module interfaces
+ *
+ * 定义编辑器专用的模块接口和 UI 描述符类型。
+ * Define editor-specific module interfaces and UI descriptor types.
  */
 
-import type { IScene, ServiceContainer, ComponentRegistry } from '@esengine/ecs-framework';
-import type { PluginDescriptor } from './PluginDescriptor';
+import type { ServiceContainer } from '@esengine/ecs-framework';
 
-/**
- * 系统创建上下文
- * System creation context
- */
-export interface SystemContext {
-    /** 是否为编辑器模式 | Is editor mode */
-    isEditor: boolean;
+// 从 PluginDescriptor 重新导出（来源于 engine-core）
+export type {
+    PluginCategory,
+    LoadingPhase,
+    ModuleType,
+    ModuleDescriptor,
+    PluginDependency,
+    PluginDescriptor,
+    SystemContext,
+    IRuntimeModule,
+    IPlugin
+} from './PluginDescriptor';
 
-    /** 引擎桥接（如有） | Engine bridge (if available) */
-    engineBridge?: any;
-
-    /** 渲染系统（如有） | Render system (if available) */
-    renderSystem?: any;
-
-    /** 其他已创建的系统引用 | Other created system references */
-    [key: string]: any;
-}
-
-/**
- * 运行时模块加载器
- * Runtime module loader
- */
-export interface IRuntimeModuleLoader {
-    /**
-     * 注册组件到 ComponentRegistry
-     * Register components to ComponentRegistry
-     */
-    registerComponents(registry: typeof ComponentRegistry): void;
-
-    /**
-     * 注册服务到 ServiceContainer
-     * Register services to ServiceContainer
-     */
-    registerServices?(services: ServiceContainer): void;
-
-    /**
-     * 为场景创建系统
-     * Create systems for scene
-     */
-    createSystems?(scene: IScene, context: SystemContext): void;
-
-    /**
-     * 所有系统创建完成后调用
-     * 用于处理跨插件的系统依赖关系
-     * Called after all systems are created, used for cross-plugin system dependencies
-     */
-    onSystemsCreated?(scene: IScene, context: SystemContext): void;
-
-    /**
-     * 模块初始化完成回调
-     * Module initialization complete callback
-     */
-    onInitialize?(): Promise<void>;
-
-    /**
-     * 模块销毁回调
-     * Module destroy callback
-     */
-    onDestroy?(): void;
-}
+// ============================================================================
+// UI 描述符类型 | UI Descriptor Types
+// ============================================================================
 
 /**
  * 面板位置
@@ -146,8 +104,8 @@ export interface ToolbarItemDescriptor {
 }
 
 /**
- * 组件检视器提供者（简化版）
- * Component inspector provider (simplified)
+ * 组件检视器提供者
+ * Component inspector provider
  */
 export interface ComponentInspectorProviderDef {
     /** 组件类型名 | Component type name */
@@ -234,6 +192,33 @@ export interface ISerializer<T = any> {
     /** 反序列化数据 | Deserialize data */
     deserialize(data: Uint8Array): T;
 }
+
+/**
+ * 文件创建模板
+ * File creation template
+ */
+export interface FileCreationTemplate {
+    /** 模板ID | Template ID */
+    id: string;
+    /** 标签 | Label */
+    label: string;
+    /** 扩展名 | Extension */
+    extension: string;
+    /** 图标 | Icon */
+    icon?: string;
+    /** 分类 | Category */
+    category?: string;
+    /**
+     * 获取文件内容 | Get file content
+     * @param fileName 文件名（不含路径，含扩展名）
+     * @returns 文件内容字符串
+     */
+    getContent: (fileName: string) => string | Promise<string>;
+}
+
+// ============================================================================
+// 编辑器模块接口 | Editor Module Interface
+// ============================================================================
 
 /**
  * 编辑器模块加载器
@@ -327,43 +312,22 @@ export interface IEditorModuleLoader {
     setLocale?(locale: string): void;
 }
 
-/**
- * 统一插件加载器
- * Unified plugin loader
- */
-export interface IPluginLoader {
-    /** 插件描述符 | Plugin descriptor */
-    readonly descriptor: PluginDescriptor;
-
-    /** 运行时模块（可选） | Runtime module (optional) */
-    readonly runtimeModule?: IRuntimeModuleLoader;
-
-    /** 编辑器模块（可选） | Editor module (optional) */
-    readonly editorModule?: IEditorModuleLoader;
-}
+// ============================================================================
+// 类型别名（向后兼容）| Type Aliases (backward compatibility)
+// ============================================================================
 
 /**
- * 文件创建模板
- * File creation template
+ * IPluginLoader 类型别名
  *
- * 插件通过 getContent 提供文件内容，编辑器负责写入文件。
- * 这样可以避免插件直接访问文件系统带来的权限问题。
+ * @deprecated 使用 IPlugin 代替。IPluginLoader 只是 IPlugin 的别名。
+ * @deprecated Use IPlugin instead. IPluginLoader is just an alias for IPlugin.
  */
-export interface FileCreationTemplate {
-    /** 模板ID | Template ID */
-    id: string;
-    /** 标签 | Label */
-    label: string;
-    /** 扩展名 | Extension */
-    extension: string;
-    /** 图标 | Icon */
-    icon?: string;
-    /** 分类 | Category */
-    category?: string;
-    /**
-     * 获取文件内容 | Get file content
-     * @param fileName 文件名（不含路径，含扩展名）
-     * @returns 文件内容字符串
-     */
-    getContent: (fileName: string) => string | Promise<string>;
-}
+export type { IPlugin as IPluginLoader } from './PluginDescriptor';
+
+/**
+ * IRuntimeModuleLoader 类型别名
+ *
+ * @deprecated 使用 IRuntimeModule 代替。
+ * @deprecated Use IRuntimeModule instead.
+ */
+export type { IRuntimeModule as IRuntimeModuleLoader } from './PluginDescriptor';

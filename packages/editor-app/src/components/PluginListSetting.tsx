@@ -11,8 +11,8 @@
 
 import { useState, useEffect } from 'react';
 import { Core } from '@esengine/ecs-framework';
-import { PluginManager, type RegisteredPlugin, type PluginCategory } from '@esengine/editor-core';
-import { Check, Lock, RefreshCw, Package } from 'lucide-react';
+import { PluginManager, type RegisteredPlugin, type PluginCategory, ProjectService } from '@esengine/editor-core';
+import { Check, Lock, Package } from 'lucide-react';
 import { NotificationService } from '../services/NotificationService';
 import '../styles/PluginListSetting.css';
 
@@ -30,14 +30,14 @@ const categoryLabels: Record<PluginCategory, { zh: string; en: string }> = {
     networking: { zh: '网络', en: 'Networking' },
     tools: { zh: '工具', en: 'Tools' },
     scripting: { zh: '脚本', en: 'Scripting' },
-    content: { zh: '内容', en: 'Content' }
+    content: { zh: '内容', en: 'Content' },
+    tilemap: { zh: '瓦片地图', en: 'Tilemap' }
 };
 
-const categoryOrder: PluginCategory[] = ['core', 'rendering', 'ui', 'ai', 'scripting', 'physics', 'audio', 'networking', 'tools', 'content'];
+const categoryOrder: PluginCategory[] = ['core', 'rendering', 'ui', 'ai', 'scripting', 'physics', 'audio', 'networking', 'tilemap', 'tools', 'content'];
 
 export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
     const [plugins, setPlugins] = useState<RegisteredPlugin[]>([]);
-    const [pendingChanges, setPendingChanges] = useState<Map<string, boolean>>(new Map());
 
     useEffect(() => {
         loadPlugins();
@@ -55,11 +55,11 @@ export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
         }
     };
 
-    const handleToggle = (pluginId: string) => {
-        const plugin = plugins.find(p => p.loader.descriptor.id === pluginId);
+    const handleToggle = async (pluginId: string) => {
+        const plugin = plugins.find(p => p.plugin.descriptor.id === pluginId);
         if (!plugin) return;
 
-        const descriptor = plugin.loader.descriptor;
+        const descriptor = plugin.plugin.descriptor;
 
         // 核心插件不可禁用
         if (descriptor.isCore) {
@@ -69,11 +69,11 @@ export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
 
         const newEnabled = !plugin.enabled;
 
-        // 检查依赖
+        // 检查依赖（启用时）
         if (newEnabled) {
             const deps = descriptor.dependencies || [];
             const missingDeps = deps.filter(dep => {
-                const depPlugin = plugins.find(p => p.loader.descriptor.id === dep.id);
+                const depPlugin = plugins.find(p => p.plugin.descriptor.id === dep.id);
                 return depPlugin && !depPlugin.enabled;
             });
 
@@ -81,44 +81,76 @@ export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
                 showWarning(`需要先启用依赖插件: ${missingDeps.map(d => d.id).join(', ')}`);
                 return;
             }
-        } else {
-            // 检查是否有其他插件依赖此插件
-            const dependents = plugins.filter(p => {
-                if (!p.enabled || p.loader.descriptor.id === pluginId) return false;
-                const deps = p.loader.descriptor.dependencies || [];
-                return deps.some(d => d.id === pluginId);
-            });
-
-            if (dependents.length > 0) {
-                showWarning(`以下插件依赖此插件: ${dependents.map(p => p.loader.descriptor.name).join(', ')}`);
-                return;
-            }
         }
 
-        // 记录待处理的更改
-        const newPendingChanges = new Map(pendingChanges);
-        newPendingChanges.set(pluginId, newEnabled);
-        setPendingChanges(newPendingChanges);
+        // 调用 PluginManager 的动态启用/禁用方法
+        console.log(`[PluginListSetting] ${newEnabled ? 'Enabling' : 'Disabling'} plugin: ${pluginId}`);
+        let success: boolean;
+        if (newEnabled) {
+            success = await pluginManager.enable(pluginId);
+        } else {
+            success = await pluginManager.disable(pluginId);
+        }
+        console.log(`[PluginListSetting] ${newEnabled ? 'Enable' : 'Disable'} result: ${success}`);
+
+        if (!success) {
+            showWarning(newEnabled ? '启用插件失败' : '禁用插件失败');
+            return;
+        }
 
         // 更新本地状态
         setPlugins(plugins.map(p => {
-            if (p.loader.descriptor.id === pluginId) {
+            if (p.plugin.descriptor.id === pluginId) {
                 return { ...p, enabled: newEnabled };
             }
             return p;
         }));
 
-        // 调用 PluginManager 的启用/禁用方法
-        if (newEnabled) {
-            pluginManager.enable(pluginId);
-        } else {
-            pluginManager.disable(pluginId);
+        // 保存到项目配置
+        savePluginConfigToProject();
+
+        // 通知用户（如果有编辑器模块变更）
+        const hasEditorModule = !!plugin.plugin.editorModule;
+        if (hasEditorModule) {
+            const notificationService = Core.services.tryResolve(NotificationService) as NotificationService | null;
+            if (notificationService) {
+                notificationService.show(
+                    newEnabled ? `已启用插件: ${descriptor.name}` : `已禁用插件: ${descriptor.name}`,
+                    'success',
+                    2000
+                );
+            }
+        }
+    };
+
+    /**
+     * 保存插件配置到项目文件
+     */
+    const savePluginConfigToProject = async () => {
+        const projectService = Core.services.tryResolve<ProjectService>(ProjectService);
+        if (!projectService || !projectService.isProjectOpen()) {
+            console.warn('[PluginListSetting] Cannot save: project not open');
+            return;
+        }
+
+        // 获取当前启用的插件列表（排除核心插件和内置编辑器插件）
+        const enabledPlugins = pluginManager.getEnabledPlugins()
+            .filter(p => !p.plugin.descriptor.isCore && p.plugin.descriptor.isEnginePlugin)
+            .map(p => p.plugin.descriptor.id);
+
+        console.log('[PluginListSetting] Saving enabled plugins:', enabledPlugins);
+
+        try {
+            await projectService.setEnabledPlugins(enabledPlugins);
+            console.log('[PluginListSetting] Plugin config saved successfully');
+        } catch (error) {
+            console.error('[PluginListSetting] Failed to save plugin config:', error);
         }
     };
 
     // 按类别分组并排序
     const groupedPlugins = plugins.reduce((acc, plugin) => {
-        const category = plugin.loader.descriptor.category;
+        const category = plugin.plugin.descriptor.category;
         if (!acc[category]) {
             acc[category] = [];
         }
@@ -131,13 +163,6 @@ export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
 
     return (
         <div className="plugin-list-setting">
-            {pendingChanges.size > 0 && (
-                <div className="plugin-list-notice">
-                    <RefreshCw size={14} />
-                    <span>部分更改需要重启编辑器后生效</span>
-                </div>
-            )}
-
             {sortedCategories.map(category => (
                 <div key={category} className="plugin-category">
                     <div className="plugin-category-header">
@@ -145,9 +170,9 @@ export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
                     </div>
                     <div className="plugin-list">
                         {groupedPlugins[category].map(plugin => {
-                            const descriptor = plugin.loader.descriptor;
-                            const hasRuntime = !!plugin.loader.runtimeModule;
-                            const hasEditor = !!plugin.loader.editorModule;
+                            const descriptor = plugin.plugin.descriptor;
+                            const hasRuntime = !!plugin.plugin.runtimeModule;
+                            const hasEditor = !!plugin.plugin.editorModule;
 
                             return (
                                 <div

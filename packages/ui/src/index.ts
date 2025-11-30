@@ -161,8 +161,5 @@ export {
     type UIScrollViewConfig
 } from './UIBuilder';
 
-// Runtime module (no editor dependencies)
-export { UIRuntimeModule } from './UIRuntimeModule';
-
-// Plugin (for PluginManager - includes editor dependencies)
-export { UIPlugin } from './editor/UIPlugin';
+// Runtime module and plugin
+export { UIRuntimeModule, UIPlugin, type UISystemContext } from './UIRuntimeModule';

@@ -2,6 +2,11 @@
     "name": "@esengine/ui",
     "version": "1.0.0",
     "description": "ECS-based UI system with WebGL rendering for games",
+    "esengine": {
+        "plugin": true,
+        "pluginExport": "UIPlugin",
+        "category": "ui"
+    },
     "main": "dist/index.js",
     "module": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -10,52 +15,26 @@
         ".": {
             "types": "./dist/index.d.ts",
             "import": "./dist/index.js"
-        },
-        "./runtime": {
-            "types": "./dist/runtime.d.ts",
-            "import": "./dist/runtime.js"
-        },
-        "./editor": {
-            "types": "./dist/editor/index.d.ts",
-            "import": "./dist/editor/index.js"
-        },
-        "./plugin.json": "./plugin.json"
+        }
     },
     "files": [
-        "dist",
-        "plugin.json"
+        "dist"
     ],
     "scripts": {
-        "build": "vite build",
-        "build:watch": "vite build --watch",
+        "build": "tsup",
+        "build:watch": "tsup --watch",
         "type-check": "tsc --noEmit",
         "clean": "rimraf dist"
     },
     "peerDependencies": {
         "@esengine/ecs-framework": ">=2.0.0",
-        "@esengine/ecs-components": "workspace:*",
-        "@esengine/editor-core": "workspace:*",
-        "lucide-react": "^0.545.0",
-        "react": "^18.3.1"
-    },
-    "peerDependenciesMeta": {
-        "@esengine/editor-core": {
-            "optional": true
-        },
-        "react": {
-            "optional": true
-        },
-        "lucide-react": {
-            "optional": true
-        }
+        "@esengine/engine-core": "workspace:*"
     },
     "devDependencies": {
-        "@types/react": "^18.3.12",
-        "@vitejs/plugin-react": "^4.7.0",
+        "@esengine/build-config": "workspace:*",
         "rimraf": "^5.0.5",
-        "typescript": "^5.3.3",
-        "vite": "^5.0.0",
-        "vite-plugin-dts": "^3.7.0"
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.3"
     },
     "keywords": [
         "ecs",

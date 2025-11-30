@@ -9,4 +9,5 @@ export { ProfilerPlugin } from './ProfilerPlugin';
 export { EditorAppearancePlugin } from './EditorAppearancePlugin';
 export { PluginConfigPlugin } from './PluginConfigPlugin';
 export { ProjectSettingsPlugin } from './ProjectSettingsPlugin';
-export { BlueprintPlugin } from '@esengine/blueprint/editor';
+// TODO: Re-enable when blueprint-editor package is fixed
+// export { BlueprintPlugin } from '@esengine/blueprint-editor';

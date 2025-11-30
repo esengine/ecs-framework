@@ -38,13 +38,18 @@
   "author": "yhh",
   "license": "MIT",
   "peerDependencies": {
+    "@esengine/ecs-framework": ">=2.0.0"
+  },
+  "optionalDependencies": {
     "@esengine/asset-system": "workspace:*",
+    "@esengine/audio": "workspace:*",
     "@esengine/behavior-tree": "workspace:*",
-    "@esengine/ecs-components": "workspace:*",
+    "@esengine/camera": "workspace:*",
     "@esengine/ecs-engine-bindgen": "workspace:*",
-    "@esengine/ecs-framework": "workspace:*",
+    "@esengine/engine-core": "workspace:*",
     "@esengine/physics-rapier2d": "workspace:*",
-    "@esengine/platform-common": "workspace:*",
+    "@esengine/runtime-core": "workspace:*",
+    "@esengine/sprite": "workspace:*",
     "@esengine/tilemap": "workspace:*",
     "@esengine/ui": "workspace:*"
   },

@@ -4,7 +4,7 @@
  */
 
 import type { ServiceContainer } from '@esengine/ecs-framework';
-import type { IPluginLoader, IEditorModuleLoader, PluginDescriptor, GizmoProviderRegistration } from '@esengine/editor-core';
+import type { IPlugin, IEditorModuleLoader, PluginDescriptor, GizmoProviderRegistration } from '@esengine/editor-core';
 import { registerSpriteGizmo } from '../../gizmos';
 
 /**
@@ -44,7 +44,7 @@ const descriptor: PluginDescriptor = {
     ]
 };
 
-export const GizmoPlugin: IPluginLoader = {
+export const GizmoPlugin: IPlugin = {
     descriptor,
     editorModule: new GizmoEditorModule()
 };

@@ -6,7 +6,7 @@
  */
 
 import { EntitySystem, Matcher, type Entity } from '@esengine/ecs-framework';
-import { TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
 import { Physics2DWorld } from '../world/Physics2DWorld';
 import { Rigidbody2DComponent } from '../components/Rigidbody2DComponent';
 import { Collider2DBase } from '../components/Collider2DBase';

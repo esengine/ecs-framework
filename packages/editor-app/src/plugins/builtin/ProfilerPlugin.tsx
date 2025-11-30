@@ -5,7 +5,7 @@
 
 import type { ServiceContainer } from '@esengine/ecs-framework';
 import type {
-    IPluginLoader,
+    IPlugin,
     IEditorModuleLoader,
     PluginDescriptor,
     PanelDescriptor,
@@ -151,13 +151,12 @@ const descriptor: PluginDescriptor = {
         {
             name: 'ProfilerEditor',
             type: 'editor',
-            loadingPhase: 'postDefault',
-            panels: ['profiler-monitor']
+            loadingPhase: 'postDefault'
         }
     ]
 };
 
-export const ProfilerPlugin: IPluginLoader = {
+export const ProfilerPlugin: IPlugin = {
     descriptor,
     editorModule: new ProfilerEditorModule()
 };

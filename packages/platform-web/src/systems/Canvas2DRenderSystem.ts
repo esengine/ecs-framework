@@ -4,7 +4,8 @@
  */
 
 import { EntitySystem, Matcher, ECSSystem, Core } from '@esengine/ecs-framework';
-import { TransformComponent, SpriteComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
+import { SpriteComponent } from '@esengine/sprite';
 
 @ECSSystem('Canvas2DRender', { updateOrder: 1000 })
 export class Canvas2DRenderSystem extends EntitySystem {

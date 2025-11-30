@@ -1,6 +1,9 @@
 /**
  * 插件安装器
  * Plugin Installer
+ *
+ * 现在所有插件都使用统一的 IPlugin 接口，无需适配器。
+ * Now all plugins use the unified IPlugin interface, no adapter needed.
  */
 
 import type { PluginManager } from '@esengine/editor-core';
@@ -13,12 +16,12 @@ import { EditorAppearancePlugin } from '../../plugins/builtin/EditorAppearancePl
 import { PluginConfigPlugin } from '../../plugins/builtin/PluginConfigPlugin';
 import { ProjectSettingsPlugin } from '../../plugins/builtin/ProjectSettingsPlugin';
 
-// 统一模块插件（CSS 已内联到 JS 中，导入时自动注入）
-import { TilemapPlugin } from '@esengine/tilemap';
-import { UIPlugin } from '@esengine/ui';
-import { BehaviorTreePlugin } from '@esengine/behavior-tree';
+// 统一模块插件（从编辑器包导入完整插件，包含 runtime + editor）
+import { BehaviorTreePlugin } from '@esengine/behavior-tree-editor';
 import { Physics2DPlugin } from '@esengine/physics-rapier2d';
-import { BlueprintPlugin } from '@esengine/blueprint/editor';
+import { TilemapPlugin } from '@esengine/tilemap-editor';
+import { UIPlugin } from '@esengine/ui';
+import { BlueprintPlugin } from '@esengine/blueprint-editor';
 
 export class PluginInstaller {
     /**
@@ -67,7 +70,5 @@ export class PluginInstaller {
                 console.error(`[PluginInstaller] Failed to register ${name}:`, error);
             }
         }
-
-        // All builtin plugins registered
     }
 }

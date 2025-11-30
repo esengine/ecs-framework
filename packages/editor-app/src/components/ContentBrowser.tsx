@@ -26,7 +26,15 @@ import {
     Trash2,
     Edit3,
     ExternalLink,
-    PanelRightClose
+    PanelRightClose,
+    Tag,
+    Link,
+    FileSearch,
+    Globe,
+    Package,
+    Clipboard,
+    RefreshCw,
+    Settings
 } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
 import { MessageHub, FileActionRegistry, type FileCreationTemplate } from '@esengine/editor-core';
@@ -564,9 +572,191 @@ export function ContentBrowser({
                 icon: <File size={16} />,
                 onClick: () => handleAssetDoubleClick(asset)
             });
+
             items.push({ label: '', separator: true, onClick: () => {} });
+
+            // 保存
+            items.push({
+                label: locale === 'zh' ? '保存' : 'Save',
+                icon: <Save size={16} />,
+                shortcut: 'Ctrl+S',
+                onClick: () => {
+                    console.log('Save file:', asset.path);
+                }
+            });
         }
 
+        // 重命名
+        items.push({
+            label: locale === 'zh' ? '重命名' : 'Rename',
+            icon: <Edit3 size={16} />,
+            shortcut: 'F2',
+            onClick: () => {
+                setRenameDialog({ asset, newName: asset.name });
+                setContextMenu(null);
+            }
+        });
+
+        // 批量重命名
+        items.push({
+            label: locale === 'zh' ? '批量重命名' : 'Batch Rename',
+            icon: <Edit3 size={16} />,
+            shortcut: 'Shift+F2',
+            disabled: true,
+            onClick: () => {
+                console.log('Batch rename');
+            }
+        });
+
+        // 复制
+        items.push({
+            label: locale === 'zh' ? '复制' : 'Duplicate',
+            icon: <Clipboard size={16} />,
+            shortcut: 'Ctrl+D',
+            onClick: () => {
+                console.log('Duplicate:', asset.path);
+            }
+        });
+
+        // 删除
+        items.push({
+            label: locale === 'zh' ? '删除' : 'Delete',
+            icon: <Trash2 size={16} />,
+            shortcut: 'Delete',
+            onClick: () => {
+                setDeleteConfirmDialog(asset);
+                setContextMenu(null);
+            }
+        });
+
+        items.push({ label: '', separator: true, onClick: () => {} });
+
+        // 资产操作子菜单
+        items.push({
+            label: locale === 'zh' ? '资产操作' : 'Asset Actions',
+            icon: <Settings size={16} />,
+            onClick: () => {},
+            children: [
+                {
+                    label: locale === 'zh' ? '重新导入' : 'Reimport',
+                    icon: <RefreshCw size={16} />,
+                    onClick: () => {
+                        console.log('Reimport asset:', asset.path);
+                    }
+                },
+                {
+                    label: locale === 'zh' ? '导出...' : 'Export...',
+                    icon: <Package size={16} />,
+                    onClick: () => {
+                        console.log('Export asset:', asset.path);
+                    }
+                },
+                { label: '', separator: true, onClick: () => {} },
+                {
+                    label: locale === 'zh' ? '迁移资产' : 'Migrate Asset',
+                    icon: <Folder size={16} />,
+                    onClick: () => {
+                        console.log('Migrate asset:', asset.path);
+                    }
+                }
+            ]
+        });
+
+        // 资产本地化子菜单
+        items.push({
+            label: locale === 'zh' ? '资产本地化' : 'Asset Localization',
+            icon: <Globe size={16} />,
+            onClick: () => {},
+            children: [
+                {
+                    label: locale === 'zh' ? '创建本地化资产' : 'Create Localized Asset',
+                    onClick: () => {
+                        console.log('Create localized asset:', asset.path);
+                    }
+                },
+                {
+                    label: locale === 'zh' ? '导入翻译' : 'Import Translation',
+                    onClick: () => {
+                        console.log('Import translation:', asset.path);
+                    }
+                },
+                {
+                    label: locale === 'zh' ? '导出翻译' : 'Export Translation',
+                    onClick: () => {
+                        console.log('Export translation:', asset.path);
+                    }
+                }
+            ]
+        });
+
+        items.push({ label: '', separator: true, onClick: () => {} });
+
+        // 标签管理
+        items.push({
+            label: locale === 'zh' ? '管理标签' : 'Manage Tags',
+            icon: <Tag size={16} />,
+            shortcut: 'Ctrl+T',
+            onClick: () => {
+                console.log('Manage tags:', asset.path);
+            }
+        });
+
+        items.push({ label: '', separator: true, onClick: () => {} });
+
+        // 路径复制选项
+        items.push({
+            label: locale === 'zh' ? '复制引用' : 'Copy Reference',
+            icon: <Link size={16} />,
+            shortcut: 'Ctrl+C',
+            onClick: () => {
+                navigator.clipboard.writeText(asset.path);
+            }
+        });
+
+        items.push({
+            label: locale === 'zh' ? '拷贝Object路径' : 'Copy Object Path',
+            icon: <Copy size={16} />,
+            shortcut: 'Ctrl+Shift+C',
+            onClick: () => {
+                const objectPath = asset.path.replace(/\\/g, '/');
+                navigator.clipboard.writeText(objectPath);
+            }
+        });
+
+        items.push({
+            label: locale === 'zh' ? '拷贝包路径' : 'Copy Package Path',
+            icon: <Package size={16} />,
+            shortcut: 'Ctrl+Alt+C',
+            onClick: () => {
+                const packagePath = '/' + asset.path.replace(/\\/g, '/').split('/').slice(-2).join('/');
+                navigator.clipboard.writeText(packagePath);
+            }
+        });
+
+        items.push({ label: '', separator: true, onClick: () => {} });
+
+        // 引用查看器
+        items.push({
+            label: locale === 'zh' ? '引用查看器' : 'Reference Viewer',
+            icon: <FileSearch size={16} />,
+            shortcut: 'Alt+Shift+R',
+            onClick: () => {
+                console.log('Open reference viewer:', asset.path);
+            }
+        });
+
+        items.push({
+            label: locale === 'zh' ? '尺寸信息图' : 'Size Map',
+            icon: <FileSearch size={16} />,
+            shortcut: 'Alt+Shift+D',
+            onClick: () => {
+                console.log('Show size map:', asset.path);
+            }
+        });
+
+        items.push({ label: '', separator: true, onClick: () => {} });
+
+        // 在文件管理器中显示
         items.push({
             label: locale === 'zh' ? '在文件管理器中显示' : 'Show in Explorer',
             icon: <ExternalLink size={16} />,
@@ -579,34 +769,8 @@ export function ContentBrowser({
             }
         });
 
-        items.push({
-            label: locale === 'zh' ? '复制路径' : 'Copy Path',
-            icon: <Copy size={16} />,
-            onClick: () => navigator.clipboard.writeText(asset.path)
-        });
-
-        items.push({ label: '', separator: true, onClick: () => {} });
-
-        items.push({
-            label: locale === 'zh' ? '重命名' : 'Rename',
-            icon: <Edit3 size={16} />,
-            onClick: () => {
-                setRenameDialog({ asset, newName: asset.name });
-                setContextMenu(null);
-            }
-        });
-
-        items.push({
-            label: locale === 'zh' ? '删除' : 'Delete',
-            icon: <Trash2 size={16} />,
-            onClick: () => {
-                setDeleteConfirmDialog(asset);
-                setContextMenu(null);
-            }
-        });
-
         return items;
-    }, [currentPath, fileActionRegistry, handleAssetDoubleClick, loadAssets, locale, t.newFolder]);
+    }, [currentPath, fileActionRegistry, handleAssetDoubleClick, loadAssets, locale, t.newFolder, setRenameDialog, setDeleteConfirmDialog, setContextMenu, setCreateFileDialog]);
 
     // Render folder tree node
     const renderFolderNode = useCallback((node: FolderNode, depth: number = 0) => {
@@ -818,7 +982,10 @@ export function ContentBrowser({
                                 className={`cb-asset-item ${selectedPaths.has(asset.path) ? 'selected' : ''}`}
                                 onClick={(e) => handleAssetClick(asset, e)}
                                 onDoubleClick={() => handleAssetDoubleClick(asset)}
-                                onContextMenu={(e) => handleContextMenu(e, asset)}
+                                onContextMenu={(e) => {
+                                    e.stopPropagation();
+                                    handleContextMenu(e, asset);
+                                }}
                                 draggable={asset.type === 'file'}
                                 onDragStart={(e) => {
                                     if (asset.type === 'file') {

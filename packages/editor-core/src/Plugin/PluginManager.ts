@@ -9,16 +9,18 @@ import type {
     PluginDescriptor,
     PluginState,
     PluginCategory,
-    LoadingPhase
+    LoadingPhase,
+    IPlugin
 } from './PluginDescriptor';
 import type {
-    IPluginLoader,
-    SystemContext
+    SystemContext,
+    IEditorModuleLoader
 } from './IPluginLoader';
 import { EntityCreationRegistry } from '../Services/EntityCreationRegistry';
 import { ComponentActionRegistry } from '../Services/ComponentActionRegistry';
 import { FileActionRegistry } from '../Services/FileActionRegistry';
 import { UIRegistry } from '../Services/UIRegistry';
+import { MessageHub } from '../Services/MessageHub';
 
 const logger = createLogger('PluginManager');
 
@@ -29,12 +31,64 @@ const logger = createLogger('PluginManager');
 export const IPluginManager = Symbol.for('IPluginManager');
 
 /**
+ * 标准化后的插件描述符（所有字段都有值）
+ * Normalized plugin descriptor (all fields have values)
+ */
+export interface NormalizedPluginDescriptor {
+    id: string;
+    name: string;
+    version: string;
+    description: string;
+    category: PluginCategory;
+    tags: string[];
+    icon?: string;
+    enabledByDefault: boolean;
+    canContainContent: boolean;
+    isEnginePlugin: boolean;
+    isCore: boolean;
+    modules: Array<{ name: string; type: 'runtime' | 'editor'; loadingPhase: LoadingPhase }>;
+    dependencies: Array<{ id: string; version?: string; optional?: boolean }>;
+    platforms: ('web' | 'desktop' | 'mobile')[];
+}
+
+/**
+ * 标准化后的插件（内部使用）
+ * Normalized plugin (internal use)
+ */
+export interface NormalizedPlugin {
+    descriptor: NormalizedPluginDescriptor;
+    runtimeModule?: IPlugin['runtimeModule'];
+    editorModule?: IEditorModuleLoader;
+}
+
+/**
+ * 插件注册的资源（用于卸载时清理）
+ * Resources registered by plugin (for cleanup on unload)
+ */
+export interface PluginRegisteredResources {
+    /** 注册的面板ID | Registered panel IDs */
+    panelIds: string[];
+    /** 注册的菜单ID | Registered menu IDs */
+    menuIds: string[];
+    /** 注册的工具栏ID | Registered toolbar IDs */
+    toolbarIds: string[];
+    /** 注册的实体模板ID | Registered entity template IDs */
+    entityTemplateIds: string[];
+    /** 注册的组件操作 | Registered component actions */
+    componentActions: Array<{ componentName: string; actionId: string }>;
+    /** 注册的文件处理器 | Registered file handlers */
+    fileHandlers: any[];
+    /** 注册的文件模板 | Registered file templates */
+    fileTemplates: any[];
+}
+
+/**
  * 已注册的插件信息
  * Registered plugin info
  */
 export interface RegisteredPlugin {
-    /** 插件加载器 | Plugin loader */
-    loader: IPluginLoader;
+    /** 标准化后的插件 | Normalized plugin */
+    plugin: NormalizedPlugin;
     /** 插件状态 | Plugin state */
     state: PluginState;
     /** 错误信息 | Error info */
@@ -45,6 +99,8 @@ export interface RegisteredPlugin {
     loadedAt?: number;
     /** 激活时间 | Activation time */
     activatedAt?: number;
+    /** 插件注册的资源 | Resources registered by plugin */
+    registeredResources?: PluginRegisteredResources;
 }
 
 /**
@@ -80,8 +136,28 @@ export class PluginManager implements IService {
     private plugins: Map<string, RegisteredPlugin> = new Map();
     private initialized = false;
     private editorInitialized = false;
+    private services: ServiceContainer | null = null;
+    private currentScene: IScene | null = null;
+    private currentContext: SystemContext | null = null;
 
     constructor() {}
+
+    /**
+     * 设置服务容器（用于动态启用插件）
+     * Set service container (for dynamic plugin enabling)
+     */
+    setServiceContainer(services: ServiceContainer): void {
+        this.services = services;
+    }
+
+    /**
+     * 设置当前场景和上下文（用于动态创建系统）
+     * Set current scene and context (for dynamic system creation)
+     */
+    setSceneContext(scene: IScene, context: SystemContext): void {
+        this.currentScene = scene;
+        this.currentContext = context;
+    }
 
     /**
      * 释放资源
@@ -92,24 +168,59 @@ export class PluginManager implements IService {
     }
 
     /**
+     * 标准化插件描述符，填充默认值
+     * Normalize plugin descriptor, fill in defaults
+     */
+    private normalizePlugin(input: IPlugin): NormalizedPlugin {
+        const d = input.descriptor;
+        return {
+            descriptor: {
+                id: d.id,
+                name: d.name,
+                version: d.version,
+                description: d.description ?? '',
+                category: d.category ?? 'tools',
+                tags: d.tags ?? [],
+                icon: d.icon,
+                enabledByDefault: d.enabledByDefault ?? false,
+                canContainContent: d.canContainContent ?? false,
+                isEnginePlugin: d.isEnginePlugin ?? true,
+                isCore: d.isCore ?? false,
+                modules: (d.modules ?? [{ name: 'Runtime', type: 'runtime' as const, loadingPhase: 'default' as const }]).map((m: { name: string; type: 'runtime' | 'editor'; loadingPhase?: LoadingPhase }) => ({
+                    name: m.name,
+                    type: m.type,
+                    loadingPhase: m.loadingPhase ?? 'default' as LoadingPhase
+                })),
+                dependencies: d.dependencies ?? [],
+                platforms: d.platforms ?? ['web', 'desktop']
+            },
+            runtimeModule: input.runtimeModule,
+            editorModule: input.editorModule as IEditorModuleLoader | undefined
+        };
+    }
+
+    /**
      * 注册插件
      * Register plugin
+     *
+     * 接受任何符合 IPlugin 接口的插件，内部会标准化所有字段。
+     * Accepts any plugin conforming to IPlugin interface, normalizes all fields internally.
      */
-    register(loader: IPluginLoader): void {
-        if (!loader) {
-            logger.error('Cannot register plugin: loader is null or undefined');
+    register(plugin: IPlugin): void {
+        if (!plugin) {
+            logger.error('Cannot register plugin: plugin is null or undefined');
             return;
         }
 
-        if (!loader.descriptor) {
-            logger.error('Cannot register plugin: descriptor is null or undefined', loader);
+        if (!plugin.descriptor) {
+            logger.error('Cannot register plugin: descriptor is null or undefined', plugin);
             return;
         }
 
-        const { id } = loader.descriptor;
+        const { id } = plugin.descriptor;
 
         if (!id) {
-            logger.error('Cannot register plugin: descriptor.id is null or undefined', loader.descriptor);
+            logger.error('Cannot register plugin: descriptor.id is null or undefined', plugin.descriptor);
             return;
         }
 
@@ -118,36 +229,42 @@ export class PluginManager implements IService {
             return;
         }
 
-        const enabled = loader.descriptor.isCore || loader.descriptor.enabledByDefault;
+        const normalized = this.normalizePlugin(plugin);
+        const enabled = normalized.descriptor.isCore || normalized.descriptor.enabledByDefault;
 
         this.plugins.set(id, {
-            loader,
+            plugin: normalized,
             state: 'loaded',
             enabled,
             loadedAt: Date.now()
         });
 
-        logger.info(`Plugin registered: ${id} (${loader.descriptor.name})`);
+        logger.info(`Plugin registered: ${id} (${normalized.descriptor.name})`);
     }
 
     /**
-     * 启用插件
-     * Enable plugin
+     * 启用插件（动态加载编辑器模块和运行时系统）
+     * Enable plugin (dynamically load editor module and runtime systems)
      */
-    enable(pluginId: string): boolean {
+    async enable(pluginId: string): Promise<boolean> {
         const plugin = this.plugins.get(pluginId);
         if (!plugin) {
             logger.error(`Plugin ${pluginId} not found`);
             return false;
         }
 
-        if (plugin.loader.descriptor.isCore) {
+        if (plugin.plugin.descriptor.isCore) {
             logger.warn(`Core plugin ${pluginId} cannot be disabled/enabled`);
             return false;
         }
 
+        if (plugin.enabled) {
+            logger.warn(`Plugin ${pluginId} is already enabled`);
+            return true;
+        }
+
         // 检查依赖
-        const deps = plugin.loader.descriptor.dependencies || [];
+        const deps = plugin.plugin.descriptor.dependencies;
         for (const dep of deps) {
             if (dep.optional) continue;
             const depPlugin = this.plugins.get(dep.id);
@@ -158,31 +275,57 @@ export class PluginManager implements IService {
         }
 
         plugin.enabled = true;
-        plugin.state = 'loaded';
-        logger.info(`Plugin enabled: ${pluginId}`);
-        return true;
+        plugin.state = 'loading';
+
+        try {
+            // 动态加载编辑器模块
+            if (this.services && this.editorInitialized) {
+                await this.activatePluginEditor(pluginId);
+            }
+
+            // 动态加载运行时模块
+            if (this.currentScene && this.currentContext && this.initialized) {
+                await this.activatePluginRuntime(pluginId);
+            }
+
+            plugin.state = 'active';
+            plugin.activatedAt = Date.now();
+            logger.info(`Plugin enabled and activated: ${pluginId}`);
+            return true;
+        } catch (e) {
+            logger.error(`Failed to activate plugin ${pluginId}:`, e);
+            plugin.state = 'error';
+            plugin.error = e as Error;
+            plugin.enabled = false;
+            return false;
+        }
     }
 
     /**
-     * 禁用插件
-     * Disable plugin
+     * 禁用插件（动态卸载编辑器模块和运行时系统）
+     * Disable plugin (dynamically unload editor module and runtime systems)
      */
-    disable(pluginId: string): boolean {
+    async disable(pluginId: string): Promise<boolean> {
         const plugin = this.plugins.get(pluginId);
         if (!plugin) {
             logger.error(`Plugin ${pluginId} not found`);
             return false;
         }
 
-        if (plugin.loader.descriptor.isCore) {
+        if (plugin.plugin.descriptor.isCore) {
             logger.warn(`Core plugin ${pluginId} cannot be disabled`);
             return false;
+        }
+
+        if (!plugin.enabled) {
+            logger.warn(`Plugin ${pluginId} is already disabled`);
+            return true;
         }
 
         // 检查是否有其他插件依赖此插件
         for (const [id, p] of this.plugins) {
             if (!p.enabled || id === pluginId) continue;
-            const deps = p.loader.descriptor.dependencies || [];
+            const deps = p.plugin.descriptor.dependencies;
             const hasDep = deps.some(d => d.id === pluginId && !d.optional);
             if (hasDep) {
                 logger.error(`Cannot disable ${pluginId}: plugin ${id} depends on it`);
@@ -190,10 +333,302 @@ export class PluginManager implements IService {
             }
         }
 
-        plugin.enabled = false;
-        plugin.state = 'disabled';
-        logger.info(`Plugin disabled: ${pluginId}`);
-        return true;
+        try {
+            // 卸载编辑器模块
+            if (this.services) {
+                await this.deactivatePluginEditor(pluginId);
+            }
+
+            // 卸载运行时模块（清理系统）
+            if (this.currentScene) {
+                this.deactivatePluginRuntime(pluginId);
+            }
+
+            plugin.enabled = false;
+            plugin.state = 'disabled';
+            plugin.registeredResources = undefined;
+            logger.info(`Plugin disabled: ${pluginId}`);
+            return true;
+        } catch (e) {
+            logger.error(`Failed to deactivate plugin ${pluginId}:`, e);
+            return false;
+        }
+    }
+
+    /**
+     * 动态激活插件的编辑器模块
+     * Dynamically activate plugin's editor module
+     */
+    private async activatePluginEditor(pluginId: string): Promise<void> {
+        const plugin = this.plugins.get(pluginId);
+        if (!plugin || !this.services) return;
+
+        const editorModule = plugin.plugin.editorModule;
+        if (!editorModule) return;
+
+        // 初始化资源跟踪
+        const resources: PluginRegisteredResources = {
+            panelIds: [],
+            menuIds: [],
+            toolbarIds: [],
+            entityTemplateIds: [],
+            componentActions: [],
+            fileHandlers: [],
+            fileTemplates: []
+        };
+
+        // 获取注册表服务
+        const entityCreationRegistry = this.services.tryResolve(EntityCreationRegistry);
+        const componentActionRegistry = this.services.tryResolve(ComponentActionRegistry);
+        const fileActionRegistry = this.services.tryResolve(FileActionRegistry);
+        const uiRegistry = this.services.tryResolve(UIRegistry);
+
+        // 安装编辑器模块
+        await editorModule.install(this.services);
+        logger.debug(`Editor module installed: ${pluginId}`);
+
+        // 注册实体创建模板
+        if (entityCreationRegistry && editorModule.getEntityCreationTemplates) {
+            const templates = editorModule.getEntityCreationTemplates();
+            if (templates && templates.length > 0) {
+                entityCreationRegistry.registerMany(templates);
+                resources.entityTemplateIds = templates.map(t => t.id);
+                logger.debug(`Registered ${templates.length} entity templates from: ${pluginId}`);
+            }
+        }
+
+        // 注册组件操作
+        if (componentActionRegistry && editorModule.getComponentActions) {
+            const actions = editorModule.getComponentActions();
+            if (actions && actions.length > 0) {
+                for (const action of actions) {
+                    componentActionRegistry.register(action);
+                    resources.componentActions.push({
+                        componentName: action.componentName,
+                        actionId: action.id
+                    });
+                }
+                logger.debug(`Registered ${actions.length} component actions from: ${pluginId}`);
+            }
+        }
+
+        // 注册文件操作处理器
+        if (fileActionRegistry && editorModule.getFileActionHandlers) {
+            const handlers = editorModule.getFileActionHandlers();
+            if (handlers && handlers.length > 0) {
+                for (const handler of handlers) {
+                    fileActionRegistry.registerActionHandler(handler);
+                    resources.fileHandlers.push(handler);
+                }
+                logger.debug(`Registered ${handlers.length} file action handlers from: ${pluginId}`);
+            }
+        }
+
+        // 注册文件创建模板
+        if (fileActionRegistry && editorModule.getFileCreationTemplates) {
+            const templates = editorModule.getFileCreationTemplates();
+            if (templates && templates.length > 0) {
+                for (const template of templates) {
+                    fileActionRegistry.registerCreationTemplate(template);
+                    resources.fileTemplates.push(template);
+                }
+                logger.debug(`Registered ${templates.length} file creation templates from: ${pluginId}`);
+            }
+        }
+
+        // 注册面板
+        if (uiRegistry && editorModule.getPanels) {
+            const panels = editorModule.getPanels();
+            if (panels && panels.length > 0) {
+                uiRegistry.registerPanels(panels);
+                resources.panelIds = panels.map(p => p.id);
+                logger.debug(`Registered ${panels.length} panels from: ${pluginId}`);
+            }
+        }
+
+        // 注册菜单
+        if (uiRegistry && editorModule.getMenuItems) {
+            const menuItems = editorModule.getMenuItems();
+            if (menuItems && menuItems.length > 0) {
+                for (const item of menuItems) {
+                    uiRegistry.registerMenu(item as any);
+                    resources.menuIds.push(item.id);
+                }
+                logger.debug(`Registered ${menuItems.length} menu items from: ${pluginId}`);
+            }
+        }
+
+        // 注册工具栏
+        if (uiRegistry && editorModule.getToolbarItems) {
+            const toolbarItems = editorModule.getToolbarItems();
+            if (toolbarItems && toolbarItems.length > 0) {
+                for (const item of toolbarItems) {
+                    uiRegistry.registerToolbarItem(item as any);
+                    resources.toolbarIds.push(item.id);
+                }
+                logger.debug(`Registered ${toolbarItems.length} toolbar items from: ${pluginId}`);
+            }
+        }
+
+        // 保存注册的资源
+        plugin.registeredResources = resources;
+
+        // 调用 onEditorReady
+        if (editorModule.onEditorReady) {
+            await editorModule.onEditorReady();
+        }
+
+        // 发布插件安装事件，通知 UI 刷新
+        const messageHub = this.services.tryResolve(MessageHub);
+        if (messageHub) {
+            messageHub.publish('plugin:installed', { pluginId });
+        }
+    }
+
+    /**
+     * 动态卸载插件的编辑器模块
+     * Dynamically deactivate plugin's editor module
+     */
+    private async deactivatePluginEditor(pluginId: string): Promise<void> {
+        const plugin = this.plugins.get(pluginId);
+        if (!plugin || !this.services) return;
+
+        const editorModule = plugin.plugin.editorModule;
+        const resources = plugin.registeredResources;
+
+        // 获取注册表服务
+        const entityCreationRegistry = this.services.tryResolve(EntityCreationRegistry);
+        const componentActionRegistry = this.services.tryResolve(ComponentActionRegistry);
+        const fileActionRegistry = this.services.tryResolve(FileActionRegistry);
+        const uiRegistry = this.services.tryResolve(UIRegistry);
+
+        if (resources) {
+            // 注销面板
+            if (uiRegistry) {
+                for (const panelId of resources.panelIds) {
+                    uiRegistry.unregisterPanel(panelId);
+                }
+            }
+
+            // 注销菜单
+            if (uiRegistry) {
+                for (const menuId of resources.menuIds) {
+                    uiRegistry.unregisterMenu(menuId);
+                }
+            }
+
+            // 注销工具栏
+            if (uiRegistry) {
+                for (const toolbarId of resources.toolbarIds) {
+                    uiRegistry.unregisterToolbarItem(toolbarId);
+                }
+            }
+
+            // 注销实体模板
+            if (entityCreationRegistry) {
+                for (const templateId of resources.entityTemplateIds) {
+                    entityCreationRegistry.unregister(templateId);
+                }
+            }
+
+            // 注销组件操作
+            if (componentActionRegistry) {
+                for (const action of resources.componentActions) {
+                    componentActionRegistry.unregister(action.componentName, action.actionId);
+                }
+            }
+
+            // 注销文件处理器
+            if (fileActionRegistry) {
+                for (const handler of resources.fileHandlers) {
+                    fileActionRegistry.unregisterActionHandler(handler);
+                }
+            }
+
+            // 注销文件模板
+            if (fileActionRegistry) {
+                for (const template of resources.fileTemplates) {
+                    fileActionRegistry.unregisterCreationTemplate(template);
+                }
+            }
+
+            logger.debug(`Unregistered resources for: ${pluginId}`);
+        }
+
+        // 调用 uninstall
+        if (editorModule?.uninstall) {
+            await editorModule.uninstall();
+            logger.debug(`Editor module uninstalled: ${pluginId}`);
+        }
+
+        // 发布插件卸载事件，通知 UI 刷新
+        const messageHub = this.services.tryResolve(MessageHub);
+        if (messageHub) {
+            messageHub.publish('plugin:uninstalled', { pluginId });
+        }
+    }
+
+    /**
+     * 动态激活插件的运行时模块
+     * Dynamically activate plugin's runtime module
+     */
+    private async activatePluginRuntime(pluginId: string): Promise<void> {
+        const plugin = this.plugins.get(pluginId);
+        if (!plugin || !this.currentScene || !this.currentContext || !this.services) return;
+
+        const runtimeModule = plugin.plugin.runtimeModule;
+        if (!runtimeModule) return;
+
+        // 注册组件
+        if (runtimeModule.registerComponents) {
+            runtimeModule.registerComponents(ComponentRegistry);
+            logger.debug(`Components registered for: ${pluginId}`);
+        }
+
+        // 注册服务
+        if (runtimeModule.registerServices) {
+            runtimeModule.registerServices(this.services);
+            logger.debug(`Services registered for: ${pluginId}`);
+        }
+
+        // 创建系统
+        if (runtimeModule.createSystems) {
+            runtimeModule.createSystems(this.currentScene, this.currentContext);
+            logger.debug(`Systems created for: ${pluginId}`);
+        }
+
+        // 调用系统创建后回调
+        if (runtimeModule.onSystemsCreated) {
+            runtimeModule.onSystemsCreated(this.currentScene, this.currentContext);
+            logger.debug(`Systems wired for: ${pluginId}`);
+        }
+
+        // 调用初始化
+        if (runtimeModule.onInitialize) {
+            await runtimeModule.onInitialize();
+            logger.debug(`Runtime initialized for: ${pluginId}`);
+        }
+    }
+
+    /**
+     * 动态卸载插件的运行时模块
+     * Dynamically deactivate plugin's runtime module
+     */
+    private deactivatePluginRuntime(pluginId: string): void {
+        const plugin = this.plugins.get(pluginId);
+        if (!plugin) return;
+
+        const runtimeModule = plugin.plugin.runtimeModule;
+        if (!runtimeModule) return;
+
+        // 调用销毁回调
+        if (runtimeModule.onDestroy) {
+            runtimeModule.onDestroy();
+            logger.debug(`Runtime destroyed for: ${pluginId}`);
+        }
+
+        // 注意：组件和服务无法动态注销，这是设计限制
+        // 系统的移除需要场景支持，暂时只调用 onDestroy
     }
 
     /**
@@ -235,7 +670,7 @@ export class PluginManager implements IService {
      */
     getPluginsByCategory(category: PluginCategory): RegisteredPlugin[] {
         return this.getAllPlugins().filter(
-            p => p.loader.descriptor.category === category
+            p => p.plugin.descriptor.category === category
         );
     }
 
@@ -257,6 +692,9 @@ export class PluginManager implements IService {
             return;
         }
 
+        // 保存服务容器引用
+        this.services = services;
+
         logger.info('Initializing runtime modules...');
 
         const sortedPlugins = this.sortByLoadingPhase('runtime');
@@ -266,8 +704,8 @@ export class PluginManager implements IService {
             const plugin = this.plugins.get(pluginId);
             if (!plugin?.enabled) continue;
 
-            const runtimeModule = plugin.loader.runtimeModule;
-            if (runtimeModule) {
+            const runtimeModule = plugin.plugin.runtimeModule;
+            if (runtimeModule?.registerComponents) {
                 try {
                     runtimeModule.registerComponents(ComponentRegistry);
                     logger.debug(`Components registered for: ${pluginId}`);
@@ -284,7 +722,7 @@ export class PluginManager implements IService {
             const plugin = this.plugins.get(pluginId);
             if (!plugin?.enabled || plugin.state === 'error') continue;
 
-            const runtimeModule = plugin.loader.runtimeModule;
+            const runtimeModule = plugin.plugin.runtimeModule;
             if (runtimeModule?.registerServices) {
                 try {
                     runtimeModule.registerServices(services);
@@ -302,7 +740,7 @@ export class PluginManager implements IService {
             const plugin = this.plugins.get(pluginId);
             if (!plugin?.enabled || plugin.state === 'error') continue;
 
-            const runtimeModule = plugin.loader.runtimeModule;
+            const runtimeModule = plugin.plugin.runtimeModule;
             if (runtimeModule?.onInitialize) {
                 try {
                     await runtimeModule.onInitialize();
@@ -330,6 +768,10 @@ export class PluginManager implements IService {
      * Create systems for scene
      */
     createSystemsForScene(scene: IScene, context: SystemContext): void {
+        // 保存场景和上下文引用（用于动态启用插件）
+        this.currentScene = scene;
+        this.currentContext = context;
+
         logger.info('Creating systems for scene...');
         console.log('[PluginManager] createSystemsForScene called, context.assetManager:', context.assetManager ? 'exists' : 'null');
 
@@ -340,10 +782,10 @@ export class PluginManager implements IService {
         // Phase 1: Create all systems
         for (const pluginId of sortedPlugins) {
             const plugin = this.plugins.get(pluginId);
-            console.log(`[PluginManager] Plugin ${pluginId}: enabled=${plugin?.enabled}, state=${plugin?.state}, hasRuntimeModule=${!!plugin?.loader.runtimeModule}`);
+            console.log(`[PluginManager] Plugin ${pluginId}: enabled=${plugin?.enabled}, state=${plugin?.state}, hasRuntimeModule=${!!plugin?.plugin.runtimeModule}`);
             if (!plugin?.enabled || plugin.state === 'error') continue;
 
-            const runtimeModule = plugin.loader.runtimeModule;
+            const runtimeModule = plugin.plugin.runtimeModule;
             if (runtimeModule?.createSystems) {
                 try {
                     console.log(`[PluginManager] Calling createSystems for: ${pluginId}`);
@@ -361,7 +803,7 @@ export class PluginManager implements IService {
             const plugin = this.plugins.get(pluginId);
             if (!plugin?.enabled || plugin.state === 'error') continue;
 
-            const runtimeModule = plugin.loader.runtimeModule;
+            const runtimeModule = plugin.plugin.runtimeModule;
             if (runtimeModule?.onSystemsCreated) {
                 try {
                     runtimeModule.onSystemsCreated(scene, context);
@@ -385,82 +827,24 @@ export class PluginManager implements IService {
             return;
         }
 
+        // 保存服务容器引用
+        this.services = services;
+
         logger.info('Initializing editor modules...');
 
         const sortedPlugins = this.sortByLoadingPhase('editor');
-
-        // 获取注册表服务 | Get registry services
-        const entityCreationRegistry = services.tryResolve(EntityCreationRegistry);
-        const componentActionRegistry = services.tryResolve(ComponentActionRegistry);
-        const fileActionRegistry = services.tryResolve(FileActionRegistry);
-        const uiRegistry = services.tryResolve(UIRegistry);
 
         for (const pluginId of sortedPlugins) {
             const plugin = this.plugins.get(pluginId);
             if (!plugin?.enabled) continue;
 
-            const editorModule = plugin.loader.editorModule;
-            if (editorModule) {
-                try {
-                    // 安装编辑器模块 | Install editor module
-                    await editorModule.install(services);
-                    logger.debug(`Editor module installed: ${pluginId}`);
-
-                    // 注册实体创建模板 | Register entity creation templates
-                    if (entityCreationRegistry && editorModule.getEntityCreationTemplates) {
-                        const templates = editorModule.getEntityCreationTemplates();
-                        if (templates && templates.length > 0) {
-                            entityCreationRegistry.registerMany(templates);
-                            logger.debug(`Registered ${templates.length} entity templates from: ${pluginId}`);
-                        }
-                    }
-
-                    // 注册组件操作 | Register component actions
-                    if (componentActionRegistry && editorModule.getComponentActions) {
-                        const actions = editorModule.getComponentActions();
-                        if (actions && actions.length > 0) {
-                            for (const action of actions) {
-                                componentActionRegistry.register(action);
-                            }
-                            logger.debug(`Registered ${actions.length} component actions from: ${pluginId}`);
-                        }
-                    }
-
-                    // 注册文件操作处理器 | Register file action handlers
-                    if (fileActionRegistry && editorModule.getFileActionHandlers) {
-                        const handlers = editorModule.getFileActionHandlers();
-                        if (handlers && handlers.length > 0) {
-                            for (const handler of handlers) {
-                                fileActionRegistry.registerActionHandler(handler);
-                            }
-                            logger.debug(`Registered ${handlers.length} file action handlers from: ${pluginId}`);
-                        }
-                    }
-
-                    // 注册文件创建模板 | Register file creation templates
-                    if (fileActionRegistry && editorModule.getFileCreationTemplates) {
-                        const templates = editorModule.getFileCreationTemplates();
-                        if (templates && templates.length > 0) {
-                            for (const template of templates) {
-                                fileActionRegistry.registerCreationTemplate(template);
-                            }
-                            logger.debug(`Registered ${templates.length} file creation templates from: ${pluginId}`);
-                        }
-                    }
-
-                    // 注册面板 | Register panels
-                    if (uiRegistry && editorModule.getPanels) {
-                        const panels = editorModule.getPanels();
-                        if (panels && panels.length > 0) {
-                            uiRegistry.registerPanels(panels);
-                            logger.debug(`Registered ${panels.length} panels from: ${pluginId}`);
-                        }
-                    }
-                } catch (e) {
-                    logger.error(`Failed to install editor module for ${pluginId}:`, e);
-                    plugin.state = 'error';
-                    plugin.error = e as Error;
-                }
+            try {
+                // 使用统一的激活方法，自动跟踪注册的资源
+                await this.activatePluginEditor(pluginId);
+            } catch (e) {
+                logger.error(`Failed to install editor module for ${pluginId}:`, e);
+                plugin.state = 'error';
+                plugin.error = e as Error;
             }
         }
 
@@ -479,77 +863,14 @@ export class PluginManager implements IService {
             return;
         }
 
-        const editorModule = plugin.loader.editorModule;
-        if (!editorModule) {
-            return;
+        // 确保服务容器已设置
+        if (!this.services) {
+            this.services = services;
         }
 
-        // 获取注册表服务 | Get registry services
-        const entityCreationRegistry = services.tryResolve(EntityCreationRegistry);
-        const componentActionRegistry = services.tryResolve(ComponentActionRegistry);
-        const fileActionRegistry = services.tryResolve(FileActionRegistry);
-        const uiRegistry = services.tryResolve(UIRegistry);
-
         try {
-            // 安装编辑器模块 | Install editor module
-            await editorModule.install(services);
-            logger.debug(`Editor module installed: ${pluginId}`);
-
-            // 注册实体创建模板 | Register entity creation templates
-            if (entityCreationRegistry && editorModule.getEntityCreationTemplates) {
-                const templates = editorModule.getEntityCreationTemplates();
-                if (templates && templates.length > 0) {
-                    entityCreationRegistry.registerMany(templates);
-                    logger.debug(`Registered ${templates.length} entity templates from: ${pluginId}`);
-                }
-            }
-
-            // 注册组件操作 | Register component actions
-            if (componentActionRegistry && editorModule.getComponentActions) {
-                const actions = editorModule.getComponentActions();
-                if (actions && actions.length > 0) {
-                    for (const action of actions) {
-                        componentActionRegistry.register(action);
-                    }
-                    logger.debug(`Registered ${actions.length} component actions from: ${pluginId}`);
-                }
-            }
-
-            // 注册文件操作处理器 | Register file action handlers
-            if (fileActionRegistry && editorModule.getFileActionHandlers) {
-                const handlers = editorModule.getFileActionHandlers();
-                if (handlers && handlers.length > 0) {
-                    for (const handler of handlers) {
-                        fileActionRegistry.registerActionHandler(handler);
-                    }
-                    logger.debug(`Registered ${handlers.length} file action handlers from: ${pluginId}`);
-                }
-            }
-
-            // 注册文件创建模板 | Register file creation templates
-            if (fileActionRegistry && editorModule.getFileCreationTemplates) {
-                const templates = editorModule.getFileCreationTemplates();
-                if (templates && templates.length > 0) {
-                    for (const template of templates) {
-                        fileActionRegistry.registerCreationTemplate(template);
-                    }
-                    logger.debug(`Registered ${templates.length} file creation templates from: ${pluginId}`);
-                }
-            }
-
-            // 注册面板 | Register panels
-            if (uiRegistry && editorModule.getPanels) {
-                const panels = editorModule.getPanels();
-                if (panels && panels.length > 0) {
-                    uiRegistry.registerPanels(panels);
-                    logger.debug(`Registered ${panels.length} panels from: ${pluginId}`);
-                }
-            }
-
-            // 调用 onEditorReady（如果编辑器已就绪）
-            if (this.editorInitialized && editorModule.onEditorReady) {
-                await editorModule.onEditorReady();
-            }
+            // 使用统一的激活方法
+            await this.activatePluginEditor(pluginId);
         } catch (e) {
             logger.error(`Failed to install editor module for ${pluginId}:`, e);
             plugin.state = 'error';
@@ -564,7 +885,7 @@ export class PluginManager implements IService {
     async notifyEditorReady(): Promise<void> {
         for (const [pluginId, plugin] of this.plugins) {
             if (!plugin.enabled) continue;
-            const editorModule = plugin.loader.editorModule;
+            const editorModule = plugin.plugin.editorModule;
             if (editorModule?.onEditorReady) {
                 try {
                     await editorModule.onEditorReady();
@@ -582,7 +903,7 @@ export class PluginManager implements IService {
     async notifyProjectOpen(projectPath: string): Promise<void> {
         for (const [pluginId, plugin] of this.plugins) {
             if (!plugin.enabled) continue;
-            const editorModule = plugin.loader.editorModule;
+            const editorModule = plugin.plugin.editorModule;
             if (editorModule?.onProjectOpen) {
                 try {
                     await editorModule.onProjectOpen(projectPath);
@@ -600,7 +921,7 @@ export class PluginManager implements IService {
     async notifyProjectClose(): Promise<void> {
         for (const [pluginId, plugin] of this.plugins) {
             if (!plugin.enabled) continue;
-            const editorModule = plugin.loader.editorModule;
+            const editorModule = plugin.plugin.editorModule;
             if (editorModule?.onProjectClose) {
                 try {
                     await editorModule.onProjectClose();
@@ -618,7 +939,7 @@ export class PluginManager implements IService {
     notifySceneLoaded(scenePath: string): void {
         for (const [pluginId, plugin] of this.plugins) {
             if (!plugin.enabled) continue;
-            const editorModule = plugin.loader.editorModule;
+            const editorModule = plugin.plugin.editorModule;
             if (editorModule?.onSceneLoaded) {
                 try {
                     editorModule.onSceneLoaded(scenePath);
@@ -636,7 +957,7 @@ export class PluginManager implements IService {
     notifySceneSaving(scenePath: string): boolean {
         for (const [pluginId, plugin] of this.plugins) {
             if (!plugin.enabled) continue;
-            const editorModule = plugin.loader.editorModule;
+            const editorModule = plugin.plugin.editorModule;
             if (editorModule?.onSceneSaving) {
                 try {
                     const result = editorModule.onSceneSaving(scenePath);
@@ -658,7 +979,7 @@ export class PluginManager implements IService {
     setLocale(locale: string): void {
         for (const [pluginId, plugin] of this.plugins) {
             if (!plugin.enabled) continue;
-            const editorModule = plugin.loader.editorModule;
+            const editorModule = plugin.plugin.editorModule;
             if (editorModule?.setLocale) {
                 try {
                     editorModule.setLocale(locale);
@@ -676,7 +997,7 @@ export class PluginManager implements IService {
     exportConfig(): PluginConfig {
         const enabledPlugins: string[] = [];
         for (const [id, plugin] of this.plugins) {
-            if (plugin.enabled && !plugin.loader.descriptor.isCore) {
+            if (plugin.enabled && !plugin.plugin.descriptor.isCore) {
                 enabledPlugins.push(id);
             }
         }
@@ -684,22 +1005,48 @@ export class PluginManager implements IService {
     }
 
     /**
-     * 加载配置
-     * Load configuration
+     * 加载配置并激活插件
+     * Load configuration and activate plugins
+     *
+     * 此方法会：
+     * 1. 根据配置启用/禁用插件
+     * 2. 激活新启用插件的编辑器模块
+     * 3. 卸载新禁用插件的编辑器模块
      */
-    loadConfig(config: PluginConfig): void {
+    async loadConfig(config: PluginConfig): Promise<void> {
         const { enabledPlugins } = config;
+        logger.info(`loadConfig called with: ${enabledPlugins.join(', ')}`);
+
+        // 收集状态变化的插件
+        const toEnable: string[] = [];
+        const toDisable: string[] = [];
 
         for (const [id, plugin] of this.plugins) {
-            if (plugin.loader.descriptor.isCore) {
-                plugin.enabled = true;
-            } else {
-                plugin.enabled = enabledPlugins.includes(id);
-                plugin.state = plugin.enabled ? 'loaded' : 'disabled';
+            if (plugin.plugin.descriptor.isCore) {
+                continue; // 核心插件始终启用
+            }
+
+            const shouldBeEnabled = enabledPlugins.includes(id);
+            const wasEnabled = plugin.enabled;
+
+            if (shouldBeEnabled && !wasEnabled) {
+                toEnable.push(id);
+            } else if (!shouldBeEnabled && wasEnabled) {
+                toDisable.push(id);
             }
         }
 
-        logger.info(`Loaded config: ${enabledPlugins.length} plugins enabled`);
+        // 禁用不再需要的插件
+        for (const pluginId of toDisable) {
+            await this.disable(pluginId);
+        }
+
+        // 启用新插件
+        for (const pluginId of toEnable) {
+            await this.enable(pluginId);
+        }
+
+        logger.info(`Config loaded and applied: ${toEnable.length} enabled, ${toDisable.length} disabled`);
     }
 
     /**
@@ -718,12 +1065,12 @@ export class PluginManager implements IService {
             const pluginB = this.plugins.get(b);
 
             const moduleA = moduleType === 'runtime'
-                ? pluginA?.loader.descriptor.modules.find(m => m.type === 'runtime')
-                : pluginA?.loader.descriptor.modules.find(m => m.type === 'editor');
+                ? pluginA?.plugin.descriptor.modules.find(m => m.type === 'runtime')
+                : pluginA?.plugin.descriptor.modules.find(m => m.type === 'editor');
 
             const moduleB = moduleType === 'runtime'
-                ? pluginB?.loader.descriptor.modules.find(m => m.type === 'runtime')
-                : pluginB?.loader.descriptor.modules.find(m => m.type === 'editor');
+                ? pluginB?.plugin.descriptor.modules.find(m => m.type === 'runtime')
+                : pluginB?.plugin.descriptor.modules.find(m => m.type === 'editor');
 
             const phaseA = moduleA?.loadingPhase || 'default';
             const phaseB = moduleB?.loadingPhase || 'default';
@@ -748,7 +1095,7 @@ export class PluginManager implements IService {
 
             const plugin = this.plugins.get(id);
             if (plugin) {
-                const deps = plugin.loader.descriptor.dependencies || [];
+                const deps = plugin.plugin.descriptor.dependencies || [];
                 for (const dep of deps) {
                     if (pluginIds.includes(dep.id)) {
                         visit(dep.id);
@@ -773,7 +1120,7 @@ export class PluginManager implements IService {
     clearSceneSystems(): void {
         for (const [pluginId, plugin] of this.plugins) {
             if (!plugin.enabled) continue;
-            const runtimeModule = plugin.loader.runtimeModule;
+            const runtimeModule = plugin.plugin.runtimeModule;
             if (runtimeModule?.onDestroy) {
                 try {
                     runtimeModule.onDestroy();
