@@ -8,7 +8,8 @@
 
 import { Entity, Component } from '@esengine/ecs-framework';
 import { MessageHub, EntityStoreService } from '@esengine/editor-core';
-import { TransformComponent, SpriteComponent, SpriteAnimatorComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
+import { SpriteComponent, SpriteAnimatorComponent } from '@esengine/sprite';
 import { EngineService } from './EngineService';
 
 export class EditorEngineSync {

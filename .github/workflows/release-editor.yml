@@ -71,39 +71,13 @@ jobs:
           node -e "const pkg=require('./package.json'); pkg.version='${{ github.event.inputs.version }}'; require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2)+'\n')"
           node scripts/sync-version.js
 
-      # ===== 第一层：基础包（无依赖） =====
-      - name: Build core package
-        run: pnpm run build:core
-
-      - name: Build math package
-        run: |
-          cd packages/math
-          pnpm run build
-
-      - name: Build platform-common package
-        run: |
-          cd packages/platform-common
-          pnpm run build
-
-      # ===== 第二层：依赖 core 的包 =====
-      - name: Build asset-system package
-        run: |
-          cd packages/asset-system
-          pnpm run build
-
-      - name: Build components package
-        run: |
-          cd packages/components
-          pnpm run build
-
-      # ===== 第三层：Rust WASM 引擎 =====
       - name: Install wasm-pack
         run: cargo install wasm-pack
 
-      - name: Build engine package (Rust WASM)
-        run: |
-          cd packages/engine
-          pnpm run build
+      # 使用 Turborepo 自动按依赖顺序构建所有包
+      # 这会自动处理：core -> asset-system -> editor-core -> ui -> 等等
+      - name: Build all packages with Turborepo
+        run: pnpm run build
 
       - name: Copy WASM files to ecs-engine-bindgen
         shell: bash
@@ -113,60 +87,6 @@ jobs:
           cp packages/engine/pkg/es_engine.d.ts packages/ecs-engine-bindgen/src/wasm/
           cp packages/engine/pkg/es_engine_bg.wasm packages/ecs-engine-bindgen/src/wasm/
           cp packages/engine/pkg/es_engine_bg.wasm.d.ts packages/ecs-engine-bindgen/src/wasm/
-
-      - name: Build ecs-engine-bindgen package
-        run: |
-          cd packages/ecs-engine-bindgen
-          pnpm run build
-
-      # ===== 第四层：依赖 ecs-engine-bindgen/asset-system 的包 =====
-      - name: Build editor-core package
-        run: |
-          cd packages/editor-core
-          pnpm run build
-
-      # ===== 第五层：依赖 editor-core 的包 =====
-      - name: Build UI package
-        run: |
-          cd packages/ui
-          pnpm run build
-
-      - name: Build tilemap package
-        run: |
-          cd packages/tilemap
-          pnpm run build
-
-      - name: Build editor-runtime package
-        run: |
-          cd packages/editor-runtime
-          pnpm run build
-
-      - name: Build node-editor package
-        run: |
-          cd packages/node-editor
-          pnpm run build
-
-      # ===== 第六层：依赖 editor-runtime 的包 =====
-      - name: Build behavior-tree package
-        run: |
-          cd packages/behavior-tree
-          pnpm run build
-
-      - name: Build physics-rapier2d package
-        run: |
-          cd packages/physics-rapier2d
-          pnpm run build
-
-      - name: Build blueprint package
-        run: |
-          cd packages/blueprint
-          pnpm run build
-
-      # ===== 第七层：平台包（依赖 ui, tilemap, behavior-tree, physics-rapier2d） =====
-      - name: Build platform-web package
-        run: |
-          cd packages/platform-web
-          pnpm run build
 
       - name: Bundle runtime files for Tauri
         run: |
@@ -220,16 +140,16 @@ jobs:
           delete-branch: true
           title: "chore(editor): Release v${{ github.event.inputs.version }}"
           body: |
-            ## 🚀 Release v${{ github.event.inputs.version }}
+            ## Release v${{ github.event.inputs.version }}
 
             This PR updates the editor version after successful release build.
 
             ### Changes
-            - ✅ Updated `packages/editor-app/package.json` → `${{ github.event.inputs.version }}`
-            - ✅ Updated `packages/editor-app/src-tauri/tauri.conf.json` → `${{ github.event.inputs.version }}`
+            - Updated `packages/editor-app/package.json` → `${{ github.event.inputs.version }}`
+            - Updated `packages/editor-app/src-tauri/tauri.conf.json` → `${{ github.event.inputs.version }}`
 
             ### Release
-            - 📦 [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/editor-v${{ github.event.inputs.version }})
+            - [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/editor-v${{ github.event.inputs.version }})
 
             ---
             *This PR was automatically created by the release workflow.*

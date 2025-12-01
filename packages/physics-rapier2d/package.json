@@ -40,20 +40,13 @@
     ],
     "author": "yhh",
     "license": "MIT",
-    "peerDependencies": {
-        "@esengine/ecs-framework": ">=2.0.0",
-        "@esengine/engine-core": "workspace:*",
-        "@esengine/editor-core": "workspace:*"
-    },
-    "peerDependenciesMeta": {
-        "@esengine/editor-core": {
-            "optional": true
-        }
-    },
     "dependencies": {
         "@dimforge/rapier2d-compat": "^0.14.0"
     },
     "devDependencies": {
+        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/engine-core": "workspace:*",
+        "@esengine/editor-core": "workspace:*",
         "@esengine/build-config": "workspace:*",
         "rimraf": "^5.0.0",
         "tsup": "^8.0.0",

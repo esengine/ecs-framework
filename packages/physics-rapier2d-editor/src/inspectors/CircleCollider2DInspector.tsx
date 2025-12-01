@@ -6,8 +6,7 @@
 import React from 'react';
 import { Component } from '@esengine/ecs-framework';
 import type { IComponentInspector, ComponentInspectorContext } from '@esengine/editor-core';
-import { CircleCollider2DComponent } from '@esengine/physics-rapier2d/CircleCollider2DComponent';
-import { CollisionLayer2D } from '@esengine/physics-rapier2d/Physics2DTypes';
+import { CircleCollider2DComponent, CollisionLayer2D } from '@esengine/physics-rapier2d';
 
 export class CircleCollider2DInspectorProvider implements IComponentInspector<CircleCollider2DComponent> {
     readonly id = 'circlecollider2d-inspector';

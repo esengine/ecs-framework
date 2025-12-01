@@ -18,7 +18,10 @@ import { EntityStoreService, MessageHub } from '@esengine/editor-core';
 import * as editorRuntime from '@esengine/editor-runtime';
 import * as ecsFramework from '@esengine/ecs-framework';
 import * as behaviorTree from '@esengine/behavior-tree';
-import * as ecsComponents from '@esengine/ecs-components';
+import * as engineCore from '@esengine/engine-core';
+import * as sprite from '@esengine/sprite';
+import * as camera from '@esengine/camera';
+import * as audio from '@esengine/audio';
 
 // 存储服务实例引用（在初始化时设置）
 let entityStoreInstance: EntityStoreService | null = null;
@@ -29,7 +32,10 @@ const SDK_MODULES = {
     '@esengine/editor-runtime': editorRuntime,
     '@esengine/ecs-framework': ecsFramework,
     '@esengine/behavior-tree': behaviorTree,
-    '@esengine/ecs-components': ecsComponents,
+    '@esengine/engine-core': engineCore,
+    '@esengine/sprite': sprite,
+    '@esengine/camera': camera,
+    '@esengine/audio': audio,
 } as const;
 
 // 全局变量名称映射（用于插件构建配置）
@@ -37,7 +43,10 @@ export const SDK_GLOBALS = {
     '@esengine/editor-runtime': '__ESENGINE__.editorRuntime',
     '@esengine/ecs-framework': '__ESENGINE__.ecsFramework',
     '@esengine/behavior-tree': '__ESENGINE__.behaviorTree',
-    '@esengine/ecs-components': '__ESENGINE__.ecsComponents',
+    '@esengine/engine-core': '__ESENGINE__.engineCore',
+    '@esengine/sprite': '__ESENGINE__.sprite',
+    '@esengine/camera': '__ESENGINE__.camera',
+    '@esengine/audio': '__ESENGINE__.audio',
 } as const;
 
 /**
@@ -62,7 +71,10 @@ interface ESEngineGlobal {
     editorRuntime: typeof editorRuntime;
     ecsFramework: typeof ecsFramework;
     behaviorTree: typeof behaviorTree;
-    ecsComponents: typeof ecsComponents;
+    engineCore: typeof engineCore;
+    sprite: typeof sprite;
+    camera: typeof camera;
+    audio: typeof audio;
     require: (moduleName: string) => any;
     api: IPluginAPI;
 }
@@ -117,7 +129,10 @@ export class PluginSDKRegistry {
             editorRuntime,
             ecsFramework,
             behaviorTree,
-            ecsComponents,
+            engineCore,
+            sprite,
+            camera,
+            audio,
             require: this.requireModule.bind(this),
             api: pluginAPI,
         };

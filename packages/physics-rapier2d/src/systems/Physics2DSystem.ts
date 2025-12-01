@@ -6,7 +6,6 @@
  */
 
 import { EntitySystem, Matcher, type Entity } from '@esengine/ecs-framework';
-import { TransformComponent } from '@esengine/engine-core';
 import { Physics2DWorld } from '../world/Physics2DWorld';
 import { Rigidbody2DComponent } from '../components/Rigidbody2DComponent';
 import { Collider2DBase } from '../components/Collider2DBase';
@@ -54,6 +53,16 @@ export interface Physics2DSystemConfig {
  * scene.addEntityProcessor(physicsSystem);
  * ```
  */
+/**
+ * Transform 组件接口（用于跨包兼容）
+ * 由于打包可能导致多个 TransformComponent 类实例，使用接口进行类型检查
+ */
+interface ITransformLike {
+    position: { x: number; y: number; z: number };
+    rotation: { x: number; y: number; z: number };
+    scale: { x: number; y: number; z: number };
+}
+
 export class Physics2DSystem extends EntitySystem {
     private _world: Physics2DWorld;
     private _rapierModule: typeof import('@dimforge/rapier2d-compat') | null = null;
@@ -65,9 +74,6 @@ export class Physics2DSystem extends EntitySystem {
 
     // 待处理的新实体队列
     private _pendingEntities: Entity[] = [];
-
-    // Transform 组件类型（用于检查）
-    private _transformType = TransformComponent;
 
     constructor(config?: Physics2DSystemConfig) {
         // 匹配所有拥有 Rigidbody2DComponent 的实体
@@ -286,14 +292,37 @@ export class Physics2DSystem extends EntitySystem {
     }
 
     /**
+     * 通过名称查找 Transform 组件
+     * 由于打包可能导致多个 TransformComponent 类实例，instanceof 检查会失败
+     * 因此使用组件名称匹配来查找
+     */
+    private _findTransformComponent(entity: Entity): ITransformLike | null {
+        for (const component of entity.components) {
+            const name = component.constructor.name;
+            if (name === 'TransformComponent') {
+                // 验证组件具有必需的属性
+                const comp = component as unknown as ITransformLike;
+                if (comp.position && comp.rotation && comp.scale) {
+                    return comp;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * 创建物理体
      */
     private _createPhysicsBody(entity: Entity): void {
         const rigidbody = entity.getComponent(Rigidbody2DComponent);
-        const transform = entity.getComponent(this._transformType);
+        // 使用名称匹配查找 Transform，避免跨包 instanceof 检查失败
+        const transform = this._findTransformComponent(entity);
 
         if (!rigidbody || !transform) {
-            this.logger.warn(`Entity ${entity.name} missing required components for physics`);
+            const missing: string[] = [];
+            if (!rigidbody) missing.push('Rigidbody2DComponent');
+            if (!transform) missing.push('TransformComponent');
+            this.logger.warn(`Entity ${entity.name} missing required components: ${missing.join(', ')}`);
             return;
         }
 
@@ -361,7 +390,7 @@ export class Physics2DSystem extends EntitySystem {
     private _syncTransformsToPhysics(entities: readonly Entity[]): void {
         for (const entity of entities) {
             const rigidbody = entity.getComponent(Rigidbody2DComponent);
-            const transform = entity.getComponent(this._transformType);
+            const transform = this._findTransformComponent(entity);
             const mapping = this._entityBodies.get(entity.id);
 
             if (!rigidbody || !transform || !mapping) continue;
@@ -465,7 +494,7 @@ export class Physics2DSystem extends EntitySystem {
     private _syncPhysicsToTransforms(entities: readonly Entity[]): void {
         for (const entity of entities) {
             const rigidbody = entity.getComponent(Rigidbody2DComponent);
-            const transform = entity.getComponent(this._transformType);
+            const transform = this._findTransformComponent(entity);
             const mapping = this._entityBodies.get(entity.id);
 
             if (!rigidbody || !transform || !mapping) continue;

@@ -11,7 +11,7 @@
 import type { Entity } from '@esengine/ecs-framework';
 import type { IGizmoRenderData, IRectGizmoData, IGridGizmoData, GizmoColor } from '@esengine/editor-core';
 import { GizmoColors, GizmoRegistry } from '@esengine/editor-core';
-import { TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
 import { TilemapComponent } from '@esengine/tilemap';
 import { TilemapCollider2DComponent, TilemapColliderMode } from '@esengine/tilemap';
 

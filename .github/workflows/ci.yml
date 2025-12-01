@@ -8,6 +8,7 @@ on:
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'tsconfig.json'
+      - 'turbo.json'
       - 'jest.config.*'
       - '.github/workflows/ci.yml'
   pull_request:
@@ -17,6 +18,7 @@ on:
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'tsconfig.json'
+      - 'turbo.json'
       - 'jest.config.*'
       - '.github/workflows/ci.yml'
 
@@ -48,13 +50,9 @@ jobs:
     - name: Install wasm-pack
       run: cargo install wasm-pack
 
-    - name: Build core package first
-      run: pnpm run build:core
-
-    - name: Build engine WASM package
-      run: |
-        cd packages/engine
-        pnpm run build
+    # 使用 Turborepo 自动按依赖顺序构建所有包
+    - name: Build all packages
+      run: pnpm run build
 
     - name: Copy WASM files to ecs-engine-bindgen
       run: |
@@ -63,24 +61,6 @@ jobs:
         cp packages/engine/pkg/es_engine.d.ts packages/ecs-engine-bindgen/src/wasm/
         cp packages/engine/pkg/es_engine_bg.wasm packages/ecs-engine-bindgen/src/wasm/
         cp packages/engine/pkg/es_engine_bg.wasm.d.ts packages/ecs-engine-bindgen/src/wasm/
-
-    - name: Build dependent packages for type declarations
-      run: |
-        cd packages/platform-common && pnpm run build
-        cd ../asset-system && pnpm run build
-        cd ../components && pnpm run build
-        cd ../editor-core && pnpm run build
-        cd ../ui && pnpm run build
-        cd ../editor-runtime && pnpm run build
-        cd ../behavior-tree && pnpm run build
-        cd ../tilemap && pnpm run build
-        cd ../physics-rapier2d && pnpm run build
-        cd ../node-editor && pnpm run build
-        cd ../blueprint && pnpm run build
-
-    - name: Build ecs-engine-bindgen
-      run: |
-        cd packages/ecs-engine-bindgen && pnpm run build
 
     - name: Type check
       run: pnpm run type-check

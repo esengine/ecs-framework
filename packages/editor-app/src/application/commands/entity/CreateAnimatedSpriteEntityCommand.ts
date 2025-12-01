@@ -1,6 +1,7 @@
 import { Core, Entity, HierarchySystem, HierarchyComponent } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub } from '@esengine/editor-core';
-import { TransformComponent, SpriteComponent, SpriteAnimatorComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
+import { SpriteComponent, SpriteAnimatorComponent } from '@esengine/sprite';
 import { BaseCommand } from '../BaseCommand';
 
 /**

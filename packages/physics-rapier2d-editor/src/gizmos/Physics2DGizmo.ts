@@ -16,14 +16,16 @@ import type {
     GizmoColor
 } from '@esengine/editor-core';
 import { GizmoRegistry } from '@esengine/editor-core';
-import { TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
 
-import { BoxCollider2DComponent } from '@esengine/physics-rapier2d/BoxCollider2DComponent';
-import { CircleCollider2DComponent } from '@esengine/physics-rapier2d/CircleCollider2DComponent';
-import { CapsuleCollider2DComponent } from '@esengine/physics-rapier2d/CapsuleCollider2DComponent';
-import { PolygonCollider2DComponent } from '@esengine/physics-rapier2d/PolygonCollider2DComponent';
-import { Rigidbody2DComponent } from '@esengine/physics-rapier2d/Rigidbody2DComponent';
-import { RigidbodyType2D } from '@esengine/physics-rapier2d/Physics2DTypes';
+import {
+    BoxCollider2DComponent,
+    CircleCollider2DComponent,
+    CapsuleCollider2DComponent,
+    PolygonCollider2DComponent,
+    Rigidbody2DComponent,
+    RigidbodyType2D
+} from '@esengine/physics-rapier2d';
 
 /**
  * 物理 Gizmo 颜色配置

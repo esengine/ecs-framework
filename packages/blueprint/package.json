@@ -29,10 +29,8 @@
     ],
     "author": "yhh",
     "license": "MIT",
-    "peerDependencies": {
-        "@esengine/ecs-framework": ">=2.0.0"
-    },
     "devDependencies": {
+        "@esengine/ecs-framework": "workspace:*",
         "@esengine/build-config": "workspace:*",
         "@types/node": "^20.19.17",
         "rimraf": "^5.0.0",

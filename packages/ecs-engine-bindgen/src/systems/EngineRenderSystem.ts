@@ -4,7 +4,9 @@
  */
 
 import { EntitySystem, Matcher, Entity, ComponentType, ECSSystem, Component, Core } from '@esengine/ecs-framework';
-import { SpriteComponent, CameraComponent, TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
+import { SpriteComponent } from '@esengine/sprite';
+import { CameraComponent } from '@esengine/camera';
 import type { EngineBridge } from '../core/EngineBridge';
 import { RenderBatcher } from '../core/RenderBatcher';
 import type { SpriteRenderData } from '../types';

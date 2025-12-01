@@ -16,17 +16,22 @@ import {
     ComponentRegistry,
     SettingsRegistry
 } from '@esengine/editor-core';
-import { DEFAULT_PHYSICS_CONFIG } from '../types/Physics2DTypes';
-import { TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
 
-// Local imports
-import { Rigidbody2DComponent } from '../components/Rigidbody2DComponent';
-import { BoxCollider2DComponent } from '../components/BoxCollider2DComponent';
-import { CircleCollider2DComponent } from '../components/CircleCollider2DComponent';
-import { CapsuleCollider2DComponent } from '../components/CapsuleCollider2DComponent';
-import { PolygonCollider2DComponent } from '../components/PolygonCollider2DComponent';
+// Import from @esengine/physics-rapier2d package
+import {
+    DEFAULT_PHYSICS_CONFIG,
+    Rigidbody2DComponent,
+    BoxCollider2DComponent,
+    CircleCollider2DComponent,
+    CapsuleCollider2DComponent,
+    PolygonCollider2DComponent,
+    CollisionLayerConfig
+} from '@esengine/physics-rapier2d';
+import { Physics2DSystem } from '@esengine/physics-rapier2d/runtime';
+
+// Local editor imports
 import { registerPhysics2DGizmos } from './gizmos/Physics2DGizmo';
-import { Physics2DSystem } from '../systems/Physics2DSystem';
 import { CollisionMatrixEditor } from './components/CollisionMatrixEditor';
 
 /**

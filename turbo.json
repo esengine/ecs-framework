@@ -1,0 +1,48 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "bin/**", "pkg/**"],
+      "env": ["NODE_ENV"]
+    },
+    "build:watch": {
+      "dependsOn": ["^build"],
+      "persistent": true,
+      "cache": false
+    },
+    "build:npm": {
+      "dependsOn": ["build"],
+      "outputs": ["dist/**", "bin/**"]
+    },
+    "build:release": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "bin/**", "pkg/**"]
+    },
+    "type-check": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "lint": {
+      "outputs": []
+    },
+    "lint:fix": {
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "test:ci": {
+      "dependsOn": ["build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:coverage": {
+      "dependsOn": ["build"],
+      "outputs": ["coverage/**"]
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

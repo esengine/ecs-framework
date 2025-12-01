@@ -24,18 +24,16 @@
     "dependencies": {
         "@esengine/behavior-tree": "workspace:*"
     },
-    "peerDependencies": {
-        "@esengine/ecs-framework": ">=2.0.0",
-        "@esengine/ecs-components": "workspace:*",
+    "devDependencies": {
+        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/engine-core": "workspace:*",
         "@esengine/editor-core": "workspace:*",
         "@esengine/editor-runtime": "workspace:*",
         "@esengine/node-editor": "workspace:*",
+        "@esengine/build-config": "workspace:*",
         "lucide-react": "^0.545.0",
         "react": "^18.3.1",
-        "zustand": "^5.0.8"
-    },
-    "devDependencies": {
-        "@esengine/build-config": "workspace:*",
+        "zustand": "^5.0.8",
         "@types/react": "^18.3.12",
         "rimraf": "^5.0.5",
         "tsup": "^8.0.0",

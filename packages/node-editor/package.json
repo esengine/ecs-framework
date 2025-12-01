@@ -35,19 +35,9 @@
   ],
   "author": "yhh",
   "license": "MIT",
-  "peerDependencies": {
-    "react": "^18.3.1",
-    "zustand": "^4.5.2"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": false
-    },
-    "zustand": {
-      "optional": false
-    }
-  },
   "devDependencies": {
+    "react": "^18.3.1",
+    "zustand": "^5.0.8",
     "@types/node": "^20.19.17",
     "@types/react": "^18.3.12",
     "@vitejs/plugin-react": "^4.7.0",

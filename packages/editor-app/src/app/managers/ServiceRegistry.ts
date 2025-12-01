@@ -28,14 +28,11 @@ import {
     CompilerRegistry,
     ICompilerRegistry
 } from '@esengine/editor-core';
-import {
-    TransformComponent,
-    SpriteComponent,
-    SpriteAnimatorComponent,
-    TextComponent,
-    CameraComponent,
-    AudioSourceComponent
-} from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
+import { SpriteComponent, SpriteAnimatorComponent } from '@esengine/sprite';
+import { CameraComponent } from '@esengine/camera';
+import { AudioSourceComponent } from '@esengine/audio';
+import { UITextComponent } from '@esengine/ui';
 import { BehaviorTreeRuntimeComponent } from '@esengine/behavior-tree';
 import { TauriFileAPI } from '../../adapters/TauriFileAPI';
 import { DIContainer } from '../../core/di/DIContainer';
@@ -110,7 +107,7 @@ export class ServiceRegistry {
             { name: 'TransformComponent', type: TransformComponent, editorName: 'Transform', category: 'components.category.core', description: 'components.transform.description', icon: 'Move3d' },
             { name: 'SpriteComponent', type: SpriteComponent, editorName: 'Sprite', category: 'components.category.rendering', description: 'components.sprite.description', icon: 'Image' },
             { name: 'SpriteAnimatorComponent', type: SpriteAnimatorComponent, editorName: 'SpriteAnimator', category: 'components.category.rendering', description: 'components.spriteAnimator.description', icon: 'Film' },
-            { name: 'TextComponent', type: TextComponent, editorName: 'Text', category: 'components.category.rendering', description: 'components.text.description', icon: 'Type' },
+            { name: 'UITextComponent', type: UITextComponent, editorName: 'UIText', category: 'components.category.ui', description: 'components.text.description', icon: 'Type' },
             { name: 'CameraComponent', type: CameraComponent, editorName: 'Camera', category: 'components.category.rendering', description: 'components.camera.description', icon: 'Camera' },
             { name: 'AudioSourceComponent', type: AudioSourceComponent, editorName: 'AudioSource', category: 'components.category.audio', description: 'components.audioSource.description', icon: 'Volume2' },
             { name: 'BehaviorTreeRuntimeComponent', type: BehaviorTreeRuntimeComponent, editorName: 'BehaviorTreeRuntime', category: 'components.category.ai', description: 'components.behaviorTreeRuntime.description', icon: 'GitBranch' }

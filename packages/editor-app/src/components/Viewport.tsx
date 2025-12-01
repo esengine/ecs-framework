@@ -9,7 +9,8 @@ import { useEngine } from '../hooks/useEngine';
 import { EngineService } from '../services/EngineService';
 import { Core, Entity, SceneSerializer } from '@esengine/ecs-framework';
 import { MessageHub } from '@esengine/editor-core';
-import { TransformComponent, CameraComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
+import { CameraComponent } from '@esengine/camera';
 import { UITransformComponent } from '@esengine/ui';
 import { TauriAPI } from '../api/tauri';
 import { open } from '@tauri-apps/plugin-shell';
@@ -354,11 +355,13 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
 
                     if (messageHubRef.current) {
                         const propertyName = mode === 'move' ? 'position' : mode === 'rotate' ? 'rotation' : 'scale';
+                        const value = propertyName === 'position' ? transform.position :
+                                     propertyName === 'rotation' ? transform.rotation : transform.scale;
                         messageHubRef.current.publish('component:property:changed', {
                             entity,
                             component: transform,
                             propertyName,
-                            value: transform[propertyName]
+                            value
                         });
                     }
                 }
@@ -373,16 +376,29 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                         const rotationSpeed = 0.01;
                         uiTransform.rotation += deltaX * rotationSpeed;
                     } else if (mode === 'scale') {
-                        const width = uiTransform.width * uiTransform.scaleX;
-                        const height = uiTransform.height * uiTransform.scaleY;
-                        const centerX = uiTransform.x + width * uiTransform.pivotX;
-                        const centerY = uiTransform.y + height * uiTransform.pivotY;
-                        const startDist = Math.sqrt((worldStart.x - centerX) ** 2 + (worldStart.y - centerY) ** 2);
-                        const endDist = Math.sqrt((worldEnd.x - centerX) ** 2 + (worldEnd.y - centerY) ** 2);
+                        const oldWidth = uiTransform.width * uiTransform.scaleX;
+                        const oldHeight = uiTransform.height * uiTransform.scaleY;
+
+                        // pivot点的世界坐标（缩放前）
+                        const pivotWorldX = uiTransform.x + oldWidth * uiTransform.pivotX;
+                        const pivotWorldY = uiTransform.y + oldHeight * uiTransform.pivotY;
+
+                        const startDist = Math.sqrt((worldStart.x - pivotWorldX) ** 2 + (worldStart.y - pivotWorldY) ** 2);
+                        const endDist = Math.sqrt((worldEnd.x - pivotWorldX) ** 2 + (worldEnd.y - pivotWorldY) ** 2);
+
                         if (startDist > 0) {
                             const scaleFactor = endDist / startDist;
-                            uiTransform.scaleX *= scaleFactor;
-                            uiTransform.scaleY *= scaleFactor;
+                            const newScaleX = uiTransform.scaleX * scaleFactor;
+                            const newScaleY = uiTransform.scaleY * scaleFactor;
+
+                            const newWidth = uiTransform.width * newScaleX;
+                            const newHeight = uiTransform.height * newScaleY;
+
+                            // 调整位置使pivot点保持不动
+                            uiTransform.x = pivotWorldX - newWidth * uiTransform.pivotX;
+                            uiTransform.y = pivotWorldY - newHeight * uiTransform.pivotY;
+                            uiTransform.scaleX = newScaleX;
+                            uiTransform.scaleY = newScaleY;
                         }
                     }
 

@@ -28,7 +28,7 @@ import {
     FileActionRegistry
 } from '@esengine/editor-core';
 import type { IDialog, IFileSystem } from '@esengine/editor-core';
-import { TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
 
 // Runtime imports from @esengine/tilemap
 import { TilemapComponent, TilemapCollider2DComponent, TilemapRuntimeModule } from '@esengine/tilemap';

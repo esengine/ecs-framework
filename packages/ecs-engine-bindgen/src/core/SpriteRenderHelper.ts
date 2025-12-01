@@ -6,7 +6,7 @@
 import { Entity, Component } from '@esengine/ecs-framework';
 import type { EngineBridge } from './EngineBridge';
 import { RenderBatcher } from './RenderBatcher';
-import { SpriteComponent } from '@esengine/ecs-components';
+import { SpriteComponent } from '@esengine/sprite';
 import type { SpriteRenderData } from '../types';
 
 /**

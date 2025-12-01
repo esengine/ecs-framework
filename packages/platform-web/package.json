@@ -37,10 +37,8 @@
   ],
   "author": "yhh",
   "license": "MIT",
-  "peerDependencies": {
-    "@esengine/ecs-framework": ">=2.0.0"
-  },
-  "optionalDependencies": {
+  "devDependencies": {
+    "@esengine/ecs-framework": "workspace:*",
     "@esengine/asset-system": "workspace:*",
     "@esengine/audio": "workspace:*",
     "@esengine/behavior-tree": "workspace:*",
@@ -51,9 +49,7 @@
     "@esengine/runtime-core": "workspace:*",
     "@esengine/sprite": "workspace:*",
     "@esengine/tilemap": "workspace:*",
-    "@esengine/ui": "workspace:*"
-  },
-  "devDependencies": {
+    "@esengine/ui": "workspace:*",
     "@rollup/plugin-alias": "^6.0.0",
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-node-resolve": "^16.0.1",

@@ -18,6 +18,9 @@ dist/
 .cache/
 .build-cache/
 
+# Turborepo
+.turbo/
+
 # IDE 配置
 .idea/
 .vscode/

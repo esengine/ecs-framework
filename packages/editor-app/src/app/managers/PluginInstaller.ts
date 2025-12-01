@@ -18,7 +18,7 @@ import { ProjectSettingsPlugin } from '../../plugins/builtin/ProjectSettingsPlug
 
 // 统一模块插件（从编辑器包导入完整插件，包含 runtime + editor）
 import { BehaviorTreePlugin } from '@esengine/behavior-tree-editor';
-import { Physics2DPlugin } from '@esengine/physics-rapier2d';
+import { Physics2DPlugin } from '@esengine/physics-rapier2d-editor';
 import { TilemapPlugin } from '@esengine/tilemap-editor';
 import { UIPlugin } from '@esengine/ui-editor';
 import { BlueprintPlugin } from '@esengine/blueprint-editor';

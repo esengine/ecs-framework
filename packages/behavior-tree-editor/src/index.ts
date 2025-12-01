@@ -4,7 +4,7 @@
  */
 
 import type { ServiceContainer } from '@esengine/ecs-framework';
-import { TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
 import {
     type IEditorModuleLoader,
     type IPluginLoader,

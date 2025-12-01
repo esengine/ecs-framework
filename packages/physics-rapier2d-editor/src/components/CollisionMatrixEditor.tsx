@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { CollisionLayerConfig } from '../../services/CollisionLayerConfig';
+import { CollisionLayerConfig } from '@esengine/physics-rapier2d';
 
 interface CollisionMatrixEditorProps {
     onClose?: () => void;

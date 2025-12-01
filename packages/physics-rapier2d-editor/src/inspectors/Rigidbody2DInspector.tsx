@@ -6,8 +6,7 @@
 import React from 'react';
 import { Component } from '@esengine/ecs-framework';
 import type { IComponentInspector, ComponentInspectorContext } from '@esengine/editor-core';
-import { Rigidbody2DComponent } from '@esengine/physics-rapier2d/Rigidbody2DComponent';
-import { RigidbodyType2D, CollisionDetectionMode2D } from '@esengine/physics-rapier2d/Physics2DTypes';
+import { Rigidbody2DComponent, RigidbodyType2D, CollisionDetectionMode2D } from '@esengine/physics-rapier2d';
 
 export class Rigidbody2DInspectorProvider implements IComponentInspector<Rigidbody2DComponent> {
     readonly id = 'rigidbody2d-inspector';

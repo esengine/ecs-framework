@@ -16,7 +16,7 @@ import {
     MessageHub,
     ComponentRegistry
 } from '@esengine/editor-core';
-import { TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
 
 // Runtime imports from @esengine/sprite
 import {

@@ -37,20 +37,10 @@
     },
     "author": "yhh",
     "license": "MIT",
-    "peerDependencies": {
-        "@esengine/ecs-framework": ">=2.0.0",
-        "@esengine/engine-core": "workspace:*",
-        "@esengine/asset-system": "workspace:*"
-    },
-    "peerDependenciesMeta": {
-        "@esengine/engine-core": {
-            "optional": true
-        },
-        "@esengine/asset-system": {
-            "optional": true
-        }
-    },
     "devDependencies": {
+        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/engine-core": "workspace:*",
+        "@esengine/asset-system": "workspace:*",
         "@esengine/build-config": "workspace:*",
         "@types/jest": "^29.5.14",
         "@types/node": "^20.19.17",

@@ -15,7 +15,9 @@ import type {
     EntityCreationTemplate
 } from '@esengine/editor-core';
 import { PanelPosition, EntityStoreService, MessageHub } from '@esengine/editor-core';
-import { TransformComponent, SpriteComponent, SpriteAnimatorComponent, CameraComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
+import { SpriteComponent, SpriteAnimatorComponent } from '@esengine/sprite';
+import { CameraComponent } from '@esengine/camera';
 
 /**
  * Scene Inspector 编辑器模块

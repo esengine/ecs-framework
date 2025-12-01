@@ -6,7 +6,8 @@
  */
 
 import type { Entity, ServiceContainer } from '@esengine/ecs-framework';
-import { Core, TransformComponent } from '@esengine/ecs-framework';
+import { Core } from '@esengine/ecs-framework';
+import { TransformComponent } from '@esengine/engine-core';
 import type {
     IEditorModuleLoader,
     EntityCreationTemplate

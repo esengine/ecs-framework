@@ -1,6 +1,6 @@
 import { Core, Entity, HierarchySystem, HierarchyComponent } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub } from '@esengine/editor-core';
-import { TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
 import { TilemapComponent } from '@esengine/tilemap';
 import { BaseCommand } from '../BaseCommand';
 

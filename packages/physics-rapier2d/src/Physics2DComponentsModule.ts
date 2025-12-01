@@ -7,7 +7,7 @@
  */
 
 import { ComponentRegistry } from '@esengine/ecs-framework';
-import type { IRuntimeModuleLoader } from '@esengine/ecs-components';
+import type { IRuntimeModule } from '@esengine/engine-core';
 
 // Components (no WASM dependency)
 import { Rigidbody2DComponent } from './components/Rigidbody2DComponent';
@@ -23,7 +23,7 @@ import { PolygonCollider2DComponent } from './components/PolygonCollider2DCompon
  * 仅实现组件注册，不包含系统创建和 WASM 初始化
  * 用于编辑器场景序列化
  */
-export class Physics2DComponentsModule implements IRuntimeModuleLoader {
+export class Physics2DComponentsModule implements IRuntimeModule {
     /**
      * 注册组件到 ComponentRegistry
      */

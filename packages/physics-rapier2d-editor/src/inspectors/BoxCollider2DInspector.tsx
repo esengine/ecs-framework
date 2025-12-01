@@ -6,8 +6,7 @@
 import React from 'react';
 import { Component } from '@esengine/ecs-framework';
 import type { IComponentInspector, ComponentInspectorContext } from '@esengine/editor-core';
-import { BoxCollider2DComponent } from '@esengine/physics-rapier2d/BoxCollider2DComponent';
-import { CollisionLayer2D } from '@esengine/physics-rapier2d/Physics2DTypes';
+import { BoxCollider2DComponent, CollisionLayer2D } from '@esengine/physics-rapier2d';
 
 export class BoxCollider2DInspectorProvider implements IComponentInspector<BoxCollider2DComponent> {
     readonly id = 'boxcollider2d-inspector';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Component } from '@esengine/ecs-framework';
 import { IComponentInspector, ComponentInspectorContext } from '@esengine/editor-core';
-import { TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
 import { ChevronDown, Lock, Unlock } from 'lucide-react';
 import '../../../styles/TransformInspector.css';
 
