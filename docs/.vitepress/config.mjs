@@ -28,11 +28,15 @@ export default defineConfig({
       }
     }
   },
-  title: 'ECS Framework',
-  description: '高性能TypeScript ECS框架 - 为游戏开发而生',
+  title: 'ESEngine',
+  description: '高性能 TypeScript ECS 框架 - 为游戏开发而生',
   lang: 'zh-CN',
 
+  appearance: 'force-dark',
+
   themeConfig: {
+    siteTitle: 'ESEngine',
+
     nav: [
       { text: '首页', link: '/' },
       { text: '快速开始', link: '/guide/getting-started' },
@@ -219,7 +223,7 @@ export default defineConfig({
 
     outline: {
       level: [2, 3],
-      label: '目录'
+      label: '在这个页面上'
     }
   },
 
@@ -228,7 +232,9 @@ export default defineConfig({
     ['link', { rel: 'icon', href: '/favicon.ico' }]
   ],
 
-  base: '/ecs-framework/',
+  // 使用自定义域名 esengine.cn 时，base 设置为 '/'
+  // 如果部署到 GitHub Pages 子路径，改为 '/ecs-framework/'
+  base: '/',
   cleanUrls: true,
 
   markdown: {
