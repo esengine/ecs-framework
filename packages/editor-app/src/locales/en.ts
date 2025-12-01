@@ -15,8 +15,7 @@ export const en: Translations = {
             ready: 'Editor Ready',
             failed: 'Initialization Failed',
             projectOpened: 'Project Opened',
-            remoteConnected: 'Remote Game Connected',
-            profilerMode: 'Profiler Mode - Waiting for connection...'
+            remoteConnected: 'Remote Game Connected'
         }
     },
     hierarchy: {

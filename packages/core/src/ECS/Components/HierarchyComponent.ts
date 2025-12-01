@@ -1,6 +1,6 @@
 import { Component } from '../Component';
 import { ECSComponent } from '../Decorators';
-import { Serializable, Serialize } from '../Serialization';
+import { Serializable, Serialize } from '../Serialization/SerializationDecorators';
 
 /**
  * 层级关系组件 - 用于建立实体间的父子关系

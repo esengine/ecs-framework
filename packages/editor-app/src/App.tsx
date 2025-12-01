@@ -34,9 +34,7 @@ import { ProjectCreationWizard } from './components/ProjectCreationWizard';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { Inspector } from './components/inspectors/Inspector';
 import { AssetBrowser } from './components/AssetBrowser';
-import { ConsolePanel } from './components/ConsolePanel';
 import { Viewport } from './components/Viewport';
-import { ProfilerWindow } from './components/ProfilerWindow';
 import { AdvancedProfilerWindow } from './components/AdvancedProfilerWindow';
 import { PortManager } from './components/PortManager';
 import { SettingsWindow } from './components/SettingsWindow';
@@ -110,7 +108,6 @@ function App() {
     const [panels, setPanels] = useState<FlexDockPanel[]>([]);
     const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
     const [isRemoteConnected, setIsRemoteConnected] = useState(false);
-    const [isProfilerMode, setIsProfilerMode] = useState(false);
     const [showProjectWizard, setShowProjectWizard] = useState(false);
 
     const {
@@ -536,13 +533,6 @@ function App() {
         }
     };
 
-    const handleProfilerMode = async () => {
-        setIsProfilerMode(true);
-        setIsRemoteConnected(true);
-        setProjectLoaded(true);
-        setStatus(t('header.status.profilerMode') || 'Profiler Mode - Waiting for connection...');
-    };
-
     const handleNewScene = async () => {
         if (!sceneManager) {
             console.error('SceneManagerService not available');
@@ -647,7 +637,6 @@ function App() {
 
         setProjectLoaded(false);
         setCurrentProjectPath(null);
-        setIsProfilerMode(false);
         setStatus(t('header.status.ready'));
     };
 
@@ -721,45 +710,26 @@ function App() {
 
     useEffect(() => {
         if (projectLoaded && entityStore && messageHub && logService && uiRegistry && pluginManager) {
-            let corePanels: FlexDockPanel[];
-
-            if (isProfilerMode) {
-                corePanels = [
-                    {
-                        id: 'scene-hierarchy',
-                        title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
-                        content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} commandManager={commandManager} isProfilerMode={true} />,
-                        closable: false
-                    },
-                    {
-                        id: 'inspector',
-                        title: locale === 'zh' ? '检视器' : 'Inspector',
-                        content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} commandManager={commandManager} />,
-                        closable: false
-                    }
-                ];
-            } else {
-                corePanels = [
-                    {
-                        id: 'scene-hierarchy',
-                        title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
-                        content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} commandManager={commandManager} />,
-                        closable: false
-                    },
-                    {
-                        id: 'viewport',
-                        title: locale === 'zh' ? '视口' : 'Viewport',
-                        content: <Viewport locale={locale} messageHub={messageHub} />,
-                        closable: false
-                    },
-                    {
-                        id: 'inspector',
-                        title: locale === 'zh' ? '检视器' : 'Inspector',
-                        content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} commandManager={commandManager} />,
-                        closable: false
-                    }
-                ];
-            }
+            const corePanels: FlexDockPanel[] = [
+                {
+                    id: 'scene-hierarchy',
+                    title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
+                    content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} commandManager={commandManager} />,
+                    closable: false
+                },
+                {
+                    id: 'viewport',
+                    title: locale === 'zh' ? '视口' : 'Viewport',
+                    content: <Viewport locale={locale} messageHub={messageHub} />,
+                    closable: false
+                },
+                {
+                    id: 'inspector',
+                    title: locale === 'zh' ? '检视器' : 'Inspector',
+                    content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} commandManager={commandManager} />,
+                    closable: false
+                }
+            ];
 
             // 获取启用的插件面板
             const pluginPanels: FlexDockPanel[] = uiRegistry.getAllPanels()
@@ -813,7 +783,7 @@ function App() {
 
             setPanels([...corePanels, ...pluginPanels, ...dynamicPanels]);
         }
-    }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode, handleOpenSceneByPath, activeDynamicPanels, dynamicPanelTitles]);
+    }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, handleOpenSceneByPath, activeDynamicPanels, dynamicPanelTitles]);
 
 
     if (!initialized) {
@@ -835,7 +805,6 @@ function App() {
                     onOpenProject={handleOpenProject}
                     onCreateProject={handleCreateProject}
                     onOpenRecentProject={handleOpenRecentProject}
-                    onProfilerMode={handleProfilerMode}
                     onLocaleChange={handleLocaleChange}
                     recentProjects={recentProjects}
                     locale={locale}
@@ -963,12 +932,11 @@ function App() {
             />
 
 
-            {showProfiler && (
-                <ProfilerWindow onClose={() => setShowProfiler(false)} />
-            )}
-
-            {showAdvancedProfiler && (
-                <AdvancedProfilerWindow onClose={() => setShowAdvancedProfiler(false)} />
+            {(showProfiler || showAdvancedProfiler) && (
+                <AdvancedProfilerWindow onClose={() => {
+                    setShowProfiler(false);
+                    setShowAdvancedProfiler(false);
+                }} />
             )}
 
             {showPortManager && (

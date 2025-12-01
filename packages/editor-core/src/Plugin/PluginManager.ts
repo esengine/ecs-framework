@@ -361,10 +361,18 @@ export class PluginManager implements IService {
      */
     private async activatePluginEditor(pluginId: string): Promise<void> {
         const plugin = this.plugins.get(pluginId);
-        if (!plugin || !this.services) return;
+        if (!plugin || !this.services) {
+            logger.warn(`activatePluginEditor: skipping ${pluginId} (plugin=${!!plugin}, services=${!!this.services})`);
+            return;
+        }
 
         const editorModule = plugin.plugin.editorModule;
-        if (!editorModule) return;
+        if (!editorModule) {
+            logger.debug(`activatePluginEditor: ${pluginId} has no editorModule`);
+            return;
+        }
+
+        logger.info(`activatePluginEditor: activating ${pluginId}`);
 
         // 初始化资源跟踪
         const resources: PluginRegisteredResources = {
@@ -390,11 +398,14 @@ export class PluginManager implements IService {
         // 注册实体创建模板
         if (entityCreationRegistry && editorModule.getEntityCreationTemplates) {
             const templates = editorModule.getEntityCreationTemplates();
+            logger.info(`[${pluginId}] getEntityCreationTemplates returned ${templates?.length ?? 0} templates`);
             if (templates && templates.length > 0) {
                 entityCreationRegistry.registerMany(templates);
                 resources.entityTemplateIds = templates.map(t => t.id);
-                logger.debug(`Registered ${templates.length} entity templates from: ${pluginId}`);
+                logger.info(`Registered ${templates.length} entity templates from: ${pluginId}`, templates.map(t => t.id));
             }
+        } else {
+            logger.debug(`[${pluginId}] entityCreationRegistry=${!!entityCreationRegistry}, hasGetEntityCreationTemplates=${!!editorModule.getEntityCreationTemplates}`);
         }
 
         // 注册组件操作
@@ -451,7 +462,12 @@ export class PluginManager implements IService {
             const menuItems = editorModule.getMenuItems();
             if (menuItems && menuItems.length > 0) {
                 for (const item of menuItems) {
-                    uiRegistry.registerMenu(item as any);
+                    // 转换 MenuItemDescriptor 到 MenuItem（execute -> onClick）
+                    const menuItem = {
+                        ...item,
+                        onClick: item.execute
+                    };
+                    uiRegistry.registerMenu(menuItem as any);
                     resources.menuIds.push(item.id);
                 }
                 logger.debug(`Registered ${menuItems.length} menu items from: ${pluginId}`);
@@ -833,9 +849,11 @@ export class PluginManager implements IService {
         logger.info('Initializing editor modules...');
 
         const sortedPlugins = this.sortByLoadingPhase('editor');
+        logger.info(`Sorted plugins for editor initialization: ${sortedPlugins.join(', ')}`);
 
         for (const pluginId of sortedPlugins) {
             const plugin = this.plugins.get(pluginId);
+            logger.debug(`Processing plugin ${pluginId}: enabled=${plugin?.enabled}, hasEditorModule=${!!plugin?.plugin.editorModule}`);
             if (!plugin?.enabled) continue;
 
             try {

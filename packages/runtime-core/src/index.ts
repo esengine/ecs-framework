@@ -34,3 +34,30 @@ export {
     createProjectConfigFromEnabledList,
     type ProjectConfig
 } from './ProjectConfig';
+
+// Platform Adapter
+export {
+    DefaultPathResolver,
+    type IPlatformAdapter,
+    type IPathResolver,
+    type PlatformCapabilities,
+    type PlatformAdapterConfig
+} from './IPlatformAdapter';
+
+// Game Runtime
+export {
+    GameRuntime,
+    createGameRuntime,
+    type GameRuntimeConfig,
+    type RuntimeState
+} from './GameRuntime';
+
+// Platform Adapters
+export {
+    BrowserPlatformAdapter,
+    BrowserPathResolver,
+    type BrowserPlatformConfig,
+    EditorPlatformAdapter,
+    EditorPathResolver,
+    type EditorPlatformConfig
+} from './adapters';

@@ -8,7 +8,7 @@ import '../styles/Viewport.css';
 import { useEngine } from '../hooks/useEngine';
 import { EngineService } from '../services/EngineService';
 import { Core, Entity, SceneSerializer } from '@esengine/ecs-framework';
-import { MessageHub } from '@esengine/editor-core';
+import { MessageHub, ProjectService } from '@esengine/editor-core';
 import { TransformComponent } from '@esengine/engine-core';
 import { CameraComponent } from '@esengine/camera';
 import { UITransformComponent } from '@esengine/ui';
@@ -60,7 +60,8 @@ function generateRuntimeHtml(): string {
                 const runtime = ECSRuntime.create({
                     canvasId: 'runtime-canvas',
                     width: window.innerWidth,
-                    height: window.innerHeight
+                    height: window.innerHeight,
+                    projectConfigUrl: '/ecs-editor.config.json'
                 });
 
                 await runtime.initialize(esEngine);
@@ -705,6 +706,21 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             // Write scene data and HTML (always update)
             await TauriAPI.writeFileContent(`${runtimeDir}/scene.json`, sceneData);
 
+            // Copy project config file (for plugin settings)
+            // 复制项目配置文件（用于插件设置）
+            const projectService = Core.services.tryResolve(ProjectService);
+            if (projectService) {
+                const currentProject = projectService.getCurrentProject();
+                if (currentProject?.path) {
+                    const configPath = `${currentProject.path}\\ecs-editor.config.json`;
+                    const configExists = await TauriAPI.pathExists(configPath);
+                    if (configExists) {
+                        await TauriAPI.copyFile(configPath, `${runtimeDir}\\ecs-editor.config.json`);
+                        console.log('[Viewport] Copied project config to runtime dir');
+                    }
+                }
+            }
+
             // Copy texture assets referenced in the scene
             // 复制场景中引用的纹理资产
             const sceneObj = JSON.parse(sceneData);
@@ -796,6 +812,19 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             const runtimeResolver = RuntimeResolver.getInstance();
             await runtimeResolver.initialize();
             await runtimeResolver.prepareRuntimeFiles(runtimeDir);
+
+            // Copy project config file (for plugin settings)
+            const projectService = Core.services.tryResolve(ProjectService);
+            if (projectService) {
+                const currentProject = projectService.getCurrentProject();
+                if (currentProject?.path) {
+                    const configPath = `${currentProject.path}\\ecs-editor.config.json`;
+                    const configExists = await TauriAPI.pathExists(configPath);
+                    if (configExists) {
+                        await TauriAPI.copyFile(configPath, `${runtimeDir}\\ecs-editor.config.json`);
+                    }
+                }
+            }
 
             // Write scene data and HTML
             const sceneDataStr = typeof sceneData === 'string' ? sceneData : new TextDecoder().decode(sceneData);

@@ -32,7 +32,7 @@ export const descriptor: PluginDescriptor = {
         }
     ],
     dependencies: [
-        { id: '@esengine/core', version: '>=1.0.0' }
+        { id: '@esengine/engine-core', version: '>=1.0.0', optional: true }
     ],
     icon: 'GitBranch'
 };

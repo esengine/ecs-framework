@@ -42,14 +42,14 @@ function getLevelIcon(level: LogLevel, size: number = 14) {
 function getLevelClass(level: LogLevel): string {
     switch (level) {
         case LogLevel.Debug:
-            return 'log-entry-debug';
+            return 'output-log-entry-debug';
         case LogLevel.Info:
-            return 'log-entry-info';
+            return 'output-log-entry-info';
         case LogLevel.Warn:
-            return 'log-entry-warn';
+            return 'output-log-entry-warn';
         case LogLevel.Error:
         case LogLevel.Fatal:
-            return 'log-entry-error';
+            return 'output-log-entry-error';
         default:
             return '';
     }
@@ -90,13 +90,21 @@ const LogEntryItem = memo(({ log, isExpanded, onToggle, onCopy }: {
     onToggle: () => void;
     onCopy: () => void;
 }) => {
-    const { message, stack } = useMemo(() => extractStackTrace(log.message), [log.message]);
+    // 优先使用 log.stack，否则尝试从 message 中提取
+    const { message, stack } = useMemo(() => {
+        if (log.stack) {
+            return { message: log.message, stack: log.stack };
+        }
+        return extractStackTrace(log.message);
+    }, [log.message, log.stack]);
+
+    const hasStack = !!stack;
 
     return (
         <div
-            className={`output-log-entry ${getLevelClass(log.level)} ${isExpanded ? 'expanded' : ''} ${log.source === 'remote' ? 'log-entry-remote' : ''}`}
+            className={`output-log-entry ${getLevelClass(log.level)} ${isExpanded ? 'expanded' : ''} ${log.source === 'remote' ? 'log-entry-remote' : ''} ${hasStack ? 'has-stack' : ''}`}
         >
-            <div className="output-log-entry-main" onClick={onToggle}>
+            <div className="output-log-entry-main" onClick={hasStack ? onToggle : undefined} style={{ cursor: hasStack ? 'pointer' : 'default' }}>
                 <div className="output-log-entry-icon">
                     {getLevelIcon(log.level)}
                 </div>
@@ -123,7 +131,7 @@ const LogEntryItem = memo(({ log, isExpanded, onToggle, onCopy }: {
             {isExpanded && stack && (
                 <div className="output-log-entry-stack">
                     <div className="output-log-stack-header">调用堆栈:</div>
-                    {stack.split('\n').map((line, index) => (
+                    {stack.split('\n').filter(line => line.trim()).map((line, index) => (
                         <div key={index} className="output-log-stack-line">
                             {line}
                         </div>

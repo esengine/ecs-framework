@@ -56,6 +56,8 @@ export interface ProfileSample {
     duration: number;
     selfTime: number;
     parentId?: string | undefined;
+    /** 父级采样的名称（用于构建调用图） */
+    parentName?: string | undefined;
     depth: number;
     callCount: number;
     metadata?: Record<string, unknown>;

@@ -77,7 +77,8 @@ const descriptor: PluginDescriptor = {
     version: '1.0.0',
     description: 'Deterministic 2D physics with Rapier2D',
     category: 'physics',
-    enabledByDefault: true
+    enabledByDefault: true,
+    isEnginePlugin: true
 };
 
 export const PhysicsPlugin: IPlugin = {

@@ -35,6 +35,7 @@
     "@esengine/ecs-framework": "workspace:*",
     "@esengine/editor-core": "workspace:*",
     "@esengine/engine": "workspace:*",
+    "@esengine/runtime-core": "workspace:*",
     "@monaco-editor/react": "^4.7.0",
     "@tauri-apps/api": "^2.2.0",
     "@tauri-apps/plugin-cli": "^2.4.1",

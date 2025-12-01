@@ -586,7 +586,42 @@
 .profiler-table-cell.name .expand-icon {
     color: #666;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+}
+
+.profiler-table-cell.name .expand-icon.clickable {
     cursor: pointer;
+}
+
+.profiler-table-cell.name .expand-icon.clickable:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+.profiler-table-cell.name .expand-icon.placeholder {
+    visibility: hidden;
+}
+
+/* 层级行的背景色变化 */
+.profiler-table-row.depth-1 {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.profiler-table-row.depth-2 {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.profiler-table-row.depth-3 {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.profiler-table-row.depth-4 {
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .profiler-table-cell.name .category-dot {

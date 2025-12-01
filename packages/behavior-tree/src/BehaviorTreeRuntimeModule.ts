@@ -60,7 +60,8 @@ const descriptor: PluginDescriptor = {
     version: '1.0.0',
     description: 'AI behavior tree system',
     category: 'ai',
-    enabledByDefault: false
+    enabledByDefault: false,
+    isEnginePlugin: true
 };
 
 export const BehaviorTreePlugin: IPlugin = {

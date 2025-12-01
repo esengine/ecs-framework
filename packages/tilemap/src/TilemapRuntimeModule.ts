@@ -69,7 +69,8 @@ const descriptor: PluginDescriptor = {
     version: '1.0.0',
     description: 'Tilemap system with Tiled editor support',
     category: 'tilemap',
-    enabledByDefault: false
+    enabledByDefault: false,
+    isEnginePlugin: true
 };
 
 export const TilemapPlugin: IPlugin = {

@@ -148,9 +148,14 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
             } else {
                 const value = settings.get(key, descriptor.defaultValue);
                 initialValues.set(key, value);
+                if (key.startsWith('profiler.')) {
+                    console.log(`[SettingsWindow] Loading ${key}: stored=${settings.get(key, undefined)}, default=${descriptor.defaultValue}, using=${value}`);
+                }
             }
         }
 
+        console.log('[SettingsWindow] Initial values for profiler:',
+            Array.from(initialValues.entries()).filter(([k]) => k.startsWith('profiler.')));
         setValues(initialValues);
     }, [settingsRegistry, initialCategoryId]);
 
@@ -162,10 +167,24 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
         const newErrors = new Map(errors);
         if (!settingsRegistry.validateSetting(descriptor, value)) {
             newErrors.set(key, descriptor.validator?.errorMessage || '无效值');
+            setErrors(newErrors);
+            return; // 验证失败，不保存
         } else {
             newErrors.delete(key);
         }
         setErrors(newErrors);
+
+        // 实时保存设置
+        const settings = SettingsService.getInstance();
+        if (!key.startsWith('project.')) {
+            settings.set(key, value);
+            console.log(`[SettingsWindow] Saved ${key}:`, value);
+
+            // 触发设置变更事件
+            window.dispatchEvent(new CustomEvent('settings:changed', {
+                detail: { [key]: value }
+            }));
+        }
     };
 
     const handleSave = async () => {
@@ -208,6 +227,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
             await projectService.setUIDesignResolution({ width: newWidth, height: newHeight });
         }
 
+        console.log('[SettingsWindow] Saving settings, changedSettings:', changedSettings);
         window.dispatchEvent(new CustomEvent('settings:changed', {
             detail: changedSettings
         }));

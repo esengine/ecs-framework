@@ -64,6 +64,8 @@ export class PluginInstaller {
                 console.error(`[PluginInstaller] ${name} is invalid: missing descriptor`, plugin);
                 continue;
             }
+            // 详细日志，检查 editorModule 是否存在
+            console.log(`[PluginInstaller] ${name}: descriptor.id=${plugin.descriptor.id}, hasRuntimeModule=${!!plugin.runtimeModule}, hasEditorModule=${!!plugin.editorModule}`);
             try {
                 pluginManager.register(plugin);
             } catch (error) {

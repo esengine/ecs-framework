@@ -70,7 +70,7 @@ type AdvancedProfilerDataListener = (data: AdvancedProfilerDataPayload) => void;
 export class ProfilerService {
     private ws: WebSocket | null = null;
     private isServerRunning = false;
-    private wsPort: string;
+    private wsPort: number;
     private listeners: Set<ProfilerDataListener> = new Set();
     private advancedListeners: Set<AdvancedProfilerDataListener> = new Set();
     private currentData: ProfilerData | null = null;
@@ -82,7 +82,7 @@ export class ProfilerService {
 
     constructor() {
         const settings = SettingsService.getInstance();
-        this.wsPort = settings.get('profiler.port', '8080');
+        this.wsPort = settings.get('profiler.port', 8080);
         this.autoStart = settings.get('profiler.autoStart', true);
 
         this.startServerCheck();
@@ -97,8 +97,9 @@ export class ProfilerService {
     private listenToSettingsChanges(): void {
         window.addEventListener('settings:changed', ((event: CustomEvent) => {
             const newPort = event.detail['profiler.port'];
-            if (newPort && newPort !== this.wsPort) {
-                this.wsPort = newPort;
+            if (newPort !== undefined && Number(newPort) !== this.wsPort) {
+                console.log(`[ProfilerService] Port changed from ${this.wsPort} to ${newPort}`);
+                this.wsPort = Number(newPort);
                 this.reconnectWithNewPort();
             }
         }) as EventListener);
@@ -247,8 +248,8 @@ export class ProfilerService {
 
     private async startServer(): Promise<void> {
         try {
-            const port = parseInt(this.wsPort);
-            await invoke<string>('start_profiler_server', { port });
+            console.log(`[ProfilerService] Starting server on port ${this.wsPort}`);
+            await invoke<string>('start_profiler_server', { port: this.wsPort });
             this.isServerRunning = true;
         } catch (error) {
             // Ignore "already running" error - it's expected in some cases
@@ -300,7 +301,7 @@ export class ProfilerService {
                 try {
                     const message = JSON.parse(event.data);
                     if (message.type === 'debug_data' && message.data) {
-                        this.handleDebugData(message.data);
+                        this.handleDebugData(message.data, message.advancedProfiler);
                     } else if (message.type === 'get_raw_entity_list_response' && message.data) {
                         this.handleRawEntityListResponse(message.data);
                     } else if (message.type === 'get_entity_details_response' && message.data) {
@@ -338,7 +339,7 @@ export class ProfilerService {
         }
     }
 
-    private handleDebugData(debugData: any): void {
+    private handleDebugData(debugData: any, advancedProfiler?: any): void {
         const performance = debugData.performance;
         if (!performance) return;
 
@@ -380,18 +381,25 @@ export class ProfilerService {
 
         this.notifyListeners(this.currentData);
 
-        // 通知高级监听器原始数据
-        this.lastRawData = {
-            performance: debugData.performance,
-            systems: {
-                systemsInfo: systems.map(sys => ({
-                    name: sys.name,
-                    executionTime: sys.executionTime,
-                    entityCount: sys.entityCount,
-                    averageTime: sys.averageTime
-                }))
-            }
-        };
+        // 如果有高级性能数据，优先使用它
+        if (advancedProfiler) {
+            this.lastRawData = {
+                advancedProfiler
+            };
+        } else {
+            // 否则使用传统数据
+            this.lastRawData = {
+                performance: debugData.performance,
+                systems: {
+                    systemsInfo: systems.map(sys => ({
+                        name: sys.name,
+                        executionTime: sys.executionTime,
+                        entityCount: sys.entityCount,
+                        averageTime: sys.averageTime
+                    }))
+                }
+            };
+        }
         this.notifyAdvancedListeners(this.lastRawData);
 
         // 请求完整的实体列表

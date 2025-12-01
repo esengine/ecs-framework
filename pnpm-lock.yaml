@@ -549,6 +549,9 @@ importers:
       '@esengine/physics-rapier2d-editor':
         specifier: workspace:*
         version: link:../physics-rapier2d-editor
+      '@esengine/runtime-core':
+        specifier: workspace:*
+        version: link:../runtime-core
       '@esengine/sprite':
         specifier: workspace:*
         version: link:../sprite
@@ -1102,12 +1105,21 @@ importers:
 
   packages/runtime-core:
     devDependencies:
+      '@esengine/asset-system':
+        specifier: workspace:*
+        version: link:../asset-system
       '@esengine/build-config':
         specifier: workspace:*
         version: link:../build-config
+      '@esengine/ecs-engine-bindgen':
+        specifier: workspace:*
+        version: link:../ecs-engine-bindgen
       '@esengine/ecs-framework':
         specifier: workspace:*
         version: link:../core
+      '@esengine/engine-core':
+        specifier: workspace:*
+        version: link:../engine-core
       rimraf:
         specifier: ^5.0.5
         version: 5.0.10

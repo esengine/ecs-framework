@@ -486,6 +486,9 @@ export class DebugManager implements IService, IUpdatable {
             const { functionName, requestId } = message;
             this.advancedProfilerCollector.setSelectedFunction(functionName || null);
 
+            // 立即发送更新的数据，无需等待下一帧
+            this.sendDebugData();
+
             this.webSocketManager.send({
                 type: 'set_profiler_selected_function_response',
                 requestId,
@@ -995,10 +998,19 @@ export class DebugManager implements IService, IUpdatable {
 
         try {
             const debugData = this.getDebugData();
+
+            // 收集高级性能数据（包含 callGraph）
+            const isProfilerEnabled = ProfilerSDK.isEnabled();
+
+            const advancedProfilerData = isProfilerEnabled
+                ? this.advancedProfilerCollector.collectAdvancedData(this.performanceMonitor)
+                : null;
+
             // 包装成调试面板期望的消息格式
             const message = {
                 type: 'debug_data',
-                data: debugData
+                data: debugData,
+                advancedProfiler: advancedProfilerData
             };
             this.webSocketManager.send(message);
         } catch (error) {

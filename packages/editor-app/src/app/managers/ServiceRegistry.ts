@@ -14,6 +14,7 @@ import {
     SceneManagerService,
     SceneTemplateRegistry,
     FileActionRegistry,
+    IFileActionRegistry,
     EntityCreationRegistry,
     PluginManager,
     IPluginManager,
@@ -151,6 +152,7 @@ export class ServiceRegistry {
         Core.services.registerInstance(SettingsRegistry, settingsRegistry);
         Core.services.registerInstance(SceneManagerService, sceneManager);
         Core.services.registerInstance(FileActionRegistry, fileActionRegistry);
+        Core.services.registerInstance(IFileActionRegistry, fileActionRegistry);  // Symbol 注册用于跨包插件访问
         Core.services.registerInstance(EntityCreationRegistry, entityCreationRegistry);
         Core.services.registerInstance(ComponentActionRegistry, componentActionRegistry);
         Core.services.registerInstance(ComponentInspectorRegistry, componentInspectorRegistry);

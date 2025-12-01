@@ -21,6 +21,9 @@ import {
 } from './Serialization/IncrementalSerializer';
 import { ComponentPoolManager } from './Core/ComponentPool';
 import { PerformanceMonitor } from '../Utils/PerformanceMonitor';
+import { ProfilerSDK } from '../Utils/Profiler/ProfilerSDK';
+import { ProfileCategory } from '../Utils/Profiler/ProfilerTypes';
+import { AutoProfiler } from '../Utils/Profiler/AutoProfiler';
 import { ServiceContainer, type ServiceType, type IService } from '../Core/ServiceContainer';
 import { createInstance, isInjectable, injectProperties } from '../Core/DI';
 import { createLogger } from '../Utils/Logger';
@@ -334,30 +337,58 @@ export class Scene implements IScene {
      * 更新场景
      */
     public update() {
-        ComponentPoolManager.getInstance().update();
+        // 开始性能采样帧
+        ProfilerSDK.beginFrame();
+        const frameHandle = ProfilerSDK.beginSample('Scene.update', ProfileCategory.ECS);
 
-        this.entities.updateLists();
+        try {
+            ComponentPoolManager.getInstance().update();
 
-        const systems = this.systems;
+            this.entities.updateLists();
 
-        for (const system of systems) {
-            if (system.enabled) {
-                try {
-                    system.update();
-                } catch (error) {
-                    this._handleSystemError(system, 'update', error);
+            const systems = this.systems;
+
+            // Update 阶段
+            const updateHandle = ProfilerSDK.beginSample('Systems.update', ProfileCategory.ECS);
+            try {
+                for (const system of systems) {
+                    if (system.enabled) {
+                        const systemHandle = ProfilerSDK.beginSample(system.systemName, ProfileCategory.ECS);
+                        try {
+                            system.update();
+                        } catch (error) {
+                            this._handleSystemError(system, 'update', error);
+                        } finally {
+                            ProfilerSDK.endSample(systemHandle);
+                        }
+                    }
                 }
+            } finally {
+                ProfilerSDK.endSample(updateHandle);
             }
-        }
 
-        for (const system of systems) {
-            if (system.enabled) {
-                try {
-                    system.lateUpdate();
-                } catch (error) {
-                    this._handleSystemError(system, 'lateUpdate', error);
+            // LateUpdate 阶段
+            const lateUpdateHandle = ProfilerSDK.beginSample('Systems.lateUpdate', ProfileCategory.ECS);
+            try {
+                for (const system of systems) {
+                    if (system.enabled) {
+                        const systemHandle = ProfilerSDK.beginSample(`${system.systemName}.late`, ProfileCategory.ECS);
+                        try {
+                            system.lateUpdate();
+                        } catch (error) {
+                            this._handleSystemError(system, 'lateUpdate', error);
+                        } finally {
+                            ProfilerSDK.endSample(systemHandle);
+                        }
+                    }
                 }
+            } finally {
+                ProfilerSDK.endSample(lateUpdateHandle);
             }
+        } finally {
+            ProfilerSDK.endSample(frameHandle);
+            // 结束性能采样帧
+            ProfilerSDK.endFrame();
         }
     }
 
@@ -692,6 +723,11 @@ export class Scene implements IScene {
         this.markSystemsOrderDirty();
 
         injectProperties(system, this._services);
+
+        // 调试模式下自动包装系统方法以收集性能数据（ProfilerSDK 启用时表示调试模式）
+        if (ProfilerSDK.isEnabled()) {
+            AutoProfiler.wrapInstance(system, system.systemName, ProfileCategory.ECS);
+        }
 
         system.initialize();
 

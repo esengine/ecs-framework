@@ -88,6 +88,30 @@
   }
 }
 
+.profiler-window-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.profiler-window-btn {
+  padding: 6px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profiler-window-btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
 .profiler-window-close {
   padding: 6px;
   background: transparent;
@@ -104,6 +128,24 @@
 .profiler-window-close:hover {
   background: var(--color-bg-hover);
   color: var(--color-text-primary);
+}
+
+/* Fullscreen styles */
+.profiler-window-overlay.fullscreen {
+  background: rgba(0, 0, 0, 0.95);
+}
+
+.profiler-window.fullscreen {
+  border: none;
+  border-radius: 0;
+  max-height: none;
+  height: 100vh;
+  width: 100vw;
+  max-width: none;
+}
+
+.profiler-window.fullscreen .profiler-window-header {
+  border-radius: 0;
 }
 
 .profiler-window-toolbar {

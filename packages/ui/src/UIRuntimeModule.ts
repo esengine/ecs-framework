@@ -101,7 +101,8 @@ const descriptor: PluginDescriptor = {
     version: '1.0.0',
     description: 'ECS-based UI system',
     category: 'ui',
-    enabledByDefault: true
+    enabledByDefault: true,
+    isEnginePlugin: true
 };
 
 export const UIPlugin: IPlugin = {

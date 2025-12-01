@@ -133,9 +133,9 @@ export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
             return;
         }
 
-        // 获取当前启用的插件列表（排除核心插件和内置编辑器插件）
+        // 获取当前启用的插件列表（排除核心插件）
         const enabledPlugins = pluginManager.getEnabledPlugins()
-            .filter(p => !p.plugin.descriptor.isCore && p.plugin.descriptor.isEnginePlugin)
+            .filter(p => !p.plugin.descriptor.isCore)
             .map(p => p.plugin.descriptor.id);
 
         console.log('[PluginListSetting] Saving enabled plugins:', enabledPlugins);

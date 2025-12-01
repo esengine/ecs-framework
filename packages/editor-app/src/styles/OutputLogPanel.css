@@ -460,8 +460,16 @@
     color: #858585;
 }
 
+.output-log-entry-debug .output-log-entry-message {
+    color: #858585;
+}
+
 .output-log-entry-info .output-log-entry-icon {
     color: #4a9eff;
+}
+
+.output-log-entry-info .output-log-entry-message {
+    color: #e0e0e0;
 }
 
 .output-log-entry-warn {
@@ -472,11 +480,19 @@
     color: #ffc107;
 }
 
+.output-log-entry-warn .output-log-entry-message {
+    color: #ffc107;
+}
+
 .output-log-entry-error {
     background: rgba(244, 67, 54, 0.08);
 }
 
 .output-log-entry-error .output-log-entry-icon {
+    color: #f44336;
+}
+
+.output-log-entry-error .output-log-entry-message {
     color: #f44336;
 }
 

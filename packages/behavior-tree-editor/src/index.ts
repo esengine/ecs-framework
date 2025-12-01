@@ -20,6 +20,7 @@ import {
     MessageHub,
     IMessageHub,
     FileActionRegistry,
+    IFileActionRegistry,
     IDialogService,
     IFileSystemService,
     type IDialog,
@@ -85,7 +86,7 @@ export class BehaviorTreeEditorModule implements IEditorModuleLoader {
 
     private registerAssetCreationMappings(services: ServiceContainer): void {
         try {
-            const fileActionRegistry = services.resolve(FileActionRegistry);
+            const fileActionRegistry = services.resolve<FileActionRegistry>(IFileActionRegistry);
             if (fileActionRegistry) {
                 fileActionRegistry.registerAssetCreationMapping({
                     extension: '.btree',

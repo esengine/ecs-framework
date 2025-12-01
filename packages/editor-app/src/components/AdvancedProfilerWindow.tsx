@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X, BarChart3 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { X, BarChart3, Maximize2, Minimize2 } from 'lucide-react';
 import { ProfilerService } from '../services/ProfilerService';
 import { AdvancedProfiler } from './AdvancedProfiler';
 import '../styles/ProfilerWindow.css';
@@ -15,6 +15,7 @@ interface WindowWithProfiler extends Window {
 export function AdvancedProfilerWindow({ onClose }: AdvancedProfilerWindowProps) {
     const [profilerService, setProfilerService] = useState<ProfilerService | null>(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
 
     useEffect(() => {
         const service = (window as WindowWithProfiler).__PROFILER_SERVICE__;
@@ -36,12 +37,35 @@ export function AdvancedProfilerWindow({ onClose }: AdvancedProfilerWindowProps)
         return () => clearInterval(interval);
     }, [profilerService]);
 
+    // 处理 ESC 键退出全屏
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isFullscreen) {
+                setIsFullscreen(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isFullscreen]);
+
+    const toggleFullscreen = useCallback(() => {
+        setIsFullscreen(prev => !prev);
+    }, []);
+
+    const windowStyle = isFullscreen
+        ? { width: '100vw', height: '100vh', maxWidth: 'none', borderRadius: 0 }
+        : { width: '90vw', height: '85vh', maxWidth: '1600px' };
+
     return (
-        <div className="profiler-window-overlay" onClick={onClose}>
+        <div
+            className={`profiler-window-overlay ${isFullscreen ? 'fullscreen' : ''}`}
+            onClick={isFullscreen ? undefined : onClose}
+        >
             <div
-                className="profiler-window advanced-profiler-window"
+                className={`profiler-window advanced-profiler-window ${isFullscreen ? 'fullscreen' : ''}`}
                 onClick={(e) => e.stopPropagation()}
-                style={{ width: '90vw', height: '85vh', maxWidth: '1600px' }}
+                style={windowStyle}
             >
                 <div className="profiler-window-header">
                     <div className="profiler-window-title">
@@ -53,9 +77,18 @@ export function AdvancedProfilerWindow({ onClose }: AdvancedProfilerWindowProps)
                             </span>
                         )}
                     </div>
-                    <button className="profiler-window-close" onClick={onClose} title="Close">
-                        <X size={20} />
-                    </button>
+                    <div className="profiler-window-controls">
+                        <button
+                            className="profiler-window-btn"
+                            onClick={toggleFullscreen}
+                            title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Fullscreen'}
+                        >
+                            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                        </button>
+                        <button className="profiler-window-close" onClick={onClose} title="Close">
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="profiler-window-content" style={{ padding: 0 }}>

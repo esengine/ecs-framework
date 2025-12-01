@@ -264,8 +264,6 @@ export interface IECSDebugConfig {
 export interface ICoreConfig {
     /** 是否启用调试模式 */
     debug?: boolean;
-    /** 是否启用实体系统 */
-    enableEntitySystems?: boolean;
     /** 调试配置 */
     debugConfig?: IECSDebugConfig;
     /** WorldManager配置 */

@@ -5,7 +5,7 @@
 
 import type { IPlugin, PluginDescriptor } from '@esengine/editor-core';
 import { PhysicsRuntimeModule } from '@esengine/physics-rapier2d/runtime';
-import { physics2DEditorModule } from './index';
+import { physics2DEditorModule } from './Physics2DEditorModule';
 
 /**
  * Physics 2D 插件描述符
