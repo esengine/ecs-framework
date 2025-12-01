@@ -1038,6 +1038,9 @@ importers:
       '@esengine/physics-rapier2d':
         specifier: workspace:*
         version: link:../physics-rapier2d
+      '@esengine/platform-common':
+        specifier: workspace:*
+        version: link:../platform-common
       '@esengine/runtime-core':
         specifier: workspace:*
         version: link:../runtime-core

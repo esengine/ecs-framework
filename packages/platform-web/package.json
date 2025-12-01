@@ -40,6 +40,7 @@
   "devDependencies": {
     "@esengine/ecs-framework": "workspace:*",
     "@esengine/asset-system": "workspace:*",
+    "@esengine/platform-common": "workspace:*",
     "@esengine/audio": "workspace:*",
     "@esengine/behavior-tree": "workspace:*",
     "@esengine/camera": "workspace:*",
