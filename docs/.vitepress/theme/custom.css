@@ -1,0 +1,631 @@
+/* ============================================
+   ESEngine 文档站主题样式
+   ============================================ */
+
+:root {
+  color-scheme: dark;
+  --vp-nav-height: 64px;
+}
+
+body {
+  background: #0d0d0d !important;
+}
+
+.VPContent.has-sidebar {
+  background: linear-gradient(180deg, #1e3a5f 0%, #152540 30vh, #0d1a2a 50vh, #0d0d0d 70vh) !important;
+  background-repeat: no-repeat !important;
+}
+
+html,
+html.dark {
+  --vp-c-bg: #0d0d0d;
+  --vp-c-bg-soft: #1a1a1a;
+  --vp-c-bg-mute: #1f1f1f;
+  --vp-c-bg-alt: #1a1a1a;
+  --vp-c-text-1: #e0e0e0;
+  --vp-c-text-2: #a0a0a0;
+  --vp-c-text-3: #707070;
+  --vp-c-divider: #2a2a2a;
+  --vp-c-divider-light: #222222;
+}
+
+html:not(.dark) {
+  --vp-c-bg: #0d0d0d !important;
+  --vp-c-bg-soft: #1a1a1a !important;
+  --vp-c-bg-mute: #1f1f1f !important;
+  --vp-c-bg-alt: #1a1a1a !important;
+  --vp-c-text-1: #e0e0e0 !important;
+  --vp-c-text-2: #a0a0a0 !important;
+  --vp-c-text-3: #707070 !important;
+}
+
+:root {
+  --es-bg-base: #0d0d0d;
+  --es-bg-sidebar: #1a1a1a;
+  --es-bg-card: #1f1f1f;
+  --es-bg-hover: #252525;
+  --es-bg-selected: #0e4a7c;
+
+  --es-text-primary: #e0e0e0;
+  --es-text-secondary: #a0a0a0;
+  --es-text-tertiary: #707070;
+  --es-text-inverse: #ffffff;
+
+  --es-border-default: #2a2a2a;
+  --es-border-subtle: #222222;
+
+  --es-primary: #3b9eff;
+  --es-warning: #c9a227;
+  --es-info: #3b9eff;
+}
+
+/* ============================================
+   导航栏
+   ============================================ */
+.VPNav {
+  background: #0d0d0d !important;
+  border-bottom: 1px solid #2a2a2a !important;
+}
+
+.VPNav .VPNavBar {
+  background: #0d0d0d !important;
+}
+
+.VPNav .VPNavBar .wrapper {
+  background: #0d0d0d !important;
+}
+
+.VPNav .VPNavBar::before,
+.VPNav .VPNavBar::after {
+  display: none !important;
+}
+
+.VPNavBar {
+  background: #0d0d0d !important;
+}
+
+.VPNavBar::before {
+  display: none !important;
+}
+
+.VPNavBarTitle .title {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.VPNavBarMenuLink {
+  color: #a0a0a0 !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+}
+
+.VPNavBarMenuLink:hover {
+  color: #ffffff !important;
+}
+
+.VPNavBarMenuLink.active {
+  color: #ffffff !important;
+}
+
+.VPNavBarSearch .DocSearch-Button {
+  background: #1a1a1a !important;
+  border: 1px solid #2a2a2a !important;
+  border-radius: 6px;
+}
+
+/* ============================================
+   侧边栏
+   ============================================ */
+.VPSidebar {
+  background: transparent !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  padding: 16px 0 !important;
+  width: 280px !important;
+}
+
+.VPSidebar .nav {
+  padding: 0 16px;
+}
+
+.VPSidebarItem.level-0 > .item {
+  padding: 12px 0 6px 0;
+}
+
+.VPSidebarItem.level-0 > .item > .text {
+  font-weight: 400;
+  font-size: 13px;
+  color: #808080;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.VPSidebarItem .link {
+  padding: 6px 12px;
+  margin: 1px 0;
+  border-radius: 4px;
+  color: #9d9d9d;
+  font-size: 14px;
+  transition: all 0.15s;
+  position: relative;
+  border-left: 2px solid transparent;
+}
+
+.VPSidebarItem .link:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.VPSidebarItem.is-active > .item > .link {
+  background: transparent;
+  color: #ffffff;
+  border-left: 2px solid #3b9eff;
+}
+
+.VPSidebarItem.level-1 .link {
+  padding-left: 24px;
+  font-size: 13px;
+}
+
+.VPSidebarItem.level-2 .link {
+  padding-left: 36px;
+  font-size: 13px;
+}
+
+.VPSidebarItem .caret {
+  color: #606060;
+}
+
+.VPSidebarItem .caret:hover {
+  color: #9d9d9d;
+}
+
+/* ============================================
+   内容区域
+   ============================================ */
+.VPContent {
+  background: transparent !important;
+}
+
+.VPDoc {
+  background: transparent !important;
+}
+
+.VPDoc .container {
+  max-width: 100% !important;
+}
+
+.VPDoc .content {
+  max-width: 860px !important;
+  padding: 80px 60px 48px !important;
+}
+
+.VPNavBar {
+  background: #0d0d0d !important;
+}
+
+.VPNavBar .content {
+  background: #0d0d0d !important;
+}
+
+.VPNavBar .content-body {
+  background: #0d0d0d !important;
+}
+
+.VPNavBar .divider {
+  display: none;
+}
+
+.VPLocalNav {
+  background: #0d0d0d !important;
+  border-bottom: 1px solid #2a2a2a !important;
+}
+
+.VPNavScreenMenu {
+  background: #0d0d0d !important;
+}
+
+.VPNavScreen {
+  background: #0d0d0d !important;
+}
+
+.curtain {
+  display: none !important;
+}
+
+.VPNav .curtain,
+.VPNavBar .curtain {
+  display: none !important;
+}
+
+[class*="curtain"] {
+  display: none !important;
+}
+
+.VPNav > div::before,
+.VPNav > div::after {
+  display: none !important;
+}
+
+.vp-doc {
+  color: #e0e0e0;
+}
+
+.vp-doc h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 32px;
+  line-height: 1.2;
+}
+
+.vp-doc h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #ffffff;
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-top: 48px;
+  margin-bottom: 20px;
+}
+
+.vp-doc h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-top: 32px;
+  margin-bottom: 16px;
+}
+
+.vp-doc p {
+  color: #a0a0a0;
+  line-height: 1.8;
+  font-size: 15px;
+  margin: 20px 0;
+}
+
+.vp-doc ul,
+.vp-doc ol {
+  padding-left: 24px;
+  margin: 20px 0;
+}
+
+.vp-doc li {
+  line-height: 1.8;
+  margin: 8px 0;
+  color: #a0a0a0;
+  font-size: 15px;
+}
+
+.vp-doc li::marker {
+  color: #707070;
+}
+
+.vp-doc strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.vp-doc a {
+  color: #3b9eff;
+  text-decoration: none;
+}
+
+.vp-doc a:hover {
+  text-decoration: underline;
+}
+
+/* ============================================
+   右侧大纲
+   ============================================ */
+.VPDocAside {
+  padding-left: 32px;
+  border-left: 1px solid #2a2a2a;
+}
+
+.VPDocAsideOutline {
+  padding: 0;
+  border: none !important;
+}
+
+.VPDocAsideOutline .content {
+  border: none !important;
+  padding-left: 0 !important;
+}
+
+.VPDocAsideOutline .outline-title {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #ffffff;
+  padding-bottom: 16px;
+}
+
+.VPDocAsideOutline .outline-link {
+  color: #707070;
+  font-size: 13px;
+  padding: 6px 0;
+  line-height: 1.5;
+  display: block;
+}
+
+.VPDocAsideOutline .outline-link:hover {
+  color: #a0a0a0;
+}
+
+.VPDocAsideOutline .outline-link.active {
+  color: #3b9eff;
+}
+
+.VPDocAsideOutline .outline-marker {
+  display: none;
+}
+
+/* ============================================
+   代码块
+   ============================================ */
+div[class*='language-'] {
+  background: #1a1a1a !important;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.vp-code-group .tabs {
+  background: #1f1f1f;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.vp-doc :not(pre) > code {
+  background: #1f1f1f;
+  color: #3b9eff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* ============================================
+   表格
+   ============================================ */
+.vp-doc table {
+  display: table;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-collapse: collapse;
+  margin: 24px 0;
+}
+
+.vp-doc tr {
+  border-bottom: 1px solid #2a2a2a;
+  background: transparent;
+}
+
+.vp-doc tr:last-child {
+  border-bottom: none;
+}
+
+.vp-doc th {
+  background: #1f1f1f;
+  font-weight: 600;
+  font-size: 14px;
+  color: #a0a0a0;
+  text-align: left;
+  padding: 14px 20px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.vp-doc td {
+  font-size: 15px;
+  color: #e0e0e0;
+  padding: 14px 20px;
+  vertical-align: top;
+  line-height: 1.6;
+}
+
+.vp-doc td:first-child {
+  font-weight: 500;
+  color: #a0a0a0;
+  min-width: 120px;
+}
+
+/* ============================================
+   提示框
+   ============================================ */
+.vp-doc .warning,
+.vp-doc .custom-block.warning {
+  background: rgba(201, 162, 39, 0.08);
+  border: none;
+  border-left: 4px solid #c9a227;
+  border-radius: 0 8px 8px 0;
+  padding: 16px 24px;
+  margin: 24px 0;
+}
+
+.vp-doc .warning .custom-block-title,
+.vp-doc .custom-block.warning .custom-block-title {
+  color: #c9a227;
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.vp-doc .warning p {
+  color: #a0a0a0;
+  margin: 0;
+}
+
+.vp-doc .tip,
+.vp-doc .custom-block.tip {
+  background: rgba(59, 158, 255, 0.08);
+  border: none;
+  border-left: 4px solid #3b9eff;
+  border-radius: 0 8px 8px 0;
+  padding: 16px 24px;
+  margin: 24px 0;
+}
+
+.vp-doc .tip .custom-block-title,
+.vp-doc .custom-block.tip .custom-block-title {
+  color: #3b9eff;
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.vp-doc .tip p {
+  color: #a0a0a0;
+  margin: 0;
+}
+
+.vp-doc .info,
+.vp-doc .custom-block.info {
+  background: rgba(78, 201, 176, 0.08);
+  border: none;
+  border-left: 4px solid #4ec9b0;
+  border-radius: 0 8px 8px 0;
+  padding: 16px 24px;
+  margin: 24px 0;
+}
+
+.vp-doc .info .custom-block-title,
+.vp-doc .custom-block.info .custom-block-title {
+  color: #4ec9b0;
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.vp-doc .danger,
+.vp-doc .custom-block.danger {
+  background: rgba(244, 135, 113, 0.08);
+  border: none;
+  border-left: 4px solid #f48771;
+  border-radius: 0 8px 8px 0;
+  padding: 16px 24px;
+  margin: 24px 0;
+}
+
+.vp-doc .danger .custom-block-title,
+.vp-doc .custom-block.danger .custom-block-title {
+  color: #f48771;
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+/* ============================================
+   卡片样式
+   ============================================ */
+.vp-doc .card {
+  background: #1f1f1f;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.vp-doc .card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.vp-doc .card-description {
+  font-size: 14px;
+  color: #707070;
+  line-height: 1.6;
+}
+
+/* ============================================
+   标签样式
+   ============================================ */
+.vp-doc .tag {
+  display: inline-block;
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid #3a3a3a;
+  border-radius: 16px;
+  color: #a0a0a0;
+  font-size: 13px;
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+/* ============================================
+   链接行样式
+   ============================================ */
+.vp-doc .link-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  color: #a0a0a0;
+  font-size: 15px;
+}
+
+.vp-doc .link-row a {
+  color: #3b9eff;
+}
+
+/* ============================================
+   页脚
+   ============================================ */
+.VPFooter {
+  background: #1a1a1a !important;
+  border-top: 1px solid #2a2a2a !important;
+}
+
+/* ============================================
+   滚动条
+   ============================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ============================================
+   首页专用样式
+   ============================================ */
+.home-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.home-section {
+  padding: 48px 0;
+}
+
+/* ============================================
+   响应式
+   ============================================ */
+@media (max-width: 960px) {
+  .VPDoc .content {
+    padding: 24px !important;
+  }
+
+  .VPSidebar {
+    width: 100% !important;
+  }
+}

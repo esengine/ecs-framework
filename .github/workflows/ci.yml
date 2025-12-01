@@ -67,7 +67,7 @@ jobs:
         fi
 
     - name: Install dependencies
-      run: pnpm install
+      run: pnpm install --no-frozen-lockfile
 
     # 缓存 Turbo
     - name: Cache Turbo
