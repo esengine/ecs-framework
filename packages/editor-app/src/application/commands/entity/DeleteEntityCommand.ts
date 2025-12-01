@@ -36,8 +36,6 @@ export class DeleteEntityCommand extends BaseCommand {
         const scene = Core.scene;
         if (!scene) return;
 
-        const hierarchySystem = scene.getSystem(HierarchySystem);
-
         // 先移除子实体
         for (const childId of this.childEntityIds) {
             const child = scene.findEntityById(childId);

@@ -73,7 +73,7 @@ export function blockEditorPlugin(options: BlockEditorOptions): Plugin {
         name: 'esengine:block-editor',
         enforce: 'pre',
 
-        resolveId(source, importer) {
+        resolveId(source: string, importer: string | undefined) {
             if (isBlocked(source)) {
                 const message = `[block-editor] Editor dependency detected in runtime build:\n` +
                     `  Source: ${source}\n` +

@@ -8,6 +8,9 @@
     "include": ["src/**/*"],
     "exclude": ["node_modules", "dist"],
     "references": [
-        { "path": "../core" }
+        { "path": "../core" },
+        { "path": "../ecs-engine-bindgen" },
+        { "path": "../engine-core" },
+        { "path": "../asset-system" }
     ]
 }

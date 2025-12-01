@@ -21,14 +21,12 @@ export const descriptor: PluginDescriptor = {
         {
             name: 'BehaviorTreeRuntime',
             type: 'runtime',
-            loadingPhase: 'default',
-            entry: './src/index.ts'
+            loadingPhase: 'default'
         },
         {
             name: 'BehaviorTreeEditor',
             type: 'editor',
-            loadingPhase: 'default',
-            entry: './src/editor/index.ts'
+            loadingPhase: 'default'
         }
     ],
     dependencies: [

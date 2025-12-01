@@ -18,7 +18,6 @@ import { defineConfig, type UserConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 import { STANDARD_EXTERNALS, EDITOR_ONLY_EXTERNALS } from '../types';
 import { cssInjectPlugin } from '../plugins/css-inject';
-import { blockEditorPlugin } from '../plugins/block-editor';
 
 export interface PluginPackageOptions {
     /** 包根目录 (通常是 __dirname) */
@@ -66,7 +65,6 @@ export function pluginPreset(options: PluginPackageOptions): UserConfig {
         root,
         entries = {},
         hasCSS = false,
-        hasPluginJson = true,
         external = [],
         viteConfig = {}
     } = options;
@@ -104,7 +102,7 @@ export function pluginPreset(options: PluginPackageOptions): UserConfig {
             lib: {
                 entry: entryPoints,
                 formats: ['es'],
-                fileName: (format, entryName) => `${entryName}.js`
+                fileName: (_format: string, entryName: string) => `${entryName}.js`
             },
             rollupOptions: {
                 external: [

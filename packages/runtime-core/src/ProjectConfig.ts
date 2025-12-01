@@ -110,7 +110,7 @@ export function createProjectConfigFromEnabledList(
     // First disable all non-core plugins
     const plugins: Record<string, PluginConfig> = {};
 
-    for (const [id, config] of Object.entries(defaultConfig.plugins)) {
+    for (const id of Object.keys(defaultConfig.plugins)) {
         const packageInfo = BUILTIN_PLUGIN_PACKAGES[id];
         // 核心插件始终启用
         // Core plugins are always enabled

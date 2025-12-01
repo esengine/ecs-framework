@@ -7,6 +7,7 @@
  */
 
 import type { Plugin } from 'vite';
+import type { OutputBundle, NormalizedOutputOptions, OutputAsset, OutputChunk } from 'rollup';
 
 /**
  * 创建 CSS 注入插件
@@ -25,7 +26,7 @@ export function cssInjectPlugin(): Plugin {
         name: 'esengine:css-inject',
         apply: 'build',
 
-        generateBundle(options, bundle) {
+        generateBundle(_options: NormalizedOutputOptions, bundle: OutputBundle) {
             // 收集所有 CSS 内容
             const cssChunks: string[] = [];
             const cssFileNames: string[] = [];
@@ -54,7 +55,7 @@ export function cssInjectPlugin(): Plugin {
 `;
 
             // 找到主入口 JS 文件并注入
-            for (const [fileName, chunk] of Object.entries(bundle)) {
+            for (const chunk of Object.values(bundle)) {
                 if (chunk.type === 'chunk' && chunk.isEntry) {
                     chunk.code = injectCode + chunk.code;
                     break;

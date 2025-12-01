@@ -8,7 +8,7 @@
     "include": ["src/**/*"],
     "exclude": ["node_modules", "dist"],
     "references": [
-        { "path": "../ecs-framework" },
+        { "path": "../core" },
         { "path": "../asset-system" }
     ]
 }

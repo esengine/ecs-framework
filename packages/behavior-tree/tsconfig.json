@@ -30,7 +30,7 @@
   ],
   "references": [
     { "path": "../core" },
-    { "path": "../components" },
+    { "path": "../engine-core" },
     { "path": "../editor-core" },
     { "path": "../ui" },
     { "path": "../editor-runtime" }

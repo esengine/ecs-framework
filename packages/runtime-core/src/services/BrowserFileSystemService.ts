@@ -286,6 +286,16 @@ export class BrowserFileSystemService {
     get isInitialized(): boolean {
         return this._initialized;
     }
+
+    /**
+     * Dispose service and clear resources
+     * Required by IService interface
+     */
+    dispose(): void {
+        this._cache.clear();
+        this._catalog = null;
+        this._initialized = false;
+    }
 }
 
 /**

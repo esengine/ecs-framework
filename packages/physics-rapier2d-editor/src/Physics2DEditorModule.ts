@@ -25,8 +25,7 @@ import {
     BoxCollider2DComponent,
     CircleCollider2DComponent,
     CapsuleCollider2DComponent,
-    PolygonCollider2DComponent,
-    CollisionLayerConfig
+    PolygonCollider2DComponent
 } from '@esengine/physics-rapier2d';
 import { Physics2DSystem } from '@esengine/physics-rapier2d/runtime';
 

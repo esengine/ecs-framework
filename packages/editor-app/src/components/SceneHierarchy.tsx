@@ -107,8 +107,6 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         const scene = Core.scene;
         if (!scene) return [];
 
-        const hierarchySystem = scene.getSystem(HierarchySystem);
-
         const buildNode = (entity: Entity, depth: number): EntityNode => {
             const hierarchy = entity.getComponent(HierarchyComponent);
             const childIds = hierarchy?.childIds ?? [];

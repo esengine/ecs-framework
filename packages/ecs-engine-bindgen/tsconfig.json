@@ -10,14 +10,23 @@
         "rootDir": "./src",
         "strict": true,
         "composite": true,
+        "incremental": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "moduleResolution": "node",
         "resolveJsonModule": true,
         "experimentalDecorators": true,
-        "emitDecoratorMetadata": true
+        "emitDecoratorMetadata": true,
+        "tsBuildInfoFile": "./bin/.tsbuildinfo"
     },
     "include": ["src/**/*"],
-    "exclude": ["node_modules", "bin", "dist"]
+    "exclude": ["node_modules", "bin", "dist"],
+    "references": [
+        { "path": "../core" },
+        { "path": "../engine-core" },
+        { "path": "../sprite" },
+        { "path": "../camera" },
+        { "path": "../asset-system" }
+    ]
 }

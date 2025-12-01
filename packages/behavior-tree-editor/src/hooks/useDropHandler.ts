@@ -1,5 +1,5 @@
 import { useState, type RefObject, React, createLogger } from '@esengine/editor-runtime';
-import type { NodeTemplate, NodeType } from '@esengine/behavior-tree';
+import { NodeType, type NodeTemplate } from '@esengine/behavior-tree';
 import { Position } from '../domain/value-objects/Position';
 import { useNodeOperations } from './useNodeOperations';
 

@@ -174,6 +174,7 @@ export class AutoProfiler {
         const name = className || constructor.name;
         this.registeredClasses.set(name, { constructor, category });
 
+        // eslint-disable-next-line @typescript-eslint/no-this-alias -- Required for Proxy construct handler
         const self = this;
 
         // 创建代理类
@@ -253,6 +254,7 @@ export class AutoProfiler {
     ): T {
         if (!this.config.enabled) return fn;
 
+        // eslint-disable-next-line @typescript-eslint/no-this-alias -- Required for wrapped function closure
         const self = this;
 
         const wrapped = function(this: any, ...args: any[]): any {
@@ -324,6 +326,7 @@ export class AutoProfiler {
         methodName: string,
         category: ProfileCategory
     ): Function {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias -- Required for wrapped method closure
         const self = this;
         const fullName = `${className}.${methodName}`;
         const minDuration = this.config.minDuration;
@@ -589,7 +592,7 @@ export function Profile(
     category: ProfileCategory = ProfileCategory.Custom
 ): MethodDecorator {
     return function(
-        target: Object,
+        target: object,
         propertyKey: string | symbol,
         descriptor: PropertyDescriptor
     ): PropertyDescriptor {
