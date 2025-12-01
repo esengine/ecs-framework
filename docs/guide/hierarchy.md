@@ -434,4 +434,4 @@ const found = hierarchySystem.findChild(parent, "Child");
 
 - 了解 [实体类](./entity.md) 的其他功能
 - 了解 [场景管理](./scene.md) 如何组织实体和系统
-- 探索 [变换系统](./transform.md) 实现空间层级变换
+- 了解 [组件系统](./component.md) 如何定义和使用组件
