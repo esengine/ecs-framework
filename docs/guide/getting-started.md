@@ -23,7 +23,6 @@ import { Core } from '@esengine/ecs-framework'
 // 方式1：使用配置对象（推荐）
 const core = Core.create({
   debug: true,                    // 启用调试模式，提供详细的日志和性能监控
-  enableEntitySystems: true,     // 启用实体系统，这是ECS的核心功能
   debugConfig: {                 // 可选：高级调试配置
     enabled: false,               // 是否启用WebSocket调试服务器
     websocketUrl: 'ws://localhost:8080',
@@ -39,12 +38,11 @@ const core = Core.create({
 });
 
 // 方式2：简化创建（向后兼容）
-const core = Core.create(true);  // 等同于 { debug: true, enableEntitySystems: true }
+const core = Core.create(true);  // 等同于 { debug: true }
 
 // 方式3：生产环境配置
 const core = Core.create({
-  debug: false,                 // 生产环境关闭调试
-  enableEntitySystems: true
+  debug: false                   // 生产环境关闭调试
 });
 ```
 
@@ -54,9 +52,6 @@ const core = Core.create({
 interface ICoreConfig {
   /** 是否启用调试模式 - 影响日志级别和性能监控 */
   debug?: boolean;
-
-  /** 是否启用实体系统 - 核心ECS功能开关 */
-  enableEntitySystems?: boolean;
 
   /** 高级调试配置 - 用于开发工具集成 */
   debugConfig?: {
