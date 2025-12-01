@@ -1,4 +1,4 @@
-import { SceneSerializer, SerializedScene } from '../../../src/ECS/Serialization/SceneSerializer';
+import { SceneSerializer } from '../../../src/ECS/Serialization/SceneSerializer';
 import { Scene } from '../../../src/ECS/Scene';
 import { Component } from '../../../src/ECS/Component';
 import { HierarchySystem } from '../../../src/ECS/Systems/HierarchySystem';

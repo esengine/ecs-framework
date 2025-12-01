@@ -179,7 +179,7 @@ describe('EntityDataCollector', () => {
             const data = collector.collectEntityDataWithMemory(scene);
 
             expect(data.entityDetailsMap).toBeDefined();
-            expect(data.entityDetailsMap[entity.id]).toBeDefined();
+            expect(data.entityDetailsMap![entity.id]).toBeDefined();
         });
 
         test('should build entity hierarchy tree', () => {
@@ -194,8 +194,9 @@ describe('EntityDataCollector', () => {
 
             const data = collector.collectEntityDataWithMemory(scene);
 
-            expect(data.entityHierarchy.length).toBe(1);
-            expect(data.entityHierarchy[0].name).toBe('Root');
+            expect(data.entityHierarchy).toBeDefined();
+            expect(data.entityHierarchy!.length).toBe(1);
+            expect(data.entityHierarchy![0].name).toBe('Root');
         });
     });
 

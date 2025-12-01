@@ -816,7 +816,7 @@ describe('Scene - 场景管理系统测试', () => {
 
         describe('延迟缓存清理', () => {
             test('addEntity 应该支持延迟缓存清理', () => {
-                const entity1 = scene.createEntity('Entity1');
+                scene.createEntity('Entity1');
                 const entity2 = new Entity('Entity2', scene.identifierPool.checkOut());
 
                 // 延迟缓存清理
