@@ -10,7 +10,7 @@ import {
     AssetLoadError,
     IAssetLoader
 } from '@esengine/asset-system';
-import { TilemapAssetType } from '../index';
+import { TilemapAssetType } from '../constants';
 
 /**
  * Tilemap data interface

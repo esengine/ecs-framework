@@ -1,0 +1,49 @@
+/**
+ * {{displayName}} Runtime Module
+ *
+ * 运行时模块 - 负责注册组件、服务和系统
+ */
+
+import type {
+    IRuntimeModuleLoader,
+    IComponentRegistry,
+    SystemContext
+} from '@esengine/ecs-components';
+import type { IScene, ServiceContainer } from '@esengine/ecs-framework';
+
+export class {{name}}RuntimeModule implements IRuntimeModuleLoader {
+    /**
+     * 注册组件到组件注册表
+     */
+    registerComponents(registry: IComponentRegistry): void {
+        // registry.register(MyComponent);
+    }
+
+    /**
+     * 注册服务到服务容器
+     */
+    registerServices?(services: ServiceContainer): void {
+        // services.registerSingleton(MyService);
+    }
+
+    /**
+     * 初始化回调
+     */
+    async onInitialize?(): Promise<void> {
+        // 执行初始化逻辑
+    }
+
+    /**
+     * 为场景创建系统
+     */
+    createSystems?(scene: IScene, context: SystemContext): void {
+        // scene.addSystem(new MySystem());
+    }
+
+    /**
+     * 系统创建完成后的回调，用于连接跨插件依赖
+     */
+    onSystemsCreated?(scene: IScene, context: SystemContext): void {
+        // 连接跨插件依赖
+    }
+}

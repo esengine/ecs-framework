@@ -8,7 +8,7 @@
 
 import type { ServiceContainer } from '@esengine/ecs-framework';
 import { createLogger, Core } from '@esengine/ecs-framework';
-import type { IPluginLoader, IEditorModuleLoader, PluginDescriptor } from '@esengine/editor-core';
+import type { IPlugin, IEditorModuleLoader, PluginDescriptor } from '@esengine/editor-core';
 import { SettingsRegistry, ProjectService } from '@esengine/editor-core';
 import EngineService from '../../services/EngineService';
 
@@ -167,7 +167,7 @@ const descriptor: PluginDescriptor = {
     ]
 };
 
-export const ProjectSettingsPlugin: IPluginLoader = {
+export const ProjectSettingsPlugin: IPlugin = {
     descriptor,
     editorModule: new ProjectSettingsEditorModule()
 };

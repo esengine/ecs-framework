@@ -3,9 +3,8 @@ import { LogService, LogEntry } from '@esengine/editor-core';
 import { LogLevel } from '@esengine/ecs-framework';
 import {
     Search, Filter, Settings, X, Trash2, ChevronDown,
-    Bug, Info, AlertTriangle, XCircle, AlertCircle, Wifi, Pause, Play
+    Bug, Info, AlertTriangle, XCircle, AlertCircle, Wifi, Pause, Play, Copy
 } from 'lucide-react';
-import { JsonViewer } from './JsonViewer';
 import '../styles/OutputLogPanel.css';
 
 interface OutputLogPanelProps {
@@ -16,15 +15,6 @@ interface OutputLogPanelProps {
 
 const MAX_LOGS = 1000;
 
-function tryParseJSON(message: string): { isJSON: boolean; parsed?: unknown } {
-    try {
-        const parsed: unknown = JSON.parse(message);
-        return { isJSON: true, parsed };
-    } catch {
-        return { isJSON: false };
-    }
-}
-
 function formatTime(date: Date): string {
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
@@ -33,103 +23,121 @@ function formatTime(date: Date): string {
     return `${hours}:${minutes}:${seconds}.${ms}`;
 }
 
-function getLevelIcon(level: LogLevel) {
+function getLevelIcon(level: LogLevel, size: number = 14) {
     switch (level) {
         case LogLevel.Debug:
-            return <Bug size={14} />;
+            return <Bug size={size} />;
         case LogLevel.Info:
-            return <Info size={14} />;
+            return <Info size={size} />;
         case LogLevel.Warn:
-            return <AlertTriangle size={14} />;
+            return <AlertTriangle size={size} />;
         case LogLevel.Error:
         case LogLevel.Fatal:
-            return <XCircle size={14} />;
+            return <XCircle size={size} />;
         default:
-            return <AlertCircle size={14} />;
+            return <AlertCircle size={size} />;
     }
 }
 
 function getLevelClass(level: LogLevel): string {
     switch (level) {
         case LogLevel.Debug:
-            return 'log-entry-debug';
+            return 'output-log-entry-debug';
         case LogLevel.Info:
-            return 'log-entry-info';
+            return 'output-log-entry-info';
         case LogLevel.Warn:
-            return 'log-entry-warn';
+            return 'output-log-entry-warn';
         case LogLevel.Error:
         case LogLevel.Fatal:
-            return 'log-entry-error';
+            return 'output-log-entry-error';
         default:
             return '';
     }
 }
 
-const LogEntryItem = memo(({ log, onOpenJsonViewer }: {
+/**
+ * 尝试从消息中提取堆栈信息
+ */
+function extractStackTrace(message: string): { message: string; stack: string | null } {
+    const stackPattern = /\n\s*at\s+/;
+    if (stackPattern.test(message)) {
+        const lines = message.split('\n');
+        const messageLines: string[] = [];
+        const stackLines: string[] = [];
+        let inStack = false;
+
+        for (const line of lines) {
+            if (line.trim().startsWith('at ') || inStack) {
+                inStack = true;
+                stackLines.push(line);
+            } else {
+                messageLines.push(line);
+            }
+        }
+
+        return {
+            message: messageLines.join('\n').trim(),
+            stack: stackLines.length > 0 ? stackLines.join('\n') : null
+        };
+    }
+
+    return { message, stack: null };
+}
+
+const LogEntryItem = memo(({ log, isExpanded, onToggle, onCopy }: {
     log: LogEntry;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onOpenJsonViewer: (data: any) => void;
+    isExpanded: boolean;
+    onToggle: () => void;
+    onCopy: () => void;
 }) => {
-    const { isJSON, parsed } = useMemo(() => tryParseJSON(log.message), [log.message]);
-    const shouldTruncate = log.message.length > 200;
-    const [isExpanded, setIsExpanded] = useState(false);
+    // 优先使用 log.stack，否则尝试从 message 中提取
+    const { message, stack } = useMemo(() => {
+        if (log.stack) {
+            return { message: log.message, stack: log.stack };
+        }
+        return extractStackTrace(log.message);
+    }, [log.message, log.stack]);
+
+    const hasStack = !!stack;
 
     return (
-        <div className={`output-log-entry ${getLevelClass(log.level)} ${log.source === 'remote' ? 'log-entry-remote' : ''}`}>
-            <div className="output-log-entry-icon">
-                {getLevelIcon(log.level)}
+        <div
+            className={`output-log-entry ${getLevelClass(log.level)} ${isExpanded ? 'expanded' : ''} ${log.source === 'remote' ? 'log-entry-remote' : ''} ${hasStack ? 'has-stack' : ''}`}
+        >
+            <div className="output-log-entry-main" onClick={hasStack ? onToggle : undefined} style={{ cursor: hasStack ? 'pointer' : 'default' }}>
+                <div className="output-log-entry-icon">
+                    {getLevelIcon(log.level)}
+                </div>
+                <div className="output-log-entry-time">
+                    {formatTime(log.timestamp)}
+                </div>
+                <div className={`output-log-entry-source ${log.source === 'remote' ? 'source-remote' : ''}`}>
+                    [{log.source === 'remote' ? 'Remote' : log.source}]
+                </div>
+                <div className="output-log-entry-message">
+                    {message}
+                </div>
+                <button
+                    className="output-log-entry-copy"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onCopy();
+                    }}
+                    title="复制"
+                >
+                    <Copy size={12} />
+                </button>
             </div>
-            <div className="output-log-entry-time">
-                {formatTime(log.timestamp)}
-            </div>
-            <div className={`output-log-entry-source ${log.source === 'remote' ? 'source-remote' : ''}`}>
-                [{log.source === 'remote' ? '🌐 Remote' : log.source}]
-            </div>
-            {log.clientId && (
-                <div className="output-log-entry-client" title={`Client: ${log.clientId}`}>
-                    {log.clientId}
+            {isExpanded && stack && (
+                <div className="output-log-entry-stack">
+                    <div className="output-log-stack-header">调用堆栈:</div>
+                    {stack.split('\n').filter(line => line.trim()).map((line, index) => (
+                        <div key={index} className="output-log-stack-line">
+                            {line}
+                        </div>
+                    ))}
                 </div>
             )}
-            <div className="output-log-entry-message">
-                <div className="output-log-message-container">
-                    <div className="output-log-message-text">
-                        {shouldTruncate && !isExpanded ? (
-                            <>
-                                <span className="output-log-message-preview">
-                                    {log.message.substring(0, 200)}...
-                                </span>
-                                <button
-                                    className="output-log-expand-btn"
-                                    onClick={() => setIsExpanded(true)}
-                                >
-                                    Show more
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                <span>{log.message}</span>
-                                {shouldTruncate && (
-                                    <button
-                                        className="output-log-expand-btn"
-                                        onClick={() => setIsExpanded(false)}
-                                    >
-                                        Show less
-                                    </button>
-                                )}
-                            </>
-                        )}
-                    </div>
-                    {isJSON && parsed !== undefined && (
-                        <button
-                            className="output-log-json-btn"
-                            onClick={() => onOpenJsonViewer(parsed)}
-                            title="Open in JSON Viewer"
-                        >
-                            JSON
-                        </button>
-                    )}
-                </div>
-            </div>
         </div>
     );
 });
@@ -150,10 +158,7 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
     const [autoScroll, setAutoScroll] = useState(true);
     const [showFilterMenu, setShowFilterMenu] = useState(false);
     const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [jsonViewerData, setJsonViewerData] = useState<any>(null);
-    const [showTimestamp, setShowTimestamp] = useState(true);
-    const [showSource, setShowSource] = useState(true);
+    const [expandedLogIds, setExpandedLogIds] = useState<Set<string>>(new Set());
     const logContainerRef = useRef<HTMLDivElement>(null);
     const filterMenuRef = useRef<HTMLDivElement>(null);
     const settingsMenuRef = useRef<HTMLDivElement>(null);
@@ -174,7 +179,6 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
         }
     }, [logs, autoScroll]);
 
-    // Close menus on outside click
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (filterMenuRef.current && !filterMenuRef.current.contains(e.target as Node)) {
@@ -199,6 +203,7 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
     const handleClear = useCallback(() => {
         logService.clear();
         setLogs([]);
+        setExpandedLogIds(new Set());
     }, [logService]);
 
     const toggleLevelFilter = useCallback((level: LogLevel) => {
@@ -211,6 +216,22 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
             }
             return newFilter;
         });
+    }, []);
+
+    const toggleLogExpanded = useCallback((logId: string) => {
+        setExpandedLogIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(logId)) {
+                newSet.delete(logId);
+            } else {
+                newSet.add(logId);
+            }
+            return newSet;
+        });
+    }, []);
+
+    const handleCopyLog = useCallback((log: LogEntry) => {
+        navigator.clipboard.writeText(log.message);
     }, []);
 
     const filteredLogs = useMemo(() => {
@@ -376,26 +397,6 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
                         </button>
                         {showSettingsMenu && (
                             <div className="output-log-menu settings-menu">
-                                <div className="output-log-menu-header">
-                                    {locale === 'zh' ? '显示选项' : 'Display Options'}
-                                </div>
-                                <label className="output-log-menu-item">
-                                    <input
-                                        type="checkbox"
-                                        checked={showTimestamp}
-                                        onChange={() => setShowTimestamp(!showTimestamp)}
-                                    />
-                                    <span>{locale === 'zh' ? '显示时间戳' : 'Show Timestamp'}</span>
-                                </label>
-                                <label className="output-log-menu-item">
-                                    <input
-                                        type="checkbox"
-                                        checked={showSource}
-                                        onChange={() => setShowSource(!showSource)}
-                                    />
-                                    <span>{locale === 'zh' ? '显示来源' : 'Show Source'}</span>
-                                </label>
-                                <div className="output-log-menu-divider" />
                                 <button
                                     className="output-log-menu-action"
                                     onClick={handleClear}
@@ -421,7 +422,7 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
 
             {/* Log Content */}
             <div
-                className={`output-log-content ${!showTimestamp ? 'hide-timestamp' : ''} ${!showSource ? 'hide-source' : ''}`}
+                className="output-log-content"
                 ref={logContainerRef}
                 onScroll={handleScroll}
             >
@@ -438,7 +439,9 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
                         <LogEntryItem
                             key={`${log.id}-${index}`}
                             log={log}
-                            onOpenJsonViewer={setJsonViewerData}
+                            isExpanded={expandedLogIds.has(String(log.id))}
+                            onToggle={() => toggleLogExpanded(String(log.id))}
+                            onCopy={() => handleCopyLog(log)}
                         />
                     ))
                 )}
@@ -461,14 +464,6 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
                     </button>
                 )}
             </div>
-
-            {/* JSON Viewer Modal */}
-            {jsonViewerData && (
-                <JsonViewer
-                    data={jsonViewerData}
-                    onClose={() => setJsonViewerData(null)}
-                />
-            )}
         </div>
     );
 }

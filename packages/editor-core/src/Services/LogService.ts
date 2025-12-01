@@ -8,6 +8,7 @@ export interface LogEntry {
     source: string;
     message: string;
     args: unknown[];
+    stack?: string; // 调用堆栈
     clientId?: string; // 远程客户端ID
 }
 
@@ -59,12 +60,12 @@ export class LogService implements IService {
         };
 
         console.warn = (...args: unknown[]) => {
-            this.addLog(LogLevel.Warn, 'console', this.formatMessage(args), args);
+            this.addLog(LogLevel.Warn, 'console', this.formatMessage(args), args, true);
             this.originalConsole.warn(...args);
         };
 
         console.error = (...args: unknown[]) => {
-            this.addLog(LogLevel.Error, 'console', this.formatMessage(args), args);
+            this.addLog(LogLevel.Error, 'console', this.formatMessage(args), args, true);
             this.originalConsole.error(...args);
         };
 
@@ -93,7 +94,10 @@ export class LogService implements IService {
     private formatMessage(args: unknown[]): string {
         return args.map((arg) => {
             if (typeof arg === 'string') return arg;
-            if (arg instanceof Error) return arg.message;
+            if (arg instanceof Error) {
+                // 包含错误消息和堆栈
+                return arg.stack || arg.message;
+            }
             try {
                 return JSON.stringify(arg);
             } catch {
@@ -103,16 +107,29 @@ export class LogService implements IService {
     }
 
     /**
+     * 捕获当前调用堆栈
+     */
+    private captureStack(): string {
+        const stack = new Error().stack;
+        if (!stack) return '';
+
+        // 移除前几行（Error、captureStack、addLog、console.xxx）
+        const lines = stack.split('\n');
+        return lines.slice(4).join('\n');
+    }
+
+    /**
      * 添加日志
      */
-    private addLog(level: LogLevel, source: string, message: string, args: unknown[]): void {
+    private addLog(level: LogLevel, source: string, message: string, args: unknown[], includeStack = false): void {
         const entry: LogEntry = {
             id: this.nextId++,
             timestamp: new Date(),
             level,
             source,
             message,
-            args
+            args,
+            stack: includeStack ? this.captureStack() : undefined
         };
 
         this.logs.push(entry);

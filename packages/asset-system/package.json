@@ -2,24 +2,24 @@
   "name": "@esengine/asset-system",
   "version": "1.0.0",
   "description": "Asset management system for ES Engine",
+  "type": "module",
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "rollup -c",
-    "build:npm": "npm run build",
+    "build": "tsup",
+    "build:watch": "tsup --watch",
     "clean": "rimraf dist",
-    "type-check": "npx tsc --noEmit"
+    "type-check": "tsc --noEmit"
   },
   "keywords": [
     "ecs",
@@ -29,16 +29,11 @@
   ],
   "author": "yhh",
   "license": "MIT",
-  "peerDependencies": {
-    "@esengine/ecs-framework": "^2.0.0"
-  },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^28.0.3",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-typescript": "^11.1.6",
+    "@esengine/ecs-framework": "workspace:*",
+    "@esengine/build-config": "workspace:*",
     "rimraf": "^5.0.0",
-    "rollup": "^4.42.0",
-    "rollup-plugin-dts": "^6.2.1",
+    "tsup": "^8.0.0",
     "typescript": "^5.8.3"
   },
   "publishConfig": {

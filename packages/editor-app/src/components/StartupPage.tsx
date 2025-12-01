@@ -11,7 +11,6 @@ interface StartupPageProps {
   onOpenProject: () => void;
   onCreateProject: () => void;
   onOpenRecentProject?: (projectPath: string) => void;
-  onProfilerMode?: () => void;
   onLocaleChange?: (locale: Locale) => void;
   recentProjects?: string[];
   locale: string;
@@ -22,7 +21,7 @@ const LANGUAGES = [
     { code: 'zh', name: '中文' }
 ];
 
-export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProject, onProfilerMode, onLocaleChange, recentProjects = [], locale }: StartupPageProps) {
+export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProject, onLocaleChange, recentProjects = [], locale }: StartupPageProps) {
     const [showLogo, setShowLogo] = useState(true);
     const [hoveredProject, setHoveredProject] = useState<string | null>(null);
     const [appVersion, setAppVersion] = useState<string>('');
@@ -62,10 +61,8 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
             subtitle: 'Professional Game Development Tool',
             openProject: 'Open Project',
             createProject: 'Create Project',
-            profilerMode: 'Profiler Mode',
             recentProjects: 'Recent Projects',
             noRecentProjects: 'No recent projects',
-            comingSoon: 'Coming Soon',
             updateAvailable: 'New version available',
             updateNow: 'Update Now',
             installing: 'Installing...',
@@ -76,10 +73,8 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
             subtitle: '专业游戏开发工具',
             openProject: '打开项目',
             createProject: '创建新项目',
-            profilerMode: '性能分析模式',
             recentProjects: '最近的项目',
             noRecentProjects: '没有最近的项目',
-            comingSoon: '即将推出',
             updateAvailable: '发现新版本',
             updateNow: '立即更新',
             installing: '正在安装...',
@@ -125,13 +120,6 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                             <path d="M12 5V19M5 12H19" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                         <span>{t.createProject}</span>
-                    </button>
-
-                    <button className="startup-action-btn" onClick={onProfilerMode}>
-                        <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        <span>{t.profilerMode}</span>
                     </button>
                 </div>
 

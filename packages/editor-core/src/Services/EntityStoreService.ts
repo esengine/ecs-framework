@@ -1,4 +1,4 @@
-import { Injectable, IService, Entity, Core } from '@esengine/ecs-framework';
+import { Injectable, IService, Entity, Core, HierarchyComponent } from '@esengine/ecs-framework';
 import { MessageHub } from './MessageHub';
 
 export interface EntityTreeNode {
@@ -68,6 +68,10 @@ export class EntityStoreService implements IService {
             .filter((e): e is Entity => e !== undefined);
     }
 
+    public getRootEntityIds(): number[] {
+        return [...this.rootEntityIds];
+    }
+
     public getEntity(id: number): Entity | undefined {
         return this.entities.get(id);
     }
@@ -88,7 +92,9 @@ export class EntityStoreService implements IService {
 
         scene.entities.forEach((entity) => {
             this.entities.set(entity.id, entity);
-            if (!entity.parent) {
+            const hierarchy = entity.getComponent(HierarchyComponent);
+            const bHasNoParent = hierarchy?.parentId === null || hierarchy?.parentId === undefined;
+            if (bHasNoParent) {
                 this.rootEntityIds.push(entity.id);
             }
         });

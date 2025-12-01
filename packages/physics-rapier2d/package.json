@@ -2,6 +2,11 @@
     "name": "@esengine/physics-rapier2d",
     "version": "1.0.0",
     "description": "Deterministic 2D physics engine based on Rapier2D with enhanced-determinism",
+    "esengine": {
+        "plugin": true,
+        "pluginExport": "PhysicsPlugin",
+        "category": "physics"
+    },
     "main": "dist/index.js",
     "module": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -14,21 +19,15 @@
         "./runtime": {
             "types": "./dist/runtime.d.ts",
             "import": "./dist/runtime.js"
-        },
-        "./editor": {
-            "types": "./dist/editor/index.d.ts",
-            "import": "./dist/editor/index.js"
-        },
-        "./plugin.json": "./plugin.json"
+        }
     },
     "files": [
-        "dist",
-        "plugin.json"
+        "dist"
     ],
     "scripts": {
         "clean": "rimraf dist tsconfig.tsbuildinfo",
-        "build": "vite build",
-        "build:watch": "vite build --watch",
+        "build": "tsup",
+        "build:watch": "tsup --watch",
         "type-check": "tsc --noEmit"
     },
     "keywords": [
@@ -41,30 +40,17 @@
     ],
     "author": "yhh",
     "license": "MIT",
-    "peerDependencies": {
-        "@esengine/ecs-framework": ">=2.0.0",
-        "@esengine/ecs-components": "workspace:*",
-        "@esengine/editor-core": "workspace:*",
-        "react": "^18.3.1"
-    },
-    "peerDependenciesMeta": {
-        "@esengine/editor-core": {
-            "optional": true
-        },
-        "react": {
-            "optional": true
-        }
-    },
     "dependencies": {
         "@dimforge/rapier2d-compat": "^0.14.0"
     },
     "devDependencies": {
-        "@types/react": "^18.3.12",
-        "@vitejs/plugin-react": "^4.7.0",
+        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/engine-core": "workspace:*",
+        "@esengine/editor-core": "workspace:*",
+        "@esengine/build-config": "workspace:*",
         "rimraf": "^5.0.0",
-        "typescript": "^5.8.3",
-        "vite": "^6.0.7",
-        "vite-plugin-dts": "^4.5.0"
+        "tsup": "^8.0.0",
+        "typescript": "^5.8.3"
     },
     "publishConfig": {
         "access": "public",

@@ -56,33 +56,40 @@ export class UIRectRenderSystem extends EntitySystem {
 
             const x = transform.worldX ?? transform.x;
             const y = transform.worldY ?? transform.y;
-            const width = (transform.computedWidth ?? transform.width) * transform.scaleX;
-            const height = (transform.computedHeight ?? transform.height) * transform.scaleY;
+            // 使用世界缩放（考虑父级缩放）
+            const scaleX = transform.worldScaleX ?? transform.scaleX;
+            const scaleY = transform.worldScaleY ?? transform.scaleY;
+            const width = (transform.computedWidth ?? transform.width) * scaleX;
+            const height = (transform.computedHeight ?? transform.height) * scaleY;
             const alpha = transform.worldAlpha ?? transform.alpha;
+            // 使用世界旋转（考虑父级旋转）
+            const rotation = transform.worldRotation ?? transform.rotation;
             const baseOrder = 100 + transform.zIndex;
+            // 使用 transform 的 pivot 作为旋转/缩放中心
+            const pivotX = transform.pivotX;
+            const pivotY = transform.pivotY;
 
-            // Use top-left position with origin at (0, 0)
-            // Like Sprite: x,y is anchor position, origin determines where anchor is on the rect
-            // For UI: x,y is top-left corner, so origin should be (0, 0)
-            // 使用左上角位置，原点在 (0, 0)
-            // 类似 Sprite：x,y 是锚点位置，origin 决定锚点在矩形上的位置
-            // 对于 UI：x,y 是左上角，所以 origin 应该是 (0, 0)
+            // worldX/worldY 是元素左下角位置，需要转换为以 pivot 为中心的位置
+            // pivot 相对于元素的偏移：(width * pivotX, height * pivotY)
+            // 渲染位置 = 左下角 + pivot 偏移
+            const renderX = x + width * pivotX;
+            const renderY = y + height * pivotY;
 
             // Render shadow if enabled
             // 如果启用，渲染阴影
             if (render.shadowEnabled && render.shadowAlpha > 0) {
                 collector.addRect(
-                    x + render.shadowOffsetX - render.shadowBlur,
-                    y + render.shadowOffsetY - render.shadowBlur,
+                    renderX + render.shadowOffsetX,
+                    renderY + render.shadowOffsetY,
                     width + render.shadowBlur * 2,
                     height + render.shadowBlur * 2,
                     render.shadowColor,
                     render.shadowAlpha * alpha,
                     baseOrder - 0.1,
                     {
-                        rotation: transform.rotation,
-                        pivotX: 0,
-                        pivotY: 0
+                        rotation,
+                        pivotX,
+                        pivotY
                     }
                 );
             }
@@ -94,15 +101,15 @@ export class UIRectRenderSystem extends EntitySystem {
                 const textureId = typeof render.texture === 'number' ? render.texture : undefined;
 
                 collector.addRect(
-                    x, y,
+                    renderX, renderY,
                     width, height,
                     render.textureTint,
                     alpha,
                     baseOrder,
                     {
-                        rotation: transform.rotation,
-                        pivotX: 0,
-                        pivotY: 0,
+                        rotation,
+                        pivotX,
+                        pivotY,
                         textureId,
                         texturePath,
                         uv: render.textureUV
@@ -115,15 +122,15 @@ export class UIRectRenderSystem extends EntitySystem {
             // 如果启用填充，渲染背景颜色
             else if (render.fillBackground && render.backgroundAlpha > 0) {
                 collector.addRect(
-                    x, y,
+                    renderX, renderY,
                     width, height,
                     render.backgroundColor,
                     render.backgroundAlpha * alpha,
                     baseOrder,
                     {
-                        rotation: transform.rotation,
-                        pivotX: 0,
-                        pivotY: 0
+                        rotation,
+                        pivotX,
+                        pivotY
                     }
                 );
             }
@@ -133,61 +140,78 @@ export class UIRectRenderSystem extends EntitySystem {
             if (render.borderWidth > 0 && render.borderAlpha > 0) {
                 this.renderBorder(
                     collector,
-                    x, y, width, height,
+                    renderX, renderY, width, height,
                     render.borderWidth,
                     render.borderColor,
                     render.borderAlpha * alpha,
                     baseOrder + 0.1,
-                    transform.rotation
+                    rotation,
+                    pivotX,
+                    pivotY
                 );
             }
         }
     }
 
     /**
-     * Render border using top-left coordinates
-     * 使用左上角坐标渲染边框
+     * Render border using pivot-based coordinates
+     * 使用基于 pivot 的坐标渲染边框
      */
     private renderBorder(
         collector: ReturnType<typeof getUIRenderCollector>,
-        x: number, y: number,
+        centerX: number, centerY: number,
         width: number, height: number,
         borderWidth: number,
         borderColor: number,
         alpha: number,
         sortOrder: number,
-        rotation: number
+        rotation: number,
+        pivotX: number,
+        pivotY: number
     ): void {
-        // Top border (from top-left corner)
+        // 计算矩形的左下角位置（相对于 pivot 中心）
+        const left = centerX - width * pivotX;
+        const bottom = centerY - height * pivotY;
+        const right = left + width;
+        const top = bottom + height;
+
+        // Top border
+        const topBorderCenterX = (left + right) / 2;
+        const topBorderCenterY = top - borderWidth / 2;
         collector.addRect(
-            x, y,
+            topBorderCenterX, topBorderCenterY,
             width, borderWidth,
             borderColor, alpha, sortOrder,
-            { rotation, pivotX: 0, pivotY: 0 }
+            { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
         // Bottom border
+        const bottomBorderCenterY = bottom + borderWidth / 2;
         collector.addRect(
-            x, y + height - borderWidth,
+            topBorderCenterX, bottomBorderCenterY,
             width, borderWidth,
             borderColor, alpha, sortOrder,
-            { rotation, pivotX: 0, pivotY: 0 }
+            { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
         // Left border (excluding corners)
+        const sideBorderHeight = height - borderWidth * 2;
+        const leftBorderCenterX = left + borderWidth / 2;
+        const sideBorderCenterY = (top + bottom) / 2;
         collector.addRect(
-            x, y + borderWidth,
-            borderWidth, height - borderWidth * 2,
+            leftBorderCenterX, sideBorderCenterY,
+            borderWidth, sideBorderHeight,
             borderColor, alpha, sortOrder,
-            { rotation, pivotX: 0, pivotY: 0 }
+            { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
         // Right border (excluding corners)
+        const rightBorderCenterX = right - borderWidth / 2;
         collector.addRect(
-            x + width - borderWidth, y + borderWidth,
-            borderWidth, height - borderWidth * 2,
+            rightBorderCenterX, sideBorderCenterY,
+            borderWidth, sideBorderHeight,
             borderColor, alpha, sortOrder,
-            { rotation, pivotX: 0, pivotY: 0 }
+            { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
     }
 }

@@ -20,6 +20,12 @@ export interface AssetCreationMapping {
 }
 
 /**
+ * FileActionRegistry 服务标识符
+ * FileActionRegistry service identifier
+ */
+export const IFileActionRegistry = Symbol.for('IFileActionRegistry');
+
+/**
  * 文件操作注册表服务
  *
  * 管理插件注册的文件操作处理器和文件创建模板

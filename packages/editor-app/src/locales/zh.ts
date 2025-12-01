@@ -15,8 +15,7 @@ export const zh: Translations = {
             ready: '编辑器就绪',
             failed: '初始化失败',
             projectOpened: '项目已打开',
-            remoteConnected: '远程游戏已连接',
-            profilerMode: '性能分析模式 - 等待连接...'
+            remoteConnected: '远程游戏已连接'
         }
     },
     hierarchy: {

@@ -228,6 +228,9 @@ export class ProfilerSDK {
         const endTime = performance.now();
         const duration = endTime - handle.startTime;
 
+        // 获取父级 handle（在删除当前 handle 之前）
+        const parentHandle = handle.parentId ? this.activeSamples.get(handle.parentId) : undefined;
+
         const sample: ProfileSample = {
             id: handle.id,
             name: handle.name,
@@ -237,6 +240,7 @@ export class ProfilerSDK {
             duration,
             selfTime: duration,
             parentId: handle.parentId,
+            parentName: parentHandle?.name,
             depth: handle.depth,
             callCount: 1
         };
@@ -245,7 +249,7 @@ export class ProfilerSDK {
             this.currentFrame.samples.push(sample);
         }
 
-        this.updateCallGraph(handle.name, handle.category, duration, handle.parentId);
+        this.updateCallGraph(handle.name, handle.category, duration, parentHandle);
 
         this.activeSamples.delete(handle.id);
         const stackIndex = this.sampleStack.indexOf(handle);
@@ -437,6 +441,9 @@ export class ProfilerSDK {
 
         const categoryBreakdown = this.aggregateCategoryStats(frames);
 
+        // 根据帧历史重新计算 callGraph（不使用全局累积的数据）
+        const callGraph = this.buildCallGraphFromFrames(frames);
+
         const firstFrame = frames[0];
         const lastFrame = frames[frames.length - 1];
 
@@ -450,11 +457,104 @@ export class ProfilerSDK {
             p95FrameTime: sortedTimes[Math.floor(sortedTimes.length * 0.95)] || 0,
             p99FrameTime: sortedTimes[Math.floor(sortedTimes.length * 0.99)] || 0,
             hotspots,
-            callGraph: new Map(this.callGraph),
+            callGraph,
             categoryBreakdown,
             memoryTrend: frames.map((f) => f.memory),
             longTasks: [...this.longTasks]
         };
+    }
+
+    /**
+     * 从帧历史构建调用图
+     * 注意：totalTime 存储的是平均耗时（总耗时/调用次数），而不是累计总耗时
+     */
+    private buildCallGraphFromFrames(frames: ProfileFrame[]): Map<string, CallGraphNode> {
+        // 临时存储累计数据
+        const tempData = new Map<string, {
+            category: ProfileCategory;
+            callCount: number;
+            totalTime: number;
+            callers: Map<string, { count: number; totalTime: number }>;
+            callees: Map<string, { count: number; totalTime: number }>;
+        }>();
+
+        for (const frame of frames) {
+            for (const sample of frame.samples) {
+                // 获取或创建当前函数的节点
+                let node = tempData.get(sample.name);
+                if (!node) {
+                    node = {
+                        category: sample.category,
+                        callCount: 0,
+                        totalTime: 0,
+                        callers: new Map(),
+                        callees: new Map()
+                    };
+                    tempData.set(sample.name, node);
+                }
+
+                node.callCount++;
+                node.totalTime += sample.duration;
+
+                // 如果有父级，建立调用关系
+                if (sample.parentName) {
+                    // 记录当前函数被谁调用
+                    const callerData = node.callers.get(sample.parentName) || { count: 0, totalTime: 0 };
+                    callerData.count++;
+                    callerData.totalTime += sample.duration;
+                    node.callers.set(sample.parentName, callerData);
+
+                    // 确保父节点存在并记录它调用了谁
+                    let parentNode = tempData.get(sample.parentName);
+                    if (!parentNode) {
+                        parentNode = {
+                            category: sample.category,
+                            callCount: 0,
+                            totalTime: 0,
+                            callers: new Map(),
+                            callees: new Map()
+                        };
+                        tempData.set(sample.parentName, parentNode);
+                    }
+
+                    const calleeData = parentNode.callees.get(sample.name) || { count: 0, totalTime: 0 };
+                    calleeData.count++;
+                    calleeData.totalTime += sample.duration;
+                    parentNode.callees.set(sample.name, calleeData);
+                }
+            }
+        }
+
+        // 转换为最终结果，将 totalTime 改为平均耗时
+        const callGraph = new Map<string, CallGraphNode>();
+        for (const [name, data] of tempData) {
+            const avgCallers = new Map<string, { count: number; totalTime: number }>();
+            for (const [callerName, callerData] of data.callers) {
+                avgCallers.set(callerName, {
+                    count: callerData.count,
+                    totalTime: callerData.count > 0 ? callerData.totalTime / callerData.count : 0
+                });
+            }
+
+            const avgCallees = new Map<string, { count: number; totalTime: number }>();
+            for (const [calleeName, calleeData] of data.callees) {
+                avgCallees.set(calleeName, {
+                    count: calleeData.count,
+                    totalTime: calleeData.count > 0 ? calleeData.totalTime / calleeData.count : 0
+                });
+            }
+
+            callGraph.set(name, {
+                name,
+                category: data.category,
+                callCount: data.callCount,
+                totalTime: data.callCount > 0 ? data.totalTime / data.callCount : 0,
+                callers: avgCallers,
+                callees: avgCallees
+            });
+        }
+
+        return callGraph;
     }
 
     /**
@@ -631,7 +731,7 @@ export class ProfilerSDK {
         name: string,
         category: ProfileCategory,
         duration: number,
-        parentId?: string
+        parentHandle?: SampleHandle
     ): void {
         let node = this.callGraph.get(name);
         if (!node) {
@@ -649,22 +749,33 @@ export class ProfilerSDK {
         node.callCount++;
         node.totalTime += duration;
 
-        if (parentId) {
-            const parentHandle = this.activeSamples.get(parentId);
-            if (parentHandle) {
-                const callerData = node.callers.get(parentHandle.name) || { count: 0, totalTime: 0 };
-                callerData.count++;
-                callerData.totalTime += duration;
-                node.callers.set(parentHandle.name, callerData);
+        // 如果有父级，建立调用关系
+        if (parentHandle) {
+            // 记录当前函数被谁调用
+            const callerData = node.callers.get(parentHandle.name) || { count: 0, totalTime: 0 };
+            callerData.count++;
+            callerData.totalTime += duration;
+            node.callers.set(parentHandle.name, callerData);
 
-                const parentNode = this.callGraph.get(parentHandle.name);
-                if (parentNode) {
-                    const calleeData = parentNode.callees.get(name) || { count: 0, totalTime: 0 };
-                    calleeData.count++;
-                    calleeData.totalTime += duration;
-                    parentNode.callees.set(name, calleeData);
-                }
+            // 确保父节点存在
+            let parentNode = this.callGraph.get(parentHandle.name);
+            if (!parentNode) {
+                parentNode = {
+                    name: parentHandle.name,
+                    category: parentHandle.category,
+                    callCount: 0,
+                    totalTime: 0,
+                    callers: new Map(),
+                    callees: new Map()
+                };
+                this.callGraph.set(parentHandle.name, parentNode);
             }
+
+            // 记录父函数调用了谁
+            const calleeData = parentNode.callees.get(name) || { count: 0, totalTime: 0 };
+            calleeData.count++;
+            calleeData.totalTime += duration;
+            parentNode.callees.set(name, calleeData);
         }
     }
 

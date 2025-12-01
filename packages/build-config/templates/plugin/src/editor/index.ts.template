@@ -1,0 +1,13 @@
+/**
+ * @esengine/{{name}} Editor Module
+ *
+ * 编辑器模块 - 包含 Inspector、工具等编辑器专用代码
+ * Editor module - contains Inspector, tools, and other editor-specific code
+ *
+ * This module can safely import React and editor-core packages.
+ */
+
+export { {{name}}Plugin } from './{{name}}Plugin';
+
+// Inspectors
+// export { MyComponentInspector } from './inspectors/MyComponentInspector';

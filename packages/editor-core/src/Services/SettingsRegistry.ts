@@ -55,6 +55,7 @@ export class SettingsRegistry implements IService {
         if (this.categories.has(category.id)) {
             console.warn(`[SettingsRegistry] Category ${category.id} already registered, overwriting`);
         }
+        console.log(`[SettingsRegistry] Registering category: ${category.id} (${category.title}), sections: ${category.sections.map(s => s.id).join(', ')}`);
         this.categories.set(category.id, category);
     }
 

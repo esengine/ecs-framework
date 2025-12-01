@@ -34,9 +34,7 @@ import { ProjectCreationWizard } from './components/ProjectCreationWizard';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { Inspector } from './components/inspectors/Inspector';
 import { AssetBrowser } from './components/AssetBrowser';
-import { ConsolePanel } from './components/ConsolePanel';
 import { Viewport } from './components/Viewport';
-import { ProfilerWindow } from './components/ProfilerWindow';
 import { AdvancedProfilerWindow } from './components/AdvancedProfilerWindow';
 import { PortManager } from './components/PortManager';
 import { SettingsWindow } from './components/SettingsWindow';
@@ -110,7 +108,6 @@ function App() {
     const [panels, setPanels] = useState<FlexDockPanel[]>([]);
     const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
     const [isRemoteConnected, setIsRemoteConnected] = useState(false);
-    const [isProfilerMode, setIsProfilerMode] = useState(false);
     const [showProjectWizard, setShowProjectWizard] = useState(false);
 
     const {
@@ -372,6 +369,9 @@ function App() {
 
             await projectService.openProject(projectPath);
 
+            // 注意：插件配置会在引擎初始化后加载和激活
+            // Note: Plugin config will be loaded and activated after engine initialization
+
             // 设置 Tauri project:// 协议的基础路径（用于加载插件等项目文件）
             await TauriAPI.setProjectBasePath(projectPath);
 
@@ -390,6 +390,19 @@ function App() {
             const engineReady = await engineService.waitForInitialization(30000);
             if (!engineReady) {
                 throw new Error(locale === 'zh' ? '引擎初始化超时' : 'Engine initialization timeout');
+            }
+
+            // 加载项目插件配置并激活插件（在引擎初始化后、模块系统初始化前）
+            // Load project plugin config and activate plugins (after engine init, before module system init)
+            if (pluginManager) {
+                const pluginSettings = projectService.getPluginSettings();
+                console.log('[App] Plugin settings from project:', pluginSettings);
+                if (pluginSettings && pluginSettings.enabledPlugins.length > 0) {
+                    console.log('[App] Loading plugin config:', pluginSettings.enabledPlugins);
+                    await pluginManager.loadConfig({ enabledPlugins: pluginSettings.enabledPlugins });
+                } else {
+                    console.log('[App] No plugin settings found in project config');
+                }
             }
 
             // 初始化模块系统（所有插件的 runtimeModule 会在 PluginManager 安装时自动注册）
@@ -520,13 +533,6 @@ function App() {
         }
     };
 
-    const handleProfilerMode = async () => {
-        setIsProfilerMode(true);
-        setIsRemoteConnected(true);
-        setProjectLoaded(true);
-        setStatus(t('header.status.profilerMode') || 'Profiler Mode - Waiting for connection...');
-    };
-
     const handleNewScene = async () => {
         if (!sceneManager) {
             console.error('SceneManagerService not available');
@@ -631,7 +637,6 @@ function App() {
 
         setProjectLoaded(false);
         setCurrentProjectPath(null);
-        setIsProfilerMode(false);
         setStatus(t('header.status.ready'));
     };
 
@@ -705,45 +710,26 @@ function App() {
 
     useEffect(() => {
         if (projectLoaded && entityStore && messageHub && logService && uiRegistry && pluginManager) {
-            let corePanels: FlexDockPanel[];
-
-            if (isProfilerMode) {
-                corePanels = [
-                    {
-                        id: 'scene-hierarchy',
-                        title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
-                        content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} commandManager={commandManager} isProfilerMode={true} />,
-                        closable: false
-                    },
-                    {
-                        id: 'inspector',
-                        title: locale === 'zh' ? '检视器' : 'Inspector',
-                        content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} commandManager={commandManager} />,
-                        closable: false
-                    }
-                ];
-            } else {
-                corePanels = [
-                    {
-                        id: 'scene-hierarchy',
-                        title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
-                        content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} commandManager={commandManager} />,
-                        closable: false
-                    },
-                    {
-                        id: 'viewport',
-                        title: locale === 'zh' ? '视口' : 'Viewport',
-                        content: <Viewport locale={locale} messageHub={messageHub} />,
-                        closable: false
-                    },
-                    {
-                        id: 'inspector',
-                        title: locale === 'zh' ? '检视器' : 'Inspector',
-                        content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} commandManager={commandManager} />,
-                        closable: false
-                    }
-                ];
-            }
+            const corePanels: FlexDockPanel[] = [
+                {
+                    id: 'scene-hierarchy',
+                    title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
+                    content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} commandManager={commandManager} />,
+                    closable: false
+                },
+                {
+                    id: 'viewport',
+                    title: locale === 'zh' ? '视口' : 'Viewport',
+                    content: <Viewport locale={locale} messageHub={messageHub} />,
+                    closable: false
+                },
+                {
+                    id: 'inspector',
+                    title: locale === 'zh' ? '检视器' : 'Inspector',
+                    content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} commandManager={commandManager} />,
+                    closable: false
+                }
+            ];
 
             // 获取启用的插件面板
             const pluginPanels: FlexDockPanel[] = uiRegistry.getAllPanels()
@@ -797,7 +783,7 @@ function App() {
 
             setPanels([...corePanels, ...pluginPanels, ...dynamicPanels]);
         }
-    }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, isProfilerMode, handleOpenSceneByPath, activeDynamicPanels, dynamicPanelTitles]);
+    }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, handleOpenSceneByPath, activeDynamicPanels, dynamicPanelTitles]);
 
 
     if (!initialized) {
@@ -819,7 +805,6 @@ function App() {
                     onOpenProject={handleOpenProject}
                     onCreateProject={handleCreateProject}
                     onOpenRecentProject={handleOpenRecentProject}
-                    onProfilerMode={handleProfilerMode}
                     onLocaleChange={handleLocaleChange}
                     recentProjects={recentProjects}
                     locale={locale}
@@ -947,12 +932,11 @@ function App() {
             />
 
 
-            {showProfiler && (
-                <ProfilerWindow onClose={() => setShowProfiler(false)} />
-            )}
-
-            {showAdvancedProfiler && (
-                <AdvancedProfilerWindow onClose={() => setShowAdvancedProfiler(false)} />
+            {(showProfiler || showAdvancedProfiler) && (
+                <AdvancedProfilerWindow onClose={() => {
+                    setShowProfiler(false);
+                    setShowAdvancedProfiler(false);
+                }} />
             )}
 
             {showPortManager && (

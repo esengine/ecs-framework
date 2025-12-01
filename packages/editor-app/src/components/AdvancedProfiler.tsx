@@ -8,6 +8,19 @@ import '../styles/AdvancedProfiler.css';
 /**
  * 高级性能数据接口（与 Core 的 IAdvancedProfilerData 对应）
  */
+interface HotspotItem {
+    name: string;
+    category: string;
+    inclusiveTime: number;
+    inclusiveTimePercent: number;
+    exclusiveTime: number;
+    exclusiveTimePercent: number;
+    callCount: number;
+    avgCallTime: number;
+    depth: number;
+    children?: HotspotItem[];
+}
+
 interface AdvancedProfilerData {
     currentFrame: {
         frameNumber: number;
@@ -41,16 +54,7 @@ interface AdvancedProfilerData {
             percentOfFrame: number;
         }>;
     }>;
-    hotspots: Array<{
-        name: string;
-        category: string;
-        inclusiveTime: number;
-        inclusiveTimePercent: number;
-        exclusiveTime: number;
-        exclusiveTimePercent: number;
-        callCount: number;
-        avgCallTime: number;
-    }>;
+    hotspots: HotspotItem[];
     callGraph: {
         currentFunction: string | null;
         callers: Array<{
@@ -120,18 +124,72 @@ const CATEGORY_COLORS: Record<string, string> = {
     'Custom': '#64748b'
 };
 
+type DataMode = 'oneframe' | 'average' | 'maximum';
+
 export function AdvancedProfiler({ profilerService }: AdvancedProfilerProps) {
     const [data, setData] = useState<AdvancedProfilerData | null>(null);
     const [isPaused, setIsPaused] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['ECS']));
+    const [expandedHotspots, setExpandedHotspots] = useState<Set<string>>(new Set());
     const [sortColumn, setSortColumn] = useState<SortColumn>('incTime');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [viewMode, setViewMode] = useState<'hierarchical' | 'flat'>('hierarchical');
+    const [dataMode, setDataMode] = useState<DataMode>('average');
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const frameHistoryRef = useRef<Array<{ time: number; duration: number }>>([]);
     const lastDataRef = useRef<AdvancedProfilerData | null>(null);
+    // 用于计算平均值和最大值的历史数据
+    const hotspotHistoryRef = useRef<Map<string, { times: number[]; maxTime: number }>>(new Map());
+
+    // 更新历史数据
+    const updateHotspotHistory = useCallback((hotspots: HotspotItem[]) => {
+        const updateItem = (item: HotspotItem) => {
+            const history = hotspotHistoryRef.current.get(item.name) || { times: [], maxTime: 0 };
+            history.times.push(item.inclusiveTime);
+            // 保留最近 60 帧的数据
+            if (history.times.length > 60) {
+                history.times.shift();
+            }
+            history.maxTime = Math.max(history.maxTime, item.inclusiveTime);
+            hotspotHistoryRef.current.set(item.name, history);
+
+            if (item.children) {
+                item.children.forEach(updateItem);
+            }
+        };
+        hotspots.forEach(updateItem);
+    }, []);
+
+    // 根据数据模式处理 hotspots
+    const processHotspotsWithDataMode = useCallback((hotspots: HotspotItem[], mode: DataMode): HotspotItem[] => {
+        if (mode === 'oneframe') {
+            return hotspots;
+        }
+
+        const processItem = (item: HotspotItem): HotspotItem => {
+            const history = hotspotHistoryRef.current.get(item.name);
+            let processedTime = item.inclusiveTime;
+
+            if (history && history.times.length > 0) {
+                if (mode === 'average') {
+                    processedTime = history.times.reduce((a, b) => a + b, 0) / history.times.length;
+                } else if (mode === 'maximum') {
+                    processedTime = history.maxTime;
+                }
+            }
+
+            return {
+                ...item,
+                inclusiveTime: processedTime,
+                avgCallTime: item.callCount > 0 ? processedTime / item.callCount : 0,
+                children: item.children ? item.children.map(processItem) : undefined
+            };
+        };
+
+        return hotspots.map(processItem);
+    }, []);
 
     // 订阅数据更新
     useEffect(() => {
@@ -142,18 +200,21 @@ export function AdvancedProfiler({ profilerService }: AdvancedProfilerProps) {
 
             // 解析高级性能数据
             if (rawData.advancedProfiler) {
+                // 更新历史数据
+                updateHotspotHistory(rawData.advancedProfiler.hotspots);
                 setData(rawData.advancedProfiler);
                 lastDataRef.current = rawData.advancedProfiler;
             } else if (rawData.performance) {
                 // 从传统数据构建
                 const advancedData = buildFromLegacyData(rawData);
+                updateHotspotHistory(advancedData.hotspots);
                 setData(advancedData);
                 lastDataRef.current = advancedData;
             }
         });
 
         return unsubscribe;
-    }, [profilerService, isPaused]);
+    }, [profilerService, isPaused, updateHotspotHistory]);
 
     // 当选中函数变化时，通知服务端
     useEffect(() => {
@@ -317,44 +378,90 @@ export function AdvancedProfiler({ profilerService }: AdvancedProfilerProps) {
         return percent.toFixed(1) + '%';
     };
 
+    // 展平层级数据用于显示
+    const flattenHotspots = (items: HotspotItem[], result: HotspotItem[] = []): HotspotItem[] => {
+        for (const item of items) {
+            // 搜索过滤
+            const matchesSearch = searchTerm === '' || item.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+            if (viewMode === 'flat') {
+                // 扁平模式：显示所有层级的项目
+                if (matchesSearch) {
+                    result.push({ ...item, depth: 0 }); // 扁平模式下深度都是0
+                }
+                if (item.children) {
+                    flattenHotspots(item.children, result);
+                }
+            } else {
+                // 层级模式：根据展开状态显示
+                if (matchesSearch || (item.children && item.children.some(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())))) {
+                    result.push(item);
+                }
+                if (item.children && expandedHotspots.has(item.name)) {
+                    flattenHotspots(item.children, result);
+                }
+            }
+        }
+        return result;
+    };
+
+    // 切换展开状态
+    const toggleHotspotExpand = (name: string) => {
+        setExpandedHotspots(prev => {
+            const next = new Set(prev);
+            if (next.has(name)) {
+                next.delete(name);
+            } else {
+                next.add(name);
+            }
+            return next;
+        });
+    };
+
     // 排序数据
-    const getSortedHotspots = () => {
+    const getSortedHotspots = (): HotspotItem[] => {
         if (!data) return [];
 
-        const filtered = data.hotspots.filter(h =>
-            searchTerm === '' || h.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        // 先根据数据模式处理 hotspots
+        const processedHotspots = processHotspotsWithDataMode(data.hotspots, dataMode);
+        const flattened = flattenHotspots(processedHotspots);
 
-        return [...filtered].sort((a, b) => {
-            let comparison = 0;
-            switch (sortColumn) {
-                case 'name':
-                    comparison = a.name.localeCompare(b.name);
-                    break;
-                case 'incTime':
-                    comparison = a.inclusiveTime - b.inclusiveTime;
-                    break;
-                case 'incPercent':
-                    comparison = a.inclusiveTimePercent - b.inclusiveTimePercent;
-                    break;
-                case 'excTime':
-                    comparison = a.exclusiveTime - b.exclusiveTime;
-                    break;
-                case 'excPercent':
-                    comparison = a.exclusiveTimePercent - b.exclusiveTimePercent;
-                    break;
-                case 'calls':
-                    comparison = a.callCount - b.callCount;
-                    break;
-                case 'avgTime':
-                    comparison = a.avgCallTime - b.avgCallTime;
-                    break;
-                case 'framePercent':
-                    comparison = a.inclusiveTimePercent - b.inclusiveTimePercent;
-                    break;
-            }
-            return sortDirection === 'asc' ? comparison : -comparison;
-        });
+        // 扁平模式下排序
+        if (viewMode === 'flat') {
+            return [...flattened].sort((a, b) => {
+                let comparison = 0;
+                switch (sortColumn) {
+                    case 'name':
+                        comparison = a.name.localeCompare(b.name);
+                        break;
+                    case 'incTime':
+                        comparison = a.inclusiveTime - b.inclusiveTime;
+                        break;
+                    case 'incPercent':
+                        comparison = a.inclusiveTimePercent - b.inclusiveTimePercent;
+                        break;
+                    case 'excTime':
+                        comparison = a.exclusiveTime - b.exclusiveTime;
+                        break;
+                    case 'excPercent':
+                        comparison = a.exclusiveTimePercent - b.exclusiveTimePercent;
+                        break;
+                    case 'calls':
+                        comparison = a.callCount - b.callCount;
+                        break;
+                    case 'avgTime':
+                        comparison = a.avgCallTime - b.avgCallTime;
+                        break;
+                    case 'framePercent':
+                        comparison = a.inclusiveTimePercent - b.inclusiveTimePercent;
+                        break;
+                }
+                return sortDirection === 'asc' ? comparison : -comparison;
+            });
+        }
+
+        // 层级模式下保持原有层级顺序
+        return flattened;
     };
 
     const renderSortIcon = (column: SortColumn) => {
@@ -512,7 +619,11 @@ export function AdvancedProfiler({ profilerService }: AdvancedProfilerProps) {
                             <Activity size={14} />
                             <span className="profiler-graph-title">Call Graph</span>
                             <div className="profiler-callgraph-controls">
-                                <select className="profiler-callgraph-type-select">
+                                <select
+                                    className="profiler-callgraph-type-select"
+                                    value={dataMode}
+                                    onChange={(e) => setDataMode(e.target.value as DataMode)}
+                                >
                                     <option value="oneframe">One Frame</option>
                                     <option value="average">Average</option>
                                     <option value="maximum">Maximum</option>
@@ -654,49 +765,67 @@ export function AdvancedProfiler({ profilerService }: AdvancedProfilerProps) {
                             </div>
                         </div>
                         <div className="profiler-table-body">
-                            {getSortedHotspots().map((item, index) => (
-                                <div
-                                    key={item.name + index}
-                                    className={`profiler-table-row ${selectedFunction === item.name ? 'selected' : ''}`}
-                                    onClick={() => setSelectedFunction(item.name)}
-                                >
-                                    <div className="profiler-table-cell col-name name">
-                                        <ChevronRight size={12} className="expand-icon" />
-                                        <span
-                                            className="category-dot"
-                                            style={{ background: CATEGORY_COLORS[item.category] || '#666' }}
-                                        />
-                                        {item.name}
-                                    </div>
-                                    <div className="profiler-table-cell col-inc-time numeric">
-                                        {formatTime(item.inclusiveTime)}
-                                    </div>
-                                    <div className="profiler-table-cell col-inc-percent percent">
-                                        <div className="bar-container">
-                                            <div
-                                                className={`bar ${item.inclusiveTimePercent > 50 ? 'critical' : item.inclusiveTimePercent > 25 ? 'warning' : ''}`}
-                                                style={{ width: `${Math.min(item.inclusiveTimePercent, 100)}%` }}
+                            {getSortedHotspots().map((item, index) => {
+                                const hasChildren = item.children && item.children.length > 0;
+                                const isExpanded = expandedHotspots.has(item.name);
+                                const indentPadding = viewMode === 'hierarchical' ? item.depth * 16 : 0;
+
+                                return (
+                                    <div
+                                        key={item.name + index + item.depth}
+                                        className={`profiler-table-row ${selectedFunction === item.name ? 'selected' : ''} depth-${item.depth}`}
+                                        onClick={() => setSelectedFunction(item.name)}
+                                    >
+                                        <div className="profiler-table-cell col-name name" style={{ paddingLeft: indentPadding }}>
+                                            {hasChildren && viewMode === 'hierarchical' ? (
+                                                <span
+                                                    className={`expand-icon clickable ${isExpanded ? 'expanded' : ''}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleHotspotExpand(item.name);
+                                                    }}
+                                                >
+                                                    {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                                </span>
+                                            ) : (
+                                                <span className="expand-icon placeholder" style={{ width: 12 }} />
+                                            )}
+                                            <span
+                                                className="category-dot"
+                                                style={{ background: CATEGORY_COLORS[item.category] || '#666' }}
                                             />
-                                            <span>{formatPercent(item.inclusiveTimePercent)}</span>
+                                            {item.name}
+                                        </div>
+                                        <div className="profiler-table-cell col-inc-time numeric">
+                                            {formatTime(item.inclusiveTime)}
+                                        </div>
+                                        <div className="profiler-table-cell col-inc-percent percent">
+                                            <div className="bar-container">
+                                                <div
+                                                    className={`bar ${item.inclusiveTimePercent > 50 ? 'critical' : item.inclusiveTimePercent > 25 ? 'warning' : ''}`}
+                                                    style={{ width: `${Math.min(item.inclusiveTimePercent, 100)}%` }}
+                                                />
+                                                <span>{formatPercent(item.inclusiveTimePercent)}</span>
+                                            </div>
+                                        </div>
+                                        <div className="profiler-table-cell col-exc-time numeric">
+                                            {formatTime(item.exclusiveTime)}
+                                        </div>
+                                        <div className="profiler-table-cell col-exc-percent percent">
+                                            {formatPercent(item.exclusiveTimePercent)}
+                                        </div>
+                                        <div className="profiler-table-cell col-calls numeric">
+                                            {item.callCount}
+                                        </div>
+                                        <div className="profiler-table-cell col-avg-calls numeric">
+                                            {formatTime(item.avgCallTime)}
+                                        </div>
+                                        <div className="profiler-table-cell col-frame-percent percent">
+                                            {formatPercent(item.inclusiveTimePercent)}
                                         </div>
                                     </div>
-                                    <div className="profiler-table-cell col-exc-time numeric">
-                                        {formatTime(item.exclusiveTime)}
-                                    </div>
-                                    <div className="profiler-table-cell col-exc-percent percent">
-                                        {formatPercent(item.exclusiveTimePercent)}
-                                    </div>
-                                    <div className="profiler-table-cell col-calls numeric">
-                                        {item.callCount}
-                                    </div>
-                                    <div className="profiler-table-cell col-avg-calls numeric">
-                                        {formatTime(item.avgCallTime)}
-                                    </div>
-                                    <div className="profiler-table-cell col-frame-percent percent">
-                                        {formatPercent(item.inclusiveTimePercent)}
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
@@ -716,7 +845,7 @@ function buildFromLegacyData(rawData: any): AdvancedProfilerData {
     const fps = frameTime > 0 ? Math.round(1000 / frameTime) : 0;
 
     // 构建 hotspots
-    const hotspots = systems.map((sys: any) => ({
+    const hotspots: HotspotItem[] = systems.map((sys: any) => ({
         name: sys.name || sys.type || 'Unknown',
         category: 'ECS',
         inclusiveTime: sys.executionTime || 0,
@@ -724,7 +853,8 @@ function buildFromLegacyData(rawData: any): AdvancedProfilerData {
         exclusiveTime: sys.executionTime || 0,
         exclusiveTimePercent: frameTime > 0 ? (sys.executionTime / frameTime) * 100 : 0,
         callCount: 1,
-        avgCallTime: sys.executionTime || 0
+        avgCallTime: sys.executionTime || 0,
+        depth: 0
     }));
 
     // 构建 categoryStats

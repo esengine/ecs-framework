@@ -5,7 +5,7 @@
 
 import type { ServiceContainer } from '@esengine/ecs-framework';
 import { createLogger } from '@esengine/ecs-framework';
-import type { IPluginLoader, IEditorModuleLoader, PluginDescriptor } from '@esengine/editor-core';
+import type { IPlugin, IEditorModuleLoader, PluginDescriptor } from '@esengine/editor-core';
 import { SettingsRegistry } from '@esengine/editor-core';
 import { SettingsService } from '../../services/SettingsService';
 
@@ -122,7 +122,7 @@ const descriptor: PluginDescriptor = {
     ]
 };
 
-export const EditorAppearancePlugin: IPluginLoader = {
+export const EditorAppearancePlugin: IPlugin = {
     descriptor,
     editorModule: new EditorAppearanceEditorModule()
 };

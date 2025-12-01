@@ -15,7 +15,7 @@ import { Core } from '@esengine/ecs-framework';
 import { BehaviorTreeData } from '../execution/BehaviorTreeData';
 import { BehaviorTreeAssetManager } from '../execution/BehaviorTreeAssetManager';
 import { EditorToBehaviorTreeDataConverter } from '../Serialization/EditorToBehaviorTreeDataConverter';
-import { BehaviorTreeAssetType } from '../index';
+import { BehaviorTreeAssetType } from '../constants';
 
 /**
  * 行为树资产接口

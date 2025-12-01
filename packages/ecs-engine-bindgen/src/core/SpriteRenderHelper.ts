@@ -6,7 +6,7 @@
 import { Entity, Component } from '@esengine/ecs-framework';
 import type { EngineBridge } from './EngineBridge';
 import { RenderBatcher } from './RenderBatcher';
-import { SpriteComponent } from '@esengine/ecs-components';
+import { SpriteComponent } from '@esengine/sprite';
 import type { SpriteRenderData } from '../types';
 
 /**
@@ -20,6 +20,12 @@ export interface ITransformComponent {
     position: { x: number; y: number; z?: number };
     rotation: number | { x: number; y: number; z: number };
     scale: { x: number; y: number; z?: number };
+    /** 世界位置（由 TransformSystem 计算，考虑父级变换） */
+    worldPosition?: { x: number; y: number; z?: number };
+    /** 世界旋转（由 TransformSystem 计算，考虑父级变换） */
+    worldRotation?: { x: number; y: number; z: number };
+    /** 世界缩放（由 TransformSystem 计算，考虑父级变换） */
+    worldScale?: { x: number; y: number; z?: number };
 }
 
 /**

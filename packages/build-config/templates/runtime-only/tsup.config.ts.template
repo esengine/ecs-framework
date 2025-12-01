@@ -1,0 +1,7 @@
+import { defineConfig } from 'tsup';
+import { runtimeOnlyPreset } from '@esengine/build-config/presets/tsup';
+
+export default defineConfig({
+    ...runtimeOnlyPreset(),
+    tsconfig: 'tsconfig.build.json'
+});

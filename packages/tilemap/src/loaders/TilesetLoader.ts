@@ -10,7 +10,7 @@ import {
     AssetLoadError,
     IAssetLoader
 } from '@esengine/asset-system';
-import { TilesetAssetType } from '../index';
+import { TilesetAssetType } from '../constants';
 
 /**
  * Tileset data interface

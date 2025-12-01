@@ -11,6 +11,8 @@ import { EntitySerializer, SerializedEntity } from './EntitySerializer';
 import { getComponentTypeName } from '../Decorators';
 import { getSerializationMetadata } from './SerializationDecorators';
 import { BinarySerializer } from '../../Utils/BinarySerializer';
+import { HierarchySystem } from '../Systems/HierarchySystem';
+import { HierarchyComponent } from '../Components/HierarchyComponent';
 
 /**
  * 场景序列化格式
@@ -167,8 +169,11 @@ export class SceneSerializer {
         // 过滤实体和组件
         const entities = this.filterEntities(scene, opts);
 
-        // 序列化实体
-        const serializedEntities = EntitySerializer.serializeEntities(entities, true);
+        // 获取层级系统用于序列化子实体
+        const hierarchySystem = scene.getSystem(HierarchySystem);
+
+        // 序列化实体（传入 hierarchySystem 以正确序列化子实体）
+        const serializedEntities = EntitySerializer.serializeEntities(entities, true, hierarchySystem ?? undefined);
 
         // 收集组件类型信息
         const componentTypeRegistry = this.buildComponentTypeRegistry(entities);
@@ -258,19 +263,24 @@ export class SceneSerializer {
         // ID生成器
         const idGenerator = () => scene.identifierPool.checkOut();
 
+        // 获取层级系统
+        const hierarchySystem = scene.getSystem(HierarchySystem);
+
         // 反序列化实体
-        const entities = EntitySerializer.deserializeEntities(
+        const { rootEntities, allEntities } = EntitySerializer.deserializeEntities(
             serializedScene.entities,
             componentRegistry,
             idGenerator,
             opts.preserveIds || false,
-            scene
+            scene,
+            hierarchySystem
         );
 
-        // 将实体添加到场景
-        for (const entity of entities) {
+        // 将所有实体添加到场景（包括子实体）
+        // 先添加根实体，再递归添加子实体
+        for (const entity of rootEntities) {
             scene.addEntity(entity, true);
-            this.addChildrenRecursively(entity, scene);
+            this.addChildrenRecursively(entity, scene, hierarchySystem, allEntities);
         }
 
         // 统一清理缓存（批量操作完成后）
@@ -285,8 +295,8 @@ export class SceneSerializer {
         // 调用所有组件的 onDeserialized 生命周期方法
         // Call onDeserialized lifecycle method on all components
         const deserializedPromises: Promise<void>[] = [];
-        for (const entity of entities) {
-            this.callOnDeserializedRecursively(entity, deserializedPromises);
+        for (const entity of allEntities.values()) {
+            this.callOnDeserializedForEntity(entity, deserializedPromises);
         }
 
         // 如果有异步的 onDeserialized，在后台执行
@@ -298,9 +308,12 @@ export class SceneSerializer {
     }
 
     /**
-     * 递归调用实体及其子实体所有组件的 onDeserialized 方法
+     * 调用实体所有组件的 onDeserialized 方法（不递归）
      */
-    private static callOnDeserializedRecursively(entity: Entity, promises: Promise<void>[]): void {
+    private static callOnDeserializedForEntity(
+        entity: Entity,
+        promises: Promise<void>[]
+    ): void {
         for (const component of entity.components) {
             try {
                 const result = component.onDeserialized();
@@ -310,10 +323,6 @@ export class SceneSerializer {
             } catch (error) {
                 console.error(`Error calling onDeserialized on component ${component.constructor.name}:`, error);
             }
-        }
-
-        for (const child of entity.children) {
-            this.callOnDeserializedRecursively(child, promises);
         }
     }
 
@@ -327,11 +336,27 @@ export class SceneSerializer {
      *
      * @param entity 父实体
      * @param scene 目标场景
+     * @param hierarchySystem 层级系统
      */
-    private static addChildrenRecursively(entity: Entity, scene: IScene): void {
-        for (const child of entity.children) {
-            scene.addEntity(child, true);  // 延迟缓存清理
-            this.addChildrenRecursively(child, scene);  // 递归处理子实体的子实体
+    private static addChildrenRecursively(
+        entity: Entity,
+        scene: IScene,
+        hierarchySystem?: HierarchySystem | null,
+        childEntitiesMap?: Map<number, Entity>
+    ): void {
+        const hierarchy = entity.getComponent(HierarchyComponent);
+        if (!hierarchy || hierarchy.childIds.length === 0) return;
+
+        // 获取子实体
+        // 注意：此时子实体还没有被添加到场景，所以不能用 scene.findEntityById
+        // 需要从 childEntitiesMap 中查找（如果提供了的话）
+        for (const childId of hierarchy.childIds) {
+            // 尝试从 map 中获取，否则从场景获取（用于已添加的情况）
+            const child = childEntitiesMap?.get(childId) ?? scene.findEntityById(childId);
+            if (child) {
+                scene.addEntity(child, true);  // 延迟缓存清理
+                this.addChildrenRecursively(child, scene, hierarchySystem, childEntitiesMap);
+            }
         }
     }
 

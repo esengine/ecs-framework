@@ -1,4 +1,4 @@
-import { Entity, Scene } from '@esengine/ecs-framework';
+import { Entity, Scene, HierarchySystem, HierarchyComponent } from '@esengine/ecs-framework';
 import { UITransformComponent, AnchorPreset } from './components/UITransformComponent';
 import { UIRenderComponent, UIRenderType } from './components/UIRenderComponent';
 import { UIInteractableComponent } from './components/UIInteractableComponent';
@@ -144,6 +144,9 @@ export class UIBuilder {
      */
     private createBase(config: UIBaseConfig, defaultName: string): Entity {
         const entity = this.scene.createEntity(config.name ?? `${defaultName}_${this.idCounter++}`);
+
+        // 添加 HierarchyComponent 支持层级结构
+        entity.addComponent(new HierarchyComponent());
 
         const transform = entity.addComponent(new UITransformComponent());
         transform.x = config.x ?? 0;
@@ -419,7 +422,10 @@ export class UIBuilder {
      * Add child to parent
      */
     public addChild(parent: Entity, child: Entity): Entity {
-        parent.addChild(child);
+        const hierarchySystem = this.scene.getSystem(HierarchySystem);
+        if (hierarchySystem) {
+            hierarchySystem.setParent(child, parent);
+        }
         return child;
     }
 
@@ -428,8 +434,11 @@ export class UIBuilder {
      * Add multiple children to parent
      */
     public addChildren(parent: Entity, children: Entity[]): Entity[] {
-        for (const child of children) {
-            parent.addChild(child);
+        const hierarchySystem = this.scene.getSystem(HierarchySystem);
+        if (hierarchySystem) {
+            for (const child of children) {
+                hierarchySystem.setParent(child, parent);
+            }
         }
         return children;
     }

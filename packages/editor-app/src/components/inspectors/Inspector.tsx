@@ -124,7 +124,15 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
             setComponentVersion((prev) => prev + 1);
         };
 
+        const handleSceneRestored = () => {
+            // 场景恢复后，清除当前选中的实体（因为旧引用已无效）
+            // 用户需要重新选择实体
+            setTarget(null);
+            setComponentVersion(0);
+        };
+
         const unsubEntitySelect = messageHub.subscribe('entity:selected', handleEntitySelection);
+        const unsubSceneRestored = messageHub.subscribe('scene:restored', handleSceneRestored);
         const unsubRemoteSelect = messageHub.subscribe('remote-entity:selected', handleRemoteEntitySelection);
         const unsubNodeSelect = messageHub.subscribe('behavior-tree:node-selected', handleExtensionSelection);
         const unsubAssetFileSelect = messageHub.subscribe('asset-file:selected', handleAssetFileSelection);
@@ -136,6 +144,7 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
 
         return () => {
             unsubEntitySelect();
+            unsubSceneRestored();
             unsubRemoteSelect();
             unsubNodeSelect();
             unsubAssetFileSelect();

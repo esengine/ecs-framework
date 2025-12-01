@@ -1,99 +1,63 @@
 {
-  "name": "@esengine/behavior-tree",
-  "version": "1.0.1",
-  "description": "ECS-based AI behavior tree system with visual editor and runtime execution",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+    "name": "@esengine/behavior-tree",
+    "version": "1.0.1",
+    "description": "ECS-based AI behavior tree system with runtime execution",
+    "esengine": {
+        "plugin": true,
+        "pluginExport": "BehaviorTreePlugin",
+        "category": "ai"
     },
-    "./runtime": {
-      "types": "./dist/runtime.d.ts",
-      "import": "./dist/runtime.js"
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
     },
-    "./editor": {
-      "types": "./dist/editor/index.d.ts",
-      "import": "./dist/editor/index.js"
+    "files": [
+        "dist"
+    ],
+    "keywords": [
+        "ecs",
+        "behavior-tree",
+        "ai",
+        "game-ai",
+        "entity-component-system"
+    ],
+    "scripts": {
+        "clean": "rimraf dist tsconfig.tsbuildinfo",
+        "build": "tsup",
+        "build:watch": "tsup --watch",
+        "type-check": "tsc --noEmit"
     },
-    "./plugin.json": "./plugin.json"
-  },
-  "files": [
-    "dist",
-    "plugin.json"
-  ],
-  "keywords": [
-    "ecs",
-    "behavior-tree",
-    "ai",
-    "game-ai",
-    "entity-component-system"
-  ],
-  "scripts": {
-    "clean": "rimraf dist tsconfig.tsbuildinfo",
-    "build": "vite build",
-    "build:watch": "vite build --watch",
-    "type-check": "tsc --noEmit",
-    "test": "jest --config jest.config.cjs",
-    "test:watch": "jest --watch --config jest.config.cjs"
-  },
-  "author": "yhh",
-  "license": "MIT",
-  "peerDependencies": {
-    "@esengine/ecs-framework": ">=2.0.0",
-    "@esengine/ecs-components": "workspace:*",
-    "@esengine/asset-system": "workspace:*",
-    "@esengine/editor-runtime": "workspace:*",
-    "lucide-react": "^0.545.0",
-    "react": "^18.3.1",
-    "zustand": "^4.5.2"
-  },
-  "peerDependenciesMeta": {
-    "@esengine/ecs-components": {
-      "optional": true
+    "author": "yhh",
+    "license": "MIT",
+    "devDependencies": {
+        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/engine-core": "workspace:*",
+        "@esengine/asset-system": "workspace:*",
+        "@esengine/build-config": "workspace:*",
+        "@types/jest": "^29.5.14",
+        "@types/node": "^20.19.17",
+        "jest": "^29.7.0",
+        "rimraf": "^5.0.0",
+        "ts-jest": "^29.4.0",
+        "tsup": "^8.0.0",
+        "typescript": "^5.8.3"
     },
-    "@esengine/asset-system": {
-      "optional": true
+    "dependencies": {
+        "tslib": "^2.8.1"
     },
-    "@esengine/editor-runtime": {
-      "optional": true
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org/"
     },
-    "react": {
-      "optional": true
-    },
-    "lucide-react": {
-      "optional": true
-    },
-    "zustand": {
-      "optional": true
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/esengine/ecs-framework.git",
+        "directory": "packages/behavior-tree"
     }
-  },
-  "devDependencies": {
-    "@tauri-apps/plugin-fs": "^2.4.2",
-    "@types/jest": "^29.5.14",
-    "@types/node": "^20.19.17",
-    "@types/react": "^18.3.12",
-    "@vitejs/plugin-react": "^4.7.0",
-    "jest": "^29.7.0",
-    "rimraf": "^5.0.0",
-    "ts-jest": "^29.4.0",
-    "typescript": "^5.8.3",
-    "vite": "^6.0.7",
-    "vite-plugin-dts": "^3.7.0"
-  },
-  "dependencies": {
-    "tslib": "^2.8.1"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/esengine/ecs-framework.git",
-    "directory": "packages/behavior-tree"
-  }
 }

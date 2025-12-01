@@ -2,6 +2,7 @@ import { Entity } from '../../Entity';
 import { Component } from '../../Component';
 import { IScene } from '../../IScene';
 import { ComponentType, ComponentStorageManager } from '../ComponentStorage';
+import { HierarchySystem } from '../../Systems/HierarchySystem';
 
 /**
  * 实体构建器 - 提供流式API创建和配置实体
@@ -129,7 +130,8 @@ export class EntityBuilder {
      */
     public withChild(childBuilder: EntityBuilder): EntityBuilder {
         const child = childBuilder.build();
-        this.entity.addChild(child);
+        const hierarchySystem = this.scene.getSystem(HierarchySystem);
+        hierarchySystem?.setParent(child, this.entity);
         return this;
     }
 
@@ -139,9 +141,10 @@ export class EntityBuilder {
      * @returns 实体构建器
      */
     public withChildren(...childBuilders: EntityBuilder[]): EntityBuilder {
+        const hierarchySystem = this.scene.getSystem(HierarchySystem);
         for (const childBuilder of childBuilders) {
             const child = childBuilder.build();
-            this.entity.addChild(child);
+            hierarchySystem?.setParent(child, this.entity);
         }
         return this;
     }
@@ -154,7 +157,8 @@ export class EntityBuilder {
     public withChildFactory(childFactory: (parent: Entity) => EntityBuilder): EntityBuilder {
         const childBuilder = childFactory(this.entity);
         const child = childBuilder.build();
-        this.entity.addChild(child);
+        const hierarchySystem = this.scene.getSystem(HierarchySystem);
+        hierarchySystem?.setParent(child, this.entity);
         return this;
     }
 
@@ -167,7 +171,8 @@ export class EntityBuilder {
     public withChildIf(condition: boolean, childBuilder: EntityBuilder): EntityBuilder {
         if (condition) {
             const child = childBuilder.build();
-            this.entity.addChild(child);
+            const hierarchySystem = this.scene.getSystem(HierarchySystem);
+            hierarchySystem?.setParent(child, this.entity);
         }
         return this;
     }

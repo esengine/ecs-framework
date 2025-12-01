@@ -5,14 +5,12 @@
 
 import type { ServiceContainer } from '@esengine/ecs-framework';
 import type {
-    IPluginLoader,
+    IPlugin,
     IEditorModuleLoader,
     PluginDescriptor,
-    PanelDescriptor,
     MenuItemDescriptor
 } from '@esengine/editor-core';
-import { MessageHub, SettingsRegistry, PanelPosition } from '@esengine/editor-core';
-import { ProfilerDockPanel } from '../../components/ProfilerDockPanel';
+import { MessageHub, SettingsRegistry } from '@esengine/editor-core';
 import { ProfilerService } from '../../services/ProfilerService';
 
 /**
@@ -100,19 +98,6 @@ class ProfilerEditorModule implements IEditorModuleLoader {
         delete (window as any).__PROFILER_SERVICE__;
     }
 
-    getPanels(): PanelDescriptor[] {
-        return [
-            {
-                id: 'profiler-monitor',
-                title: 'Performance Monitor',
-                position: PanelPosition.Center,
-                closable: false,
-                component: ProfilerDockPanel,
-                order: 200
-            }
-        ];
-    }
-
     getMenuItems(): MenuItemDescriptor[] {
         return [
             {
@@ -121,14 +106,6 @@ class ProfilerEditorModule implements IEditorModuleLoader {
                 parentId: 'window',
                 execute: () => {
                     this.messageHub?.publish('ui:openWindow', { windowId: 'profiler' });
-                }
-            },
-            {
-                id: 'window.advancedProfiler',
-                label: 'Advanced Profiler',
-                parentId: 'window',
-                execute: () => {
-                    this.messageHub?.publish('ui:openWindow', { windowId: 'advancedProfiler' });
                 }
             }
         ];
@@ -151,13 +128,12 @@ const descriptor: PluginDescriptor = {
         {
             name: 'ProfilerEditor',
             type: 'editor',
-            loadingPhase: 'postDefault',
-            panels: ['profiler-monitor']
+            loadingPhase: 'postDefault'
         }
     ]
 };
 
-export const ProfilerPlugin: IPluginLoader = {
+export const ProfilerPlugin: IPlugin = {
     descriptor,
     editorModule: new ProfilerEditorModule()
 };

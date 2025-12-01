@@ -65,6 +65,7 @@ export default defineConfig({
           collapsed: false,
           items: [
             { text: '实体类 (Entity)', link: '/guide/entity' },
+            { text: '层级系统 (Hierarchy)', link: '/guide/hierarchy' },
             { text: '组件系统 (Component)', link: '/guide/component' },
             { text: '实体查询系统', link: '/guide/entity-query' },
             {

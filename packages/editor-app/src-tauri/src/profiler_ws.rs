@@ -43,7 +43,6 @@ impl ProfilerServer {
                     result = listener.accept() => {
                         match result {
                             Ok((stream, peer_addr)) => {
-                                println!("[ProfilerServer] New connection from: {}", peer_addr);
                                 let tx = tx.clone();
                                 tokio::spawn(handle_connection(stream, peer_addr, tx));
                             }
@@ -98,7 +97,12 @@ async fn handle_connection(
     let ws_stream = match accept_async(stream).await {
         Ok(ws) => ws,
         Err(e) => {
-            eprintln!("[ProfilerServer] WebSocket error: {}", e);
+            // 忽略非 WebSocket 连接的错误（如普通 HTTP 请求、健康检查等）
+            // 这些是正常现象，不需要输出错误日志
+            let error_str = e.to_string();
+            if !error_str.contains("Connection: upgrade") && !error_str.contains("protocol error") {
+                eprintln!("[ProfilerServer] WebSocket error: {}", e);
+            }
             return;
         }
     };

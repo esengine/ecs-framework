@@ -5,9 +5,11 @@
  * @packageDocumentation
  */
 
-export { EngineBridge, EngineBridgeConfig } from './core/EngineBridge';
+export { EngineBridge } from './core/EngineBridge';
+export type { EngineBridgeConfig } from './core/EngineBridge';
 export { RenderBatcher } from './core/RenderBatcher';
-export { SpriteRenderHelper, ITransformComponent } from './core/SpriteRenderHelper';
+export { SpriteRenderHelper } from './core/SpriteRenderHelper';
+export type { ITransformComponent } from './core/SpriteRenderHelper';
 export { EngineRenderSystem, type TransformComponentType, type IRenderDataProvider, type IUIRenderDataProvider, type GizmoDataProviderFn, type HasGizmoProviderFn, type ProviderRenderData } from './systems/EngineRenderSystem';
 export { CameraSystem } from './systems/CameraSystem';
 export * from './types';

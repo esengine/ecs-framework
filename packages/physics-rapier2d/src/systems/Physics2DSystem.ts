@@ -6,7 +6,7 @@
  */
 
 import { EntitySystem, Matcher, type Entity } from '@esengine/ecs-framework';
-import { TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
 import { Physics2DWorld } from '../world/Physics2DWorld';
 import { Rigidbody2DComponent } from '../components/Rigidbody2DComponent';
 import { Collider2DBase } from '../components/Collider2DBase';
@@ -65,9 +65,6 @@ export class Physics2DSystem extends EntitySystem {
 
     // 待处理的新实体队列
     private _pendingEntities: Entity[] = [];
-
-    // Transform 组件类型（用于检查）
-    private _transformType = TransformComponent;
 
     constructor(config?: Physics2DSystemConfig) {
         // 匹配所有拥有 Rigidbody2DComponent 的实体
@@ -290,10 +287,13 @@ export class Physics2DSystem extends EntitySystem {
      */
     private _createPhysicsBody(entity: Entity): void {
         const rigidbody = entity.getComponent(Rigidbody2DComponent);
-        const transform = entity.getComponent(this._transformType);
+        const transform = entity.getComponent(TransformComponent);
 
         if (!rigidbody || !transform) {
-            this.logger.warn(`Entity ${entity.name} missing required components for physics`);
+            const missing: string[] = [];
+            if (!rigidbody) missing.push('Rigidbody2DComponent');
+            if (!transform) missing.push('TransformComponent');
+            this.logger.warn(`Entity ${entity.name} missing required components: ${missing.join(', ')}`);
             return;
         }
 
@@ -361,7 +361,7 @@ export class Physics2DSystem extends EntitySystem {
     private _syncTransformsToPhysics(entities: readonly Entity[]): void {
         for (const entity of entities) {
             const rigidbody = entity.getComponent(Rigidbody2DComponent);
-            const transform = entity.getComponent(this._transformType);
+            const transform = entity.getComponent(TransformComponent);
             const mapping = this._entityBodies.get(entity.id);
 
             if (!rigidbody || !transform || !mapping) continue;
@@ -465,7 +465,7 @@ export class Physics2DSystem extends EntitySystem {
     private _syncPhysicsToTransforms(entities: readonly Entity[]): void {
         for (const entity of entities) {
             const rigidbody = entity.getComponent(Rigidbody2DComponent);
-            const transform = entity.getComponent(this._transformType);
+            const transform = entity.getComponent(TransformComponent);
             const mapping = this._entityBodies.get(entity.id);
 
             if (!rigidbody || !transform || !mapping) continue;

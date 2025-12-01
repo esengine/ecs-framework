@@ -1,0 +1,41 @@
+{
+    "name": "@esengine/runtime-core",
+    "version": "1.0.0",
+    "description": "Runtime core - plugin management and system initialization",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "build:watch": "tsup --watch",
+        "type-check": "tsc --noEmit",
+        "clean": "rimraf dist"
+    },
+    "devDependencies": {
+        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/ecs-engine-bindgen": "workspace:*",
+        "@esengine/engine-core": "workspace:*",
+        "@esengine/asset-system": "workspace:*",
+        "@esengine/build-config": "workspace:*",
+        "rimraf": "^5.0.5",
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.3"
+    },
+    "keywords": [
+        "ecs",
+        "runtime",
+        "plugin"
+    ],
+    "author": "yhh",
+    "license": "MIT"
+}

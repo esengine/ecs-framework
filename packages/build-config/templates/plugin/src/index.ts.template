@@ -1,0 +1,14 @@
+/**
+ * @esengine/{{name}}
+ *
+ * {{description}}
+ *
+ * 主入口 - 导出所有内容（包括编辑器模块）
+ * Main entry - exports everything (including editor modules)
+ */
+
+// Runtime exports (always available)
+export * from './runtime';
+
+// Editor exports (only in editor environment)
+export { {{name}}Plugin } from './editor';

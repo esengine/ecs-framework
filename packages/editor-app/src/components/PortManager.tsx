@@ -18,12 +18,16 @@ export function PortManager({ onClose }: PortManagerProps) {
 
     useEffect(() => {
         const settings = SettingsService.getInstance();
-        setServerPort(settings.get('profiler.port', '8080'));
+        const savedPort = settings.get('profiler.port', 8080);
+        console.log('[PortManager] Initial port from settings:', savedPort);
+        setServerPort(String(savedPort));
 
         const handleSettingsChange = ((event: CustomEvent) => {
+            console.log('[PortManager] settings:changed event received:', event.detail);
             const newPort = event.detail['profiler.port'];
-            if (newPort) {
-                setServerPort(newPort);
+            if (newPort !== undefined) {
+                console.log('[PortManager] Updating port to:', newPort);
+                setServerPort(String(newPort));
             }
         }) as EventListener;
 

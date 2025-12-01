@@ -243,8 +243,18 @@
     opacity: 0.5;
 }
 
-.outliner-item.drop-target {
+/* Drop Indicators */
+.outliner-item.drop-before {
     border-top: 2px solid #4a9eff;
+}
+
+.outliner-item.drop-after {
+    border-bottom: 2px solid #4a9eff;
+}
+
+.outliner-item.drop-inside {
+    background: rgba(74, 158, 255, 0.2);
+    box-shadow: inset 0 0 0 1px #4a9eff;
 }
 
 .outliner-item.disabled {
@@ -289,6 +299,17 @@
     justify-content: center;
     color: #888;
     flex-shrink: 0;
+}
+
+.outliner-item-expand.clickable {
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.outliner-item-expand.clickable:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .outliner-item-expand:hover {

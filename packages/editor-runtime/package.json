@@ -26,18 +26,16 @@
     "tsyringe": "^4.10.0",
     "reflect-metadata": "^0.2.2"
   },
-  "peerDependencies": {
+  "devDependencies": {
     "@esengine/ecs-framework": "workspace:*",
     "@esengine/editor-core": "workspace:*",
     "@esengine/ui": "workspace:*",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^5.0.8",
-    "lucide-react": "^0.545.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
+    "lucide-react": "^0.545.0",
     "rimraf": "^5.0.0",
     "typescript": "^5.8.3",
     "vite": "^6.0.7",

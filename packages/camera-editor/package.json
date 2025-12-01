@@ -1,0 +1,43 @@
+{
+    "name": "@esengine/camera-editor",
+    "version": "1.0.0",
+    "description": "Editor components for camera system",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "build:watch": "tsup --watch",
+        "type-check": "tsc --noEmit",
+        "clean": "rimraf dist"
+    },
+    "devDependencies": {
+        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/engine-core": "workspace:*",
+        "@esengine/camera": "workspace:*",
+        "@esengine/editor-core": "workspace:*",
+        "@esengine/build-config": "workspace:*",
+        "react": "^18.3.1",
+        "@types/react": "^18.2.0",
+        "rimraf": "^5.0.5",
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.3"
+    },
+    "keywords": [
+        "ecs",
+        "camera",
+        "editor"
+    ],
+    "author": "yhh",
+    "license": "MIT"
+}

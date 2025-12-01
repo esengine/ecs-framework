@@ -50,7 +50,7 @@
       "path": "../core"
     },
     {
-      "path": "../components"
+      "path": "../engine-core"
     },
     {
       "path": "../ecs-engine-bindgen"

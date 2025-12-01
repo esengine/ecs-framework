@@ -1,11 +1,6 @@
-/**
- * Tilemap Runtime Module (Pure runtime, no editor dependencies)
- * Tilemap 运行时模块（纯运行时，无编辑器依赖）
- */
-
 import type { IScene } from '@esengine/ecs-framework';
 import { ComponentRegistry } from '@esengine/ecs-framework';
-import type { IRuntimeModuleLoader, SystemContext } from '@esengine/ecs-components';
+import type { IRuntimeModule, IPlugin, PluginDescriptor, SystemContext } from '@esengine/engine-core';
 import type { AssetManager } from '@esengine/asset-system';
 
 import { TilemapComponent } from './TilemapComponent';
@@ -13,13 +8,17 @@ import { TilemapRenderingSystem } from './systems/TilemapRenderingSystem';
 import { TilemapCollider2DComponent } from './physics/TilemapCollider2DComponent';
 import { TilemapPhysicsSystem, type IPhysicsWorld } from './physics/TilemapPhysicsSystem';
 import { TilemapLoader } from './loaders/TilemapLoader';
-import { TilemapAssetType } from './index';
+import { TilemapAssetType } from './constants';
 
-/**
- * Tilemap Runtime Module
- * Tilemap 运行时模块
- */
-export class TilemapRuntimeModule implements IRuntimeModuleLoader {
+export interface TilemapSystemContext extends SystemContext {
+    tilemapSystem?: TilemapRenderingSystem;
+    tilemapPhysicsSystem?: TilemapPhysicsSystem;
+    physics2DWorld?: IPhysicsWorld;
+    assetManager?: AssetManager;
+    renderSystem?: any;
+}
+
+class TilemapRuntimeModule implements IRuntimeModule {
     private _tilemapPhysicsSystem: TilemapPhysicsSystem | null = null;
     private _loaderRegistered = false;
 
@@ -29,47 +28,54 @@ export class TilemapRuntimeModule implements IRuntimeModuleLoader {
     }
 
     createSystems(scene: IScene, context: SystemContext): void {
-        // 注册 Tilemap 加载器到 AssetManager
-        // Register tilemap loader to AssetManager
-        const assetManager = context.assetManager as AssetManager | undefined;
-        if (!this._loaderRegistered && assetManager) {
-            assetManager.registerLoader(TilemapAssetType, new TilemapLoader());
+        const tilemapContext = context as TilemapSystemContext;
+
+        if (!this._loaderRegistered && tilemapContext.assetManager) {
+            tilemapContext.assetManager.registerLoader(TilemapAssetType, new TilemapLoader());
             this._loaderRegistered = true;
         }
 
-        // Tilemap rendering system
         const tilemapSystem = new TilemapRenderingSystem();
         scene.addSystem(tilemapSystem);
 
-        if (context.renderSystem) {
-            context.renderSystem.addRenderDataProvider(tilemapSystem);
+        if (tilemapContext.renderSystem) {
+            tilemapContext.renderSystem.addRenderDataProvider(tilemapSystem);
         }
 
-        context.tilemapSystem = tilemapSystem;
+        tilemapContext.tilemapSystem = tilemapSystem;
 
-        // Tilemap physics system
         this._tilemapPhysicsSystem = new TilemapPhysicsSystem();
         scene.addSystem(this._tilemapPhysicsSystem);
 
-        context.tilemapPhysicsSystem = this._tilemapPhysicsSystem;
+        tilemapContext.tilemapPhysicsSystem = this._tilemapPhysicsSystem;
     }
 
-    /**
-     * 所有系统创建完成后，连接跨插件依赖
-     * Wire cross-plugin dependencies after all systems are created
-     */
     onSystemsCreated(_scene: IScene, context: SystemContext): void {
-        // 连接物理世界（如果物理插件已加载）
-        // Connect physics world (if physics plugin is loaded)
-        if (this._tilemapPhysicsSystem && context.physics2DWorld) {
-            this._tilemapPhysicsSystem.setPhysicsWorld(context.physics2DWorld as IPhysicsWorld);
+        const tilemapContext = context as TilemapSystemContext;
+
+        if (this._tilemapPhysicsSystem && tilemapContext.physics2DWorld) {
+            this._tilemapPhysicsSystem.setPhysicsWorld(tilemapContext.physics2DWorld);
         }
     }
 
-    /**
-     * 获取 Tilemap 物理系统
-     */
     get tilemapPhysicsSystem(): TilemapPhysicsSystem | null {
         return this._tilemapPhysicsSystem;
     }
 }
+
+const descriptor: PluginDescriptor = {
+    id: '@esengine/tilemap',
+    name: 'Tilemap',
+    version: '1.0.0',
+    description: 'Tilemap system with Tiled editor support',
+    category: 'tilemap',
+    enabledByDefault: false,
+    isEnginePlugin: true
+};
+
+export const TilemapPlugin: IPlugin = {
+    descriptor,
+    runtimeModule: new TilemapRuntimeModule()
+};
+
+export { TilemapRuntimeModule };

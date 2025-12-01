@@ -1,0 +1,38 @@
+{
+    "name": "{{fullName}}",
+    "version": "1.0.0",
+    "description": "{{description}}",
+    "type": "module",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "build:watch": "tsup --watch",
+        "clean": "rimraf dist",
+        "type-check": "tsc --noEmit"
+    },
+    "peerDependencies": {
+        "@esengine/ecs-framework": "{{depVersion}}"
+    },
+    "devDependencies": {
+        "@esengine/build-config": "{{depVersion}}",
+        "rimraf": "^5.0.5",
+        "tsup": "^8.0.0",
+        "typescript": "^5.8.3"
+    },
+    "keywords": [
+        "ecs"
+    ],
+    "author": "",
+    "license": "MIT"
+}

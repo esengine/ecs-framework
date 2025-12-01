@@ -2,25 +2,23 @@
     "name": "@esengine/ecs-engine-bindgen",
     "version": "0.1.0",
     "description": "Bridge layer between ECS Framework and Rust Engine | ECS框架与Rust引擎之间的桥接层",
-    "main": "bin/index.js",
-    "module": "bin/index.js",
-    "types": "bin/index.d.ts",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "type": "module",
     "exports": {
         ".": {
-            "types": "./bin/index.d.ts",
-            "import": "./bin/index.js",
-            "require": "./bin/index.js",
-            "default": "./bin/index.js"
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
         }
     },
     "files": [
-        "bin",
         "dist"
     ],
     "scripts": {
-        "build": "tsc",
-        "build:watch": "tsc --watch",
-        "clean": "rimraf bin dist"
+        "build": "tsup",
+        "build:watch": "tsup --watch",
+        "clean": "rimraf dist"
     },
     "repository": {
         "type": "git",
@@ -36,15 +34,16 @@
     ],
     "author": "ESEngine Team",
     "license": "MIT",
-    "peerDependencies": {
-        "@esengine/ecs-framework": "workspace:*",
-        "@esengine/ecs-components": "workspace:*",
-        "@esengine/asset-system": "workspace:*"
-    },
     "optionalDependencies": {
         "es-engine": "file:../engine/pkg"
     },
     "devDependencies": {
+        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/engine-core": "workspace:*",
+        "@esengine/sprite": "workspace:*",
+        "@esengine/camera": "workspace:*",
+        "@esengine/asset-system": "workspace:*",
+        "tsup": "^8.5.1",
         "typescript": "^5.8.0",
         "rimraf": "^5.0.0"
     }

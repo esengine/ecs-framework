@@ -1,11 +1,6 @@
-/**
- * UI Runtime Module (Pure runtime, no editor dependencies)
- * UI 运行时模块（纯运行时，无编辑器依赖）
- */
-
 import type { IScene } from '@esengine/ecs-framework';
 import { ComponentRegistry } from '@esengine/ecs-framework';
-import type { IRuntimeModuleLoader, SystemContext } from '@esengine/ecs-components';
+import type { IRuntimeModule, IPlugin, PluginDescriptor, SystemContext } from '@esengine/engine-core';
 
 import {
     UITransformComponent,
@@ -32,11 +27,14 @@ import {
     UIScrollViewRenderSystem
 } from './systems/render';
 
-/**
- * UI Runtime Module
- * UI 运行时模块
- */
-export class UIRuntimeModule implements IRuntimeModuleLoader {
+export interface UISystemContext extends SystemContext {
+    uiLayoutSystem?: UILayoutSystem;
+    uiRenderProvider?: UIRenderDataProvider;
+    uiInputSystem?: UIInputSystem;
+    uiTextRenderSystem?: UITextRenderSystem;
+}
+
+class UIRuntimeModule implements IRuntimeModule {
     registerComponents(registry: typeof ComponentRegistry): void {
         registry.register(UITransformComponent);
         registry.register(UIRenderComponent);
@@ -50,6 +48,8 @@ export class UIRuntimeModule implements IRuntimeModuleLoader {
     }
 
     createSystems(scene: IScene, context: SystemContext): void {
+        const uiContext = context as UISystemContext;
+
         const layoutSystem = new UILayoutSystem();
         scene.addSystem(layoutSystem);
 
@@ -77,9 +77,9 @@ export class UIRuntimeModule implements IRuntimeModuleLoader {
         const textRenderSystem = new UITextRenderSystem();
         scene.addSystem(textRenderSystem);
 
-        if (context.engineBridge) {
+        if (uiContext.engineBridge) {
             textRenderSystem.setTextureCallback((id: number, dataUrl: string) => {
-                context.engineBridge.loadTexture(id, dataUrl);
+                uiContext.engineBridge.loadTexture(id, dataUrl);
             });
         }
 
@@ -88,9 +88,26 @@ export class UIRuntimeModule implements IRuntimeModuleLoader {
         inputSystem.setLayoutSystem(layoutSystem);
         scene.addSystem(inputSystem);
 
-        context.uiLayoutSystem = layoutSystem;
-        context.uiRenderProvider = uiRenderProvider;
-        context.uiInputSystem = inputSystem;
-        context.uiTextRenderSystem = textRenderSystem;
+        uiContext.uiLayoutSystem = layoutSystem;
+        uiContext.uiRenderProvider = uiRenderProvider;
+        uiContext.uiInputSystem = inputSystem;
+        uiContext.uiTextRenderSystem = textRenderSystem;
     }
 }
+
+const descriptor: PluginDescriptor = {
+    id: '@esengine/ui',
+    name: 'UI',
+    version: '1.0.0',
+    description: 'ECS-based UI system',
+    category: 'ui',
+    enabledByDefault: true,
+    isEnginePlugin: true
+};
+
+export const UIPlugin: IPlugin = {
+    descriptor,
+    runtimeModule: new UIRuntimeModule()
+};
+
+export { UIRuntimeModule };

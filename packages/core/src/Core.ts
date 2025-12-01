@@ -70,13 +70,6 @@ export class Core {
     private static _logger = createLogger('Core');
 
     /**
-     * 实体系统启用状态
-     *
-     * 控制是否启用ECS实体系统功能。
-     */
-    public static entitySystemsEnabled: boolean;
-
-    /**
      * 调试模式标志
      *
      * 在调试模式下会启用额外的性能监控和错误检查。
@@ -132,7 +125,6 @@ export class Core {
         // 保存配置
         this._config = {
             debug: true,
-            enableEntitySystems: true,
             ...config
         };
 
@@ -176,7 +168,6 @@ export class Core {
         this._pluginManager.initialize(this, this._serviceContainer);
         this._serviceContainer.registerInstance(PluginManager, this._pluginManager);
 
-        Core.entitySystemsEnabled = this._config.enableEntitySystems ?? true;
         this.debug = this._config.debug ?? true;
 
         // 初始化调试管理器
@@ -266,7 +257,6 @@ export class Core {
      * // 方式1：使用配置对象
      * Core.create({
      *     debug: true,
-     *     enableEntitySystems: true,
      *     debugConfig: {
      *         enabled: true,
      *         websocketUrl: 'ws://localhost:9229'
@@ -281,7 +271,7 @@ export class Core {
         if (this._instance == null) {
             // 向后兼容：如果传入boolean，转换为配置对象
             const coreConfig: ICoreConfig = typeof config === 'boolean'
-                ? { debug: config, enableEntitySystems: true }
+                ? { debug: config }
                 : config;
             this._instance = new Core(coreConfig);
         } else {
@@ -614,7 +604,6 @@ export class Core {
         // 核心系统初始化
         Core._logger.info('Core initialized', {
             debug: this.debug,
-            entitySystemsEnabled: Core.entitySystemsEnabled,
             debugEnabled: this._config.debugConfig?.enabled || false
         });
     }

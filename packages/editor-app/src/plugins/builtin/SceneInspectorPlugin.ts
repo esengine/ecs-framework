@@ -6,7 +6,7 @@
 import { Core, Entity } from '@esengine/ecs-framework';
 import type { ServiceContainer } from '@esengine/ecs-framework';
 import type {
-    IPluginLoader,
+    IPlugin,
     IEditorModuleLoader,
     PluginDescriptor,
     PanelDescriptor,
@@ -15,7 +15,9 @@ import type {
     EntityCreationTemplate
 } from '@esengine/editor-core';
 import { PanelPosition, EntityStoreService, MessageHub } from '@esengine/editor-core';
-import { TransformComponent, SpriteComponent, SpriteAnimatorComponent, CameraComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
+import { SpriteComponent, SpriteAnimatorComponent } from '@esengine/sprite';
+import { CameraComponent } from '@esengine/camera';
 
 /**
  * Scene Inspector 编辑器模块
@@ -186,14 +188,12 @@ const descriptor: PluginDescriptor = {
         {
             name: 'SceneInspectorEditor',
             type: 'editor',
-            loadingPhase: 'default',
-            panels: ['panel-scene-hierarchy', 'panel-entity-inspector'],
-            inspectors: ['EntityInspector']
+            loadingPhase: 'default'
         }
     ]
 };
 
-export const SceneInspectorPlugin: IPluginLoader = {
+export const SceneInspectorPlugin: IPlugin = {
     descriptor,
     editorModule: new SceneInspectorEditorModule()
 };

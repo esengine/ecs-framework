@@ -135,6 +135,7 @@ export {
     IMessageHub,
     ICompilerRegistry,
     IInspectorRegistry,
+    IFileActionRegistry,
 } from '@esengine/editor-core';
 
 // Type-only exports from editor-core

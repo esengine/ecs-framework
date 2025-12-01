@@ -31,6 +31,24 @@ export interface ILegacyPerformanceMonitor {
 }
 
 /**
+ * 热点函数项（支持递归层级）
+ */
+export interface IHotspotItem {
+    name: string;
+    category: string;
+    inclusiveTime: number;
+    inclusiveTimePercent: number;
+    exclusiveTime: number;
+    exclusiveTimePercent: number;
+    callCount: number;
+    avgCallTime: number;
+    /** 层级深度 */
+    depth: number;
+    /** 子函数 */
+    children?: IHotspotItem[] | undefined;
+}
+
+/**
  * 高级性能数据接口
  */
 export interface IAdvancedProfilerData {
@@ -63,17 +81,8 @@ export interface IAdvancedProfilerData {
             percentOfFrame: number;
         }>;
     }>;
-    /** 热点函数列表 */
-    hotspots: Array<{
-        name: string;
-        category: string;
-        inclusiveTime: number;
-        inclusiveTimePercent: number;
-        exclusiveTime: number;
-        exclusiveTimePercent: number;
-        callCount: number;
-        avgCallTime: number;
-    }>;
+    /** 热点函数列表（支持层级） */
+    hotspots: IHotspotItem[];
     /** 调用关系数据 */
     callGraph: {
         /** 当前选中的函数 */
@@ -332,16 +341,91 @@ export class AdvancedProfilerCollector {
     private buildHotspots(report: ProfileReport): IAdvancedProfilerData['hotspots'] {
         const totalTime = report.hotspots.reduce((sum, h) => sum + h.inclusiveTime, 0) || 1;
 
-        return report.hotspots.slice(0, 50).map(h => ({
-            name: h.name,
-            category: h.category,
-            inclusiveTime: h.inclusiveTime,
-            inclusiveTimePercent: (h.inclusiveTime / totalTime) * 100,
-            exclusiveTime: h.exclusiveTime,
-            exclusiveTimePercent: (h.exclusiveTime / totalTime) * 100,
-            callCount: h.callCount,
-            avgCallTime: h.averageTime
-        }));
+        // 使用 callGraph 构建层级结构
+        // 找出所有根节点（没有被任何函数调用的，或者是顶层函数）
+        const rootFunctions = new Set<string>();
+        const childFunctions = new Set<string>();
+
+        for (const [name, node] of report.callGraph) {
+            // 如果没有调用者，或者调用者不在 hotspots 中，则是根节点
+            if (node.callers.size === 0) {
+                rootFunctions.add(name);
+            } else {
+                // 检查是否所有调用者都在 hotspots 之外
+                let hasParentInHotspots = false;
+                for (const callerName of node.callers.keys()) {
+                    if (report.callGraph.has(callerName)) {
+                        hasParentInHotspots = true;
+                        childFunctions.add(name);
+                        break;
+                    }
+                }
+                if (!hasParentInHotspots) {
+                    rootFunctions.add(name);
+                }
+            }
+        }
+
+        // 递归构建层级热点数据
+        const buildHotspotItem = (
+            name: string,
+            depth: number,
+            visited: Set<string>
+        ): IHotspotItem | null => {
+            if (visited.has(name)) return null; // 避免循环
+            visited.add(name);
+
+            const stats = report.hotspots.find(h => h.name === name);
+            const node = report.callGraph.get(name);
+
+            if (!stats && !node) return null;
+
+            const inclusiveTime = stats?.inclusiveTime || node?.totalTime || 0;
+            const exclusiveTime = stats?.exclusiveTime || inclusiveTime;
+            const callCount = stats?.callCount || node?.callCount || 1;
+
+            // 构建子节点
+            const children: IHotspotItem[] = [];
+            if (node && depth < 5) { // 限制深度避免过深
+                for (const [calleeName] of node.callees) {
+                    const child = buildHotspotItem(calleeName, depth + 1, visited);
+                    if (child) {
+                        children.push(child);
+                    }
+                }
+                // 按耗时排序
+                children.sort((a, b) => b.inclusiveTime - a.inclusiveTime);
+            }
+
+            return {
+                name,
+                category: stats?.category || node?.category || ProfileCategory.Custom,
+                inclusiveTime,
+                inclusiveTimePercent: (inclusiveTime / totalTime) * 100,
+                exclusiveTime,
+                exclusiveTimePercent: (exclusiveTime / totalTime) * 100,
+                callCount,
+                avgCallTime: callCount > 0 ? inclusiveTime / callCount : 0,
+                depth,
+                children: children.length > 0 ? children : undefined
+            };
+        };
+
+        // 构建根节点列表
+        const result: IAdvancedProfilerData['hotspots'] = [];
+        const visited = new Set<string>();
+
+        for (const rootName of rootFunctions) {
+            const item = buildHotspotItem(rootName, 0, visited);
+            if (item) {
+                result.push(item);
+            }
+        }
+
+        // 按耗时排序
+        result.sort((a, b) => b.inclusiveTime - a.inclusiveTime);
+
+        return result.slice(0, 50);
     }
 
     private buildHotspotsFromLegacy(
@@ -363,7 +447,8 @@ export class AdvancedProfilerCollector {
                 exclusiveTime: execTime,
                 exclusiveTimePercent: frameTime > 0 ? (execTime / frameTime) * 100 : 0,
                 callCount: stats?.executionCount || 1,
-                avgCallTime: stats?.averageTime || execTime
+                avgCallTime: stats?.averageTime || execTime,
+                depth: 0
             });
         }
 
@@ -388,15 +473,27 @@ export class AdvancedProfilerCollector {
             };
         }
 
+        // 计算所有调用者的总调用次数（用于计算调用者的百分比）
+        let totalCallerCount = 0;
+        for (const data of node.callers.values()) {
+            totalCallerCount += data.count;
+        }
+
+        // Calling Functions（谁调用了我）
+        // - totalTime: 该调用者调用当前函数时的平均耗时
+        // - percentOfCurrent: 该调用者的调用次数占总调用次数的百分比
         const callers = Array.from(node.callers.entries())
             .map(([name, data]) => ({
                 name,
                 callCount: data.count,
                 totalTime: data.totalTime,
-                percentOfCurrent: node.totalTime > 0 ? (data.totalTime / node.totalTime) * 100 : 0
+                percentOfCurrent: totalCallerCount > 0 ? (data.count / totalCallerCount) * 100 : 0
             }))
-            .sort((a, b) => b.totalTime - a.totalTime);
+            .sort((a, b) => b.callCount - a.callCount);
 
+        // Called Functions（我调用了谁）
+        // - totalTime: 当前函数调用该被调用者时的平均耗时
+        // - percentOfCurrent: 该被调用者的耗时占当前函数耗时的百分比
         const callees = Array.from(node.callees.entries())
             .map(([name, data]) => ({
                 name,

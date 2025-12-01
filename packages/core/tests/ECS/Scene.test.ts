@@ -629,4 +629,201 @@ describe('Scene - 场景管理系统测试', () => {
             scene2.end();
         });
     });
+
+    describe('扩展测试 - 补齐覆盖率', () => {
+        describe('实体标签查找', () => {
+            test('findEntitiesByTag 应该返回具有指定标签的实体', () => {
+                const entity1 = scene.createEntity('Entity1');
+                entity1.tag = 0x01;
+
+                const entity2 = scene.createEntity('Entity2');
+                entity2.tag = 0x02;
+
+                const entity3 = scene.createEntity('Entity3');
+                entity3.tag = 0x01;
+
+                const found = scene.findEntitiesByTag(0x01);
+
+                expect(found.length).toBe(2);
+                expect(found).toContain(entity1);
+                expect(found).toContain(entity3);
+            });
+
+            test('findEntitiesByTag 应该在没有匹配时返回空数组', () => {
+                scene.createEntity('Entity1');
+
+                const found = scene.findEntitiesByTag(0xFF);
+
+                expect(found).toEqual([]);
+            });
+        });
+
+        describe('批量实体操作', () => {
+            test('destroyEntities 应该批量销毁实体', () => {
+                const entities = scene.createEntities(5, 'Entity');
+                expect(scene.entities.count).toBe(5);
+
+                const toDestroy = entities.slice(0, 3);
+                scene.destroyEntities(toDestroy);
+
+                expect(scene.entities.count).toBe(2);
+            });
+
+            test('destroyEntities 应该处理空数组', () => {
+                scene.createEntities(3, 'Entity');
+
+                expect(() => {
+                    scene.destroyEntities([]);
+                }).not.toThrow();
+
+                expect(scene.entities.count).toBe(3);
+            });
+        });
+
+        describe('查询方法', () => {
+            test('queryAny 应该返回具有任意一个组件的实体', () => {
+                const entity1 = scene.createEntity('Entity1');
+                entity1.addComponent(new PositionComponent());
+
+                const entity2 = scene.createEntity('Entity2');
+                entity2.addComponent(new VelocityComponent());
+
+                const entity3 = scene.createEntity('Entity3');
+                entity3.addComponent(new HealthComponent());
+
+                const result = scene.queryAny(PositionComponent, VelocityComponent);
+
+                expect(result.entities.length).toBe(2);
+            });
+
+            test('queryNone 应该返回不包含指定组件的实体', () => {
+                const entity1 = scene.createEntity('Entity1');
+                entity1.addComponent(new PositionComponent());
+
+                const entity2 = scene.createEntity('Entity2');
+                entity2.addComponent(new VelocityComponent());
+
+                const entity3 = scene.createEntity('Entity3');
+
+                const result = scene.queryNone(PositionComponent);
+
+                expect(result.entities.length).toBe(2);
+                expect(result.entities).toContain(entity2);
+                expect(result.entities).toContain(entity3);
+            });
+
+            test('query 应该创建类型安全的查询构建器', () => {
+                const builder = scene.query();
+                expect(builder).toBeDefined();
+
+                const matcher = builder.withAll(PositionComponent).buildMatcher();
+                expect(matcher).toBeDefined();
+            });
+        });
+
+        describe('服务容器', () => {
+            test('scene.services 应该返回服务容器', () => {
+                expect(scene.services).toBeDefined();
+            });
+        });
+
+        describe('系统错误处理', () => {
+            test('频繁出错的系统应该被自动禁用', () => {
+                const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+                class ErrorProneSystem extends EntitySystem {
+                    constructor() {
+                        super(Matcher.empty().all(PositionComponent));
+                    }
+
+                    protected override process(): void {
+                        throw new Error('Intentional error');
+                    }
+                }
+
+                const system = new ErrorProneSystem();
+                scene.addEntityProcessor(system);
+
+                const entity = scene.createEntity('TestEntity');
+                entity.addComponent(new PositionComponent(0, 0));
+
+                // 多次更新以触发错误阈值
+                for (let i = 0; i < 15; i++) {
+                    scene.update();
+                }
+
+                // 系统应该被禁用
+                expect(system.enabled).toBe(false);
+
+                consoleSpy.mockRestore();
+            });
+        });
+
+        describe('已废弃方法', () => {
+            test('getEntityByName 应该作为 findEntity 的别名工作', () => {
+                const entity = scene.createEntity('TestEntity');
+
+                const found = scene.getEntityByName('TestEntity');
+
+                expect(found).toBe(entity);
+            });
+
+            test('getEntitiesByTag 应该作为 findEntitiesByTag 的别名工作', () => {
+                const entity = scene.createEntity('Entity');
+                entity.tag = 0x10;
+
+                const found = scene.getEntitiesByTag(0x10);
+
+                expect(found.length).toBe(1);
+                expect(found[0]).toBe(entity);
+            });
+        });
+
+        describe('系统管理扩展', () => {
+            test('getSystem 应该返回指定类型的系统', () => {
+                const movementSystem = new MovementSystem();
+                scene.addEntityProcessor(movementSystem);
+
+                const found = scene.getSystem(MovementSystem);
+
+                expect(found).toBe(movementSystem);
+            });
+
+            test('getSystem 应该在系统不存在时返回 null', () => {
+                const found = scene.getSystem(MovementSystem);
+
+                expect(found).toBeNull();
+            });
+
+            test('markSystemsOrderDirty 应该标记系统顺序为脏', () => {
+                const system1 = new MovementSystem();
+                const system2 = new RenderSystem();
+
+                scene.addEntityProcessor(system1);
+                scene.addEntityProcessor(system2);
+
+                // 访问 systems 以清除脏标记
+                const _ = scene.systems;
+
+                // 标记为脏
+                scene.markSystemsOrderDirty();
+
+                // 再次访问应该重新构建缓存
+                const systems = scene.systems;
+                expect(systems).toBeDefined();
+            });
+        });
+
+        describe('延迟缓存清理', () => {
+            test('addEntity 应该支持延迟缓存清理', () => {
+                scene.createEntity('Entity1');
+                const entity2 = new Entity('Entity2', scene.identifierPool.checkOut());
+
+                // 延迟缓存清理
+                scene.addEntity(entity2, true);
+
+                expect(scene.entities.count).toBe(2);
+            });
+        });
+    });
 });

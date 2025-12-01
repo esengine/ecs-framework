@@ -52,6 +52,5 @@ export { Physics2DSystem, type Physics2DSystemConfig } from './systems/Physics2D
 // Services
 export { Physics2DService } from './services/Physics2DService';
 
-// Runtime Module
-export { PhysicsRuntimeModule } from './PhysicsRuntimeModule';
-export { default as physicsRuntimeModule } from './PhysicsRuntimeModule';
+// Runtime module and plugin
+export { PhysicsRuntimeModule, PhysicsPlugin, type PhysicsSystemContext } from './PhysicsRuntimeModule';

@@ -4,7 +4,8 @@
  */
 
 import { Component, Property, Serialize, Serializable, ECSComponent } from '@esengine/ecs-framework';
-import { RigidbodyType2D, CollisionDetectionMode2D, Vector2 } from '../types/Physics2DTypes';
+import { RigidbodyType2D, CollisionDetectionMode2D } from '../types/Physics2DTypes';
+import type { Vector2 } from '../types/Physics2DTypes';
 
 /**
  * 刚体约束配置

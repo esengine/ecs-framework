@@ -1,0 +1,8 @@
+/**
+ * @esengine/{{name}}
+ *
+ * {{description}}
+ */
+
+// Export your public API here
+export {};

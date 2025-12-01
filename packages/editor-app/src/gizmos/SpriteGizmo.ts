@@ -11,7 +11,8 @@
 import type { Entity } from '@esengine/ecs-framework';
 import type { IGizmoRenderData, IRectGizmoData, GizmoColor } from '@esengine/editor-core';
 import { GizmoColors, GizmoRegistry } from '@esengine/editor-core';
-import { SpriteComponent, TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
+import { SpriteComponent } from '@esengine/sprite';
 
 /**
  * Gizmo provider function for SpriteComponent.

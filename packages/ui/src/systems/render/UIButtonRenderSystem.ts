@@ -48,10 +48,20 @@ export class UIButtonRenderSystem extends EntitySystem {
 
             const x = transform.worldX ?? transform.x;
             const y = transform.worldY ?? transform.y;
-            const width = (transform.computedWidth ?? transform.width) * transform.scaleX;
-            const height = (transform.computedHeight ?? transform.height) * transform.scaleY;
+            // 使用世界缩放和旋转
+            const scaleX = transform.worldScaleX ?? transform.scaleX;
+            const scaleY = transform.worldScaleY ?? transform.scaleY;
+            const rotation = transform.worldRotation ?? transform.rotation;
+            const width = (transform.computedWidth ?? transform.width) * scaleX;
+            const height = (transform.computedHeight ?? transform.height) * scaleY;
             const alpha = transform.worldAlpha ?? transform.alpha;
             const baseOrder = 100 + transform.zIndex;
+            // 使用 transform 的 pivot 作为旋转/缩放中心
+            const pivotX = transform.pivotX;
+            const pivotY = transform.pivotY;
+            // 渲染位置 = 左下角 + pivot 偏移
+            const renderX = x + width * pivotX;
+            const renderY = y + height * pivotY;
 
             // Render texture if in texture or both mode
             // 如果在纹理或两者模式下，渲染纹理
@@ -59,15 +69,15 @@ export class UIButtonRenderSystem extends EntitySystem {
                 const texture = button.getStateTexture('normal');
                 if (texture) {
                     collector.addRect(
-                        x, y,
+                        renderX, renderY,
                         width, height,
                         0xFFFFFF,  // White tint for texture
                         alpha,
                         baseOrder,
                         {
-                            rotation: transform.rotation,
-                            pivotX: 0,
-                            pivotY: 0,
+                            rotation,
+                            pivotX,
+                            pivotY,
                             texturePath: texture
                         }
                     );
@@ -80,15 +90,15 @@ export class UIButtonRenderSystem extends EntitySystem {
                 const bgAlpha = render?.backgroundAlpha ?? 1;
                 if (bgAlpha > 0) {
                     collector.addRect(
-                        x, y,
+                        renderX, renderY,
                         width, height,
                         button.currentColor,
                         bgAlpha * alpha,
                         baseOrder + (button.useTexture() ? 0.05 : 0),
                         {
-                            rotation: transform.rotation,
-                            pivotX: 0,
-                            pivotY: 0
+                            rotation,
+                            pivotX,
+                            pivotY
                         }
                     );
                 }
@@ -99,61 +109,72 @@ export class UIButtonRenderSystem extends EntitySystem {
             if (render && render.borderWidth > 0 && render.borderAlpha > 0) {
                 this.renderBorder(
                     collector,
-                    x, y, width, height,
+                    renderX, renderY, width, height,
                     render.borderWidth,
                     render.borderColor,
                     render.borderAlpha * alpha,
                     baseOrder + 0.1,
-                    transform.rotation
+                    rotation,
+                    pivotX,
+                    pivotY
                 );
             }
         }
     }
 
     /**
-     * Render border using top-left coordinates
-     * 使用左上角坐标渲染边框
+     * Render border using pivot-based coordinates
+     * 使用基于 pivot 的坐标渲染边框
      */
     private renderBorder(
         collector: ReturnType<typeof getUIRenderCollector>,
-        x: number, y: number,
+        centerX: number, centerY: number,
         width: number, height: number,
         borderWidth: number,
         borderColor: number,
         alpha: number,
         sortOrder: number,
-        rotation: number
+        rotation: number,
+        pivotX: number,
+        pivotY: number
     ): void {
+        // 计算矩形的边界（相对于 pivot 中心）
+        const left = centerX - width * pivotX;
+        const bottom = centerY - height * pivotY;
+        const right = left + width;
+        const top = bottom + height;
+
         // Top border
         collector.addRect(
-            x, y,
+            (left + right) / 2, top - borderWidth / 2,
             width, borderWidth,
             borderColor, alpha, sortOrder,
-            { rotation, pivotX: 0, pivotY: 0 }
+            { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
         // Bottom border
         collector.addRect(
-            x, y + height - borderWidth,
+            (left + right) / 2, bottom + borderWidth / 2,
             width, borderWidth,
             borderColor, alpha, sortOrder,
-            { rotation, pivotX: 0, pivotY: 0 }
+            { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
         // Left border (excluding corners)
+        const sideBorderHeight = height - borderWidth * 2;
         collector.addRect(
-            x, y + borderWidth,
-            borderWidth, height - borderWidth * 2,
+            left + borderWidth / 2, (top + bottom) / 2,
+            borderWidth, sideBorderHeight,
             borderColor, alpha, sortOrder,
-            { rotation, pivotX: 0, pivotY: 0 }
+            { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
         // Right border (excluding corners)
         collector.addRect(
-            x + width - borderWidth, y + borderWidth,
-            borderWidth, height - borderWidth * 2,
+            right - borderWidth / 2, (top + bottom) / 2,
+            borderWidth, sideBorderHeight,
             borderColor, alpha, sortOrder,
-            { rotation, pivotX: 0, pivotY: 0 }
+            { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
     }
 }

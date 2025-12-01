@@ -1,0 +1,47 @@
+{
+    "name": "@esengine/camera",
+    "version": "1.0.0",
+    "description": "Camera component and systems for 2D/3D rendering",
+    "esengine": {
+        "plugin": true,
+        "pluginExport": "CameraPlugin",
+        "category": "core",
+        "isEnginePlugin": true
+    },
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "build:watch": "tsup --watch",
+        "type-check": "tsc --noEmit",
+        "clean": "rimraf dist"
+    },
+    "devDependencies": {
+        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/engine-core": "workspace:*",
+        "@esengine/build-config": "workspace:*",
+        "rimraf": "^5.0.5",
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.3"
+    },
+    "keywords": [
+        "ecs",
+        "camera",
+        "2d",
+        "3d",
+        "rendering"
+    ],
+    "author": "yhh",
+    "license": "MIT"
+}

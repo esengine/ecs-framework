@@ -4,7 +4,7 @@
  */
 
 import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/ecs-framework';
-import { CameraComponent } from '@esengine/ecs-components';
+import { CameraComponent } from '@esengine/camera';
 import type { EngineBridge } from '../core/EngineBridge';
 
 @ECSSystem('Camera', { updateOrder: -100 })

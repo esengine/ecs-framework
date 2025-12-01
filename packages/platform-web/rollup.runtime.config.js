@@ -17,7 +17,13 @@ export default {
     external: [
         'react',
         'react-dom',
-        '@esengine/editor-core'
+        '@esengine/editor-core',
+        // Editor packages should never be imported in runtime
+        '@esengine/ui-editor',
+        '@esengine/tilemap-editor',
+        '@esengine/behavior-tree-editor',
+        '@esengine/blueprint-editor',
+        '@esengine/physics-rapier2d-editor'
     ],
     plugins: [
         // Replace process.env.NODE_ENV for browser
@@ -28,10 +34,7 @@ export default {
         resolve({
             browser: true,
             preferBuiltins: false,
-            // Only resolve main/module fields, not source
-            mainFields: ['module', 'main'],
-            // Support package.json exports field for subpath imports
-            exportConditions: ['import', 'module', 'default']
+            exportConditions: ['import', 'default']
         }),
         commonjs(),
         typescript({

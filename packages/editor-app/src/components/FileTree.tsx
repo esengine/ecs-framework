@@ -1,6 +1,9 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { Folder, ChevronRight, ChevronDown, File, Edit3, Trash2, FolderOpen, Copy, FileText, FolderPlus, Plus } from 'lucide-react';
+import {
+    Folder, ChevronRight, ChevronDown, File, Edit3, Trash2, FolderOpen, Copy, FileText, FolderPlus, Plus,
+    Save, Tag, Link, FileSearch, Globe, Package, Clipboard, RefreshCw, Settings
+} from 'lucide-react';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { MessageHub, FileActionRegistry } from '@esengine/editor-core';
 import { Core } from '@esengine/ecs-framework';
@@ -614,11 +617,25 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                     }
                 }
             }
+
+            items.push({ label: '', separator: true, onClick: () => {} });
+
+            // 文件操作菜单项
+            items.push({
+                label: '保存',
+                icon: <Save size={16} />,
+                shortcut: 'Ctrl+S',
+                onClick: () => {
+                    // TODO: 实现保存功能
+                    console.log('Save file:', node.path);
+                }
+            });
         }
 
         items.push({
             label: '重命名',
             icon: <Edit3 size={16} />,
+            shortcut: 'F2',
             onClick: () => {
                 setRenamingNode(node.path);
                 setNewName(node.name);
@@ -626,9 +643,157 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         });
 
         items.push({
+            label: '批量重命名',
+            icon: <Edit3 size={16} />,
+            shortcut: 'Shift+F2',
+            disabled: true, // TODO: 实现批量重命名
+            onClick: () => {
+                console.log('Batch rename');
+            }
+        });
+
+        items.push({
+            label: '复制',
+            icon: <Clipboard size={16} />,
+            shortcut: 'Ctrl+D',
+            onClick: () => {
+                // TODO: 实现复制功能
+                console.log('Duplicate:', node.path);
+            }
+        });
+
+        items.push({
             label: '删除',
             icon: <Trash2 size={16} />,
+            shortcut: 'Delete',
             onClick: () => handleDeleteClick(node)
+        });
+
+        items.push({ label: '', separator: true, onClick: () => {} });
+
+        // 资产操作子菜单
+        items.push({
+            label: '资产操作',
+            icon: <Settings size={16} />,
+            onClick: () => {},
+            children: [
+                {
+                    label: '重新导入',
+                    icon: <RefreshCw size={16} />,
+                    onClick: () => {
+                        console.log('Reimport asset:', node.path);
+                    }
+                },
+                {
+                    label: '导出...',
+                    icon: <Package size={16} />,
+                    onClick: () => {
+                        console.log('Export asset:', node.path);
+                    }
+                },
+                { label: '', separator: true, onClick: () => {} },
+                {
+                    label: '迁移资产',
+                    icon: <Folder size={16} />,
+                    onClick: () => {
+                        console.log('Migrate asset:', node.path);
+                    }
+                }
+            ]
+        });
+
+        // 资产本地化子菜单
+        items.push({
+            label: '资产本地化',
+            icon: <Globe size={16} />,
+            onClick: () => {},
+            children: [
+                {
+                    label: '创建本地化资产',
+                    onClick: () => {
+                        console.log('Create localized asset:', node.path);
+                    }
+                },
+                {
+                    label: '导入翻译',
+                    onClick: () => {
+                        console.log('Import translation:', node.path);
+                    }
+                },
+                {
+                    label: '导出翻译',
+                    onClick: () => {
+                        console.log('Export translation:', node.path);
+                    }
+                }
+            ]
+        });
+
+        items.push({ label: '', separator: true, onClick: () => {} });
+
+        // 标签和引用
+        items.push({
+            label: '管理标签',
+            icon: <Tag size={16} />,
+            shortcut: 'Ctrl+T',
+            onClick: () => {
+                console.log('Manage tags:', node.path);
+            }
+        });
+
+        items.push({ label: '', separator: true, onClick: () => {} });
+
+        // 路径复制选项
+        items.push({
+            label: '复制引用',
+            icon: <Link size={16} />,
+            shortcut: 'Ctrl+C',
+            onClick: () => {
+                navigator.clipboard.writeText(node.path);
+            }
+        });
+
+        items.push({
+            label: '拷贝Object路径',
+            icon: <Copy size={16} />,
+            shortcut: 'Ctrl+Shift+C',
+            onClick: () => {
+                // 生成对象路径格式
+                const objectPath = node.path.replace(/\\/g, '/');
+                navigator.clipboard.writeText(objectPath);
+            }
+        });
+
+        items.push({
+            label: '拷贝包路径',
+            icon: <Package size={16} />,
+            shortcut: 'Ctrl+Alt+C',
+            onClick: () => {
+                // 生成包路径格式
+                const packagePath = '/' + node.path.replace(/\\/g, '/').split('/').slice(-2).join('/');
+                navigator.clipboard.writeText(packagePath);
+            }
+        });
+
+        items.push({ label: '', separator: true, onClick: () => {} });
+
+        // 引用查看器
+        items.push({
+            label: '引用查看器',
+            icon: <FileSearch size={16} />,
+            shortcut: 'Alt+Shift+R',
+            onClick: () => {
+                console.log('Open reference viewer:', node.path);
+            }
+        });
+
+        items.push({
+            label: '尺寸信息图',
+            icon: <FileSearch size={16} />,
+            shortcut: 'Alt+Shift+D',
+            onClick: () => {
+                console.log('Show size map:', node.path);
+            }
         });
 
         items.push({ label: '', separator: true, onClick: () => {} });
@@ -672,14 +837,6 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                 } catch (error) {
                     console.error('Failed to show in folder:', error);
                 }
-            }
-        });
-
-        items.push({
-            label: '复制路径',
-            icon: <Copy size={16} />,
-            onClick: () => {
-                navigator.clipboard.writeText(node.path);
             }
         });
 

@@ -1,4 +1,4 @@
-import { Core, Entity, Component } from '@esengine/ecs-framework';
+import { Core, Entity, Component, HierarchySystem, HierarchyComponent } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub } from '@esengine/editor-core';
 import { BaseCommand } from '../BaseCommand';
 
@@ -8,9 +8,9 @@ import { BaseCommand } from '../BaseCommand';
 export class DeleteEntityCommand extends BaseCommand {
     private entityId: number;
     private entityName: string;
-    private parentEntity: Entity | null;
+    private parentEntityId: number | null;
     private components: Component[] = [];
-    private childEntities: Entity[] = [];
+    private childEntityIds: number[] = [];
 
     constructor(
         private entityStore: EntityStoreService,
@@ -20,18 +20,28 @@ export class DeleteEntityCommand extends BaseCommand {
         super();
         this.entityId = entity.id;
         this.entityName = entity.name;
-        this.parentEntity = entity.parent;
+
+        // 通过 HierarchyComponent 获取父实体 ID
+        const hierarchy = entity.getComponent(HierarchyComponent);
+        this.parentEntityId = hierarchy?.parentId ?? null;
 
         // 保存组件状态用于撤销
         this.components = [...entity.components];
-        // 保存子实体
-        this.childEntities = [...entity.children];
+
+        // 保存子实体 ID
+        this.childEntityIds = hierarchy?.childIds ? [...hierarchy.childIds] : [];
     }
 
     execute(): void {
+        const scene = Core.scene;
+        if (!scene) return;
+
         // 先移除子实体
-        for (const child of this.childEntities) {
-            this.entityStore.removeEntity(child);
+        for (const childId of this.childEntityIds) {
+            const child = scene.findEntityById(childId);
+            if (child) {
+                this.entityStore.removeEntity(child);
+            }
         }
 
         this.entityStore.removeEntity(this.entity);
@@ -46,12 +56,17 @@ export class DeleteEntityCommand extends BaseCommand {
             throw new Error('场景未初始化');
         }
 
+        const hierarchySystem = scene.getSystem(HierarchySystem);
+
         // 重新创建实体
         const newEntity = scene.createEntity(this.entityName);
 
         // 设置父实体
-        if (this.parentEntity) {
-            this.parentEntity.addChild(newEntity);
+        if (this.parentEntityId !== null && hierarchySystem) {
+            const parentEntity = scene.findEntityById(this.parentEntityId);
+            if (parentEntity) {
+                hierarchySystem.setParent(newEntity, parentEntity);
+            }
         }
 
         // 恢复组件
@@ -71,12 +86,20 @@ export class DeleteEntityCommand extends BaseCommand {
         }
 
         // 恢复子实体
-        for (const child of this.childEntities) {
-            newEntity.addChild(child);
-            this.entityStore.addEntity(child, newEntity);
+        for (const childId of this.childEntityIds) {
+            const child = scene.findEntityById(childId);
+            if (child && hierarchySystem) {
+                hierarchySystem.setParent(child, newEntity);
+                this.entityStore.addEntity(child, newEntity);
+            }
         }
 
-        this.entityStore.addEntity(newEntity, this.parentEntity ?? undefined);
+        // 获取父实体
+        const parentEntity = this.parentEntityId !== null
+            ? scene.findEntityById(this.parentEntityId) ?? undefined
+            : undefined;
+
+        this.entityStore.addEntity(newEntity, parentEntity);
         this.entityStore.selectEntity(newEntity);
 
         // 更新引用

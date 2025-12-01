@@ -1,6 +1,6 @@
-import { Core, Entity } from '@esengine/ecs-framework';
+import { Core, Entity, HierarchySystem, HierarchyComponent } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub } from '@esengine/editor-core';
-import { TransformComponent } from '@esengine/ecs-components';
+import { TransformComponent } from '@esengine/engine-core';
 import { BaseCommand } from '../BaseCommand';
 
 /**
@@ -28,11 +28,15 @@ export class CreateEntityCommand extends BaseCommand {
         this.entity = scene.createEntity(this.entityName);
         this.entityId = this.entity.id;
 
-        // 自动添加Transform组件
+        // 自动添加 Transform 组件
         this.entity.addComponent(new TransformComponent());
 
+        // 添加 HierarchyComponent 支持层级结构
+        this.entity.addComponent(new HierarchyComponent());
+
         if (this.parentEntity) {
-            this.parentEntity.addChild(this.entity);
+            const hierarchySystem = scene.getSystem(HierarchySystem);
+            hierarchySystem?.setParent(this.entity, this.parentEntity);
         }
 
         this.entityStore.addEntity(this.entity, this.parentEntity);

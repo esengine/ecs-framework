@@ -7,9 +7,8 @@
  * @packageDocumentation
  */
 
-// Asset type constant for behavior tree
-// 行为树资产类型常量
-export const BehaviorTreeAssetType = 'behaviortree' as const;
+// Constants
+export { BehaviorTreeAssetType } from './constants';
 
 // Types
 export * from './Types/TaskStatus';
@@ -35,8 +34,5 @@ export * from './Services/GlobalBlackboardService';
 export type { BlackboardTypeDefinition } from './Blackboard/BlackboardTypes';
 export { BlackboardTypes } from './Blackboard/BlackboardTypes';
 
-// Runtime module (no editor dependencies)
-export { BehaviorTreeRuntimeModule } from './BehaviorTreeRuntimeModule';
-
-// Plugin (for PluginManager - includes editor dependencies)
-export { BehaviorTreePlugin } from './editor/index';
+// Runtime module and plugin
+export { BehaviorTreeRuntimeModule, BehaviorTreePlugin, type BehaviorTreeSystemContext } from './BehaviorTreeRuntimeModule';

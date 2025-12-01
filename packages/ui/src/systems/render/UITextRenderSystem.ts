@@ -101,10 +101,20 @@ export class UITextRenderSystem extends EntitySystem {
 
             const x = transform.worldX ?? transform.x;
             const y = transform.worldY ?? transform.y;
-            const width = (transform.computedWidth ?? transform.width) * transform.scaleX;
-            const height = (transform.computedHeight ?? transform.height) * transform.scaleY;
+            // 使用世界缩放和旋转
+            const scaleX = transform.worldScaleX ?? transform.scaleX;
+            const scaleY = transform.worldScaleY ?? transform.scaleY;
+            const rotation = transform.worldRotation ?? transform.rotation;
+            const width = (transform.computedWidth ?? transform.width) * scaleX;
+            const height = (transform.computedHeight ?? transform.height) * scaleY;
             const alpha = transform.worldAlpha ?? transform.alpha;
             const baseOrder = 100 + transform.zIndex;
+            // 使用 transform 的 pivot 作为旋转/缩放中心
+            const pivotX = transform.pivotX;
+            const pivotY = transform.pivotY;
+            // 渲染位置 = 左下角 + pivot 偏移
+            const renderX = x + width * pivotX;
+            const renderY = y + height * pivotY;
 
             // Generate or retrieve cached texture
             // 生成或获取缓存的纹理
@@ -114,18 +124,18 @@ export class UITextRenderSystem extends EntitySystem {
 
             if (textureId === null) continue;
 
-            // Use top-left position with origin at (0, 0)
-            // 使用左上角位置，原点在 (0, 0)
+            // Use pivot position with transform's pivot values
+            // 使用 transform 的 pivot 值作为旋转中心
             collector.addRect(
-                x, y,
+                renderX, renderY,
                 width, height,
                 0xFFFFFF,  // White tint (color is baked into texture)
                 alpha,
                 baseOrder + 1,  // Text renders above background
                 {
-                    rotation: transform.rotation,
-                    pivotX: 0,
-                    pivotY: 0,
+                    rotation,
+                    pivotX,
+                    pivotY,
                     textureId
                 }
             );

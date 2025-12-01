@@ -1,0 +1,62 @@
+{
+    "name": "{{fullName}}",
+    "version": "1.0.0",
+    "description": "{{description}}",
+    "type": "module",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./runtime": {
+            "types": "./dist/runtime.d.ts",
+            "import": "./dist/runtime.js"
+        },
+        "./editor": {
+            "types": "./dist/editor/index.d.ts",
+            "import": "./dist/editor/index.js"
+        },
+        "./plugin.json": "./plugin.json"
+    },
+    "files": [
+        "dist",
+        "plugin.json"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "build:watch": "tsup --watch",
+        "clean": "rimraf dist",
+        "type-check": "tsc --noEmit"
+    },
+    "peerDependencies": {
+        "@esengine/ecs-framework": "{{depVersion}}",
+        "@esengine/ecs-components": "{{depVersion}}",
+        "@esengine/editor-core": "{{depVersion}}",
+        "react": "^18.3.1"
+    },
+    "peerDependenciesMeta": {
+        "@esengine/editor-core": {
+            "optional": true
+        },
+        "react": {
+            "optional": true
+        }
+    },
+    "devDependencies": {
+        "@esengine/build-config": "{{depVersion}}",
+        "@types/react": "^18.3.12",
+        "rimraf": "^5.0.5",
+        "tsup": "^8.0.0",
+        "typescript": "^5.8.3"
+    },
+    "keywords": [
+        "ecs",
+        "esengine",
+        "plugin"
+    ],
+    "author": "",
+    "license": "MIT"
+}

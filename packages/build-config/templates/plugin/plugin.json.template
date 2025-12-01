@@ -1,0 +1,22 @@
+{
+    "id": "{{fullName}}",
+    "name": "{{displayName}}",
+    "version": "1.0.0",
+    "category": "{{category}}",
+    "enabledByDefault": true,
+    "isEnginePlugin": false,
+    "modules": [
+        {
+            "name": "{{pascalName}}Runtime",
+            "type": "runtime",
+            "entry": "./src/runtime.ts"
+        },
+        {
+            "name": "{{pascalName}}Editor",
+            "type": "editor",
+            "entry": "./src/editor/index.ts"
+        }
+    ],
+    "components": [],
+    "dependencies": []
+}

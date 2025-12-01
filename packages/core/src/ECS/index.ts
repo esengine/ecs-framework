@@ -4,6 +4,7 @@ export { ECSEventType, EventPriority, EVENT_TYPES, EventTypeValidator } from './
 export * from './Systems';
 export * from './Utils';
 export * from './Decorators';
+export * from './Components';
 export { Scene } from './Scene';
 export { IScene, ISceneFactory, ISceneConfig } from './IScene';
 export { SceneManager } from './SceneManager';
@@ -18,3 +19,4 @@ export { ReferenceTracker, getSceneByEntityId } from './Core/ReferenceTracker';
 export type { EntityRefRecord } from './Core/ReferenceTracker';
 export { ReactiveQuery, ReactiveQueryChangeType } from './Core/ReactiveQuery';
 export type { ReactiveQueryChange, ReactiveQueryListener, ReactiveQueryConfig } from './Core/ReactiveQuery';
+export * from './EntityTags';
