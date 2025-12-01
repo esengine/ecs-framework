@@ -102,6 +102,12 @@ jobs:
     - name: Install dependencies
       run: pnpm install
 
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install wasm-pack
+      run: cargo install wasm-pack
+
     - name: Build project
       run: pnpm run build
 

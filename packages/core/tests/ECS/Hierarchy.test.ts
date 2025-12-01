@@ -359,3 +359,290 @@ describe('HierarchyComponent', () => {
         expect(component.bCacheDirty).toBe(true);
     });
 });
+
+describe('HierarchySystem - Extended Tests', () => {
+    let scene: Scene;
+    let hierarchySystem: HierarchySystem;
+
+    beforeEach(() => {
+        scene = new Scene();
+        scene.initialize();
+        hierarchySystem = new HierarchySystem();
+        scene.addSystem(hierarchySystem);
+    });
+
+    afterEach(() => {
+        scene.end();
+    });
+
+    describe('findChildrenByTag', () => {
+        it('should find children by tag', () => {
+            const parent = scene.createEntity('Parent');
+            const child1 = scene.createEntity('Child1');
+            const child2 = scene.createEntity('Child2');
+            const child3 = scene.createEntity('Child3');
+
+            child1.tag = 0x01;
+            child2.tag = 0x02;
+            child3.tag = 0x01;
+
+            hierarchySystem.setParent(child1, parent);
+            hierarchySystem.setParent(child2, parent);
+            hierarchySystem.setParent(child3, parent);
+
+            const found = hierarchySystem.findChildrenByTag(parent, 0x01);
+            expect(found.length).toBe(2);
+            expect(found).toContain(child1);
+            expect(found).toContain(child3);
+        });
+
+        it('should find children by tag recursively', () => {
+            const root = scene.createEntity('Root');
+            const child = scene.createEntity('Child');
+            const grandchild = scene.createEntity('Grandchild');
+
+            child.tag = 0x01;
+            grandchild.tag = 0x01;
+
+            hierarchySystem.setParent(child, root);
+            hierarchySystem.setParent(grandchild, child);
+
+            const foundNonRecursive = hierarchySystem.findChildrenByTag(root, 0x01, false);
+            expect(foundNonRecursive.length).toBe(1);
+            expect(foundNonRecursive[0]).toBe(child);
+
+            const foundRecursive = hierarchySystem.findChildrenByTag(root, 0x01, true);
+            expect(foundRecursive.length).toBe(2);
+            expect(foundRecursive).toContain(child);
+            expect(foundRecursive).toContain(grandchild);
+        });
+
+        it('should return empty array when no children match tag', () => {
+            const parent = scene.createEntity('Parent');
+            const child = scene.createEntity('Child');
+            child.tag = 0x01;
+
+            hierarchySystem.setParent(child, parent);
+
+            const found = hierarchySystem.findChildrenByTag(parent, 0x02);
+            expect(found).toEqual([]);
+        });
+    });
+
+    describe('flattenHierarchy', () => {
+        it('should flatten hierarchy with expanded nodes', () => {
+            const root = scene.createEntity('Root');
+            const child1 = scene.createEntity('Child1');
+            const child2 = scene.createEntity('Child2');
+            const grandchild = scene.createEntity('Grandchild');
+
+            root.addComponent(new HierarchyComponent());
+            hierarchySystem.setParent(child1, root);
+            hierarchySystem.setParent(child2, root);
+            hierarchySystem.setParent(grandchild, child1);
+
+            const expandedIds = new Set([root.id, child1.id]);
+            const flattened = hierarchySystem.flattenHierarchy(expandedIds);
+
+            expect(flattened.length).toBe(4);
+            expect(flattened[0].entity).toBe(root);
+            expect(flattened[0].depth).toBe(0);
+            expect(flattened[0].bHasChildren).toBe(true);
+            expect(flattened[0].bIsExpanded).toBe(true);
+        });
+
+        it('should not include children of collapsed nodes', () => {
+            const root = scene.createEntity('Root');
+            const child = scene.createEntity('Child');
+            const grandchild = scene.createEntity('Grandchild');
+
+            root.addComponent(new HierarchyComponent());
+            hierarchySystem.setParent(child, root);
+            hierarchySystem.setParent(grandchild, child);
+
+            // Root is expanded, but child is collapsed
+            const expandedIds = new Set([root.id]);
+            const flattened = hierarchySystem.flattenHierarchy(expandedIds);
+
+            expect(flattened.length).toBe(2);
+            expect(flattened[0].entity).toBe(root);
+            expect(flattened[1].entity).toBe(child);
+            expect(flattened[1].bHasChildren).toBe(true);
+            expect(flattened[1].bIsExpanded).toBe(false);
+        });
+
+        it('should return empty array when no root entities', () => {
+            const flattened = hierarchySystem.flattenHierarchy(new Set());
+            expect(flattened).toEqual([]);
+        });
+    });
+
+    describe('updateOrder', () => {
+        it('should have negative update order for early processing', () => {
+            expect(hierarchySystem.updateOrder).toBe(-1000);
+        });
+    });
+
+    describe('process - cache update', () => {
+        it('should update dirty caches during process', () => {
+            const parent = scene.createEntity('Parent');
+            const child = scene.createEntity('Child');
+
+            hierarchySystem.setParent(child, parent);
+
+            // Cache should be dirty after setParent
+            const childHierarchy = child.getComponent(HierarchyComponent)!;
+            expect(childHierarchy.bCacheDirty).toBe(true);
+
+            // Update scene to process
+            scene.update();
+
+            // Cache should be clean after process
+            expect(childHierarchy.bCacheDirty).toBe(false);
+        });
+    });
+
+    describe('insertChildAt edge cases', () => {
+        it('should handle circular reference prevention', () => {
+            const parent = scene.createEntity('Parent');
+            const child = scene.createEntity('Child');
+            const grandchild = scene.createEntity('Grandchild');
+
+            hierarchySystem.setParent(child, parent);
+            hierarchySystem.setParent(grandchild, child);
+
+            expect(() => {
+                hierarchySystem.insertChildAt(grandchild, parent, 0);
+            }).toThrow('Cannot set parent: would create circular reference');
+        });
+
+        it('should move child within same parent to different position', () => {
+            const parent = scene.createEntity('Parent');
+            const child1 = scene.createEntity('Child1');
+            const child2 = scene.createEntity('Child2');
+            const child3 = scene.createEntity('Child3');
+
+            hierarchySystem.setParent(child1, parent);
+            hierarchySystem.setParent(child2, parent);
+            hierarchySystem.setParent(child3, parent);
+
+            // Move child3 to position 0
+            hierarchySystem.insertChildAt(parent, child3, 0);
+
+            const children = hierarchySystem.getChildren(parent);
+            expect(children[0]).toBe(child3);
+            expect(children[1]).toBe(child1);
+            expect(children[2]).toBe(child2);
+        });
+    });
+
+    describe('removeChild edge cases', () => {
+        it('should return false when parent has no HierarchyComponent', () => {
+            const parent = scene.createEntity('Parent');
+            const child = scene.createEntity('Child');
+
+            const result = hierarchySystem.removeChild(parent, child);
+            expect(result).toBe(false);
+        });
+
+        it('should return false when child has no HierarchyComponent', () => {
+            const parent = scene.createEntity('Parent');
+            const child = scene.createEntity('Child');
+
+            parent.addComponent(new HierarchyComponent());
+
+            const result = hierarchySystem.removeChild(parent, child);
+            expect(result).toBe(false);
+        });
+    });
+
+    describe('removeAllChildren edge cases', () => {
+        it('should handle entity with no HierarchyComponent', () => {
+            const parent = scene.createEntity('Parent');
+
+            expect(() => {
+                hierarchySystem.removeAllChildren(parent);
+            }).not.toThrow();
+        });
+    });
+
+    describe('getChildren edge cases', () => {
+        it('should return empty array when entity has no HierarchyComponent', () => {
+            const entity = scene.createEntity('Entity');
+            const children = hierarchySystem.getChildren(entity);
+            expect(children).toEqual([]);
+        });
+    });
+
+    describe('getChildCount edge cases', () => {
+        it('should return 0 when entity has no HierarchyComponent', () => {
+            const entity = scene.createEntity('Entity');
+            expect(hierarchySystem.getChildCount(entity)).toBe(0);
+        });
+    });
+
+    describe('getDepth edge cases', () => {
+        it('should return 0 when entity has no HierarchyComponent', () => {
+            const entity = scene.createEntity('Entity');
+            expect(hierarchySystem.getDepth(entity)).toBe(0);
+        });
+
+        it('should use cached depth when cache is valid', () => {
+            const parent = scene.createEntity('Parent');
+            const child = scene.createEntity('Child');
+
+            parent.addComponent(new HierarchyComponent());
+            hierarchySystem.setParent(child, parent);
+
+            // First call computes depth
+            const depth1 = hierarchySystem.getDepth(child);
+            expect(depth1).toBe(1);
+
+            // Mark cache as valid
+            const childHierarchy = child.getComponent(HierarchyComponent)!;
+            childHierarchy.bCacheDirty = false;
+
+            // Second call should use cache
+            const depth2 = hierarchySystem.getDepth(child);
+            expect(depth2).toBe(1);
+        });
+    });
+
+    describe('isActiveInHierarchy edge cases', () => {
+        it('should return entity.active when entity has no HierarchyComponent', () => {
+            const entity = scene.createEntity('Entity');
+            entity.active = true;
+            expect(hierarchySystem.isActiveInHierarchy(entity)).toBe(true);
+
+            entity.active = false;
+            expect(hierarchySystem.isActiveInHierarchy(entity)).toBe(false);
+        });
+
+        it('should use cached value when cache is valid', () => {
+            const parent = scene.createEntity('Parent');
+            const child = scene.createEntity('Child');
+
+            hierarchySystem.setParent(child, parent);
+
+            // First call computes activeInHierarchy
+            const active1 = hierarchySystem.isActiveInHierarchy(child);
+            expect(active1).toBe(true);
+
+            // Mark cache as valid
+            const childHierarchy = child.getComponent(HierarchyComponent)!;
+            childHierarchy.bCacheDirty = false;
+
+            // Second call should use cache
+            const active2 = hierarchySystem.isActiveInHierarchy(child);
+            expect(active2).toBe(true);
+        });
+    });
+
+    describe('dispose', () => {
+        it('should not throw when disposing', () => {
+            expect(() => {
+                hierarchySystem.dispose();
+            }).not.toThrow();
+        });
+    });
+});
