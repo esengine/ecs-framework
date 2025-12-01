@@ -31,9 +31,7 @@
         "clean": "rimraf dist tsconfig.tsbuildinfo",
         "build": "tsup",
         "build:watch": "tsup --watch",
-        "type-check": "tsc --noEmit",
-        "test": "jest --config jest.config.cjs",
-        "test:watch": "jest --watch --config jest.config.cjs"
+        "type-check": "tsc --noEmit"
     },
     "author": "yhh",
     "license": "MIT",
