@@ -12,7 +12,7 @@
       "cache": false
     },
     "build:npm": {
-      "dependsOn": ["build"],
+      "dependsOn": ["^build:npm", "build"],
       "outputs": ["dist/**", "bin/**"]
     },
     "build:release": {
