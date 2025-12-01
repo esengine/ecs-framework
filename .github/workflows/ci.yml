@@ -23,7 +23,7 @@ on:
       - '.github/workflows/ci.yml'
 
 jobs:
-  test:
+  ci:
     runs-on: ubuntu-latest
 
     steps:
@@ -41,16 +41,45 @@ jobs:
         node-version: '20.x'
         cache: 'pnpm'
 
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: wasm32-unknown-unknown
+
+    # 缓存 Rust 编译结果
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: packages/engine
+        cache-on-failure: true
+
+    # 缓存 wasm-pack
+    - name: Cache wasm-pack
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/bin/wasm-pack
+        key: wasm-pack-${{ runner.os }}
+
+    - name: Install wasm-pack
+      run: |
+        if ! command -v wasm-pack &> /dev/null; then
+          cargo install wasm-pack
+        fi
+
     - name: Install dependencies
       run: pnpm install
 
-    - name: Install Rust stable
-      uses: dtolnay/rust-toolchain@stable
+    # 缓存 Turbo
+    - name: Cache Turbo
+      uses: actions/cache@v4
+      with:
+        path: .turbo
+        key: turbo-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ github.sha }}
+        restore-keys: |
+          turbo-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}-
+          turbo-${{ runner.os }}-
 
-    - name: Install wasm-pack
-      run: cargo install wasm-pack
-
-    # 使用 Turborepo 自动按依赖顺序构建所有包
+    # 构建所有包
     - name: Build all packages
       run: pnpm run build
 
@@ -62,12 +91,15 @@ jobs:
         cp packages/engine/pkg/es_engine_bg.wasm packages/ecs-engine-bindgen/src/wasm/
         cp packages/engine/pkg/es_engine_bg.wasm.d.ts packages/ecs-engine-bindgen/src/wasm/
 
+    # 类型检查
     - name: Type check
       run: pnpm run type-check
 
+    # Lint 检查
     - name: Lint check
       run: pnpm run lint
 
+    # 测试
     - name: Run tests with coverage
       run: pnpm run test:ci
 
@@ -80,45 +112,16 @@ jobs:
         name: codecov-umbrella
         fail_ci_if_error: false
 
-  build:
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 8
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-        cache: 'pnpm'
-
-    - name: Install dependencies
-      run: pnpm install
-
-    - name: Install Rust stable
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Install wasm-pack
-      run: cargo install wasm-pack
-
-    - name: Build project
-      run: pnpm run build
-
-    - name: Build npm package
+    # 构建 npm 包
+    - name: Build npm packages
       run: pnpm run build:npm
 
+    # 上传构建产物
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: build-artifacts
         path: |
-          bin/
-          dist/
+          packages/*/dist/
+          packages/*/bin/
         retention-days: 7

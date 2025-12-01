@@ -15,7 +15,13 @@ const banner = `/**
  * @license ${pkg.license}
  */`;
 
-const external = ['@esengine/ecs-framework'];
+const external = [
+  '@esengine/ecs-framework',
+  'react',
+  'react-dom',
+  'react/jsx-runtime',
+  /^@types\//
+];
 
 const commonPlugins = [
   resolve({
