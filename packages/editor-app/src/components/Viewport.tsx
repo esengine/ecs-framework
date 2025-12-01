@@ -8,7 +8,7 @@ import '../styles/Viewport.css';
 import { useEngine } from '../hooks/useEngine';
 import { EngineService } from '../services/EngineService';
 import { Core, Entity, SceneSerializer } from '@esengine/ecs-framework';
-import { MessageHub, ProjectService } from '@esengine/editor-core';
+import { MessageHub, ProjectService, AssetRegistryService } from '@esengine/editor-core';
 import { TransformComponent } from '@esengine/engine-core';
 import { CameraComponent } from '@esengine/camera';
 import { UITransformComponent } from '@esengine/ui';
@@ -709,57 +709,114 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             // Copy project config file (for plugin settings)
             // 复制项目配置文件（用于插件设置）
             const projectService = Core.services.tryResolve(ProjectService);
-            if (projectService) {
-                const currentProject = projectService.getCurrentProject();
-                if (currentProject?.path) {
-                    const configPath = `${currentProject.path}\\ecs-editor.config.json`;
-                    const configExists = await TauriAPI.pathExists(configPath);
-                    if (configExists) {
-                        await TauriAPI.copyFile(configPath, `${runtimeDir}\\ecs-editor.config.json`);
-                        console.log('[Viewport] Copied project config to runtime dir');
-                    }
+            const projectPath = projectService?.getCurrentProject()?.path;
+            if (projectPath) {
+                const configPath = `${projectPath}\\ecs-editor.config.json`;
+                const configExists = await TauriAPI.pathExists(configPath);
+                if (configExists) {
+                    await TauriAPI.copyFile(configPath, `${runtimeDir}\\ecs-editor.config.json`);
+                    console.log('[Viewport] Copied project config to runtime dir');
                 }
             }
 
-            // Copy texture assets referenced in the scene
-            // 复制场景中引用的纹理资产
-            const sceneObj = JSON.parse(sceneData);
-            const texturePathSet = new Set<string>();
-
-            // Find all texture paths in sprite components
-            if (sceneObj.entities) {
-                for (const entity of sceneObj.entities) {
-                    if (entity.components) {
-                        for (const comp of entity.components) {
-                            if (comp.type === 'Sprite' && comp.data?.texture) {
-                                texturePathSet.add(comp.data.texture);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Create assets directory and copy textures
+            // Create assets directory
+            // 创建资产目录
             const assetsDir = `${runtimeDir}\\assets`;
             const assetsDirExists = await TauriAPI.pathExists(assetsDir);
             if (!assetsDirExists) {
                 await TauriAPI.createDirectory(assetsDir);
             }
 
-            for (const texturePath of texturePathSet) {
-                if (texturePath && (texturePath.includes(':\\') || texturePath.startsWith('/'))) {
-                    try {
-                        const filename = texturePath.split(/[/\\]/).pop() || '';
-                        const destPath = `${assetsDir}\\${filename}`;
-                        const exists = await TauriAPI.pathExists(texturePath);
-                        if (exists) {
-                            await TauriAPI.copyFile(texturePath, destPath);
+            // Collect all asset paths from scene
+            // 从场景中收集所有资产路径
+            const sceneObj = JSON.parse(sceneData);
+            const assetPaths = new Set<string>();
+
+            // Scan all components for asset references
+            if (sceneObj.entities) {
+                for (const entity of sceneObj.entities) {
+                    if (entity.components) {
+                        for (const comp of entity.components) {
+                            // Sprite textures
+                            if (comp.type === 'Sprite' && comp.data?.texture) {
+                                assetPaths.add(comp.data.texture);
+                            }
+                            // Behavior tree assets
+                            if (comp.type === 'BehaviorTreeRuntime' && comp.data?.treeAssetId) {
+                                assetPaths.add(comp.data.treeAssetId);
+                            }
+                            // Tilemap assets
+                            if (comp.type === 'Tilemap' && comp.data?.tmxPath) {
+                                assetPaths.add(comp.data.tmxPath);
+                            }
+                            // Audio assets
+                            if (comp.type === 'AudioSource' && comp.data?.clip) {
+                                assetPaths.add(comp.data.clip);
+                            }
                         }
-                    } catch (error) {
-                        console.error(`Failed to copy texture ${texturePath}:`, error);
                     }
                 }
             }
+
+            // Build asset catalog and copy files
+            // 构建资产目录并复制文件
+            const catalogEntries: Record<string, { guid: string; path: string; type: string; size: number; hash: string }> = {};
+
+            for (const assetPath of assetPaths) {
+                if (!assetPath || (!assetPath.includes(':\\') && !assetPath.startsWith('/'))) continue;
+
+                try {
+                    const exists = await TauriAPI.pathExists(assetPath);
+                    if (!exists) {
+                        console.warn(`[Viewport] Asset not found: ${assetPath}`);
+                        continue;
+                    }
+
+                    // Get filename and determine relative path
+                    const filename = assetPath.split(/[/\\]/).pop() || '';
+                    const destPath = `${assetsDir}\\${filename}`;
+                    const relativePath = `assets/${filename}`;
+
+                    // Copy file
+                    await TauriAPI.copyFile(assetPath, destPath);
+
+                    // Determine asset type from extension
+                    const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
+                    const typeMap: Record<string, string> = {
+                        '.png': 'texture', '.jpg': 'texture', '.jpeg': 'texture', '.webp': 'texture',
+                        '.btree': 'btree',
+                        '.tmx': 'tilemap', '.tsx': 'tileset',
+                        '.mp3': 'audio', '.ogg': 'audio', '.wav': 'audio',
+                        '.json': 'json'
+                    };
+                    const assetType = typeMap[ext] || 'binary';
+
+                    // Generate simple GUID based on path
+                    const guid = assetPath.replace(/[^a-zA-Z0-9]/g, '-').substring(0, 36);
+
+                    catalogEntries[guid] = {
+                        guid,
+                        path: relativePath,
+                        type: assetType,
+                        size: 0,
+                        hash: ''
+                    };
+
+                    console.log(`[Viewport] Copied asset: ${filename}`);
+                } catch (error) {
+                    console.error(`[Viewport] Failed to copy asset ${assetPath}:`, error);
+                }
+            }
+
+            // Write asset catalog
+            // 写入资产目录
+            const assetCatalog = {
+                version: '1.0.0',
+                createdAt: Date.now(),
+                entries: catalogEntries
+            };
+            await TauriAPI.writeFileContent(`${runtimeDir}/asset-catalog.json`, JSON.stringify(assetCatalog, null, 2));
+            console.log(`[Viewport] Asset catalog created with ${Object.keys(catalogEntries).length} entries`);
 
             const runtimeHtml = generateRuntimeHtml();
             await TauriAPI.writeFileContent(`${runtimeDir}/index.html`, runtimeHtml);

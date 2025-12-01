@@ -61,3 +61,12 @@ export {
     EditorPathResolver,
     type EditorPlatformConfig
 } from './adapters';
+
+// Browser File System Service
+export {
+    BrowserFileSystemService,
+    createBrowserFileSystem,
+    type AssetCatalog,
+    type AssetCatalogEntry,
+    type BrowserFileSystemOptions
+} from './services/BrowserFileSystemService';

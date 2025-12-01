@@ -11,7 +11,8 @@ import {
     GameRuntime,
     createGameRuntime,
     BrowserPlatformAdapter,
-    runtimePluginManager
+    runtimePluginManager,
+    BrowserFileSystemService
 } from '@esengine/runtime-core';
 
 // 静态导入所有运行时插件（与编辑器保持一致）
@@ -54,6 +55,10 @@ export interface RuntimeConfig {
     height?: number;
     /** 项目配置文件 URL / Project config file URL */
     projectConfigUrl?: string;
+    /** 资产目录文件 URL / Asset catalog file URL */
+    assetCatalogUrl?: string;
+    /** 资产基础 URL / Asset base URL */
+    assetBaseUrl?: string;
 }
 
 /**
@@ -76,10 +81,15 @@ class BrowserRuntime {
     private _runtime: GameRuntime | null = null;
     private _canvasId: string;
     private _configUrl?: string;
+    private _assetCatalogUrl?: string;
+    private _assetBaseUrl?: string;
+    private _fileSystem: BrowserFileSystemService | null = null;
 
     constructor(config: RuntimeConfig) {
         this._canvasId = config.canvasId;
         this._configUrl = config.projectConfigUrl;
+        this._assetCatalogUrl = config.assetCatalogUrl ?? '/asset-catalog.json';
+        this._assetBaseUrl = config.assetBaseUrl ?? '/assets';
     }
 
     /**
@@ -111,6 +121,15 @@ class BrowserRuntime {
         // 从配置文件加载插件配置（如果指定了 URL）
         await this._loadConfigFromUrl();
 
+        // 初始化浏览器文件系统服务（用于资产加载）
+        // Initialize browser file system service (for asset loading)
+        this._fileSystem = new BrowserFileSystemService({
+            baseUrl: this._assetBaseUrl,
+            catalogUrl: this._assetCatalogUrl,
+            enableCache: true
+        });
+        await this._fileSystem.initialize();
+
         // 创建浏览器平台适配器
         const platform = new BrowserPlatformAdapter({
             wasmModule: wasmModule
@@ -127,6 +146,13 @@ class BrowserRuntime {
         });
 
         await this._runtime.initialize();
+
+        // 注册文件系统服务到 Core.services（必须在 GameRuntime.initialize 之后，因为 Core 在那时才创建）
+        // Register file system service to Core.services (must be after GameRuntime.initialize as Core is created there)
+        const IFileSystemServiceKey = Symbol.for('IFileSystemService');
+        if (!Core.services.isRegistered(IFileSystemServiceKey)) {
+            Core.services.registerInstance(IFileSystemServiceKey, this._fileSystem);
+        }
 
         // 设置浏览器特定配置
         this._runtime.setShowGrid(false);
