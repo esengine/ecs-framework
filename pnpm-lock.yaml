@@ -774,6 +774,9 @@ importers:
       '@rollup/plugin-terser':
         specifier: ^0.4.4
         version: 0.4.4(rollup@4.53.3)
+      '@tauri-apps/api':
+        specifier: ^2.2.0
+        version: 2.9.0
       '@types/jest':
         specifier: ^29.5.14
         version: 29.5.14
@@ -1355,6 +1358,9 @@ importers:
       '@esengine/ecs-framework':
         specifier: workspace:*
         version: link:../core
+      '@esengine/ecs-framework-math':
+        specifier: workspace:*
+        version: link:../math
       '@esengine/engine-core':
         specifier: workspace:*
         version: link:../engine-core
