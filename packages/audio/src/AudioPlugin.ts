@@ -1,5 +1,5 @@
 import type { ComponentRegistry as ComponentRegistryType } from '@esengine/ecs-framework';
-import type { IRuntimeModule, IPlugin, PluginDescriptor } from '@esengine/engine-core';
+import type { IRuntimeModule, IPlugin, ModuleManifest } from '@esengine/engine-core';
 import { AudioSourceComponent } from './AudioSourceComponent';
 
 class AudioRuntimeModule implements IRuntimeModule {
@@ -8,17 +8,21 @@ class AudioRuntimeModule implements IRuntimeModule {
     }
 }
 
-const descriptor: PluginDescriptor = {
-    id: '@esengine/audio',
-    name: 'Audio',
+const manifest: ModuleManifest = {
+    id: 'audio',
+    name: '@esengine/audio',
+    displayName: 'Audio',
     version: '1.0.0',
     description: '音频组件',
-    category: 'audio',
-    enabledByDefault: true,
-    isEnginePlugin: true
+    category: 'Audio',
+    isCore: false,
+    defaultEnabled: true,
+    isEngineModule: true,
+    dependencies: ['core', 'asset-system'],
+    exports: { components: ['AudioSourceComponent'] }
 };
 
 export const AudioPlugin: IPlugin = {
-    descriptor,
+    manifest,
     runtimeModule: new AudioRuntimeModule()
 };

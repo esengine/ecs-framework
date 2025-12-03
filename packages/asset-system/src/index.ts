@@ -1,14 +1,28 @@
 /**
  * Asset System for ECS Framework
  * ECS框架的资产系统
+ *
+ * Runtime-focused asset management:
+ * - Asset loading and caching
+ * - GUID-based asset resolution
+ * - Bundle loading
+ *
+ * For editor-side functionality (meta files, packing), use @esengine/asset-system-editor
  */
 
 // Types
 export * from './types/AssetTypes';
 
+// Bundle format (shared types for runtime and editor)
+export * from './bundle/BundleFormat';
+
+// Runtime catalog
+export { RuntimeCatalog, runtimeCatalog } from './runtime/RuntimeCatalog';
+
 // Interfaces
 export * from './interfaces/IAssetLoader';
 export * from './interfaces/IAssetManager';
+export * from './interfaces/IAssetReader';
 export * from './interfaces/IResourceComponent';
 
 // Core
@@ -51,9 +65,12 @@ export const assetManager = new AssetManager();
  * Initialize asset system with catalog
  * 使用目录初始化资产系统
  */
-export function initializeAssetSystem(catalog?: any): AssetManager {
+export function initializeAssetSystem(catalog?: IAssetCatalog): AssetManager {
     if (catalog) {
         return new AssetManager(catalog);
     }
     return assetManager;
 }
+
+// Re-export IAssetCatalog for initializeAssetSystem signature
+import type { IAssetCatalog } from './types/AssetTypes';

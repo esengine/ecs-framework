@@ -70,6 +70,12 @@ export interface IAssetManager {
     getAssetByHandle<T = unknown>(handle: AssetHandle): T | null;
 
     /**
+     * Get loaded asset by path (synchronous)
+     * 通过路径获取已加载的资产（同步）
+     */
+    getAssetByPath<T = unknown>(path: string): T | null;
+
+    /**
      * Check if asset is loaded
      * 检查资产是否已加载
      */

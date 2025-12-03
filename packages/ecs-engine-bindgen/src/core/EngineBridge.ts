@@ -58,6 +58,7 @@ export class EngineBridge implements IEngineBridge {
     private textureIdBuffer: Uint32Array;
     private uvBuffer: Float32Array;
     private colorBuffer: Uint32Array;
+    private materialIdBuffer: Uint32Array;
 
     // Statistics | 统计信息
     private stats: EngineStats = {
@@ -92,6 +93,7 @@ export class EngineBridge implements IEngineBridge {
         this.textureIdBuffer = new Uint32Array(maxSprites);
         this.uvBuffer = new Float32Array(maxSprites * 4); // u0, v0, u1, v1
         this.colorBuffer = new Uint32Array(maxSprites);
+        this.materialIdBuffer = new Uint32Array(maxSprites);
     }
 
     /**
@@ -235,6 +237,9 @@ export class EngineBridge implements IEngineBridge {
 
             // Color | 颜色
             this.colorBuffer[i] = sprite.color;
+
+            // Material ID (0 = default) | 材质ID（0 = 默认）
+            this.materialIdBuffer[i] = sprite.materialId ?? 0;
         }
 
         // Submit to engine (single WASM call) | 提交到引擎（单次WASM调用）
@@ -242,7 +247,8 @@ export class EngineBridge implements IEngineBridge {
             this.transformBuffer.subarray(0, count * 7),
             this.textureIdBuffer.subarray(0, count),
             this.uvBuffer.subarray(0, count * 4),
-            this.colorBuffer.subarray(0, count)
+            this.colorBuffer.subarray(0, count),
+            this.materialIdBuffer.subarray(0, count)
         );
 
         this.stats.spriteCount = count;

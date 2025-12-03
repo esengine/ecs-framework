@@ -5,35 +5,9 @@
 
 import { ComponentRegistry, ServiceContainer } from '@esengine/ecs-framework';
 import type { IScene } from '@esengine/ecs-framework';
+import type { IPlugin, IRuntimeModule, SystemContext, ModuleManifest } from '@esengine/engine-core';
 
-export interface SystemContext {
-    isEditor: boolean;
-    [key: string]: any;
-}
-
-export interface PluginDescriptor {
-    id: string;
-    name: string;
-    version: string;
-    description?: string;
-    category?: string;
-    enabledByDefault?: boolean;
-    isEnginePlugin?: boolean;
-}
-
-export interface IRuntimeModule {
-    registerComponents?(registry: typeof ComponentRegistry): void;
-    registerServices?(services: ServiceContainer): void;
-    createSystems?(scene: IScene, context: SystemContext): void;
-    onSystemsCreated?(scene: IScene, context: SystemContext): void;
-    onInitialize?(): Promise<void>;
-    onDestroy?(): void;
-}
-
-export interface IPlugin {
-    readonly descriptor: PluginDescriptor;
-    readonly runtimeModule?: IRuntimeModule;
-}
+export type { IPlugin, IRuntimeModule, SystemContext, ModuleManifest };
 
 export class RuntimePluginManager {
     private _plugins = new Map<string, IPlugin>();
@@ -41,12 +15,12 @@ export class RuntimePluginManager {
     private _bInitialized = false;
 
     register(plugin: IPlugin): void {
-        const id = plugin.descriptor.id;
+        const id = plugin.manifest.id;
         if (this._plugins.has(id)) {
             return;
         }
         this._plugins.set(id, plugin);
-        if (plugin.descriptor.enabledByDefault !== false) {
+        if (plugin.manifest.defaultEnabled !== false) {
             this._enabledPlugins.add(id);
         }
     }
@@ -68,9 +42,9 @@ export class RuntimePluginManager {
         for (const id of config.enabledPlugins) {
             this._enabledPlugins.add(id);
         }
-        // 始终启用引擎核心插件
+        // 始终启用引擎核心模块
         for (const [id, plugin] of this._plugins) {
-            if (plugin.descriptor.isEnginePlugin) {
+            if (plugin.manifest.isEngineModule) {
                 this._enabledPlugins.add(id);
             }
         }

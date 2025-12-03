@@ -7,40 +7,64 @@ import {
     AssetType,
     AssetGUID,
     IAssetLoadOptions,
-    IAssetMetadata,
-    IAssetLoadResult
+    IAssetMetadata
 } from '../types/AssetTypes';
+import type { IAssetContent, AssetContentType } from './IAssetReader';
 
 /**
- * Base asset loader interface
- * 基础资产加载器接口
+ * Parse context provided to loaders.
+ * 提供给加载器的解析上下文。
+ */
+export interface IAssetParseContext {
+    /** Asset metadata. | 资产元数据。 */
+    metadata: IAssetMetadata;
+    /** Load options. | 加载选项。 */
+    options?: IAssetLoadOptions;
+    /**
+     * Load a dependency asset by relative path.
+     * 通过相对路径加载依赖资产。
+     */
+    loadDependency<D = unknown>(relativePath: string): Promise<D>;
+}
+
+/**
+ * Asset loader interface.
+ * 资产加载器接口。
+ *
+ * Loaders only parse content, file reading is handled by AssetManager.
+ * 加载器只负责解析内容，文件读取由 AssetManager 处理。
  */
 export interface IAssetLoader<T = unknown> {
-    /** 支持的资产类型 / Supported asset type */
+    /** Supported asset type. | 支持的资产类型。 */
     readonly supportedType: AssetType;
 
-    /** 支持的文件扩展名 / Supported file extensions */
+    /** Supported file extensions. | 支持的文件扩展名。 */
     readonly supportedExtensions: string[];
 
     /**
-     * Load an asset from the given path
-     * 从指定路径加载资产
+     * Required content type for this loader.
+     * 此加载器需要的内容类型。
+     *
+     * - 'text': For JSON, shader, material files
+     * - 'binary': For binary formats
+     * - 'image': For textures
+     * - 'audio': For audio files
      */
-    load(
-        path: string,
-        metadata: IAssetMetadata,
-        options?: IAssetLoadOptions
-    ): Promise<IAssetLoadResult<T>>;
+    readonly contentType: AssetContentType;
 
     /**
-     * Validate if the loader can handle this asset
-     * 验证加载器是否可以处理此资产
+     * Parse asset from content.
+     * 从内容解析资产。
+     *
+     * @param content - File content. | 文件内容。
+     * @param context - Parse context. | 解析上下文。
+     * @returns Parsed asset. | 解析后的资产。
      */
-    canLoad(path: string, metadata: IAssetMetadata): boolean;
+    parse(content: IAssetContent, context: IAssetParseContext): Promise<T>;
 
     /**
-     * Dispose loaded asset and free resources
-     * 释放已加载的资产并释放资源
+     * Dispose loaded asset and free resources.
+     * 释放已加载的资产。
      */
     dispose(asset: T): void;
 }

@@ -4,11 +4,10 @@
  */
 
 import {
-    IAssetLoadOptions,
-    IAssetMetadata,
-    IAssetLoadResult,
-    AssetLoadError,
-    IAssetLoader
+    IAssetLoader,
+    IAssetContent,
+    IAssetParseContext,
+    AssetContentType
 } from '@esengine/asset-system';
 import { TilemapAssetType } from '../constants';
 
@@ -39,6 +38,8 @@ export interface ITilemapAsset {
         visible: boolean;
         opacity: number;
         data?: number[];
+        /** 材质路径 */
+        materialPath?: string;
     }>;
     /** 碰撞数据（可选） */
     collisionData?: number[];
@@ -53,78 +54,26 @@ export interface ITilemapAsset {
 export class TilemapLoader implements IAssetLoader<ITilemapAsset> {
     readonly supportedType = TilemapAssetType;
     readonly supportedExtensions = ['.tilemap.json', '.tilemap'];
+    readonly contentType: AssetContentType = 'text';
 
     /**
-     * Load tilemap asset
-     * 加载瓦片地图资产
+     * Parse tilemap asset from text content
+     * 从文本内容解析瓦片地图资产
      */
-    async load(
-        path: string,
-        metadata: IAssetMetadata,
-        options?: IAssetLoadOptions
-    ): Promise<IAssetLoadResult<ITilemapAsset>> {
-        const startTime = performance.now();
-
-        try {
-            const response = await this.fetchWithTimeout(path, options?.timeout);
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const jsonData = await response.json() as ITilemapAsset;
-
-            // 验证必要字段
-            if (!jsonData.width || !jsonData.height || !jsonData.data) {
-                throw new Error('Invalid tilemap format: missing required fields');
-            }
-
-            return {
-                asset: jsonData,
-                handle: 0,
-                metadata,
-                loadTime: performance.now() - startTime
-            };
-        } catch (error) {
-            if (error instanceof Error) {
-                throw new AssetLoadError(
-                    `Failed to load tilemap: ${error.message}`,
-                    metadata.guid,
-                    TilemapAssetType,
-                    error
-                );
-            }
-            throw AssetLoadError.fileNotFound(metadata.guid, path);
+    async parse(content: IAssetContent, _context: IAssetParseContext): Promise<ITilemapAsset> {
+        if (!content.text) {
+            throw new Error('Tilemap content is empty');
         }
-    }
 
-    /**
-     * Fetch with timeout
-     * 带超时的fetch
-     */
-    private async fetchWithTimeout(url: string, timeout = 30000): Promise<Response> {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        const jsonData = JSON.parse(content.text) as ITilemapAsset;
 
-        try {
-            const response = await fetch(url, {
-                signal: controller.signal,
-                mode: 'cors',
-                credentials: 'same-origin'
-            });
-            return response;
-        } finally {
-            clearTimeout(timeoutId);
+        // 验证必要字段
+        // Validate required fields
+        if (!jsonData.width || !jsonData.height || !jsonData.data) {
+            throw new Error('Invalid tilemap format: missing required fields');
         }
-    }
 
-    /**
-     * Validate if the loader can handle this asset
-     * 验证加载器是否可以处理此资产
-     */
-    canLoad(path: string, _metadata: IAssetMetadata): boolean {
-        const lowerPath = path.toLowerCase();
-        return this.supportedExtensions.some(ext => lowerPath.endsWith(ext));
+        return jsonData;
     }
 
     /**

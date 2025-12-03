@@ -8,27 +8,7 @@
 
 import type { ComponentRegistry as ComponentRegistryType, IScene, ServiceContainer } from '@esengine/ecs-framework';
 import { TransformComponent } from './TransformComponent';
-
-// ============================================================================
-// 基础类型 | Basic Types
-// ============================================================================
-
-/**
- * 插件类别
- * Plugin category
- */
-export type PluginCategory =
-    | 'core'        // 核心功能 | Core functionality
-    | 'rendering'   // 渲染相关 | Rendering
-    | 'ui'          // UI 系统 | UI System
-    | 'ai'          // AI/行为树 | AI/Behavior
-    | 'physics'     // 物理引擎 | Physics
-    | 'audio'       // 音频系统 | Audio
-    | 'networking'  // 网络功能 | Networking
-    | 'tools'       // 工具/编辑器扩展 | Tools/Editor extensions
-    | 'scripting'   // 脚本/蓝图 | Scripting/Blueprint
-    | 'tilemap'     // 瓦片地图 | Tilemap
-    | 'content';    // 内容/资源 | Content/Assets
+import type { ModuleManifest } from './ModuleManifest';
 
 /**
  * 加载阶段 - 控制插件模块的加载顺序
@@ -40,80 +20,6 @@ export type LoadingPhase =
     | 'default'       // 默认阶段 | Default phase
     | 'postDefault'   // 默认之后 | After default
     | 'postEngine';   // 引擎初始化后 | After engine init
-
-/**
- * 模块类型
- * Module type
- */
-export type ModuleType = 'runtime' | 'editor';
-
-/**
- * 模块描述符
- * Module descriptor
- */
-export interface ModuleDescriptor {
-    /** 模块名称 | Module name */
-    name: string;
-    /** 模块类型 | Module type */
-    type: ModuleType;
-    /** 加载阶段 | Loading phase */
-    loadingPhase?: LoadingPhase;
-}
-
-/**
- * 插件依赖
- * Plugin dependency
- */
-export interface PluginDependency {
-    /** 依赖的插件ID | Dependent plugin ID */
-    id: string;
-    /** 版本要求 | Version requirement */
-    version?: string;
-    /** 是否可选 | Optional */
-    optional?: boolean;
-}
-
-// ============================================================================
-// 插件描述符 | Plugin Descriptor
-// ============================================================================
-
-/**
- * 插件描述符
- * Plugin descriptor
- *
- * 所有字段都是可选的，PluginManager 会填充默认值。
- * All fields are optional, PluginManager will fill in defaults.
- */
-export interface PluginDescriptor {
-    /** 插件唯一标识符 | Unique plugin ID */
-    id: string;
-    /** 显示名称 | Display name */
-    name: string;
-    /** 版本号 | Version */
-    version: string;
-    /** 描述 | Description */
-    description?: string;
-    /** 插件类别 | Plugin category */
-    category?: PluginCategory;
-    /** 标签（用于搜索） | Tags (for search) */
-    tags?: string[];
-    /** 图标（Lucide 图标名） | Icon (Lucide icon name) */
-    icon?: string;
-    /** 是否默认启用 | Enabled by default */
-    enabledByDefault?: boolean;
-    /** 是否可以包含内容资产 | Can contain content assets */
-    canContainContent?: boolean;
-    /** 是否为引擎内置插件 | Is engine built-in plugin */
-    isEnginePlugin?: boolean;
-    /** 是否为核心插件（不可禁用） | Is core plugin (cannot be disabled) */
-    isCore?: boolean;
-    /** 模块列表 | Module list */
-    modules?: ModuleDescriptor[];
-    /** 依赖列表 | Dependency list */
-    dependencies?: PluginDependency[];
-    /** 平台要求 | Platform requirements */
-    platforms?: ('web' | 'desktop' | 'mobile')[];
-}
 
 // ============================================================================
 // 系统上下文 | System Context
@@ -192,8 +98,8 @@ export interface IRuntimeModule {
  * This is the unified type that all plugin packages export.
  */
 export interface IPlugin {
-    /** 插件描述符 | Plugin descriptor */
-    readonly descriptor: PluginDescriptor;
+    /** 模块清单 | Module manifest */
+    readonly manifest: ModuleManifest;
     /** 运行时模块（可选） | Runtime module (optional) */
     readonly runtimeModule?: IRuntimeModule;
     /** 编辑器模块（可选，类型为 any 以避免循环依赖） | Editor module (optional, typed as any to avoid circular deps) */
@@ -210,18 +116,25 @@ class EngineRuntimeModule implements IRuntimeModule {
     }
 }
 
-const descriptor: PluginDescriptor = {
-    id: '@esengine/engine-core',
-    name: 'Engine Core',
-    version: '1.0.0',
+const manifest: ModuleManifest = {
+    id: 'engine-core',
+    name: '@esengine/engine-core',
+    displayName: 'Engine Core',
     description: 'Transform 等核心组件',
-    category: 'core',
-    enabledByDefault: true,
-    isEnginePlugin: true,
-    isCore: true
+    version: '1.0.0',
+    category: 'Core',
+    icon: 'Box',
+    isCore: true,
+    defaultEnabled: true,
+    isEngineModule: true,
+    dependencies: ['core', 'math'],
+    exports: {
+        components: ['TransformComponent', 'HierarchyComponent'],
+        systems: ['TransformSystem', 'HierarchySystem']
+    }
 };
 
 export const EnginePlugin: IPlugin = {
-    descriptor,
+    manifest,
     runtimeModule: new EngineRuntimeModule()
 };

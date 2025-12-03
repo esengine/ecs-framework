@@ -7,9 +7,9 @@
 
 import type {
     IAssetLoader,
-    IAssetMetadata,
-    IAssetLoadOptions,
-    IAssetLoadResult
+    IAssetParseContext,
+    IAssetContent,
+    AssetContentType
 } from '@esengine/asset-system';
 import { Core } from '@esengine/ecs-framework';
 import { BehaviorTreeData } from '../execution/BehaviorTreeData';
@@ -34,58 +34,36 @@ export interface IBehaviorTreeAsset {
 export class BehaviorTreeLoader implements IAssetLoader<IBehaviorTreeAsset> {
     readonly supportedType = BehaviorTreeAssetType;
     readonly supportedExtensions = ['.btree'];
+    readonly contentType: AssetContentType = 'text';
 
     /**
-     * 加载行为树资产
-     * Load behavior tree asset
+     * 从内容解析行为树资产
+     * Parse behavior tree asset from content
      */
-    async load(
-        path: string,
-        metadata: IAssetMetadata,
-        _options?: IAssetLoadOptions
-    ): Promise<IAssetLoadResult<IBehaviorTreeAsset>> {
-        // 获取文件系统服务
-        const IFileSystemServiceKey = Symbol.for('IFileSystemService');
-        const fileSystem = Core.services.tryResolve(IFileSystemServiceKey) as IFileSystem | null;
-
-        if (!fileSystem) {
-            throw new Error('FileSystem service not available');
+    async parse(content: IAssetContent, context: IAssetParseContext): Promise<IBehaviorTreeAsset> {
+        if (!content.text) {
+            throw new Error('Behavior tree content is empty');
         }
 
-        // 读取文件内容
-        const content = await fileSystem.readFile(path);
-
         // 转换为运行时数据
-        const treeData = EditorToBehaviorTreeDataConverter.fromEditorJSON(content);
+        const treeData = EditorToBehaviorTreeDataConverter.fromEditorJSON(content.text);
 
         // 使用文件路径作为 ID
-        treeData.id = path;
+        const assetPath = context.metadata.path;
+        treeData.id = assetPath;
 
-        // 注册到 BehaviorTreeAssetManager（保持兼容性）
+        // 同时注册到 BehaviorTreeAssetManager
+        // Also register to BehaviorTreeAssetManager for legacy code that uses it directly
+        // (e.g., loadFromEditorJSON, or code that doesn't use AssetManager)
         const btAssetManager = Core.services.tryResolve(BehaviorTreeAssetManager);
         if (btAssetManager) {
             btAssetManager.loadAsset(treeData);
         }
 
-        const asset: IBehaviorTreeAsset = {
-            data: treeData,
-            path
-        };
-
         return {
-            asset,
-            handle: 0, // 由 AssetManager 分配
-            metadata,
-            loadTime: 0
+            data: treeData,
+            path: assetPath
         };
-    }
-
-    /**
-     * 检查是否可以加载
-     * Check if can load this asset
-     */
-    canLoad(path: string, _metadata: IAssetMetadata): boolean {
-        return path.endsWith('.btree');
     }
 
     /**
@@ -99,12 +77,4 @@ export class BehaviorTreeLoader implements IAssetLoader<IBehaviorTreeAsset> {
             btAssetManager.unloadAsset(asset.data.id);
         }
     }
-}
-
-/**
- * 文件系统接口（简化版，仅用于类型）
- */
-interface IFileSystem {
-    readFile(path: string): Promise<string>;
-    exists(path: string): Promise<boolean>;
 }

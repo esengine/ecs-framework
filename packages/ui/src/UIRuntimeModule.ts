@@ -1,6 +1,6 @@
 import type { IScene } from '@esengine/ecs-framework';
 import { ComponentRegistry } from '@esengine/ecs-framework';
-import type { IRuntimeModule, IPlugin, PluginDescriptor, SystemContext } from '@esengine/engine-core';
+import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 
 import {
     UITransformComponent,
@@ -95,18 +95,25 @@ class UIRuntimeModule implements IRuntimeModule {
     }
 }
 
-const descriptor: PluginDescriptor = {
-    id: '@esengine/ui',
-    name: 'UI',
+const manifest: ModuleManifest = {
+    id: 'ui',
+    name: '@esengine/ui',
+    displayName: 'UI System',
     version: '1.0.0',
     description: 'ECS-based UI system',
-    category: 'ui',
-    enabledByDefault: true,
-    isEnginePlugin: true
+    category: 'Rendering',
+    icon: 'Layout',
+    isCore: false,
+    defaultEnabled: false,
+    isEngineModule: true,
+    canContainContent: true,
+    dependencies: ['core', 'math'],
+    exports: { components: ['UICanvasComponent'] },
+    editorPackage: '@esengine/ui-editor'
 };
 
 export const UIPlugin: IPlugin = {
-    descriptor,
+    manifest,
     runtimeModule: new UIRuntimeModule()
 };
 

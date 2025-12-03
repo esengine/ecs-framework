@@ -142,6 +142,7 @@ impl GameEngine {
     /// * `texture_ids` - Uint32Array of texture IDs | 纹理ID数组
     /// * `uvs` - Float32Array [u0, v0, u1, v1] per sprite | 每个精灵的UV坐标
     /// * `colors` - Uint32Array of packed RGBA colors | 打包的RGBA颜色数组
+    /// * `material_ids` - Uint32Array of material IDs (0 = default) | 材质ID数组（0 = 默认）
     #[wasm_bindgen(js_name = submitSpriteBatch)]
     pub fn submit_sprite_batch(
         &mut self,
@@ -149,9 +150,10 @@ impl GameEngine {
         texture_ids: &[u32],
         uvs: &[f32],
         colors: &[u32],
+        material_ids: &[u32],
     ) -> std::result::Result<(), JsValue> {
         self.engine
-            .submit_sprite_batch(transforms, texture_ids, uvs, colors)
+            .submit_sprite_batch(transforms, texture_ids, uvs, colors, material_ids)
             .map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
@@ -462,5 +464,151 @@ impl GameEngine {
     #[wasm_bindgen(js_name = getViewportIds)]
     pub fn get_viewport_ids(&self) -> Vec<String> {
         self.engine.viewport_ids()
+    }
+
+    // ===== Shader API =====
+    // ===== 着色器 API =====
+
+    /// Compile and register a custom shader.
+    /// 编译并注册自定义着色器。
+    ///
+    /// # Arguments | 参数
+    /// * `vertex_source` - Vertex shader GLSL source | 顶点着色器GLSL源代码
+    /// * `fragment_source` - Fragment shader GLSL source | 片段着色器GLSL源代码
+    ///
+    /// # Returns | 返回
+    /// The shader ID for referencing this shader | 用于引用此着色器的ID
+    #[wasm_bindgen(js_name = compileShader)]
+    pub fn compile_shader(
+        &mut self,
+        vertex_source: &str,
+        fragment_source: &str,
+    ) -> std::result::Result<u32, JsValue> {
+        self.engine
+            .compile_shader(vertex_source, fragment_source)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Compile a shader with a specific ID.
+    /// 使用特定ID编译着色器。
+    #[wasm_bindgen(js_name = compileShaderWithId)]
+    pub fn compile_shader_with_id(
+        &mut self,
+        shader_id: u32,
+        vertex_source: &str,
+        fragment_source: &str,
+    ) -> std::result::Result<(), JsValue> {
+        self.engine
+            .compile_shader_with_id(shader_id, vertex_source, fragment_source)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Check if a shader exists.
+    /// 检查着色器是否存在。
+    #[wasm_bindgen(js_name = hasShader)]
+    pub fn has_shader(&self, shader_id: u32) -> bool {
+        self.engine.has_shader(shader_id)
+    }
+
+    /// Remove a shader.
+    /// 移除着色器。
+    #[wasm_bindgen(js_name = removeShader)]
+    pub fn remove_shader(&mut self, shader_id: u32) -> bool {
+        self.engine.remove_shader(shader_id)
+    }
+
+    // ===== Material API =====
+    // ===== 材质 API =====
+
+    /// Create and register a new material.
+    /// 创建并注册新材质。
+    ///
+    /// # Arguments | 参数
+    /// * `name` - Material name for debugging | 材质名称（用于调试）
+    /// * `shader_id` - Shader ID to use | 使用的着色器ID
+    /// * `blend_mode` - Blend mode: 0=None, 1=Alpha, 2=Additive, 3=Multiply, 4=Screen, 5=PremultipliedAlpha
+    ///
+    /// # Returns | 返回
+    /// The material ID for referencing this material | 用于引用此材质的ID
+    #[wasm_bindgen(js_name = createMaterial)]
+    pub fn create_material(
+        &mut self,
+        name: &str,
+        shader_id: u32,
+        blend_mode: u8,
+    ) -> u32 {
+        self.engine.create_material(name, shader_id, blend_mode)
+    }
+
+    /// Create a material with a specific ID.
+    /// 使用特定ID创建材质。
+    #[wasm_bindgen(js_name = createMaterialWithId)]
+    pub fn create_material_with_id(
+        &mut self,
+        material_id: u32,
+        name: &str,
+        shader_id: u32,
+        blend_mode: u8,
+    ) {
+        self.engine.create_material_with_id(material_id, name, shader_id, blend_mode);
+    }
+
+    /// Check if a material exists.
+    /// 检查材质是否存在。
+    #[wasm_bindgen(js_name = hasMaterial)]
+    pub fn has_material(&self, material_id: u32) -> bool {
+        self.engine.has_material(material_id)
+    }
+
+    /// Remove a material.
+    /// 移除材质。
+    #[wasm_bindgen(js_name = removeMaterial)]
+    pub fn remove_material(&mut self, material_id: u32) -> bool {
+        self.engine.remove_material(material_id)
+    }
+
+    /// Set a material's float uniform.
+    /// 设置材质的浮点uniform。
+    #[wasm_bindgen(js_name = setMaterialFloat)]
+    pub fn set_material_float(&mut self, material_id: u32, name: &str, value: f32) -> bool {
+        self.engine.set_material_float(material_id, name, value)
+    }
+
+    /// Set a material's vec2 uniform.
+    /// 设置材质的vec2 uniform。
+    #[wasm_bindgen(js_name = setMaterialVec2)]
+    pub fn set_material_vec2(&mut self, material_id: u32, name: &str, x: f32, y: f32) -> bool {
+        self.engine.set_material_vec2(material_id, name, x, y)
+    }
+
+    /// Set a material's vec3 uniform.
+    /// 设置材质的vec3 uniform。
+    #[wasm_bindgen(js_name = setMaterialVec3)]
+    pub fn set_material_vec3(&mut self, material_id: u32, name: &str, x: f32, y: f32, z: f32) -> bool {
+        self.engine.set_material_vec3(material_id, name, x, y, z)
+    }
+
+    /// Set a material's vec4 uniform (also used for colors).
+    /// 设置材质的vec4 uniform（也用于颜色）。
+    #[wasm_bindgen(js_name = setMaterialVec4)]
+    pub fn set_material_vec4(&mut self, material_id: u32, name: &str, x: f32, y: f32, z: f32, w: f32) -> bool {
+        self.engine.set_material_vec4(material_id, name, x, y, z, w)
+    }
+
+    /// Set a material's color uniform (RGBA, 0.0-1.0).
+    /// 设置材质的颜色uniform（RGBA，0.0-1.0）。
+    #[wasm_bindgen(js_name = setMaterialColor)]
+    pub fn set_material_color(&mut self, material_id: u32, name: &str, r: f32, g: f32, b: f32, a: f32) -> bool {
+        self.engine.set_material_color(material_id, name, r, g, b, a)
+    }
+
+    /// Set a material's blend mode.
+    /// 设置材质的混合模式。
+    ///
+    /// # Arguments | 参数
+    /// * `blend_mode` - 0=None, 1=Alpha, 2=Additive, 3=Multiply, 4=Screen, 5=PremultipliedAlpha
+    #[wasm_bindgen(js_name = setMaterialBlendMode)]
+    pub fn set_material_blend_mode(&mut self, material_id: u32, blend_mode: u8) -> bool {
+        self.engine.set_material_blend_mode(material_id, blend_mode)
     }
 }

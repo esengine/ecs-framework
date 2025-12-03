@@ -13,8 +13,9 @@ import {
 } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
 import { SettingsService } from '../services/SettingsService';
-import { SettingsRegistry, SettingCategory, SettingDescriptor, ProjectService, PluginManager, IPluginManager } from '@esengine/editor-core';
+import { SettingsRegistry, SettingCategory, SettingDescriptor, ProjectService, PluginManager, IPluginManager, ModuleManifest } from '@esengine/editor-core';
 import { PluginListSetting } from './PluginListSetting';
+import { ModuleListSetting } from './ModuleListSetting';
 import '../styles/SettingsWindow.css';
 
 interface SettingsWindowProps {
@@ -142,6 +143,9 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                 } else if (key === 'project.uiDesignResolution.preset') {
                     const resolution = projectService.getUIDesignResolution();
                     initialValues.set(key, `${resolution.width}x${resolution.height}`);
+                } else if (key === 'project.disabledModules') {
+                    // Load disabled modules from ProjectService
+                    initialValues.set(key, projectService.getDisabledModules());
                 } else {
                     initialValues.set(key, descriptor.defaultValue);
                 }
@@ -199,6 +203,8 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
         let uiResolutionChanged = false;
         let newWidth = 1920;
         let newHeight = 1080;
+        let disabledModulesChanged = false;
+        let newDisabledModules: string[] = [];
 
         for (const [key, value] of values.entries()) {
             if (key.startsWith('project.') && projectService) {
@@ -215,6 +221,9 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                         newHeight = h;
                         uiResolutionChanged = true;
                     }
+                } else if (key === 'project.disabledModules') {
+                    newDisabledModules = value as string[];
+                    disabledModulesChanged = true;
                 }
                 changedSettings[key] = value;
             } else {
@@ -225,6 +234,10 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
 
         if (uiResolutionChanged && projectService) {
             await projectService.setUIDesignResolution({ width: newWidth, height: newHeight });
+        }
+
+        if (disabledModulesChanged && projectService) {
+            await projectService.setDisabledModules(newDisabledModules);
         }
 
         console.log('[SettingsWindow] Saving settings, changedSettings:', changedSettings);
@@ -483,6 +496,31 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                 return (
                     <div className="settings-row">
                         <p className="settings-hint">碰撞矩阵编辑器未配置</p>
+                    </div>
+                );
+            }
+
+            case 'moduleList': {
+                // Get module data from setting's custom props
+                // 从设置的自定义属性获取模块数据
+                const moduleData = setting as SettingDescriptor & {
+                    modules?: ModuleManifest[];
+                    getModules?: () => ModuleManifest[];
+                    useBlacklist?: boolean;
+                    validateDisable?: (moduleId: string) => Promise<{ canDisable: boolean; reason?: string }>;
+                };
+                const moduleValue = value as string[] || [];
+
+                return (
+                    <div className="settings-module-list">
+                        <ModuleListSetting
+                            modules={moduleData.modules}
+                            getModules={moduleData.getModules}
+                            value={moduleValue}
+                            onModulesChange={(newValue) => handleValueChange(setting.key, newValue, setting)}
+                            useBlacklist={moduleData.useBlacklist}
+                            validateDisable={moduleData.validateDisable}
+                        />
                     </div>
                 );
             }

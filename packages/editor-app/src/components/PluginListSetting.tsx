@@ -11,7 +11,7 @@
 
 import { useState, useEffect } from 'react';
 import { Core } from '@esengine/ecs-framework';
-import { PluginManager, type RegisteredPlugin, type PluginCategory, ProjectService } from '@esengine/editor-core';
+import { PluginManager, type RegisteredPlugin, type ModuleCategory, ProjectService } from '@esengine/editor-core';
 import { Check, Lock, Package } from 'lucide-react';
 import { NotificationService } from '../services/NotificationService';
 import '../styles/PluginListSetting.css';
@@ -20,21 +20,17 @@ interface PluginListSettingProps {
     pluginManager: PluginManager;
 }
 
-const categoryLabels: Record<PluginCategory, { zh: string; en: string }> = {
-    core: { zh: '核心', en: 'Core' },
-    rendering: { zh: '渲染', en: 'Rendering' },
-    ui: { zh: 'UI', en: 'UI' },
-    ai: { zh: 'AI', en: 'AI' },
-    physics: { zh: '物理', en: 'Physics' },
-    audio: { zh: '音频', en: 'Audio' },
-    networking: { zh: '网络', en: 'Networking' },
-    tools: { zh: '工具', en: 'Tools' },
-    scripting: { zh: '脚本', en: 'Scripting' },
-    content: { zh: '内容', en: 'Content' },
-    tilemap: { zh: '瓦片地图', en: 'Tilemap' }
+const categoryLabels: Record<ModuleCategory, { zh: string; en: string }> = {
+    Core: { zh: '核心', en: 'Core' },
+    Rendering: { zh: '渲染', en: 'Rendering' },
+    Physics: { zh: '物理', en: 'Physics' },
+    AI: { zh: 'AI', en: 'AI' },
+    Audio: { zh: '音频', en: 'Audio' },
+    Networking: { zh: '网络', en: 'Networking' },
+    Other: { zh: '其他', en: 'Other' }
 };
 
-const categoryOrder: PluginCategory[] = ['core', 'rendering', 'ui', 'ai', 'scripting', 'physics', 'audio', 'networking', 'tilemap', 'tools', 'content'];
+const categoryOrder: ModuleCategory[] = ['Core', 'Rendering', 'Physics', 'AI', 'Audio', 'Networking', 'Other'];
 
 export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
     const [plugins, setPlugins] = useState<RegisteredPlugin[]>([]);
@@ -56,13 +52,13 @@ export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
     };
 
     const handleToggle = async (pluginId: string) => {
-        const plugin = plugins.find(p => p.plugin.descriptor.id === pluginId);
+        const plugin = plugins.find(p => p.plugin.manifest.id === pluginId);
         if (!plugin) return;
 
-        const descriptor = plugin.plugin.descriptor;
+        const manifest = plugin.plugin.manifest;
 
         // 核心插件不可禁用
-        if (descriptor.isCore) {
+        if (manifest.isCore) {
             showWarning('核心插件不可禁用');
             return;
         }
@@ -71,14 +67,14 @@ export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
 
         // 检查依赖（启用时）
         if (newEnabled) {
-            const deps = descriptor.dependencies || [];
-            const missingDeps = deps.filter(dep => {
-                const depPlugin = plugins.find(p => p.plugin.descriptor.id === dep.id);
+            const deps = manifest.dependencies || [];
+            const missingDeps = deps.filter((depId: string) => {
+                const depPlugin = plugins.find(p => p.plugin.manifest.id === depId);
                 return depPlugin && !depPlugin.enabled;
             });
 
             if (missingDeps.length > 0) {
-                showWarning(`需要先启用依赖插件: ${missingDeps.map(d => d.id).join(', ')}`);
+                showWarning(`需要先启用依赖插件: ${missingDeps.join(', ')}`);
                 return;
             }
         }
@@ -100,7 +96,7 @@ export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
 
         // 更新本地状态
         setPlugins(plugins.map(p => {
-            if (p.plugin.descriptor.id === pluginId) {
+            if (p.plugin.manifest.id === pluginId) {
                 return { ...p, enabled: newEnabled };
             }
             return p;
@@ -115,7 +111,7 @@ export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
             const notificationService = Core.services.tryResolve(NotificationService) as NotificationService | null;
             if (notificationService) {
                 notificationService.show(
-                    newEnabled ? `已启用插件: ${descriptor.name}` : `已禁用插件: ${descriptor.name}`,
+                    newEnabled ? `已启用插件: ${manifest.displayName}` : `已禁用插件: ${manifest.displayName}`,
                     'success',
                     2000
                 );
@@ -135,8 +131,8 @@ export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
 
         // 获取当前启用的插件列表（排除核心插件）
         const enabledPlugins = pluginManager.getEnabledPlugins()
-            .filter(p => !p.plugin.descriptor.isCore)
-            .map(p => p.plugin.descriptor.id);
+            .filter(p => !p.plugin.manifest.isCore)
+            .map(p => p.plugin.manifest.id);
 
         console.log('[PluginListSetting] Saving enabled plugins:', enabledPlugins);
 
@@ -150,13 +146,13 @@ export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
 
     // 按类别分组并排序
     const groupedPlugins = plugins.reduce((acc, plugin) => {
-        const category = plugin.plugin.descriptor.category;
+        const category = plugin.plugin.manifest.category;
         if (!acc[category]) {
             acc[category] = [];
         }
         acc[category].push(plugin);
         return acc;
-    }, {} as Record<PluginCategory, RegisteredPlugin[]>);
+    }, {} as Record<ModuleCategory, RegisteredPlugin[]>);
 
     // 按照 categoryOrder 排序
     const sortedCategories = categoryOrder.filter(cat => groupedPlugins[cat]?.length > 0);
@@ -169,19 +165,19 @@ export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
                         {categoryLabels[category]?.zh || category}
                     </div>
                     <div className="plugin-list">
-                        {groupedPlugins[category].map(plugin => {
-                            const descriptor = plugin.plugin.descriptor;
+                        {groupedPlugins[category]?.map(plugin => {
+                            const manifest = plugin.plugin.manifest;
                             const hasRuntime = !!plugin.plugin.runtimeModule;
                             const hasEditor = !!plugin.plugin.editorModule;
 
                             return (
                                 <div
-                                    key={descriptor.id}
-                                    className={`plugin-item ${plugin.enabled ? 'enabled' : ''} ${descriptor.isCore ? 'core' : ''}`}
-                                    onClick={() => handleToggle(descriptor.id)}
+                                    key={manifest.id}
+                                    className={`plugin-item ${plugin.enabled ? 'enabled' : ''} ${manifest.isCore ? 'core' : ''}`}
+                                    onClick={() => handleToggle(manifest.id)}
                                 >
                                     <div className="plugin-checkbox">
-                                        {descriptor.isCore ? (
+                                        {manifest.isCore ? (
                                             <Lock size={10} />
                                         ) : (
                                             plugin.enabled && <Check size={10} />
@@ -189,12 +185,12 @@ export function PluginListSetting({ pluginManager }: PluginListSettingProps) {
                                     </div>
                                     <div className="plugin-info">
                                         <div className="plugin-header">
-                                            <span className="plugin-name">{descriptor.name}</span>
-                                            <span className="plugin-version">v{descriptor.version}</span>
+                                            <span className="plugin-name">{manifest.displayName}</span>
+                                            <span className="plugin-version">v{manifest.version}</span>
                                         </div>
-                                        {descriptor.description && (
+                                        {manifest.description && (
                                             <div className="plugin-description">
-                                                {descriptor.description}
+                                                {manifest.description}
                                             </div>
                                         )}
                                         <div className="plugin-modules">

@@ -1,0 +1,19 @@
+{
+  "id": "runtime-core",
+  "name": "@esengine/runtime-core",
+  "displayName": "Runtime Core",
+  "description": "Core runtime framework | 核心运行时框架",
+  "version": "1.0.0",
+  "category": "Core",
+  "icon": "Play",
+  "tags": ["runtime", "core", "framework"],
+  "isCore": true,
+  "defaultEnabled": true,
+  "isEngineModule": true,
+  "canContainContent": false,
+  "platforms": ["web", "desktop", "mobile"],
+  "dependencies": ["core", "asset-system"],
+  "exports": {},
+  "requiresWasm": false,
+  "outputPath": "dist/index.js"
+}

@@ -99,7 +99,11 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
                 'conf',
                 'log',
                 'btree',
-                'ecs'
+                'ecs',
+                'mat',
+                'shader',
+                'tilemap',
+                'tileset'
             ];
             const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff', 'tif'];
             const isTextFile = fileInfo.extension && textExtensions.includes(fileInfo.extension.toLowerCase());
@@ -188,6 +192,12 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
     }
 
     if (target.type === 'asset-file') {
+        // Check if a plugin provides a custom inspector for this asset type
+        const customInspector = inspectorRegistry.render(target, { target, projectPath });
+        if (customInspector) {
+            return customInspector;
+        }
+        // Fall back to default asset file inspector
         return <AssetFileInspector fileInfo={target.data} content={target.content} isImage={target.isImage} />;
     }
 

@@ -4,6 +4,23 @@
  */
 
 /**
+ * Material property override for rendering.
+ * 用于渲染的材质属性覆盖。
+ */
+export interface MaterialPropertyOverride {
+    /** Uniform type. | Uniform 类型。 */
+    type: 'float' | 'vec2' | 'vec3' | 'vec4' | 'color' | 'int';
+    /** Uniform value. | Uniform 值。 */
+    value: number | number[];
+}
+
+/**
+ * Material overrides map.
+ * 材质覆盖映射。
+ */
+export type MaterialOverrides = Record<string, MaterialPropertyOverride>;
+
+/**
  * Sprite render data for batch submission.
  * 用于批量提交的精灵渲染数据。
  */
@@ -28,6 +45,13 @@ export interface SpriteRenderData {
     uv: [number, number, number, number];
     /** Packed RGBA color. | 打包的RGBA颜色。 */
     color: number;
+    /** Material ID (0 = default material). | 材质ID（0 = 默认材质）。 */
+    materialId?: number;
+    /**
+     * Material property overrides (instance level).
+     * 材质属性覆盖（实例级别）。
+     */
+    materialOverrides?: MaterialOverrides;
 }
 
 /**

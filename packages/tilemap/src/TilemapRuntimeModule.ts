@@ -1,6 +1,6 @@
 import type { IScene } from '@esengine/ecs-framework';
 import { ComponentRegistry } from '@esengine/ecs-framework';
-import type { IRuntimeModule, IPlugin, PluginDescriptor, SystemContext } from '@esengine/engine-core';
+import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 import type { AssetManager } from '@esengine/asset-system';
 
 import { TilemapComponent } from './TilemapComponent';
@@ -63,18 +63,25 @@ class TilemapRuntimeModule implements IRuntimeModule {
     }
 }
 
-const descriptor: PluginDescriptor = {
-    id: '@esengine/tilemap',
-    name: 'Tilemap',
+const manifest: ModuleManifest = {
+    id: 'tilemap',
+    name: '@esengine/tilemap',
+    displayName: 'Tilemap 2D',
     version: '1.0.0',
     description: 'Tilemap system with Tiled editor support',
-    category: 'tilemap',
-    enabledByDefault: false,
-    isEnginePlugin: true
+    category: 'Rendering',
+    icon: 'Grid3X3',
+    isCore: false,
+    defaultEnabled: false,
+    isEngineModule: true,
+    canContainContent: true,
+    dependencies: ['core', 'math', 'sprite', 'asset-system'],
+    exports: { components: ['TilemapComponent', 'TilemapCollider2DComponent'] },
+    editorPackage: '@esengine/tilemap-editor'
 };
 
 export const TilemapPlugin: IPlugin = {
-    descriptor,
+    manifest,
     runtimeModule: new TilemapRuntimeModule()
 };
 

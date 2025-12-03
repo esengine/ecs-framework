@@ -6,11 +6,10 @@
 import { createLogger, ComponentRegistry } from '@esengine/ecs-framework';
 import type { IScene, ServiceContainer, IService } from '@esengine/ecs-framework';
 import type {
-    PluginDescriptor,
-    PluginState,
-    PluginCategory,
-    LoadingPhase,
-    IPlugin
+    ModuleManifest,
+    IPlugin,
+    ModuleCategory,
+    PluginState
 } from './PluginDescriptor';
 import type {
     SystemContext,
@@ -21,6 +20,7 @@ import { ComponentActionRegistry } from '../Services/ComponentActionRegistry';
 import { FileActionRegistry } from '../Services/FileActionRegistry';
 import { UIRegistry } from '../Services/UIRegistry';
 import { MessageHub } from '../Services/MessageHub';
+import { moduleRegistry } from '../Services/Module/ModuleRegistry';
 
 const logger = createLogger('PluginManager');
 
@@ -31,24 +31,29 @@ const logger = createLogger('PluginManager');
 export const IPluginManager = Symbol.for('IPluginManager');
 
 /**
- * 标准化后的插件描述符（所有字段都有值）
- * Normalized plugin descriptor (all fields have values)
+ * 标准化后的模块清单（所有字段都有值）
+ * Normalized module manifest (all fields have values)
  */
-export interface NormalizedPluginDescriptor {
+export interface NormalizedManifest {
     id: string;
     name: string;
+    displayName: string;
     version: string;
     description: string;
-    category: PluginCategory;
+    category: ModuleCategory;
     tags: string[];
     icon?: string;
-    enabledByDefault: boolean;
+    defaultEnabled: boolean;
     canContainContent: boolean;
-    isEnginePlugin: boolean;
+    isEngineModule: boolean;
     isCore: boolean;
-    modules: Array<{ name: string; type: 'runtime' | 'editor'; loadingPhase: LoadingPhase }>;
-    dependencies: Array<{ id: string; version?: string; optional?: boolean }>;
+    dependencies: string[];
+    exports: { components?: string[]; systems?: string[]; loaders?: string[]; other?: string[] };
     platforms: ('web' | 'desktop' | 'mobile')[];
+    editorPackage?: string;
+    jsSize?: number;
+    wasmSize?: number;
+    requiresWasm?: boolean;
 }
 
 /**
@@ -56,7 +61,7 @@ export interface NormalizedPluginDescriptor {
  * Normalized plugin (internal use)
  */
 export interface NormalizedPlugin {
-    descriptor: NormalizedPluginDescriptor;
+    manifest: NormalizedManifest;
     runtimeModule?: IPlugin['runtimeModule'];
     editorModule?: IEditorModuleLoader;
 }
@@ -113,18 +118,6 @@ export interface PluginConfig {
 }
 
 /**
- * 加载阶段顺序
- * Loading phase order
- */
-const LOADING_PHASE_ORDER: LoadingPhase[] = [
-    'earliest',
-    'preDefault',
-    'default',
-    'postDefault',
-    'postEngine'
-];
-
-/**
  * 统一插件管理器
  * Unified Plugin Manager
  *
@@ -168,31 +161,49 @@ export class PluginManager implements IService {
     }
 
     /**
-     * 标准化插件描述符，填充默认值
-     * Normalize plugin descriptor, fill in defaults
+     * 解析依赖 ID 为完整的插件 ID
+     * Resolve dependency ID to full plugin ID
+     *
+     * 支持两种格式：
+     * - 短 ID: "core" -> "@esengine/core"
+     * - 完整 ID: "@esengine/core" -> "@esengine/core"
+     */
+    private resolveDependencyId(depId: string): string {
+        // 如果已经是完整 ID，直接返回
+        if (depId.startsWith('@')) {
+            return depId;
+        }
+        // 短 ID 转换为完整 ID
+        return `@esengine/${depId}`;
+    }
+
+    /**
+     * 标准化模块清单，填充默认值
+     * Normalize module manifest, fill in defaults
      */
     private normalizePlugin(input: IPlugin): NormalizedPlugin {
-        const d = input.descriptor;
+        const m = input.manifest;
         return {
-            descriptor: {
-                id: d.id,
-                name: d.name,
-                version: d.version,
-                description: d.description ?? '',
-                category: d.category ?? 'tools',
-                tags: d.tags ?? [],
-                icon: d.icon,
-                enabledByDefault: d.enabledByDefault ?? false,
-                canContainContent: d.canContainContent ?? false,
-                isEnginePlugin: d.isEnginePlugin ?? true,
-                isCore: d.isCore ?? false,
-                modules: (d.modules ?? [{ name: 'Runtime', type: 'runtime' as const, loadingPhase: 'default' as const }]).map((m: { name: string; type: 'runtime' | 'editor'; loadingPhase?: LoadingPhase }) => ({
-                    name: m.name,
-                    type: m.type,
-                    loadingPhase: m.loadingPhase ?? 'default' as LoadingPhase
-                })),
-                dependencies: d.dependencies ?? [],
-                platforms: d.platforms ?? ['web', 'desktop']
+            manifest: {
+                id: m.id,
+                name: m.name,
+                displayName: m.displayName,
+                version: m.version,
+                description: m.description ?? '',
+                category: m.category ?? 'Other',
+                tags: m.tags ?? [],
+                icon: m.icon,
+                defaultEnabled: m.defaultEnabled ?? false,
+                canContainContent: m.canContainContent ?? false,
+                isEngineModule: m.isEngineModule ?? true,
+                isCore: m.isCore ?? false,
+                dependencies: m.dependencies ?? [],
+                exports: m.exports ?? {},
+                platforms: m.platforms ?? ['web', 'desktop'],
+                editorPackage: m.editorPackage,
+                jsSize: m.jsSize,
+                wasmSize: m.wasmSize,
+                requiresWasm: m.requiresWasm
             },
             runtimeModule: input.runtimeModule,
             editorModule: input.editorModule as IEditorModuleLoader | undefined
@@ -212,15 +223,15 @@ export class PluginManager implements IService {
             return;
         }
 
-        if (!plugin.descriptor) {
-            logger.error('Cannot register plugin: descriptor is null or undefined', plugin);
+        if (!plugin.manifest) {
+            logger.error('Cannot register plugin: manifest is null or undefined', plugin);
             return;
         }
 
-        const { id } = plugin.descriptor;
+        const { id } = plugin.manifest;
 
         if (!id) {
-            logger.error('Cannot register plugin: descriptor.id is null or undefined', plugin.descriptor);
+            logger.error('Cannot register plugin: manifest.id is null or undefined', plugin.manifest);
             return;
         }
 
@@ -230,7 +241,7 @@ export class PluginManager implements IService {
         }
 
         const normalized = this.normalizePlugin(plugin);
-        const enabled = normalized.descriptor.isCore || normalized.descriptor.enabledByDefault;
+        const enabled = normalized.manifest.isCore || normalized.manifest.defaultEnabled;
 
         this.plugins.set(id, {
             plugin: normalized,
@@ -239,7 +250,7 @@ export class PluginManager implements IService {
             loadedAt: Date.now()
         });
 
-        logger.info(`Plugin registered: ${id} (${normalized.descriptor.name})`);
+        logger.info(`Plugin registered: ${id} (${normalized.manifest.displayName})`);
     }
 
     /**
@@ -253,7 +264,7 @@ export class PluginManager implements IService {
             return false;
         }
 
-        if (plugin.plugin.descriptor.isCore) {
+        if (plugin.plugin.manifest.isCore) {
             logger.warn(`Core plugin ${pluginId} cannot be disabled/enabled`);
             return false;
         }
@@ -263,13 +274,33 @@ export class PluginManager implements IService {
             return true;
         }
 
-        // 检查依赖
-        const deps = plugin.plugin.descriptor.dependencies;
-        for (const dep of deps) {
-            if (dep.optional) continue;
-            const depPlugin = this.plugins.get(dep.id);
-            if (!depPlugin || !depPlugin.enabled) {
-                logger.error(`Cannot enable ${pluginId}: dependency ${dep.id} is not enabled`);
+        // 检查依赖（支持短 ID 和完整 ID）
+        // Check dependencies (supports both short ID and full ID)
+        const deps = plugin.plugin.manifest.dependencies;
+        for (const depId of deps) {
+            const resolvedDepId = this.resolveDependencyId(depId);
+            const depPlugin = this.plugins.get(resolvedDepId);
+
+            // 如果依赖不在 plugins 中，检查是否是核心模块
+            // If dependency is not in plugins, check if it's a core module
+            if (!depPlugin) {
+                // 核心模块（如 engine-core, core, math）不作为插件注册
+                // Core modules (like engine-core, core, math) are not registered as plugins
+                // 它们总是可用的，所以跳过检查
+                // They are always available, so skip the check
+                const shortId = depId.startsWith('@esengine/') ? depId.replace('@esengine/', '') : depId;
+                // 动态查询 moduleRegistry 判断是否是核心模块
+                // Dynamically query moduleRegistry to check if it's a core module
+                const moduleEntry = moduleRegistry.getModule(shortId);
+                if (moduleEntry?.isCore) {
+                    continue;
+                }
+                logger.error(`Cannot enable ${pluginId}: dependency ${depId} (resolved: ${resolvedDepId}) is not registered`);
+                return false;
+            }
+
+            if (!depPlugin.enabled) {
+                logger.error(`Cannot enable ${pluginId}: dependency ${depId} (resolved: ${resolvedDepId}) is not enabled`);
                 return false;
             }
         }
@@ -312,7 +343,7 @@ export class PluginManager implements IService {
             return false;
         }
 
-        if (plugin.plugin.descriptor.isCore) {
+        if (plugin.plugin.manifest.isCore) {
             logger.warn(`Core plugin ${pluginId} cannot be disabled`);
             return false;
         }
@@ -322,12 +353,13 @@ export class PluginManager implements IService {
             return true;
         }
 
-        // 检查是否有其他插件依赖此插件
+        // 检查是否有其他插件依赖此插件（支持短 ID 和完整 ID）
         for (const [id, p] of this.plugins) {
             if (!p.enabled || id === pluginId) continue;
-            const deps = p.plugin.descriptor.dependencies;
-            const hasDep = deps.some(d => d.id === pluginId && !d.optional);
-            if (hasDep) {
+            const deps = p.plugin.manifest.dependencies;
+            // 将每个依赖解析为完整 ID 后检查
+            const resolvedDeps = deps.map(d => this.resolveDependencyId(d));
+            if (resolvedDeps.includes(pluginId)) {
                 logger.error(`Cannot disable ${pluginId}: plugin ${id} depends on it`);
                 return false;
             }
@@ -684,9 +716,9 @@ export class PluginManager implements IService {
      * 按类别获取插件
      * Get plugins by category
      */
-    getPluginsByCategory(category: PluginCategory): RegisteredPlugin[] {
+    getPluginsByCategory(category: ModuleCategory): RegisteredPlugin[] {
         return this.getAllPlugins().filter(
-            p => p.plugin.descriptor.category === category
+            p => p.plugin.manifest.category === category
         );
     }
 
@@ -1015,7 +1047,7 @@ export class PluginManager implements IService {
     exportConfig(): PluginConfig {
         const enabledPlugins: string[] = [];
         for (const [id, plugin] of this.plugins) {
-            if (plugin.enabled && !plugin.plugin.descriptor.isCore) {
+            if (plugin.enabled && !plugin.plugin.manifest.isCore) {
                 enabledPlugins.push(id);
             }
         }
@@ -1040,7 +1072,7 @@ export class PluginManager implements IService {
         const toDisable: string[] = [];
 
         for (const [id, plugin] of this.plugins) {
-            if (plugin.plugin.descriptor.isCore) {
+            if (plugin.plugin.manifest.isCore) {
                 continue; // 核心插件始终启用
             }
 
@@ -1068,35 +1100,13 @@ export class PluginManager implements IService {
     }
 
     /**
-     * 按加载阶段排序
-     * Sort by loading phase
+     * 按依赖排序（拓扑排序）
+     * Sort by dependencies (topological sort)
      */
-    private sortByLoadingPhase(moduleType: 'runtime' | 'editor'): string[] {
+    private sortByLoadingPhase(_moduleType: 'runtime' | 'editor'): string[] {
         const pluginIds = Array.from(this.plugins.keys());
-
-        // 先按依赖拓扑排序
-        const sorted = this.topologicalSort(pluginIds);
-
-        // 再按加载阶段排序（稳定排序）
-        sorted.sort((a, b) => {
-            const pluginA = this.plugins.get(a);
-            const pluginB = this.plugins.get(b);
-
-            const moduleA = moduleType === 'runtime'
-                ? pluginA?.plugin.descriptor.modules.find(m => m.type === 'runtime')
-                : pluginA?.plugin.descriptor.modules.find(m => m.type === 'editor');
-
-            const moduleB = moduleType === 'runtime'
-                ? pluginB?.plugin.descriptor.modules.find(m => m.type === 'runtime')
-                : pluginB?.plugin.descriptor.modules.find(m => m.type === 'editor');
-
-            const phaseA = moduleA?.loadingPhase || 'default';
-            const phaseB = moduleB?.loadingPhase || 'default';
-
-            return LOADING_PHASE_ORDER.indexOf(phaseA) - LOADING_PHASE_ORDER.indexOf(phaseB);
-        });
-
-        return sorted;
+        // 按依赖拓扑排序
+        return this.topologicalSort(pluginIds);
     }
 
     /**
@@ -1113,10 +1123,12 @@ export class PluginManager implements IService {
 
             const plugin = this.plugins.get(id);
             if (plugin) {
-                const deps = plugin.plugin.descriptor.dependencies || [];
-                for (const dep of deps) {
-                    if (pluginIds.includes(dep.id)) {
-                        visit(dep.id);
+                const deps = plugin.plugin.manifest.dependencies || [];
+                for (const depId of deps) {
+                    // 解析短 ID 为完整 ID
+                    const resolvedDepId = this.resolveDependencyId(depId);
+                    if (pluginIds.includes(resolvedDepId)) {
+                        visit(resolvedDepId);
                     }
                 }
             }

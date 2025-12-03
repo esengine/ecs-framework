@@ -1,0 +1,23 @@
+{
+  "id": "core",
+  "name": "@esengine/ecs-framework",
+  "displayName": "Core ECS",
+  "outputPath": "dist/index.mjs",
+  "description": "Core Entity-Component-System framework | 核心 ECS 框架",
+  "version": "1.0.0",
+  "category": "Core",
+  "icon": "Box",
+  "tags": ["ecs", "entity", "component", "system"],
+  "isCore": true,
+  "defaultEnabled": true,
+  "isEngineModule": true,
+  "canContainContent": false,
+  "platforms": ["web", "desktop", "mobile"],
+  "dependencies": [],
+  "exports": {
+    "components": ["Component", "Transform"],
+    "systems": ["System"],
+    "other": ["World", "Entity", "EntityManager", "SystemManager"]
+  },
+  "requiresWasm": false
+}

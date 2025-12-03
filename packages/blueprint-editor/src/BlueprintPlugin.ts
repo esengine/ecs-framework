@@ -4,7 +4,7 @@
  */
 
 import { Core, type ServiceContainer } from '@esengine/ecs-framework';
-import type { IPlugin, PluginDescriptor } from '@esengine/engine-core';
+import type { IPlugin, ModuleManifest } from '@esengine/engine-core';
 import type { IEditorModuleLoader, PanelDescriptor, FileActionHandler, FileCreationTemplate } from '@esengine/editor-core';
 import { MessageHub, PanelPosition } from '@esengine/editor-core';
 
@@ -95,19 +95,23 @@ class BlueprintEditorModuleImpl implements IEditorModuleLoader {
     }
 }
 
-const descriptor: PluginDescriptor = {
+const manifest: ModuleManifest = {
     id: '@esengine/blueprint',
-    name: 'Blueprint',
+    name: '@esengine/blueprint',
+    displayName: 'Blueprint',
     version: '1.0.0',
     description: 'Visual scripting system for ECS Framework',
-    category: 'scripting',
-    enabledByDefault: false,
-    isEnginePlugin: true,
+    category: 'Other',
+    isCore: false,
+    defaultEnabled: false,
+    isEngineModule: true,
     canContainContent: true,
-    modules: [
-        { name: 'Runtime', type: 'runtime', loadingPhase: 'default' },
-        { name: 'Editor', type: 'editor', loadingPhase: 'postDefault' }
-    ]
+    dependencies: ['engine-core'],
+    exports: {
+        components: ['BlueprintComponent'],
+        systems: ['BlueprintSystem'],
+        other: ['NodeRegistry', 'BlueprintVM']
+    }
 };
 
 /**
@@ -115,7 +119,7 @@ const descriptor: PluginDescriptor = {
  * 完整的蓝图插件，包含运行时和编辑器模块
  */
 export const BlueprintPlugin: IPlugin = {
-    descriptor,
+    manifest,
     editorModule: new BlueprintEditorModuleImpl()
 };
 

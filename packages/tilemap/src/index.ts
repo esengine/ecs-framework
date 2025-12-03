@@ -8,8 +8,11 @@ export { TilemapAssetType, TilesetAssetType } from './constants';
 
 // Component
 export { TilemapComponent } from './TilemapComponent';
-export type { ITilemapData, ITilesetData } from './TilemapComponent';
+export type { ITilemapData, ITilesetData, ITileMetadata, ITileAnimation, ITileAnimationFrame } from './TilemapComponent';
 export type { ResizeAnchor } from './TilemapComponent';
+
+// Animation System
+export { TilemapAnimationSystem, tilemapAnimationSystem } from './TilemapAnimationSystem';
 
 // Systems
 export { TilemapRenderingSystem } from './systems/TilemapRenderingSystem';

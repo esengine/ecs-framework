@@ -39,10 +39,12 @@
     },
     "devDependencies": {
         "@esengine/ecs-framework": "workspace:*",
+        "@esengine/ecs-framework-math": "workspace:*",
         "@esengine/engine-core": "workspace:*",
         "@esengine/sprite": "workspace:*",
         "@esengine/camera": "workspace:*",
         "@esengine/asset-system": "workspace:*",
+        "@esengine/material-system": "workspace:*",
         "tsup": "^8.5.1",
         "typescript": "^5.8.0",
         "rimraf": "^5.0.0"

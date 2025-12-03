@@ -9,6 +9,62 @@
     user-select: none;
 }
 
+/* ==================== Mode Toggle ==================== */
+.tileset-mode-toggle {
+    display: flex;
+    padding: 6px 8px;
+    gap: 2px;
+    background: #1e1e1e;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.mode-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 1;
+    height: 28px;
+    padding: 0 12px;
+    background: #2d2d30;
+    border: 1px solid #3c3c3c;
+    border-radius: 3px;
+    color: #888;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.mode-toggle-btn:first-child {
+    border-radius: 3px 0 0 3px;
+    border-right: none;
+}
+
+.mode-toggle-btn:last-child {
+    border-radius: 0 3px 3px 0;
+}
+
+.mode-toggle-btn:hover {
+    background: #3c3c3c;
+    color: #e0e0e0;
+}
+
+.mode-toggle-btn.active {
+    background: #094771;
+    border-color: #0078d4;
+    color: #fff;
+}
+
+.mode-toggle-btn.active:hover {
+    background: #0a5a8a;
+}
+
+.mode-toggle-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
 /* ==================== Tool Buttons Row ==================== */
 .tileset-tools {
     display: flex;
@@ -240,6 +296,36 @@
     justify-content: center;
     width: 100%;
     height: 100%;
+}
+
+/* ==================== Collision Mode Hint ==================== */
+.collision-mode-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 24px;
+    text-align: center;
+    color: #888;
+}
+
+.collision-mode-hint svg {
+    color: #0078d4;
+    opacity: 0.8;
+}
+
+.collision-mode-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e0e0e0;
+    margin-top: 8px;
+}
+
+.collision-mode-desc {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.4;
 }
 
 .tileset-select-btn {

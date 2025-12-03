@@ -1,0 +1,8 @@
+name: "CodeQL Config"
+
+# Paths to exclude from analysis
+paths-ignore:
+  - thirdparty
+  - "**/node_modules"
+  - "**/dist"
+  - "**/bin"

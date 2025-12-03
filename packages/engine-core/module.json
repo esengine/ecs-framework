@@ -1,0 +1,38 @@
+{
+  "id": "engine-core",
+  "name": "@esengine/engine-core",
+  "displayName": "Engine Core",
+  "description": "Engine lifecycle, scene management, game loop | 引擎生命周期、场景管理、游戏循环",
+  "version": "1.0.0",
+  "category": "Core",
+  "icon": "Cpu",
+  "tags": [
+    "engine",
+    "scene",
+    "gameloop"
+  ],
+  "isCore": true,
+  "defaultEnabled": true,
+  "isEngineModule": true,
+  "canContainContent": false,
+  "platforms": [
+    "web",
+    "desktop",
+    "mobile"
+  ],
+  "dependencies": [
+    "core",
+    "math"
+  ],
+  "exports": {
+    "other": [
+      "Engine",
+      "Scene",
+      "SceneManager",
+      "GameLoop",
+      "Time"
+    ]
+  },
+  "requiresWasm": false,
+  "outputPath": "dist/index.js"
+}

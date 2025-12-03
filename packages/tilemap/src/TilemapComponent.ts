@@ -12,6 +12,41 @@ export type ResizeAnchor =
     | 'bottom-left' | 'bottom-center' | 'bottom-right';
 
 /**
+ * Animation frame definition
+ * 动画帧定义
+ */
+export interface ITileAnimationFrame {
+    /** Tile ID to display for this frame (local ID within tileset) | 此帧显示的瓦片ID（图块集内的本地ID） */
+    tileId: number;
+    /** Frame duration in milliseconds | 帧持续时间（毫秒） */
+    duration: number;
+}
+
+/**
+ * Tile animation definition
+ * 瓦片动画定义
+ */
+export interface ITileAnimation {
+    /** Animation frame sequence | 动画帧序列 */
+    frames: ITileAnimationFrame[];
+}
+
+/**
+ * Individual tile metadata
+ * 单个瓦片元数据
+ */
+export interface ITileMetadata {
+    /** Tile ID (local ID within tileset) | 瓦片ID（图块集内的本地ID） */
+    id: number;
+    /** Tile class/type | 瓦片类型 */
+    type?: string;
+    /** Custom properties | 自定义属性 */
+    properties?: Record<string, unknown>;
+    /** Tile animation (if any) | 瓦片动画（如果有） */
+    animation?: ITileAnimation;
+}
+
+/**
  * Tileset data interface
  * 图块集数据接口
  */
@@ -41,11 +76,7 @@ export interface ITilesetData {
     /** Spacing between tiles in pixels | 图块间距（像素） */
     spacing?: number;
     /** Individual tile metadata | 单个图块元数据 */
-    tiles?: Array<{
-        id: number;
-        type?: string;
-        properties?: Record<string, unknown>;
-    }>;
+    tiles?: ITileMetadata[];
 }
 
 /**
@@ -69,6 +100,14 @@ export interface ITilemapLayerData {
     offsetX?: number;
     /** Layer Y offset in pixels | 图层Y偏移（像素） */
     offsetY?: number;
+    /** Material asset path for this layer (.mat file) | 此图层的材质资源路径（.mat 文件） */
+    materialPath?: string;
+    /** Runtime material ID (set after loading) | 运行时材质ID（加载后设置） */
+    materialId?: number;
+    /** Tint color in hex format | 着色颜色（十六进制格式） */
+    color?: string;
+    /** Hidden in game (visible only in editor) | 游戏中隐藏（仅在编辑器中可见） */
+    hiddenInGame?: boolean;
     /** Custom layer properties | 自定义图层属性 */
     properties?: Record<string, unknown>;
 }
@@ -441,6 +480,40 @@ export class TilemapComponent extends Component implements IResourceComponent {
     }
 
     /**
+     * Duplicate a layer
+     * 复制图层
+     * @param index Layer index to duplicate | 要复制的图层索引
+     * @returns The duplicated layer data, or null if index is invalid | 复制的图层数据，如果索引无效则返回 null
+     */
+    duplicateLayer(index: number): ITilemapLayerData | null {
+        if (index < 0 || index >= this._layers.length) {
+            return null;
+        }
+
+        const sourceLayer = this._layers[index];
+        const sourceData = this._layersData.get(sourceLayer.id);
+        if (!sourceData) {
+            return null;
+        }
+
+        const id = `layer_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+        const newLayer: ITilemapLayerData = {
+            id,
+            name: `${sourceLayer.name} (副本)`,
+            visible: sourceLayer.visible,
+            opacity: sourceLayer.opacity,
+            data: Array.from(sourceData)
+        };
+
+        // Insert after the source layer
+        this._layers.splice(index + 1, 0, newLayer);
+        this._layersData.set(id, new Uint32Array(sourceData));
+        this.renderDirty = true;
+
+        return newLayer;
+    }
+
+    /**
      * Remove a layer by index (cannot remove last layer)
      * 按索引移除图层（不能移除最后一个图层）
      * @param index Layer index to remove | 要移除的图层索引
@@ -527,6 +600,96 @@ export class TilemapComponent extends Component implements IResourceComponent {
         }
     }
 
+    /**
+     * Set layer color (tint)
+     * 设置图层颜色（着色）
+     */
+    setLayerColor(index: number, color: string): void {
+        if (index >= 0 && index < this._layers.length) {
+            this._layers[index].color = color;
+            this.renderDirty = true;
+        }
+    }
+
+    /**
+     * Get layer color
+     * 获取图层颜色
+     */
+    getLayerColor(index: number): string {
+        if (index >= 0 && index < this._layers.length) {
+            return this._layers[index].color ?? '#ffffff';
+        }
+        return '#ffffff';
+    }
+
+    /**
+     * Set layer hidden in game
+     * 设置图层在游戏中隐藏
+     */
+    setLayerHiddenInGame(index: number, hidden: boolean): void {
+        if (index >= 0 && index < this._layers.length) {
+            this._layers[index].hiddenInGame = hidden;
+        }
+    }
+
+    /**
+     * Get layer hidden in game
+     * 获取图层在游戏中是否隐藏
+     */
+    getLayerHiddenInGame(index: number): boolean {
+        if (index >= 0 && index < this._layers.length) {
+            return this._layers[index].hiddenInGame ?? false;
+        }
+        return false;
+    }
+
+    /**
+     * Set layer material path
+     * 设置图层材质路径
+     * @param index Layer index | 图层索引
+     * @param materialPath Material asset path (.mat file) | 材质资源路径（.mat 文件）
+     */
+    setLayerMaterial(index: number, materialPath: string): void {
+        if (index >= 0 && index < this._layers.length) {
+            this._layers[index].materialPath = materialPath;
+            this._layers[index].materialId = undefined;
+            this.renderDirty = true;
+        }
+    }
+
+    /**
+     * Get layer material path
+     * 获取图层材质路径
+     * @param index Layer index | 图层索引
+     * @returns Material path or undefined | 材质路径或 undefined
+     */
+    getLayerMaterial(index: number): string | undefined {
+        return this._layers[index]?.materialPath;
+    }
+
+    /**
+     * Set layer material ID (runtime)
+     * 设置图层材质ID（运行时）
+     * @param index Layer index | 图层索引
+     * @param materialId Runtime material ID | 运行时材质ID
+     */
+    setLayerMaterialId(index: number, materialId: number): void {
+        if (index >= 0 && index < this._layers.length) {
+            this._layers[index].materialId = materialId;
+            this.renderDirty = true;
+        }
+    }
+
+    /**
+     * Get layer material ID
+     * 获取图层材质ID
+     * @param index Layer index | 图层索引
+     * @returns Material ID or 0 (default) | 材质ID 或 0（默认）
+     */
+    getLayerMaterialId(index: number): number {
+        return this._layers[index]?.materialId ?? 0;
+    }
+
     // ===== Tile Operations | 瓦片操作 =====
 
     /**
@@ -589,6 +752,22 @@ export class TilemapComponent extends Component implements IResourceComponent {
         const layer = this._layers[layerIndex];
         if (!layer) return undefined;
         return this._layersData.get(layer.id);
+    }
+
+    /**
+     * Set raw tile data array for a layer
+     * 设置图层的原始图块数据数组
+     * @param layerIndex Layer index | 图层索引
+     * @param data Uint32Array of tile indices | 图块索引的Uint32Array
+     */
+    setLayerData(layerIndex: number, data: Uint32Array): void {
+        const layer = this._layers[layerIndex];
+        if (!layer) return;
+
+        // Copy data to both the layer object and the internal map
+        layer.data = Array.from(data);
+        this._layersData.set(layer.id, new Uint32Array(data));
+        this.renderDirty = true;
     }
 
     /**
@@ -846,8 +1025,8 @@ export class TilemapComponent extends Component implements IResourceComponent {
 
         // Parse anchor to get X and Y alignment
         // 解析锚点获取X和Y方向的对齐方式
-        let xAnchor: 'start' | 'center' | 'end' = 'start';
-        let yAnchor: 'start' | 'center' | 'end' = 'end'; // 'end' means bottom in Y-up system
+        let xAnchor: 'start' | 'center' | 'end';
+        let yAnchor: 'start' | 'center' | 'end';
 
         if (anchor.includes('left')) xAnchor = 'start';
         else if (anchor.includes('right')) xAnchor = 'end';
@@ -1002,6 +1181,18 @@ export class TilemapComponent extends Component implements IResourceComponent {
             }
         }
 
+        // 收集所有图层材质引用
+        // Collect all layer material references
+        for (const layer of this._layers) {
+            if (layer.materialPath) {
+                refs.push({
+                    path: layer.materialPath,
+                    type: 'data',
+                    runtimeId: layer.materialId
+                });
+            }
+        }
+
         return refs;
     }
 
@@ -1017,6 +1208,17 @@ export class TilemapComponent extends Component implements IResourceComponent {
                 const textureId = pathToId.get(tileset.source);
                 if (textureId !== undefined) {
                     tileset.textureId = textureId;
+                }
+            }
+        }
+
+        // 为每个图层设置材质 ID
+        // Set material ID for each layer
+        for (const layer of this._layers) {
+            if (layer.materialPath) {
+                const materialId = pathToId.get(layer.materialPath);
+                if (materialId !== undefined) {
+                    layer.materialId = materialId;
                 }
             }
         }

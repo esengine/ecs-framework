@@ -1,5 +1,5 @@
 import type { ComponentRegistry as ComponentRegistryType } from '@esengine/ecs-framework';
-import type { IRuntimeModule, IPlugin, PluginDescriptor } from '@esengine/engine-core';
+import type { IRuntimeModule, IPlugin, ModuleManifest } from '@esengine/engine-core';
 import { CameraComponent } from './CameraComponent';
 
 class CameraRuntimeModule implements IRuntimeModule {
@@ -8,17 +8,21 @@ class CameraRuntimeModule implements IRuntimeModule {
     }
 }
 
-const descriptor: PluginDescriptor = {
-    id: '@esengine/camera',
-    name: 'Camera',
+const manifest: ModuleManifest = {
+    id: 'camera',
+    name: '@esengine/camera',
+    displayName: 'Camera',
     version: '1.0.0',
     description: '2D/3D 相机组件',
-    category: 'core',
-    enabledByDefault: true,
-    isEnginePlugin: true
+    category: 'Rendering',
+    isCore: false,
+    defaultEnabled: true,
+    isEngineModule: true,
+    dependencies: ['core', 'math'],
+    exports: { components: ['CameraComponent'] }
 };
 
 export const CameraPlugin: IPlugin = {
-    descriptor,
+    manifest,
     runtimeModule: new CameraRuntimeModule()
 };

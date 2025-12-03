@@ -11,31 +11,19 @@ import {
     ZoomIn,
     ZoomOut,
     RotateCcw,
-    Map,
     Save,
-    Scaling,
     X,
     Search,
     Folder,
     FolderOpen,
     File,
     Image as ImageIcon,
-    MousePointer2,
-    Move,
-    RotateCw,
-    Maximize2,
-    Minimize2,
-    ChevronDown,
-    Magnet,
     AlertTriangle,
-    SunDim,
-    Layers,
     Box,
-    View,
-    Sidebar
+    Map
 } from 'lucide-react';
-import { Core, Entity } from '@esengine/ecs-framework';
-import { MessageHub, ProjectService, IFileSystemService, type IFileSystem, IDialogService, type IDialog } from '@esengine/editor-core';
+import { Core } from '@esengine/ecs-framework';
+import { MessageHub, ProjectService, IFileSystemService, type IFileSystem, type IDialog } from '@esengine/editor-core';
 import { TilemapComponent, type ITilesetData, type ResizeAnchor } from '@esengine/tilemap';
 import { useTilemapEditorStore, type TilemapToolType, type LayerState } from '../../stores/TilemapEditorStore';
 import { TilemapCanvas } from '../TilemapCanvas';
@@ -578,7 +566,7 @@ const PanelDivider: React.FC<PanelDividerProps> = ({ onDrag, direction }) => {
 
 export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageHub: propMessageHub }) => {
     const [tilemap, setTilemap] = useState<TilemapComponent | null>(null);
-    const [entity, setEntity] = useState<Entity | null>(null);
+    const [_entity, setEntity] = useState<unknown>(null);
 
     // Panel widths for resizable layout - smaller defaults to give viewport more space
     const [leftPanelWidth, setLeftPanelWidth] = useState(180);
@@ -596,12 +584,9 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
     const [showAssetPicker, setShowAssetPicker] = useState(false);
     const [showResizeDialog, setShowResizeDialog] = useState(false);
     const [activeTilesetIndex, setActiveTilesetIndex] = useState(0);
-
-    // Viewport state
-    const [viewMode, setViewMode] = useState<'right' | 'left' | 'top' | 'bottom'>('right');
-    const [litMode, setLitMode] = useState(true);
-    const [showViewOptions, setShowViewOptions] = useState(false);
-    const [transformMode, setTransformMode] = useState<'select' | 'move' | 'rotate' | 'scale'>('select');
+    // Material picker state
+    const [showMaterialPicker, setShowMaterialPicker] = useState(false);
+    const [materialPickerLayerIndex, setMaterialPickerLayerIndex] = useState(0);
 
     const messageHub = propMessageHub || Core.services.resolve(MessageHub);
 
@@ -609,12 +594,9 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         entityId,
         pendingFilePath,
         currentFilePath,
-        currentTool,
         zoom,
         showGrid,
         showCollision,
-        editingCollision,
-        tileWidth,
         tileHeight,
         tilesetImageUrl,
         tilesetColumns,
@@ -622,15 +604,16 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         setEntityId,
         setPendingFilePath,
         setCurrentFilePath,
-        setCurrentTool,
         setZoom,
         setShowGrid,
         setShowCollision,
-        setEditingCollision,
         setPan,
         setTileset,
         setLayers,
-        setCurrentLayer
+        setCurrentLayer,
+        currentLayer,
+        undo,
+        redo
     } = useTilemapEditorStore();
 
     // Load tileset from component (defined early for use in effects)
@@ -721,7 +704,9 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
                     name: layer.name,
                     visible: layer.visible,
                     locked: false,
-                    opacity: layer.opacity
+                    opacity: layer.opacity,
+                    color: layer.color ?? '#ffffff',
+                    hiddenInGame: layer.hiddenInGame ?? false
                 }));
                 setLayers(layerStates);
                 setCurrentLayer(0);
@@ -788,7 +773,9 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
             name: layer.name,
             visible: layer.visible,
             locked: false,
-            opacity: layer.opacity
+            opacity: layer.opacity,
+            color: layer.color ?? '#ffffff',
+            hiddenInGame: layer.hiddenInGame ?? false
         }));
         setLayers(layerStates);
         setCurrentLayer(0);
@@ -800,7 +787,6 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
 
         const unsubscribeModified = messageHub.subscribe('scene:modified', () => {
             loadTilesetFromComponent(tilemap);
-            setTilemapKey(`${tilemap.width}-${tilemap.height}-${Date.now()}`);
         });
 
         const unsubscribeRestored = messageHub.subscribe('scene:restored', () => {
@@ -840,16 +826,61 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         messageHub?.publish('scene:modified', {});
     }, [messageHub]);
 
+    // Handle tile animation change from animation editor
+    const handleTileAnimationChange = useCallback((tileId: number, animation: import('@esengine/tilemap').ITileAnimation | null) => {
+        if (!tilemap) return;
+
+        const tilesetRef = tilemap.tilesets[activeTilesetIndex];
+        if (!tilesetRef?.data) return;
+
+        // Ensure tiles array exists
+        if (!tilesetRef.data.tiles) {
+            tilesetRef.data.tiles = [];
+        }
+
+        // Find or create tile metadata
+        let tileMetadata = tilesetRef.data.tiles.find(t => t.id === tileId);
+        if (!tileMetadata) {
+            tileMetadata = { id: tileId };
+            tilesetRef.data.tiles.push(tileMetadata);
+        }
+
+        // Update animation
+        if (animation) {
+            tileMetadata.animation = animation;
+        } else {
+            delete tileMetadata.animation;
+            // Remove empty tile metadata
+            if (!tileMetadata.type && !tileMetadata.properties) {
+                const index = tilesetRef.data.tiles.indexOf(tileMetadata);
+                if (index >= 0) {
+                    tilesetRef.data.tiles.splice(index, 1);
+                }
+            }
+        }
+
+        handleTilemapChange();
+    }, [tilemap, activeTilesetIndex, handleTilemapChange]);
+
+    // Get active tileset data for animation editor
+    const activeTilesetData = tilemap?.tilesets[activeTilesetIndex]?.data;
+
     const handleSaveTilemap = useCallback(async () => {
-        if (!tilemap || !entity) return;
+        if (!tilemap) return;
 
         try {
             const tilemapData = tilemap.exportToData();
             const jsonContent = JSON.stringify(tilemapData, null, 2);
 
-            const tilemapAssetPath = tilemap.tilemapAssetGuid;
+            // Use tilemapAssetGuid or currentFilePath for file-based editing
+            const tilemapAssetPath = tilemap.tilemapAssetGuid || currentFilePath;
             if (!tilemapAssetPath) {
                 console.warn('Tilemap asset path not set');
+                messageHub?.publish('notification:show', {
+                    type: 'warning',
+                    message: 'Cannot save: No tilemap file associated. Please set a tilemap asset path first.',
+                    duration: 3000
+                });
                 return;
             }
 
@@ -885,21 +916,65 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
                 duration: 3000
             });
         }
-    }, [tilemap, entity, messageHub]);
+    }, [tilemap, currentFilePath, messageHub]);
+
+    // Handle undo action
+    const handleUndo = useCallback(() => {
+        if (!tilemap) return;
+
+        const previousData = undo();
+        if (previousData) {
+            tilemap.setLayerData(currentLayer, previousData);
+            handleTilemapChange();
+        }
+    }, [tilemap, currentLayer, undo, handleTilemapChange]);
+
+    // Handle redo action
+    const handleRedo = useCallback(() => {
+        if (!tilemap) return;
+
+        const nextData = redo();
+        if (nextData) {
+            tilemap.setLayerData(currentLayer, nextData);
+            handleTilemapChange();
+        }
+    }, [tilemap, currentLayer, redo, handleTilemapChange]);
 
     // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                e.stopPropagation();
-                handleSaveTilemap();
+            // Check if Ctrl or Cmd is pressed
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key.toLowerCase()) {
+                    case 's':
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSaveTilemap();
+                        break;
+                    case 'z':
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (e.shiftKey) {
+                            // Ctrl+Shift+Z = Redo
+                            handleRedo();
+                        } else {
+                            // Ctrl+Z = Undo
+                            handleUndo();
+                        }
+                        break;
+                    case 'y':
+                        // Ctrl+Y = Redo (Windows style)
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleRedo();
+                        break;
+                }
             }
         };
 
         window.addEventListener('keydown', handleKeyDown, { capture: true });
         return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-    }, [handleSaveTilemap]);
+    }, [handleSaveTilemap, handleUndo, handleRedo]);
 
     const handleZoomIn = () => setZoom(Math.min(10, zoom * 1.2));
     const handleZoomOut = () => setZoom(Math.max(0.1, zoom / 1.2));
@@ -908,8 +983,8 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         setPan(0, 0);
     };
 
-    // 退出全屏模式
-    const handleExitFullscreen = useCallback(() => {
+    // 退出全屏模式 (reserved for future use)
+    const _handleExitFullscreen = useCallback(() => {
         messageHub?.publish('editor:fullscreen', { fullscreen: false });
     }, [messageHub]);
 
@@ -922,7 +997,9 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
             name: layer.name,
             visible: layer.visible,
             locked: false,
-            opacity: layer.opacity
+            opacity: layer.opacity,
+            color: layer.color ?? '#ffffff',
+            hiddenInGame: layer.hiddenInGame ?? false
         }));
         setLayers(layerStates);
         setCurrentLayer(tilemap.layers.length - 1);
@@ -938,7 +1015,9 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
             name: layer.name,
             visible: layer.visible,
             locked: false,
-            opacity: layer.opacity
+            opacity: layer.opacity,
+            color: layer.color ?? '#ffffff',
+            hiddenInGame: layer.hiddenInGame ?? false
         }));
         setLayers(layerStates);
         const { currentLayer } = useTilemapEditorStore.getState();
@@ -958,10 +1037,32 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
             name: layer.name,
             visible: layer.visible,
             locked: false,
-            opacity: layer.opacity
+            opacity: layer.opacity,
+            color: layer.color ?? '#ffffff',
+            hiddenInGame: layer.hiddenInGame ?? false
         }));
         setLayers(layerStates);
         setCurrentLayer(toIndex);
+        tilemap.renderDirty = true;
+        handleTilemapChange();
+    }, [tilemap, setLayers, setCurrentLayer, handleTilemapChange]);
+
+    const handleDuplicateLayer = useCallback((index: number) => {
+        if (!tilemap) return;
+        const newLayer = tilemap.duplicateLayer(index);
+        if (!newLayer) return;
+
+        const layerStates: LayerState[] = tilemap.layers.map((layer) => ({
+            id: layer.id,
+            name: layer.name,
+            visible: layer.visible,
+            locked: false,
+            opacity: layer.opacity,
+            color: layer.color ?? '#ffffff',
+            hiddenInGame: layer.hiddenInGame ?? false
+        }));
+        setLayers(layerStates);
+        setCurrentLayer(index + 1); // Select the new duplicated layer
         tilemap.renderDirty = true;
         handleTilemapChange();
     }, [tilemap, setLayers, setCurrentLayer, handleTilemapChange]);
@@ -995,6 +1096,18 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         handleTilemapChange();
     }, [tilemap, handleTilemapChange]);
 
+    // Layer material selection
+    const handleSelectLayerMaterial = useCallback((layerIndex: number) => {
+        setMaterialPickerLayerIndex(layerIndex);
+        setShowMaterialPicker(true);
+    }, []);
+
+    const handleMaterialSelected = useCallback((path: string) => {
+        if (!tilemap) return;
+        tilemap.setLayerMaterial(materialPickerLayerIndex, path);
+        handleTilemapChange();
+    }, [tilemap, materialPickerLayerIndex, handleTilemapChange]);
+
     // Get tileset list
     const tilesetOptions = tilemap?.tilesets.map((t, i) => ({
         name: t.data?.name || `Tileset ${i + 1}`,
@@ -1025,8 +1138,11 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
                 <TileSetSelectorPanel
                     tilesets={tilesetOptions}
                     activeTilesetIndex={activeTilesetIndex}
+                    activeTileset={activeTilesetData}
+                    tilesetImage={tilesetImage}
                     onTilesetChange={handleTilesetChange}
                     onAddTileset={handleAddTileset}
+                    onTileAnimationChange={handleTileAnimationChange}
                 />
             </div>
 
@@ -1038,69 +1154,6 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
                 {/* Viewport top toolbar */}
                 <div className="viewport-toolbar">
                     <div className="viewport-toolbar-left">
-                        {/* View mode buttons */}
-                        <div className="viewport-btn-group">
-                            <button
-                                className={`viewport-btn icon ${viewMode === 'right' ? 'active' : ''}`}
-                                onClick={() => setViewMode('right')}
-                                title="右视图"
-                            >
-                                <Box size={14} />
-                            </button>
-                            <button
-                                className={`viewport-btn icon ${litMode ? 'active' : ''}`}
-                                onClick={() => setLitMode(!litMode)}
-                                title="光照模式"
-                            >
-                                <SunDim size={14} />
-                            </button>
-                            <button
-                                className="viewport-btn icon"
-                                onClick={() => setShowViewOptions(!showViewOptions)}
-                                title="显示选项"
-                            >
-                                <Layers size={14} />
-                                <ChevronDown size={10} />
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="viewport-toolbar-center">
-                        {/* Transform tools */}
-                        <div className="viewport-btn-group">
-                            <button
-                                className={`viewport-btn icon ${transformMode === 'select' ? 'active' : ''}`}
-                                onClick={() => setTransformMode('select')}
-                                title="选择"
-                            >
-                                <MousePointer2 size={14} />
-                            </button>
-                            <button
-                                className={`viewport-btn icon ${transformMode === 'move' ? 'active' : ''}`}
-                                onClick={() => setTransformMode('move')}
-                                title="移动"
-                            >
-                                <Move size={14} />
-                            </button>
-                            <button
-                                className={`viewport-btn icon ${transformMode === 'rotate' ? 'active' : ''}`}
-                                onClick={() => setTransformMode('rotate')}
-                                title="旋转"
-                            >
-                                <RotateCw size={14} />
-                            </button>
-                            <button
-                                className={`viewport-btn icon ${transformMode === 'scale' ? 'active' : ''}`}
-                                onClick={() => setTransformMode('scale')}
-                                title="缩放"
-                            >
-                                <Maximize2 size={14} />
-                            </button>
-                        </div>
-
-                        <div className="viewport-separator" />
-
-                        {/* Grid/snap controls */}
                         <div className="viewport-btn-group">
                             <button
                                 className={`viewport-btn icon ${showGrid ? 'active' : ''}`}
@@ -1109,23 +1162,24 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
                             >
                                 <Grid3x3 size={14} />
                             </button>
-                            <button className="viewport-btn snap-btn" title="位置吸附">
-                                <Magnet size={12} />
-                                10
-                            </button>
-                            <button className="viewport-btn snap-btn" title="旋转吸附">
-                                <RotateCw size={12} />
-                                10°
-                            </button>
-                            <button className="viewport-btn snap-btn" title="缩放吸附">
-                                <Scaling size={12} />
-                                0.25
+                            <button
+                                className={`viewport-btn icon ${showCollision ? 'active' : ''}`}
+                                onClick={() => setShowCollision(!showCollision)}
+                                title="显示碰撞"
+                            >
+                                <Box size={14} />
                             </button>
                         </div>
                     </div>
 
+                    <div className="viewport-toolbar-center">
+                        <button className="viewport-btn" onClick={handleSaveTilemap} title="保存 (Ctrl+S)">
+                            <Save size={14} />
+                            <span>保存</span>
+                        </button>
+                    </div>
+
                     <div className="viewport-toolbar-right">
-                        {/* Zoom controls */}
                         <div className="viewport-btn-group">
                             <button className="viewport-btn icon" onClick={handleZoomOut} title="缩小">
                                 <ZoomOut size={14} />
@@ -1158,7 +1212,7 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
                     <div className="info-item">近似大小: {tilemap.width * tilemap.tileWidth}x{tilemap.height * tilemap.tileHeight}</div>
                 </div>
 
-                {/* Canvas */}
+                {/* Viewport */}
                 <div className="viewport-canvas-container">
                     <TilemapCanvas
                         key={tilemapKey}
@@ -1190,8 +1244,10 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
                     onAddLayer={handleAddLayer}
                     onRemoveLayer={handleRemoveLayer}
                     onMoveLayer={handleMoveLayer}
+                    onDuplicateLayer={handleDuplicateLayer}
                     onTilemapChange={handleTilemapChange}
                     onOpenAssetPicker={() => setShowAssetPicker(true)}
+                    onSelectLayerMaterial={handleSelectLayerMaterial}
                 />
             </div>
 
@@ -1202,6 +1258,15 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
                 onSelect={handleTilesetSelected}
                 title="选择瓦片集图片"
                 fileExtensions={['.png', '.jpg', '.jpeg', '.webp']}
+            />
+
+            {/* Material Picker Dialog */}
+            <AssetPickerDialog
+                isOpen={showMaterialPicker}
+                onClose={() => setShowMaterialPicker(false)}
+                onSelect={handleMaterialSelected}
+                title="选择图层材质"
+                fileExtensions={['.mat', '.mat.json']}
             />
 
             <ResizeMapDialog

@@ -35,17 +35,36 @@ export interface PluginSettings {
     enabledPlugins: string[];
 }
 
+/**
+ * 模块配置
+ * Module Configuration
+ */
+export interface ModuleSettings {
+    /**
+     * 禁用的模块 ID 列表（黑名单方式）
+     * Disabled module IDs (blacklist approach)
+     * Modules NOT in this list are enabled.
+     * 不在此列表中的模块为启用状态。
+     */
+    disabledModules: string[];
+}
+
 export interface ProjectConfig {
     projectType?: ProjectType;
-    componentsPath?: string;
-    componentPattern?: string;
+    /** User scripts directory (default: 'scripts') | 用户脚本目录（默认：'scripts'） */
+    scriptsPath?: string;
+    /** Build output directory | 构建输出目录 */
     buildOutput?: string;
+    /** Scenes directory | 场景目录 */
     scenesPath?: string;
+    /** Default scene file | 默认场景文件 */
     defaultScene?: string;
-    /** UI 设计分辨率 / UI design resolution */
+    /** UI design resolution | UI 设计分辨率 */
     uiDesignResolution?: UIDesignResolution;
-    /** 插件配置 / Plugin settings */
+    /** Plugin settings | 插件配置 */
     plugins?: PluginSettings;
+    /** Module settings | 模块配置 */
+    modules?: ModuleSettings;
 }
 
 @Injectable()
@@ -72,9 +91,8 @@ export class ProjectService implements IService {
 
             const config: ProjectConfig = {
                 projectType: 'esengine',
-                componentsPath: 'components',
-                componentPattern: '**/*.ts',
-                buildOutput: 'temp/editor-components',
+                scriptsPath: 'scripts',
+                buildOutput: '.esengine/compiled',
                 scenesPath: 'scenes',
                 defaultScene: 'main.ecs'
             };
@@ -153,15 +171,34 @@ export class ProjectService implements IService {
         return this.currentProject !== null;
     }
 
-    public getComponentsPath(): string | null {
+    /**
+     * Get user scripts directory path.
+     * 获取用户脚本目录路径。
+     *
+     * @returns Scripts directory path | 脚本目录路径
+     */
+    public getScriptsPath(): string | null {
         if (!this.currentProject) {
             return null;
         }
-        if (!this.projectConfig?.componentsPath) {
-            return this.currentProject.path;
-        }
+        const scriptsPath = this.projectConfig?.scriptsPath || 'scripts';
         const sep = this.currentProject.path.includes('\\') ? '\\' : '/';
-        return `${this.currentProject.path}${sep}${this.projectConfig.componentsPath}`;
+        return `${this.currentProject.path}${sep}${scriptsPath}`;
+    }
+
+    /**
+     * Get editor scripts directory path (scripts/editor).
+     * 获取编辑器脚本目录路径（scripts/editor）。
+     *
+     * @returns Editor scripts directory path | 编辑器脚本目录路径
+     */
+    public getEditorScriptsPath(): string | null {
+        const scriptsPath = this.getScriptsPath();
+        if (!scriptsPath) {
+            return null;
+        }
+        const sep = scriptsPath.includes('\\') ? '\\' : '/';
+        return `${scriptsPath}${sep}editor`;
     }
 
     public getScenesPath(): string | null {
@@ -214,15 +251,15 @@ export class ProjectService implements IService {
             logger.debug('Raw config content:', content);
             const config = JSON.parse(content) as ProjectConfig;
             logger.debug('Parsed config plugins:', config.plugins);
-            const result = {
+            const result: ProjectConfig = {
                 projectType: config.projectType || 'esengine',
-                componentsPath: config.componentsPath || '',
-                componentPattern: config.componentPattern || '**/*.ts',
-                buildOutput: config.buildOutput || 'temp/editor-components',
+                scriptsPath: config.scriptsPath || 'scripts',
+                buildOutput: config.buildOutput || '.esengine/compiled',
                 scenesPath: config.scenesPath || 'scenes',
                 defaultScene: config.defaultScene || 'main.ecs',
                 uiDesignResolution: config.uiDesignResolution,
-                plugins: config.plugins
+                plugins: config.plugins,
+                modules: config.modules
             };
             logger.debug('Loaded config result:', result);
             return result;
@@ -230,9 +267,8 @@ export class ProjectService implements IService {
             logger.warn('Failed to load config, using defaults', error);
             return {
                 projectType: 'esengine',
-                componentsPath: '',
-                componentPattern: '**/*.ts',
-                buildOutput: 'temp/editor-components',
+                scriptsPath: 'scripts',
+                buildOutput: '.esengine/compiled',
                 scenesPath: 'scenes',
                 defaultScene: 'main.ecs'
             };
@@ -348,6 +384,70 @@ export class ProjectService implements IService {
     public async disablePlugin(pluginId: string): Promise<void> {
         const current = this.getEnabledPlugins();
         await this.setEnabledPlugins(current.filter(id => id !== pluginId));
+    }
+
+    // ==================== Module Settings ====================
+
+    /**
+     * 获取禁用的模块列表（黑名单）
+     * Get disabled modules list (blacklist)
+     * @returns Array of disabled module IDs
+     */
+    public getDisabledModules(): string[] {
+        return this.projectConfig?.modules?.disabledModules || [];
+    }
+
+    /**
+     * 获取模块配置
+     * Get module settings
+     */
+    public getModuleSettings(): ModuleSettings | null {
+        return this.projectConfig?.modules || null;
+    }
+
+    /**
+     * 设置禁用的模块列表
+     * Set disabled modules list
+     *
+     * @param disabledModules - Array of disabled module IDs
+     */
+    public async setDisabledModules(disabledModules: string[]): Promise<void> {
+        await this.updateConfig({
+            modules: {
+                disabledModules
+            }
+        });
+        await this.messageHub.publish('project:modulesChanged', { disabledModules });
+        logger.info('Module settings saved', { disabledCount: disabledModules.length });
+    }
+
+    /**
+     * 禁用模块
+     * Disable a module
+     */
+    public async disableModule(moduleId: string): Promise<void> {
+        const current = this.getDisabledModules();
+        if (!current.includes(moduleId)) {
+            await this.setDisabledModules([...current, moduleId]);
+        }
+    }
+
+    /**
+     * 启用模块
+     * Enable a module
+     */
+    public async enableModule(moduleId: string): Promise<void> {
+        const current = this.getDisabledModules();
+        await this.setDisabledModules(current.filter(id => id !== moduleId));
+    }
+
+    /**
+     * 检查模块是否启用
+     * Check if a module is enabled
+     */
+    public isModuleEnabled(moduleId: string): boolean {
+        const disabled = this.getDisabledModules();
+        return !disabled.includes(moduleId);
     }
 
     public dispose(): void {

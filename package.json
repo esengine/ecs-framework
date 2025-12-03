@@ -58,7 +58,8 @@
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
     "build:wasm": "cd packages/engine && wasm-pack build --dev --out-dir pkg",
-    "build:wasm:release": "cd packages/engine && wasm-pack build --release --out-dir pkg"
+    "build:wasm:release": "cd packages/engine && wasm-pack build --release --out-dir pkg",
+    "copy-modules": "node scripts/copy-engine-modules.mjs"
   },
   "author": "yhh",
   "license": "MIT",
@@ -120,3 +121,4 @@
     "ws": "^8.18.2"
   }
 }
+

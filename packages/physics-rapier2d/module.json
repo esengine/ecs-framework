@@ -1,0 +1,49 @@
+{
+  "id": "physics-rapier2d",
+  "name": "@esengine/physics-rapier2d",
+  "displayName": "Physics 2D (Rapier)",
+  "description": "2D physics using Rapier engine | 使用 Rapier 引擎的 2D 物理",
+  "version": "1.0.0",
+  "category": "Physics",
+  "icon": "Atom",
+  "tags": [
+    "physics",
+    "2d",
+    "rapier",
+    "collision"
+  ],
+  "isCore": false,
+  "defaultEnabled": false,
+  "isEngineModule": true,
+  "canContainContent": false,
+  "platforms": [
+    "web",
+    "desktop"
+  ],
+  "dependencies": [
+    "core",
+    "math"
+  ],
+  "externalDependencies": [
+    "@esengine/rapier2d"
+  ],
+  "exports": {
+    "components": [
+      "RigidBody2D",
+      "Collider2D",
+      "BoxCollider2D",
+      "CircleCollider2D"
+    ],
+    "systems": [
+      "PhysicsSystem2D"
+    ]
+  },
+  "requiresWasm": true,
+  "wasmPaths": [
+    "rapier_wasm2d_bg.wasm"
+  ],
+  "runtimeWasmPath": "wasm/rapier_wasm2d_bg.wasm",
+  "outputPath": "dist/index.js",
+  "pluginExport": "PhysicsPlugin",
+  "includes": ["chunk-*.js"]
+}

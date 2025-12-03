@@ -24,7 +24,8 @@ import {
     ICompilerRegistry,
     InspectorRegistry,
     INotification,
-    CommandManager
+    CommandManager,
+    BuildService
 } from '@esengine/editor-core';
 import type { IDialogExtended } from './services/TauriDialogService';
 import { GlobalBlackboardService } from '@esengine/behavior-tree';
@@ -42,6 +43,7 @@ import { AboutDialog } from './components/AboutDialog';
 import { ErrorDialog } from './components/ErrorDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { PluginGeneratorWindow } from './components/PluginGeneratorWindow';
+import { BuildSettingsWindow } from './components/BuildSettingsWindow';
 import { ToastProvider, useToast } from './components/Toast';
 import { TitleBar } from './components/TitleBar';
 import { MainToolbar } from './components/MainToolbar';
@@ -95,6 +97,7 @@ function App() {
     const [sceneManager, setSceneManager] = useState<SceneManagerService | null>(null);
     const [notification, setNotification] = useState<INotification | null>(null);
     const [dialog, setDialog] = useState<IDialogExtended | null>(null);
+    const [buildService, setBuildService] = useState<BuildService | null>(null);
     const [commandManager] = useState(() => new CommandManager());
     const { t, locale, changeLocale } = useLocale();
 
@@ -117,6 +120,7 @@ function App() {
         showSettings, setShowSettings,
         showAbout, setShowAbout,
         showPluginGenerator, setShowPluginGenerator,
+        showBuildSettings, setShowBuildSettings,
         errorDialog, setErrorDialog,
         confirmDialog, setConfirmDialog
     } = useDialogStore();
@@ -285,6 +289,7 @@ function App() {
                 setSceneManager(services.sceneManager);
                 setNotification(services.notification);
                 setDialog(services.dialog as IDialogExtended);
+                setBuildService(services.buildService);
                 setStatus(t('header.status.ready'));
 
                 // Check for updates on startup (after 3 seconds)
@@ -768,7 +773,7 @@ function App() {
                     let content: React.ReactNode;
                     if (panelDesc.component) {
                         const Component = panelDesc.component;
-                        content = <Component projectPath={currentProjectPath} />;
+                        content = <Component projectPath={currentProjectPath} locale={locale} />;
                     } else if (panelDesc.render) {
                         content = panelDesc.render();
                     }
@@ -883,6 +888,7 @@ function App() {
                         onOpenAbout={handleOpenAbout}
                         onCreatePlugin={handleCreatePlugin}
                         onReloadPlugins={handleReloadPlugins}
+                        onOpenBuildSettings={() => setShowBuildSettings(true)}
                     />
                     <MainToolbar
                         locale={locale}
@@ -968,6 +974,16 @@ function App() {
                             await pluginLoader.loadProjectPlugins(currentProjectPath, pluginManager);
                         }
                     }}
+                />
+            )}
+
+            {showBuildSettings && (
+                <BuildSettingsWindow
+                    onClose={() => setShowBuildSettings(false)}
+                    projectPath={currentProjectPath || undefined}
+                    locale={locale}
+                    buildService={buildService || undefined}
+                    sceneManager={sceneManager || undefined}
                 />
             )}
 

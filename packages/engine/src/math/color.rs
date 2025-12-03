@@ -12,6 +12,7 @@ use bytemuck::{Pod, Zeroable};
 ///
 /// # Examples | 示例
 /// ```rust
+/// use es_engine::math::Color;
 /// let red = Color::RED;
 /// let custom = Color::new(0.5, 0.7, 0.3, 1.0);
 /// let packed = custom.to_packed(); // For GPU

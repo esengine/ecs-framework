@@ -42,7 +42,7 @@ export async function loadPlugin(
         const exportName = packageInfo.pluginExport || 'default';
         const plugin = module[exportName] as IPlugin;
 
-        if (!plugin || !plugin.descriptor) {
+        if (!plugin || !plugin.manifest) {
             console.warn(`[PluginLoader] Invalid plugin export from ${packageId}`);
             return null;
         }

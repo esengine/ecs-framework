@@ -3,27 +3,31 @@
  * 完整的 2D 物理插件（运行时 + 编辑器）
  */
 
-import type { IPlugin, PluginDescriptor } from '@esengine/editor-core';
+import type { IPlugin, ModuleManifest } from '@esengine/editor-core';
 import { PhysicsRuntimeModule } from '@esengine/physics-rapier2d/runtime';
 import { physics2DEditorModule } from './Physics2DEditorModule';
 
 /**
- * Physics 2D 插件描述符
- * Physics 2D Plugin Descriptor
+ * Physics 2D 插件清单
+ * Physics 2D Plugin Manifest
  */
-const descriptor: PluginDescriptor = {
+const manifest: ModuleManifest = {
     id: '@esengine/physics-rapier2d',
-    name: 'Physics 2D',
+    name: '@esengine/physics-rapier2d',
+    displayName: 'Physics 2D',
     version: '1.0.0',
     description: 'Deterministic 2D physics with Rapier2D',
-    category: 'physics',
-    enabledByDefault: true,
-    isEnginePlugin: true,
+    category: 'Physics',
+    isCore: false,
+    defaultEnabled: true,
+    isEngineModule: true,
     canContainContent: false,
-    modules: [
-        { name: 'Runtime', type: 'runtime', loadingPhase: 'default' },
-        { name: 'Editor', type: 'editor', loadingPhase: 'postDefault' }
-    ]
+    requiresWasm: true,
+    dependencies: ['engine-core'],
+    exports: {
+        components: ['Rigidbody2DComponent', 'BoxCollider2DComponent', 'CircleCollider2DComponent'],
+        systems: ['PhysicsSystem']
+    }
 };
 
 /**
@@ -31,7 +35,7 @@ const descriptor: PluginDescriptor = {
  * Complete Physics 2D Plugin (runtime + editor)
  */
 export const Physics2DPlugin: IPlugin = {
-    descriptor,
+    manifest,
     runtimeModule: new PhysicsRuntimeModule(),
     editorModule: physics2DEditorModule
 };

@@ -34,6 +34,7 @@ interface MenuBarProps {
   onOpenAbout?: () => void;
   onCreatePlugin?: () => void;
   onReloadPlugins?: () => void;
+  onOpenBuildSettings?: () => void;
 }
 
 export function MenuBar({
@@ -55,7 +56,8 @@ export function MenuBar({
     onToggleDevtools,
     onOpenAbout,
     onCreatePlugin,
-    onReloadPlugins
+    onReloadPlugins,
+    onOpenBuildSettings
 }: MenuBarProps) {
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [pluginMenuItems, setPluginMenuItems] = useState<PluginMenuItem[]>([]);
@@ -129,7 +131,8 @@ export function MenuBar({
                 documentation: 'Documentation',
                 checkForUpdates: 'Check for Updates',
                 about: 'About',
-                devtools: 'Developer Tools'
+                devtools: 'Developer Tools',
+                buildSettings: 'Build Settings'
             },
             zh: {
                 file: '文件',
@@ -164,7 +167,8 @@ export function MenuBar({
                 documentation: '文档',
                 checkForUpdates: '检查更新',
                 about: '关于',
-                devtools: '开发者工具'
+                devtools: '开发者工具',
+                buildSettings: '构建设置'
             }
         };
         return translations[locale]?.[key] || key;
@@ -177,6 +181,8 @@ export function MenuBar({
             { separator: true },
             { label: t('saveScene'), shortcut: 'Ctrl+S', onClick: onSaveScene },
             { label: t('saveSceneAs'), shortcut: 'Ctrl+Shift+S', onClick: onSaveSceneAs },
+            { separator: true },
+            { label: t('buildSettings'), shortcut: 'Ctrl+Shift+B', onClick: onOpenBuildSettings },
             { separator: true },
             { label: t('openProject'), onClick: onOpenProject },
             { label: t('closeProject'), onClick: onCloseProject },

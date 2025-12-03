@@ -1,0 +1,21 @@
+{
+  "id": "math",
+  "name": "@esengine/ecs-framework-math",
+  "displayName": "Math",
+  "description": "Vector, Matrix, Transform and other math utilities | 向量、矩阵、变换等数学工具",
+  "version": "1.0.0",
+  "category": "Core",
+  "icon": "Calculator",
+  "tags": ["math", "vector", "matrix", "transform"],
+  "isCore": true,
+  "defaultEnabled": true,
+  "isEngineModule": true,
+  "canContainContent": false,
+  "platforms": ["web", "desktop", "mobile"],
+  "dependencies": [],
+  "exports": {
+    "other": ["Vector2", "Vector3", "Matrix3x3", "Matrix4x4", "Quaternion", "Transform", "Rectangle", "Color"]
+  },
+  "requiresWasm": false,
+  "outputPath": "dist/index.mjs"
+}

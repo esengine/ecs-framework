@@ -4,31 +4,33 @@
  * 插件定义 - 注册编辑器模块（Inspector、工具等）
  */
 
-import type { IPluginLoader, PluginDescriptor, IEditorModuleLoader } from '@esengine/ecs-components';
+import type { IPlugin, ModuleManifest, IEditorModuleLoader } from '@esengine/editor-core';
 import { {{name}}RuntimeModule } from '../{{name}}RuntimeModule';
 
 class {{name}}EditorModule implements IEditorModuleLoader {
-    registerInspectors(registry: any): void {
+    async install(): Promise<void> {
         // 注册组件 Inspector
         // registry.register('MyComponent', MyComponentInspector);
     }
+    async uninstall(): Promise<void> {}
 }
 
-const descriptor: PluginDescriptor = {
+const manifest: ModuleManifest = {
     id: '@esengine/{{name}}',
-    name: '{{displayName}}',
+    name: '@esengine/{{name}}',
+    displayName: '{{displayName}}',
     version: '1.0.0',
+    description: '{{displayName}} plugin',
     category: '{{category}}',
-    enabledByDefault: true,
-    isEnginePlugin: false,
-    modules: [
-        { name: '{{name}}Runtime', type: 'runtime', entry: './src/runtime.ts' },
-        { name: '{{name}}Editor', type: 'editor', entry: './src/editor/index.ts' }
-    ]
+    isCore: false,
+    defaultEnabled: true,
+    isEngineModule: false,
+    dependencies: ['engine-core'],
+    exports: {}
 };
 
-export const {{name}}Plugin: IPluginLoader = {
-    descriptor,
+export const {{name}}Plugin: IPlugin = {
+    manifest,
     runtimeModule: new {{name}}RuntimeModule(),
     editorModule: new {{name}}EditorModule()
 };

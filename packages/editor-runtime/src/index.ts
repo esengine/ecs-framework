@@ -146,11 +146,7 @@ export type {
     FileActionHandler,
     RegisteredPlugin,
     PluginConfig,
-    PluginCategory,
     LoadingPhase,
-    ModuleType,
-    ModuleDescriptor,
-    PluginDependency,
     PluginState,
 
     // Service interfaces
@@ -203,7 +199,12 @@ export type {
     IPluginLoader,
     IRuntimeModuleLoader,
     IEditorModuleLoader,
-    PluginDescriptor,
+    ModuleManifest,
+    ModuleCategory,
+    ModulePlatform,
+    ModuleExports,
+    IPlugin,
+    IRuntimeModule,
     SystemContext,
     ComponentInspectorProviderDef,
 } from '@esengine/editor-core';

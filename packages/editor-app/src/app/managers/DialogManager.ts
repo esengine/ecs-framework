@@ -13,6 +13,7 @@ interface DialogState {
     showSettings: boolean;
     showAbout: boolean;
     showPluginGenerator: boolean;
+    showBuildSettings: boolean;
     errorDialog: ErrorDialogData | null;
     confirmDialog: ConfirmDialogData | null;
 
@@ -22,6 +23,7 @@ interface DialogState {
     setShowSettings: (show: boolean) => void;
     setShowAbout: (show: boolean) => void;
     setShowPluginGenerator: (show: boolean) => void;
+    setShowBuildSettings: (show: boolean) => void;
     setErrorDialog: (data: ErrorDialogData | null) => void;
     setConfirmDialog: (data: ConfirmDialogData | null) => void;
     closeAllDialogs: () => void;
@@ -34,6 +36,7 @@ export const useDialogStore = create<DialogState>((set) => ({
     showSettings: false,
     showAbout: false,
     showPluginGenerator: false,
+    showBuildSettings: false,
     errorDialog: null,
     confirmDialog: null,
 
@@ -43,6 +46,7 @@ export const useDialogStore = create<DialogState>((set) => ({
     setShowSettings: (show) => set({ showSettings: show }),
     setShowAbout: (show) => set({ showAbout: show }),
     setShowPluginGenerator: (show) => set({ showPluginGenerator: show }),
+    setShowBuildSettings: (show) => set({ showBuildSettings: show }),
     setErrorDialog: (data) => set({ errorDialog: data }),
     setConfirmDialog: (data) => set({ confirmDialog: data }),
 
@@ -53,6 +57,7 @@ export const useDialogStore = create<DialogState>((set) => ({
         showSettings: false,
         showAbout: false,
         showPluginGenerator: false,
+        showBuildSettings: false,
         errorDialog: null,
         confirmDialog: null
     })

@@ -22,6 +22,76 @@ export class AssetDatabase {
     private readonly _dependencies = new Map<AssetGUID, Set<AssetGUID>>();
     private readonly _dependents = new Map<AssetGUID, Set<AssetGUID>>();
 
+    /** Project root path for resolving relative paths. | 项目根路径，用于解析相对路径。 */
+    private _projectRoot: string | null = null;
+
+    /**
+     * Set project root path.
+     * 设置项目根路径。
+     *
+     * @param path - Absolute path to project root. | 项目根目录的绝对路径。
+     */
+    setProjectRoot(path: string): void {
+        this._projectRoot = path;
+    }
+
+    /**
+     * Get project root path.
+     * 获取项目根路径。
+     */
+    getProjectRoot(): string | null {
+        return this._projectRoot;
+    }
+
+    /**
+     * Resolve relative path to absolute path.
+     * 将相对路径解析为绝对路径。
+     *
+     * @param relativePath - Relative asset path (e.g., "assets/texture.png"). | 相对资产路径。
+     * @returns Absolute file system path. | 绝对文件系统路径。
+     */
+    resolveAbsolutePath(relativePath: string): string {
+        // Already absolute path (Windows or Unix).
+        // 已经是绝对路径。
+        if (relativePath.match(/^[a-zA-Z]:/) || relativePath.startsWith('/')) {
+            return relativePath;
+        }
+
+        // No project root set, return as-is.
+        // 未设置项目根路径，原样返回。
+        if (!this._projectRoot) {
+            return relativePath;
+        }
+
+        // Join with project root.
+        // 与项目根路径拼接。
+        const separator = this._projectRoot.includes('\\') ? '\\' : '/';
+        const normalizedPath = relativePath.replace(/[/\\]/g, separator);
+        return `${this._projectRoot}${separator}${normalizedPath}`;
+    }
+
+    /**
+     * Convert absolute path to relative path.
+     * 将绝对路径转换为相对路径。
+     *
+     * @param absolutePath - Absolute file system path. | 绝对文件系统路径。
+     * @returns Relative asset path, or null if not under project root. | 相对资产路径。
+     */
+    toRelativePath(absolutePath: string): string | null {
+        if (!this._projectRoot) {
+            return null;
+        }
+
+        const normalizedAbs = absolutePath.replace(/\\/g, '/');
+        const normalizedRoot = this._projectRoot.replace(/\\/g, '/');
+
+        if (normalizedAbs.startsWith(normalizedRoot)) {
+            return normalizedAbs.substring(normalizedRoot.length + 1);
+        }
+
+        return null;
+    }
+
     /**
      * Add asset to database
      * 添加资产到数据库

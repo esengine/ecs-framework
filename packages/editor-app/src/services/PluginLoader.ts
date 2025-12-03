@@ -4,7 +4,7 @@
  */
 
 import { PluginManager, LocaleService, MessageHub } from '@esengine/editor-core';
-import type { IPluginLoader, PluginDescriptor } from '@esengine/editor-core';
+import type { IPluginLoader, ModuleManifest } from '@esengine/editor-core';
 import { Core } from '@esengine/ecs-framework';
 import { TauriAPI } from '../api/tauri';
 import { PluginSDKRegistry } from './PluginSDKRegistry';
@@ -132,7 +132,7 @@ export class PluginLoader {
             pluginManager.register(pluginLoader);
 
             // 8. 初始化编辑器模块（注册面板、文件处理器等）
-            const pluginId = pluginLoader.descriptor.id;
+            const pluginId = pluginLoader.manifest.id;
             await pluginManager.initializePluginEditor(pluginId, Core.services);
 
             // 9. 记录已加载
@@ -285,7 +285,7 @@ export class PluginLoader {
         }
 
         // 新的 IPluginLoader 接口检查
-        if (obj.descriptor && this.isPluginDescriptor(obj.descriptor)) {
+        if (obj.manifest && this.isModuleManifest(obj.manifest)) {
             return true;
         }
 
@@ -293,9 +293,9 @@ export class PluginLoader {
     }
 
     /**
-     * 验证对象是否为有效的插件描述符
+     * 验证对象是否为有效的模块清单
      */
-    private isPluginDescriptor(obj: any): obj is PluginDescriptor {
+    private isModuleManifest(obj: any): obj is ModuleManifest {
         return (
             obj &&
             typeof obj.id === 'string' &&

@@ -404,15 +404,23 @@ export const uiEditorModule = new UIEditorModule();
 
 // 从 @esengine/ui 导入运行时模块
 import { UIRuntimeModule } from '@esengine/ui';
-import type { IPlugin, PluginDescriptor } from '@esengine/editor-core';
+import type { IPlugin, ModuleManifest } from '@esengine/editor-core';
 
-const descriptor: PluginDescriptor = {
+const manifest: ModuleManifest = {
     id: '@esengine/ui',
-    name: 'UI',
+    name: '@esengine/ui',
+    displayName: 'UI',
     version: '1.0.0',
     description: 'ECS-based UI system with editor support',
-    category: 'ui',
-    enabledByDefault: true
+    category: 'Rendering',
+    isCore: false,
+    defaultEnabled: true,
+    isEngineModule: true,
+    dependencies: ['engine-core'],
+    exports: {
+        components: ['UITransformComponent', 'UIRenderComponent', 'UITextComponent', 'UIButtonComponent'],
+        systems: ['UIRenderSystem', 'UILayoutSystem', 'UIInteractionSystem']
+    }
 };
 
 /**
@@ -420,7 +428,7 @@ const descriptor: PluginDescriptor = {
  * Complete UI Plugin (runtime + editor)
  */
 export const UIPlugin: IPlugin = {
-    descriptor,
+    manifest,
     runtimeModule: new UIRuntimeModule(),
     editorModule: uiEditorModule
 };

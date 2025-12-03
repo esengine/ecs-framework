@@ -8,7 +8,7 @@ import type { ServiceContainer } from '@esengine/ecs-framework';
 import type {
     IPlugin,
     IEditorModuleLoader,
-    PluginDescriptor,
+    ModuleManifest,
     PanelDescriptor,
     MenuItemDescriptor,
     ToolbarItemDescriptor,
@@ -173,27 +173,25 @@ class SceneInspectorEditorModule implements IEditorModuleLoader {
     async onProjectClose(): Promise<void> {}
 }
 
-const descriptor: PluginDescriptor = {
+const manifest: ModuleManifest = {
     id: '@esengine/scene-inspector',
-    name: 'Scene Inspector',
+    name: '@esengine/scene-inspector',
+    displayName: 'Scene Inspector',
     version: '1.0.0',
     description: 'Scene hierarchy and entity inspector',
-    category: 'tools',
+    category: 'Other',
     icon: 'Search',
-    enabledByDefault: true,
-    canContainContent: false,
-    isEnginePlugin: true,
     isCore: true,
-    modules: [
-        {
-            name: 'SceneInspectorEditor',
-            type: 'editor',
-            loadingPhase: 'default'
-        }
-    ]
+    defaultEnabled: true,
+    isEngineModule: true,
+    canContainContent: false,
+    dependencies: ['engine-core'],
+    exports: {
+        other: ['SceneHierarchy', 'EntityInspector']
+    }
 };
 
 export const SceneInspectorPlugin: IPlugin = {
-    descriptor,
+    manifest,
     editorModule: new SceneInspectorEditorModule()
 };

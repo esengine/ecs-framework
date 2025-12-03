@@ -1,10 +1,10 @@
 import type { ComponentRegistry as ComponentRegistryType, IScene } from '@esengine/ecs-framework';
-import type { IRuntimeModule, IPlugin, PluginDescriptor, SystemContext } from '@esengine/engine-core';
+import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 import { SpriteComponent } from './SpriteComponent';
 import { SpriteAnimatorComponent } from './SpriteAnimatorComponent';
 import { SpriteAnimatorSystem } from './systems/SpriteAnimatorSystem';
 
-export type { SystemContext, PluginDescriptor, IRuntimeModule as IRuntimeModuleLoader, IPlugin as IPluginLoader };
+export type { SystemContext, ModuleManifest, IRuntimeModule as IRuntimeModuleLoader, IPlugin as IPluginLoader };
 
 class SpriteRuntimeModule implements IRuntimeModule {
     registerComponents(registry: typeof ComponentRegistryType): void {
@@ -24,18 +24,26 @@ class SpriteRuntimeModule implements IRuntimeModule {
     }
 }
 
-const descriptor: PluginDescriptor = {
-    id: '@esengine/sprite',
-    name: 'Sprite Components',
+const manifest: ModuleManifest = {
+    id: 'sprite',
+    name: '@esengine/sprite',
+    displayName: 'Sprite 2D',
     version: '1.0.0',
     description: 'Sprite and SpriteAnimator components for 2D rendering',
-    category: 'rendering',
-    enabledByDefault: true,
-    isEnginePlugin: true
+    category: 'Rendering',
+    icon: 'Image',
+    isCore: false,
+    defaultEnabled: true,
+    isEngineModule: true,
+    canContainContent: true,
+    dependencies: ['core', 'math'],
+    exports: { components: ['SpriteComponent', 'SpriteAnimatorComponent'] },
+    editorPackage: '@esengine/sprite-editor',
+    requiresWasm: true
 };
 
 export const SpritePlugin: IPlugin = {
-    descriptor,
+    manifest,
     runtimeModule: new SpriteRuntimeModule()
 };
 

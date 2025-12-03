@@ -1,0 +1,23 @@
+{
+  "id": "material-system",
+  "name": "@esengine/material-system",
+  "displayName": "Material System",
+  "description": "Material and shader system | 材质和着色器系统",
+  "version": "1.0.0",
+  "category": "Rendering",
+  "icon": "Palette",
+  "tags": ["material", "shader", "rendering"],
+  "isCore": true,
+  "defaultEnabled": true,
+  "isEngineModule": true,
+  "canContainContent": true,
+  "platforms": ["web", "desktop"],
+  "dependencies": ["core", "asset-system"],
+  "exports": {
+    "other": ["Material", "Shader", "MaterialManager"]
+  },
+  "editorPackage": "@esengine/material-editor",
+  "requiresWasm": false,
+  "outputPath": "dist/index.js",
+  "pluginExport": "MaterialSystemPlugin"
+}

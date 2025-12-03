@@ -5,7 +5,7 @@
 
 import type { ServiceContainer } from '@esengine/ecs-framework';
 import { createLogger } from '@esengine/ecs-framework';
-import type { IPlugin, IEditorModuleLoader, PluginDescriptor } from '@esengine/editor-core';
+import type { IPlugin, IEditorModuleLoader, ModuleManifest } from '@esengine/editor-core';
 import { SettingsRegistry } from '@esengine/editor-core';
 import { SettingsService } from '../../services/SettingsService';
 
@@ -102,27 +102,23 @@ class EditorAppearanceEditorModule implements IEditorModuleLoader {
     }
 }
 
-const descriptor: PluginDescriptor = {
+const manifest: ModuleManifest = {
     id: '@esengine/editor-appearance',
-    name: 'Editor Appearance',
+    name: '@esengine/editor-appearance',
+    displayName: 'Editor Appearance',
     version: '1.0.0',
     description: 'Configure editor appearance settings',
-    category: 'tools',
+    category: 'Other',
     icon: 'Palette',
-    enabledByDefault: true,
-    canContainContent: false,
-    isEnginePlugin: true,
     isCore: true,
-    modules: [
-        {
-            name: 'EditorAppearanceEditor',
-            type: 'editor',
-            loadingPhase: 'earliest'
-        }
-    ]
+    defaultEnabled: true,
+    isEngineModule: true,
+    canContainContent: false,
+    dependencies: [],
+    exports: {}
 };
 
 export const EditorAppearancePlugin: IPlugin = {
-    descriptor,
+    manifest,
     editorModule: new EditorAppearanceEditorModule()
 };

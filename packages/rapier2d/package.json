@@ -1,0 +1,31 @@
+{
+  "name": "@esengine/rapier2d",
+  "version": "0.14.0",
+  "description": "Rapier2D physics engine with dynamic WASM loading support",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./pkg/*": "./pkg/*"
+  },
+  "files": [
+    "dist",
+    "pkg/*.wasm"
+  ],
+  "scripts": {
+    "gen:src": "node scripts/gen-src.mjs",
+    "build": "pnpm gen:src && tsup",
+    "clean": "rimraf dist src"
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "rimraf": "^5.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}

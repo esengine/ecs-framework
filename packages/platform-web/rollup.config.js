@@ -3,19 +3,41 @@ import commonjs from '@rollup/plugin-commonjs';
 import typescript from '@rollup/plugin-typescript';
 import dts from 'rollup-plugin-dts';
 
-// 所有 @esengine/* 包设为 external，避免多实例问题
+/**
+ * Platform-web Rollup Configuration
+ *
+ * Builds:
+ * 1. ESM + CJS bundles for editor usage
+ * 2. TypeScript declarations
+ *
+ * All @esengine/* packages are external to avoid bundling.
+ * Game builds use import maps to resolve modules at runtime.
+ */
+
 const external = [
-    '@esengine/platform-common',
     '@esengine/ecs-framework',
+    '@esengine/runtime-core',
+    '@esengine/platform-common',
+    '@esengine/asset-system',
     '@esengine/ecs-components',
+    '@esengine/ecs-engine-bindgen',
     '@esengine/tilemap',
     '@esengine/ui',
     '@esengine/behavior-tree',
-    '@esengine/ecs-engine-bindgen',
-    '@esengine/asset-system',
+    // Editor packages (should never be in runtime)
+    '@esengine/editor-core',
+    '@esengine/ui-editor',
+    '@esengine/tilemap-editor',
+    '@esengine/behavior-tree-editor',
+    '@esengine/blueprint-editor',
+    '@esengine/physics-rapier2d-editor',
+    // React (editor only)
+    'react',
+    'react-dom',
 ];
 
 export default [
+    // Main bundle (ESM + CJS)
     {
         input: 'src/index.ts',
         output: [
@@ -32,7 +54,10 @@ export default [
         ],
         external,
         plugins: [
-            resolve(),
+            resolve({
+                browser: true,
+                preferBuiltins: false
+            }),
             commonjs(),
             typescript({
                 tsconfig: './tsconfig.json',
@@ -40,6 +65,7 @@ export default [
             })
         ]
     },
+    // TypeScript declarations
     {
         input: 'src/index.ts',
         output: {

@@ -9,6 +9,7 @@ use glam::Mat3;
 ///
 /// # Examples | 示例
 /// ```rust
+/// use es_engine::math::{Transform2D, Vec2};
 /// let mut transform = Transform2D::new();
 /// transform.position = Vec2::new(100.0, 200.0);
 /// transform.rotation = std::f32::consts::PI / 4.0; // 45 degrees

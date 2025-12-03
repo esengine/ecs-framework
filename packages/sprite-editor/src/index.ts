@@ -9,20 +9,30 @@ import type { Entity, ServiceContainer } from '@esengine/ecs-framework';
 import { Core } from '@esengine/ecs-framework';
 import type {
     IEditorModuleLoader,
-    EntityCreationTemplate
+    EntityCreationTemplate,
+    IPlugin,
+    ModuleManifest
 } from '@esengine/editor-core';
 import {
     EntityStoreService,
     MessageHub,
-    ComponentRegistry
+    ComponentRegistry,
+    ComponentInspectorRegistry
 } from '@esengine/editor-core';
 import { TransformComponent } from '@esengine/engine-core';
 
 // Runtime imports from @esengine/sprite
 import {
     SpriteComponent,
-    SpriteAnimatorComponent
+    SpriteAnimatorComponent,
+    SpriteRuntimeModule
 } from '@esengine/sprite';
+
+// Inspector
+import { SpriteComponentInspector } from './SpriteComponentInspector';
+
+// Export inspector
+export { SpriteComponentInspector } from './SpriteComponentInspector';
 
 /**
  * 精灵编辑器模块
@@ -30,6 +40,12 @@ import {
  */
 export class SpriteEditorModule implements IEditorModuleLoader {
     async install(services: ServiceContainer): Promise<void> {
+        // 注册组件检查器 | Register component inspectors
+        const componentInspectorRegistry = services.tryResolve(ComponentInspectorRegistry);
+        if (componentInspectorRegistry) {
+            componentInspectorRegistry.register(new SpriteComponentInspector());
+        }
+
         // 注册 Sprite 组件到编辑器组件注册表 | Register Sprite components to editor component registry
         const componentRegistry = services.resolve(ComponentRegistry);
         if (componentRegistry) {
@@ -143,5 +159,36 @@ export class SpriteEditorModule implements IEditorModuleLoader {
 }
 
 export const spriteEditorModule = new SpriteEditorModule();
+
+/**
+ * Sprite 插件清单
+ * Sprite Plugin Manifest
+ */
+const manifest: ModuleManifest = {
+    id: '@esengine/sprite',
+    name: '@esengine/sprite',
+    displayName: 'Sprite',
+    version: '1.0.0',
+    description: 'Sprite and animation components for 2D rendering',
+    category: 'Rendering',
+    isCore: false,
+    defaultEnabled: true,
+    isEngineModule: true,
+    dependencies: ['engine-core'],
+    exports: {
+        components: ['SpriteComponent', 'SpriteAnimatorComponent'],
+        systems: ['SpriteRenderSystem']
+    }
+};
+
+/**
+ * 完整的 Sprite 插件（运行时 + 编辑器）
+ * Complete Sprite Plugin (runtime + editor)
+ */
+export const SpritePlugin: IPlugin = {
+    manifest,
+    runtimeModule: new SpriteRuntimeModule(),
+    editorModule: spriteEditorModule
+};
 
 export default spriteEditorModule;

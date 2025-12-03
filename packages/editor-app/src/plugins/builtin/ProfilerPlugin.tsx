@@ -7,7 +7,7 @@ import type { ServiceContainer } from '@esengine/ecs-framework';
 import type {
     IPlugin,
     IEditorModuleLoader,
-    PluginDescriptor,
+    ModuleManifest,
     MenuItemDescriptor
 } from '@esengine/editor-core';
 import { MessageHub, SettingsRegistry } from '@esengine/editor-core';
@@ -114,26 +114,23 @@ class ProfilerEditorModule implements IEditorModuleLoader {
     async onEditorReady(): Promise<void> {}
 }
 
-const descriptor: PluginDescriptor = {
+const manifest: ModuleManifest = {
     id: '@esengine/profiler',
-    name: 'Performance Profiler',
+    name: '@esengine/profiler',
+    displayName: 'Performance Profiler',
     version: '1.0.0',
     description: 'Real-time performance monitoring for ECS systems',
-    category: 'tools',
+    category: 'Other',
     icon: 'BarChart3',
-    enabledByDefault: true,
+    isCore: false,
+    defaultEnabled: true,
+    isEngineModule: true,
     canContainContent: false,
-    isEnginePlugin: true,
-    modules: [
-        {
-            name: 'ProfilerEditor',
-            type: 'editor',
-            loadingPhase: 'postDefault'
-        }
-    ]
+    dependencies: [],
+    exports: {}
 };
 
 export const ProfilerPlugin: IPlugin = {
-    descriptor,
+    manifest,
     editorModule: new ProfilerEditorModule()
 };

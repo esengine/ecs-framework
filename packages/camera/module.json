@@ -1,0 +1,38 @@
+{
+  "id": "camera",
+  "name": "@esengine/camera",
+  "displayName": "Camera",
+  "description": "Camera and viewport management | 相机和视口管理",
+  "version": "1.0.0",
+  "category": "Rendering",
+  "icon": "Video",
+  "tags": [
+    "camera",
+    "viewport",
+    "rendering"
+  ],
+  "isCore": false,
+  "defaultEnabled": true,
+  "isEngineModule": true,
+  "canContainContent": false,
+  "platforms": [
+    "web",
+    "desktop",
+    "mobile"
+  ],
+  "dependencies": [
+    "core",
+    "math"
+  ],
+  "exports": {
+    "components": [
+      "CameraComponent"
+    ],
+    "systems": [
+      "CameraSystem"
+    ]
+  },
+  "requiresWasm": false,
+  "outputPath": "dist/index.js",
+  "pluginExport": "CameraPlugin"
+}

@@ -4,5 +4,5 @@
 mod sprite_batch;
 mod vertex;
 
-pub use sprite_batch::SpriteBatch;
+pub use sprite_batch::{BatchKey, SpriteBatch};
 pub use vertex::{SpriteVertex, VERTEX_SIZE};

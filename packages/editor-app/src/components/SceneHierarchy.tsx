@@ -928,9 +928,25 @@ function ContextMenuWithSubmenu({
         'other': { zh: '其他', en: 'Other' },
     };
 
+    // 实体创建模板的 label 本地化映射
+    const entityTemplateLabels: Record<string, { zh: string; en: string }> = {
+        'Sprite': { zh: '精灵', en: 'Sprite' },
+        'Animated Sprite': { zh: '动画精灵', en: 'Animated Sprite' },
+        '创建 Tilemap': { zh: '瓦片地图', en: 'Tilemap' },
+        'Camera 2D': { zh: '2D 相机', en: 'Camera 2D' },
+    };
+
     const getCategoryLabel = (category: string) => {
         const labels = categoryLabels[category];
         return labels ? (locale === 'zh' ? labels.zh : labels.en) : category;
+    };
+
+    const getEntityTemplateLabel = (label: string) => {
+        const mapping = entityTemplateLabels[label];
+        if (mapping) {
+            return locale === 'zh' ? mapping.zh : mapping.en;
+        }
+        return label;
     };
 
     const templatesByCategory = pluginTemplates.reduce((acc, template) => {
@@ -996,7 +1012,7 @@ function ContextMenuWithSubmenu({
                             {templates.map((template) => (
                                 <button key={template.id} onClick={() => onCreateFromTemplate(template)}>
                                     {getIconComponent(template.icon as string, 12)}
-                                    <span>{template.label}</span>
+                                    <span>{getEntityTemplateLabel(template.label)}</span>
                                 </button>
                             ))}
                         </div>

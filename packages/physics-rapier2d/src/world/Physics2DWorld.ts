@@ -5,7 +5,7 @@
  * 封装 Rapier2D 物理世界，提供确定性物理模拟
  */
 
-import type RAPIER from '@dimforge/rapier2d-compat';
+import type RAPIER from '@esengine/rapier2d';
 import type {
     Physics2DConfig,
     Vector2,

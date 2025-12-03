@@ -23,6 +23,57 @@ export class FillTool implements ITilemapTool {
         // No action on up
     }
 
+    getPreviewTiles(tileX: number, tileY: number, ctx: ToolContext): { x: number; y: number }[] {
+        const { tilemap, editingCollision, currentLayer } = ctx;
+
+        if (tileX < 0 || tileX >= tilemap.width || tileY < 0 || tileY >= tilemap.height) {
+            return [];
+        }
+
+        const tiles: { x: number; y: number }[] = [];
+        const maxPreviewTiles = 500;
+
+        if (editingCollision) {
+            const targetCollision = tilemap.hasCollision(tileX, tileY);
+            const stack: [number, number][] = [[tileX, tileY]];
+            const visited = new Set<string>();
+
+            while (stack.length > 0 && tiles.length < maxPreviewTiles) {
+                const [x, y] = stack.pop()!;
+                const key = `${x},${y}`;
+
+                if (visited.has(key)) continue;
+                if (x < 0 || x >= tilemap.width || y < 0 || y >= tilemap.height) continue;
+                if (tilemap.hasCollision(x, y) !== targetCollision) continue;
+
+                visited.add(key);
+                tiles.push({ x, y });
+
+                stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+            }
+        } else {
+            const targetTile = tilemap.getTile(currentLayer, tileX, tileY);
+            const stack: [number, number][] = [[tileX, tileY]];
+            const visited = new Set<string>();
+
+            while (stack.length > 0 && tiles.length < maxPreviewTiles) {
+                const [x, y] = stack.pop()!;
+                const key = `${x},${y}`;
+
+                if (visited.has(key)) continue;
+                if (x < 0 || x >= tilemap.width || y < 0 || y >= tilemap.height) continue;
+                if (tilemap.getTile(currentLayer, x, y) !== targetTile) continue;
+
+                visited.add(key);
+                tiles.push({ x, y });
+
+                stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+            }
+        }
+
+        return tiles;
+    }
+
     private floodFill(startX: number, startY: number, ctx: ToolContext): void {
         const { tilemap, selectedTiles, editingCollision, currentLayer } = ctx;
 

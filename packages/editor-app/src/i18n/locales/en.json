@@ -50,7 +50,12 @@
       "core": "Core",
       "rendering": "Rendering",
       "physics": "Physics",
-      "audio": "Audio"
+      "audio": "Audio",
+      "tilemap": "Tilemap"
+    },
+    "material": {
+      "name": "Material",
+      "description": "Custom material and shader component"
     },
     "transform": {
       "description": "Transform - Position, Rotation, Scale"
@@ -75,6 +80,17 @@
     },
     "audioSource": {
       "description": "Audio Source"
+    }
+  },
+  "file": {
+    "create": {
+      "material": "Material",
+      "shader": "Shader"
+    }
+  },
+  "entity": {
+    "create": {
+      "materialEntity": "Material Entity"
     }
   }
 }

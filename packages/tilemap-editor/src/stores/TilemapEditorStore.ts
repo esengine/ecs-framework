@@ -20,6 +20,8 @@ export interface LayerState {
     visible: boolean;
     locked: boolean;
     opacity: number;
+    color: string;
+    hiddenInGame: boolean;
 }
 
 export interface TilemapEditorState {
@@ -86,6 +88,8 @@ export interface TilemapEditorState {
     toggleLayerVisibility: (index: number) => void;
     toggleLayerLocked: (index: number) => void;
     setLayerOpacity: (index: number, opacity: number) => void;
+    setLayerColor: (index: number, color: string) => void;
+    setLayerHiddenInGame: (index: number, hidden: boolean) => void;
     renameLayer: (index: number, name: string) => void;
 }
 
@@ -212,6 +216,24 @@ export const useTilemapEditorStore = create<TilemapEditorState>((set, get) => ({
         if (!layer) return;
         const newLayers = [...layers];
         newLayers[index] = { ...layer, opacity: Math.max(0, Math.min(1, opacity)) };
+        set({ layers: newLayers });
+    },
+
+    setLayerColor: (index, color) => {
+        const { layers } = get();
+        const layer = layers[index];
+        if (!layer) return;
+        const newLayers = [...layers];
+        newLayers[index] = { ...layer, color };
+        set({ layers: newLayers });
+    },
+
+    setLayerHiddenInGame: (index, hidden) => {
+        const { layers } = get();
+        const layer = layers[index];
+        if (!layer) return;
+        const newLayers = [...layers];
+        newLayers[index] = { ...layer, hiddenInGame: hidden };
         set({ layers: newLayers });
     },
 

@@ -1,12 +1,33 @@
-import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/ecs-framework';
 import type { AssetReference } from '@esengine/asset-system';
+import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/ecs-framework';
+
+/**
+ * Material property override value.
+ * 材质属性覆盖值。
+ *
+ * Used to override specific uniform parameters on a per-instance basis
+ * without creating a new material instance.
+ * 用于在每个实例上覆盖特定的 uniform 参数，而无需创建新的材质实例。
+ */
+export interface MaterialPropertyOverride {
+    /** Uniform type. | Uniform 类型。 */
+    type: 'float' | 'vec2' | 'vec3' | 'vec4' | 'color' | 'int';
+    /** Uniform value. | Uniform 值。 */
+    value: number | number[];
+}
+
+/**
+ * Material property overrides map.
+ * 材质属性覆盖映射。
+ */
+export type MaterialOverrides = Record<string, MaterialPropertyOverride>;
 
 /**
  * 精灵组件 - 管理2D图像渲染
  * Sprite component - manages 2D image rendering
  */
 @ECSComponent('Sprite')
-@Serializable({ version: 2, typeId: 'Sprite' })
+@Serializable({ version: 3, typeId: 'Sprite' })
 export class SpriteComponent extends Component {
     /** 纹理路径或资源ID | Texture path or asset ID */
     @Serialize()
@@ -129,6 +150,55 @@ export class SpriteComponent extends Component {
     @Property({ type: 'integer', label: 'Sorting Order' })
     public sortingOrder: number = 0;
 
+    /**
+     * 材质资产路径（共享材质）
+     * Material asset path (shared material)
+     *
+     * Multiple sprites can reference the same material file.
+     * 多个精灵可以引用同一个材质文件。
+     */
+    @Serialize()
+    @Property({ type: 'asset', label: 'Material', extensions: ['.mat'] })
+    public material: string = '';
+
+    /**
+     * 材质属性覆盖（实例级别）
+     * Material property overrides (instance level)
+     *
+     * Override specific uniform parameters without creating a new material.
+     * 覆盖特定的 uniform 参数，无需创建新材质。
+     */
+    @Serialize()
+    public materialOverrides: MaterialOverrides = {};
+
+    /**
+     * 是否使用独立材质实例
+     * Whether to use an independent material instance
+     *
+     * When true, a copy of the shared material is created for this sprite.
+     * Changes to this material won't affect other sprites using the same source.
+     * 当为 true 时，会为此精灵创建共享材质的副本。
+     * 对此材质的更改不会影响使用相同源的其他精灵。
+     */
+    @Serialize()
+    @Property({ type: 'boolean', label: 'Use Instance Material' })
+    public useInstanceMaterial: boolean = false;
+
+    /**
+     * 运行时材质ID（缓存）
+     * Runtime material ID (cached)
+     *
+     * Cached material ID for rendering. Updated when material path changes.
+     * 用于渲染的缓存材质ID。当材质路径更改时更新。
+     */
+    private _materialId: number = 0;
+
+    /**
+     * 独立材质实例（如果 useInstanceMaterial 为 true）
+     * Independent material instance (if useInstanceMaterial is true)
+     */
+    private _instanceMaterial: unknown = null;
+
     /** 锚点X (0-1) - 别名为originX | Anchor X (0-1) - alias for originX */
     get anchorX(): number {
         return this.originX;
@@ -229,6 +299,167 @@ export class SpriteComponent extends Component {
         return this.assetGuid || this.texture;
     }
 
+    // ============= Material Override Methods =============
+    // ============= 材质覆盖方法 =============
+
+    /**
+     * 获取材质ID
+     * Get material ID
+     *
+     * # Returns | 返回
+     * The cached material ID for rendering.
+     * 用于渲染的缓存材质ID。
+     */
+    getMaterialId(): number {
+        return this._materialId;
+    }
+
+    /**
+     * 设置材质ID
+     * Set material ID
+     *
+     * # Arguments | 参数
+     * * `id` - Material ID from MaterialManager. | 来自 MaterialManager 的材质ID。
+     */
+    setMaterialId(id: number): void {
+        this._materialId = id;
+    }
+
+    /**
+     * 设置浮点覆盖值
+     * Set float override value
+     *
+     * # Arguments | 参数
+     * * `name` - Uniform name. | Uniform 名称。
+     * * `value` - Float value. | 浮点值。
+     */
+    setOverrideFloat(name: string, value: number): this {
+        this.materialOverrides[name] = { type: 'float', value };
+        return this;
+    }
+
+    /**
+     * 设置 vec2 覆盖值
+     * Set vec2 override value
+     *
+     * # Arguments | 参数
+     * * `name` - Uniform name. | Uniform 名称。
+     * * `x` - X component. | X 分量。
+     * * `y` - Y component. | Y 分量。
+     */
+    setOverrideVec2(name: string, x: number, y: number): this {
+        this.materialOverrides[name] = { type: 'vec2', value: [x, y] };
+        return this;
+    }
+
+    /**
+     * 设置 vec3 覆盖值
+     * Set vec3 override value
+     *
+     * # Arguments | 参数
+     * * `name` - Uniform name. | Uniform 名称。
+     * * `x` - X component. | X 分量。
+     * * `y` - Y component. | Y 分量。
+     * * `z` - Z component. | Z 分量。
+     */
+    setOverrideVec3(name: string, x: number, y: number, z: number): this {
+        this.materialOverrides[name] = { type: 'vec3', value: [x, y, z] };
+        return this;
+    }
+
+    /**
+     * 设置 vec4 覆盖值
+     * Set vec4 override value
+     *
+     * # Arguments | 参数
+     * * `name` - Uniform name. | Uniform 名称。
+     * * `x` - X component. | X 分量。
+     * * `y` - Y component. | Y 分量。
+     * * `z` - Z component. | Z 分量。
+     * * `w` - W component. | W 分量。
+     */
+    setOverrideVec4(name: string, x: number, y: number, z: number, w: number): this {
+        this.materialOverrides[name] = { type: 'vec4', value: [x, y, z, w] };
+        return this;
+    }
+
+    /**
+     * 设置颜色覆盖值
+     * Set color override value
+     *
+     * # Arguments | 参数
+     * * `name` - Uniform name. | Uniform 名称。
+     * * `r` - Red component (0-1). | 红色分量 (0-1)。
+     * * `g` - Green component (0-1). | 绿色分量 (0-1)。
+     * * `b` - Blue component (0-1). | 蓝色分量 (0-1)。
+     * * `a` - Alpha component (0-1). | 透明度分量 (0-1)。
+     */
+    setOverrideColor(name: string, r: number, g: number, b: number, a: number = 1.0): this {
+        this.materialOverrides[name] = { type: 'color', value: [r, g, b, a] };
+        return this;
+    }
+
+    /**
+     * 设置整数覆盖值
+     * Set integer override value
+     *
+     * # Arguments | 参数
+     * * `name` - Uniform name. | Uniform 名称。
+     * * `value` - Integer value. | 整数值。
+     */
+    setOverrideInt(name: string, value: number): this {
+        this.materialOverrides[name] = { type: 'int', value: Math.floor(value) };
+        return this;
+    }
+
+    /**
+     * 获取覆盖值
+     * Get override value
+     *
+     * # Arguments | 参数
+     * * `name` - Uniform name. | Uniform 名称。
+     *
+     * # Returns | 返回
+     * Override value or undefined if not set.
+     * 覆盖值，如果未设置则返回 undefined。
+     */
+    getOverride(name: string): MaterialPropertyOverride | undefined {
+        return this.materialOverrides[name];
+    }
+
+    /**
+     * 移除覆盖值
+     * Remove override value
+     *
+     * # Arguments | 参数
+     * * `name` - Uniform name to remove. | 要移除的 Uniform 名称。
+     */
+    removeOverride(name: string): this {
+        delete this.materialOverrides[name];
+        return this;
+    }
+
+    /**
+     * 清除所有覆盖值
+     * Clear all override values
+     */
+    clearOverrides(): this {
+        this.materialOverrides = {};
+        return this;
+    }
+
+    /**
+     * 检查是否有覆盖值
+     * Check if there are any overrides
+     *
+     * # Returns | 返回
+     * True if there are any material overrides.
+     * 如果有任何材质覆盖则返回 true。
+     */
+    hasOverrides(): boolean {
+        return Object.keys(this.materialOverrides).length > 0;
+    }
+
     /**
      * 组件销毁时调用
      * Called when component is destroyed
@@ -239,5 +470,8 @@ export class SpriteComponent extends Component {
             this._assetReference.release();
             this._assetReference = undefined;
         }
+        // 清理材质覆盖 / Clear material overrides
+        this.materialOverrides = {};
+        this._instanceMaterial = null;
     }
 }

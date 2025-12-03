@@ -9,7 +9,7 @@ import {
     runtimePluginManager,
     type IPlugin,
     type IRuntimeModule,
-    type PluginDescriptor,
+    type ModuleManifest,
     type SystemContext
 } from './PluginManager';
 
@@ -22,10 +22,10 @@ export interface RuntimeConfig {
  * 创建插件（简化工厂）
  */
 export function createPlugin(
-    descriptor: PluginDescriptor,
+    manifest: ModuleManifest,
     runtimeModule: IRuntimeModule
 ): IPlugin {
-    return { descriptor, runtimeModule };
+    return { manifest, runtimeModule };
 }
 
 /**
@@ -44,7 +44,7 @@ export async function initializeRuntime(config?: RuntimeConfig): Promise<void> {
         runtimePluginManager.loadConfig({ enabledPlugins: config.enabledPlugins });
     } else {
         for (const plugin of runtimePluginManager.getPlugins()) {
-            runtimePluginManager.enable(plugin.descriptor.id);
+            runtimePluginManager.enable(plugin.manifest.id);
         }
     }
 

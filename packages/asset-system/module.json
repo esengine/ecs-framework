@@ -1,0 +1,41 @@
+{
+  "id": "asset-system",
+  "name": "@esengine/asset-system",
+  "displayName": "Asset System",
+  "description": "Asset loading, caching and management | 资源加载、缓存和管理",
+  "version": "1.0.0",
+  "category": "Core",
+  "icon": "FolderOpen",
+  "tags": [
+    "asset",
+    "resource",
+    "loader"
+  ],
+  "isCore": true,
+  "defaultEnabled": true,
+  "isEngineModule": true,
+  "canContainContent": false,
+  "platforms": [
+    "web",
+    "desktop",
+    "mobile"
+  ],
+  "dependencies": [
+    "core"
+  ],
+  "exports": {
+    "loaders": [
+      "TextureLoader",
+      "JsonLoader",
+      "TextLoader",
+      "BinaryLoader"
+    ],
+    "other": [
+      "AssetManager",
+      "AssetDatabase",
+      "AssetCache"
+    ]
+  },
+  "requiresWasm": false,
+  "outputPath": "dist/index.js"
+}

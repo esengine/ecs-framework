@@ -442,7 +442,8 @@
 
 /* ==================== Special Types ==================== */
 .settings-plugin-list,
-.settings-custom-renderer {
+.settings-custom-renderer,
+.settings-module-list {
     padding: 8px 16px;
 }
 

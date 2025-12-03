@@ -29,3 +29,6 @@ export {
     triggerCustomBlueprintEvent
 } from './runtime/BlueprintSystem';
 export { createEmptyBlueprint, validateBlueprintAsset } from './types/blueprint';
+
+// Plugin
+export { BlueprintPlugin } from './BlueprintPlugin';

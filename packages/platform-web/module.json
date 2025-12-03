@@ -1,0 +1,19 @@
+{
+  "id": "platform-web",
+  "name": "@esengine/platform-web",
+  "displayName": "Platform Web",
+  "description": "Web platform runtime | Web 平台运行时",
+  "version": "1.0.0",
+  "category": "Platform",
+  "icon": "Globe",
+  "tags": ["platform", "web", "browser", "runtime"],
+  "isCore": true,
+  "defaultEnabled": true,
+  "isEngineModule": true,
+  "canContainContent": false,
+  "platforms": ["web"],
+  "dependencies": ["core", "runtime-core"],
+  "exports": {},
+  "outputPath": "dist/index.mjs",
+  "requiresWasm": false
+}
