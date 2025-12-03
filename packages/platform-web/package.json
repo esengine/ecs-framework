@@ -1,7 +1,8 @@
 {
   "name": "@esengine/platform-web",
   "version": "1.0.0",
-  "description": "Web/H5 平台适配器",
+  "description": "Web/H5 Platform Adapter - Browser runtime and asset loading",
+  "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -10,19 +11,13 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
-    },
-    "./runtime": {
-      "default": "./dist/runtime.browser.js"
     }
   },
-  "unpkg": "dist/runtime.browser.js",
-  "jsdelivr": "dist/runtime.browser.js",
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "rollup -c && rollup -c rollup.runtime.config.js",
-    "build:runtime": "rollup -c rollup.runtime.config.js",
+    "build": "rollup -c",
     "build:npm": "npm run build",
     "clean": "rimraf dist",
     "type-check": "npx tsc --noEmit",
@@ -33,28 +28,20 @@
     "web",
     "h5",
     "platform",
-    "adapter"
+    "runtime",
+    "browser"
   ],
   "author": "yhh",
   "license": "MIT",
+  "dependencies": {
+    "@esengine/runtime-core": "workspace:*"
+  },
   "devDependencies": {
     "@esengine/ecs-framework": "workspace:*",
     "@esengine/asset-system": "workspace:*",
     "@esengine/platform-common": "workspace:*",
-    "@esengine/audio": "workspace:*",
-    "@esengine/behavior-tree": "workspace:*",
-    "@esengine/camera": "workspace:*",
-    "@esengine/ecs-engine-bindgen": "workspace:*",
-    "@esengine/engine-core": "workspace:*",
-    "@esengine/physics-rapier2d": "workspace:*",
-    "@esengine/runtime-core": "workspace:*",
-    "@esengine/sprite": "workspace:*",
-    "@esengine/tilemap": "workspace:*",
-    "@esengine/ui": "workspace:*",
-    "@rollup/plugin-alias": "^6.0.0",
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-replace": "^6.0.3",
     "@rollup/plugin-typescript": "^11.1.6",
     "rimraf": "^5.0.0",
     "rollup": "^4.42.0",
