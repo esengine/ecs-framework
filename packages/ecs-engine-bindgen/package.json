@@ -39,6 +39,7 @@
     },
     "devDependencies": {
         "@esengine/ecs-framework": "workspace:*",
+        "@esengine/ecs-framework-math": "workspace:*",
         "@esengine/engine-core": "workspace:*",
         "@esengine/sprite": "workspace:*",
         "@esengine/camera": "workspace:*",

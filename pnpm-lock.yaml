@@ -516,6 +516,9 @@ importers:
       '@esengine/ecs-framework':
         specifier: workspace:*
         version: link:../core
+      '@esengine/ecs-framework-math':
+        specifier: workspace:*
+        version: link:../math
       '@esengine/engine-core':
         specifier: workspace:*
         version: link:../engine-core
