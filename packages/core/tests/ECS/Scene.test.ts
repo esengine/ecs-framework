@@ -825,5 +825,106 @@ describe('Scene - 场景管理系统测试', () => {
                 expect(scene.entities.count).toBe(2);
             });
         });
+
+        describe('系统排序稳定性', () => {
+            test('相同 updateOrder 的系统应按添加顺序稳定排序', () => {
+                // 创建多个 updateOrder 都为 0 的系统
+                // Create multiple systems with updateOrder = 0
+                class SystemA extends EntitySystem {
+                    name = 'SystemA';
+                    constructor() { super(); }
+                }
+                class SystemB extends EntitySystem {
+                    name = 'SystemB';
+                    constructor() { super(); }
+                }
+                class SystemC extends EntitySystem {
+                    name = 'SystemC';
+                    constructor() { super(); }
+                }
+
+                const systemA = new SystemA();
+                const systemB = new SystemB();
+                const systemC = new SystemC();
+
+                // 按 A, B, C 顺序添加
+                scene.addEntityProcessor(systemA);
+                scene.addEntityProcessor(systemB);
+                scene.addEntityProcessor(systemC);
+
+                // 验证 addOrder 按添加顺序递增
+                expect(systemA.addOrder).toBe(0);
+                expect(systemB.addOrder).toBe(1);
+                expect(systemC.addOrder).toBe(2);
+
+                // 验证系统列表按添加顺序排列
+                const systems = scene.systems;
+                expect(systems[0]).toBe(systemA);
+                expect(systems[1]).toBe(systemB);
+                expect(systems[2]).toBe(systemC);
+            });
+
+            test('updateOrder 优先于 addOrder 排序', () => {
+                class SystemA extends EntitySystem {
+                    name = 'SystemA';
+                    constructor() { super(); }
+                }
+                class SystemB extends EntitySystem {
+                    name = 'SystemB';
+                    constructor() { super(); }
+                }
+                class SystemC extends EntitySystem {
+                    name = 'SystemC';
+                    constructor() { super(); }
+                }
+
+                const systemA = new SystemA();
+                const systemB = new SystemB();
+                const systemC = new SystemC();
+
+                // 按 A, B, C 顺序添加，但设置不同的 updateOrder
+                scene.addEntityProcessor(systemA);
+                systemA.updateOrder = 10;
+
+                scene.addEntityProcessor(systemB);
+                systemB.updateOrder = 5;
+
+                scene.addEntityProcessor(systemC);
+                systemC.updateOrder = 5; // 与 B 相同
+
+                // 验证排序：B(5,1), C(5,2), A(10,0)
+                const systems = scene.systems;
+                expect(systems[0]).toBe(systemB); // updateOrder=5, addOrder=1
+                expect(systems[1]).toBe(systemC); // updateOrder=5, addOrder=2
+                expect(systems[2]).toBe(systemA); // updateOrder=10, addOrder=0
+            });
+
+            test('多次重新排序后仍保持稳定性', () => {
+                class SystemA extends EntitySystem {
+                    name = 'SystemA';
+                    constructor() { super(); }
+                }
+                class SystemB extends EntitySystem {
+                    name = 'SystemB';
+                    constructor() { super(); }
+                }
+
+                const systemA = new SystemA();
+                const systemB = new SystemB();
+
+                scene.addEntityProcessor(systemA);
+                scene.addEntityProcessor(systemB);
+
+                // 多次触发重新排序
+                for (let i = 0; i < 10; i++) {
+                    scene.markSystemsOrderDirty();
+                    const systems = scene.systems;
+
+                    // 每次排序后顺序应该相同
+                    expect(systems[0]).toBe(systemA);
+                    expect(systems[1]).toBe(systemB);
+                }
+            });
+        });
     });
 });
