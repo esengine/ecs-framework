@@ -36,30 +36,24 @@ function updateModuleSizes() {
         }
 
         try {
+            // Read module.json first
+            const content = fs.readFileSync(moduleJsonPath, 'utf-8');
+            const moduleJson = JSON.parse(content);
+            const oldSize = moduleJson.estimatedSize;
+
             // Get actual file size
             const stat = fs.statSync(distIndexPath);
             const actualSize = stat.size;
 
-            // Read module.json - use file descriptor to avoid race condition
-            const fd = fs.openSync(moduleJsonPath, 'r+');
-            try {
-                const content = fs.readFileSync(fd, 'utf-8');
-                const moduleJson = JSON.parse(content);
-                const oldSize = moduleJson.estimatedSize;
-
-                // Update if different
-                if (oldSize !== actualSize) {
-                    moduleJson.estimatedSize = actualSize;
-                    const newContent = JSON.stringify(moduleJson, null, 2) + '\n';
-                    fs.ftruncateSync(fd, 0);
-                    fs.writeSync(fd, newContent, 0, 'utf-8');
-                    const oldKB = oldSize ? (oldSize / 1024).toFixed(1) : 'N/A';
-                    const newKB = (actualSize / 1024).toFixed(1);
-                    console.log(`  ${pkg}: ${oldKB} KB -> ${newKB} KB`);
-                    updated++;
-                }
-            } finally {
-                fs.closeSync(fd);
+            // Update if different
+            if (oldSize !== actualSize) {
+                moduleJson.estimatedSize = actualSize;
+                const newContent = JSON.stringify(moduleJson, null, 2) + '\n';
+                fs.writeFileSync(moduleJsonPath, newContent, 'utf-8');
+                const oldKB = oldSize ? (oldSize / 1024).toFixed(1) : 'N/A';
+                const newKB = (actualSize / 1024).toFixed(1);
+                console.log(`  ${pkg}: ${oldKB} KB -> ${newKB} KB`);
+                updated++;
             }
         } catch (err) {
             console.error(`  Error processing ${pkg}:`, err.message);

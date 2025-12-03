@@ -237,7 +237,6 @@ export class UICanvasScalerSystem extends EntitySystem {
 
         let finalCanvasWidth = this.screenInfo.width;
         let finalCanvasHeight = this.screenInfo.height;
-        let finalScale = 1;
 
         // 处理 CanvasScaler 组件
         // Process CanvasScaler components
@@ -252,8 +251,8 @@ export class UICanvasScalerSystem extends EntitySystem {
 
                 finalCanvasWidth = scaler.computedCanvasWidth;
                 finalCanvasHeight = scaler.computedCanvasHeight;
-                finalScale = scaler.computedScale;
-                break; // 只使用第一个 CanvasScaler
+                // scaler.computedScale is stored in the component for other uses
+                break; // 只使用第一个 CanvasScaler | Only use the first CanvasScaler
             }
         }
 
