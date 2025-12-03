@@ -50,7 +50,12 @@
       "core": "基础",
       "rendering": "渲染",
       "physics": "物理",
-      "audio": "音频"
+      "audio": "音频",
+      "tilemap": "瓦片地图"
+    },
+    "material": {
+      "name": "材质",
+      "description": "自定义材质和着色器组件"
     },
     "transform": {
       "description": "变换组件 - 位置、旋转、缩放"
@@ -75,6 +80,17 @@
     },
     "audioSource": {
       "description": "音频源组件"
+    }
+  },
+  "file": {
+    "create": {
+      "material": "材质",
+      "shader": "着色器"
+    }
+  },
+  "entity": {
+    "create": {
+      "materialEntity": "材质实体"
     }
   }
 }

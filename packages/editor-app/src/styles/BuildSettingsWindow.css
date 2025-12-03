@@ -1,0 +1,73 @@
+/**
+ * Build Settings Window Styles.
+ * 构建设置窗口样式。
+ */
+
+.build-settings-window-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.build-settings-window {
+    display: flex;
+    flex-direction: column;
+    width: 90%;
+    max-width: 900px;
+    height: 80%;
+    max-height: 600px;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.build-settings-window-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 32px;
+    padding: 0 12px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #1a1a1a;
+    flex-shrink: 0;
+}
+
+.build-settings-window-header h2 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: #e0e0e0;
+}
+
+.build-settings-window-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.build-settings-window-close:hover {
+    background: #3a3a3a;
+    color: #e0e0e0;
+}
+
+.build-settings-window-content {
+    flex: 1;
+    overflow: hidden;
+}

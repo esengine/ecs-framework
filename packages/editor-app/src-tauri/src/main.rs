@@ -12,14 +12,15 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
-use state::{ProfilerState, ProjectPaths};
+use state::{ProfilerState, ProjectPaths, ScriptWatcherState};
 
 fn main() {
-    // Initialize shared state
+    // Initialize shared state | 初始化共享状态
     let project_paths: ProjectPaths = Arc::new(Mutex::new(HashMap::new()));
     let project_paths_for_protocol = Arc::clone(&project_paths);
 
     let profiler_state = ProfilerState::new();
+    let script_watcher_state = ScriptWatcherState::new();
 
     // Build and run the Tauri application
     tauri::Builder::default()
@@ -34,10 +35,11 @@ fn main() {
         .register_uri_scheme_protocol("project", move |_app, request| {
             handle_project_protocol(request, &project_paths_for_protocol)
         })
-        // Setup application state
+        // Setup application state | 设置应用状态
         .setup(move |app| {
             app.manage(project_paths);
             app.manage(profiler_state);
+            app.manage(script_watcher_state);
             Ok(())
         })
         // Register all commands
@@ -85,6 +87,24 @@ fn main() {
             commands::stop_local_server,
             commands::get_local_ip,
             commands::generate_qrcode,
+            // User code compilation | 用户代码编译
+            commands::compile_typescript,
+            commands::watch_scripts,
+            commands::stop_watch_scripts,
+            // Build commands | 构建命令
+            commands::prepare_build_directory,
+            commands::copy_directory,
+            commands::bundle_scripts,
+            commands::generate_html,
+            commands::get_file_size,
+            commands::get_directory_size,
+            commands::write_json_file,
+            commands::list_files_by_extension,
+            commands::read_binary_file_as_base64,
+            // Engine modules | 引擎模块
+            commands::read_engine_modules_index,
+            commands::read_module_manifest,
+            commands::get_engine_modules_base_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

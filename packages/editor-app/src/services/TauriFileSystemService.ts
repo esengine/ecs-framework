@@ -51,7 +51,7 @@ export class TauriFileSystemService implements IFileSystem {
     }
 
     async scanFiles(basePath: string, pattern: string): Promise<string[]> {
-        return await invoke<string[]>('scan_files', { basePath, pattern });
+        return await invoke<string[]>('scan_directory', { path: basePath, pattern });
     }
 
     convertToAssetUrl(filePath: string): string {

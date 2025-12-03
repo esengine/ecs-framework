@@ -27,8 +27,10 @@ import {
     EditorPlatformAdapter,
     type GameRuntimeConfig
 } from '@esengine/runtime-core';
+import { getMaterialManager } from '@esengine/material-system';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { IdGenerator } from '../utils/idGenerator';
+import { TauriAssetReader } from './TauriAssetReader';
 
 /**
  * Engine service singleton for editor integration.
@@ -191,7 +193,7 @@ export class EngineService {
 
         // 创建系统上下文
         const context: SystemContext = {
-            core: Core,
+            services: Core.services,
             engineBridge: this._runtime.bridge,
             renderSystem: this._runtime.renderSystem,
             assetManager: this._assetManager,
@@ -345,11 +347,25 @@ export class EngineService {
         try {
             this._assetManager = new AssetManager();
 
+            // Set up asset reader for Tauri environment.
+            // 为 Tauri 环境设置资产读取器。
+            const assetReader = new TauriAssetReader();
+            this._assetManager.setReader(assetReader);
+
+            // Set project root when project is open.
+            // 当项目打开时设置项目根路径。
+            const projectService = Core.services.tryResolve<ProjectService>(ProjectService);
+            if (projectService && projectService.isProjectOpen()) {
+                const projectInfo = projectService.getCurrentProject();
+                if (projectInfo) {
+                    this._assetManager.setProjectRoot(projectInfo.path);
+                }
+            }
+
             const pathTransformerFn = (path: string) => {
                 if (!path.startsWith('http://') && !path.startsWith('https://') &&
                     !path.startsWith('data:') && !path.startsWith('asset://')) {
                     if (!path.startsWith('/') && !path.match(/^[a-zA-Z]:/)) {
-                        const projectService = Core.services.tryResolve<ProjectService>(ProjectService);
                         if (projectService && projectService.isProjectOpen()) {
                             const projectInfo = projectService.getCurrentProject();
                             if (projectInfo) {
@@ -384,6 +400,13 @@ export class EngineService {
                 if (sceneManagerService) {
                     sceneManagerService.setSceneResourceManager(this._sceneResourceManager);
                 }
+            }
+
+            // Set asset manager for MaterialManager.
+            // 为 MaterialManager 设置 asset manager。
+            const materialManager = getMaterialManager();
+            if (materialManager) {
+                materialManager.setAssetManager(this._assetManager);
             }
 
             this._assetSystemInitialized = true;

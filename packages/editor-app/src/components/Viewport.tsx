@@ -17,69 +17,139 @@ import { open } from '@tauri-apps/plugin-shell';
 import { RuntimeResolver } from '../services/RuntimeResolver';
 import { QRCodeDialog } from './QRCodeDialog';
 
-// Generate runtime HTML for browser preview
-function generateRuntimeHtml(): string {
+import type { ModuleManifest } from '../services/RuntimeResolver';
+
+/**
+ * Generate runtime HTML for browser preview using ES Modules with import maps
+ * 使用 ES 模块和 import maps 生成浏览器预览的运行时 HTML
+ *
+ * This matches the structure of published builds for consistency
+ * 这与发布构建的结构一致
+ */
+function generateRuntimeHtml(importMap: Record<string, string>, modules: ModuleManifest[]): string {
+    const importMapScript = `<script type="importmap">
+    ${JSON.stringify({ imports: importMap }, null, 2).split('\n').join('\n    ')}
+    </script>`;
+
+    // Generate plugin import code for modules with pluginExport
+    // Only modules with pluginExport are considered runtime plugins
+    // Core/infrastructure modules don't need to be registered as plugins
+    const pluginModules = modules.filter(m => m.pluginExport);
+
+    const pluginImportCode = pluginModules.map(m =>
+        `                try {
+                    const { ${m.pluginExport} } = await import('@esengine/${m.id}');
+                    runtime.registerPlugin(${m.pluginExport});
+                } catch (e) {
+                    console.warn('[Preview] Failed to load plugin ${m.id}:', e.message);
+                }`
+    ).join('\n');
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>ECS Runtime Preview</title>
+${importMapScript}
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            background: #1e1e1e;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            width: 100%;
-            height: 100%;
-            position: fixed;
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1a2e; }
+        #game-canvas { width: 100%; height: 100%; display: block; }
+        #loading {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: #1a1a2e; color: #eee; font-family: sans-serif;
         }
-        canvas {
-            display: block;
-            touch-action: none;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-user-drag: none;
+        #loading .spinner {
+            width: 40px; height: 40px; border: 3px solid #333;
+            border-top-color: #4a9eff; border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        #loading .message { margin-top: 16px; font-size: 14px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #error {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            display: none; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: #1a1a2e; color: #ff6b6b; font-family: sans-serif;
+            padding: 20px; text-align: center;
+        }
+        #error.show { display: flex; }
+        #error h2 { margin-bottom: 16px; }
+        #error pre {
+            background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px;
+            max-width: 600px; white-space: pre-wrap; word-break: break-word;
+            font-size: 13px; line-height: 1.5;
         }
     </style>
 </head>
 <body>
-    <canvas id="runtime-canvas"></canvas>
-    <script src="/runtime.browser.js"></script>
+    <div id="loading">
+        <div class="spinner"></div>
+        <div class="message" id="loading-message">Loading...</div>
+    </div>
+    <div id="error">
+        <h2 id="error-title">Failed to start</h2>
+        <pre id="error-message"></pre>
+    </div>
+    <canvas id="game-canvas"></canvas>
+
     <script type="module">
-        import * as esEngine from '/es_engine.js';
-        (async function() {
-            try {
-                // Set canvas size before creating runtime
-                const canvas = document.getElementById('runtime-canvas');
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
+        const loading = document.getElementById('loading');
+        const loadingMessage = document.getElementById('loading-message');
+        const errorDiv = document.getElementById('error');
+        const errorTitle = document.getElementById('error-title');
+        const errorMessage = document.getElementById('error-message');
 
-                const runtime = ECSRuntime.create({
-                    canvasId: 'runtime-canvas',
-                    width: window.innerWidth,
-                    height: window.innerHeight,
-                    projectConfigUrl: '/ecs-editor.config.json'
-                });
+        function showError(title, msg) {
+            loading.style.display = 'none';
+            errorTitle.textContent = title || 'Failed to start';
+            errorMessage.textContent = msg;
+            errorDiv.classList.add('show');
+            console.error('[Preview]', msg);
+        }
 
-                await runtime.initialize(esEngine);
-                await runtime.loadScene('/scene.json?_=' + Date.now());
-                runtime.start();
+        function updateLoading(msg) {
+            loadingMessage.textContent = msg;
+            console.log('[Preview]', msg);
+        }
 
-                window.addEventListener('resize', () => {
-                    const canvas = document.getElementById('runtime-canvas');
-                    const newWidth = window.innerWidth;
-                    const newHeight = window.innerHeight;
-                    canvas.width = newWidth;
-                    canvas.height = newHeight;
-                    runtime.handleResize(newWidth, newHeight);
-                });
-            } catch (e) {
-                console.error('Runtime error:', e);
-            }
-        })();
+        try {
+            updateLoading('Loading runtime...');
+            const ECSRuntime = (await import('@esengine/platform-web')).default;
+
+            updateLoading('Loading WASM module...');
+            const wasmModule = await import('./libs/es-engine/es_engine.js');
+
+            updateLoading('Initializing runtime...');
+            const runtime = ECSRuntime.create({
+                canvasId: 'game-canvas',
+                width: window.innerWidth,
+                height: window.innerHeight,
+                assetBaseUrl: './assets',
+                projectConfigUrl: './ecs-editor.config.json'
+            });
+
+            updateLoading('Loading plugins...');
+${pluginImportCode}
+
+            await runtime.initialize(wasmModule);
+
+            updateLoading('Loading scene...');
+            await runtime.loadScene('./scene.json?_=' + Date.now());
+
+            loading.style.display = 'none';
+            runtime.start();
+
+            window.addEventListener('resize', () => {
+                runtime.handleResize(window.innerWidth, window.innerHeight);
+            });
+            console.log('[Preview] Started successfully');
+        } catch (error) {
+            showError(null, error.message || String(error));
+        }
     </script>
 </body>
 </html>`;
@@ -697,13 +767,13 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                 await TauriAPI.createDirectory(runtimeDir);
             }
 
-            // Use RuntimeResolver to copy runtime files
-            // 使用 RuntimeResolver 复制运行时文件
+            // Use RuntimeResolver to copy runtime files with ES Modules structure
+            // 使用 RuntimeResolver 复制运行时文件（ES 模块结构）
             const runtimeResolver = RuntimeResolver.getInstance();
             await runtimeResolver.initialize();
-            await runtimeResolver.prepareRuntimeFiles(runtimeDir);
+            const { modules, importMap } = await runtimeResolver.prepareRuntimeFiles(runtimeDir);
 
-            // Write scene data and HTML (always update)
+            // Write scene data
             await TauriAPI.writeFileContent(`${runtimeDir}/scene.json`, sceneData);
 
             // Copy project config file (for plugin settings)
@@ -818,7 +888,8 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             await TauriAPI.writeFileContent(`${runtimeDir}/asset-catalog.json`, JSON.stringify(assetCatalog, null, 2));
             console.log(`[Viewport] Asset catalog created with ${Object.keys(catalogEntries).length} entries`);
 
-            const runtimeHtml = generateRuntimeHtml();
+            // Generate HTML with import maps (matching published build structure)
+            const runtimeHtml = generateRuntimeHtml(importMap, modules);
             await TauriAPI.writeFileContent(`${runtimeDir}/index.html`, runtimeHtml);
 
             // Start local server and open browser
@@ -865,10 +936,10 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                 await TauriAPI.createDirectory(runtimeDir);
             }
 
-            // Use RuntimeResolver to copy runtime files
+            // Use RuntimeResolver to copy runtime files with ES Modules structure
             const runtimeResolver = RuntimeResolver.getInstance();
             await runtimeResolver.initialize();
-            await runtimeResolver.prepareRuntimeFiles(runtimeDir);
+            const { modules, importMap } = await runtimeResolver.prepareRuntimeFiles(runtimeDir);
 
             // Copy project config file (for plugin settings)
             const projectService = Core.services.tryResolve(ProjectService);
@@ -883,10 +954,10 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                 }
             }
 
-            // Write scene data and HTML
+            // Write scene data and HTML with import maps
             const sceneDataStr = typeof sceneData === 'string' ? sceneData : new TextDecoder().decode(sceneData);
             await TauriAPI.writeFileContent(`${runtimeDir}/scene.json`, sceneDataStr);
-            await TauriAPI.writeFileContent(`${runtimeDir}/index.html`, generateRuntimeHtml());
+            await TauriAPI.writeFileContent(`${runtimeDir}/index.html`, generateRuntimeHtml(importMap, modules));
 
             // Copy textures referenced in scene
             const assetsDir = `${runtimeDir}\\assets`;

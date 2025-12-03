@@ -36,6 +36,7 @@ interface TitleBarProps {
     onOpenAbout?: () => void;
     onCreatePlugin?: () => void;
     onReloadPlugins?: () => void;
+    onOpenBuildSettings?: () => void;
 }
 
 export function TitleBar({
@@ -58,7 +59,8 @@ export function TitleBar({
     onToggleDevtools,
     onOpenAbout,
     onCreatePlugin,
-    onReloadPlugins
+    onReloadPlugins,
+    onOpenBuildSettings
 }: TitleBarProps) {
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [pluginMenuItems, setPluginMenuItems] = useState<PluginMenuItem[]>([]);
@@ -152,7 +154,8 @@ export function TitleBar({
                 documentation: 'Documentation',
                 checkForUpdates: 'Check for Updates',
                 about: 'About',
-                devtools: 'Developer Tools'
+                devtools: 'Developer Tools',
+                buildSettings: 'Build Settings'
             },
             zh: {
                 file: '文件',
@@ -187,7 +190,8 @@ export function TitleBar({
                 documentation: '文档',
                 checkForUpdates: '检查更新',
                 about: '关于',
-                devtools: '开发者工具'
+                devtools: '开发者工具',
+                buildSettings: '构建设置'
             }
         };
         return translations[locale]?.[key] || key;
@@ -200,6 +204,8 @@ export function TitleBar({
             { separator: true },
             { label: t('saveScene'), shortcut: 'Ctrl+S', onClick: onSaveScene },
             { label: t('saveSceneAs'), shortcut: 'Ctrl+Shift+S', onClick: onSaveSceneAs },
+            { separator: true },
+            { label: t('buildSettings'), shortcut: 'Ctrl+Shift+B', onClick: onOpenBuildSettings },
             { separator: true },
             { label: t('openProject'), onClick: onOpenProject },
             { label: t('closeProject'), onClick: onCloseProject },

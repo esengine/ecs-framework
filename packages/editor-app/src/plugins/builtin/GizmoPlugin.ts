@@ -4,7 +4,7 @@
  */
 
 import type { ServiceContainer } from '@esengine/ecs-framework';
-import type { IPlugin, IEditorModuleLoader, PluginDescriptor, GizmoProviderRegistration } from '@esengine/editor-core';
+import type { IPlugin, IEditorModuleLoader, ModuleManifest, GizmoProviderRegistration } from '@esengine/editor-core';
 import { registerSpriteGizmo } from '../../gizmos';
 
 /**
@@ -24,27 +24,25 @@ class GizmoEditorModule implements IEditorModuleLoader {
     }
 }
 
-const descriptor: PluginDescriptor = {
+const manifest: ModuleManifest = {
     id: '@esengine/gizmo',
-    name: 'Gizmo System',
+    name: '@esengine/gizmo',
+    displayName: 'Gizmo System',
     version: '1.0.0',
     description: 'Provides gizmo support for editor components',
-    category: 'tools',
+    category: 'Other',
     icon: 'Move',
-    enabledByDefault: true,
-    canContainContent: false,
-    isEnginePlugin: true,
     isCore: true,
-    modules: [
-        {
-            name: 'GizmoEditor',
-            type: 'editor',
-            loadingPhase: 'preDefault'
-        }
-    ]
+    defaultEnabled: true,
+    isEngineModule: true,
+    canContainContent: false,
+    dependencies: ['engine-core'],
+    exports: {
+        other: ['GizmoRegistry']
+    }
 };
 
 export const GizmoPlugin: IPlugin = {
-    descriptor,
+    manifest,
     editorModule: new GizmoEditorModule()
 };

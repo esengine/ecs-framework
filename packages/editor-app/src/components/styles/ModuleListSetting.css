@@ -1,0 +1,187 @@
+/**
+ * Module List Setting Styles.
+ * 模块列表设置样式。
+ */
+
+.module-list-setting {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.module-list-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Category Group */
+.module-category-group {
+    border: 1px solid var(--border-color, #3a3a3a);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.module-category-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-tertiary, #2a2a2a);
+    cursor: pointer;
+    user-select: none;
+}
+
+.module-category-header:hover {
+    background: var(--bg-hover, #333);
+}
+
+.module-category-name {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary, #eee);
+}
+
+.module-category-count {
+    font-size: 11px;
+    color: var(--text-tertiary, #888);
+}
+
+/* Category Items */
+.module-category-items {
+    display: flex;
+    flex-direction: column;
+}
+
+.module-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px 6px 28px;
+    border-top: 1px solid var(--border-color, #3a3a3a);
+    transition: background-color 0.15s;
+}
+
+.module-item:hover {
+    background: var(--bg-hover, #333);
+}
+
+.module-item.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Checkbox Label */
+.module-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    flex: 1;
+}
+
+.module-checkbox-label input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.module-checkbox-label input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.module-icon {
+    color: var(--text-secondary, #aaa);
+}
+
+.module-item.enabled .module-icon {
+    color: var(--accent-color, #4a9eff);
+}
+
+.module-name {
+    font-size: 12px;
+    color: var(--text-primary, #eee);
+}
+
+.module-badge {
+    padding: 1px 6px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    border-radius: 3px;
+}
+
+.module-badge.core {
+    background: rgba(74, 158, 255, 0.2);
+    color: var(--accent-color, #4a9eff);
+}
+
+.module-size {
+    font-size: 10px;
+    color: var(--text-tertiary, #888);
+}
+
+.module-size-inlined {
+    font-style: italic;
+    opacity: 0.6;
+}
+
+.module-wasm-indicator {
+    margin-left: 2px;
+}
+
+.module-size-breakdown {
+    margin-left: 4px;
+    opacity: 0.7;
+    font-size: 9px;
+}
+
+/* Footer */
+.module-list-footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--bg-tertiary, #2a2a2a);
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.module-list-size-label {
+    color: var(--text-secondary, #aaa);
+}
+
+.module-list-size-value {
+    color: var(--text-primary, #eee);
+    font-weight: 600;
+}
+
+/* Validation Error */
+.module-validation-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(255, 107, 107, 0.15);
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    border-radius: 4px;
+    color: #ff6b6b;
+    font-size: 12px;
+}
+
+.module-validation-error button {
+    margin-left: auto;
+    padding: 2px 8px;
+    background: transparent;
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    color: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.module-validation-error button:hover {
+    background: rgba(255, 107, 107, 0.2);
+}

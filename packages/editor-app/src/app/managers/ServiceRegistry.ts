@@ -1,4 +1,5 @@
 import { Core, ComponentRegistry as CoreComponentRegistry } from '@esengine/ecs-framework';
+import { invoke } from '@tauri-apps/api/core';
 import {
     UIRegistry,
     MessageHub,
@@ -27,8 +28,18 @@ import {
     IDialogService,
     IFileSystemService,
     CompilerRegistry,
-    ICompilerRegistry
+    ICompilerRegistry,
+    IViewportService_ID,
+    IPreviewSceneService,
+    IEditorViewportServiceIdentifier,
+    PreviewSceneService,
+    EditorViewportService,
+    BuildService,
+    WebBuildPipeline,
+    WeChatBuildPipeline,
+    moduleRegistry
 } from '@esengine/editor-core';
+import { ViewportService } from '../../services/ViewportService';
 import { TransformComponent } from '@esengine/engine-core';
 import { SpriteComponent, SpriteAnimatorComponent } from '@esengine/sprite';
 import { CameraComponent } from '@esengine/camera';
@@ -65,6 +76,8 @@ import {
     AnimationClipsFieldEditor
 } from '../../infrastructure/field-editors';
 import { TransformComponentInspector } from '../../components/inspectors/component-inspectors/TransformComponentInspector';
+import { buildFileSystem } from '../../services/BuildFileSystemService';
+import { TauriModuleFileSystem } from '../../services/TauriModuleFileSystem';
 
 export interface EditorServices {
     uiRegistry: UIRegistry;
@@ -90,6 +103,7 @@ export interface EditorServices {
     inspectorRegistry: InspectorRegistry;
     propertyRendererRegistry: PropertyRendererRegistry;
     fieldEditorRegistry: FieldEditorRegistry;
+    buildService: BuildService;
 }
 
 export class ServiceRegistry {
@@ -172,6 +186,22 @@ export class ServiceRegistry {
         Core.services.registerInstance(IDialogService, dialog);
         Core.services.registerInstance(IFileSystemService, fileSystem);
 
+        // Register viewport service for editor panels
+        // 注册视口服务供编辑器面板使用
+        const viewportService = ViewportService.getInstance();
+        Core.services.registerInstance(IViewportService_ID, viewportService);
+
+        // Register preview scene service for isolated preview scenes
+        // 注册预览场景服务，用于隔离的预览场景
+        const previewSceneService = PreviewSceneService.getInstance();
+        Core.services.registerInstance(IPreviewSceneService, previewSceneService);
+
+        // Register editor viewport service for coordinating viewports with overlays
+        // 注册编辑器视口服务，协调带有覆盖层的视口
+        const editorViewportService = EditorViewportService.getInstance();
+        editorViewportService.setViewportService(viewportService);
+        Core.services.registerInstance(IEditorViewportServiceIdentifier, editorViewportService);
+
         const inspectorRegistry = new InspectorRegistry();
         Core.services.registerInstance(InspectorRegistry, inspectorRegistry);
         Core.services.registerInstance(IInspectorRegistry, inspectorRegistry);  // Symbol 注册用于跨包插件访问
@@ -204,6 +234,43 @@ export class ServiceRegistry {
         // Register component inspectors
         componentInspectorRegistry.register(new TransformComponentInspector());
 
+        // 注册构建服务
+        // Register build service
+        const buildService = new BuildService();
+
+        // Register Web build pipeline with file system service
+        // 注册 Web 构建管线并注入文件系统服务
+        const webPipeline = new WebBuildPipeline();
+        webPipeline.setFileSystem(buildFileSystem);
+
+        // Get engine modules path from Tauri backend
+        // 从 Tauri 后端获取引擎模块路径
+        invoke<string>('get_engine_modules_base_path').then(enginePath => {
+            console.log('[ServiceRegistry] Engine modules path:', enginePath);
+            webPipeline.setEngineModulesPath(enginePath);
+        }).catch(err => {
+            console.warn('[ServiceRegistry] Failed to get engine modules path:', err);
+        });
+
+        buildService.register(webPipeline);
+
+        // Register WeChat build pipeline
+        // 注册微信构建管线
+        const wechatPipeline = new WeChatBuildPipeline();
+        wechatPipeline.setFileSystem(buildFileSystem);
+        buildService.register(wechatPipeline);
+
+        Core.services.registerInstance(BuildService, buildService);
+
+        // Initialize ModuleRegistry with Tauri file system
+        // 使用 Tauri 文件系统初始化 ModuleRegistry
+        // Engine modules are read via Tauri commands from local file system
+        // 引擎模块通过 Tauri 命令从本地文件系统读取
+        const tauriModuleFs = new TauriModuleFileSystem();
+        moduleRegistry.initialize(tauriModuleFs, '/engine').catch(err => {
+            console.warn('[ServiceRegistry] Failed to initialize ModuleRegistry:', err);
+        });
+
         // 注册默认场景模板 - 创建默认相机
         // Register default scene template - creates default camera
         this.registerDefaultSceneTemplate();
@@ -231,7 +298,8 @@ export class ServiceRegistry {
             notification,
             inspectorRegistry,
             propertyRendererRegistry,
-            fieldEditorRegistry
+            fieldEditorRegistry,
+            buildService
         };
     }
 

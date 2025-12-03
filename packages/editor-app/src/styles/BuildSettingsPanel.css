@@ -1,0 +1,909 @@
+/**
+ * Build Settings Panel Styles.
+ * 构建设置面板样式。
+ *
+ * Designed to match the editor's existing panel style.
+ * 设计与编辑器现有面板风格一致。
+ */
+
+/* ==================== Main Container | 主容器 ==================== */
+
+.build-settings-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    font-size: 11px;
+}
+
+/* ==================== Header Tabs | 头部标签 ==================== */
+
+.build-settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 28px;
+    padding: 0 8px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #1a1a1a;
+    flex-shrink: 0;
+}
+
+.build-settings-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.build-settings-tab {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    color: #888;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.build-settings-tab:hover {
+    background: #3a3a3a;
+    color: #ccc;
+}
+
+.build-settings-tab.active {
+    background: #3a3a3a;
+    color: #e0e0e0;
+}
+
+.build-settings-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.build-settings-header-btn {
+    padding: 3px 8px;
+    background: transparent;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    color: #888;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.build-settings-header-btn:hover {
+    background: #3a3a3a;
+    border-color: #4a4a4a;
+    color: #ccc;
+}
+
+/* ==================== Add Profile Bar | 添加配置栏 ==================== */
+
+.build-settings-add-bar {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    background: #262626;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.build-settings-add-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: transparent;
+    border: 1px dashed #3a3a3a;
+    border-radius: 2px;
+    color: #888;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.build-settings-add-btn:hover {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+
+/* ==================== Main Content | 主要内容 ==================== */
+
+.build-settings-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+/* ==================== Sidebar | 侧边栏 ==================== */
+
+.build-settings-sidebar {
+    width: 200px;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    background: #262626;
+    border-right: 1px solid #1a1a1a;
+    overflow-y: auto;
+}
+
+.build-settings-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.build-settings-section-header {
+    padding: 6px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: #2d2d2d;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+/* ==================== Platform List | 平台列表 ==================== */
+
+.build-settings-platform-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.build-settings-platform-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    border-bottom: 1px solid transparent;
+}
+
+.build-settings-platform-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.build-settings-platform-item.selected {
+    background: #3d5a80;
+}
+
+.build-settings-platform-item.selected:hover {
+    background: #4a6a90;
+}
+
+.build-settings-platform-icon {
+    display: flex;
+    align-items: center;
+    color: #888;
+}
+
+.build-settings-platform-item.selected .build-settings-platform-icon {
+    color: #e0e0e0;
+}
+
+.build-settings-platform-label {
+    flex: 1;
+    font-size: 11px;
+    color: #ccc;
+}
+
+.build-settings-platform-item.selected .build-settings-platform-label {
+    color: #fff;
+}
+
+.build-settings-active-badge {
+    padding: 1px 6px;
+    background: rgba(74, 222, 128, 0.15);
+    border-radius: 2px;
+    font-size: 9px;
+    color: #4ade80;
+}
+
+/* ==================== Profile List | 配置列表 ==================== */
+
+.build-settings-profile-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.build-settings-profile-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.build-settings-profile-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.build-settings-profile-item.selected {
+    background: #3d5a80;
+}
+
+.build-settings-profile-icon {
+    display: flex;
+    align-items: center;
+    color: #888;
+}
+
+.build-settings-profile-item.selected .build-settings-profile-icon {
+    color: #e0e0e0;
+}
+
+.build-settings-profile-name {
+    flex: 1;
+    font-size: 11px;
+    color: #ccc;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.build-settings-profile-item.selected .build-settings-profile-name {
+    color: #fff;
+}
+
+/* ==================== Details Panel | 详情面板 ==================== */
+
+.build-settings-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    background: #2a2a2a;
+}
+
+.build-settings-details-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #1a1a1a;
+    flex-shrink: 0;
+}
+
+.build-settings-details-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.build-settings-details-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #3a3a3a;
+    border-radius: 3px;
+    color: #ccc;
+}
+
+.build-settings-details-info h3 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: #e0e0e0;
+}
+
+.build-settings-details-info span {
+    font-size: 10px;
+    color: #888;
+}
+
+.build-settings-details-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ==================== Buttons | 按钮 ==================== */
+
+.build-settings-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 12px;
+    border-radius: 2px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.build-settings-btn.primary {
+    background: #3b82f6;
+    border: 1px solid #3b82f6;
+    color: #fff;
+}
+
+.build-settings-btn.primary:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+.build-settings-btn.secondary {
+    background: #3a3a3a;
+    border: 1px solid #4a4a4a;
+    color: #ccc;
+}
+
+.build-settings-btn.secondary:hover {
+    background: #444;
+    border-color: #555;
+    color: #fff;
+}
+
+.build-settings-btn.text {
+    background: transparent;
+    border: none;
+    color: #3b82f6;
+    padding: 4px 8px;
+}
+
+.build-settings-btn.text:hover {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.build-settings-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ==================== Card | 卡片 ==================== */
+
+.build-settings-card {
+    margin: 0;
+    background: #262626;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.build-settings-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: #2d2d2d;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.build-settings-more-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.build-settings-more-btn:hover {
+    background: #3a3a3a;
+    color: #ccc;
+}
+
+/* ==================== Field Group | 字段组 ==================== */
+
+.build-settings-field-group {
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.build-settings-field-group:last-child {
+    border-bottom: none;
+}
+
+.build-settings-field-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    color: #ccc;
+    font-size: 11px;
+    transition: background 0.1s ease;
+}
+
+.build-settings-field-header:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.build-settings-field-header svg {
+    color: #888;
+}
+
+.build-settings-field-content {
+    padding: 8px 12px;
+    background: #262626;
+}
+
+/* ==================== Scene List | 场景列表 ==================== */
+
+.build-settings-scene-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 40px;
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    padding: 4px;
+}
+
+.build-settings-scene-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: #ccc;
+    border-radius: 2px;
+}
+
+.build-settings-scene-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.build-settings-scene-item input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: #3b82f6;
+}
+
+.build-settings-empty-list {
+    min-height: 30px;
+}
+
+.build-settings-empty-text {
+    padding: 8px;
+    text-align: center;
+    color: #666;
+    font-size: 11px;
+    font-style: italic;
+}
+
+.build-settings-field-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 6px;
+}
+
+/* ==================== Defines List | 定义列表 ==================== */
+
+.build-settings-defines-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 30px;
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    padding: 4px;
+}
+
+.build-settings-define-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: #ccc;
+    border-radius: 2px;
+}
+
+.build-settings-define-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.build-settings-define-item button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    border-radius: 2px;
+}
+
+.build-settings-define-item button:hover {
+    background: #ef4444;
+    color: #fff;
+}
+
+.build-settings-list-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 2px;
+    margin-top: 4px;
+}
+
+.build-settings-list-actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.build-settings-list-actions button:hover:not(:disabled) {
+    background: #3a3a3a;
+    border-color: #4a4a4a;
+    color: #ccc;
+}
+
+.build-settings-list-actions button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ==================== Form | 表单 ==================== */
+
+.build-settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.build-settings-form-row {
+    display: flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 3px 0;
+    gap: 8px;
+}
+
+.build-settings-form-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.build-settings-form-row label {
+    flex: 0 0 35%;
+    min-width: 80px;
+    max-width: 140px;
+    font-size: 11px;
+    color: #999;
+}
+
+.build-settings-form-row input[type="text"],
+.build-settings-form-row select {
+    flex: 1;
+    height: 22px;
+    padding: 0 8px;
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    color: #ddd;
+    font-size: 11px;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.build-settings-form-row input[type="text"]:hover,
+.build-settings-form-row select:hover {
+    border-color: #4a4a4a;
+    background: #1e1e1e;
+}
+
+.build-settings-form-row input[type="text"]:focus,
+.build-settings-form-row select:focus {
+    border-color: #3b82f6;
+    outline: none;
+}
+
+.build-settings-form-row input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: #3b82f6;
+}
+
+/* Icon Picker | 图标选择器 */
+
+.build-settings-icon-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    height: 22px;
+    padding: 0 8px;
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    color: #666;
+    font-size: 11px;
+    font-style: italic;
+}
+
+.build-settings-icon-hint {
+    font-size: 10px;
+    color: #555;
+}
+
+/* ==================== No Selection | 无选择 ==================== */
+
+.build-settings-no-selection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #666;
+    font-size: 11px;
+}
+
+/* ==================== Scrollbar | 滚动条 ==================== */
+
+.build-settings-sidebar::-webkit-scrollbar,
+.build-settings-details::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.build-settings-sidebar::-webkit-scrollbar-track,
+.build-settings-details::-webkit-scrollbar-track {
+    background: #2a2a2a;
+}
+
+.build-settings-sidebar::-webkit-scrollbar-thumb,
+.build-settings-details::-webkit-scrollbar-thumb {
+    background: #4a4a4a;
+    border-radius: 4px;
+    border: 2px solid #2a2a2a;
+}
+
+.build-settings-sidebar::-webkit-scrollbar-thumb:hover,
+.build-settings-details::-webkit-scrollbar-thumb:hover {
+    background: #5a5a5a;
+}
+
+/* ==================== Build Progress Dialog | 构建进度对话框 ==================== */
+
+.build-progress-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.build-progress-dialog {
+    display: flex;
+    flex-direction: column;
+    width: 360px;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.build-progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.build-progress-header h3 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: #e0e0e0;
+}
+
+.build-progress-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    color: #888;
+    cursor: pointer;
+}
+
+.build-progress-close:hover {
+    background: #3a3a3a;
+    color: #ccc;
+}
+
+.build-progress-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 20px;
+    gap: 12px;
+}
+
+.build-progress-status-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.build-progress-spinner {
+    color: #3b82f6;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.build-progress-success {
+    color: #4ade80;
+}
+
+.build-progress-error {
+    color: #ef4444;
+}
+
+.build-progress-message {
+    font-size: 11px;
+    color: #ccc;
+    text-align: center;
+}
+
+.build-progress-bar-container {
+    position: relative;
+    width: 100%;
+    height: 4px;
+    background: #3a3a3a;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.build-progress-bar {
+    height: 100%;
+    background: #3b82f6;
+    border-radius: 2px;
+    transition: width 0.2s ease;
+}
+
+.build-progress-percent {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #888;
+}
+
+/* Build Result Details | 构建结果详情 */
+
+.build-result-details {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.build-result-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+}
+
+.build-result-label {
+    color: #888;
+}
+
+.build-result-value {
+    color: #ccc;
+    word-break: break-all;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.build-result-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 10px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 2px;
+    color: #ef4444;
+    font-size: 11px;
+}
+
+.build-result-error svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.build-result-warnings {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 2px;
+}
+
+.build-result-warnings-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #f59e0b;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.build-result-warnings-list {
+    margin: 0;
+    padding-left: 20px;
+    color: #ccc;
+    font-size: 10px;
+}
+
+.build-result-warnings-list li {
+    margin-bottom: 2px;
+}
+
+.build-progress-actions {
+    display: flex;
+    justify-content: center;
+    padding: 12px;
+    border-top: 1px solid #1a1a1a;
+    background: #262626;
+}
+
+.build-progress-actions .build-settings-btn {
+    min-width: 80px;
+    justify-content: center;
+}
+
+/* ==================== Toggle Group | 开关组 ==================== */
+
+.build-settings-toggle-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.build-settings-hint {
+    font-size: 10px;
+    color: #666;
+    font-style: italic;
+}

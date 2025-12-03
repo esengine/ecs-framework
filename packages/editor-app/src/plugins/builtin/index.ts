@@ -7,7 +7,7 @@ export { GizmoPlugin } from './GizmoPlugin';
 export { SceneInspectorPlugin } from './SceneInspectorPlugin';
 export { ProfilerPlugin } from './ProfilerPlugin';
 export { EditorAppearancePlugin } from './EditorAppearancePlugin';
-export { PluginConfigPlugin } from './PluginConfigPlugin';
 export { ProjectSettingsPlugin } from './ProjectSettingsPlugin';
+// Note: PluginConfigPlugin removed - module management is now unified in ProjectSettingsPlugin
 // TODO: Re-enable when blueprint-editor package is fixed
 // export { BlueprintPlugin } from '@esengine/blueprint-editor';

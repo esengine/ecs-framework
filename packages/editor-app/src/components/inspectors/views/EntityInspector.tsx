@@ -59,16 +59,26 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
     const availableComponents = (componentRegistry?.getAllComponents() || []) as ComponentInfo[];
 
     // 当 entity 变化或组件数量变化时，更新展开状态（新组件默认展开）
+    // 注意：不要依赖 componentVersion，否则每次属性变化都会重置展开状态
     useEffect(() => {
         setExpandedComponents((prev) => {
             const newSet = new Set(prev);
-            // 添加所有当前组件的索引（保留已有的展开状态）
+            // 只添加新增组件的索引（保留已有的展开/收缩状态）
             entity.components.forEach((_, index) => {
-                newSet.add(index);
+                // 只有当索引不在集合中时才添加（即新组件）
+                if (!prev.has(index) && index >= prev.size) {
+                    newSet.add(index);
+                }
             });
+            // 移除不存在的索引（组件被删除的情况）
+            for (const idx of prev) {
+                if (idx >= entity.components.length) {
+                    newSet.delete(idx);
+                }
+            }
             return newSet;
         });
-    }, [entity, entity.components.length, componentVersion]);
+    }, [entity, entity.components.length]);
 
     useEffect(() => {
         if (showComponentMenu && addButtonRef.current) {
@@ -439,6 +449,15 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                                                     onAction={handlePropertyAction}
                                                 />
                                             }
+                                            {/* Append-mode inspectors (shown after default inspector) */}
+                                            {componentInspectorRegistry?.renderAppendInspectors({
+                                                component,
+                                                entity,
+                                                version: componentVersion + localVersion,
+                                                onChange: (propName: string, value: unknown) =>
+                                                    handlePropertyChange(component, propName, value),
+                                                onAction: handlePropertyAction
+                                            })}
                                             {/* Dynamic component actions from plugins */}
                                             {componentActionRegistry?.getActionsForComponent(componentName).map((action) => {
                                                 // 解析图标：支持字符串（Lucide 图标名）或 React 元素

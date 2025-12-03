@@ -8,9 +8,24 @@
 
 import type { ServiceContainer } from '@esengine/ecs-framework';
 import { createLogger, Core } from '@esengine/ecs-framework';
-import type { IPlugin, IEditorModuleLoader, PluginDescriptor } from '@esengine/editor-core';
-import { SettingsRegistry, ProjectService } from '@esengine/editor-core';
+import type { IPlugin, IEditorModuleLoader, ModuleManifest } from '@esengine/editor-core';
+import { SettingsRegistry, ProjectService, moduleRegistry } from '@esengine/editor-core';
 import EngineService from '../../services/EngineService';
+
+/**
+ * Get engine modules from ModuleRegistry.
+ * 从 ModuleRegistry 获取引擎模块。
+ *
+ * Returns all registered modules from the module registry.
+ * 返回模块注册表中的所有已注册模块。
+ */
+function getModuleManifests(): ModuleManifest[] {
+    // Get modules from moduleRegistry singleton
+    // 从 moduleRegistry 单例获取模块
+    const modules = moduleRegistry.getAllModules();
+    console.log('[ProjectSettingsPlugin] getModuleManifests: got', modules.length, 'modules from registry');
+    return modules;
+}
 
 const logger = createLogger('ProjectSettingsPlugin');
 
@@ -85,6 +100,38 @@ class ProjectSettingsEditorModule implements IEditorModuleLoader {
                             }))
                         }
                     ]
+                },
+                {
+                    id: 'modules',
+                    title: '引擎模块',
+                    description: '管理项目使用的引擎模块。每个模块包含运行时组件和编辑器工具。禁用不需要的模块可以减小构建体积。',
+                    settings: [
+                        {
+                            key: 'project.disabledModules',
+                            label: '模块列表',
+                            type: 'moduleList',
+                            // Default: no modules disabled (all enabled)
+                            // 默认：没有禁用的模块（全部启用）
+                            defaultValue: [],
+                            description: '取消勾选不需要的模块。核心模块不能禁用。新增的模块会自动启用。',
+                            // Custom props for moduleList type
+                            // Modules are loaded dynamically from ModuleRegistry (sizes from module.json)
+                            // 模块从 ModuleRegistry 动态加载（大小来自 module.json）
+                            getModules: getModuleManifests,
+                            // Use blacklist mode: store disabled modules instead of enabled
+                            // 使用黑名单模式：存储禁用的模块而不是启用的
+                            useBlacklist: true,
+                            validateDisable: async (moduleId: string) => {
+                                // Use moduleRegistry singleton for validation
+                                // 使用 moduleRegistry 单例进行验证
+                                const validation = await moduleRegistry.validateDisable(moduleId);
+                                if (!validation.canDisable) {
+                                    return { canDisable: false, reason: validation.message };
+                                }
+                                return { canDisable: true };
+                            }
+                        } as any  // Cast to any to allow custom props
+                    ]
                 }
             ]
         });
@@ -147,27 +194,23 @@ class ProjectSettingsEditorModule implements IEditorModuleLoader {
     }
 }
 
-const descriptor: PluginDescriptor = {
+const manifest: ModuleManifest = {
     id: '@esengine/project-settings',
-    name: 'Project Settings',
+    name: '@esengine/project-settings',
+    displayName: 'Project Settings',
     version: '1.0.0',
     description: 'Configure project-level settings',
-    category: 'tools',
+    category: 'Other',
     icon: 'Settings',
-    enabledByDefault: true,
-    canContainContent: false,
-    isEnginePlugin: true,
     isCore: true,
-    modules: [
-        {
-            name: 'ProjectSettingsEditor',
-            type: 'editor',
-            loadingPhase: 'postDefault'
-        }
-    ]
+    defaultEnabled: true,
+    isEngineModule: true,
+    canContainContent: false,
+    dependencies: [],
+    exports: {}
 };
 
 export const ProjectSettingsPlugin: IPlugin = {
-    descriptor,
+    manifest,
     editorModule: new ProjectSettingsEditorModule()
 };

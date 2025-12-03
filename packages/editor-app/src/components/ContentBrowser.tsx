@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import * as LucideIcons from 'lucide-react';
 import {
     Plus,
     Download,
@@ -66,6 +67,21 @@ interface ContentBrowserProps {
     isDrawer?: boolean;
     onDockInLayout?: () => void;
     revealPath?: string | null;
+}
+
+/**
+ * 根据图标名获取 Lucide 图标组件
+ */
+function getIconComponent(iconName: string | undefined, size: number = 16): React.ReactNode {
+    if (!iconName) return <File size={size} />;
+
+    const icons = LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number }>>;
+    const IconComponent = icons[iconName];
+    if (IconComponent) {
+        return <IconComponent size={size} />;
+    }
+
+    return <File size={size} />;
 }
 
 // 获取资产类型显示名称
@@ -156,7 +172,8 @@ export function ContentBrowser({
             dockInLayout: 'Dock in Layout',
             noProject: 'No project loaded',
             empty: 'This folder is empty',
-            newFolder: 'New Folder'
+            newFolder: 'New Folder',
+            newPrefix: 'New'
         },
         zh: {
             favorites: '收藏夹',
@@ -169,7 +186,8 @@ export function ContentBrowser({
             dockInLayout: '停靠到布局',
             noProject: '未加载项目',
             empty: '文件夹为空',
-            newFolder: '新建文件夹'
+            newFolder: '新建文件夹',
+            newPrefix: '新建'
         }
     }[locale] || {
         favorites: 'Favorites',
@@ -182,7 +200,24 @@ export function ContentBrowser({
         dockInLayout: 'Dock in Layout',
         noProject: 'No project loaded',
         empty: 'This folder is empty',
-        newFolder: 'New Folder'
+        newFolder: 'New Folder',
+        newPrefix: 'New'
+    };
+
+    // 文件创建模板的 label 本地化映射
+    const templateLabels: Record<string, { en: string; zh: string }> = {
+        'Material': { en: 'Material', zh: '材质' },
+        'Shader': { en: 'Shader', zh: '着色器' },
+        'Tilemap': { en: 'Tilemap', zh: '瓦片地图' },
+        'Tileset': { en: 'Tileset', zh: '瓦片集' },
+    };
+
+    const getTemplateLabel = (label: string): string => {
+        const mapping = templateLabels[label];
+        if (mapping) {
+            return locale === 'zh' ? mapping.zh : mapping.en;
+        }
+        return label;
     };
 
     // Build folder tree - use ref to avoid dependency cycle
@@ -546,8 +581,10 @@ export function ContentBrowser({
                 if (templates.length > 0) {
                     items.push({ label: '', separator: true, onClick: () => {} });
                     for (const template of templates) {
+                        const localizedLabel = getTemplateLabel(template.label);
                         items.push({
-                            label: `New ${template.label}`,
+                            label: `${t.newPrefix} ${localizedLabel}`,
+                            icon: getIconComponent(template.icon, 16),
                             onClick: () => {
                                 setContextMenu(null);
                                 if (currentPath) {

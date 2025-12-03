@@ -34,6 +34,8 @@ once_cell = "1.19"
 urlencoding = "2.1"
 qrcode = "0.14"
 image = "0.25"
+notify = "7.0"
+notify-debouncer-mini = "0.5"
 
 [profile.dev]
 incremental = true

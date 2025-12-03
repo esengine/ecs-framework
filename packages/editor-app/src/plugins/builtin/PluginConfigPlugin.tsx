@@ -5,7 +5,7 @@
 
 import type { ServiceContainer } from '@esengine/ecs-framework';
 import { createLogger } from '@esengine/ecs-framework';
-import type { IPlugin, IEditorModuleLoader, PluginDescriptor } from '@esengine/editor-core';
+import type { IPlugin, IEditorModuleLoader, ModuleManifest } from '@esengine/editor-core';
 import { SettingsRegistry } from '@esengine/editor-core';
 
 const logger = createLogger('PluginConfigPlugin');
@@ -51,27 +51,23 @@ class PluginConfigEditorModule implements IEditorModuleLoader {
     }
 }
 
-const descriptor: PluginDescriptor = {
+const manifest: ModuleManifest = {
     id: '@esengine/plugin-config',
-    name: 'Plugin Config',
+    name: '@esengine/plugin-config',
+    displayName: 'Plugin Config',
     version: '1.0.0',
     description: 'Configure engine plugins',
-    category: 'tools',
+    category: 'Other',
     icon: 'Package',
-    enabledByDefault: true,
-    canContainContent: false,
-    isEnginePlugin: true,
     isCore: true,
-    modules: [
-        {
-            name: 'PluginConfigEditor',
-            type: 'editor',
-            loadingPhase: 'postDefault'
-        }
-    ]
+    defaultEnabled: true,
+    isEngineModule: true,
+    canContainContent: false,
+    dependencies: [],
+    exports: {}
 };
 
 export const PluginConfigPlugin: IPlugin = {
-    descriptor,
+    manifest,
     editorModule: new PluginConfigEditorModule()
 };
