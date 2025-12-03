@@ -1,78 +1,84 @@
-/* ============================================
-   ESEngine 文档站主题样式
-   ============================================ */
-
 :root {
   color-scheme: dark;
   --vp-nav-height: 64px;
+
+  --es-bg-base: #1e1e1e;
+  --es-bg-elevated: #252526;
+  --es-bg-overlay: #2d2d2d;
+  --es-bg-input: #3c3c3c;
+  --es-bg-inset: #181818;
+  --es-bg-hover: #2a2d2e;
+  --es-bg-active: #37373d;
+  --es-bg-sidebar: #262626;
+  --es-bg-card: #2a2a2a;
+  --es-bg-header: #2d2d2d;
+
+  --es-text-primary: #cccccc;
+  --es-text-secondary: #9d9d9d;
+  --es-text-tertiary: #6a6a6a;
+  --es-text-inverse: #ffffff;
+  --es-text-muted: #aaaaaa;
+  --es-text-dim: #6a6a6a;
+
+  --es-font-xs: 11px;
+  --es-font-sm: 12px;
+  --es-font-base: 13px;
+  --es-font-md: 14px;
+  --es-font-lg: 16px;
+
+  --es-border-default: #3a3a3a;
+  --es-border-subtle: #1a1a1a;
+  --es-border-strong: #4a4a4a;
+
+  --es-primary: #3b82f6;
+  --es-primary-hover: #2563eb;
+  --es-success: #4ade80;
+  --es-warning: #f59e0b;
+  --es-error: #ef4444;
+  --es-info: #3b82f6;
+
+  --es-selected: #3d5a80;
+  --es-selected-hover: #4a6a90;
 }
 
 body {
-  background: #0d0d0d !important;
-}
-
-.VPContent.has-sidebar {
-  background: linear-gradient(180deg, #1e3a5f 0%, #152540 30vh, #0d1a2a 50vh, #0d0d0d 70vh) !important;
-  background-repeat: no-repeat !important;
+  background: var(--es-bg-base) !important;
 }
 
 html,
 html.dark {
-  --vp-c-bg: #0d0d0d;
-  --vp-c-bg-soft: #1a1a1a;
-  --vp-c-bg-mute: #1f1f1f;
-  --vp-c-bg-alt: #1a1a1a;
-  --vp-c-text-1: #e0e0e0;
-  --vp-c-text-2: #a0a0a0;
-  --vp-c-text-3: #707070;
-  --vp-c-divider: #2a2a2a;
-  --vp-c-divider-light: #222222;
+  --vp-c-bg: var(--es-bg-base);
+  --vp-c-bg-soft: var(--es-bg-elevated);
+  --vp-c-bg-mute: var(--es-bg-overlay);
+  --vp-c-bg-alt: var(--es-bg-sidebar);
+  --vp-c-text-1: var(--es-text-primary);
+  --vp-c-text-2: var(--es-text-tertiary);
+  --vp-c-text-3: var(--es-text-muted);
+  --vp-c-divider: var(--es-border-default);
+  --vp-c-divider-light: var(--es-border-subtle);
 }
 
 html:not(.dark) {
-  --vp-c-bg: #0d0d0d !important;
-  --vp-c-bg-soft: #1a1a1a !important;
-  --vp-c-bg-mute: #1f1f1f !important;
-  --vp-c-bg-alt: #1a1a1a !important;
-  --vp-c-text-1: #e0e0e0 !important;
-  --vp-c-text-2: #a0a0a0 !important;
-  --vp-c-text-3: #707070 !important;
+  --vp-c-bg: var(--es-bg-base) !important;
+  --vp-c-bg-soft: var(--es-bg-elevated) !important;
+  --vp-c-bg-mute: var(--es-bg-overlay) !important;
+  --vp-c-bg-alt: var(--es-bg-sidebar) !important;
+  --vp-c-text-1: var(--es-text-primary) !important;
+  --vp-c-text-2: var(--es-text-tertiary) !important;
+  --vp-c-text-3: var(--es-text-muted) !important;
 }
 
-:root {
-  --es-bg-base: #0d0d0d;
-  --es-bg-sidebar: #1a1a1a;
-  --es-bg-card: #1f1f1f;
-  --es-bg-hover: #252525;
-  --es-bg-selected: #0e4a7c;
-
-  --es-text-primary: #e0e0e0;
-  --es-text-secondary: #a0a0a0;
-  --es-text-tertiary: #707070;
-  --es-text-inverse: #ffffff;
-
-  --es-border-default: #2a2a2a;
-  --es-border-subtle: #222222;
-
-  --es-primary: #3b9eff;
-  --es-warning: #c9a227;
-  --es-info: #3b9eff;
-}
-
-/* ============================================
-   导航栏
-   ============================================ */
 .VPNav {
-  background: #0d0d0d !important;
-  border-bottom: 1px solid #2a2a2a !important;
+  background: var(--es-bg-header) !important;
+  border-bottom: 1px solid var(--es-border-subtle) !important;
 }
 
 .VPNav .VPNavBar {
-  background: #0d0d0d !important;
+  background: var(--es-bg-header) !important;
 }
 
 .VPNav .VPNavBar .wrapper {
-  background: #0d0d0d !important;
+  background: var(--es-bg-header) !important;
 }
 
 .VPNav .VPNavBar::before,
@@ -81,7 +87,7 @@ html:not(.dark) {
 }
 
 .VPNavBar {
-  background: #0d0d0d !important;
+  background: var(--es-bg-header) !important;
 }
 
 .VPNavBar::before {
@@ -89,127 +95,110 @@ html:not(.dark) {
 }
 
 .VPNavBarTitle .title {
-  color: #ffffff;
-  font-weight: 600;
-  font-size: 15px;
+  color: var(--es-text-primary);
+  font-weight: 500;
+  font-size: var(--es-font-base);
 }
 
 .VPNavBarMenuLink {
-  color: #a0a0a0 !important;
-  font-size: 14px !important;
+  color: var(--es-text-secondary) !important;
+  font-size: var(--es-font-sm) !important;
   font-weight: 400 !important;
 }
 
 .VPNavBarMenuLink:hover {
-  color: #ffffff !important;
+  color: var(--es-text-primary) !important;
 }
 
 .VPNavBarMenuLink.active {
-  color: #ffffff !important;
+  color: var(--es-text-primary) !important;
 }
 
 .VPNavBarSearch .DocSearch-Button {
-  background: #1a1a1a !important;
-  border: 1px solid #2a2a2a !important;
-  border-radius: 6px;
+  background: var(--es-bg-input) !important;
+  border: 1px solid var(--es-border-default) !important;
+  border-radius: 2px;
+  height: 26px;
 }
 
-/* ============================================
-   侧边栏
-   ============================================ */
 .VPSidebar {
-  background: transparent !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
-  padding: 16px 0 !important;
-  width: 280px !important;
-}
-
-.VPSidebar .nav {
-  padding: 0 16px;
+  background: var(--es-bg-sidebar) !important;
+  border-right: 1px solid var(--es-border-subtle) !important;
 }
 
 .VPSidebarItem.level-0 > .item {
-  padding: 12px 0 6px 0;
+  padding: 8px 0 4px 0;
 }
 
 .VPSidebarItem.level-0 > .item > .text {
-  font-weight: 400;
-  font-size: 13px;
-  color: #808080;
+  font-weight: 600;
+  font-size: var(--es-font-xs);
+  color: var(--es-text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
 }
 
 .VPSidebarItem .link {
-  padding: 6px 12px;
+  padding: 4px 8px;
   margin: 1px 0;
-  border-radius: 4px;
-  color: #9d9d9d;
-  font-size: 14px;
-  transition: all 0.15s;
-  position: relative;
+  border-radius: 2px;
+  color: var(--es-text-primary);
+  font-size: var(--es-font-sm);
+  transition: all 0.1s ease;
   border-left: 2px solid transparent;
 }
 
 .VPSidebarItem .link:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--es-text-inverse);
 }
 
 .VPSidebarItem.is-active > .item > .link {
-  background: transparent;
-  color: #ffffff;
-  border-left: 2px solid #3b9eff;
+  background: var(--es-selected);
+  color: var(--es-text-inverse);
+  border-left: 2px solid var(--es-primary);
+}
+
+.VPSidebarItem.is-active > .item > .link:hover {
+  background: var(--es-selected-hover);
 }
 
 .VPSidebarItem.level-1 .link {
-  padding-left: 24px;
-  font-size: 13px;
+  padding-left: 20px;
+  font-size: var(--es-font-sm);
 }
 
 .VPSidebarItem.level-2 .link {
-  padding-left: 36px;
-  font-size: 13px;
+  padding-left: 32px;
+  font-size: var(--es-font-sm);
 }
 
 .VPSidebarItem .caret {
-  color: #606060;
+  color: var(--es-text-secondary);
 }
 
 .VPSidebarItem .caret:hover {
-  color: #9d9d9d;
+  color: var(--es-text-primary);
 }
 
-/* ============================================
-   内容区域
-   ============================================ */
 .VPContent {
-  background: transparent !important;
+  background: var(--es-bg-card) !important;
+}
+
+.VPContent.has-sidebar {
+  background: var(--es-bg-card) !important;
 }
 
 .VPDoc {
   background: transparent !important;
 }
 
-.VPDoc .container {
-  max-width: 100% !important;
-}
-
-.VPDoc .content {
-  max-width: 860px !important;
-  padding: 80px 60px 48px !important;
-}
-
-.VPNavBar {
-  background: #0d0d0d !important;
-}
-
 .VPNavBar .content {
-  background: #0d0d0d !important;
+  background: var(--es-bg-header) !important;
 }
 
 .VPNavBar .content-body {
-  background: #0d0d0d !important;
+  background: var(--es-bg-header) !important;
 }
 
 .VPNavBar .divider {
@@ -217,16 +206,16 @@ html:not(.dark) {
 }
 
 .VPLocalNav {
-  background: #0d0d0d !important;
-  border-bottom: 1px solid #2a2a2a !important;
+  background: var(--es-bg-header) !important;
+  border-bottom: 1px solid var(--es-border-subtle) !important;
 }
 
 .VPNavScreenMenu {
-  background: #0d0d0d !important;
+  background: var(--es-bg-base) !important;
 }
 
 .VPNavScreen {
-  background: #0d0d0d !important;
+  background: var(--es-bg-base) !important;
 }
 
 .curtain {
@@ -248,68 +237,71 @@ html:not(.dark) {
 }
 
 .vp-doc {
-  color: #e0e0e0;
+  color: var(--es-text-primary);
 }
 
 .vp-doc h1 {
-  font-size: 32px;
-  font-weight: 700;
-  color: #ffffff;
+  font-size: var(--es-font-lg);
+  font-weight: 600;
+  color: var(--es-text-inverse);
   border-bottom: none;
   padding-bottom: 0;
-  margin-bottom: 32px;
-  line-height: 1.2;
+  margin-bottom: 16px;
+  line-height: 1.3;
 }
 
 .vp-doc h2 {
-  font-size: 24px;
+  font-size: var(--es-font-md);
   font-weight: 600;
-  color: #ffffff;
+  color: var(--es-text-inverse);
   border-bottom: none;
   padding-bottom: 0;
-  margin-top: 48px;
-  margin-bottom: 20px;
+  margin-top: 32px;
+  margin-bottom: 12px;
+  padding: 6px 12px;
+  background: var(--es-bg-header);
+  border-left: 3px solid var(--es-primary);
 }
 
 .vp-doc h3 {
-  font-size: 18px;
+  font-size: var(--es-font-base);
   font-weight: 600;
-  color: #ffffff;
-  margin-top: 32px;
-  margin-bottom: 16px;
+  color: var(--es-text-primary);
+  margin-top: 20px;
+  margin-bottom: 8px;
 }
 
 .vp-doc p {
-  color: #a0a0a0;
-  line-height: 1.8;
-  font-size: 15px;
-  margin: 20px 0;
+  color: var(--es-text-primary);
+  line-height: 1.7;
+  font-size: var(--es-font-base);
+  margin: 12px 0;
 }
 
 .vp-doc ul,
 .vp-doc ol {
-  padding-left: 24px;
-  margin: 20px 0;
+  padding-left: 20px;
+  margin: 12px 0;
 }
 
 .vp-doc li {
-  line-height: 1.8;
-  margin: 8px 0;
-  color: #a0a0a0;
-  font-size: 15px;
+  line-height: 1.7;
+  margin: 4px 0;
+  color: var(--es-text-primary);
+  font-size: var(--es-font-base);
 }
 
 .vp-doc li::marker {
-  color: #707070;
+  color: var(--es-text-secondary);
 }
 
 .vp-doc strong {
-  color: #ffffff;
+  color: var(--es-text-primary);
   font-weight: 600;
 }
 
 .vp-doc a {
-  color: #3b9eff;
+  color: var(--es-primary);
   text-decoration: none;
 }
 
@@ -317,12 +309,9 @@ html:not(.dark) {
   text-decoration: underline;
 }
 
-/* ============================================
-   右侧大纲
-   ============================================ */
 .VPDocAside {
-  padding-left: 32px;
-  border-left: 1px solid #2a2a2a;
+  padding-left: 16px;
+  border-left: 1px solid var(--es-border-subtle);
 }
 
 .VPDocAsideOutline {
@@ -336,71 +325,66 @@ html:not(.dark) {
 }
 
 .VPDocAsideOutline .outline-title {
-  font-size: 14px;
+  font-size: var(--es-font-xs);
   font-weight: 600;
-  text-transform: none;
-  letter-spacing: 0;
-  color: #ffffff;
-  padding-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--es-text-secondary);
+  padding-bottom: 8px;
 }
 
 .VPDocAsideOutline .outline-link {
-  color: #707070;
-  font-size: 13px;
-  padding: 6px 0;
-  line-height: 1.5;
+  color: var(--es-text-secondary);
+  font-size: var(--es-font-xs);
+  padding: 4px 0;
+  line-height: 1.4;
   display: block;
 }
 
 .VPDocAsideOutline .outline-link:hover {
-  color: #a0a0a0;
+  color: var(--es-text-primary);
 }
 
 .VPDocAsideOutline .outline-link.active {
-  color: #3b9eff;
+  color: var(--es-primary);
 }
 
 .VPDocAsideOutline .outline-marker {
   display: none;
 }
 
-/* ============================================
-   代码块
-   ============================================ */
 div[class*='language-'] {
-  background: #1a1a1a !important;
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
-  margin: 20px 0;
+  background: var(--es-bg-inset) !important;
+  border: 1px solid var(--es-border-default);
+  border-radius: 2px;
+  margin: 12px 0;
 }
 
 .vp-code-group .tabs {
-  background: #1f1f1f;
-  border-bottom: 1px solid #2a2a2a;
+  background: var(--es-bg-header);
+  border-bottom: 1px solid var(--es-border-subtle);
 }
 
 .vp-doc :not(pre) > code {
-  background: #1f1f1f;
-  color: #3b9eff;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 0.9em;
+  background: var(--es-bg-input);
+  color: var(--es-primary);
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-size: var(--es-font-xs);
 }
 
-/* ============================================
-   表格
-   ============================================ */
 .vp-doc table {
   display: table;
   width: 100%;
   background: transparent;
   border: none;
   border-collapse: collapse;
-  margin: 24px 0;
+  margin: 16px 0;
+  font-size: var(--es-font-sm);
 }
 
 .vp-doc tr {
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--es-border-subtle);
   background: transparent;
 }
 
@@ -408,224 +392,193 @@ div[class*='language-'] {
   border-bottom: none;
 }
 
+.vp-doc tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .vp-doc th {
-  background: #1f1f1f;
+  background: var(--es-bg-header);
   font-weight: 600;
-  font-size: 14px;
-  color: #a0a0a0;
+  font-size: var(--es-font-xs);
+  color: var(--es-text-secondary);
   text-align: left;
-  padding: 14px 20px;
-  border-bottom: 1px solid #2a2a2a;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--es-border-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .vp-doc td {
-  font-size: 15px;
-  color: #e0e0e0;
-  padding: 14px 20px;
+  font-size: var(--es-font-sm);
+  color: var(--es-text-primary);
+  padding: 8px 12px;
   vertical-align: top;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 .vp-doc td:first-child {
   font-weight: 500;
-  color: #a0a0a0;
-  min-width: 120px;
+  color: var(--es-text-primary);
+  min-width: 100px;
 }
 
-/* ============================================
-   提示框
-   ============================================ */
 .vp-doc .warning,
 .vp-doc .custom-block.warning {
-  background: rgba(201, 162, 39, 0.08);
+  background: rgba(245, 158, 11, 0.08);
   border: none;
-  border-left: 4px solid #c9a227;
-  border-radius: 0 8px 8px 0;
-  padding: 16px 24px;
-  margin: 24px 0;
+  border-left: 3px solid var(--es-warning);
+  border-radius: 0 2px 2px 0;
+  padding: 10px 12px;
+  margin: 16px 0;
 }
 
 .vp-doc .warning .custom-block-title,
 .vp-doc .custom-block.warning .custom-block-title {
-  color: #c9a227;
+  color: var(--es-warning);
   font-weight: 600;
-  font-size: 15px;
-  margin-bottom: 8px;
+  font-size: var(--es-font-xs);
+  margin-bottom: 4px;
 }
 
 .vp-doc .warning p {
-  color: #a0a0a0;
+  color: var(--es-text-primary);
   margin: 0;
+  font-size: var(--es-font-xs);
 }
 
 .vp-doc .tip,
 .vp-doc .custom-block.tip {
-  background: rgba(59, 158, 255, 0.08);
+  background: rgba(59, 130, 246, 0.08);
   border: none;
-  border-left: 4px solid #3b9eff;
-  border-radius: 0 8px 8px 0;
-  padding: 16px 24px;
-  margin: 24px 0;
+  border-left: 3px solid var(--es-primary);
+  border-radius: 0 2px 2px 0;
+  padding: 10px 12px;
+  margin: 16px 0;
 }
 
 .vp-doc .tip .custom-block-title,
 .vp-doc .custom-block.tip .custom-block-title {
-  color: #3b9eff;
+  color: var(--es-primary);
   font-weight: 600;
-  font-size: 15px;
-  margin-bottom: 8px;
+  font-size: var(--es-font-xs);
+  margin-bottom: 4px;
 }
 
 .vp-doc .tip p {
-  color: #a0a0a0;
+  color: var(--es-text-primary);
   margin: 0;
+  font-size: var(--es-font-xs);
 }
 
 .vp-doc .info,
 .vp-doc .custom-block.info {
-  background: rgba(78, 201, 176, 0.08);
+  background: rgba(74, 222, 128, 0.08);
   border: none;
-  border-left: 4px solid #4ec9b0;
-  border-radius: 0 8px 8px 0;
-  padding: 16px 24px;
-  margin: 24px 0;
+  border-left: 3px solid var(--es-success);
+  border-radius: 0 2px 2px 0;
+  padding: 10px 12px;
+  margin: 16px 0;
 }
 
 .vp-doc .info .custom-block-title,
 .vp-doc .custom-block.info .custom-block-title {
-  color: #4ec9b0;
+  color: var(--es-success);
   font-weight: 600;
-  font-size: 15px;
-  margin-bottom: 8px;
+  font-size: var(--es-font-xs);
+  margin-bottom: 4px;
 }
 
 .vp-doc .danger,
 .vp-doc .custom-block.danger {
-  background: rgba(244, 135, 113, 0.08);
+  background: rgba(239, 68, 68, 0.08);
   border: none;
-  border-left: 4px solid #f48771;
-  border-radius: 0 8px 8px 0;
-  padding: 16px 24px;
-  margin: 24px 0;
+  border-left: 3px solid var(--es-error);
+  border-radius: 0 2px 2px 0;
+  padding: 10px 12px;
+  margin: 16px 0;
 }
 
 .vp-doc .danger .custom-block-title,
 .vp-doc .custom-block.danger .custom-block-title {
-  color: #f48771;
+  color: var(--es-error);
   font-weight: 600;
-  font-size: 15px;
-  margin-bottom: 8px;
+  font-size: var(--es-font-xs);
+  margin-bottom: 4px;
 }
 
-/* ============================================
-   卡片样式
-   ============================================ */
 .vp-doc .card {
-  background: #1f1f1f;
-  border-radius: 12px;
-  padding: 24px;
-  margin: 24px 0;
+  background: var(--es-bg-sidebar);
+  border: 1px solid var(--es-border-subtle);
+  border-radius: 4px;
+  padding: 12px;
+  margin: 16px 0;
 }
 
 .vp-doc .card-title {
-  font-size: 18px;
+  font-size: var(--es-font-sm);
   font-weight: 600;
-  color: #ffffff;
-  margin-bottom: 8px;
+  color: var(--es-text-primary);
+  margin-bottom: 6px;
 }
 
 .vp-doc .card-description {
-  font-size: 14px;
-  color: #707070;
-  line-height: 1.6;
+  font-size: var(--es-font-xs);
+  color: var(--es-text-muted);
+  line-height: 1.5;
 }
 
-/* ============================================
-   标签样式
-   ============================================ */
 .vp-doc .tag {
   display: inline-block;
-  padding: 4px 12px;
+  padding: 2px 8px;
   background: transparent;
-  border: 1px solid #3a3a3a;
-  border-radius: 16px;
-  color: #a0a0a0;
-  font-size: 13px;
-  margin-right: 8px;
-  margin-bottom: 8px;
+  border: 1px solid var(--es-border-default);
+  border-radius: 2px;
+  color: var(--es-text-secondary);
+  font-size: var(--es-font-xs);
+  margin-right: 4px;
+  margin-bottom: 4px;
 }
 
-/* ============================================
-   链接行样式
-   ============================================ */
-.vp-doc .link-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  color: #a0a0a0;
-  font-size: 15px;
-}
-
-.vp-doc .link-row a {
-  color: #3b9eff;
-}
-
-/* ============================================
-   页脚
-   ============================================ */
 .VPFooter {
-  background: #1a1a1a !important;
-  border-top: 1px solid #2a2a2a !important;
+  background: var(--es-bg-sidebar) !important;
+  border-top: 1px solid var(--es-border-subtle) !important;
 }
 
-/* ============================================
-   滚动条
-   ============================================ */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--es-bg-card);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3a3a3a;
+  background: var(--es-border-strong);
   border-radius: 4px;
+  border: 2px solid var(--es-bg-card);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4a4a4a;
+  background: #5a5a5a;
 }
 
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
 
-/* ============================================
-   首页专用样式
-   ============================================ */
 .home-container {
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 16px;
 }
 
 .home-section {
-  padding: 48px 0;
+  padding: 32px 0;
 }
 
-/* ============================================
-   响应式
-   ============================================ */
 @media (max-width: 960px) {
   .VPDoc .content {
-    padding: 24px !important;
-  }
-
-  .VPSidebar {
-    width: 100% !important;
+    padding: 16px !important;
   }
 }
