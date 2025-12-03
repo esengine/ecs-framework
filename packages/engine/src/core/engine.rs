@@ -185,6 +185,7 @@ impl Engine {
         texture_ids: &[u32],
         uvs: &[f32],
         colors: &[u32],
+        material_ids: &[u32],
     ) -> Result<()> {
         // Debug: log once
         use std::sync::atomic::{AtomicBool, Ordering};
@@ -199,6 +200,7 @@ impl Engine {
             texture_ids,
             uvs,
             colors,
+            material_ids,
             &self.texture_manager,
         )
     }
@@ -532,5 +534,177 @@ impl Engine {
     /// 获取所有已注册的视口ID。
     pub fn viewport_ids(&self) -> Vec<String> {
         self.viewport_manager.viewport_ids().into_iter().cloned().collect()
+    }
+
+    // ===== Shader Management =====
+    // ===== 着色器管理 =====
+
+    /// Compile and register a custom shader.
+    /// 编译并注册自定义着色器。
+    pub fn compile_shader(
+        &mut self,
+        vertex_source: &str,
+        fragment_source: &str,
+    ) -> Result<u32> {
+        self.renderer.compile_shader(self.context.gl(), vertex_source, fragment_source)
+    }
+
+    /// Compile a shader with a specific ID.
+    /// 使用特定ID编译着色器。
+    pub fn compile_shader_with_id(
+        &mut self,
+        shader_id: u32,
+        vertex_source: &str,
+        fragment_source: &str,
+    ) -> Result<()> {
+        self.renderer.compile_shader_with_id(self.context.gl(), shader_id, vertex_source, fragment_source)
+    }
+
+    /// Check if a shader exists.
+    /// 检查着色器是否存在。
+    pub fn has_shader(&self, shader_id: u32) -> bool {
+        self.renderer.has_shader(shader_id)
+    }
+
+    /// Remove a shader.
+    /// 移除着色器。
+    pub fn remove_shader(&mut self, shader_id: u32) -> bool {
+        self.renderer.remove_shader(shader_id)
+    }
+
+    // ===== Material Management =====
+    // ===== 材质管理 =====
+
+    /// Create and register a new material.
+    /// 创建并注册新材质。
+    pub fn create_material(
+        &mut self,
+        name: &str,
+        shader_id: u32,
+        blend_mode: u8,
+    ) -> u32 {
+        use crate::renderer::material::{Material, BlendMode};
+
+        let blend = match blend_mode {
+            0 => BlendMode::None,
+            1 => BlendMode::Alpha,
+            2 => BlendMode::Additive,
+            3 => BlendMode::Multiply,
+            4 => BlendMode::Screen,
+            5 => BlendMode::PremultipliedAlpha,
+            _ => BlendMode::Alpha,
+        };
+
+        let mut material = Material::with_shader(name, shader_id);
+        material.blend_mode = blend;
+
+        self.renderer.register_material(material)
+    }
+
+    /// Create a material with a specific ID.
+    /// 使用特定ID创建材质。
+    pub fn create_material_with_id(
+        &mut self,
+        material_id: u32,
+        name: &str,
+        shader_id: u32,
+        blend_mode: u8,
+    ) {
+        use crate::renderer::material::{Material, BlendMode};
+
+        let blend = match blend_mode {
+            0 => BlendMode::None,
+            1 => BlendMode::Alpha,
+            2 => BlendMode::Additive,
+            3 => BlendMode::Multiply,
+            4 => BlendMode::Screen,
+            5 => BlendMode::PremultipliedAlpha,
+            _ => BlendMode::Alpha,
+        };
+
+        let mut material = Material::with_shader(name, shader_id);
+        material.blend_mode = blend;
+
+        self.renderer.register_material_with_id(material_id, material);
+    }
+
+    /// Check if a material exists.
+    /// 检查材质是否存在。
+    pub fn has_material(&self, material_id: u32) -> bool {
+        self.renderer.has_material(material_id)
+    }
+
+    /// Remove a material.
+    /// 移除材质。
+    pub fn remove_material(&mut self, material_id: u32) -> bool {
+        self.renderer.remove_material(material_id)
+    }
+
+    /// Set a material's float uniform.
+    /// 设置材质的浮点uniform。
+    pub fn set_material_float(&mut self, material_id: u32, name: &str, value: f32) -> bool {
+        self.renderer.set_material_float(material_id, name, value)
+    }
+
+    /// Set a material's vec2 uniform.
+    /// 设置材质的vec2 uniform。
+    pub fn set_material_vec2(&mut self, material_id: u32, name: &str, x: f32, y: f32) -> bool {
+        if let Some(material) = self.renderer.get_material_mut(material_id) {
+            material.uniforms.set_vec2(name, x, y);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Set a material's vec3 uniform.
+    /// 设置材质的vec3 uniform。
+    pub fn set_material_vec3(&mut self, material_id: u32, name: &str, x: f32, y: f32, z: f32) -> bool {
+        if let Some(material) = self.renderer.get_material_mut(material_id) {
+            material.uniforms.set_vec3(name, x, y, z);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Set a material's vec4 uniform.
+    /// 设置材质的vec4 uniform。
+    pub fn set_material_vec4(&mut self, material_id: u32, name: &str, x: f32, y: f32, z: f32, w: f32) -> bool {
+        self.renderer.set_material_vec4(material_id, name, x, y, z, w)
+    }
+
+    /// Set a material's color uniform.
+    /// 设置材质的颜色uniform。
+    pub fn set_material_color(&mut self, material_id: u32, name: &str, r: f32, g: f32, b: f32, a: f32) -> bool {
+        if let Some(material) = self.renderer.get_material_mut(material_id) {
+            material.uniforms.set_color(name, r, g, b, a);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Set a material's blend mode.
+    /// 设置材质的混合模式。
+    pub fn set_material_blend_mode(&mut self, material_id: u32, blend_mode: u8) -> bool {
+        use crate::renderer::material::BlendMode;
+
+        let blend = match blend_mode {
+            0 => BlendMode::None,
+            1 => BlendMode::Alpha,
+            2 => BlendMode::Additive,
+            3 => BlendMode::Multiply,
+            4 => BlendMode::Screen,
+            5 => BlendMode::PremultipliedAlpha,
+            _ => return false,
+        };
+
+        if let Some(material) = self.renderer.get_material_mut(material_id) {
+            material.blend_mode = blend;
+            true
+        } else {
+            false
+        }
     }
 }

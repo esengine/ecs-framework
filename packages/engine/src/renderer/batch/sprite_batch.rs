@@ -27,6 +27,18 @@ const TRANSFORM_STRIDE: usize = 7;
 /// UV数据步长。
 const UV_STRIDE: usize = 4;
 
+/// Batch key combining material and texture IDs.
+/// 组合材质ID和纹理ID的批次键。
+#[derive(Hash, Eq, PartialEq, Clone, Copy, Debug)]
+pub struct BatchKey {
+    /// Material ID (0 = default material).
+    /// 材质ID（0 = 默认材质）。
+    pub material_id: u32,
+    /// Texture ID.
+    /// 纹理ID。
+    pub texture_id: u32,
+}
+
 /// Sprite batch renderer.
 /// 精灵批处理渲染器。
 ///
@@ -35,7 +47,7 @@ const UV_STRIDE: usize = 4;
 ///
 /// # Performance | 性能
 /// - Uses dynamic vertex buffer for efficient updates | 使用动态顶点缓冲区以高效更新
-/// - Groups sprites by texture to minimize state changes | 按纹理分组精灵以最小化状态更改
+/// - Groups sprites by material and texture to minimize state changes | 按材质和纹理分组精灵以最小化状态更改
 /// - Supports up to 10000+ sprites per batch | 每批次支持10000+精灵
 pub struct SpriteBatch {
     /// Vertex array object.
@@ -54,9 +66,9 @@ pub struct SpriteBatch {
     /// 最大精灵数。
     max_sprites: usize,
 
-    /// Per-texture vertex data buffers.
-    /// 按纹理分组的顶点数据缓冲区。
-    texture_batches: HashMap<u32, Vec<f32>>,
+    /// Per-material-texture vertex data buffers.
+    /// 按材质和纹理分组的顶点数据缓冲区。
+    batches: HashMap<BatchKey, Vec<f32>>,
 
     /// Total sprite count across all batches.
     /// 所有批次的总精灵数。
@@ -124,7 +136,7 @@ impl SpriteBatch {
             vbo,
             ibo,
             max_sprites,
-            texture_batches: HashMap::new(),
+            batches: HashMap::new(),
             sprite_count: 0,
         })
     }
@@ -192,7 +204,7 @@ impl SpriteBatch {
     /// Clear the batch for a new frame.
     /// 为新帧清空批处理。
     pub fn clear(&mut self) {
-        for batch in self.texture_batches.values_mut() {
+        for batch in self.batches.values_mut() {
             batch.clear();
         }
         self.sprite_count = 0;
@@ -206,6 +218,7 @@ impl SpriteBatch {
     /// * `texture_ids` - Texture ID for each sprite | 每个精灵的纹理ID
     /// * `uvs` - [u0, v0, u1, v1] per sprite | 每个精灵的UV坐标
     /// * `colors` - Packed RGBA color per sprite | 每个精灵的打包RGBA颜色
+    /// * `material_ids` - Material ID for each sprite (0 = default) | 每个精灵的材质ID（0 = 默认）
     /// * `_texture_manager` - Texture manager for getting texture sizes | 纹理管理器
     pub fn add_sprites(
         &mut self,
@@ -213,6 +226,7 @@ impl SpriteBatch {
         texture_ids: &[u32],
         uvs: &[f32],
         colors: &[u32],
+        material_ids: &[u32],
         _texture_manager: &TextureManager,
     ) -> Result<()> {
         let sprite_count = texture_ids.len();
@@ -242,6 +256,14 @@ impl SpriteBatch {
             )));
         }
 
+        if material_ids.len() != sprite_count {
+            return Err(EngineError::InvalidBatchData(format!(
+                "Material ID data length mismatch: expected {}, got {}",
+                sprite_count,
+                material_ids.len()
+            )));
+        }
+
         // Check capacity | 检查容量
         if self.sprite_count + sprite_count > self.max_sprites {
             return Err(EngineError::InvalidBatchData(format!(
@@ -250,7 +272,7 @@ impl SpriteBatch {
             )));
         }
 
-        // Add each sprite grouped by texture | 按纹理分组添加每个精灵
+        // Add each sprite grouped by material and texture | 按材质和纹理分组添加每个精灵
         for i in 0..sprite_count {
             let t_offset = i * TRANSFORM_STRIDE;
             let uv_offset = i * UV_STRIDE;
@@ -276,11 +298,14 @@ impl SpriteBatch {
             let width = scale_x;
             let height = scale_y;
 
-            let texture_id = texture_ids[i];
+            let batch_key = BatchKey {
+                material_id: material_ids[i],
+                texture_id: texture_ids[i],
+            };
 
-            // Get or create batch for this texture | 获取或创建此纹理的批次
-            let batch = self.texture_batches
-                .entry(texture_id)
+            // Get or create batch for this material+texture combination | 获取或创建此材质+纹理组合的批次
+            let batch = self.batches
+                .entry(batch_key)
                 .or_insert_with(Vec::new);
 
             // Calculate transformed vertices and add to batch | 计算变换后的顶点并添加到批次
@@ -367,9 +392,9 @@ impl SpriteBatch {
         }
     }
 
-    /// Flush a specific texture batch to GPU and render.
-    /// 将特定纹理批次刷新到GPU并渲染。
-    fn flush_texture_batch(&self, gl: &WebGl2RenderingContext, vertices: &[f32]) {
+    /// Flush a batch to GPU and render.
+    /// 将批次刷新到GPU并渲染。
+    fn flush_batch(&self, gl: &WebGl2RenderingContext, vertices: &[f32]) {
         if vertices.is_empty() {
             return;
         }
@@ -403,17 +428,17 @@ impl SpriteBatch {
         gl.bind_vertex_array(None);
     }
 
-    /// Get texture batches for rendering.
-    /// 获取用于渲染的纹理批次。
-    pub fn texture_batches(&self) -> &HashMap<u32, Vec<f32>> {
-        &self.texture_batches
+    /// Get all batches for rendering.
+    /// 获取所有批次用于渲染。
+    pub fn batches(&self) -> &HashMap<BatchKey, Vec<f32>> {
+        &self.batches
     }
 
-    /// Flush a specific texture batch.
-    /// 刷新特定纹理批次。
-    pub fn flush_for_texture(&self, gl: &WebGl2RenderingContext, texture_id: u32) {
-        if let Some(vertices) = self.texture_batches.get(&texture_id) {
-            self.flush_texture_batch(gl, vertices);
+    /// Flush a specific batch by key.
+    /// 按键刷新特定批次。
+    pub fn flush_for_batch(&self, gl: &WebGl2RenderingContext, key: &BatchKey) {
+        if let Some(vertices) = self.batches.get(key) {
+            self.flush_batch(gl, vertices);
         }
     }
 
