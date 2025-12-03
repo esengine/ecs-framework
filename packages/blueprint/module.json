@@ -1,0 +1,43 @@
+{
+  "id": "blueprint",
+  "name": "@esengine/blueprint",
+  "displayName": "Blueprint",
+  "description": "Visual scripting system | 可视化脚本系统",
+  "version": "1.0.0",
+  "category": "AI",
+  "icon": "Workflow",
+  "tags": [
+    "visual",
+    "scripting",
+    "blueprint",
+    "nodes"
+  ],
+  "isCore": false,
+  "defaultEnabled": false,
+  "isEngineModule": true,
+  "canContainContent": true,
+  "platforms": [
+    "web",
+    "desktop"
+  ],
+  "dependencies": [
+    "core"
+  ],
+  "exports": {
+    "components": [
+      "BlueprintComponent"
+    ],
+    "systems": [
+      "BlueprintSystem"
+    ],
+    "other": [
+      "Blueprint",
+      "BlueprintNode",
+      "BlueprintGraph"
+    ]
+  },
+  "editorPackage": "@esengine/blueprint-editor",
+  "requiresWasm": false,
+  "outputPath": "dist/index.js",
+  "pluginExport": "BlueprintPlugin"
+}

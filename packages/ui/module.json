@@ -1,0 +1,43 @@
+{
+  "id": "ui",
+  "name": "@esengine/ui",
+  "displayName": "UI System",
+  "description": "User interface components and layout | 用户界面组件和布局",
+  "version": "1.0.0",
+  "category": "Rendering",
+  "icon": "Layout",
+  "tags": [
+    "ui",
+    "interface",
+    "layout"
+  ],
+  "isCore": false,
+  "defaultEnabled": false,
+  "isEngineModule": true,
+  "canContainContent": true,
+  "platforms": [
+    "web",
+    "desktop",
+    "mobile"
+  ],
+  "dependencies": [
+    "core",
+    "math"
+  ],
+  "exports": {
+    "components": [
+      "UICanvasComponent",
+      "UITextComponent",
+      "UIImageComponent",
+      "UIButtonComponent"
+    ],
+    "systems": [
+      "UIRenderSystem",
+      "UIEventSystem"
+    ]
+  },
+  "editorPackage": "@esengine/ui-editor",
+  "requiresWasm": false,
+  "outputPath": "dist/index.js",
+  "pluginExport": "UIPlugin"
+}

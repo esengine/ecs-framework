@@ -1,36 +1,29 @@
 /**
- * Behavior Tree Plugin Descriptor
- * 行为树插件描述符
+ * Behavior Tree Plugin Manifest
+ * 行为树插件清单
  */
 
-import type { PluginDescriptor } from '@esengine/editor-runtime';
+import type { ModuleManifest } from '@esengine/editor-runtime';
 
 /**
- * 插件描述符
+ * 插件清单
  */
-export const descriptor: PluginDescriptor = {
+export const manifest: ModuleManifest = {
     id: '@esengine/behavior-tree',
-    name: 'Behavior Tree System',
+    name: '@esengine/behavior-tree',
+    displayName: 'Behavior Tree System',
     version: '1.0.0',
     description: 'AI 行为树系统，支持可视化编辑和运行时执行',
-    category: 'ai',
-    enabledByDefault: true,
+    category: 'AI',
+    icon: 'GitBranch',
+    isCore: false,
+    defaultEnabled: true,
+    isEngineModule: false,
     canContainContent: false,
-    isEnginePlugin: false,
-    modules: [
-        {
-            name: 'BehaviorTreeRuntime',
-            type: 'runtime',
-            loadingPhase: 'default'
-        },
-        {
-            name: 'BehaviorTreeEditor',
-            type: 'editor',
-            loadingPhase: 'default'
-        }
-    ],
-    dependencies: [
-        { id: '@esengine/engine-core', version: '>=1.0.0', optional: true }
-    ],
-    icon: 'GitBranch'
+    dependencies: ['engine-core'],
+    exports: {
+        components: ['BehaviorTreeRuntimeComponent'],
+        systems: ['BehaviorTreeExecutionSystem'],
+        loaders: ['BehaviorTreeLoader']
+    }
 };

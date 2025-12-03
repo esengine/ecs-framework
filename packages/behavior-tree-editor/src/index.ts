@@ -42,8 +42,8 @@ import { useBehaviorTreeDataStore } from './stores';
 import { createRootNode } from './domain/constants/RootNode';
 import { PluginContext } from './PluginContext';
 
-// Import descriptor from local file
-import { descriptor } from './BehaviorTreePlugin';
+// Import manifest from local file
+import { manifest } from './BehaviorTreePlugin';
 
 // 导入编辑器 CSS 样式（会被 vite 自动处理并注入到 DOM）
 // Import editor CSS styles (automatically handled and injected by vite)
@@ -340,7 +340,7 @@ export class BehaviorTreeEditorModule implements IEditorModuleLoader {
 
 // Create the complete plugin with editor module
 export const BehaviorTreePlugin: IPluginLoader = {
-    descriptor,
+    manifest,
     runtimeModule: new BehaviorTreeRuntimeModule(),
     editorModule: new BehaviorTreeEditorModule(),
 };

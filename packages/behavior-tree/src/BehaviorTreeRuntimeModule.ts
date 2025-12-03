@@ -1,6 +1,6 @@
 import type { IScene, ServiceContainer } from '@esengine/ecs-framework';
 import { ComponentRegistry, Core } from '@esengine/ecs-framework';
-import type { IRuntimeModule, IPlugin, PluginDescriptor, SystemContext } from '@esengine/engine-core';
+import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 import type { AssetManager } from '@esengine/asset-system';
 
 import { BehaviorTreeRuntimeComponent } from './execution/BehaviorTreeRuntimeComponent';
@@ -39,7 +39,10 @@ class BehaviorTreeRuntimeModule implements IRuntimeModule {
             this._loaderRegistered = true;
         }
 
-        const behaviorTreeSystem = new BehaviorTreeExecutionSystem(Core);
+        // 使用 context 中的 services，确保与调用方使用同一个 ServiceContainer 实例
+        // Use services from context to ensure same ServiceContainer instance as caller
+        const services = (btContext as any).services || Core.services;
+        const behaviorTreeSystem = new BehaviorTreeExecutionSystem(services);
 
         if (btContext.assetManager) {
             behaviorTreeSystem.setAssetManager(btContext.assetManager);
@@ -54,18 +57,25 @@ class BehaviorTreeRuntimeModule implements IRuntimeModule {
     }
 }
 
-const descriptor: PluginDescriptor = {
-    id: '@esengine/behavior-tree',
-    name: 'Behavior Tree',
+const manifest: ModuleManifest = {
+    id: 'behavior-tree',
+    name: '@esengine/behavior-tree',
+    displayName: 'Behavior Tree',
     version: '1.0.0',
     description: 'AI behavior tree system',
-    category: 'ai',
-    enabledByDefault: false,
-    isEnginePlugin: true
+    category: 'AI',
+    icon: 'GitBranch',
+    isCore: false,
+    defaultEnabled: false,
+    isEngineModule: true,
+    canContainContent: true,
+    dependencies: ['core'],
+    exports: { components: ['BehaviorTreeComponent'] },
+    editorPackage: '@esengine/behavior-tree-editor'
 };
 
 export const BehaviorTreePlugin: IPlugin = {
-    descriptor,
+    manifest,
     runtimeModule: new BehaviorTreeRuntimeModule()
 };
 

@@ -1,0 +1,585 @@
+/**
+ * Sprite Component Inspector Styles.
+ * 精灵组件检查器样式。
+ */
+
+.sprite-component-inspector {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Material Override Section */
+.material-override-section {
+    border: 1px solid var(--border-color, #333);
+    border-radius: 4px;
+    margin-top: 8px;
+    background: var(--bg-secondary, #252526);
+}
+
+.material-override-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.material-override-header:hover {
+    background: var(--bg-hover, #2a2a2a);
+}
+
+.material-override-expand {
+    color: var(--text-secondary, #888);
+}
+
+.material-override-title {
+    flex: 1;
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--text-primary, #e0e0e0);
+}
+
+.material-override-count {
+    padding: 2px 6px;
+    border-radius: 10px;
+    background: var(--accent-color, #0078d4);
+    color: white;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.material-override-content {
+    padding: 8px 10px;
+    border-top: 1px solid var(--border-color, #333);
+}
+
+/* Override Items */
+.material-override-item {
+    padding: 8px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    background: var(--bg-tertiary, #1e1e1e);
+}
+
+.material-override-item:last-child {
+    margin-bottom: 0;
+}
+
+.material-override-item-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.material-override-name {
+    flex: 1;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-primary, #e0e0e0);
+}
+
+.material-override-type {
+    font-size: 10px;
+    color: var(--text-tertiary, #666);
+    font-style: italic;
+}
+
+.material-override-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--text-secondary, #888);
+    cursor: pointer;
+}
+
+.material-override-remove:hover {
+    background: var(--error-bg, #3a2020);
+    color: var(--error-color, #f87171);
+}
+
+/* Override Inputs */
+.override-input {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--border-color, #333);
+    border-radius: 3px;
+    background: var(--input-bg, #333);
+    color: var(--text-primary, #e0e0e0);
+    font-size: 11px;
+}
+
+.override-input:focus {
+    outline: none;
+    border-color: var(--accent-color, #0078d4);
+}
+
+.override-input-number {
+    text-align: right;
+}
+
+/* Vector Inputs */
+.override-vector {
+    display: flex;
+    gap: 4px;
+}
+
+.override-vector-4 {
+    flex-wrap: wrap;
+}
+
+.override-vector-axis {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 50px;
+}
+
+.override-axis-label {
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    font-size: 9px;
+    font-weight: 600;
+    color: white;
+    flex-shrink: 0;
+}
+
+.override-axis-x { background: #e06666; }
+.override-axis-y { background: #93c47d; }
+.override-axis-z { background: #6fa8dc; }
+.override-axis-w { background: #b4a7d6; }
+
+.override-vector-axis .override-input {
+    flex: 1;
+    min-width: 0;
+    padding: 3px 4px;
+    text-align: right;
+}
+
+/* Color Input */
+.override-color {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.override-color-preview {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color, #333);
+    flex-shrink: 0;
+}
+
+.override-color-input {
+    width: 60px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.override-color-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.override-color-input::-webkit-color-swatch {
+    border-radius: 3px;
+    border: 1px solid var(--border-color, #333);
+}
+
+.override-alpha {
+    width: 50px;
+    text-align: right;
+}
+
+/* Add Override */
+.material-override-add-container {
+    position: relative;
+    margin-top: 8px;
+}
+
+.material-override-add-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px dashed var(--border-color, #444);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-secondary, #888);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.material-override-add-btn:hover {
+    border-color: var(--accent-color, #0078d4);
+    color: var(--accent-color, #0078d4);
+    background: var(--accent-bg, rgba(0, 120, 212, 0.1));
+}
+
+.material-override-add-menu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
+    padding: 4px 0;
+    border-radius: 4px;
+    background: var(--dropdown-bg, #2d2d2d);
+    border: 1px solid var(--border-color, #444);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.material-override-add-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 6px 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-primary, #e0e0e0);
+    font-size: 11px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.material-override-add-item:hover {
+    background: var(--bg-hover, #3a3a3a);
+}
+
+.material-override-type-hint {
+    font-size: 10px;
+    color: var(--text-tertiary, #666);
+    font-style: italic;
+}
+
+/* Empty State */
+.material-override-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--text-secondary, #888);
+    font-size: 11px;
+    font-style: italic;
+}
+
+.override-unsupported {
+    color: var(--text-tertiary, #666);
+    font-size: 10px;
+    font-style: italic;
+}
+
+/* ============================================
+   Inline Material Editor
+   ============================================ */
+
+.inline-material-editor {
+    border: 1px solid var(--border-color, #333);
+    border-radius: 4px;
+    margin-top: 8px;
+    background: var(--bg-secondary, #252526);
+}
+
+.inline-material-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 10px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid transparent;
+}
+
+.inline-material-header:hover {
+    background: var(--bg-hover, #2a2a2a);
+}
+
+.inline-material-expand {
+    color: var(--text-secondary, #888);
+}
+
+.inline-material-title {
+    flex: 1;
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--accent-color, #0078d4);
+}
+
+.inline-material-dirty {
+    color: var(--warning-color, #fbbf24);
+    margin-left: 4px;
+}
+
+.inline-material-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.inline-material-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 3px;
+    background: var(--button-bg, #333);
+    color: var(--text-secondary, #888);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.inline-material-btn:hover:not(:disabled) {
+    background: var(--button-hover-bg, #444);
+    color: var(--text-primary, #e0e0e0);
+}
+
+.inline-material-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.inline-material-content {
+    padding: 10px;
+    border-top: 1px solid var(--border-color, #333);
+}
+
+.inline-material-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.inline-material-row:last-child {
+    margin-bottom: 0;
+}
+
+.inline-material-row label {
+    flex: 0 0 80px;
+    font-size: 11px;
+    color: var(--text-secondary, #888);
+}
+
+.inline-material-row select {
+    flex: 1;
+    padding: 4px 8px;
+    border: 1px solid var(--border-color, #333);
+    border-radius: 3px;
+    background: var(--input-bg, #333);
+    color: var(--text-primary, #e0e0e0);
+    font-size: 11px;
+}
+
+.inline-material-row select:focus {
+    outline: none;
+    border-color: var(--accent-color, #0078d4);
+}
+
+/* Shader select with browse button */
+.inline-material-shader-select {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+}
+
+.inline-material-shader-select select {
+    flex: 1;
+}
+
+.inline-material-refresh-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--border-color, #333);
+    border-radius: 3px;
+    background: var(--button-bg, #333);
+    color: var(--text-secondary, #888);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.inline-material-refresh-btn:hover:not(:disabled) {
+    background: var(--button-hover-bg, #444);
+    color: var(--text-primary, #e0e0e0);
+    border-color: var(--accent-color, #0078d4);
+}
+
+.inline-material-refresh-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.inline-material-refresh-btn.loading svg {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.inline-material-uniforms {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color, #333);
+}
+
+.inline-material-uniforms-header {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary, #888);
+    margin-bottom: 8px;
+}
+
+.inline-material-uniform {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.inline-material-uniform:last-child {
+    margin-bottom: 0;
+}
+
+.inline-material-uniform label {
+    flex: 0 0 80px;
+    font-size: 11px;
+    color: var(--text-secondary, #888);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ============================================
+   Uniform Value Editor (shared)
+   ============================================ */
+
+.uniform-input {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--border-color, #333);
+    border-radius: 3px;
+    background: var(--input-bg, #333);
+    color: var(--text-primary, #e0e0e0);
+    font-size: 11px;
+}
+
+.uniform-input:focus {
+    outline: none;
+    border-color: var(--accent-color, #0078d4);
+}
+
+.uniform-input-number {
+    text-align: right;
+}
+
+.uniform-vector {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+}
+
+.uniform-vector-4 {
+    flex-wrap: wrap;
+}
+
+.uniform-vector-axis {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 45px;
+}
+
+.uniform-axis-label {
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    font-size: 9px;
+    font-weight: 600;
+    color: white;
+    flex-shrink: 0;
+}
+
+.uniform-axis-x { background: #e06666; }
+.uniform-axis-y { background: #93c47d; }
+.uniform-axis-z { background: #6fa8dc; }
+.uniform-axis-w { background: #b4a7d6; }
+
+.uniform-vector-axis .uniform-input {
+    flex: 1;
+    min-width: 0;
+    padding: 3px 4px;
+    text-align: right;
+}
+
+.uniform-color {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+}
+
+.uniform-color-preview {
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color, #333);
+    flex-shrink: 0;
+}
+
+.uniform-color-input {
+    width: 50px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.uniform-color-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.uniform-color-input::-webkit-color-swatch {
+    border-radius: 3px;
+    border: 1px solid var(--border-color, #333);
+}
+
+.uniform-alpha {
+    width: 45px;
+    text-align: right;
+}
+
+.uniform-unsupported {
+    color: var(--text-tertiary, #666);
+    font-size: 10px;
+    font-style: italic;
+}

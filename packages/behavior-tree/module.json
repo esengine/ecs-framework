@@ -1,0 +1,45 @@
+{
+  "id": "behavior-tree",
+  "name": "@esengine/behavior-tree",
+  "displayName": "Behavior Tree",
+  "description": "AI behavior tree system | AI 行为树系统",
+  "version": "1.0.0",
+  "category": "AI",
+  "icon": "GitBranch",
+  "tags": [
+    "ai",
+    "behavior",
+    "tree"
+  ],
+  "isCore": false,
+  "defaultEnabled": false,
+  "isEngineModule": true,
+  "canContainContent": true,
+  "platforms": [
+    "web",
+    "desktop"
+  ],
+  "dependencies": [
+    "core"
+  ],
+  "exports": {
+    "components": [
+      "BehaviorTreeComponent"
+    ],
+    "systems": [
+      "BehaviorTreeSystem"
+    ],
+    "other": [
+      "BehaviorTree",
+      "BTNode",
+      "Selector",
+      "Sequence",
+      "Condition",
+      "Action"
+    ]
+  },
+  "editorPackage": "@esengine/behavior-tree-editor",
+  "requiresWasm": false,
+  "outputPath": "dist/index.js",
+  "pluginExport": "BehaviorTreePlugin"
+}

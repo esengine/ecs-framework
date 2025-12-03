@@ -1,0 +1,38 @@
+{
+  "id": "sprite",
+  "name": "@esengine/sprite",
+  "displayName": "Sprite 2D",
+  "description": "2D sprite rendering | 2D 精灵渲染",
+  "version": "1.0.0",
+  "category": "Rendering",
+  "icon": "Image",
+  "tags": [
+    "2d",
+    "sprite",
+    "rendering"
+  ],
+  "isCore": false,
+  "defaultEnabled": true,
+  "isEngineModule": true,
+  "canContainContent": true,
+  "platforms": [
+    "web",
+    "desktop"
+  ],
+  "dependencies": [
+    "core",
+    "math"
+  ],
+  "exports": {
+    "components": [
+      "SpriteComponent"
+    ],
+    "systems": [
+      "SpriteRenderSystem"
+    ]
+  },
+  "editorPackage": "@esengine/sprite-editor",
+  "requiresWasm": true,
+  "outputPath": "dist/index.js",
+  "pluginExport": "SpritePlugin"
+}

@@ -1,0 +1,43 @@
+{
+  "id": "audio",
+  "name": "@esengine/audio",
+  "displayName": "Audio",
+  "description": "Audio playback and sound effects | 音频播放和音效",
+  "version": "1.0.0",
+  "category": "Audio",
+  "icon": "Volume2",
+  "tags": [
+    "audio",
+    "sound",
+    "music"
+  ],
+  "isCore": false,
+  "defaultEnabled": false,
+  "isEngineModule": true,
+  "canContainContent": true,
+  "platforms": [
+    "web",
+    "desktop",
+    "mobile"
+  ],
+  "dependencies": [
+    "core",
+    "asset-system"
+  ],
+  "exports": {
+    "components": [
+      "AudioSourceComponent",
+      "AudioListenerComponent"
+    ],
+    "systems": [
+      "AudioSystem"
+    ],
+    "other": [
+      "AudioClip",
+      "AudioMixer"
+    ]
+  },
+  "requiresWasm": false,
+  "outputPath": "dist/index.js",
+  "pluginExport": "AudioPlugin"
+}

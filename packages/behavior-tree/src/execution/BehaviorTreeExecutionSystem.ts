@@ -1,4 +1,4 @@
-import { EntitySystem, Matcher, Entity, Time, Core, ECSSystem } from '@esengine/ecs-framework';
+import { EntitySystem, Matcher, Entity, Time, Core, ECSSystem, ServiceContainer } from '@esengine/ecs-framework';
 import type { AssetManager } from '@esengine/asset-system';
 import { BehaviorTreeRuntimeComponent } from './BehaviorTreeRuntimeComponent';
 import { BehaviorTreeAssetManager } from './BehaviorTreeAssetManager';
@@ -6,6 +6,7 @@ import { NodeExecutorRegistry, NodeExecutionContext } from './NodeExecutor';
 import { BehaviorTreeData, BehaviorNodeData } from './BehaviorTreeData';
 import { TaskStatus } from '../Types/TaskStatus';
 import { NodeMetadataRegistry } from './NodeMetadata';
+import type { IBehaviorTreeAsset } from '../loaders/BehaviorTreeLoader';
 import './Executors';
 
 /**
@@ -17,14 +18,17 @@ import './Executors';
 export class BehaviorTreeExecutionSystem extends EntitySystem {
     private btAssetManager: BehaviorTreeAssetManager | null = null;
     private executorRegistry: NodeExecutorRegistry;
-    private coreInstance: typeof Core | null = null;
+    private _services: ServiceContainer | null = null;
 
     /** 引用 asset-system 的 AssetManager（由 BehaviorTreeRuntimeModule 设置） */
     private _assetManager: AssetManager | null = null;
 
-    constructor(coreInstance?: typeof Core) {
+    /** 已警告过的缺失资产，避免重复警告 */
+    private _warnedMissingAssets: Set<string> = new Set();
+
+    constructor(services?: ServiceContainer) {
         super(Matcher.empty().all(BehaviorTreeRuntimeComponent));
-        this.coreInstance = coreInstance || null;
+        this._services = services || null;
         this.executorRegistry = new NodeExecutorRegistry();
         this.registerBuiltInExecutors();
     }
@@ -121,10 +125,36 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
 
     private getBTAssetManager(): BehaviorTreeAssetManager {
         if (!this.btAssetManager) {
-            const core = this.coreInstance || Core;
-            this.btAssetManager = core.services.resolve(BehaviorTreeAssetManager);
+            // 优先使用传入的 services，否则回退到全局 Core.services
+            // Prefer passed services, fallback to global Core.services
+            const services = this._services || Core.services;
+            if (!services) {
+                throw new Error('ServiceContainer is not available. Ensure Core.create() was called.');
+            }
+            this.btAssetManager = services.resolve(BehaviorTreeAssetManager);
         }
         return this.btAssetManager;
+    }
+
+    /**
+     * 获取行为树数据
+     * Get behavior tree data from AssetManager or BehaviorTreeAssetManager
+     *
+     * 优先从 AssetManager 获取（新方式），如果没有再从 BehaviorTreeAssetManager 获取（兼容旧方式）
+     */
+    private getTreeData(assetIdOrPath: string): BehaviorTreeData | undefined {
+        // 1. 优先从 AssetManager 获取（如果已加载）
+        // First try AssetManager (preferred way)
+        if (this._assetManager) {
+            const cachedAsset = this._assetManager.getAssetByPath<IBehaviorTreeAsset>(assetIdOrPath);
+            if (cachedAsset?.data) {
+                return cachedAsset.data;
+            }
+        }
+
+        // 2. 回退到 BehaviorTreeAssetManager（兼容旧方式）
+        // Fallback to BehaviorTreeAssetManager (legacy support)
+        return this.getBTAssetManager().getAsset(assetIdOrPath);
     }
 
     /**
@@ -158,9 +188,14 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
                 continue;
             }
 
-            const treeData = this.getBTAssetManager().getAsset(runtime.treeAssetId);
+            const treeData = this.getTreeData(runtime.treeAssetId);
             if (!treeData) {
-                this.logger.warn(`未找到行为树资产: ${runtime.treeAssetId}`);
+                // 只警告一次，避免每帧重复输出
+                // Only warn once to avoid repeated output every frame
+                if (!this._warnedMissingAssets.has(runtime.treeAssetId)) {
+                    this._warnedMissingAssets.add(runtime.treeAssetId);
+                    this.logger.warn(`未找到行为树资产: ${runtime.treeAssetId}`);
+                }
                 continue;
             }
 
