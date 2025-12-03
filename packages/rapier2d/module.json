@@ -1,0 +1,32 @@
+{
+  "id": "rapier2d",
+  "name": "@esengine/rapier2d",
+  "displayName": "Rapier2D",
+  "description": "Rapier2D physics engine WASM bindings | Rapier2D 物理引擎 WASM 绑定",
+  "version": "0.14.0",
+  "category": "Physics",
+  "icon": "Atom",
+  "tags": [
+    "physics",
+    "wasm",
+    "rapier"
+  ],
+  "isCore": false,
+  "defaultEnabled": false,
+  "isEngineModule": true,
+  "canContainContent": false,
+  "platforms": [
+    "web",
+    "desktop"
+  ],
+  "dependencies": [],
+  "exports": {
+    "other": ["RAPIER"]
+  },
+  "requiresWasm": true,
+  "wasmPaths": [
+    "pkg/rapier_wasm2d_bg.wasm"
+  ],
+  "outputPath": "dist/index.js",
+  "isExternalDependency": true
+}
