@@ -20,7 +20,8 @@ const external = [
   'react',
   'react-dom',
   'react/jsx-runtime',
-  /^@types\//
+  /^@types\//,
+  /^@tauri-apps\//
 ];
 
 const commonPlugins = [
