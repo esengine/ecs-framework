@@ -1,0 +1,21 @@
+{
+  "id": "platform-common",
+  "name": "@esengine/platform-common",
+  "displayName": "Platform Common",
+  "description": "Common platform interfaces | 平台通用接口定义",
+  "version": "1.0.0",
+  "category": "Core",
+  "icon": "Layers",
+  "tags": ["platform", "common", "interface"],
+  "isCore": true,
+  "defaultEnabled": true,
+  "isEngineModule": true,
+  "canContainContent": false,
+  "platforms": ["web", "desktop", "mobile"],
+  "dependencies": [],
+  "exports": {
+    "other": ["WasmLibraryLoaderFactory", "IPlatformAdapter"]
+  },
+  "requiresWasm": false,
+  "outputPath": "dist/index.mjs"
+}
