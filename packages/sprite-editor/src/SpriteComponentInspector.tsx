@@ -9,7 +9,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Component, Core, getComponentInstanceTypeName } from '@esengine/ecs-framework';
 import { IComponentInspector, ComponentInspectorContext, MessageHub, IFileSystemService, IFileSystem, ProjectService } from '@esengine/editor-core';
-import { SpriteComponent, MaterialOverrides, MaterialPropertyOverride } from '@esengine/sprite';
+import { SpriteComponent, MaterialPropertyOverride } from '@esengine/sprite';
 import { getMaterialManager, Material, BlendMode, BuiltInShaders, UniformType } from '@esengine/material-system';
 import { ChevronDown, ChevronRight, X, Plus, Save, ExternalLink, RefreshCw } from 'lucide-react';
 import './SpriteComponentInspector.css';

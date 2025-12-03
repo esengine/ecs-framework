@@ -1025,8 +1025,8 @@ export class TilemapComponent extends Component implements IResourceComponent {
 
         // Parse anchor to get X and Y alignment
         // 解析锚点获取X和Y方向的对齐方式
-        let xAnchor: 'start' | 'center' | 'end' = 'start';
-        let yAnchor: 'start' | 'center' | 'end' = 'end'; // 'end' means bottom in Y-up system
+        let xAnchor: 'start' | 'center' | 'end';
+        let yAnchor: 'start' | 'center' | 'end';
 
         if (anchor.includes('left')) xAnchor = 'start';
         else if (anchor.includes('right')) xAnchor = 'end';

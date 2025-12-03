@@ -3,7 +3,7 @@
  * Tilemap 详情面板 - 右侧分组属性面板
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
     ChevronDown,
     ChevronRight,
@@ -412,7 +412,7 @@ export const TilemapDetailsPanel: React.FC<TilemapDetailsPanelProps> = ({
     // Colors for grid (editor settings, not layer properties)
     const [tileGridColor, setTileGridColor] = useState('#333333');
     const [multiTileGridColor, setMultiTileGridColor] = useState('#ff0000');
-    const [layerGridColor, setLayerGridColor] = useState('#00ff00');
+    const [_layerGridColor, _setLayerGridColor] = useState('#00ff00');
 
     const handleLayerSelect = useCallback((index: number) => {
         setCurrentLayer(index);

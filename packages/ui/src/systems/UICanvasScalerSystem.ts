@@ -263,20 +263,8 @@ export class UICanvasScalerSystem extends EntitySystem {
             const safeArea = entity.getComponent(UISafeAreaComponent);
             if (safeArea) {
                 safeArea.update();
-
-                // 将安全区域转换为设计单位
-                // Convert safe area to design units
-                const scaledInsets = {
-                    top: safeArea.appliedInsets.top / finalScale,
-                    right: safeArea.appliedInsets.right / finalScale,
-                    bottom: safeArea.appliedInsets.bottom / finalScale,
-                    left: safeArea.appliedInsets.left / finalScale
-                };
-
-                // 调整画布有效尺寸（可选，取决于使用方式）
-                // 这里不直接修改画布尺寸，而是让 UI 元素通过锚点适配
-                // Adjust effective canvas size (optional, depends on usage)
-                // Here we don't modify canvas size directly, let UI elements adapt via anchors
+                // 安全区域已更新，UI 元素通过锚点适配
+                // Safe area updated, UI elements adapt via anchors
             }
         }
 

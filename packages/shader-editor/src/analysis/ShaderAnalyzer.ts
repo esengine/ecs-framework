@@ -186,9 +186,9 @@ export class ShaderAnalyzer {
      * 从源代码中移除注释。
      */
     private removeComments(source: string): string {
-        // Remove single-line comments.
-        // 移除单行注释。
-        let result = source.replace(/\/\/.*$/gm, '');
+        // Remove single-line comments (non-greedy, stop at newline).
+        // 移除单行注释（非贪婪，遇到换行停止）。
+        let result = source.replace(/\/\/[^\n\r]*/g, '');
         // Remove multi-line comments.
         // 移除多行注释。
         result = result.replace(/\/\*[\s\S]*?\*\//g, '');

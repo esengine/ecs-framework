@@ -18,13 +18,12 @@ import {
     FolderOpen,
     File,
     Image as ImageIcon,
-    ChevronDown,
     AlertTriangle,
     Box,
     Map
 } from 'lucide-react';
-import { Core, Entity } from '@esengine/ecs-framework';
-import { MessageHub, ProjectService, IFileSystemService, type IFileSystem, IDialogService, type IDialog } from '@esengine/editor-core';
+import { Core } from '@esengine/ecs-framework';
+import { MessageHub, ProjectService, IFileSystemService, type IFileSystem, type IDialog } from '@esengine/editor-core';
 import { TilemapComponent, type ITilesetData, type ResizeAnchor } from '@esengine/tilemap';
 import { useTilemapEditorStore, type TilemapToolType, type LayerState } from '../../stores/TilemapEditorStore';
 import { TilemapCanvas } from '../TilemapCanvas';
@@ -567,7 +566,7 @@ const PanelDivider: React.FC<PanelDividerProps> = ({ onDrag, direction }) => {
 
 export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageHub: propMessageHub }) => {
     const [tilemap, setTilemap] = useState<TilemapComponent | null>(null);
-    const [entity, setEntity] = useState<Entity | null>(null);
+    const [_entity, setEntity] = useState<unknown>(null);
 
     // Panel widths for resizable layout - smaller defaults to give viewport more space
     const [leftPanelWidth, setLeftPanelWidth] = useState(180);
@@ -595,12 +594,12 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         entityId,
         pendingFilePath,
         currentFilePath,
-        currentTool,
+        currentTool: _currentTool,
         zoom,
         showGrid,
-        showCollision,
-        editingCollision,
-        tileWidth,
+        showCollision: _showCollision,
+        editingCollision: _editingCollision,
+        tileWidth: _tileWidth,
         tileHeight,
         tilesetImageUrl,
         tilesetColumns,
@@ -608,11 +607,11 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         setEntityId,
         setPendingFilePath,
         setCurrentFilePath,
-        setCurrentTool,
+        setCurrentTool: _setCurrentTool,
         setZoom,
         setShowGrid,
         setShowCollision,
-        setEditingCollision,
+        setEditingCollision: _setEditingCollision,
         setPan,
         setTileset,
         setLayers,
@@ -989,8 +988,8 @@ export const TilemapEditorPanel: React.FC<TilemapEditorPanelProps> = ({ messageH
         setPan(0, 0);
     };
 
-    // 退出全屏模式
-    const handleExitFullscreen = useCallback(() => {
+    // 退出全屏模式 (reserved for future use)
+    const _handleExitFullscreen = useCallback(() => {
         messageHub?.publish('editor:fullscreen', { fullscreen: false });
     }, [messageHub]);
 

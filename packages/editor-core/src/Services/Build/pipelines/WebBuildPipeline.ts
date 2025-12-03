@@ -711,6 +711,7 @@ export class WebBuildPipeline implements IBuildPipeline {
 
         for (const pattern of includes) {
             const regexPattern = pattern
+                .replace(/\\/g, '\\\\')
                 .replace(/\./g, '\\.')
                 .replace(/\*/g, '.*')
                 .replace(/\?/g, '.');
@@ -1112,16 +1113,6 @@ export class WebBuildPipeline implements IBuildPipeline {
             const sceneFiles = await fs.listFilesByExtension(`${context.outputDir}/assets`, ['.ecs']);
             if (sceneFiles.length > 0) {
                 mainScenePath = './assets/' + sceneFiles[0].split(/[/\\]/).pop();
-            }
-        }
-
-        const esEngineDir = `${context.outputDir}/libs/es-engine`;
-        const hasWasm = await fs.pathExists(esEngineDir);
-        let wasmFileName = 'es_engine_bg.wasm';
-        if (hasWasm) {
-            const wasmFiles = await fs.listFilesByExtension(esEngineDir, ['.wasm']);
-            if (wasmFiles.length > 0) {
-                wasmFileName = wasmFiles[0].split(/[/\\]/).pop() || wasmFileName;
             }
         }
 

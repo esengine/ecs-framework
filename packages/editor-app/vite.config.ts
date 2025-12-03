@@ -223,6 +223,7 @@ function copyEngineModulesPlugin(): Plugin {
             for (const pattern of includes) {
               // Convert glob pattern to regex
               const regexPattern = pattern
+                .replace(/\\/g, '\\\\')
                 .replace(/\./g, '\\.')
                 .replace(/\*/g, '.*')
                 .replace(/\?/g, '.');

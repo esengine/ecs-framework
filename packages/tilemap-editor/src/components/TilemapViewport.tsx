@@ -45,7 +45,7 @@ export const TilemapViewport: React.FC<TilemapViewportProps> = ({
         panX,
         panY,
         showGrid,
-        showCollision,
+        showCollision: _showCollision,
         selectedTiles,
         brushSize,
         currentLayer,
@@ -63,12 +63,12 @@ export const TilemapViewport: React.FC<TilemapViewportProps> = ({
 
     const [isPanning, setIsPanning] = useState(false);
     const [lastPanPos, setLastPanPos] = useState({ x: 0, y: 0 });
-    const [mousePos, setMousePos] = useState<{ tileX: number; tileY: number } | null>(null);
+    const [_mousePos, setMousePos] = useState<{ tileX: number; tileY: number } | null>(null);
     const [spacePressed, setSpacePressed] = useState(false);
 
-    // Get canvas size
-    const canvasWidth = tilemap.width * tileWidth;
-    const canvasHeight = tilemap.height * tileHeight;
+    // Get canvas size (reserved for future virtual scrolling)
+    const _canvasWidth = tilemap.width * tileWidth;
+    const _canvasHeight = tilemap.height * tileHeight;
 
     // Initialize viewport service
     useEffect(() => {

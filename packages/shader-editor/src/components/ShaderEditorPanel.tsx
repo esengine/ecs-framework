@@ -38,7 +38,7 @@ export function ShaderEditorPanel({ filePath: propFilePath }: ShaderEditorPanelP
 
     const [activeTab, setActiveTab] = useState<'vertex' | 'fragment'>('fragment');
     const [showAnalysis, setShowAnalysis] = useState(true);
-    const [showPreview, setShowPreview] = useState(true);
+    const [_showPreview, _setShowPreview] = useState(true);
     const [vertexAnalysis, setVertexAnalysis] = useState<ShaderAnalysis | null>(null);
     const [fragmentAnalysis, setFragmentAnalysis] = useState<ShaderAnalysis | null>(null);
     const [compileError, setCompileError] = useState<string | null>(null);

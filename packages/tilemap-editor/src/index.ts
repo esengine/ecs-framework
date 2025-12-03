@@ -3,7 +3,6 @@
  * Tilemap Editor Module Entry
  */
 
-import React from 'react';
 import type { ServiceContainer, Entity } from '@esengine/ecs-framework';
 import { Core } from '@esengine/ecs-framework';
 import type {
@@ -24,7 +23,6 @@ import {
     ComponentRegistry,
     IDialogService,
     IFileSystemService,
-    UIRegistry,
     FileActionRegistry
 } from '@esengine/editor-core';
 import type { IDialog, IFileSystem } from '@esengine/editor-core';

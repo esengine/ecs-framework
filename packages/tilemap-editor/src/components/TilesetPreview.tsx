@@ -223,7 +223,7 @@ export const TilesetPreview: React.FC<TilesetPreviewProps> = ({
         });
     };
 
-    const handleCloseContextMenu = () => {
+    const _handleCloseContextMenu = () => {
         setContextMenu(null);
     };
 
