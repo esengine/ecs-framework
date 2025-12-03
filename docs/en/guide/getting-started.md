@@ -387,8 +387,8 @@ export class ECSGameManager extends Component {
 
 You've successfully created your first ECS application! Next you can:
 
-- Check the complete [API Documentation](/en/api/README)
-- Explore more [practical examples](/en/examples/)
+- Check the complete [API Documentation](/api/README)
+- Explore more [practical examples](/examples/)
 
 ## FAQ
 
