@@ -8,6 +8,7 @@ use bytemuck::{Pod, Zeroable};
 ///
 /// # Examples | 示例
 /// ```rust
+/// use es_engine::math::Vec2;
 /// let pos = Vec2::new(100.0, 200.0);
 /// let velocity = Vec2::new(1.0, 0.0);
 /// let new_pos = pos + velocity * 16.0;

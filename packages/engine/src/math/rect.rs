@@ -8,6 +8,7 @@ use super::Vec2;
 ///
 /// # Examples | 示例
 /// ```rust
+/// use es_engine::math::{Rect, Vec2};
 /// let rect = Rect::new(10.0, 20.0, 100.0, 50.0);
 /// let point = Vec2::new(50.0, 40.0);
 /// assert!(rect.contains_point(point));
