@@ -2,7 +2,7 @@ export {
     RuntimePluginManager,
     runtimePluginManager,
     type SystemContext,
-    type PluginDescriptor,
+    type ModuleManifest,
     type IRuntimeModule,
     type IPlugin
 } from './PluginManager';

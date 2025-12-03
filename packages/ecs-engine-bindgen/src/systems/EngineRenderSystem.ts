@@ -5,8 +5,10 @@
 
 import { EntitySystem, Matcher, Entity, ComponentType, ECSSystem, Component, Core } from '@esengine/ecs-framework';
 import { TransformComponent } from '@esengine/engine-core';
+import { Color } from '@esengine/ecs-framework-math';
 import { SpriteComponent } from '@esengine/sprite';
 import { CameraComponent } from '@esengine/camera';
+import { getMaterialManager } from '@esengine/material-system';
 import type { EngineBridge } from '../core/EngineBridge';
 import { RenderBatcher } from '../core/RenderBatcher';
 import type { SpriteRenderData } from '../types';
@@ -279,7 +281,7 @@ export class EngineRenderSystem extends EntitySystem {
                 : (typeof transform.rotation === 'number' ? transform.rotation : transform.rotation.z);
 
             // Convert hex color string to packed RGBA | 将十六进制颜色字符串转换为打包的RGBA
-            const color = this.hexToPackedColor(sprite.color, sprite.alpha);
+            const color = Color.packHexAlpha(sprite.color, sprite.alpha);
 
             // Get texture ID from sprite component
             // 从精灵组件获取纹理ID
@@ -289,6 +291,16 @@ export class EngineRenderSystem extends EntitySystem {
             if (sprite.texture) {
                 textureId = this.bridge.getOrLoadTextureByPath(sprite.texture);
             }
+
+            // Get material ID from path (0 = default if not found or no path specified)
+            // 从路径获取材质 ID（0 = 默认，如果未找到或未指定路径）
+            const materialId = sprite.material
+                ? getMaterialManager().getMaterialIdByPath(sprite.material)
+                : 0;
+
+            // Collect material overrides if any
+            // 收集材质覆盖（如果有）
+            const hasOverrides = sprite.hasOverrides();
 
             // Pass actual display dimensions (sprite size * world transform scale)
             // 传递实际显示尺寸（sprite尺寸 * 世界变换缩放）
@@ -302,7 +314,11 @@ export class EngineRenderSystem extends EntitySystem {
                 originY: sprite.anchorY,
                 textureId,
                 uv,
-                color
+                color,
+                materialId,
+                // Only include overrides if there are any
+                // 仅在有覆盖时包含
+                ...(hasOverrides ? { materialOverrides: sprite.materialOverrides } : {})
             };
 
             renderItems.push({ sortingOrder: sprite.sortingOrder, sprites: [renderData] });
@@ -1053,32 +1069,6 @@ export class EngineRenderSystem extends EntitySystem {
     getTransformMode(): 'select' | 'move' | 'rotate' | 'scale' {
         return this.transformMode;
     }
-
-    /**
-     * Convert hex color string to packed RGBA.
-     * 将十六进制颜色字符串转换为打包的RGBA。
-     */
-    private hexToPackedColor(hex: string, alpha: number): number {
-        let r = 255, g = 255, b = 255;
-
-        if (typeof hex === 'string' && hex.startsWith('#')) {
-            const hexValue = hex.slice(1);
-            if (hexValue.length === 3) {
-                r = parseInt(hexValue[0] + hexValue[0], 16);
-                g = parseInt(hexValue[1] + hexValue[1], 16);
-                b = parseInt(hexValue[2] + hexValue[2], 16);
-            } else if (hexValue.length === 6) {
-                r = parseInt(hexValue.slice(0, 2), 16);
-                g = parseInt(hexValue.slice(2, 4), 16);
-                b = parseInt(hexValue.slice(4, 6), 16);
-            }
-        }
-
-        const a = Math.round(alpha * 255);
-        // Pack as 0xAABBGGRR for WebGL
-        return ((a & 0xFF) << 24) | ((b & 0xFF) << 16) | ((g & 0xFF) << 8) | (r & 0xFF);
-    }
-
 
     /**
      * Register a render data provider.

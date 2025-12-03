@@ -5,13 +5,16 @@ export { HierarchySystem } from './HierarchySystem';
 export {
     EnginePlugin,
     // 类型导出
-    type PluginCategory,
     type LoadingPhase,
-    type ModuleType,
-    type ModuleDescriptor,
-    type PluginDependency,
-    type PluginDescriptor,
     type SystemContext,
     type IRuntimeModule,
     type IPlugin
 } from './EnginePlugin';
+
+// Module Manifest types (unified module/plugin configuration)
+export {
+    type ModuleManifest,
+    type ModuleCategory,
+    type ModulePlatform,
+    type ModuleExports
+} from './ModuleManifest';

@@ -1,0 +1,21 @@
+{
+  "id": "ecs-engine-bindgen",
+  "name": "@esengine/ecs-engine-bindgen",
+  "displayName": "Engine Bindgen",
+  "description": "Bridge between ECS and Rust Engine | ECS 与 Rust 引擎之间的桥接层",
+  "version": "0.1.0",
+  "category": "Core",
+  "icon": "Link",
+  "tags": ["engine", "bindgen", "wasm", "rendering"],
+  "isCore": true,
+  "defaultEnabled": true,
+  "isEngineModule": true,
+  "canContainContent": false,
+  "platforms": ["web", "desktop"],
+  "dependencies": ["core", "math"],
+  "exports": {
+    "other": ["EngineBridge", "EngineRenderSystem", "CameraSystem"]
+  },
+  "requiresWasm": true,
+  "outputPath": "dist/index.js"
+}

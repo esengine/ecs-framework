@@ -24,6 +24,11 @@ export class GameEngine {
    */
   getCamera(): Float32Array;
   /**
+   * Check if a shader exists.
+   * 检查着色器是否存在。
+   */
+  hasShader(shader_id: number): boolean;
+  /**
    * Set camera position, zoom, and rotation.
    * 设置相机位置、缩放和旋转。
    *
@@ -42,6 +47,11 @@ export class GameEngine {
    * * `key_code` - The key code to check | 要检查的键码
    */
   isKeyDown(key_code: string): boolean;
+  /**
+   * Check if a material exists.
+   * 检查材质是否存在。
+   */
+  hasMaterial(material_id: number): boolean;
   /**
    * Load a texture from URL.
    * 从URL加载纹理。
@@ -64,6 +74,11 @@ export class GameEngine {
    * 适用于微信小游戏等环境。
    */
   static fromExternal(gl_context: any, width: number, height: number): GameEngine;
+  /**
+   * Remove a shader.
+   * 移除着色器。
+   */
+  removeShader(shader_id: number): boolean;
   /**
    * Set grid visibility.
    * 设置网格可见性。
@@ -91,6 +106,18 @@ export class GameEngine {
    */
   addGizmoRect(x: number, y: number, width: number, height: number, rotation: number, origin_x: number, origin_y: number, r: number, g: number, b: number, a: number, show_handles: boolean): void;
   /**
+   * Compile and register a custom shader.
+   * 编译并注册自定义着色器。
+   *
+   * # Arguments | 参数
+   * * `vertex_source` - Vertex shader GLSL source | 顶点着色器GLSL源代码
+   * * `fragment_source` - Fragment shader GLSL source | 片段着色器GLSL源代码
+   *
+   * # Returns | 返回
+   * The shader ID for referencing this shader | 用于引用此着色器的ID
+   */
+  compileShader(vertex_source: string, fragment_source: string): number;
+  /**
    * Render sprites as overlay (without clearing screen).
    * 渲染精灵作为叠加层（不清除屏幕）。
    *
@@ -98,6 +125,24 @@ export class GameEngine {
    * 用于在世界内容上渲染 UI。
    */
   renderOverlay(): void;
+  /**
+   * Create and register a new material.
+   * 创建并注册新材质。
+   *
+   * # Arguments | 参数
+   * * `name` - Material name for debugging | 材质名称（用于调试）
+   * * `shader_id` - Shader ID to use | 使用的着色器ID
+   * * `blend_mode` - Blend mode: 0=None, 1=Alpha, 2=Additive, 3=Multiply, 4=Screen, 5=PremultipliedAlpha
+   *
+   * # Returns | 返回
+   * The material ID for referencing this material | 用于引用此材质的ID
+   */
+  createMaterial(name: string, shader_id: number, blend_mode: number): number;
+  /**
+   * Remove a material.
+   * 移除材质。
+   */
+  removeMaterial(material_id: number): boolean;
   /**
    * Resize a specific viewport.
    * 调整特定视口大小。
@@ -141,10 +186,35 @@ export class GameEngine {
    */
   registerViewport(id: string, canvas_id: string): void;
   /**
+   * Set a material's vec2 uniform.
+   * 设置材质的vec2 uniform。
+   */
+  setMaterialVec2(material_id: number, name: string, x: number, y: number): boolean;
+  /**
+   * Set a material's vec3 uniform.
+   * 设置材质的vec3 uniform。
+   */
+  setMaterialVec3(material_id: number, name: string, x: number, y: number, z: number): boolean;
+  /**
+   * Set a material's vec4 uniform (also used for colors).
+   * 设置材质的vec4 uniform（也用于颜色）。
+   */
+  setMaterialVec4(material_id: number, name: string, x: number, y: number, z: number, w: number): boolean;
+  /**
    * Render to a specific viewport.
    * 渲染到特定视口。
    */
   renderToViewport(viewport_id: string): void;
+  /**
+   * Set a material's color uniform (RGBA, 0.0-1.0).
+   * 设置材质的颜色uniform（RGBA，0.0-1.0）。
+   */
+  setMaterialColor(material_id: number, name: string, r: number, g: number, b: number, a: number): boolean;
+  /**
+   * Set a material's float uniform.
+   * 设置材质的浮点uniform。
+   */
+  setMaterialFloat(material_id: number, name: string, value: number): boolean;
   /**
    * Set transform tool mode.
    * 设置变换工具模式。
@@ -191,8 +261,9 @@ export class GameEngine {
    * * `texture_ids` - Uint32Array of texture IDs | 纹理ID数组
    * * `uvs` - Float32Array [u0, v0, u1, v1] per sprite | 每个精灵的UV坐标
    * * `colors` - Uint32Array of packed RGBA colors | 打包的RGBA颜色数组
+   * * `material_ids` - Uint32Array of material IDs (0 = default) | 材质ID数组（0 = 默认）
    */
-  submitSpriteBatch(transforms: Float32Array, texture_ids: Uint32Array, uvs: Float32Array, colors: Uint32Array): void;
+  submitSpriteBatch(transforms: Float32Array, texture_ids: Uint32Array, uvs: Float32Array, colors: Uint32Array, material_ids: Uint32Array): void;
   /**
    * Unregister a viewport.
    * 注销视口。
@@ -207,6 +278,11 @@ export class GameEngine {
    */
   loadTextureByPath(path: string): number;
   /**
+   * Compile a shader with a specific ID.
+   * 使用特定ID编译着色器。
+   */
+  compileShaderWithId(shader_id: number, vertex_source: string, fragment_source: string): void;
+  /**
    * Get texture ID by path.
    * 按路径获取纹理ID。
    *
@@ -214,6 +290,19 @@ export class GameEngine {
    * * `path` - Image path to lookup | 要查找的图片路径
    */
   getTextureIdByPath(path: string): number | undefined;
+  /**
+   * Create a material with a specific ID.
+   * 使用特定ID创建材质。
+   */
+  createMaterialWithId(material_id: number, name: string, shader_id: number, blend_mode: number): void;
+  /**
+   * Set a material's blend mode.
+   * 设置材质的混合模式。
+   *
+   * # Arguments | 参数
+   * * `blend_mode` - 0=None, 1=Alpha, 2=Additive, 3=Multiply, 4=Screen, 5=PremultipliedAlpha
+   */
+  setMaterialBlendMode(material_id: number, blend_mode: number): boolean;
   /**
    * Create a new game engine instance.
    * 创建新的游戏引擎实例。
@@ -272,18 +361,26 @@ export interface InitOutput {
   readonly gameengine_addGizmoLine: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
   readonly gameengine_addGizmoRect: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number) => void;
   readonly gameengine_clear: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly gameengine_compileShader: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
+  readonly gameengine_compileShaderWithId: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
+  readonly gameengine_createMaterial: (a: number, b: number, c: number, d: number, e: number) => number;
+  readonly gameengine_createMaterialWithId: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
   readonly gameengine_fromExternal: (a: any, b: number, c: number) => [number, number, number];
   readonly gameengine_getCamera: (a: number) => [number, number];
   readonly gameengine_getOrLoadTextureByPath: (a: number, b: number, c: number) => [number, number, number];
   readonly gameengine_getTextureIdByPath: (a: number, b: number, c: number) => number;
   readonly gameengine_getViewportCamera: (a: number, b: number, c: number) => [number, number];
   readonly gameengine_getViewportIds: (a: number) => [number, number];
+  readonly gameengine_hasMaterial: (a: number, b: number) => number;
+  readonly gameengine_hasShader: (a: number, b: number) => number;
   readonly gameengine_height: (a: number) => number;
   readonly gameengine_isKeyDown: (a: number, b: number, c: number) => number;
   readonly gameengine_loadTexture: (a: number, b: number, c: number, d: number) => [number, number];
   readonly gameengine_loadTextureByPath: (a: number, b: number, c: number) => [number, number, number];
   readonly gameengine_new: (a: number, b: number) => [number, number, number];
   readonly gameengine_registerViewport: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+  readonly gameengine_removeMaterial: (a: number, b: number) => number;
+  readonly gameengine_removeShader: (a: number, b: number) => number;
   readonly gameengine_render: (a: number) => [number, number];
   readonly gameengine_renderOverlay: (a: number) => [number, number];
   readonly gameengine_renderToViewport: (a: number, b: number, c: number) => [number, number];
@@ -292,12 +389,18 @@ export interface InitOutput {
   readonly gameengine_setActiveViewport: (a: number, b: number, c: number) => number;
   readonly gameengine_setCamera: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly gameengine_setClearColor: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly gameengine_setMaterialBlendMode: (a: number, b: number, c: number) => number;
+  readonly gameengine_setMaterialColor: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+  readonly gameengine_setMaterialFloat: (a: number, b: number, c: number, d: number, e: number) => number;
+  readonly gameengine_setMaterialVec2: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+  readonly gameengine_setMaterialVec3: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+  readonly gameengine_setMaterialVec4: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
   readonly gameengine_setShowGizmos: (a: number, b: number) => void;
   readonly gameengine_setShowGrid: (a: number, b: number) => void;
   readonly gameengine_setTransformMode: (a: number, b: number) => void;
   readonly gameengine_setViewportCamera: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
   readonly gameengine_setViewportConfig: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly gameengine_submitSpriteBatch: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => [number, number];
+  readonly gameengine_submitSpriteBatch: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => [number, number];
   readonly gameengine_unregisterViewport: (a: number, b: number, c: number) => void;
   readonly gameengine_updateInput: (a: number) => void;
   readonly gameengine_width: (a: number) => number;

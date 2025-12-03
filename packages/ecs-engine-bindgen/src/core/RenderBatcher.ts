@@ -74,10 +74,14 @@ export class RenderBatcher {
      * @returns Sorted array of sprites | 排序后的精灵数组
      */
     getSprites(): SpriteRenderData[] {
-        // Sort by texture ID for better batching (fewer texture switches)
-        // 按纹理ID排序以获得更好的批处理效果（减少纹理切换）
+        // Sort by material ID first, then texture ID for better batching
+        // 先按材质ID排序，再按纹理ID排序以获得更好的批处理效果
         if (!this.sortByZ) {
-            this.sprites.sort((a, b) => a.textureId - b.textureId);
+            this.sprites.sort((a, b) => {
+                const materialDiff = (a.materialId || 0) - (b.materialId || 0);
+                if (materialDiff !== 0) return materialDiff;
+                return a.textureId - b.textureId;
+            });
         }
         return this.sprites;
     }

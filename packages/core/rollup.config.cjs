@@ -70,7 +70,7 @@ module.exports = [
       warn(warning);
     },
     treeshake: {
-      moduleSideEffects: false,
+      moduleSideEffects: (id) => id.includes('reflect-metadata'),
       propertyReadSideEffects: false,
       unknownGlobalSideEffects: false
     }
@@ -102,7 +102,7 @@ module.exports = [
       warn(warning);
     },
     treeshake: {
-      moduleSideEffects: false
+      moduleSideEffects: (id) => id.includes('reflect-metadata')
     }
   },
 
@@ -133,7 +133,7 @@ module.exports = [
       warn(warning);
     },
     treeshake: {
-      moduleSideEffects: false
+      moduleSideEffects: (id) => id.includes('reflect-metadata')
     }
   },
 
@@ -193,10 +193,10 @@ module.exports = [
       warn(warning);
     },
     treeshake: {
-      moduleSideEffects: false
+      moduleSideEffects: (id) => id.includes('reflect-metadata')
     }
   },
-  
+
   // 类型定义构建
   {
     input: 'bin/index.d.ts',

@@ -7,6 +7,7 @@ import { Entity, Component } from '@esengine/ecs-framework';
 import type { EngineBridge } from './EngineBridge';
 import { RenderBatcher } from './RenderBatcher';
 import { SpriteComponent } from '@esengine/sprite';
+import { getMaterialManager } from '@esengine/material-system';
 import type { SpriteRenderData } from '../types';
 
 /**
@@ -108,6 +109,14 @@ export class SpriteRenderHelper {
             // Convert hex color string to packed RGBA
             const color = this.hexToPackedColor(sprite.color, sprite.alpha);
 
+            // Get material ID from path (0 = default if not found or no path specified)
+            const materialId = sprite.material
+                ? getMaterialManager().getMaterialIdByPath(sprite.material)
+                : 0;
+
+            // Collect material overrides if any
+            const hasOverrides = sprite.hasOverrides();
+
             const renderData: SpriteRenderData = {
                 x: transform.position.x,
                 y: transform.position.y,
@@ -118,7 +127,10 @@ export class SpriteRenderHelper {
                 originY: sprite.originY,
                 textureId: sprite.textureId,
                 uv,
-                color
+                color,
+                materialId,
+                // Only include overrides if there are any
+                ...(hasOverrides ? { materialOverrides: sprite.materialOverrides } : {})
             };
 
             this.batcher.addSprite(renderData);
