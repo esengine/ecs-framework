@@ -24,3 +24,6 @@ export type { Physics2DSystem } from './systems/Physics2DSystem';
 
 // Editor plugin (no WASM dependency)
 export { Physics2DPlugin } from './PhysicsEditorPlugin';
+
+// Runtime plugin (for game builds)
+export { PhysicsPlugin } from './PhysicsRuntimeModule';

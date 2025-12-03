@@ -56,7 +56,7 @@ export interface Physics2DSystemConfig {
  */
 export class Physics2DSystem extends EntitySystem {
     private _world: Physics2DWorld;
-    private _rapierModule: typeof import('@dimforge/rapier2d-compat') | null = null;
+    private _rapierModule: typeof import('@esengine/rapier2d') | null = null;
     private _rapierInitialized: boolean = false;
     private _config: Physics2DSystemConfig;
 
@@ -102,7 +102,7 @@ export class Physics2DSystem extends EntitySystem {
      *
      * @param rapier Rapier2D 模块
      */
-    public async initializeWithRapier(rapier: typeof import('@dimforge/rapier2d-compat')): Promise<void> {
+    public async initializeWithRapier(rapier: typeof import('@esengine/rapier2d')): Promise<void> {
         if (this._rapierInitialized) {
             this.logger.warn('Physics2DSystem already initialized');
             return;

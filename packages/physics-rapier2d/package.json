@@ -41,7 +41,8 @@
     "author": "yhh",
     "license": "MIT",
     "dependencies": {
-        "@dimforge/rapier2d-compat": "^0.14.0"
+        "@esengine/rapier2d": "workspace:*",
+        "@esengine/platform-common": "workspace:*"
     },
     "devDependencies": {
         "@esengine/ecs-framework": "workspace:*",

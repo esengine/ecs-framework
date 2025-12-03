@@ -2,6 +2,8 @@ import { defineConfig } from 'tsup';
 import { STANDARD_EXTERNALS } from '../build-config/src/types';
 
 // Physics-rapier2d keeps runtime entry for WASM loading
+// Chunks are shared between index and runtime entries
+// 保留 chunk 分割，index 和 runtime 入口共享代码
 export default defineConfig({
     entry: {
         index: 'src/index.ts',
