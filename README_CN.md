@@ -81,6 +81,17 @@ player.addComponent(new Position());
 player.addComponent(new Velocity());
 
 Core.setScene(scene);
+
+// 游戏循环
+let lastTime = 0;
+function gameLoop(currentTime: number) {
+    const deltaTime = (currentTime - lastTime) / 1000;
+    lastTime = currentTime;
+
+    Core.update(deltaTime);
+    requestAnimationFrame(gameLoop);
+}
+requestAnimationFrame(gameLoop);
 ```
 
 ## 模块

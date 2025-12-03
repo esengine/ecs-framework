@@ -183,10 +183,20 @@ html:not(.dark) {
 
 .VPContent {
   background: var(--es-bg-card) !important;
+  padding-top: 0 !important;
 }
 
 .VPContent.has-sidebar {
   background: var(--es-bg-card) !important;
+}
+
+/* 首页布局修复 | Home page layout fix */
+.VPPage {
+  padding-top: 0 !important;
+}
+
+.Layout > .VPContent {
+  padding-top: var(--vp-nav-height) !important;
 }
 
 .VPDoc {
