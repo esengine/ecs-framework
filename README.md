@@ -214,11 +214,6 @@ graph TB
 - [完整指南](https://esengine.github.io/ecs-framework/guide/) - ECS 概念和使用指南
 - [API 参考](https://esengine.github.io/ecs-framework/api/) - 完整 API 文档
 
-## 生态系统
-
-- [路径寻找](https://github.com/esengine/ecs-astar) - A*、BFS、Dijkstra 算法
-- [AI 系统](https://github.com/esengine/BehaviourTree-ai) - 行为树、效用 AI
-
 ## 💪 支持项目 / Support the Project
 
 如果这个项目对你有帮助，请考虑：
