@@ -1,0 +1,45 @@
+{
+    "name": "@esengine/shader-editor",
+    "version": "1.0.0",
+    "description": "Shader editor with code editing, analysis, and preview",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "build:watch": "tsup --watch",
+        "type-check": "tsc --noEmit",
+        "clean": "rimraf dist"
+    },
+    "devDependencies": {
+        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/engine-core": "workspace:*",
+        "@esengine/editor-core": "workspace:*",
+        "@esengine/material-system": "workspace:*",
+        "@esengine/build-config": "workspace:*",
+        "react": "^18.3.1",
+        "@types/react": "^18.2.0",
+        "lucide-react": "^0.453.0",
+        "rimraf": "^5.0.5",
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.3"
+    },
+    "keywords": [
+        "ecs",
+        "shader",
+        "editor",
+        "glsl"
+    ],
+    "author": "yhh",
+    "license": "MIT"
+}

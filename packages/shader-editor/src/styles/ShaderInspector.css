@@ -1,0 +1,286 @@
+/**
+ * Shader Inspector Styles.
+ * 着色器检视器样式。
+ */
+
+.shader-inspector {
+    font-size: 12px;
+}
+
+.shader-dirty-indicator {
+    color: var(--warning-color, #fbbf24);
+    margin-left: 4px;
+}
+
+.shader-error,
+.shader-loading {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-secondary, #888);
+}
+
+.shader-error {
+    color: var(--error-color, #f87171);
+}
+
+/* Toolbar */
+.shader-toolbar {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color, #333);
+    background: var(--bg-secondary, #252526);
+}
+
+.shader-toolbar-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1px solid var(--border-color, #444);
+    border-radius: 4px;
+    background: var(--button-bg, #333);
+    color: var(--text-primary, #e0e0e0);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.shader-toolbar-btn:hover:not(:disabled) {
+    background: var(--button-hover-bg, #444);
+    border-color: var(--accent-color, #0078d4);
+}
+
+.shader-toolbar-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Status */
+.shader-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    font-size: 11px;
+}
+
+.shader-status.success {
+    background: var(--success-bg, #1a3a1a);
+    color: var(--success-color, #4ade80);
+}
+
+.shader-status.error {
+    background: var(--error-bg, #3a2020);
+    color: var(--error-color, #f87171);
+}
+
+/* Input */
+.shader-input {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--border-color, #333);
+    border-radius: 3px;
+    background: var(--input-bg, #333);
+    color: var(--text-primary, #e0e0e0);
+    font-size: 11px;
+}
+
+.shader-input:focus {
+    outline: none;
+    border-color: var(--accent-color, #0078d4);
+}
+
+/* Tabs */
+.shader-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color, #333);
+    margin-bottom: 8px;
+}
+
+.shader-tab {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--text-secondary, #888);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.shader-tab:hover {
+    color: var(--text-primary, #e0e0e0);
+}
+
+.shader-tab.active {
+    color: var(--accent-color, #0078d4);
+    border-bottom-color: var(--accent-color, #0078d4);
+}
+
+/* Code Editor */
+.shader-code-wrapper {
+    position: relative;
+    border: 1px solid var(--border-color, #333);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.shader-code-editor {
+    width: 100%;
+    min-height: 200px;
+    max-height: 400px;
+    padding: 8px;
+    border: none;
+    background: var(--bg-tertiary, #1a1a1a);
+    color: var(--text-primary, #e0e0e0);
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+    tab-size: 4;
+    white-space: pre;
+}
+
+.shader-code-editor::placeholder {
+    color: var(--text-tertiary, #555);
+}
+
+/* Analysis */
+.shader-analysis {
+    padding: 8px 0;
+}
+
+.analysis-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.analysis-label {
+    color: var(--text-secondary, #888);
+    font-size: 11px;
+}
+
+.analysis-value {
+    color: var(--text-primary, #e0e0e0);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* Complexity Badge */
+.complexity-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.complexity-badge.low {
+    background: var(--success-bg, #1a3a1a);
+    color: var(--success-color, #4ade80);
+}
+
+.complexity-badge.medium {
+    background: var(--info-bg, #1a2a3a);
+    color: var(--info-color, #60a5fa);
+}
+
+.complexity-badge.high {
+    background: var(--warning-bg, #3a3a1a);
+    color: var(--warning-color, #fbbf24);
+}
+
+.complexity-badge.very-high {
+    background: var(--error-bg, #3a2020);
+    color: var(--error-color, #f87171);
+}
+
+/* Analysis Groups */
+.analysis-group {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color, #333);
+}
+
+.analysis-group-title {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-secondary, #888);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+/* Analysis Items */
+.analysis-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 6px;
+    margin-bottom: 2px;
+    border-radius: 3px;
+    background: var(--bg-tertiary, #1e1e1e);
+    font-size: 10px;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.item-type {
+    color: var(--accent-color, #0078d4);
+}
+
+.item-name {
+    color: var(--text-primary, #e0e0e0);
+}
+
+.item-array {
+    color: var(--text-tertiary, #666);
+}
+
+.item-location {
+    color: var(--text-tertiary, #666);
+    font-size: 9px;
+}
+
+.item-qualifier {
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 9px;
+    font-weight: 500;
+}
+
+.item-qualifier.in {
+    background: var(--success-bg, #1a3a1a);
+    color: var(--success-color, #4ade80);
+}
+
+.item-qualifier.out {
+    background: var(--info-bg, #1a2a3a);
+    color: var(--info-color, #60a5fa);
+}
+
+/* Tips and Warnings */
+.analysis-tip,
+.analysis-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    font-size: 10px;
+    line-height: 1.4;
+    background: var(--warning-bg, #3a3a1a);
+    color: var(--warning-color, #fbbf24);
+}
+
+.analysis-tip svg,
+.analysis-warning svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+}

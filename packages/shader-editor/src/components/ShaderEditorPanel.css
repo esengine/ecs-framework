@@ -1,0 +1,396 @@
+/**
+ * Shader Editor Panel Styles.
+ * 着色器编辑器面板样式。
+ */
+
+.shader-editor-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--bg-primary, #1e1e1e);
+    color: var(--text-primary, #e0e0e0);
+    font-size: 12px;
+}
+
+.shader-editor-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary, #888);
+    gap: 12px;
+}
+
+.shader-editor-hint {
+    font-size: 11px;
+    color: var(--text-tertiary, #666);
+}
+
+/* Header */
+.shader-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color, #333);
+    background: var(--bg-secondary, #252526);
+}
+
+.shader-editor-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+.shader-editor-dirty {
+    color: var(--warning-color, #fbbf24);
+}
+
+.shader-editor-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.shader-editor-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1px solid var(--border-color, #444);
+    border-radius: 4px;
+    background: var(--button-bg, #333);
+    color: var(--text-primary, #e0e0e0);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.shader-editor-btn:hover:not(:disabled) {
+    background: var(--button-hover-bg, #444);
+    border-color: var(--accent-color, #0078d4);
+}
+
+.shader-editor-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Status bar */
+.shader-editor-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    font-size: 11px;
+}
+
+.shader-editor-status.error {
+    background: var(--error-bg, #3a2020);
+    color: var(--error-color, #f87171);
+}
+
+.shader-editor-status.success {
+    background: var(--success-bg, #1a3a1a);
+    color: var(--success-color, #4ade80);
+}
+
+/* Main content */
+.shader-editor-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Code section */
+.shader-editor-code-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color, #333);
+    min-width: 0;
+}
+
+/* Tabs */
+.shader-editor-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color, #333);
+    background: var(--bg-secondary, #252526);
+}
+
+.shader-editor-tab {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--text-secondary, #888);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.shader-editor-tab:hover {
+    color: var(--text-primary, #e0e0e0);
+}
+
+.shader-editor-tab.active {
+    color: var(--accent-color, #0078d4);
+    border-bottom-color: var(--accent-color, #0078d4);
+}
+
+/* Textarea wrapper */
+.shader-editor-textarea-wrapper {
+    flex: 1;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+}
+
+.shader-editor-line-numbers {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 8px;
+    background: var(--bg-tertiary, #1a1a1a);
+    color: var(--text-tertiary, #666);
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: right;
+    user-select: none;
+    border-right: 1px solid var(--border-color, #333);
+    overflow-y: auto;
+}
+
+.shader-editor-line-numbers span {
+    min-width: 24px;
+}
+
+.shader-editor-textarea {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: var(--bg-primary, #1e1e1e);
+    color: var(--text-primary, #e0e0e0);
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    tab-size: 4;
+    white-space: pre;
+    overflow: auto;
+}
+
+.shader-editor-textarea::placeholder {
+    color: var(--text-tertiary, #555);
+}
+
+/* Analysis section */
+.shader-editor-analysis-section {
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-secondary, #252526);
+    overflow: hidden;
+}
+
+.shader-editor-section-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color, #333);
+    cursor: pointer;
+    user-select: none;
+    font-weight: 500;
+}
+
+.shader-editor-section-header:hover {
+    background: var(--bg-hover, #2a2a2a);
+}
+
+.shader-editor-analysis-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+/* Analysis sections */
+.analysis-section {
+    margin-bottom: 12px;
+    padding: 8px;
+    border-radius: 4px;
+    background: var(--bg-tertiary, #1e1e1e);
+}
+
+.analysis-section-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary, #888);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+/* Complexity badge */
+.complexity-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.complexity-badge.low {
+    background: var(--success-bg, #1a3a1a);
+    color: var(--success-color, #4ade80);
+}
+
+.complexity-badge.medium {
+    background: var(--info-bg, #1a2a3a);
+    color: var(--info-color, #60a5fa);
+}
+
+.complexity-badge.high {
+    background: var(--warning-bg, #3a3a1a);
+    color: var(--warning-color, #fbbf24);
+}
+
+.complexity-badge.very-high {
+    background: var(--error-bg, #3a2020);
+    color: var(--error-color, #f87171);
+}
+
+/* Metrics */
+.analysis-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+}
+
+.metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 11px;
+}
+
+.metric-label {
+    color: var(--text-secondary, #888);
+}
+
+.metric-value {
+    color: var(--text-primary, #e0e0e0);
+    font-weight: 500;
+}
+
+/* Analysis list */
+.analysis-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.analysis-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    background: var(--bg-primary, #1e1e1e);
+    font-size: 11px;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.item-type {
+    color: var(--accent-color, #0078d4);
+}
+
+.item-name {
+    color: var(--text-primary, #e0e0e0);
+}
+
+.item-array {
+    color: var(--text-tertiary, #666);
+}
+
+.item-location {
+    color: var(--text-tertiary, #666);
+    font-size: 10px;
+}
+
+.item-qualifier {
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 9px;
+    font-weight: 500;
+}
+
+.item-qualifier.in {
+    background: var(--success-bg, #1a3a1a);
+    color: var(--success-color, #4ade80);
+}
+
+.item-qualifier.out {
+    background: var(--info-bg, #1a2a3a);
+    color: var(--info-color, #60a5fa);
+}
+
+/* Tips and warnings */
+.analysis-tips,
+.analysis-warnings {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.analysis-tip,
+.analysis-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.analysis-tip {
+    background: var(--warning-bg, #3a3a1a);
+    color: var(--warning-color, #fbbf24);
+}
+
+.analysis-warning {
+    background: var(--warning-bg, #3a3a1a);
+    color: var(--warning-color, #fbbf24);
+}
+
+.analysis-tip svg,
+.analysis-warning svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* Info */
+.analysis-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+}
+
+.info-label {
+    color: var(--text-secondary, #888);
+}
+
+.info-value {
+    color: var(--text-primary, #e0e0e0);
+}
