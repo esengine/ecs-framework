@@ -66,6 +66,12 @@ interface EventListenerRecord {
  */
 export abstract class EntitySystem implements ISystemBase, IService {
     private _updateOrder: number;
+    /**
+     * 添加顺序，用于 updateOrder 相同时的稳定排序
+     * Add order for stable sorting when updateOrder is the same
+     * @internal
+     */
+    private _addOrder: number;
     private _enabled: boolean;
     private _performanceMonitor: PerformanceMonitor | null;
     private _systemName: string;
@@ -117,6 +123,24 @@ export abstract class EntitySystem implements ISystemBase, IService {
     }
 
     /**
+     * 获取系统的添加顺序
+     * Get the add order of the system
+     * @internal
+     */
+    public get addOrder(): number {
+        return this._addOrder;
+    }
+
+    /**
+     * 设置系统的添加顺序（由 Scene 在添加时设置）
+     * Set the add order of the system (set by Scene when adding)
+     * @internal
+     */
+    public set addOrder(value: number) {
+        this._addOrder = value;
+    }
+
+    /**
      * 获取系统的启用状态
      */
     public get enabled(): boolean {
@@ -139,6 +163,7 @@ export abstract class EntitySystem implements ISystemBase, IService {
 
     constructor(matcher?: Matcher) {
         this._updateOrder = 0;
+        this._addOrder = 0;
         this._enabled = true;
         this._performanceMonitor = null;
         this._systemName = getSystemInstanceTypeName(this);
