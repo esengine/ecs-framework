@@ -144,6 +144,14 @@ export class Scene implements IScene {
     private _maxErrorCount: number = 10;
 
     /**
+     * 系统添加计数器
+     *
+     * 用于为每个添加的系统分配唯一的添加顺序，保证排序稳定性
+     * Counter for assigning unique add order to each system for stable sorting
+     */
+    private _systemAddCounter: number = 0;
+
+    /**
      * 获取场景中所有已注册的EntitySystem
      *
      * 按updateOrder排序。使用缓存机制，仅在系统变化时重新排序。
@@ -180,10 +188,15 @@ export class Scene implements IScene {
     }
 
     /**
-     * 按updateOrder排序系统
+     * 按 updateOrder 排序系统，相同时按 addOrder 保证稳定性
+     * Sort systems by updateOrder, use addOrder as secondary key for stability
      */
     private _sortSystemsByUpdateOrder(systems: EntitySystem[]): EntitySystem[] {
-        return systems.sort((a, b) => a.updateOrder - b.updateOrder);
+        return systems.sort((a, b) => {
+            const orderDiff = a.updateOrder - b.updateOrder;
+            if (orderDiff !== 0) return orderDiff;
+            return a.addOrder - b.addOrder;
+        });
     }
 
     /**
@@ -706,6 +719,9 @@ export class Scene implements IScene {
         }
 
         system.scene = this;
+
+        // 分配添加顺序，用于稳定排序 | Assign add order for stable sorting
+        system.addOrder = this._systemAddCounter++;
 
         system.setPerformanceMonitor(this.performanceMonitor);
 
