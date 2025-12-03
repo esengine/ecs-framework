@@ -40,8 +40,21 @@ export * from './Services/FieldEditorRegistry';
 export * from './Services/ComponentInspectorRegistry';
 export * from './Services/ComponentActionRegistry';
 export * from './Services/AssetRegistryService';
+export * from './Services/IViewportService';
+export * from './Services/PreviewSceneService';
+export * from './Services/EditorViewportService';
+
+// Build System | 构建系统
+export * from './Services/Build';
+
+// User Code System | 用户代码系统
+export * from './Services/UserCode';
+
+// Module System | 模块系统
+export * from './Services/Module';
 
 export * from './Gizmos';
+export * from './Rendering';
 
 export * from './Module/IEventBus';
 export * from './Module/ICommandRegistry';

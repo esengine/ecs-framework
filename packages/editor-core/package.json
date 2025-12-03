@@ -41,6 +41,7 @@
   "devDependencies": {
     "@esengine/ecs-framework": "workspace:*",
     "@esengine/asset-system": "workspace:*",
+    "@esengine/asset-system-editor": "workspace:*",
     "@esengine/engine-core": "workspace:*",
     "@babel/core": "^7.28.3",
     "@babel/plugin-transform-nullish-coalescing-operator": "^7.27.1",

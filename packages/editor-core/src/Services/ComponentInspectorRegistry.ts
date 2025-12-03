@@ -21,6 +21,12 @@ export interface ComponentInspectorContext {
 }
 
 /**
+ * Inspector render mode.
+ * 检查器渲染模式。
+ */
+export type InspectorRenderMode = 'replace' | 'append';
+
+/**
  * 组件检查器接口
  * Interface for custom component inspectors
  */
@@ -33,6 +39,12 @@ export interface IComponentInspector<T extends Component = Component> {
     readonly priority?: number;
     /** 目标组件类型名称列表 */
     readonly targetComponents: string[];
+    /**
+     * 渲染模式
+     * - 'replace': 替换默认的 PropertyInspector（默认）
+     * - 'append': 追加到默认的 PropertyInspector 后面
+     */
+    readonly renderMode?: InspectorRenderMode;
 
     /**
      * 判断是否可以处理该组件
@@ -73,10 +85,12 @@ export class ComponentInspectorRegistry implements IService {
     }
 
     /**
-     * 查找可以处理指定组件的检查器
+     * 查找可以处理指定组件的检查器（仅 replace 模式）
+     * Find inspector that can handle the component (replace mode only)
      */
     findInspector(component: Component): IComponentInspector | undefined {
         const inspectors = Array.from(this.inspectors.values())
+            .filter(i => i.renderMode !== 'append')
             .sort((a, b) => (b.priority || 0) - (a.priority || 0));
 
         for (const inspector of inspectors) {
@@ -93,14 +107,45 @@ export class ComponentInspectorRegistry implements IService {
     }
 
     /**
-     * 检查是否有自定义检查器
+     * 查找所有追加模式的检查器
+     * Find all append-mode inspectors for the component
+     */
+    findAppendInspectors(component: Component): IComponentInspector[] {
+        const result: IComponentInspector[] = [];
+        const inspectors = Array.from(this.inspectors.values())
+            .filter(i => i.renderMode === 'append')
+            .sort((a, b) => (b.priority || 0) - (a.priority || 0));
+
+        for (const inspector of inspectors) {
+            try {
+                if (inspector.canHandle(component)) {
+                    result.push(inspector);
+                }
+            } catch (error) {
+                logger.error(`Error in canHandle for inspector ${inspector.id}:`, error);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * 检查是否有自定义检查器（replace 模式）
      */
     hasInspector(component: Component): boolean {
         return this.findInspector(component) !== undefined;
     }
 
     /**
-     * 渲染组件
+     * 检查是否有追加检查器
+     */
+    hasAppendInspectors(component: Component): boolean {
+        return this.findAppendInspectors(component).length > 0;
+    }
+
+    /**
+     * 渲染组件（replace 模式）
+     * Render component with replace-mode inspector
      */
     render(context: ComponentInspectorContext): React.ReactElement | null {
         const inspector = this.findInspector(context.component);
@@ -118,6 +163,38 @@ export class ComponentInspectorRegistry implements IService {
                 '[Inspector Render Error]'
             );
         }
+    }
+
+    /**
+     * 渲染追加检查器
+     * Render append-mode inspectors
+     */
+    renderAppendInspectors(context: ComponentInspectorContext): React.ReactElement[] {
+        const inspectors = this.findAppendInspectors(context.component);
+        const elements: React.ReactElement[] = [];
+
+        for (const inspector of inspectors) {
+            try {
+                elements.push(
+                    React.createElement(
+                        React.Fragment,
+                        { key: inspector.id },
+                        inspector.render(context)
+                    )
+                );
+            } catch (error) {
+                logger.error(`Error rendering append inspector ${inspector.id}:`, error);
+                elements.push(
+                    React.createElement(
+                        'span',
+                        { key: inspector.id, style: { color: '#f87171', fontStyle: 'italic' } },
+                        `[${inspector.name} Error]`
+                    )
+                );
+            }
+        }
+
+        return elements;
     }
 
     /**

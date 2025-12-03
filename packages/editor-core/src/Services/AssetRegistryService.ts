@@ -4,22 +4,25 @@
  *
  * 负责扫描项目资产目录，为每个资产生成唯一GUID，
  * 并维护 GUID ↔ 路径 的映射关系。
+ * 使用 .meta 文件持久化存储每个资产的 GUID。
  *
  * Responsible for scanning project asset directories,
  * generating unique GUIDs for each asset, and maintaining
  * GUID ↔ path mappings.
+ * Uses .meta files to persistently store each asset's GUID.
  */
 
-import { Core } from '@esengine/ecs-framework';
+import { Core, createLogger } from '@esengine/ecs-framework';
 import { MessageHub } from './MessageHub';
+import {
+    AssetMetaManager,
+    IAssetMeta,
+    IMetaFileSystem,
+    inferAssetType
+} from '@esengine/asset-system-editor';
 
-// Simple logger for AssetRegistry
-const logger = {
-    info: (msg: string, ...args: unknown[]) => console.log(`[AssetRegistry] ${msg}`, ...args),
-    warn: (msg: string, ...args: unknown[]) => console.warn(`[AssetRegistry] ${msg}`, ...args),
-    error: (msg: string, ...args: unknown[]) => console.error(`[AssetRegistry] ${msg}`, ...args),
-    debug: (msg: string, ...args: unknown[]) => console.debug(`[AssetRegistry] ${msg}`, ...args),
-};
+// Logger for AssetRegistry using core's logger
+const logger = createLogger('AssetRegistry');
 
 /**
  * Asset GUID type (simplified, no dependency on asset-system)
@@ -213,6 +216,9 @@ export class AssetRegistryService {
     private _messageHub: MessageHub | null = null;
     private _initialized = false;
 
+    /** Asset meta manager for .meta file management */
+    private _metaManager: AssetMetaManager;
+
     /** Manifest file name */
     static readonly MANIFEST_FILE = 'asset-manifest.json';
     /** Current manifest version */
@@ -220,6 +226,15 @@ export class AssetRegistryService {
 
     constructor() {
         this._database = new SimpleAssetDatabase();
+        this._metaManager = new AssetMetaManager();
+    }
+
+    /**
+     * Get the AssetMetaManager instance
+     * 获取 AssetMetaManager 实例
+     */
+    get metaManager(): AssetMetaManager {
+        return this._metaManager;
     }
 
     /**
@@ -270,11 +285,32 @@ export class AssetRegistryService {
 
         this._projectPath = projectPath;
         this._database.clear();
+        this._metaManager.clear();
 
-        // Try to load existing manifest
+        // Setup MetaManager with file system adapter
+        const metaFs: IMetaFileSystem = {
+            exists: (path: string) => this._fileSystem!.exists(path),
+            readText: (path: string) => this._fileSystem!.readFile(path),
+            writeText: (path: string, content: string) => this._fileSystem!.writeFile(path, content),
+            delete: async (path: string) => {
+                // Try to delete, ignore if not exists
+                try {
+                    // Note: IFileSystem may not have delete, handle gracefully
+                    const fs = this._fileSystem as IFileSystem & { delete?: (p: string) => Promise<void> };
+                    if (fs.delete) {
+                        await fs.delete(path);
+                    }
+                } catch {
+                    // Ignore delete errors
+                }
+            }
+        };
+        this._metaManager.setFileSystem(metaFs);
+
+        // Try to load existing manifest (for backward compatibility)
         await this._loadManifest();
 
-        // Scan assets directory
+        // Scan assets directory (now uses .meta files)
         await this._scanAssetsDirectory();
 
         // Save updated manifest
@@ -422,15 +458,18 @@ export class AssetRegistryService {
     private async _registerAssetFile(absolutePath: string, relativePath: string): Promise<void> {
         if (!this._fileSystem || !this._manifest) return;
 
+        // Skip .meta files
+        if (relativePath.endsWith('.meta')) return;
+
         // Get file extension
         const lastDot = relativePath.lastIndexOf('.');
         if (lastDot === -1) return; // Skip files without extension
 
         const extension = relativePath.substring(lastDot).toLowerCase();
-        const assetType = EXTENSION_TYPE_MAP[extension];
+        const assetType = EXTENSION_TYPE_MAP[extension] || inferAssetType(relativePath);
 
         // Skip unknown file types
-        if (!assetType) return;
+        if (!assetType || assetType === 'binary') return;
 
         // Get file info
         let stat: { size: number; mtime: number };
@@ -440,15 +479,19 @@ export class AssetRegistryService {
             return;
         }
 
-        // Check if already in manifest
-        let guid: AssetGUID;
-        const existingEntry = this._manifest.assets[relativePath];
+        // Use MetaManager to get or create meta (with .meta file)
+        let meta: IAssetMeta;
+        try {
+            meta = await this._metaManager.getOrCreateMeta(absolutePath);
+        } catch (e) {
+            logger.warn(`Failed to get meta for ${relativePath}:`, e);
+            return;
+        }
 
-        if (existingEntry) {
-            guid = existingEntry.guid;
-        } else {
-            // Generate new GUID
-            guid = this._generateGUID();
+        const guid = meta.guid;
+
+        // Update manifest for backward compatibility
+        if (!this._manifest.assets[relativePath]) {
             this._manifest.assets[relativePath] = {
                 guid,
                 relativePath,

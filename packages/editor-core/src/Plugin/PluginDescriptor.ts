@@ -1,22 +1,21 @@
 /**
- * 插件描述符类型
- * Plugin descriptor types
+ * 插件/模块类型定义
+ * Plugin/Module type definitions
  *
- * 从 @esengine/engine-core 重新导出基础类型，并添加编辑器专用类型。
- * Re-export base types from @esengine/engine-core, and add editor-specific types.
+ * 从 @esengine/engine-core 重新导出基础类型。
+ * Re-export base types from @esengine/engine-core.
  */
 
-// 从 engine-core 重新导出所有插件相关类型
+// 从 engine-core 重新导出所有类型
 export type {
-    PluginCategory,
     LoadingPhase,
-    ModuleType,
-    ModuleDescriptor,
-    PluginDependency,
-    PluginDescriptor,
     SystemContext,
     IRuntimeModule,
-    IPlugin
+    IPlugin,
+    ModuleManifest,
+    ModuleCategory,
+    ModulePlatform,
+    ModuleExports
 } from '@esengine/engine-core';
 
 /**

@@ -10,15 +10,14 @@ import type { ServiceContainer } from '@esengine/ecs-framework';
 
 // 从 PluginDescriptor 重新导出（来源于 engine-core）
 export type {
-    PluginCategory,
     LoadingPhase,
-    ModuleType,
-    ModuleDescriptor,
-    PluginDependency,
-    PluginDescriptor,
     SystemContext,
     IRuntimeModule,
-    IPlugin
+    IPlugin,
+    ModuleManifest,
+    ModuleCategory,
+    ModulePlatform,
+    ModuleExports
 } from './PluginDescriptor';
 
 // ============================================================================
