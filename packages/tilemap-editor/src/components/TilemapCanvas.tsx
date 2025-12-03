@@ -81,11 +81,14 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
+        const dpr = window.devicePixelRatio || 1;
+
         // Clear
         ctx.fillStyle = '#2d2d2d';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.save();
+        ctx.scale(dpr, dpr);
         ctx.translate(panX, panY);
         ctx.scale(zoom, zoom);
 
@@ -214,11 +217,16 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
                 cancelAnimationFrame(rafId);
             }
             rafId = requestAnimationFrame(() => {
+                const dpr = window.devicePixelRatio || 1;
                 const newWidth = container.clientWidth;
                 const newHeight = container.clientHeight;
-                if (canvas.width !== newWidth || canvas.height !== newHeight) {
-                    canvas.width = newWidth;
-                    canvas.height = newHeight;
+                const scaledWidth = Math.floor(newWidth * dpr);
+                const scaledHeight = Math.floor(newHeight * dpr);
+                if (canvas.width !== scaledWidth || canvas.height !== scaledHeight) {
+                    canvas.width = scaledWidth;
+                    canvas.height = scaledHeight;
+                    canvas.style.width = `${newWidth}px`;
+                    canvas.style.height = `${newHeight}px`;
                     draw();
                 }
                 rafId = null;
