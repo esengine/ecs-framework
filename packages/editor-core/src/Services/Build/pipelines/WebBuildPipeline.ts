@@ -1116,6 +1116,10 @@ export class WebBuildPipeline implements IBuildPipeline {
             }
         }
 
+        // Check if WASM engine is available
+        const esEngineDir = `${context.outputDir}/libs/es-engine`;
+        const hasWasm = await fs.pathExists(esEngineDir);
+
         const useBundledModules = webConfig.bundleModules !== false;
         let importMapScript = '';
         let pluginImportCode = '';
