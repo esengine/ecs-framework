@@ -32,7 +32,7 @@ import { TransformComponent } from '@esengine/engine-core';
 
 // Runtime imports from @esengine/tilemap
 import { TilemapComponent, TilemapCollider2DComponent, TilemapRuntimeModule } from '@esengine/tilemap';
-import type { IPlugin, PluginDescriptor } from '@esengine/editor-core';
+import type { IPlugin, ModuleManifest } from '@esengine/editor-core';
 import { TilemapEditorPanel } from './components/panels/TilemapEditorPanel';
 import { TilemapInspectorProvider } from './providers/TilemapInspectorProvider';
 import { registerTilemapGizmo } from './gizmos/TilemapGizmo';
@@ -46,6 +46,7 @@ import './styles/TilemapEditor.css';
 export { TilemapEditorPanel } from './components/panels/TilemapEditorPanel';
 export { TilesetPanel } from './components/panels/TilesetPanel';
 export { TilemapCanvas } from './components/TilemapCanvas';
+export { TilemapViewport } from './components/TilemapViewport';
 export { TilesetPreview } from './components/TilesetPreview';
 export { useTilemapEditorStore } from './stores/TilemapEditorStore';
 export type { TilemapEditorState, TilemapToolType, TileSelection } from './stores/TilemapEditorStore';
@@ -53,7 +54,10 @@ export type { ITilemapTool, ToolContext } from './tools/ITilemapTool';
 export { BrushTool } from './tools/BrushTool';
 export { EraserTool } from './tools/EraserTool';
 export { FillTool } from './tools/FillTool';
+export { RectangleTool } from './tools/RectangleTool';
+export { SelectTool } from './tools/SelectTool';
 export { TilemapInspectorProvider } from './providers/TilemapInspectorProvider';
+export { TileAnimationEditor } from './components/panels/TileAnimationEditor';
 
 /**
  * Tilemap 编辑器模块
@@ -355,22 +359,26 @@ export class TilemapEditorModule implements IEditorModuleLoader {
 export const tilemapEditorModule = new TilemapEditorModule();
 
 /**
- * Tilemap 插件描述符
- * Tilemap Plugin Descriptor
+ * Tilemap 插件清单
+ * Tilemap Plugin Manifest
  */
-const descriptor: PluginDescriptor = {
+const manifest: ModuleManifest = {
     id: '@esengine/tilemap',
-    name: 'Tilemap',
+    name: '@esengine/tilemap',
+    displayName: 'Tilemap',
     version: '1.0.0',
     description: 'Tilemap system with Tiled editor support',
-    category: 'tilemap',
-    enabledByDefault: false,
-    isEnginePlugin: true,
+    category: 'Rendering',
+    isCore: false,
+    defaultEnabled: false,
+    isEngineModule: true,
     canContainContent: true,
-    modules: [
-        { name: 'Runtime', type: 'runtime', loadingPhase: 'default' },
-        { name: 'Editor', type: 'editor', loadingPhase: 'postDefault' }
-    ]
+    dependencies: ['engine-core'],
+    exports: {
+        components: ['TilemapComponent', 'TilemapCollider2DComponent'],
+        systems: ['TilemapRenderingSystem'],
+        loaders: ['TilemapLoader', 'TilesetLoader']
+    }
 };
 
 /**
@@ -378,7 +386,7 @@ const descriptor: PluginDescriptor = {
  * Complete Tilemap Plugin (runtime + editor)
  */
 export const TilemapPlugin: IPlugin = {
-    descriptor,
+    manifest,
     runtimeModule: new TilemapRuntimeModule(),
     editorModule: tilemapEditorModule
 };

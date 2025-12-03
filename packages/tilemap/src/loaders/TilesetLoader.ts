@@ -4,11 +4,10 @@
  */
 
 import {
-    IAssetLoadOptions,
-    IAssetMetadata,
-    IAssetLoadResult,
-    AssetLoadError,
-    IAssetLoader
+    IAssetLoader,
+    IAssetContent,
+    IAssetParseContext,
+    AssetContentType
 } from '@esengine/asset-system';
 import { TilesetAssetType } from '../constants';
 
@@ -56,89 +55,38 @@ export interface ITilesetAsset {
 export class TilesetLoader implements IAssetLoader<ITilesetAsset> {
     readonly supportedType = TilesetAssetType;
     readonly supportedExtensions = ['.tileset.json', '.tileset'];
+    readonly contentType: AssetContentType = 'text';
 
     /**
-     * Load tileset asset
-     * 加载瓦片集资产
+     * Parse tileset asset from text content
+     * 从文本内容解析瓦片集资产
      */
-    async load(
-        path: string,
-        metadata: IAssetMetadata,
-        options?: IAssetLoadOptions
-    ): Promise<IAssetLoadResult<ITilesetAsset>> {
-        const startTime = performance.now();
-
-        try {
-            const response = await this.fetchWithTimeout(path, options?.timeout);
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const jsonData = await response.json() as ITilesetAsset;
-
-            // 验证必要字段
-            if (!jsonData.tileWidth || !jsonData.tileHeight || !jsonData.image) {
-                throw new Error('Invalid tileset format: missing required fields');
-            }
-
-            // 计算派生字段（如果未提供）
-            if (!jsonData.columns && jsonData.imageWidth) {
-                jsonData.columns = Math.floor(jsonData.imageWidth / jsonData.tileWidth);
-            }
-            if (!jsonData.rows && jsonData.imageHeight) {
-                jsonData.rows = Math.floor(jsonData.imageHeight / jsonData.tileHeight);
-            }
-            if (!jsonData.tileCount && jsonData.columns && jsonData.rows) {
-                jsonData.tileCount = jsonData.columns * jsonData.rows;
-            }
-
-            return {
-                asset: jsonData,
-                handle: 0,
-                metadata,
-                loadTime: performance.now() - startTime
-            };
-        } catch (error) {
-            if (error instanceof Error) {
-                throw new AssetLoadError(
-                    `Failed to load tileset: ${error.message}`,
-                    metadata.guid,
-                    TilesetAssetType,
-                    error
-                );
-            }
-            throw AssetLoadError.fileNotFound(metadata.guid, path);
+    async parse(content: IAssetContent, _context: IAssetParseContext): Promise<ITilesetAsset> {
+        if (!content.text) {
+            throw new Error('Tileset content is empty');
         }
-    }
 
-    /**
-     * Fetch with timeout
-     * 带超时的fetch
-     */
-    private async fetchWithTimeout(url: string, timeout = 30000): Promise<Response> {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        const jsonData = JSON.parse(content.text) as ITilesetAsset;
 
-        try {
-            const response = await fetch(url, {
-                signal: controller.signal,
-                mode: 'cors',
-                credentials: 'same-origin'
-            });
-            return response;
-        } finally {
-            clearTimeout(timeoutId);
+        // 验证必要字段
+        // Validate required fields
+        if (!jsonData.tileWidth || !jsonData.tileHeight || !jsonData.image) {
+            throw new Error('Invalid tileset format: missing required fields');
         }
-    }
 
-    /**
-     * Validate if the loader can handle this asset
-     * 验证加载器是否可以处理此资产
-     */
-    canLoad(path: string, _metadata: IAssetMetadata): boolean {
-        const lowerPath = path.toLowerCase();
-        return this.supportedExtensions.some(ext => lowerPath.endsWith(ext));
+        // 计算派生字段（如果未提供）
+        // Calculate derived fields if not provided
+        if (!jsonData.columns && jsonData.imageWidth) {
+            jsonData.columns = Math.floor(jsonData.imageWidth / jsonData.tileWidth);
+        }
+        if (!jsonData.rows && jsonData.imageHeight) {
+            jsonData.rows = Math.floor(jsonData.imageHeight / jsonData.tileHeight);
+        }
+        if (!jsonData.tileCount && jsonData.columns && jsonData.rows) {
+            jsonData.tileCount = jsonData.columns * jsonData.rows;
+        }
+
+        return jsonData;
     }
 
     /**

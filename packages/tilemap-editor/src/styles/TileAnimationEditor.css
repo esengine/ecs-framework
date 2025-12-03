@@ -1,0 +1,339 @@
+/**
+ * Tile Animation Editor Styles
+ * 瓦片动画编辑器样式
+ */
+
+.tile-animation-editor-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.tile-animation-editor {
+    background: #252526;
+    border: 1px solid #3c3c3c;
+    border-radius: 8px;
+    width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.animation-editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #3c3c3c;
+    background: #2d2d2d;
+    border-radius: 8px 8px 0 0;
+}
+
+.animation-editor-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #e0e0e0;
+}
+
+.animation-editor-header .close-btn {
+    background: none;
+    border: none;
+    color: #808080;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.animation-editor-header .close-btn:hover {
+    background: #3c3c3c;
+    color: #e0e0e0;
+}
+
+.animation-editor-content {
+    display: flex;
+    padding: 16px;
+    gap: 16px;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Preview Section */
+.animation-preview-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.preview-box {
+    background: #1a1a1a;
+    border: 1px solid #3c3c3c;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.animation-preview-canvas {
+    display: block;
+    image-rendering: pixelated;
+}
+
+.preview-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.preview-btn {
+    background: #3c3c3c;
+    border: none;
+    color: #e0e0e0;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-btn:hover {
+    background: #4c4c4c;
+}
+
+.preview-btn.active {
+    background: #0e639c;
+}
+
+.frame-indicator {
+    font-size: 12px;
+    color: #808080;
+}
+
+/* Frames Section */
+.animation-frames-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.frames-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #e0e0e0;
+}
+
+.frame-count {
+    color: #808080;
+}
+
+.frames-list {
+    flex: 1;
+    overflow-y: auto;
+    background: #1a1a1a;
+    border: 1px solid #3c3c3c;
+    border-radius: 4px;
+    padding: 8px;
+    min-height: 150px;
+    max-height: 200px;
+}
+
+.frames-empty {
+    text-align: center;
+    color: #808080;
+    font-size: 12px;
+    padding: 40px 20px;
+}
+
+.frame-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: #252526;
+    border: 1px solid #3c3c3c;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    cursor: grab;
+}
+
+.frame-item:active {
+    cursor: grabbing;
+}
+
+.frame-item.drag-over {
+    border-color: #0e639c;
+    background: #1e3a5f;
+}
+
+.frame-drag-handle {
+    color: #606060;
+    cursor: grab;
+}
+
+.frame-preview {
+    flex-shrink: 0;
+}
+
+.frame-preview canvas {
+    display: block;
+    image-rendering: pixelated;
+    border: 1px solid #3c3c3c;
+    border-radius: 2px;
+}
+
+.frame-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.frame-tile-id {
+    color: #808080;
+    min-width: 32px;
+}
+
+.frame-duration-input {
+    width: 60px;
+    background: #1a1a1a;
+    border: 1px solid #3c3c3c;
+    color: #e0e0e0;
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.frame-duration-input:focus {
+    outline: none;
+    border-color: #0e639c;
+}
+
+.duration-unit {
+    color: #808080;
+}
+
+.frame-delete-btn {
+    background: none;
+    border: none;
+    color: #808080;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.frame-delete-btn:hover {
+    background: #5a1d1d;
+    color: #ff6b6b;
+}
+
+/* Tileset Section */
+.animation-tileset-section {
+    border-top: 1px solid #3c3c3c;
+    padding: 12px 16px;
+}
+
+.tileset-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #e0e0e0;
+}
+
+.default-duration {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #808080;
+}
+
+.default-duration input {
+    width: 60px;
+    background: #1a1a1a;
+    border: 1px solid #3c3c3c;
+    color: #e0e0e0;
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.default-duration input:focus {
+    outline: none;
+    border-color: #0e639c;
+}
+
+.tileset-scroll-container {
+    max-height: 150px;
+    overflow: auto;
+    background: #1a1a1a;
+    border: 1px solid #3c3c3c;
+    border-radius: 4px;
+}
+
+.animation-tileset-canvas {
+    display: block;
+    image-rendering: pixelated;
+    cursor: pointer;
+}
+
+/* Footer */
+.animation-editor-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-top: 1px solid #3c3c3c;
+    background: #2d2d2d;
+    border-radius: 0 0 8px 8px;
+}
+
+.footer-right {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-primary {
+    background: #0e639c;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #1177bb;
+}
+
+.btn-secondary {
+    background: #3c3c3c;
+    color: #e0e0e0;
+}
+
+.btn-secondary:hover {
+    background: #4c4c4c;
+}

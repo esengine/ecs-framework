@@ -4,6 +4,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useTilemapEditorStore, type TileSelection } from '../stores/TilemapEditorStore';
+import type { ITilesetData, ITileAnimation } from '@esengine/tilemap';
 
 interface TilesetPreviewProps {
     imageUrl: string;
@@ -11,7 +12,10 @@ interface TilesetPreviewProps {
     tileHeight: number;
     columns: number;
     rows: number;
+    tileset?: ITilesetData;
+    animatedTileIds?: Set<number>;
     onSelectionChange?: (selection: TileSelection) => void;
+    onEditAnimation?: (tileId: number) => void;
 }
 
 export const TilesetPreview: React.FC<TilesetPreviewProps> = ({
@@ -20,7 +24,10 @@ export const TilesetPreview: React.FC<TilesetPreviewProps> = ({
     tileHeight,
     columns,
     rows,
+    tileset,
+    animatedTileIds,
     onSelectionChange,
+    onEditAnimation,
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -29,6 +36,7 @@ export const TilesetPreview: React.FC<TilesetPreviewProps> = ({
     const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
     const [selectionEnd, setSelectionEnd] = useState<{ x: number; y: number } | null>(null);
     const [zoom, setZoom] = useState(1);
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tileId: number } | null>(null);
 
     const selectedTiles = useTilemapEditorStore(state => state.selectedTiles);
     const setSelectedTiles = useTilemapEditorStore(state => state.setSelectedTiles);
@@ -101,7 +109,24 @@ export const TilesetPreview: React.FC<TilesetPreviewProps> = ({
                 selectedTiles.height * tileHeight - 2
             );
         }
-    }, [image, columns, rows, tileWidth, tileHeight, selectedTiles, isSelecting, selectionStart, selectionEnd]);
+
+        // Draw animation indicators
+        if (animatedTileIds && animatedTileIds.size > 0) {
+            for (const tileId of animatedTileIds) {
+                const x = (tileId % columns) * tileWidth;
+                const y = Math.floor(tileId / columns) * tileHeight;
+
+                // Draw small play icon in bottom-right corner
+                ctx.fillStyle = 'rgba(0, 180, 0, 0.9)';
+                ctx.beginPath();
+                ctx.moveTo(x + tileWidth - 12, y + tileHeight - 10);
+                ctx.lineTo(x + tileWidth - 12, y + tileHeight - 2);
+                ctx.lineTo(x + tileWidth - 4, y + tileHeight - 6);
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+    }, [image, columns, rows, tileWidth, tileHeight, selectedTiles, isSelecting, selectionStart, selectionEnd, animatedTileIds]);
 
     useEffect(() => {
         draw();
@@ -184,12 +209,47 @@ export const TilesetPreview: React.FC<TilesetPreviewProps> = ({
         setSelectionEnd(null);
     };
 
+    const handleContextMenu = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (!onEditAnimation) return;
+
+        const coords = getTileCoords(e);
+        const tileId = coords.y * columns + coords.x;
+
+        setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            tileId
+        });
+    };
+
+    const handleCloseContextMenu = () => {
+        setContextMenu(null);
+    };
+
+    const handleEditAnimation = () => {
+        if (contextMenu && onEditAnimation) {
+            onEditAnimation(contextMenu.tileId);
+        }
+        setContextMenu(null);
+    };
+
+    // Close context menu when clicking outside
+    useEffect(() => {
+        const handleClick = () => setContextMenu(null);
+        if (contextMenu) {
+            document.addEventListener('click', handleClick);
+            return () => document.removeEventListener('click', handleClick);
+        }
+    }, [contextMenu]);
+
     return (
         <div
             ref={containerRef}
             style={{
                 width: '100%',
                 height: '100%',
+                position: 'relative',
             }}
             onWheel={handleWheel}
         >
@@ -204,7 +264,43 @@ export const TilesetPreview: React.FC<TilesetPreviewProps> = ({
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
+                onContextMenu={handleContextMenu}
             />
+            {contextMenu && (
+                <div
+                    className="tileset-context-menu"
+                    style={{
+                        position: 'fixed',
+                        left: contextMenu.x,
+                        top: contextMenu.y,
+                        background: '#252526',
+                        border: '1px solid #3c3c3c',
+                        borderRadius: '4px',
+                        padding: '4px 0',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                        zIndex: 1000,
+                    }}
+                >
+                    <button
+                        style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: '6px 16px',
+                            background: 'none',
+                            border: 'none',
+                            color: '#e0e0e0',
+                            fontSize: '12px',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#094771'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                        onClick={handleEditAnimation}
+                    >
+                        编辑动画... (瓦片 #{contextMenu.tileId})
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

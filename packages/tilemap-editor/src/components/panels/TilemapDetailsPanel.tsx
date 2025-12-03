@@ -15,7 +15,8 @@ import {
     Search,
     Settings,
     Eye,
-    EyeOff
+    EyeOff,
+    FileBox
 } from 'lucide-react';
 import { useTilemapEditorStore, type LayerState } from '../../stores/TilemapEditorStore';
 import type { TilemapComponent } from '@esengine/tilemap';
@@ -26,8 +27,11 @@ interface TilemapDetailsPanelProps {
     onAddLayer: () => void;
     onRemoveLayer: (index: number) => void;
     onMoveLayer: (from: number, to: number) => void;
+    onDuplicateLayer: (index: number) => void;
     onTilemapChange: () => void;
     onOpenAssetPicker: () => void;
+    /** Callback to open material picker for a specific layer */
+    onSelectLayerMaterial?: (layerIndex: number) => void;
 }
 
 // Collapsible section component
@@ -123,6 +127,40 @@ const NumberProperty: React.FC<NumberPropertyProps> = ({
     </PropertyRow>
 );
 
+// Slider property for opacity etc.
+interface SliderPropertyProps {
+    label: string;
+    value: number;
+    onChange: (value: number) => void;
+    min?: number;
+    max?: number;
+    step?: number;
+}
+
+const SliderProperty: React.FC<SliderPropertyProps> = ({
+    label,
+    value,
+    onChange,
+    min = 0,
+    max = 1,
+    step = 0.01
+}) => (
+    <PropertyRow label={label}>
+        <div className="slider-wrapper">
+            <input
+                type="range"
+                className="property-slider"
+                value={value}
+                onChange={(e) => onChange(parseFloat(e.target.value))}
+                min={min}
+                max={max}
+                step={step}
+            />
+            <span className="slider-value">{Math.round(value * 100)}%</span>
+        </div>
+    </PropertyRow>
+);
+
 // Color property - unified style matching PropertyInspector
 interface ColorPropertyProps {
     label: string;
@@ -175,13 +213,85 @@ const ColorProperty: React.FC<ColorPropertyProps> = ({ label, value, onChange })
     );
 };
 
+// Material field - AssetField-like style for material selection
+interface MaterialFieldProps {
+    label: string;
+    value: string | undefined;
+    onSelect: () => void;
+    onClear: () => void;
+}
+
+const MaterialField: React.FC<MaterialFieldProps> = ({ label, value, onSelect, onClear }) => {
+    const getFileName = (path: string) => {
+        const parts = path.split(/[\\/]/);
+        return parts[parts.length - 1].replace('.mat', '').replace('.json', '');
+    };
+
+    return (
+        <div className="material-field">
+            <label className="material-field__label">{label}</label>
+            <div className="material-field__content">
+                {/* Thumbnail */}
+                <div className="material-field__thumbnail">
+                    <FileBox size={18} className="material-field__thumbnail-icon" />
+                </div>
+
+                {/* Right side */}
+                <div className="material-field__right">
+                    {/* Dropdown */}
+                    <div
+                        className={`material-field__dropdown ${value ? 'has-value' : ''}`}
+                        onClick={onSelect}
+                        title={value || '点击选择材质'}
+                    >
+                        <span className="material-field__value">
+                            {value ? getFileName(value) : '默认材质'}
+                        </span>
+                        <ChevronDown size={12} className="material-field__dropdown-arrow" />
+                    </div>
+
+                    {/* Actions */}
+                    <div className="material-field__actions">
+                        {value && (
+                            <>
+                                <button
+                                    className="material-field__btn"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(value);
+                                    }}
+                                    title="复制路径"
+                                >
+                                    <Copy size={12} />
+                                </button>
+                                <button
+                                    className="material-field__btn material-field__btn--clear"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onClear();
+                                    }}
+                                    title="清除"
+                                >
+                                    <X size={12} />
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export const TilemapDetailsPanel: React.FC<TilemapDetailsPanelProps> = ({
     tilemap,
     onAddLayer,
     onRemoveLayer,
     onMoveLayer,
+    onDuplicateLayer,
     onTilemapChange,
-    onOpenAssetPicker
+    onOpenAssetPicker,
+    onSelectLayerMaterial
 }) => {
     const {
         layers,
@@ -189,19 +299,24 @@ export const TilemapDetailsPanel: React.FC<TilemapDetailsPanelProps> = ({
         setCurrentLayer,
         toggleLayerVisibility,
         setLayerOpacity,
+        setLayerColor,
+        setLayerHiddenInGame,
+        renameLayer,
         showCollision,
         setShowCollision
     } = useTilemapEditorStore();
 
-    // Layer properties state - synced with store's visibility
+    // Layer name editing state
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [editingName, setEditingName] = useState('');
+
+    // Layer properties state - synced with store
     const selectedLayer = layers[currentLayer];
-    const [hiddenInGame, setHiddenInGame] = useState(false);
     const [layerCollides, setLayerCollides] = useState(true);
     const [overrideCollisionThickness, setOverrideCollisionThickness] = useState(false);
     const [overrideCollisionOffset, setOverrideCollisionOffset] = useState(false);
     const [collisionThickness, setCollisionThickness] = useState(50.0);
     const [collisionOffset, setCollisionOffset] = useState(0.0);
-    const [layerColor, setLayerColor] = useState('#ffffff');
 
     // hiddenInEditor is derived from layer visibility (inverse relationship)
     const hiddenInEditor = selectedLayer ? !selectedLayer.visible : false;
@@ -230,7 +345,71 @@ export const TilemapDetailsPanel: React.FC<TilemapDetailsPanelProps> = ({
         }
     }, [toggleLayerVisibility, tilemap, onTilemapChange]);
 
-    // Colors
+    // Handle layer opacity change
+    const handleLayerOpacityChange = useCallback((opacity: number) => {
+        if (currentLayer >= 0 && currentLayer < layers.length) {
+            setLayerOpacity(currentLayer, opacity);
+            // Also update tilemap component
+            if (tilemap && tilemap.layers[currentLayer]) {
+                tilemap.layers[currentLayer].opacity = opacity;
+                tilemap.renderDirty = true;
+                onTilemapChange();
+            }
+        }
+    }, [currentLayer, layers.length, setLayerOpacity, tilemap, onTilemapChange]);
+
+    // Handle layer name editing
+    const handleStartEditName = useCallback(() => {
+        if (selectedLayer) {
+            setEditingName(selectedLayer.name);
+            setIsEditingName(true);
+        }
+    }, [selectedLayer]);
+
+    const handleFinishEditName = useCallback(() => {
+        if (isEditingName && editingName.trim()) {
+            renameLayer(currentLayer, editingName.trim());
+            // Also update tilemap component
+            if (tilemap && tilemap.layers[currentLayer]) {
+                tilemap.renameLayer(currentLayer, editingName.trim());
+                onTilemapChange();
+            }
+        }
+        setIsEditingName(false);
+    }, [isEditingName, editingName, currentLayer, renameLayer, tilemap, onTilemapChange]);
+
+    const handleNameKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleFinishEditName();
+        } else if (e.key === 'Escape') {
+            setIsEditingName(false);
+        }
+    }, [handleFinishEditName]);
+
+    // Handle layer color change
+    const handleLayerColorChange = useCallback((color: string) => {
+        if (currentLayer >= 0 && currentLayer < layers.length) {
+            setLayerColor(currentLayer, color);
+            if (tilemap) {
+                tilemap.setLayerColor(currentLayer, color);
+                tilemap.renderDirty = true;
+                onTilemapChange();
+            }
+        }
+    }, [currentLayer, layers.length, setLayerColor, tilemap, onTilemapChange]);
+
+    // Handle layer hidden in game change
+    const handleHiddenInGameChange = useCallback((hidden: boolean) => {
+        if (currentLayer >= 0 && currentLayer < layers.length) {
+            setLayerHiddenInGame(currentLayer, hidden);
+            if (tilemap) {
+                tilemap.setLayerHiddenInGame(currentLayer, hidden);
+                onTilemapChange();
+            }
+        }
+    }, [currentLayer, layers.length, setLayerHiddenInGame, tilemap, onTilemapChange]);
+
+    // Colors for grid (editor settings, not layer properties)
     const [tileGridColor, setTileGridColor] = useState('#333333');
     const [multiTileGridColor, setMultiTileGridColor] = useState('#ff0000');
     const [layerGridColor, setLayerGridColor] = useState('#00ff00');
@@ -348,7 +527,8 @@ export const TilemapDetailsPanel: React.FC<TilemapDetailsPanelProps> = ({
                         </button>
                         <button
                             className="layer-action-btn"
-                            title="复制"
+                            onClick={() => onDuplicateLayer(currentLayer)}
+                            title="复制图层"
                         >
                             <Copy size={14} />
                         </button>
@@ -365,8 +545,26 @@ export const TilemapDetailsPanel: React.FC<TilemapDetailsPanelProps> = ({
 
                 {/* Selected Layer Section */}
                 <Section title="选定层">
-                    <PropertyRow label="">
-                        <span className="selected-layer-name">{selectedLayer?.name || '图层 1'}</span>
+                    <PropertyRow label="名称">
+                        {isEditingName ? (
+                            <input
+                                type="text"
+                                className="layer-name-input"
+                                value={editingName}
+                                onChange={(e) => setEditingName(e.target.value)}
+                                onBlur={handleFinishEditName}
+                                onKeyDown={handleNameKeyDown}
+                                autoFocus
+                            />
+                        ) : (
+                            <span
+                                className="selected-layer-name editable"
+                                onDoubleClick={handleStartEditName}
+                                title="双击编辑名称"
+                            >
+                                {selectedLayer?.name || '图层 1'}
+                            </span>
+                        )}
                     </PropertyRow>
                     <ToggleProperty
                         label="编辑器中隐藏"
@@ -375,8 +573,16 @@ export const TilemapDetailsPanel: React.FC<TilemapDetailsPanelProps> = ({
                     />
                     <ToggleProperty
                         label="游戏中隐藏"
-                        checked={hiddenInGame}
-                        onChange={setHiddenInGame}
+                        checked={selectedLayer?.hiddenInGame ?? false}
+                        onChange={handleHiddenInGameChange}
+                    />
+                    <SliderProperty
+                        label="图层透明度"
+                        value={selectedLayer?.opacity ?? 1}
+                        onChange={handleLayerOpacityChange}
+                        min={0}
+                        max={1}
+                        step={0.01}
                     />
                     <ToggleProperty
                         label="图层碰撞"
@@ -411,8 +617,8 @@ export const TilemapDetailsPanel: React.FC<TilemapDetailsPanelProps> = ({
                     )}
                     <ColorProperty
                         label="图层颜色"
-                        value={layerColor}
-                        onChange={setLayerColor}
+                        value={selectedLayer?.color ?? '#ffffff'}
+                        onChange={handleLayerColorChange}
                     />
                 </Section>
 
@@ -457,13 +663,18 @@ export const TilemapDetailsPanel: React.FC<TilemapDetailsPanelProps> = ({
                 </Section>
 
                 {/* Material Section */}
-                <Section title="材质" defaultOpen={false}>
-                    <PropertyRow label="材质">
-                        <button className="asset-dropdown">
-                            <span>Masked</span>
-                            <ChevronDown size={12} />
-                        </button>
-                    </PropertyRow>
+                <Section title="图层材质" defaultOpen={true}>
+                    <div className="material-section-content">
+                        <MaterialField
+                            label={`${selectedLayer?.name || '图层'} 材质`}
+                            value={tilemap.getLayerMaterial(currentLayer)}
+                            onSelect={() => onSelectLayerMaterial?.(currentLayer)}
+                            onClear={() => {
+                                tilemap.setLayerMaterial(currentLayer, '');
+                                onTilemapChange();
+                            }}
+                        />
+                    </div>
                 </Section>
 
                 {/* Advanced Section */}

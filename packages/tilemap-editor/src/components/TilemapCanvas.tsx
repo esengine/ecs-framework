@@ -4,11 +4,14 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import type { TilemapComponent } from '@esengine/tilemap';
+import { tilemapAnimationSystem } from '@esengine/tilemap';
 import { useTilemapEditorStore } from '../stores/TilemapEditorStore';
 import type { ITilemapTool, ToolContext } from '../tools/ITilemapTool';
 import { BrushTool } from '../tools/BrushTool';
 import { EraserTool } from '../tools/EraserTool';
 import { FillTool } from '../tools/FillTool';
+import { RectangleTool } from '../tools/RectangleTool';
+import { SelectTool } from '../tools/SelectTool';
 
 interface TilemapCanvasProps {
     tilemap: TilemapComponent;
@@ -20,6 +23,8 @@ const tools: Record<string, ITilemapTool> = {
     brush: new BrushTool(),
     eraser: new EraserTool(),
     fill: new FillTool(),
+    rectangle: new RectangleTool(),
+    select: new SelectTool(),
 };
 
 export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
@@ -57,9 +62,12 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
     const layersKey = layers.map(l => `${l.visible}-${l.opacity}`).join(',');
 
     const [isPanning, setIsPanning] = useState(false);
-    const [lastPanPos, setLastPanPos] = useState({ x: 0, y: 0 });
+    const lastPanPosRef = useRef({ x: 0, y: 0 });
     const [mousePos, setMousePos] = useState<{ tileX: number; tileY: number } | null>(null);
     const [spacePressed, setSpacePressed] = useState(false);
+    const [animationTime, setAnimationTime] = useState(0);
+    const lastFrameTimeRef = useRef<number>(0);
+    const animationFrameRef = useRef<number | null>(null);
 
     // Get canvas size
     const canvasWidth = tilemap.width * tileWidth;
@@ -104,9 +112,16 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
                     for (let x = 0; x < tilemap.width; x++) {
                         const tileIndex = tilemap.getTile(layerIndex, x, y);
                         if (tileIndex > 0) {
+                            // Get the tileset index for this tile (assuming single tileset for now)
+                            // tileIndex is 1-based (0 = empty), so tileId = tileIndex - 1
+                            const tileId = tileIndex - 1;
+
+                            // Get current animation frame tile ID (returns original if not animated)
+                            const displayTileId = tilemapAnimationSystem.getCurrentTileId(0, tileId);
+
                             // Calculate source position in tileset
-                            const srcX = ((tileIndex - 1) % tilesetColumns) * tileWidth;
-                            const srcY = Math.floor((tileIndex - 1) / tilesetColumns) * tileHeight;
+                            const srcX = (displayTileId % tilesetColumns) * tileWidth;
+                            const srcY = Math.floor(displayTileId / tilesetColumns) * tileHeight;
 
                             // Only draw if tile is within tileset bounds
                             if (srcX + tileWidth <= tilesetImage.width && srcY + tileHeight <= tilesetImage.height) {
@@ -182,7 +197,7 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
         }
 
         ctx.restore();
-    }, [tilemap, tilesetImage, zoom, panX, panY, showGrid, showCollision, mousePos, currentTool, selectedTiles, brushSize, currentLayer, layerLocked, editingCollision, tileWidth, tileHeight, tilesetColumns, canvasWidth, canvasHeight, layersKey]);
+    }, [tilemap, tilesetImage, zoom, panX, panY, showGrid, showCollision, mousePos, currentTool, selectedTiles, brushSize, currentLayer, layerLocked, editingCollision, tileWidth, tileHeight, tilesetColumns, canvasWidth, canvasHeight, layersKey, animationTime]);
 
     // Update canvas size
     useEffect(() => {
@@ -222,6 +237,44 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
     useEffect(() => {
         draw();
     }, [draw]);
+
+    // Register tileset animations when tilemap changes
+    useEffect(() => {
+        tilemapAnimationSystem.clear();
+        for (let i = 0; i < tilemap.tilesets.length; i++) {
+            const tilesetRef = tilemap.tilesets[i];
+            if (tilesetRef.data) {
+                tilemapAnimationSystem.registerTileset(i, tilesetRef.data);
+            }
+        }
+        return () => {
+            tilemapAnimationSystem.clear();
+        };
+    }, [tilemap]);
+
+    // Animation loop for animated tiles
+    useEffect(() => {
+        const animate = (time: number) => {
+            if (lastFrameTimeRef.current === 0) {
+                lastFrameTimeRef.current = time;
+            }
+            const deltaTime = time - lastFrameTimeRef.current;
+            lastFrameTimeRef.current = time;
+
+            tilemapAnimationSystem.update(deltaTime);
+            setAnimationTime(time);
+
+            animationFrameRef.current = requestAnimationFrame(animate);
+        };
+
+        animationFrameRef.current = requestAnimationFrame(animate);
+
+        return () => {
+            if (animationFrameRef.current !== null) {
+                cancelAnimationFrame(animationFrameRef.current);
+            }
+        };
+    }, []);
 
     // Center view on first mount
     useEffect(() => {
@@ -288,7 +341,7 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
         // Middle mouse button, Alt+left click, or Space+left click for panning
         if (e.button === 1 || (e.button === 0 && (e.altKey || spacePressed))) {
             setIsPanning(true);
-            setLastPanPos({ x: e.clientX, y: e.clientY });
+            lastPanPosRef.current = { x: e.clientX, y: e.clientY };
             return;
         }
 
@@ -313,7 +366,7 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
             };
             tool.onMouseDown(tileX, tileY, toolContext);
             onTilemapChange?.();
-            draw();
+            // draw() 由 useEffect 统一处理，避免重复绘制导致闪烁
         }
     };
 
@@ -326,10 +379,11 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
 
         // Handle panning
         if (isPanning) {
-            const dx = e.clientX - lastPanPos.x;
-            const dy = e.clientY - lastPanPos.y;
-            setPan(panX + dx, panY + dy);
-            setLastPanPos({ x: e.clientX, y: e.clientY });
+            const dx = e.clientX - lastPanPosRef.current.x;
+            const dy = e.clientY - lastPanPosRef.current.y;
+            const state = useTilemapEditorStore.getState();
+            setPan(state.panX + dx, state.panY + dy);
+            lastPanPosRef.current = { x: e.clientX, y: e.clientY };
             return;
         }
 
@@ -354,8 +408,7 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
                 onTilemapChange?.();
             }
         }
-
-        draw();
+        // draw() 由 setMousePos 触发的 useEffect 统一处理
     };
 
     const handleMouseUp = (e: React.MouseEvent) => {
@@ -389,7 +442,7 @@ export const TilemapCanvas: React.FC<TilemapCanvasProps> = ({
 
     const handleMouseLeave = () => {
         setMousePos(null);
-        draw();
+        // draw() 由 setMousePos 触发的 useEffect 统一处理
     };
 
     const handleWheel = (e: React.WheelEvent) => {
