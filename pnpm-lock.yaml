@@ -1143,9 +1143,15 @@ importers:
       '@esengine/ecs-framework':
         specifier: workspace:*
         version: link:../core
+      '@esengine/engine-core':
+        specifier: workspace:*
+        version: link:../engine-core
       '@esengine/platform-common':
         specifier: workspace:*
         version: link:../platform-common
+      '@esengine/sprite':
+        specifier: workspace:*
+        version: link:../sprite
       '@rollup/plugin-commonjs':
         specifier: ^28.0.3
         version: 28.0.9(rollup@4.53.3)

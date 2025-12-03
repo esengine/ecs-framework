@@ -49,7 +49,7 @@ export const TileSetSelectorPanel: React.FC<TileSetSelectorPanelProps> = ({
     } = useTilemapEditorStore();
 
     const [showTilesetDropdown, setShowTilesetDropdown] = useState(false);
-    const [_previewZoom, _setPreviewZoom] = useState(1);
+    const [previewZoom, _setPreviewZoom] = useState(1);
     const [editingAnimationTileId, setEditingAnimationTileId] = useState<number | null>(null);
 
     // Get animated tile IDs from tileset
