@@ -21,7 +21,8 @@ import {
     IAssetManager,
     IAssetLoadQueue
 } from '../interfaces/IAssetManager';
-import { IAssetLoader, IAssetLoaderFactory } from '../interfaces/IAssetLoader';
+import { IAssetLoader, IAssetLoaderFactory, IAssetParseContext } from '../interfaces/IAssetLoader';
+import { IAssetReader, IAssetContent } from '../interfaces/IAssetReader';
 import { AssetCache } from './AssetCache';
 import { AssetLoadQueue } from './AssetLoadQueue';
 import { AssetLoaderFactory } from '../loaders/AssetLoaderFactory';
@@ -55,6 +56,9 @@ export class AssetManager implements IAssetManager {
     private readonly _loaderFactory: IAssetLoaderFactory;
     private readonly _database: AssetDatabase;
 
+    /** Asset reader for file operations. | 用于文件操作的资产读取器。 */
+    private _reader: IAssetReader | null = null;
+
     private _nextHandle: AssetHandle = 1;
 
     private _statistics = {
@@ -71,10 +75,33 @@ export class AssetManager implements IAssetManager {
         this._loaderFactory = new AssetLoaderFactory();
         this._database = new AssetDatabase();
 
-        // 如果提供了目录，初始化数据库 / Initialize database if catalog provided
         if (catalog) {
             this.initializeFromCatalog(catalog);
         }
+    }
+
+    /**
+     * Set asset reader.
+     * 设置资产读取器。
+     */
+    setReader(reader: IAssetReader): void {
+        this._reader = reader;
+    }
+
+    /**
+     * Set project root path for resolving relative paths.
+     * 设置项目根路径用于解析相对路径。
+     */
+    setProjectRoot(path: string): void {
+        this._database.setProjectRoot(path);
+    }
+
+    /**
+     * Get the asset database.
+     * 获取资产数据库。
+     */
+    getDatabase(): AssetDatabase {
+        return this._database;
     }
 
     /**
@@ -196,32 +223,89 @@ export class AssetManager implements IAssetManager {
         startTime: number,
         entry: AssetEntry
     ): Promise<IAssetLoadResult<T>> {
-        // 加载依赖 / Load dependencies
+        if (!this._reader) {
+            throw new Error('Asset reader not set. Call setReader() first.');
+        }
+
+        // Load dependencies first.
+        // 先加载依赖。
         if (metadata.dependencies.length > 0) {
             await this.loadDependencies(metadata.dependencies, options);
         }
 
-        // 执行加载 / Execute loading
-        const result = await loader.load(metadata.path, metadata, options);
+        // Resolve absolute path.
+        // 解析绝对路径。
+        const absolutePath = this._database.resolveAbsolutePath(metadata.path);
 
-        // 更新条目 / Update entry
-        entry.asset = result.asset;
+        // Read content based on loader's content type.
+        // 根据加载器的内容类型读取内容。
+        const content = await this.readContent(loader.contentType, absolutePath);
+
+        // Create parse context.
+        // 创建解析上下文。
+        const context: IAssetParseContext = {
+            metadata,
+            options,
+            loadDependency: async <D>(relativePath: string) => {
+                const result = await this.loadAssetByPath<D>(relativePath, options);
+                return result.asset;
+            }
+        };
+
+        // Parse asset.
+        // 解析资产。
+        const asset = await loader.parse(content, context);
+
+        // Update entry.
+        // 更新条目。
+        entry.asset = asset;
         entry.state = AssetState.Loaded;
 
-        // 缓存资产 / Cache asset
-        this._cache.set(metadata.guid, result.asset);
+        // Cache asset.
+        // 缓存资产。
+        this._cache.set(metadata.guid, asset);
 
-        // 更新统计 / Update statistics
+        // Update statistics.
+        // 更新统计。
         this._statistics.loadedCount++;
 
-        const loadResult: IAssetLoadResult<T> = {
-            asset: result.asset as T,
+        return {
+            asset: asset as T,
             handle: entry.handle,
             metadata,
             loadTime: performance.now() - startTime
         };
+    }
 
-        return loadResult;
+    /**
+     * Read content based on content type.
+     * 根据内容类型读取内容。
+     */
+    private async readContent(contentType: string, absolutePath: string): Promise<IAssetContent> {
+        if (!this._reader) {
+            throw new Error('Asset reader not set');
+        }
+
+        switch (contentType) {
+            case 'text': {
+                const text = await this._reader.readText(absolutePath);
+                return { type: 'text', text };
+            }
+            case 'binary': {
+                const binary = await this._reader.readBinary(absolutePath);
+                return { type: 'binary', binary };
+            }
+            case 'image': {
+                const image = await this._reader.loadImage(absolutePath);
+                return { type: 'image', image };
+            }
+            case 'audio': {
+                const audioBuffer = await this._reader.loadAudio(absolutePath);
+                return { type: 'audio', audioBuffer };
+            }
+            default:
+                throw new Error(`Unknown content type: ${contentType}`);
+        }
     }
 
     /**
@@ -425,6 +509,19 @@ export class AssetManager implements IAssetManager {
      */
     getAssetByHandle<T = unknown>(handle: AssetHandle): T | null {
         const guid = this._handleToGuid.get(handle);
+        if (!guid) return null;
+        return this.getAsset<T>(guid);
+    }
+
+    /**
+     * Get loaded asset by path (synchronous)
+     * 通过路径获取已加载的资产（同步）
+     *
+     * Returns the asset if it's already loaded, null otherwise.
+     * 如果资产已加载则返回资产，否则返回 null。
+     */
+    getAssetByPath<T = unknown>(path: string): T | null {
+        const guid = this._pathToGuid.get(path);
         if (!guid) return null;
         return this.getAsset<T>(guid);
     }

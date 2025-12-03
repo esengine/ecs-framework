@@ -65,8 +65,8 @@ export class EngineIntegration {
      * Load texture for component
      * 为组件加载纹理
      *
-     * 统一的路径解析入口：相对路径会被转换为 Tauri 可用的 asset:// URL
-     * Unified path resolution entry: relative paths will be converted to Tauri-compatible asset:// URLs
+     * AssetManager 内部会处理路径解析，这里只需传入原始路径。
+     * AssetManager handles path resolution internally, just pass the original path here.
      */
     async loadTextureForComponent(texturePath: string): Promise<number> {
         // 检查缓存（使用原始路径作为键）
@@ -76,19 +76,18 @@ export class EngineIntegration {
             return existingId;
         }
 
-        // 使用 globalPathResolver 转换路径
-        // Use globalPathResolver to transform the path
-        const resolvedPath = globalPathResolver.resolve(texturePath);
-
-        // 通过资产系统加载（使用解析后的路径）
-        // Load through asset system (using resolved path)
-        const result = await this._assetManager.loadAssetByPath<ITextureAsset>(resolvedPath);
+        // 通过资产系统加载（AssetManager 内部会解析路径）
+        // Load through asset system (AssetManager resolves path internally)
+        const result = await this._assetManager.loadAssetByPath<ITextureAsset>(texturePath);
         const textureAsset = result.asset;
 
-        // 如果有引擎桥接，上传到GPU（使用解析后的路径）
-        // Upload to GPU if bridge exists (using resolved path)
+        // 如果有引擎桥接，上传到GPU
+        // Upload to GPU if bridge exists
+        // 使用 globalPathResolver 将路径转换为引擎可用的 URL
+        // Use globalPathResolver to convert path to engine-compatible URL
         if (this._engineBridge && textureAsset.data) {
-            await this._engineBridge.loadTexture(textureAsset.textureId, resolvedPath);
+            const engineUrl = globalPathResolver.resolve(texturePath);
+            await this._engineBridge.loadTexture(textureAsset.textureId, engineUrl);
         }
 
         // 缓存映射（使用原始路径作为键，避免重复解析）

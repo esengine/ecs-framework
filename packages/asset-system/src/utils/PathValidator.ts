@@ -6,29 +6,77 @@
  * 验证并清理资产路径以确保安全
  */
 
+/**
+ * Path validation options.
+ * 路径验证选项。
+ */
+export interface PathValidationOptions {
+    /** Allow absolute paths (for editor environment). | 允许绝对路径（用于编辑器环境）。 */
+    allowAbsolutePaths?: boolean;
+    /** Allow URLs (http://, https://, asset://). | 允许 URL。 */
+    allowUrls?: boolean;
+}
+
 export class PathValidator {
-    // Dangerous path patterns
-    private static readonly DANGEROUS_PATTERNS = [
+    // Dangerous path patterns (without absolute path checks)
+    private static readonly DANGEROUS_PATTERNS_STRICT = [
         /\.\.[/\\]/g,  // Path traversal attempts (..)
         /^[/\\]/,      // Absolute paths on Unix
         /^[a-zA-Z]:[/\\]/,  // Absolute paths on Windows
-        /[<>:"|?*]/,    // Invalid characters for Windows paths
         /\0/,           // Null bytes
         /%00/,          // URL encoded null bytes
         /\.\.%2[fF]/   // URL encoded path traversal
     ];
 
-    // Valid path characters (alphanumeric, dash, underscore, dot, slash)
+    // Dangerous path patterns (allowing absolute paths)
+    private static readonly DANGEROUS_PATTERNS_RELAXED = [
+        /\.\.[/\\]/g,  // Path traversal attempts (..)
+        /\0/,           // Null bytes
+        /%00/,          // URL encoded null bytes
+        /\.\.%2[fF]/   // URL encoded path traversal
+    ];
+
+    // Valid path characters for relative paths (alphanumeric, dash, underscore, dot, slash)
     private static readonly VALID_PATH_REGEX = /^[a-zA-Z0-9\-_./\\@]+$/;
 
+    // Valid path characters for absolute paths (includes colon for Windows drives)
+    private static readonly VALID_ABSOLUTE_PATH_REGEX = /^[a-zA-Z0-9\-_./\\@:]+$/;
+
+    // URL pattern
+    private static readonly URL_REGEX = /^(https?|asset|blob|data):\/\//;
+
     // Maximum path length
-    private static readonly MAX_PATH_LENGTH = 260;
+    private static readonly MAX_PATH_LENGTH = 1024;
+
+    /** Global options for path validation. | 路径验证的全局选项。 */
+    private static _globalOptions: PathValidationOptions = {
+        allowAbsolutePaths: false,
+        allowUrls: true
+    };
+
+    /**
+     * Set global validation options.
+     * 设置全局验证选项。
+     */
+    static setGlobalOptions(options: PathValidationOptions): void {
+        this._globalOptions = { ...this._globalOptions, ...options };
+    }
+
+    /**
+     * Get current global options.
+     * 获取当前全局选项。
+     */
+    static getGlobalOptions(): PathValidationOptions {
+        return { ...this._globalOptions };
+    }
 
     /**
      * Validate if a path is safe
      * 验证路径是否安全
      */
-    static validate(path: string): { valid: boolean; reason?: string } {
+    static validate(path: string, options?: PathValidationOptions): { valid: boolean; reason?: string } {
+        const opts = { ...this._globalOptions, ...options };
+
         // Check for null/undefined/empty
         if (!path || typeof path !== 'string') {
             return { valid: false, reason: 'Path is empty or invalid' };
@@ -39,15 +87,29 @@ export class PathValidator {
             return { valid: false, reason: `Path exceeds maximum length of ${this.MAX_PATH_LENGTH} characters` };
         }
 
+        // Allow URLs if enabled
+        if (opts.allowUrls && this.URL_REGEX.test(path)) {
+            return { valid: true };
+        }
+
+        // Choose patterns based on options
+        const patterns = opts.allowAbsolutePaths
+            ? this.DANGEROUS_PATTERNS_RELAXED
+            : this.DANGEROUS_PATTERNS_STRICT;
+
         // Check for dangerous patterns
-        for (const pattern of this.DANGEROUS_PATTERNS) {
+        for (const pattern of patterns) {
             if (pattern.test(path)) {
                 return { valid: false, reason: 'Path contains dangerous pattern' };
             }
         }
 
         // Check for valid characters
-        if (!this.VALID_PATH_REGEX.test(path)) {
+        const validCharsRegex = opts.allowAbsolutePaths
+            ? this.VALID_ABSOLUTE_PATH_REGEX
+            : this.VALID_PATH_REGEX;
+
+        if (!validCharsRegex.test(path)) {
             return { valid: false, reason: 'Path contains invalid characters' };
         }
 
