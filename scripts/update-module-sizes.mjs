@@ -36,24 +36,32 @@ function updateModuleSizes() {
         }
 
         try {
-            // Read module.json first
-            const content = fs.readFileSync(moduleJsonPath, 'utf-8');
-            const moduleJson = JSON.parse(content);
-            const oldSize = moduleJson.estimatedSize;
-
-            // Get actual file size
+            // Get actual file size first (independent of module.json)
             const stat = fs.statSync(distIndexPath);
             const actualSize = stat.size;
 
-            // Update if different
-            if (oldSize !== actualSize) {
-                moduleJson.estimatedSize = actualSize;
-                const newContent = JSON.stringify(moduleJson, null, 2) + '\n';
-                fs.writeFileSync(moduleJsonPath, newContent, 'utf-8');
-                const oldKB = oldSize ? (oldSize / 1024).toFixed(1) : 'N/A';
-                const newKB = (actualSize / 1024).toFixed(1);
-                console.log(`  ${pkg}: ${oldKB} KB -> ${newKB} KB`);
-                updated++;
+            // Use file descriptor to atomically read and write module.json
+            // This prevents TOCTOU race condition
+            const fd = fs.openSync(moduleJsonPath, 'r+');
+            try {
+                const content = fs.readFileSync(fd, 'utf-8');
+                const moduleJson = JSON.parse(content);
+                const oldSize = moduleJson.estimatedSize;
+
+                // Update if different
+                if (oldSize !== actualSize) {
+                    moduleJson.estimatedSize = actualSize;
+                    const newContent = JSON.stringify(moduleJson, null, 2) + '\n';
+                    // Truncate and write using the same file descriptor
+                    fs.ftruncateSync(fd, 0);
+                    fs.writeSync(fd, newContent, 0, 'utf-8');
+                    const oldKB = oldSize ? (oldSize / 1024).toFixed(1) : 'N/A';
+                    const newKB = (actualSize / 1024).toFixed(1);
+                    console.log(`  ${pkg}: ${oldKB} KB -> ${newKB} KB`);
+                    updated++;
+                }
+            } finally {
+                fs.closeSync(fd);
             }
         } catch (err) {
             console.error(`  Error processing ${pkg}:`, err.message);
