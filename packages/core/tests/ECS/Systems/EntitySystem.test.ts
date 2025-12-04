@@ -439,6 +439,215 @@ describe('EntitySystem', () => {
 
             scene.removeSystem(trackingSystem);
         });
+
+        it('在系统 process 中添加组件时应立即触发其他系统的 onAdded', () => {
+            // 使用独立的场景，避免 beforeEach 创建的实体干扰
+            // Use independent scene to avoid interference from beforeEach entities
+            const testScene = new Scene();
+
+            // 组件定义
+            class TagComponent extends TestComponent {}
+
+            // SystemA: 匹配 TestComponent + TagComponent
+            class SystemA extends EntitySystem {
+                public onAddedEntities: Entity[] = [];
+
+                constructor() {
+                    super(Matcher.all(TestComponent, TagComponent));
+                }
+
+                protected override onAdded(entity: Entity): void {
+                    this.onAddedEntities.push(entity);
+                }
+            }
+
+            // TriggerSystem: 在 process 中添加 TagComponent
+            class TriggerSystem extends EntitySystem {
+                constructor() {
+                    super(Matcher.all(TestComponent));
+                }
+
+                protected override process(entities: readonly Entity[]): void {
+                    for (const entity of entities) {
+                        if (!entity.hasComponent(TagComponent)) {
+                            entity.addComponent(new TagComponent());
+                        }
+                    }
+                }
+            }
+
+            const systemA = new SystemA();
+            const triggerSystem = new TriggerSystem();
+
+            // 注意：SystemA 先注册，TriggerSystem 后注册
+            // 事件驱动设计确保即使 SystemA 已执行完毕，也能收到 onAdded 通知
+            testScene.addSystem(systemA);
+            testScene.addSystem(triggerSystem);
+
+            // 创建实体（已有 TestComponent）
+            const testEntity = testScene.createEntity('test');
+            testEntity.addComponent(new TestComponent());
+
+            // 执行一帧：TriggerSystem 会添加 TagComponent，SystemA 应立即收到 onAdded
+            testScene.update();
+
+            expect(systemA.onAddedEntities.length).toBe(1);
+            expect(systemA.onAddedEntities[0]).toBe(testEntity);
+
+            testScene.removeSystem(systemA);
+            testScene.removeSystem(triggerSystem);
+        });
+
+        it('同一帧内添加后移除组件，onAdded 和 onRemoved 都应触发', () => {
+            // 使用独立的场景，避免 beforeEach 创建的实体干扰
+            // Use independent scene to avoid interference from beforeEach entities
+            const testScene = new Scene();
+
+            class TagComponent extends TestComponent {}
+
+            class TrackingSystemWithTag extends EntitySystem {
+                public onAddedEntities: Entity[] = [];
+                public onRemovedEntities: Entity[] = [];
+
+                constructor() {
+                    super(Matcher.all(TestComponent, TagComponent));
+                }
+
+                protected override onAdded(entity: Entity): void {
+                    this.onAddedEntities.push(entity);
+                }
+
+                protected override onRemoved(entity: Entity): void {
+                    this.onRemovedEntities.push(entity);
+                }
+            }
+
+            // AddSystem: 在 process 中添加 TagComponent
+            class AddSystem extends EntitySystem {
+                constructor() {
+                    super(Matcher.all(TestComponent));
+                }
+
+                protected override process(entities: readonly Entity[]): void {
+                    for (const entity of entities) {
+                        if (!entity.hasComponent(TagComponent)) {
+                            entity.addComponent(new TagComponent());
+                        }
+                    }
+                }
+            }
+
+            // RemoveSystem: 在 lateProcess 中移除 TagComponent
+            class RemoveSystem extends EntitySystem {
+                constructor() {
+                    super(Matcher.all(TagComponent));
+                }
+
+                protected override lateProcess(entities: readonly Entity[]): void {
+                    for (const entity of entities) {
+                        const tag = entity.getComponent(TagComponent);
+                        if (tag) {
+                            entity.removeComponent(tag);
+                        }
+                    }
+                }
+            }
+
+            const trackingSystem = new TrackingSystemWithTag();
+            const addSystem = new AddSystem();
+            const removeSystem = new RemoveSystem();
+
+            testScene.addSystem(trackingSystem);
+            testScene.addSystem(addSystem);
+            testScene.addSystem(removeSystem);
+
+            const testEntity = testScene.createEntity('test');
+            testEntity.addComponent(new TestComponent());
+
+            // 执行一帧
+            testScene.update();
+
+            // AddSystem 添加了 TagComponent，RemoveSystem 在 lateProcess 中移除
+            expect(testEntity.hasComponent(TagComponent)).toBe(false);
+
+            // 事件驱动：onAdded 应该在组件添加时立即触发
+            expect(trackingSystem.onAddedEntities.length).toBe(1);
+            // onRemoved 应该在组件移除时立即触发
+            expect(trackingSystem.onRemovedEntities.length).toBe(1);
+
+            testScene.removeSystem(trackingSystem);
+            testScene.removeSystem(addSystem);
+            testScene.removeSystem(removeSystem);
+        });
+
+        it('多个系统监听同一组件变化时都应收到 onAdded 通知', () => {
+            // 使用独立的场景，避免 beforeEach 创建的实体干扰
+            // Use independent scene to avoid interference from beforeEach entities
+            const testScene = new Scene();
+
+            // 使用独立的组件类，避免继承带来的问题
+            // Use independent component class to avoid inheritance issues
+            class TagComponent2 extends Component {}
+
+            class SystemA extends EntitySystem {
+                public onAddedEntities: Entity[] = [];
+
+                constructor() {
+                    super(Matcher.all(TestComponent, TagComponent2));
+                }
+
+                protected override onAdded(entity: Entity): void {
+                    this.onAddedEntities.push(entity);
+                }
+            }
+
+            class SystemB extends EntitySystem {
+                public onAddedEntities: Entity[] = [];
+
+                constructor() {
+                    super(Matcher.all(TestComponent, TagComponent2));
+                }
+
+                protected override onAdded(entity: Entity): void {
+                    this.onAddedEntities.push(entity);
+                }
+            }
+
+            class TriggerSystem extends EntitySystem {
+                constructor() {
+                    super(Matcher.all(TestComponent));
+                }
+
+                protected override process(entities: readonly Entity[]): void {
+                    for (const entity of entities) {
+                        if (!entity.hasComponent(TagComponent2)) {
+                            entity.addComponent(new TagComponent2());
+                        }
+                    }
+                }
+            }
+
+            const systemA = new SystemA();
+            const systemB = new SystemB();
+            const triggerSystem = new TriggerSystem();
+
+            testScene.addSystem(systemA);
+            testScene.addSystem(systemB);
+            testScene.addSystem(triggerSystem);
+
+            const testEntity = testScene.createEntity('test');
+            testEntity.addComponent(new TestComponent());
+
+            testScene.update();
+
+            // 两个系统都应收到 onAdded 通知
+            expect(systemA.onAddedEntities.length).toBe(1);
+            expect(systemB.onAddedEntities.length).toBe(1);
+
+            testScene.removeSystem(systemA);
+            testScene.removeSystem(systemB);
+            testScene.removeSystem(triggerSystem);
+        });
     });
 
     describe('reset 方法', () => {

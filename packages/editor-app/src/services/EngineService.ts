@@ -28,6 +28,7 @@ import {
     type GameRuntimeConfig
 } from '@esengine/runtime-core';
 import { getMaterialManager } from '@esengine/material-system';
+import { resetEngineState } from '../hooks/useEngine';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { IdGenerator } from '../utils/idGenerator';
 import { TauriAssetReader } from './TauriAssetReader';
@@ -245,7 +246,14 @@ export class EngineService {
             ctx.uiInputSystem.unbind?.();
         }
 
+        // 清理 viewport | Clear viewport
+        this.unregisterViewport('editor-viewport');
+
+        // 重置 useEngine 的模块级状态 | Reset useEngine module-level state
+        resetEngineState();
+
         this._modulesInitialized = false;
+        this._initialized = false;
     }
 
     /**

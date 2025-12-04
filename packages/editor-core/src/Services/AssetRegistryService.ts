@@ -20,6 +20,8 @@ import {
     IMetaFileSystem,
     inferAssetType
 } from '@esengine/asset-system-editor';
+import type { IFileSystem, FileEntry } from './IFileSystem';
+import { IFileSystemService } from './IFileSystem';
 
 // Logger for AssetRegistry using core's logger
 const logger = createLogger('AssetRegistry');
@@ -114,6 +116,9 @@ const EXTENSION_TYPE_MAP: Record<string, AssetRegistryType> = {
     // Data
     '.json': 'json',
     '.txt': 'text',
+    // Scripts
+    '.ts': 'script',
+    '.js': 'script',
     // Custom types
     '.btree': 'btree',
     '.ecs': 'scene',
@@ -122,17 +127,8 @@ const EXTENSION_TYPE_MAP: Record<string, AssetRegistryType> = {
     '.tsx': 'tileset',
 };
 
-/**
- * File system interface for asset scanning
- */
-interface IFileSystem {
-    readDir(path: string): Promise<string[]>;
-    readFile(path: string): Promise<string>;
-    writeFile(path: string, content: string): Promise<void>;
-    exists(path: string): Promise<boolean>;
-    stat(path: string): Promise<{ size: number; mtime: number; isDirectory: boolean }>;
-    isDirectory(path: string): Promise<boolean>;
-}
+// 使用从 IFileSystem.ts 导入的标准接口
+// Using standard interface imported from IFileSystem.ts
 
 /**
  * Simple in-memory asset database
@@ -243,9 +239,9 @@ export class AssetRegistryService {
     async initialize(): Promise<void> {
         if (this._initialized) return;
 
-        // Get file system service
-        const IFileSystemServiceKey = Symbol.for('IFileSystemService');
-        this._fileSystem = Core.services.tryResolve(IFileSystemServiceKey) as IFileSystem | null;
+        // Get file system service using the exported Symbol
+        // 使用导出的 Symbol 获取文件系统服务
+        this._fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
 
         // Get message hub
         this._messageHub = Core.services.tryResolve(MessageHub) as MessageHub | null;
@@ -254,10 +250,11 @@ export class AssetRegistryService {
         if (this._messageHub) {
             this._messageHub.subscribe('project:opened', this._onProjectOpened.bind(this));
             this._messageHub.subscribe('project:closed', this._onProjectClosed.bind(this));
+        } else {
+            logger.warn('MessageHub not available, cannot subscribe to project events');
         }
 
         this._initialized = true;
-        logger.info('AssetRegistryService initialized');
     }
 
     /**
@@ -288,18 +285,16 @@ export class AssetRegistryService {
         this._metaManager.clear();
 
         // Setup MetaManager with file system adapter
+        // 设置 MetaManager 的文件系统适配器
         const metaFs: IMetaFileSystem = {
             exists: (path: string) => this._fileSystem!.exists(path),
             readText: (path: string) => this._fileSystem!.readFile(path),
             writeText: (path: string, content: string) => this._fileSystem!.writeFile(path, content),
             delete: async (path: string) => {
-                // Try to delete, ignore if not exists
+                // Try to delete using deleteFile
+                // 尝试使用 deleteFile 删除
                 try {
-                    // Note: IFileSystem may not have delete, handle gracefully
-                    const fs = this._fileSystem as IFileSystem & { delete?: (p: string) => Promise<void> };
-                    if (fs.delete) {
-                        await fs.delete(path);
-                    }
+                    await this._fileSystem!.deleteFile(path);
                 } catch {
                     // Ignore delete errors
                 }
@@ -398,53 +393,61 @@ export class AssetRegistryService {
     }
 
     /**
-     * Scan assets directory and register all assets
+     * Scan all project directories for assets
+     * 扫描项目中所有目录的资产
      */
     private async _scanAssetsDirectory(): Promise<void> {
         if (!this._fileSystem || !this._projectPath) return;
 
         const sep = this._projectPath.includes('\\') ? '\\' : '/';
-        const assetsPath = `${this._projectPath}${sep}assets`;
 
-        try {
-            const exists = await this._fileSystem.exists(assetsPath);
-            if (!exists) {
-                logger.info('No assets directory found');
-                return;
+        // 扫描多个目录：assets, scripts, scenes
+        // Scan multiple directories: assets, scripts, scenes
+        const directoriesToScan = [
+            { path: `${this._projectPath}${sep}assets`, name: 'assets' },
+            { path: `${this._projectPath}${sep}scripts`, name: 'scripts' },
+            { path: `${this._projectPath}${sep}scenes`, name: 'scenes' }
+        ];
+
+        for (const dir of directoriesToScan) {
+            try {
+                const exists = await this._fileSystem.exists(dir.path);
+                if (!exists) continue;
+
+                await this._scanDirectory(dir.path, dir.name);
+            } catch (error) {
+                logger.error(`Failed to scan ${dir.name} directory:`, error);
             }
-
-            await this._scanDirectory(assetsPath, 'assets');
-        } catch (error) {
-            logger.error('Failed to scan assets directory:', error);
         }
     }
 
     /**
      * Recursively scan a directory
+     * 递归扫描目录
      */
     private async _scanDirectory(absolutePath: string, relativePath: string): Promise<void> {
         if (!this._fileSystem) return;
 
         try {
-            const entries = await this._fileSystem.readDir(absolutePath);
+            // 使用标准 IFileSystem.listDirectory
+            // Use standard IFileSystem.listDirectory
+            const entries: FileEntry[] = await this._fileSystem.listDirectory(absolutePath);
             const sep = absolutePath.includes('\\') ? '\\' : '/';
 
             for (const entry of entries) {
-                const entryAbsPath = `${absolutePath}${sep}${entry}`;
-                const entryRelPath = `${relativePath}/${entry}`;
+                const entryAbsPath = entry.path || `${absolutePath}${sep}${entry.name}`;
+                const entryRelPath = `${relativePath}/${entry.name}`;
 
                 try {
-                    const isDir = await this._fileSystem.isDirectory(entryAbsPath);
-
-                    if (isDir) {
+                    if (entry.isDirectory) {
                         // Recursively scan subdirectory
                         await this._scanDirectory(entryAbsPath, entryRelPath);
                     } else {
-                        // Register file as asset
-                        await this._registerAssetFile(entryAbsPath, entryRelPath);
+                        // Register file as asset with size from entry
+                        await this._registerAssetFile(entryAbsPath, entryRelPath, entry.size, entry.modified);
                     }
                 } catch (error) {
-                    logger.warn(`Failed to process entry ${entry}:`, error);
+                    logger.warn(`Failed to process entry ${entry.name}:`, error);
                 }
             }
         } catch (error) {
@@ -454,8 +457,19 @@ export class AssetRegistryService {
 
     /**
      * Register a single asset file
+     * 注册单个资产文件
+     *
+     * @param absolutePath - 绝对路径 | Absolute path
+     * @param relativePath - 相对路径 | Relative path
+     * @param size - 文件大小（可选）| File size (optional)
+     * @param modified - 修改时间（可选）| Modified time (optional)
      */
-    private async _registerAssetFile(absolutePath: string, relativePath: string): Promise<void> {
+    private async _registerAssetFile(
+        absolutePath: string,
+        relativePath: string,
+        size?: number,
+        modified?: Date
+    ): Promise<void> {
         if (!this._fileSystem || !this._manifest) return;
 
         // Skip .meta files
@@ -471,18 +485,16 @@ export class AssetRegistryService {
         // Skip unknown file types
         if (!assetType || assetType === 'binary') return;
 
-        // Get file info
-        let stat: { size: number; mtime: number };
-        try {
-            stat = await this._fileSystem.stat(absolutePath);
-        } catch {
-            return;
-        }
+        // Use provided size/modified or default values
+        const fileSize = size ?? 0;
+        const fileMtime = modified ? modified.getTime() : Date.now();
 
         // Use MetaManager to get or create meta (with .meta file)
         let meta: IAssetMeta;
         try {
+            logger.debug(`Creating/loading meta for: ${relativePath}`);
             meta = await this._metaManager.getOrCreateMeta(absolutePath);
+            logger.debug(`Meta created/loaded for ${relativePath}: guid=${meta.guid}`);
         } catch (e) {
             logger.warn(`Failed to get meta for ${relativePath}:`, e);
             return;
@@ -510,9 +522,9 @@ export class AssetRegistryService {
             path: relativePath,
             type: assetType,
             name,
-            size: stat.size,
+            size: fileSize,
             hash: '', // Could compute hash if needed
-            lastModified: stat.mtime
+            lastModified: fileMtime
         };
 
         // Register in database

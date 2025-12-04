@@ -152,6 +152,30 @@ export class Scene implements IScene {
     private _systemAddCounter: number = 0;
 
     /**
+     * 组件ID到系统的索引映射
+     *
+     * 用于快速查找关心特定组件的系统，避免遍历所有系统。
+     * 使用组件ID（数字）而非ComponentType作为key，避免类引用问题。
+     *
+     * Component ID to systems index map.
+     * Used for fast lookup of systems that care about specific components.
+     * Uses component ID (number) instead of ComponentType as key to avoid class reference issues.
+     */
+    private _componentIdToSystems: Map<number, Set<EntitySystem>> = new Map();
+
+    /**
+     * 需要接收所有组件变化通知的系统集合
+     *
+     * 包括使用 none 条件、tag/name 查询、或空匹配器的系统。
+     * 这些系统无法通过组件ID索引优化，需要在每次组件变化时都检查。
+     *
+     * Systems that need to receive all component change notifications.
+     * Includes systems using none conditions, tag/name queries, or empty matchers.
+     * These systems cannot be optimized via component ID indexing.
+     */
+    private _globalNotifySystems: Set<EntitySystem> = new Set();
+
+    /**
      * 获取场景中所有已注册的EntitySystem
      *
      * 按updateOrder排序。使用缓存机制，仅在系统变化时重新排序。
@@ -344,6 +368,10 @@ export class Scene implements IScene {
         // 清空系统缓存
         this._cachedSystems = null;
         this._systemsOrderDirty = true;
+
+        // 清空组件索引 | Clear component indices
+        this._componentIdToSystems.clear();
+        this._globalNotifySystems.clear();
     }
 
     /**
@@ -450,6 +478,146 @@ export class Scene implements IScene {
     public clearSystemEntityCaches(): void {
         for (const system of this.systems) {
             system.clearEntityCache();
+        }
+    }
+
+    /**
+     * 通知相关系统实体的组件发生了变化
+     *
+     * 这是事件驱动设计的核心：当组件被添加或移除时，立即通知相关系统检查该实体是否匹配，
+     * 并触发 onAdded/onRemoved 回调。通过组件ID索引优化，只通知关心该组件的系统。
+     *
+     * This is the core of event-driven design: when a component is added or removed,
+     * immediately notify relevant systems to check if the entity matches and trigger
+     * onAdded/onRemoved callbacks. Optimized via component ID indexing to only notify
+     * systems that care about the changed component.
+     *
+     * @param entity 组件发生变化的实体 | The entity whose components changed
+     * @param changedComponentType 变化的组件类型（可选） | The changed component type (optional)
+     */
+    public notifyEntityComponentChanged(entity: Entity, changedComponentType?: ComponentType): void {
+        // 已通知的系统集合，避免重复通知 | Set of notified systems to avoid duplicates
+        const notifiedSystems = new Set<EntitySystem>();
+
+        // 如果提供了组件类型，使用索引优化 | If component type provided, use index optimization
+        if (changedComponentType && ComponentRegistry.isRegistered(changedComponentType)) {
+            const componentId = ComponentRegistry.getBitIndex(changedComponentType);
+            const interestedSystems = this._componentIdToSystems.get(componentId);
+
+            if (interestedSystems) {
+                for (const system of interestedSystems) {
+                    system.handleEntityComponentChanged(entity);
+                    notifiedSystems.add(system);
+                }
+            }
+        }
+
+        // 通知全局监听系统（none条件、tag/name查询等） | Notify global listener systems
+        for (const system of this._globalNotifySystems) {
+            if (!notifiedSystems.has(system)) {
+                system.handleEntityComponentChanged(entity);
+                notifiedSystems.add(system);
+            }
+        }
+
+        // 如果没有提供组件类型，回退到遍历所有系统 | Fallback to all systems if no component type
+        if (!changedComponentType) {
+            for (const system of this.systems) {
+                if (!notifiedSystems.has(system)) {
+                    system.handleEntityComponentChanged(entity);
+                }
+            }
+        }
+    }
+
+    /**
+     * 将系统添加到组件索引
+     *
+     * 根据系统的 Matcher 条件，将系统注册到相应的组件ID索引中。
+     *
+     * Index a system by its interested component types.
+     * Registers the system to component ID indices based on its Matcher conditions.
+     *
+     * @param system 要索引的系统 | The system to index
+     */
+    private indexSystemByComponents(system: EntitySystem): void {
+        const matcher = system.matcher;
+        if (!matcher) {
+            return;
+        }
+
+        // nothing 匹配器不需要索引 | Nothing matcher doesn't need indexing
+        if (matcher.isNothing()) {
+            return;
+        }
+
+        const condition = matcher.getCondition();
+
+        // 有 none/tag/name 条件的系统加入全局通知 | Systems with none/tag/name go to global
+        if (condition.none.length > 0 || condition.tag !== undefined || condition.name !== undefined) {
+            this._globalNotifySystems.add(system);
+        }
+
+        // 空匹配器（匹配所有实体）加入全局通知 | Empty matcher (matches all) goes to global
+        if (matcher.isEmpty()) {
+            this._globalNotifySystems.add(system);
+            return;
+        }
+
+        // 索引 all 条件中的组件 | Index components in all condition
+        for (const componentType of condition.all) {
+            this.addSystemToComponentIndex(componentType, system);
+        }
+
+        // 索引 any 条件中的组件 | Index components in any condition
+        for (const componentType of condition.any) {
+            this.addSystemToComponentIndex(componentType, system);
+        }
+
+        // 索引单组件查询 | Index single component query
+        if (condition.component) {
+            this.addSystemToComponentIndex(condition.component, system);
+        }
+    }
+
+    /**
+     * 将系统添加到指定组件的索引
+     *
+     * Add system to the index for a specific component type.
+     *
+     * @param componentType 组件类型 | Component type
+     * @param system 系统 | System
+     */
+    private addSystemToComponentIndex(componentType: ComponentType, system: EntitySystem): void {
+        if (!ComponentRegistry.isRegistered(componentType)) {
+            ComponentRegistry.register(componentType);
+        }
+
+        const componentId = ComponentRegistry.getBitIndex(componentType);
+        let systems = this._componentIdToSystems.get(componentId);
+
+        if (!systems) {
+            systems = new Set();
+            this._componentIdToSystems.set(componentId, systems);
+        }
+
+        systems.add(system);
+    }
+
+    /**
+     * 从组件索引中移除系统
+     *
+     * Remove a system from all component indices.
+     *
+     * @param system 要移除的系统 | The system to remove
+     */
+    private removeSystemFromIndex(system: EntitySystem): void {
+        // 从全局通知列表移除 | Remove from global notify list
+        this._globalNotifySystems.delete(system);
+
+        // 从所有组件索引中移除 | Remove from all component indices
+        for (const systems of this._componentIdToSystems.values()) {
+            systems.delete(system);
         }
     }
 
@@ -738,6 +906,9 @@ export class Scene implements IScene {
         // 标记系统列表已变化
         this.markSystemsOrderDirty();
 
+        // 建立组件类型到系统的索引 | Build component type to system index
+        this.indexSystemByComponents(system);
+
         injectProperties(system, this._services);
 
         // 调试模式下自动包装系统方法以收集性能数据（ProfilerSDK 启用时表示调试模式）
@@ -821,6 +992,9 @@ export class Scene implements IScene {
 
         // 标记系统列表已变化
         this.markSystemsOrderDirty();
+
+        // 从组件类型索引中移除 | Remove from component type index
+        this.removeSystemFromIndex(processor);
 
         // 重置System状态
         processor.reset();

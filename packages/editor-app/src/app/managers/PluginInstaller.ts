@@ -14,6 +14,7 @@ import { SceneInspectorPlugin } from '../../plugins/builtin/SceneInspectorPlugin
 import { ProfilerPlugin } from '../../plugins/builtin/ProfilerPlugin';
 import { EditorAppearancePlugin } from '../../plugins/builtin/EditorAppearancePlugin';
 import { ProjectSettingsPlugin } from '../../plugins/builtin/ProjectSettingsPlugin';
+import { AssetMetaPlugin } from '../../plugins/builtin/AssetMetaPlugin';
 // Note: PluginConfigPlugin removed - module management is now unified in ProjectSettingsPlugin
 
 // 统一模块插件（从编辑器包导入完整插件，包含 runtime + editor）
@@ -38,6 +39,7 @@ export class PluginInstaller {
             { name: 'ProfilerPlugin', plugin: ProfilerPlugin },
             { name: 'EditorAppearancePlugin', plugin: EditorAppearancePlugin },
             { name: 'ProjectSettingsPlugin', plugin: ProjectSettingsPlugin },
+            { name: 'AssetMetaPlugin', plugin: AssetMetaPlugin },
         ];
 
         for (const { name, plugin } of builtinPlugins) {

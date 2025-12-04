@@ -321,11 +321,19 @@ export class Entity {
 
     /**
      * 通知Scene中的QuerySystem实体组件发生变动
+     *
+     * Notify the QuerySystem in Scene that entity components have changed
+     *
+     * @param changedComponentType 变化的组件类型（可选，用于优化通知） | Changed component type (optional, for optimized notification)
      */
-    private notifyQuerySystems(): void {
+    private notifyQuerySystems(changedComponentType?: ComponentType): void {
         if (this.scene && this.scene.querySystem) {
             this.scene.querySystem.updateEntity(this);
             this.scene.clearSystemEntityCaches();
+            // 事件驱动：立即通知关心该组件的系统 | Event-driven: notify systems that care about this component
+            if (this.scene.notifyEntityComponentChanged) {
+                this.scene.notifyEntityComponentChanged(this, changedComponentType);
+            }
         }
     }
 
@@ -381,7 +389,7 @@ export class Entity {
             });
         }
 
-        this.notifyQuerySystems();
+        this.notifyQuerySystems(componentType);
 
         return component;
     }
@@ -514,7 +522,7 @@ export class Entity {
             });
         }
 
-        this.notifyQuerySystems();
+        this.notifyQuerySystems(componentType);
     }
 
     /**

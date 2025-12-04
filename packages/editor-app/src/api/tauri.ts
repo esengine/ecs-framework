@@ -169,6 +169,26 @@ export class TauriAPI {
     }
 
     /**
+     * 使用指定编辑器打开项目
+     * Open project with specified editor
+     *
+     * @param projectPath 项目文件夹路径 | Project folder path
+     * @param editorCommand 编辑器命令（如 "code", "cursor"）| Editor command
+     * @param filePath 可选的要打开的文件路径 | Optional file path to open
+     */
+    static async openWithEditor(
+        projectPath: string,
+        editorCommand: string,
+        filePath?: string
+    ): Promise<void> {
+        await invoke('open_with_editor', {
+            projectPath,
+            editorCommand,
+            filePath: filePath || null
+        });
+    }
+
+    /**
    * 打开行为树文件选择对话框
    * @returns 用户选择的文件路径，取消则返回 null
    */
@@ -309,6 +329,16 @@ export class TauriAPI {
    */
     static async generateQRCode(text: string): Promise<string> {
         return await invoke<string>('generate_qrcode', { text });
+    }
+
+    /**
+     * 复制类型定义文件到项目
+     * Copy type definition files to project for IDE intellisense
+     *
+     * @param projectPath 项目路径 | Project path
+     */
+    static async copyTypeDefinitions(projectPath: string): Promise<void> {
+        return await invoke<void>('copy_type_definitions', { projectPath });
     }
 
     /**

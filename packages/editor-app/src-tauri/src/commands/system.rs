@@ -75,10 +75,35 @@ pub fn open_file_with_default_app(file_path: String) -> Result<(), String> {
 /// Show file in system file explorer
 #[tauri::command]
 pub fn show_in_folder(file_path: String) -> Result<(), String> {
+    println!("[show_in_folder] Received path: {}", file_path);
+
     #[cfg(target_os = "windows")]
     {
+        use std::path::Path;
+
+        // Normalize path separators for Windows
+        // 规范化路径分隔符
+        let normalized_path = file_path.replace('/', "\\");
+        println!("[show_in_folder] Normalized path: {}", normalized_path);
+
+        // Verify the path exists before trying to show it
+        // 验证路径存在
+        let path = Path::new(&normalized_path);
+        let exists = path.exists();
+        println!("[show_in_folder] Path exists: {}", exists);
+
+        if !exists {
+            return Err(format!("Path does not exist: {}", normalized_path));
+        }
+
+        // Windows explorer requires /select, to be concatenated with the path
+        // without spaces. Use a single argument to avoid shell parsing issues.
+        // Windows 资源管理器要求 /select, 与路径连接在一起，中间没有空格
+        let select_arg = format!("/select,{}", normalized_path);
+        println!("[show_in_folder] Explorer arg: {}", select_arg);
+
         Command::new("explorer")
-            .args(["/select,", &file_path])
+            .arg(&select_arg)
             .spawn()
             .map_err(|e| format!("Failed to show in folder: {}", e))?;
     }
@@ -117,6 +142,55 @@ pub fn get_temp_dir() -> Result<String, String> {
         .ok_or_else(|| "Failed to get temp directory".to_string())
 }
 
+/// Open project folder with specified editor
+/// 使用指定编辑器打开项目文件夹
+///
+/// @param project_path - Project folder path | 项目文件夹路径
+/// @param editor_command - Editor command (e.g., "code", "cursor") | 编辑器命令
+/// @param file_path - Optional file to open (will be opened in the editor) | 可选的要打开的文件
+#[tauri::command]
+pub fn open_with_editor(
+    project_path: String,
+    editor_command: String,
+    file_path: Option<String>,
+) -> Result<(), String> {
+    use std::path::Path;
+
+    // Normalize paths
+    let normalized_project = project_path.replace('/', "\\");
+    let normalized_file = file_path.map(|f| f.replace('/', "\\"));
+
+    // Verify project path exists
+    let project = Path::new(&normalized_project);
+    if !project.exists() {
+        return Err(format!("Project path does not exist: {}", normalized_project));
+    }
+
+    println!(
+        "[open_with_editor] editor: {}, project: {}, file: {:?}",
+        editor_command, normalized_project, normalized_file
+    );
+
+    let mut cmd = Command::new(&editor_command);
+
+    // Add project folder as first argument
+    cmd.arg(&normalized_project);
+
+    // If a specific file is provided, add it as a second argument
+    // Most editors support: editor <folder> <file>
+    if let Some(ref file) = normalized_file {
+        let file_path = Path::new(file);
+        if file_path.exists() {
+            cmd.arg(file);
+        }
+    }
+
+    cmd.spawn()
+        .map_err(|e| format!("Failed to open with editor '{}': {}", editor_command, e))?;
+
+    Ok(())
+}
+
 /// Get application resource directory
 #[tauri::command]
 pub fn get_app_resource_dir(app: AppHandle) -> Result<String, String> {
@@ -136,6 +210,97 @@ pub fn get_current_dir() -> Result<String, String> {
     std::env::current_dir()
         .and_then(|p| Ok(p.to_string_lossy().to_string()))
         .map_err(|e| format!("Failed to get current directory: {}", e))
+}
+
+/// Copy type definitions to project for IDE intellisense
+/// 复制类型定义文件到项目以支持 IDE 智能感知
+#[tauri::command]
+pub fn copy_type_definitions(app: AppHandle, project_path: String) -> Result<(), String> {
+    use std::fs;
+    use std::path::Path;
+
+    let project = Path::new(&project_path);
+    if !project.exists() {
+        return Err(format!("Project path does not exist: {}", project_path));
+    }
+
+    // Create types directory in project
+    // 在项目中创建 types 目录
+    let types_dir = project.join("types");
+    if !types_dir.exists() {
+        fs::create_dir_all(&types_dir)
+            .map_err(|e| format!("Failed to create types directory: {}", e))?;
+    }
+
+    // Get resource directory (where bundled files are)
+    // 获取资源目录（打包文件所在位置）
+    let resource_dir = app.path()
+        .resource_dir()
+        .map_err(|e| format!("Failed to get resource directory: {}", e))?;
+
+    // Type definition files to copy
+    // 要复制的类型定义文件
+    // Format: (resource_path, workspace_path, dest_name)
+    // 格式：(资源路径，工作区路径，目标文件名)
+    // Note: resource_path is relative to Tauri resource dir (runtime/ is mapped to .)
+    // 注意：resource_path 相对于 Tauri 资源目录（runtime/ 映射到 .）
+    let type_files = [
+        ("types/ecs-framework.d.ts", "packages/core/dist/index.d.ts", "ecs-framework.d.ts"),
+        ("types/engine-core.d.ts", "packages/engine-core/dist/index.d.ts", "engine-core.d.ts"),
+    ];
+
+    // Try to find workspace root (for development mode)
+    // 尝试查找工作区根目录（用于开发模式）
+    let workspace_root = std::env::current_dir()
+        .ok()
+        .and_then(|cwd| {
+            // Look for pnpm-workspace.yaml or package.json in parent directories
+            // 在父目录中查找 pnpm-workspace.yaml 或 package.json
+            let mut dir = cwd.as_path();
+            loop {
+                if dir.join("pnpm-workspace.yaml").exists() {
+                    return Some(dir.to_path_buf());
+                }
+                match dir.parent() {
+                    Some(parent) => dir = parent,
+                    None => return None,
+                }
+            }
+        });
+
+    let mut copied_count = 0;
+    for (resource_relative, workspace_relative, dest_name) in type_files {
+        let dest_path = types_dir.join(dest_name);
+
+        // Try resource directory first (production mode)
+        // 首先尝试资源目录（生产模式）
+        let src_path = resource_dir.join(resource_relative);
+        if src_path.exists() {
+            fs::copy(&src_path, &dest_path)
+                .map_err(|e| format!("Failed to copy {}: {}", resource_relative, e))?;
+            println!("[copy_type_definitions] Copied {} to {}", src_path.display(), dest_path.display());
+            copied_count += 1;
+            continue;
+        }
+
+        // Try workspace directory (development mode)
+        // 尝试工作区目录（开发模式）
+        if let Some(ref ws_root) = workspace_root {
+            let ws_src_path = ws_root.join(workspace_relative);
+            if ws_src_path.exists() {
+                fs::copy(&ws_src_path, &dest_path)
+                    .map_err(|e| format!("Failed to copy {}: {}", workspace_relative, e))?;
+                println!("[copy_type_definitions] Copied {} to {} (dev mode)", ws_src_path.display(), dest_path.display());
+                copied_count += 1;
+                continue;
+            }
+        }
+
+        println!("[copy_type_definitions] {} not found, skipping", dest_name);
+    }
+
+    println!("[copy_type_definitions] Copied {} type definition files to {}", copied_count, types_dir.display());
+    Ok(())
 }
 
 /// Start a local HTTP server for runtime preview
