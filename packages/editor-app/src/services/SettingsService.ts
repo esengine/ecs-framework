@@ -70,9 +70,11 @@ export class SettingsService {
     }
 
     public addRecentProject(projectPath: string): void {
+        // 规范化路径，防止双重转义 | Normalize path to prevent double escaping
+        const normalizedPath = projectPath.replace(/\\\\/g, '\\');
         const recentProjects = this.getRecentProjects();
-        const filtered = recentProjects.filter((p) => p !== projectPath);
-        const updated = [projectPath, ...filtered].slice(0, 10);
+        const filtered = recentProjects.filter((p) => p !== normalizedPath);
+        const updated = [normalizedPath, ...filtered].slice(0, 10);
         this.set('recentProjects', updated);
     }
 

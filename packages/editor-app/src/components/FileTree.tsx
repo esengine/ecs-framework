@@ -833,9 +833,10 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             icon: <FolderOpen size={16} />,
             onClick: async () => {
                 try {
+                    console.log('[FileTree] showInFolder path:', node.path);
                     await TauriAPI.showInFolder(node.path);
                 } catch (error) {
-                    console.error('Failed to show in folder:', error);
+                    console.error('Failed to show in folder:', error, 'Path:', node.path);
                 }
             }
         });

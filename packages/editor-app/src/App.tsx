@@ -465,7 +465,9 @@ function App() {
     };
 
     const handleCreateProjectFromWizard = async (projectName: string, projectPath: string, _templateId: string) => {
-        const fullProjectPath = `${projectPath}\\${projectName}`;
+        // 使用与 projectPath 相同的路径分隔符 | Use same separator as projectPath
+        const sep = projectPath.includes('/') ? '/' : '\\';
+        const fullProjectPath = `${projectPath}${sep}${projectName}`;
 
         try {
             setIsLoading(true);
@@ -824,6 +826,28 @@ function App() {
                     onOpenProject={handleOpenProject}
                     onCreateProject={handleCreateProject}
                     onOpenRecentProject={handleOpenRecentProject}
+                    onRemoveRecentProject={(projectPath) => {
+                        settings.removeRecentProject(projectPath);
+                        // 强制重新渲染 | Force re-render
+                        setStatus(t('header.status.ready'));
+                    }}
+                    onDeleteProject={async (projectPath) => {
+                        try {
+                            await TauriAPI.deleteFolder(projectPath);
+                            // 删除成功后从列表中移除并触发重新渲染
+                            // Remove from list and trigger re-render after successful deletion
+                            settings.removeRecentProject(projectPath);
+                            setStatus(t('header.status.ready'));
+                        } catch (error) {
+                            console.error('Failed to delete project:', error);
+                            setErrorDialog({
+                                title: locale === 'zh' ? '删除项目失败' : 'Failed to Delete Project',
+                                message: locale === 'zh'
+                                    ? `无法删除项目:\n${error instanceof Error ? error.message : String(error)}`
+                                    : `Failed to delete project:\n${error instanceof Error ? error.message : String(error)}`
+                            });
+                        }
+                    }}
                     onLocaleChange={handleLocaleChange}
                     recentProjects={recentProjects}
                     locale={locale}

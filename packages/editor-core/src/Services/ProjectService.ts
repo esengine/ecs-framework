@@ -94,11 +94,15 @@ export class ProjectService implements IService {
                 scriptsPath: 'scripts',
                 buildOutput: '.esengine/compiled',
                 scenesPath: 'scenes',
-                defaultScene: 'main.ecs'
+                defaultScene: 'main.ecs',
+                plugins: { enabledPlugins: [] },
+                modules: { disabledModules: [] }
             };
 
             await this.fileAPI.writeFileContent(configPath, JSON.stringify(config, null, 2));
 
+            // Create scenes folder and default scene
+            // 创建场景文件夹和默认场景
             const scenesPath = `${projectPath}${sep}${config.scenesPath}`;
             await this.fileAPI.createDirectory(scenesPath);
 
@@ -110,6 +114,21 @@ export class ProjectService implements IService {
                 includeMetadata: true
             }) as string;
             await this.fileAPI.writeFileContent(defaultScenePath, sceneData);
+
+            // Create scripts folder for user scripts
+            // 创建用户脚本文件夹
+            const scriptsPath = `${projectPath}${sep}${config.scriptsPath}`;
+            await this.fileAPI.createDirectory(scriptsPath);
+
+            // Create scripts/editor folder for editor extension scripts
+            // 创建编辑器扩展脚本文件夹
+            const editorScriptsPath = `${scriptsPath}${sep}editor`;
+            await this.fileAPI.createDirectory(editorScriptsPath);
+
+            // Create assets folder for project assets (textures, audio, etc.)
+            // 创建资源文件夹（纹理、音频等）
+            const assetsPath = `${projectPath}${sep}assets`;
+            await this.fileAPI.createDirectory(assetsPath);
 
             await this.messageHub.publish('project:created', {
                 path: projectPath
@@ -258,8 +277,10 @@ export class ProjectService implements IService {
                 scenesPath: config.scenesPath || 'scenes',
                 defaultScene: config.defaultScene || 'main.ecs',
                 uiDesignResolution: config.uiDesignResolution,
-                plugins: config.plugins,
-                modules: config.modules
+                // Provide default empty plugins config for legacy projects
+                // 为旧项目提供默认的空插件配置
+                plugins: config.plugins || { enabledPlugins: [] },
+                modules: config.modules || { disabledModules: [] }
             };
             logger.debug('Loaded config result:', result);
             return result;

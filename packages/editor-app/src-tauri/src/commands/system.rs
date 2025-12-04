@@ -75,10 +75,35 @@ pub fn open_file_with_default_app(file_path: String) -> Result<(), String> {
 /// Show file in system file explorer
 #[tauri::command]
 pub fn show_in_folder(file_path: String) -> Result<(), String> {
+    println!("[show_in_folder] Received path: {}", file_path);
+
     #[cfg(target_os = "windows")]
     {
+        use std::path::Path;
+
+        // Normalize path separators for Windows
+        // 规范化路径分隔符
+        let normalized_path = file_path.replace('/', "\\");
+        println!("[show_in_folder] Normalized path: {}", normalized_path);
+
+        // Verify the path exists before trying to show it
+        // 验证路径存在
+        let path = Path::new(&normalized_path);
+        let exists = path.exists();
+        println!("[show_in_folder] Path exists: {}", exists);
+
+        if !exists {
+            return Err(format!("Path does not exist: {}", normalized_path));
+        }
+
+        // Windows explorer requires /select, to be concatenated with the path
+        // without spaces. Use a single argument to avoid shell parsing issues.
+        // Windows 资源管理器要求 /select, 与路径连接在一起，中间没有空格
+        let select_arg = format!("/select,{}", normalized_path);
+        println!("[show_in_folder] Explorer arg: {}", select_arg);
+
         Command::new("explorer")
-            .args(["/select,", &file_path])
+            .arg(&select_arg)
             .spawn()
             .map_err(|e| format!("Failed to show in folder: {}", e))?;
     }

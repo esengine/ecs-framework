@@ -799,9 +799,10 @@ export function ContentBrowser({
             icon: <ExternalLink size={16} />,
             onClick: async () => {
                 try {
+                    console.log('[ContentBrowser] showInFolder path:', asset.path);
                     await TauriAPI.showInFolder(asset.path);
                 } catch (error) {
-                    console.error('Failed to show in folder:', error);
+                    console.error('Failed to show in folder:', error, 'Path:', asset.path);
                 }
             }
         });
