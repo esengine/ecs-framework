@@ -375,7 +375,15 @@ export class Entity {
         if (this.scene.referenceTracker) {
             this.scene.referenceTracker.registerEntityScene(this.id, this.scene);
         }
-        component.onAddedToEntity();
+
+        // 编辑器模式下延迟执行 onAddedToEntity | Defer onAddedToEntity in editor mode
+        if (this.scene.isEditorMode) {
+            this.scene.queueDeferredComponentCallback(() => {
+                component.onAddedToEntity();
+            });
+        } else {
+            component.onAddedToEntity();
+        }
 
         if (this.scene && this.scene.eventSystem) {
             this.scene.eventSystem.emitSync('component:added', {

@@ -62,6 +62,10 @@ export class SceneManagerService implements IService {
             throw new Error('No active scene');
         }
 
+        // 确保编辑器模式下设置 isEditorMode，延迟组件生命周期回调
+        // Ensure isEditorMode is set in editor to defer component lifecycle callbacks
+        scene.isEditorMode = true;
+
         // 只移除实体，保留系统（系统由模块管理）
         // Only remove entities, preserve systems (systems managed by modules)
         scene.entities.removeAllEntities();
@@ -117,6 +121,11 @@ export class SceneManagerService implements IService {
             if (!scene) {
                 throw new Error('No active scene');
             }
+
+            // 确保编辑器模式下设置 isEditorMode，延迟组件生命周期回调
+            // Ensure isEditorMode is set in editor to defer component lifecycle callbacks
+            scene.isEditorMode = true;
+
             scene.deserialize(jsonData, {
                 strategy: 'replace'
             });

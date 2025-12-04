@@ -138,9 +138,9 @@ export class BrowserRuntime {
             this._runtime.assetManager.setReader(this._assetReader);
         }
 
-        // Browser-specific settings (no editor UI)
-        this._runtime.setShowGrid(false);
-        this._runtime.setShowGizmos(false);
+        // Disable editor mode (hides grid, gizmos, axis indicator)
+        // 禁用编辑器模式（隐藏网格、gizmos、坐标轴指示器）
+        this._runtime.setEditorMode(false);
 
         this._initialized = true;
         console.log('[Runtime] Initialized');

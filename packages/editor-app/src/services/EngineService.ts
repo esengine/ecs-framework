@@ -613,6 +613,26 @@ export class EngineService {
     }
 
     /**
+     * Set editor mode.
+     * 设置编辑器模式。
+     *
+     * When false (runtime mode), editor-only UI like grid, gizmos,
+     * and axis indicator are automatically hidden.
+     * 当为 false（运行时模式）时，编辑器专用 UI 会自动隐藏。
+     */
+    setEditorMode(isEditor: boolean): void {
+        this._runtime?.setEditorMode(isEditor);
+    }
+
+    /**
+     * Get editor mode.
+     * 获取编辑器模式。
+     */
+    isEditorMode(): boolean {
+        return this._runtime?.isEditorMode() ?? true;
+    }
+
+    /**
      * Set UI canvas size for boundary display.
      */
     setUICanvasSize(width: number, height: number): void {

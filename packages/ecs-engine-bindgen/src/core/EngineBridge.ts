@@ -598,6 +598,28 @@ export class EngineBridge implements IEngineBridge {
         this.getEngine().setShowGizmos(show);
     }
 
+    /**
+     * Set editor mode.
+     * 设置编辑器模式。
+     *
+     * When false (runtime mode), editor-only UI like grid, gizmos,
+     * and axis indicator are automatically hidden.
+     * 当为 false（运行时模式）时，编辑器专用 UI 会自动隐藏。
+     */
+    setEditorMode(isEditor: boolean): void {
+        if (!this.initialized) return;
+        this.getEngine().setEditorMode(isEditor);
+    }
+
+    /**
+     * Get editor mode.
+     * 获取编辑器模式。
+     */
+    isEditorMode(): boolean {
+        if (!this.initialized) return true;
+        return this.getEngine().isEditorMode();
+    }
+
     // ===== Multi-viewport API =====
     // ===== 多视口 API =====
 

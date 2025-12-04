@@ -390,6 +390,24 @@ impl GameEngine {
         self.engine.set_show_gizmos(show);
     }
 
+    /// Set editor mode.
+    /// 设置编辑器模式。
+    ///
+    /// When false (runtime mode), editor-only UI like grid, gizmos,
+    /// and axis indicator are automatically hidden.
+    /// 当为 false（运行时模式）时，编辑器专用 UI（如网格、gizmos、坐标轴指示器）会自动隐藏。
+    #[wasm_bindgen(js_name = setEditorMode)]
+    pub fn set_editor_mode(&mut self, is_editor: bool) {
+        self.engine.set_editor_mode(is_editor);
+    }
+
+    /// Get editor mode.
+    /// 获取编辑器模式。
+    #[wasm_bindgen(js_name = isEditorMode)]
+    pub fn is_editor_mode(&self) -> bool {
+        self.engine.is_editor()
+    }
+
     // ===== Multi-viewport API =====
     // ===== 多视口 API =====
 

@@ -218,6 +218,12 @@ export class GameRuntime {
                 Core.setScene(this._scene);
             }
 
+            // 编辑器模式下设置 isEditorMode，延迟组件生命周期回调
+            // Set isEditorMode in editor mode to defer component lifecycle callbacks
+            if (this._platform.isEditorMode()) {
+                this._scene.isEditorMode = true;
+            }
+
             // 6. 添加基础系统
             this._scene.addSystem(new HierarchySystem());
             this._scene.addSystem(new TransformSystem());
@@ -402,6 +408,12 @@ export class GameRuntime {
             this._renderSystem.setPreviewMode(true);
         }
 
+        // 调用场景 begin() 触发延迟的组件生命周期回调
+        // Call scene begin() to trigger deferred component lifecycle callbacks
+        if (this._scene) {
+            this._scene.begin();
+        }
+
         // 启用游戏逻辑系统
         this._enableGameLogicSystems();
 
@@ -574,6 +586,31 @@ export class GameRuntime {
         if (this._renderSystem) {
             this._renderSystem.setShowGizmos(show);
         }
+    }
+
+    /**
+     * 设置编辑器模式
+     * Set editor mode
+     *
+     * When false (runtime mode), editor-only UI like grid, gizmos,
+     * and axis indicator are automatically hidden.
+     * 当为 false（运行时模式）时，编辑器专用 UI 会自动隐藏。
+     */
+    setEditorMode(isEditor: boolean): void {
+        if (this._bridge) {
+            this._bridge.setEditorMode(isEditor);
+        }
+    }
+
+    /**
+     * 获取编辑器模式
+     * Get editor mode
+     */
+    isEditorMode(): boolean {
+        if (this._bridge) {
+            return this._bridge.isEditorMode();
+        }
+        return true;
     }
 
     /**

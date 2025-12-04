@@ -248,14 +248,20 @@ export class ${className} extends Component {
     @Property({ type: 'number', label: 'Example Property' })
     public exampleProperty: number = 0;
 
-    onInitialize(): void {
-        // 组件初始化时调用
-        // Called when component is initialized
+    /**
+     * 组件添加到实体时调用
+     * Called when component is added to entity
+     */
+    onAddedToEntity(): void {
+        console.log('${className} added to entity');
     }
 
-    onDestroy(): void {
-        // 组件销毁时调用
-        // Called when component is destroyed
+    /**
+     * 组件从实体移除时调用
+     * Called when component is removed from entity
+     */
+    onRemovedFromEntity(): void {
+        console.log('${className} removed from entity');
     }
 }
 `;

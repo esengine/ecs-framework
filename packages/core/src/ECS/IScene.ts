@@ -79,6 +79,18 @@ export interface IScene {
     readonly services: ServiceContainer;
 
     /**
+     * 编辑器模式标志
+     *
+     * 当为 true 时，组件的生命周期回调（如 onAddedToEntity）会被延迟，
+     * 直到调用 begin() 开始运行场景时才会触发。
+     *
+     * Editor mode flag.
+     * When true, component lifecycle callbacks (like onAddedToEntity) are deferred
+     * until begin() is called to start running the scene.
+     */
+    isEditorMode: boolean;
+
+    /**
      * 获取系统列表
      */
     readonly systems: EntitySystem[];
@@ -97,6 +109,15 @@ export interface IScene {
      * 场景卸载时的回调
      */
     unload(): void;
+
+    /**
+     * 添加延迟的组件生命周期回调
+     *
+     * Queue a deferred component lifecycle callback.
+     *
+     * @param callback 要延迟执行的回调 | The callback to defer
+     */
+    queueDeferredComponentCallback(callback: () => void): void;
 
     /**
      * 开始场景

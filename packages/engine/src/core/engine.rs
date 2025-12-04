@@ -77,6 +77,14 @@ pub struct Engine {
     /// Whether to show gizmos.
     /// 是否显示辅助工具。
     show_gizmos: bool,
+
+    /// Whether the engine is running in editor mode.
+    /// 引擎是否在编辑器模式下运行。
+    ///
+    /// When false (runtime mode), editor-only UI like grid, gizmos,
+    /// and axis indicator are automatically hidden.
+    /// 当为 false（运行时模式）时，编辑器专用 UI（如网格、gizmos、坐标轴指示器）会自动隐藏。
+    is_editor: bool,
 }
 
 impl Engine {
@@ -116,6 +124,7 @@ impl Engine {
             show_grid: true,
             viewport_manager: ViewportManager::new(),
             show_gizmos: true,
+            is_editor: true, // 默认为编辑器模式 | Default to editor mode
         })
     }
 
@@ -154,6 +163,7 @@ impl Engine {
             show_grid: true,
             viewport_manager: ViewportManager::new(),
             show_gizmos: true,
+            is_editor: true, // 默认为编辑器模式 | Default to editor mode
         })
     }
 
@@ -212,8 +222,9 @@ impl Engine {
         let [r, g, b, a] = self.renderer.get_clear_color();
         self.context.clear(r, g, b, a);
 
-        // Render grid first (background)
-        if self.show_grid {
+        // Render grid first (background) - only in editor mode
+        // 首先渲染网格（背景）- 仅在编辑器模式下
+        if self.is_editor && self.show_grid {
             self.grid_renderer.render(self.context.gl(), self.renderer.camera());
             self.grid_renderer.render_axes(self.context.gl(), self.renderer.camera());
         }
@@ -221,8 +232,9 @@ impl Engine {
         // Render sprites
         self.renderer.render(self.context.gl(), &self.texture_manager)?;
 
-        // Render gizmos on top
-        if self.show_gizmos {
+        // Render gizmos on top - only in editor mode
+        // 在顶部渲染 gizmos - 仅在编辑器模式下
+        if self.is_editor && self.show_gizmos {
             self.gizmo_renderer.render(self.context.gl(), self.renderer.camera());
             // Render axis indicator in corner
             // 在角落渲染坐标轴指示器
@@ -411,6 +423,23 @@ impl Engine {
         self.show_gizmos
     }
 
+    /// Set editor mode.
+    /// 设置编辑器模式。
+    ///
+    /// When false (runtime mode), editor-only UI like grid, gizmos,
+    /// and axis indicator are automatically hidden regardless of their individual settings.
+    /// 当为 false（运行时模式）时，编辑器专用 UI（如网格、gizmos、坐标轴指示器）
+    /// 会自动隐藏，无论它们的单独设置如何。
+    pub fn set_editor_mode(&mut self, is_editor: bool) {
+        self.is_editor = is_editor;
+    }
+
+    /// Get editor mode.
+    /// 获取编辑器模式。
+    pub fn is_editor(&self) -> bool {
+        self.is_editor
+    }
+
     /// Set clear color for the active viewport.
     /// 设置活动视口的清除颜色。
     pub fn set_clear_color(&mut self, r: f32, g: f32, b: f32, a: f32) {
@@ -504,8 +533,9 @@ impl Engine {
         renderer_camera.rotation = camera.rotation;
         renderer_camera.set_viewport(camera.viewport_width(), camera.viewport_height());
 
-        // Render grid if enabled
-        if show_grid {
+        // Render grid if enabled - only in editor mode
+        // 渲染网格（如果启用）- 仅在编辑器模式下
+        if self.is_editor && show_grid {
             self.grid_renderer.render(viewport.gl(), &camera);
             self.grid_renderer.render_axes(viewport.gl(), &camera);
         }
@@ -513,8 +543,9 @@ impl Engine {
         // Render sprites
         self.renderer.render(viewport.gl(), &self.texture_manager)?;
 
-        // Render gizmos if enabled
-        if show_gizmos {
+        // Render gizmos if enabled - only in editor mode
+        // 渲染 gizmos（如果启用）- 仅在编辑器模式下
+        if self.is_editor && show_gizmos {
             self.gizmo_renderer.render(viewport.gl(), &camera);
             // Render axis indicator in corner
             // 在角落渲染坐标轴指示器

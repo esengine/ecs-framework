@@ -25,8 +25,12 @@ import type { ModuleManifest } from '../services/RuntimeResolver';
  *
  * This matches the structure of published builds for consistency
  * 这与发布构建的结构一致
+ *
+ * @param importMap - Import map for module resolution
+ * @param modules - Module manifests for plugin loading
+ * @param hasUserRuntime - Whether user-runtime.js exists and should be loaded
  */
-function generateRuntimeHtml(importMap: Record<string, string>, modules: ModuleManifest[]): string {
+function generateRuntimeHtml(importMap: Record<string, string>, modules: ModuleManifest[], hasUserRuntime: boolean = false): string {
     const importMapScript = `<script type="importmap">
     ${JSON.stringify({ imports: importMap }, null, 2).split('\n').join('\n    ')}
     </script>`;
@@ -44,6 +48,44 @@ function generateRuntimeHtml(importMap: Record<string, string>, modules: ModuleM
                     console.warn('[Preview] Failed to load plugin ${m.id}:', e.message);
                 }`
     ).join('\n');
+
+    // Generate user runtime loading code
+    // 生成用户运行时加载代码
+    const userRuntimeCode = hasUserRuntime ? `
+            updateLoading('Loading user scripts...');
+            try {
+                // Import ECS framework and set up global for user-runtime.js shim
+                // 导入 ECS 框架并为 user-runtime.js 设置全局变量
+                const ecsFramework = await import('@esengine/ecs-framework');
+                window.__ESENGINE__ = window.__ESENGINE__ || {};
+                window.__ESENGINE__.ecsFramework = ecsFramework;
+
+                // Load user-runtime.js which contains compiled user components
+                // 加载 user-runtime.js，其中包含编译的用户组件
+                const userRuntimeScript = document.createElement('script');
+                userRuntimeScript.src = './user-runtime.js?_=' + Date.now();
+                await new Promise((resolve, reject) => {
+                    userRuntimeScript.onload = resolve;
+                    userRuntimeScript.onerror = reject;
+                    document.head.appendChild(userRuntimeScript);
+                });
+
+                // Register user components to ComponentRegistry
+                // 将用户组件注册到 ComponentRegistry
+                if (window.__USER_RUNTIME_EXPORTS__) {
+                    const { ComponentRegistry, Component } = ecsFramework;
+                    const exports = window.__USER_RUNTIME_EXPORTS__;
+                    for (const [name, exported] of Object.entries(exports)) {
+                        if (typeof exported === 'function' && exported.prototype instanceof Component) {
+                            ComponentRegistry.register(exported);
+                            console.log('[Preview] Registered user component:', name);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[Preview] Failed to load user scripts:', e.message);
+            }
+` : '';
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -136,7 +178,7 @@ ${importMapScript}
 ${pluginImportCode}
 
             await runtime.initialize(wasmModule);
-
+${userRuntimeCode}
             updateLoading('Loading scene...');
             await runtime.loadScene('./scene.json?_=' + Date.now());
 
@@ -681,9 +723,9 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             // Save editor camera state
             editorCameraRef.current = { x: camera2DOffset.x, y: camera2DOffset.y, zoom: camera2DZoom };
             setPlayState('playing');
-            // Hide grid and gizmos in play mode
-            EngineService.getInstance().setShowGrid(false);
-            EngineService.getInstance().setShowGizmos(false);
+            // Disable editor mode (hides grid, gizmos, axis indicator)
+            // 禁用编辑器模式（隐藏网格、gizmos、坐标轴指示器）
+            EngineService.getInstance().setEditorMode(false);
             // Switch to player camera
             syncPlayerCamera();
             engine.start();
@@ -708,9 +750,9 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         // Restore editor camera state
         setCamera2DOffset({ x: editorCameraRef.current.x, y: editorCameraRef.current.y });
         setCamera2DZoom(editorCameraRef.current.zoom);
-        // Restore grid and gizmos
-        EngineService.getInstance().setShowGrid(showGrid);
-        EngineService.getInstance().setShowGizmos(showGizmos);
+        // Restore editor mode (restores grid, gizmos, axis indicator based on settings)
+        // 恢复编辑器模式（根据设置恢复网格、gizmos、坐标轴指示器）
+        EngineService.getInstance().setEditorMode(true);
         // Restore editor default background color
         EngineService.getInstance().setClearColor(0.1, 0.1, 0.12, 1.0);
     };
@@ -888,8 +930,21 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             await TauriAPI.writeFileContent(`${runtimeDir}/asset-catalog.json`, JSON.stringify(assetCatalog, null, 2));
             console.log(`[Viewport] Asset catalog created with ${Object.keys(catalogEntries).length} entries`);
 
+            // Copy user-runtime.js if it exists
+            // 如果存在用户运行时，复制 user-runtime.js
+            let hasUserRuntime = false;
+            if (projectPath) {
+                const userRuntimePath = `${projectPath}\\.esengine\\compiled\\user-runtime.js`;
+                const userRuntimeExists = await TauriAPI.pathExists(userRuntimePath);
+                if (userRuntimeExists) {
+                    await TauriAPI.copyFile(userRuntimePath, `${runtimeDir}\\user-runtime.js`);
+                    console.log('[Viewport] Copied user-runtime.js');
+                    hasUserRuntime = true;
+                }
+            }
+
             // Generate HTML with import maps (matching published build structure)
-            const runtimeHtml = generateRuntimeHtml(importMap, modules);
+            const runtimeHtml = generateRuntimeHtml(importMap, modules, hasUserRuntime);
             await TauriAPI.writeFileContent(`${runtimeDir}/index.html`, runtimeHtml);
 
             // Start local server and open browser
@@ -954,10 +1009,26 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                 }
             }
 
-            // Write scene data and HTML with import maps
+            // Write scene data
             const sceneDataStr = typeof sceneData === 'string' ? sceneData : new TextDecoder().decode(sceneData);
             await TauriAPI.writeFileContent(`${runtimeDir}/scene.json`, sceneDataStr);
-            await TauriAPI.writeFileContent(`${runtimeDir}/index.html`, generateRuntimeHtml(importMap, modules));
+
+            // Copy user-runtime.js if it exists
+            // 如果存在用户运行时，复制 user-runtime.js
+            let hasUserRuntime = false;
+            const currentProject = projectService?.getCurrentProject();
+            if (currentProject?.path) {
+                const userRuntimePath = `${currentProject.path}\\.esengine\\compiled\\user-runtime.js`;
+                const userRuntimeExists = await TauriAPI.pathExists(userRuntimePath);
+                if (userRuntimeExists) {
+                    await TauriAPI.copyFile(userRuntimePath, `${runtimeDir}\\user-runtime.js`);
+                    console.log('[Viewport] Copied user-runtime.js for device preview');
+                    hasUserRuntime = true;
+                }
+            }
+
+            // Write HTML with import maps
+            await TauriAPI.writeFileContent(`${runtimeDir}/index.html`, generateRuntimeHtml(importMap, modules, hasUserRuntime));
 
             // Copy textures referenced in scene
             const assetsDir = `${runtimeDir}\\assets`;
