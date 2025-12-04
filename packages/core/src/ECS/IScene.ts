@@ -2,7 +2,7 @@ import { Entity } from './Entity';
 import { EntityList } from './Utils/EntityList';
 import { IdentifierPool } from './Utils/IdentifierPool';
 import { EntitySystem } from './Systems/EntitySystem';
-import { ComponentStorageManager } from './Core/ComponentStorage';
+import { ComponentStorageManager, ComponentType } from './Core/ComponentStorage';
 import { QuerySystem } from './Core/QuerySystem';
 import { TypeSafeEventSystem } from './Core/EventSystem';
 import type { ReferenceTracker } from './Core/ReferenceTracker';
@@ -120,8 +120,25 @@ export interface IScene {
 
     /**
      * 清除所有EntitySystem的实体缓存
+     * Clear all EntitySystem entity caches
      */
     clearSystemEntityCaches(): void;
+
+    /**
+     * 通知相关系统实体的组件发生了变化
+     *
+     * 当组件被添加或移除时调用，立即通知相关系统检查该实体是否匹配，
+     * 并触发 onAdded/onRemoved 回调。通过组件ID索引优化，只通知关心该组件的系统。
+     *
+     * Notify relevant systems that an entity's components have changed.
+     * Called when a component is added or removed, immediately notifying
+     * relevant systems to check if the entity matches and trigger onAdded/onRemoved callbacks.
+     * Optimized via component ID indexing to only notify systems that care about the changed component.
+     *
+     * @param entity 组件发生变化的实体 | The entity whose components changed
+     * @param changedComponentType 变化的组件类型（可选） | The changed component type (optional)
+     */
+    notifyEntityComponentChanged(entity: Entity, changedComponentType?: ComponentType): void;
 
     /**
      * 添加实体

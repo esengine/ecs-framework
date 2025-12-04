@@ -235,7 +235,7 @@ export abstract class EntitySystem implements ISystemBase, IService {
      * 在系统创建时调用。框架内部使用，用户不应直接调用。
      */
     public initialize(): void {
-        // 防止重复初始化
+        // 防止重复初始化 | Prevent re-initialization
         if (this._initialized) {
             return;
         }
@@ -243,13 +243,20 @@ export abstract class EntitySystem implements ISystemBase, IService {
         this._initialized = true;
 
         // 框架内部初始化：触发一次实体查询，以便正确跟踪现有实体
+        // Framework initialization: query entities once to track existing entities
         if (this.scene) {
-            // 清理缓存确保初始化时重新查询
+            // 清理缓存确保初始化时重新查询 | Clear cache to ensure fresh query
             this._entityCache.invalidate();
-            this.queryEntities();
+            const entities = this.queryEntities();
+
+            // 初始化时对已存在的匹配实体触发 onAdded
+            // Trigger onAdded for existing matching entities during initialization
+            for (const entity of entities) {
+                this.onAdded(entity);
+            }
         }
 
-        // 调用用户可重写的初始化方法
+        // 调用用户可重写的初始化方法 | Call user-overridable initialization method
         this.onInitialize();
     }
 
@@ -719,31 +726,150 @@ export abstract class EntitySystem implements ISystemBase, IService {
     }
 
     /**
+     * 检查实体是否匹配当前系统的查询条件
+     * Check if an entity matches this system's query condition
+     *
+     * @param entity 要检查的实体 / The entity to check
+     * @returns 是否匹配 / Whether the entity matches
+     */
+    public matchesEntity(entity: Entity): boolean {
+        if (!this._matcher) {
+            return false;
+        }
+
+        // nothing 匹配器不匹配任何实体
+        if (this._matcher.isNothing()) {
+            return false;
+        }
+
+        // 空匹配器匹配所有实体
+        if (this._matcher.isEmpty()) {
+            return true;
+        }
+
+        const condition = this._matcher.getCondition();
+
+        // 检查 all 条件
+        for (const componentType of condition.all) {
+            if (!entity.hasComponent(componentType)) {
+                return false;
+            }
+        }
+
+        // 检查 any 条件
+        if (condition.any.length > 0) {
+            let hasAny = false;
+            for (const componentType of condition.any) {
+                if (entity.hasComponent(componentType)) {
+                    hasAny = true;
+                    break;
+                }
+            }
+            if (!hasAny) {
+                return false;
+            }
+        }
+
+        // 检查 none 条件
+        for (const componentType of condition.none) {
+            if (entity.hasComponent(componentType)) {
+                return false;
+            }
+        }
+
+        // 检查 tag 条件
+        if (condition.tag !== undefined && entity.tag !== condition.tag) {
+            return false;
+        }
+
+        // 检查 name 条件
+        if (condition.name !== undefined && entity.name !== condition.name) {
+            return false;
+        }
+
+        // 检查单组件条件
+        if (condition.component !== undefined && !entity.hasComponent(condition.component)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * 检查实体是否正在被此系统跟踪
+     * Check if an entity is being tracked by this system
+     *
+     * @param entity 要检查的实体 / The entity to check
+     * @returns 是否正在跟踪 / Whether the entity is being tracked
+     */
+    public isTracking(entity: Entity): boolean {
+        return this._entityCache.isTracked(entity);
+    }
+
+    /**
+     * 当实体的组件发生变化时由 Scene 调用
+     *
+     * 立即检查实体是否匹配并触发 onAdded/onRemoved 回调。
+     * 这是事件驱动设计的核心：组件变化时立即通知相关系统。
+     *
+     * Called by Scene when an entity's components change.
+     * Immediately checks if the entity matches and triggers onAdded/onRemoved callbacks.
+     * This is the core of event-driven design: notify relevant systems immediately when components change.
+     *
+     * @param entity 组件发生变化的实体 / The entity whose components changed
+     * @internal 由 Scene.notifyEntityComponentChanged 调用 / Called by Scene.notifyEntityComponentChanged
+     */
+    public handleEntityComponentChanged(entity: Entity): void {
+        if (!this._matcher || !this._enabled) {
+            return;
+        }
+
+        const wasTracked = this._entityCache.isTracked(entity);
+        const nowMatches = this.matchesEntity(entity);
+
+        if (!wasTracked && nowMatches) {
+            // 新匹配：添加跟踪并触发 onAdded | New match: add tracking and trigger onAdded
+            this._entityCache.addTracked(entity);
+            this._entityCache.invalidate();
+            this.onAdded(entity);
+        } else if (wasTracked && !nowMatches) {
+            // 不再匹配：移除跟踪并触发 onRemoved | No longer matches: remove tracking and trigger onRemoved
+            this._entityCache.removeTracked(entity);
+            this._entityCache.invalidate();
+            this.onRemoved(entity);
+        }
+    }
+
+    /**
      * 更新实体跟踪，检查新增和移除的实体
+     *
+     * 由于采用了事件驱动设计，运行时的 onAdded/onRemoved 已在 handleEntityComponentChanged 中
+     * 立即触发。此方法不再触发回调，只同步跟踪状态。
+     *
+     * With event-driven design, runtime onAdded/onRemoved are triggered immediately in
+     * handleEntityComponentChanged. This method no longer triggers callbacks, only syncs tracking state.
      */
     private updateEntityTracking(currentEntities: readonly Entity[]): void {
         const currentSet = new Set(currentEntities);
         let hasChanged = false;
 
-        // 检查新增的实体
+        // 检查新增的实体 | Check for newly added entities
         for (const entity of currentEntities) {
             if (!this._entityCache.isTracked(entity)) {
                 this._entityCache.addTracked(entity);
-                this.onAdded(entity);
                 hasChanged = true;
             }
         }
 
-        // 检查移除的实体
+        // 检查移除的实体 | Check for removed entities
         for (const entity of this._entityCache.getTracked()) {
             if (!currentSet.has(entity)) {
                 this._entityCache.removeTracked(entity);
-                this.onRemoved(entity);
                 hasChanged = true;
             }
         }
 
-        // 如果实体发生了变化，使缓存失效
+        // 如果实体发生了变化，使缓存失效 | If entities changed, invalidate cache
         if (hasChanged) {
             this._entityCache.invalidate();
         }
