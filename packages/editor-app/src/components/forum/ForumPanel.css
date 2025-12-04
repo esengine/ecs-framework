@@ -1,0 +1,170 @@
+/**
+ * 论坛面板样式
+ * Forum panel styles
+ */
+
+.forum-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #2a2a2a;
+    color: #e0e0e0;
+}
+
+.forum-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid #1a1a1a;
+    background: #333;
+}
+
+.forum-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.forum-title {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.forum-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}
+
+.forum-user {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+}
+
+.forum-user:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.forum-user-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.forum-user-avatar-placeholder {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #4a9eff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+}
+
+.forum-user-name {
+    font-size: 12px;
+    color: #999;
+}
+
+/* 个人资料下拉面板 | Profile dropdown panel */
+.forum-profile-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    z-index: 1000;
+    min-width: 280px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.forum-content {
+    flex: 1;
+    overflow: auto;
+}
+
+.forum-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 12px;
+    color: #888;
+}
+
+/* 通用按钮样式 | Common button styles */
+.forum-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    font-size: 11px;
+    background: #3a3a3a;
+    border: 1px solid #4a4a4a;
+    color: #ccc;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.forum-btn:hover:not(:disabled) {
+    background: #444;
+    border-color: #555;
+    color: #fff;
+}
+
+.forum-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.forum-btn-primary {
+    background: #4a9eff;
+    border-color: #4a9eff;
+    color: white;
+}
+
+.forum-btn-primary:hover:not(:disabled) {
+    background: #3a8eef;
+    border-color: #3a8eef;
+}
+
+/* 返回按钮 | Back button */
+.forum-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    margin: 10px 12px;
+    font-size: 11px;
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.forum-back-btn:hover {
+    color: #ccc;
+}
+
+/* 旋转动画 | Spin animation */
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

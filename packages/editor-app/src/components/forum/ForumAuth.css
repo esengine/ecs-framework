@@ -1,0 +1,255 @@
+/**
+ * 论坛认证样式 - GitHub Device Flow
+ * Forum auth styles - GitHub Device Flow
+ */
+
+.forum-auth {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 20px;
+    background: #2a2a2a;
+}
+
+.forum-auth-card {
+    width: 100%;
+    max-width: 360px;
+    padding: 28px;
+    background: #333;
+    border-radius: 6px;
+    border: 1px solid #444;
+    text-align: center;
+}
+
+.forum-auth-header {
+    margin-bottom: 24px;
+}
+
+.forum-auth-icon {
+    color: #e0e0e0;
+    margin-bottom: 12px;
+}
+
+.forum-auth-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: #e0e0e0;
+}
+
+.forum-auth-header p {
+    font-size: 12px;
+    color: #888;
+    margin: 0;
+}
+
+/* 初始状态 | Idle state */
+.forum-auth-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.forum-auth-instructions {
+    background: #2a2a2a;
+    padding: 12px;
+    border-radius: 4px;
+    border-left: 3px solid #4a9eff;
+    text-align: left;
+}
+
+.forum-auth-instructions p {
+    margin: 6px 0;
+    font-size: 12px;
+    color: #999;
+    line-height: 1.5;
+}
+
+.forum-auth-instructions p:first-child {
+    margin-top: 0;
+}
+
+.forum-auth-instructions p:last-child {
+    margin-bottom: 0;
+}
+
+.forum-auth-github-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #24292e;
+    border: 1px solid #444;
+    color: #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.forum-auth-github-btn:hover {
+    background: #2f363d;
+    border-color: #555;
+}
+
+/* 等待授权 | Pending state */
+.forum-auth-pending {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.forum-auth-pending-text {
+    font-size: 13px;
+    color: #999;
+    margin: 0;
+}
+
+.forum-auth-code-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.forum-auth-code-section label {
+    font-size: 11px;
+    color: #888;
+}
+
+.forum-auth-code-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #2a2a2a;
+    padding: 12px 16px;
+    border-radius: 4px;
+    border: 1px solid #444;
+}
+
+.forum-auth-code {
+    flex: 1;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 18px;
+    font-weight: bold;
+    color: #4a9eff;
+    letter-spacing: 2px;
+}
+
+.forum-auth-copy-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+    transition: transform 0.1s ease;
+}
+
+.forum-auth-copy-btn:hover {
+    transform: scale(1.1);
+}
+
+.forum-auth-copy-btn:active {
+    transform: scale(0.95);
+}
+
+.forum-auth-link-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px;
+    font-size: 12px;
+    background: none;
+    border: none;
+    color: #4a9eff;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.forum-auth-link-btn:hover {
+    color: #3a8eef;
+    text-decoration: underline;
+}
+
+/* 授权成功 | Success state */
+.forum-auth-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 0;
+}
+
+.forum-auth-success-icon {
+    color: #4ade80;
+}
+
+.forum-auth-success p {
+    font-size: 14px;
+    color: #4ade80;
+    margin: 0;
+}
+
+/* 授权失败 | Error state */
+.forum-auth-error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 0;
+}
+
+.forum-auth-error-icon {
+    color: #f87171;
+}
+
+.forum-auth-error-state > p {
+    font-size: 14px;
+    color: #f87171;
+    margin: 0;
+}
+
+.forum-auth-error-detail {
+    font-size: 11px;
+    color: #888;
+    background: #2a2a2a;
+    padding: 8px 12px;
+    border-radius: 4px;
+    max-width: 100%;
+    word-break: break-word;
+}
+
+.forum-auth-retry-btn {
+    padding: 8px 20px;
+    font-size: 12px;
+    background: #3a3a3a;
+    border: 1px solid #4a4a4a;
+    color: #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-top: 8px;
+}
+
+.forum-auth-retry-btn:hover {
+    background: #444;
+    border-color: #555;
+    color: #fff;
+}
+
+/* 加载动画 | Loading animation */
+.spinning {
+    animation: spin 1s linear infinite;
+    color: #4a9eff;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
