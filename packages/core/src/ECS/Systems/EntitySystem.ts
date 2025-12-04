@@ -601,10 +601,13 @@ export abstract class EntitySystem implements ISystemBase, IService {
             // 查询实体并存储到帧缓存中
             // 响应式查询会自动维护最新的实体列表，updateEntityTracking会在检测到变化时invalidate
             const queriedEntities = this.queryEntities();
-            this._entityCache.setFrame(queriedEntities);
-            entityCount = queriedEntities.length;
+            // 创建数组副本以防止迭代过程中数组被修改
+            // Create a copy to prevent array modification during iteration
+            const entities = [...queriedEntities];
+            this._entityCache.setFrame(entities);
+            entityCount = entities.length;
 
-            this.process(queriedEntities);
+            this.process(entities);
         } finally {
             monitor.endMonitoring(this._systemName, startTime, entityCount);
         }
@@ -623,8 +626,15 @@ export abstract class EntitySystem implements ISystemBase, IService {
         let entityCount = 0;
 
         try {
-            // 使用缓存的实体列表，避免重复查询
-            const entities = this._entityCache.getFrame() || [];
+            // 重新查询实体以获取最新列表
+            // 在 update 和 lateUpdate 之间可能有新组件被添加（事件驱动设计）
+            // Re-query entities to get the latest list
+            // New components may have been added between update and lateUpdate (event-driven design)
+            const queriedEntities = this.queryEntities();
+            // 创建数组副本以防止迭代过程中数组被修改
+            // Create a copy to prevent array modification during iteration
+            const entities = [...queriedEntities];
+            this._entityCache.setFrame(entities);
             entityCount = entities.length;
             this.lateProcess(entities);
             this.onEnd();

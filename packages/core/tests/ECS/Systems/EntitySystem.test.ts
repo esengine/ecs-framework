@@ -829,4 +829,256 @@ describe('EntitySystem', () => {
         });
     });
 
+    describe('addComponent 后立即 getComponent', () => {
+        it('addComponent 后应该能立即 getComponent 获取到组件', () => {
+            // 使用独立场景 | Use independent scene
+            const testScene = new Scene();
+
+            class ClickComponent extends Component {
+                public element: string;
+                constructor(element: string) {
+                    super();
+                    this.element = element;
+                }
+            }
+
+            const testEntity = testScene.createEntity('panel');
+
+            // 添加组件后立即获取 | Get component immediately after adding
+            const comp = testEntity.addComponent(new ClickComponent('button'));
+            const comp1 = testEntity.getComponent(ClickComponent);
+
+            expect(comp).not.toBeNull();
+            expect(comp1).not.toBeNull();
+            expect(comp).toBe(comp1);
+            expect(comp1!.element).toBe('button');
+        });
+
+        it('有系统监听时 addComponent 后应该能立即 getComponent', () => {
+            // 使用独立场景 | Use independent scene
+            const testScene = new Scene();
+
+            class ClickComponent extends Component {
+                public element: string;
+                constructor(element: string) {
+                    super();
+                    this.element = element;
+                }
+            }
+
+            // 添加一个监听该组件的系统 | Add a system that listens to this component
+            class ClickSystem extends EntitySystem {
+                public onAddedCount = 0;
+
+                constructor() {
+                    super(Matcher.all(ClickComponent));
+                }
+
+                protected override onAdded(entity: Entity): void {
+                    this.onAddedCount++;
+                }
+            }
+
+            const clickSystem = new ClickSystem();
+            testScene.addSystem(clickSystem);
+
+            const testEntity = testScene.createEntity('panel');
+
+            // 添加组件后立即获取 | Get component immediately after adding
+            const comp = testEntity.addComponent(new ClickComponent('button'));
+            const comp1 = testEntity.getComponent(ClickComponent);
+
+            expect(comp).not.toBeNull();
+            expect(comp1).not.toBeNull();
+            expect(comp).toBe(comp1);
+            expect(comp1!.element).toBe('button');
+
+            // onAdded 应该被触发 | onAdded should be triggered
+            expect(clickSystem.onAddedCount).toBe(1);
+
+            testScene.removeSystem(clickSystem);
+        });
+
+        it('系统在 onAdded 中移除组件时 getComponent 应返回 null', () => {
+            // 使用独立场景 | Use independent scene
+            const testScene = new Scene();
+
+            class ClickComponent extends Component {
+                public element: string;
+                constructor(element: string) {
+                    super();
+                    this.element = element;
+                }
+            }
+
+            // 这个系统在 onAdded 中移除组件（模拟可能的用户代码）
+            // This system removes component in onAdded (simulating possible user code)
+            class RemoveOnAddSystem extends EntitySystem {
+                constructor() {
+                    super(Matcher.all(ClickComponent));
+                }
+
+                protected override onAdded(entity: Entity): void {
+                    // 在 onAdded 中移除组件 | Remove component in onAdded
+                    const comp = entity.getComponent(ClickComponent);
+                    if (comp) {
+                        entity.removeComponent(comp);
+                    }
+                }
+            }
+
+            const removeSystem = new RemoveOnAddSystem();
+            testScene.addSystem(removeSystem);
+
+            const testEntity = testScene.createEntity('panel');
+
+            // 添加组件 - 会触发 onAdded，然后组件被移除
+            // Add component - triggers onAdded, then component is removed
+            const comp = testEntity.addComponent(new ClickComponent('button'));
+
+            // 此时 getComponent 应该返回 null，因为组件在 onAdded 中被移除了
+            // getComponent should return null because component was removed in onAdded
+            const comp1 = testEntity.getComponent(ClickComponent);
+
+            expect(comp).not.toBeNull(); // addComponent 返回值仍然有效
+            expect(comp1).toBeNull(); // 但 getComponent 返回 null
+
+            testScene.removeSystem(removeSystem);
+        });
+
+        it('模拟 lawn-mower-demo: CSystem 在 process 中添加 D 组件', () => {
+            // 模拟 lawn-mower-demo 的场景 | Simulate lawn-mower-demo scenario
+            const testScene = new Scene();
+
+            // 组件定义 | Component definitions
+            class A extends Component {}
+            class B extends Component {}
+            class C extends Component {
+                public aId: number;
+                public bId: number;
+                constructor(aId: number, bId: number) {
+                    super();
+                    this.aId = aId;
+                    this.bId = bId;
+                }
+            }
+            class D extends Component {}
+
+            // ASystem: 匹配 A + D | Matches A + D
+            class ASystem extends EntitySystem {
+                public onAddedEntities: Entity[] = [];
+                constructor() {
+                    super(Matcher.all(A, D));
+                }
+                protected override onAdded(entity: Entity): void {
+                    console.log('ASystem onAdded:', entity.name);
+                    this.onAddedEntities.push(entity);
+                }
+            }
+
+            // BSystem: 匹配 B + D | Matches B + D
+            class BSystem extends EntitySystem {
+                public onAddedEntities: Entity[] = [];
+                constructor() {
+                    super(Matcher.all(B, D));
+                }
+                protected override onAdded(entity: Entity): void {
+                    console.log('BSystem onAdded:', entity.name);
+                    this.onAddedEntities.push(entity);
+                }
+            }
+
+            // CSystem: 在 process 中给 A 和 B 实体添加 D 组件
+            // CSystem: Adds D component to A and B entities in process
+            class CSystem extends EntitySystem {
+                constructor() {
+                    super(Matcher.all(C));
+                }
+                protected override process(entities: readonly Entity[]): void {
+                    for (const entity of entities) {
+                        const c = entity.getComponent(C);
+                        if (c) {
+                            const a = this.scene!.findEntityById(c.aId);
+                            if (a && !a.hasComponent(D)) {
+                                console.log('CSystem: Adding D to Entity A');
+                                a.addComponent(new D());
+                            }
+                            const b = this.scene!.findEntityById(c.bId);
+                            if (b && !b.hasComponent(D)) {
+                                console.log('CSystem: Adding D to Entity B');
+                                b.addComponent(new D());
+                            }
+                        }
+                    }
+                }
+            }
+
+            // DSystem: 在 lateProcess 中移除 D 组件
+            // DSystem: Removes D component in lateProcess
+            class DSystem extends EntitySystem {
+                public lateProcessEntities: Entity[] = [];
+                constructor() {
+                    super(Matcher.all(D));
+                }
+                protected override lateProcess(entities: readonly Entity[]): void {
+                    console.log('DSystem lateProcess, entities count:', entities.length);
+                    for (const entity of entities) {
+                        console.log('DSystem removing D from:', entity.name);
+                        this.lateProcessEntities.push(entity);
+                        const d = entity.getComponent(D);
+                        if (d) {
+                            entity.removeComponent(d);
+                        }
+                    }
+                }
+            }
+
+            // 按顺序添加系统（与 demo 一致）
+            // Add systems in order (same as demo)
+            const aSystem = new ASystem();
+            const bSystem = new BSystem();
+            const cSystem = new CSystem();
+            const dSystem = new DSystem();
+
+            testScene.addSystem(aSystem);
+            testScene.addSystem(bSystem);
+            testScene.addSystem(cSystem);
+            testScene.addSystem(dSystem);
+
+            // 创建实体 | Create entities
+            const entity1 = testScene.createEntity('Entity1');
+            entity1.addComponent(new A());
+
+            const entity2 = testScene.createEntity('Entity2');
+            entity2.addComponent(new B());
+
+            const entity3 = testScene.createEntity('Entity3');
+            entity3.addComponent(new C(entity1.id, entity2.id));
+
+            // 执行一帧 | Execute one frame
+            testScene.update();
+
+            // 验证 ASystem 和 BSystem 都收到了 onAdded 通知
+            // Verify ASystem and BSystem both received onAdded notification
+            expect(aSystem.onAddedEntities.length).toBe(1);
+            expect(aSystem.onAddedEntities[0]).toBe(entity1);
+
+            expect(bSystem.onAddedEntities.length).toBe(1);
+            expect(bSystem.onAddedEntities[0]).toBe(entity2);
+
+            // 检查 DSystem 处理了哪些实体
+            console.log('DSystem processed entities:', dSystem.lateProcessEntities.map(e => e.name));
+
+            // D 组件应该在 lateProcess 中被移除
+            // D component should be removed in lateProcess
+            expect(entity1.hasComponent(D)).toBe(false);
+            expect(entity2.hasComponent(D)).toBe(false);
+
+            testScene.removeSystem(aSystem);
+            testScene.removeSystem(bSystem);
+            testScene.removeSystem(cSystem);
+            testScene.removeSystem(dSystem);
+        });
+    });
+
 });

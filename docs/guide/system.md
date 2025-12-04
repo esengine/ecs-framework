@@ -216,11 +216,13 @@ class ExampleSystem extends EntitySystem {
     // 主要的处理逻辑
     for (const entity of entities) {
       // 处理每个实体
+      // ✅ 可以安全地在这里添加/移除组件，不会影响当前迭代
     }
   }
 
   protected lateProcess(entities: readonly Entity[]): void {
     // 主处理之后的后期处理
+    // ✅ 可以安全地在这里添加/移除组件，不会影响当前迭代
   }
 
   protected onEnd(): void {
@@ -269,6 +271,68 @@ class EnemyManagerSystem extends EntitySystem {
   }
 }
 ```
+
+### 重要：onAdded/onRemoved 的调用时机
+
+> ⚠️ **注意**：`onAdded` 和 `onRemoved` 回调是**同步调用**的，会在 `addComponent`/`removeComponent` 返回**之前**立即执行。
+
+这意味着：
+
+```typescript
+// ❌ 错误的用法：链式赋值在 onAdded 之后才执行
+const comp = entity.addComponent(new ClickComponent());
+comp.element = this._element;  // 此时 onAdded 已经执行完了！
+
+// ✅ 正确的用法：通过构造函数传入初始值
+const comp = entity.addComponent(new ClickComponent(this._element));
+
+// ✅ 或者使用 createComponent 方法
+const comp = entity.createComponent(ClickComponent, this._element);
+```
+
+**为什么这样设计？**
+
+事件驱动设计确保 `onAdded`/`onRemoved` 回调不受系统注册顺序的影响。当组件被添加时，所有监听该组件的系统都会立即收到通知，而不是等到下一帧。
+
+**最佳实践：**
+
+1. 组件的初始值应该通过**构造函数**传入
+2. 不要依赖 `addComponent` 返回后再设置属性
+3. 如果需要在 `onAdded` 中访问组件属性，确保这些属性在构造时已经设置
+
+### 在 process/lateProcess 中安全地修改组件
+
+在 `process` 或 `lateProcess` 中迭代实体时，可以安全地添加或移除组件，不会影响当前的迭代过程：
+
+```typescript
+@ECSSystem('Damage')
+class DamageSystem extends EntitySystem {
+  constructor() {
+    super(Matcher.all(Health, DamageReceiver));
+  }
+
+  protected process(entities: readonly Entity[]): void {
+    for (const entity of entities) {
+      const health = entity.getComponent(Health);
+      const damage = entity.getComponent(DamageReceiver);
+
+      if (health && damage) {
+        health.current -= damage.amount;
+
+        // ✅ 安全：移除组件不会影响当前迭代
+        entity.removeComponent(damage);
+
+        if (health.current <= 0) {
+          // ✅ 安全：添加组件也不会影响当前迭代
+          entity.addComponent(new Dead());
+        }
+      }
+    }
+  }
+}
+```
+
+框架会在每次 `process`/`lateProcess` 调用前创建实体列表的快照，确保迭代过程中的组件变化不会导致跳过实体或重复处理。
 
 ## 系统属性和方法
 
@@ -457,6 +521,8 @@ class GameScene extends Scene {
 
 ### 系统更新顺序
 
+系统的执行顺序由 `updateOrder` 属性决定，数值越小越先执行：
+
 ```typescript
 @ECSSystem('Input')
 class InputSystem extends EntitySystem {
@@ -482,6 +548,25 @@ class RenderSystem extends EntitySystem {
   }
 }
 ```
+
+#### 稳定排序：addOrder
+
+当多个系统的 `updateOrder` 相同时，框架使用 `addOrder`（添加顺序）作为第二排序条件，确保排序结果稳定可预测：
+
+```typescript
+// 这两个系统 updateOrder 都是默认值 0
+@ECSSystem('SystemA')
+class SystemA extends EntitySystem { /* ... */ }
+
+@ECSSystem('SystemB')
+class SystemB extends EntitySystem { /* ... */ }
+
+// 添加顺序决定了执行顺序
+scene.addSystem(new SystemA()); // addOrder = 0，先执行
+scene.addSystem(new SystemB()); // addOrder = 1，后执行
+```
+
+> **注意**：`addOrder` 由框架在 `addSystem` 时自动设置，无需手动管理。这确保了相同 `updateOrder` 的系统按照添加顺序执行，避免了排序不稳定导致的随机行为。
 
 ## 复杂系统示例
 
