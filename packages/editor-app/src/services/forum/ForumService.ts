@@ -810,9 +810,12 @@ export class ForumService {
     // 图片上传 | Image Upload
     // =====================================================
 
+    /** Imgur Client ID (匿名上传) | Imgur Client ID (anonymous upload) */
+    private readonly IMGUR_CLIENT_ID = '546c25a59c58ad7';
+
     /**
-     * 上传图片到 GitHub 仓库
-     * Upload image to GitHub repository
+     * 上传图片到 Imgur 图床
+     * Upload image to Imgur
      * @param file 图片文件 | Image file
      * @param onProgress 进度回调 | Progress callback
      * @returns 图片 URL | Image URL
@@ -821,72 +824,54 @@ export class ForumService {
         file: File,
         onProgress?: (progress: number) => void
     ): Promise<string> {
-        const token = this.currentUser?.accessToken;
-        if (!token) {
-            throw new Error('Not authenticated');
-        }
-
         // 验证文件类型 | Validate file type
         const allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
         if (!allowedTypes.includes(file.type)) {
             throw new Error('Only PNG, JPEG, GIF, and WebP images are allowed');
         }
 
-        // 限制文件大小 (5MB) | Limit file size (5MB)
-        const maxSize = 5 * 1024 * 1024;
+        // 限制文件大小 (10MB - Imgur 限制) | Limit file size (10MB - Imgur limit)
+        const maxSize = 10 * 1024 * 1024;
         if (file.size > maxSize) {
-            throw new Error('Image size must be less than 5MB');
+            throw new Error('Image size must be less than 10MB');
         }
 
         onProgress?.(10);
 
-        // 生成唯一文件名 | Generate unique filename
-        const ext = file.name.split('.').pop() || 'png';
-        const timestamp = Date.now();
-        const randomStr = Math.random().toString(36).substring(2, 8);
-        const fileName = `${timestamp}-${randomStr}.${ext}`;
-        const filePath = `forum-images/${fileName}`;
-
-        onProgress?.(20);
-
         // 读取文件为 base64 | Read file as base64
         const base64Content = await this.fileToBase64(file);
 
-        onProgress?.(40);
+        onProgress?.(30);
 
-        // 使用 GitHub REST API 上传文件 | Upload file using GitHub REST API
-        const response = await fetch(
-            `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`,
-            {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/vnd.github.v3+json'
-                },
-                body: JSON.stringify({
-                    message: `Upload forum image: ${fileName}`,
-                    content: base64Content,
-                    branch: 'master'
-                })
-            }
-        );
+        // 使用 Imgur API 上传 | Upload using Imgur API
+        const response = await fetch('https://api.imgur.com/3/image', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Client-ID ${this.IMGUR_CLIENT_ID}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                image: base64Content,
+                type: 'base64'
+            })
+        });
 
         onProgress?.(80);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error('[ForumService] Upload failed:', errorData);
+            console.error('[ForumService] Imgur upload failed:', errorData);
             throw new Error(`Failed to upload image: ${response.status}`);
         }
 
         const data = await response.json();
         onProgress?.(100);
 
-        // 返回 raw URL | Return raw URL
-        // 使用 jsdelivr CDN 加速 | Use jsdelivr CDN for acceleration
-        const cdnUrl = `https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@master/${filePath}`;
-        return cdnUrl;
+        if (!data.success || !data.data?.link) {
+            throw new Error('Imgur upload failed: invalid response');
+        }
+
+        return data.data.link;
     }
 
     /**
