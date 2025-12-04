@@ -213,6 +213,15 @@ function copyEngineModulesPlugin(): Plugin {
           if (fs.existsSync(sourceMapPath)) {
             fs.copyFileSync(sourceMapPath, path.join(moduleOutputDir, 'index.js.map'));
           }
+          // Copy type definitions if exists
+          // 复制类型定义文件（如果存在）
+          // Handle both .js and .mjs extensions
+          // 处理 .js 和 .mjs 两种扩展名
+          const distDir = path.dirname(module.distPath);
+          const dtsPath = path.join(distDir, 'index.d.ts');
+          if (fs.existsSync(dtsPath)) {
+            fs.copyFileSync(dtsPath, path.join(moduleOutputDir, 'index.d.ts'));
+          }
           hasRuntime = true;
 
           // Copy additional included files (e.g., chunks)

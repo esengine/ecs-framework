@@ -7,7 +7,7 @@
  */
 
 import type { IService } from '@esengine/ecs-framework';
-import { Injectable, createLogger, PlatformDetector } from '@esengine/ecs-framework';
+import { Injectable, createLogger, PlatformDetector, ComponentRegistry as CoreComponentRegistry } from '@esengine/ecs-framework';
 import type {
     IUserCodeService,
     UserScriptInfo,
@@ -333,9 +333,23 @@ export class UserCodeService implements IService, IUserCodeService {
             if (this._isComponentClass(exported)) {
                 logger.debug(`Found component: ${name} | 发现组件: ${name}`);
 
-                // Register with ComponentRegistry if provided | 如果提供了 ComponentRegistry 则注册
-                // ComponentRegistry expects ComponentTypeInfo object, not the class directly
-                // ComponentRegistry 期望 ComponentTypeInfo 对象，而不是直接传入类
+                // Register with Core ComponentRegistry for serialization/deserialization
+                // 注册到核心 ComponentRegistry 用于序列化/反序列化
+                try {
+                    CoreComponentRegistry.register(exported);
+                    // Debug: verify registration
+                    const registeredType = CoreComponentRegistry.getComponentType(name);
+                    if (registeredType) {
+                        logger.info(`Component ${name} registered to core registry successfully`);
+                    } else {
+                        logger.warn(`Component ${name} registered but not found by name lookup`);
+                    }
+                } catch (err) {
+                    logger.warn(`Failed to register component ${name} to core registry | 注册组件 ${name} 到核心注册表失败:`, err);
+                }
+
+                // Register with Editor ComponentRegistry for UI display
+                // 注册到编辑器 ComponentRegistry 用于 UI 显示
                 if (componentRegistry && typeof componentRegistry.register === 'function') {
                     try {
                         componentRegistry.register({
@@ -345,7 +359,7 @@ export class UserCodeService implements IService, IUserCodeService {
                             description: `User component: ${name}`
                         });
                     } catch (err) {
-                        logger.warn(`Failed to register component ${name} | 注册组件 ${name} 失败:`, err);
+                        logger.warn(`Failed to register component ${name} to editor registry | 注册组件 ${name} 到编辑器注册表失败:`, err);
                     }
                 }
 

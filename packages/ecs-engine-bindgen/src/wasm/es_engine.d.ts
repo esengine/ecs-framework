@@ -118,6 +118,11 @@ export class GameEngine {
    */
   compileShader(vertex_source: string, fragment_source: string): number;
   /**
+   * Get editor mode.
+   * 获取编辑器模式。
+   */
+  isEditorMode(): boolean;
+  /**
    * Render sprites as overlay (without clearing screen).
    * 渲染精灵作为叠加层（不清除屏幕）。
    *
@@ -156,6 +161,15 @@ export class GameEngine {
    * * `r`, `g`, `b`, `a` - Color components (0.0-1.0) | 颜色分量 (0.0-1.0)
    */
   setClearColor(r: number, g: number, b: number, a: number): void;
+  /**
+   * Set editor mode.
+   * 设置编辑器模式。
+   *
+   * When false (runtime mode), editor-only UI like grid, gizmos,
+   * and axis indicator are automatically hidden.
+   * 当为 false（运行时模式）时，编辑器专用 UI（如网格、gizmos、坐标轴指示器）会自动隐藏。
+   */
+  setEditorMode(is_editor: boolean): void;
   /**
    * Set gizmo visibility.
    * 设置辅助工具可见性。
@@ -374,6 +388,7 @@ export interface InitOutput {
   readonly gameengine_hasMaterial: (a: number, b: number) => number;
   readonly gameengine_hasShader: (a: number, b: number) => number;
   readonly gameengine_height: (a: number) => number;
+  readonly gameengine_isEditorMode: (a: number) => number;
   readonly gameengine_isKeyDown: (a: number, b: number, c: number) => number;
   readonly gameengine_loadTexture: (a: number, b: number, c: number, d: number) => [number, number];
   readonly gameengine_loadTextureByPath: (a: number, b: number, c: number) => [number, number, number];
@@ -389,6 +404,7 @@ export interface InitOutput {
   readonly gameengine_setActiveViewport: (a: number, b: number, c: number) => number;
   readonly gameengine_setCamera: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly gameengine_setClearColor: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly gameengine_setEditorMode: (a: number, b: number) => void;
   readonly gameengine_setMaterialBlendMode: (a: number, b: number, c: number) => number;
   readonly gameengine_setMaterialColor: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
   readonly gameengine_setMaterialFloat: (a: number, b: number, c: number, d: number, e: number) => number;

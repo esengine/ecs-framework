@@ -118,6 +118,30 @@ export class Scene implements IScene {
     private _didSceneBegin: boolean = false;
 
     /**
+     * 编辑器模式标志
+     *
+     * 当为 true 时，组件的生命周期回调（如 onAddedToEntity）会被延迟，
+     * 直到调用 begin() 开始运行场景时才会触发。
+     *
+     * Editor mode flag.
+     * When true, component lifecycle callbacks (like onAddedToEntity) are deferred
+     * until begin() is called to start running the scene.
+     */
+    public isEditorMode: boolean = false;
+
+    /**
+     * 延迟的组件生命周期回调队列
+     *
+     * 在编辑器模式下，组件的 onAddedToEntity 回调会被加入此队列，
+     * 等到 begin() 调用时统一执行。
+     *
+     * Deferred component lifecycle callback queue.
+     * In editor mode, component's onAddedToEntity callbacks are queued here,
+     * and will be executed when begin() is called.
+     */
+    private _deferredComponentCallbacks: Array<() => void> = [];
+
+    /**
      * 系统列表缓存
      */
     private _cachedSystems: EntitySystem[] | null = null;
@@ -320,13 +344,46 @@ export class Scene implements IScene {
     public unload(): void {}
 
     /**
+     * 添加延迟的组件生命周期回调
+     *
+     * 在编辑器模式下，组件的 onAddedToEntity 回调会通过此方法加入队列。
+     *
+     * Queue a deferred component lifecycle callback.
+     * In editor mode, component's onAddedToEntity callbacks are queued via this method.
+     *
+     * @param callback 要延迟执行的回调 | The callback to defer
+     */
+    public queueDeferredComponentCallback(callback: () => void): void {
+        this._deferredComponentCallbacks.push(callback);
+    }
+
+    /**
      * 开始场景，启动实体处理器等
      *
      * 这个方法会启动场景。它将启动实体处理器等，并调用onStart方法。
+     * 在编辑器模式下，此方法还会执行所有延迟的组件生命周期回调。
+     *
+     * This method starts the scene. It will start entity processors and call onStart.
+     * In editor mode, this method also executes all deferred component lifecycle callbacks.
      */
     public begin() {
-        // 标记场景已开始运行并调用onStart方法
+        // 标记场景已开始运行
         this._didSceneBegin = true;
+
+        // 执行所有延迟的组件生命周期回调 | Execute all deferred component lifecycle callbacks
+        if (this._deferredComponentCallbacks.length > 0) {
+            for (const callback of this._deferredComponentCallbacks) {
+                try {
+                    callback();
+                } catch (error) {
+                    this.logger.error('Error executing deferred component callback:', error);
+                }
+            }
+            // 清空队列 | Clear the queue
+            this._deferredComponentCallbacks = [];
+        }
+
+        // 调用onStart方法
         this.onStart();
     }
 
