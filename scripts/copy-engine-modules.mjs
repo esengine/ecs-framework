@@ -110,7 +110,9 @@ function copyModule(module) {
     fs.copyFileSync(module.moduleJsonPath, destModuleJson);
 
     // Copy dist/index.js if exists
+    // 如果存在则拷贝 dist/index.js
     let hasRuntime = false;
+    let hasTypes = false;
     let sizeKB = 'N/A';
 
     if (fs.existsSync(module.distPath)) {
@@ -118,6 +120,7 @@ function copyModule(module) {
         fs.copyFileSync(module.distPath, destIndexJs);
 
         // Also copy source map if exists
+        // 如果存在则拷贝 source map
         const sourceMapPath = module.distPath + '.map';
         if (fs.existsSync(sourceMapPath)) {
             fs.copyFileSync(sourceMapPath, destIndexJs + '.map');
@@ -128,7 +131,16 @@ function copyModule(module) {
         hasRuntime = true;
     }
 
-    return { hasRuntime, sizeKB };
+    // Copy type definitions (.d.ts) if exists
+    // 如果存在则拷贝类型定义文件 (.d.ts)
+    const typesPath = module.distPath.replace(/\.js$/, '.d.ts');
+    if (fs.existsSync(typesPath)) {
+        const destDts = path.join(moduleOutputDir, 'index.d.ts');
+        fs.copyFileSync(typesPath, destDts);
+        hasTypes = true;
+    }
+
+    return { hasRuntime, hasTypes, sizeKB };
 }
 
 /**
@@ -203,10 +215,11 @@ function main() {
     const moduleInfos = [];
 
     for (const module of modules) {
-        const { hasRuntime, sizeKB } = copyModule(module);
+        const { hasRuntime, hasTypes, sizeKB } = copyModule(module);
 
         if (hasRuntime) {
-            console.log(`  ✓ ${module.id} (${sizeKB} KB)`);
+            const typesIndicator = hasTypes ? ' +types' : '';
+            console.log(`  ✓ ${module.id} (${sizeKB} KB${typesIndicator})`);
         } else {
             console.log(`  ○ ${module.id} (config only)`);
         }
@@ -216,6 +229,7 @@ function main() {
             name: module.name,
             displayName: module.displayName,
             hasRuntime,
+            hasTypes,
             editorPackage: module.editorPackage,
             isCore: module.isCore,
             category: module.category

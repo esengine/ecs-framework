@@ -332,13 +332,17 @@ export class TauriAPI {
     }
 
     /**
-     * 复制类型定义文件到项目
-     * Copy type definition files to project for IDE intellisense
+     * 更新项目的 tsconfig.json，添加引擎类型路径
+     * Update project tsconfig.json with engine type paths
+     *
+     * This updates the tsconfig to point directly to engine's .d.ts files
+     * instead of copying them to the project.
+     * 这会更新 tsconfig 直接指向引擎的 .d.ts 文件，而不是复制到项目。
      *
      * @param projectPath 项目路径 | Project path
      */
-    static async copyTypeDefinitions(projectPath: string): Promise<void> {
-        return await invoke<void>('copy_type_definitions', { projectPath });
+    static async updateProjectTsconfig(projectPath: string): Promise<void> {
+        return await invoke<void>('update_project_tsconfig', { projectPath });
     }
 
     /**

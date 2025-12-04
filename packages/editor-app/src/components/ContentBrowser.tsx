@@ -125,6 +125,9 @@ export function ContentBrowser({
     const messageHub = Core.services.resolve(MessageHub);
     const fileActionRegistry = Core.services.resolve(FileActionRegistry);
 
+    // Refs
+    const containerRef = useRef<HTMLDivElement>(null);
+
     // State
     const [currentPath, setCurrentPath] = useState<string | null>(null);
     const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
@@ -329,6 +332,53 @@ export function ${name.charAt(0).toLowerCase() + name.slice(1)}(): void {
         };
     }, [fileActionRegistry]);
 
+    // 键盘快捷键处理 | Keyboard shortcuts handling
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // 如果正在输入或有对话框打开，不处理快捷键
+            // Skip shortcuts if typing or dialog is open
+            if (
+                e.target instanceof HTMLInputElement ||
+                e.target instanceof HTMLTextAreaElement ||
+                renameDialog ||
+                deleteConfirmDialog ||
+                createFileDialog
+            ) {
+                return;
+            }
+
+            // 只在内容浏览器区域处理快捷键
+            // Only handle shortcuts when content browser has focus
+            if (!containerRef.current?.contains(document.activeElement) &&
+                document.activeElement !== containerRef.current) {
+                return;
+            }
+
+            // F2 - 重命名 | Rename
+            if (e.key === 'F2' && selectedPaths.size === 1) {
+                e.preventDefault();
+                const selectedPath = Array.from(selectedPaths)[0];
+                const asset = assets.find(a => a.path === selectedPath);
+                if (asset) {
+                    setRenameDialog({ asset, newName: asset.name });
+                }
+            }
+
+            // Delete - 删除 | Delete
+            if (e.key === 'Delete' && selectedPaths.size === 1) {
+                e.preventDefault();
+                const selectedPath = Array.from(selectedPaths)[0];
+                const asset = assets.find(a => a.path === selectedPath);
+                if (asset) {
+                    setDeleteConfirmDialog(asset);
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [selectedPaths, assets, renameDialog, deleteConfirmDialog, createFileDialog]);
+
     const getTemplateLabel = (label: string): string => {
         const mapping = templateLabels[label];
         if (mapping) {
@@ -510,6 +560,9 @@ export function ${name.charAt(0).toLowerCase() + name.slice(1)}(): void {
 
     // Handle asset click
     const handleAssetClick = useCallback((asset: AssetItem, e: React.MouseEvent) => {
+        // 聚焦容器以启用键盘快捷键 | Focus container to enable keyboard shortcuts
+        containerRef.current?.focus();
+
         if (e.shiftKey && lastSelectedPath) {
             const lastIndex = assets.findIndex(a => a.path === lastSelectedPath);
             const currentIndex = assets.findIndex(a => a.path === asset.path);
@@ -562,9 +615,12 @@ export function ${name.charAt(0).toLowerCase() + name.slice(1)}(): void {
                 const settings = SettingsService.getInstance();
                 const editorCommand = settings.getScriptEditorCommand();
 
-                if (editorCommand && projectPath) {
+                if (editorCommand) {
+                    // 使用项目路径，如果没有则使用文件所在目录
+                    // Use project path, or file's parent directory if not available
+                    const workingDir = projectPath || asset.path.substring(0, asset.path.lastIndexOf('\\')) || asset.path.substring(0, asset.path.lastIndexOf('/'));
                     try {
-                        await TauriAPI.openWithEditor(projectPath, editorCommand, asset.path);
+                        await TauriAPI.openWithEditor(workingDir, editorCommand, asset.path);
                         return;
                     } catch (error) {
                         console.error('Failed to open with editor:', error);
@@ -624,21 +680,38 @@ export function ${name.charAt(0).toLowerCase() + name.slice(1)}(): void {
     // Handle delete
     const handleDelete = useCallback(async (asset: AssetItem) => {
         try {
+            const deletedPath = asset.path;
+
             if (asset.type === 'folder') {
                 await TauriAPI.deleteFolder(asset.path);
+                // Also delete folder meta file if exists | 同时删除文件夹的 meta 文件
+                try {
+                    await TauriAPI.deleteFile(`${asset.path}.meta`);
+                } catch {
+                    // Meta file may not exist, ignore | meta 文件可能不存在，忽略
+                }
             } else {
                 await TauriAPI.deleteFile(asset.path);
+                // Also delete corresponding meta file if exists | 同时删除对应的 meta 文件
+                try {
+                    await TauriAPI.deleteFile(`${asset.path}.meta`);
+                } catch {
+                    // Meta file may not exist, ignore | meta 文件可能不存在，忽略
+                }
             }
 
             if (currentPath) {
                 await loadAssets(currentPath);
             }
 
+            // Notify that a file was deleted | 通知文件已删除
+            messageHub?.publish('file:deleted', { path: deletedPath });
+
             setDeleteConfirmDialog(null);
         } catch (error) {
             console.error('Failed to delete:', error);
         }
-    }, [currentPath, loadAssets]);
+    }, [currentPath, loadAssets, messageHub]);
 
     // Get breadcrumbs
     const getBreadcrumbs = useCallback(() => {
@@ -996,7 +1069,11 @@ export function ${name.charAt(0).toLowerCase() + name.slice(1)}(): void {
     }
 
     return (
-        <div className={`content-browser ${isDrawer ? 'is-drawer' : ''}`}>
+        <div
+            ref={containerRef}
+            className={`content-browser ${isDrawer ? 'is-drawer' : ''}`}
+            tabIndex={-1}
+        >
             {/* Left Panel - Folder Tree */}
             <div className="content-browser-left">
                 {/* Favorites Section */}
@@ -1291,6 +1368,9 @@ export function ${name.charAt(0).toLowerCase() + name.slice(1)}(): void {
                             if (currentPath) {
                                 await loadAssets(currentPath);
                             }
+
+                            // Notify that a file was created | 通知文件已创建
+                            messageHub?.publish('file:created', { path: filePath });
                         } catch (error) {
                             console.error('Failed to create file:', error);
                         }
