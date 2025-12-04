@@ -1,0 +1,590 @@
+/**
+ * 论坛帖子列表样式
+ * Forum post list styles
+ */
+
+.forum-post-list {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* 欢迎横幅 | Welcome banner */
+.forum-welcome-banner {
+    background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+    border-bottom: 1px solid #3a4a5a;
+    padding: 16px;
+}
+
+.forum-welcome-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.forum-welcome-text h2 {
+    margin: 0 0 4px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.forum-welcome-text p {
+    margin: 0;
+    font-size: 11px;
+    color: #9ca3af;
+}
+
+.forum-welcome-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.forum-btn-github {
+    background: #24292e;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+.forum-btn-github:hover:not(:disabled) {
+    background: #2f363d;
+    border-color: #555;
+}
+
+/* 分类卡片 | Category cards */
+.forum-category-cards {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    overflow-x: auto;
+    background: #2d2d2d;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.forum-category-cards::-webkit-scrollbar {
+    height: 4px;
+}
+
+.forum-category-cards::-webkit-scrollbar-track {
+    background: #2a2a2a;
+}
+
+.forum-category-cards::-webkit-scrollbar-thumb {
+    background: #4a4a4a;
+    border-radius: 2px;
+}
+
+.forum-category-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 16px;
+    min-width: 80px;
+    background: #363636;
+    border: 1px solid #444;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.forum-category-card:hover {
+    background: #404040;
+    border-color: #4a9eff;
+    transform: translateY(-2px);
+}
+
+.forum-category-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: rgba(74, 158, 255, 0.15);
+    border-radius: 50%;
+    color: #4a9eff;
+}
+
+.forum-category-card-emoji {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.forum-category-card-name {
+    font-size: 10px;
+    color: #999;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* 工具栏 | Toolbar */
+.forum-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #1a1a1a;
+    background: #333;
+}
+
+.forum-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.forum-search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #3a3a3a;
+    border: 1px solid #4a4a4a;
+    border-radius: 3px;
+    min-width: 180px;
+}
+
+.forum-search svg {
+    color: #666;
+    flex-shrink: 0;
+}
+
+.forum-search input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    font-size: 11px;
+    color: #e0e0e0;
+}
+
+.forum-search input::placeholder {
+    color: #666;
+}
+
+/* 过滤器 | Filters */
+.forum-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-bottom: 1px solid #1a1a1a;
+    background: #2d2d2d;
+}
+
+.forum-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.forum-filter-group svg {
+    color: #666;
+}
+
+.forum-filter-group select {
+    padding: 3px 6px;
+    font-size: 11px;
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    color: #ddd;
+    cursor: pointer;
+}
+
+.forum-filter-group select:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.forum-post-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: #666;
+}
+
+/* 帖子统计栏 | Stats bar */
+.forum-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #2a2a2a;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.forum-stats-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #888;
+}
+
+.forum-stats-left svg {
+    color: #4a9eff;
+}
+
+.forum-stats-clear {
+    background: none;
+    border: none;
+    font-size: 11px;
+    color: #4a9eff;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: all 0.15s ease;
+}
+
+.forum-stats-clear:hover {
+    background: rgba(74, 158, 255, 0.1);
+}
+
+/* 下拉选择框 | Select dropdown */
+.forum-select {
+    padding: 4px 8px;
+    font-size: 11px;
+    background: #3a3a3a;
+    border: 1px solid #4a4a4a;
+    border-radius: 3px;
+    color: #ddd;
+    cursor: pointer;
+    min-width: 120px;
+}
+
+.forum-select:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+/* 帖子列表 | Post list */
+.forum-posts {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+}
+
+.forum-posts.loading {
+    pointer-events: none;
+}
+
+.forum-posts.loading > *:not(.forum-posts-overlay) {
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+}
+
+/* 加载覆盖层 | Loading overlay */
+.forum-posts-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(42, 42, 42, 0.7);
+    z-index: 10;
+    backdrop-filter: blur(2px);
+}
+
+.forum-posts-overlay svg {
+    color: #4a9eff;
+}
+
+.forum-posts-loading,
+.forum-posts-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 12px;
+    color: #888;
+}
+
+.forum-posts-empty svg {
+    opacity: 0.3;
+    color: #444;
+}
+
+.forum-posts-empty p {
+    margin: 0;
+    font-size: 12px;
+}
+
+/* 帖子项 | Post item */
+.forum-post-item {
+    display: flex;
+    gap: 12px;
+    padding: 14px 12px;
+    border-bottom: 1px solid #1a1a1a;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.forum-post-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.forum-post-item.hot {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, transparent 50%);
+    border-left: 2px solid #ef4444;
+}
+
+.forum-post-item.hot:hover {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(255, 255, 255, 0.03) 50%);
+}
+
+.forum-post-avatar {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.forum-post-avatar img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #3a3a3a;
+}
+
+.forum-post-avatar-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #2a2a2a;
+}
+
+.forum-post-avatar-badge.hot {
+    background: #ef4444;
+    color: white;
+}
+
+.forum-post-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.forum-post-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.forum-post-badges {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.forum-post-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 500;
+}
+
+.forum-post-badge.new {
+    background: rgba(74, 158, 255, 0.15);
+    color: #4a9eff;
+}
+
+.forum-post-badge.hot {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.forum-post-badge.pinned {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+}
+
+.forum-post-badge.locked {
+    background: rgba(107, 114, 128, 0.15);
+    color: #9ca3af;
+}
+
+.forum-post-external {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: none;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+    margin-left: auto;
+}
+
+.forum-post-external:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #4a9eff;
+}
+
+.forum-post-category {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 500;
+    background: rgba(74, 158, 255, 0.1);
+    color: #4a9eff;
+}
+
+.forum-post-title {
+    flex: 1;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #e0e0e0;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.forum-post-item:hover .forum-post-title {
+    color: #4a9eff;
+}
+
+.forum-post-excerpt {
+    margin: 0 0 8px 0;
+    font-size: 11px;
+    color: #888;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.forum-post-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.forum-post-author {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #888;
+}
+
+.forum-post-author-avatar {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.forum-post-author-placeholder {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #4a9eff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 600;
+    color: white;
+}
+
+.forum-post-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #666;
+}
+
+/* 帖子统计 | Post stats */
+.forum-post-stats {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.forum-post-stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #666;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.forum-post-stat.active {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.forum-post-stat.active svg {
+    fill: #ef4444;
+}
+
+.forum-post-answered {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+/* 加载更多 | Load more */
+.forum-load-more {
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+    border-top: 1px solid #1a1a1a;
+}
+
+.forum-load-more .forum-btn {
+    min-width: 120px;
+}
+
+/* 分页 | Pagination */
+.forum-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-top: 1px solid #1a1a1a;
+    background: #2d2d2d;
+}
+
+.forum-pagination-info {
+    font-size: 11px;
+    color: #888;
+}

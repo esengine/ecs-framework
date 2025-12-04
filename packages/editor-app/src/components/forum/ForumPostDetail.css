@@ -1,0 +1,560 @@
+/**
+ * 论坛帖子详情样式
+ * Forum post detail styles
+ */
+
+.forum-post-detail {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.forum-detail-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 12px;
+    color: #888;
+}
+
+/* 文章区 | Article section */
+.forum-detail-article {
+    padding: 0 12px 20px;
+}
+
+.forum-detail-header {
+    margin-bottom: 16px;
+}
+
+.forum-detail-category-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.forum-detail-category {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    background: rgba(74, 158, 255, 0.1);
+    color: #4a9eff;
+}
+
+.forum-detail-answered {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.forum-detail-external {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    font-size: 11px;
+    background: #3a3a3a;
+    border: 1px solid #4a4a4a;
+    color: #888;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-left: auto;
+}
+
+.forum-detail-external:hover {
+    background: #444;
+    color: #e0e0e0;
+    border-color: #555;
+}
+
+.forum-detail-title {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #e0e0e0;
+    line-height: 1.4;
+}
+
+.forum-detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.forum-detail-author {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.forum-detail-author img {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.forum-detail-author-placeholder {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #4a9eff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.forum-detail-author span {
+    font-size: 12px;
+    color: #e0e0e0;
+    font-weight: 500;
+}
+
+.forum-detail-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #666;
+}
+
+/* 内容区 | Content section */
+.forum-detail-content {
+    font-size: 13px;
+    line-height: 1.7;
+    color: #bbb;
+}
+
+.forum-detail-content p {
+    margin: 0 0 12px 0;
+}
+
+.forum-detail-content p:last-child {
+    margin-bottom: 0;
+}
+
+/* Markdown 样式 | Markdown styles */
+.forum-detail-content h1,
+.forum-detail-content h2,
+.forum-detail-content h3,
+.forum-detail-content h4 {
+    color: #e0e0e0;
+    margin: 20px 0 10px 0;
+    font-weight: 600;
+}
+
+.forum-detail-content h1 { font-size: 20px; }
+.forum-detail-content h2 { font-size: 17px; }
+.forum-detail-content h3 { font-size: 15px; }
+.forum-detail-content h4 { font-size: 14px; }
+
+.forum-detail-content a {
+    color: #4a9eff;
+    text-decoration: none;
+}
+
+.forum-detail-content a:hover {
+    text-decoration: underline;
+}
+
+.forum-detail-content code {
+    background: #1a1a1a;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    color: #e06c75;
+}
+
+.forum-detail-content pre {
+    background: #1a1a1a;
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 12px 0;
+    border: 1px solid #333;
+}
+
+.forum-detail-content pre code {
+    background: none;
+    padding: 0;
+    color: #abb2bf;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.forum-detail-content blockquote {
+    margin: 12px 0;
+    padding: 10px 16px;
+    border-left: 3px solid #4a9eff;
+    background: rgba(74, 158, 255, 0.05);
+    color: #999;
+}
+
+.forum-detail-content ul,
+.forum-detail-content ol {
+    margin: 12px 0;
+    padding-left: 24px;
+}
+
+.forum-detail-content li {
+    margin: 6px 0;
+}
+
+.forum-detail-content img {
+    max-width: 100%;
+    border-radius: 6px;
+    margin: 12px 0;
+}
+
+.forum-detail-content hr {
+    border: none;
+    border-top: 1px solid #3a3a3a;
+    margin: 20px 0;
+}
+
+.forum-detail-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+}
+
+.forum-detail-content th,
+.forum-detail-content td {
+    padding: 8px 12px;
+    border: 1px solid #3a3a3a;
+    text-align: left;
+}
+
+.forum-detail-content th {
+    background: #333;
+    color: #e0e0e0;
+    font-weight: 600;
+}
+
+.forum-detail-content tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* 底部统计 | Footer stats */
+.forum-detail-footer {
+    margin-top: 20px;
+    padding-top: 12px;
+    border-top: 1px solid #1a1a1a;
+}
+
+.forum-detail-stats {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.forum-detail-stat {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #666;
+}
+
+.forum-detail-stat.interactive {
+    padding: 5px 10px;
+    margin: -5px -10px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: none;
+    border: none;
+}
+
+.forum-detail-stat.interactive:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #888;
+}
+
+.forum-detail-stat.interactive.liked {
+    color: #ef4444;
+}
+
+.forum-detail-stat.interactive.liked svg {
+    fill: #ef4444;
+}
+
+/* 回复区 | Replies section */
+.forum-replies-section {
+    padding: 0 12px 20px;
+    border-top: 1px solid #1a1a1a;
+}
+
+.forum-replies-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 16px 0 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+/* 回复表单 | Reply form */
+.forum-reply-form {
+    margin-bottom: 16px;
+}
+
+.forum-reply-form.nested {
+    margin-top: 10px;
+    margin-left: 20px;
+}
+
+.forum-reply-form textarea {
+    width: 100%;
+    padding: 10px;
+    font-size: 12px;
+    font-family: inherit;
+    line-height: 1.5;
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    border-radius: 3px;
+    color: #ddd;
+    resize: vertical;
+    min-height: 70px;
+}
+
+.forum-reply-form textarea:hover {
+    border-color: #4a4a4a;
+}
+
+.forum-reply-form textarea:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.forum-reply-form textarea::placeholder {
+    color: #555;
+}
+
+.forum-reply-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+/* 回复列表 | Reply list */
+.forum-replies-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.forum-replies-loading {
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+    color: #666;
+}
+
+.forum-replies-empty {
+    padding: 24px;
+    text-align: center;
+    color: #666;
+}
+
+.forum-replies-empty p {
+    margin: 0;
+    font-size: 12px;
+}
+
+/* 单条回复 | Single reply */
+.forum-reply {
+    padding: 12px 0;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.forum-reply:last-child {
+    border-bottom: none;
+}
+
+.forum-reply-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.forum-reply-author {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.forum-reply-author img {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.forum-reply-author-placeholder {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #4a9eff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+}
+
+.forum-reply-author-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #e0e0e0;
+}
+
+.forum-reply-answer-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 500;
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border-radius: 12px;
+}
+
+.forum-reply-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #666;
+}
+
+.forum-reply-content {
+    font-size: 12px;
+    line-height: 1.6;
+    color: #bbb;
+}
+
+/* 回复内容 Markdown 样式 | Reply content Markdown styles */
+.forum-reply-content p {
+    margin: 0 0 8px 0;
+}
+
+.forum-reply-content p:last-child {
+    margin-bottom: 0;
+}
+
+.forum-reply-content a {
+    color: #4a9eff;
+    text-decoration: none;
+}
+
+.forum-reply-content a:hover {
+    text-decoration: underline;
+}
+
+.forum-reply-content code {
+    background: #1a1a1a;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+    color: #e06c75;
+}
+
+.forum-reply-content pre {
+    background: #1a1a1a;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 8px 0;
+    border: 1px solid #333;
+}
+
+.forum-reply-content pre code {
+    background: none;
+    padding: 0;
+    color: #abb2bf;
+}
+
+.forum-reply-content blockquote {
+    margin: 8px 0;
+    padding: 8px 12px;
+    border-left: 2px solid #4a9eff;
+    background: rgba(74, 158, 255, 0.05);
+    color: #999;
+}
+
+.forum-reply-content ul,
+.forum-reply-content ol {
+    margin: 8px 0;
+    padding-left: 20px;
+}
+
+.forum-reply-content li {
+    margin: 4px 0;
+}
+
+.forum-reply-content img {
+    max-width: 100%;
+    border-radius: 4px;
+    margin: 8px 0;
+}
+
+.forum-reply-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.forum-reply-action {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    font-size: 11px;
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s ease;
+}
+
+.forum-reply-action:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #888;
+}
+
+.forum-reply-action.liked {
+    color: #ef4444;
+}
+
+.forum-reply-action.liked svg {
+    fill: #ef4444;
+}
+
+.forum-reply-action.delete:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}

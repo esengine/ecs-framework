@@ -44,6 +44,7 @@ import { ErrorDialog } from './components/ErrorDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { PluginGeneratorWindow } from './components/PluginGeneratorWindow';
 import { BuildSettingsWindow } from './components/BuildSettingsWindow';
+import { ForumPanel } from './components/forum';
 import { ToastProvider, useToast } from './components/Toast';
 import { TitleBar } from './components/TitleBar';
 import { MainToolbar } from './components/MainToolbar';
@@ -733,6 +734,12 @@ function App() {
                     title: locale === 'zh' ? '检视器' : 'Inspector',
                     content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} commandManager={commandManager} />,
                     closable: false
+                },
+                {
+                    id: 'forum',
+                    title: locale === 'zh' ? '社区论坛' : 'Forum',
+                    content: <ForumPanel />,
+                    closable: true
                 }
             ];
 
