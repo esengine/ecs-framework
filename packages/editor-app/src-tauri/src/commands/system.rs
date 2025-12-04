@@ -475,12 +475,26 @@ fn update_tsconfig_file(
             // Check for index.d.ts
             // 检查是否存在 index.d.ts
             let dts_path = module_path.join("index.d.ts");
-            if dts_path.exists() {
-                let module_name = format!("@esengine/{}", module_id);
-                let dts_path_str = format!("{}/{}/index.d.ts", engine_path_normalized, module_id);
-                paths.insert(module_name, serde_json::json!([dts_path_str]));
-                module_count += 1;
+            if !dts_path.exists() {
+                continue;
             }
+
+            // Read module.json to get the actual package name
+            // 读取 module.json 获取实际的包名
+            let module_json_path = module_path.join("module.json");
+            let module_name = if module_json_path.exists() {
+                fs::read_to_string(&module_json_path)
+                    .ok()
+                    .and_then(|content| serde_json::from_str::<serde_json::Value>(&content).ok())
+                    .and_then(|json| json.get("name").and_then(|n| n.as_str()).map(|s| s.to_string()))
+                    .unwrap_or_else(|| format!("@esengine/{}", module_id))
+            } else {
+                format!("@esengine/{}", module_id)
+            };
+
+            let dts_path_str = format!("{}/{}/index.d.ts", engine_path_normalized, module_id);
+            paths.insert(module_name, serde_json::json!([dts_path_str]));
+            module_count += 1;
         }
     }
 
