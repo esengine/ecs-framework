@@ -87,4 +87,64 @@ export class SettingsService {
     public clearRecentProjects(): void {
         this.set('recentProjects', []);
     }
+
+    // ==================== Script Editor Settings ====================
+
+    /**
+     * 支持的脚本编辑器类型
+     * Supported script editor types
+     */
+    public static readonly SCRIPT_EDITORS = [
+        { id: 'system', name: 'System Default', nameZh: '系统默认', command: '' },
+        { id: 'vscode', name: 'Visual Studio Code', nameZh: 'Visual Studio Code', command: 'code' },
+        { id: 'cursor', name: 'Cursor', nameZh: 'Cursor', command: 'cursor' },
+        { id: 'webstorm', name: 'WebStorm', nameZh: 'WebStorm', command: 'webstorm' },
+        { id: 'sublime', name: 'Sublime Text', nameZh: 'Sublime Text', command: 'subl' },
+        { id: 'custom', name: 'Custom', nameZh: '自定义', command: '' }
+    ];
+
+    /**
+     * 获取脚本编辑器设置
+     * Get script editor setting
+     */
+    public getScriptEditor(): string {
+        return this.get<string>('editor.scriptEditor', 'system');
+    }
+
+    /**
+     * 设置脚本编辑器
+     * Set script editor
+     */
+    public setScriptEditor(editorId: string): void {
+        this.set('editor.scriptEditor', editorId);
+    }
+
+    /**
+     * 获取自定义脚本编辑器命令
+     * Get custom script editor command
+     */
+    public getCustomScriptEditorCommand(): string {
+        return this.get<string>('editor.customScriptEditorCommand', '');
+    }
+
+    /**
+     * 设置自定义脚本编辑器命令
+     * Set custom script editor command
+     */
+    public setCustomScriptEditorCommand(command: string): void {
+        this.set('editor.customScriptEditorCommand', command);
+    }
+
+    /**
+     * 获取当前脚本编辑器的命令
+     * Get current script editor command
+     */
+    public getScriptEditorCommand(): string {
+        const editorId = this.getScriptEditor();
+        if (editorId === 'custom') {
+            return this.getCustomScriptEditorCommand();
+        }
+        const editor = SettingsService.SCRIPT_EDITORS.find(e => e.id === editorId);
+        return editor?.command || '';
+    }
 }

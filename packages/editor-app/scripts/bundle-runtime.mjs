@@ -37,6 +37,25 @@ const filesToBundle = [
     }
 ];
 
+// Type definition files for IDE intellisense
+// 用于 IDE 智能感知的类型定义文件
+const typesDir = path.join(bundleDir, 'types');
+if (!fs.existsSync(typesDir)) {
+    fs.mkdirSync(typesDir, { recursive: true });
+    console.log(`Created types directory: ${typesDir}`);
+}
+
+const typeFilesToBundle = [
+    {
+        src: path.join(rootPath, 'packages/core/dist/index.d.ts'),
+        dst: path.join(typesDir, 'ecs-framework.d.ts')
+    },
+    {
+        src: path.join(rootPath, 'packages/engine-core/dist/index.d.ts'),
+        dst: path.join(typesDir, 'engine-core.d.ts')
+    }
+];
+
 // Copy files
 let success = true;
 for (const { src, dst } of filesToBundle) {
@@ -56,6 +75,24 @@ for (const { src, dst } of filesToBundle) {
     } catch (error) {
         console.error(`Failed to bundle ${path.basename(src)}: ${error.message}`);
         success = false;
+    }
+}
+
+// Copy type definition files (optional - don't fail if not found)
+// 复制类型定义文件（可选 - 找不到不报错）
+for (const { src, dst } of typeFilesToBundle) {
+    try {
+        if (!fs.existsSync(src)) {
+            console.warn(`Type definition not found: ${src}`);
+            console.log('  Build packages first: pnpm --filter @esengine/core build');
+            continue;
+        }
+
+        fs.copyFileSync(src, dst);
+        const stats = fs.statSync(dst);
+        console.log(`✓ Bundled type definition ${path.basename(dst)} (${(stats.size / 1024).toFixed(2)} KB)`);
+    } catch (error) {
+        console.warn(`Failed to bundle type definition ${path.basename(src)}: ${error.message}`);
     }
 }
 

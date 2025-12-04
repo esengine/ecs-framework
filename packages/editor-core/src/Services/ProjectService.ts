@@ -130,6 +130,40 @@ export class ProjectService implements IService {
             const assetsPath = `${projectPath}${sep}assets`;
             await this.fileAPI.createDirectory(assetsPath);
 
+            // Create types folder for type definitions
+            // 创建类型定义文件夹
+            const typesPath = `${projectPath}${sep}types`;
+            await this.fileAPI.createDirectory(typesPath);
+
+            // Create tsconfig.json for TypeScript support
+            // 创建 tsconfig.json 用于 TypeScript 支持
+            const tsConfig = {
+                compilerOptions: {
+                    target: 'ES2020',
+                    module: 'ESNext',
+                    moduleResolution: 'bundler',
+                    lib: ['ES2020', 'DOM'],
+                    strict: true,
+                    esModuleInterop: true,
+                    skipLibCheck: true,
+                    forceConsistentCasingInFileNames: true,
+                    experimentalDecorators: true,
+                    emitDecoratorMetadata: true,
+                    noEmit: true,
+                    // Reference local type definitions
+                    // 引用本地类型定义文件
+                    typeRoots: ['./types'],
+                    paths: {
+                        '@esengine/ecs-framework': ['./types/ecs-framework.d.ts'],
+                        '@esengine/engine-core': ['./types/engine-core.d.ts']
+                    }
+                },
+                include: ['scripts/**/*.ts'],
+                exclude: ['.esengine']
+            };
+            const tsConfigPath = `${projectPath}${sep}tsconfig.json`;
+            await this.fileAPI.writeFileContent(tsConfigPath, JSON.stringify(tsConfig, null, 2));
+
             await this.messageHub.publish('project:created', {
                 path: projectPath
             });

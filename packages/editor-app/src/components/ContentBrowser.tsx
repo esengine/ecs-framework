@@ -40,6 +40,7 @@ import {
 import { Core } from '@esengine/ecs-framework';
 import { MessageHub, FileActionRegistry, type FileCreationTemplate } from '@esengine/editor-core';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
+import { SettingsService } from '../services/SettingsService';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { PromptDialog } from './PromptDialog';
 import '../styles/ContentBrowser.css';
@@ -210,7 +211,123 @@ export function ContentBrowser({
         'Shader': { en: 'Shader', zh: '着色器' },
         'Tilemap': { en: 'Tilemap', zh: '瓦片地图' },
         'Tileset': { en: 'Tileset', zh: '瓦片集' },
+        'Component': { en: 'Component', zh: '组件' },
+        'System': { en: 'System', zh: '系统' },
+        'TypeScript': { en: 'TypeScript', zh: 'TypeScript' },
     };
+
+    // 注册内置的 TypeScript 文件创建模板
+    // Register built-in TypeScript file creation templates
+    useEffect(() => {
+        if (!fileActionRegistry) return;
+
+        const builtinTemplates: FileCreationTemplate[] = [
+            {
+                id: 'ts-component',
+                label: 'Component',
+                extension: '.ts',
+                icon: 'FileCode',
+                category: 'Script',
+                getContent: (fileName: string) => {
+                    const className = fileName.replace(/\.ts$/, '');
+                    return `import { Component, ECSComponent, Property, Serialize, Serializable } from '@esengine/ecs-framework';
+
+/**
+ * ${className}
+ */
+@ECSComponent('${className}')
+@Serializable({ version: 1, typeId: '${className}' })
+export class ${className} extends Component {
+    // 在这里添加组件属性
+    // Add component properties here
+
+    @Serialize()
+    @Property({ type: 'number', label: 'Example Property' })
+    public exampleProperty: number = 0;
+
+    onInitialize(): void {
+        // 组件初始化时调用
+        // Called when component is initialized
+    }
+
+    onDestroy(): void {
+        // 组件销毁时调用
+        // Called when component is destroyed
+    }
+}
+`;
+                }
+            },
+            {
+                id: 'ts-system',
+                label: 'System',
+                extension: '.ts',
+                icon: 'FileCode',
+                category: 'Script',
+                getContent: (fileName: string) => {
+                    const className = fileName.replace(/\.ts$/, '');
+                    return `import { EntitySystem, Matcher, type Entity } from '@esengine/ecs-framework';
+
+/**
+ * ${className}
+ */
+export class ${className} extends EntitySystem {
+    // 定义系统处理的组件类型
+    // Define component types this system processes
+    protected getMatcher(): Matcher {
+        // 返回匹配器，指定需要哪些组件
+        // Return matcher specifying required components
+        // return Matcher.all(SomeComponent);
+        return Matcher.empty();
+    }
+
+    protected updateEntity(entity: Entity, deltaTime: number): void {
+        // 处理每个实体
+        // Process each entity
+    }
+
+    // 可选：系统初始化
+    // Optional: System initialization
+    // onInitialize(): void {
+    //     super.onInitialize();
+    // }
+}
+`;
+                }
+            },
+            {
+                id: 'ts-script',
+                label: 'TypeScript',
+                extension: '.ts',
+                icon: 'FileCode',
+                category: 'Script',
+                getContent: (fileName: string) => {
+                    const name = fileName.replace(/\.ts$/, '');
+                    return `/**
+ * ${name}
+ */
+
+export function ${name.charAt(0).toLowerCase() + name.slice(1)}(): void {
+    // 在这里编写代码
+    // Write your code here
+}
+`;
+                }
+            }
+        ];
+
+        // 注册模板
+        for (const template of builtinTemplates) {
+            fileActionRegistry.registerCreationTemplate(template);
+        }
+
+        // 清理函数
+        return () => {
+            for (const template of builtinTemplates) {
+                fileActionRegistry.unregisterCreationTemplate(template);
+            }
+        };
+    }, [fileActionRegistry]);
 
     const getTemplateLabel = (label: string): string => {
         const mapping = templateLabels[label];
@@ -439,6 +556,24 @@ export function ContentBrowser({
                 return;
             }
 
+            // 脚本文件使用配置的编辑器打开
+            // Open script files with configured editor
+            if (ext === 'ts' || ext === 'tsx' || ext === 'js' || ext === 'jsx') {
+                const settings = SettingsService.getInstance();
+                const editorCommand = settings.getScriptEditorCommand();
+
+                if (editorCommand && projectPath) {
+                    try {
+                        await TauriAPI.openWithEditor(projectPath, editorCommand, asset.path);
+                        return;
+                    } catch (error) {
+                        console.error('Failed to open with editor:', error);
+                        // 如果失败，回退到系统默认应用
+                        // Fall back to system default app if failed
+                    }
+                }
+            }
+
             if (fileActionRegistry) {
                 const handled = await fileActionRegistry.handleDoubleClick(asset.path);
                 if (handled) return;
@@ -450,7 +585,7 @@ export function ContentBrowser({
                 console.error('Failed to open file:', error);
             }
         }
-    }, [loadAssets, onOpenScene, fileActionRegistry]);
+    }, [loadAssets, onOpenScene, fileActionRegistry, projectPath]);
 
     // Handle context menu
     const handleContextMenu = useCallback((e: React.MouseEvent, asset?: AssetItem) => {
@@ -1127,10 +1262,16 @@ export function ContentBrowser({
             )}
 
             {/* Create File Dialog */}
-            {createFileDialog && (
+            {createFileDialog && (() => {
+                // 规范化扩展名（确保有点号前缀）
+                // Normalize extension (ensure dot prefix)
+                const ext = createFileDialog.template.extension.startsWith('.')
+                    ? createFileDialog.template.extension
+                    : `.${createFileDialog.template.extension}`;
+                return (
                 <PromptDialog
-                    title={`New ${createFileDialog.template.label}`}
-                    message={`Enter file name (.${createFileDialog.template.extension} will be added):`}
+                    title={locale === 'zh' ? `新建 ${getTemplateLabel(createFileDialog.template.label)}` : `New ${createFileDialog.template.label}`}
+                    message={locale === 'zh' ? `输入文件名（将添加 ${ext}）:` : `Enter file name (${ext} will be added):`}
                     placeholder="filename"
                     confirmText={locale === 'zh' ? '创建' : 'Create'}
                     cancelText={locale === 'zh' ? '取消' : 'Cancel'}
@@ -1139,8 +1280,8 @@ export function ContentBrowser({
                         setCreateFileDialog(null);
 
                         let fileName = value;
-                        if (!fileName.endsWith(`.${template.extension}`)) {
-                            fileName = `${fileName}.${template.extension}`;
+                        if (!fileName.endsWith(ext)) {
+                            fileName = `${fileName}${ext}`;
                         }
                         const filePath = `${parentPath}/${fileName}`;
 
@@ -1156,7 +1297,8 @@ export function ContentBrowser({
                     }}
                     onCancel={() => setCreateFileDialog(null)}
                 />
-            )}
+                );
+            })()}
         </div>
     );
 }

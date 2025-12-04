@@ -381,6 +381,14 @@ function App() {
             // 设置 Tauri project:// 协议的基础路径（用于加载插件等项目文件）
             await TauriAPI.setProjectBasePath(projectPath);
 
+            // 复制类型定义到项目，用于 IDE 智能感知
+            // Copy type definitions to project for IDE intellisense
+            try {
+                await TauriAPI.copyTypeDefinitions(projectPath);
+            } catch (e) {
+                console.warn('[App] Failed to copy type definitions:', e);
+            }
+
             const settings = SettingsService.getInstance();
             settings.addRecentProject(projectPath);
 
