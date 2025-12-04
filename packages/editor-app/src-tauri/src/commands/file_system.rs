@@ -82,10 +82,35 @@ pub fn delete_file(path: String) -> Result<(), String> {
 }
 
 /// Delete directory (recursive)
+/// 递归删除目录
 #[tauri::command]
 pub fn delete_folder(path: String) -> Result<(), String> {
-    fs::remove_dir_all(&path)
-        .map_err(|e| format!("Failed to delete folder {}: {}", path, e))
+    println!("[delete_folder] Attempting to delete: {}", path);
+
+    // Check if path exists
+    // 检查路径是否存在
+    let dir_path = std::path::Path::new(&path);
+    if !dir_path.exists() {
+        println!("[delete_folder] Path does not exist: {}", path);
+        return Err(format!("Directory does not exist: {}", path));
+    }
+
+    if !dir_path.is_dir() {
+        println!("[delete_folder] Path is not a directory: {}", path);
+        return Err(format!("Path is not a directory: {}", path));
+    }
+
+    match fs::remove_dir_all(&path) {
+        Ok(_) => {
+            println!("[delete_folder] Successfully deleted: {}", path);
+            Ok(())
+        }
+        Err(e) => {
+            let error_msg = format!("Failed to delete folder {}: {}", path, e);
+            eprintln!("[delete_folder] Error: {}", error_msg);
+            Err(error_msg)
+        }
+    }
 }
 
 /// Rename or move file/folder

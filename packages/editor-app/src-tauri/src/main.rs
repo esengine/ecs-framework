@@ -82,7 +82,7 @@ fn main() {
             commands::show_in_folder,
             commands::get_temp_dir,
             commands::open_with_editor,
-            commands::copy_type_definitions,
+            commands::update_project_tsconfig,
             commands::get_app_resource_dir,
             commands::get_current_dir,
             commands::start_local_server,
@@ -156,7 +156,13 @@ fn handle_project_protocol(
             tauri::http::Response::builder()
                 .status(200)
                 .header("Content-Type", mime_type)
+                // CORS headers for dynamic ES module imports | 动态 ES 模块导入所需的 CORS 头
                 .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Methods", "GET, OPTIONS")
+                .header("Access-Control-Allow-Headers", "Content-Type")
+                .header("Access-Control-Expose-Headers", "Content-Length")
+                // Allow cross-origin script loading | 允许跨域脚本加载
+                .header("Cross-Origin-Resource-Policy", "cross-origin")
                 .body(content)
                 .unwrap()
         }
@@ -164,6 +170,7 @@ fn handle_project_protocol(
             eprintln!("Failed to read file {}: {}", file_path, e);
             tauri::http::Response::builder()
                 .status(404)
+                .header("Access-Control-Allow-Origin", "*")
                 .body(Vec::new())
                 .unwrap()
         }

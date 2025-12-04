@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { MessageHub, FileActionRegistry } from '@esengine/editor-core';
+import { SettingsService } from '../services/SettingsService';
 import { Core } from '@esengine/ecs-framework';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -898,6 +899,27 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             if (ext === 'ecs' && onOpenScene) {
                 onOpenScene(node.path);
                 return;
+            }
+
+            // 脚本文件使用配置的编辑器打开
+            // Open script files with configured editor
+            if (ext === 'ts' || ext === 'tsx' || ext === 'js' || ext === 'jsx') {
+                const settings = SettingsService.getInstance();
+                const editorCommand = settings.getScriptEditorCommand();
+
+                if (editorCommand) {
+                    // 使用项目路径，如果没有则使用文件所在目录
+                    // Use project path, or file's parent directory if not available
+                    const workingDir = rootPath || node.path.substring(0, node.path.lastIndexOf('\\')) || node.path.substring(0, node.path.lastIndexOf('/'));
+                    try {
+                        await TauriAPI.openWithEditor(workingDir, editorCommand, node.path);
+                        return;
+                    } catch (error) {
+                        console.error('Failed to open with editor:', error);
+                        // 如果失败，回退到系统默认应用
+                        // Fall back to system default app if failed
+                    }
+                }
             }
 
             if (fileActionRegistry) {

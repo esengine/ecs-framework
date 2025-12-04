@@ -189,6 +189,46 @@ export class PlatformDetector {
     }
 
     /**
+     * 检测是否在 Tauri 桌面环境中运行
+     * Check if running in Tauri desktop environment
+     *
+     * 同时支持 Tauri v1 (__TAURI__) 和 v2 (__TAURI_INTERNALS__)
+     * Supports both Tauri v1 (__TAURI__) and v2 (__TAURI_INTERNALS__)
+     */
+    public static isTauriEnvironment(): boolean {
+        if (typeof window === 'undefined') {
+            return false;
+        }
+        // Tauri v1 uses __TAURI__, Tauri v2 uses __TAURI_INTERNALS__
+        return '__TAURI__' in window || '__TAURI_INTERNALS__' in window;
+    }
+
+    /**
+     * 检测是否在编辑器环境中运行
+     * Check if running in editor environment
+     *
+     * 包括 Tauri 桌面应用或带 __ESENGINE_EDITOR__ 标记的环境
+     * Includes Tauri desktop app or environments marked with __ESENGINE_EDITOR__
+     */
+    public static isEditorEnvironment(): boolean {
+        if (typeof window === 'undefined') {
+            return false;
+        }
+
+        // Tauri desktop app | Tauri 桌面应用
+        if (this.isTauriEnvironment()) {
+            return true;
+        }
+
+        // Editor marker | 编辑器标记
+        if ('__ESENGINE_EDITOR__' in window) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * 获取详细的环境信息（用于调试）
      */
     public static getDetailedInfo(): Record<string, any> {

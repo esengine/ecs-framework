@@ -37,7 +37,9 @@ import {
     BuildService,
     WebBuildPipeline,
     WeChatBuildPipeline,
-    moduleRegistry
+    moduleRegistry,
+    UserCodeService,
+    UserCodeTarget
 } from '@esengine/editor-core';
 import { ViewportService } from '../../services/ViewportService';
 import { TransformComponent } from '@esengine/engine-core';
@@ -78,6 +80,7 @@ import {
 import { TransformComponentInspector } from '../../components/inspectors/component-inspectors/TransformComponentInspector';
 import { buildFileSystem } from '../../services/BuildFileSystemService';
 import { TauriModuleFileSystem } from '../../services/TauriModuleFileSystem';
+import { PluginSDKRegistry } from '../../services/PluginSDKRegistry';
 
 export interface EditorServices {
     uiRegistry: UIRegistry;
@@ -104,6 +107,7 @@ export interface EditorServices {
     propertyRendererRegistry: PropertyRendererRegistry;
     fieldEditorRegistry: FieldEditorRegistry;
     buildService: BuildService;
+    userCodeService: UserCodeService;
 }
 
 export class ServiceRegistry {
@@ -271,6 +275,74 @@ export class ServiceRegistry {
             console.warn('[ServiceRegistry] Failed to initialize ModuleRegistry:', err);
         });
 
+        // Initialize UserCodeService for user script compilation and loading
+        // 初始化 UserCodeService 用于用户脚本编译和加载
+        const userCodeService = new UserCodeService(fileSystem);
+        Core.services.registerInstance(UserCodeService, userCodeService);
+
+        // Helper function to compile and load user scripts
+        // 辅助函数：编译和加载用户脚本
+        let currentProjectPath: string | null = null;
+
+        const compileAndLoadUserScripts = async (projectPath: string) => {
+            // Ensure PluginSDKRegistry is initialized before loading user code
+            // 确保在加载用户代码之前 PluginSDKRegistry 已初始化
+            PluginSDKRegistry.initialize();
+
+            try {
+                // Compile runtime scripts | 编译运行时脚本
+                const compileResult = await userCodeService.compile({
+                    projectPath: projectPath,
+                    target: UserCodeTarget.Runtime
+                });
+
+                if (compileResult.success && compileResult.outputPath) {
+                    // Load compiled module | 加载编译后的模块
+                    const module = await userCodeService.load(compileResult.outputPath, UserCodeTarget.Runtime);
+
+                    // Register user components to editor | 注册用户组件到编辑器
+                    userCodeService.registerComponents(module, componentRegistry);
+
+                    // Notify that user code has been reloaded | 通知用户代码已重新加载
+                    messageHub.publish('usercode:reloaded', {
+                        projectPath,
+                        exports: Object.keys(module.exports)
+                    });
+                } else if (compileResult.errors.length > 0) {
+                    console.warn('[UserCodeService] Compilation errors:', compileResult.errors);
+                }
+            } catch (error) {
+                console.error('[UserCodeService] Failed to compile/load:', error);
+            }
+        };
+
+        // Subscribe to project:opened to compile and load user scripts
+        // 订阅 project:opened 以编译和加载用户脚本
+        messageHub.subscribe('project:opened', async (data: { path: string; type: string; name: string }) => {
+            currentProjectPath = data.path;
+            await compileAndLoadUserScripts(data.path);
+        });
+
+        // Subscribe to script file changes (create/delete/modify)
+        // 订阅脚本文件变更（创建/删除/修改）
+        messageHub.subscribe('file:created', async (data: { path: string }) => {
+            if (currentProjectPath && this.isScriptFile(data.path)) {
+                await compileAndLoadUserScripts(currentProjectPath);
+            }
+        });
+
+        messageHub.subscribe('file:deleted', async (data: { path: string }) => {
+            if (currentProjectPath && this.isScriptFile(data.path)) {
+                await compileAndLoadUserScripts(currentProjectPath);
+            }
+        });
+
+        messageHub.subscribe('file:modified', async (data: { path: string }) => {
+            if (currentProjectPath && this.isScriptFile(data.path)) {
+                await compileAndLoadUserScripts(currentProjectPath);
+            }
+        });
+
         // 注册默认场景模板 - 创建默认相机
         // Register default scene template - creates default camera
         this.registerDefaultSceneTemplate();
@@ -299,7 +371,8 @@ export class ServiceRegistry {
             inspectorRegistry,
             propertyRendererRegistry,
             fieldEditorRegistry,
-            buildService
+            buildService,
+            userCodeService
         };
     }
 
@@ -308,6 +381,37 @@ export class ServiceRegistry {
             const { level, message, timestamp, clientId } = event.detail;
             logService.addRemoteLog(level, message, timestamp, clientId);
         }) as EventListener);
+    }
+
+    /**
+     * Check if a file path is a TypeScript script file (not in editor folder)
+     * 检查文件路径是否为 TypeScript 脚本文件（不在 editor 文件夹中）
+     */
+    private isScriptFile(filePath: string): boolean {
+        // Must be .ts file | 必须是 .ts 文件
+        if (!filePath.endsWith('.ts')) {
+            return false;
+        }
+
+        // Normalize path separators | 规范化路径分隔符
+        const normalizedPath = filePath.replace(/\\/g, '/');
+
+        // Must be in scripts folder | 必须在 scripts 文件夹中
+        if (!normalizedPath.includes('/scripts/')) {
+            return false;
+        }
+
+        // Exclude editor scripts | 排除编辑器脚本
+        if (normalizedPath.includes('/scripts/editor/')) {
+            return false;
+        }
+
+        // Exclude .esengine folder | 排除 .esengine 文件夹
+        if (normalizedPath.includes('/.esengine/')) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

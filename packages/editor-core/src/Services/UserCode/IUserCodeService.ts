@@ -215,8 +215,9 @@ export interface IUserCodeService {
      * - Classes extending System
      *
      * @param module - User code module | 用户代码模块
+     * @param componentRegistry - Optional ComponentRegistry to register components | 可选的 ComponentRegistry 用于注册组件
      */
-    registerComponents(module: UserCodeModule): void;
+    registerComponents(module: UserCodeModule, componentRegistry?: any): void;
 
     /**
      * Register editor extensions from user module.

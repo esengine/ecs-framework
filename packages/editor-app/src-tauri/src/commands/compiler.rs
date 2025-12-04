@@ -24,12 +24,17 @@ pub struct CompileOptions {
     pub output_path: String,
     /// Output format (esm or iife) | 输出格式
     pub format: String,
+    /// Global name for IIFE format | IIFE 格式的全局名称
+    pub global_name: Option<String>,
     /// Whether to generate source map | 是否生成 source map
     pub source_map: bool,
     /// Whether to minify | 是否压缩
     pub minify: bool,
     /// External dependencies | 外部依赖
     pub external: Vec<String>,
+    /// Module aliases (e.g., "@esengine/ecs-framework" -> "/path/to/shim.js")
+    /// 模块别名
+    pub alias: Option<std::collections::HashMap<String, String>>,
     /// Project root for resolving imports | 项目根目录用于解析导入
     pub project_root: String,
 }
@@ -106,10 +111,26 @@ pub async fn compile_typescript(options: CompileOptions) -> Result<CompileResult
         args.push("--minify".to_string());
     }
 
+    // Add global name for IIFE format | 添加 IIFE 格式的全局名称
+    if let Some(ref global_name) = options.global_name {
+        args.push(format!("--global-name={}", global_name));
+    }
+
     // Add external dependencies | 添加外部依赖
     for external in &options.external {
         args.push(format!("--external:{}", external));
     }
+
+    // Add module aliases | 添加模块别名
+    if let Some(ref aliases) = options.alias {
+        for (from, to) in aliases {
+            args.push(format!("--alias:{}={}", from, to));
+        }
+    }
+
+    // Build full command string for error reporting | 构建完整命令字符串用于错误报告
+    let cmd_str = format!("{} {}", esbuild_path, args.join(" "));
+    println!("[Compiler] Running: {}", cmd_str);
 
     // Run esbuild | 运行 esbuild
     let output = Command::new(&esbuild_path)
@@ -119,6 +140,7 @@ pub async fn compile_typescript(options: CompileOptions) -> Result<CompileResult
         .map_err(|e| format!("Failed to run esbuild | 运行 esbuild 失败: {}", e))?;
 
     if output.status.success() {
+        println!("[Compiler] Compilation successful: {}", options.output_path);
         Ok(CompileResult {
             success: true,
             errors: vec![],
@@ -126,7 +148,37 @@ pub async fn compile_typescript(options: CompileOptions) -> Result<CompileResult
         })
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let errors = parse_esbuild_errors(&stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        println!("[Compiler] Compilation failed");
+        println!("[Compiler] stdout: {}", stdout);
+        println!("[Compiler] stderr: {}", stderr);
+
+        // Try to parse errors from both stdout and stderr | 尝试从 stdout 和 stderr 解析错误
+        let mut errors = parse_esbuild_errors(&stderr);
+        if errors.is_empty() {
+            errors = parse_esbuild_errors(&stdout);
+        }
+
+        // If still no parsed errors, include the raw output and command | 如果仍然没有解析到错误，包含原始输出和命令
+        if errors.is_empty() {
+            let combined_output = if !stderr.is_empty() && !stdout.is_empty() {
+                format!("stdout: {}\nstderr: {}", stdout.trim(), stderr.trim())
+            } else if !stderr.is_empty() {
+                stderr.trim().to_string()
+            } else if !stdout.is_empty() {
+                stdout.trim().to_string()
+            } else {
+                format!("Command failed: {}", cmd_str)
+            };
+
+            errors.push(CompileError {
+                message: combined_output,
+                file: None,
+                line: None,
+                column: None,
+            });
+        }
 
         Ok(CompileResult {
             success: false,

@@ -130,13 +130,10 @@ export class ProjectService implements IService {
             const assetsPath = `${projectPath}${sep}assets`;
             await this.fileAPI.createDirectory(assetsPath);
 
-            // Create types folder for type definitions
-            // 创建类型定义文件夹
-            const typesPath = `${projectPath}${sep}types`;
-            await this.fileAPI.createDirectory(typesPath);
-
-            // Create tsconfig.json for TypeScript support
-            // 创建 tsconfig.json 用于 TypeScript 支持
+            // Create tsconfig.json for runtime scripts (components, systems)
+            // 创建运行时脚本的 tsconfig.json（组件、系统等）
+            // Note: paths will be populated by update_project_tsconfig when project is opened
+            // 注意：paths 会在项目打开时由 update_project_tsconfig 填充
             const tsConfig = {
                 compilerOptions: {
                     target: 'ES2020',
@@ -149,20 +146,39 @@ export class ProjectService implements IService {
                     forceConsistentCasingInFileNames: true,
                     experimentalDecorators: true,
                     emitDecoratorMetadata: true,
-                    noEmit: true,
-                    // Reference local type definitions
-                    // 引用本地类型定义文件
-                    typeRoots: ['./types'],
-                    paths: {
-                        '@esengine/ecs-framework': ['./types/ecs-framework.d.ts'],
-                        '@esengine/engine-core': ['./types/engine-core.d.ts']
-                    }
+                    noEmit: true
+                    // paths will be added by editor when project is opened
+                    // paths 会在编辑器打开项目时添加
                 },
                 include: ['scripts/**/*.ts'],
-                exclude: ['.esengine']
+                exclude: ['scripts/editor/**/*.ts', '.esengine']
             };
             const tsConfigPath = `${projectPath}${sep}tsconfig.json`;
             await this.fileAPI.writeFileContent(tsConfigPath, JSON.stringify(tsConfig, null, 2));
+
+            // Create tsconfig.editor.json for editor extension scripts
+            // 创建编辑器扩展脚本的 tsconfig.editor.json
+            const tsConfigEditor = {
+                compilerOptions: {
+                    target: 'ES2020',
+                    module: 'ESNext',
+                    moduleResolution: 'bundler',
+                    lib: ['ES2020', 'DOM'],
+                    strict: true,
+                    esModuleInterop: true,
+                    skipLibCheck: true,
+                    forceConsistentCasingInFileNames: true,
+                    experimentalDecorators: true,
+                    emitDecoratorMetadata: true,
+                    noEmit: true
+                    // paths will be added by editor when project is opened
+                    // paths 会在编辑器打开项目时添加
+                },
+                include: ['scripts/editor/**/*.ts'],
+                exclude: ['.esengine']
+            };
+            const tsConfigEditorPath = `${projectPath}${sep}tsconfig.editor.json`;
+            await this.fileAPI.writeFileContent(tsConfigEditorPath, JSON.stringify(tsConfigEditor, null, 2));
 
             await this.messageHub.publish('project:created', {
                 path: projectPath

@@ -12,7 +12,7 @@
  * Uses .meta files to persistently store each asset's GUID.
  */
 
-import { Core, createLogger } from '@esengine/ecs-framework';
+import { Core, createLogger, PlatformDetector } from '@esengine/ecs-framework';
 import { MessageHub } from './MessageHub';
 import {
     AssetMetaManager,
@@ -215,6 +215,9 @@ export class AssetRegistryService {
     /** Asset meta manager for .meta file management */
     private _metaManager: AssetMetaManager;
 
+    /** Tauri event unlisten function | Tauri 事件取消监听函数 */
+    private _eventUnlisten: (() => void) | undefined;
+
     /** Manifest file name */
     static readonly MANIFEST_FILE = 'asset-manifest.json';
     /** Current manifest version */
@@ -311,6 +314,10 @@ export class AssetRegistryService {
         // Save updated manifest
         await this._saveManifest();
 
+        // Subscribe to file change events (Tauri only)
+        // 订阅文件变化事件（仅 Tauri 环境）
+        await this._subscribeToFileChanges();
+
         logger.info(`Project assets loaded: ${this._database.getStatistics().totalAssets} assets`);
 
         // Publish event
@@ -321,9 +328,76 @@ export class AssetRegistryService {
     }
 
     /**
+     * Subscribe to file change events from Tauri backend
+     * 订阅来自 Tauri 后端的文件变化事件
+     */
+    private async _subscribeToFileChanges(): Promise<void> {
+        // Only in Tauri environment
+        // 仅在 Tauri 环境中
+        if (!PlatformDetector.isTauriEnvironment()) {
+            return;
+        }
+
+        try {
+            const { listen } = await import('@tauri-apps/api/event');
+
+            // Listen to user-code:file-changed event
+            // 监听 user-code:file-changed 事件
+            this._eventUnlisten = await listen<{
+                changeType: string;
+                paths: string[];
+            }>('user-code:file-changed', async (event) => {
+                const { changeType, paths } = event.payload;
+
+                logger.debug('File change event received | 收到文件变化事件', { changeType, paths });
+
+                // Handle file creation - register new assets and generate .meta
+                // 处理文件创建 - 注册新资产并生成 .meta
+                if (changeType === 'create' || changeType === 'modify') {
+                    for (const absolutePath of paths) {
+                        // Skip .meta files
+                        if (absolutePath.endsWith('.meta')) continue;
+
+                        // Register or refresh the asset
+                        await this.registerAsset(absolutePath);
+                    }
+                } else if (changeType === 'remove') {
+                    for (const absolutePath of paths) {
+                        // Skip .meta files
+                        if (absolutePath.endsWith('.meta')) continue;
+
+                        // Unregister the asset
+                        await this.unregisterAsset(absolutePath);
+                    }
+                }
+            });
+
+            logger.info('Subscribed to file change events | 已订阅文件变化事件');
+        } catch (error) {
+            logger.warn('Failed to subscribe to file change events | 订阅文件变化事件失败:', error);
+        }
+    }
+
+    /**
+     * Unsubscribe from file change events
+     * 取消订阅文件变化事件
+     */
+    private _unsubscribeFromFileChanges(): void {
+        if (this._eventUnlisten) {
+            this._eventUnlisten();
+            this._eventUnlisten = undefined;
+            logger.debug('Unsubscribed from file change events | 已取消订阅文件变化事件');
+        }
+    }
+
+    /**
      * Unload current project
      */
     unloadProject(): void {
+        // Unsubscribe from file change events
+        // 取消订阅文件变化事件
+        this._unsubscribeFromFileChanges();
+
         this._projectPath = null;
         this._manifest = null;
         this._database.clear();

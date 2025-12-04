@@ -142,6 +142,109 @@ pub fn get_temp_dir() -> Result<String, String> {
         .ok_or_else(|| "Failed to get temp directory".to_string())
 }
 
+/// 使用 where 命令查找可执行文件路径
+/// Use 'where' command to find executable path
+#[cfg(target_os = "windows")]
+fn find_command_path(cmd: &str) -> Option<String> {
+    use std::process::Command as StdCommand;
+    use std::path::Path;
+
+    // 使用 where 命令查找
+    let output = StdCommand::new("where")
+        .arg(cmd)
+        .output()
+        .ok()?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        // 取第一行结果（可能有多个匹配）
+        if let Some(first_line) = stdout.lines().next() {
+            let path = first_line.trim();
+            if !path.is_empty() {
+                let path_obj = Path::new(path);
+
+                // 检查是否是 bin 目录下的脚本（VSCode/Cursor 特征）
+                // Check if it's a script in bin directory (VSCode/Cursor pattern)
+                let is_bin_script = path_obj.parent()
+                    .map(|p| p.ends_with("bin"))
+                    .unwrap_or(false);
+
+                // 如果找到的是 .cmd 或 .bat，或者是 bin 目录下的脚本（where 可能不返回扩展名）
+                // If found .cmd or .bat, or a script in bin directory (where may not return extension)
+                let has_script_ext = path.ends_with(".cmd") || path.ends_with(".bat");
+
+                if has_script_ext || is_bin_script {
+                    // 尝试找 Code.exe (VSCode) 或 Cursor.exe 等
+                    // Try to find Code.exe (VSCode) or Cursor.exe etc.
+                    if let Some(bin_dir) = path_obj.parent() {
+                        if let Some(parent_dir) = bin_dir.parent() {
+                            // VSCode: bin/code.cmd -> Code.exe
+                            let exe_path = parent_dir.join("Code.exe");
+                            if exe_path.exists() {
+                                let exe_str = exe_path.to_string_lossy().to_string();
+                                println!("[find_command_path] Found {} exe at: {}", cmd, exe_str);
+                                return Some(exe_str);
+                            }
+
+                            // Cursor: bin/cursor.cmd -> Cursor.exe
+                            let cursor_exe = parent_dir.join("Cursor.exe");
+                            if cursor_exe.exists() {
+                                let exe_str = cursor_exe.to_string_lossy().to_string();
+                                println!("[find_command_path] Found {} exe at: {}", cmd, exe_str);
+                                return Some(exe_str);
+                            }
+                        }
+                    }
+                }
+
+                println!("[find_command_path] Found {} at: {}", cmd, path);
+                return Some(path.to_string());
+            }
+        }
+    }
+    None
+}
+
+#[cfg(not(target_os = "windows"))]
+fn find_command_path(cmd: &str) -> Option<String> {
+    use std::process::Command as StdCommand;
+
+    let output = StdCommand::new("which")
+        .arg(cmd)
+        .output()
+        .ok()?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let path = stdout.trim();
+        if !path.is_empty() {
+            return Some(path.to_string());
+        }
+    }
+    None
+}
+
+/// 解析编辑器命令，返回实际可执行路径
+/// Resolve editor command to actual executable path
+fn resolve_editor_command(editor_command: &str) -> String {
+    use std::path::Path;
+
+    // 如果命令已经是完整路径且存在，直接返回
+    // If command is already a full path and exists, return it
+    if Path::new(editor_command).exists() {
+        return editor_command.to_string();
+    }
+
+    // 使用系统命令查找可执行文件路径
+    // Use system command to find executable path
+    if let Some(path) = find_command_path(editor_command) {
+        return path;
+    }
+
+    // 回退到原始命令 | Fall back to original command
+    editor_command.to_string()
+}
+
 /// Open project folder with specified editor
 /// 使用指定编辑器打开项目文件夹
 ///
@@ -166,27 +269,49 @@ pub fn open_with_editor(
         return Err(format!("Project path does not exist: {}", normalized_project));
     }
 
+    // 解析编辑器命令到实际路径
+    // Resolve editor command to actual path
+    let resolved_command = resolve_editor_command(&editor_command);
+
     println!(
-        "[open_with_editor] editor: {}, project: {}, file: {:?}",
-        editor_command, normalized_project, normalized_file
+        "[open_with_editor] editor: {} -> {}, project: {}, file: {:?}",
+        editor_command, resolved_command, normalized_project, normalized_file
     );
 
-    let mut cmd = Command::new(&editor_command);
+    let mut cmd = Command::new(&resolved_command);
 
-    // Add project folder as first argument
+    // VSCode/Cursor CLI 正确用法：
+    // 1. 使用 --folder-uri 或直接传文件夹路径会打开新窗口
+    // 2. 使用 --add 可以将文件夹添加到当前工作区
+    // 3. 使用 --goto file:line:column 可以打开文件并定位
+    //
+    // VSCode/Cursor CLI correct usage:
+    // 1. Use --folder-uri or pass folder path directly to open new window
+    // 2. Use --add to add folder to current workspace
+    // 3. Use --goto file:line:column to open file and navigate
+    //
+    // 正确命令格式: code <folder> <file>
+    // 这会打开文件夹并同时打开文件
+    // Correct command format: code <folder> <file>
+    // This opens the folder and also opens the file
+
+    // Add project folder first
+    // 先添加项目文件夹
     cmd.arg(&normalized_project);
 
-    // If a specific file is provided, add it as a second argument
-    // Most editors support: editor <folder> <file>
+    // If a specific file is provided, add it directly (not with -g)
+    // VSCode will open the folder AND the file
+    // 如果提供了文件，直接添加（不使用 -g）
+    // VSCode 会同时打开文件夹和文件
     if let Some(ref file) = normalized_file {
-        let file_path = Path::new(file);
-        if file_path.exists() {
+        let file_path_obj = Path::new(file);
+        if file_path_obj.exists() {
             cmd.arg(file);
         }
     }
 
     cmd.spawn()
-        .map_err(|e| format!("Failed to open with editor '{}': {}", editor_command, e))?;
+        .map_err(|e| format!("Failed to open with editor '{}': {}", resolved_command, e))?;
 
     Ok(())
 }
@@ -212,10 +337,13 @@ pub fn get_current_dir() -> Result<String, String> {
         .map_err(|e| format!("Failed to get current directory: {}", e))
 }
 
-/// Copy type definitions to project for IDE intellisense
-/// 复制类型定义文件到项目以支持 IDE 智能感知
+/// Update project tsconfig.json with engine type paths
+/// 更新项目的 tsconfig.json，添加引擎类型路径
+///
+/// Scans dist/engine/ directory and adds paths for all modules with .d.ts files.
+/// 扫描 dist/engine/ 目录，为所有有 .d.ts 文件的模块添加路径。
 #[tauri::command]
-pub fn copy_type_definitions(app: AppHandle, project_path: String) -> Result<(), String> {
+pub fn update_project_tsconfig(app: AppHandle, project_path: String) -> Result<(), String> {
     use std::fs;
     use std::path::Path;
 
@@ -224,38 +352,68 @@ pub fn copy_type_definitions(app: AppHandle, project_path: String) -> Result<(),
         return Err(format!("Project path does not exist: {}", project_path));
     }
 
-    // Create types directory in project
-    // 在项目中创建 types 目录
-    let types_dir = project.join("types");
-    if !types_dir.exists() {
-        fs::create_dir_all(&types_dir)
-            .map_err(|e| format!("Failed to create types directory: {}", e))?;
+    // Get engine modules path (dist/engine/)
+    // 获取引擎模块路径
+    let engine_path = get_engine_modules_base_path_internal(&app)?;
+
+    // Read existing tsconfig.json
+    // 读取现有的 tsconfig.json
+    let tsconfig_path = project.join("tsconfig.json");
+    let tsconfig_editor_path = project.join("tsconfig.editor.json");
+
+    // Update runtime tsconfig
+    // 更新运行时 tsconfig
+    if tsconfig_path.exists() {
+        update_tsconfig_file(&tsconfig_path, &engine_path, false)?;
+        println!("[update_project_tsconfig] Updated {}", tsconfig_path.display());
     }
 
-    // Get resource directory (where bundled files are)
-    // 获取资源目录（打包文件所在位置）
+    // Update editor tsconfig
+    // 更新编辑器 tsconfig
+    if tsconfig_editor_path.exists() {
+        update_tsconfig_file(&tsconfig_editor_path, &engine_path, true)?;
+        println!("[update_project_tsconfig] Updated {}", tsconfig_editor_path.display());
+    }
+
+    Ok(())
+}
+
+/// Internal function to get engine modules base path
+/// 内部函数：获取引擎模块基础路径
+fn get_engine_modules_base_path_internal(app: &AppHandle) -> Result<String, String> {
     let resource_dir = app.path()
         .resource_dir()
         .map_err(|e| format!("Failed to get resource directory: {}", e))?;
 
-    // Type definition files to copy
-    // 要复制的类型定义文件
-    // Format: (resource_path, workspace_path, dest_name)
-    // 格式：(资源路径，工作区路径，目标文件名)
-    // Note: resource_path is relative to Tauri resource dir (runtime/ is mapped to .)
-    // 注意：resource_path 相对于 Tauri 资源目录（runtime/ 映射到 .）
-    let type_files = [
-        ("types/ecs-framework.d.ts", "packages/core/dist/index.d.ts", "ecs-framework.d.ts"),
-        ("types/engine-core.d.ts", "packages/engine-core/dist/index.d.ts", "engine-core.d.ts"),
-    ];
+    // Production mode: resource_dir/engine/
+    // 生产模式
+    let prod_path = resource_dir.join("engine");
+    if prod_path.exists() {
+        return prod_path.to_str()
+            .map(|s| s.to_string())
+            .ok_or_else(|| "Invalid path encoding".to_string());
+    }
 
-    // Try to find workspace root (for development mode)
-    // 尝试查找工作区根目录（用于开发模式）
-    let workspace_root = std::env::current_dir()
+    // Development mode: workspace/packages/editor-app/dist/engine/
+    // 开发模式
+    if let Some(ws_root) = find_workspace_root() {
+        let dev_path = ws_root.join("packages").join("editor-app").join("dist").join("engine");
+        if dev_path.exists() {
+            return dev_path.to_str()
+                .map(|s| s.to_string())
+                .ok_or_else(|| "Invalid path encoding".to_string());
+        }
+    }
+
+    Err("Engine modules directory not found".to_string())
+}
+
+/// Find workspace root directory
+/// 查找工作区根目录
+fn find_workspace_root() -> Option<std::path::PathBuf> {
+    std::env::current_dir()
         .ok()
         .and_then(|cwd| {
-            // Look for pnpm-workspace.yaml or package.json in parent directories
-            // 在父目录中查找 pnpm-workspace.yaml 或 package.json
             let mut dir = cwd.as_path();
             loop {
                 if dir.join("pnpm-workspace.yaml").exists() {
@@ -266,40 +424,87 @@ pub fn copy_type_definitions(app: AppHandle, project_path: String) -> Result<(),
                     None => return None,
                 }
             }
-        });
+        })
+}
 
-    let mut copied_count = 0;
-    for (resource_relative, workspace_relative, dest_name) in type_files {
-        let dest_path = types_dir.join(dest_name);
+/// Update a tsconfig file with engine paths
+/// 使用引擎路径更新 tsconfig 文件
+///
+/// Scans all subdirectories in engine_path for index.d.ts files.
+/// 扫描 engine_path 下所有子目录的 index.d.ts 文件。
+fn update_tsconfig_file(
+    tsconfig_path: &std::path::Path,
+    engine_path: &str,
+    include_editor: bool,
+) -> Result<(), String> {
+    use std::fs;
 
-        // Try resource directory first (production mode)
-        // 首先尝试资源目录（生产模式）
-        let src_path = resource_dir.join(resource_relative);
-        if src_path.exists() {
-            fs::copy(&src_path, &dest_path)
-                .map_err(|e| format!("Failed to copy {}: {}", resource_relative, e))?;
-            println!("[copy_type_definitions] Copied {} to {}", src_path.display(), dest_path.display());
-            copied_count += 1;
-            continue;
-        }
+    let content = fs::read_to_string(tsconfig_path)
+        .map_err(|e| format!("Failed to read tsconfig: {}", e))?;
 
-        // Try workspace directory (development mode)
-        // 尝试工作区目录（开发模式）
-        if let Some(ref ws_root) = workspace_root {
-            let ws_src_path = ws_root.join(workspace_relative);
-            if ws_src_path.exists() {
-                fs::copy(&ws_src_path, &dest_path)
-                    .map_err(|e| format!("Failed to copy {}: {}", workspace_relative, e))?;
-                println!("[copy_type_definitions] Copied {} to {} (dev mode)", ws_src_path.display(), dest_path.display());
-                copied_count += 1;
+    let mut config: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse tsconfig: {}", e))?;
+
+    // Normalize path for cross-platform compatibility
+    // 规范化路径以实现跨平台兼容
+    let engine_path_normalized = engine_path.replace('\\', "/");
+
+    // Build paths mapping by scanning engine modules directory
+    // 通过扫描引擎模块目录构建路径映射
+    let mut paths = serde_json::Map::new();
+    let mut module_count = 0;
+
+    let engine_dir = std::path::Path::new(engine_path);
+    if let Ok(entries) = fs::read_dir(engine_dir) {
+        for entry in entries.flatten() {
+            let module_path = entry.path();
+            if !module_path.is_dir() {
                 continue;
             }
-        }
 
-        println!("[copy_type_definitions] {} not found, skipping", dest_name);
+            let module_id = module_path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("");
+
+            // Skip editor modules for runtime tsconfig
+            // 运行时 tsconfig 跳过编辑器模块
+            if !include_editor && module_id.ends_with("-editor") {
+                continue;
+            }
+
+            // Check for index.d.ts
+            // 检查是否存在 index.d.ts
+            let dts_path = module_path.join("index.d.ts");
+            if dts_path.exists() {
+                let module_name = format!("@esengine/{}", module_id);
+                let dts_path_str = format!("{}/{}/index.d.ts", engine_path_normalized, module_id);
+                paths.insert(module_name, serde_json::json!([dts_path_str]));
+                module_count += 1;
+            }
+        }
     }
 
-    println!("[copy_type_definitions] Copied {} type definition files to {}", copied_count, types_dir.display());
+    println!("[update_tsconfig_file] Found {} modules with type definitions", module_count);
+
+    // Update compilerOptions.paths
+    // 更新 compilerOptions.paths
+    if let Some(compiler_options) = config.get_mut("compilerOptions") {
+        if let Some(obj) = compiler_options.as_object_mut() {
+            obj.insert("paths".to_string(), serde_json::Value::Object(paths));
+            // Remove typeRoots since we're using paths
+            // 移除 typeRoots，因为我们使用 paths
+            obj.remove("typeRoots");
+        }
+    }
+
+    // Write back
+    // 写回文件
+    let output = serde_json::to_string_pretty(&config)
+        .map_err(|e| format!("Failed to serialize tsconfig: {}", e))?;
+
+    fs::write(tsconfig_path, output)
+        .map_err(|e| format!("Failed to write tsconfig: {}", e))?;
+
     Ok(())
 }
 

@@ -310,7 +310,12 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                                 className="startup-dialog-btn danger"
                                 onClick={async () => {
                                     if (deleteConfirm && onDeleteProject) {
-                                        await onDeleteProject(deleteConfirm);
+                                        try {
+                                            await onDeleteProject(deleteConfirm);
+                                        } catch (error) {
+                                            console.error('[StartupPage] Failed to delete project:', error);
+                                            // Error will be handled by App.tsx error dialog
+                                        }
                                     }
                                     setDeleteConfirm(null);
                                 }}

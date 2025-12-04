@@ -7,7 +7,7 @@
  */
 
 import type { IService } from '@esengine/ecs-framework';
-import { Injectable, createLogger } from '@esengine/ecs-framework';
+import { Injectable, createLogger, PlatformDetector } from '@esengine/ecs-framework';
 import type {
     IUserCodeService,
     UserScriptInfo,
@@ -110,6 +110,9 @@ export class UserCodeService implements IService, IUserCodeService {
         const errors: CompileError[] = [];
         const warnings: CompileError[] = [];
 
+        // Store project path for later use in load() | 存储项目路径供 load() 使用
+        this._currentProjectPath = options.projectPath;
+
         const sep = options.projectPath.includes('\\') ? '\\' : '/';
         const scriptsDir = `${options.projectPath}${sep}${SCRIPTS_DIR}`;
         const outputDir = options.outputDir || `${options.projectPath}${sep}${USER_CODE_OUTPUT_DIR}`;
@@ -146,14 +149,35 @@ export class UserCodeService implements IService, IUserCodeService {
             const entryPath = `${outputDir}${sep}_entry_${options.target}.ts`;
             await this._fileSystem.writeFile(entryPath, entryContent);
 
+            // Create shim files for framework dependencies | 创建框架依赖的 shim 文件
+            await this._createDependencyShims(outputDir, options.target);
+
+            // Determine global name for IIFE output | 确定 IIFE 输出的全局名称
+            const globalName = options.target === UserCodeTarget.Runtime
+                ? '__USER_RUNTIME_EXPORTS__'
+                : '__USER_EDITOR_EXPORTS__';
+
+            // Build alias map for framework dependencies | 构建框架依赖的别名映射
+            const shimPath = `${outputDir}${sep}_shim_ecs_framework.js`.replace(/\\/g, '/');
+            const alias: Record<string, string> = {
+                '@esengine/ecs-framework': shimPath,
+                '@esengine/core': shimPath,
+                '@esengine/engine-core': shimPath,
+                '@esengine/math': shimPath
+            };
+
             // Compile using esbuild (via Tauri command or direct) | 使用 esbuild 编译
+            // Use IIFE format to avoid ES module import issues in Tauri
+            // 使用 IIFE 格式以避免 Tauri 中的 ES 模块导入问题
             const compileResult = await this._runEsbuild({
                 entryPath,
                 outputPath,
-                format: options.format || 'esm',
+                format: 'iife',  // Always use IIFE for Tauri compatibility | 始终使用 IIFE 以兼容 Tauri
+                globalName,
                 sourceMap: options.sourceMap ?? true,
                 minify: options.minify ?? false,
-                external: this._getExternalDependencies(options.target),
+                external: [],  // Don't use external, use alias instead | 不使用 external，使用 alias
+                alias,
                 projectRoot: options.projectPath
             });
 
@@ -207,12 +231,30 @@ export class UserCodeService implements IService, IUserCodeService {
      */
     async load(modulePath: string, target: UserCodeTarget): Promise<UserCodeModule> {
         try {
-            // Add cache-busting query parameter for hot reload | 添加缓存破坏参数用于热更新
-            const cacheBuster = `?t=${Date.now()}`;
-            const moduleUrl = `file://${modulePath}${cacheBuster}`;
+            let moduleExports: Record<string, any>;
 
-            // Dynamic import the module | 动态导入模块
-            const moduleExports = await import(/* @vite-ignore */ moduleUrl);
+            if (PlatformDetector.isTauriEnvironment()) {
+                // In Tauri, read file content and execute via script tag
+                // 在 Tauri 中，读取文件内容并通过 script 标签执行
+                // This avoids CORS and module resolution issues
+                // 这避免了 CORS 和模块解析问题
+                const { invoke } = await import('@tauri-apps/api/core');
+
+                const content = await invoke<string>('read_file_content', {
+                    path: modulePath
+                });
+
+                logger.debug(`Loading module via script injection`, { originalPath: modulePath });
+
+                // Execute module code and capture exports | 执行模块代码并捕获导出
+                moduleExports = await this._executeModuleCode(content, target);
+            } else {
+                // Fallback to file:// for non-Tauri environments
+                // 非 Tauri 环境使用 file://
+                const cacheBuster = `?t=${Date.now()}`;
+                const moduleUrl = `file://${modulePath}${cacheBuster}`;
+                moduleExports = await import(/* @vite-ignore */ moduleUrl);
+            }
 
             const module: UserCodeModule = {
                 id: `user-${target}-${Date.now()}`,
@@ -273,7 +315,7 @@ export class UserCodeService implements IService, IUserCodeService {
      *
      * @param module - User code module | 用户代码模块
      */
-    registerComponents(module: UserCodeModule): void {
+    registerComponents(module: UserCodeModule, componentRegistry?: any): void {
         if (module.target !== UserCodeTarget.Runtime) {
             logger.warn('Cannot register components from editor module | 无法从编辑器模块注册组件');
             return;
@@ -289,10 +331,24 @@ export class UserCodeService implements IService, IUserCodeService {
 
             // Check if it's a Component subclass | 检查是否是 Component 子类
             if (this._isComponentClass(exported)) {
-                // Register with ComponentRegistry | 注册到 ComponentRegistry
-                // Note: Actual registration depends on runtime context
-                // 注意：实际注册取决于运行时上下文
                 logger.debug(`Found component: ${name} | 发现组件: ${name}`);
+
+                // Register with ComponentRegistry if provided | 如果提供了 ComponentRegistry 则注册
+                // ComponentRegistry expects ComponentTypeInfo object, not the class directly
+                // ComponentRegistry 期望 ComponentTypeInfo 对象，而不是直接传入类
+                if (componentRegistry && typeof componentRegistry.register === 'function') {
+                    try {
+                        componentRegistry.register({
+                            name: name,
+                            type: exported,
+                            category: 'User',  // User-defined components | 用户自定义组件
+                            description: `User component: ${name}`
+                        });
+                    } catch (err) {
+                        logger.warn(`Failed to register component ${name} | 注册组件 ${name} 失败:`, err);
+                    }
+                }
+
                 componentCount++;
             }
 
@@ -373,7 +429,7 @@ export class UserCodeService implements IService, IUserCodeService {
 
         try {
             // Check if we're in Tauri environment | 检查是否在 Tauri 环境
-            if (typeof window !== 'undefined' && '__TAURI__' in window) {
+            if (PlatformDetector.isTauriEnvironment()) {
                 const { invoke } = await import('@tauri-apps/api/core');
                 const { listen } = await import('@tauri-apps/api/event');
 
@@ -461,7 +517,7 @@ export class UserCodeService implements IService, IUserCodeService {
             }
 
             // Stop backend file watcher | 停止后端文件监视器
-            if (typeof window !== 'undefined' && '__TAURI__' in window) {
+            if (PlatformDetector.isTauriEnvironment()) {
                 const { invoke } = await import('@tauri-apps/api/core');
                 await invoke('stop_watch_scripts', {
                     projectPath: this._currentProjectPath
@@ -577,6 +633,17 @@ export class UserCodeService implements IService, IUserCodeService {
     /**
      * Build entry point content that re-exports all user scripts.
      * 构建重新导出所有用户脚本的入口点内容。
+     *
+     * Entry file is in: {projectPath}/.esengine/compiled/_entry_runtime.ts
+     * Scripts are in: {projectPath}/scripts/
+     * So the relative path from entry to scripts is: ../../scripts/
+     *
+     * For IIFE format, we inject shims that map global variables to module imports.
+     * This allows user code to use `import { Component } from '@esengine/ecs-framework'`
+     * while actually accessing `window.__ESENGINE_FRAMEWORK__`.
+     * 对于 IIFE 格式，我们注入 shim 将全局变量映射到模块导入。
+     * 这使用户代码可以使用 `import { Component } from '@esengine/ecs-framework'`，
+     * 实际上访问的是 `window.__ESENGINE_FRAMEWORK__`。
      */
     private _buildEntryPoint(
         scripts: UserScriptInfo[],
@@ -589,20 +656,58 @@ export class UserCodeService implements IService, IUserCodeService {
             ''
         ];
 
+        // Entry file is in .esengine/compiled/, need to go up 2 levels to reach project root
+        // 入口文件在 .esengine/compiled/ 目录，需要上升 2 级到达项目根目录
+        const relativePrefix = `../../${SCRIPTS_DIR}`;
+
         for (const script of scripts) {
             // Convert absolute path to relative import | 将绝对路径转换为相对导入
             const relativePath = script.relativePath.replace(/\\/g, '/').replace(/\.tsx?$/, '');
 
             if (script.exports.length > 0) {
-                lines.push(`export { ${script.exports.join(', ')} } from './${SCRIPTS_DIR}/${relativePath}';`);
+                lines.push(`export { ${script.exports.join(', ')} } from '${relativePrefix}/${relativePath}';`);
             } else {
                 // Re-export everything if we couldn't detect specific exports
                 // 如果无法检测到具体导出，则重新导出所有内容
-                lines.push(`export * from './${SCRIPTS_DIR}/${relativePath}';`);
+                lines.push(`export * from '${relativePrefix}/${relativePath}';`);
             }
         }
 
         return lines.join('\n');
+    }
+
+    /**
+     * Create shim files that map global variables to module imports.
+     * 创建将全局变量映射到模块导入的 shim 文件。
+     *
+     * This is used for IIFE format to resolve external dependencies.
+     * The shim exports the global __ESENGINE__.ecsFramework which is set by PluginSDKRegistry.
+     * 这用于 IIFE 格式解析外部依赖。
+     * shim 导出全局的 __ESENGINE__.ecsFramework，由 PluginSDKRegistry 设置。
+     *
+     * @param outputDir - Output directory | 输出目录
+     * @param target - Target environment | 目标环境
+     * @returns Array of shim file paths | shim 文件路径数组
+     */
+    private async _createDependencyShims(
+        outputDir: string,
+        target: UserCodeTarget
+    ): Promise<string[]> {
+        const sep = outputDir.includes('\\') ? '\\' : '/';
+        const shimPaths: string[] = [];
+
+        // Create shim for @esengine/ecs-framework | 为 @esengine/ecs-framework 创建 shim
+        // This uses window.__ESENGINE__.ecsFramework set by PluginSDKRegistry
+        // 这使用 PluginSDKRegistry 设置的 window.__ESENGINE__.ecsFramework
+        const ecsShimPath = `${outputDir}${sep}_shim_ecs_framework.js`;
+        const ecsShimContent = `// Shim for @esengine/ecs-framework
+// Maps to window.__ESENGINE__.ecsFramework set by PluginSDKRegistry
+module.exports = (typeof window !== 'undefined' && window.__ESENGINE__ && window.__ESENGINE__.ecsFramework) || {};
+`;
+        await this._fileSystem.writeFile(ecsShimPath, ecsShimContent);
+        shimPaths.push(ecsShimPath);
+
+        return shimPaths;
     }
 
     /**
@@ -640,14 +745,16 @@ export class UserCodeService implements IService, IUserCodeService {
         entryPath: string;
         outputPath: string;
         format: 'esm' | 'iife';
+        globalName?: string;
         sourceMap: boolean;
         minify: boolean;
         external: string[];
+        alias?: Record<string, string>;
         projectRoot: string;
     }): Promise<{ success: boolean; errors: CompileError[] }> {
         try {
             // Check if we're in Tauri environment | 检查是否在 Tauri 环境
-            if (typeof window !== 'undefined' && '__TAURI__' in window) {
+            if (PlatformDetector.isTauriEnvironment()) {
                 // Use Tauri command | 使用 Tauri 命令
                 const { invoke } = await import('@tauri-apps/api/core');
 
@@ -665,9 +772,11 @@ export class UserCodeService implements IService, IUserCodeService {
                         entryPath: options.entryPath,
                         outputPath: options.outputPath,
                         format: options.format,
+                        globalName: options.globalName,
                         sourceMap: options.sourceMap,
                         minify: options.minify,
                         external: options.external,
+                        alias: options.alias,
                         projectRoot: options.projectRoot
                     }
                 });
@@ -702,6 +811,56 @@ export class UserCodeService implements IService, IUserCodeService {
     }
 
     /**
+     * Execute compiled module code and return exports.
+     * 执行编译后的模块代码并返回导出。
+     *
+     * The code should be in IIFE format that sets a global variable.
+     * 代码应该是设置全局变量的 IIFE 格式。
+     *
+     * @param code - Compiled JavaScript code | 编译后的 JavaScript 代码
+     * @param target - Target environment | 目标环境
+     * @returns Module exports | 模块导出
+     */
+    private async _executeModuleCode(
+        code: string,
+        target: UserCodeTarget
+    ): Promise<Record<string, any>> {
+        // Determine global name based on target | 根据目标确定全局名称
+        const globalName = target === UserCodeTarget.Runtime
+            ? '__USER_RUNTIME_EXPORTS__'
+            : '__USER_EDITOR_EXPORTS__';
+
+        // Clear any previous exports | 清除之前的导出
+        (window as any)[globalName] = undefined;
+
+        try {
+            // esbuild generates: var __USER_RUNTIME_EXPORTS__ = (() => {...})();
+            // When executed via new Function(), var declarations stay in function scope
+            // We need to replace "var globalName" with "window.globalName" to expose it
+            // esbuild 生成: var __USER_RUNTIME_EXPORTS__ = (() => {...})();
+            // 通过 new Function() 执行时，var 声明在函数作用域内
+            // 需要替换 "var globalName" 为 "window.globalName" 以暴露到全局
+            const modifiedCode = code.replace(
+                new RegExp(`^"use strict";\\s*var ${globalName}`, 'm'),
+                `"use strict";\nwindow.${globalName}`
+            );
+
+            // Execute the IIFE code | 执行 IIFE 代码
+            // eslint-disable-next-line no-new-func
+            const executeScript = new Function(modifiedCode);
+            executeScript();
+
+            // Get exports from global | 从全局获取导出
+            const exports = (window as any)[globalName] || {};
+
+            return exports;
+        } catch (error) {
+            logger.error('Failed to execute user code | 执行用户代码失败:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Ensure directory exists, create if not.
      * 确保目录存在，如果不存在则创建。
      */
@@ -719,17 +878,29 @@ export class UserCodeService implements IService, IUserCodeService {
     /**
      * Check if a class extends Component.
      * 检查类是否继承自 Component。
+     *
+     * Uses the actual Component class from the global framework to check inheritance.
+     * 使用全局框架中的实际 Component 类来检查继承关系。
      */
     private _isComponentClass(cls: any): boolean {
-        // Check prototype chain for Component | 检查原型链中是否有 Component
-        let proto = cls.prototype;
-        while (proto) {
-            if (proto.constructor?.name === 'Component') {
-                return true;
-            }
-            proto = Object.getPrototypeOf(proto);
+        // Get Component class from global framework | 从全局框架获取 Component 类
+        const framework = (window as any).__ESENGINE__?.ecsFramework;
+
+        if (!framework?.Component) {
+            return false;
         }
-        return false;
+
+        // Use instanceof or prototype chain check | 使用 instanceof 或原型链检查
+        try {
+            const ComponentClass = framework.Component;
+
+            // Check if cls.prototype is an instance of Component
+            // 检查 cls.prototype 是否是 Component 的实例
+            return cls.prototype instanceof ComponentClass ||
+                   ComponentClass.prototype.isPrototypeOf(cls.prototype);
+        } catch {
+            return false;
+        }
     }
 
     /**

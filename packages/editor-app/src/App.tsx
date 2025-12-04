@@ -381,12 +381,12 @@ function App() {
             // 设置 Tauri project:// 协议的基础路径（用于加载插件等项目文件）
             await TauriAPI.setProjectBasePath(projectPath);
 
-            // 复制类型定义到项目，用于 IDE 智能感知
-            // Copy type definitions to project for IDE intellisense
+            // 更新项目 tsconfig，直接引用引擎类型定义
+            // Update project tsconfig to reference engine type definitions directly
             try {
-                await TauriAPI.copyTypeDefinitions(projectPath);
+                await TauriAPI.updateProjectTsconfig(projectPath);
             } catch (e) {
-                console.warn('[App] Failed to copy type definitions:', e);
+                console.warn('[App] Failed to update project tsconfig:', e);
             }
 
             const settings = SettingsService.getInstance();
@@ -840,14 +840,17 @@ function App() {
                         setStatus(t('header.status.ready'));
                     }}
                     onDeleteProject={async (projectPath) => {
+                        console.log('[App] onDeleteProject called with path:', projectPath);
                         try {
+                            console.log('[App] Calling TauriAPI.deleteFolder...');
                             await TauriAPI.deleteFolder(projectPath);
+                            console.log('[App] deleteFolder succeeded');
                             // 删除成功后从列表中移除并触发重新渲染
                             // Remove from list and trigger re-render after successful deletion
                             settings.removeRecentProject(projectPath);
                             setStatus(t('header.status.ready'));
                         } catch (error) {
-                            console.error('Failed to delete project:', error);
+                            console.error('[App] Failed to delete project:', error);
                             setErrorDialog({
                                 title: locale === 'zh' ? '删除项目失败' : 'Failed to Delete Project',
                                 message: locale === 'zh'
