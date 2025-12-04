@@ -631,6 +631,13 @@ function App() {
             await pluginLoader.unloadProjectPlugins(pluginManager);
         }
 
+        // 清理场景（会清理所有实体和系统）
+        // Clear scene (clears all entities and systems)
+        const scene = Core.scene;
+        if (scene) {
+            scene.end();
+        }
+
         // 清理模块系统
         const engineService = EngineService.getInstance();
         engineService.clearModuleSystems();

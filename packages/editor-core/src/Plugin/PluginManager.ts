@@ -1159,6 +1159,11 @@ export class PluginManager implements IService {
                 }
             }
         }
+
+        // 重置初始化状态，允许下次重新初始化运行时
+        // Reset initialized flag to allow re-initialization
+        this.initialized = false;
+        logger.debug('Scene systems cleared, runtime can be re-initialized');
     }
 
     /**
