@@ -22,10 +22,19 @@ export class TauriFileSystemService implements IFileSystem {
 
     async exists(path: string): Promise<boolean> {
         try {
-            await invoke('read_file_content', { path });
+            // 首先尝试作为目录列出内容
+            // First try to list as directory
+            await invoke('list_directory', { path });
             return true;
         } catch {
-            return false;
+            // 如果不是目录，尝试读取文件
+            // If not a directory, try reading as file
+            try {
+                await invoke('read_file_content', { path });
+                return true;
+            } catch {
+                return false;
+            }
         }
     }
 
@@ -34,11 +43,19 @@ export class TauriFileSystemService implements IFileSystem {
     }
 
     async listDirectory(path: string): Promise<FileEntry[]> {
-        const entries = await invoke<Array<{ name: string; path: string; is_dir: boolean }>>('list_directory', { path });
+        const entries = await invoke<Array<{
+            name: string;
+            path: string;
+            is_dir: boolean;
+            size?: number;
+            modified?: number;
+        }>>('list_directory', { path });
         return entries.map((entry) => ({
             name: entry.name,
             isDirectory: entry.is_dir,
-            path: entry.path
+            path: entry.path,
+            size: entry.size,
+            modified: entry.modified ? new Date(entry.modified * 1000) : undefined
         }));
     }
 

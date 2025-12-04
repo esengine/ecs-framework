@@ -14,6 +14,15 @@ import { EditorEngineSync } from '../services/EditorEngineSync';
 let engineInitialized = false;
 let engineInitializing = false;
 
+/**
+ * 重置引擎初始化状态（在项目关闭时调用）
+ * Reset engine initialization state (called when project is closed)
+ */
+export function resetEngineState(): void {
+    engineInitialized = false;
+    engineInitializing = false;
+}
+
 export interface EngineState {
     initialized: boolean;
     running: boolean;

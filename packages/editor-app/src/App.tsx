@@ -381,6 +381,14 @@ function App() {
             // 设置 Tauri project:// 协议的基础路径（用于加载插件等项目文件）
             await TauriAPI.setProjectBasePath(projectPath);
 
+            // 复制类型定义到项目，用于 IDE 智能感知
+            // Copy type definitions to project for IDE intellisense
+            try {
+                await TauriAPI.copyTypeDefinitions(projectPath);
+            } catch (e) {
+                console.warn('[App] Failed to copy type definitions:', e);
+            }
+
             const settings = SettingsService.getInstance();
             settings.addRecentProject(projectPath);
 
@@ -465,7 +473,9 @@ function App() {
     };
 
     const handleCreateProjectFromWizard = async (projectName: string, projectPath: string, _templateId: string) => {
-        const fullProjectPath = `${projectPath}\\${projectName}`;
+        // 使用与 projectPath 相同的路径分隔符 | Use same separator as projectPath
+        const sep = projectPath.includes('/') ? '/' : '\\';
+        const fullProjectPath = `${projectPath}${sep}${projectName}`;
 
         try {
             setIsLoading(true);
@@ -629,6 +639,13 @@ function App() {
         // 卸载项目插件
         if (pluginManager) {
             await pluginLoader.unloadProjectPlugins(pluginManager);
+        }
+
+        // 清理场景（会清理所有实体和系统）
+        // Clear scene (clears all entities and systems)
+        const scene = Core.scene;
+        if (scene) {
+            scene.end();
         }
 
         // 清理模块系统
@@ -817,6 +834,28 @@ function App() {
                     onOpenProject={handleOpenProject}
                     onCreateProject={handleCreateProject}
                     onOpenRecentProject={handleOpenRecentProject}
+                    onRemoveRecentProject={(projectPath) => {
+                        settings.removeRecentProject(projectPath);
+                        // 强制重新渲染 | Force re-render
+                        setStatus(t('header.status.ready'));
+                    }}
+                    onDeleteProject={async (projectPath) => {
+                        try {
+                            await TauriAPI.deleteFolder(projectPath);
+                            // 删除成功后从列表中移除并触发重新渲染
+                            // Remove from list and trigger re-render after successful deletion
+                            settings.removeRecentProject(projectPath);
+                            setStatus(t('header.status.ready'));
+                        } catch (error) {
+                            console.error('Failed to delete project:', error);
+                            setErrorDialog({
+                                title: locale === 'zh' ? '删除项目失败' : 'Failed to Delete Project',
+                                message: locale === 'zh'
+                                    ? `无法删除项目:\n${error instanceof Error ? error.message : String(error)}`
+                                    : `Failed to delete project:\n${error instanceof Error ? error.message : String(error)}`
+                            });
+                        }
+                    }}
                     onLocaleChange={handleLocaleChange}
                     recentProjects={recentProjects}
                     locale={locale}

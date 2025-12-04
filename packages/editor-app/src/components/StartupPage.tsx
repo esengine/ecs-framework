@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
-import { Globe, ChevronDown, Download, X, Loader2 } from 'lucide-react';
+import { Globe, ChevronDown, Download, X, Loader2, Trash2 } from 'lucide-react';
 import { checkForUpdatesOnStartup, installUpdate, type UpdateCheckResult } from '../utils/updater';
 import { StartupLogo } from './StartupLogo';
 import '../styles/StartupPage.css';
@@ -11,6 +11,8 @@ interface StartupPageProps {
   onOpenProject: () => void;
   onCreateProject: () => void;
   onOpenRecentProject?: (projectPath: string) => void;
+  onRemoveRecentProject?: (projectPath: string) => void;
+  onDeleteProject?: (projectPath: string) => Promise<void>;
   onLocaleChange?: (locale: Locale) => void;
   recentProjects?: string[];
   locale: string;
@@ -21,11 +23,13 @@ const LANGUAGES = [
     { code: 'zh', name: '中文' }
 ];
 
-export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProject, onLocaleChange, recentProjects = [], locale }: StartupPageProps) {
+export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProject, onRemoveRecentProject, onDeleteProject, onLocaleChange, recentProjects = [], locale }: StartupPageProps) {
     const [showLogo, setShowLogo] = useState(true);
     const [hoveredProject, setHoveredProject] = useState<string | null>(null);
     const [appVersion, setAppVersion] = useState<string>('');
     const [showLangMenu, setShowLangMenu] = useState(false);
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; project: string } | null>(null);
+    const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
     const [updateInfo, setUpdateInfo] = useState<UpdateCheckResult | null>(null);
     const [showUpdateBanner, setShowUpdateBanner] = useState(false);
     const [isInstalling, setIsInstalling] = useState(false);
@@ -66,7 +70,13 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
             updateAvailable: 'New version available',
             updateNow: 'Update Now',
             installing: 'Installing...',
-            later: 'Later'
+            later: 'Later',
+            removeFromList: 'Remove from List',
+            deleteProject: 'Delete Project',
+            deleteConfirmTitle: 'Delete Project',
+            deleteConfirmMessage: 'Are you sure you want to permanently delete this project? This action cannot be undone.',
+            cancel: 'Cancel',
+            delete: 'Delete'
         },
         zh: {
             title: 'ESEngine 编辑器',
@@ -78,7 +88,13 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
             updateAvailable: '发现新版本',
             updateNow: '立即更新',
             installing: '正在安装...',
-            later: '稍后'
+            later: '稍后',
+            removeFromList: '从列表中移除',
+            deleteProject: '删除项目',
+            deleteConfirmTitle: '删除项目',
+            deleteConfirmMessage: '确定要永久删除此项目吗？此操作无法撤销。',
+            cancel: '取消',
+            delete: '删除'
         }
     };
 
@@ -136,6 +152,10 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                                     onMouseEnter={() => setHoveredProject(project)}
                                     onMouseLeave={() => setHoveredProject(null)}
                                     onClick={() => onOpenRecentProject?.(project)}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        setContextMenu({ x: e.clientX, y: e.clientY, project });
+                                    }}
                                     style={{ cursor: onOpenRecentProject ? 'pointer' : 'default' }}
                                 >
                                     <svg className="recent-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -145,6 +165,18 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                                         <div className="recent-name">{project.split(/[\\/]/).pop()}</div>
                                         <div className="recent-path">{project}</div>
                                     </div>
+                                    {onRemoveRecentProject && (
+                                        <button
+                                            className="recent-remove-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onRemoveRecentProject(project);
+                                            }}
+                                            title={t.removeFromList}
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
                                 </li>
                             ))}
                         </ul>
@@ -217,6 +249,78 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                     </div>
                 )}
             </div>
+
+            {/* 右键菜单 | Context Menu */}
+            {contextMenu && (
+                <div
+                    className="startup-context-menu-overlay"
+                    onClick={() => setContextMenu(null)}
+                >
+                    <div
+                        className="startup-context-menu"
+                        style={{ left: contextMenu.x, top: contextMenu.y }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            className="startup-context-menu-item"
+                            onClick={() => {
+                                onRemoveRecentProject?.(contextMenu.project);
+                                setContextMenu(null);
+                            }}
+                        >
+                            <X size={14} />
+                            <span>{t.removeFromList}</span>
+                        </button>
+                        {onDeleteProject && (
+                            <button
+                                className="startup-context-menu-item danger"
+                                onClick={() => {
+                                    setDeleteConfirm(contextMenu.project);
+                                    setContextMenu(null);
+                                }}
+                            >
+                                <Trash2 size={14} />
+                                <span>{t.deleteProject}</span>
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* 删除确认对话框 | Delete Confirmation Dialog */}
+            {deleteConfirm && (
+                <div className="startup-dialog-overlay">
+                    <div className="startup-dialog">
+                        <div className="startup-dialog-header">
+                            <Trash2 size={20} className="dialog-icon-danger" />
+                            <h3>{t.deleteConfirmTitle}</h3>
+                        </div>
+                        <div className="startup-dialog-body">
+                            <p>{t.deleteConfirmMessage}</p>
+                            <p className="startup-dialog-path">{deleteConfirm}</p>
+                        </div>
+                        <div className="startup-dialog-footer">
+                            <button
+                                className="startup-dialog-btn"
+                                onClick={() => setDeleteConfirm(null)}
+                            >
+                                {t.cancel}
+                            </button>
+                            <button
+                                className="startup-dialog-btn danger"
+                                onClick={async () => {
+                                    if (deleteConfirm && onDeleteProject) {
+                                        await onDeleteProject(deleteConfirm);
+                                    }
+                                    setDeleteConfirm(null);
+                                }}
+                            >
+                                {t.delete}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

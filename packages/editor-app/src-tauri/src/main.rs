@@ -81,6 +81,8 @@ fn main() {
             commands::open_file_with_default_app,
             commands::show_in_folder,
             commands::get_temp_dir,
+            commands::open_with_editor,
+            commands::copy_type_definitions,
             commands::get_app_resource_dir,
             commands::get_current_dir,
             commands::start_local_server,

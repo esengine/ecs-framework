@@ -174,6 +174,32 @@
   white-space: nowrap;
 }
 
+.recent-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #6e6e6e;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.recent-item:hover .recent-remove-btn {
+  opacity: 1;
+}
+
+.recent-remove-btn:hover {
+  background: rgba(255, 80, 80, 0.15);
+  color: #f87171;
+}
+
 .startup-footer {
   display: flex;
   align-items: center;
@@ -345,4 +371,158 @@
 .update-banner-close:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 右键菜单样式 | Context Menu Styles */
+.startup-context-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+.startup-context-menu {
+  position: fixed;
+  min-width: 180px;
+  background: #252529;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  padding: 4px 0;
+  z-index: 1001;
+}
+
+.startup-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  color: #cccccc;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.startup-context-menu-item:hover {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.startup-context-menu-item.danger {
+  color: #f87171;
+}
+
+.startup-context-menu-item.danger:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+/* 对话框样式 | Dialog Styles */
+.startup-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1002;
+}
+
+.startup-dialog {
+  width: 400px;
+  background: #2d2d30;
+  border: 1px solid #3e3e42;
+  border-radius: 8px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.startup-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #252526;
+  border-bottom: 1px solid #3e3e42;
+}
+
+.startup-dialog-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.dialog-icon-danger {
+  color: #f87171;
+}
+
+.startup-dialog-body {
+  padding: 20px;
+}
+
+.startup-dialog-body p {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  color: #cccccc;
+  line-height: 1.5;
+}
+
+.startup-dialog-body p:last-child {
+  margin-bottom: 0;
+}
+
+.startup-dialog-path {
+  padding: 10px 12px;
+  background: #1e1e1e;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #858585;
+  word-break: break-all;
+}
+
+.startup-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  background: #252526;
+  border-top: 1px solid #3e3e42;
+}
+
+.startup-dialog-btn {
+  padding: 8px 16px;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  background: #2d2d30;
+  color: #cccccc;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.startup-dialog-btn:hover {
+  background: #37373d;
+  border-color: #555;
+}
+
+.startup-dialog-btn.danger {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+.startup-dialog-btn.danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
 }

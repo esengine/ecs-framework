@@ -56,6 +56,32 @@ class EditorAppearanceEditorModule implements IEditorModuleLoader {
                             step: 1
                         }
                     ]
+                },
+                {
+                    id: 'scriptEditor',
+                    title: '脚本编辑器',
+                    description: '配置用于打开脚本文件的外部编辑器',
+                    settings: [
+                        {
+                            key: 'editor.scriptEditor',
+                            label: '脚本编辑器',
+                            type: 'select',
+                            defaultValue: 'system',
+                            description: '双击脚本文件时使用的编辑器',
+                            options: SettingsService.SCRIPT_EDITORS.map(editor => ({
+                                value: editor.id,
+                                label: editor.name
+                            }))
+                        },
+                        {
+                            key: 'editor.customScriptEditorCommand',
+                            label: '自定义编辑器命令',
+                            type: 'string',
+                            defaultValue: '',
+                            description: '当选择"自定义"时，填写编辑器的命令行命令（如 notepad++）',
+                            placeholder: '例如：notepad++'
+                        }
+                    ]
                 }
             ]
         });
