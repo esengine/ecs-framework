@@ -22,10 +22,11 @@ if (!fs.existsSync(bundleDir)) {
 }
 
 // Files to bundle
+// 需要打包的文件
 const filesToBundle = [
     {
-        src: path.join(rootPath, 'packages/platform-web/dist/runtime.browser.js'),
-        dst: path.join(bundleDir, 'runtime.browser.js')
+        src: path.join(rootPath, 'packages/platform-web/dist/index.mjs'),
+        dst: path.join(bundleDir, 'platform-web.mjs')
     },
     {
         src: path.join(rootPath, 'packages/engine/pkg/es_engine_bg.wasm'),
