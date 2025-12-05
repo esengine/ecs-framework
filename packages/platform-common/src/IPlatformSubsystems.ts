@@ -631,6 +631,14 @@ export interface IPlatformInputSubsystem {
      * Check if mouse input is supported
      */
     supportsMouse?(): boolean;
+
+    // ========== 生命周期 | Lifecycle ==========
+
+    /**
+     * 释放资源
+     * Dispose resources
+     */
+    dispose?(): void;
 }
 
 // ============================================================================
