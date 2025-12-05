@@ -12,7 +12,7 @@ export {
 } from './ParticleEmitter';
 
 // Component
-export { ParticleSystemComponent, ParticleBlendMode, type BurstConfig } from './ParticleSystemComponent';
+export { ParticleSystemComponent, ParticleBlendMode, SimulationSpace, type BurstConfig } from './ParticleSystemComponent';
 
 // System
 export { ParticleUpdateSystem } from './systems/ParticleSystem';
@@ -37,7 +37,11 @@ export {
     AnimationLoopMode,
     CollisionModule,
     BoundaryType,
-    CollisionBehavior
+    CollisionBehavior,
+    ForceFieldModule,
+    ForceFieldType,
+    createDefaultForceField,
+    type ForceField
 } from './modules';
 
 // Rendering
@@ -63,6 +67,9 @@ export {
     DustPreset,
     BubblePreset,
     StarTrailPreset,
+    VortexPreset,
+    LeavesPreset,
+    BouncingPreset,
     getPresetsByCategory,
     getPresetNames,
     getPresetByName,

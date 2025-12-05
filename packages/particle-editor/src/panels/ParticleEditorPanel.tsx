@@ -18,6 +18,7 @@ import type { IFileSystem, IDialog } from '@esengine/editor-core';
 import {
     EmissionShape,
     ParticleBlendMode,
+    SimulationSpace,
     AllPresets,
     getPresetByName,
     type IParticleAsset,
@@ -26,8 +27,12 @@ import {
     createDefaultParticleAsset,
     valueNoise2D,
     ScaleCurveType,
+    BoundaryType,
+    CollisionBehavior,
+    ForceFieldType,
     type ColorKey,
     type ScaleKey,
+    type ForceField,
 } from '@esengine/particle';
 import { useParticleEditorStore } from '../stores/ParticleEditorStore';
 import { GradientEditor } from '../components/GradientEditor';
@@ -218,6 +223,8 @@ function useParticlePreview(
         const noiseModule = modules.find(m => m.type === 'Noise');
         const rotationModule = modules.find(m => m.type === 'RotationOverLifetime');
         const velocityModule = modules.find(m => m.type === 'VelocityOverLifetime');
+        const collisionModule = modules.find(m => m.type === 'Collision');
+        const forceFieldModule = modules.find(m => m.type === 'ForceField');
 
         // 颜色渐变 | Color gradient
         const colorGradient: ColorKey[] = colorModule?.enabled && colorModule.params?.gradient
@@ -255,6 +262,35 @@ function useParticlePreview(
         const speedMultiplierEnd: number = (velocityModule?.params?.speedMultiplierEnd as number) ?? 1;
         const orbitalVelocity: number = (velocityModule?.params?.orbitalVelocity as number) ?? 0;
         const radialVelocity: number = (velocityModule?.params?.radialVelocity as number) ?? 0;
+
+        // 碰撞参数 | Collision parameters
+        const collisionEnabled = collisionModule?.enabled ?? false;
+        const collisionBoundaryType: string = (collisionModule?.params?.boundaryType as string) ?? 'rectangle';
+        const collisionBehavior: string = (collisionModule?.params?.behavior as string) ?? 'kill';
+        const collisionLeft: number = (collisionModule?.params?.left as number) ?? -200;
+        const collisionRight: number = (collisionModule?.params?.right as number) ?? 200;
+        const collisionTop: number = (collisionModule?.params?.top as number) ?? -200;
+        const collisionBottom: number = (collisionModule?.params?.bottom as number) ?? 200;
+        const collisionRadius: number = (collisionModule?.params?.radius as number) ?? 200;
+        const collisionBounceFactor: number = (collisionModule?.params?.bounceFactor as number) ?? 0.8;
+        const collisionLifeLoss: number = (collisionModule?.params?.lifeLossOnBounce as number) ?? 0;
+        const collisionMinVelocity: number = (collisionModule?.params?.minVelocityThreshold as number) ?? 5;
+
+        // 力场参数 | Force field parameters
+        const forceFieldEnabled = forceFieldModule?.enabled ?? false;
+        const forceFieldType: string = (forceFieldModule?.params?.type as string) ?? 'wind';
+        const forceFieldStrength: number = (forceFieldModule?.params?.strength as number) ?? 100;
+        const forceFieldDirX: number = (forceFieldModule?.params?.directionX as number) ?? 1;
+        const forceFieldDirY: number = (forceFieldModule?.params?.directionY as number) ?? 0;
+        const forceFieldPosX: number = (forceFieldModule?.params?.positionX as number) ?? 0;
+        const forceFieldPosY: number = (forceFieldModule?.params?.positionY as number) ?? 0;
+        const forceFieldRadius: number = (forceFieldModule?.params?.radius as number) ?? 100;
+        const forceFieldFalloff: string = (forceFieldModule?.params?.falloff as string) ?? 'linear';
+        const forceFieldCenterX: number = (forceFieldModule?.params?.centerX as number) ?? 0;
+        const forceFieldCenterY: number = (forceFieldModule?.params?.centerY as number) ?? 0;
+        const forceFieldInward: number = (forceFieldModule?.params?.inwardStrength as number) ?? 0;
+        const forceFieldFrequency: number = (forceFieldModule?.params?.frequency as number) ?? 1;
+        const forceFieldAmplitude: number = (forceFieldModule?.params?.amplitude as number) ?? 50;
 
         // 爆发配置 | Burst configuration
         const bursts: BurstConfig[] = (data as any).bursts || [];
@@ -516,6 +552,161 @@ function useParticlePreview(
                         }
                         if (noiseRotationAmount !== 0) {
                             p.rotation += noiseX * noiseRotationAmount * dt;
+                        }
+                    }
+
+                    // 力场模块 | Force field module
+                    if (forceFieldEnabled) {
+                        switch (forceFieldType) {
+                            case 'wind': {
+                                // 风力 | Wind force
+                                const dirLen = Math.sqrt(forceFieldDirX * forceFieldDirX + forceFieldDirY * forceFieldDirY);
+                                if (dirLen > 0.001) {
+                                    p.vx += (forceFieldDirX / dirLen) * forceFieldStrength * dt;
+                                    p.vy += (forceFieldDirY / dirLen) * forceFieldStrength * dt;
+                                }
+                                break;
+                            }
+                            case 'point': {
+                                // 吸引/排斥力 | Attraction/repulsion
+                                const fieldX = centerX + forceFieldPosX;
+                                const fieldY = centerY + forceFieldPosY;
+                                const dx = fieldX - p.x;
+                                const dy = fieldY - p.y;
+                                const distSq = dx * dx + dy * dy;
+                                const dist = Math.sqrt(distSq);
+                                if (dist > 0.001 && dist < forceFieldRadius) {
+                                    let falloffFactor = 1;
+                                    if (forceFieldFalloff === 'linear') {
+                                        falloffFactor = 1 - dist / forceFieldRadius;
+                                    } else if (forceFieldFalloff === 'quadratic') {
+                                        falloffFactor = 1 - (distSq / (forceFieldRadius * forceFieldRadius));
+                                    }
+                                    const force = forceFieldStrength * falloffFactor * dt;
+                                    p.vx += (dx / dist) * force;
+                                    p.vy += (dy / dist) * force;
+                                }
+                                break;
+                            }
+                            case 'vortex': {
+                                // 漩涡力 | Vortex force
+                                const vcx = centerX + forceFieldCenterX;
+                                const vcy = centerY + forceFieldCenterY;
+                                const vdx = p.x - vcx;
+                                const vdy = p.y - vcy;
+                                const vdist = Math.sqrt(vdx * vdx + vdy * vdy);
+                                if (vdist > 0.001) {
+                                    // 切向力 | Tangential force
+                                    const tangentX = -vdy / vdist;
+                                    const tangentY = vdx / vdist;
+                                    p.vx += tangentX * forceFieldStrength * dt;
+                                    p.vy += tangentY * forceFieldStrength * dt;
+                                    // 向心力 | Centripetal force
+                                    if (forceFieldInward !== 0) {
+                                        p.vx -= (vdx / vdist) * forceFieldInward * dt;
+                                        p.vy -= (vdy / vdist) * forceFieldInward * dt;
+                                    }
+                                }
+                                break;
+                            }
+                            case 'turbulence': {
+                                // 湍流 | Turbulence
+                                const turbNoiseX = Math.sin(p.x * forceFieldFrequency * 0.01 + noiseTimeRef.current * forceFieldFrequency) *
+                                    Math.cos(p.y * forceFieldFrequency * 0.013 + noiseTimeRef.current * forceFieldFrequency * 0.7);
+                                const turbNoiseY = Math.cos(p.x * forceFieldFrequency * 0.011 + noiseTimeRef.current * forceFieldFrequency * 0.8) *
+                                    Math.sin(p.y * forceFieldFrequency * 0.01 + noiseTimeRef.current * forceFieldFrequency);
+                                p.vx += turbNoiseX * forceFieldAmplitude * dt;
+                                p.vy += turbNoiseY * forceFieldAmplitude * dt;
+                                break;
+                            }
+                        }
+                    }
+
+                    // 碰撞模块 | Collision module
+                    if (collisionEnabled && collisionBoundaryType !== 'none') {
+                        const relX = p.x - centerX;
+                        const relY = p.y - centerY;
+                        let collision = false;
+                        let normalX = 0;
+                        let normalY = 0;
+
+                        if (collisionBoundaryType === 'rectangle') {
+                            // 矩形边界 | Rectangle boundary
+                            if (relX < collisionLeft) {
+                                collision = true;
+                                normalX = 1;
+                                if (collisionBehavior === 'wrap') {
+                                    p.x = centerX + collisionRight;
+                                } else if (collisionBehavior === 'bounce') {
+                                    p.x = centerX + collisionLeft;
+                                }
+                            } else if (relX > collisionRight) {
+                                collision = true;
+                                normalX = -1;
+                                if (collisionBehavior === 'wrap') {
+                                    p.x = centerX + collisionLeft;
+                                } else if (collisionBehavior === 'bounce') {
+                                    p.x = centerX + collisionRight;
+                                }
+                            }
+                            if (relY < collisionTop) {
+                                collision = true;
+                                normalY = 1;
+                                if (collisionBehavior === 'wrap') {
+                                    p.y = centerY + collisionBottom;
+                                } else if (collisionBehavior === 'bounce') {
+                                    p.y = centerY + collisionTop;
+                                }
+                            } else if (relY > collisionBottom) {
+                                collision = true;
+                                normalY = -1;
+                                if (collisionBehavior === 'wrap') {
+                                    p.y = centerY + collisionTop;
+                                } else if (collisionBehavior === 'bounce') {
+                                    p.y = centerY + collisionBottom;
+                                }
+                            }
+                        } else if (collisionBoundaryType === 'circle') {
+                            // 圆形边界 | Circle boundary
+                            const dist = Math.sqrt(relX * relX + relY * relY);
+                            if (dist > collisionRadius) {
+                                collision = true;
+                                if (dist > 0.001) {
+                                    normalX = -relX / dist;
+                                    normalY = -relY / dist;
+                                }
+                                if (collisionBehavior === 'wrap') {
+                                    p.x = centerX - relX * (collisionRadius / dist) * 0.9;
+                                    p.y = centerY - relY * (collisionRadius / dist) * 0.9;
+                                } else if (collisionBehavior === 'bounce') {
+                                    p.x = centerX + relX * (collisionRadius / dist) * 0.99;
+                                    p.y = centerY + relY * (collisionRadius / dist) * 0.99;
+                                }
+                            }
+                        }
+
+                        if (collision) {
+                            if (collisionBehavior === 'kill') {
+                                return false;
+                            } else if (collisionBehavior === 'bounce') {
+                                // 反弹 | Bounce
+                                if (normalX !== 0) {
+                                    p.vx = -p.vx * collisionBounceFactor;
+                                }
+                                if (normalY !== 0) {
+                                    p.vy = -p.vy * collisionBounceFactor;
+                                }
+                                // 生命损失 | Life loss
+                                if (collisionLifeLoss > 0) {
+                                    p.lifetime *= (1 - collisionLifeLoss);
+                                }
+                                // 检查最小速度 | Check minimum velocity
+                                const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+                                if (speed < collisionMinVelocity) {
+                                    return false;
+                                }
+                            }
+                            // wrap 已处理位置 | wrap position already handled
                         }
                     }
 
@@ -943,6 +1134,15 @@ function BasicProperties({ data, onChange, onBrowseTexture }: BasicPropertiesPro
                 ]}
                 onChange={v => onChange('blendMode', v as ParticleBlendMode)}
             />
+            <PropertySelect
+                label="Space"
+                value={(data as any).simulationSpace || SimulationSpace.World}
+                options={[
+                    { value: SimulationSpace.World, label: 'World' },
+                    { value: SimulationSpace.Local, label: 'Local' },
+                ]}
+                onChange={v => onChange('simulationSpace' as any, v)}
+            />
             <PropertyInput
                 label="Particle Size"
                 type="number"
@@ -1173,6 +1373,8 @@ function ModulesProperties({ data, onModuleChange, onModuleToggle }: ModulesProp
     const velocityModule = getModule('VelocityOverLifetime');
     const rotationModule = getModule('RotationOverLifetime');
     const noiseModule = getModule('Noise');
+    const collisionModule = getModule('Collision');
+    const forceFieldModule = getModule('ForceField');
 
     // 颜色渐变数据 | Color gradient data
     const colorGradient: ColorKey[] = (colorModule?.params?.gradient as ColorKey[]) ?? [
@@ -1331,6 +1533,195 @@ function ModulesProperties({ data, onModuleChange, onModuleToggle }: ModulesProp
                     onChange={v => onModuleChange('Noise', { ...noiseModule?.params, scrollSpeed: v })}
                 />
             </ModuleSection>
+
+            {/* Collision */}
+            <ModuleSection
+                name="Collision"
+                enabled={collisionModule?.enabled ?? false}
+                expanded={expandedModules.has('Collision')}
+                onToggle={enabled => onModuleToggle('Collision', enabled)}
+                onExpandToggle={() => toggleExpand('Collision')}
+            >
+                <PropertySelect
+                    label="Boundary"
+                    value={(collisionModule?.params?.boundaryType as string) ?? BoundaryType.Rectangle}
+                    options={[
+                        { value: BoundaryType.None, label: 'None' },
+                        { value: BoundaryType.Rectangle, label: 'Rectangle' },
+                        { value: BoundaryType.Circle, label: 'Circle' },
+                    ]}
+                    onChange={v => onModuleChange('Collision', { ...collisionModule?.params, boundaryType: v })}
+                />
+                <PropertySelect
+                    label="Behavior"
+                    value={(collisionModule?.params?.behavior as string) ?? CollisionBehavior.Kill}
+                    options={[
+                        { value: CollisionBehavior.Kill, label: 'Kill' },
+                        { value: CollisionBehavior.Bounce, label: 'Bounce' },
+                        { value: CollisionBehavior.Wrap, label: 'Wrap' },
+                    ]}
+                    onChange={v => onModuleChange('Collision', { ...collisionModule?.params, behavior: v })}
+                />
+                {((collisionModule?.params?.boundaryType as string) ?? BoundaryType.Rectangle) === BoundaryType.Rectangle && (
+                    <>
+                        <PropertyInput
+                            label="Left"
+                            type="number"
+                            value={(collisionModule?.params?.left as number) ?? -200}
+                            onChange={v => onModuleChange('Collision', { ...collisionModule?.params, left: v })}
+                        />
+                        <PropertyInput
+                            label="Right"
+                            type="number"
+                            value={(collisionModule?.params?.right as number) ?? 200}
+                            onChange={v => onModuleChange('Collision', { ...collisionModule?.params, right: v })}
+                        />
+                        <PropertyInput
+                            label="Top"
+                            type="number"
+                            value={(collisionModule?.params?.top as number) ?? -200}
+                            onChange={v => onModuleChange('Collision', { ...collisionModule?.params, top: v })}
+                        />
+                        <PropertyInput
+                            label="Bottom"
+                            type="number"
+                            value={(collisionModule?.params?.bottom as number) ?? 200}
+                            onChange={v => onModuleChange('Collision', { ...collisionModule?.params, bottom: v })}
+                        />
+                    </>
+                )}
+                {((collisionModule?.params?.boundaryType as string) ?? BoundaryType.Rectangle) === BoundaryType.Circle && (
+                    <PropertyInput
+                        label="Radius"
+                        type="number"
+                        value={(collisionModule?.params?.radius as number) ?? 200}
+                        min={1}
+                        onChange={v => onModuleChange('Collision', { ...collisionModule?.params, radius: v })}
+                    />
+                )}
+                {((collisionModule?.params?.behavior as string) ?? CollisionBehavior.Kill) === CollisionBehavior.Bounce && (
+                    <>
+                        <PropertyInput
+                            label="Bounce"
+                            type="number"
+                            value={(collisionModule?.params?.bounceFactor as number) ?? 0.8}
+                            min={0}
+                            max={1}
+                            step={0.1}
+                            onChange={v => onModuleChange('Collision', { ...collisionModule?.params, bounceFactor: v })}
+                        />
+                        <PropertyInput
+                            label="Life Loss"
+                            type="number"
+                            value={(collisionModule?.params?.lifeLossOnBounce as number) ?? 0}
+                            min={0}
+                            max={1}
+                            step={0.1}
+                            onChange={v => onModuleChange('Collision', { ...collisionModule?.params, lifeLossOnBounce: v })}
+                        />
+                    </>
+                )}
+            </ModuleSection>
+
+            {/* Force Field */}
+            <ModuleSection
+                name="Force Field"
+                enabled={forceFieldModule?.enabled ?? false}
+                expanded={expandedModules.has('ForceField')}
+                onToggle={enabled => onModuleToggle('ForceField', enabled)}
+                onExpandToggle={() => toggleExpand('ForceField')}
+            >
+                <PropertySelect
+                    label="Type"
+                    value={(forceFieldModule?.params?.type as string) ?? ForceFieldType.Wind}
+                    options={[
+                        { value: ForceFieldType.Wind, label: 'Wind' },
+                        { value: ForceFieldType.Point, label: 'Point' },
+                        { value: ForceFieldType.Vortex, label: 'Vortex' },
+                        { value: ForceFieldType.Turbulence, label: 'Turbulence' },
+                    ]}
+                    onChange={v => onModuleChange('ForceField', { ...forceFieldModule?.params, type: v })}
+                />
+                <PropertyInput
+                    label="Strength"
+                    type="number"
+                    value={(forceFieldModule?.params?.strength as number) ?? 100}
+                    onChange={v => onModuleChange('ForceField', { ...forceFieldModule?.params, strength: v })}
+                />
+                {((forceFieldModule?.params?.type as string) ?? ForceFieldType.Wind) === ForceFieldType.Wind && (
+                    <Vector2Field
+                        label="Direction"
+                        x={(forceFieldModule?.params?.directionX as number) ?? 1}
+                        y={(forceFieldModule?.params?.directionY as number) ?? 0}
+                        onXChange={v => onModuleChange('ForceField', { ...forceFieldModule?.params, directionX: v })}
+                        onYChange={v => onModuleChange('ForceField', { ...forceFieldModule?.params, directionY: v })}
+                        step={0.1}
+                    />
+                )}
+                {((forceFieldModule?.params?.type as string) ?? ForceFieldType.Wind) === ForceFieldType.Point && (
+                    <>
+                        <Vector2Field
+                            label="Position"
+                            x={(forceFieldModule?.params?.positionX as number) ?? 0}
+                            y={(forceFieldModule?.params?.positionY as number) ?? 0}
+                            onXChange={v => onModuleChange('ForceField', { ...forceFieldModule?.params, positionX: v })}
+                            onYChange={v => onModuleChange('ForceField', { ...forceFieldModule?.params, positionY: v })}
+                        />
+                        <PropertyInput
+                            label="Radius"
+                            type="number"
+                            value={(forceFieldModule?.params?.radius as number) ?? 100}
+                            min={1}
+                            onChange={v => onModuleChange('ForceField', { ...forceFieldModule?.params, radius: v })}
+                        />
+                        <PropertySelect
+                            label="Falloff"
+                            value={(forceFieldModule?.params?.falloff as string) ?? 'linear'}
+                            options={[
+                                { value: 'none', label: 'None' },
+                                { value: 'linear', label: 'Linear' },
+                                { value: 'quadratic', label: 'Quadratic' },
+                            ]}
+                            onChange={v => onModuleChange('ForceField', { ...forceFieldModule?.params, falloff: v })}
+                        />
+                    </>
+                )}
+                {((forceFieldModule?.params?.type as string) ?? ForceFieldType.Wind) === ForceFieldType.Vortex && (
+                    <>
+                        <Vector2Field
+                            label="Center"
+                            x={(forceFieldModule?.params?.centerX as number) ?? 0}
+                            y={(forceFieldModule?.params?.centerY as number) ?? 0}
+                            onXChange={v => onModuleChange('ForceField', { ...forceFieldModule?.params, centerX: v })}
+                            onYChange={v => onModuleChange('ForceField', { ...forceFieldModule?.params, centerY: v })}
+                        />
+                        <PropertyInput
+                            label="Inward"
+                            type="number"
+                            value={(forceFieldModule?.params?.inwardStrength as number) ?? 0}
+                            onChange={v => onModuleChange('ForceField', { ...forceFieldModule?.params, inwardStrength: v })}
+                        />
+                    </>
+                )}
+                {((forceFieldModule?.params?.type as string) ?? ForceFieldType.Wind) === ForceFieldType.Turbulence && (
+                    <>
+                        <PropertyInput
+                            label="Frequency"
+                            type="number"
+                            value={(forceFieldModule?.params?.frequency as number) ?? 1}
+                            min={0.01}
+                            step={0.1}
+                            onChange={v => onModuleChange('ForceField', { ...forceFieldModule?.params, frequency: v })}
+                        />
+                        <PropertyInput
+                            label="Amplitude"
+                            type="number"
+                            value={(forceFieldModule?.params?.amplitude as number) ?? 50}
+                            onChange={v => onModuleChange('ForceField', { ...forceFieldModule?.params, amplitude: v })}
+                        />
+                    </>
+                )}
+            </ModuleSection>
         </div>
     );
 }
@@ -1397,6 +1788,44 @@ function BurstProperties({ bursts, onBurstsChange }: BurstPropertiesProps) {
 // ============= Helper Functions =============
 
 function presetToAsset(preset: ParticlePreset): Partial<IParticleAsset> {
+    const modules: IParticleModuleConfig[] = [];
+
+    // 添加碰撞模块 | Add collision module
+    if (preset.collision) {
+        modules.push({
+            type: 'Collision',
+            enabled: true,
+            params: {
+                boundaryType: preset.collision.boundaryType,
+                behavior: preset.collision.behavior,
+                radius: preset.collision.radius,
+                bounceFactor: preset.collision.bounceFactor,
+                left: -200,
+                right: 200,
+                top: -200,
+                bottom: 200,
+            },
+        });
+    }
+
+    // 添加力场模块 | Add force field module
+    if (preset.forceField) {
+        modules.push({
+            type: 'ForceField',
+            enabled: true,
+            params: {
+                type: preset.forceField.type,
+                strength: preset.forceField.strength,
+                directionX: preset.forceField.directionX,
+                directionY: preset.forceField.directionY,
+                centerX: preset.forceField.centerX,
+                centerY: preset.forceField.centerY,
+                inwardStrength: preset.forceField.inwardStrength,
+                frequency: preset.forceField.frequency,
+            },
+        });
+    }
+
     return {
         maxParticles: preset.maxParticles,
         looping: preset.looping,
@@ -1424,6 +1853,7 @@ function presetToAsset(preset: ParticlePreset): Partial<IParticleAsset> {
         endScale: preset.endScale,
         particleSize: preset.particleSize,
         blendMode: preset.blendMode,
+        modules: modules.length > 0 ? modules : undefined,
     };
 }
 

@@ -14,3 +14,9 @@ export {
     BoundaryType,
     CollisionBehavior
 } from './CollisionModule';
+export {
+    ForceFieldModule,
+    ForceFieldType,
+    createDefaultForceField,
+    type ForceField
+} from './ForceFieldModule';

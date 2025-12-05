@@ -7,7 +7,9 @@
  */
 
 import { EmissionShape, type ColorValue } from '../ParticleEmitter';
-import { ParticleBlendMode } from '../ParticleSystemComponent';
+import { ParticleBlendMode, SimulationSpace } from '../ParticleSystemComponent';
+import { ForceFieldType } from '../modules/ForceFieldModule';
+import { BoundaryType, CollisionBehavior } from '../modules/CollisionModule';
 
 /**
  * 辅助函数：十六进制转 ColorValue
@@ -73,6 +75,25 @@ export interface ParticlePreset {
     // 渲染属性 | Rendering properties
     particleSize: number;
     blendMode: ParticleBlendMode;
+
+    // 可选模块 | Optional modules
+    simulationSpace?: SimulationSpace;
+    forceField?: {
+        type: ForceFieldType;
+        strength: number;
+        directionX?: number;
+        directionY?: number;
+        centerX?: number;
+        centerY?: number;
+        inwardStrength?: number;
+        frequency?: number;
+    };
+    collision?: {
+        boundaryType: BoundaryType;
+        behavior: CollisionBehavior;
+        radius?: number;
+        bounceFactor?: number;
+    };
 }
 
 /**
@@ -562,6 +583,152 @@ export const DefaultPreset: ParticlePreset = {
 };
 
 /**
+ * 漩涡预设
+ * Vortex preset
+ */
+export const VortexPreset: ParticlePreset = {
+    name: 'Vortex',
+    description: 'Swirling vortex with inward pull',
+    category: PresetCategory.Magic,
+    icon: 'Tornado',
+
+    maxParticles: 200,
+    looping: true,
+    duration: 10,
+    playbackSpeed: 1,
+
+    emissionRate: 30,
+    emissionShape: EmissionShape.Circle,
+    shapeRadius: 80,
+    shapeWidth: 160,
+    shapeHeight: 160,
+    shapeAngle: 360,
+
+    lifetimeMin: 2,
+    lifetimeMax: 4,
+    speedMin: 10,
+    speedMax: 30,
+    direction: 0,
+    directionSpread: 360,
+    scaleMin: 0.5,
+    scaleMax: 1,
+    gravityX: 0,
+    gravityY: 0,
+
+    startColor: hexToColor('#88ccff'),
+    startAlpha: 0.8,
+    endAlpha: 0,
+    endScale: 0.3,
+
+    particleSize: 8,
+    blendMode: ParticleBlendMode.Additive,
+
+    forceField: {
+        type: ForceFieldType.Vortex,
+        strength: 150,
+        centerX: 0,
+        centerY: 0,
+        inwardStrength: 30,
+    },
+};
+
+/**
+ * 落叶预设
+ * Falling leaves preset
+ */
+export const LeavesPreset: ParticlePreset = {
+    name: 'Leaves',
+    description: 'Falling leaves with wind effect',
+    category: PresetCategory.Environment,
+    icon: 'Leaf',
+
+    maxParticles: 100,
+    looping: true,
+    duration: 10,
+    playbackSpeed: 1,
+
+    emissionRate: 8,
+    emissionShape: EmissionShape.Line,
+    shapeRadius: 200,
+    shapeWidth: 400,
+    shapeHeight: 10,
+    shapeAngle: 0,
+
+    lifetimeMin: 4,
+    lifetimeMax: 8,
+    speedMin: 30,
+    speedMax: 60,
+    direction: -90,
+    directionSpread: 20,
+    scaleMin: 0.6,
+    scaleMax: 1.2,
+    gravityX: 0,
+    gravityY: 20,
+
+    startColor: hexToColor('#dd8844'),
+    startAlpha: 0.9,
+    endAlpha: 0.6,
+    endScale: 1,
+
+    particleSize: 12,
+    blendMode: ParticleBlendMode.Normal,
+
+    forceField: {
+        type: ForceFieldType.Turbulence,
+        strength: 40,
+        frequency: 0.5,
+    },
+};
+
+/**
+ * 弹球预设
+ * Bouncing balls preset
+ */
+export const BouncingPreset: ParticlePreset = {
+    name: 'Bouncing',
+    description: 'Bouncing particles in a box',
+    category: PresetCategory.Basic,
+    icon: 'Circle',
+
+    maxParticles: 50,
+    looping: true,
+    duration: 10,
+    playbackSpeed: 1,
+
+    emissionRate: 5,
+    emissionShape: EmissionShape.Point,
+    shapeRadius: 0,
+    shapeWidth: 0,
+    shapeHeight: 0,
+    shapeAngle: 0,
+
+    lifetimeMin: 8,
+    lifetimeMax: 12,
+    speedMin: 100,
+    speedMax: 200,
+    direction: 90,
+    directionSpread: 60,
+    scaleMin: 0.8,
+    scaleMax: 1.2,
+    gravityX: 0,
+    gravityY: 200,
+
+    startColor: hexToColor('#66aaff'),
+    startAlpha: 1,
+    endAlpha: 0.8,
+    endScale: 1,
+
+    particleSize: 16,
+    blendMode: ParticleBlendMode.Normal,
+
+    collision: {
+        boundaryType: BoundaryType.Rectangle,
+        behavior: CollisionBehavior.Bounce,
+        bounceFactor: 0.8,
+    },
+};
+
+/**
  * 所有预设
  * All presets
  */
@@ -577,6 +744,9 @@ export const AllPresets: ParticlePreset[] = [
     DustPreset,
     BubblePreset,
     StarTrailPreset,
+    VortexPreset,
+    LeavesPreset,
+    BouncingPreset,
 ];
 
 /**

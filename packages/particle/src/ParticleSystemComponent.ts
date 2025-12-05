@@ -5,6 +5,7 @@ import type { IParticleModule } from './modules/IParticleModule';
 import { ColorOverLifetimeModule } from './modules/ColorOverLifetimeModule';
 import { SizeOverLifetimeModule } from './modules/SizeOverLifetimeModule';
 import { CollisionModule } from './modules/CollisionModule';
+import { ForceFieldModule } from './modules/ForceFieldModule';
 
 /**
  * 爆发配置
@@ -32,6 +33,17 @@ export enum ParticleBlendMode {
     Additive = 'additive',
     /** 正片叠底 | Multiply */
     Multiply = 'multiply'
+}
+
+/**
+ * 模拟空间
+ * Simulation space
+ */
+export enum SimulationSpace {
+    /** 本地空间（粒子跟随发射器）| Local space (particles follow emitter) */
+    Local = 'local',
+    /** 世界空间（粒子不跟随发射器）| World space (particles don't follow emitter) */
+    World = 'world'
 }
 
 /**
@@ -70,6 +82,14 @@ export class ParticleSystemComponent extends Component {
     @Serialize()
     @Property({ type: 'number', label: 'Playback Speed', min: 0.01, max: 10 })
     public playbackSpeed: number = 1;
+
+    /** 模拟空间 | Simulation space */
+    @Serialize()
+    @Property({ type: 'enum', label: 'Simulation Space', options: [
+        { value: 'world', label: 'World' },
+        { value: 'local', label: 'Local' }
+    ]})
+    public simulationSpace: SimulationSpace = SimulationSpace.World;
 
     // ============= 发射器属性 | Emitter Properties =============
 
@@ -220,6 +240,9 @@ export class ParticleSystemComponent extends Component {
     private _needsRebuild: boolean = true;
     /** 爆发状态追踪 | Burst state tracking */
     private _burstStates: { firedCount: number; lastFireTime: number }[] = [];
+    /** 上一帧发射器位置（本地空间用）| Last frame emitter position (for local space) */
+    private _lastEmitterX: number = 0;
+    private _lastEmitterY: number = 0;
 
     /** 纹理ID（运行时）| Texture ID (runtime) */
     public textureId: number = 0;
@@ -271,6 +294,9 @@ export class ParticleSystemComponent extends Component {
         this._elapsedTime = 0;
         // 初始化爆发状态 | Initialize burst states
         this._burstStates = this.bursts.map(() => ({ firedCount: 0, lastFireTime: -Infinity }));
+        // 初始化发射器位置 | Initialize emitter position
+        this._lastEmitterX = worldX;
+        this._lastEmitterY = worldY;
 
         if (this.prewarmTime > 0) {
             this._simulate(this.prewarmTime, worldX, worldY);
@@ -443,6 +469,11 @@ export class ParticleSystemComponent extends Component {
     private _simulate(dt: number, worldX: number, worldY: number): void {
         if (!this._pool || !this._emitter) return;
 
+        // 本地空间：计算发射器移动量 | Local space: calculate emitter movement
+        const isLocalSpace = this.simulationSpace === SimulationSpace.Local;
+        const emitterDeltaX = worldX - this._lastEmitterX;
+        const emitterDeltaY = worldY - this._lastEmitterY;
+
         // 发射新粒子 | Emit new particles
         this._emitter.emit(this._pool, dt, worldX, worldY);
 
@@ -457,8 +488,21 @@ export class ParticleSystemComponent extends Component {
             collisionModule.clearDeathFlags();
         }
 
+        // 查找力场模块并更新发射器位置 | Find force field module and update emitter position
+        const forceFieldModule = this._modules.find(m => m instanceof ForceFieldModule) as ForceFieldModule | undefined;
+        if (forceFieldModule) {
+            forceFieldModule.emitterX = worldX;
+            forceFieldModule.emitterY = worldY;
+        }
+
         // 更新粒子 | Update particles
         this._pool.forEachActive((p) => {
+            // 本地空间：粒子跟随发射器移动 | Local space: particles follow emitter
+            if (isLocalSpace) {
+                p.x += emitterDeltaX;
+                p.y += emitterDeltaY;
+            }
+
             // 物理更新 | Physics update
             p.vx += p.ax * dt;
             p.vy += p.ay * dt;
@@ -487,6 +531,10 @@ export class ParticleSystemComponent extends Component {
                 this._pool.recycle(p);
             }
         }
+
+        // 记录发射器位置供下一帧使用 | Record emitter position for next frame
+        this._lastEmitterX = worldX;
+        this._lastEmitterY = worldY;
     }
 
     /**
