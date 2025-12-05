@@ -6,6 +6,11 @@ This document records the version update history of the `@esengine/ecs-framework
 
 ## v2.2.21 (2025-12-05)
 
+### Bug Fixes
+
+- **Iteration safety fix**: Fix issue where component changes during `process`/`lateProcess` iteration caused entities to be skipped (#272)
+  - Adding/removing components during system processing no longer causes entities to be unexpectedly skipped
+
 ### Performance
 
 - **HierarchySystem optimization**: Optimize hierarchy system to avoid iterating all entities every frame (#279)
