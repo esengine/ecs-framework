@@ -24,6 +24,8 @@ import {
     USER_CODE_OUTPUT_DIR
 } from './IUserCodeService';
 import type { IFileSystem, FileEntry } from '../IFileSystem';
+import type { ComponentInspectorRegistry, IComponentInspector } from '../ComponentInspectorRegistry';
+import { GizmoRegistry } from '../../Gizmos/GizmoRegistry';
 
 const logger = createLogger('UserCodeService');
 
@@ -43,6 +45,24 @@ export class UserCodeService implements IService, IUserCodeService {
     private _watchCallbacks: Array<(event: HotReloadEvent) => void> = [];
     private _currentProjectPath: string | undefined;
     private _eventUnlisten: (() => void) | undefined;
+
+    /**
+     * 已注册的用户系统实例
+     * Registered user system instances
+     */
+    private _registeredSystems: any[] = [];
+
+    /**
+     * 已注册的用户 Inspector ID 列表
+     * Registered user inspector IDs
+     */
+    private _registeredInspectorIds: string[] = [];
+
+    /**
+     * 已注册的用户 Gizmo 组件类型
+     * Registered user gizmo component types
+     */
+    private _registeredGizmoTypes: any[] = [];
 
     constructor(fileSystem: IFileSystem) {
         this._fileSystem = fileSystem;
@@ -459,50 +479,211 @@ export class UserCodeService implements IService, IUserCodeService {
     }
 
     /**
-     * Register editor extensions from user module.
-     * 从用户模块注册编辑器扩展。
+     * Register user systems to scene.
+     * 注册用户系统到场景。
      *
      * @param module - User code module | 用户代码模块
+     * @param scene - Scene to add systems | 要添加系统的场景
+     * @returns Array of registered system instances | 注册的系统实例数组
      */
-    registerEditorExtensions(module: UserCodeModule): void {
-        if (module.target !== UserCodeTarget.Editor) {
-            logger.warn('Cannot register editor extensions from runtime module | 无法从运行时模块注册编辑器扩展');
-            return;
+    registerSystems(module: UserCodeModule, scene: any): any[] {
+        if (module.target !== UserCodeTarget.Runtime) {
+            logger.warn('Cannot register systems from editor module | 无法从编辑器模块注册系统');
+            return [];
         }
 
-        let inspectorCount = 0;
-        let gizmoCount = 0;
-        let panelCount = 0;
+        if (!scene) {
+            logger.warn('No scene provided for system registration | 未提供场景用于系统注册');
+            return [];
+        }
+
+        // 先移除之前注册的用户系统 | Remove previously registered user systems first
+        this.unregisterSystems(scene);
+
+        const registeredSystems: any[] = [];
 
         for (const [name, exported] of Object.entries(module.exports)) {
             if (typeof exported !== 'function') {
                 continue;
             }
 
-            // Check for inspector | 检查检查器
+            // 检查是否是 System 子类 | Check if it's a System subclass
+            if (this._isSystemClass(exported)) {
+                try {
+                    // 获取系统元数据 | Get system metadata
+                    const metadata = (exported as any).__systemMetadata__;
+                    const updateOrder = metadata?.updateOrder ?? 0;
+                    const enabled = metadata?.enabled !== false;
+
+                    // 实例化系统 | Instantiate system
+                    const systemInstance = new (exported as any)();
+
+                    // 设置系统属性 | Set system properties
+                    if (typeof systemInstance.updateOrder !== 'undefined') {
+                        systemInstance.updateOrder = updateOrder;
+                    }
+                    if (typeof systemInstance.enabled !== 'undefined') {
+                        systemInstance.enabled = enabled;
+                    }
+
+                    // 标记为用户系统，便于后续识别和移除 | Mark as user system for later identification and removal
+                    systemInstance.__isUserSystem__ = true;
+                    systemInstance.__userSystemName__ = name;
+
+                    // 添加到场景 | Add to scene
+                    scene.addSystem(systemInstance);
+                    registeredSystems.push(systemInstance);
+
+                    logger.info(`Registered user system: ${name} | 注册用户系统: ${name}`, {
+                        updateOrder,
+                        enabled
+                    });
+                } catch (err) {
+                    logger.error(`Failed to register system ${name} | 注册系统 ${name} 失败:`, err);
+                }
+            }
+        }
+
+        this._registeredSystems = registeredSystems;
+
+        logger.info(`Registered ${registeredSystems.length} user systems | 注册了 ${registeredSystems.length} 个用户系统`);
+
+        return registeredSystems;
+    }
+
+    /**
+     * Unregister user systems from scene.
+     * 从场景注销用户系统。
+     *
+     * @param scene - Scene to remove systems | 要移除系统的场景
+     */
+    unregisterSystems(scene: any): void {
+        if (!scene) {
+            return;
+        }
+
+        for (const system of this._registeredSystems) {
+            try {
+                scene.removeSystem(system);
+                logger.debug(`Removed user system: ${system.__userSystemName__} | 移除用户系统: ${system.__userSystemName__}`);
+            } catch (err) {
+                logger.warn(`Failed to remove system ${system.__userSystemName__}:`, err);
+            }
+        }
+
+        this._registeredSystems = [];
+    }
+
+    /**
+     * Get registered user systems.
+     * 获取已注册的用户系统。
+     *
+     * @returns Array of registered system instances | 注册的系统实例数组
+     */
+    getRegisteredSystems(): any[] {
+        return [...this._registeredSystems];
+    }
+
+    /**
+     * Hot reload user systems.
+     * 热更新用户系统。
+     *
+     * Removes old systems and registers new ones from the updated module.
+     * 移除旧系统并从更新的模块注册新系统。
+     *
+     * @param module - New user code module | 新的用户代码模块
+     * @param scene - Scene to update systems | 要更新系统的场景
+     * @returns Array of newly registered system instances | 新注册的系统实例数组
+     */
+    hotReloadSystems(module: UserCodeModule, scene: any): any[] {
+        logger.info('Hot reloading user systems | 热更新用户系统');
+        return this.registerSystems(module, scene);
+    }
+
+    /**
+     * Register editor extensions from user module.
+     * 从用户模块注册编辑器扩展。
+     *
+     * @param module - User code module | 用户代码模块
+     * @param inspectorRegistry - Component inspector registry | 组件检查器注册表
+     */
+    registerEditorExtensions(module: UserCodeModule, inspectorRegistry?: ComponentInspectorRegistry): void {
+        if (module.target !== UserCodeTarget.Editor) {
+            logger.warn('Cannot register editor extensions from runtime module | 无法从运行时模块注册编辑器扩展');
+            return;
+        }
+
+        // 先移除之前注册的扩展
+        this.unregisterEditorExtensions(inspectorRegistry);
+
+        let inspectorCount = 0;
+        let gizmoCount = 0;
+
+        for (const [name, exported] of Object.entries(module.exports)) {
+            if (typeof exported !== 'function') {
+                continue;
+            }
+
+            // 注册 Inspector
             if (this._isInspectorClass(exported)) {
-                logger.debug(`Found inspector: ${name} | 发现检查器: ${name}`);
-                inspectorCount++;
+                try {
+                    const inspector = new (exported as any)() as IComponentInspector;
+                    if (inspectorRegistry) {
+                        inspectorRegistry.register(inspector);
+                        this._registeredInspectorIds.push(inspector.id);
+                        logger.info(`Registered user inspector: ${name} (${inspector.id})`);
+                        inspectorCount++;
+                    }
+                } catch (err) {
+                    logger.error(`Failed to register inspector ${name}:`, err);
+                }
             }
 
-            // Check for gizmo | 检查 Gizmo
+            // 注册 Gizmo
             if (this._isGizmoClass(exported)) {
-                logger.debug(`Found gizmo: ${name} | 发现 Gizmo: ${name}`);
-                gizmoCount++;
-            }
-
-            // Check for panel | 检查面板
-            if (this._isPanelComponent(exported)) {
-                logger.debug(`Found panel: ${name} | 发现面板: ${name}`);
-                panelCount++;
+                try {
+                    const gizmoProvider = new (exported as any)();
+                    const targetComponent = gizmoProvider.targetComponent;
+                    if (targetComponent) {
+                        GizmoRegistry.register(targetComponent, (component, entity, isSelected) => {
+                            return gizmoProvider.draw(component, entity, isSelected);
+                        });
+                        this._registeredGizmoTypes.push(targetComponent);
+                        logger.info(`Registered user gizmo for: ${targetComponent.name || name}`);
+                        gizmoCount++;
+                    }
+                } catch (err) {
+                    logger.error(`Failed to register gizmo ${name}:`, err);
+                }
             }
         }
 
         logger.info(`Registered editor extensions | 注册编辑器扩展`, {
             inspectors: inspectorCount,
-            gizmos: gizmoCount,
-            panels: panelCount
+            gizmos: gizmoCount
         });
+    }
+
+    /**
+     * Unregister editor extensions.
+     * 注销编辑器扩展。
+     *
+     * @param inspectorRegistry - Component inspector registry | 组件检查器注册表
+     */
+    unregisterEditorExtensions(inspectorRegistry?: ComponentInspectorRegistry): void {
+        // 注销 Inspector
+        if (inspectorRegistry) {
+            for (const id of this._registeredInspectorIds) {
+                inspectorRegistry.unregister(id);
+            }
+        }
+        this._registeredInspectorIds = [];
+
+        // 注销 Gizmo
+        for (const componentType of this._registeredGizmoTypes) {
+            GizmoRegistry.unregister(componentType);
+        }
+        this._registeredGizmoTypes = [];
     }
 
     /**

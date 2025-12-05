@@ -295,26 +295,39 @@ export class ServiceRegistry {
             PluginSDKRegistry.initialize();
 
             try {
-                // Compile runtime scripts | 编译运行时脚本
-                const compileResult = await userCodeService.compile({
+                // 1. 编译运行时脚本 | Compile runtime scripts
+                const runtimeResult = await userCodeService.compile({
                     projectPath: projectPath,
                     target: UserCodeTarget.Runtime
                 });
 
-                if (compileResult.success && compileResult.outputPath) {
-                    // Load compiled module | 加载编译后的模块
-                    const module = await userCodeService.load(compileResult.outputPath, UserCodeTarget.Runtime);
-
-                    // Register user components to editor | 注册用户组件到编辑器
+                if (runtimeResult.success && runtimeResult.outputPath) {
+                    const module = await userCodeService.load(runtimeResult.outputPath, UserCodeTarget.Runtime);
                     userCodeService.registerComponents(module, componentRegistry);
-
-                    // Notify that user code has been reloaded | 通知用户代码已重新加载
                     messageHub.publish('usercode:reloaded', {
                         projectPath,
                         exports: Object.keys(module.exports)
                     });
-                } else if (compileResult.errors.length > 0) {
-                    console.warn('[UserCodeService] Compilation errors:', compileResult.errors);
+                } else if (runtimeResult.errors.length > 0) {
+                    console.warn('[UserCodeService] Runtime compilation errors:', runtimeResult.errors);
+                }
+
+                // 2. 编译编辑器脚本 | Compile editor scripts
+                const editorResult = await userCodeService.compile({
+                    projectPath: projectPath,
+                    target: UserCodeTarget.Editor
+                });
+
+                if (editorResult.success && editorResult.outputPath) {
+                    const editorModule = await userCodeService.load(editorResult.outputPath, UserCodeTarget.Editor);
+                    userCodeService.registerEditorExtensions(editorModule, componentInspectorRegistry);
+                    messageHub.publish('usercode:editor-reloaded', {
+                        projectPath,
+                        exports: Object.keys(editorModule.exports)
+                    });
+                } else if (editorResult.errors.length > 0) {
+                    // 编辑器脚本编译错误只记录，不影响运行时
+                    console.warn('[UserCodeService] Editor compilation errors:', editorResult.errors);
                 }
             } catch (error) {
                 console.error('[UserCodeService] Failed to compile/load:', error);
@@ -333,17 +346,20 @@ export class ServiceRegistry {
                 console.log('[UserCodeService] Hot reload event:', event.changedFiles);
 
                 if (event.newModule) {
-                    // 1. Register new/updated components to registries
                     // 1. 注册新的/更新的组件到注册表
                     userCodeService.registerComponents(event.newModule, componentRegistry);
 
-                    // 2. Hot reload: update prototype chain of existing instances
                     // 2. 热更新：更新现有实例的原型链
                     const updatedCount = userCodeService.hotReloadInstances(event.newModule);
                     console.log(`[UserCodeService] Hot reloaded ${updatedCount} component instances`);
 
-                    // 3. Notify that user code has been reloaded
-                    // 3. 通知用户代码已重新加载
+                    // 3. 如果正在预览，热更新用户系统
+                    const scene = Core.scene;
+                    if (scene && !scene.isEditorMode) {
+                        userCodeService.hotReloadSystems(event.newModule, scene);
+                    }
+
+                    // 4. 通知用户代码已重新加载
                     messageHub.publish('usercode:reloaded', {
                         projectPath: data.path,
                         exports: Object.keys(event.newModule.exports),
@@ -355,11 +371,12 @@ export class ServiceRegistry {
             });
         });
 
-        // Subscribe to project:closed to stop watching
-        // 订阅 project:closed 以停止监视
+        // Subscribe to project:closed to stop watching and cleanup
+        // 订阅 project:closed 以停止监视和清理
         messageHub.subscribe('project:closed', async () => {
             currentProjectPath = null;
             await userCodeService.stopWatch();
+            userCodeService.unregisterEditorExtensions(componentInspectorRegistry);
         });
 
         // Subscribe to script file changes (create/delete) from editor operations
@@ -375,6 +392,27 @@ export class ServiceRegistry {
         messageHub.subscribe('file:deleted', async (data: { path: string }) => {
             if (currentProjectPath && this.isScriptFile(data.path)) {
                 await compileAndLoadUserScripts(currentProjectPath);
+            }
+        });
+
+        // 预览开始时注册用户系统
+        // Register user systems when preview starts
+        messageHub.subscribe('preview:start', () => {
+            const runtimeModule = userCodeService.getModule(UserCodeTarget.Runtime);
+            if (runtimeModule) {
+                const scene = Core.scene;
+                if (scene) {
+                    userCodeService.registerSystems(runtimeModule, scene);
+                }
+            }
+        });
+
+        // 预览停止时移除用户系统
+        // Unregister user systems when preview stops
+        messageHub.subscribe('preview:stop', () => {
+            const scene = Core.scene;
+            if (scene) {
+                userCodeService.unregisterSystems(scene);
             }
         });
 
