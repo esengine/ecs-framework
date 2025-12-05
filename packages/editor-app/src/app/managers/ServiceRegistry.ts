@@ -147,6 +147,10 @@ export class ServiceRegistry {
             CoreComponentRegistry.register(comp.type as any);
         }
 
+        // Enable hot reload for editor environment
+        // 在编辑器环境中启用热更新
+        CoreComponentRegistry.enableHotReload();
+
         const projectService = new ProjectService(messageHub, fileAPI);
         const componentDiscovery = new ComponentDiscoveryService(messageHub);
         const propertyMetadata = new PropertyMetadataService();

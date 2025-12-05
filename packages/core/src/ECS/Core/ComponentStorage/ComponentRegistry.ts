@@ -22,6 +22,14 @@ export class ComponentRegistry {
     private static nextBitIndex = 0;
 
     /**
+     * 热更新模式标志，默认禁用
+     * Hot reload mode flag, disabled by default
+     * 编辑器环境应启用此选项以支持脚本热更新
+     * Editor environment should enable this to support script hot reload
+     */
+    private static hotReloadEnabled = false;
+
+    /**
      * 注册组件类型并分配位掩码
      * @param componentType 组件类型
      * @returns 分配的位索引
@@ -36,7 +44,7 @@ export class ComponentRegistry {
 
         // 检查是否有同名但不同类的组件已注册（热更新场景）
         // Check if a component with the same name but different class is registered (hot reload scenario)
-        if (this.componentNameToType.has(typeName)) {
+        if (this.hotReloadEnabled && this.componentNameToType.has(typeName)) {
             const existingType = this.componentNameToType.get(typeName);
             if (existingType !== componentType) {
                 // 热更新：替换旧的类为新的类，复用相同的 bitIndex
@@ -226,6 +234,32 @@ export class ComponentRegistry {
     }
 
     /**
+     * 启用热更新模式
+     * Enable hot reload mode
+     * 在编辑器环境中调用以支持脚本热更新
+     * Call in editor environment to support script hot reload
+     */
+    public static enableHotReload(): void {
+        this.hotReloadEnabled = true;
+    }
+
+    /**
+     * 禁用热更新模式
+     * Disable hot reload mode
+     */
+    public static disableHotReload(): void {
+        this.hotReloadEnabled = false;
+    }
+
+    /**
+     * 检查热更新模式是否启用
+     * Check if hot reload mode is enabled
+     */
+    public static isHotReloadEnabled(): boolean {
+        return this.hotReloadEnabled;
+    }
+
+    /**
      * 重置注册表（用于测试）
      */
     public static reset(): void {
@@ -235,5 +269,6 @@ export class ComponentRegistry {
         this.componentNameToId.clear();
         this.maskCache.clear();
         this.nextBitIndex = 0;
+        this.hotReloadEnabled = false;
     }
 }
