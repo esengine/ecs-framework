@@ -10,6 +10,7 @@ import type { EventListenerConfig, TypeSafeEventSystem, EventHandler } from '../
 import type { ComponentConstructor, ComponentInstance } from '../../Types/TypeHelpers';
 import type { IService } from '../../Core/ServiceContainer';
 import { EntityCache } from './EntityCache';
+import { CommandBuffer } from '../Core/CommandBuffer';
 
 /**
  * 事件监听器记录
@@ -92,6 +93,30 @@ export abstract class EntitySystem implements ISystemBase, IService {
      * 统一的实体缓存管理器
      */
     private _entityCache: EntityCache;
+
+    /**
+     * 命令缓冲区 - 用于延迟执行实体操作
+     * Command buffer - for deferred entity operations
+     *
+     * 在 process() 中使用 commands 可以避免迭代过程中修改实体列表，
+     * 提高性能并保证迭代安全。命令会在帧末由 Scene 统一执行。
+     *
+     * Using commands in process() avoids modifying entity list during iteration,
+     * improving performance and ensuring iteration safety. Commands are executed by Scene at end of frame.
+     *
+     * @example
+     * ```typescript
+     * protected process(entities: readonly Entity[]): void {
+     *     for (const entity of entities) {
+     *         if (shouldDie(entity)) {
+     *             // 延迟执行，不影响当前迭代
+     *             this.commands.destroyEntity(entity);
+     *         }
+     *     }
+     * }
+     * ```
+     */
+    protected readonly commands: CommandBuffer = new CommandBuffer();
 
     /**
      * 获取系统处理的实体列表
@@ -191,6 +216,9 @@ export abstract class EntitySystem implements ISystemBase, IService {
 
     public set scene(value: Scene | null) {
         this._scene = value;
+        // 同步更新 CommandBuffer 的场景引用
+        // Sync CommandBuffer scene reference
+        this.commands.setScene(value);
     }
 
     /**
@@ -599,11 +627,9 @@ export abstract class EntitySystem implements ISystemBase, IService {
         try {
             this.onBegin();
             // 查询实体并存储到帧缓存中
-            // 响应式查询会自动维护最新的实体列表，updateEntityTracking会在检测到变化时invalidate
-            const queriedEntities = this.queryEntities();
-            // 创建数组副本以防止迭代过程中数组被修改
-            // Create a copy to prevent array modification during iteration
-            const entities = [...queriedEntities];
+            // ReactiveQuery.getEntities() 返回的是安全快照，只在实体变化时才创建新数组
+            // ReactiveQuery.getEntities() returns a safe snapshot, only creates new array when entities change
+            const entities = this.queryEntities();
             this._entityCache.setFrame(entities);
             entityCount = entities.length;
 
@@ -630,10 +656,8 @@ export abstract class EntitySystem implements ISystemBase, IService {
             // 在 update 和 lateUpdate 之间可能有新组件被添加（事件驱动设计）
             // Re-query entities to get the latest list
             // New components may have been added between update and lateUpdate (event-driven design)
-            const queriedEntities = this.queryEntities();
-            // 创建数组副本以防止迭代过程中数组被修改
-            // Create a copy to prevent array modification during iteration
-            const entities = [...queriedEntities];
+            // ReactiveQuery.getEntities() 返回的是安全快照，只在实体变化时才创建新数组
+            const entities = this.queryEntities();
             this._entityCache.setFrame(entities);
             entityCount = entities.length;
             this.lateProcess(entities);
@@ -643,6 +667,19 @@ export abstract class EntitySystem implements ISystemBase, IService {
             // 清理帧缓存
             this._entityCache.clearFrame();
         }
+    }
+
+    /**
+     * 执行命令缓冲区中的所有延迟命令
+     * Flush all deferred commands in the command buffer
+     *
+     * 由 Scene 在帧末自动调用。
+     * Called automatically by Scene at end of frame.
+     *
+     * @returns 执行的命令数量 | Number of commands executed
+     */
+    public flushCommands(): number {
+        return this.commands.flush();
     }
 
     /**
@@ -936,6 +973,10 @@ export abstract class EntitySystem implements ISystemBase, IService {
         // 清空所有缓存
         this._entityCache.clearAll();
         this._entityIdMap = null;
+
+        // 清理命令缓冲区
+        // Clear command buffer
+        this.commands.dispose();
 
         // 重置状态
         this._initialized = false;

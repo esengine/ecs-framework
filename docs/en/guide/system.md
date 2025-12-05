@@ -334,6 +334,110 @@ class DamageSystem extends EntitySystem {
 
 The framework creates a snapshot of the entity list before each `process`/`lateProcess` call, ensuring that component changes during iteration won't cause entities to be skipped or processed multiple times.
 
+## Command Buffer (CommandBuffer)
+
+> **v2.2.22+**
+
+CommandBuffer provides a mechanism for deferred execution of entity operations. When you need to destroy entities or perform other operations that might affect iteration during processing, CommandBuffer allows you to defer these operations to the end of the frame.
+
+### Basic Usage
+
+Every EntitySystem has a built-in `commands` property:
+
+```typescript
+@ECSSystem('Damage')
+class DamageSystem extends EntitySystem {
+  constructor() {
+    super(Matcher.all(Health, DamageReceiver));
+  }
+
+  protected process(entities: readonly Entity[]): void {
+    for (const entity of entities) {
+      const health = entity.getComponent(Health);
+      const damage = entity.getComponent(DamageReceiver);
+
+      if (health && damage) {
+        health.current -= damage.amount;
+
+        // Use command buffer to defer component removal
+        this.commands.removeComponent(entity, DamageReceiver);
+
+        if (health.current <= 0) {
+          // Defer adding death marker
+          this.commands.addComponent(entity, new Dead());
+          // Defer entity destruction
+          this.commands.destroyEntity(entity);
+        }
+      }
+    }
+  }
+}
+```
+
+### Supported Commands
+
+| Method | Description |
+|--------|-------------|
+| `addComponent(entity, component)` | Defer adding component |
+| `removeComponent(entity, ComponentType)` | Defer removing component |
+| `destroyEntity(entity)` | Defer destroying entity |
+| `setEntityActive(entity, active)` | Defer setting entity active state |
+
+### Execution Timing
+
+Commands in the buffer are automatically executed after the `lateUpdate` phase of each frame. Execution order matches the order commands were queued.
+
+```
+Scene Update Flow:
+1. onBegin()
+2. process()
+3. lateProcess()
+4. onEnd()
+5. flushCommandBuffers()  <-- Commands execute here
+```
+
+### Use Cases
+
+CommandBuffer is suitable for:
+
+1. **Destroying entities during iteration**: Avoid modifying collection being traversed
+2. **Batch deferred operations**: Merge multiple operations to execute at end of frame
+3. **Cross-system coordination**: One system marks, another system responds
+
+```typescript
+// Example: Enemy death system
+@ECSSystem('EnemyDeath')
+class EnemyDeathSystem extends EntitySystem {
+  constructor() {
+    super(Matcher.all(Enemy, Health));
+  }
+
+  protected process(entities: readonly Entity[]): void {
+    for (const entity of entities) {
+      const health = entity.getComponent(Health);
+      if (health && health.current <= 0) {
+        // Play death animation, spawn loot, etc.
+        this.spawnLoot(entity);
+
+        // Defer destruction, doesn't affect current iteration
+        this.commands.destroyEntity(entity);
+      }
+    }
+  }
+
+  private spawnLoot(entity: Entity): void {
+    // Loot spawning logic
+  }
+}
+```
+
+### Notes
+
+- Commands skip already destroyed entities (safety check)
+- Single command failure doesn't affect other commands
+- Commands execute in queue order
+- Command queue clears after each `flush()`
+
 ## System Properties and Methods
 
 ### Important Properties

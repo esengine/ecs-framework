@@ -87,6 +87,14 @@ export class ReactiveQuery {
     /** 实体ID集合,用于快速查找 */
     private _entityIdSet: Set<number> = new Set();
 
+    /**
+     * 实体数组快照 - 用于安全迭代
+     * Entity array snapshot - for safe iteration
+     * 只在实体列表变化时才创建新快照，静态场景下所有系统共享同一快照
+     * Only create new snapshot when entity list changes, static scenes share the same snapshot
+     */
+    private _snapshot: readonly Entity[] | null = null;
+
     /** 查询条件 */
     private readonly _condition: QueryCondition;
 
@@ -179,10 +187,23 @@ export class ReactiveQuery {
     }
 
     /**
-     * 获取当前查询结果
+     * 获取当前查询结果（返回安全快照）
+     * Get current query results (returns safe snapshot)
+     *
+     * 返回的快照在实体列表变化前保持不变，可安全用于迭代。
+     * 静态场景下所有系统共享同一快照，避免每帧创建数组副本。
+     *
+     * The returned snapshot remains unchanged until entity list changes, safe for iteration.
+     * Static scenes share the same snapshot, avoiding array copy every frame.
      */
     public getEntities(): readonly Entity[] {
-        return this._entities;
+        // 如果快照有效，直接返回 | Return snapshot if valid
+        if (this._snapshot !== null) {
+            return this._snapshot;
+        }
+        // 创建新快照 | Create new snapshot
+        this._snapshot = [...this._entities];
+        return this._snapshot;
     }
 
     /**
@@ -236,6 +257,7 @@ export class ReactiveQuery {
         // 添加到结果集
         this._entities.push(entity);
         this._entityIdSet.add(entity.id);
+        this._snapshot = null; // 使快照失效 | Invalidate snapshot
 
         // 通知监听器
         if (this._config.enableBatchMode) {
@@ -273,6 +295,7 @@ export class ReactiveQuery {
             this._entities.splice(index, 1);
         }
         this._entityIdSet.delete(entity.id);
+        this._snapshot = null; // 使快照失效 | Invalidate snapshot
 
         // 通知监听器
         if (this._config.enableBatchMode) {
@@ -320,6 +343,7 @@ export class ReactiveQuery {
         // 清空现有结果
         this._entities.length = 0;
         this._entityIdSet.clear();
+        this._snapshot = null; // 使快照失效 | Invalidate snapshot
 
         // 筛选匹配的实体
         for (const entity of entities) {
@@ -439,6 +463,7 @@ export class ReactiveQuery {
         this.unsubscribeAll();
         this._entities.length = 0;
         this._entityIdSet.clear();
+        this._snapshot = null;
 
         if (this._config.debug) {
             logger.debug(`ReactiveQuery ${this._id}: 已销毁`);
