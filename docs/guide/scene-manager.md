@@ -19,6 +19,7 @@ SceneManager 适合以下场景：
 - 自动管理 ECS 流式 API
 - 自动处理场景生命周期
 - 集成在 Core 中，自动更新
+- 支持[持久化实体](./persistent-entity.md)跨场景迁移（v2.2.22+）
 
 ## 基本使用
 
@@ -672,4 +673,9 @@ setTimeout(() => {
 }, 3000);
 ```
 
-SceneManager 为大多数游戏提供了简单而强大的场景管理能力。通过 Core 的静态方法，你可以轻松地管理场景切换。如果你需要更高级的多世界隔离功能，请参考 [WorldManager](./world-manager.md) 文档。
+SceneManager 为大多数游戏提供了简单而强大的场景管理能力。通过 Core 的静态方法，你可以轻松地管理场景切换。
+
+## 相关文档
+
+- [持久化实体](./persistent-entity.md) - 了解如何让实体跨场景保持状态
+- [WorldManager](./world-manager.md) - 了解更高级的多世界隔离功能

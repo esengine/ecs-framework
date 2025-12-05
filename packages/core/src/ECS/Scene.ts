@@ -820,6 +820,81 @@ export class Scene implements IScene {
     }
 
     /**
+     * 查找所有持久化实体
+     *
+     * Find all persistent entities in this scene.
+     *
+     * @returns 持久化实体数组 | Array of persistent entities
+     */
+    public findPersistentEntities(): Entity[] {
+        return this.entities.buffer.filter(entity => entity.isPersistent);
+    }
+
+    /**
+     * 提取持久化实体（从场景中分离但不销毁）
+     *
+     * 用于场景切换时收集需要迁移的实体。
+     *
+     * Extract persistent entities (detach from scene without destroying).
+     * Used during scene transitions to collect entities for migration.
+     *
+     * @returns 被提取的持久化实体数组 | Array of extracted persistent entities
+     *
+     * @internal
+     */
+    public extractPersistentEntities(): Entity[] {
+        const persistentEntities = this.findPersistentEntities();
+
+        for (const entity of persistentEntities) {
+            // 从实体列表移除
+            this.entities.remove(entity);
+
+            // 从查询系统移除
+            this.querySystem.removeEntity(entity);
+
+            // 清除场景引用（但保留组件数据）
+            entity.scene = null;
+        }
+
+        return persistentEntities;
+    }
+
+    /**
+     * 接收迁移的实体
+     *
+     * 将从其他场景迁移来的实体添加到当前场景。
+     *
+     * Receive migrated entities from another scene.
+     *
+     * @param entities 要接收的实体数组 | Entities to receive
+     *
+     * @internal
+     */
+    public receiveMigratedEntities(entities: Entity[]): void {
+        for (const entity of entities) {
+            // 设置新场景引用
+            entity.scene = this;
+
+            // 添加到实体列表
+            this.entities.add(entity);
+
+            // 添加到查询系统
+            this.querySystem.addEntity(entity);
+
+            // 重新注册组件到新场景的存储
+            for (const component of entity.components) {
+                this.componentStorageManager.addComponent(entity.id, component);
+                this.referenceTracker?.registerEntityScene(entity.id, this);
+            }
+        }
+
+        // 清除系统缓存
+        if (entities.length > 0) {
+            this.clearSystemEntityCaches();
+        }
+    }
+
+    /**
      * 根据名称查找实体（别名方法）
      *
      * @param name 实体名称

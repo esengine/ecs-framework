@@ -45,7 +45,8 @@ function createSidebar(t, prefix = '') {
             link: `${prefix}/guide/scene`,
             items: [
               { text: t.sidebar.sceneManager, link: `${prefix}/guide/scene-manager` },
-              { text: t.sidebar.worldManager, link: `${prefix}/guide/world-manager` }
+              { text: t.sidebar.worldManager, link: `${prefix}/guide/world-manager` },
+              { text: t.sidebar.persistentEntity, link: `${prefix}/guide/persistent-entity` }
             ]
           },
           {
