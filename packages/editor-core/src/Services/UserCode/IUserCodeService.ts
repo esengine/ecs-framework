@@ -260,11 +260,19 @@ export interface IUserCodeService {
      * 自动检测并注册：
      * - Component inspectors
      * - Gizmo providers
-     * - Editor panels
      *
      * @param module - User code module | 用户代码模块
+     * @param inspectorRegistry - Component inspector registry | 组件检查器注册表
      */
-    registerEditorExtensions(module: UserCodeModule): void;
+    registerEditorExtensions(module: UserCodeModule, inspectorRegistry?: any): void;
+
+    /**
+     * Unregister editor extensions.
+     * 注销编辑器扩展。
+     *
+     * @param inspectorRegistry - Component inspector registry | 组件检查器注册表
+     */
+    unregisterEditorExtensions(inspectorRegistry?: any): void;
 
     /**
      * Start watching for file changes (hot reload).

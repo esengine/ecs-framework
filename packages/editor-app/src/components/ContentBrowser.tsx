@@ -313,6 +313,86 @@ export function ${name.charAt(0).toLowerCase() + name.slice(1)}(): void {
 }
 `;
                 }
+            },
+            {
+                id: 'ts-inspector',
+                label: 'Inspector',
+                extension: '.ts',
+                icon: 'FileCode',
+                category: 'Editor',
+                getContent: (fileName: string) => {
+                    const className = fileName.replace(/\.ts$/, '');
+                    return `import React from 'react';
+import type { Component } from '@esengine/ecs-framework';
+import type { IComponentInspector, ComponentInspectorContext } from '@esengine/editor-core';
+
+/**
+ * ${className}
+ *
+ * 自定义组件检查器 | Custom component inspector
+ * 放置在 scripts/editor/ 目录下 | Place in scripts/editor/ directory
+ */
+export class ${className} implements IComponentInspector {
+    readonly id = '${className.toLowerCase()}';
+    readonly name = '${className}';
+    readonly priority = 10;
+    // 目标组件类型名称 | Target component type names
+    readonly targetComponents = ['YourComponent'];
+
+    canHandle(component: Component): boolean {
+        return this.targetComponents.includes(component.constructor.name);
+    }
+
+    render(context: ComponentInspectorContext): React.ReactElement {
+        const { component } = context;
+
+        return React.createElement('div', { className: 'custom-inspector' },
+            React.createElement('h4', null, '${className}'),
+            React.createElement('pre', null, JSON.stringify(component, null, 2))
+        );
+    }
+}
+`;
+                }
+            },
+            {
+                id: 'ts-gizmo',
+                label: 'Gizmo',
+                extension: '.ts',
+                icon: 'FileCode',
+                category: 'Editor',
+                getContent: (fileName: string) => {
+                    const className = fileName.replace(/\.ts$/, '');
+                    return `import type { Component, Entity } from '@esengine/ecs-framework';
+import type { IGizmoRenderData } from '@esengine/editor-core';
+
+/**
+ * ${className}
+ *
+ * 自定义 Gizmo 提供者 | Custom Gizmo provider
+ * 放置在 scripts/editor/ 目录下 | Place in scripts/editor/ directory
+ */
+export class ${className} {
+    // 目标组件类型 | Target component type
+    // 需要替换为实际的组件类 | Replace with actual component class
+    readonly targetComponent = null; // YourComponent
+
+    draw(component: Component, entity: Entity, isSelected: boolean): IGizmoRenderData[] {
+        // 返回要绘制的 Gizmo 数据 | Return gizmo data to draw
+        return [
+            {
+                type: 'circle',
+                x: 0,
+                y: 0,
+                radius: 10,
+                strokeColor: isSelected ? '#00ff00' : '#ffffff',
+                strokeWidth: 2
+            }
+        ];
+    }
+}
+`;
+                }
             }
         ];
 

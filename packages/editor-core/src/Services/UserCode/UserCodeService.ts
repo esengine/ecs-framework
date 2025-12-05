@@ -24,6 +24,8 @@ import {
     USER_CODE_OUTPUT_DIR
 } from './IUserCodeService';
 import type { IFileSystem, FileEntry } from '../IFileSystem';
+import type { ComponentInspectorRegistry, IComponentInspector } from '../ComponentInspectorRegistry';
+import { GizmoRegistry } from '../../Gizmos/GizmoRegistry';
 
 const logger = createLogger('UserCodeService');
 
@@ -49,6 +51,18 @@ export class UserCodeService implements IService, IUserCodeService {
      * Registered user system instances
      */
     private _registeredSystems: any[] = [];
+
+    /**
+     * 已注册的用户 Inspector ID 列表
+     * Registered user inspector IDs
+     */
+    private _registeredInspectorIds: string[] = [];
+
+    /**
+     * 已注册的用户 Gizmo 组件类型
+     * Registered user gizmo component types
+     */
+    private _registeredGizmoTypes: any[] = [];
 
     constructor(fileSystem: IFileSystem) {
         this._fileSystem = fileSystem;
@@ -591,46 +605,85 @@ export class UserCodeService implements IService, IUserCodeService {
      * 从用户模块注册编辑器扩展。
      *
      * @param module - User code module | 用户代码模块
+     * @param inspectorRegistry - Component inspector registry | 组件检查器注册表
      */
-    registerEditorExtensions(module: UserCodeModule): void {
+    registerEditorExtensions(module: UserCodeModule, inspectorRegistry?: ComponentInspectorRegistry): void {
         if (module.target !== UserCodeTarget.Editor) {
             logger.warn('Cannot register editor extensions from runtime module | 无法从运行时模块注册编辑器扩展');
             return;
         }
 
+        // 先移除之前注册的扩展
+        this.unregisterEditorExtensions(inspectorRegistry);
+
         let inspectorCount = 0;
         let gizmoCount = 0;
-        let panelCount = 0;
 
         for (const [name, exported] of Object.entries(module.exports)) {
             if (typeof exported !== 'function') {
                 continue;
             }
 
-            // Check for inspector | 检查检查器
+            // 注册 Inspector
             if (this._isInspectorClass(exported)) {
-                logger.debug(`Found inspector: ${name} | 发现检查器: ${name}`);
-                inspectorCount++;
+                try {
+                    const inspector = new (exported as any)() as IComponentInspector;
+                    if (inspectorRegistry) {
+                        inspectorRegistry.register(inspector);
+                        this._registeredInspectorIds.push(inspector.id);
+                        logger.info(`Registered user inspector: ${name} (${inspector.id})`);
+                        inspectorCount++;
+                    }
+                } catch (err) {
+                    logger.error(`Failed to register inspector ${name}:`, err);
+                }
             }
 
-            // Check for gizmo | 检查 Gizmo
+            // 注册 Gizmo
             if (this._isGizmoClass(exported)) {
-                logger.debug(`Found gizmo: ${name} | 发现 Gizmo: ${name}`);
-                gizmoCount++;
-            }
-
-            // Check for panel | 检查面板
-            if (this._isPanelComponent(exported)) {
-                logger.debug(`Found panel: ${name} | 发现面板: ${name}`);
-                panelCount++;
+                try {
+                    const gizmoProvider = new (exported as any)();
+                    const targetComponent = gizmoProvider.targetComponent;
+                    if (targetComponent) {
+                        GizmoRegistry.register(targetComponent, (component, entity, isSelected) => {
+                            return gizmoProvider.draw(component, entity, isSelected);
+                        });
+                        this._registeredGizmoTypes.push(targetComponent);
+                        logger.info(`Registered user gizmo for: ${targetComponent.name || name}`);
+                        gizmoCount++;
+                    }
+                } catch (err) {
+                    logger.error(`Failed to register gizmo ${name}:`, err);
+                }
             }
         }
 
         logger.info(`Registered editor extensions | 注册编辑器扩展`, {
             inspectors: inspectorCount,
-            gizmos: gizmoCount,
-            panels: panelCount
+            gizmos: gizmoCount
         });
+    }
+
+    /**
+     * Unregister editor extensions.
+     * 注销编辑器扩展。
+     *
+     * @param inspectorRegistry - Component inspector registry | 组件检查器注册表
+     */
+    unregisterEditorExtensions(inspectorRegistry?: ComponentInspectorRegistry): void {
+        // 注销 Inspector
+        if (inspectorRegistry) {
+            for (const id of this._registeredInspectorIds) {
+                inspectorRegistry.unregister(id);
+            }
+        }
+        this._registeredInspectorIds = [];
+
+        // 注销 Gizmo
+        for (const componentType of this._registeredGizmoTypes) {
+            GizmoRegistry.unregister(componentType);
+        }
+        this._registeredGizmoTypes = [];
     }
 
     /**
