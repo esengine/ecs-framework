@@ -1,5 +1,6 @@
 import { Component } from './Component';
 import { ComponentRegistry, ComponentType } from './Core/ComponentStorage';
+import { EEntityLifecyclePolicy } from './Core/EntityLifecyclePolicy';
 import { BitMask64Utils, BitMask64Data } from './Utils/BigIntCompatibility';
 import { createLogger } from '../Utils/Logger';
 import { getComponentInstanceTypeName, getComponentTypeName } from './Decorators';
@@ -119,6 +120,13 @@ export class Entity {
     private _componentCache: Component[] | null = null;
 
     /**
+     * 生命周期策略
+     *
+     * Lifecycle policy for scene transitions.
+     */
+    private _lifecyclePolicy: EEntityLifecyclePolicy = EEntityLifecyclePolicy.SceneLocal;
+
+    /**
      * 构造函数
      *
      * @param name - 实体名称
@@ -127,6 +135,61 @@ export class Entity {
     constructor(name: string, id: number) {
         this.name = name;
         this.id = id;
+    }
+
+    /**
+     * 获取生命周期策略
+     *
+     * Get lifecycle policy.
+     */
+    public get lifecyclePolicy(): EEntityLifecyclePolicy {
+        return this._lifecyclePolicy;
+    }
+
+    /**
+     * 检查实体是否为持久化实体
+     *
+     * Check if entity is persistent (survives scene transitions).
+     */
+    public get isPersistent(): boolean {
+        return this._lifecyclePolicy === EEntityLifecyclePolicy.Persistent;
+    }
+
+    /**
+     * 设置实体为持久化（跨场景保留）
+     *
+     * 标记后的实体在场景切换时不会被销毁，会自动迁移到新场景。
+     *
+     * Mark entity as persistent (survives scene transitions).
+     * Persistent entities are automatically migrated to the new scene.
+     *
+     * @returns this，支持链式调用 | Returns this for chaining
+     *
+     * @example
+     * ```typescript
+     * const player = scene.createEntity('Player')
+     *     .setPersistent()
+     *     .addComponent(new PlayerComponent());
+     * ```
+     */
+    public setPersistent(): this {
+        this._lifecyclePolicy = EEntityLifecyclePolicy.Persistent;
+        return this;
+    }
+
+    /**
+     * 设置实体为场景本地（随场景销毁）
+     *
+     * 将实体恢复为默认行为。
+     *
+     * Mark entity as scene-local (destroyed with scene).
+     * Restores default behavior.
+     *
+     * @returns this，支持链式调用 | Returns this for chaining
+     */
+    public setSceneLocal(): this {
+        this._lifecyclePolicy = EEntityLifecyclePolicy.SceneLocal;
+        return this;
     }
 
     /**

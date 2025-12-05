@@ -1,5 +1,6 @@
 export { Entity } from './Entity';
 export { Component } from './Component';
+export { EEntityLifecyclePolicy } from './Core/EntityLifecyclePolicy';
 export { ECSEventType, EventPriority, EVENT_TYPES, EventTypeValidator } from './CoreEvents';
 export * from './Systems';
 export * from './Utils';

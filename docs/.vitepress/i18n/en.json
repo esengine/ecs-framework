@@ -23,6 +23,7 @@
     "scene": "Scene",
     "sceneManager": "SceneManager",
     "worldManager": "WorldManager",
+    "persistentEntity": "Persistent Entity",
     "behaviorTree": "Behavior Tree",
     "btGettingStarted": "Getting Started",
     "btCoreConcepts": "Core Concepts",

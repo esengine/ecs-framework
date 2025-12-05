@@ -657,5 +657,6 @@ world.setSceneActive('main', true);
 
 - 了解 [SceneManager](./scene-manager.md) - 适用于大多数游戏的简单场景管理
 - 了解 [WorldManager](./world-manager.md) - 适用于需要多世界隔离的高级场景
+- 了解 [持久化实体](./persistent-entity.md) - 让实体跨场景保持状态（v2.2.22+）
 
 场景是 ECS 框架的核心容器，正确使用场景管理能让你的游戏架构更加清晰、模块化和易于维护。
