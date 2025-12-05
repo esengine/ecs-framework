@@ -139,7 +139,7 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
         for (const [sortingOrder, systems] of groups) {
             let particleIndex = 0;
 
-            for (const { component, transform } of systems) {
+            for (const { component } of systems) {
                 const pool = component.pool!;
                 const size = component.particleSize;
                 const textureId = component.textureId;
