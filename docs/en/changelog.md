@@ -4,6 +4,19 @@ This document records the version update history of the `@esengine/ecs-framework
 
 ---
 
+## v2.2.21 (2025-12-05)
+
+### Performance
+
+- **HierarchySystem optimization**: Optimize hierarchy system to avoid iterating all entities every frame (#279)
+  - Use dirty entity set instead of iterating all entities
+  - Static scene `process()` optimized from O(n) to O(1)
+  - 1000 entities static scene: 81.79μs → 0.07μs (1168x faster)
+  - 10000 entities static scene: 939.43μs → 0.56μs (1677x faster)
+  - Server simulation (100 rooms x 100 entities): 2.7ms → 1.4ms per tick
+
+---
+
 ## v2.2.20 (2025-12-04)
 
 ### Bug Fixes
