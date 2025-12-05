@@ -25,6 +25,12 @@ import { HierarchyComponent } from '../Components/HierarchyComponent';
 export class HierarchySystem extends EntitySystem {
     private static readonly MAX_DEPTH = 32;
 
+    /**
+     * 脏实体集合 - 只有这些实体需要在 process() 中更新缓存
+     * Dirty entity set - only these entities need cache update in process()
+     */
+    private dirtyEntities: Set<Entity> = new Set();
+
     constructor() {
         super(Matcher.empty().all(HierarchyComponent));
     }
@@ -36,14 +42,19 @@ export class HierarchySystem extends EntitySystem {
         return -1000;
     }
 
-    protected override process(): void {
-        // 更新所有脏缓存
-        for (const entity of this.entities) {
-            const hierarchy = entity.getComponent(HierarchyComponent);
-            if (hierarchy?.bCacheDirty) {
+    protected override process(_entities: readonly Entity[]): void {
+        // 只更新脏实体，不遍历所有实体 | Only update dirty entities, no full iteration
+        if (this.dirtyEntities.size === 0) {
+            return;
+        }
+
+        for (const entity of this.dirtyEntities) {
+            // 确保实体仍然有效 | Ensure entity is still valid
+            if (entity.scene) {
                 this.updateHierarchyCache(entity);
             }
         }
+        this.dirtyEntities.clear();
     }
 
     /**
@@ -474,15 +485,21 @@ export class HierarchySystem extends EntitySystem {
     }
 
     /**
-     * 标记缓存为脏
+     * 标记缓存为脏，并添加到脏实体集合
+     * Mark cache as dirty and add to dirty entity set
      */
     private markCacheDirty(entity: Entity): void {
         const hierarchy = entity.getComponent(HierarchyComponent);
         if (!hierarchy) return;
 
-        hierarchy.bCacheDirty = true;
+        // 如果已经是脏的，跳过（避免重复递归）
+        // Skip if already dirty (avoid redundant recursion)
+        if (hierarchy.bCacheDirty) return;
 
-        // 递归标记所有子级
+        hierarchy.bCacheDirty = true;
+        this.dirtyEntities.add(entity);
+
+        // 递归标记所有子级 | Recursively mark all children
         for (const childId of hierarchy.childIds) {
             const child = this.scene?.findEntityById(childId);
             if (child) {
@@ -509,13 +526,28 @@ export class HierarchySystem extends EntitySystem {
     }
 
     /**
-     * 当实体被移除时清理层级关系
+     * 当实体被添加到系统时，将其加入脏集合
+     * When entity is added to system, add it to dirty set
      */
-    protected onEntityRemoved(entity: Entity): void {
+    protected override onAdded(entity: Entity): void {
+        const hierarchy = entity.getComponent(HierarchyComponent);
+        if (hierarchy && hierarchy.bCacheDirty) {
+            this.dirtyEntities.add(entity);
+        }
+    }
+
+    /**
+     * 当实体被移除时清理层级关系
+     * When entity is removed, clean up hierarchy relationships
+     */
+    protected override onRemoved(entity: Entity): void {
+        // 从脏集合中移除 | Remove from dirty set
+        this.dirtyEntities.delete(entity);
+
         const hierarchy = entity.getComponent(HierarchyComponent);
         if (!hierarchy) return;
 
-        // 从父级移除
+        // 从父级移除 | Remove from parent
         if (hierarchy.parentId !== null) {
             const parent = this.scene?.findEntityById(hierarchy.parentId);
             if (parent) {
@@ -529,8 +561,8 @@ export class HierarchySystem extends EntitySystem {
             }
         }
 
-        // 处理子级：可选择销毁或移动到根级
-        // 默认将子级移动到根级
+        // 处理子级：将子级移动到根级
+        // Handle children: move children to root level
         for (const childId of hierarchy.childIds) {
             const child = this.scene?.findEntityById(childId);
             if (child) {
@@ -544,6 +576,7 @@ export class HierarchySystem extends EntitySystem {
     }
 
     public override dispose(): void {
-        // 清理资源
+        // 清理脏实体集合 | Clear dirty entity set
+        this.dirtyEntities.clear();
     }
 }
