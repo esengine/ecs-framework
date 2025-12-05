@@ -12,7 +12,7 @@ export {
 } from './ParticleEmitter';
 
 // Component
-export { ParticleSystemComponent, ParticleBlendMode } from './ParticleSystemComponent';
+export { ParticleSystemComponent, ParticleBlendMode, type BurstConfig } from './ParticleSystemComponent';
 
 // System
 export { ParticleUpdateSystem } from './systems/ParticleSystem';
@@ -26,13 +26,18 @@ export {
     ScaleCurveType,
     type ScaleKey,
     VelocityOverLifetimeModule,
+    VelocityCurveType,
+    type VelocityKey,
     RotationOverLifetimeModule,
     NoiseModule,
     valueNoise2D,
     noiseHash,
     TextureSheetAnimationModule,
     AnimationPlayMode,
-    AnimationLoopMode
+    AnimationLoopMode,
+    CollisionModule,
+    BoundaryType,
+    CollisionBehavior
 } from './modules';
 
 // Rendering

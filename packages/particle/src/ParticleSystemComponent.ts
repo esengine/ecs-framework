@@ -4,6 +4,22 @@ import { ParticleEmitter, EmissionShape, createDefaultEmitterConfig, type Emitte
 import type { IParticleModule } from './modules/IParticleModule';
 import { ColorOverLifetimeModule } from './modules/ColorOverLifetimeModule';
 import { SizeOverLifetimeModule } from './modules/SizeOverLifetimeModule';
+import { CollisionModule } from './modules/CollisionModule';
+
+/**
+ * 爆发配置
+ * Burst configuration
+ */
+export interface BurstConfig {
+    /** 触发时间（秒）| Trigger time (seconds) */
+    time: number;
+    /** 发射数量 | Particle count */
+    count: number;
+    /** 循环次数（0=无限）| Number of cycles (0=infinite) */
+    cycles: number;
+    /** 循环间隔（秒）| Interval between cycles (seconds) */
+    interval: number;
+}
 
 /**
  * 粒子混合模式
@@ -188,6 +204,12 @@ export class ParticleSystemComponent extends Component {
     @Property({ type: 'integer', label: 'Sorting Order' })
     public sortingOrder: number = 0;
 
+    // ============= 爆发配置 | Burst Configuration =============
+
+    /** 爆发列表 | Burst list */
+    @Serialize()
+    public bursts: BurstConfig[] = [];
+
     // ============= 运行时状态 | Runtime State =============
 
     private _pool: ParticlePool | null = null;
@@ -196,6 +218,8 @@ export class ParticleSystemComponent extends Component {
     private _isPlaying: boolean = false;
     private _elapsedTime: number = 0;
     private _needsRebuild: boolean = true;
+    /** 爆发状态追踪 | Burst state tracking */
+    private _burstStates: { firedCount: number; lastFireTime: number }[] = [];
 
     /** 纹理ID（运行时）| Texture ID (runtime) */
     public textureId: number = 0;
@@ -244,6 +268,9 @@ export class ParticleSystemComponent extends Component {
         this._rebuildIfNeeded();
         this._isPlaying = true;
         this._emitter!.isEmitting = true;
+        this._elapsedTime = 0;
+        // 初始化爆发状态 | Initialize burst states
+        this._burstStates = this.bursts.map(() => ({ firedCount: 0, lastFireTime: -Infinity }));
 
         if (this.prewarmTime > 0) {
             this._simulate(this.prewarmTime, worldX, worldY);
@@ -258,6 +285,8 @@ export class ParticleSystemComponent extends Component {
         this._isPlaying = false;
         this._emitter!.isEmitting = false;
         this._elapsedTime = 0;
+        // 重置爆发状态 | Reset burst states
+        this._burstStates = this.bursts.map(() => ({ firedCount: 0, lastFireTime: -Infinity }));
 
         if (clearParticles) {
             this._pool?.recycleAll();
@@ -417,6 +446,17 @@ export class ParticleSystemComponent extends Component {
         // 发射新粒子 | Emit new particles
         this._emitter.emit(this._pool, dt, worldX, worldY);
 
+        // 处理定时爆发 | Process timed bursts
+        this._processBursts(worldX, worldY);
+
+        // 查找碰撞模块并更新发射器位置 | Find collision module and update emitter position
+        const collisionModule = this._modules.find(m => m instanceof CollisionModule) as CollisionModule | undefined;
+        if (collisionModule) {
+            collisionModule.emitterX = worldX;
+            collisionModule.emitterY = worldY;
+            collisionModule.clearDeathFlags();
+        }
+
         // 更新粒子 | Update particles
         this._pool.forEachActive((p) => {
             // 物理更新 | Physics update
@@ -439,6 +479,56 @@ export class ParticleSystemComponent extends Component {
                 this._pool!.recycle(p);
             }
         });
+
+        // 处理碰撞模块标记的死亡粒子 | Process particles marked for death by collision module
+        if (collisionModule) {
+            const particlesToKill = collisionModule.getParticlesToKill();
+            for (const p of particlesToKill) {
+                this._pool.recycle(p);
+            }
+        }
+    }
+
+    /**
+     * 处理定时爆发
+     * Process timed bursts
+     */
+    private _processBursts(worldX: number, worldY: number): void {
+        if (!this._pool || !this._emitter || this.bursts.length === 0) return;
+
+        // 确保爆发状态数组与配置同步 | Ensure burst states array is synced with config
+        while (this._burstStates.length < this.bursts.length) {
+            this._burstStates.push({ firedCount: 0, lastFireTime: -Infinity });
+        }
+
+        const currentTime = this._elapsedTime;
+
+        for (let i = 0; i < this.bursts.length; i++) {
+            const burst = this.bursts[i];
+            const state = this._burstStates[i];
+
+            // 检查是否已达到循环次数上限 | Check if reached cycle limit
+            if (burst.cycles > 0 && state.firedCount >= burst.cycles) {
+                continue;
+            }
+
+            // 计算下次触发时间 | Calculate next fire time
+            let nextFireTime: number;
+            if (state.firedCount === 0) {
+                // 首次触发 | First fire
+                nextFireTime = burst.time;
+            } else {
+                // 循环触发 | Cycle fire
+                nextFireTime = state.lastFireTime + burst.interval;
+            }
+
+            // 检查是否应该触发 | Check if should fire
+            if (currentTime >= nextFireTime) {
+                this._emitter.burst(this._pool, burst.count, worldX, worldY);
+                state.firedCount++;
+                state.lastFireTime = currentTime;
+            }
+        }
     }
 
     private _parseColor(hex: string): { r: number; g: number; b: number } {

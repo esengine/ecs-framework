@@ -1,7 +1,7 @@
 export type { IParticleModule } from './IParticleModule';
 export { ColorOverLifetimeModule, type ColorKey } from './ColorOverLifetimeModule';
 export { SizeOverLifetimeModule, ScaleCurveType, type ScaleKey } from './SizeOverLifetimeModule';
-export { VelocityOverLifetimeModule } from './VelocityOverLifetimeModule';
+export { VelocityOverLifetimeModule, VelocityCurveType, type VelocityKey } from './VelocityOverLifetimeModule';
 export { RotationOverLifetimeModule } from './RotationOverLifetimeModule';
 export { NoiseModule, valueNoise2D, noiseHash } from './NoiseModule';
 export {
@@ -9,3 +9,8 @@ export {
     AnimationPlayMode,
     AnimationLoopMode
 } from './TextureSheetAnimationModule';
+export {
+    CollisionModule,
+    BoundaryType,
+    CollisionBehavior
+} from './CollisionModule';
