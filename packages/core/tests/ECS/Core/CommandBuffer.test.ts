@@ -1,7 +1,4 @@
-import {
-    CommandBuffer,
-    CommandType
-} from '../../../src/ECS/Core/CommandBuffer';
+import { CommandBuffer } from '../../../src/ECS/Core/CommandBuffer';
 import { Entity } from '../../../src/ECS/Entity';
 import { Component } from '../../../src/ECS/Component';
 import { Scene } from '../../../src/ECS/Scene';
