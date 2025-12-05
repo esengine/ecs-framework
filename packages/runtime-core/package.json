@@ -26,8 +26,7 @@
         "@esengine/ecs-engine-bindgen": "workspace:*",
         "@esengine/engine-core": "workspace:*",
         "@esengine/asset-system": "workspace:*",
-        "@esengine/platform-common": "workspace:*",
-        "@esengine/platform-web": "workspace:*"
+        "@esengine/platform-common": "workspace:*"
     },
     "devDependencies": {
         "@esengine/build-config": "workspace:*",
