@@ -180,6 +180,7 @@ function createNav(t, prefix = '') {
         { text: t.nav.lawnMowerDemo, link: 'https://github.com/esengine/lawn-mower-demo' }
       ]
     },
+    { text: t.nav.changelog, link: `${prefix}/changelog` },
     {
       text: `v${corePackageJson.version}`,
       link: 'https://github.com/esengine/ecs-framework/releases'
