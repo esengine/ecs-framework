@@ -70,3 +70,20 @@ export {
     type AssetCatalogEntry,
     type BrowserFileSystemOptions
 } from './services/BrowserFileSystemService';
+
+// Re-export Input System from engine-core for convenience
+export {
+    Input,
+    InputManager,
+    InputSystem,
+    MouseButton,
+    type InputSystemConfig,
+    type KeyState,
+    type MouseButtonState,
+    type Vector2,
+    type KeyboardEventInfo,
+    type MouseEventInfo,
+    type WheelEventInfo,
+    type TouchInfo,
+    type TouchEvent
+} from '@esengine/engine-core';

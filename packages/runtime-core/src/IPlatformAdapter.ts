@@ -6,6 +6,8 @@
  * Defines the adapter interface that different platforms need to implement
  */
 
+import type { IPlatformInputSubsystem } from '@esengine/platform-common';
+
 /**
  * 资源路径解析器
  * Asset path resolver
@@ -126,6 +128,15 @@ export interface IPlatformAdapter {
      * Set whether to show gizmos (only effective in editor mode)
      */
     setShowGizmos?(show: boolean): void;
+
+    /**
+     * 获取输入子系统
+     * Get input subsystem
+     *
+     * 返回平台特定的输入子系统实现
+     * Returns platform-specific input subsystem implementation
+     */
+    getInputSubsystem?(): IPlatformInputSubsystem | null;
 
     /**
      * 释放资源

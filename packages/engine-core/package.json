@@ -27,8 +27,11 @@
         "type-check": "tsc --noEmit",
         "clean": "rimraf dist"
     },
-    "devDependencies": {
+    "dependencies": {
         "@esengine/ecs-framework": "workspace:*",
+        "@esengine/platform-common": "workspace:*"
+    },
+    "devDependencies": {
         "@esengine/build-config": "workspace:*",
         "rimraf": "^5.0.5",
         "tsup": "^8.0.0",

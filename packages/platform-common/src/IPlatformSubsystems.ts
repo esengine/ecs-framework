@@ -354,6 +354,7 @@ export interface IPlatformNetworkSubsystem {
 
 /**
  * 触摸点信息
+ * Touch point information
  */
 export interface TouchInfo {
     identifier: number;
@@ -364,6 +365,7 @@ export interface TouchInfo {
 
 /**
  * 触摸事件
+ * Touch event
  */
 export interface TouchEvent {
     touches: TouchInfo[];
@@ -373,57 +375,262 @@ export interface TouchEvent {
 
 /**
  * 触摸事件处理函数
+ * Touch event handler
  */
 export type TouchHandler = (event: TouchEvent) => void;
 
 /**
+ * 键盘事件信息
+ * Keyboard event information
+ */
+export interface KeyboardEventInfo {
+    /** 按键代码 (如 'KeyW', 'Space', 'ArrowUp') | Key code */
+    code: string;
+    /** 按键值 (如 'w', ' ', 'ArrowUp') | Key value */
+    key: string;
+    /** Alt 键是否按下 | Alt key pressed */
+    altKey: boolean;
+    /** Ctrl 键是否按下 | Ctrl key pressed */
+    ctrlKey: boolean;
+    /** Shift 键是否按下 | Shift key pressed */
+    shiftKey: boolean;
+    /** Meta 键是否按下 (Windows/Command) | Meta key pressed */
+    metaKey: boolean;
+    /** 是否重复触发 | Is repeat */
+    repeat: boolean;
+    /** 时间戳 | Timestamp */
+    timeStamp: number;
+}
+
+/**
+ * 键盘事件处理函数
+ * Keyboard event handler
+ */
+export type KeyboardHandler = (event: KeyboardEventInfo) => void;
+
+/**
+ * 鼠标按钮枚举
+ * Mouse button enum
+ */
+export enum MouseButton {
+    /** 左键 | Left button */
+    Left = 0,
+    /** 中键 | Middle button */
+    Middle = 1,
+    /** 右键 | Right button */
+    Right = 2
+}
+
+/**
+ * 鼠标事件信息
+ * Mouse event information
+ */
+export interface MouseEventInfo {
+    /** X 坐标 | X coordinate */
+    x: number;
+    /** Y 坐标 | Y coordinate */
+    y: number;
+    /** 相对上次的 X 偏移 | X movement delta */
+    movementX: number;
+    /** 相对上次的 Y 偏移 | Y movement delta */
+    movementY: number;
+    /** 按下的按钮 | Button pressed */
+    button: MouseButton;
+    /** 所有按下的按钮位掩码 | Buttons bitmask */
+    buttons: number;
+    /** Alt 键是否按下 | Alt key pressed */
+    altKey: boolean;
+    /** Ctrl 键是否按下 | Ctrl key pressed */
+    ctrlKey: boolean;
+    /** Shift 键是否按下 | Shift key pressed */
+    shiftKey: boolean;
+    /** Meta 键是否按下 | Meta key pressed */
+    metaKey: boolean;
+    /** 时间戳 | Timestamp */
+    timeStamp: number;
+}
+
+/**
+ * 鼠标滚轮事件信息
+ * Mouse wheel event information
+ */
+export interface WheelEventInfo {
+    /** X 坐标 | X coordinate */
+    x: number;
+    /** Y 坐标 | Y coordinate */
+    y: number;
+    /** X 轴滚动量 | Delta X */
+    deltaX: number;
+    /** Y 轴滚动量 | Delta Y */
+    deltaY: number;
+    /** Z 轴滚动量 | Delta Z */
+    deltaZ: number;
+    /** 时间戳 | Timestamp */
+    timeStamp: number;
+}
+
+/**
+ * 鼠标事件处理函数
+ * Mouse event handler
+ */
+export type MouseHandler = (event: MouseEventInfo) => void;
+
+/**
+ * 鼠标滚轮事件处理函数
+ * Mouse wheel event handler
+ */
+export type WheelHandler = (event: WheelEventInfo) => void;
+
+/**
  * 输入子系统接口
+ * Input subsystem interface
  */
 export interface IPlatformInputSubsystem {
+    // ========== 触摸事件 | Touch events ==========
+
     /**
      * 监听触摸开始
+     * Listen for touch start
      */
     onTouchStart(handler: TouchHandler): void;
 
     /**
      * 监听触摸移动
+     * Listen for touch move
      */
     onTouchMove(handler: TouchHandler): void;
 
     /**
      * 监听触摸结束
+     * Listen for touch end
      */
     onTouchEnd(handler: TouchHandler): void;
 
     /**
      * 监听触摸取消
+     * Listen for touch cancel
      */
     onTouchCancel(handler: TouchHandler): void;
 
     /**
      * 取消监听触摸开始
+     * Stop listening for touch start
      */
     offTouchStart(handler: TouchHandler): void;
 
     /**
      * 取消监听触摸移动
+     * Stop listening for touch move
      */
     offTouchMove(handler: TouchHandler): void;
 
     /**
      * 取消监听触摸结束
+     * Stop listening for touch end
      */
     offTouchEnd(handler: TouchHandler): void;
 
     /**
      * 取消监听触摸取消
+     * Stop listening for touch cancel
      */
     offTouchCancel(handler: TouchHandler): void;
 
     /**
      * 获取触摸点是否支持压感
+     * Check if touch supports pressure
      */
     supportsPressure?(): boolean;
+
+    // ========== 键盘事件 | Keyboard events ==========
+
+    /**
+     * 监听键盘按下
+     * Listen for key down
+     */
+    onKeyDown?(handler: KeyboardHandler): void;
+
+    /**
+     * 监听键盘释放
+     * Listen for key up
+     */
+    onKeyUp?(handler: KeyboardHandler): void;
+
+    /**
+     * 取消监听键盘按下
+     * Stop listening for key down
+     */
+    offKeyDown?(handler: KeyboardHandler): void;
+
+    /**
+     * 取消监听键盘释放
+     * Stop listening for key up
+     */
+    offKeyUp?(handler: KeyboardHandler): void;
+
+    // ========== 鼠标事件 | Mouse events ==========
+
+    /**
+     * 监听鼠标移动
+     * Listen for mouse move
+     */
+    onMouseMove?(handler: MouseHandler): void;
+
+    /**
+     * 监听鼠标按下
+     * Listen for mouse down
+     */
+    onMouseDown?(handler: MouseHandler): void;
+
+    /**
+     * 监听鼠标释放
+     * Listen for mouse up
+     */
+    onMouseUp?(handler: MouseHandler): void;
+
+    /**
+     * 监听鼠标滚轮
+     * Listen for mouse wheel
+     */
+    onWheel?(handler: WheelHandler): void;
+
+    /**
+     * 取消监听鼠标移动
+     * Stop listening for mouse move
+     */
+    offMouseMove?(handler: MouseHandler): void;
+
+    /**
+     * 取消监听鼠标按下
+     * Stop listening for mouse down
+     */
+    offMouseDown?(handler: MouseHandler): void;
+
+    /**
+     * 取消监听鼠标释放
+     * Stop listening for mouse up
+     */
+    offMouseUp?(handler: MouseHandler): void;
+
+    /**
+     * 取消监听鼠标滚轮
+     * Stop listening for mouse wheel
+     */
+    offWheel?(handler: WheelHandler): void;
+
+    // ========== 输入能力查询 | Input capability queries ==========
+
+    /**
+     * 是否支持键盘输入
+     * Check if keyboard input is supported
+     */
+    supportsKeyboard?(): boolean;
+
+    /**
+     * 是否支持鼠标输入
+     * Check if mouse input is supported
+     */
+    supportsMouse?(): boolean;
 }
 
 // ============================================================================
