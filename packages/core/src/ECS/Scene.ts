@@ -483,10 +483,36 @@ export class Scene implements IScene {
             } finally {
                 ProfilerSDK.endSample(lateUpdateHandle);
             }
+
+            // 执行所有系统的延迟命令
+            // Flush all systems' deferred commands
+            this.flushCommandBuffers(systems);
         } finally {
             ProfilerSDK.endSample(frameHandle);
             // 结束性能采样帧
             ProfilerSDK.endFrame();
+        }
+    }
+
+    /**
+     * 执行所有系统的延迟命令
+     * Flush all systems' deferred commands
+     *
+     * 在帧末统一执行所有通过 CommandBuffer 提交的延迟操作。
+     * Execute all deferred operations submitted via CommandBuffer at end of frame.
+     */
+    private flushCommandBuffers(systems: readonly EntitySystem[]): void {
+        const flushHandle = ProfilerSDK.beginSample('Scene.flushCommandBuffers', ProfileCategory.ECS);
+        try {
+            for (const system of systems) {
+                try {
+                    system.flushCommands();
+                } catch (error) {
+                    this.logger.error(`Error flushing commands for system ${system.systemName}:`, error);
+                }
+            }
+        } finally {
+            ProfilerSDK.endSample(flushHandle);
         }
     }
 

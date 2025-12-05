@@ -19,4 +19,6 @@ export { ReferenceTracker, getSceneByEntityId } from './Core/ReferenceTracker';
 export type { EntityRefRecord } from './Core/ReferenceTracker';
 export { ReactiveQuery, ReactiveQueryChangeType } from './Core/ReactiveQuery';
 export type { ReactiveQueryChange, ReactiveQueryListener, ReactiveQueryConfig } from './Core/ReactiveQuery';
+export { CommandBuffer, CommandType } from './Core/CommandBuffer';
+export type { DeferredCommand } from './Core/CommandBuffer';
 export * from './EntityTags';
