@@ -1,0 +1,44 @@
+{
+  "id": "particle",
+  "name": "@esengine/particle",
+  "displayName": "Particle System",
+  "description": "2D particle system for visual effects | 2D 粒子系统用于视觉特效",
+  "version": "1.0.0",
+  "category": "Rendering",
+  "icon": "Sparkles",
+  "tags": [
+    "2d",
+    "particle",
+    "effects",
+    "vfx"
+  ],
+  "isCore": false,
+  "defaultEnabled": true,
+  "isEngineModule": true,
+  "canContainContent": true,
+  "platforms": [
+    "web",
+    "desktop"
+  ],
+  "dependencies": [
+    "core",
+    "math",
+    "engine-core",
+    "asset-system"
+  ],
+  "exports": {
+    "components": [
+      "ParticleSystemComponent"
+    ],
+    "systems": [
+      "ParticleUpdateSystem"
+    ],
+    "loaders": [
+      "ParticleLoader"
+    ]
+  },
+  "editorPackage": "@esengine/particle-editor",
+  "requiresWasm": false,
+  "outputPath": "dist/index.js",
+  "pluginExport": "ParticlePlugin"
+}
