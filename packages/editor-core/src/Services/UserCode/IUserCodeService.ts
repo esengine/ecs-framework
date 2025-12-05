@@ -220,6 +220,39 @@ export interface IUserCodeService {
     registerComponents(module: UserCodeModule, componentRegistry?: any): void;
 
     /**
+     * Register user systems to scene.
+     * 注册用户系统到场景。
+     *
+     * Automatically detects and instantiates System subclasses from user module,
+     * then adds them to the scene.
+     * 自动检测用户模块中的 System 子类并实例化，然后添加到场景。
+     *
+     * @param module - User code module | 用户代码模块
+     * @param scene - Scene to add systems | 要添加系统的场景
+     * @returns Array of registered system instances | 注册的系统实例数组
+     */
+    registerSystems(module: UserCodeModule, scene: any): any[];
+
+    /**
+     * Unregister user systems from scene.
+     * 从场景注销用户系统。
+     *
+     * Removes previously registered user systems from the scene.
+     * 从场景移除之前注册的用户系统。
+     *
+     * @param scene - Scene to remove systems | 要移除系统的场景
+     */
+    unregisterSystems(scene: any): void;
+
+    /**
+     * Get registered user systems.
+     * 获取已注册的用户系统。
+     *
+     * @returns Array of registered system instances | 注册的系统实例数组
+     */
+    getRegisteredSystems(): any[];
+
+    /**
      * Register editor extensions from user module.
      * 从用户模块注册编辑器扩展。
      *

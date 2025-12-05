@@ -333,17 +333,20 @@ export class ServiceRegistry {
                 console.log('[UserCodeService] Hot reload event:', event.changedFiles);
 
                 if (event.newModule) {
-                    // 1. Register new/updated components to registries
                     // 1. 注册新的/更新的组件到注册表
                     userCodeService.registerComponents(event.newModule, componentRegistry);
 
-                    // 2. Hot reload: update prototype chain of existing instances
                     // 2. 热更新：更新现有实例的原型链
                     const updatedCount = userCodeService.hotReloadInstances(event.newModule);
                     console.log(`[UserCodeService] Hot reloaded ${updatedCount} component instances`);
 
-                    // 3. Notify that user code has been reloaded
-                    // 3. 通知用户代码已重新加载
+                    // 3. 如果正在预览，热更新用户系统
+                    const scene = Core.scene;
+                    if (scene && !scene.isEditorMode) {
+                        userCodeService.hotReloadSystems(event.newModule, scene);
+                    }
+
+                    // 4. 通知用户代码已重新加载
                     messageHub.publish('usercode:reloaded', {
                         projectPath: data.path,
                         exports: Object.keys(event.newModule.exports),
@@ -375,6 +378,27 @@ export class ServiceRegistry {
         messageHub.subscribe('file:deleted', async (data: { path: string }) => {
             if (currentProjectPath && this.isScriptFile(data.path)) {
                 await compileAndLoadUserScripts(currentProjectPath);
+            }
+        });
+
+        // 预览开始时注册用户系统
+        // Register user systems when preview starts
+        messageHub.subscribe('preview:start', () => {
+            const runtimeModule = userCodeService.getModule(UserCodeTarget.Runtime);
+            if (runtimeModule) {
+                const scene = Core.scene;
+                if (scene) {
+                    userCodeService.registerSystems(runtimeModule, scene);
+                }
+            }
+        });
+
+        // 预览停止时移除用户系统
+        // Unregister user systems when preview stops
+        messageHub.subscribe('preview:stop', () => {
+            const scene = Core.scene;
+            if (scene) {
+                userCodeService.unregisterSystems(scene);
             }
         });
 

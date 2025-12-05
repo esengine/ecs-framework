@@ -44,6 +44,12 @@ export class UserCodeService implements IService, IUserCodeService {
     private _currentProjectPath: string | undefined;
     private _eventUnlisten: (() => void) | undefined;
 
+    /**
+     * 已注册的用户系统实例
+     * Registered user system instances
+     */
+    private _registeredSystems: any[] = [];
+
     constructor(fileSystem: IFileSystem) {
         this._fileSystem = fileSystem;
     }
@@ -456,6 +462,128 @@ export class UserCodeService implements IService, IUserCodeService {
         }
 
         return updatedCount;
+    }
+
+    /**
+     * Register user systems to scene.
+     * 注册用户系统到场景。
+     *
+     * @param module - User code module | 用户代码模块
+     * @param scene - Scene to add systems | 要添加系统的场景
+     * @returns Array of registered system instances | 注册的系统实例数组
+     */
+    registerSystems(module: UserCodeModule, scene: any): any[] {
+        if (module.target !== UserCodeTarget.Runtime) {
+            logger.warn('Cannot register systems from editor module | 无法从编辑器模块注册系统');
+            return [];
+        }
+
+        if (!scene) {
+            logger.warn('No scene provided for system registration | 未提供场景用于系统注册');
+            return [];
+        }
+
+        // 先移除之前注册的用户系统 | Remove previously registered user systems first
+        this.unregisterSystems(scene);
+
+        const registeredSystems: any[] = [];
+
+        for (const [name, exported] of Object.entries(module.exports)) {
+            if (typeof exported !== 'function') {
+                continue;
+            }
+
+            // 检查是否是 System 子类 | Check if it's a System subclass
+            if (this._isSystemClass(exported)) {
+                try {
+                    // 获取系统元数据 | Get system metadata
+                    const metadata = (exported as any).__systemMetadata__;
+                    const updateOrder = metadata?.updateOrder ?? 0;
+                    const enabled = metadata?.enabled !== false;
+
+                    // 实例化系统 | Instantiate system
+                    const systemInstance = new (exported as any)();
+
+                    // 设置系统属性 | Set system properties
+                    if (typeof systemInstance.updateOrder !== 'undefined') {
+                        systemInstance.updateOrder = updateOrder;
+                    }
+                    if (typeof systemInstance.enabled !== 'undefined') {
+                        systemInstance.enabled = enabled;
+                    }
+
+                    // 标记为用户系统，便于后续识别和移除 | Mark as user system for later identification and removal
+                    systemInstance.__isUserSystem__ = true;
+                    systemInstance.__userSystemName__ = name;
+
+                    // 添加到场景 | Add to scene
+                    scene.addSystem(systemInstance);
+                    registeredSystems.push(systemInstance);
+
+                    logger.info(`Registered user system: ${name} | 注册用户系统: ${name}`, {
+                        updateOrder,
+                        enabled
+                    });
+                } catch (err) {
+                    logger.error(`Failed to register system ${name} | 注册系统 ${name} 失败:`, err);
+                }
+            }
+        }
+
+        this._registeredSystems = registeredSystems;
+
+        logger.info(`Registered ${registeredSystems.length} user systems | 注册了 ${registeredSystems.length} 个用户系统`);
+
+        return registeredSystems;
+    }
+
+    /**
+     * Unregister user systems from scene.
+     * 从场景注销用户系统。
+     *
+     * @param scene - Scene to remove systems | 要移除系统的场景
+     */
+    unregisterSystems(scene: any): void {
+        if (!scene) {
+            return;
+        }
+
+        for (const system of this._registeredSystems) {
+            try {
+                scene.removeSystem(system);
+                logger.debug(`Removed user system: ${system.__userSystemName__} | 移除用户系统: ${system.__userSystemName__}`);
+            } catch (err) {
+                logger.warn(`Failed to remove system ${system.__userSystemName__}:`, err);
+            }
+        }
+
+        this._registeredSystems = [];
+    }
+
+    /**
+     * Get registered user systems.
+     * 获取已注册的用户系统。
+     *
+     * @returns Array of registered system instances | 注册的系统实例数组
+     */
+    getRegisteredSystems(): any[] {
+        return [...this._registeredSystems];
+    }
+
+    /**
+     * Hot reload user systems.
+     * 热更新用户系统。
+     *
+     * Removes old systems and registers new ones from the updated module.
+     * 移除旧系统并从更新的模块注册新系统。
+     *
+     * @param module - New user code module | 新的用户代码模块
+     * @param scene - Scene to update systems | 要更新系统的场景
+     * @returns Array of newly registered system instances | 新注册的系统实例数组
+     */
+    hotReloadSystems(module: UserCodeModule, scene: any): any[] {
+        logger.info('Hot reloading user systems | 热更新用户系统');
+        return this.registerSystems(module, scene);
     }
 
     /**

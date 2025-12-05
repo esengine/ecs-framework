@@ -275,31 +275,22 @@ export class ${className} extends Component {
                 category: 'Script',
                 getContent: (fileName: string) => {
                     const className = fileName.replace(/\.ts$/, '');
-                    return `import { EntitySystem, Matcher, type Entity } from '@esengine/ecs-framework';
+                    return `import { EntitySystem, Matcher, ECSSystem, type Entity } from '@esengine/ecs-framework';
 
 /**
  * ${className}
  */
+@ECSSystem('${className}')
 export class ${className} extends EntitySystem {
-    // 定义系统处理的组件类型
-    // Define component types this system processes
-    protected getMatcher(): Matcher {
-        // 返回匹配器，指定需要哪些组件
-        // Return matcher specifying required components
-        // return Matcher.all(SomeComponent);
-        return Matcher.empty();
+    constructor() {
+        // 定义系统处理的组件类型 | Define component types this system processes
+        // super(Matcher.all(SomeComponent));
+        super(Matcher.empty());
     }
 
     protected updateEntity(entity: Entity, deltaTime: number): void {
-        // 处理每个实体
-        // Process each entity
+        // 处理每个实体 | Process each entity
     }
-
-    // 可选：系统初始化
-    // Optional: System initialization
-    // onInitialize(): void {
-    //     super.onInitialize();
-    // }
 }
 `;
                 }
