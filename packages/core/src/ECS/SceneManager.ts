@@ -1,4 +1,6 @@
 import { IScene } from './IScene';
+import { Scene } from './Scene';
+import { Entity } from './Entity';
 import { ECSFluentAPI, createECSAPI } from './Core/FluentAPI';
 import { Time } from '../Utils/Time';
 import { createLogger } from '../Utils/Logger';
@@ -80,6 +82,13 @@ export class SceneManager implements IService {
     private _performanceMonitor: PerformanceMonitor | null = null;
 
     /**
+     * 待迁移的持久化实体
+     *
+     * Pending persistent entities for migration.
+     */
+    private _pendingPersistentEntities: Entity[] = [];
+
+    /**
      * 默认场景ID
      */
     private static readonly DEFAULT_SCENE_ID = '__main__';
@@ -104,17 +113,33 @@ export class SceneManager implements IService {
      * 设置当前场景（立即切换）
      *
      * 会自动处理旧场景的结束和新场景的初始化。
+     * 持久化实体会自动迁移到新场景。
      *
-     * @param scene - 要设置的场景实例
-     * @returns 返回设置的场景实例，便于链式调用
+     * Set current scene (immediate transition).
+     * Automatically handles old scene cleanup and new scene initialization.
+     * Persistent entities are automatically migrated to the new scene.
+     *
+     * @param scene - 要设置的场景实例 | Scene instance to set
+     * @returns 返回设置的场景实例，便于链式调用 | Returns the scene for chaining
      *
      * @example
      * ```typescript
      * const gameScene = sceneManager.setScene(new GameScene());
-     * console.log(gameScene.name); // 可以立即使用返回的场景
+     * console.log(gameScene.name);
      * ```
      */
     public setScene<T extends IScene>(scene: T): T {
+        // 从当前场景提取持久化实体
+        const currentScene = this.currentScene;
+        if (currentScene && currentScene instanceof Scene) {
+            this._pendingPersistentEntities = currentScene.extractPersistentEntities();
+            if (this._pendingPersistentEntities.length > 0) {
+                this._logger.debug(
+                    `Extracted ${this._pendingPersistentEntities.length} persistent entities for migration`
+                );
+            }
+        }
+
         // 移除旧场景
         this._defaultWorld.removeAllScenes();
 
@@ -126,6 +151,15 @@ export class SceneManager implements IService {
         // 通过 World 创建新场景
         this._defaultWorld.createScene(SceneManager.DEFAULT_SCENE_ID, scene);
         this._defaultWorld.setSceneActive(SceneManager.DEFAULT_SCENE_ID, true);
+
+        // 迁移持久化实体到新场景
+        if (this._pendingPersistentEntities.length > 0 && scene instanceof Scene) {
+            scene.receiveMigratedEntities(this._pendingPersistentEntities);
+            this._logger.debug(
+                `Migrated ${this._pendingPersistentEntities.length} persistent entities to new scene`
+            );
+            this._pendingPersistentEntities = [];
+        }
 
         // 重建ECS API
         if (scene.querySystem && scene.eventSystem) {

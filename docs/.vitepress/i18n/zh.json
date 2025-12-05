@@ -23,6 +23,7 @@
     "scene": "场景管理 (Scene)",
     "sceneManager": "SceneManager",
     "worldManager": "WorldManager",
+    "persistentEntity": "持久化实体 (Persistent Entity)",
     "behaviorTree": "行为树系统 (Behavior Tree)",
     "btGettingStarted": "快速开始",
     "btCoreConcepts": "核心概念",
