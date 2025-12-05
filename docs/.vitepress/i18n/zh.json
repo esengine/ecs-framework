@@ -6,7 +6,8 @@
     "api": "API",
     "examples": "示例",
     "workerDemo": "Worker系统演示",
-    "lawnMowerDemo": "割草机演示"
+    "lawnMowerDemo": "割草机演示",
+    "changelog": "更新日志"
   },
   "sidebar": {
     "gettingStarted": "开始使用",

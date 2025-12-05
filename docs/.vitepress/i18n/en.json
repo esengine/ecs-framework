@@ -6,7 +6,8 @@
     "api": "API",
     "examples": "Examples",
     "workerDemo": "Worker System Demo",
-    "lawnMowerDemo": "Lawn Mower Demo"
+    "lawnMowerDemo": "Lawn Mower Demo",
+    "changelog": "Changelog"
   },
   "sidebar": {
     "gettingStarted": "Getting Started",
