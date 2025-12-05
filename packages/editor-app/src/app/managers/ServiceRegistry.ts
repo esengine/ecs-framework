@@ -39,7 +39,8 @@ import {
     WeChatBuildPipeline,
     moduleRegistry,
     UserCodeService,
-    UserCodeTarget
+    UserCodeTarget,
+    type HotReloadEvent
 } from '@esengine/editor-core';
 import { ViewportService } from '../../services/ViewportService';
 import { TransformComponent } from '@esengine/engine-core';
@@ -321,10 +322,46 @@ export class ServiceRegistry {
         messageHub.subscribe('project:opened', async (data: { path: string; type: string; name: string }) => {
             currentProjectPath = data.path;
             await compileAndLoadUserScripts(data.path);
+
+            // Start watching for file changes (external editor support)
+            // 开始监视文件变更（支持外部编辑器）
+            userCodeService.watch(data.path, async (event) => {
+                console.log('[UserCodeService] Hot reload event:', event.changedFiles);
+
+                if (event.newModule) {
+                    // 1. Register new/updated components to registries
+                    // 1. 注册新的/更新的组件到注册表
+                    userCodeService.registerComponents(event.newModule, componentRegistry);
+
+                    // 2. Hot reload: update prototype chain of existing instances
+                    // 2. 热更新：更新现有实例的原型链
+                    const updatedCount = userCodeService.hotReloadInstances(event.newModule);
+                    console.log(`[UserCodeService] Hot reloaded ${updatedCount} component instances`);
+
+                    // 3. Notify that user code has been reloaded
+                    // 3. 通知用户代码已重新加载
+                    messageHub.publish('usercode:reloaded', {
+                        projectPath: data.path,
+                        exports: Object.keys(event.newModule.exports),
+                        updatedInstances: updatedCount
+                    });
+                }
+            }).catch(err => {
+                console.warn('[UserCodeService] Failed to start file watcher:', err);
+            });
         });
 
-        // Subscribe to script file changes (create/delete/modify)
-        // 订阅脚本文件变更（创建/删除/修改）
+        // Subscribe to project:closed to stop watching
+        // 订阅 project:closed 以停止监视
+        messageHub.subscribe('project:closed', async () => {
+            currentProjectPath = null;
+            await userCodeService.stopWatch();
+        });
+
+        // Subscribe to script file changes (create/delete) from editor operations
+        // 订阅编辑器操作的脚本文件变更（创建/删除）
+        // Note: file:modified is handled by the Rust file watcher for external editor support
+        // 注意：file:modified 由 Rust 文件监视器处理以支持外部编辑器
         messageHub.subscribe('file:created', async (data: { path: string }) => {
             if (currentProjectPath && this.isScriptFile(data.path)) {
                 await compileAndLoadUserScripts(currentProjectPath);
@@ -332,12 +369,6 @@ export class ServiceRegistry {
         });
 
         messageHub.subscribe('file:deleted', async (data: { path: string }) => {
-            if (currentProjectPath && this.isScriptFile(data.path)) {
-                await compileAndLoadUserScripts(currentProjectPath);
-            }
-        });
-
-        messageHub.subscribe('file:modified', async (data: { path: string }) => {
             if (currentProjectPath && this.isScriptFile(data.path)) {
                 await compileAndLoadUserScripts(currentProjectPath);
             }

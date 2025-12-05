@@ -115,7 +115,9 @@ export class UserCodeService implements IService, IUserCodeService {
 
         const sep = options.projectPath.includes('\\') ? '\\' : '/';
         const scriptsDir = `${options.projectPath}${sep}${SCRIPTS_DIR}`;
-        const outputDir = options.outputDir || `${options.projectPath}${sep}${USER_CODE_OUTPUT_DIR}`;
+        // Ensure consistent path separators | 确保路径分隔符一致
+        const userCodeOutputDir = USER_CODE_OUTPUT_DIR.replace(/\//g, sep);
+        const outputDir = options.outputDir || `${options.projectPath}${sep}${userCodeOutputDir}`;
 
         try {
             // Scan scripts first | 先扫描脚本
@@ -377,6 +379,83 @@ export class UserCodeService implements IService, IUserCodeService {
             components: componentCount,
             systems: systemCount
         });
+    }
+
+    /**
+     * Hot reload: update existing component instances to use new class prototype.
+     * 热更新：更新现有组件实例以使用新类的原型。
+     *
+     * This is the core of hot reload - it updates the prototype chain of existing
+     * instances so they use the new methods from the updated class while preserving
+     * their data (properties).
+     * 这是热更新的核心 - 它更新现有实例的原型链，使它们使用更新后类的新方法，
+     * 同时保留它们的数据（属性）。
+     *
+     * @param module - New user code module | 新的用户代码模块
+     * @returns Number of instances updated | 更新的实例数量
+     */
+    hotReloadInstances(module: UserCodeModule): number {
+        if (module.target !== UserCodeTarget.Runtime) {
+            return 0;
+        }
+
+        // Access scene through Core.scene
+        // 通过 Core.scene 访问场景
+        const Core = (window as any).__ESENGINE__?.ecsFramework?.Core;
+        const scene = Core?.scene;
+        if (!scene || !scene.entities) {
+            logger.warn('No active scene for hot reload | 没有活动场景用于热更新');
+            return 0;
+        }
+
+        let updatedCount = 0;
+
+        // EntityList.buffer contains all entities
+        // EntityList.buffer 包含所有实体
+        const entities: any[] = scene.entities.buffer || [];
+
+        for (const entity of entities) {
+            if (!entity) continue;
+
+            // entity.components is a getter that returns readonly Component[]
+            // entity.components 是一个 getter，返回 readonly Component[]
+            const components = entity.components;
+            if (!components || !Array.isArray(components)) continue;
+
+            for (const component of components) {
+                if (!component) continue;
+
+                // Get the component's type name
+                // 获取组件的类型名称
+                const typeName = component.constructor?.name;
+                if (!typeName) continue;
+
+                // Check if we have a new version of this component class
+                // 检查是否有此组件类的新版本
+                const newClass = module.exports[typeName];
+                if (!newClass || typeof newClass !== 'function') continue;
+
+                // Check if this is actually a different class (hot reload scenario)
+                // 检查这是否确实是不同的类（热更新场景）
+                if (component.constructor === newClass) continue;
+
+                // Update the prototype chain to use the new class
+                // 更新原型链以使用新类
+                try {
+                    Object.setPrototypeOf(component, newClass.prototype);
+                    updatedCount++;
+                    logger.debug(`Hot reloaded component instance: ${typeName} on entity ${entity.name || entity.id}`);
+                } catch (err) {
+                    logger.warn(`Failed to hot reload ${typeName}:`, err);
+                }
+            }
+        }
+
+        if (updatedCount > 0) {
+            logger.info(`Hot reload: updated ${updatedCount} component instances | 热更新：更新了 ${updatedCount} 个组件实例`);
+        }
+
+        return updatedCount;
     }
 
     /**

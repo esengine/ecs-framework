@@ -97,34 +97,101 @@ for (const { src, dst } of typeFilesToBundle) {
     }
 }
 
-// Update tauri.conf.json to include runtime directory
-if (success) {
-    const tauriConfigPath = path.join(editorPath, 'src-tauri', 'tauri.conf.json');
-    const config = JSON.parse(fs.readFileSync(tauriConfigPath, 'utf8'));
+// Copy engine modules directory from dist/engine to src-tauri/engine
+// 复制引擎模块目录从 dist/engine 到 src-tauri/engine
+const engineSrcDir = path.join(editorPath, 'dist', 'engine');
+const engineDstDir = path.join(editorPath, 'src-tauri', 'engine');
 
-    // Add runtime directory to resources
-    if (!config.bundle) {
-        config.bundle = {};
-    }
-    if (!config.bundle.resources) {
-        config.bundle.resources = {};
+/**
+ * Recursively copy directory
+ * 递归复制目录
+ */
+function copyDirRecursive(src, dst) {
+    if (!fs.existsSync(src)) {
+        return false;
     }
 
-    // Handle both array and object format for resources
-    if (Array.isArray(config.bundle.resources)) {
-        if (!config.bundle.resources.includes('runtime/**/*')) {
-            config.bundle.resources.push('runtime/**/*');
-            fs.writeFileSync(tauriConfigPath, JSON.stringify(config, null, 2));
-            console.log('✓ Updated tauri.conf.json with runtime resources');
-        }
-    } else if (typeof config.bundle.resources === 'object') {
-        // Object format - add runtime files if not present
-        if (!config.bundle.resources['runtime/**/*']) {
-            config.bundle.resources['runtime/**/*'] = '.';
-            fs.writeFileSync(tauriConfigPath, JSON.stringify(config, null, 2));
-            console.log('✓ Updated tauri.conf.json with runtime resources');
+    if (!fs.existsSync(dst)) {
+        fs.mkdirSync(dst, { recursive: true });
+    }
+
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+    for (const entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const dstPath = path.join(dst, entry.name);
+
+        if (entry.isDirectory()) {
+            copyDirRecursive(srcPath, dstPath);
+        } else {
+            fs.copyFileSync(srcPath, dstPath);
         }
     }
+    return true;
+}
+
+if (fs.existsSync(engineSrcDir)) {
+    // Remove old engine directory if exists
+    if (fs.existsSync(engineDstDir)) {
+        fs.rmSync(engineDstDir, { recursive: true });
+    }
+
+    if (copyDirRecursive(engineSrcDir, engineDstDir)) {
+        // Count files
+        let fileCount = 0;
+        function countFiles(dir) {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            for (const entry of entries) {
+                if (entry.isDirectory()) {
+                    countFiles(path.join(dir, entry.name));
+                } else {
+                    fileCount++;
+                }
+            }
+        }
+        countFiles(engineDstDir);
+        console.log(`✓ Copied engine modules directory (${fileCount} files)`);
+    }
+} else {
+    console.warn(`Engine modules directory not found: ${engineSrcDir}`);
+    console.log('  Build editor-app first: pnpm --filter @esengine/editor-app build');
+}
+
+// Copy esbuild binary for user code compilation
+// 复制 esbuild 二进制文件用于用户代码编译
+const binDir = path.join(editorPath, 'src-tauri', 'bin');
+if (!fs.existsSync(binDir)) {
+    fs.mkdirSync(binDir, { recursive: true });
+    console.log(`Created bin directory: ${binDir}`);
+}
+
+// Platform-specific esbuild binary paths
+// 平台特定的 esbuild 二进制路径
+const esbuildSources = {
+    win32: path.join(rootPath, 'node_modules/@esbuild/win32-x64/esbuild.exe'),
+    darwin: path.join(rootPath, 'node_modules/@esbuild/darwin-x64/bin/esbuild'),
+    linux: path.join(rootPath, 'node_modules/@esbuild/linux-x64/bin/esbuild'),
+};
+
+const platform = process.platform;
+const esbuildSrc = esbuildSources[platform];
+const esbuildDst = path.join(binDir, platform === 'win32' ? 'esbuild.exe' : 'esbuild');
+
+if (esbuildSrc && fs.existsSync(esbuildSrc)) {
+    try {
+        fs.copyFileSync(esbuildSrc, esbuildDst);
+        // Ensure executable permission on Unix
+        if (platform !== 'win32') {
+            fs.chmodSync(esbuildDst, 0o755);
+        }
+        const stats = fs.statSync(esbuildDst);
+        console.log(`✓ Bundled esbuild binary (${(stats.size / 1024 / 1024).toFixed(2)} MB)`);
+    } catch (error) {
+        console.warn(`Failed to bundle esbuild: ${error.message}`);
+        console.log('  User code compilation will require global esbuild installation');
+    }
+} else {
+    console.warn(`esbuild binary not found for platform ${platform}: ${esbuildSrc}`);
+    console.log('  User code compilation will require global esbuild installation');
 }
 
 if (!success) {

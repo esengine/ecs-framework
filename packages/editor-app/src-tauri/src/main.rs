@@ -93,6 +93,7 @@ fn main() {
             commands::compile_typescript,
             commands::watch_scripts,
             commands::stop_watch_scripts,
+            commands::check_environment,
             // Build commands | 构建命令
             commands::prepare_build_directory,
             commands::copy_directory,

@@ -34,11 +34,27 @@ export class ComponentRegistry {
             return existingIndex;
         }
 
-        // 检查是否有同名但不同类的组件已注册
+        // 检查是否有同名但不同类的组件已注册（热更新场景）
+        // Check if a component with the same name but different class is registered (hot reload scenario)
         if (this.componentNameToType.has(typeName)) {
             const existingType = this.componentNameToType.get(typeName);
             if (existingType !== componentType) {
-                console.warn(`[ComponentRegistry] Component name conflict: "${typeName}" already registered with different class. Existing: ${existingType?.name}, New: ${componentType.name}`);
+                // 热更新：替换旧的类为新的类，复用相同的 bitIndex
+                // Hot reload: replace old class with new class, reuse the same bitIndex
+                const existingIndex = this.componentTypes.get(existingType!)!;
+
+                // 移除旧类的映射
+                // Remove old class mapping
+                this.componentTypes.delete(existingType!);
+
+                // 用新类更新映射
+                // Update mappings with new class
+                this.componentTypes.set(componentType, existingIndex);
+                this.bitIndexToType.set(existingIndex, componentType);
+                this.componentNameToType.set(typeName, componentType);
+
+                console.log(`[ComponentRegistry] Hot reload: replaced component "${typeName}"`);
+                return existingIndex;
             }
         }
 
