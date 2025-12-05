@@ -84,9 +84,7 @@ This document records the version update history of the `@esengine/ecs-framework
 ### Features
 
 - **Component lifecycle**: Add component lifecycle callback support (#237)
-  - `onEnable()`: Called when component is enabled
-  - `onDisable()`: Called when component is disabled
-  - `onDestroy()`: Called when component is destroyed
+  - `onDeserialized()`: Called after component is loaded from scene file or snapshot restore, used to restore runtime data
 
 - **ServiceContainer enhancement**: Improve service container functionality (#237)
   - Support `Symbol.for()` pattern for service identifiers

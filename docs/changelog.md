@@ -84,9 +84,7 @@
 ### Features
 
 - **组件生命周期**: 添加组件生命周期回调支持 (#237)
-  - `onEnable()`: 组件启用时调用
-  - `onDisable()`: 组件禁用时调用
-  - `onDestroy()`: 组件销毁时调用
+  - `onDeserialized()`: 组件从场景文件加载或快照恢复后调用，用于恢复运行时数据
 
 - **ServiceContainer 增强**: 改进服务容器功能 (#237)
   - 支持 `Symbol.for()` 模式的服务标识
