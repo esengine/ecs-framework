@@ -12,6 +12,7 @@ import type {
     PlatformCapabilities,
     PlatformAdapterConfig
 } from '../IPlatformAdapter';
+import type { IPlatformInputSubsystem } from '@esengine/platform-common';
 
 /**
  * 浏览器路径解析器
@@ -56,6 +57,11 @@ export interface BrowserPlatformConfig {
     wasmModuleLoader?: () => Promise<any>;
     /** 资产基础 URL */
     assetBaseUrl?: string;
+    /**
+     * 输入子系统工厂函数
+     * Input subsystem factory function
+     */
+    inputSubsystemFactory?: () => IPlatformInputSubsystem;
 }
 
 /**
@@ -77,6 +83,7 @@ export class BrowserPlatformAdapter implements IPlatformAdapter {
     private _canvas: HTMLCanvasElement | null = null;
     private _config: BrowserPlatformConfig;
     private _viewportSize = { width: 0, height: 0 };
+    private _inputSubsystem: IPlatformInputSubsystem | null = null;
 
     constructor(config: BrowserPlatformConfig = {}) {
         this._config = config;
@@ -100,6 +107,10 @@ export class BrowserPlatformAdapter implements IPlatformAdapter {
         this._canvas.width = width;
         this._canvas.height = height;
         this._viewportSize = { width, height };
+
+        if (this._config.inputSubsystemFactory) {
+            this._inputSubsystem = this._config.inputSubsystemFactory();
+        }
     }
 
     async getWasmModule(): Promise<any> {
@@ -137,7 +148,15 @@ export class BrowserPlatformAdapter implements IPlatformAdapter {
         return false;
     }
 
+    getInputSubsystem(): IPlatformInputSubsystem | null {
+        return this._inputSubsystem;
+    }
+
     dispose(): void {
+        if (this._inputSubsystem) {
+            this._inputSubsystem.dispose?.();
+            this._inputSubsystem = null;
+        }
         this._canvas = null;
     }
 }

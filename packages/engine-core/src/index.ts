@@ -18,3 +18,20 @@ export {
     type ModulePlatform,
     type ModuleExports
 } from './ModuleManifest';
+
+// Input System (keyboard, mouse, touch)
+export {
+    Input,
+    InputManager,
+    InputSystem,
+    MouseButton,
+    type InputSystemConfig,
+    type KeyState,
+    type MouseButtonState,
+    type Vector2,
+    type KeyboardEventInfo,
+    type MouseEventInfo,
+    type WheelEventInfo,
+    type TouchInfo,
+    type TouchEvent
+} from './Input';

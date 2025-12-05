@@ -8,7 +8,7 @@
 
 import { Core, Scene, SceneSerializer, HierarchySystem } from '@esengine/ecs-framework';
 import { EngineBridge, EngineRenderSystem, CameraSystem } from '@esengine/ecs-engine-bindgen';
-import { TransformComponent, TransformSystem } from '@esengine/engine-core';
+import { TransformComponent, TransformSystem, InputSystem, Input } from '@esengine/engine-core';
 import { AssetManager, EngineIntegration } from '@esengine/asset-system';
 import {
     runtimePluginManager,
@@ -77,6 +77,7 @@ export class GameRuntime {
     private _scene: Scene | null = null;
     private _renderSystem: EngineRenderSystem | null = null;
     private _cameraSystem: CameraSystem | null = null;
+    private _inputSystem: InputSystem | null = null;
     private _assetManager: AssetManager | null = null;
     private _engineIntegration: EngineIntegration | null = null;
     private _projectConfig: ProjectConfig;
@@ -228,6 +229,19 @@ export class GameRuntime {
             this._scene.addSystem(new HierarchySystem());
             this._scene.addSystem(new TransformSystem());
 
+            // 7. 添加输入系统（最先更新，以便其他系统可以读取输入状态）
+            // Add input system (updates first so other systems can read input state)
+            this._inputSystem = new InputSystem({
+                disableInEditor: true // 编辑器模式下禁用，避免与编辑器输入冲突
+            });
+            this._scene.addSystem(this._inputSystem);
+
+            // 设置平台输入子系统 | Set platform input subsystem
+            const inputSubsystem = this._platform.getInputSubsystem?.();
+            if (inputSubsystem) {
+                this._inputSystem.setInputSubsystem(inputSubsystem);
+            }
+
             this._cameraSystem = new CameraSystem(this._bridge);
             this._scene.addSystem(this._cameraSystem);
 
@@ -257,7 +271,9 @@ export class GameRuntime {
                 isEditor: this._platform.isEditorMode(),
                 engineBridge: this._bridge,
                 renderSystem: this._renderSystem,
-                assetManager: this._assetManager
+                assetManager: this._assetManager,
+                inputSystem: this._inputSystem,
+                inputManager: Input
             };
 
             // 11. 让插件创建系统（编辑器模式下跳过，由 EngineService.initializeModuleSystems 处理）
@@ -845,6 +861,7 @@ export class GameRuntime {
 
         this._renderSystem = null;
         this._cameraSystem = null;
+        this._inputSystem = null;
         this._systemContext = null;
         this._platform.dispose();
 

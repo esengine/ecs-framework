@@ -29,6 +29,12 @@ export type {
     TouchInfo,
     TouchEvent,
     TouchHandler,
+    KeyboardEventInfo,
+    KeyboardHandler,
+    MouseEventInfo,
+    MouseHandler,
+    WheelEventInfo,
+    WheelHandler,
     // 文件系统
     IPlatformFileSubsystem,
     FileInfo,
@@ -40,6 +46,9 @@ export type {
     // 系统信息
     SystemInfo
 } from './IPlatformSubsystems';
+
+// 导出枚举值 | Export enum values
+export { MouseButton } from './IPlatformSubsystems';
 
 // WASM 库加载器
 export {
