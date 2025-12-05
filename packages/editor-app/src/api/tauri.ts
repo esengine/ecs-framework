@@ -357,6 +357,47 @@ export class TauriAPI {
     static convertFileSrc(filePath: string, protocol?: string): string {
         return convertFileSrc(filePath, protocol);
     }
+
+    /**
+     * 检测开发环境
+     * Check development environment
+     *
+     * Checks if all required tools (esbuild, etc.) are available.
+     * 检查所有必需的工具是否可用。
+     *
+     * @returns 环境检测结果 | Environment check result
+     */
+    static async checkEnvironment(): Promise<EnvironmentCheckResult> {
+        return await invoke<EnvironmentCheckResult>('check_environment');
+    }
+}
+
+/**
+ * 工具可用性状态
+ * Tool availability status
+ */
+export interface ToolStatus {
+    /** 工具是否可用 | Whether the tool is available */
+    available: boolean;
+    /** 工具版本 | Tool version */
+    version?: string;
+    /** 工具路径 | Tool path */
+    path?: string;
+    /** 工具来源: "bundled", "local", "global" | Tool source */
+    source?: string;
+    /** 错误信息 | Error message */
+    error?: string;
+}
+
+/**
+ * 环境检测结果
+ * Environment check result
+ */
+export interface EnvironmentCheckResult {
+    /** 所有必需工具是否可用 | Whether all required tools are available */
+    ready: boolean;
+    /** esbuild 可用性状态 | esbuild availability status */
+    esbuild: ToolStatus;
 }
 
 export interface DirectoryEntry {

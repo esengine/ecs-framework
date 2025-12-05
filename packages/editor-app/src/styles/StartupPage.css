@@ -526,3 +526,92 @@
   background: #b91c1c;
   border-color: #b91c1c;
 }
+
+/* 环境状态指示器样式 | Environment Status Indicator Styles */
+.startup-env-status {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.startup-env-status.ready {
+  color: #4ade80;
+}
+
+.startup-env-status.ready:hover {
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.startup-env-status.warning {
+  color: #f59e0b;
+  animation: pulse 2s infinite;
+}
+
+.startup-env-status.warning:hover {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.startup-env-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  padding: 12px 16px;
+  min-width: 200px;
+  background: #2d2d30;
+  border: 1px solid #3e3e42;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+}
+
+.startup-env-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #3e3e42;
+}
+
+.env-tooltip-title {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #3e3e42;
+  font-size: 12px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.env-tooltip-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.env-tooltip-item.ok {
+  color: #4ade80;
+}
+
+.env-tooltip-item.error {
+  color: #f87171;
+}
+
+.env-source {
+  opacity: 0.6;
+  font-size: 11px;
+}

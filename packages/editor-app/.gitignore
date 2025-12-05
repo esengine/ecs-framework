@@ -1,2 +1,4 @@
 # Generated runtime files
 src-tauri/runtime/
+src-tauri/engine/
+src-tauri/bin/

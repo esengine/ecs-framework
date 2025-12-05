@@ -22,6 +22,14 @@ export class ComponentRegistry {
     private static nextBitIndex = 0;
 
     /**
+     * 热更新模式标志，默认禁用
+     * Hot reload mode flag, disabled by default
+     * 编辑器环境应启用此选项以支持脚本热更新
+     * Editor environment should enable this to support script hot reload
+     */
+    private static hotReloadEnabled = false;
+
+    /**
      * 注册组件类型并分配位掩码
      * @param componentType 组件类型
      * @returns 分配的位索引
@@ -34,11 +42,27 @@ export class ComponentRegistry {
             return existingIndex;
         }
 
-        // 检查是否有同名但不同类的组件已注册
-        if (this.componentNameToType.has(typeName)) {
+        // 检查是否有同名但不同类的组件已注册（热更新场景）
+        // Check if a component with the same name but different class is registered (hot reload scenario)
+        if (this.hotReloadEnabled && this.componentNameToType.has(typeName)) {
             const existingType = this.componentNameToType.get(typeName);
             if (existingType !== componentType) {
-                console.warn(`[ComponentRegistry] Component name conflict: "${typeName}" already registered with different class. Existing: ${existingType?.name}, New: ${componentType.name}`);
+                // 热更新：替换旧的类为新的类，复用相同的 bitIndex
+                // Hot reload: replace old class with new class, reuse the same bitIndex
+                const existingIndex = this.componentTypes.get(existingType!)!;
+
+                // 移除旧类的映射
+                // Remove old class mapping
+                this.componentTypes.delete(existingType!);
+
+                // 用新类更新映射
+                // Update mappings with new class
+                this.componentTypes.set(componentType, existingIndex);
+                this.bitIndexToType.set(existingIndex, componentType);
+                this.componentNameToType.set(typeName, componentType);
+
+                console.log(`[ComponentRegistry] Hot reload: replaced component "${typeName}"`);
+                return existingIndex;
             }
         }
 
@@ -210,6 +234,32 @@ export class ComponentRegistry {
     }
 
     /**
+     * 启用热更新模式
+     * Enable hot reload mode
+     * 在编辑器环境中调用以支持脚本热更新
+     * Call in editor environment to support script hot reload
+     */
+    public static enableHotReload(): void {
+        this.hotReloadEnabled = true;
+    }
+
+    /**
+     * 禁用热更新模式
+     * Disable hot reload mode
+     */
+    public static disableHotReload(): void {
+        this.hotReloadEnabled = false;
+    }
+
+    /**
+     * 检查热更新模式是否启用
+     * Check if hot reload mode is enabled
+     */
+    public static isHotReloadEnabled(): boolean {
+        return this.hotReloadEnabled;
+    }
+
+    /**
      * 重置注册表（用于测试）
      */
     public static reset(): void {
@@ -219,5 +269,6 @@ export class ComponentRegistry {
         this.componentNameToId.clear();
         this.maskCache.clear();
         this.nextBitIndex = 0;
+        this.hotReloadEnabled = false;
     }
 }

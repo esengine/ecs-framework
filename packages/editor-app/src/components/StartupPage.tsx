@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
-import { Globe, ChevronDown, Download, X, Loader2, Trash2 } from 'lucide-react';
+import { Globe, ChevronDown, Download, X, Loader2, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 import { checkForUpdatesOnStartup, installUpdate, type UpdateCheckResult } from '../utils/updater';
 import { StartupLogo } from './StartupLogo';
+import { TauriAPI, type EnvironmentCheckResult } from '../api/tauri';
 import '../styles/StartupPage.css';
 
 type Locale = 'en' | 'zh';
@@ -33,6 +34,8 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
     const [updateInfo, setUpdateInfo] = useState<UpdateCheckResult | null>(null);
     const [showUpdateBanner, setShowUpdateBanner] = useState(false);
     const [isInstalling, setIsInstalling] = useState(false);
+    const [envCheck, setEnvCheck] = useState<EnvironmentCheckResult | null>(null);
+    const [showEnvStatus, setShowEnvStatus] = useState(false);
     const langMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -59,6 +62,24 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
         });
     }, []);
 
+    // 启动时检测开发环境
+    useEffect(() => {
+        TauriAPI.checkEnvironment().then((result) => {
+            setEnvCheck(result);
+            // 如果环境就绪，在控制台显示信息
+            if (result.ready) {
+                console.log('[Environment] Ready ✓');
+                console.log(`[Environment] esbuild: ${result.esbuild.version} (${result.esbuild.source})`);
+            } else {
+                // 环境有问题，显示提示
+                setShowEnvStatus(true);
+                console.warn('[Environment] Not ready:', result.esbuild.error);
+            }
+        }).catch((error) => {
+            console.error('[Environment] Check failed:', error);
+        });
+    }, []);
+
     const translations = {
         en: {
             title: 'ESEngine Editor',
@@ -76,7 +97,11 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
             deleteConfirmTitle: 'Delete Project',
             deleteConfirmMessage: 'Are you sure you want to permanently delete this project? This action cannot be undone.',
             cancel: 'Cancel',
-            delete: 'Delete'
+            delete: 'Delete',
+            envReady: 'Environment Ready',
+            envNotReady: 'Environment Issue',
+            esbuildReady: 'esbuild ready',
+            esbuildMissing: 'esbuild not found'
         },
         zh: {
             title: 'ESEngine 编辑器',
@@ -94,7 +119,11 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
             deleteConfirmTitle: '删除项目',
             deleteConfirmMessage: '确定要永久删除此项目吗？此操作无法撤销。',
             cancel: '取消',
-            delete: '删除'
+            delete: '删除',
+            envReady: '环境就绪',
+            envNotReady: '环境问题',
+            esbuildReady: 'esbuild 就绪',
+            esbuildMissing: '未找到 esbuild'
         }
     };
 
@@ -220,6 +249,43 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
 
             <div className="startup-footer">
                 <span className="startup-version">{versionText}</span>
+
+                {/* 环境状态指示器 | Environment Status Indicator */}
+                {envCheck && (
+                    <div
+                        className={`startup-env-status ${envCheck.ready ? 'ready' : 'warning'}`}
+                        onClick={() => setShowEnvStatus(!showEnvStatus)}
+                        title={envCheck.ready ? t.envReady : t.envNotReady}
+                    >
+                        {envCheck.ready ? (
+                            <CheckCircle size={14} />
+                        ) : (
+                            <AlertCircle size={14} />
+                        )}
+                        {showEnvStatus && (
+                            <div className="startup-env-tooltip">
+                                <div className="env-tooltip-title">
+                                    {envCheck.ready ? t.envReady : t.envNotReady}
+                                </div>
+                                <div className={`env-tooltip-item ${envCheck.esbuild.available ? 'ok' : 'error'}`}>
+                                    {envCheck.esbuild.available ? (
+                                        <>
+                                            <CheckCircle size={12} />
+                                            <span>esbuild {envCheck.esbuild.version}</span>
+                                            <span className="env-source">({envCheck.esbuild.source})</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <AlertCircle size={12} />
+                                            <span>{t.esbuildMissing}</span>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {onLocaleChange && (
                     <div className="startup-locale-dropdown" ref={langMenuRef}>
                         <button

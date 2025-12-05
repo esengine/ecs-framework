@@ -180,6 +180,103 @@ describe('ComponentRegistry Extended - 64+ 组件支持', () => {
         });
     });
 
+    describe('热更新模式', () => {
+        it('默认应该禁用热更新模式', () => {
+            expect(ComponentRegistry.isHotReloadEnabled()).toBe(false);
+        });
+
+        it('应该能够启用和禁用热更新模式', () => {
+            expect(ComponentRegistry.isHotReloadEnabled()).toBe(false);
+
+            ComponentRegistry.enableHotReload();
+            expect(ComponentRegistry.isHotReloadEnabled()).toBe(true);
+
+            ComponentRegistry.disableHotReload();
+            expect(ComponentRegistry.isHotReloadEnabled()).toBe(false);
+        });
+
+        it('reset 应该重置热更新模式为禁用', () => {
+            ComponentRegistry.enableHotReload();
+            expect(ComponentRegistry.isHotReloadEnabled()).toBe(true);
+
+            ComponentRegistry.reset();
+            expect(ComponentRegistry.isHotReloadEnabled()).toBe(false);
+        });
+
+        it('启用热更新时应该替换同名组件类', () => {
+            ComponentRegistry.enableHotReload();
+
+            // 模拟热更新场景：两个不同的类但有相同的 constructor.name
+            // Simulate hot reload: two different classes with same constructor.name
+            const createHotReloadComponent = (version: number) => {
+                // 使用 eval 创建具有相同名称的类
+                // Use function constructor to create classes with same name
+                const cls = (new Function('Component', `
+                    return class HotReloadTestComponent extends Component {
+                        constructor() {
+                            super();
+                            this.version = ${version};
+                        }
+                    }
+                `))(Component);
+                return cls;
+            };
+
+            const TestComponentV1 = createHotReloadComponent(1);
+            const TestComponentV2 = createHotReloadComponent(2);
+
+            // 确保两个类名相同但不是同一个类
+            expect(TestComponentV1.name).toBe(TestComponentV2.name);
+            expect(TestComponentV1).not.toBe(TestComponentV2);
+
+            const index1 = ComponentRegistry.register(TestComponentV1);
+            const index2 = ComponentRegistry.register(TestComponentV2);
+
+            // 应该复用相同的 bitIndex
+            expect(index1).toBe(index2);
+
+            // 新类应该替换旧类
+            expect(ComponentRegistry.isRegistered(TestComponentV2)).toBe(true);
+            expect(ComponentRegistry.isRegistered(TestComponentV1)).toBe(false);
+        });
+
+        it('禁用热更新时不应该替换同名组件类', () => {
+            // 确保热更新被禁用
+            ComponentRegistry.disableHotReload();
+
+            // 创建两个同名组件
+            // Create two classes with same constructor.name
+            const createNoHotReloadComponent = (id: number) => {
+                const cls = (new Function('Component', `
+                    return class NoHotReloadComponent extends Component {
+                        constructor() {
+                            super();
+                            this.id = ${id};
+                        }
+                    }
+                `))(Component);
+                return cls;
+            };
+
+            const TestCompA = createNoHotReloadComponent(1);
+            const TestCompB = createNoHotReloadComponent(2);
+
+            // 确保两个类名相同但不是同一个类
+            expect(TestCompA.name).toBe(TestCompB.name);
+            expect(TestCompA).not.toBe(TestCompB);
+
+            const index1 = ComponentRegistry.register(TestCompA);
+            const index2 = ComponentRegistry.register(TestCompB);
+
+            // 应该分配不同的 bitIndex（因为热更新被禁用）
+            expect(index2).toBe(index1 + 1);
+
+            // 两个类都应该被注册
+            expect(ComponentRegistry.isRegistered(TestCompA)).toBe(true);
+            expect(ComponentRegistry.isRegistered(TestCompB)).toBe(true);
+        });
+    });
+
     describe('边界情况', () => {
         it('应该正确处理第 64 个组件（边界）', () => {
             const scene = new Scene();

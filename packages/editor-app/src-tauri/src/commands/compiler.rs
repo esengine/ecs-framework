@@ -67,6 +67,34 @@ pub struct CompileResult {
     pub output_path: Option<String>,
 }
 
+/// Environment check result.
+/// 环境检测结果。
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EnvironmentCheckResult {
+    /// Whether all required tools are available | 所有必需工具是否可用
+    pub ready: bool,
+    /// esbuild availability status | esbuild 可用性状态
+    pub esbuild: ToolStatus,
+}
+
+/// Tool availability status.
+/// 工具可用性状态。
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolStatus {
+    /// Whether the tool is available | 工具是否可用
+    pub available: bool,
+    /// Tool version (if available) | 工具版本（如果可用）
+    pub version: Option<String>,
+    /// Tool path (if available) | 工具路径（如果可用）
+    pub path: Option<String>,
+    /// Source of the tool: "bundled", "local", "global" | 工具来源
+    pub source: Option<String>,
+    /// Error message (if not available) | 错误信息（如果不可用）
+    pub error: Option<String>,
+}
+
 /// File change event sent to frontend.
 /// 发送到前端的文件变更事件。
 #[derive(Debug, Clone, Serialize)]
@@ -76,6 +104,82 @@ pub struct FileChangeEvent {
     pub change_type: String,
     /// File paths that changed | 发生变更的文件路径
     pub paths: Vec<String>,
+}
+
+/// Check development environment.
+/// 检测开发环境。
+///
+/// Checks if all required tools (esbuild, etc.) are available.
+/// 检查所有必需的工具是否可用。
+#[command]
+pub async fn check_environment() -> Result<EnvironmentCheckResult, String> {
+    let esbuild_status = check_esbuild_status();
+
+    Ok(EnvironmentCheckResult {
+        ready: esbuild_status.available,
+        esbuild: esbuild_status,
+    })
+}
+
+/// Check esbuild availability and get its status.
+/// 检查 esbuild 可用性并获取其状态。
+fn check_esbuild_status() -> ToolStatus {
+    // Try bundled esbuild first | 首先尝试打包的 esbuild
+    if let Some(bundled_path) = find_bundled_esbuild() {
+        match get_esbuild_version(&bundled_path) {
+            Ok(version) => {
+                return ToolStatus {
+                    available: true,
+                    version: Some(version),
+                    path: Some(bundled_path),
+                    source: Some("bundled".to_string()),
+                    error: None,
+                };
+            }
+            Err(e) => {
+                println!("[Environment] Bundled esbuild found but failed to get version: {}", e);
+            }
+        }
+    }
+
+    // Try global esbuild | 尝试全局 esbuild
+    let global_esbuild = if cfg!(windows) { "esbuild.cmd" } else { "esbuild" };
+    match get_esbuild_version(global_esbuild) {
+        Ok(version) => {
+            ToolStatus {
+                available: true,
+                version: Some(version),
+                path: Some(global_esbuild.to_string()),
+                source: Some("global".to_string()),
+                error: None,
+            }
+        }
+        Err(_) => {
+            ToolStatus {
+                available: false,
+                version: None,
+                path: None,
+                source: None,
+                error: Some("esbuild not found | 未找到 esbuild".to_string()),
+            }
+        }
+    }
+}
+
+/// Get esbuild version.
+/// 获取 esbuild 版本。
+fn get_esbuild_version(esbuild_path: &str) -> Result<String, String> {
+    let output = Command::new(esbuild_path)
+        .arg("--version")
+        .output()
+        .map_err(|e| format!("Failed to run esbuild: {}", e))?;
+
+    if output.status.success() {
+        let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        Ok(version)
+    } else {
+        Err("esbuild --version failed".to_string())
+    }
 }
 
 /// Compile TypeScript using esbuild.
@@ -254,6 +358,11 @@ pub async fn watch_scripts(
 
         println!("[UserCode] Started watching: {}", watch_path_clone.display());
 
+        // Debounce state | 防抖状态
+        let mut pending_paths: std::collections::HashSet<String> = std::collections::HashSet::new();
+        let mut last_event_time = std::time::Instant::now();
+        let debounce_duration = Duration::from_millis(300);
+
         // Event loop | 事件循环
         loop {
             // Check for shutdown | 检查关闭信号
@@ -277,28 +386,34 @@ pub async fn watch_scripts(
                         .collect();
 
                     if !ts_paths.is_empty() {
-                        let change_type = match event.kind {
-                            EventKind::Create(_) => "create",
-                            EventKind::Modify(_) => "modify",
-                            EventKind::Remove(_) => "remove",
+                        // Only handle create/modify/remove events | 只处理创建/修改/删除事件
+                        match event.kind {
+                            EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                                // Add to pending paths and update last event time | 添加到待处理路径并更新最后事件时间
+                                for path in ts_paths {
+                                    pending_paths.insert(path);
+                                }
+                                last_event_time = std::time::Instant::now();
+                            }
                             _ => continue,
                         };
-
+                    }
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                    // Check if we should emit pending events (debounce) | 检查是否应该发送待处理事件（防抖）
+                    if !pending_paths.is_empty() && last_event_time.elapsed() >= debounce_duration {
                         let file_event = FileChangeEvent {
-                            change_type: change_type.to_string(),
-                            paths: ts_paths,
+                            change_type: "modify".to_string(),
+                            paths: pending_paths.drain().collect(),
                         };
 
-                        println!("[UserCode] File change detected: {:?}", file_event);
+                        println!("[UserCode] File change detected (debounced): {:?}", file_event);
 
                         // Emit event to frontend | 向前端发送事件
                         if let Err(e) = app_clone.emit("user-code:file-changed", file_event) {
                             eprintln!("[UserCode] Failed to emit event: {}", e);
                         }
                     }
-                }
-                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
-                    // No events, continue | 无事件，继续
                 }
                 Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
                     println!("[UserCode] Watcher channel disconnected");
@@ -352,10 +467,21 @@ pub async fn stop_watch_scripts(
 
 /// Find esbuild executable path.
 /// 查找 esbuild 可执行文件路径。
+///
+/// Search order | 搜索顺序:
+/// 1. Bundled esbuild in app resources | 应用资源中打包的 esbuild
+/// 2. Local node_modules | 本地 node_modules
+/// 3. Global esbuild | 全局 esbuild
 fn find_esbuild(project_root: &str) -> Result<String, String> {
     let project_path = Path::new(project_root);
 
-    // Try local node_modules first | 首先尝试本地 node_modules
+    // Try bundled esbuild first (in app resources) | 首先尝试打包的 esbuild（在应用资源中）
+    if let Some(bundled) = find_bundled_esbuild() {
+        println!("[Compiler] Using bundled esbuild: {}", bundled);
+        return Ok(bundled);
+    }
+
+    // Try local node_modules | 尝试本地 node_modules
     let local_esbuild = if cfg!(windows) {
         project_path.join("node_modules/.bin/esbuild.cmd")
     } else {
@@ -363,6 +489,7 @@ fn find_esbuild(project_root: &str) -> Result<String, String> {
     };
 
     if local_esbuild.exists() {
+        println!("[Compiler] Using local esbuild: {}", local_esbuild.display());
         return Ok(local_esbuild.to_string_lossy().to_string());
     }
 
@@ -375,9 +502,49 @@ fn find_esbuild(project_root: &str) -> Result<String, String> {
         .output();
 
     match check {
-        Ok(output) if output.status.success() => Ok(global_esbuild.to_string()),
+        Ok(output) if output.status.success() => {
+            println!("[Compiler] Using global esbuild");
+            Ok(global_esbuild.to_string())
+        },
         _ => Err("esbuild not found. Please install esbuild: npm install -g esbuild | 未找到 esbuild，请安装: npm install -g esbuild".to_string())
     }
+}
+
+/// Find bundled esbuild in app resources.
+/// 在应用资源中查找打包的 esbuild。
+fn find_bundled_esbuild() -> Option<String> {
+    // Get the executable path | 获取可执行文件路径
+    let exe_path = std::env::current_exe().ok()?;
+    let exe_dir = exe_path.parent()?;
+
+    // In development, resources are in src-tauri directory | 开发模式下，资源在 src-tauri 目录
+    // In production, resources are next to the executable | 生产模式下，资源在可执行文件旁边
+    let esbuild_name = if cfg!(windows) { "esbuild.exe" } else { "esbuild" };
+
+    // Try production path (resources next to exe) | 尝试生产路径（资源在 exe 旁边）
+    let prod_path = exe_dir.join("bin").join(esbuild_name);
+    if prod_path.exists() {
+        return Some(prod_path.to_string_lossy().to_string());
+    }
+
+    // Try development path (in src-tauri/bin) | 尝试开发路径（在 src-tauri/bin 中）
+    // This handles running via `cargo tauri dev`
+    let dev_path = exe_dir
+        .ancestors()
+        .find_map(|p| {
+            let candidate = p.join("src-tauri").join("bin").join(esbuild_name);
+            if candidate.exists() {
+                Some(candidate)
+            } else {
+                None
+            }
+        });
+
+    if let Some(path) = dev_path {
+        return Some(path.to_string_lossy().to_string());
+    }
+
+    None
 }
 
 /// Parse esbuild error output.
