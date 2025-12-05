@@ -885,13 +885,17 @@ importers:
         version: 5.0.10
 
   packages/engine-core:
+    dependencies:
+      '@esengine/ecs-framework':
+        specifier: workspace:*
+        version: link:../core
+      '@esengine/platform-common':
+        specifier: workspace:*
+        version: link:../platform-common
     devDependencies:
       '@esengine/build-config':
         specifier: workspace:*
         version: link:../build-config
-      '@esengine/ecs-framework':
-        specifier: workspace:*
-        version: link:../core
       rimraf:
         specifier: ^5.0.5
         version: 5.0.10
@@ -1221,13 +1225,10 @@ importers:
         version: 5.9.3
 
   packages/runtime-core:
-    devDependencies:
+    dependencies:
       '@esengine/asset-system':
         specifier: workspace:*
         version: link:../asset-system
-      '@esengine/build-config':
-        specifier: workspace:*
-        version: link:../build-config
       '@esengine/ecs-engine-bindgen':
         specifier: workspace:*
         version: link:../ecs-engine-bindgen
@@ -1237,6 +1238,13 @@ importers:
       '@esengine/engine-core':
         specifier: workspace:*
         version: link:../engine-core
+      '@esengine/platform-common':
+        specifier: workspace:*
+        version: link:../platform-common
+    devDependencies:
+      '@esengine/build-config':
+        specifier: workspace:*
+        version: link:../build-config
       rimraf:
         specifier: ^5.0.5
         version: 5.0.10
