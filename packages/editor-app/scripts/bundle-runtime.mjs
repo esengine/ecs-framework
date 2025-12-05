@@ -176,6 +176,7 @@ const platform = process.platform;
 const esbuildSrc = esbuildSources[platform];
 const esbuildDst = path.join(binDir, platform === 'win32' ? 'esbuild.exe' : 'esbuild');
 
+let esbuildBundled = false;
 if (esbuildSrc && fs.existsSync(esbuildSrc)) {
     try {
         fs.copyFileSync(esbuildSrc, esbuildDst);
@@ -185,6 +186,7 @@ if (esbuildSrc && fs.existsSync(esbuildSrc)) {
         }
         const stats = fs.statSync(esbuildDst);
         console.log(`✓ Bundled esbuild binary (${(stats.size / 1024 / 1024).toFixed(2)} MB)`);
+        esbuildBundled = true;
     } catch (error) {
         console.warn(`Failed to bundle esbuild: ${error.message}`);
         console.log('  User code compilation will require global esbuild installation');
@@ -192,6 +194,16 @@ if (esbuildSrc && fs.existsSync(esbuildSrc)) {
 } else {
     console.warn(`esbuild binary not found for platform ${platform}: ${esbuildSrc}`);
     console.log('  User code compilation will require global esbuild installation');
+}
+
+// Create a placeholder file if esbuild was not bundled
+// Tauri requires resources patterns to match at least one file
+// 如果 esbuild 没有打包，创建占位文件
+// Tauri 要求资源模式至少匹配一个文件
+if (!esbuildBundled) {
+    const placeholderPath = path.join(binDir, '.gitkeep');
+    fs.writeFileSync(placeholderPath, '# Placeholder for Tauri resources\n# esbuild binary will be bundled during release build\n');
+    console.log('✓ Created placeholder in bin directory');
 }
 
 if (!success) {
