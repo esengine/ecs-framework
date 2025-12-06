@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Sparkles } from 'lucide-react';
+import { Play, Pause, RotateCcw, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
 import type { IInspectorProvider, InspectorContext } from '@esengine/editor-core';
 import type { ParticleSystemComponent } from '@esengine/particle';
 import { EmissionShape, ParticleBlendMode } from '@esengine/particle';
@@ -41,6 +41,7 @@ interface ParticleInspectorUIProps {
 function ParticleInspectorUI({ data }: ParticleInspectorUIProps) {
     const { component } = data;
     const [, forceUpdate] = useState({});
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
     const refresh = useCallback(() => forceUpdate({}), []);
 
@@ -73,8 +74,31 @@ function ParticleInspectorUI({ data }: ParticleInspectorUIProps) {
         refresh();
     };
 
+    const hasAsset = !!component.particleAssetGuid;
+
     return (
         <div className="entity-inspector">
+            {/* 资产选择 | Asset Selection - 最重要，放在最上面 */}
+            <div className="inspector-section">
+                <div className="section-title">Particle Asset</div>
+                <AssetInput
+                    value={component.particleAssetGuid}
+                    extensions={['.particle', '.particle.json']}
+                    placeholder="Select particle asset..."
+                    onChange={v => handleChange('particleAssetGuid', v)}
+                />
+                {hasAsset && (
+                    <div style={{
+                        fontSize: '11px',
+                        color: 'var(--text-muted, #888)',
+                        marginTop: '4px',
+                        fontStyle: 'italic'
+                    }}>
+                        Using settings from particle asset file
+                    </div>
+                )}
+            </div>
+
             {/* 控制按钮 | Control buttons */}
             <div className="inspector-section">
                 <div className="section-title">Controls</div>
@@ -99,215 +123,236 @@ function ParticleInspectorUI({ data }: ParticleInspectorUIProps) {
                 </div>
             </div>
 
-            {/* 基础属性 | Basic Properties */}
-            <div className="inspector-section">
-                <div className="section-title">Basic</div>
+            {/* 高级属性折叠区域 | Advanced properties (collapsible) */}
+            {!hasAsset && (
+                <div className="inspector-section">
+                    <div
+                        className="section-title"
+                        style={{
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            userSelect: 'none'
+                        }}
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                    >
+                        {showAdvanced ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        Inline Settings
+                    </div>
+                    <div style={{
+                        fontSize: '11px',
+                        color: 'var(--text-muted, #888)',
+                        marginBottom: '8px'
+                    }}>
+                        These settings are used when no asset is selected
+                    </div>
 
-                <NumberInput
-                    label="Max Particles"
-                    value={component.maxParticles}
-                    min={1}
-                    max={10000}
-                    step={100}
-                    onChange={v => handleChange('maxParticles', v)}
-                />
+                    {showAdvanced && (
+                        <>
+                            {/* 基础属性 | Basic Properties */}
+                            <CollapsibleSection title="Basic" defaultOpen>
+                                <NumberInput
+                                    label="Max Particles"
+                                    value={component.maxParticles}
+                                    min={1}
+                                    max={10000}
+                                    step={100}
+                                    onChange={v => handleChange('maxParticles', v)}
+                                />
 
-                <CheckboxInput
-                    label="Looping"
-                    checked={component.looping}
-                    onChange={v => handleChange('looping', v)}
-                />
+                                <CheckboxInput
+                                    label="Looping"
+                                    checked={component.looping}
+                                    onChange={v => handleChange('looping', v)}
+                                />
 
-                <NumberInput
-                    label="Duration"
-                    value={component.duration}
-                    min={0.1}
-                    step={0.1}
-                    onChange={v => handleChange('duration', v)}
-                />
+                                <NumberInput
+                                    label="Duration"
+                                    value={component.duration}
+                                    min={0.1}
+                                    step={0.1}
+                                    onChange={v => handleChange('duration', v)}
+                                />
 
-                <NumberInput
-                    label="Playback Speed"
-                    value={component.playbackSpeed}
-                    min={0.01}
-                    max={10}
-                    step={0.1}
-                    onChange={v => handleChange('playbackSpeed', v)}
-                />
-            </div>
+                                <NumberInput
+                                    label="Playback Speed"
+                                    value={component.playbackSpeed}
+                                    min={0.01}
+                                    max={10}
+                                    step={0.1}
+                                    onChange={v => handleChange('playbackSpeed', v)}
+                                />
+                            </CollapsibleSection>
 
-            {/* 发射属性 | Emission Properties */}
-            <div className="inspector-section">
-                <div className="section-title">Emission</div>
+                            {/* 发射属性 | Emission Properties */}
+                            <CollapsibleSection title="Emission">
+                                <NumberInput
+                                    label="Emission Rate"
+                                    value={component.emissionRate}
+                                    min={0}
+                                    step={1}
+                                    onChange={v => handleChange('emissionRate', v)}
+                                />
 
-                <NumberInput
-                    label="Emission Rate"
-                    value={component.emissionRate}
-                    min={0}
-                    step={1}
-                    onChange={v => handleChange('emissionRate', v)}
-                />
+                                <SelectInput
+                                    label="Shape"
+                                    value={component.emissionShape}
+                                    options={[
+                                        { value: EmissionShape.Point, label: 'Point' },
+                                        { value: EmissionShape.Circle, label: 'Circle (filled)' },
+                                        { value: EmissionShape.Ring, label: 'Ring (edge)' },
+                                        { value: EmissionShape.Rectangle, label: 'Rectangle (filled)' },
+                                        { value: EmissionShape.Edge, label: 'Edge (rect outline)' },
+                                        { value: EmissionShape.Line, label: 'Line' },
+                                        { value: EmissionShape.Cone, label: 'Cone' },
+                                    ]}
+                                    onChange={v => handleChange('emissionShape', v as EmissionShape)}
+                                />
 
-                <SelectInput
-                    label="Shape"
-                    value={component.emissionShape}
-                    options={[
-                        { value: EmissionShape.Point, label: 'Point' },
-                        { value: EmissionShape.Circle, label: 'Circle (filled)' },
-                        { value: EmissionShape.Ring, label: 'Ring (edge)' },
-                        { value: EmissionShape.Rectangle, label: 'Rectangle (filled)' },
-                        { value: EmissionShape.Edge, label: 'Edge (rect outline)' },
-                        { value: EmissionShape.Line, label: 'Line' },
-                        { value: EmissionShape.Cone, label: 'Cone' },
-                    ]}
-                    onChange={v => handleChange('emissionShape', v as EmissionShape)}
-                />
+                                {component.emissionShape !== EmissionShape.Point && (
+                                    <NumberInput
+                                        label="Shape Radius"
+                                        value={component.shapeRadius}
+                                        min={0}
+                                        step={1}
+                                        onChange={v => handleChange('shapeRadius', v)}
+                                    />
+                                )}
+                            </CollapsibleSection>
 
-                {component.emissionShape !== EmissionShape.Point && (
-                    <NumberInput
-                        label="Shape Radius"
-                        value={component.shapeRadius}
-                        min={0}
-                        step={1}
-                        onChange={v => handleChange('shapeRadius', v)}
-                    />
-                )}
-            </div>
+                            {/* 粒子属性 | Particle Properties */}
+                            <CollapsibleSection title="Particle">
+                                <RangeInput
+                                    label="Lifetime"
+                                    minValue={component.lifetimeMin}
+                                    maxValue={component.lifetimeMax}
+                                    min={0.01}
+                                    step={0.1}
+                                    onMinChange={v => handleChange('lifetimeMin', v)}
+                                    onMaxChange={v => handleChange('lifetimeMax', v)}
+                                />
 
-            {/* 粒子属性 | Particle Properties */}
-            <div className="inspector-section">
-                <div className="section-title">Particle</div>
+                                <RangeInput
+                                    label="Speed"
+                                    minValue={component.speedMin}
+                                    maxValue={component.speedMax}
+                                    min={0}
+                                    step={1}
+                                    onMinChange={v => handleChange('speedMin', v)}
+                                    onMaxChange={v => handleChange('speedMax', v)}
+                                />
 
-                <RangeInput
-                    label="Lifetime"
-                    minValue={component.lifetimeMin}
-                    maxValue={component.lifetimeMax}
-                    min={0.01}
-                    step={0.1}
-                    onMinChange={v => handleChange('lifetimeMin', v)}
-                    onMaxChange={v => handleChange('lifetimeMax', v)}
-                />
+                                <NumberInput
+                                    label="Direction (°)"
+                                    value={component.direction}
+                                    min={-180}
+                                    max={180}
+                                    step={1}
+                                    onChange={v => handleChange('direction', v)}
+                                />
 
-                <RangeInput
-                    label="Speed"
-                    minValue={component.speedMin}
-                    maxValue={component.speedMax}
-                    min={0}
-                    step={1}
-                    onMinChange={v => handleChange('speedMin', v)}
-                    onMaxChange={v => handleChange('speedMax', v)}
-                />
+                                <NumberInput
+                                    label="Spread (°)"
+                                    value={component.directionSpread}
+                                    min={0}
+                                    max={360}
+                                    step={1}
+                                    onChange={v => handleChange('directionSpread', v)}
+                                />
 
-                <NumberInput
-                    label="Direction (°)"
-                    value={component.direction}
-                    min={-180}
-                    max={180}
-                    step={1}
-                    onChange={v => handleChange('direction', v)}
-                />
+                                <RangeInput
+                                    label="Scale"
+                                    minValue={component.scaleMin}
+                                    maxValue={component.scaleMax}
+                                    min={0.01}
+                                    step={0.1}
+                                    onMinChange={v => handleChange('scaleMin', v)}
+                                    onMaxChange={v => handleChange('scaleMax', v)}
+                                />
 
-                <NumberInput
-                    label="Spread (°)"
-                    value={component.directionSpread}
-                    min={0}
-                    max={360}
-                    step={1}
-                    onChange={v => handleChange('directionSpread', v)}
-                />
+                                <NumberInput
+                                    label="Gravity X"
+                                    value={component.gravityX}
+                                    step={1}
+                                    onChange={v => handleChange('gravityX', v)}
+                                />
 
-                <RangeInput
-                    label="Scale"
-                    minValue={component.scaleMin}
-                    maxValue={component.scaleMax}
-                    min={0.01}
-                    step={0.1}
-                    onMinChange={v => handleChange('scaleMin', v)}
-                    onMaxChange={v => handleChange('scaleMax', v)}
-                />
+                                <NumberInput
+                                    label="Gravity Y"
+                                    value={component.gravityY}
+                                    step={1}
+                                    onChange={v => handleChange('gravityY', v)}
+                                />
+                            </CollapsibleSection>
 
-                <NumberInput
-                    label="Gravity X"
-                    value={component.gravityX}
-                    step={1}
-                    onChange={v => handleChange('gravityX', v)}
-                />
+                            {/* 颜色属性 | Color Properties */}
+                            <CollapsibleSection title="Color">
+                                <ColorInput
+                                    label="Start Color"
+                                    value={component.startColor}
+                                    onChange={v => handleChange('startColor', v)}
+                                />
 
-                <NumberInput
-                    label="Gravity Y"
-                    value={component.gravityY}
-                    step={1}
-                    onChange={v => handleChange('gravityY', v)}
-                />
-            </div>
+                                <NumberInput
+                                    label="Start Alpha"
+                                    value={component.startAlpha}
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    onChange={v => handleChange('startAlpha', v)}
+                                />
 
-            {/* 颜色属性 | Color Properties */}
-            <div className="inspector-section">
-                <div className="section-title">Color</div>
+                                <NumberInput
+                                    label="End Alpha"
+                                    value={component.endAlpha}
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    onChange={v => handleChange('endAlpha', v)}
+                                />
 
-                <ColorInput
-                    label="Start Color"
-                    value={component.startColor}
-                    onChange={v => handleChange('startColor', v)}
-                />
+                                <NumberInput
+                                    label="End Scale"
+                                    value={component.endScale}
+                                    min={0}
+                                    step={0.1}
+                                    onChange={v => handleChange('endScale', v)}
+                                />
+                            </CollapsibleSection>
 
-                <NumberInput
-                    label="Start Alpha"
-                    value={component.startAlpha}
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    onChange={v => handleChange('startAlpha', v)}
-                />
+                            {/* 渲染属性 | Rendering Properties */}
+                            <CollapsibleSection title="Rendering">
+                                <NumberInput
+                                    label="Particle Size"
+                                    value={component.particleSize}
+                                    min={1}
+                                    step={1}
+                                    onChange={v => handleChange('particleSize', v)}
+                                />
 
-                <NumberInput
-                    label="End Alpha"
-                    value={component.endAlpha}
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    onChange={v => handleChange('endAlpha', v)}
-                />
+                                <SelectInput
+                                    label="Blend Mode"
+                                    value={component.blendMode}
+                                    options={[
+                                        { value: ParticleBlendMode.Normal, label: 'Normal' },
+                                        { value: ParticleBlendMode.Additive, label: 'Additive' },
+                                        { value: ParticleBlendMode.Multiply, label: 'Multiply' },
+                                    ]}
+                                    onChange={v => handleChange('blendMode', v as ParticleBlendMode)}
+                                />
 
-                <NumberInput
-                    label="End Scale"
-                    value={component.endScale}
-                    min={0}
-                    step={0.1}
-                    onChange={v => handleChange('endScale', v)}
-                />
-            </div>
-
-            {/* 渲染属性 | Rendering Properties */}
-            <div className="inspector-section">
-                <div className="section-title">Rendering</div>
-
-                <NumberInput
-                    label="Particle Size"
-                    value={component.particleSize}
-                    min={1}
-                    step={1}
-                    onChange={v => handleChange('particleSize', v)}
-                />
-
-                <SelectInput
-                    label="Blend Mode"
-                    value={component.blendMode}
-                    options={[
-                        { value: ParticleBlendMode.Normal, label: 'Normal' },
-                        { value: ParticleBlendMode.Additive, label: 'Additive' },
-                        { value: ParticleBlendMode.Multiply, label: 'Multiply' },
-                    ]}
-                    onChange={v => handleChange('blendMode', v as ParticleBlendMode)}
-                />
-
-                <NumberInput
-                    label="Sorting Order"
-                    value={component.sortingOrder}
-                    step={1}
-                    onChange={v => handleChange('sortingOrder', v)}
-                />
-            </div>
+                                <NumberInput
+                                    label="Sorting Order"
+                                    value={component.sortingOrder}
+                                    step={1}
+                                    onChange={v => handleChange('sortingOrder', v)}
+                                />
+                            </CollapsibleSection>
+                        </>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
@@ -337,6 +382,95 @@ const buttonStyle: React.CSSProperties = {
     fontSize: '12px',
 };
 
+// ============= Collapsible Section =============
+
+interface CollapsibleSectionProps {
+    title: string;
+    defaultOpen?: boolean;
+    children: React.ReactNode;
+}
+
+function CollapsibleSection({ title, defaultOpen = false, children }: CollapsibleSectionProps) {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+
+    return (
+        <div style={{ marginBottom: '8px' }}>
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    padding: '4px 0',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    color: 'var(--text-color, #e0e0e0)',
+                    userSelect: 'none',
+                }}
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                {title}
+            </div>
+            {isOpen && (
+                <div style={{ paddingLeft: '16px' }}>
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ============= Asset Input =============
+
+interface AssetInputProps {
+    value: string;
+    extensions: string[];
+    placeholder?: string;
+    onChange: (value: string) => void;
+}
+
+function AssetInput({ value, extensions, placeholder = 'None', onChange }: AssetInputProps) {
+    const displayValue = value || placeholder;
+    const hasValue = !!value;
+
+    return (
+        <div className="property-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '4px' }}>
+            <div style={{ display: 'flex', gap: '4px' }}>
+                <input
+                    type="text"
+                    value={displayValue}
+                    placeholder={placeholder}
+                    readOnly
+                    style={{
+                        ...inputStyle,
+                        flex: 1,
+                        color: hasValue ? 'var(--text-color, #e0e0e0)' : 'var(--text-muted, #888)',
+                    }}
+                    title={value || placeholder}
+                />
+                {hasValue && (
+                    <button
+                        onClick={() => onChange('')}
+                        style={{
+                            ...buttonStyle,
+                            padding: '4px 8px',
+                        }}
+                        title="Clear"
+                    >
+                        ×
+                    </button>
+                )}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted, #888)' }}>
+                Drag & drop a {extensions.join(' or ')} file here
+            </div>
+        </div>
+    );
+}
+
+// ============= Number Input =============
+
 interface NumberInputProps {
     label: string;
     value: number;
@@ -362,6 +496,8 @@ function NumberInput({ label, value, min, max, step = 1, onChange }: NumberInput
         </div>
     );
 }
+
+// ============= Range Input =============
 
 interface RangeInputProps {
     label: string;
@@ -404,6 +540,8 @@ function RangeInput({ label, minValue, maxValue, min, max, step = 1, onMinChange
     );
 }
 
+// ============= Checkbox Input =============
+
 interface CheckboxInputProps {
     label: string;
     checked: boolean;
@@ -422,6 +560,8 @@ function CheckboxInput({ label, checked, onChange }: CheckboxInputProps) {
         </div>
     );
 }
+
+// ============= Select Input =============
 
 interface SelectInputProps {
     label: string;
@@ -446,6 +586,8 @@ function SelectInput({ label, value, options, onChange }: SelectInputProps) {
         </div>
     );
 }
+
+// ============= Color Input =============
 
 interface ColorInputProps {
     label: string;
