@@ -191,7 +191,7 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
                     colors: this._colors.subarray(0, particleIndex),
                     tileCount: particleIndex,
                     sortingOrder,
-                    texturePath: systems[0]?.component.texture || undefined
+                    texturePath: systems[0]?.component.textureGuid || undefined
                 };
 
                 this._renderDataCache.push(renderData);

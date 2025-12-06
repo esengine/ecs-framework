@@ -20,16 +20,20 @@ const logger = createLogger('AssetMetaPlugin');
 class AssetMetaEditorModule implements IEditorModuleLoader {
     private _assetRegistry: AssetRegistryService | null = null;
 
-    async install(_services: ServiceContainer): Promise<void> {
+    async install(services: ServiceContainer): Promise<void> {
         // 创建 AssetRegistryService 并初始化
         // Create AssetRegistryService and initialize
         this._assetRegistry = new AssetRegistryService();
+
+        // 注册到服务容器，以便其他地方可以访问
+        // Register to service container so other places can access it
+        services.registerInstance(AssetRegistryService, this._assetRegistry);
 
         // 初始化服务（订阅 project:opened 事件）
         // Initialize service (subscribes to project:opened event)
         await this._assetRegistry.initialize();
 
-        logger.info('AssetRegistryService initialized');
+        logger.info('AssetRegistryService initialized and registered');
     }
 
     async uninstall(): Promise<void> {

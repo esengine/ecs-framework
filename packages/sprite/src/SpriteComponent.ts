@@ -27,19 +27,20 @@ export type MaterialOverrides = Record<string, MaterialPropertyOverride>;
  * Sprite component - manages 2D image rendering
  */
 @ECSComponent('Sprite')
-@Serializable({ version: 3, typeId: 'Sprite' })
+@Serializable({ version: 4, typeId: 'Sprite' })
 export class SpriteComponent extends Component {
-    /** 纹理路径或资源ID | Texture path or asset ID */
-    @Serialize()
-    @Property({ type: 'asset', label: 'Texture', assetType: 'texture' })
-    public texture: string = '';
-
     /**
-     * 资产GUID（新的资产系统）
-     * Asset GUID for new asset system
+     * 纹理资产 GUID
+     * Texture asset GUID
+     *
+     * Stores the unique identifier of the texture asset.
+     * The actual file path is resolved at runtime via AssetDatabase.
+     * 存储纹理资产的唯一标识符。
+     * 实际文件路径在运行时通过 AssetDatabase 解析。
      */
     @Serialize()
-    public assetGuid?: string;
+    @Property({ type: 'asset', label: 'Texture', assetType: 'texture' })
+    public textureGuid: string = '';
 
     /**
      * 纹理ID（运行时使用）
@@ -151,15 +152,15 @@ export class SpriteComponent extends Component {
     public sortingOrder: number = 0;
 
     /**
-     * 材质资产路径（共享材质）
-     * Material asset path (shared material)
+     * 材质资产 GUID（共享材质）
+     * Material asset GUID (shared material)
      *
      * Multiple sprites can reference the same material file.
      * 多个精灵可以引用同一个材质文件。
      */
     @Serialize()
     @Property({ type: 'asset', label: 'Material', extensions: ['.mat'] })
-    public material: string = '';
+    public materialGuid: string = '';
 
     /**
      * 材质属性覆盖（实例级别）
@@ -215,9 +216,13 @@ export class SpriteComponent extends Component {
         this.originY = value;
     }
 
-    constructor(texture: string = '') {
+    /**
+     * @param textureGuidOrPath - Texture GUID or path (for backward compatibility)
+     */
+    constructor(textureGuidOrPath: string = '') {
         super();
-        this.texture = texture;
+        // Support both GUID and path for backward compatibility
+        this.textureGuid = textureGuidOrPath;
     }
 
     /**
@@ -260,7 +265,7 @@ export class SpriteComponent extends Component {
         }
         this._assetReference = reference;
         if (reference) {
-            this.assetGuid = reference.guid;
+            this.textureGuid = reference.guid;
         }
     }
 
@@ -292,11 +297,11 @@ export class SpriteComponent extends Component {
     }
 
     /**
-     * 获取有效的纹理源
-     * Get effective texture source
+     * 获取纹理 GUID
+     * Get texture GUID
      */
     getTextureSource(): string {
-        return this.assetGuid || this.texture;
+        return this.textureGuid;
     }
 
     // ============= Material Override Methods =============

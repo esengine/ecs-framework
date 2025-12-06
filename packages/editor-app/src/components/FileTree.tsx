@@ -5,7 +5,7 @@ import {
     Save, Tag, Link, FileSearch, Globe, Package, Clipboard, RefreshCw, Settings
 } from 'lucide-react';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
-import { MessageHub, FileActionRegistry } from '@esengine/editor-core';
+import { MessageHub, FileActionRegistry, AssetRegistryService } from '@esengine/editor-core';
 import { SettingsService } from '../services/SettingsService';
 import { Core } from '@esengine/ecs-framework';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
@@ -998,6 +998,19 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                             const ext = node.name.includes('.') ? node.name.split('.').pop() : '';
                             e.dataTransfer.setData('asset-extension', ext || '');
                             e.dataTransfer.setData('text/plain', node.path);
+
+                            // Add GUID for new asset reference system
+                            const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+                            if (assetRegistry) {
+                                // Convert absolute path to relative path for GUID lookup
+                                const relativePath = assetRegistry.absoluteToRelative(node.path);
+                                if (relativePath) {
+                                    const guid = assetRegistry.getGuidByPath(relativePath);
+                                    if (guid) {
+                                        e.dataTransfer.setData('asset-guid', guid);
+                                    }
+                                }
+                            }
 
                             // 添加视觉反馈
                             e.currentTarget.style.opacity = '0.5';

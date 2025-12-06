@@ -51,7 +51,7 @@ export class SpriteAnimatorSystem extends EntitySystem {
             if (sprite) {
                 const frame = animator.getCurrentFrame();
                 if (frame) {
-                    sprite.texture = frame.texture;
+                    sprite.textureGuid = frame.textureGuid;
 
                     // Update UV if specified
                     if (frame.uv) {

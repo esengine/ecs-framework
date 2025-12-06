@@ -5,8 +5,11 @@ import { Component, ECSComponent, Serializable, Serialize, Property } from '@ese
  * Animation frame data
  */
 export interface AnimationFrame {
-    /** 纹理路径 | Texture path */
-    texture: string;
+    /**
+     * 纹理资产 GUID
+     * Texture asset GUID
+     */
+    textureGuid: string;
     /** 帧持续时间(秒) | Frame duration in seconds */
     duration: number;
     /** UV坐标 [u0, v0, u1, v1] | UV coordinates */
@@ -43,7 +46,7 @@ export class SpriteAnimatorComponent extends Component {
     @Property({
         type: 'animationClips',
         label: 'Animation Clips',
-        controls: [{ component: 'Sprite', property: 'texture' }]
+        controls: [{ component: 'Sprite', property: 'textureGuid' }]
     })
     public clips: AnimationClip[] = [];
 
@@ -101,7 +104,7 @@ export class SpriteAnimatorComponent extends Component {
      * Create animation clip from sprite atlas
      *
      * @param name - 动画名称 | Animation name
-     * @param texture - 纹理路径 | Texture path
+     * @param textureGuid - 纹理资产 GUID | Texture asset GUID
      * @param frameCount - 帧数 | Number of frames
      * @param frameWidth - 每帧宽度 | Frame width
      * @param frameHeight - 每帧高度 | Frame height
@@ -112,7 +115,7 @@ export class SpriteAnimatorComponent extends Component {
      */
     createClipFromAtlas(
         name: string,
-        texture: string,
+        textureGuid: string,
         frameCount: number,
         frameWidth: number,
         frameHeight: number,
@@ -132,7 +135,7 @@ export class SpriteAnimatorComponent extends Component {
             const y = row * frameHeight;
 
             frames.push({
-                texture,
+                textureGuid,
                 duration,
                 uv: [
                     x / atlasWidth,
@@ -159,19 +162,19 @@ export class SpriteAnimatorComponent extends Component {
      * Create animation clip from frame sequence
      *
      * @param name - 动画名称 | Animation name
-     * @param textures - 纹理路径数组 | Array of texture paths
+     * @param textureGuids - 纹理资产 GUID 数组 | Array of texture asset GUIDs
      * @param fps - 帧率 | Frames per second
      * @param loop - 是否循环 | Whether to loop
      */
     createClipFromSequence(
         name: string,
-        textures: string[],
+        textureGuids: string[],
         fps: number = 12,
         loop: boolean = true
     ): AnimationClip {
         const duration = 1 / fps;
-        const frames: AnimationFrame[] = textures.map((texture) => ({
-            texture,
+        const frames: AnimationFrame[] = textureGuids.map((textureGuid) => ({
+            textureGuid,
             duration
         }));
 

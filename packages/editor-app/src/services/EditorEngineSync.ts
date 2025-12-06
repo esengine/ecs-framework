@@ -169,7 +169,7 @@ export class EditorEngineSync {
                     if (firstClip && firstClip.frames && firstClip.frames.length > 0) {
                         const firstFrame = firstClip.frames[0];
                         if (firstFrame && firstFrame.texture && spriteComponent) {
-                            spriteComponent.texture = firstFrame.texture;
+                            spriteComponent.textureGuid = firstFrame.texture;
                         }
                     }
                 }
@@ -241,7 +241,7 @@ export class EditorEngineSync {
                 if (firstClip && firstClip.frames && firstClip.frames.length > 0) {
                     const firstFrame = firstClip.frames[0];
                     if (firstFrame && firstFrame.texture) {
-                        sprite.texture = firstFrame.texture;
+                        sprite.textureGuid = firstFrame.texture;
                     }
                 }
             }

@@ -108,8 +108,8 @@ export interface IParticleAsset {
     blendMode: ParticleBlendMode;
     /** 排序顺序 | Sorting order */
     sortingOrder: number;
-    /** 纹理路径 | Texture path */
-    texture?: string;
+    /** 纹理资产 GUID | Texture asset GUID */
+    textureGuid?: string;
 
     // 模块配置 | Module configurations
     /** 模块列表 | Module list */

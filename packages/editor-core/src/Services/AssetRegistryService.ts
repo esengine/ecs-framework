@@ -139,9 +139,13 @@ class SimpleAssetDatabase {
     private readonly _typeToGuids = new Map<AssetRegistryType, Set<AssetGUID>>();
 
     addAsset(metadata: IAssetRegistryMetadata): void {
-        const { guid, path, type } = metadata;
-        this._metadata.set(guid, metadata);
-        this._pathToGuid.set(path, guid);
+        const { guid, type } = metadata;
+        // Normalize path separators for consistent storage
+        const normalizedPath = metadata.path.replace(/\\/g, '/');
+        const normalizedMetadata = { ...metadata, path: normalizedPath };
+
+        this._metadata.set(guid, normalizedMetadata);
+        this._pathToGuid.set(normalizedPath, guid);
 
         if (!this._typeToGuids.has(type)) {
             this._typeToGuids.set(type, new Set());
@@ -154,6 +158,7 @@ class SimpleAssetDatabase {
         if (!metadata) return;
 
         this._metadata.delete(guid);
+        // Path is already normalized when stored
         this._pathToGuid.delete(metadata.path);
 
         const typeSet = this._typeToGuids.get(metadata.type);
@@ -167,7 +172,9 @@ class SimpleAssetDatabase {
     }
 
     getMetadataByPath(path: string): IAssetRegistryMetadata | undefined {
-        const guid = this._pathToGuid.get(path);
+        // Normalize path separators for consistent lookup
+        const normalizedPath = path.replace(/\\/g, '/');
+        const guid = this._pathToGuid.get(normalizedPath);
         return guid ? this._metadata.get(guid) : undefined;
     }
 
@@ -638,6 +645,11 @@ export class AssetRegistryService {
      */
     getGuidByPath(relativePath: string): AssetGUID | undefined {
         const metadata = this._database.getMetadataByPath(relativePath);
+        if (!metadata) {
+            // Debug: show registered paths if not found
+            const stats = this._database.getStatistics();
+            logger.debug(`[AssetRegistry] GUID not found for path: "${relativePath}", total assets: ${stats.totalAssets}`);
+        }
         return metadata?.guid;
     }
 
@@ -775,5 +787,14 @@ export class AssetRegistryService {
      */
     get projectPath(): string | null {
         return this._projectPath;
+    }
+
+    /**
+     * Dispose the service
+     */
+    dispose(): void {
+        this._unsubscribeFromFileChanges();
+        this.unloadProject();
+        this._initialized = false;
     }
 }

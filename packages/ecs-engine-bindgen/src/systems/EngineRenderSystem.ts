@@ -120,6 +120,18 @@ export type HasGizmoProviderFn = (component: Component) => boolean;
 export type TransformComponentType = ComponentType & (new (...args: any[]) => Component & ITransformComponent);
 
 /**
+ * Asset path resolver function type.
+ * 资产路径解析器函数类型。
+ *
+ * Resolves GUID or path to actual file path for loading.
+ * 将 GUID 或路径解析为实际文件路径以进行加载。
+ *
+ * @param guidOrPath - Asset GUID or path | 资产 GUID 或路径
+ * @returns Resolved file path, or original value if cannot resolve | 解析后的文件路径，或无法解析时返回原值
+ */
+export type AssetPathResolverFn = (guidOrPath: string) => string;
+
+/**
  * ECS System for rendering sprites using the Rust engine.
  * 使用Rust引擎渲染精灵的ECS系统。
  *
@@ -176,6 +188,10 @@ export class EngineRenderSystem extends EntitySystem {
     // UI render data provider (supports screen space and world space)
     // UI 渲染数据提供者（支持屏幕空间和世界空间）
     private uiRenderDataProvider: IUIRenderDataProvider | null = null;
+
+    // Asset path resolver (injected from editor layer for GUID resolution)
+    // 资产路径解析器（从编辑器层注入，用于 GUID 解析）
+    private assetPathResolver: AssetPathResolverFn | null = null;
 
     // Preview mode flag: when true, UI uses screen space overlay projection
     // when false (editor mode), UI renders in world space following editor camera
@@ -288,14 +304,24 @@ export class EngineRenderSystem extends EntitySystem {
             // Use Rust engine's path-based texture loading for automatic caching
             // 使用Rust引擎的基于路径的纹理加载实现自动缓存
             let textureId = 0;
-            if (sprite.texture) {
-                textureId = this.bridge.getOrLoadTextureByPath(sprite.texture);
+            const textureSource = sprite.getTextureSource();
+            if (textureSource) {
+                // Resolve GUID to path if resolver is available
+                // 如果有解析器，将 GUID 解析为路径
+                const texturePath = this.assetPathResolver
+                    ? this.assetPathResolver(textureSource)
+                    : textureSource;
+                textureId = this.bridge.getOrLoadTextureByPath(texturePath);
             }
 
-            // Get material ID from path (0 = default if not found or no path specified)
-            // 从路径获取材质 ID（0 = 默认，如果未找到或未指定路径）
-            const materialId = sprite.material
-                ? getMaterialManager().getMaterialIdByPath(sprite.material)
+            // Get material ID from GUID (0 = default if not found or no GUID specified)
+            // 从 GUID 获取材质 ID（0 = 默认，如果未找到或未指定 GUID）
+            const materialGuidOrPath = sprite.materialGuid;
+            const materialPath = materialGuidOrPath && this.assetPathResolver
+                ? this.assetPathResolver(materialGuidOrPath)
+                : materialGuidOrPath;
+            const materialId = materialPath
+                ? getMaterialManager().getMaterialIdByPath(materialPath)
                 : 0;
 
             // Collect material overrides if any
@@ -1158,5 +1184,29 @@ export class EngineRenderSystem extends EntitySystem {
      */
     loadTexture(id: number, url: string): void {
         this.bridge.loadTexture(id, url);
+    }
+
+    /**
+     * Set asset path resolver.
+     * 设置资产路径解析器。
+     *
+     * The resolver function is used to convert asset GUIDs to file paths.
+     * This allows the editor to inject AssetRegistryService functionality
+     * without creating a direct dependency.
+     * 解析器函数用于将资产 GUID 转换为文件路径。
+     * 这允许编辑器注入 AssetRegistryService 功能而不创建直接依赖。
+     *
+     * @param resolver - Function to resolve GUID/path to actual path | 将 GUID/路径解析为实际路径的函数
+     */
+    setAssetPathResolver(resolver: AssetPathResolverFn | null): void {
+        this.assetPathResolver = resolver;
+    }
+
+    /**
+     * Get asset path resolver.
+     * 获取资产路径解析器。
+     */
+    getAssetPathResolver(): AssetPathResolverFn | null {
+        return this.assetPathResolver;
     }
 }

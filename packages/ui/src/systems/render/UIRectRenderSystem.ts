@@ -96,9 +96,9 @@ export class UIRectRenderSystem extends EntitySystem {
 
             // Render texture if present
             // 如果有纹理，渲染纹理
-            if (render.texture) {
-                const texturePath = typeof render.texture === 'string' ? render.texture : undefined;
-                const textureId = typeof render.texture === 'number' ? render.texture : undefined;
+            if (render.textureGuid) {
+                const texturePath = typeof render.textureGuid === 'string' ? render.textureGuid : undefined;
+                const textureId = typeof render.textureGuid === 'number' ? render.textureGuid : undefined;
 
                 collector.addRect(
                     renderX, renderY,
