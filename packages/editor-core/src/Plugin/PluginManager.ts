@@ -1076,8 +1076,15 @@ export class PluginManager implements IService {
                 continue; // 核心插件始终启用
             }
 
-            const shouldBeEnabled = enabledPlugins.includes(id);
+            const inConfig = enabledPlugins.includes(id);
             const wasEnabled = plugin.enabled;
+            const isDefaultEnabled = plugin.plugin.manifest.defaultEnabled;
+
+            // 如果插件在配置中明确列出，按配置来
+            // 如果插件不在配置中但 defaultEnabled=true，保持启用（新插件不应被旧配置禁用）
+            // If plugin is explicitly in config, follow config
+            // If plugin is not in config but defaultEnabled=true, keep enabled (new plugins should not be disabled by old config)
+            const shouldBeEnabled = inConfig || (isDefaultEnabled && !enabledPlugins.some(p => p === id));
 
             if (shouldBeEnabled && !wasEnabled) {
                 toEnable.push(id);

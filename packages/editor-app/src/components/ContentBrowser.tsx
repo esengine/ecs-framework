@@ -164,6 +164,34 @@ export function ContentBrowser({
         template: FileCreationTemplate;
     } | null>(null);
 
+    // 文件创建模板列表（需要状态跟踪以便插件安装后刷新）
+    // File creation templates list (need state tracking to refresh after plugin installation)
+    const [fileCreationTemplates, setFileCreationTemplates] = useState<FileCreationTemplate[]>([]);
+
+    // 初始化和监听插件安装事件以更新模板列表
+    // Initialize and listen for plugin installation events to update template list
+    useEffect(() => {
+        const updateTemplates = () => {
+            if (fileActionRegistry) {
+                const templates = fileActionRegistry.getCreationTemplates();
+                setFileCreationTemplates([...templates]);
+            }
+        };
+
+        // 初始加载
+        updateTemplates();
+
+        // 监听插件安装/卸载事件
+        if (messageHub) {
+            const unsubInstall = messageHub.subscribe('plugin:installed', updateTemplates);
+            const unsubUninstall = messageHub.subscribe('plugin:uninstalled', updateTemplates);
+            return () => {
+                unsubInstall();
+                unsubUninstall();
+            };
+        }
+    }, [fileActionRegistry, messageHub]);
+
     const t = {
         en: {
             favorites: 'Favorites',
@@ -855,7 +883,6 @@ export class ${className} {
         const items: ContextMenuItem[] = [];
 
         if (!asset) {
-            // Background context menu
             items.push({
                 label: t.newFolder,
                 icon: <FolderClosed size={16} />,
@@ -872,28 +899,54 @@ export class ${className} {
                 }
             });
 
-            if (fileActionRegistry) {
-                const templates = fileActionRegistry.getCreationTemplates();
-                if (templates.length > 0) {
-                    items.push({ label: '', separator: true, onClick: () => {} });
-                    for (const template of templates) {
-                        const localizedLabel = getTemplateLabel(template.label);
-                        items.push({
-                            label: `${t.newPrefix} ${localizedLabel}`,
-                            icon: getIconComponent(template.icon, 16),
-                            onClick: () => {
-                                setContextMenu(null);
-                                if (currentPath) {
-                                    setCreateFileDialog({
-                                        parentPath: currentPath,
-                                        template
-                                    });
-                                }
+            if (fileCreationTemplates.length > 0) {
+                items.push({ label: '', separator: true, onClick: () => {} });
+
+                for (const template of fileCreationTemplates) {
+                    const localizedLabel = getTemplateLabel(template.label);
+                    items.push({
+                        label: localizedLabel,
+                        icon: getIconComponent(template.icon, 16),
+                        onClick: () => {
+                            setContextMenu(null);
+                            if (currentPath) {
+                                setCreateFileDialog({
+                                    parentPath: currentPath,
+                                    template
+                                });
                             }
-                        });
-                    }
+                        }
+                    });
                 }
             }
+
+            items.push({ label: '', separator: true, onClick: () => {} });
+
+            items.push({
+                label: locale === 'zh' ? '在资源管理器中显示' : 'Show in Explorer',
+                icon: <ExternalLink size={16} />,
+                onClick: async () => {
+                    if (currentPath) {
+                        try {
+                            await TauriAPI.showInFolder(currentPath);
+                        } catch (error) {
+                            console.error('Failed to show in folder:', error);
+                        }
+                    }
+                    setContextMenu(null);
+                }
+            });
+
+            items.push({
+                label: locale === 'zh' ? '刷新' : 'Refresh',
+                icon: <RefreshCw size={16} />,
+                onClick: async () => {
+                    if (currentPath) {
+                        await loadAssets(currentPath);
+                    }
+                    setContextMenu(null);
+                }
+            });
 
             return items;
         }
@@ -1104,7 +1157,7 @@ export class ${className} {
         });
 
         return items;
-    }, [currentPath, fileActionRegistry, handleAssetDoubleClick, loadAssets, locale, t.newFolder, setRenameDialog, setDeleteConfirmDialog, setContextMenu, setCreateFileDialog]);
+    }, [currentPath, fileCreationTemplates, handleAssetDoubleClick, loadAssets, locale, t.newFolder, t.newPrefix, setRenameDialog, setDeleteConfirmDialog, setContextMenu, setCreateFileDialog]);
 
     // Render folder tree node
     const renderFolderNode = useCallback((node: FolderNode, depth: number = 0) => {
