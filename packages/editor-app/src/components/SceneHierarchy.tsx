@@ -28,6 +28,7 @@ function getIconComponent(iconName: string | undefined, size: number = 14): Reac
 const categoryIconMap: Record<string, string> = {
     'rendering': 'Image',
     'ui': 'LayoutGrid',
+    'effects': 'Sparkles',
     'physics': 'Box',
     'audio': 'Volume2',
     'basic': 'Plus',
@@ -925,6 +926,7 @@ function ContextMenuWithSubmenu({
         'ui': { zh: 'UI', en: 'UI' },
         'physics': { zh: '物理', en: 'Physics' },
         'audio': { zh: '音频', en: 'Audio' },
+        'effects': { zh: '特效', en: 'Effects' },
         'other': { zh: '其他', en: 'Other' },
     };
 
@@ -934,6 +936,7 @@ function ContextMenuWithSubmenu({
         'Animated Sprite': { zh: '动画精灵', en: 'Animated Sprite' },
         '创建 Tilemap': { zh: '瓦片地图', en: 'Tilemap' },
         'Camera 2D': { zh: '2D 相机', en: 'Camera 2D' },
+        '创建粒子效果': { zh: '粒子效果', en: 'Particle Effect' },
     };
 
     const getCategoryLabel = (category: string) => {
@@ -966,7 +969,7 @@ function ContextMenuWithSubmenu({
         setActiveSubmenu(category);
     };
 
-    const categoryOrder = ['rendering', 'ui', 'physics', 'audio', 'basic', 'other'];
+    const categoryOrder = ['rendering', 'ui', 'effects', 'physics', 'audio', 'basic', 'other'];
     const sortedCategories = Object.entries(templatesByCategory).sort(([a], [b]) => {
         const orderA = categoryOrder.indexOf(a);
         const orderB = categoryOrder.indexOf(b);

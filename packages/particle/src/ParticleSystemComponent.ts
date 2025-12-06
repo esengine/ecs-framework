@@ -1,26 +1,19 @@
 import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/ecs-framework';
-import { ParticlePool } from './Particle';
-import { ParticleEmitter, EmissionShape, createDefaultEmitterConfig, type EmitterConfig, type ValueRange, type ColorValue } from './ParticleEmitter';
+import { assetManager } from '@esengine/asset-system';
+import { ParticlePool, type Particle } from './Particle';
+import { ParticleEmitter, EmissionShape, createDefaultEmitterConfig, type EmitterConfig, type ColorValue } from './ParticleEmitter';
 import type { IParticleModule } from './modules/IParticleModule';
 import { ColorOverLifetimeModule } from './modules/ColorOverLifetimeModule';
 import { SizeOverLifetimeModule } from './modules/SizeOverLifetimeModule';
 import { CollisionModule } from './modules/CollisionModule';
 import { ForceFieldModule } from './modules/ForceFieldModule';
+import type { IParticleAsset, IBurstConfig } from './loaders/ParticleLoader';
 
-/**
- * 爆发配置
- * Burst configuration
- */
-export interface BurstConfig {
-    /** 触发时间（秒）| Trigger time (seconds) */
-    time: number;
-    /** 发射数量 | Particle count */
-    count: number;
-    /** 循环次数（0=无限）| Number of cycles (0=infinite) */
-    cycles: number;
-    /** 循环间隔（秒）| Interval between cycles (seconds) */
-    interval: number;
-}
+// Re-export for backward compatibility
+// 为了向后兼容重新导出
+export type { IBurstConfig };
+/** @deprecated Use IBurstConfig instead */
+export type BurstConfig = IBurstConfig;
 
 /**
  * 粒子混合模式
@@ -47,14 +40,61 @@ export enum SimulationSpace {
 }
 
 /**
+ * 运行时覆盖配置
+ * Runtime override configuration
+ *
+ * 用于在游戏运行时动态修改粒子系统参数，而不影响原始资产配置。
+ * Used to dynamically modify particle system parameters at runtime without affecting the original asset configuration.
+ */
+export interface ParticleRuntimeOverrides {
+    /** 发射速率覆盖 | Emission rate override */
+    emissionRate?: number;
+    /** 播放速度覆盖 | Playback speed override */
+    playbackSpeed?: number;
+    /** 是否循环覆盖 | Looping override */
+    looping?: boolean;
+    /** 重力X覆盖 | Gravity X override */
+    gravityX?: number;
+    /** 重力Y覆盖 | Gravity Y override */
+    gravityY?: number;
+    /** 起始颜色覆盖 | Start color override */
+    startColor?: ColorValue;
+    /** 缩放乘数（应用于所有尺寸）| Scale multiplier (applied to all sizes) */
+    scaleMultiplier?: number;
+    /** 速度乘数 | Speed multiplier */
+    speedMultiplier?: number;
+}
+
+/**
  * 粒子系统组件
  * Particle system component
  *
- * Manages particle emission, simulation, and provides data for rendering.
- * 管理粒子发射、模拟，并为渲染提供数据。
+ * 基于资产的粒子系统组件。所有粒子配置从 .particle 文件读取，
+ * 运行时可通过 runtimeOverrides 动态修改部分参数。
+ *
+ * Asset-based particle system component. All particle configuration is read from .particle files.
+ * Runtime modifications can be made through runtimeOverrides.
+ *
+ * @example
+ * ```typescript
+ * // 在编辑器中设置 particleAssetGuid，运行时自动加载
+ * // Set particleAssetGuid in editor, loads automatically at runtime
+ *
+ * // 运行时修改发射速率
+ * // Modify emission rate at runtime
+ * particle.setOverride('emissionRate', 50);
+ *
+ * // 或批量设置
+ * // Or set multiple overrides
+ * particle.setOverrides({ emissionRate: 50, playbackSpeed: 2 });
+ *
+ * // 清除覆盖，恢复原始值
+ * // Clear overrides, restore original values
+ * particle.clearOverrides();
+ * ```
  */
 @ECSComponent('ParticleSystem')
-@Serializable({ version: 2, typeId: 'ParticleSystem' })
+@Serializable({ version: 3, typeId: 'ParticleSystem' })
 export class ParticleSystemComponent extends Component {
     // ============= 资产引用 | Asset Reference =============
 
@@ -62,192 +102,57 @@ export class ParticleSystemComponent extends Component {
      * 粒子效果资产 GUID
      * Particle effect asset GUID
      *
-     * When set, loads particle configuration from .particle file.
-     * Inline properties below are ignored when asset is set.
-     * 设置后从 .particle 文件加载粒子配置。
-     * 设置了资产后，下面的内联属性将被忽略。
+     * 必须设置此属性才能使用粒子系统。所有配置从 .particle 文件读取。
+     * Must be set to use the particle system. All configuration is read from .particle file.
      */
     @Serialize()
     @Property({ type: 'asset', label: 'Particle Asset', extensions: ['.particle', '.particle.json'] })
     public particleAssetGuid: string = '';
 
-    // ============= 基础属性 | Basic Properties =============
-    // These are used when particleAssetGuid is not set
-
-    /** 最大粒子数量 | Maximum particle count */
-    @Serialize()
-    @Property({ type: 'integer', label: 'Max Particles', min: 1, max: 10000 })
-    public maxParticles: number = 1000;
-
-    /** 是否循环播放 | Whether to loop */
-    @Serialize()
-    @Property({ type: 'boolean', label: 'Looping' })
-    public looping: boolean = true;
-
-    /** 预热时间（秒）| Prewarm time (seconds) */
-    @Serialize()
-    @Property({ type: 'number', label: 'Prewarm Time', min: 0 })
-    public prewarmTime: number = 0;
-
-    /** 持续时间（秒，非循环时使用）| Duration (seconds, for non-looping) */
-    @Serialize()
-    @Property({ type: 'number', label: 'Duration', min: 0.1 })
-    public duration: number = 5;
-
-    /** 播放速度倍率 | Playback speed multiplier */
-    @Serialize()
-    @Property({ type: 'number', label: 'Playback Speed', min: 0.01, max: 10 })
-    public playbackSpeed: number = 1;
-
-    /** 模拟空间 | Simulation space */
-    @Serialize()
-    @Property({ type: 'enum', label: 'Simulation Space', options: [
-        { value: 'world', label: 'World' },
-        { value: 'local', label: 'Local' }
-    ]})
-    public simulationSpace: SimulationSpace = SimulationSpace.World;
-
-    // ============= 发射器属性 | Emitter Properties =============
-
-    /** 每秒发射数量 | Emission rate (particles per second) */
-    @Serialize()
-    @Property({ type: 'number', label: 'Emission Rate', min: 0 })
-    public emissionRate: number = 10;
-
-    /** 发射形状 | Emission shape */
-    @Serialize()
-    @Property({ type: 'enum', label: 'Shape', options: [
-        { value: 'point', label: 'Point' },
-        { value: 'circle', label: 'Circle' },
-        { value: 'rectangle', label: 'Rectangle' },
-        { value: 'line', label: 'Line' },
-        { value: 'cone', label: 'Cone' }
-    ]})
-    public emissionShape: EmissionShape = EmissionShape.Point;
-
-    /** 形状半径 | Shape radius */
-    @Serialize()
-    @Property({ type: 'number', label: 'Shape Radius', min: 0 })
-    public shapeRadius: number = 0;
-
-    /** 形状宽度 | Shape width */
-    @Serialize()
-    @Property({ type: 'number', label: 'Shape Width', min: 0 })
-    public shapeWidth: number = 0;
-
-    /** 形状高度 | Shape height */
-    @Serialize()
-    @Property({ type: 'number', label: 'Shape Height', min: 0 })
-    public shapeHeight: number = 0;
-
-    // ============= 粒子属性 | Particle Properties =============
-
-    /** 粒子生命时间最小值（秒）| Particle lifetime min (seconds) */
-    @Serialize()
-    @Property({ type: 'number', label: 'Lifetime Min', min: 0.01 })
-    public lifetimeMin: number = 1;
-
-    /** 粒子生命时间最大值（秒）| Particle lifetime max (seconds) */
-    @Serialize()
-    @Property({ type: 'number', label: 'Lifetime Max', min: 0.01 })
-    public lifetimeMax: number = 2;
-
-    /** 初始速度最小值 | Initial speed min */
-    @Serialize()
-    @Property({ type: 'number', label: 'Speed Min', min: 0 })
-    public speedMin: number = 50;
-
-    /** 初始速度最大值 | Initial speed max */
-    @Serialize()
-    @Property({ type: 'number', label: 'Speed Max', min: 0 })
-    public speedMax: number = 100;
-
-    /** 发射方向（角度）| Emission direction (degrees) */
-    @Serialize()
-    @Property({ type: 'number', label: 'Direction', min: -180, max: 180 })
-    public direction: number = -90;
-
-    /** 发射方向扩散（角度）| Direction spread (degrees) */
-    @Serialize()
-    @Property({ type: 'number', label: 'Direction Spread', min: 0, max: 360 })
-    public directionSpread: number = 0;
-
-    /** 初始缩放最小值 | Initial scale min */
-    @Serialize()
-    @Property({ type: 'number', label: 'Scale Min', min: 0.01 })
-    public scaleMin: number = 1;
-
-    /** 初始缩放最大值 | Initial scale max */
-    @Serialize()
-    @Property({ type: 'number', label: 'Scale Max', min: 0.01 })
-    public scaleMax: number = 1;
-
-    /** 重力X | Gravity X */
-    @Serialize()
-    @Property({ type: 'number', label: 'Gravity X' })
-    public gravityX: number = 0;
-
-    /** 重力Y | Gravity Y */
-    @Serialize()
-    @Property({ type: 'number', label: 'Gravity Y' })
-    public gravityY: number = 0;
-
-    // ============= 颜色属性 | Color Properties =============
-
-    /** 起始颜色 | Start color */
-    @Serialize()
-    @Property({ type: 'color', label: 'Start Color' })
-    public startColor: string = '#ffffff';
-
-    /** 起始透明度 | Start alpha */
-    @Serialize()
-    @Property({ type: 'number', label: 'Start Alpha', min: 0, max: 1, step: 0.01 })
-    public startAlpha: number = 1;
-
-    /** 结束透明度（淡出）| End alpha (fade out) */
-    @Serialize()
-    @Property({ type: 'number', label: 'End Alpha', min: 0, max: 1, step: 0.01 })
-    public endAlpha: number = 0;
-
-    /** 结束缩放乘数 | End scale multiplier */
-    @Serialize()
-    @Property({ type: 'number', label: 'End Scale', min: 0 })
-    public endScale: number = 0;
-
-    // ============= 渲染属性 | Rendering Properties =============
+    // ============= 播放控制 | Playback Control =============
 
     /**
-     * 粒子纹理 GUID
-     * Particle texture GUID
+     * 是否自动播放
+     * Whether to auto-play on start
+     *
+     * 默认为 false，在编辑器中需要手动点击播放按钮。
+     * 运行时场景中如需自动播放，请设置为 true。
+     *
+     * Default is false, manual play button click is required in editor.
+     * Set to true for auto-play in runtime scenes.
      */
     @Serialize()
-    @Property({ type: 'asset', label: 'Texture', assetType: 'texture' })
-    public textureGuid: string = '';
+    @Property({ type: 'boolean', label: 'Auto Play' })
+    public autoPlay: boolean = false;
 
-    /** 粒子尺寸（像素）| Particle size (pixels) */
+    /**
+     * 模拟空间
+     * Simulation space
+     *
+     * Local: 粒子跟随发射器移动
+     * World: 粒子在世界空间独立运动
+     */
     @Serialize()
-    @Property({ type: 'number', label: 'Particle Size', min: 1 })
-    public particleSize: number = 8;
+    @Property({
+        type: 'enum',
+        label: 'Simulation Space',
+        options: [
+            { label: 'Local', value: SimulationSpace.Local },
+            { label: 'World', value: SimulationSpace.World }
+        ]
+    })
+    public simulationSpace: SimulationSpace = SimulationSpace.World;
 
-    /** 混合模式 | Blend mode */
-    @Serialize()
-    @Property({ type: 'enum', label: 'Blend Mode', options: [
-        { value: 'normal', label: 'Normal' },
-        { value: 'additive', label: 'Additive' },
-        { value: 'multiply', label: 'Multiply' }
-    ]})
-    public blendMode: ParticleBlendMode = ParticleBlendMode.Additive;
+    // ============= 运行时覆盖 | Runtime Overrides =============
 
-    /** 排序顺序 | Sorting order */
-    @Serialize()
-    @Property({ type: 'integer', label: 'Sorting Order' })
-    public sortingOrder: number = 0;
-
-    // ============= 爆发配置 | Burst Configuration =============
-
-    /** 爆发列表 | Burst list */
-    @Serialize()
-    public bursts: BurstConfig[] = [];
+    /**
+     * 运行时参数覆盖
+     * Runtime parameter overrides
+     *
+     * 这些值会覆盖资产中的对应配置。不会被序列化保存。
+     * These values override corresponding asset configuration. Not serialized.
+     */
+    private _runtimeOverrides: ParticleRuntimeOverrides = {};
 
     // ============= 运行时状态 | Runtime State =============
 
@@ -262,9 +167,21 @@ export class ParticleSystemComponent extends Component {
     /** 上一帧发射器位置（本地空间用）| Last frame emitter position (for local space) */
     private _lastEmitterX: number = 0;
     private _lastEmitterY: number = 0;
+    /** 当前世界旋转（弧度）| Current world rotation (radians) */
+    private _worldRotation: number = 0;
+    /** 当前世界缩放X | Current world scale X */
+    private _worldScaleX: number = 1;
+    /** 当前世界缩放Y | Current world scale Y */
+    private _worldScaleY: number = 1;
+    /** 已加载的粒子资产数据 | Loaded particle asset data */
+    private _loadedAsset: IParticleAsset | null = null;
+    /** 上次加载的资产 GUID（用于检测变化）| Last loaded asset GUID (for change detection) */
+    private _lastLoadedGuid: string = '';
 
     /** 纹理ID（运行时）| Texture ID (runtime) */
     public textureId: number = 0;
+
+    // ============= 公开属性访问器 | Public Property Accessors =============
 
     /** 是否正在播放 | Whether playing */
     get isPlaying(): boolean {
@@ -291,74 +208,280 @@ export class ParticleSystemComponent extends Component {
         return this._modules;
     }
 
+    /** 已加载的资产数据 | Loaded asset data */
+    get loadedAsset(): IParticleAsset | null {
+        return this._loadedAsset;
+    }
+
+    /**
+     * 获取当前运行时覆盖配置
+     * Get current runtime overrides
+     */
+    get runtimeOverrides(): Readonly<ParticleRuntimeOverrides> {
+        return this._runtimeOverrides;
+    }
+
+    /** 当前世界旋转（弧度）| Current world rotation (radians) */
+    get worldRotation(): number {
+        return this._worldRotation;
+    }
+
+    /** 当前世界缩放X | Current world scale X */
+    get worldScaleX(): number {
+        return this._worldScaleX;
+    }
+
+    /** 当前世界缩放Y | Current world scale Y */
+    get worldScaleY(): number {
+        return this._worldScaleY;
+    }
+
+    // ============= 从资产或覆盖读取的属性 | Properties from Asset or Overrides =============
+
+    /** 最大粒子数（从资产读取）| Maximum particles (from asset) */
+    get maxParticles(): number {
+        return this._loadedAsset?.maxParticles ?? 1000;
+    }
+
+    /** 是否循环 | Whether looping */
+    get looping(): boolean {
+        return this._runtimeOverrides.looping ?? this._loadedAsset?.looping ?? true;
+    }
+
+    /** 持续时间（秒）| Duration in seconds */
+    get duration(): number {
+        return this._loadedAsset?.duration ?? 5;
+    }
+
+    /** 播放速度 | Playback speed */
+    get playbackSpeed(): number {
+        return this._runtimeOverrides.playbackSpeed ?? this._loadedAsset?.playbackSpeed ?? 1;
+    }
+
+    /** 发射速率 | Emission rate */
+    get emissionRate(): number {
+        return this._runtimeOverrides.emissionRate ?? this._loadedAsset?.emissionRate ?? 10;
+    }
+
+    /** 混合模式（从资产读取）| Blend mode (from asset) */
+    get blendMode(): ParticleBlendMode {
+        return this._loadedAsset?.blendMode ?? ParticleBlendMode.Additive;
+    }
+
+    /** 粒子尺寸（从资产读取）| Particle size (from asset) */
+    get particleSize(): number {
+        return this._loadedAsset?.particleSize ?? 8;
+    }
+
+    /** 纹理 GUID（从资产读取）| Texture GUID (from asset) */
+    get textureGuid(): string {
+        return this._loadedAsset?.textureGuid ?? '';
+    }
+
+    /** 排序顺序（从资产读取）| Sorting order (from asset) */
+    get sortingOrder(): number {
+        return this._loadedAsset?.sortingOrder ?? 0;
+    }
+
+    /** 爆发列表（从资产读取）| Burst list (from asset) */
+    get bursts(): IBurstConfig[] {
+        return this._loadedAsset?.bursts ?? [];
+    }
+
+    // ============= 运行时覆盖方法 | Runtime Override Methods =============
+
+    /**
+     * 设置单个运行时覆盖参数
+     * Set a single runtime override parameter
+     *
+     * @param key 参数名 | Parameter name
+     * @param value 参数值 | Parameter value
+     */
+    setOverride<K extends keyof ParticleRuntimeOverrides>(key: K, value: ParticleRuntimeOverrides[K]): void {
+        this._runtimeOverrides[key] = value;
+        this._needsRebuild = true;
+    }
+
+    /**
+     * 批量设置运行时覆盖参数
+     * Set multiple runtime override parameters
+     *
+     * @param overrides 覆盖配置 | Override configuration
+     */
+    setOverrides(overrides: Partial<ParticleRuntimeOverrides>): void {
+        Object.assign(this._runtimeOverrides, overrides);
+        this._needsRebuild = true;
+    }
+
+    /**
+     * 清除所有运行时覆盖，恢复资产原始值
+     * Clear all runtime overrides, restore asset original values
+     */
+    clearOverrides(): void {
+        this._runtimeOverrides = {};
+        this._needsRebuild = true;
+    }
+
+    /**
+     * 清除指定的运行时覆盖参数
+     * Clear specific runtime override parameter
+     *
+     * @param key 参数名 | Parameter name
+     */
+    clearOverride<K extends keyof ParticleRuntimeOverrides>(key: K): void {
+        delete this._runtimeOverrides[key];
+        this._needsRebuild = true;
+    }
+
+    // ============= 生命周期方法 | Lifecycle Methods =============
+
     /**
      * 初始化粒子系统
      * Initialize particle system
      */
     initialize(): void {
         this._rebuildIfNeeded();
+
+        // 自动播放 | Auto play
+        if (this.autoPlay && !this._isPlaying) {
+            this.play();
+        }
     }
+
+    /**
+     * 加载粒子资产
+     * Load particle asset
+     *
+     * @param guid - Asset GUID to load | 要加载的资产 GUID
+     * @returns Promise that resolves when asset is loaded | 资产加载完成时解析的 Promise
+     */
+    async loadAsset(guid: string, bForceReload: boolean = false): Promise<boolean> {
+        if (!guid) {
+            this._loadedAsset = null;
+            this._lastLoadedGuid = '';
+            this._needsRebuild = true;
+            return true;
+        }
+
+        // 如果是同一个资产且不强制重新加载，不需要重新加载
+        // If same asset and not force reload, no need to reload
+        if (guid === this._lastLoadedGuid && this._loadedAsset && !bForceReload) {
+            return true;
+        }
+
+        try {
+            console.log(`[ParticleSystem] Loading asset: ${guid}${bForceReload ? ' (force reload)' : ''}`);
+            const result = await assetManager.loadAsset<IParticleAsset>(guid, { forceReload: bForceReload });
+            const asset = result?.asset;
+
+            if (asset) {
+                this._loadedAsset = asset;
+                this._lastLoadedGuid = guid;
+                this._needsRebuild = true;
+                console.log(`[ParticleSystem] Asset loaded successfully:`, asset.name);
+                return true;
+            } else {
+                console.warn(`[ParticleSystem] Failed to load asset: ${guid}`);
+                return false;
+            }
+        } catch (error) {
+            console.error(`[ParticleSystem] Error loading asset ${guid}:`, error);
+            return false;
+        }
+    }
+
+    /**
+     * 强制重新加载资产
+     * Force reload the asset
+     *
+     * 当资产文件内容变化时调用此方法，强制从文件系统重新加载。
+     * Call this method when asset file content changes, forcing a reload from filesystem.
+     */
+    async reloadAsset(): Promise<boolean> {
+        if (!this.particleAssetGuid) return false;
+        return this.loadAsset(this.particleAssetGuid, true);
+    }
+
+    /**
+     * 设置资产数据（由加载器调用）
+     * Set asset data (called by loader)
+     *
+     * @param asset 粒子资产数据 | Particle asset data
+     */
+    setAssetData(asset: IParticleAsset | null): void {
+        this._loadedAsset = asset;
+        this._needsRebuild = true;
+    }
+
+    // ============= 播放控制 | Playback Control =============
 
     /**
      * 播放粒子系统
-     * Play particle system
-     *
-     * @param worldX - Initial world position X for prewarm | 预热时的初始世界坐标X
-     * @param worldY - Initial world position Y for prewarm | 预热时的初始世界坐标Y
+     * Play the particle system
      */
-    play(worldX: number = 0, worldY: number = 0): void {
+    play(): void {
         this._rebuildIfNeeded();
-        this._isPlaying = true;
-        this._emitter!.isEmitting = true;
-        this._elapsedTime = 0;
-        // 初始化爆发状态 | Initialize burst states
-        this._burstStates = this.bursts.map(() => ({ firedCount: 0, lastFireTime: -Infinity }));
-        // 初始化发射器位置 | Initialize emitter position
-        this._lastEmitterX = worldX;
-        this._lastEmitterY = worldY;
 
-        if (this.prewarmTime > 0) {
-            this._simulate(this.prewarmTime, worldX, worldY);
+        if (this._emitter) {
+            this._emitter.isEmitting = true;
         }
-    }
-
-    /**
-     * 停止粒子系统
-     * Stop particle system
-     */
-    stop(clearParticles: boolean = false): void {
-        this._isPlaying = false;
-        this._emitter!.isEmitting = false;
+        this._isPlaying = true;
         this._elapsedTime = 0;
+
         // 重置爆发状态 | Reset burst states
         this._burstStates = this.bursts.map(() => ({ firedCount: 0, lastFireTime: -Infinity }));
-
-        if (clearParticles) {
-            this._pool?.recycleAll();
-        }
     }
 
     /**
      * 暂停粒子系统
-     * Pause particle system
+     * Pause the particle system
      */
     pause(): void {
+        if (this._emitter) {
+            this._emitter.isEmitting = false;
+        }
         this._isPlaying = false;
     }
 
     /**
-     * 立即爆发发射
-     * Burst emit
+     * 停止粒子系统
+     * Stop the particle system
      *
-     * @param count - Number of particles to emit | 发射的粒子数量
-     * @param worldX - World position X | 世界坐标X
-     * @param worldY - World position Y | 世界坐标Y
+     * @param clear 是否立即清除所有粒子 | Whether to immediately clear all particles
      */
-    burst(count: number, worldX: number = 0, worldY: number = 0): void {
-        this._rebuildIfNeeded();
-        if (!this._emitter || !this._pool) return;
+    stop(clear: boolean = false): void {
+        if (this._emitter) {
+            this._emitter.isEmitting = false;
+        }
+        this._isPlaying = false;
+        this._elapsedTime = 0;
 
-        this._emitter.burst(this._pool, count, worldX, worldY);
+        if (clear && this._pool) {
+            this._pool.recycleAll();
+        }
+
+        // 重置爆发状态 | Reset burst states
+        this._burstStates = [];
+    }
+
+    /**
+     * 清除所有粒子
+     * Clear all particles
+     */
+    clear(): void {
+        this._pool?.recycleAll();
+    }
+
+    /**
+     * 触发一次爆发
+     * Trigger a burst emission
+     *
+     * @param count 发射数量 | Number of particles to emit
+     */
+    emit(count: number): void {
+        if (this._pool && this._emitter) {
+            this._emitter.burst(this._pool, count, this._lastEmitterX, this._lastEmitterY);
+        }
     }
 
     /**
@@ -368,12 +491,22 @@ export class ParticleSystemComponent extends Component {
      * @param dt - Delta time in seconds | 时间增量（秒）
      * @param worldX - World position X for emission | 发射位置世界坐标X
      * @param worldY - World position Y for emission | 发射位置世界坐标Y
+     * @param worldRotation - World rotation in radians | 世界旋转（弧度）
+     * @param worldScaleX - World scale X | 世界缩放X
+     * @param worldScaleY - World scale Y | 世界缩放Y
      */
-    update(dt: number, worldX: number = 0, worldY: number = 0): void {
+    update(
+        dt: number,
+        worldX: number = 0,
+        worldY: number = 0,
+        worldRotation: number = 0,
+        worldScaleX: number = 1,
+        worldScaleY: number = 1
+    ): void {
         if (!this._isPlaying || !this._pool || !this._emitter) return;
 
         const scaledDt = dt * this.playbackSpeed;
-        this._simulate(scaledDt, worldX, worldY);
+        this._simulate(scaledDt, worldX, worldY, worldRotation, worldScaleX, worldScaleY);
         this._elapsedTime += scaledDt;
 
         // 检查持续时间 | Check duration
@@ -384,6 +517,8 @@ export class ParticleSystemComponent extends Component {
             }
         }
     }
+
+    // ============= 模块管理 | Module Management =============
 
     /**
      * 添加模块
@@ -415,6 +550,8 @@ export class ParticleSystemComponent extends Component {
         return false;
     }
 
+    // ============= 重建与标记 | Rebuild and Marking =============
+
     /**
      * 标记需要重建
      * Mark for rebuild
@@ -423,40 +560,105 @@ export class ParticleSystemComponent extends Component {
         this._needsRebuild = true;
     }
 
+    /**
+     * 检查并重建粒子系统（如果需要）
+     * Check and rebuild particle system if needed
+     *
+     * This method is called by ParticleUpdateSystem to ensure the particle system
+     * is built even when not playing. This allows property changes to take effect
+     * immediately in the editor.
+     *
+     * 此方法由 ParticleUpdateSystem 调用，确保即使未播放时也能重建粒子系统。
+     * 这使得编辑器中的属性更改能够立即生效。
+     */
+    ensureBuilt(): void {
+        this._rebuildIfNeeded();
+    }
+
     private _rebuildIfNeeded(): void {
         if (!this._needsRebuild && this._pool && this._emitter) return;
 
-        // 创建/调整粒子池 | Create/resize particle pool
-        if (!this._pool) {
-            this._pool = new ParticlePool(this.maxParticles);
-        } else if (this._pool.capacity !== this.maxParticles) {
-            this._pool.resize(this.maxParticles);
+        // 必须有加载的资产才能构建
+        // Must have loaded asset to build
+        const asset = this._loadedAsset;
+        if (!asset) {
+            // 没有资产时使用默认值创建最小系统
+            // Create minimal system with defaults when no asset
+            if (!this._pool) {
+                this._pool = new ParticlePool(100);
+            }
+            if (!this._emitter) {
+                this._emitter = new ParticleEmitter(createDefaultEmitterConfig());
+            }
+            this._needsRebuild = false;
+            return;
         }
 
+        // 应用运行时覆盖 | Apply runtime overrides
+        const overrides = this._runtimeOverrides;
+        const scaleMultiplier = overrides.scaleMultiplier ?? 1;
+        const speedMultiplier = overrides.speedMultiplier ?? 1;
+
+        const maxParticles = asset.maxParticles;
+        const emissionRate = overrides.emissionRate ?? asset.emissionRate;
+        const emissionShape = asset.emissionShape;
+        const shapeRadius = asset.shapeRadius;
+        const shapeWidth = asset.shapeWidth;
+        const shapeHeight = asset.shapeHeight;
+        const lifetimeMin = asset.lifetimeMin;
+        const lifetimeMax = asset.lifetimeMax;
+        const speedMin = (asset.speedMin ?? 50) * speedMultiplier;
+        const speedMax = (asset.speedMax ?? 100) * speedMultiplier;
+        const direction = asset.direction ?? 90;
+        const directionSpread = asset.directionSpread ?? 0;
+        const scaleMin = (asset.scaleMin ?? 1) * scaleMultiplier;
+        const scaleMax = (asset.scaleMax ?? 1) * scaleMultiplier;
+        const gravityX = overrides.gravityX ?? asset.gravityX ?? 0;
+        const gravityY = overrides.gravityY ?? asset.gravityY ?? 0;
+        const startAlpha = asset.startAlpha ?? 1;
+        const endAlpha = asset.endAlpha ?? 0;
+        const endScale = asset.endScale ?? 0;
+
         // 解析颜色 | Parse color
-        const color = this._parseColor(this.startColor);
+        let color: { r: number; g: number; b: number };
+        if (overrides.startColor) {
+            color = { r: overrides.startColor.r, g: overrides.startColor.g, b: overrides.startColor.b };
+        } else if (asset.startColor) {
+            color = { r: asset.startColor.r, g: asset.startColor.g, b: asset.startColor.b };
+        } else {
+            color = { r: 1, g: 1, b: 1 };
+        }
+
+        // 创建/调整粒子池 | Create/resize particle pool
+        if (!this._pool) {
+            this._pool = new ParticlePool(maxParticles);
+        } else if (this._pool.capacity !== maxParticles) {
+            this._pool.resize(maxParticles);
+        }
 
         // 创建发射器配置 | Create emitter config
+        const directionRad = (direction - 90) * Math.PI / 180;
+
         const config: EmitterConfig = {
             ...createDefaultEmitterConfig(),
-            emissionRate: this.emissionRate,
+            emissionRate,
             burstCount: 0,
-            lifetime: { min: this.lifetimeMin, max: this.lifetimeMax },
-            shape: this.emissionShape,
-            shapeRadius: this.shapeRadius,
-            shapeWidth: this.shapeWidth,
-            shapeHeight: this.shapeHeight,
+            lifetime: { min: lifetimeMin, max: lifetimeMax },
+            shape: emissionShape,
+            shapeRadius,
+            shapeWidth,
+            shapeHeight,
             coneAngle: Math.PI / 6,
-            direction: this.direction * Math.PI / 180,
-            directionSpread: this.directionSpread * Math.PI / 180,
-            speed: { min: this.speedMin, max: this.speedMax },
+            direction: directionRad,
+            directionSpread: directionSpread * Math.PI / 180,
+            speed: { min: speedMin, max: speedMax },
             angularVelocity: { min: 0, max: 0 },
-            startScale: { min: this.scaleMin, max: this.scaleMax },
+            startScale: { min: scaleMin, max: scaleMax },
             startRotation: { min: 0, max: 0 },
-            startColor: { ...color, a: this.startAlpha },
+            startColor: { ...color, a: startAlpha },
             startColorVariance: { r: 0, g: 0, b: 0, a: 0 },
-            gravityX: this.gravityX,
-            gravityY: this.gravityY
+            gravityX,
+            gravityY: -gravityY
         };
 
         if (!this._emitter) {
@@ -471,149 +673,156 @@ export class ParticleSystemComponent extends Component {
             const colorModule = new ColorOverLifetimeModule();
             colorModule.gradient = [
                 { time: 0, r: 1, g: 1, b: 1, a: 1 },
-                { time: 1, r: 1, g: 1, b: 1, a: this.endAlpha }
+                { time: 1, r: 1, g: 1, b: 1, a: endAlpha }
             ];
             this._modules.push(colorModule);
 
             // 缩放模块 | Size module
             const sizeModule = new SizeOverLifetimeModule();
             sizeModule.startMultiplier = 1;
-            sizeModule.endMultiplier = this.endScale;
+            sizeModule.endMultiplier = endScale;
             this._modules.push(sizeModule);
         }
 
         this._needsRebuild = false;
     }
 
-    private _simulate(dt: number, worldX: number, worldY: number): void {
+    private _simulate(
+        dt: number,
+        worldX: number,
+        worldY: number,
+        worldRotation: number = 0,
+        worldScaleX: number = 1,
+        worldScaleY: number = 1
+    ): void {
         if (!this._pool || !this._emitter) return;
 
         // 本地空间：计算发射器移动量 | Local space: calculate emitter movement
         const isLocalSpace = this.simulationSpace === SimulationSpace.Local;
         const emitterDeltaX = worldX - this._lastEmitterX;
         const emitterDeltaY = worldY - this._lastEmitterY;
+        this._lastEmitterX = worldX;
+        this._lastEmitterY = worldY;
 
-        // 发射新粒子 | Emit new particles
-        this._emitter.emit(this._pool, dt, worldX, worldY);
+        // 保存当前的变换参数，供渲染使用 | Save current transform params for rendering
+        this._worldRotation = worldRotation;
+        this._worldScaleX = worldScaleX;
+        this._worldScaleY = worldScaleY;
 
-        // 处理定时爆发 | Process timed bursts
-        this._processBursts(worldX, worldY);
+        // 发射新粒子（应用旋转到发射方向）| Emit new particles (apply rotation to emission direction)
+        this._emitter.emit(this._pool, dt, worldX, worldY, worldRotation, worldScaleX, worldScaleY);
 
-        // 查找碰撞模块并更新发射器位置 | Find collision module and update emitter position
-        const collisionModule = this._modules.find(m => m instanceof CollisionModule) as CollisionModule | undefined;
-        if (collisionModule) {
-            collisionModule.emitterX = worldX;
-            collisionModule.emitterY = worldY;
-            collisionModule.clearDeathFlags();
-        }
+        // 处理爆发 | Process bursts
+        this._processBursts(worldX, worldY, worldRotation, worldScaleX, worldScaleY);
 
-        // 查找力场模块并更新发射器位置 | Find force field module and update emitter position
-        const forceFieldModule = this._modules.find(m => m instanceof ForceFieldModule) as ForceFieldModule | undefined;
-        if (forceFieldModule) {
-            forceFieldModule.emitterX = worldX;
-            forceFieldModule.emitterY = worldY;
-        }
+        // 更新现有粒子 | Update existing particles
+        const particles = this._pool.particles;
+        const particlesToRecycle: Particle[] = [];
 
-        // 更新粒子 | Update particles
-        this._pool.forEachActive((p) => {
-            // 本地空间：粒子跟随发射器移动 | Local space: particles follow emitter
+        for (const p of particles) {
+            if (!p.alive) continue;
+
+            p.age += dt;
+
+            if (p.age >= p.lifetime) {
+                particlesToRecycle.push(p);
+                continue;
+            }
+
+            // 应用重力 | Apply gravity
+            const config = this._emitter.config;
+            p.vx += config.gravityX * dt;
+            p.vy += config.gravityY * dt;
+
+            // 更新位置 | Update position
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+
+            // 本地空间：粒子跟随发射器 | Local space: particles follow emitter
             if (isLocalSpace) {
                 p.x += emitterDeltaX;
                 p.y += emitterDeltaY;
             }
 
-            // 物理更新 | Physics update
-            p.vx += p.ax * dt;
-            p.vy += p.ay * dt;
-            p.x += p.vx * dt;
-            p.y += p.vy * dt;
-            p.age += dt;
+            // 更新旋转 | Update rotation
+            p.rotation += p.angularVelocity * dt;
 
             // 应用模块 | Apply modules
             const normalizedAge = p.age / p.lifetime;
             for (const module of this._modules) {
                 if (module.enabled) {
-                    module.update(p, dt, normalizedAge);
+                    module.update(p, normalizedAge, dt);
                 }
-            }
-
-            // 检查生命周期 | Check lifetime
-            if (p.age >= p.lifetime) {
-                this._pool!.recycle(p);
-            }
-        });
-
-        // 处理碰撞模块标记的死亡粒子 | Process particles marked for death by collision module
-        if (collisionModule) {
-            const particlesToKill = collisionModule.getParticlesToKill();
-            for (const p of particlesToKill) {
-                this._pool.recycle(p);
             }
         }
 
-        // 记录发射器位置供下一帧使用 | Record emitter position for next frame
-        this._lastEmitterX = worldX;
-        this._lastEmitterY = worldY;
+        // 回收已过期的粒子 | Recycle expired particles
+        for (const p of particlesToRecycle) {
+            this._pool.recycle(p);
+        }
     }
 
-    /**
-     * 处理定时爆发
-     * Process timed bursts
-     */
-    private _processBursts(worldX: number, worldY: number): void {
-        if (!this._pool || !this._emitter || this.bursts.length === 0) return;
+    private _processBursts(
+        worldX: number,
+        worldY: number,
+        worldRotation: number = 0,
+        worldScaleX: number = 1,
+        worldScaleY: number = 1
+    ): void {
+        const bursts = this.bursts;
+        if (!bursts || bursts.length === 0 || !this._pool || !this._emitter) return;
 
-        // 确保爆发状态数组与配置同步 | Ensure burst states array is synced with config
-        while (this._burstStates.length < this.bursts.length) {
+        // 初始化爆发状态 | Initialize burst states
+        while (this._burstStates.length < bursts.length) {
             this._burstStates.push({ firedCount: 0, lastFireTime: -Infinity });
         }
 
-        const currentTime = this._elapsedTime;
-
-        for (let i = 0; i < this.bursts.length; i++) {
-            const burst = this.bursts[i];
+        for (let i = 0; i < bursts.length; i++) {
+            const burst = bursts[i];
             const state = this._burstStates[i];
 
-            // 检查是否已达到循环次数上限 | Check if reached cycle limit
-            if (burst.cycles > 0 && state.firedCount >= burst.cycles) {
-                continue;
-            }
+            // 检查是否达到触发时间 | Check if trigger time reached
+            if (this._elapsedTime >= burst.time) {
+                // 检查循环次数 | Check cycle count
+                const maxCycles = burst.cycles === 0 ? Infinity : burst.cycles;
+                if (state.firedCount >= maxCycles) continue;
 
-            // 计算下次触发时间 | Calculate next fire time
-            let nextFireTime: number;
-            if (state.firedCount === 0) {
-                // 首次触发 | First fire
-                nextFireTime = burst.time;
-            } else {
-                // 循环触发 | Cycle fire
-                nextFireTime = state.lastFireTime + burst.interval;
-            }
+                // 检查间隔 | Check interval
+                const timeSinceLastFire = this._elapsedTime - state.lastFireTime;
+                const interval = state.firedCount === 0 ? 0 : burst.interval;
 
-            // 检查是否应该触发 | Check if should fire
-            if (currentTime >= nextFireTime) {
-                this._emitter.burst(this._pool, burst.count, worldX, worldY);
-                state.firedCount++;
-                state.lastFireTime = currentTime;
+                if (timeSinceLastFire >= interval) {
+                    this._emitter.burst(this._pool, burst.count, worldX, worldY, worldRotation, worldScaleX, worldScaleY);
+                    state.firedCount++;
+                    state.lastFireTime = this._elapsedTime;
+                }
             }
         }
     }
 
-    private _parseColor(hex: string): { r: number; g: number; b: number } {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        if (result) {
-            return {
-                r: parseInt(result[1], 16) / 255,
-                g: parseInt(result[2], 16) / 255,
-                b: parseInt(result[3], 16) / 255
-            };
-        }
-        return { r: 1, g: 1, b: 1 };
-    }
+    // ============= 清理 | Cleanup =============
 
-    onDestroy(): void {
-        this._pool?.recycleAll();
+    /**
+     * 重置粒子系统到初始状态
+     * Reset particle system to initial state
+     */
+    resetSystem(): void {
+        this.stop(true);
         this._pool = null;
         this._emitter = null;
         this._modules = [];
+        this._needsRebuild = true;
+        this._loadedAsset = null;
+        this._lastLoadedGuid = '';
+        this._runtimeOverrides = {};
+        this.textureId = 0;
+    }
+
+    /**
+     * 组件从实体移除时的回调
+     * Called when component is removed from entity
+     */
+    override onRemovedFromEntity(): void {
+        this.resetSystem();
     }
 }

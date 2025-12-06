@@ -23,3 +23,6 @@ export type { ParticleEditorState } from './stores/ParticleEditorStore';
 
 // Components
 export { GradientEditor, CurveEditor } from './components';
+
+// Gizmos
+export { registerParticleGizmo, unregisterParticleGizmo } from './gizmos/ParticleGizmo';

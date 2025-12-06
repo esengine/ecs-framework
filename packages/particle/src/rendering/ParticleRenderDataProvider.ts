@@ -106,6 +106,7 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
             }
         }
 
+
         if (totalParticles === 0) return;
 
         // 确保缓冲区足够大 | Ensure buffers are large enough
@@ -183,6 +184,11 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
             }
 
             if (particleIndex > 0) {
+                // 获取纹理路径（支持多种来源）| Get texture path (support multiple sources)
+                const firstComponent = systems[0]?.component;
+                const asset = firstComponent?.loadedAsset as { textureGuid?: string; texturePath?: string } | null;
+                const texPath = asset?.textureGuid || asset?.texturePath || firstComponent?.textureGuid || undefined;
+
                 // 创建当前组的渲染数据 | Create render data for current group
                 const renderData: ParticleProviderRenderData = {
                     transforms: this._transforms.subarray(0, particleIndex * 7),
@@ -191,7 +197,7 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
                     colors: this._colors.subarray(0, particleIndex),
                     tileCount: particleIndex,
                     sortingOrder,
-                    texturePath: systems[0]?.component.textureGuid || undefined
+                    texturePath: texPath
                 };
 
                 this._renderDataCache.push(renderData);

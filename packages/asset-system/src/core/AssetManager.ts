@@ -105,10 +105,21 @@ export class AssetManager implements IAssetManager {
     }
 
     /**
+     * Get the loader factory.
+     * 获取加载器工厂。
+     */
+    getLoaderFactory(): AssetLoaderFactory {
+        return this._loaderFactory as AssetLoaderFactory;
+    }
+
+    /**
      * Initialize from catalog
      * 从目录初始化
+     *
+     * Can be called after construction to load catalog entries.
+     * 可在构造后调用以加载目录条目。
      */
-    private initializeFromCatalog(catalog: IAssetCatalog): void {
+    initializeFromCatalog(catalog: IAssetCatalog): void {
         catalog.entries.forEach((entry, guid) => {
             const metadata: IAssetMetadata = {
                 guid,

@@ -159,9 +159,20 @@ export class ParticleEmitter {
      * @param dt - Delta time in seconds
      * @param worldX - World position X
      * @param worldY - World position Y
+     * @param worldRotation - World rotation in radians (applied to emission direction)
+     * @param worldScaleX - World scale X (applied to emission offset and speed)
+     * @param worldScaleY - World scale Y (applied to emission offset and speed)
      * @returns Number of particles emitted
      */
-    emit(pool: ParticlePool, dt: number, worldX: number, worldY: number): number {
+    emit(
+        pool: ParticlePool,
+        dt: number,
+        worldX: number,
+        worldY: number,
+        worldRotation: number = 0,
+        worldScaleX: number = 1,
+        worldScaleY: number = 1
+    ): number {
         if (!this._isEmitting) return 0;
 
         let emitted = 0;
@@ -171,7 +182,7 @@ export class ParticleEmitter {
             for (let i = 0; i < this.config.burstCount; i++) {
                 const p = pool.spawn();
                 if (p) {
-                    this._initParticle(p, worldX, worldY);
+                    this._initParticle(p, worldX, worldY, worldRotation, worldScaleX, worldScaleY);
                     emitted++;
                 }
             }
@@ -182,7 +193,7 @@ export class ParticleEmitter {
             while (this._emissionAccumulator >= 1) {
                 const p = pool.spawn();
                 if (p) {
-                    this._initParticle(p, worldX, worldY);
+                    this._initParticle(p, worldX, worldY, worldRotation, worldScaleX, worldScaleY);
                     emitted++;
                 }
                 this._emissionAccumulator -= 1;
@@ -195,13 +206,29 @@ export class ParticleEmitter {
     /**
      * 立即爆发发射
      * Burst emit immediately
+     *
+     * @param pool - Particle pool
+     * @param count - Number of particles to emit
+     * @param worldX - World position X
+     * @param worldY - World position Y
+     * @param worldRotation - World rotation in radians
+     * @param worldScaleX - World scale X
+     * @param worldScaleY - World scale Y
      */
-    burst(pool: ParticlePool, count: number, worldX: number, worldY: number): number {
+    burst(
+        pool: ParticlePool,
+        count: number,
+        worldX: number,
+        worldY: number,
+        worldRotation: number = 0,
+        worldScaleX: number = 1,
+        worldScaleY: number = 1
+    ): number {
         let emitted = 0;
         for (let i = 0; i < count; i++) {
             const p = pool.spawn();
             if (p) {
-                this._initParticle(p, worldX, worldY);
+                this._initParticle(p, worldX, worldY, worldRotation, worldScaleX, worldScaleY);
                 emitted++;
             }
         }
@@ -217,23 +244,45 @@ export class ParticleEmitter {
         this._isEmitting = true;
     }
 
-    private _initParticle(p: Particle, worldX: number, worldY: number): void {
+    private _initParticle(
+        p: Particle,
+        worldX: number,
+        worldY: number,
+        worldRotation: number = 0,
+        worldScaleX: number = 1,
+        worldScaleY: number = 1
+    ): void {
         const config = this.config;
 
-        // 位置 | Position
+        // 获取形状偏移 | Get shape offset
         const [ox, oy] = this._getShapeOffset();
-        p.x = worldX + ox;
-        p.y = worldY + oy;
+
+        // 应用旋转和缩放到发射偏移 | Apply rotation and scale to emission offset
+        // 先缩放，再旋转 | Scale first, then rotate
+        const scaledOx = ox * worldScaleX;
+        const scaledOy = oy * worldScaleY;
+        const cos = Math.cos(worldRotation);
+        const sin = Math.sin(worldRotation);
+        const rotatedOx = scaledOx * cos - scaledOy * sin;
+        const rotatedOy = scaledOx * sin + scaledOy * cos;
+
+        // 位置 | Position
+        p.x = worldX + rotatedOx;
+        p.y = worldY + rotatedOy;
 
         // 生命时间 | Lifetime
         p.lifetime = randomRange(config.lifetime.min, config.lifetime.max);
         p.age = 0;
 
-        // 速度方向 | Velocity direction
-        const dir = config.direction + randomRange(-config.directionSpread / 2, config.directionSpread / 2);
+        // 速度方向（应用世界旋转）| Velocity direction (apply world rotation)
+        const baseDir = config.direction + randomRange(-config.directionSpread / 2, config.directionSpread / 2);
+        const dir = baseDir + worldRotation;
         const speed = randomRange(config.speed.min, config.speed.max);
-        p.vx = Math.cos(dir) * speed;
-        p.vy = Math.sin(dir) * speed;
+
+        // 速度也应用缩放（使用平均缩放）| Speed also applies scale (use average scale)
+        const avgScale = (worldScaleX + worldScaleY) / 2;
+        p.vx = Math.cos(dir) * speed * avgScale;
+        p.vy = Math.sin(dir) * speed * avgScale;
 
         // 加速度（重力）| Acceleration (gravity)
         p.ax = config.gravityX;
@@ -243,12 +292,12 @@ export class ParticleEmitter {
         p.rotation = randomRange(config.startRotation.min, config.startRotation.max);
         p.angularVelocity = randomRange(config.angularVelocity.min, config.angularVelocity.max);
 
-        // 缩放 | Scale
-        const scale = randomRange(config.startScale.min, config.startScale.max);
-        p.scaleX = scale;
-        p.scaleY = scale;
-        p.startScaleX = scale;
-        p.startScaleY = scale;
+        // 缩放（应用世界缩放）| Scale (apply world scale)
+        const baseScale = randomRange(config.startScale.min, config.startScale.max);
+        p.scaleX = baseScale * worldScaleX;
+        p.scaleY = baseScale * worldScaleY;
+        p.startScaleX = p.scaleX;
+        p.startScaleY = p.scaleY;
 
         // 颜色 | Color
         p.r = clamp(config.startColor.r + randomRange(-config.startColorVariance.r, config.startColorVariance.r), 0, 1);

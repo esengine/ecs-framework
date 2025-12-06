@@ -270,6 +270,7 @@ export class GameRuntime {
             this._systemContext = {
                 isEditor: this._platform.isEditorMode(),
                 engineBridge: this._bridge,
+                engineIntegration: this._engineIntegration,
                 renderSystem: this._renderSystem,
                 assetManager: this._assetManager,
                 inputSystem: this._inputSystem,

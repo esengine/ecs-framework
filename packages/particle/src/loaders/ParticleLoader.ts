@@ -32,6 +32,21 @@ export interface IParticleModuleConfig {
 }
 
 /**
+ * 爆发配置
+ * Burst configuration
+ */
+export interface IBurstConfig {
+    /** 触发时间（秒）| Trigger time (seconds) */
+    time: number;
+    /** 发射数量 | Particle count */
+    count: number;
+    /** 循环次数（0=无限）| Number of cycles (0=infinite) */
+    cycles: number;
+    /** 循环间隔（秒）| Interval between cycles (seconds) */
+    interval: number;
+}
+
+/**
  * 粒子效果资源数据接口
  * Particle effect asset data interface
  */
@@ -110,10 +125,16 @@ export interface IParticleAsset {
     sortingOrder: number;
     /** 纹理资产 GUID | Texture asset GUID */
     textureGuid?: string;
+    /** 纹理路径（编辑器兼容）| Texture path (editor compatibility) */
+    texturePath?: string;
 
     // 模块配置 | Module configurations
     /** 模块列表 | Module list */
     modules?: IParticleModuleConfig[];
+
+    // 爆发配置 | Burst configurations
+    /** 爆发列表 | Burst list */
+    bursts?: IBurstConfig[];
 
     // 纹理动画（可选）| Texture animation (optional)
     /** 纹理图集列数 | Texture sheet columns */
