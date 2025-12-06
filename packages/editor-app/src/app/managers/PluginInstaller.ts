@@ -19,6 +19,7 @@ import { AssetMetaPlugin } from '../../plugins/builtin/AssetMetaPlugin';
 
 // 统一模块插件（从编辑器包导入完整插件，包含 runtime + editor）
 import { BehaviorTreePlugin } from '@esengine/behavior-tree-editor';
+import { ParticlePlugin } from '@esengine/particle-editor';
 import { Physics2DPlugin } from '@esengine/physics-rapier2d-editor';
 import { TilemapPlugin } from '@esengine/tilemap-editor';
 import { UIPlugin } from '@esengine/ui-editor';
@@ -60,6 +61,7 @@ export class PluginInstaller {
             { name: 'TilemapPlugin', plugin: TilemapPlugin },
             { name: 'UIPlugin', plugin: UIPlugin },
             { name: 'BehaviorTreePlugin', plugin: BehaviorTreePlugin },
+            { name: 'ParticlePlugin', plugin: ParticlePlugin },
             { name: 'Physics2DPlugin', plugin: Physics2DPlugin },
             { name: 'BlueprintPlugin', plugin: BlueprintPlugin },
             { name: 'MaterialPlugin', plugin: MaterialPlugin },

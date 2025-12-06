@@ -592,6 +592,12 @@ importers:
       '@esengine/material-system':
         specifier: workspace:*
         version: link:../material-system
+      '@esengine/particle':
+        specifier: workspace:*
+        version: link:../particle
+      '@esengine/particle-editor':
+        specifier: workspace:*
+        version: link:../particle-editor
       '@esengine/physics-rapier2d':
         specifier: workspace:*
         version: link:../physics-rapier2d
@@ -1039,6 +1045,73 @@ importers:
       vite-plugin-dts:
         specifier: ^3.7.0
         version: 3.9.1(@types/node@20.19.25)(rollup@4.53.3)(typescript@5.9.3)(vite@6.4.1(@types/node@20.19.25)(jiti@2.6.1)(terser@5.44.1)(yaml@2.8.1))
+      zustand:
+        specifier: ^5.0.8
+        version: 5.0.8(@types/react@18.3.27)(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1))
+
+  packages/particle:
+    devDependencies:
+      '@esengine/asset-system':
+        specifier: workspace:*
+        version: link:../asset-system
+      '@esengine/build-config':
+        specifier: workspace:*
+        version: link:../build-config
+      '@esengine/ecs-framework':
+        specifier: workspace:*
+        version: link:../core
+      '@esengine/ecs-framework-math':
+        specifier: workspace:*
+        version: link:../math
+      '@esengine/engine-core':
+        specifier: workspace:*
+        version: link:../engine-core
+      rimraf:
+        specifier: ^5.0.5
+        version: 5.0.10
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(@microsoft/api-extractor@7.55.1(@types/node@20.19.25))(@swc/core@1.15.3)(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  packages/particle-editor:
+    dependencies:
+      '@esengine/particle':
+        specifier: workspace:*
+        version: link:../particle
+    devDependencies:
+      '@esengine/build-config':
+        specifier: workspace:*
+        version: link:../build-config
+      '@esengine/ecs-framework':
+        specifier: workspace:*
+        version: link:../core
+      '@esengine/editor-core':
+        specifier: workspace:*
+        version: link:../editor-core
+      '@esengine/engine-core':
+        specifier: workspace:*
+        version: link:../engine-core
+      '@types/react':
+        specifier: ^18.3.12
+        version: 18.3.27
+      lucide-react:
+        specifier: ^0.545.0
+        version: 0.545.0(react@18.3.1)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      rimraf:
+        specifier: ^5.0.5
+        version: 5.0.10
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(@microsoft/api-extractor@7.55.1(@types/node@20.19.25))(@swc/core@1.15.3)(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
       zustand:
         specifier: ^5.0.8
         version: 5.0.8(@types/react@18.3.27)(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1))

@@ -1,0 +1,1323 @@
+/**
+ * Particle Editor Styles
+ * 粒子编辑器样式
+ *
+ * Matches editor-app property panel styles exactly.
+ * 与 editor-app 属性面板样式完全匹配。
+ */
+
+/* ==================== Empty State ==================== */
+.particle-editor-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #888;
+    text-align: center;
+    padding: 24px;
+    background: #262626;
+}
+
+.particle-editor-empty h3 {
+    margin: 16px 0 8px;
+    color: #ccc;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.particle-editor-empty p {
+    margin: 0 0 16px;
+    font-size: 11px;
+}
+
+/* ==================== Button Styles ==================== */
+.editor-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #3a3a3a;
+    border-radius: 3px;
+    background: #2a2a2a;
+    color: #ccc;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.editor-button:hover {
+    background: #333;
+    border-color: #4a4a4a;
+}
+
+.editor-button.primary {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
+}
+
+.editor-button.primary:hover {
+    background: #2563eb;
+}
+
+/* ==================== Main Panel Layout ==================== */
+.particle-editor-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #262626;
+    overflow: hidden;
+    font-size: 11px;
+    color: #ccc;
+}
+
+/* ==================== Toolbar ==================== */
+.particle-editor-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 6px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #1a1a1a;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.particle-editor-toolbar .toolbar-left,
+.particle-editor-toolbar .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.particle-editor-toolbar button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 2px;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.particle-editor-toolbar button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ccc;
+}
+
+.particle-editor-toolbar button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.particle-editor-toolbar .separator {
+    width: 1px;
+    height: 14px;
+    background: #444;
+    margin: 0 4px;
+}
+
+.particle-editor-toolbar .file-name {
+    font-size: 11px;
+    color: #666;
+    padding-right: 8px;
+}
+
+/* ==================== Content Area ==================== */
+.particle-editor-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* ==================== Preview Area ==================== */
+.particle-preview-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #1a1a1a;
+    position: relative;
+    min-width: 300px;
+    overflow: hidden;
+}
+
+.particle-preview-area.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    min-width: 100%;
+}
+
+.particle-preview-canvas {
+    flex: 1;
+    width: 100%;
+    background: #0a0a12;
+    cursor: crosshair;
+}
+
+/* ==================== Preview Controls ==================== */
+.preview-controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 8px;
+    background: #1e1e1e;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
+}
+
+.preview-control-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 22px;
+    padding: 0 4px;
+    border: none;
+    border-radius: 2px;
+    background: transparent;
+    color: #888;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.preview-control-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ccc;
+}
+
+.preview-control-btn.active {
+    background: #3b82f6;
+    color: #fff;
+}
+
+.preview-control-separator {
+    width: 1px;
+    height: 14px;
+    background: #444;
+    margin: 0 4px;
+}
+
+.preview-control-btn.burst-btn {
+    gap: 4px;
+    padding: 0 8px;
+    background: #3a3a3a;
+    border: 1px solid #4a4a4a;
+}
+
+.preview-control-btn.burst-btn:hover {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: #000;
+}
+
+.preview-control-btn.burst-btn:active {
+    background: #d97706;
+    border-color: #d97706;
+}
+
+/* ==================== Vector Field (X/Y) ==================== */
+.vector-field-row {
+    display: flex;
+    align-items: center;
+    padding: 3px 8px;
+    min-height: 22px;
+    gap: 4px;
+}
+
+.vector-field-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.vector-field-row > label {
+    width: 64px;
+    min-width: 64px;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #999;
+    font-weight: 400;
+}
+
+.vector-field-inputs {
+    flex: 1;
+    display: flex;
+    gap: 2px;
+    min-width: 0;
+}
+
+.vector-axis-input {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    position: relative;
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.vector-axis-input:hover {
+    border-color: #4a4a4a;
+}
+
+.vector-axis-input:focus-within {
+    border-color: #4a9eff;
+}
+
+.vector-axis-bar {
+    width: 4px;
+    height: 100%;
+    flex-shrink: 0;
+}
+
+.vector-axis-bar.x {
+    background: #c04040;
+}
+
+.vector-axis-bar.y {
+    background: #40a040;
+}
+
+.vector-axis-bar.z {
+    background: #4060c0;
+}
+
+.vector-axis-input input {
+    flex: 1;
+    min-width: 0;
+    height: 16px;
+    padding: 0 4px;
+    background: transparent;
+    border: none;
+    font-size: 10px;
+    font-family: 'Consolas', 'Monaco', 'Menlo', monospace;
+    color: #ddd;
+    -moz-appearance: textfield;
+}
+
+.vector-axis-input input::-webkit-outer-spin-button,
+.vector-axis-input input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.vector-axis-input input:focus {
+    outline: none;
+}
+
+/* ==================== Range Field (Min/Max) ==================== */
+.range-field-row {
+    display: flex;
+    align-items: center;
+    padding: 3px 8px;
+    min-height: 22px;
+    gap: 4px;
+}
+
+.range-field-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.range-field-row > label {
+    width: 64px;
+    min-width: 64px;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #999;
+    font-weight: 400;
+}
+
+.range-field-inputs {
+    flex: 1;
+    display: flex;
+    gap: 4px;
+    min-width: 0;
+    align-items: center;
+}
+
+.range-field-inputs span {
+    font-size: 9px;
+    color: #666;
+}
+
+.range-field-inputs input {
+    flex: 1;
+    min-width: 0;
+    height: 18px;
+    padding: 0 4px;
+    background: #1e1e1e;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    font-size: 10px;
+    font-family: 'Consolas', 'Monaco', 'Menlo', monospace;
+    color: #ddd;
+    -moz-appearance: textfield;
+}
+
+.range-field-inputs input::-webkit-outer-spin-button,
+.range-field-inputs input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.range-field-inputs input:hover {
+    border-color: #4a4a4a;
+}
+
+.range-field-inputs input:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+/* ==================== Properties Panel ==================== */
+.particle-properties-panel {
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    background: #262626;
+    border-left: 1px solid #1a1a1a;
+    overflow: hidden;
+}
+
+/* ==================== Property Section ==================== */
+.property-section {
+    padding: 6px;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.section-header {
+    font-size: 10px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+}
+
+/* ==================== Preset Grid ==================== */
+.preset-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+}
+
+.preset-button {
+    padding: 3px 2px;
+    border: 1px solid #333;
+    border-radius: 2px;
+    background: #1e1e1e;
+    color: #888;
+    font-size: 9px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.preset-button:hover {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #ccc;
+}
+
+.preset-button.selected {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
+}
+
+/* ==================== Property Tabs ==================== */
+.property-tabs {
+    display: flex;
+    background: #262626;
+    border-bottom: 1px solid #1a1a1a;
+    flex-shrink: 0;
+}
+
+.property-tabs button {
+    flex: 1;
+    padding: 4px 2px;
+    border: none;
+    background: transparent;
+    color: #666;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    border-bottom: 2px solid transparent;
+}
+
+.property-tabs button:hover {
+    color: #999;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.property-tabs button.active {
+    color: #ccc;
+    border-bottom-color: #3b82f6;
+}
+
+/* ==================== Property Content ==================== */
+.property-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0;
+}
+
+.property-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.property-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.property-content::-webkit-scrollbar-thumb {
+    background: rgba(121, 121, 121, 0.4);
+    border-radius: 4px;
+}
+
+.property-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 100, 100, 0.7);
+}
+
+/* ==================== Property Group ==================== */
+.property-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+/* ==================== Property Row - Matches EntityInspector ==================== */
+.property-row {
+    display: flex;
+    align-items: center;
+    padding: 3px 8px;
+    min-height: 22px;
+    gap: 4px;
+}
+
+.property-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.property-row > label {
+    width: 64px;
+    min-width: 64px;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #999;
+    font-weight: 400;
+}
+
+/* ==================== Number Input - Matches Transform Field ==================== */
+.property-row > input[type="text"],
+.property-row > input[type="number"] {
+    flex: 1;
+    min-width: 0;
+    height: 18px;
+    padding: 0 4px;
+    background: #1e1e1e;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    font-size: 10px;
+    font-family: 'Consolas', 'Monaco', 'Menlo', monospace;
+    color: #ddd;
+    -moz-appearance: textfield;
+}
+
+.property-row > input[type="text"]::-webkit-outer-spin-button,
+.property-row > input[type="text"]::-webkit-inner-spin-button,
+.property-row > input[type="number"]::-webkit-outer-spin-button,
+.property-row > input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.property-row > input[type="text"]:hover,
+.property-row > input[type="number"]:hover {
+    border-color: #4a4a4a;
+    background: #222;
+}
+
+.property-row > input[type="text"]:focus,
+.property-row > input[type="number"]:focus {
+    outline: none;
+    border-color: #4a9eff;
+    background: rgba(74, 158, 255, 0.05);
+}
+
+/* ==================== Select Input ==================== */
+.property-row > select {
+    flex: 1;
+    min-width: 0;
+    height: 18px;
+    padding: 0 4px;
+    background: #1e1e1e;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    font-size: 10px;
+    color: #ddd;
+    cursor: pointer;
+}
+
+.property-row > select:hover {
+    border-color: #4a4a4a;
+    background: #222;
+}
+
+.property-row > select:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+/* ==================== Checkbox ==================== */
+.property-row > input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #3b82f6;
+}
+
+/* ==================== Color Input ==================== */
+.property-row > input[type="color"] {
+    width: 60px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    cursor: pointer;
+    background: transparent;
+}
+
+.property-row > input[type="color"]:hover {
+    border-color: #4a4a4a;
+}
+
+/* ==================== Range Inputs (Min/Max) ==================== */
+.property-row > div {
+    flex: 1;
+    display: flex;
+    gap: 3px;
+    min-width: 0;
+}
+
+.property-row > div input[type="number"] {
+    flex: 1;
+    min-width: 0;
+    height: 18px;
+    padding: 0 4px;
+    background: #1e1e1e;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    font-size: 10px;
+    font-family: 'Consolas', 'Monaco', 'Menlo', monospace;
+    color: #ddd;
+    -moz-appearance: textfield;
+}
+
+.property-row > div input[type="number"]::-webkit-outer-spin-button,
+.property-row > div input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.property-row > div input[type="number"]:hover {
+    border-color: #4a4a4a;
+    background: #222;
+}
+
+.property-row > div input[type="number"]:focus {
+    outline: none;
+    border-color: #4a9eff;
+    background: rgba(74, 158, 255, 0.05);
+}
+
+/* ==================== Module Section - Matches Component Item ==================== */
+.module-section {
+    background: #262626;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.module-header {
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    background: #2d2d2d;
+    cursor: pointer;
+    user-select: none;
+    height: 24px;
+    gap: 6px;
+}
+
+.module-header:hover {
+    background: #333;
+}
+
+.module-expand-icon {
+    display: flex;
+    align-items: center;
+    color: #888;
+    width: 12px;
+    height: 12px;
+    transition: transform 0.15s ease;
+}
+
+.module-expand-icon.expanded {
+    transform: rotate(90deg);
+}
+
+.module-checkbox {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #3b82f6;
+}
+
+.module-name {
+    flex: 1;
+    font-size: 11px;
+    font-weight: 500;
+    color: #ccc;
+}
+
+.module-section.disabled .module-name {
+    color: #666;
+}
+
+.module-content {
+    padding: 4px 0;
+    background: #262626;
+}
+
+.module-content.collapsed {
+    display: none;
+}
+
+/* ==================== Asset Field - Matches AssetField.css ==================== */
+.asset-field-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 4px 8px;
+}
+
+.asset-field-label {
+    width: 64px;
+    min-width: 64px;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #999;
+    padding-top: 3px;
+}
+
+.asset-field-content {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+}
+
+.asset-field-thumbnail {
+    width: 44px;
+    height: 44px;
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: border-color 0.15s ease;
+}
+
+.asset-field-thumbnail:hover {
+    border-color: #4a4a4a;
+}
+
+.asset-field-thumbnail.dragging {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.asset-field-thumbnail img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.asset-field-thumbnail-icon {
+    color: #555;
+}
+
+.asset-field-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.asset-field-dropdown {
+    display: flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+    min-width: 0;
+}
+
+.asset-field-dropdown:hover {
+    border-color: #4a4a4a;
+}
+
+.asset-field-value {
+    flex: 1;
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-style: italic;
+}
+
+.asset-field-dropdown.has-value .asset-field-value {
+    color: #ddd;
+    font-style: normal;
+}
+
+.asset-field-dropdown-arrow {
+    color: #666;
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+
+.asset-field-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.asset-field-btn {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.asset-field-btn:hover {
+    background: #3a3a3a;
+    border-color: #4a4a4a;
+    color: #ccc;
+}
+
+.asset-field-btn--clear:hover {
+    background: #4a2020;
+    border-color: #5a3030;
+    color: #f87171;
+}
+
+/* ==================== Burst Section ==================== */
+.burst-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 8px;
+}
+
+.burst-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 0;
+}
+
+.burst-item input {
+    flex: 1;
+    min-width: 0;
+    height: 18px;
+    padding: 0 4px;
+    background: #1e1e1e;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    font-size: 10px;
+    font-family: 'Consolas', 'Monaco', 'Menlo', monospace;
+    color: #ddd;
+    -moz-appearance: textfield;
+}
+
+.burst-item input::-webkit-outer-spin-button,
+.burst-item input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.burst-item input:hover {
+    border-color: #4a4a4a;
+}
+
+.burst-item input:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.burst-item-label {
+    font-size: 9px;
+    color: #666;
+    width: 16px;
+    text-align: right;
+}
+
+.burst-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    padding: 4px;
+    margin-top: 4px;
+    border: 1px dashed #3a3a3a;
+    border-radius: 2px;
+    background: transparent;
+    color: #666;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.burst-add-btn:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.burst-remove-btn {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    border-radius: 2px;
+    opacity: 0;
+    transition: all 0.1s ease;
+}
+
+.burst-item:hover .burst-remove-btn {
+    opacity: 1;
+}
+
+.burst-remove-btn:hover {
+    background: #ef4444;
+    color: #fff;
+}
+
+/* ==================== Gradient Preview ==================== */
+.gradient-preview {
+    flex: 1;
+    height: 18px;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+}
+
+.gradient-preview:hover {
+    border-color: #4a4a4a;
+}
+
+/* ==================== Curve Preview ==================== */
+.curve-preview {
+    flex: 1;
+    height: 32px;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    background: #1e1e1e;
+    cursor: pointer;
+}
+
+.curve-preview:hover {
+    border-color: #4a4a4a;
+}
+
+/* ==================== Collapsible Group ==================== */
+.collapsible-group {
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.collapsible-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 6px;
+    background: rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    user-select: none;
+    height: 20px;
+}
+
+.collapsible-header:hover {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.collapsible-title {
+    flex: 1;
+    font-size: 10px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.collapsible-content {
+    padding: 0;
+}
+
+.collapsible-content.collapsed {
+    display: none;
+}
+
+/* ==================== Gradient Editor ==================== */
+.gradient-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 8px;
+}
+
+.gradient-track {
+    position: relative;
+    height: 20px;
+    border-radius: 2px;
+    cursor: crosshair;
+    border: 1px solid #3a3a3a;
+}
+
+.gradient-track:hover {
+    border-color: #4a4a4a;
+}
+
+.gradient-track-checker {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: 1px;
+    background:
+        linear-gradient(45deg, #404040 25%, transparent 25%),
+        linear-gradient(-45deg, #404040 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #404040 75%),
+        linear-gradient(-45deg, transparent 75%, #404040 75%);
+    background-size: 6px 6px;
+    background-position: 0 0, 0 3px, 3px -3px, -3px 0;
+}
+
+.gradient-stop {
+    position: absolute;
+    top: 100%;
+    margin-top: 4px;
+    width: 8px;
+    height: 8px;
+    border: 2px solid #aaa;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    cursor: ew-resize;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    transition: border-color 0.1s ease;
+}
+
+.gradient-stop:hover {
+    border-color: #ccc;
+}
+
+.gradient-stop.selected {
+    border-color: #4a9eff;
+}
+
+.gradient-color-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.gradient-color-row label {
+    font-size: 10px;
+    color: #888;
+    min-width: 32px;
+}
+
+.gradient-color-input {
+    width: 28px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    cursor: pointer;
+    background: transparent;
+}
+
+.gradient-color-input:hover {
+    border-color: #4a4a4a;
+}
+
+.gradient-alpha-slider {
+    flex: 1;
+    height: 4px;
+    min-width: 40px;
+    cursor: pointer;
+    accent-color: #4a9eff;
+}
+
+.gradient-alpha-value {
+    font-size: 9px;
+    font-family: 'Consolas', 'Monaco', 'Menlo', monospace;
+    color: #888;
+    min-width: 28px;
+    text-align: right;
+}
+
+.gradient-delete-btn {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.1s ease;
+}
+
+.gradient-delete-btn:hover:not(:disabled) {
+    background: #ef4444;
+    color: #fff;
+}
+
+.gradient-delete-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* ==================== Curve Editor ==================== */
+.curve-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 8px;
+}
+
+.curve-type-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.curve-type-row label {
+    font-size: 10px;
+    color: #888;
+    min-width: 32px;
+}
+
+.curve-type-select {
+    flex: 1;
+    height: 18px;
+    padding: 0 4px;
+    background: #1e1e1e;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    font-size: 10px;
+    color: #ddd;
+    cursor: pointer;
+}
+
+.curve-type-select:hover {
+    border-color: #4a4a4a;
+}
+
+.curve-type-select:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.curve-canvas-container {
+    position: relative;
+    height: 100px;
+    border: 1px solid #3a3a3a;
+    border-radius: 3px;
+    overflow: hidden;
+    background: #1a1a1a;
+}
+
+.curve-canvas-container:hover {
+    border-color: #4a4a4a;
+}
+
+.curve-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.curve-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 20px;
+}
+
+.curve-edit-row label {
+    font-size: 10px;
+    color: #888;
+    min-width: 12px;
+}
+
+.curve-hint {
+    font-size: 10px;
+    color: #555;
+    font-style: italic;
+}
+
+.curve-value-input {
+    width: 50px;
+    height: 18px;
+    padding: 0 4px;
+    background: #1e1e1e;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    font-size: 10px;
+    font-family: 'Consolas', 'Monaco', 'Menlo', monospace;
+    color: #ddd;
+    -moz-appearance: textfield;
+}
+
+.curve-value-input::-webkit-outer-spin-button,
+.curve-value-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.curve-value-input:hover {
+    border-color: #4a4a4a;
+}
+
+.curve-value-input:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.curve-delete-btn {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    color: #888;
+    cursor: pointer;
+    border-radius: 2px;
+    margin-left: auto;
+    transition: all 0.1s ease;
+}
+
+.curve-delete-btn:hover:not(:disabled) {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #fff;
+}
+
+.curve-delete-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.curve-presets {
+    display: flex;
+    gap: 3px;
+}
+
+.curve-preset-btn {
+    flex: 1;
+    padding: 4px 6px;
+    background: #1e1e1e;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    color: #888;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.curve-preset-btn:hover {
+    background: #2a2a2a;
+    border-color: #4a9eff;
+    color: #4a9eff;
+}
+
+.curve-preset-btn:active {
+    background: #4a9eff;
+    color: #fff;
+}
+
+/* ==================== Texture Sheet Animation ==================== */
+.texture-sheet-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+}
+
+.texture-sheet-grid {
+    display: grid;
+    gap: 1px;
+    background: #333;
+    border: 1px solid #3a3a3a;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.texture-sheet-cell {
+    background: #1e1e1e;
+    aspect-ratio: 1;
+}
+
+.texture-sheet-cell.active {
+    background: rgba(59, 130, 246, 0.3);
+}
