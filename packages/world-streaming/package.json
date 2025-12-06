@@ -1,0 +1,39 @@
+{
+    "name": "@esengine/world-streaming",
+    "version": "1.0.0",
+    "description": "World streaming and chunk management system for open world games",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "type": "module",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch"
+    },
+    "dependencies": {
+        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/engine-core": "workspace:*"
+    },
+    "devDependencies": {
+        "tsup": "^8.0.1",
+        "typescript": "^5.3.3"
+    },
+    "peerDependencies": {
+        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/engine-core": "workspace:*"
+    },
+    "keywords": [
+        "ecs",
+        "streaming",
+        "chunk",
+        "open-world"
+    ],
+    "author": "ESEngine",
+    "license": "MIT"
+}
