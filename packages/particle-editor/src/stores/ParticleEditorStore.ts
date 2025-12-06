@@ -78,10 +78,14 @@ export const useParticleEditorStore = create<ParticleEditorState>((set) => ({
 
     setPendingFilePath: (path) => set({ pendingFilePath: path }),
 
-    setParticleData: (data) => set({
+    setParticleData: (data) => set((state) => ({
         particleData: data,
-        isDirty: false,
-    }),
+        // 如果有文件路径，修改数据时应该标记为 dirty
+        // 如果没有文件路径且之前也没有数据，则是加载文件，不标记 dirty
+        // If has file path, mark as dirty when data changes
+        // If no file path and no previous data, it's loading, don't mark dirty
+        isDirty: state.filePath !== null || state.particleData !== null,
+    })),
 
     updateProperty: (key, value) => set((state) => {
         if (!state.particleData) return state;
@@ -115,7 +119,7 @@ export const useParticleEditorStore = create<ParticleEditorState>((set) => ({
         particleData: createDefaultParticleAsset(name),
         filePath: null,
         isDirty: true,
-        isPlaying: false,
+        isPlaying: true,  // 自动播放 | Auto play
         selectedPreset: null,
     }),
 }));

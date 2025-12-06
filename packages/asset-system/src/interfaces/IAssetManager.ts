@@ -12,9 +12,11 @@ import {
     IAssetLoadResult,
     IAssetReferenceInfo,
     IAssetPreloadGroup,
-    IAssetLoadProgress
+    IAssetLoadProgress,
+    IAssetCatalog
 } from '../types/AssetTypes';
 import { IAssetLoader } from './IAssetLoader';
+import { IAssetReader } from './IAssetReader';
 
 /**
  * Asset manager interface
@@ -150,6 +152,21 @@ export interface IAssetManager {
      * 释放管理器
      */
     dispose(): void;
+
+    /**
+     * Set asset reader
+     * 设置资产读取器
+     */
+    setReader(reader: IAssetReader): void;
+
+    /**
+     * Initialize from catalog
+     * 从目录初始化
+     *
+     * Loads asset metadata from a catalog for runtime asset resolution.
+     * 从目录加载资产元数据，用于运行时资产解析。
+     */
+    initializeFromCatalog(catalog: IAssetCatalog): void;
 }
 
 /**

@@ -35,6 +35,7 @@ import {
 import { ParticleEditorPanel } from './panels/ParticleEditorPanel';
 import { ParticleInspectorProvider } from './providers/ParticleInspectorProvider';
 import { useParticleEditorStore } from './stores/ParticleEditorStore';
+import { registerParticleGizmo, unregisterParticleGizmo } from './gizmos/ParticleGizmo';
 
 // 导入编辑器 CSS 样式（会被 vite 自动处理并注入到 DOM）
 // Import editor CSS styles (automatically handled and injected by vite)
@@ -45,6 +46,8 @@ import './styles/ParticleEditor.css';
  * Particle Editor Module
  */
 export class ParticleEditorModule implements IEditorModuleLoader {
+    private _assetsRefreshUnsubscribe: (() => void) | null = null;
+
     async install(services: ServiceContainer): Promise<void> {
         // 注册检视器提供者 | Register inspector provider
         const inspectorRegistry = services.resolve(InspectorRegistry);
@@ -72,10 +75,61 @@ export class ParticleEditorModule implements IEditorModuleLoader {
                 createMessage: 'particle:create-asset'
             });
         }
+
+        // 注册 Gizmo | Register gizmo
+        registerParticleGizmo();
+
+        // 监听资产刷新事件，当 .particle 文件保存时重新加载所有粒子组件
+        // Listen for assets refresh event to reload particle components when .particle files are saved
+        const messageHub = services.resolve(MessageHub);
+        if (messageHub) {
+            this._assetsRefreshUnsubscribe = messageHub.subscribe('assets:refresh', () => {
+                this._reloadAllParticleAssets();
+            });
+        }
     }
 
     async uninstall(): Promise<void> {
-        // 清理 | Clean up
+        // 取消订阅事件 | Unsubscribe events
+        if (this._assetsRefreshUnsubscribe) {
+            this._assetsRefreshUnsubscribe();
+            this._assetsRefreshUnsubscribe = null;
+        }
+
+        // 取消注册 Gizmo | Unregister gizmo
+        unregisterParticleGizmo();
+    }
+
+    /**
+     * 重新加载所有粒子资产
+     * Reload all particle assets
+     *
+     * 当资产文件变化时调用，强制所有粒子组件重新加载资产。
+     * Called when asset files change, forcing all particle components to reload.
+     */
+    private _reloadAllParticleAssets(): void {
+        const scene = Core.scene;
+        if (!scene) return;
+
+        // 遍历所有带有 ParticleSystemComponent 的实体
+        // Iterate all entities with ParticleSystemComponent
+        scene.entities.forEach((entity: Entity) => {
+            const particle = entity.getComponent(ParticleSystemComponent) as ParticleSystemComponent | null;
+            if (particle && particle.particleAssetGuid) {
+                // 异步重新加载资产 | Async reload asset
+                particle.reloadAsset().then((success: boolean) => {
+                    if (success) {
+                        console.log(`[ParticleEditorModule] Reloaded particle asset for entity: ${entity.name}`);
+                        // 标记需要重建并重新播放 | Mark dirty and replay
+                        particle.markDirty();
+                        if (particle.isPlaying) {
+                            particle.stop(true);
+                            particle.play();
+                        }
+                    }
+                });
+            }
+        });
     }
 
     getPanels(): PanelDescriptor[] {

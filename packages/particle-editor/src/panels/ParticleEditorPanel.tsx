@@ -2003,6 +2003,18 @@ export function ParticleEditorPanel() {
         }
     }, [particleData, filePath, setFilePath, markSaved]);
 
+    // 面板容器 ref | Panel container ref
+    const panelRef = useRef<HTMLDivElement>(null);
+
+    // 键盘快捷键处理 | Keyboard shortcut handler
+    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            e.stopPropagation();
+            handleSave();
+        }
+    }, [handleSave]);
+
     const handleOpen = useCallback(async () => {
         const dialog = Core.services.tryResolve(IDialogService) as IDialog | null;
         if (!dialog) return;
@@ -2130,7 +2142,12 @@ export function ParticleEditorPanel() {
     }
 
     return (
-        <div className="particle-editor-panel">
+        <div
+            ref={panelRef}
+            className="particle-editor-panel"
+            tabIndex={0}
+            onKeyDown={handleKeyDown}
+        >
             {/* Toolbar */}
             <div className="particle-editor-toolbar">
                 <div className="toolbar-left">

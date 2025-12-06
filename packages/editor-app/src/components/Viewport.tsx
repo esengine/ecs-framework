@@ -843,6 +843,12 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             // 从场景中收集所有资产路径
             const sceneObj = JSON.parse(sceneData);
             const assetPaths = new Set<string>();
+            // GUID 到路径的映射，用于需要通过 GUID 加载的资产
+            // GUID to path mapping for assets that need to be loaded by GUID
+            const guidToPath = new Map<string, string>();
+
+            // Get asset registry for resolving GUIDs
+            const assetRegistry = Core.services.tryResolve(AssetRegistryService);
 
             // Scan all components for asset references
             if (sceneObj.entities) {
@@ -864,6 +870,46 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                             // Audio assets
                             if (comp.type === 'AudioSource' && comp.data?.clip) {
                                 assetPaths.add(comp.data.clip);
+                            }
+                            // Particle assets - resolve GUID to path
+                            if (comp.type === 'ParticleSystem' && comp.data?.particleAssetGuid) {
+                                const guid = comp.data.particleAssetGuid;
+                                if (assetRegistry) {
+                                    const relativePath = assetRegistry.getPathByGuid(guid);
+                                    if (relativePath && projectPath) {
+                                        // Convert relative path to absolute path
+                                        // 将相对路径转换为绝对路径
+                                        const absolutePath = `${projectPath}\\${relativePath.replace(/\//g, '\\')}`;
+                                        assetPaths.add(absolutePath);
+                                        guidToPath.set(guid, absolutePath);
+
+                                        // Also check for texture referenced in particle asset
+                                        // 同时检查粒子资产中引用的纹理
+                                        try {
+                                            const particleContent = await TauriAPI.readFileContent(absolutePath);
+                                            const particleData = JSON.parse(particleContent);
+                                            const textureRef = particleData.textureGuid || particleData.texturePath;
+                                            if (textureRef) {
+                                                // Check if it's a GUID or a path
+                                                if (textureRef.includes('-') && textureRef.length > 30) {
+                                                    // Looks like a GUID
+                                                    const textureRelPath = assetRegistry.getPathByGuid(textureRef);
+                                                    if (textureRelPath && projectPath) {
+                                                        const textureAbsPath = `${projectPath}\\${textureRelPath.replace(/\//g, '\\')}`;
+                                                        assetPaths.add(textureAbsPath);
+                                                        guidToPath.set(textureRef, textureAbsPath);
+                                                    }
+                                                } else {
+                                                    // It's a path
+                                                    const textureAbsPath = `${projectPath}\\${textureRef.replace(/\//g, '\\')}`;
+                                                    assetPaths.add(textureAbsPath);
+                                                }
+                                            }
+                                        } catch {
+                                            // Ignore parse errors
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -899,12 +945,25 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                         '.btree': 'btree',
                         '.tmx': 'tilemap', '.tsx': 'tileset',
                         '.mp3': 'audio', '.ogg': 'audio', '.wav': 'audio',
-                        '.json': 'json'
+                        '.json': 'json',
+                        '.particle': 'particle'
                     };
                     const assetType = typeMap[ext] || 'binary';
 
-                    // Generate simple GUID based on path
-                    const guid = assetPath.replace(/[^a-zA-Z0-9]/g, '-').substring(0, 36);
+                    // Check if this asset was referenced by a GUID (e.g., particle assets)
+                    // If so, use the original GUID; otherwise generate one from the path
+                    // 检查此资产是否通过 GUID 引用（如粒子资产）
+                    // 如果是，使用原始 GUID；否则根据路径生成
+                    let guid: string | undefined;
+                    for (const [originalGuid, mappedPath] of guidToPath.entries()) {
+                        if (mappedPath === assetPath) {
+                            guid = originalGuid;
+                            break;
+                        }
+                    }
+                    if (!guid) {
+                        guid = assetPath.replace(/[^a-zA-Z0-9]/g, '-').substring(0, 36);
+                    }
 
                     catalogEntries[guid] = {
                         guid,
@@ -913,8 +972,6 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                         size: 0,
                         hash: ''
                     };
-
-                    console.log(`[Viewport] Copied asset: ${filename}`);
                 } catch (error) {
                     console.error(`[Viewport] Failed to copy asset ${assetPath}:`, error);
                 }
@@ -928,7 +985,6 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                 entries: catalogEntries
             };
             await TauriAPI.writeFileContent(`${runtimeDir}/asset-catalog.json`, JSON.stringify(assetCatalog, null, 2));
-            console.log(`[Viewport] Asset catalog created with ${Object.keys(catalogEntries).length} entries`);
 
             // Copy user-runtime.js if it exists
             // 如果存在用户运行时，复制 user-runtime.js

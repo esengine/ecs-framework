@@ -11,19 +11,46 @@ const VectorInput: React.FC<{
     onChange: (value: number) => void;
     readonly?: boolean;
     axis: 'x' | 'y' | 'z' | 'w';
-}> = ({ label, value, onChange, readonly, axis }) => (
-    <div className="property-vector-axis-compact">
-        <span className={`property-vector-axis-label property-vector-axis-${axis}`}>{label}</span>
-        <input
-            type="number"
-            value={value}
-            onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-            disabled={readonly}
-            step={0.1}
-            className="property-input property-input-number property-input-number-compact"
-        />
-    </div>
-);
+    step?: number;
+}> = ({ label, value, onChange, readonly, axis, step = 0.01 }) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const inputValue = e.target.value;
+        // 允许空字符串、负号、小数点等中间输入状态
+        // Allow empty string, minus sign, decimal point as intermediate states
+        if (inputValue === '' || inputValue === '-' || inputValue === '.' || inputValue === '-.') {
+            return; // 不触发 onChange，等待用户完成输入
+        }
+        const parsed = parseFloat(inputValue);
+        if (!isNaN(parsed)) {
+            onChange(parsed);
+        }
+    };
+
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+        // 失去焦点时，如果是无效值则重置为当前值
+        // On blur, if value is invalid, reset to current value
+        const parsed = parseFloat(e.target.value);
+        if (isNaN(parsed)) {
+            e.target.value = String(value);
+        }
+    };
+
+    return (
+        <div className="property-vector-axis-compact">
+            <span className={`property-vector-axis-label property-vector-axis-${axis}`}>{label}</span>
+            <input
+                type="number"
+                defaultValue={value}
+                key={value} // 强制在外部值变化时重新渲染
+                onChange={handleChange}
+                onBlur={handleBlur}
+                disabled={readonly}
+                step={step}
+                className="property-input property-input-number property-input-number-compact"
+            />
+        </div>
+    );
+};
 
 export class Vector2FieldEditor implements IFieldEditor<Vector2> {
     readonly type = 'vector2';

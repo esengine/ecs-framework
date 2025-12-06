@@ -3,5 +3,6 @@ export {
     ParticleAssetType,
     createDefaultParticleAsset,
     type IParticleAsset,
-    type IParticleModuleConfig
+    type IParticleModuleConfig,
+    type IBurstConfig
 } from './ParticleLoader';
