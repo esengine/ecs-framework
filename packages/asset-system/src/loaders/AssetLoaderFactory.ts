@@ -9,6 +9,7 @@ import { TextureLoader } from './TextureLoader';
 import { JsonLoader } from './JsonLoader';
 import { TextLoader } from './TextLoader';
 import { BinaryLoader } from './BinaryLoader';
+import { AudioLoader } from './AudioLoader';
 
 /**
  * Asset loader factory
@@ -38,6 +39,9 @@ export class AssetLoaderFactory implements IAssetLoaderFactory {
 
         // 二进制加载器 / Binary loader
         this._loaders.set(AssetType.Binary, new BinaryLoader());
+
+        // 音频加载器 / Audio loader
+        this._loaders.set(AssetType.Audio, new AudioLoader());
     }
 
     /**

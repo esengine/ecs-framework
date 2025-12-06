@@ -40,6 +40,7 @@ export { TextureLoader } from './loaders/TextureLoader';
 export { JsonLoader } from './loaders/JsonLoader';
 export { TextLoader } from './loaders/TextLoader';
 export { BinaryLoader } from './loaders/BinaryLoader';
+export { AudioLoader } from './loaders/AudioLoader';
 
 // Integration
 export { EngineIntegration } from './integration/EngineIntegration';

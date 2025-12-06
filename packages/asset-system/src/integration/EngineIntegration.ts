@@ -5,7 +5,7 @@
 
 import { AssetManager } from '../core/AssetManager';
 import { AssetGUID } from '../types/AssetTypes';
-import { ITextureAsset } from '../interfaces/IAssetLoader';
+import { ITextureAsset, IAudioAsset, IJsonAsset } from '../interfaces/IAssetLoader';
 import { globalPathResolver } from '../core/AssetPathResolver';
 
 /**
@@ -39,6 +39,26 @@ export interface IEngineBridge {
 }
 
 /**
+ * Audio asset with runtime ID
+ * 带运行时 ID 的音频资产
+ */
+interface AudioAssetEntry {
+    id: number;
+    asset: IAudioAsset;
+    path: string;
+}
+
+/**
+ * Data asset with runtime ID
+ * 带运行时 ID 的数据资产
+ */
+interface DataAssetEntry {
+    id: number;
+    data: unknown;
+    path: string;
+}
+
+/**
  * Asset system engine integration
  * 资产系统引擎集成
  */
@@ -47,6 +67,18 @@ export class EngineIntegration {
     private _engineBridge?: IEngineBridge;
     private _textureIdMap = new Map<AssetGUID, number>();
     private _pathToTextureId = new Map<string, number>();
+
+    // Audio resource mappings | 音频资源映射
+    private _audioIdMap = new Map<AssetGUID, number>();
+    private _pathToAudioId = new Map<string, number>();
+    private _audioAssets = new Map<number, AudioAssetEntry>();
+    private static _nextAudioId = 1;
+
+    // Data resource mappings | 数据资源映射
+    private _dataIdMap = new Map<AssetGUID, number>();
+    private _pathToDataId = new Map<string, number>();
+    private _dataAssets = new Map<number, DataAssetEntry>();
+    private static _nextDataId = 1;
 
     constructor(assetManager: AssetManager, engineBridge?: IEngineBridge) {
         this._assetManager = assetManager;
@@ -170,14 +202,241 @@ export class EngineIntegration {
      * @returns 路径到运行时 ID 的映射 / Map of paths to runtime IDs
      */
     async loadResourcesBatch(paths: string[], type: 'texture' | 'audio' | 'font' | 'data'): Promise<Map<string, number>> {
-        // 目前只支持纹理 / Currently only supports textures
-        if (type === 'texture') {
-            return this.loadTexturesBatch(paths);
+        switch (type) {
+            case 'texture':
+                return this.loadTexturesBatch(paths);
+            case 'audio':
+                return this.loadAudioBatch(paths);
+            case 'data':
+                return this.loadDataBatch(paths);
+            case 'font':
+                // 字体资源暂未实现 / Font resources not yet implemented
+                console.warn('[EngineIntegration] Font resource loading not yet implemented');
+                return new Map();
+            default:
+                console.warn(`[EngineIntegration] Unknown resource type '${type}'`);
+                return new Map();
+        }
+    }
+
+    // ============= Audio Resource Methods =============
+    // ============= 音频资源方法 =============
+
+    /**
+     * Load audio for component
+     * 为组件加载音频
+     *
+     * @param audioPath 音频文件路径 / Audio file path
+     * @returns 运行时音频 ID / Runtime audio ID
+     */
+    async loadAudioForComponent(audioPath: string): Promise<number> {
+        // 检查缓存 / Check cache
+        const existingId = this._pathToAudioId.get(audioPath);
+        if (existingId) {
+            return existingId;
         }
 
-        // 其他资源类型暂未实现 / Other resource types not yet implemented
-        console.warn(`[EngineIntegration] Resource type '${type}' not yet supported`);
-        return new Map();
+        // 通过资产系统加载 / Load through asset system
+        const result = await this._assetManager.loadAssetByPath<IAudioAsset>(audioPath);
+        const audioAsset = result.asset;
+
+        // 分配运行时 ID / Assign runtime ID
+        const audioId = EngineIntegration._nextAudioId++;
+
+        // 缓存映射 / Cache mapping
+        this._pathToAudioId.set(audioPath, audioId);
+        this._audioAssets.set(audioId, {
+            id: audioId,
+            asset: audioAsset,
+            path: audioPath
+        });
+
+        return audioId;
+    }
+
+    /**
+     * Batch load audio files
+     * 批量加载音频文件
+     */
+    async loadAudioBatch(paths: string[]): Promise<Map<string, number>> {
+        const results = new Map<string, number>();
+
+        // 收集需要加载的音频 / Collect audio to load
+        const toLoad: string[] = [];
+        for (const path of paths) {
+            const existingId = this._pathToAudioId.get(path);
+            if (existingId) {
+                results.set(path, existingId);
+            } else {
+                toLoad.push(path);
+            }
+        }
+
+        if (toLoad.length === 0) {
+            return results;
+        }
+
+        // 并行加载所有音频 / Load all audio in parallel
+        const loadPromises = toLoad.map(async (path) => {
+            try {
+                const id = await this.loadAudioForComponent(path);
+                results.set(path, id);
+            } catch (error) {
+                console.error(`Failed to load audio: ${path}`, error);
+                results.set(path, 0);
+            }
+        });
+
+        await Promise.all(loadPromises);
+        return results;
+    }
+
+    /**
+     * Get audio asset by ID
+     * 通过 ID 获取音频资产
+     */
+    getAudioAsset(audioId: number): IAudioAsset | null {
+        const entry = this._audioAssets.get(audioId);
+        return entry?.asset || null;
+    }
+
+    /**
+     * Get audio ID for path
+     * 获取路径的音频 ID
+     */
+    getAudioId(path: string): number | null {
+        return this._pathToAudioId.get(path) || null;
+    }
+
+    /**
+     * Unload audio
+     * 卸载音频
+     */
+    unloadAudio(audioId: number): void {
+        const entry = this._audioAssets.get(audioId);
+        if (entry) {
+            this._pathToAudioId.delete(entry.path);
+            this._audioAssets.delete(audioId);
+
+            // 从 GUID 映射中清理 / Clean up GUID mapping
+            for (const [guid, id] of this._audioIdMap.entries()) {
+                if (id === audioId) {
+                    this._audioIdMap.delete(guid);
+                    this._assetManager.unloadAsset(guid);
+                    break;
+                }
+            }
+        }
+    }
+
+    // ============= Data Resource Methods =============
+    // ============= 数据资源方法 =============
+
+    /**
+     * Load data (JSON) for component
+     * 为组件加载数据（JSON）
+     *
+     * @param dataPath 数据文件路径 / Data file path
+     * @returns 运行时数据 ID / Runtime data ID
+     */
+    async loadDataForComponent(dataPath: string): Promise<number> {
+        // 检查缓存 / Check cache
+        const existingId = this._pathToDataId.get(dataPath);
+        if (existingId) {
+            return existingId;
+        }
+
+        // 通过资产系统加载 / Load through asset system
+        const result = await this._assetManager.loadAssetByPath<IJsonAsset>(dataPath);
+        const jsonAsset = result.asset;
+
+        // 分配运行时 ID / Assign runtime ID
+        const dataId = EngineIntegration._nextDataId++;
+
+        // 缓存映射 / Cache mapping
+        this._pathToDataId.set(dataPath, dataId);
+        this._dataAssets.set(dataId, {
+            id: dataId,
+            data: jsonAsset.data,
+            path: dataPath
+        });
+
+        return dataId;
+    }
+
+    /**
+     * Batch load data files
+     * 批量加载数据文件
+     */
+    async loadDataBatch(paths: string[]): Promise<Map<string, number>> {
+        const results = new Map<string, number>();
+
+        // 收集需要加载的数据 / Collect data to load
+        const toLoad: string[] = [];
+        for (const path of paths) {
+            const existingId = this._pathToDataId.get(path);
+            if (existingId) {
+                results.set(path, existingId);
+            } else {
+                toLoad.push(path);
+            }
+        }
+
+        if (toLoad.length === 0) {
+            return results;
+        }
+
+        // 并行加载所有数据 / Load all data in parallel
+        const loadPromises = toLoad.map(async (path) => {
+            try {
+                const id = await this.loadDataForComponent(path);
+                results.set(path, id);
+            } catch (error) {
+                console.error(`Failed to load data: ${path}`, error);
+                results.set(path, 0);
+            }
+        });
+
+        await Promise.all(loadPromises);
+        return results;
+    }
+
+    /**
+     * Get data by ID
+     * 通过 ID 获取数据
+     */
+    getData<T = unknown>(dataId: number): T | null {
+        const entry = this._dataAssets.get(dataId);
+        return (entry?.data as T) || null;
+    }
+
+    /**
+     * Get data ID for path
+     * 获取路径的数据 ID
+     */
+    getDataId(path: string): number | null {
+        return this._pathToDataId.get(path) || null;
+    }
+
+    /**
+     * Unload data
+     * 卸载数据
+     */
+    unloadData(dataId: number): void {
+        const entry = this._dataAssets.get(dataId);
+        if (entry) {
+            this._pathToDataId.delete(entry.path);
+            this._dataAssets.delete(dataId);
+
+            // 从 GUID 映射中清理 / Clean up GUID mapping
+            for (const [guid, id] of this._dataIdMap.entries()) {
+                if (id === dataId) {
+                    this._dataIdMap.delete(guid);
+                    this._assetManager.unloadAsset(guid);
+                    break;
+                }
+            }
+        }
     }
 
     /**
@@ -234,14 +493,48 @@ export class EngineIntegration {
     }
 
     /**
+     * Clear all audio mappings
+     * 清空所有音频映射
+     */
+    clearAudioMappings(): void {
+        this._audioIdMap.clear();
+        this._pathToAudioId.clear();
+        this._audioAssets.clear();
+    }
+
+    /**
+     * Clear all data mappings
+     * 清空所有数据映射
+     */
+    clearDataMappings(): void {
+        this._dataIdMap.clear();
+        this._pathToDataId.clear();
+        this._dataAssets.clear();
+    }
+
+    /**
+     * Clear all resource mappings
+     * 清空所有资源映射
+     */
+    clearAllMappings(): void {
+        this.clearTextureMappings();
+        this.clearAudioMappings();
+        this.clearDataMappings();
+    }
+
+    /**
      * Get statistics
      * 获取统计信息
      */
     getStatistics(): {
         loadedTextures: number;
+        loadedAudio: number;
+        loadedData: number;
         } {
         return {
-            loadedTextures: this._pathToTextureId.size
+            loadedTextures: this._pathToTextureId.size,
+            loadedAudio: this._audioAssets.size,
+            loadedData: this._dataAssets.size
         };
     }
 }
