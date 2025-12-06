@@ -626,7 +626,7 @@ function MaterialOverrideEditor({ sprite, material, onChange }: MaterialOverride
         onChange('materialOverrides', newOverrides);
     };
 
-    if (!sprite.material) {
+    if (!sprite.materialGuid) {
         return null;
     }
 
@@ -871,10 +871,10 @@ function SpriteInspectorContent({ context }: { context: ComponentInspectorContex
     const [material, setMaterial] = useState<Material | null>(null);
     const [, forceUpdate] = useState({});
 
-    // Load material when sprite.material changes.
-    // 当 sprite.material 变化时加载材质。
+    // Load material when sprite.materialGuid changes.
+    // 当 sprite.materialGuid 变化时加载材质。
     useEffect(() => {
-        if (!sprite.material) {
+        if (!sprite.materialGuid) {
             setMaterial(null);
             return;
         }
@@ -887,7 +887,7 @@ function SpriteInspectorContent({ context }: { context: ComponentInspectorContex
 
         // Try to get cached material by ID.
         // 尝试通过 ID 获取缓存的材质。
-        const materialId = materialManager.getMaterialIdByPath(sprite.material);
+        const materialId = materialManager.getMaterialIdByPath(sprite.materialGuid);
         if (materialId > 0) {
             const mat = materialManager.getMaterial(materialId);
             setMaterial(mat || null);
@@ -896,7 +896,7 @@ function SpriteInspectorContent({ context }: { context: ComponentInspectorContex
 
         // Load material asynchronously.
         // 异步加载材质。
-        materialManager.loadMaterialFromPath(sprite.material)
+        materialManager.loadMaterialFromPath(sprite.materialGuid)
             .then(matId => {
                 const mat = materialManager.getMaterial(matId);
                 setMaterial(mat || null);
@@ -904,7 +904,7 @@ function SpriteInspectorContent({ context }: { context: ComponentInspectorContex
             .catch(() => {
                 setMaterial(null);
             });
-    }, [sprite.material]);
+    }, [sprite.materialGuid]);
 
     const handleChange = useCallback((propertyName: string, value: unknown) => {
         (sprite as unknown as Record<string, unknown>)[propertyName] = value;
@@ -930,7 +930,7 @@ function SpriteInspectorContent({ context }: { context: ComponentInspectorContex
     }, []);
 
     // No material selected
-    if (!sprite.material) {
+    if (!sprite.materialGuid) {
         return null;
     }
 
@@ -940,7 +940,7 @@ function SpriteInspectorContent({ context }: { context: ComponentInspectorContex
             {material && (
                 <InlineMaterialEditor
                     material={material}
-                    materialPath={sprite.material}
+                    materialPath={sprite.materialGuid}
                     onMaterialChange={handleMaterialChange}
                 />
             )}
