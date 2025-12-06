@@ -140,6 +140,28 @@ function evaluateScaleCurve(t: number, curveType: string): number {
     }
 }
 
+/** 评估缩放关键帧 | Evaluate scale keys */
+function evaluateScaleKeys(keys: ScaleKey[], normalizedAge: number): number {
+    if (keys.length === 0) return 1;
+    if (keys.length === 1) return keys[0].scale;
+
+    // 找到当前时间所在的两个关键帧
+    let startKey = keys[0];
+    let endKey = keys[keys.length - 1];
+
+    for (let i = 0; i < keys.length - 1; i++) {
+        if (normalizedAge >= keys[i].time && normalizedAge <= keys[i + 1].time) {
+            startKey = keys[i];
+            endKey = keys[i + 1];
+            break;
+        }
+    }
+
+    const range = endKey.time - startKey.time;
+    const t = range > 0 ? (normalizedAge - startKey.time) / range : 0;
+    return lerp(startKey.scale, endKey.scale, t);
+}
+
 /** 评估颜色渐变 | Evaluate color gradient */
 function evaluateColorGradient(gradient: ColorKey[], normalizedAge: number): ColorKey {
     if (gradient.length === 0) {
@@ -235,11 +257,10 @@ function useParticlePreview(
             ];
 
         // 缩放曲线 | Scale curve
-        const scaleCurveType: string = sizeModule?.enabled && sizeModule.params?.curveType
-            ? sizeModule.params.curveType as string
-            : 'linear';
-        const scaleStartMultiplier: number = (sizeModule?.params?.startMultiplier as number) ?? 1;
-        const scaleEndMultiplier: number = (sizeModule?.params?.endMultiplier as number) ?? data.endScale;
+        const sizeEnabled = sizeModule?.enabled ?? false;
+        const scaleKeys: ScaleKey[] = sizeModule?.params?.keys
+            ? sizeModule.params.keys as ScaleKey[]
+            : [{ time: 0, scale: 1 }, { time: 1, scale: data.endScale }];
 
         // 噪声参数 | Noise parameters
         const noiseEnabled = noiseModule?.enabled ?? false;
@@ -532,10 +553,11 @@ function useParticlePreview(
                     p.alpha = p.startAlpha * color.a;
 
                     // 缩放曲线 | Scale curve
-                    const scaleT = evaluateScaleCurve(normalizedAge, scaleCurveType);
-                    const scaleMult = lerp(scaleStartMultiplier, scaleEndMultiplier, scaleT);
-                    p.scaleX = p.startScaleX * scaleMult;
-                    p.scaleY = p.startScaleY * scaleMult;
+                    if (sizeEnabled) {
+                        const scaleMult = evaluateScaleKeys(scaleKeys, normalizedAge);
+                        p.scaleX = p.startScaleX * scaleMult;
+                        p.scaleY = p.startScaleY * scaleMult;
+                    }
 
                     // 噪声模块 | Noise module
                     if (noiseEnabled) {

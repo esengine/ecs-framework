@@ -62,14 +62,14 @@ export class MaterialEditorModule implements IEditorModuleLoader {
     private inspectorProvider?: MaterialAssetInspectorProvider;
 
     async install(services: ServiceContainer): Promise<void> {
-        // Register file creation templates
+        // 注意：文件创建模板由 PluginManager.activatePluginEditor() 自动注册
+        // 不要在这里手动注册，否则会重复
+        // NOTE: File creation templates are auto-registered by PluginManager.activatePluginEditor()
+        // Do not manually register here to avoid duplicates
+
+        // Register asset creation mapping for .mat files
         const fileActionRegistry = services.resolve(FileActionRegistry);
         if (fileActionRegistry) {
-            for (const template of this.getFileCreationTemplates()) {
-                fileActionRegistry.registerCreationTemplate(template);
-            }
-
-            // Register asset creation mapping for .mat files
             fileActionRegistry.registerAssetCreationMapping({
                 extension: '.mat',
                 createMessage: 'material:create',
