@@ -1,4 +1,4 @@
-# SceneManager
+﻿# SceneManager
 
 SceneManager is a lightweight scene manager provided by ECS Framework, suitable for 95% of game applications. It provides a simple and intuitive API with support for scene transitions and delayed loading.
 
@@ -19,7 +19,7 @@ SceneManager is suitable for:
 - Automatic ECS fluent API management
 - Automatic scene lifecycle handling
 - Integrated with Core, auto-updated
-- Supports [Persistent Entity](./persistent-entity) migration across scenes (v2.2.22+)
+- Supports [Persistent Entity](./persistent-entity) migration across scenes (v2.3.0+)
 
 ## Basic Usage
 

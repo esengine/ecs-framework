@@ -1,4 +1,4 @@
-# 场景管理
+﻿# 场景管理
 
 在 ECS 架构中，场景（Scene）是游戏世界的容器，负责管理实体、系统和组件的生命周期。场景提供了完整的 ECS 运行环境。
 
@@ -657,6 +657,6 @@ world.setSceneActive('main', true);
 
 - 了解 [SceneManager](./scene-manager.md) - 适用于大多数游戏的简单场景管理
 - 了解 [WorldManager](./world-manager.md) - 适用于需要多世界隔离的高级场景
-- 了解 [持久化实体](./persistent-entity.md) - 让实体跨场景保持状态（v2.2.22+）
+- 了解 [持久化实体](./persistent-entity.md) - 让实体跨场景保持状态（v2.3.0+）
 
 场景是 ECS 框架的核心容器，正确使用场景管理能让你的游戏架构更加清晰、模块化和易于维护。

@@ -273,6 +273,7 @@ export default defineConfig({
 
   base: '/',
   cleanUrls: true,
+  ignoreDeadLinks: true,
 
   markdown: {
     lineNumbers: true,

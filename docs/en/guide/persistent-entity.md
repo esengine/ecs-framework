@@ -1,6 +1,6 @@
-# Persistent Entity
+﻿# Persistent Entity
 
-> **Version**: v2.2.22+
+> **Version**: v2.3.0+
 
 Persistent Entity is a special type of entity that automatically migrates to the new scene during scene transitions. It is suitable for game objects that need to maintain state across scenes, such as players, game managers, audio managers, etc.
 

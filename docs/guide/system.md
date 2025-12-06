@@ -1,4 +1,4 @@
-# 系统架构
+﻿# 系统架构
 
 在 ECS 架构中，系统（System）是处理业务逻辑的地方。系统负责对拥有特定组件组合的实体执行操作，是 ECS 架构的逻辑处理单元。
 
@@ -336,7 +336,7 @@ class DamageSystem extends EntitySystem {
 
 ## 命令缓冲区 (CommandBuffer)
 
-> **v2.2.22+**
+> **v2.3.0+**
 
 CommandBuffer 提供了一种延迟执行实体操作的机制。当你需要在迭代过程中销毁实体或进行其他可能影响迭代的操作时，使用 CommandBuffer 可以将这些操作推迟到帧末统一执行。
 

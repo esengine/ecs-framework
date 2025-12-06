@@ -1,4 +1,4 @@
-# Scene Management
+﻿# Scene Management
 
 In the ECS architecture, a Scene is a container for the game world, responsible for managing the lifecycle of entities, systems, and components. Scenes provide a complete ECS runtime environment.
 
@@ -359,6 +359,6 @@ class ResourceScene extends Scene {
 
 - Learn about [SceneManager](./scene-manager) - Simple scene management for most games
 - Learn about [WorldManager](./world-manager) - For scenarios requiring multi-world isolation
-- Learn about [Persistent Entity](./persistent-entity) - Keep entities across scene transitions (v2.2.22+)
+- Learn about [Persistent Entity](./persistent-entity) - Keep entities across scene transitions (v2.3.0+)
 
 Scene is the core container of the ECS framework. Proper scene management makes your game architecture clearer, more modular, and easier to maintain.

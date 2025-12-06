@@ -1,4 +1,4 @@
-# System Architecture
+﻿# System Architecture
 
 In ECS architecture, Systems are where business logic is processed. Systems are responsible for performing operations on entities that have specific component combinations, serving as the logic processing units of ECS architecture.
 
@@ -336,7 +336,7 @@ The framework creates a snapshot of the entity list before each `process`/`lateP
 
 ## Command Buffer (CommandBuffer)
 
-> **v2.2.22+**
+> **v2.3.0+**
 
 CommandBuffer provides a mechanism for deferred execution of entity operations. When you need to destroy entities or perform other operations that might affect iteration during processing, CommandBuffer allows you to defer these operations to the end of the frame.
 

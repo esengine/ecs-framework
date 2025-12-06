@@ -4,6 +4,32 @@ This document records the version update history of the `@esengine/ecs-framework
 
 ---
 
+## v2.3.0 (2025-12-06)
+
+### Features
+
+- **Persistent Entity**: Add entity cross-scene migration support (#285)
+  - New `EEntityLifecyclePolicy` enum (`SceneLocal`/`Persistent`)
+  - Entity adds `setPersistent()`, `setSceneLocal()`, `isPersistent` API
+  - Scene adds `findPersistentEntities()`, `extractPersistentEntities()`, `receiveMigratedEntities()`
+  - `SceneManager.setScene()` automatically handles persistent entity migration
+  - Use cases: global managers, player characters, cross-scene state persistence
+
+- **CommandBuffer Deferred Command System**: Execute entity operations uniformly at end of frame (#281)
+  - Support deferred add/remove components, destroy entities, set entity active state
+  - Each system has its own `commands` property
+  - Avoid modifying entity list during iteration, preventing iteration issues
+  - Scene automatically flushes all command buffers after `lateUpdate`
+
+### Performance
+
+- **ReactiveQuery Snapshot Optimization**: Optimize entity query iteration performance (#281)
+  - Add snapshot mechanism to avoid copying arrays every frame
+  - Only create new snapshots when entity list changes
+  - Multiple systems share the same snapshot in static scenes
+
+---
+
 ## v2.2.21 (2025-12-05)
 
 ### Bug Fixes

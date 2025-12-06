@@ -1,4 +1,4 @@
-# SceneManager
+﻿# SceneManager
 
 SceneManager 是 ECS Framework 提供的轻量级场景管理器，适用于 95% 的游戏应用。它提供简单直观的 API，支持场景切换和延迟加载。
 
@@ -19,7 +19,7 @@ SceneManager 适合以下场景：
 - 自动管理 ECS 流式 API
 - 自动处理场景生命周期
 - 集成在 Core 中，自动更新
-- 支持[持久化实体](./persistent-entity.md)跨场景迁移（v2.2.22+）
+- 支持[持久化实体](./persistent-entity.md)跨场景迁移（v2.3.0+）
 
 ## 基本使用
 

@@ -4,6 +4,32 @@
 
 ---
 
+## v2.3.0 (2025-12-06)
+
+### Features
+
+- **持久化实体**: 添加实体跨场景迁移支持 (#285)
+  - 新增 `EEntityLifecyclePolicy` 枚举（`SceneLocal`/`Persistent`）
+  - Entity 添加 `setPersistent()`、`setSceneLocal()`、`isPersistent` API
+  - Scene 添加 `findPersistentEntities()`、`extractPersistentEntities()`、`receiveMigratedEntities()`
+  - `SceneManager.setScene()` 自动处理持久化实体迁移
+  - 适用场景：全局管理器、玩家角色、跨场景状态保持
+
+- **CommandBuffer 延迟命令系统**: 在帧末统一执行实体操作 (#281)
+  - 支持延迟添加/移除组件、销毁实体、设置实体激活状态
+  - 每个系统拥有独立的 `commands` 属性
+  - 避免在迭代过程中修改实体列表，防止迭代问题
+  - Scene 在 `lateUpdate` 后自动刷新所有命令缓冲区
+
+### Performance
+
+- **ReactiveQuery 快照优化**: 优化实体查询迭代性能 (#281)
+  - 添加快照机制，避免每帧拷贝数组
+  - 只在实体列表变化时创建新快照
+  - 静态场景下多个系统共享同一快照
+
+---
+
 ## v2.2.21 (2025-12-05)
 
 ### Bug Fixes
