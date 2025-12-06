@@ -129,27 +129,43 @@ export function ContextMenu({ items, position, onClose }: ContextMenuProps) {
     const [submenuRect, setSubmenuRect] = useState<DOMRect | null>(null);
 
     useEffect(() => {
-        if (menuRef.current) {
-            const menu = menuRef.current;
-            const rect = menu.getBoundingClientRect();
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
+        const adjustPosition = () => {
+            if (menuRef.current) {
+                const menu = menuRef.current;
+                const rect = menu.getBoundingClientRect();
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
 
-            let x = position.x;
-            let y = position.y;
+                const STATUS_BAR_HEIGHT = 28;
+                const TITLE_BAR_HEIGHT = 32;
 
-            if (x + rect.width > viewportWidth) {
-                x = Math.max(0, viewportWidth - rect.width - 10);
-            }
+                let x = position.x;
+                let y = position.y;
 
-            if (y + rect.height > viewportHeight) {
-                y = Math.max(0, viewportHeight - rect.height - 10);
-            }
+                if (x + rect.width > viewportWidth - 10) {
+                    x = Math.max(10, viewportWidth - rect.width - 10);
+                }
 
-            if (x !== position.x || y !== position.y) {
+                if (y + rect.height > viewportHeight - STATUS_BAR_HEIGHT - 10) {
+                    y = Math.max(TITLE_BAR_HEIGHT + 10, viewportHeight - STATUS_BAR_HEIGHT - rect.height - 10);
+                }
+
+                if (x < 10) {
+                    x = 10;
+                }
+
+                if (y < TITLE_BAR_HEIGHT + 10) {
+                    y = TITLE_BAR_HEIGHT + 10;
+                }
+
                 setAdjustedPosition({ x, y });
             }
-        }
+        };
+
+        adjustPosition();
+        const rafId = requestAnimationFrame(adjustPosition);
+
+        return () => cancelAnimationFrame(rafId);
     }, [position]);
 
     useEffect(() => {
