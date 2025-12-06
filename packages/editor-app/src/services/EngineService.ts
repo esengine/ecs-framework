@@ -343,8 +343,8 @@ export class EngineService {
                     const firstClip = animator.clips[0];
                     if (firstClip && firstClip.frames && firstClip.frames.length > 0) {
                         const firstFrame = firstClip.frames[0];
-                        if (firstFrame && firstFrame.texture) {
-                            sprite.textureGuid = firstFrame.texture;
+                        if (firstFrame && firstFrame.textureGuid) {
+                            sprite.textureGuid = firstFrame.textureGuid;
                         }
                     }
                 }

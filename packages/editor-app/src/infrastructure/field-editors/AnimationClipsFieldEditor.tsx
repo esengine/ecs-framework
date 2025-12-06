@@ -169,7 +169,7 @@ function AnimationClipsEditor({ label, clips, onChange, readonly, component, onD
         const newClips = [...clips];
         const clip = newClips[clipIndex];
         if (!clip) return;
-        clip.frames = [...clip.frames, { texture: '', duration: 0.1 }];
+        clip.frames = [...clip.frames, { textureGuid: '', duration: 0.1 }];
         onChange(newClips);
     };
 
@@ -196,8 +196,8 @@ function AnimationClipsEditor({ label, clips, onChange, readonly, component, onD
         const newClips = [...clips];
         const clip = newClips[clipIndex];
         if (!clip) return;
-        const newFrames = texturePaths.map((texture) => ({
-            texture,
+        const newFrames = texturePaths.map((textureGuid) => ({
+            textureGuid,
             duration: 0.1
         }));
         clip.frames = [...clip.frames, ...newFrames];
@@ -451,8 +451,8 @@ function AnimationClipsEditor({ label, clips, onChange, readonly, component, onD
                                                         <span className="frame-index">{frameIndex + 1}</span>
                                                         <div className="frame-texture-field">
                                                             <AssetField
-                                                                value={frame.texture}
-                                                                onChange={(val) => updateFrame(clipIndex, frameIndex, { texture: val || '' })}
+                                                                value={frame.textureGuid}
+                                                                onChange={(val) => updateFrame(clipIndex, frameIndex, { textureGuid: val || '' })}
                                                                 fileExtension=".png"
                                                                 placeholder="Texture..."
                                                                 readonly={readonly}

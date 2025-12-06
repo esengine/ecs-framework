@@ -155,9 +155,9 @@ export class EditorEngineSync {
             if (bridge) {
                 for (const clip of animator.clips) {
                     for (const frame of clip.frames) {
-                        if (frame.texture) {
+                        if (frame.textureGuid) {
                             // Trigger texture loading
-                            bridge.getOrLoadTextureByPath(frame.texture);
+                            bridge.getOrLoadTextureByPath(frame.textureGuid);
                         }
                     }
                 }
@@ -168,8 +168,8 @@ export class EditorEngineSync {
                     const firstClip = animator.clips[0];
                     if (firstClip && firstClip.frames && firstClip.frames.length > 0) {
                         const firstFrame = firstClip.frames[0];
-                        if (firstFrame && firstFrame.texture && spriteComponent) {
-                            spriteComponent.textureGuid = firstFrame.texture;
+                        if (firstFrame && firstFrame.textureGuid && spriteComponent) {
+                            spriteComponent.textureGuid = firstFrame.textureGuid;
                         }
                     }
                 }
@@ -228,8 +228,8 @@ export class EditorEngineSync {
             // Preload all frame textures
             for (const clip of animator.clips) {
                 for (const frame of clip.frames) {
-                    if (frame.texture) {
-                        bridge.getOrLoadTextureByPath(frame.texture);
+                    if (frame.textureGuid) {
+                        bridge.getOrLoadTextureByPath(frame.textureGuid);
                     }
                 }
             }
@@ -240,8 +240,8 @@ export class EditorEngineSync {
                 const firstClip = animator.clips[0];
                 if (firstClip && firstClip.frames && firstClip.frames.length > 0) {
                     const firstFrame = firstClip.frames[0];
-                    if (firstFrame && firstFrame.texture) {
-                        sprite.textureGuid = firstFrame.texture;
+                    if (firstFrame && firstFrame.textureGuid) {
+                        sprite.textureGuid = firstFrame.textureGuid;
                     }
                 }
             }
