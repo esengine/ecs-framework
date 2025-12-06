@@ -96,12 +96,12 @@ export class UIRenderComponent extends Component {
     // ===== 纹理 Texture =====
 
     /**
-     * 纹理路径或 ID
-     * Texture path or runtime ID
+     * 纹理资产 GUID 或运行时 ID
+     * Texture asset GUID or runtime ID
      */
     @Serialize()
     @Property({ type: 'asset', label: 'Texture', assetType: 'texture' })
-    public texture: string | number | null = null;
+    public textureGuid: string | number | null = null;
 
     /**
      * 纹理 UV 坐标 (用于图集)
@@ -230,20 +230,25 @@ export class UIRenderComponent extends Component {
     /**
      * 设置图片
      * Set image texture
+     *
+     * @param textureGuid - 纹理资产 GUID | Texture asset GUID
      */
-    public setImage(texture: string | number): this {
+    public setImage(textureGuid: string | number): this {
         this.type = UIRenderType.Image;
-        this.texture = texture;
+        this.textureGuid = textureGuid;
         return this;
     }
 
     /**
      * 设置九宫格
      * Set nine-patch image
+     *
+     * @param textureGuid - 纹理资产 GUID | Texture asset GUID
+     * @param margins - 九宫格边距 | Nine-patch margins
      */
-    public setNinePatch(texture: string | number, margins: [number, number, number, number]): this {
+    public setNinePatch(textureGuid: string | number, margins: [number, number, number, number]): this {
         this.type = UIRenderType.NinePatch;
-        this.texture = texture;
+        this.textureGuid = textureGuid;
         this.ninePatchMargins = margins;
         return this;
     }

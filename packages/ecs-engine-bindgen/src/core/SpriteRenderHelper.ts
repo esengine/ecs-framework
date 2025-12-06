@@ -109,9 +109,9 @@ export class SpriteRenderHelper {
             // Convert hex color string to packed RGBA
             const color = this.hexToPackedColor(sprite.color, sprite.alpha);
 
-            // Get material ID from path (0 = default if not found or no path specified)
-            const materialId = sprite.material
-                ? getMaterialManager().getMaterialIdByPath(sprite.material)
+            // Get material ID from GUID (0 = default if not found or no GUID specified)
+            const materialId = sprite.materialGuid
+                ? getMaterialManager().getMaterialIdByPath(sprite.materialGuid)
                 : 0;
 
             // Collect material overrides if any

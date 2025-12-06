@@ -61,7 +61,8 @@ export interface UITextConfig extends UIBaseConfig {
  * Image configuration
  */
 export interface UIImageConfig extends UIBaseConfig {
-    texture: string | number;
+    /** 纹理资产 GUID 或运行时 ID | Texture asset GUID or runtime ID */
+    textureGuid: string | number;
     tint?: number;
 }
 
@@ -236,7 +237,7 @@ export class UIBuilder {
 
         const render = entity.addComponent(new UIRenderComponent());
         render.type = UIRenderType.Image;
-        render.texture = config.texture;
+        render.textureGuid = config.textureGuid;
         render.textureTint = config.tint ?? 0xFFFFFF;
 
         return entity;

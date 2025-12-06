@@ -38,7 +38,7 @@ import {
     Settings
 } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
-import { MessageHub, FileActionRegistry, type FileCreationTemplate } from '@esengine/editor-core';
+import { MessageHub, FileActionRegistry, AssetRegistryService, type FileCreationTemplate } from '@esengine/editor-core';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { SettingsService } from '../services/SettingsService';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
@@ -770,7 +770,18 @@ export class ${className} {
             const parentPath = asset.path.substring(0, lastSlash);
             const newPath = `${parentPath}/${newName}`;
 
+            // Update AssetMetaManager to preserve GUID | 更新 AssetMetaManager 以保持 GUID 不变
+            const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+            if (assetRegistry && asset.type !== 'folder') {
+                await assetRegistry.metaManager.handleAssetRename(asset.path, newPath);
+            }
+
             await TauriAPI.renameFileOrFolder(asset.path, newPath);
+
+            // Refresh asset registry | 刷新资产注册表
+            if (assetRegistry && asset.type !== 'folder') {
+                await assetRegistry.refreshAsset(newPath);
+            }
 
             if (currentPath) {
                 await loadAssets(currentPath);
@@ -1371,6 +1382,18 @@ export class ${className} {
                                     if (asset.type === 'file') {
                                         e.dataTransfer.setData('asset-path', asset.path);
                                         e.dataTransfer.setData('text/plain', asset.path);
+                                        // Add GUID for new asset reference system
+                                        const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+                                        if (assetRegistry) {
+                                            // Convert absolute path to relative path for GUID lookup
+                                            const relativePath = assetRegistry.absoluteToRelative(asset.path);
+                                            if (relativePath) {
+                                                const guid = assetRegistry.getGuidByPath(relativePath);
+                                                if (guid) {
+                                                    e.dataTransfer.setData('asset-guid', guid);
+                                                }
+                                            }
+                                        }
                                     }
                                 }}
                             >

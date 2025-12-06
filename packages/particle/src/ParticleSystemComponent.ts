@@ -54,9 +54,25 @@ export enum SimulationSpace {
  * 管理粒子发射、模拟，并为渲染提供数据。
  */
 @ECSComponent('ParticleSystem')
-@Serializable({ version: 1, typeId: 'ParticleSystem' })
+@Serializable({ version: 2, typeId: 'ParticleSystem' })
 export class ParticleSystemComponent extends Component {
+    // ============= 资产引用 | Asset Reference =============
+
+    /**
+     * 粒子效果资产 GUID
+     * Particle effect asset GUID
+     *
+     * When set, loads particle configuration from .particle file.
+     * Inline properties below are ignored when asset is set.
+     * 设置后从 .particle 文件加载粒子配置。
+     * 设置了资产后，下面的内联属性将被忽略。
+     */
+    @Serialize()
+    @Property({ type: 'asset', label: 'Particle Asset', extensions: ['.particle', '.particle.json'] })
+    public particleAssetGuid: string = '';
+
     // ============= 基础属性 | Basic Properties =============
+    // These are used when particleAssetGuid is not set
 
     /** 最大粒子数量 | Maximum particle count */
     @Serialize()
@@ -200,10 +216,13 @@ export class ParticleSystemComponent extends Component {
 
     // ============= 渲染属性 | Rendering Properties =============
 
-    /** 粒子纹理 | Particle texture */
+    /**
+     * 粒子纹理 GUID
+     * Particle texture GUID
+     */
     @Serialize()
     @Property({ type: 'asset', label: 'Texture', assetType: 'texture' })
-    public texture: string = '';
+    public textureGuid: string = '';
 
     /** 粒子尺寸（像素）| Particle size (pixels) */
     @Serialize()

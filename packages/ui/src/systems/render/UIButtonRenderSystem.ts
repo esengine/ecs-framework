@@ -66,8 +66,8 @@ export class UIButtonRenderSystem extends EntitySystem {
             // Render texture if in texture or both mode
             // 如果在纹理或两者模式下，渲染纹理
             if (button.useTexture()) {
-                const texture = button.getStateTexture('normal');
-                if (texture) {
+                const textureGuid = button.getStateTextureGuid('normal');
+                if (textureGuid) {
                     collector.addRect(
                         renderX, renderY,
                         width, height,
@@ -78,7 +78,7 @@ export class UIButtonRenderSystem extends EntitySystem {
                             rotation,
                             pivotX,
                             pivotY,
-                            texturePath: texture
+                            texturePath: textureGuid
                         }
                     );
                 }

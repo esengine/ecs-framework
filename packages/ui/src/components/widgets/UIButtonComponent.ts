@@ -10,7 +10,8 @@ export interface UIButtonStyle {
     textColor: number;
     borderColor: number;
     borderWidth: number;
-    texture?: string;
+    /** 纹理资产 GUID | Texture asset GUID */
+    textureGuid?: string;
 }
 
 /**
@@ -51,36 +52,36 @@ export class UIButtonComponent extends Component {
     // ===== 状态纹理 State Textures =====
 
     /**
-     * 正常状态纹理
-     * Normal state texture
+     * 正常状态纹理 GUID
+     * Normal state texture GUID
      */
     @Serialize()
     @Property({ type: 'asset', label: 'Normal Texture', assetType: 'texture' })
-    public normalTexture: string = '';
+    public normalTextureGuid: string = '';
 
     /**
-     * 悬停状态纹理
-     * Hover state texture
+     * 悬停状态纹理 GUID
+     * Hover state texture GUID
      */
     @Serialize()
     @Property({ type: 'asset', label: 'Hover Texture', assetType: 'texture' })
-    public hoverTexture: string = '';
+    public hoverTextureGuid: string = '';
 
     /**
-     * 按下状态纹理
-     * Pressed state texture
+     * 按下状态纹理 GUID
+     * Pressed state texture GUID
      */
     @Serialize()
     @Property({ type: 'asset', label: 'Pressed Texture', assetType: 'texture' })
-    public pressedTexture: string = '';
+    public pressedTextureGuid: string = '';
 
     /**
-     * 禁用状态纹理
-     * Disabled state texture
+     * 禁用状态纹理 GUID
+     * Disabled state texture GUID
      */
     @Serialize()
     @Property({ type: 'asset', label: 'Disabled Texture', assetType: 'texture' })
-    public disabledTexture: string = '';
+    public disabledTextureGuid: string = '';
 
     // ===== 状态样式 State Styles =====
 
@@ -245,16 +246,16 @@ export class UIButtonComponent extends Component {
     }
 
     /**
-     * 获取当前应该显示的纹理
-     * Get the texture that should be displayed based on state
+     * 获取当前应该显示的纹理 GUID
+     * Get the texture GUID that should be displayed based on state
      */
-    public getStateTexture(state: 'disabled' | 'pressed' | 'hovered' | 'focused' | 'normal'): string {
-        if (this.disabled && this.disabledTexture) return this.disabledTexture;
+    public getStateTextureGuid(state: 'disabled' | 'pressed' | 'hovered' | 'focused' | 'normal'): string {
+        if (this.disabled && this.disabledTextureGuid) return this.disabledTextureGuid;
         switch (state) {
-            case 'pressed': return this.pressedTexture || this.normalTexture;
-            case 'hovered': return this.hoverTexture || this.normalTexture;
-            case 'focused': return this.normalTexture;
-            default: return this.normalTexture;
+            case 'pressed': return this.pressedTextureGuid || this.normalTextureGuid;
+            case 'hovered': return this.hoverTextureGuid || this.normalTextureGuid;
+            case 'focused': return this.normalTextureGuid;
+            default: return this.normalTextureGuid;
         }
     }
 
@@ -263,7 +264,7 @@ export class UIButtonComponent extends Component {
      * Whether to use texture for rendering
      */
     public useTexture(): boolean {
-        return (this.displayMode === 'texture' || this.displayMode === 'both') && !!this.normalTexture;
+        return (this.displayMode === 'texture' || this.displayMode === 'both') && !!this.normalTextureGuid;
     }
 
     /**
@@ -297,14 +298,14 @@ export class UIButtonComponent extends Component {
     }
 
     /**
-     * 设置纹理
-     * Set textures for different states
+     * 设置纹理 GUID
+     * Set texture GUIDs for different states
      */
-    public setTextures(normal: string, hover?: string, pressed?: string, disabled?: string): this {
-        this.normalTexture = normal;
-        if (hover) this.hoverTexture = hover;
-        if (pressed) this.pressedTexture = pressed;
-        if (disabled) this.disabledTexture = disabled;
+    public setTextureGuids(normalGuid: string, hoverGuid?: string, pressedGuid?: string, disabledGuid?: string): this {
+        this.normalTextureGuid = normalGuid;
+        if (hoverGuid) this.hoverTextureGuid = hoverGuid;
+        if (pressedGuid) this.pressedTextureGuid = pressedGuid;
+        if (disabledGuid) this.disabledTextureGuid = disabledGuid;
         this.displayMode = 'texture';
         return this;
     }

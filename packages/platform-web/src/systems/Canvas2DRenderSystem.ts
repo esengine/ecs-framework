@@ -65,7 +65,7 @@ export class Canvas2DRenderSystem extends EntitySystem {
             this.ctx.translate(x, y);
             this.ctx.rotate(rotation);
 
-            const texture = this.textureCache.get(sprite.texture || '');
+            const texture = this.textureCache.get(sprite.textureGuid || '');
             if (texture) {
                 this.ctx.drawImage(texture, -width / 2, -height / 2, width, height);
             } else {

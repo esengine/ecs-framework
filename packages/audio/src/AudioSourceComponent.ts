@@ -1,11 +1,15 @@
 import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/ecs-framework';
 
 @ECSComponent('AudioSource')
-@Serializable({ version: 1, typeId: 'AudioSource' })
+@Serializable({ version: 2, typeId: 'AudioSource' })
 export class AudioSourceComponent extends Component {
+    /**
+     * 音频资产 GUID
+     * Audio clip asset GUID
+     */
     @Serialize()
     @Property({ type: 'asset', label: 'Audio Clip', assetType: 'audio' })
-    clip: string = '';
+    clipGuid: string = '';
 
     /** 范围 [0, 1] */
     @Serialize()

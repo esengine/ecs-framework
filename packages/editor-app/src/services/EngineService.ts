@@ -6,7 +6,7 @@
  * Uses the unified GameRuntime architecture
  */
 
-import { GizmoRegistry, EntityStoreService, MessageHub, SceneManagerService, ProjectService, PluginManager, IPluginManager, type SystemContext } from '@esengine/editor-core';
+import { GizmoRegistry, EntityStoreService, MessageHub, SceneManagerService, ProjectService, PluginManager, IPluginManager, AssetRegistryService, type SystemContext } from '@esengine/editor-core';
 import { Core, Scene, Entity, SceneSerializer, ProfilerSDK } from '@esengine/ecs-framework';
 import { CameraConfig } from '@esengine/ecs-engine-bindgen';
 import { TransformComponent } from '@esengine/engine-core';
@@ -147,6 +147,10 @@ export class EngineService {
 
             // 初始化资产系统
             await this._initializeAssetSystem();
+
+            // 设置资产路径解析器（用于 GUID 到路径的转换）
+            // Set asset path resolver (for GUID to path conversion)
+            this._setupAssetPathResolver();
 
             // 同步视口尺寸
             const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
@@ -339,8 +343,8 @@ export class EngineService {
                     const firstClip = animator.clips[0];
                     if (firstClip && firstClip.frames && firstClip.frames.length > 0) {
                         const firstFrame = firstClip.frames[0];
-                        if (firstFrame && firstFrame.texture) {
-                            sprite.texture = firstFrame.texture;
+                        if (firstFrame && firstFrame.textureGuid) {
+                            sprite.textureGuid = firstFrame.textureGuid;
                         }
                     }
                 }
@@ -425,6 +429,59 @@ export class EngineService {
             console.error('Failed to initialize asset system:', error);
             throw this._initializationError;
         }
+    }
+
+    /**
+     * Setup asset path resolver for EngineRenderSystem.
+     * 为 EngineRenderSystem 设置资产路径解析器。
+     *
+     * This enables GUID-based asset references. When a component stores a GUID,
+     * the resolver converts it to an actual file path for loading.
+     * 这启用了基于 GUID 的资产引用。当组件存储 GUID 时，
+     * 解析器将其转换为实际文件路径以进行加载。
+     */
+    private _setupAssetPathResolver(): void {
+        const renderSystem = this._runtime?.renderSystem;
+        if (!renderSystem) return;
+
+        // UUID v4 regex for GUID detection
+        // UUID v4 正则表达式用于 GUID 检测
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+        renderSystem.setAssetPathResolver((guidOrPath: string): string => {
+            // Skip if already a valid URL
+            // 如果已经是有效的 URL 则跳过
+            if (!guidOrPath || guidOrPath.startsWith('http') || guidOrPath.startsWith('asset://') || guidOrPath.startsWith('data:')) {
+                return guidOrPath;
+            }
+
+            // Check if this is a GUID
+            // 检查是否为 GUID
+            if (uuidRegex.test(guidOrPath)) {
+                const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+                if (assetRegistry) {
+                    const relativePath = assetRegistry.getPathByGuid(guidOrPath);
+                    if (relativePath) {
+                        // Convert relative path to absolute
+                        // 将相对路径转换为绝对路径
+                        const absolutePath = assetRegistry.relativeToAbsolute(relativePath);
+                        if (absolutePath) {
+                            // Convert to Tauri asset URL for WebView loading
+                            // 转换为 Tauri 资产 URL 以便 WebView 加载
+                            return convertFileSrc(absolutePath);
+                        }
+                        return relativePath;
+                    }
+                }
+                // GUID not found, return original value
+                // 未找到 GUID，返回原值
+                return guidOrPath;
+            }
+
+            // Not a GUID, treat as file path and convert
+            // 不是 GUID，当作文件路径处理并转换
+            return convertFileSrc(guidOrPath);
+        });
     }
 
     /**
