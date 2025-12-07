@@ -313,3 +313,40 @@
 .asset-save-new-folder button:last-child:hover {
     background: #444;
 }
+
+/* ==================== Managed Directory Styles ==================== */
+.asset-picker-item.managed-root .asset-picker-item__icon {
+    color: #4fc1ff;
+}
+
+.asset-picker-item.managed-root .managed-icon {
+    color: #4fc1ff;
+}
+
+.asset-picker-item .managed-badge {
+    font-size: 9px;
+    padding: 1px 4px;
+    background: #4fc1ff22;
+    color: #4fc1ff;
+    border-radius: 3px;
+    margin-left: auto;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Disabled items (no GUID) */
+.asset-picker-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.asset-picker-item.disabled:hover {
+    background: transparent;
+}
+
+.asset-picker-item .no-guid-badge {
+    margin-left: auto;
+    color: #f59e0b;
+    display: flex;
+    align-items: center;
+}

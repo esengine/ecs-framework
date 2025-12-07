@@ -125,7 +125,16 @@ const EXTENSION_TYPE_MAP: Record<string, AssetRegistryType> = {
     '.prefab': 'prefab',
     '.tmx': 'tilemap',
     '.tsx': 'tileset',
+    // Particle system
+    '.particle': 'particle',
 };
+
+/**
+ * Directories managed by asset registry (GUID system)
+ * 被资产注册表（GUID 系统）管理的目录
+ */
+export const MANAGED_ASSET_DIRECTORIES = ['assets', 'scripts', 'scenes'] as const;
+export type ManagedAssetDirectory = typeof MANAGED_ASSET_DIRECTORIES[number];
 
 // 使用从 IFileSystem.ts 导入的标准接口
 // Using standard interface imported from IFileSystem.ts
@@ -482,13 +491,12 @@ export class AssetRegistryService {
 
         const sep = this._projectPath.includes('\\') ? '\\' : '/';
 
-        // 扫描多个目录：assets, scripts, scenes
-        // Scan multiple directories: assets, scripts, scenes
-        const directoriesToScan = [
-            { path: `${this._projectPath}${sep}assets`, name: 'assets' },
-            { path: `${this._projectPath}${sep}scripts`, name: 'scripts' },
-            { path: `${this._projectPath}${sep}scenes`, name: 'scenes' }
-        ];
+        // 扫描多个目录：assets, scripts, scenes, ecs-scenes
+        // Scan multiple directories: assets, scripts, scenes, ecs-scenes
+        const directoriesToScan = MANAGED_ASSET_DIRECTORIES.map(name => ({
+            path: `${this._projectPath}${sep}${name}`,
+            name
+        }));
 
         for (const dir of directoriesToScan) {
             try {
@@ -787,6 +795,74 @@ export class AssetRegistryService {
      */
     get projectPath(): string | null {
         return this._projectPath;
+    }
+
+    /**
+     * Get managed asset directories
+     * 获取被管理的资产目录
+     */
+    getManagedDirectories(): readonly string[] {
+        return MANAGED_ASSET_DIRECTORIES;
+    }
+
+    /**
+     * Check if a path is within a managed directory
+     * 检查路径是否在被管理的目录中
+     *
+     * @param pathToCheck - Absolute or relative path | 绝对或相对路径
+     * @returns Whether the path is in a managed directory | 路径是否在被管理的目录中
+     */
+    isPathManaged(pathToCheck: string): boolean {
+        if (!pathToCheck) return false;
+
+        // Normalize path
+        const normalizedPath = pathToCheck.replace(/\\/g, '/');
+
+        // Check if path starts with any managed directory
+        for (const dir of MANAGED_ASSET_DIRECTORIES) {
+            // Check relative path (e.g., "assets/textures/...")
+            if (normalizedPath.startsWith(`${dir}/`) || normalizedPath === dir) {
+                return true;
+            }
+            // Check absolute path (e.g., "C:/project/assets/...")
+            if (this._projectPath) {
+                const normalizedProject = this._projectPath.replace(/\\/g, '/');
+                const managedAbsPath = `${normalizedProject}/${dir}`;
+                if (normalizedPath.startsWith(`${managedAbsPath}/`) || normalizedPath === managedAbsPath) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the managed directory name for a path (if any)
+     * 获取路径所属的被管理目录名称（如果有）
+     *
+     * @param pathToCheck - Absolute or relative path | 绝对或相对路径
+     * @returns The managed directory name or null | 被管理的目录名称或 null
+     */
+    getManagedDirectoryForPath(pathToCheck: string): ManagedAssetDirectory | null {
+        if (!pathToCheck) return null;
+
+        const normalizedPath = pathToCheck.replace(/\\/g, '/');
+
+        for (const dir of MANAGED_ASSET_DIRECTORIES) {
+            if (normalizedPath.startsWith(`${dir}/`) || normalizedPath === dir) {
+                return dir;
+            }
+            if (this._projectPath) {
+                const normalizedProject = this._projectPath.replace(/\\/g, '/');
+                const managedAbsPath = `${normalizedProject}/${dir}`;
+                if (normalizedPath.startsWith(`${managedAbsPath}/`) || normalizedPath === managedAbsPath) {
+                    return dir;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**

@@ -1080,11 +1080,16 @@ export class PluginManager implements IService {
             const wasEnabled = plugin.enabled;
             const isDefaultEnabled = plugin.plugin.manifest.defaultEnabled;
 
-            // 如果插件在配置中明确列出，按配置来
-            // 如果插件不在配置中但 defaultEnabled=true，保持启用（新插件不应被旧配置禁用）
-            // If plugin is explicitly in config, follow config
-            // If plugin is not in config but defaultEnabled=true, keep enabled (new plugins should not be disabled by old config)
-            const shouldBeEnabled = inConfig || (isDefaultEnabled && !enabledPlugins.some(p => p === id));
+            // 逻辑：
+            // 1. 如果插件在配置中明确列出，启用它
+            // 2. 如果插件不在配置中但 defaultEnabled=true，也启用它（新插件不应被旧配置禁用）
+            // 3. 只有在配置中明确不包含且 defaultEnabled=false 的插件才禁用
+            //
+            // Logic:
+            // 1. If plugin is explicitly in config, enable it
+            // 2. If plugin is not in config but defaultEnabled=true, also enable it (new plugins should not be disabled by old config)
+            // 3. Only disable plugins that are not in config AND have defaultEnabled=false
+            const shouldBeEnabled = inConfig || isDefaultEnabled;
 
             if (shouldBeEnabled && !wasEnabled) {
                 toEnable.push(id);

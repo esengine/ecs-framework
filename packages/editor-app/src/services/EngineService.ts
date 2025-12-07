@@ -19,7 +19,9 @@ import {
     AssetPathResolver,
     AssetPlatform,
     globalPathResolver,
-    SceneResourceManager
+    SceneResourceManager,
+    assetManager as globalAssetManager,
+    AssetType
 } from '@esengine/asset-system';
 import {
     GameRuntime,
@@ -202,11 +204,17 @@ export class EngineService {
             engineBridge: this._runtime.bridge,
             renderSystem: this._runtime.renderSystem,
             assetManager: this._assetManager,
-            isEditor: true
+            engineIntegration: this._engineIntegration,
+            isEditor: true,
+            transformType: TransformComponent
         };
 
         // 让插件为场景创建系统
         pluginManager.createSystemsForScene(this._runtime.scene!, context);
+
+        // Re-sync assets after plugins registered their loaders
+        // 插件注册完加载器后，重新同步资产（确保类型正确）
+        await this._syncAssetRegistryToManager();
 
         // 同步系统引用到 GameRuntime 的 systemContext（用于 start/stop 时启用/禁用系统）
         this._runtime.updateSystemContext({
@@ -357,7 +365,9 @@ export class EngineService {
      */
     private async _initializeAssetSystem(): Promise<void> {
         try {
-            this._assetManager = new AssetManager();
+            // Use global assetManager instance so all systems share the same manager
+            // 使用全局 assetManager 实例，以便所有系统共享同一个管理器
+            this._assetManager = globalAssetManager;
 
             // Set up asset reader for Tauri environment.
             // 为 Tauri 环境设置资产读取器。
@@ -373,6 +383,10 @@ export class EngineService {
                     this._assetManager.setProjectRoot(projectInfo.path);
                 }
             }
+
+            // Sync AssetRegistryService data to global assetManager's database
+            // 将 AssetRegistryService 的数据同步到全局 assetManager 的数据库
+            await this._syncAssetRegistryToManager();
 
             const pathTransformerFn = (path: string) => {
                 if (!path.startsWith('http://') && !path.startsWith('https://') &&
@@ -429,6 +443,97 @@ export class EngineService {
             console.error('Failed to initialize asset system:', error);
             throw this._initializationError;
         }
+    }
+
+    /**
+     * Sync AssetRegistryService data to AssetManager's database.
+     * 将 AssetRegistryService 的数据同步到 AssetManager 的数据库。
+     *
+     * This enables GUID-based asset loading through the global assetManager.
+     * Components like ParticleSystemComponent use the global assetManager to load assets by GUID.
+     *
+     * Asset type resolution order:
+     * 1. loaderType from .meta file (explicit user override)
+     * 2. loaderFactory.getAssetTypeByPath (plugin-registered loaders)
+     * 3. Extension-based fallback (built-in types)
+     *
+     * 资产类型解析顺序：
+     * 1. .meta 文件中的 loaderType（用户显式覆盖）
+     * 2. loaderFactory.getAssetTypeByPath（插件注册的加载器）
+     * 3. 基于扩展名的回退（内置类型）
+     */
+    private async _syncAssetRegistryToManager(): Promise<void> {
+        if (!this._assetManager) return;
+
+        const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+        if (!assetRegistry || !assetRegistry.isReady) {
+            console.warn('[EngineService] AssetRegistryService not ready, skipping sync');
+            return;
+        }
+
+        const database = this._assetManager.getDatabase();
+        const allAssets = assetRegistry.getAllAssets();
+        const metaManager = assetRegistry.metaManager;
+
+        console.log(`[EngineService] Syncing ${allAssets.length} assets from AssetRegistry to AssetManager`);
+
+        // Use loaderFactory to determine asset type from path
+        // This allows plugins to register their own loaders and types
+        // 使用 loaderFactory 根据路径确定资产类型
+        // 这允许插件注册自己的加载器和类型
+        const loaderFactory = this._assetManager.getLoaderFactory();
+
+        for (const asset of allAssets) {
+            let assetType: string | null = null;
+
+            // 1. Check for explicit loaderType in .meta file (user override)
+            // 1. 检查 .meta 文件中的显式 loaderType（用户覆盖）
+            const meta = metaManager.getMetaByGUID(asset.guid);
+            if (meta?.loaderType) {
+                assetType = meta.loaderType;
+            }
+
+            // 2. Try to get type from registered loaders
+            // 2. 尝试从已注册的加载器获取类型
+            if (!assetType) {
+                assetType = loaderFactory?.getAssetTypeByPath?.(asset.path) ?? null;
+            }
+
+            // 3. Fallback: determine type from extension for basic types
+            // 3. 回退：根据扩展名确定基本类型
+            if (!assetType) {
+                const ext = asset.path.substring(asset.path.lastIndexOf('.')).toLowerCase();
+                if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'].includes(ext)) {
+                    assetType = AssetType.Texture;
+                } else if (['.mp3', '.wav', '.ogg', '.m4a'].includes(ext)) {
+                    assetType = AssetType.Audio;
+                } else if (['.json'].includes(ext)) {
+                    assetType = AssetType.Json;
+                } else if (['.txt', '.md', '.xml', '.yaml'].includes(ext)) {
+                    assetType = AssetType.Text;
+                } else {
+                    // Use Custom type - the plugin's loader should handle it
+                    // 使用 Custom 类型 - 插件的加载器应该处理它
+                    assetType = AssetType.Custom;
+                }
+            }
+
+            database.addAsset({
+                guid: asset.guid,
+                path: asset.path,
+                type: assetType,
+                name: asset.name,
+                size: asset.size,
+                hash: asset.hash || '',
+                dependencies: [],
+                labels: [],
+                tags: new Map(),
+                lastModified: asset.lastModified,
+                version: 1
+            });
+        }
+
+        console.log(`[EngineService] Asset sync complete`);
     }
 
     /**
@@ -873,8 +978,12 @@ export class EngineService {
     dispose(): void {
         this.stop();
 
+        // Don't dispose the global assetManager, just clear the reference
+        // 不要 dispose 全局 assetManager，只是清除引用
         if (this._assetManager) {
-            this._assetManager.dispose();
+            // Clear the database to free memory when switching projects
+            // 切换项目时清空数据库以释放内存
+            this._assetManager.getDatabase().clear();
             this._assetManager = null;
         }
 
