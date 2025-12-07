@@ -1,9 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { X, Search, Folder, FolderOpen, File, Image, FileText, Music, Video } from 'lucide-react';
+import { X, Search, Folder, FolderOpen, File, Image, FileText, Music, Video, Database, AlertTriangle } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
-import { ProjectService } from '@esengine/editor-core';
+import { ProjectService, AssetRegistryService } from '@esengine/editor-core';
 import { TauriFileSystemService } from '../../services/TauriFileSystemService';
 import './AssetPickerDialog.css';
+
+/**
+ * Directories managed by asset registry (GUID system)
+ * Only files in these directories can be selected
+ *
+ * Note: Keep in sync with MANAGED_ASSET_DIRECTORIES in AssetRegistryService.ts
+ */
+const MANAGED_ASSET_DIRECTORIES = ['assets', 'scripts', 'scenes'] as const;
 
 interface AssetPickerDialogProps {
     isOpen: boolean;
@@ -19,6 +27,10 @@ interface FileNode {
     path: string;
     isDirectory: boolean;
     children?: FileNode[];
+    /** Asset GUID (only for files with registered GUIDs) */
+    guid?: string;
+    /** Whether this is a root managed directory */
+    isRootManaged?: boolean;
 }
 
 export function AssetPickerDialog({
@@ -35,7 +47,12 @@ export function AssetPickerDialog({
     const [assets, setAssets] = useState<FileNode[]>([]);
     const [loading, setLoading] = useState(false);
 
-    // Load project assets
+    // Get AssetRegistryService for GUID lookup
+    const assetRegistry = useMemo(() => {
+        return Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+    }, []);
+
+    // Load project assets - ONLY from managed directories (assets, scripts, scenes)
     useEffect(() => {
         if (!isOpen) return;
 
@@ -48,13 +65,44 @@ export function AssetPickerDialog({
                 const currentProject = projectService?.getCurrentProject();
                 if (projectService && currentProject) {
                     const projectPath = currentProject.path;
-                    const assetsPath = `${projectPath}/assets`;
+                    const normalizedProjectPath = projectPath.replace(/\\/g, '/');
+
+                    // 排除的目录名 | Excluded directory names
+                    const excludedDirs = new Set([
+                        'node_modules', '.git', '.idea', '.vscode', 'dist', 'build',
+                        'temp', 'tmp', '.cache', 'coverage', '__pycache__'
+                    ]);
+
+                    // Helper to get relative path from absolute path
+                    const getRelativePath = (absPath: string): string => {
+                        const normalizedAbs = absPath.replace(/\\/g, '/');
+                        if (normalizedAbs.startsWith(normalizedProjectPath)) {
+                            return normalizedAbs.substring(normalizedProjectPath.length + 1);
+                        }
+                        return absPath;
+                    };
 
                     const buildTree = async (dirPath: string): Promise<FileNode[]> => {
                         const entries = await fileSystem.listDirectory(dirPath);
                         const nodes: FileNode[] = [];
 
                         for (const entry of entries) {
+                            // 跳过排除的目录 | Skip excluded directories
+                            if (entry.isDirectory && excludedDirs.has(entry.name)) {
+                                continue;
+                            }
+
+                            // 跳过隐藏文件/目录（以.开头，除了当前目录）
+                            // Skip hidden files/directories (starting with ., except current dir)
+                            if (entry.name.startsWith('.') && entry.name !== '.') {
+                                continue;
+                            }
+
+                            // Skip .meta files
+                            if (entry.name.endsWith('.meta')) {
+                                continue;
+                            }
+
                             const node: FileNode = {
                                 name: entry.name,
                                 path: entry.path,
@@ -66,6 +114,15 @@ export function AssetPickerDialog({
                                     node.children = await buildTree(entry.path);
                                 } catch {
                                     node.children = [];
+                                }
+                            } else {
+                                // Try to get GUID for the file
+                                if (assetRegistry) {
+                                    const relativePath = getRelativePath(entry.path);
+                                    const guid = assetRegistry.getGuidByPath(relativePath);
+                                    if (guid) {
+                                        node.guid = guid;
+                                    }
                                 }
                             }
 
@@ -80,8 +137,33 @@ export function AssetPickerDialog({
                         });
                     };
 
-                    const tree = await buildTree(assetsPath);
-                    setAssets(tree);
+                    // Only load managed directories (assets, scripts, scenes)
+                    const sep = projectPath.includes('\\') ? '\\' : '/';
+                    const managedNodes: FileNode[] = [];
+
+                    for (const dirName of MANAGED_ASSET_DIRECTORIES) {
+                        const dirPath = `${projectPath}${sep}${dirName}`;
+                        try {
+                            const exists = await fileSystem.exists(dirPath);
+                            if (exists) {
+                                const children = await buildTree(dirPath);
+                                managedNodes.push({
+                                    name: dirName,
+                                    path: dirPath,
+                                    isDirectory: true,
+                                    children,
+                                    isRootManaged: true
+                                });
+                            }
+                        } catch {
+                            // Directory doesn't exist, skip
+                        }
+                    }
+
+                    setAssets(managedNodes);
+
+                    // Auto-expand managed directories
+                    setExpandedFolders(new Set(managedNodes.map(n => n.path)));
                 }
             } catch (error) {
                 console.error('Failed to load assets:', error);
@@ -93,7 +175,7 @@ export function AssetPickerDialog({
         loadAssets();
         setSelectedPath(null);
         setSearchTerm('');
-    }, [isOpen]);
+    }, [isOpen, assetRegistry]);
 
     // Filter assets based on search and file extensions
     const filteredAssets = useMemo(() => {
@@ -141,11 +223,19 @@ export function AssetPickerDialog({
         });
     }, []);
 
+    // Track selected node (to check for GUID)
+    const [selectedNode, setSelectedNode] = useState<FileNode | null>(null);
+
     const handleSelect = useCallback((node: FileNode) => {
         if (node.isDirectory) {
             toggleFolder(node.path);
         } else {
-            setSelectedPath(node.path);
+            // Only allow selecting files with GUID
+            if (node.guid) {
+                setSelectedPath(node.path);
+                setSelectedNode(node);
+            }
+            // Files without GUID cannot be selected
         }
     }, [toggleFolder]);
 
@@ -172,11 +262,15 @@ export function AssetPickerDialog({
     }, [selectedPath, onSelect, onClose, toRelativePath]);
 
     const handleDoubleClick = useCallback((node: FileNode) => {
-        if (!node.isDirectory) {
+        if (!node.isDirectory && node.guid) {
+            // Double-click on file with GUID selects it
             onSelect(toRelativePath(node.path));
             onClose();
+        } else if (node.isDirectory) {
+            // Double-click on folder toggles expansion
+            toggleFolder(node.path);
         }
-    }, [onSelect, onClose, toRelativePath]);
+    }, [onSelect, onClose, toRelativePath, toggleFolder]);
 
     const getFileIcon = (name: string) => {
         const ext = name.split('.').pop()?.toLowerCase();
@@ -206,23 +300,38 @@ export function AssetPickerDialog({
     const renderNode = (node: FileNode, depth: number = 0) => {
         const isExpanded = expandedFolders.has(node.path);
         const isSelected = selectedPath === node.path;
+        const hasGuid = node.isDirectory || !!node.guid;
+        const isDisabled = !node.isDirectory && !node.guid;
 
         return (
             <div key={node.path}>
                 <div
-                    className={`asset-picker-item ${isSelected ? 'selected' : ''}`}
+                    className={`asset-picker-item ${isSelected ? 'selected' : ''} ${node.isRootManaged ? 'managed-root' : ''} ${isDisabled ? 'disabled' : ''}`}
                     style={{ paddingLeft: `${depth * 16 + 8}px` }}
                     onClick={() => handleSelect(node)}
                     onDoubleClick={() => handleDoubleClick(node)}
+                    title={isDisabled ? 'This file has no GUID and cannot be referenced' : undefined}
                 >
                     <span className="asset-picker-item__icon">
                         {node.isDirectory ? (
-                            isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />
+                            node.isRootManaged ? (
+                                <Database size={14} className="managed-icon" />
+                            ) : (
+                                isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />
+                            )
                         ) : (
                             getFileIcon(node.name)
                         )}
                     </span>
                     <span className="asset-picker-item__name">{node.name}</span>
+                    {node.isRootManaged && (
+                        <span className="managed-badge">GUID</span>
+                    )}
+                    {isDisabled && (
+                        <span className="no-guid-badge" title="No GUID - cannot be referenced">
+                            <AlertTriangle size={12} />
+                        </span>
+                    )}
                 </div>
                 {node.isDirectory && isExpanded && node.children && (
                     <div className="asset-picker-children">

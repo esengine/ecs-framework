@@ -35,7 +35,9 @@ import {
     Package,
     Clipboard,
     RefreshCw,
-    Settings
+    Settings,
+    Database,
+    AlertTriangle
 } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
 import { MessageHub, FileActionRegistry, AssetRegistryService, type FileCreationTemplate } from '@esengine/editor-core';
@@ -44,6 +46,15 @@ import { SettingsService } from '../services/SettingsService';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { PromptDialog } from './PromptDialog';
 import '../styles/ContentBrowser.css';
+
+/**
+ * Directories managed by asset registry (GUID system)
+ * 被资产注册表（GUID 系统）管理的目录
+ *
+ * Note: This is duplicated from AssetRegistryService to avoid build dependency issues.
+ * Keep in sync with MANAGED_ASSET_DIRECTORIES in AssetRegistryService.ts
+ */
+const MANAGED_ASSET_DIRECTORIES = ['assets', 'scripts', 'scenes'] as const;
 
 interface AssetItem {
     name: string;
@@ -83,6 +94,44 @@ function getIconComponent(iconName: string | undefined, size: number = 16): Reac
     }
 
     return <File size={size} />;
+}
+
+/**
+ * Check if path is within a managed asset directory
+ * 检查路径是否在被管理的资产目录中
+ */
+function isPathInManagedDirectory(path: string, projectPath: string | null): boolean {
+    if (!projectPath || !path) return false;
+
+    const normalizedPath = path.replace(/\\/g, '/');
+    const normalizedProject = projectPath.replace(/\\/g, '/');
+
+    for (const dir of MANAGED_ASSET_DIRECTORIES) {
+        const managedAbsPath = `${normalizedProject}/${dir}`;
+        if (normalizedPath.startsWith(`${managedAbsPath}/`) || normalizedPath === managedAbsPath) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Check if folder is a root managed directory (assets, scripts, scenes)
+ * 检查文件夹是否是根级被管理目录
+ */
+function isRootManagedDirectory(folderPath: string, projectPath: string | null): boolean {
+    if (!projectPath || !folderPath) return false;
+
+    const normalizedPath = folderPath.replace(/\\/g, '/');
+    const normalizedProject = projectPath.replace(/\\/g, '/');
+
+    for (const dir of MANAGED_ASSET_DIRECTORIES) {
+        const managedAbsPath = `${normalizedProject}/${dir}`;
+        if (normalizedPath === managedAbsPath) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // 获取资产类型显示名称
@@ -154,6 +203,11 @@ export function ContentBrowser({
         asset: AssetItem | null;
         isBackground?: boolean;
     } | null>(null);
+    // Folder tree context menu (separate from asset context menu)
+    const [folderTreeContextMenu, setFolderTreeContextMenu] = useState<{
+        position: { x: number; y: number };
+        items: ContextMenuItem[];
+    } | null>(null);
     const [renameDialog, setRenameDialog] = useState<{
         asset: AssetItem;
         newName: string;
@@ -167,6 +221,9 @@ export function ContentBrowser({
     // 文件创建模板列表（需要状态跟踪以便插件安装后刷新）
     // File creation templates list (need state tracking to refresh after plugin installation)
     const [fileCreationTemplates, setFileCreationTemplates] = useState<FileCreationTemplate[]>([]);
+
+    // Drag and drop state for file moving
+    const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
 
     // 初始化和监听插件安装事件以更新模板列表
     // Initialize and listen for plugin installation events to update template list
@@ -205,7 +262,18 @@ export function ContentBrowser({
             noProject: 'No project loaded',
             empty: 'This folder is empty',
             newFolder: 'New Folder',
-            newPrefix: 'New'
+            newPrefix: 'New',
+            managedDirectoryTooltip: 'GUID-managed directory - Assets here get unique IDs for references',
+            unmanagedWarning: 'This folder is not managed by GUID system. Assets created here cannot be referenced by GUID.',
+            unmanagedWarningTitle: 'Unmanaged Directory',
+            rename: 'Rename',
+            delete: 'Delete',
+            openInExplorer: 'Show in Explorer',
+            copyPath: 'Copy Path',
+            newSubfolder: 'New Subfolder',
+            deleteConfirmTitle: 'Confirm Delete',
+            deleteConfirmMessage: 'Are you sure you want to delete',
+            cannotDeleteRoot: 'Cannot delete root directory'
         },
         zh: {
             favorites: '收藏夹',
@@ -219,7 +287,18 @@ export function ContentBrowser({
             noProject: '未加载项目',
             empty: '文件夹为空',
             newFolder: '新建文件夹',
-            newPrefix: '新建'
+            newPrefix: '新建',
+            managedDirectoryTooltip: 'GUID 管理的目录 - 此处的资产会获得唯一 ID 以便引用',
+            unmanagedWarning: '此文件夹不受 GUID 系统管理。在此创建的资产无法通过 GUID 引用。',
+            unmanagedWarningTitle: '非托管目录',
+            rename: '重命名',
+            delete: '删除',
+            openInExplorer: '在资源管理器中显示',
+            copyPath: '复制路径',
+            newSubfolder: '新建子文件夹',
+            deleteConfirmTitle: '确认删除',
+            deleteConfirmMessage: '确定要删除',
+            cannotDeleteRoot: '无法删除根目录'
         }
     }[locale] || {
         favorites: 'Favorites',
@@ -233,7 +312,18 @@ export function ContentBrowser({
         noProject: 'No project loaded',
         empty: 'This folder is empty',
         newFolder: 'New Folder',
-        newPrefix: 'New'
+        newPrefix: 'New',
+        managedDirectoryTooltip: 'GUID-managed directory - Assets here get unique IDs for references',
+        unmanagedWarning: 'This folder is not managed by GUID system. Assets created here cannot be referenced by GUID.',
+        unmanagedWarningTitle: 'Unmanaged Directory',
+        rename: 'Rename',
+        delete: 'Delete',
+        openInExplorer: 'Show in Explorer',
+        copyPath: 'Copy Path',
+        newSubfolder: 'New Subfolder',
+        deleteConfirmTitle: 'Confirm Delete',
+        deleteConfirmMessage: 'Are you sure you want to delete',
+        cannotDeleteRoot: 'Cannot delete root directory'
     };
 
     // 文件创建模板的 label 本地化映射
@@ -561,6 +651,22 @@ export class ${className} {
         }
     }, []);
 
+    /**
+     * Refresh both assets view and folder tree
+     * 同时刷新资产视图和文件夹树
+     *
+     * Call this after any file system modification (create, delete, rename, move)
+     * to keep both the right panel (assets) and left panel (folder tree) in sync.
+     */
+    const refreshAll = useCallback(async () => {
+        if (currentPath) {
+            await loadAssets(currentPath);
+        }
+        if (projectPath) {
+            buildFolderTree(projectPath).then(setFolderTree);
+        }
+    }, [currentPath, projectPath, loadAssets, buildFolderTree]);
+
     // Initialize on mount
     useEffect(() => {
         if (projectPath) {
@@ -662,6 +768,130 @@ export class ${className} {
             return next;
         });
     }, []);
+
+    // Handle moving file/folder to a new location
+    const handleMoveAsset = useCallback(async (sourcePath: string, targetFolderPath: string) => {
+        if (!sourcePath || !targetFolderPath) return;
+
+        // Get file name from source path
+        const fileName = sourcePath.split(/[\\/]/).pop();
+        if (!fileName) return;
+
+        // Build destination path
+        const sep = targetFolderPath.includes('\\') ? '\\' : '/';
+        const destPath = `${targetFolderPath}${sep}${fileName}`;
+
+        // Don't move to same location - normalize paths for comparison
+        const normalizedSource = sourcePath.replace(/\\/g, '/');
+        const normalizedTarget = targetFolderPath.replace(/\\/g, '/');
+        const sourceFolder = normalizedSource.substring(0, normalizedSource.lastIndexOf('/'));
+        if (sourceFolder === normalizedTarget) return;
+
+        // Don't move folder into itself
+        if (normalizedTarget.startsWith(normalizedSource + '/')) {
+            console.warn('Cannot move folder into itself');
+            return;
+        }
+
+        // Check if source is a file by looking in the current assets list
+        // 通过查看当前资产列表来检查源是否是文件
+        const sourceAsset = assets.find(a => a.path === sourcePath);
+        const isFile = sourceAsset ? sourceAsset.type === 'file' : !fileName.includes('.') === false;
+        const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+
+        try {
+            // Check if file has a .meta file
+            // 检查文件是否有 .meta 文件
+            const metaPath = `${sourcePath}.meta`;
+            const destMetaPath = `${destPath}.meta`;
+            let hasMetaFile = false;
+            try {
+                hasMetaFile = await TauriAPI.pathExists(metaPath);
+            } catch {
+                // Ignore
+            }
+
+            // Move the file/folder first
+            // 首先移动文件/文件夹
+            await TauriAPI.renameFileOrFolder(sourcePath, destPath);
+
+            // Move .meta file if exists
+            // 如果存在则移动 .meta 文件
+            if (hasMetaFile) {
+                try {
+                    await TauriAPI.renameFileOrFolder(metaPath, destMetaPath);
+                } catch {
+                    // Meta file might have been moved already or failed
+                }
+            }
+
+            // For files: Update asset registry
+            // 对于文件：更新资产注册表
+            if (isFile && assetRegistry) {
+                // Update metaManager's internal cache (path mapping)
+                // 更新 metaManager 的内部缓存（路径映射）
+                if (hasMetaFile) {
+                    // The meta file was moved, now update the in-memory cache
+                    // meta 文件已移动，现在更新内存缓存
+                    try {
+                        // Clear old path from cache and re-register at new path
+                        // 从缓存中清除旧路径并在新路径重新注册
+                        await assetRegistry.unregisterAsset(sourcePath);
+                        await assetRegistry.registerAsset(destPath);
+                    } catch (e) {
+                        console.warn('Failed to update asset registry after move:', e);
+                    }
+                } else {
+                    // No meta file - check if destination is managed, generate .meta if so
+                    // 没有 meta 文件 - 检查目标是否在被管理的目录中，如果是则生成 .meta
+                    const isDestManaged = isPathInManagedDirectory(destPath, projectPath);
+                    if (isDestManaged) {
+                        // Register asset at new location - generates .meta if needed
+                        // 在新位置注册资产 - 如果需要会生成 .meta
+                        await assetRegistry.registerAsset(destPath);
+                    }
+                }
+            }
+
+            // Refresh current view
+            if (currentPath) {
+                await loadAssets(currentPath);
+            }
+
+            // Refresh folder tree
+            if (projectPath) {
+                buildFolderTree(projectPath).then(setFolderTree);
+            }
+
+            console.log(`Moved ${sourcePath} to ${destPath}`);
+        } catch (error) {
+            console.error('Failed to move file:', error);
+        }
+    }, [currentPath, projectPath, loadAssets, buildFolderTree, assets]);
+
+    // Folder drag handlers
+    const handleFolderDragOver = useCallback((e: React.DragEvent, folderPath: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragOverFolder(folderPath);
+    }, []);
+
+    const handleFolderDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragOverFolder(null);
+    }, []);
+
+    const handleFolderDrop = useCallback(async (e: React.DragEvent, targetFolderPath: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragOverFolder(null);
+
+        const sourcePath = e.dataTransfer.getData('asset-path');
+        if (sourcePath) {
+            await handleMoveAsset(sourcePath, targetFolderPath);
+        }
+    }, [handleMoveAsset]);
 
     // Handle asset click
     const handleAssetClick = useCallback((asset: AssetItem, e: React.MouseEvent) => {
@@ -783,15 +1013,14 @@ export class ${className} {
                 await assetRegistry.refreshAsset(newPath);
             }
 
-            if (currentPath) {
-                await loadAssets(currentPath);
-            }
+            // Refresh both assets view and folder tree
+            await refreshAll();
 
             setRenameDialog(null);
         } catch (error) {
             console.error('Failed to rename:', error);
         }
-    }, [currentPath, loadAssets]);
+    }, [refreshAll]);
 
     // Handle delete
     const handleDelete = useCallback(async (asset: AssetItem) => {
@@ -816,9 +1045,8 @@ export class ${className} {
                 }
             }
 
-            if (currentPath) {
-                await loadAssets(currentPath);
-            }
+            // Refresh both assets view and folder tree
+            await refreshAll();
 
             // Notify that a file was deleted | 通知文件已删除
             messageHub?.publish('file:deleted', { path: deletedPath });
@@ -827,7 +1055,7 @@ export class ${className} {
         } catch (error) {
             console.error('Failed to delete:', error);
         }
-    }, [currentPath, loadAssets, messageHub]);
+    }, [refreshAll, messageHub]);
 
     // Get breadcrumbs
     const getBreadcrumbs = useCallback(() => {
@@ -881,8 +1109,20 @@ export class ${className} {
     // Get context menu items
     const getContextMenuItems = useCallback((asset: AssetItem | null): ContextMenuItem[] => {
         const items: ContextMenuItem[] = [];
+        const isCurrentPathManaged = isPathInManagedDirectory(currentPath || '', projectPath);
 
         if (!asset) {
+            // Show warning header if current path is not managed
+            if (!isCurrentPathManaged && currentPath) {
+                items.push({
+                    label: t.unmanagedWarningTitle,
+                    icon: <AlertTriangle size={16} className="warning-icon" />,
+                    disabled: true,
+                    onClick: () => {}
+                });
+                items.push({ label: '', separator: true, onClick: () => {} });
+            }
+
             items.push({
                 label: t.newFolder,
                 icon: <FolderClosed size={16} />,
@@ -892,7 +1132,8 @@ export class ${className} {
                     const folderPath = `${currentPath}/${folderName}`;
                     try {
                         await TauriAPI.createDirectory(folderPath);
-                        await loadAssets(currentPath);
+                        // Refresh both assets view and folder tree
+                        await refreshAll();
                     } catch (error) {
                         console.error('Failed to create folder:', error);
                     }
@@ -904,9 +1145,17 @@ export class ${className} {
 
                 for (const template of fileCreationTemplates) {
                     const localizedLabel = getTemplateLabel(template.label);
+                    // Add warning indicator for unmanaged directories
+                    const warningIcon = !isCurrentPathManaged ? (
+                        <span className="menu-item-with-warning">
+                            {getIconComponent(template.icon, 16)}
+                            <AlertTriangle size={10} className="warning-badge" />
+                        </span>
+                    ) : getIconComponent(template.icon, 16);
+
                     items.push({
                         label: localizedLabel,
-                        icon: getIconComponent(template.icon, 16),
+                        icon: warningIcon,
                         onClick: () => {
                             setContextMenu(null);
                             if (currentPath) {
@@ -1157,20 +1406,134 @@ export class ${className} {
         });
 
         return items;
-    }, [currentPath, fileCreationTemplates, handleAssetDoubleClick, loadAssets, locale, t.newFolder, t.newPrefix, setRenameDialog, setDeleteConfirmDialog, setContextMenu, setCreateFileDialog]);
+    }, [currentPath, fileCreationTemplates, handleAssetDoubleClick, loadAssets, locale, t.newFolder, t.newPrefix, t.unmanagedWarningTitle, setRenameDialog, setDeleteConfirmDialog, setContextMenu, setCreateFileDialog, projectPath]);
+
+    /**
+     * Handle folder tree context menu
+     * 处理文件夹树右键菜单
+     */
+    const handleFolderTreeContextMenu = useCallback((e: React.MouseEvent, node: FolderNode) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const isRoot = node.path === projectPath;
+        const folderName = node.name === 'All' ? (projectPath?.split(/[/\\]/).pop() || 'Project') : node.name;
+
+        const items: ContextMenuItem[] = [];
+
+        // New subfolder
+        items.push({
+            label: t.newSubfolder,
+            icon: <FolderClosed size={16} />,
+            onClick: async () => {
+                const folderPath = `${node.path}/New Folder`;
+                try {
+                    await TauriAPI.createDirectory(folderPath);
+                    // Expand the parent folder to show the new subfolder
+                    setExpandedFolders(prev => new Set([...prev, node.path]));
+                    await refreshAll();
+                } catch (error) {
+                    console.error('Failed to create subfolder:', error);
+                }
+            }
+        });
+
+        items.push({ label: '', separator: true, onClick: () => {} });
+
+        // Rename (not for root)
+        if (!isRoot) {
+            items.push({
+                label: t.rename,
+                icon: <Edit3 size={16} />,
+                onClick: () => {
+                    setRenameDialog({
+                        asset: {
+                            name: folderName,
+                            path: node.path,
+                            type: 'folder'
+                        },
+                        newName: folderName
+                    });
+                }
+            });
+        }
+
+        // Delete (not for root)
+        if (!isRoot) {
+            items.push({
+                label: t.delete,
+                icon: <Trash2 size={16} />,
+                onClick: () => {
+                    setDeleteConfirmDialog({
+                        name: folderName,
+                        path: node.path,
+                        type: 'folder'
+                    });
+                }
+            });
+        } else {
+            items.push({
+                label: t.cannotDeleteRoot,
+                icon: <Trash2 size={16} />,
+                disabled: true,
+                onClick: () => {}
+            });
+        }
+
+        items.push({ label: '', separator: true, onClick: () => {} });
+
+        // Copy path
+        items.push({
+            label: t.copyPath,
+            icon: <Clipboard size={16} />,
+            onClick: async () => {
+                try {
+                    await navigator.clipboard.writeText(node.path);
+                } catch (error) {
+                    console.error('Failed to copy path:', error);
+                }
+            }
+        });
+
+        // Show in explorer
+        items.push({
+            label: t.openInExplorer,
+            icon: <ExternalLink size={16} />,
+            onClick: async () => {
+                try {
+                    await TauriAPI.showInFolder(node.path);
+                } catch (error) {
+                    console.error('Failed to show in explorer:', error);
+                }
+            }
+        });
+
+        setFolderTreeContextMenu({
+            position: { x: e.clientX, y: e.clientY },
+            items
+        });
+    }, [projectPath, t, refreshAll, setRenameDialog, setDeleteConfirmDialog, setFolderTreeContextMenu, setExpandedFolders]);
 
     // Render folder tree node
     const renderFolderNode = useCallback((node: FolderNode, depth: number = 0) => {
         const isSelected = currentPath === node.path;
         const isExpanded = expandedFolders.has(node.path);
         const hasChildren = node.children.length > 0;
+        const isRootManaged = isRootManagedDirectory(node.path, projectPath);
+        const isInManaged = isPathInManagedDirectory(node.path, projectPath);
+        const isDragOver = dragOverFolder === node.path;
 
         return (
             <div key={node.path}>
                 <div
-                    className={`folder-tree-item ${isSelected ? 'selected' : ''}`}
+                    className={`folder-tree-item ${isSelected ? 'selected' : ''} ${isRootManaged ? 'managed-root' : ''} ${isDragOver ? 'drag-over' : ''}`}
                     style={{ paddingLeft: `${depth * 16 + 8}px` }}
                     onClick={() => handleFolderSelect(node.path)}
+                    onContextMenu={(e) => handleFolderTreeContextMenu(e, node)}
+                    title={isRootManaged ? t.managedDirectoryTooltip : undefined}
+                    onDragOver={(e) => handleFolderDragOver(e, node.path)}
+                    onDragLeave={handleFolderDragLeave}
+                    onDrop={(e) => handleFolderDrop(e, node.path)}
                 >
                     <span
                         className="folder-tree-expand"
@@ -1183,14 +1546,21 @@ export class ${className} {
                         )}
                     </span>
                     <span className="folder-tree-icon">
-                        {isExpanded ? <FolderOpen size={14} /> : <FolderClosed size={14} />}
+                        {isRootManaged ? (
+                            <Database size={14} className="managed-icon" />
+                        ) : (
+                            isExpanded ? <FolderOpen size={14} /> : <FolderClosed size={14} />
+                        )}
                     </span>
                     <span className="folder-tree-name">{node.name}</span>
+                    {isRootManaged && (
+                        <span className="managed-badge" title={t.managedDirectoryTooltip}>GUID</span>
+                    )}
                 </div>
                 {isExpanded && node.children.map(child => renderFolderNode(child, depth + 1))}
             </div>
         );
-    }, [currentPath, expandedFolders, handleFolderSelect, toggleFolderExpand]);
+    }, [currentPath, expandedFolders, handleFolderSelect, handleFolderTreeContextMenu, toggleFolderExpand, projectPath, t.managedDirectoryTooltip, dragOverFolder, handleFolderDragOver, handleFolderDragLeave, handleFolderDrop]);
 
     // Filter assets by search
     const filteredAssets = searchQuery.trim()
@@ -1367,49 +1737,66 @@ export class ${className} {
                     ) : filteredAssets.length === 0 ? (
                         <div className="cb-empty">{t.empty}</div>
                     ) : (
-                        filteredAssets.map(asset => (
-                            <div
-                                key={asset.path}
-                                className={`cb-asset-item ${selectedPaths.has(asset.path) ? 'selected' : ''}`}
-                                onClick={(e) => handleAssetClick(asset, e)}
-                                onDoubleClick={() => handleAssetDoubleClick(asset)}
-                                onContextMenu={(e) => {
-                                    e.stopPropagation();
-                                    handleContextMenu(e, asset);
-                                }}
-                                draggable={asset.type === 'file'}
-                                onDragStart={(e) => {
-                                    if (asset.type === 'file') {
+                        filteredAssets.map(asset => {
+                            const isDragOverAsset = asset.type === 'folder' && dragOverFolder === asset.path;
+                            return (
+                                <div
+                                    key={asset.path}
+                                    className={`cb-asset-item ${selectedPaths.has(asset.path) ? 'selected' : ''} ${isDragOverAsset ? 'drag-over' : ''}`}
+                                    onClick={(e) => handleAssetClick(asset, e)}
+                                    onDoubleClick={() => handleAssetDoubleClick(asset)}
+                                    onContextMenu={(e) => {
+                                        e.stopPropagation();
+                                        handleContextMenu(e, asset);
+                                    }}
+                                    draggable
+                                    onDragStart={(e) => {
                                         e.dataTransfer.setData('asset-path', asset.path);
                                         e.dataTransfer.setData('text/plain', asset.path);
-                                        // Add GUID for new asset reference system
-                                        const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
-                                        if (assetRegistry) {
-                                            // Convert absolute path to relative path for GUID lookup
-                                            const relativePath = assetRegistry.absoluteToRelative(asset.path);
-                                            if (relativePath) {
-                                                const guid = assetRegistry.getGuidByPath(relativePath);
-                                                if (guid) {
-                                                    e.dataTransfer.setData('asset-guid', guid);
+                                        // Add GUID for files
+                                        if (asset.type === 'file') {
+                                            const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+                                            if (assetRegistry) {
+                                                const relativePath = assetRegistry.absoluteToRelative(asset.path);
+                                                if (relativePath) {
+                                                    const guid = assetRegistry.getGuidByPath(relativePath);
+                                                    if (guid) {
+                                                        e.dataTransfer.setData('asset-guid', guid);
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
-                                }}
-                            >
-                                <div className="cb-asset-thumbnail">
-                                    {getFileIcon(asset)}
-                                </div>
-                                <div className="cb-asset-info">
-                                    <div className="cb-asset-name" title={asset.name}>
-                                        {asset.name}
+                                    }}
+                                    onDragOver={(e) => {
+                                        if (asset.type === 'folder') {
+                                            handleFolderDragOver(e, asset.path);
+                                        }
+                                    }}
+                                    onDragLeave={(e) => {
+                                        if (asset.type === 'folder') {
+                                            handleFolderDragLeave(e);
+                                        }
+                                    }}
+                                    onDrop={(e) => {
+                                        if (asset.type === 'folder') {
+                                            handleFolderDrop(e, asset.path);
+                                        }
+                                    }}
+                                >
+                                    <div className="cb-asset-thumbnail">
+                                        {getFileIcon(asset)}
                                     </div>
-                                    <div className="cb-asset-type">
-                                        {getAssetTypeName(asset)}
+                                    <div className="cb-asset-info">
+                                        <div className="cb-asset-name" title={asset.name}>
+                                            {asset.name}
+                                        </div>
+                                        <div className="cb-asset-type">
+                                            {getAssetTypeName(asset)}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
 
@@ -1425,6 +1812,15 @@ export class ${className} {
                     items={getContextMenuItems(contextMenu.asset)}
                     position={contextMenu.position}
                     onClose={() => setContextMenu(null)}
+                />
+            )}
+
+            {/* Folder Tree Context Menu */}
+            {folderTreeContextMenu && (
+                <ContextMenu
+                    items={folderTreeContextMenu.items}
+                    position={folderTreeContextMenu.position}
+                    onClose={() => setFolderTreeContextMenu(null)}
                 />
             )}
 
@@ -1518,9 +1914,9 @@ export class ${className} {
                         try {
                             const content = await template.getContent(fileName);
                             await TauriAPI.writeFileContent(filePath, content);
-                            if (currentPath) {
-                                await loadAssets(currentPath);
-                            }
+
+                            // Refresh both assets view and folder tree
+                            await refreshAll();
 
                             // Notify that a file was created | 通知文件已创建
                             messageHub?.publish('file:created', { path: filePath });

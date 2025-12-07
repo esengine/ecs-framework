@@ -24,6 +24,17 @@ export interface IAssetMeta {
     guid: AssetGUID;
     /** Asset type | 资产类型 */
     type: AssetType;
+    /**
+     * Explicit loader type override
+     * 显式指定的加载器类型覆盖
+     *
+     * When set, this type will be used instead of extension-based detection.
+     * Useful when file extension doesn't match the actual content type.
+     *
+     * 设置后，将使用此类型而非基于扩展名的检测。
+     * 适用于文件扩展名与实际内容类型不匹配的情况。
+     */
+    loaderType?: string;
     /** Import settings | 导入设置 */
     importSettings?: IImportSettings;
     /** User-defined labels | 用户定义的标签 */
@@ -133,7 +144,8 @@ export function inferAssetType(path: string): AssetType {
         tileset: 'tileset',
         btree: 'behavior-tree',
         bp: 'blueprint',
-        mat: 'material'
+        mat: 'material',
+        particle: 'particle'
     };
 
     return typeMap[ext] || 'binary';

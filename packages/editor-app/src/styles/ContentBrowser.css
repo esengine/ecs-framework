@@ -143,6 +143,61 @@
     font-size: 12px;
 }
 
+/* ==================== Managed Directory Indicators ==================== */
+.folder-tree-item.managed-root .folder-tree-icon {
+    color: #4fc1ff;
+}
+
+.folder-tree-item.managed-root .managed-icon {
+    color: #4fc1ff;
+}
+
+.managed-badge {
+    font-size: 9px;
+    padding: 1px 4px;
+    background: #4fc1ff22;
+    color: #4fc1ff;
+    border-radius: 3px;
+    margin-left: 6px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Warning icons in context menu */
+.warning-icon {
+    color: #f59e0b !important;
+}
+
+.menu-item-with-warning {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+}
+
+.warning-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -4px;
+    color: #f59e0b;
+}
+
+/* Context menu disabled item for unmanaged warning */
+.context-menu-item.disabled .warning-icon {
+    color: #f59e0b !important;
+}
+
+/* ==================== Drag and Drop Styles ==================== */
+.folder-tree-item.drag-over {
+    background: #1976d2 !important;
+    outline: 2px solid #42a5f5;
+}
+
+.cb-asset-item.drag-over {
+    background: #1976d2 !important;
+    outline: 2px solid #42a5f5;
+    border-radius: 4px;
+}
+
 /* ==================== Right Panel - Content Area ==================== */
 .content-browser-right {
     flex: 1;

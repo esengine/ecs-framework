@@ -1,5 +1,9 @@
-import { Folder, File as FileIcon, Image as ImageIcon, Clock, HardDrive } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Folder, File as FileIcon, Image as ImageIcon, Clock, HardDrive, Settings2 } from 'lucide-react';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { Core } from '@esengine/ecs-framework';
+import { AssetRegistryService } from '@esengine/editor-core';
+import { assetManager as globalAssetManager } from '@esengine/asset-system';
 import { AssetFileInfo } from '../types';
 import { ImagePreview, CodePreview, getLanguageFromExtension } from '../common';
 import '../../../styles/EntityInspector.css';
@@ -9,6 +13,18 @@ interface AssetFileInspectorProps {
     content?: string;
     isImage?: boolean;
 }
+
+/**
+ * Built-in loader types (always available)
+ * 内置加载器类型（始终可用）
+ */
+const BUILTIN_LOADER_TYPES = [
+    'texture',
+    'audio',
+    'json',
+    'text',
+    'binary'
+];
 
 function formatFileSize(bytes?: number): string {
     if (!bytes) return '0 B';
@@ -37,6 +53,68 @@ function formatDate(timestamp?: number): string {
 export function AssetFileInspector({ fileInfo, content, isImage }: AssetFileInspectorProps) {
     const IconComponent = fileInfo.isDirectory ? Folder : isImage ? ImageIcon : FileIcon;
     const iconColor = fileInfo.isDirectory ? '#dcb67a' : isImage ? '#a78bfa' : '#90caf9';
+
+    // State for loader type selector
+    const [currentLoaderType, setCurrentLoaderType] = useState<string | null>(null);
+    const [availableLoaderTypes, setAvailableLoaderTypes] = useState<string[]>([]);
+    const [detectedType, setDetectedType] = useState<string | null>(null);
+    const [isUpdating, setIsUpdating] = useState(false);
+
+    // Load meta info and available loader types
+    useEffect(() => {
+        if (fileInfo.isDirectory) return;
+
+        const loadMetaInfo = async () => {
+            try {
+                const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+                if (!assetRegistry?.isReady) return;
+
+                const metaManager = assetRegistry.metaManager;
+                const meta = await metaManager.getOrCreateMeta(fileInfo.path);
+
+                // Get current loader type from meta
+                setCurrentLoaderType(meta.loaderType || null);
+                setDetectedType(meta.type);
+
+                // Get available loader types from assetManager
+                const loaderFactory = globalAssetManager.getLoaderFactory();
+                const registeredTypes = loaderFactory?.getRegisteredTypes() || [];
+
+                // Combine built-in types with registered types (deduplicated)
+                const allTypes = new Set([...BUILTIN_LOADER_TYPES, ...registeredTypes]);
+                setAvailableLoaderTypes(Array.from(allTypes).sort());
+            } catch (error) {
+                console.warn('Failed to load meta info:', error);
+            }
+        };
+
+        loadMetaInfo();
+    }, [fileInfo.path, fileInfo.isDirectory]);
+
+    // Handle loader type change
+    const handleLoaderTypeChange = useCallback(async (newType: string) => {
+        if (fileInfo.isDirectory || isUpdating) return;
+
+        setIsUpdating(true);
+        try {
+            const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+            if (!assetRegistry?.isReady) return;
+
+            const metaManager = assetRegistry.metaManager;
+
+            // Update meta with new loader type
+            // Empty string means use auto-detection (remove override)
+            const loaderType = newType === '' ? undefined : newType;
+            await metaManager.updateMeta(fileInfo.path, { loaderType });
+
+            setCurrentLoaderType(loaderType || null);
+            console.log(`[AssetFileInspector] Updated loader type for ${fileInfo.name}: ${loaderType || '(auto)'}`);
+        } catch (error) {
+            console.error('Failed to update loader type:', error);
+        } finally {
+            setIsUpdating(false);
+        }
+    }, [fileInfo.path, fileInfo.name, fileInfo.isDirectory, isUpdating]);
 
     return (
         <div className="entity-inspector">
@@ -91,6 +169,56 @@ export function AssetFileInspector({ fileInfo, content, isImage }: AssetFileInsp
                         </span>
                     </div>
                 </div>
+
+                {/* Loader Type Section - only for files, not directories */}
+                {!fileInfo.isDirectory && availableLoaderTypes.length > 0 && (
+                    <div className="inspector-section">
+                        <div className="section-title">
+                            <Settings2 size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                            加载设置
+                        </div>
+                        <div className="property-field">
+                            <label className="property-label">加载器类型</label>
+                            <select
+                                className="property-select"
+                                value={currentLoaderType || ''}
+                                onChange={(e) => handleLoaderTypeChange(e.target.value)}
+                                disabled={isUpdating}
+                                style={{
+                                    flex: 1,
+                                    padding: '4px 8px',
+                                    fontSize: '12px',
+                                    borderRadius: '4px',
+                                    border: '1px solid #444',
+                                    backgroundColor: '#2a2a2a',
+                                    color: '#e0e0e0',
+                                    cursor: isUpdating ? 'wait' : 'pointer'
+                                }}
+                            >
+                                <option value="">
+                                    自动检测 {detectedType ? `(${detectedType})` : ''}
+                                </option>
+                                {availableLoaderTypes.map((type) => (
+                                    <option key={type} value={type}>
+                                        {type}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        {currentLoaderType && (
+                            <div
+                                style={{
+                                    marginTop: '4px',
+                                    fontSize: '11px',
+                                    color: '#888',
+                                    fontStyle: 'italic'
+                                }}
+                            >
+                                已覆盖自动检测，使用 "{currentLoaderType}" 加载器
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {isImage && (
                     <div className="inspector-section">
