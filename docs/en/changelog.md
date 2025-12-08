@@ -4,7 +4,7 @@ This document records the version update history of the `@esengine/ecs-framework
 
 ---
 
-## v2.3.1 (2025-12-08)
+## v2.3.2 (2025-12-08)
 
 ### Features
 
@@ -25,6 +25,16 @@ This document records the version update history of the `@esengine/ecs-framework
 
 - Updated Worker system documentation with WeChat Mini Game support section
 - Added English Worker system documentation (`docs/en/guide/worker-system.md`)
+
+---
+
+## v2.3.1 (2025-12-07)
+
+### Bug Fixes
+
+- **Type export fix**: Fix type export issues in v2.3.0
+  - Resolve `ServiceToken` cross-package type compatibility issues
+  - Fix type references in `editor-app` and `behavior-tree-editor`
 
 ---
 

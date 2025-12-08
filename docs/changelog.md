@@ -4,7 +4,7 @@
 
 ---
 
-## v2.3.1 (2025-12-08)
+## v2.3.2 (2025-12-08)
 
 ### Features
 
@@ -25,6 +25,16 @@
 
 - 更新 Worker 系统文档，添加微信小游戏支持章节
 - 新增英文版 Worker 系统文档 (`docs/en/guide/worker-system.md`)
+
+---
+
+## v2.3.1 (2025-12-07)
+
+### Bug Fixes
+
+- **类型导出修复**: 修复 v2.3.0 中的类型导出问题
+  - 解决 `ServiceToken` 跨包类型兼容性问题
+  - 修复 `editor-app` 和 `behavior-tree-editor` 中的类型引用
 
 ---
 

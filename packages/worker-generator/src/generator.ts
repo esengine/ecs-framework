@@ -302,32 +302,36 @@ function toKebabCase(str: string): string {
 /**
  * 简单的 ES6+ 到 ES5 转换（用于微信小游戏兼容性）
  * Simple ES6+ to ES5 conversion (for WeChat Mini Game compatibility)
+ *
+ * 注意：这些正则表达式使用非捕获组和限制量词来避免 ReDoS 攻击
+ * Note: These regexes use non-capturing groups and bounded quantifiers to prevent ReDoS
  */
 function convertToES5(code: string): string {
     let result = code;
 
     // 1. 处理 .map(e => ({ ...e })) 这种返回对象字面量的情况
     // Handle arrow functions returning object literals like .map(e => ({ ...e }))
-    result = result.replace(/(\w+)\s*=>\s*\(\s*\{([^}]*)\}\s*\)/g, 'function($1) { return {$2}; }');
+    // 使用 [ \t] 替代 \s* 避免多行回溯，限制空格数量
+    result = result.replace(/(\w+)[ \t]*=>[ \t]*\([ \t]*\{([^}]*)\}[ \t]*\)/g, 'function($1) { return {$2}; }');
 
     // 2. 处理 (params) => ({ ... }) 带括号参数返回对象
-    result = result.replace(/\(([^)]*)\)\s*=>\s*\(\s*\{([^}]*)\}\s*\)/g, 'function($1) { return {$2}; }');
+    result = result.replace(/\(([^)]*)\)[ \t]*=>[ \t]*\([ \t]*\{([^}]*)\}[ \t]*\)/g, 'function($1) { return {$2}; }');
 
     // 3. 处理 (params) => expression （非块体）
     // Handle (params) => expression (non-block body)
-    result = result.replace(/\(([^)]*)\)\s*=>\s*(?!\{)([^;,\n]+)/g, 'function($1) { return $2; }');
+    result = result.replace(/\(([^)]*)\)[ \t]*=>[ \t]*(?!\{)([^;,\n]+)/g, 'function($1) { return $2; }');
 
     // 4. 处理 (params) => { ... } （块体）
     // Handle (params) => { ... } (block body)
-    result = result.replace(/\(([^)]*)\)\s*=>\s*\{/g, 'function($1) {');
+    result = result.replace(/\(([^)]*)\)[ \t]*=>[ \t]*\{/g, 'function($1) {');
 
     // 5. 处理单参数 x => expression
     // Handle single param x => expression
-    result = result.replace(/(\b\w+)\s*=>\s*(?!\{)([^;,\n]+)/g, 'function($1) { return $2; }');
+    result = result.replace(/(\b\w+)[ \t]*=>[ \t]*(?!\{)([^;,\n]+)/g, 'function($1) { return $2; }');
 
     // 6. 处理单参数 x => { ... }
     // Handle single param x => { ... }
-    result = result.replace(/(\b\w+)\s*=>\s*\{/g, 'function($1) {');
+    result = result.replace(/(\b\w+)[ \t]*=>[ \t]*\{/g, 'function($1) {');
 
     // 7. const/let -> var
     result = result.replace(/\b(const|let)\b/g, 'var');
