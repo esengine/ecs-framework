@@ -1,0 +1,56 @@
+{
+  "name": "@esengine/worker-generator",
+  "version": "1.0.2",
+  "description": "CLI tool to generate Worker files from WorkerEntitySystem classes for WeChat Mini Game and other platforms",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "esengine-worker-gen": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "esengine",
+    "ecs",
+    "worker",
+    "web-worker",
+    "wechat",
+    "minigame",
+    "code-generator",
+    "cli"
+  ],
+  "author": "ESEngine Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/esengine/ecs-framework.git",
+    "directory": "packages/worker-generator"
+  },
+  "homepage": "https://github.com/esengine/ecs-framework/tree/master/packages/worker-generator",
+  "bugs": {
+    "url": "https://github.com/esengine/ecs-framework/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "ts-morph": "^21.0.1",
+    "typescript": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

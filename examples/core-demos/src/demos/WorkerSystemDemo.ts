@@ -123,7 +123,9 @@ class PhysicsWorkerSystem extends WorkerEntitySystem<PhysicsEntityData> {
                 enableWorker,
                 workerCount: isSharedArrayBufferAvailable ? (navigator.hardwareConcurrency || 2) : 1,
                 systemConfig: defaultConfig,
-                useSharedArrayBuffer: true
+                useSharedArrayBuffer: true,
+                // 微信小游戏等平台需要配置此路径，CLI 工具会根据此路径生成 Worker 文件
+                workerScriptPath: 'workers/physics-worker.js'
             }
         );
 

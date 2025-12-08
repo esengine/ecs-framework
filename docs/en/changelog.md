@@ -4,7 +4,43 @@ This document records the version update history of the `@esengine/ecs-framework
 
 ---
 
-## v2.3.0 (2025-12-06)
+## v2.3.2 (2025-12-08)
+
+### Features
+
+- **WeChat Mini Game Worker Support**: Add complete Worker support for WeChat Mini Game platform (#297)
+  - New `workerScriptPath` config option for pre-compiled Worker script path
+  - Fix WeChat Mini Game Worker message format difference (`res` is data directly, no `.data` wrapper)
+  - Applicable to WeChat Mini Game and other platforms that don't support dynamic scripts
+
+### New Package
+
+- **@esengine/worker-generator** `v1.0.2`: CLI tool to auto-generate Worker files from `WorkerEntitySystem` subclasses
+  - Automatically scan and extract `workerProcess` method body
+  - Support `--wechat` mode, use TypeScript compiler to convert to ES5 syntax
+  - Read `workerScriptPath` config from code, generate to specified path
+  - Generate `worker-mapping.json` mapping file
+
+### Documentation
+
+- Updated Worker system documentation with WeChat Mini Game support section
+- Added English Worker system documentation (`docs/en/guide/worker-system.md`)
+
+---
+
+## v2.3.1 (2025-12-07)
+
+### Bug Fixes
+
+- **Type export fix**: Fix type export issues in v2.3.0
+  - Resolve `ServiceToken` cross-package type compatibility issues
+  - Fix type references in `editor-app` and `behavior-tree-editor`
+
+---
+
+## v2.3.0 (2025-12-06) ⚠️ DEPRECATED
+
+> **Warning**: This version has type export issues. Please upgrade to v2.3.1 or later.
 
 ### Features
 
