@@ -1,6 +1,6 @@
 {
   "name": "@esengine/worker-generator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CLI tool to generate Worker files from WorkerEntitySystem classes for WeChat Mini Game and other platforms",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -44,11 +44,11 @@
   "dependencies": {
     "chalk": "^4.1.2",
     "commander": "^11.1.0",
-    "ts-morph": "^21.0.1"
+    "ts-morph": "^21.0.1",
+    "typescript": "^5.3.0"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
-    "typescript": "^5.3.0"
+    "@types/node": "^20.10.0"
   },
   "publishConfig": {
     "access": "public"
