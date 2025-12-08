@@ -1,6 +1,6 @@
 import React from 'react';
 import { IFieldEditor, FieldEditorProps, MessageHub, FileActionRegistry } from '@esengine/editor-core';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 import { AssetField } from '../../components/inspectors/fields/AssetField';
 
 export class AssetFieldEditor implements IFieldEditor<string | null> {

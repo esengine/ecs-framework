@@ -5,7 +5,7 @@
  * 负责更新物理世界并同步 Transform
  */
 
-import { EntitySystem, Matcher, type Entity } from '@esengine/esengine';
+import { EntitySystem, Matcher, type Entity } from '@esengine/ecs-framework';
 import { TransformComponent } from '@esengine/engine-core';
 import { Physics2DWorld } from '../world/Physics2DWorld';
 import { Rigidbody2DComponent } from '../components/Rigidbody2DComponent';

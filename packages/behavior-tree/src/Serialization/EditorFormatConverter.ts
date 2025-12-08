@@ -1,4 +1,4 @@
-import { createLogger } from '@esengine/esengine';
+import { createLogger } from '@esengine/ecs-framework';
 import type { BehaviorTreeAsset, AssetMetadata, BehaviorTreeNodeData, BlackboardVariableDefinition, PropertyBinding } from './BehaviorTreeAsset';
 import { NodeType, BlackboardValueType } from '../Types/TaskStatus';
 

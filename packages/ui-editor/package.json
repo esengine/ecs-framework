@@ -27,7 +27,7 @@
         "@esengine/ui": "workspace:*"
     },
     "devDependencies": {
-        "@esengine/esengine": "workspace:*",
+        "@esengine/ecs-framework": "workspace:*",
         "@esengine/editor-core": "workspace:*",
         "@esengine/build-config": "workspace:*",
         "lucide-react": "^0.545.0",

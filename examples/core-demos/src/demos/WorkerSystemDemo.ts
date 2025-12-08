@@ -1,5 +1,5 @@
 import { DemoBase, DemoInfo } from './DemoBase';
-import { Component, ECSComponent, WorkerEntitySystem, EntitySystem, Matcher, Entity, ECSSystem, PlatformManager, Time } from '@esengine/esengine';
+import { Component, ECSComponent, WorkerEntitySystem, EntitySystem, Matcher, Entity, ECSSystem, PlatformManager, Time } from '@esengine/ecs-framework';
 import { BrowserAdapter } from '../platform/BrowserAdapter';
 
 // ============ 组件定义 ============

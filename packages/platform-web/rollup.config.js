@@ -15,7 +15,7 @@ import dts from 'rollup-plugin-dts';
  */
 
 const external = [
-    '@esengine/esengine',
+    '@esengine/ecs-framework',
     '@esengine/runtime-core',
     '@esengine/platform-common',
     '@esengine/asset-system',

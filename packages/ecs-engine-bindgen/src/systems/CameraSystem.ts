@@ -3,7 +3,7 @@
  * 相机系统
  */
 
-import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/esengine';
+import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/ecs-framework';
 import { CameraComponent } from '@esengine/camera';
 import type { EngineBridge } from '../core/EngineBridge';
 

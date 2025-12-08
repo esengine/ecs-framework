@@ -18,7 +18,7 @@ In the ECS framework, entities have two lifecycle policies:
 ### Creating a Persistent Entity
 
 ```typescript
-import { Scene } from '@esengine/esengine';
+import { Scene } from '@esengine/ecs-framework';
 
 class GameScene extends Scene {
   protected initialize(): void {
@@ -38,7 +38,7 @@ class GameScene extends Scene {
 ### Behavior During Scene Transitions
 
 ```typescript
-import { Core, Scene } from '@esengine/esengine';
+import { Core, Scene } from '@esengine/ecs-framework';
 
 // Initial scene
 class Level1Scene extends Scene {
@@ -147,7 +147,7 @@ public get lifecyclePolicy(): EEntityLifecyclePolicy
 
 **Example**:
 ```typescript
-import { EEntityLifecyclePolicy } from '@esengine/esengine';
+import { EEntityLifecyclePolicy } from '@esengine/ecs-framework';
 
 if (entity.lifecyclePolicy === EEntityLifecyclePolicy.Persistent) {
   console.log('Persistent entity');

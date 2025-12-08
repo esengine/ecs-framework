@@ -9,6 +9,6 @@ export default defineConfig({
     clean: true,
     tsconfig: 'tsconfig.build.json',
     external: [
-        '@esengine/esengine'
+        '@esengine/ecs-framework'
     ]
 });

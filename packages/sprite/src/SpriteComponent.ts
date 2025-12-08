@@ -1,5 +1,5 @@
 import type { AssetReference } from '@esengine/asset-system';
-import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/esengine';
+import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/ecs-framework';
 
 /**
  * Material property override value.

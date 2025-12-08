@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Component } from '@esengine/esengine';
+import { Component } from '@esengine/ecs-framework';
 import type { IComponentInspector, ComponentInspectorContext } from '@esengine/editor-core';
 import { CircleCollider2DComponent, CollisionLayer2D } from '@esengine/physics-rapier2d';
 

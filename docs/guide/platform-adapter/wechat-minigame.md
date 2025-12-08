@@ -200,7 +200,7 @@ function processSharedArrayBuffer(startIndex, endIndex, deltaTime, systemConfig)
 ### 步骤 3：使用 WorkerEntitySystem
 
 ```typescript
-import { WorkerEntitySystem, Matcher, Entity } from '@esengine/esengine';
+import { WorkerEntitySystem, Matcher, Entity } from '@esengine/ecs-framework';
 
 interface PhysicsData {
     id: number;
@@ -295,7 +295,7 @@ import type {
     PlatformWorker,
     WorkerCreationOptions,
     PlatformConfig
-} from '@esengine/esengine';
+} from '@esengine/ecs-framework';
 
 /**
  * 微信小游戏平台适配器
@@ -430,7 +430,7 @@ class WeChatWorker implements PlatformWorker {
 ## 注册适配器
 
 ```typescript
-import { PlatformManager } from '@esengine/esengine';
+import { PlatformManager } from '@esengine/ecs-framework';
 import { WeChatMiniGameAdapter } from './platform/WeChatMiniGameAdapter';
 
 // 在游戏启动时注册适配器

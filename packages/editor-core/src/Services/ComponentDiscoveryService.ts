@@ -1,6 +1,6 @@
-import type { IService } from '@esengine/esengine';
-import { Injectable } from '@esengine/esengine';
-import { createLogger } from '@esengine/esengine';
+import type { IService } from '@esengine/ecs-framework';
+import { Injectable } from '@esengine/ecs-framework';
+import { createLogger } from '@esengine/ecs-framework';
 import { MessageHub } from './MessageHub';
 
 const logger = createLogger('ComponentDiscoveryService');

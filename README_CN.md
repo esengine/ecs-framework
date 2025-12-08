@@ -25,7 +25,7 @@ ESEngine 基于 MIT 协议完全免费开源。无附加条件，无版税。你
 ### 通过 npm 安装
 
 ```bash
-npm install @esengine/esengine
+npm install @esengine/ecs-framework
 ```
 
 ### 从源码构建
@@ -42,7 +42,7 @@ npm install @esengine/esengine
 import {
     Core, Scene, Entity, Component, EntitySystem,
     Matcher, Time, ECSComponent, ECSSystem
-} from '@esengine/esengine';
+} from '@esengine/ecs-framework';
 
 @ECSComponent('Position')
 class Position extends Component {
@@ -102,7 +102,7 @@ ESEngine 采用模块化组织。每个功能都有运行时模块和可选的�
 
 | 包名 | 描述 |
 |------|------|
-| `@esengine/esengine` | ECS 框架核心，包含实体管理、组件系统和查询 |
+| `@esengine/ecs-framework` | ECS 框架核心，包含实体管理、组件系统和查询 |
 | `@esengine/math` | 向量、矩阵和数学工具 |
 | `@esengine/engine` | Rust/WASM 2D 渲染器 |
 | `@esengine/engine-core` | 引擎模块系统和生命周期管理 |

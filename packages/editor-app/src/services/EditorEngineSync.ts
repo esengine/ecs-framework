@@ -6,7 +6,7 @@
  * 将编辑器实体同步到Rust引擎进行渲染。
  */
 
-import { Entity, Component } from '@esengine/esengine';
+import { Entity, Component } from '@esengine/ecs-framework';
 import { MessageHub, EntityStoreService } from '@esengine/editor-core';
 import { TransformComponent } from '@esengine/engine-core';
 import { SpriteComponent, SpriteAnimatorComponent } from '@esengine/sprite';

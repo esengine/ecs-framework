@@ -331,7 +331,7 @@ const tree = BehaviorTreeBuilder.create('BlackboardOps')
 
 ```typescript
 import { GlobalBlackboardService } from '@esengine/behavior-tree';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 
 const globalBlackboard = Core.services.resolve(GlobalBlackboardService);
 
@@ -347,7 +347,7 @@ const gameState = globalBlackboard.getValue('gameState');
 
 ```typescript
 import { GlobalBlackboardService } from '@esengine/behavior-tree';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 
 export class CheckGameState implements INodeExecutor {
     execute(context: NodeExecutionContext): TaskStatus {

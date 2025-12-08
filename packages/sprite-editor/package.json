@@ -22,7 +22,7 @@
         "clean": "rimraf dist"
     },
     "devDependencies": {
-        "@esengine/esengine": "workspace:*",
+        "@esengine/ecs-framework": "workspace:*",
         "@esengine/engine-core": "workspace:*",
         "@esengine/sprite": "workspace:*",
         "@esengine/editor-core": "workspace:*",

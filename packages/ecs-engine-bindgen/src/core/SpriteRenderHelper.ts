@@ -3,7 +3,7 @@
  * 精灵渲染辅助工具。
  */
 
-import { Entity, Component } from '@esengine/esengine';
+import { Entity, Component } from '@esengine/ecs-framework';
 import type { EngineBridge } from './EngineBridge';
 import { RenderBatcher } from './RenderBatcher';
 import { SpriteComponent } from '@esengine/sprite';

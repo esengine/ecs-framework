@@ -1,6 +1,6 @@
 import React from 'react';
 import { PropertyContext, PropertyRendererRegistry } from '@esengine/editor-core';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 
 interface PropertyFieldProps {
     name: string;

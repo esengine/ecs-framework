@@ -53,7 +53,7 @@
   },
   "sidebarLinks": {
     "GitHub": "https://github.com/esengine/esengine",
-    "NPM": "https://www.npmjs.com/package/@esengine/esengine"
+    "NPM": "https://www.npmjs.com/package/@esengine/ecs-framework"
   },
   "hideGenerator": true,
   "githubPages": false,

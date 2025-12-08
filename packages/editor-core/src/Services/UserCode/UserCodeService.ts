@@ -6,8 +6,8 @@
  * 提供用户脚本的编译、加载和热更新功能。
  */
 
-import type { IService } from '@esengine/esengine';
-import { Injectable, createLogger, PlatformDetector, ComponentRegistry as CoreComponentRegistry } from '@esengine/esengine';
+import type { IService } from '@esengine/ecs-framework';
+import { Injectable, createLogger, PlatformDetector, ComponentRegistry as CoreComponentRegistry } from '@esengine/ecs-framework';
 import type {
     IUserCodeService,
     UserScriptInfo,
@@ -182,7 +182,7 @@ export class UserCodeService implements IService, IUserCodeService {
             // Build alias map for framework dependencies | 构建框架依赖的别名映射
             const shimPath = `${outputDir}${sep}_shim_ecs_framework.js`.replace(/\\/g, '/');
             const alias: Record<string, string> = {
-                '@esengine/esengine': shimPath,
+                '@esengine/ecs-framework': shimPath,
                 '@esengine/core': shimPath,
                 '@esengine/engine-core': shimPath,
                 '@esengine/math': shimPath
@@ -913,10 +913,10 @@ export class UserCodeService implements IService, IUserCodeService {
      * So the relative path from entry to scripts is: ../../scripts/
      *
      * For IIFE format, we inject shims that map global variables to module imports.
-     * This allows user code to use `import { Component } from '@esengine/esengine'`
+     * This allows user code to use `import { Component } from '@esengine/ecs-framework'`
      * while actually accessing `window.__ESENGINE_FRAMEWORK__`.
      * 对于 IIFE 格式，我们注入 shim 将全局变量映射到模块导入。
-     * 这使用户代码可以使用 `import { Component } from '@esengine/esengine'`，
+     * 这使用户代码可以使用 `import { Component } from '@esengine/ecs-framework'`，
      * 实际上访问的是 `window.__ESENGINE_FRAMEWORK__`。
      */
     private _buildEntryPoint(
@@ -970,11 +970,11 @@ export class UserCodeService implements IService, IUserCodeService {
         const sep = outputDir.includes('\\') ? '\\' : '/';
         const shimPaths: string[] = [];
 
-        // Create shim for @esengine/esengine | 为 @esengine/esengine 创建 shim
+        // Create shim for @esengine/ecs-framework | 为 @esengine/ecs-framework 创建 shim
         // This uses window.__ESENGINE__.ecsFramework set by PluginSDKRegistry
         // 这使用 PluginSDKRegistry 设置的 window.__ESENGINE__.ecsFramework
         const ecsShimPath = `${outputDir}${sep}_shim_ecs_framework.js`;
-        const ecsShimContent = `// Shim for @esengine/esengine
+        const ecsShimContent = `// Shim for @esengine/ecs-framework
 // Maps to window.__ESENGINE__.ecsFramework set by PluginSDKRegistry
 module.exports = (typeof window !== 'undefined' && window.__ESENGINE__ && window.__ESENGINE__.ecsFramework) || {};
 `;
@@ -990,7 +990,7 @@ module.exports = (typeof window !== 'undefined' && window.__ESENGINE__ && window
      */
     private _getExternalDependencies(target: UserCodeTarget): string[] {
         const common = [
-            '@esengine/esengine',
+            '@esengine/ecs-framework',
             '@esengine/engine-core',
             '@esengine/core',
             '@esengine/math'

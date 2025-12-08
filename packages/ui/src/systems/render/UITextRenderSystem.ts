@@ -7,7 +7,7 @@
  * 通过生成文本纹理并提交到共享的 UIRenderCollector 来渲染 UITextComponent 实体。
  */
 
-import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/esengine';
+import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/ecs-framework';
 import { UITransformComponent } from '../../components/UITransformComponent';
 import { UITextComponent } from '../../components/UITextComponent';
 import { getUIRenderCollector, registerCacheInvalidationCallback, unregisterCacheInvalidationCallback } from './UIRenderCollector';

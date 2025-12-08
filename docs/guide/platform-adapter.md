@@ -95,7 +95,7 @@ export interface PlatformWorker {
 根据你的运行环境选择对应的适配器：
 
 ```typescript
-import { PlatformManager } from '@esengine/esengine';
+import { PlatformManager } from '@esengine/ecs-framework';
 
 // 浏览器环境
 if (typeof window !== 'undefined') {
@@ -140,7 +140,7 @@ if (manager.hasAdapter()) {
 ### 1. 实现接口
 
 ```typescript
-import type { IPlatformAdapter, PlatformWorker, WorkerCreationOptions, PlatformConfig } from '@esengine/esengine';
+import type { IPlatformAdapter, PlatformWorker, WorkerCreationOptions, PlatformConfig } from '@esengine/ecs-framework';
 
 export class CustomAdapter implements IPlatformAdapter {
     public readonly name = 'custom';
@@ -189,7 +189,7 @@ export class CustomAdapter implements IPlatformAdapter {
 ### 2. 注册自定义适配器
 
 ```typescript
-import { PlatformManager } from '@esengine/esengine';
+import { PlatformManager } from '@esengine/ecs-framework';
 import { CustomAdapter } from './CustomAdapter';
 
 const customAdapter = new CustomAdapter();

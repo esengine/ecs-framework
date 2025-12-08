@@ -10,7 +10,7 @@
 
 ```typescript
 import { GlobalBlackboardService } from '@esengine/behavior-tree';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 
 // 获取全局黑板服务
 const globalBlackboard = Core.services.resolve(GlobalBlackboardService);
@@ -30,7 +30,7 @@ const playerCount = globalBlackboard.getValue<number>('playerCount');
 ```typescript
 import { INodeExecutor, NodeExecutionContext, BindingHelper } from '@esengine/behavior-tree';
 import { GlobalBlackboardService } from '@esengine/behavior-tree';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 
 export class CheckGameState implements INodeExecutor {
     execute(context: NodeExecutionContext): TaskStatus {

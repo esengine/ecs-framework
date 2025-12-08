@@ -1,4 +1,4 @@
-import { IService } from '@esengine/esengine';
+import { IService } from '@esengine/ecs-framework';
 import type { FileActionHandler, FileCreationTemplate } from '../Plugin/EditorModule';
 
 // Re-export for backwards compatibility

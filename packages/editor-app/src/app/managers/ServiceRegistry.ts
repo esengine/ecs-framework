@@ -1,4 +1,4 @@
-import { Core, ComponentRegistry as CoreComponentRegistry } from '@esengine/esengine';
+import { Core, ComponentRegistry as CoreComponentRegistry } from '@esengine/ecs-framework';
 import { invoke } from '@tauri-apps/api/core';
 import {
     UIRegistry,

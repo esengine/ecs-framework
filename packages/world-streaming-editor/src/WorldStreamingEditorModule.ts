@@ -5,8 +5,8 @@
  * Registers chunk visualizer, inspector providers and tools for world streaming.
  */
 
-import type { ServiceContainer, Entity } from '@esengine/esengine';
-import { Core } from '@esengine/esengine';
+import type { ServiceContainer, Entity } from '@esengine/ecs-framework';
+import { Core } from '@esengine/ecs-framework';
 import type {
     IEditorModuleLoader,
     PanelDescriptor,

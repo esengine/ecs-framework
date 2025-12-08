@@ -1,4 +1,4 @@
-import type { Entity } from '@esengine/esengine';
+import type { Entity } from '@esengine/ecs-framework';
 import type { IGizmoRenderData, IRectGizmoData, GizmoColor } from '@esengine/editor-core';
 import { GizmoRegistry } from '@esengine/editor-core';
 import { UITransformComponent } from '@esengine/ui';

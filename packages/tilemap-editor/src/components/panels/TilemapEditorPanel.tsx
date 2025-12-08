@@ -22,7 +22,7 @@ import {
     Box,
     Map
 } from 'lucide-react';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 import { MessageHub, ProjectService, IFileSystemService, type IFileSystem, type IDialog } from '@esengine/editor-core';
 import { TilemapComponent, type ITilesetData, type ResizeAnchor } from '@esengine/tilemap';
 import { useTilemapEditorStore, type TilemapToolType, type LayerState } from '../../stores/TilemapEditorStore';

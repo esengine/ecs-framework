@@ -19,7 +19,7 @@
 最基础的系统类，所有其他系统都继承自它：
 
 ```typescript
-import { EntitySystem, ECSSystem, Matcher } from '@esengine/esengine';
+import { EntitySystem, ECSSystem, Matcher } from '@esengine/ecs-framework';
 
 @ECSSystem('Movement')
 class MovementSystem extends EntitySystem {
@@ -586,7 +586,7 @@ class GameScene extends Scene {
 系统实现了 `IService` 接口，支持通过依赖注入获取其他服务或系统：
 
 ```typescript
-import { ECSSystem, Injectable, Inject } from '@esengine/esengine';
+import { ECSSystem, Injectable, Inject } from '@esengine/ecs-framework';
 
 @Injectable()
 @ECSSystem('Physics')

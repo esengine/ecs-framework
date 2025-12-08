@@ -4,7 +4,7 @@
  */
 
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 import { MessageHub, EntityStoreService } from '@esengine/editor-core';
 import { EngineService } from '../services/EngineService';
 import { EditorEngineSync } from '../services/EditorEngineSync';

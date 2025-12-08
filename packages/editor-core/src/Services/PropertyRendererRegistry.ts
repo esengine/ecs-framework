@@ -1,5 +1,5 @@
 import React from 'react';
-import { IService, createLogger } from '@esengine/esengine';
+import { IService, createLogger } from '@esengine/ecs-framework';
 import { IPropertyRenderer, IPropertyRendererRegistry, PropertyContext } from './IPropertyRenderer';
 
 const logger = createLogger('PropertyRendererRegistry');

@@ -7,7 +7,7 @@ import type {
     PlatformWorker,
     WorkerCreationOptions,
     PlatformConfig
-} from '@esengine/esengine';
+} from '@esengine/ecs-framework';
 
 import type { SystemInfo } from '@esengine/platform-common';
 

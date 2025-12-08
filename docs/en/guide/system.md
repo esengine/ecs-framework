@@ -19,7 +19,7 @@ The framework provides several different system base classes:
 The most basic system class, all other systems inherit from it:
 
 ```typescript
-import { EntitySystem, ECSSystem, Matcher } from '@esengine/esengine';
+import { EntitySystem, ECSSystem, Matcher } from '@esengine/ecs-framework';
 
 @ECSSystem('Movement')
 class MovementSystem extends EntitySystem {
@@ -586,7 +586,7 @@ class GameScene extends Scene {
 Systems implement the `IService` interface and support obtaining other services or systems through dependency injection:
 
 ```typescript
-import { ECSSystem, Injectable, Inject } from '@esengine/esengine';
+import { ECSSystem, Injectable, Inject } from '@esengine/ecs-framework';
 
 @Injectable()
 @ECSSystem('Physics')

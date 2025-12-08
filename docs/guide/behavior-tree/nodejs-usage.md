@@ -17,7 +17,7 @@
 ### 安装
 
 ```bash
-npm install @esengine/esengine @esengine/behavior-tree
+npm install @esengine/ecs-framework @esengine/behavior-tree
 ```
 
 ### TypeScript 配置
@@ -41,7 +41,7 @@ npm install @esengine/esengine @esengine/behavior-tree
 ### 简单的游戏服务器 NPC
 
 ```typescript
-import { Core, Scene } from '@esengine/esengine';
+import { Core, Scene } from '@esengine/ecs-framework';
 import {
     BehaviorTreePlugin,
     BehaviorTreeBuilder,
@@ -109,7 +109,7 @@ startServer();
 创建一个基于行为树的智能聊天机器人：
 
 ```typescript
-import { Core, Scene, Entity } from '@esengine/esengine';
+import { Core, Scene, Entity } from '@esengine/ecs-framework';
 import {
     BehaviorTreePlugin,
     BehaviorTreeBuilder,
@@ -273,7 +273,7 @@ main();
 ### 房间管理系统
 
 ```typescript
-import { Core, Scene, Entity } from '@esengine/esengine';
+import { Core, Scene, Entity } from '@esengine/ecs-framework';
 import {
     BehaviorTreePlugin,
     BehaviorTreeBuilder,
@@ -519,7 +519,7 @@ setInterval(() => {
 
 ```typescript
 import express from 'express';
-import { Core, Scene } from '@esengine/esengine';
+import { Core, Scene } from '@esengine/ecs-framework';
 
 const app = express();
 const scene = new Scene();

@@ -30,7 +30,7 @@
     "author": "yhh",
     "license": "MIT",
     "devDependencies": {
-        "@esengine/esengine": "workspace:*",
+        "@esengine/ecs-framework": "workspace:*",
         "@esengine/build-config": "workspace:*",
         "rimraf": "^5.0.0",
         "tsup": "^8.0.0",

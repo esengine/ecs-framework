@@ -8,7 +8,7 @@ importers:
 
   .:
     dependencies:
-      '@esengine/esengine':
+      '@esengine/ecs-framework':
         specifier: ^2.2.8
         version: 2.2.13
       tslib:
@@ -645,7 +645,7 @@ packages:
   '@bcoe/v8-coverage@0.2.3':
     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
 
-  '@esengine/esengine@2.2.13':
+  '@esengine/ecs-framework@2.2.13':
     resolution: {integrity: sha512-RMRUCWMoVxEvWOeEI/r1snGLHPSdcNAzIO0qlMOfJEYoXRrl5CIhddZvhdE97rufynETUvOFaLq3DDZCeVV2kg==}
     engines: {node: '>=16.0.0'}
 
@@ -2739,7 +2739,7 @@ snapshots:
 
   '@bcoe/v8-coverage@0.2.3': {}
 
-  '@esengine/esengine@2.2.13': {}
+  '@esengine/ecs-framework@2.2.13': {}
 
   '@isaacs/cliui@8.0.2':
     dependencies:

@@ -1,2 +1,2 @@
 // Re-export from ecs-framework
-export { HierarchyComponent } from '@esengine/esengine';
+export { HierarchyComponent } from '@esengine/ecs-framework';

@@ -15,7 +15,7 @@
 ### 基础组件定义
 
 ```typescript
-import { Component, ECSComponent } from '@esengine/esengine';
+import { Component, ECSComponent } from '@esengine/ecs-framework';
 
 @ECSComponent('Position')
 class Position extends Component {
@@ -105,7 +105,7 @@ class BadComponent extends Component {
 当组件需要支持序列化时，`@ECSComponent` 和 `@Serializable` 需要一起使用：
 
 ```typescript
-import { Component, ECSComponent, Serializable, Serialize } from '@esengine/esengine';
+import { Component, ECSComponent, Serializable, Serialize } from '@esengine/ecs-framework';
 
 @ECSComponent('Player')
 @Serializable({ version: 1 })
@@ -533,7 +533,7 @@ class BadFollower extends Component {
 #### 基本用法
 
 ```typescript
-import { Component, ECSComponent, EntityRef, Entity } from '@esengine/esengine';
+import { Component, ECSComponent, EntityRef, Entity } from '@esengine/ecs-framework';
 
 @ECSComponent('Parent')
 class ParentComponent extends Component {

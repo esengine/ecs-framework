@@ -3,7 +3,7 @@
  * 2D 刚体组件
  */
 
-import { Component, Property, Serialize, Serializable, ECSComponent } from '@esengine/esengine';
+import { Component, Property, Serialize, Serializable, ECSComponent } from '@esengine/ecs-framework';
 import { RigidbodyType2D, CollisionDetectionMode2D } from '../types/Physics2DTypes';
 import type { Vector2 } from '../types/Physics2DTypes';
 

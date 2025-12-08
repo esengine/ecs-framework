@@ -1,4 +1,4 @@
-import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/esengine';
+import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/ecs-framework';
 
 export enum ECameraProjection {
     Perspective = 'perspective',

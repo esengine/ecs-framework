@@ -5,8 +5,8 @@
  * 精灵编辑器支持 - 检视器、字段编辑器和实体模板
  */
 
-import type { Entity, ServiceContainer } from '@esengine/esengine';
-import { Core } from '@esengine/esengine';
+import type { Entity, ServiceContainer } from '@esengine/ecs-framework';
+import { Core } from '@esengine/ecs-framework';
 import type {
     IEditorModuleLoader,
     EntityCreationTemplate,

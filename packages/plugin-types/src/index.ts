@@ -18,7 +18,7 @@
  * - LoadingPhase: 加载阶段类型
  */
 
-import type { ServiceContainer } from '@esengine/esengine';
+import type { ServiceContainer } from '@esengine/ecs-framework';
 
 // ============================================================================
 // 服务令牌 | Service Token

@@ -16,7 +16,7 @@
         }
     ],
     "dependencies": [
-        "@esengine/esengine",
+        "@esengine/ecs-framework",
         "@esengine/ecs-components"
     ]
 }

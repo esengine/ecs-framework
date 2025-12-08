@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Component, Core, getComponentInstanceTypeName } from '@esengine/esengine';
+import { Component, Core, getComponentInstanceTypeName } from '@esengine/ecs-framework';
 import { IComponentInspector, ComponentInspectorContext, MessageHub, IFileSystemService, IFileSystem, ProjectService } from '@esengine/editor-core';
 import { SpriteComponent, MaterialPropertyOverride } from '@esengine/sprite';
 import { getMaterialManager, Material, BlendMode, BuiltInShaders, UniformType } from '@esengine/material-system';

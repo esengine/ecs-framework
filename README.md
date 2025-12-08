@@ -25,7 +25,7 @@ ESEngine is completely free and open source under the MIT license. No strings at
 ### Using npm
 
 ```bash
-npm install @esengine/esengine
+npm install @esengine/ecs-framework
 ```
 
 ### Building from Source
@@ -42,7 +42,7 @@ Pre-built editor binaries are available on the [Releases](https://github.com/ese
 import {
     Core, Scene, Entity, Component, EntitySystem,
     Matcher, Time, ECSComponent, ECSSystem
-} from '@esengine/esengine';
+} from '@esengine/ecs-framework';
 
 @ECSComponent('Position')
 class Position extends Component {
@@ -102,7 +102,7 @@ ESEngine is organized into modular packages. Each feature has a runtime module a
 
 | Package | Description |
 |---------|-------------|
-| `@esengine/esengine` | Core ECS framework with entity management, component system, and queries |
+| `@esengine/ecs-framework` | Core ECS framework with entity management, component system, and queries |
 | `@esengine/math` | Vector, matrix, and mathematical utilities |
 | `@esengine/engine` | Rust/WASM 2D renderer |
 | `@esengine/engine-core` | Engine module system and lifecycle management |

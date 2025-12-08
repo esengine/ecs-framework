@@ -3,7 +3,7 @@
  * 蓝图编辑器插件
  */
 
-import { Core, type ServiceContainer } from '@esengine/esengine';
+import { Core, type ServiceContainer } from '@esengine/ecs-framework';
 import type { ModuleManifest } from '@esengine/engine-core';
 import type { IEditorPlugin, IEditorModuleLoader, PanelDescriptor, FileActionHandler, FileCreationTemplate } from '@esengine/editor-core';
 import { MessageHub, PanelPosition } from '@esengine/editor-core';

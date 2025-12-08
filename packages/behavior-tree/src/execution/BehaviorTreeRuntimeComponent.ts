@@ -1,5 +1,5 @@
-import { Component, ECSComponent, Property } from '@esengine/esengine';
-import { Serializable, Serialize, IgnoreSerialization } from '@esengine/esengine';
+import { Component, ECSComponent, Property } from '@esengine/ecs-framework';
+import { Serializable, Serialize, IgnoreSerialization } from '@esengine/ecs-framework';
 import { NodeRuntimeState, createDefaultRuntimeState } from './BehaviorTreeData';
 import { TaskStatus } from '../Types/TaskStatus';
 

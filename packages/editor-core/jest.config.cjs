@@ -25,7 +25,7 @@ module.exports = {
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^@esengine/esengine$': '<rootDir>/../core/src/index.ts',
+    '^@esengine/ecs-framework$': '<rootDir>/../core/src/index.ts',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   testTimeout: 0,

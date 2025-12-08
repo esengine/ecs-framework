@@ -1,6 +1,6 @@
 # Changelog
 
-This document records the version update history of the `@esengine/esengine` core library.
+This document records the version update history of the `@esengine/ecs-framework` core library.
 
 ---
 
@@ -196,5 +196,5 @@ This document records the version update history of the `@esengine/esengine` cor
 ## Related Links
 
 - [GitHub Releases](https://github.com/esengine/esengine/releases)
-- [NPM Package](https://www.npmjs.com/package/@esengine/esengine)
+- [NPM Package](https://www.npmjs.com/package/@esengine/ecs-framework)
 - [Documentation Home](./index.md)

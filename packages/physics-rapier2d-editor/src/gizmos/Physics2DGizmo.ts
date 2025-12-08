@@ -6,7 +6,7 @@
  * 通过 Rust WebGL 引擎渲染。
  */
 
-import type { Entity } from '@esengine/esengine';
+import type { Entity } from '@esengine/ecs-framework';
 import type {
     IGizmoRenderData,
     IRectGizmoData,

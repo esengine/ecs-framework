@@ -6,7 +6,7 @@
  * 用于编辑器中的组件序列化/反序列化
  */
 
-import { ComponentRegistry } from '@esengine/esengine';
+import { ComponentRegistry } from '@esengine/ecs-framework';
 import type { IRuntimeModule } from '@esengine/engine-core';
 
 // Components (no WASM dependency)

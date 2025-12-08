@@ -38,7 +38,7 @@ const player = scene.createEntity("Player");
 实体通过添加组件来获得功能：
 
 ```typescript
-import { Component, ECSComponent } from '@esengine/esengine';
+import { Component, ECSComponent } from '@esengine/ecs-framework';
 
 // 定义位置组件
 @ECSComponent('Position')

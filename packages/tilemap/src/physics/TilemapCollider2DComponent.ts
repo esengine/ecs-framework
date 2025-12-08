@@ -6,7 +6,7 @@
  * 使用优化算法合并相邻碰撞格子，减少碰撞体数量。
  */
 
-import { Component, Property, Serialize, ECSComponent, Serializable } from '@esengine/esengine';
+import { Component, Property, Serialize, ECSComponent, Serializable } from '@esengine/ecs-framework';
 
 /**
  * 碰撞体生成模式

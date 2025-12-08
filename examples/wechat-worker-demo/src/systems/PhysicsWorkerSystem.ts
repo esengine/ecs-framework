@@ -10,7 +10,7 @@ import {
     Matcher,
     Entity,
     ECSSystem
-} from '@esengine/esengine';
+} from '@esengine/ecs-framework';
 import { Position, Velocity, Physics, Renderable } from '../components';
 
 /**

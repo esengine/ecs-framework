@@ -39,7 +39,7 @@
   "author": "yhh",
   "license": "MIT",
   "devDependencies": {
-    "@esengine/esengine": "workspace:*",
+    "@esengine/ecs-framework": "workspace:*",
     "@esengine/asset-system": "workspace:*",
     "@esengine/asset-system-editor": "workspace:*",
     "@esengine/engine-core": "workspace:*",

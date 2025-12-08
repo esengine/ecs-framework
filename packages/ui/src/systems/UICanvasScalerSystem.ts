@@ -1,4 +1,4 @@
-import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/esengine';
+import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/ecs-framework';
 import { UICanvasScalerComponent } from '../components/UICanvasScalerComponent';
 import { UISafeAreaComponent } from '../components/UISafeAreaComponent';
 import { UILayoutSystem } from './UILayoutSystem';

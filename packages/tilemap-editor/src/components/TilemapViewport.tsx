@@ -7,7 +7,7 @@
  */
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 import { IViewportService_ID, type IViewportService } from '@esengine/editor-core';
 import type { TilemapComponent } from '@esengine/tilemap';
 import { useTilemapEditorStore } from '../stores/TilemapEditorStore';

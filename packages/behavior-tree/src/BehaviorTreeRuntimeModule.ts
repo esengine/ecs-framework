@@ -1,5 +1,5 @@
-import type { IScene, ServiceContainer } from '@esengine/esengine';
-import { ComponentRegistry } from '@esengine/esengine';
+import type { IScene, ServiceContainer } from '@esengine/ecs-framework';
+import { ComponentRegistry } from '@esengine/ecs-framework';
 import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 import { AssetManagerToken } from '@esengine/asset-system';
 

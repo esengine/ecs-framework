@@ -2,7 +2,7 @@ import { Node as BehaviorTreeNode } from '../../domain/models/Node';
 import { Connection } from '../../domain/models/Connection';
 import { ExecutionLog } from '../../utils/BehaviorTreeExecutor';
 import { BlackboardValue } from '../../domain/models/Blackboard';
-import { createLogger } from '@esengine/esengine';
+import { createLogger } from '@esengine/ecs-framework';
 
 const logger = createLogger('ExecutionHooks');
 

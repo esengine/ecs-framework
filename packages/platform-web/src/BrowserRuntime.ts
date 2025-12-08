@@ -9,7 +9,7 @@
  * 通过 import maps 动态加载插件。
  */
 
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 import {
     GameRuntime,
     createGameRuntime,

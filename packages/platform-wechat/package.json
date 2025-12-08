@@ -32,7 +32,7 @@
   "author": "yhh",
   "license": "MIT",
   "dependencies": {
-    "@esengine/esengine": "workspace:*",
+    "@esengine/ecs-framework": "workspace:*",
     "@esengine/platform-common": "workspace:*"
   },
   "devDependencies": {

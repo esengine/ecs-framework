@@ -11,12 +11,12 @@
  * 3. 插件构建配置中设置 globals: { '@esengine/editor-runtime': '__ESENGINE__.editorRuntime' }
  */
 
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub } from '@esengine/editor-core';
 
 // 导入所有需要暴露给插件的模块
 import * as editorRuntime from '@esengine/editor-runtime';
-import * as ecsFramework from '@esengine/esengine';
+import * as ecsFramework from '@esengine/ecs-framework';
 import * as behaviorTree from '@esengine/behavior-tree';
 import * as engineCore from '@esengine/engine-core';
 import * as sprite from '@esengine/sprite';
@@ -30,7 +30,7 @@ let messageHubInstance: MessageHub | null = null;
 // SDK 模块映射
 const SDK_MODULES = {
     '@esengine/editor-runtime': editorRuntime,
-    '@esengine/esengine': ecsFramework,
+    '@esengine/ecs-framework': ecsFramework,
     '@esengine/behavior-tree': behaviorTree,
     '@esengine/engine-core': engineCore,
     '@esengine/sprite': sprite,
@@ -41,7 +41,7 @@ const SDK_MODULES = {
 // 全局变量名称映射（用于插件构建配置）
 export const SDK_GLOBALS = {
     '@esengine/editor-runtime': '__ESENGINE__.editorRuntime',
-    '@esengine/esengine': '__ESENGINE__.ecsFramework',
+    '@esengine/ecs-framework': '__ESENGINE__.ecsFramework',
     '@esengine/behavior-tree': '__ESENGINE__.behaviorTree',
     '@esengine/engine-core': '__ESENGINE__.engineCore',
     '@esengine/sprite': '__ESENGINE__.sprite',

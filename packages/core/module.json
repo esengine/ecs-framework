@@ -1,6 +1,6 @@
 {
   "id": "core",
-  "name": "@esengine/esengine",
+  "name": "@esengine/ecs-framework",
   "displayName": "Core ECS",
   "outputPath": "dist/index.mjs",
   "description": "Core Entity-Component-System framework | 核心 ECS 框架",

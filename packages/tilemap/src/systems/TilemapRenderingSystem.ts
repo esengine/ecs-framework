@@ -1,6 +1,6 @@
-import { EntitySystem, Matcher, ECSSystem, Entity } from '@esengine/esengine';
+import { EntitySystem, Matcher, ECSSystem, Entity } from '@esengine/ecs-framework';
 import { TransformComponent } from '@esengine/engine-core';
-import { Color } from '@esengine/esengine-math';
+import { Color } from '@esengine/ecs-framework-math';
 import type { IRenderDataProvider } from '@esengine/ecs-engine-bindgen';
 import { TilemapComponent, type ITilemapLayerData } from '../TilemapComponent';
 

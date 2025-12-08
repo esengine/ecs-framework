@@ -1,5 +1,5 @@
 import { BehaviorTreeData } from './BehaviorTreeData';
-import { createLogger, IService } from '@esengine/esengine';
+import { createLogger, IService } from '@esengine/ecs-framework';
 import { EditorToBehaviorTreeDataConverter } from '../Serialization/EditorToBehaviorTreeDataConverter';
 
 const logger = createLogger('BehaviorTreeAssetManager');

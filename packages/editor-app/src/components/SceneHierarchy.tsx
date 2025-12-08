@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Entity, Core, HierarchySystem, HierarchyComponent, EntityTags, isFolder } from '@esengine/esengine';
+import { Entity, Core, HierarchySystem, HierarchyComponent, EntityTags, isFolder } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub, SceneManagerService, CommandManager, EntityCreationRegistry, EntityCreationTemplate } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
 import * as LucideIcons from 'lucide-react';

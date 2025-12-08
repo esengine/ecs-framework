@@ -15,7 +15,7 @@ const banner = `/**
  * @license ${pkg.license}
  */`;
 
-const external = ['@esengine/esengine'];
+const external = ['@esengine/ecs-framework'];
 
 const commonPlugins = [
   resolve({
@@ -94,7 +94,7 @@ module.exports = [
       sourcemap: true,
       exports: 'named',
       globals: {
-        '@esengine/esengine': 'ECS'
+        '@esengine/ecs-framework': 'ECS'
       }
     },
     plugins: [
@@ -181,6 +181,6 @@ module.exports = [
         respectExternal: true
       })
     ],
-    external: ['@esengine/esengine']
+    external: ['@esengine/ecs-framework']
   }
 ];

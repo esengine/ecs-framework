@@ -1,4 +1,4 @@
-import { Entity } from '@esengine/esengine';
+import { Entity } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub, InspectorRegistry, CommandManager } from '@esengine/editor-core';
 
 export interface InspectorProps {

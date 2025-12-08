@@ -31,7 +31,7 @@ export default defineConfig({
                 'react',
                 'react-dom',
                 'react/jsx-runtime',
-                '@esengine/esengine',
+                '@esengine/ecs-framework',
                 '@esengine/ecs-components',
                 '@esengine/tilemap',
                 '@esengine/ui',

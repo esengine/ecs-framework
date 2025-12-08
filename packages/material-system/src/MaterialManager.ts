@@ -21,7 +21,7 @@ import type { IAssetManager } from '@esengine/asset-system';
 import { AssetType } from '@esengine/asset-system';
 import { MaterialLoader, type IMaterialAssetData } from './loaders/MaterialLoader';
 import { ShaderLoader, type IShaderAssetData } from './loaders/ShaderLoader';
-import { createLogger } from '@esengine/esengine';
+import { createLogger } from '@esengine/ecs-framework';
 
 /** Logger instance for MaterialManager. | MaterialManager的日志实例。 */
 const logger = createLogger('MaterialManager');

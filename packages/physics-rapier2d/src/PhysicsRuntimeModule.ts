@@ -4,8 +4,8 @@
  * 提供 Rapier2D 物理引擎的 ECS 集成
  */
 
-import type { IScene, ServiceContainer } from '@esengine/esengine';
-import { ComponentRegistry } from '@esengine/esengine';
+import type { IScene, ServiceContainer } from '@esengine/ecs-framework';
+import { ComponentRegistry } from '@esengine/ecs-framework';
 import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 import { WasmLibraryLoaderFactory } from '@esengine/platform-common';
 import type * as RAPIER from '@esengine/rapier2d';

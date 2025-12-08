@@ -32,7 +32,7 @@ pub struct CompileOptions {
     pub minify: bool,
     /// External dependencies | 外部依赖
     pub external: Vec<String>,
-    /// Module aliases (e.g., "@esengine/esengine" -> "/path/to/shim.js")
+    /// Module aliases (e.g., "@esengine/ecs-framework" -> "/path/to/shim.js")
     /// 模块别名
     pub alias: Option<std::collections::HashMap<String, String>>,
     /// Project root for resolving imports | 项目根目录用于解析导入

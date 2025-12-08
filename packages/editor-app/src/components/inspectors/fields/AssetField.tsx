@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Image, X, Navigation, ChevronDown, Copy } from 'lucide-react';
 import { convertFileSrc } from '@tauri-apps/api/core';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 import { ProjectService, AssetRegistryService } from '@esengine/editor-core';
 import { AssetPickerDialog } from '../../../components/dialogs/AssetPickerDialog';
 import './AssetField.css';

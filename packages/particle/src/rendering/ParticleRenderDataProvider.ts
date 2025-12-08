@@ -1,5 +1,5 @@
 import type { ParticleSystemComponent } from '../ParticleSystemComponent';
-import { Color } from '@esengine/esengine-math';
+import { Color } from '@esengine/ecs-framework-math';
 
 /**
  * 粒子渲染数据（与 EngineRenderSystem 兼容）

@@ -3,7 +3,7 @@ import type {
     PlatformWorker,
     WorkerCreationOptions,
     PlatformConfig
-} from '@esengine/esengine';
+} from '@esengine/ecs-framework';
 
 /**
  * 浏览器平台适配器

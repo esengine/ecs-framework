@@ -27,7 +27,7 @@
 创建一个简单的调试插件：
 
 ```typescript
-import { IPlugin, Core, ServiceContainer } from '@esengine/esengine';
+import { IPlugin, Core, ServiceContainer } from '@esengine/ecs-framework';
 
 class DebugPlugin implements IPlugin {
     readonly name = 'debug-plugin';
@@ -51,7 +51,7 @@ class DebugPlugin implements IPlugin {
 使用 `Core.installPlugin()` 安装插件：
 
 ```typescript
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 
 // 初始化Core
 Core.create({ debug: true });
@@ -204,7 +204,7 @@ await Core.installPlugin(new AsyncPlugin());
 插件可以向服务容器注册自己的服务：
 
 ```typescript
-import { IService } from '@esengine/esengine';
+import { IService } from '@esengine/ecs-framework';
 
 class NetworkService implements IService {
     connect(url: string) {
@@ -240,7 +240,7 @@ class NetworkPlugin implements IPlugin {
 插件可以向场景添加自定义系统：
 
 ```typescript
-import { EntitySystem, Matcher } from '@esengine/esengine';
+import { EntitySystem, Matcher } from '@esengine/ecs-framework';
 
 class PhysicsSystem extends EntitySystem {
     constructor() {
@@ -393,7 +393,7 @@ for (const meta of allMetadata) {
 ### 网络同步插件
 
 ```typescript
-import { IPlugin, IService, Core, ServiceContainer } from '@esengine/esengine';
+import { IPlugin, IService, Core, ServiceContainer } from '@esengine/ecs-framework';
 
 class NetworkSyncService implements IService {
     private ws?: WebSocket;

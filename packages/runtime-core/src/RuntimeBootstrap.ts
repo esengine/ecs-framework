@@ -3,8 +3,8 @@
  * 运行时启动器 - 提供通用的初始化流程
  */
 
-import { Core } from '@esengine/esengine';
-import type { IScene } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
+import type { IScene } from '@esengine/ecs-framework';
 import {
     runtimePluginManager,
     type IPlugin,

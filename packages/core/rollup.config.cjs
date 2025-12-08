@@ -8,7 +8,7 @@ const { readFileSync } = require('fs');
 const pkg = JSON.parse(readFileSync('./package.json', 'utf8'));
 
 const banner = `/**
- * @esengine/esengine v${pkg.version}
+ * @esengine/ecs-framework v${pkg.version}
  * 高性能ECS框架 - 适用于Cocos Creator和Laya等JavaScript游戏引擎
  * 
  * @author ${pkg.author}
@@ -204,7 +204,7 @@ module.exports = [
       file: 'dist/index.d.ts',
       format: 'es',
       banner: `/**
- * @esengine/esengine v${pkg.version}
+ * @esengine/ecs-framework v${pkg.version}
  * TypeScript definitions
  */`
     },

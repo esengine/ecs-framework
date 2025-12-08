@@ -1,4 +1,4 @@
-import { Core, Entity, Component, HierarchySystem, HierarchyComponent } from '@esengine/esengine';
+import { Core, Entity, Component, HierarchySystem, HierarchyComponent } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub } from '@esengine/editor-core';
 import { BaseCommand } from '../BaseCommand';
 

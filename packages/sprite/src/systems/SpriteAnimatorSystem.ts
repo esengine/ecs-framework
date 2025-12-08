@@ -1,4 +1,4 @@
-import { EntitySystem, Matcher, ECSSystem, Time, Entity } from '@esengine/esengine';
+import { EntitySystem, Matcher, ECSSystem, Time, Entity } from '@esengine/ecs-framework';
 import { SpriteAnimatorComponent } from '../SpriteAnimatorComponent';
 import { SpriteComponent } from '../SpriteComponent';
 

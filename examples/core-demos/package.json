@@ -13,6 +13,6 @@
     "vite": "^4.0.0"
   },
   "dependencies": {
-    "@esengine/esengine": "file:../../packages/core"
+    "@esengine/ecs-framework": "file:../../packages/core"
   }
 }

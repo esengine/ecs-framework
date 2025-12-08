@@ -3,8 +3,8 @@
  * Unified Plugin Manager
  */
 
-import { createLogger, ComponentRegistry } from '@esengine/esengine';
-import type { IScene, ServiceContainer, IService } from '@esengine/esengine';
+import { createLogger, ComponentRegistry } from '@esengine/ecs-framework';
+import type { IScene, ServiceContainer, IService } from '@esengine/ecs-framework';
 import type {
     ModuleManifest,
     IPlugin,

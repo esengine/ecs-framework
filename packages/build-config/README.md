@@ -127,7 +127,7 @@ export default defineConfig({
 ## Runtime vs Editor 分离规则
 
 ### ✅ runtime.ts 中可以：
-- 导入 @esengine/esengine
+- 导入 @esengine/ecs-framework
 - 导入 @esengine/ecs-components
 - 导入其他包的 `/runtime` 路径
 
@@ -141,7 +141,7 @@ export default defineConfig({
 
 ```typescript
 // ✅ 正确
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 import { UIRuntimeModule } from '@esengine/ui/runtime';
 
 // ❌ 错误 - 会把编辑器代码打包进来

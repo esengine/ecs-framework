@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Entity } from '@esengine/esengine';
+import { Entity } from '@esengine/ecs-framework';
 import { EntityStoreService, MessageHub } from '@esengine/editor-core';
 import { PropertyInspector } from './PropertyInspector';
 import { FileSearch, ChevronDown, ChevronRight, X, Settings } from 'lucide-react';

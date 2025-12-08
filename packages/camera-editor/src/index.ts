@@ -5,8 +5,8 @@
  * 相机编辑器支持
  */
 
-import type { Entity, ServiceContainer } from '@esengine/esengine';
-import { Core } from '@esengine/esengine';
+import type { Entity, ServiceContainer } from '@esengine/ecs-framework';
+import { Core } from '@esengine/ecs-framework';
 import { TransformComponent } from '@esengine/engine-core';
 import type {
     IEditorModuleLoader,

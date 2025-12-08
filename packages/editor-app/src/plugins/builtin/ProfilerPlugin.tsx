@@ -3,7 +3,7 @@
  * 性能分析器插件
  */
 
-import type { ServiceContainer } from '@esengine/esengine';
+import type { ServiceContainer } from '@esengine/ecs-framework';
 import type {
     IPlugin,
     IEditorModuleLoader,

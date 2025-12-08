@@ -70,7 +70,7 @@
 ### 使用Builder创建
 
 ```typescript
-import { Core, Scene } from '@esengine/esengine';
+import { Core, Scene } from '@esengine/ecs-framework';
 import {
     BehaviorTreeBuilder,
     BehaviorTreeStarter,

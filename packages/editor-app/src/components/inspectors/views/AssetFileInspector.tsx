@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Folder, File as FileIcon, Image as ImageIcon, Clock, HardDrive, Settings2 } from 'lucide-react';
 import { convertFileSrc } from '@tauri-apps/api/core';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 import { AssetRegistryService } from '@esengine/editor-core';
 import { assetManager as globalAssetManager } from '@esengine/asset-system';
 import { AssetFileInfo } from '../types';

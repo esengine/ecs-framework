@@ -1,4 +1,4 @@
-import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/esengine';
+import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/ecs-framework';
 import type { IResourceComponent, ResourceReference } from '@esengine/asset-system';
 import { UVHelper } from '@esengine/asset-system';
 

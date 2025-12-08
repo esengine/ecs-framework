@@ -5,7 +5,7 @@
  * 着色器编辑器，支持代码编辑、分析和预览。
  */
 
-import type { ServiceContainer } from '@esengine/esengine';
+import type { ServiceContainer } from '@esengine/ecs-framework';
 import type {
     IEditorModuleLoader,
     IEditorPlugin,

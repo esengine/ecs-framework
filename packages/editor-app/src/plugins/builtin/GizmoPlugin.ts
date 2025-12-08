@@ -3,7 +3,7 @@
  * Gizmo 插件
  */
 
-import type { ServiceContainer } from '@esengine/esengine';
+import type { ServiceContainer } from '@esengine/ecs-framework';
 import type { IPlugin, IEditorModuleLoader, ModuleManifest, GizmoProviderRegistration } from '@esengine/editor-core';
 import { registerSpriteGizmo } from '../../gizmos';
 

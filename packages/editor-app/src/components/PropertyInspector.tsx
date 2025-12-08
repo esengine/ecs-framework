@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Component, Core, getComponentInstanceTypeName } from '@esengine/esengine';
+import { Component, Core, getComponentInstanceTypeName } from '@esengine/ecs-framework';
 import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub, FileActionRegistry } from '@esengine/editor-core';
 import { ChevronRight, ChevronDown, Lock } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';

@@ -8,7 +8,7 @@ import {
     Serializable,
     Serialize,
     IncrementalSerializer
-} from '@esengine/esengine';
+} from '@esengine/ecs-framework';
 
 // ===== 组件定义 =====
 @ECSComponent('IncDemo_Position')

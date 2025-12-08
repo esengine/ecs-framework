@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-console.log('🚀 使用 Rollup 构建 @esengine/esengine-math npm包...');
+console.log('🚀 使用 Rollup 构建 @esengine/ecs-framework-math npm包...');
 
 async function main() {
     try {

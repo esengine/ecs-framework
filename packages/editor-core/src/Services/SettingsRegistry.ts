@@ -1,4 +1,4 @@
-import { Injectable, IService } from '@esengine/esengine';
+import { Injectable, IService } from '@esengine/ecs-framework';
 
 export type SettingType = 'string' | 'number' | 'boolean' | 'select' | 'color' | 'range' | 'pluginList' | 'collisionMatrix' | 'moduleList';
 

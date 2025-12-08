@@ -1,4 +1,4 @@
-import { EntitySystem, Matcher, Entity, Time, Core, ECSSystem, ServiceContainer } from '@esengine/esengine';
+import { EntitySystem, Matcher, Entity, Time, Core, ECSSystem, ServiceContainer } from '@esengine/ecs-framework';
 import type { IAssetManager } from '@esengine/asset-system';
 import { BehaviorTreeRuntimeComponent } from './BehaviorTreeRuntimeComponent';
 import { BehaviorTreeAssetManager } from './BehaviorTreeAssetManager';

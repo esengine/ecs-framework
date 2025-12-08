@@ -1,5 +1,5 @@
-import { EntitySystem, Matcher, Time, ECSSystem } from '@esengine/esengine';
-import type { Entity, Scene } from '@esengine/esengine';
+import { EntitySystem, Matcher, Time, ECSSystem } from '@esengine/ecs-framework';
+import type { Entity, Scene } from '@esengine/ecs-framework';
 import { TransformComponent } from '@esengine/engine-core';
 import { StreamingAnchorComponent } from '../components/StreamingAnchorComponent';
 import { ChunkLoaderComponent } from '../components/ChunkLoaderComponent';

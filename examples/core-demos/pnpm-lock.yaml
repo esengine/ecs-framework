@@ -8,7 +8,7 @@ importers:
 
   .:
     dependencies:
-      '@esengine/esengine':
+      '@esengine/ecs-framework':
         specifier: file:../../packages/core
         version: file:../../packages/core
     devDependencies:
@@ -153,7 +153,7 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@esengine/esengine@file:../../packages/core':
+  '@esengine/ecs-framework@file:../../packages/core':
     resolution: {directory: ../../packages/core, type: directory}
 
   esbuild@0.18.20:
@@ -291,7 +291,7 @@ snapshots:
   '@esbuild/win32-x64@0.18.20':
     optional: true
 
-  '@esengine/esengine@file:../../packages/core':
+  '@esengine/ecs-framework@file:../../packages/core':
     dependencies:
       tslib: 2.8.1
 

@@ -13,7 +13,7 @@
 在你的 Laya 项目根目录下：
 
 ```bash
-npm install @esengine/esengine @esengine/behavior-tree
+npm install @esengine/ecs-framework @esengine/behavior-tree
 ```
 
 ## 项目结构
@@ -40,7 +40,7 @@ resources/
 ### 在Main.ts中初始化
 
 ```typescript
-import { Core, Scene } from '@esengine/esengine';
+import { Core, Scene } from '@esengine/ecs-framework';
 import { BehaviorTreePlugin } from '@esengine/behavior-tree';
 
 export class Main {
@@ -85,7 +85,7 @@ new Main();
 ## 创建AI组件
 
 ```typescript
-import { Core, Entity } from '@esengine/esengine';
+import { Core, Entity } from '@esengine/ecs-framework';
 import {
     BehaviorTreeBuilder,
     BehaviorTreeStarter,
@@ -156,7 +156,7 @@ import {
     BehaviorTreeRuntimeComponent
 } from '@esengine/behavior-tree';
 import { TaskStatus, NodeType } from '@esengine/behavior-tree';
-import { Core, Entity } from '@esengine/esengine';
+import { Core, Entity } from '@esengine/ecs-framework';
 
 // 自定义移动执行器
 @NodeExecutorMetadata({

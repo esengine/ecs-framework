@@ -57,7 +57,7 @@
  *
  * ```typescript
  * // scripts/Player.ts
- * import { Component, Serialize, Property } from '@esengine/esengine';
+ * import { Component, Serialize, Property } from '@esengine/ecs-framework';
  *
  * export class PlayerComponent extends Component {
  *     @Serialize()

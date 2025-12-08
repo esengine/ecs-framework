@@ -7,7 +7,7 @@ import {
 import '../styles/Viewport.css';
 import { useEngine } from '../hooks/useEngine';
 import { EngineService } from '../services/EngineService';
-import { Core, Entity, SceneSerializer } from '@esengine/esengine';
+import { Core, Entity, SceneSerializer } from '@esengine/ecs-framework';
 import { MessageHub, ProjectService, AssetRegistryService } from '@esengine/editor-core';
 import { TransformComponent } from '@esengine/engine-core';
 import { CameraComponent } from '@esengine/camera';
@@ -56,7 +56,7 @@ function generateRuntimeHtml(importMap: Record<string, string>, modules: ModuleM
             try {
                 // Import ECS framework and set up global for user-runtime.js shim
                 // 导入 ECS 框架并为 user-runtime.js 设置全局变量
-                const ecsFramework = await import('@esengine/esengine');
+                const ecsFramework = await import('@esengine/ecs-framework');
                 window.__ESENGINE__ = window.__ESENGINE__ || {};
                 window.__ESENGINE__.ecsFramework = ecsFramework;
 

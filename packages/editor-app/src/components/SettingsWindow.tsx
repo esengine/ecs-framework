@@ -11,7 +11,7 @@ import {
     ChevronDown,
     ChevronRight
 } from 'lucide-react';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 import { SettingsService } from '../services/SettingsService';
 import { SettingsRegistry, SettingCategory, SettingDescriptor, ProjectService, PluginManager, IPluginManager, ModuleManifest } from '@esengine/editor-core';
 import { PluginListSetting } from './PluginListSetting';

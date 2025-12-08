@@ -1,5 +1,5 @@
 {
-  "name": "@esengine/esengine",
+  "name": "@esengine/ecs-framework",
   "version": "2.3.2",
   "description": "用于Laya、Cocos Creator等JavaScript游戏引擎的高性能ECS框架",
   "main": "dist/index.cjs",

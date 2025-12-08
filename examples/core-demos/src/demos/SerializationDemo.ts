@@ -8,7 +8,7 @@ import {
     Serializable,
     Serialize,
     SerializeAsMap
-} from '@esengine/esengine';
+} from '@esengine/ecs-framework';
 
 // ===== 组件定义 =====
 @ECSComponent('SerDemo_Position')

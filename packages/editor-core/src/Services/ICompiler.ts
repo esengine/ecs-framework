@@ -7,7 +7,7 @@ export interface CompileResult {
 
 import type { IFileSystem } from './IFileSystem';
 import type { IDialog } from './IDialog';
-import type { IService, ServiceType } from '@esengine/esengine';
+import type { IService, ServiceType } from '@esengine/ecs-framework';
 
 export interface CompilerModuleContext {
     fileSystem: IFileSystem;

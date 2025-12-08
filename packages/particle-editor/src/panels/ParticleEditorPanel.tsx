@@ -12,7 +12,7 @@ import {
     ChevronRight, ChevronDown, Plus, X, Image,
     Maximize2, Minimize2, MousePointer2, Target, Zap
 } from 'lucide-react';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 import { MessageHub, IFileSystemService, IDialogService } from '@esengine/editor-core';
 import type { IFileSystem, IDialog } from '@esengine/editor-core';
 import {

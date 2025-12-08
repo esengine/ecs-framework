@@ -38,8 +38,8 @@
     "author": "yhh",
     "license": "MIT",
     "devDependencies": {
-        "@esengine/esengine": "workspace:*",
-        "@esengine/esengine-math": "workspace:*",
+        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/ecs-framework-math": "workspace:*",
         "@esengine/asset-system": "workspace:*",
         "@esengine/engine-core": "workspace:*",
         "@esengine/ecs-engine-bindgen": "workspace:*",

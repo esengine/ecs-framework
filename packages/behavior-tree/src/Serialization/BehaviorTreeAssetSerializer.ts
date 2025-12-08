@@ -1,4 +1,4 @@
-import { createLogger, BinarySerializer } from '@esengine/esengine';
+import { createLogger, BinarySerializer } from '@esengine/ecs-framework';
 import type { BehaviorTreeAsset } from './BehaviorTreeAsset';
 import { BehaviorTreeAssetValidator } from './BehaviorTreeAsset';
 import { EditorFormatConverter, type EditorFormat } from './EditorFormatConverter';

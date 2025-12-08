@@ -1,6 +1,6 @@
-import type { IService, PropertyOptions, PropertyAction, PropertyControl, AssetType, EnumOption } from '@esengine/esengine';
-import { Injectable, Component, getPropertyMetadata } from '@esengine/esengine';
-import { createLogger } from '@esengine/esengine';
+import type { IService, PropertyOptions, PropertyAction, PropertyControl, AssetType, EnumOption } from '@esengine/ecs-framework';
+import { Injectable, Component, getPropertyMetadata } from '@esengine/ecs-framework';
+import { createLogger } from '@esengine/ecs-framework';
 
 const logger = createLogger('PropertyMetadata');
 

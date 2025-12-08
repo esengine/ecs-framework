@@ -86,7 +86,7 @@ npm run tauri:dev
 
 ```typescript
 import { BehaviorTreeBuilder, BehaviorTreeStarter } from '@esengine/behavior-tree';
-import { Core, Scene } from '@esengine/esengine';
+import { Core, Scene } from '@esengine/ecs-framework';
 
 // 使用Builder创建行为树
 const tree = BehaviorTreeBuilder.create('EnemyAI')

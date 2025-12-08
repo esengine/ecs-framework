@@ -12,7 +12,7 @@
  * Uses .meta files to persistently store each asset's GUID.
  */
 
-import { Core, createLogger, PlatformDetector, type IService } from '@esengine/esengine';
+import { Core, createLogger, PlatformDetector, type IService } from '@esengine/ecs-framework';
 import { MessageHub } from './MessageHub';
 import {
     AssetMetaManager,

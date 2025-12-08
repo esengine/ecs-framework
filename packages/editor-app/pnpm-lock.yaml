@@ -10,16 +10,16 @@ importers:
     dependencies:
       '@esengine/behavior-tree':
         specifier: file:../behavior-tree
-        version: file:../behavior-tree(@esengine/esengine@file:../core)
+        version: file:../behavior-tree(@esengine/ecs-framework@file:../core)
       '@esengine/ecs-engine-bindgen':
         specifier: file:../ecs-engine-bindgen
         version: file:../ecs-engine-bindgen(es-engine@file:../engine/pkg)
-      '@esengine/esengine':
+      '@esengine/ecs-framework':
         specifier: file:../core
         version: file:../core
       '@esengine/editor-core':
         specifier: file:../editor-core
-        version: file:../editor-core(@esengine/esengine@file:../core)
+        version: file:../editor-core(@esengine/ecs-framework@file:../core)
       '@tauri-apps/api':
         specifier: ^2.2.0
         version: 2.9.0
@@ -375,20 +375,20 @@ packages:
   '@esengine/behavior-tree@file:../behavior-tree':
     resolution: {directory: ../behavior-tree, type: directory}
     peerDependencies:
-      '@esengine/esengine': ^2.2.8
+      '@esengine/ecs-framework': ^2.2.8
 
   '@esengine/ecs-engine-bindgen@file:../ecs-engine-bindgen':
     resolution: {directory: ../ecs-engine-bindgen, type: directory}
     peerDependencies:
       es-engine: file:../engine/pkg
 
-  '@esengine/esengine@file:../core':
+  '@esengine/ecs-framework@file:../core':
     resolution: {directory: ../core, type: directory}
 
   '@esengine/editor-core@file:../editor-core':
     resolution: {directory: ../editor-core, type: directory}
     peerDependencies:
-      '@esengine/esengine': ^2.2.8
+      '@esengine/ecs-framework': ^2.2.8
 
   '@img/colour@1.0.0':
     resolution: {integrity: sha512-A5P/LfWGFSl6nsckYtjw9da+19jB8hkJ6ACTGcDfEJ0aE+l2n2El7dsVM7UVHZQ9s2lmYMWlrS21YLy2IR1LUw==}
@@ -1760,23 +1760,23 @@ snapshots:
   '@esbuild/win32-x64@0.25.12':
     optional: true
 
-  '@esengine/behavior-tree@file:../behavior-tree(@esengine/esengine@file:../core)':
+  '@esengine/behavior-tree@file:../behavior-tree(@esengine/ecs-framework@file:../core)':
     dependencies:
-      '@esengine/esengine': file:../core
+      '@esengine/ecs-framework': file:../core
       tslib: 2.8.1
 
   '@esengine/ecs-engine-bindgen@file:../ecs-engine-bindgen(es-engine@file:../engine/pkg)':
     dependencies:
-      '@esengine/esengine': file:../core
+      '@esengine/ecs-framework': file:../core
       es-engine: file:../engine/pkg
 
-  '@esengine/esengine@file:../core':
+  '@esengine/ecs-framework@file:../core':
     dependencies:
       tslib: 2.8.1
 
-  '@esengine/editor-core@file:../editor-core(@esengine/esengine@file:../core)':
+  '@esengine/editor-core@file:../editor-core(@esengine/ecs-framework@file:../core)':
     dependencies:
-      '@esengine/esengine': file:../core
+      '@esengine/ecs-framework': file:../core
       tslib: 2.8.1
 
   '@img/colour@1.0.0': {}

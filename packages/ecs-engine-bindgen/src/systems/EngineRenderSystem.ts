@@ -3,9 +3,9 @@
  * 用于ECS的引擎渲染系统。
  */
 
-import { EntitySystem, Matcher, Entity, ComponentType, ECSSystem, Component, Core } from '@esengine/esengine';
+import { EntitySystem, Matcher, Entity, ComponentType, ECSSystem, Component, Core } from '@esengine/ecs-framework';
 import { TransformComponent } from '@esengine/engine-core';
-import { Color } from '@esengine/esengine-math';
+import { Color } from '@esengine/ecs-framework-math';
 import { SpriteComponent } from '@esengine/sprite';
 import { CameraComponent } from '@esengine/camera';
 import { getMaterialManager } from '@esengine/material-system';

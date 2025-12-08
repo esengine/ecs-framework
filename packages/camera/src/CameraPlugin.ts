@@ -1,4 +1,4 @@
-import type { ComponentRegistry as ComponentRegistryType } from '@esengine/esengine';
+import type { ComponentRegistry as ComponentRegistryType } from '@esengine/ecs-framework';
 import type { IRuntimeModule, IPlugin, ModuleManifest } from '@esengine/engine-core';
 import { CameraComponent } from './CameraComponent';
 

@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 import { PluginManager, type RegisteredPlugin, type ModuleCategory, ProjectService } from '@esengine/editor-core';
 import { Check, Lock, Package } from 'lucide-react';
 import { NotificationService } from '../services/NotificationService';

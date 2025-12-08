@@ -11,8 +11,8 @@
  * 2. Clear temporary state at frame end (justPressed, justReleased, etc.)
  */
 
-import { EntitySystem, Matcher, ECSSystem } from '@esengine/esengine';
-import type { Entity } from '@esengine/esengine';
+import { EntitySystem, Matcher, ECSSystem } from '@esengine/ecs-framework';
+import type { Entity } from '@esengine/ecs-framework';
 import type {
     IPlatformInputSubsystem,
     KeyboardEventInfo,

@@ -1,5 +1,5 @@
 import { DEMO_REGISTRY, DemoBase } from './demos';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 
 class DemoManager {
     private demos: Map<string, typeof DemoBase> = new Map();

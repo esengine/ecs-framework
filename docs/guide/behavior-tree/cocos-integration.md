@@ -15,7 +15,7 @@
 在你的 Cocos Creator 项目根目录下：
 
 ```bash
-npm install @esengine/esengine @esengine/behavior-tree
+npm install @esengine/ecs-framework @esengine/behavior-tree
 ```
 
 ### 步骤2：配置 tsconfig.json
@@ -62,7 +62,7 @@ assets/
 
 ```typescript
 import { _decorator, Component } from 'cc';
-import { Core, Scene } from '@esengine/esengine';
+import { Core, Scene } from '@esengine/ecs-framework';
 import { BehaviorTreePlugin } from '@esengine/behavior-tree';
 
 const { ccclass } = _decorator;
@@ -110,7 +110,7 @@ export class Main extends Component {
 
 ```typescript
 import { _decorator, Component, Node } from 'cc';
-import { Core, Entity } from '@esengine/esengine';
+import { Core, Entity } from '@esengine/ecs-framework';
 import {
     BehaviorTreeBuilder,
     BehaviorTreeStarter,
@@ -313,7 +313,7 @@ export class PlayerDetector extends Component {
 框架提供了 `BehaviorTreeAssetManager` 来统一管理行为树资产，避免重复创建：
 
 ```typescript
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 import {
     BehaviorTreeAssetManager,
     BehaviorTreeBuilder,
@@ -359,7 +359,7 @@ assets/
 
 ```typescript
 import { resources, JsonAsset } from 'cc';
-import { Core } from '@esengine/esengine';
+import { Core } from '@esengine/ecs-framework';
 import {
     BehaviorTreeAssetManager,
     BehaviorTreeAssetSerializer,
@@ -422,7 +422,7 @@ export class BehaviorTreeLoader {
 
 ```typescript
 import { _decorator, Component } from 'cc';
-import { Core, Scene } from '@esengine/esengine';
+import { Core, Scene } from '@esengine/ecs-framework';
 import { BehaviorTreePlugin } from '@esengine/behavior-tree';
 import { BehaviorTreeLoader } from './BehaviorTreeLoader';
 
@@ -471,7 +471,7 @@ export class Main extends Component {
 
 ```typescript
 import { _decorator, Component } from 'cc';
-import { Core, Entity } from '@esengine/esengine';
+import { Core, Entity } from '@esengine/ecs-framework';
 import {
     BehaviorTreeAssetManager,
     BehaviorTreeStarter

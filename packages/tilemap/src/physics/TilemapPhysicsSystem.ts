@@ -6,7 +6,7 @@
  * 需要与 Physics2DSystem 配合使用。
  */
 
-import { EntitySystem, Matcher, ECSSystem, type Entity, type Scene } from '@esengine/esengine';
+import { EntitySystem, Matcher, ECSSystem, type Entity, type Scene } from '@esengine/ecs-framework';
 import { TransformComponent } from '@esengine/engine-core';
 import { TilemapComponent } from '../TilemapComponent';
 import { TilemapCollider2DComponent, type CollisionRect } from './TilemapCollider2DComponent';

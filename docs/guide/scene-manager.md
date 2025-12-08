@@ -28,7 +28,7 @@ SceneManager 适合以下场景：
 这是最简单和推荐的方式，适合大多数应用：
 
 ```typescript
-import { Core, Scene } from '@esengine/esengine';
+import { Core, Scene } from '@esengine/ecs-framework';
 
 // 1. 初始化 Core
 Core.create({ debug: true });
@@ -78,7 +78,7 @@ update(deltaTime: number) {
 如果需要更多控制，可以直接使用 SceneManager：
 
 ```typescript
-import { Core, SceneManager, Scene } from '@esengine/esengine';
+import { Core, SceneManager, Scene } from '@esengine/ecs-framework';
 
 // 初始化 Core
 Core.create({ debug: true });
@@ -146,7 +146,7 @@ class GameOverSystem extends EntitySystem {
 ### 完整的场景切换示例
 
 ```typescript
-import { Core, Scene } from '@esengine/esengine';
+import { Core, Scene } from '@esengine/ecs-framework';
 
 // 初始化
 Core.create({ debug: true });
@@ -564,7 +564,7 @@ Core (全局服务)
 ## 完整示例
 
 ```typescript
-import { Core, Scene, EntitySystem, Entity, Matcher } from '@esengine/esengine';
+import { Core, Scene, EntitySystem, Entity, Matcher } from '@esengine/ecs-framework';
 
 // 定义组件
 class Transform {

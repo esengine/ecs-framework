@@ -34,7 +34,7 @@ This document focuses on the usage of the Scene class itself. For detailed infor
 **Recommended: Inherit the Scene class to create custom scenes**
 
 ```typescript
-import { Scene, EntitySystem } from '@esengine/esengine';
+import { Scene, EntitySystem } from '@esengine/ecs-framework';
 
 class GameScene extends Scene {
   protected initialize(): void {
@@ -81,7 +81,7 @@ class GameScene extends Scene {
 ### Using Scene Configuration
 
 ```typescript
-import { ISceneConfig } from '@esengine/esengine';
+import { ISceneConfig } from '@esengine/ecs-framework';
 
 const config: ISceneConfig = {
   name: "MainGame",

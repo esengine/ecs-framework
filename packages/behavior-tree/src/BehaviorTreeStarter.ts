@@ -1,4 +1,4 @@
-import { Entity, Core } from '@esengine/esengine';
+import { Entity, Core } from '@esengine/ecs-framework';
 import { BehaviorTreeData } from './execution/BehaviorTreeData';
 import { BehaviorTreeRuntimeComponent } from './execution/BehaviorTreeRuntimeComponent';
 import { BehaviorTreeAssetManager } from './execution/BehaviorTreeAssetManager';

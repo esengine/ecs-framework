@@ -1,4 +1,4 @@
-import { Entity, Scene, HierarchySystem, HierarchyComponent } from '@esengine/esengine';
+import { Entity, Scene, HierarchySystem, HierarchyComponent } from '@esengine/ecs-framework';
 import { UITransformComponent, AnchorPreset } from './components/UITransformComponent';
 import { UIRenderComponent, UIRenderType } from './components/UIRenderComponent';
 import { UIInteractableComponent } from './components/UIInteractableComponent';

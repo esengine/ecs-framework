@@ -10,7 +10,7 @@
  * 这确保每帧都以一组新的渲染原语开始。
  */
 
-import { EntitySystem, Entity, ECSSystem, Matcher } from '@esengine/esengine';
+import { EntitySystem, Entity, ECSSystem, Matcher } from '@esengine/ecs-framework';
 import { getUIRenderCollector } from './UIRenderCollector';
 
 /**

@@ -1,6 +1,6 @@
 [
   {
-    "name": "@esengine/esengine (ESM)",
+    "name": "@esengine/ecs-framework (ESM)",
     "path": "packages/core/dist/esm/index.js",
     "import": "*",
     "limit": "50 KB",
@@ -8,7 +8,7 @@
     "gzip": true
   },
   {
-    "name": "@esengine/esengine (UMD)",
+    "name": "@esengine/ecs-framework (UMD)",
     "path": "packages/core/dist/umd/ecs-framework.js",
     "limit": "60 KB",
     "webpack": false,

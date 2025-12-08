@@ -20,7 +20,7 @@ import type {
     PlatformWorker,
     WorkerCreationOptions,
     PlatformConfig
-} from '@esengine/esengine';
+} from '@esengine/ecs-framework';
 
 /**
  * 浏览器平台适配器
@@ -231,7 +231,7 @@ class BrowserWorker implements PlatformWorker {
 ### 2. 注册适配器
 
 ```typescript
-import { PlatformManager } from '@esengine/esengine';
+import { PlatformManager } from '@esengine/ecs-framework';
 import { BrowserAdapter } from './platform/BrowserAdapter';
 
 // 创建并注册浏览器适配器
@@ -246,7 +246,7 @@ PlatformManager.registerAdapter(browserAdapter);
 浏览器适配器与 WorkerEntitySystem 配合使用，框架会自动处理 Worker 脚本的创建：
 
 ```typescript
-import { WorkerEntitySystem, Matcher } from '@esengine/esengine';
+import { WorkerEntitySystem, Matcher } from '@esengine/ecs-framework';
 
 class PhysicsSystem extends WorkerEntitySystem {
     constructor() {

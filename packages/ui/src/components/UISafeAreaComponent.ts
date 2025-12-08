@@ -1,4 +1,4 @@
-import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/esengine';
+import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/ecs-framework';
 
 /**
  * 安全区域边缘

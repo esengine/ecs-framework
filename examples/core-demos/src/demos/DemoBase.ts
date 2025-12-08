@@ -1,4 +1,4 @@
-import { Scene, Core } from '@esengine/esengine';
+import { Scene, Core } from '@esengine/ecs-framework';
 
 export interface DemoInfo {
     id: string;

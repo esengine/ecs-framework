@@ -3,7 +3,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import typescript from '@rollup/plugin-typescript';
 import dts from 'rollup-plugin-dts';
 
-const external = ['@esengine/esengine', '@esengine/platform-common'];
+const external = ['@esengine/ecs-framework', '@esengine/platform-common'];
 
 export default [
     // ESM and CJS builds

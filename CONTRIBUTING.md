@@ -35,7 +35,7 @@ This project follows the [Conventional Commits](https://www.conventionalcommits.
 
 ### 范围 / Scope
 
-- **core**: 核心包 @esengine/esengine
+- **core**: 核心包 @esengine/ecs-framework
 - **math**: 数学库包
 - **editor**: 编辑器
 - **docs**: 文档

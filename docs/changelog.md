@@ -1,6 +1,6 @@
 # Changelog
 
-本文档记录 `@esengine/esengine` 核心库的版本更新历史。
+本文档记录 `@esengine/ecs-framework` 核心库的版本更新历史。
 
 ---
 
@@ -198,5 +198,5 @@
 ## 相关链接
 
 - [GitHub Releases](https://github.com/esengine/esengine/releases)
-- [NPM Package](https://www.npmjs.com/package/@esengine/esengine)
+- [NPM Package](https://www.npmjs.com/package/@esengine/ecs-framework)
 - [文档首页](./index.md)

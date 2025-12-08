@@ -45,7 +45,7 @@
         "@esengine/platform-common": "workspace:*"
     },
     "devDependencies": {
-        "@esengine/esengine": "workspace:*",
+        "@esengine/ecs-framework": "workspace:*",
         "@esengine/engine-core": "workspace:*",
         "@esengine/editor-core": "workspace:*",
         "@esengine/build-config": "workspace:*",

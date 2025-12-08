@@ -5,7 +5,7 @@
  */
 
 import { injectable } from 'tsyringe';
-import type { IService } from '@esengine/esengine';
+import type { IService } from '@esengine/ecs-framework';
 import type { EntityCreationTemplate } from '../Types/UITypes';
 
 @injectable()

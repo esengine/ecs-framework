@@ -1,4 +1,4 @@
-import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/esengine';
+import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/ecs-framework';
 
 export interface Vector3 {
     x: number;

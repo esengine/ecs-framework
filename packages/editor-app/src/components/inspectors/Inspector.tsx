@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Entity } from '@esengine/esengine';
+import { Entity } from '@esengine/ecs-framework';
 import { TauriAPI } from '../../api/tauri';
 import { SettingsService } from '../../services/SettingsService';
 import { InspectorProps, InspectorTarget, AssetFileInfo, RemoteEntity } from './types';

@@ -1,4 +1,4 @@
-import { IService } from '@esengine/esengine';
+import { IService } from '@esengine/ecs-framework';
 import { ICompiler } from './ICompiler';
 
 export class CompilerRegistry implements IService {

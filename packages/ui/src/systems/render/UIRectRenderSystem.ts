@@ -8,7 +8,7 @@
  * （没有专门 widget 组件的实体）。
  */
 
-import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/esengine';
+import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/ecs-framework';
 import { UITransformComponent } from '../../components/UITransformComponent';
 import { UIRenderComponent } from '../../components/UIRenderComponent';
 import { UIButtonComponent } from '../../components/widgets/UIButtonComponent';

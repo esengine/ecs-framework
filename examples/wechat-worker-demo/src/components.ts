@@ -2,7 +2,7 @@
  * 组件定义
  * Component definitions
  */
-import { Component, ECSComponent } from '@esengine/esengine';
+import { Component, ECSComponent } from '@esengine/ecs-framework';
 
 @ECSComponent('Position')
 export class Position extends Component {

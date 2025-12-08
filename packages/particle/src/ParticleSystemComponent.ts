@@ -1,4 +1,4 @@
-import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/esengine';
+import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/ecs-framework';
 import { assetManager } from '@esengine/asset-system';
 import { ParticlePool, type Particle } from './Particle';
 import { ParticleEmitter, EmissionShape, createDefaultEmitterConfig, type EmitterConfig, type ColorValue } from './ParticleEmitter';

@@ -34,7 +34,7 @@ ECS Framework 提供了两种场景管理方式：
 **推荐做法：继承 Scene 类来创建自定义场景**
 
 ```typescript
-import { Scene, EntitySystem } from '@esengine/esengine';
+import { Scene, EntitySystem } from '@esengine/ecs-framework';
 
 class GameScene extends Scene {
   protected initialize(): void {
@@ -81,7 +81,7 @@ class GameScene extends Scene {
 ### 使用场景配置
 
 ```typescript
-import { ISceneConfig } from '@esengine/esengine';
+import { ISceneConfig } from '@esengine/ecs-framework';
 
 const config: ISceneConfig = {
   name: "MainGame",
@@ -558,7 +558,7 @@ class ProperInitScene extends Scene {
 ## 完整示例
 
 ```typescript
-import { Scene, EntitySystem, Entity, Matcher } from '@esengine/esengine';
+import { Scene, EntitySystem, Entity, Matcher } from '@esengine/ecs-framework';
 
 // 定义组件
 class Transform {
@@ -638,14 +638,14 @@ class GameScene extends Scene {
 
 // 使用场景
 // 方式1：通过 SceneManager（推荐）
-import { Core, SceneManager } from '@esengine/esengine';
+import { Core, SceneManager } from '@esengine/ecs-framework';
 
 Core.create({ debug: true });
 const sceneManager = Core.services.resolve(SceneManager);
 sceneManager.setScene(new GameScene());
 
 // 方式2：通过 WorldManager（高级用例）
-import { WorldManager } from '@esengine/esengine';
+import { WorldManager } from '@esengine/ecs-framework';
 
 const worldManager = Core.services.resolve(WorldManager);
 const world = worldManager.createWorld('game');

@@ -266,7 +266,7 @@ class GameScene extends Scene {
 对于跨场景的事件通信，可以使用全局事件总线：
 
 ```typescript
-import { GlobalEventBus } from '@esengine/esengine';
+import { GlobalEventBus } from '@esengine/ecs-framework';
 
 class GameManager {
   private eventBus = GlobalEventBus.getInstance();
@@ -374,7 +374,7 @@ class MovementSystem extends EntitySystem {
 框架提供了一些预定义的 ECS 生命周期事件：
 
 ```typescript
-import { ECSEventType } from '@esengine/esengine';
+import { ECSEventType } from '@esengine/ecs-framework';
 
 class ECSMonitor {
   private eventBus = GlobalEventBus.getInstance();

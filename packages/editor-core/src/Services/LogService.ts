@@ -1,5 +1,5 @@
-import type { IService } from '@esengine/esengine';
-import { Injectable, LogLevel } from '@esengine/esengine';
+import type { IService } from '@esengine/ecs-framework';
+import { Injectable, LogLevel } from '@esengine/ecs-framework';
 
 export interface LogEntry {
     id: number;
