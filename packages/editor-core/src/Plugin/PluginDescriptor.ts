@@ -7,6 +7,7 @@
  */
 
 // 从 engine-core 重新导出所有类型
+// 包括 IEditorModuleBase（原来在 plugin-types 中定义，现在统一从 engine-core 导出）
 export type {
     LoadingPhase,
     SystemContext,
@@ -15,7 +16,8 @@ export type {
     ModuleManifest,
     ModuleCategory,
     ModulePlatform,
-    ModuleExports
+    ModuleExports,
+    IEditorModuleBase
 } from '@esengine/engine-core';
 
 /**

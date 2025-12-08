@@ -204,6 +204,12 @@ export interface IBundlePackOptions {
     groupByType?: boolean;
     /** Include asset names in bundle | 在包中包含资产名称 */
     includeNames?: boolean;
+    /**
+     * 需要预加载的包名列表 | List of bundle names to preload
+     * 如果未指定，默认预加载 'core' 和 'main' 包
+     * If not specified, defaults to preloading 'core' and 'main' bundles
+     */
+    preloadBundles?: string[];
 }
 
 /**

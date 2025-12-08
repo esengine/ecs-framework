@@ -5,13 +5,12 @@
  * 定义编辑器专用的模块接口和 UI 描述符类型。
  * Define editor-specific module interfaces and UI descriptor types.
  *
- * IEditorModuleLoader 扩展自 @esengine/plugin-types 的 IEditorModuleBase。
- * IEditorModuleLoader extends IEditorModuleBase from @esengine/plugin-types.
+ * IEditorModuleLoader 扩展自 engine-core 的 IEditorModuleBase。
+ * IEditorModuleLoader extends IEditorModuleBase from engine-core.
  */
 
-import type { IEditorModuleBase } from '@esengine/plugin-types';
-
 // 从 PluginDescriptor 重新导出（来源于 engine-core）
+// 统一从 engine-core 导入所有类型，避免直接依赖 plugin-types
 export type {
     LoadingPhase,
     SystemContext,
@@ -20,11 +19,9 @@ export type {
     ModuleManifest,
     ModuleCategory,
     ModulePlatform,
-    ModuleExports
+    ModuleExports,
+    IEditorModuleBase
 } from './PluginDescriptor';
-
-// 从 plugin-types 重新导出
-export type { IEditorModuleBase } from '@esengine/plugin-types';
 
 // ============================================================================
 // UI 描述符类型 | UI Descriptor Types
@@ -224,6 +221,8 @@ export interface FileCreationTemplate {
 // ============================================================================
 // 编辑器模块接口 | Editor Module Interface
 // ============================================================================
+
+import type { IEditorModuleBase } from './PluginDescriptor';
 
 /**
  * 编辑器模块加载器

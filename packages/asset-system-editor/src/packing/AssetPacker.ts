@@ -130,7 +130,9 @@ export class AssetPacker {
                 url: `assets/${bundleName}.bundle`,
                 size: packed.data.byteLength,
                 hash: await this._hashBuffer(packed.data),
-                preload: bundleName === 'core' || bundleName === 'main'
+                // 预加载核心资产包（可通过配置扩展） | Preload core bundles (extensible via config)
+                preload: options.preloadBundles?.includes(bundleName) ??
+                         (bundleName === 'core' || bundleName === 'main')
             };
 
             // Add asset locations
