@@ -42,6 +42,7 @@
         "@esengine/ecs-framework": "workspace:*",
         "@esengine/ecs-framework-math": "workspace:*",
         "@esengine/engine-core": "workspace:*",
+        "@esengine/ecs-engine-bindgen": "workspace:*",
         "@esengine/physics-rapier2d": "workspace:*",
         "@esengine/build-config": "workspace:*",
         "rimraf": "^5.0.5",
