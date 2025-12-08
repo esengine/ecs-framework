@@ -145,6 +145,8 @@ interface WorkerSystemConfig {
   entityDataSize?: number;
   /** 最大实体数量（用于预分配SharedArrayBuffer） */
   maxEntities?: number;
+  /** 预编译的Worker脚本路径（用于微信小游戏等不支持动态脚本的平台） */
+  workerScriptPath?: string;
 }
 ```
 
@@ -604,5 +606,167 @@ public getPerformanceMetrics(): WorkerPerformanceMetrics {
 - 实时性能对比
 - SharedArrayBuffer优化
 - 大量实体的并行处理
+
+## 微信小游戏支持
+
+微信小游戏对 Worker 有特殊限制，不支持动态创建 Worker 脚本。ESEngine 提供了 `@esengine/worker-generator` CLI 工具来解决这个问题。
+
+### 微信小游戏 Worker 限制
+
+| 特性 | 浏览器 | 微信小游戏 |
+|------|--------|-----------|
+| 动态脚本 (Blob URL) | ✅ 支持 | ❌ 不支持 |
+| Worker 数量 | 多个 | 最多 1 个 |
+| 脚本来源 | 任意 | 必须是代码包内文件 |
+| SharedArrayBuffer | 需要 COOP/COEP | 有限支持 |
+
+### 使用 Worker Generator CLI
+
+#### 1. 安装工具
+
+```bash
+pnpm add -D @esengine/worker-generator
+```
+
+#### 2. 配置 workerScriptPath
+
+在你的 WorkerEntitySystem 子类中配置 `workerScriptPath`：
+
+```typescript
+@ECSSystem('Physics')
+class PhysicsWorkerSystem extends WorkerEntitySystem<PhysicsData> {
+  constructor() {
+    super(Matcher.all(Position, Velocity, Physics), {
+      enableWorker: true,
+      workerScriptPath: 'workers/physics-worker.js', // 指定 Worker 文件路径
+      systemConfig: {
+        gravity: 100,
+        friction: 0.95
+      }
+    });
+  }
+
+  protected workerProcess(
+    entities: PhysicsData[],
+    deltaTime: number,
+    config: any
+  ): PhysicsData[] {
+    // 物理计算逻辑
+    return entities.map(entity => {
+      entity.vy += config.gravity * deltaTime;
+      entity.x += entity.vx * deltaTime;
+      entity.y += entity.vy * deltaTime;
+      return entity;
+    });
+  }
+
+  // ... 其他方法
+}
+```
+
+#### 3. 生成 Worker 文件
+
+运行 CLI 工具自动提取 `workerProcess` 函数并生成兼容微信小游戏的 Worker 文件：
+
+```bash
+# 基本用法
+npx esengine-worker-gen --src ./src --wechat
+
+# 完整选项
+npx esengine-worker-gen \
+  --src ./src \           # 源码目录
+  --wechat \              # 生成微信小游戏兼容代码
+  --mapping \             # 生成 worker-mapping.json
+  --verbose               # 详细输出
+```
+
+CLI 工具会：
+1. 扫描源码目录，找到所有 `WorkerEntitySystem` 子类
+2. 读取每个类的 `workerScriptPath` 配置
+3. 提取 `workerProcess` 方法体
+4. 转换为 ES5 语法（微信小游戏兼容）
+5. 生成到配置的路径
+
+#### 4. 配置 game.json
+
+在微信小游戏的 `game.json` 中配置 workers 目录：
+
+```json
+{
+  "deviceOrientation": "portrait",
+  "workers": "workers"
+}
+```
+
+#### 5. 项目结构
+
+```
+your-game/
+├── game.js
+├── game.json           # 配置 "workers": "workers"
+├── src/
+│   └── systems/
+│       └── PhysicsSystem.ts  # workerScriptPath: 'workers/physics-worker.js'
+└── workers/
+    ├── physics-worker.js     # 自动生成
+    └── worker-mapping.json   # 自动生成
+```
+
+### 临时禁用 Worker
+
+如果需要临时禁用 Worker（例如调试时），有两种方式：
+
+#### 方式 1：配置禁用
+
+```typescript
+constructor() {
+  super(matcher, {
+    enableWorker: false, // 禁用 Worker，使用主线程处理
+    // ...
+  });
+}
+```
+
+#### 方式 2：平台适配器禁用
+
+在自定义平台适配器中返回不支持 Worker：
+
+```typescript
+class MyPlatformAdapter implements IPlatformAdapter {
+  isWorkerSupported(): boolean {
+    return false; // 返回 false 禁用 Worker
+  }
+  // ...
+}
+```
+
+### 注意事项
+
+1. **每次修改 `workerProcess` 后都需要重新运行 CLI 工具**生成新的 Worker 文件
+
+2. **Worker 函数必须是纯函数**，不能依赖 `this` 或外部变量：
+   ```typescript
+   // ✅ 正确：只使用参数
+   protected workerProcess(entities, deltaTime, config) {
+     return entities.map(e => {
+       e.y += config.gravity * deltaTime;
+       return e;
+     });
+   }
+
+   // ❌ 错误：使用 this
+   protected workerProcess(entities, deltaTime, config) {
+     return entities.map(e => {
+       e.y += this.gravity * deltaTime; // Worker 中无法访问 this
+       return e;
+     });
+   }
+   ```
+
+3. **配置数据通过 `systemConfig` 传递**，而不是类属性
+
+4. **开发者工具中的警告可以忽略**：
+   - `getNetworkType:fail not support` - 微信开发者工具内部行为
+   - `SharedArrayBuffer will require cross-origin isolation` - 开发环境警告，真机不会出现
 
 Worker系统为ECS框架提供了强大的并行计算能力，让你能够充分利用现代多核处理器的性能，为复杂的游戏逻辑和计算密集型任务提供了高效的解决方案。
