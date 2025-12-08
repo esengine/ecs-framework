@@ -300,51 +300,26 @@ function toKebabCase(str: string): string {
 }
 
 /**
- * 简单的 ES6+ 到 ES5 转换（用于微信小游戏兼容性）
- * Simple ES6+ to ES5 conversion (for WeChat Mini Game compatibility)
+ * ES6+ 到 ES5 转换（用于微信小游戏兼容性）
+ * ES6+ to ES5 conversion (for WeChat Mini Game compatibility)
  *
- * 注意：这些正则表达式使用非捕获组和限制量词来避免 ReDoS 攻击
- * Note: These regexes use non-capturing groups and bounded quantifiers to prevent ReDoS
+ * 使用 TypeScript 编译器进行安全的代码转换
+ * Uses TypeScript compiler for safe code transformation
  */
 function convertToES5(code: string): string {
-    let result = code;
+    // 使用 ts-morph 已有的 TypeScript 依赖进行转换
+    // Use ts-morph's TypeScript dependency for transformation
+    const ts = require('typescript');
 
-    // 1. 处理 .map(e => ({ ...e })) 这种返回对象字面量的情况
-    // Handle arrow functions returning object literals like .map(e => ({ ...e }))
-    // 使用 [ \t] 替代 \s* 避免多行回溯，限制空格数量
-    result = result.replace(/(\w+)[ \t]*=>[ \t]*\([ \t]*\{([^}]*)\}[ \t]*\)/g, 'function($1) { return {$2}; }');
-
-    // 2. 处理 (params) => ({ ... }) 带括号参数返回对象
-    result = result.replace(/\(([^)]*)\)[ \t]*=>[ \t]*\([ \t]*\{([^}]*)\}[ \t]*\)/g, 'function($1) { return {$2}; }');
-
-    // 3. 处理 (params) => expression （非块体）
-    // Handle (params) => expression (non-block body)
-    result = result.replace(/\(([^)]*)\)[ \t]*=>[ \t]*(?!\{)([^;,\n]+)/g, 'function($1) { return $2; }');
-
-    // 4. 处理 (params) => { ... } （块体）
-    // Handle (params) => { ... } (block body)
-    result = result.replace(/\(([^)]*)\)[ \t]*=>[ \t]*\{/g, 'function($1) {');
-
-    // 5. 处理单参数 x => expression
-    // Handle single param x => expression
-    result = result.replace(/(\b\w+)[ \t]*=>[ \t]*(?!\{)([^;,\n]+)/g, 'function($1) { return $2; }');
-
-    // 6. 处理单参数 x => { ... }
-    // Handle single param x => { ... }
-    result = result.replace(/(\b\w+)[ \t]*=>[ \t]*\{/g, 'function($1) {');
-
-    // 7. const/let -> var
-    result = result.replace(/\b(const|let)\b/g, 'var');
-
-    // 8. 展开运算符 { ...obj } -> 使用 Object.assign
-    // Spread operator { ...obj } -> use Object.assign
-    // 简化处理：只处理简单的 { ...e } 情况
-    result = result.replace(/\{\s*\.\.\.(\w+)\s*\}/g, 'Object.assign({}, $1)');
-
-    // 9. 模板字符串（简单处理）| Template literals (simple handling)
-    result = result.replace(/`([^`]*)`/g, function(match, content) {
-        return "'" + content.replace(/\$\{([^}]+)\}/g, "' + ($1) + '") + "'";
+    const result = ts.transpileModule(code, {
+        compilerOptions: {
+            target: ts.ScriptTarget.ES5,
+            module: ts.ModuleKind.None,
+            removeComments: false,
+            // 不生成严格模式声明
+            noImplicitUseStrict: true,
+        }
     });
 
-    return result;
+    return result.outputText;
 }
