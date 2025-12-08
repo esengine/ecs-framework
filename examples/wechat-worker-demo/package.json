@@ -1,0 +1,15 @@
+{
+  "name": "wechat-worker-demo",
+  "version": "1.0.0",
+  "description": "ESEngine Worker System WeChat Mini Game Demo",
+  "scripts": {
+    "build": "node build.js",
+    "generate-worker": "npx esengine-worker-gen --src ./src --wechat --verbose",
+    "deploy": "node deploy.js"
+  },
+  "devDependencies": {
+    "@esengine/ecs-framework": "^2.3.2",
+    "@esengine/worker-generator": "^1.0.1",
+    "esbuild": "^0.19.0"
+  }
+}

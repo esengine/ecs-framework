@@ -263,6 +263,9 @@ function processSharedArrayBuffer(startIndex, endIndex, deltaTime, systemConfig)
 /**
  * 生成映射文件
  * Generate mapping file
+ *
+ * 注意：映射文件不能放在 workers 目录，微信小游戏会把它当 JS 编译
+ * Note: Mapping file should NOT be in workers dir, WeChat will try to compile it as JS
  */
 function generateMappingFile(
     success: Array<{ className: string; outputPath: string }>,
@@ -274,13 +277,15 @@ function generateMappingFile(
     };
 
     for (const item of success) {
-        // 使用相对于输出目录的路径
-        // Use path relative to output directory
-        const relativePath = path.relative(config.outDir, item.outputPath).replace(/\\/g, '/');
+        // 使用相对于项目根目录的路径
+        // Use path relative to project root
+        const relativePath = path.relative(process.cwd(), item.outputPath).replace(/\\/g, '/');
         mapping.mappings[item.className] = relativePath;
     }
 
-    const mappingPath = path.join(config.outDir, 'worker-mapping.json');
+    // 映射文件放在项目根目录，而不是 workers 目录
+    // Put mapping file in project root, not in workers directory
+    const mappingPath = path.join(process.cwd(), 'worker-mapping.json');
     fs.writeFileSync(mappingPath, JSON.stringify(mapping, null, 2), 'utf8');
 
     if (config.verbose) {
