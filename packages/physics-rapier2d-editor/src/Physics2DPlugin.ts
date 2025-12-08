@@ -3,7 +3,7 @@
  * 完整的 2D 物理插件（运行时 + 编辑器）
  */
 
-import type { IPlugin, ModuleManifest } from '@esengine/editor-core';
+import type { IEditorPlugin, ModuleManifest } from '@esengine/editor-core';
 import { PhysicsRuntimeModule } from '@esengine/physics-rapier2d/runtime';
 import { physics2DEditorModule } from './Physics2DEditorModule';
 
@@ -34,7 +34,7 @@ const manifest: ModuleManifest = {
  * 完整的 Physics 2D 插件（运行时 + 编辑器）
  * Complete Physics 2D Plugin (runtime + editor)
  */
-export const Physics2DPlugin: IPlugin = {
+export const Physics2DPlugin: IEditorPlugin = {
     manifest,
     runtimeModule: new PhysicsRuntimeModule(),
     editorModule: physics2DEditorModule

@@ -29,7 +29,8 @@
     },
     "dependencies": {
         "@esengine/ecs-framework": "workspace:*",
-        "@esengine/platform-common": "workspace:*"
+        "@esengine/platform-common": "workspace:*",
+        "@esengine/plugin-types": "workspace:*"
     },
     "devDependencies": {
         "@esengine/build-config": "workspace:*",

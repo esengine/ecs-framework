@@ -38,6 +38,8 @@ export class BinaryLoader implements IAssetLoader<IBinaryAsset> {
      * 释放已加载的资产
      */
     dispose(asset: IBinaryAsset): void {
-        (asset as any).data = null;
+        // 释放二进制数据引用以允许垃圾回收
+        // Release binary data reference to allow garbage collection
+        (asset as { data: ArrayBuffer | null }).data = null;
     }
 }

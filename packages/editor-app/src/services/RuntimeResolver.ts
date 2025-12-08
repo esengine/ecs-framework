@@ -5,6 +5,26 @@
 
 import { TauriAPI } from '../api/tauri';
 
+// ============================================================================
+// 配置常量 | Configuration Constants
+// ============================================================================
+
+/**
+ * 引擎 WASM 模块配置
+ * Engine WASM module configuration
+ *
+ * 避免硬编码目录名，使用配置驱动
+ * Avoid hardcoded directory names, use configuration-driven approach
+ */
+const ENGINE_WASM_CONFIG = {
+    /** 引擎 WASM 目录名 | Engine WASM directory name */
+    dirName: 'es-engine',
+    /** 引擎包名 | Engine package name */
+    packageName: 'engine',
+    /** WASM 文件列表 | WASM file list */
+    files: ['es_engine_bg.wasm', 'es_engine.js', 'es_engine_bg.js']
+} as const;
+
 /**
  * 运行时模块清单
  * Module manifest for runtime modules
@@ -94,14 +114,43 @@ export class RuntimeResolver {
     }
 
     /**
+     * 获取可能的安装路径列表
+     * Get list of possible installation paths
+     *
+     * 使用环境变量和标准路径，避免硬编码
+     * Use environment variables and standard paths, avoid hardcoding
+     */
+    private getInstalledEnginePaths(): string[] {
+        const paths: string[] = [];
+
+        // 1. 使用环境变量（如果设置） | Use environment variable if set
+        // 可以在 Tauri 配置或系统环境变量中设置 ESENGINE_INSTALL_DIR
+        // 注意：Tauri 目前无法直接读取环境变量，此处为将来扩展预留
+
+        // 2. 使用标准安装位置（按平台） | Use standard install locations (by platform)
+        // 这些路径仍然是硬编码的，但集中在一处便于维护
+        // Windows
+        paths.push('C:/Program Files/ESEngine Editor/engine');
+        paths.push('C:/Program Files (x86)/ESEngine Editor/engine');
+        // macOS (future support)
+        paths.push('/Applications/ESEngine Editor.app/Contents/Resources/engine');
+        // Linux (future support)
+        paths.push('/opt/esengine-editor/engine');
+        paths.push('/usr/local/share/esengine-editor/engine');
+
+        return paths;
+    }
+
+    /**
      * Find engine modules path (where compiled modules with module.json are)
      * 查找引擎模块路径（编译后的模块和 module.json 所在位置）
      */
     private async findEngineModulesPath(): Promise<string> {
-        // Try installed editor location first
-        const installedPath = 'C:/Program Files/ESEngine Editor/engine';
-        if (await TauriAPI.pathExists(`${installedPath}/index.json`)) {
-            return installedPath;
+        // Try installed editor locations first (production mode)
+        for (const installedPath of this.getInstalledEnginePaths()) {
+            if (await TauriAPI.pathExists(`${installedPath}/index.json`)) {
+                return installedPath;
+            }
         }
 
         // Try workspace packages directory (dev mode)
@@ -237,15 +286,11 @@ export class RuntimeResolver {
                 // 复制所有 chunk 文件（代码分割会创建 chunk-*.js 文件）
                 await this.copyChunkFiles(moduleDistDir, dstModuleDir);
 
-                // Add to import map
-                importMap[`@esengine/${module.id}`] = `./libs/${module.id}/${module.id}.js`;
-
-                // Also add common aliases
-                if (module.id === 'core') {
-                    importMap['@esengine/ecs-framework'] = `./libs/${module.id}/${module.id}.js`;
-                }
-                if (module.id === 'math') {
-                    importMap['@esengine/ecs-framework-math'] = `./libs/${module.id}/${module.id}.js`;
+                // Add to import map using module.name from module.json
+                // 使用 module.json 中的 module.name 作为 import map 的 key
+                // e.g., core/module.json: { "name": "@esengine/ecs-framework" }
+                if (module.name) {
+                    importMap[module.name] = `./libs/${module.id}/${module.id}.js`;
                 }
 
                 copiedModules.push(module.id);
@@ -331,27 +376,44 @@ export class RuntimeResolver {
     }
 
     /**
+     * 获取引擎 WASM 文件的搜索路径
+     * Get search paths for engine WASM files
+     */
+    private getEngineWasmSearchPaths(): string[] {
+        const paths: string[] = [];
+
+        // 1. 开发模式：工作区内的 engine 包 | Dev mode: engine package in workspace
+        paths.push(`${this.baseDir}\\packages\\${ENGINE_WASM_CONFIG.packageName}\\pkg`);
+
+        // 2. 相对于引擎模块路径 | Relative to engine modules path
+        paths.push(`${this.engineModulesPath}\\..\\..\\${ENGINE_WASM_CONFIG.packageName}\\pkg`);
+
+        // 3. 生产模式：安装目录中的 wasm 文件夹 | Production mode: wasm folder in install dir
+        for (const installedPath of this.getInstalledEnginePaths()) {
+            // 将 /engine 替换为 /wasm | Replace /engine with /wasm
+            const wasmPath = installedPath.replace(/[/\\]engine$/, '/wasm');
+            paths.push(wasmPath);
+        }
+
+        return paths;
+    }
+
+    /**
      * Copy engine WASM files
      * 复制引擎 WASM 文件
      */
     private async copyEngineWasm(libsDir: string): Promise<void> {
-        const esEngineDir = `${libsDir}\\es-engine`;
+        const esEngineDir = `${libsDir}\\${ENGINE_WASM_CONFIG.dirName}`;
         if (!await TauriAPI.pathExists(esEngineDir)) {
             await TauriAPI.createDirectory(esEngineDir);
         }
 
         // Try different locations for engine WASM
-        const wasmSearchPaths = [
-            `${this.baseDir}\\packages\\engine\\pkg`,
-            `${this.engineModulesPath}\\..\\..\\engine\\pkg`,
-            'C:/Program Files/ESEngine Editor/wasm'
-        ];
-
-        const filesToCopy = ['es_engine_bg.wasm', 'es_engine.js', 'es_engine_bg.js'];
+        const wasmSearchPaths = this.getEngineWasmSearchPaths();
 
         for (const searchPath of wasmSearchPaths) {
             if (await TauriAPI.pathExists(searchPath)) {
-                for (const file of filesToCopy) {
+                for (const file of ENGINE_WASM_CONFIG.files) {
                     const srcFile = `${searchPath}\\${file}`;
                     if (await TauriAPI.pathExists(srcFile)) {
                         const dstFile = `${esEngineDir}\\${file}`;

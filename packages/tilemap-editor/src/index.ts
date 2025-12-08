@@ -30,7 +30,7 @@ import { TransformComponent } from '@esengine/engine-core';
 
 // Runtime imports from @esengine/tilemap
 import { TilemapComponent, TilemapCollider2DComponent, TilemapRuntimeModule } from '@esengine/tilemap';
-import type { IPlugin, ModuleManifest } from '@esengine/editor-core';
+import type { IEditorPlugin, ModuleManifest } from '@esengine/editor-core';
 import { TilemapEditorPanel } from './components/panels/TilemapEditorPanel';
 import { TilemapInspectorProvider } from './providers/TilemapInspectorProvider';
 import { registerTilemapGizmo } from './gizmos/TilemapGizmo';
@@ -383,7 +383,7 @@ const manifest: ModuleManifest = {
  * 完整的 Tilemap 插件（运行时 + 编辑器）
  * Complete Tilemap Plugin (runtime + editor)
  */
-export const TilemapPlugin: IPlugin = {
+export const TilemapPlugin: IEditorPlugin = {
     manifest,
     runtimeModule: new TilemapRuntimeModule(),
     editorModule: tilemapEditorModule

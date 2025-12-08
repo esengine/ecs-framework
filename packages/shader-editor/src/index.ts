@@ -8,7 +8,7 @@
 import type { ServiceContainer } from '@esengine/ecs-framework';
 import type {
     IEditorModuleLoader,
-    IPlugin,
+    IEditorPlugin,
     ModuleManifest,
     IFileSystem
 } from '@esengine/editor-core';
@@ -102,7 +102,7 @@ const manifest: ModuleManifest = {
  * Shader Editor Plugin (editor only, no runtime).
  * 着色器编辑器插件（仅编辑器，无运行时）。
  */
-export const ShaderEditorPlugin: IPlugin = {
+export const ShaderEditorPlugin: IEditorPlugin = {
     manifest,
     editorModule: shaderEditorModule
 };

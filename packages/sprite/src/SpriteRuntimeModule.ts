@@ -3,8 +3,12 @@ import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@es
 import { SpriteComponent } from './SpriteComponent';
 import { SpriteAnimatorComponent } from './SpriteAnimatorComponent';
 import { SpriteAnimatorSystem } from './systems/SpriteAnimatorSystem';
+import { SpriteAnimatorSystemToken } from './tokens';
 
-export type { SystemContext, ModuleManifest, IRuntimeModule as IRuntimeModuleLoader, IPlugin as IPluginLoader };
+export type { SystemContext, ModuleManifest, IRuntimeModule, IPlugin };
+
+// 重新导出 tokens | Re-export tokens
+export { SpriteAnimatorSystemToken } from './tokens';
 
 class SpriteRuntimeModule implements IRuntimeModule {
     registerComponents(registry: typeof ComponentRegistryType): void {
@@ -20,7 +24,9 @@ class SpriteRuntimeModule implements IRuntimeModule {
         }
 
         scene.addSystem(animatorSystem);
-        (context as any).animatorSystem = animatorSystem;
+
+        // 注册服务到服务注册表 | Register service to service registry
+        context.services.register(SpriteAnimatorSystemToken, animatorSystem);
     }
 }
 

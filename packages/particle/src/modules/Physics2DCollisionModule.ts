@@ -1,6 +1,14 @@
 import type { Particle } from '../Particle';
 import type { IParticleModule } from './IParticleModule';
 
+// 从 physics-rapier2d 导入共享接口
+// Import shared interface from physics-rapier2d
+import type { IPhysics2DQuery } from '@esengine/physics-rapier2d';
+
+// 重新导出以保持向后兼容
+// Re-export for backward compatibility
+export type { IPhysics2DQuery };
+
 /**
  * 物理碰撞行为
  * Physics collision behavior
@@ -12,53 +20,6 @@ export enum Physics2DCollisionBehavior {
     Bounce = 'bounce',
     /** 停止运动 | Stop movement */
     Stop = 'stop'
-}
-
-/**
- * 物理查询接口
- * Physics query interface
- *
- * 抽象物理服务查询，避免直接依赖 physics-rapier2d 包
- * Abstract physics service query to avoid direct dependency on physics-rapier2d
- */
-export interface IPhysics2DQuery {
-    /**
-     * 圆形重叠检测
-     * Circle overlap detection
-     *
-     * @param center - 圆心位置 | Center position
-     * @param radius - 半径 | Radius
-     * @param collisionMask - 碰撞掩码 | Collision mask
-     * @returns 重叠结果 | Overlap result
-     */
-    overlapCircle(
-        center: { x: number; y: number },
-        radius: number,
-        collisionMask?: number
-    ): { entityIds: number[]; colliderHandles: number[] };
-
-    /**
-     * 射线检测
-     * Raycast detection
-     *
-     * @param origin - 起点 | Origin
-     * @param direction - 方向（归一化）| Direction (normalized)
-     * @param maxDistance - 最大距离 | Max distance
-     * @param collisionMask - 碰撞掩码 | Collision mask
-     * @returns 射线结果或 null | Raycast result or null
-     */
-    raycast(
-        origin: { x: number; y: number },
-        direction: { x: number; y: number },
-        maxDistance: number,
-        collisionMask?: number
-    ): {
-        entityId: number;
-        point: { x: number; y: number };
-        normal: { x: number; y: number };
-        distance: number;
-        colliderHandle: number;
-    } | null;
 }
 
 /**

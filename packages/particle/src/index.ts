@@ -91,4 +91,6 @@ export {
 
 // Plugin
 export { ParticleRuntimeModule, ParticlePlugin } from './ParticleRuntimeModule';
-export type { ParticleSystemContext } from './ParticleRuntimeModule';
+
+// Service tokens | 服务令牌
+export { ParticleUpdateSystemToken } from './tokens';

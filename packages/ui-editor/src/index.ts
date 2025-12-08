@@ -404,7 +404,7 @@ export const uiEditorModule = new UIEditorModule();
 
 // 从 @esengine/ui 导入运行时模块
 import { UIRuntimeModule } from '@esengine/ui';
-import type { IPlugin, ModuleManifest } from '@esengine/editor-core';
+import type { IEditorPlugin, ModuleManifest } from '@esengine/editor-core';
 
 const manifest: ModuleManifest = {
     id: '@esengine/ui',
@@ -427,7 +427,7 @@ const manifest: ModuleManifest = {
  * 完整的 UI 插件（运行时 + 编辑器）
  * Complete UI Plugin (runtime + editor)
  */
-export const UIPlugin: IPlugin = {
+export const UIPlugin: IEditorPlugin = {
     manifest,
     runtimeModule: new UIRuntimeModule(),
     editorModule: uiEditorModule

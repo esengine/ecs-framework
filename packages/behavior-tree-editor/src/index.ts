@@ -7,7 +7,7 @@ import type { ServiceContainer } from '@esengine/ecs-framework';
 import { TransformComponent } from '@esengine/engine-core';
 import {
     type IEditorModuleLoader,
-    type IPluginLoader,
+    type IEditorPlugin,
     type PanelDescriptor,
     type EntityCreationTemplate,
     type FileCreationTemplate,
@@ -339,7 +339,7 @@ export class BehaviorTreeEditorModule implements IEditorModuleLoader {
 }
 
 // Create the complete plugin with editor module
-export const BehaviorTreePlugin: IPluginLoader = {
+export const BehaviorTreePlugin: IEditorPlugin = {
     manifest,
     runtimeModule: new BehaviorTreeRuntimeModule(),
     editorModule: new BehaviorTreeEditorModule(),

@@ -14,7 +14,7 @@ import type {
 import type {
     SystemContext,
     IEditorModuleLoader
-} from './IPluginLoader';
+} from './EditorModule';
 import { EntityCreationRegistry } from '../Services/EntityCreationRegistry';
 import { ComponentActionRegistry } from '../Services/ComponentActionRegistry';
 import { FileActionRegistry } from '../Services/FileActionRegistry';
@@ -821,22 +821,18 @@ export class PluginManager implements IService {
         this.currentContext = context;
 
         logger.info('Creating systems for scene...');
-        console.log('[PluginManager] createSystemsForScene called, context.assetManager:', context.assetManager ? 'exists' : 'null');
 
         const sortedPlugins = this.sortByLoadingPhase('runtime');
-        console.log('[PluginManager] Sorted plugins for runtime:', sortedPlugins);
 
         // 第一阶段：创建所有系统
         // Phase 1: Create all systems
         for (const pluginId of sortedPlugins) {
             const plugin = this.plugins.get(pluginId);
-            console.log(`[PluginManager] Plugin ${pluginId}: enabled=${plugin?.enabled}, state=${plugin?.state}, hasRuntimeModule=${!!plugin?.plugin.runtimeModule}`);
             if (!plugin?.enabled || plugin.state === 'error') continue;
 
             const runtimeModule = plugin.plugin.runtimeModule;
             if (runtimeModule?.createSystems) {
                 try {
-                    console.log(`[PluginManager] Calling createSystems for: ${pluginId}`);
                     runtimeModule.createSystems(scene, context);
                     logger.debug(`Systems created for: ${pluginId}`);
                 } catch (e) {

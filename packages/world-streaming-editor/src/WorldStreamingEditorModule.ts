@@ -12,7 +12,7 @@ import type {
     PanelDescriptor,
     EntityCreationTemplate,
     ComponentInspectorProviderDef,
-    IPlugin,
+    IEditorPlugin,
     ModuleManifest
 } from '@esengine/editor-core';
 import {
@@ -218,7 +218,7 @@ const manifest: ModuleManifest = {
  * 完整的世界流式加载插件（运行时 + 编辑器）
  * Complete World Streaming Plugin (runtime + editor)
  */
-export const WorldStreamingPlugin: IPlugin = {
+export const WorldStreamingPlugin: IEditorPlugin = {
     manifest,
     runtimeModule: new WorldStreamingModule(),
     editorModule: worldStreamingEditorModule

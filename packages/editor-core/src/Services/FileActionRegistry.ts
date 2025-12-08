@@ -1,8 +1,8 @@
 import { IService } from '@esengine/ecs-framework';
-import type { FileActionHandler, FileCreationTemplate } from '../Plugin/IPluginLoader';
+import type { FileActionHandler, FileCreationTemplate } from '../Plugin/EditorModule';
 
 // Re-export for backwards compatibility
-export type { FileCreationTemplate } from '../Plugin/IPluginLoader';
+export type { FileCreationTemplate } from '../Plugin/EditorModule';
 
 /**
  * 资产创建消息映射

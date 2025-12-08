@@ -8,6 +8,26 @@ import { IAssetLoader, ITextureAsset, IAssetParseContext } from '../interfaces/I
 import { IAssetContent, AssetContentType } from '../interfaces/IAssetReader';
 
 /**
+ * 全局引擎桥接接口（运行时挂载到 window）
+ * Global engine bridge interface (mounted to window at runtime)
+ */
+interface IEngineBridgeGlobal {
+    loadTexture?(textureId: number, path: string): Promise<void>;
+    unloadTexture?(textureId: number): void;
+}
+
+/**
+ * 获取全局引擎桥接
+ * Get global engine bridge
+ */
+function getEngineBridge(): IEngineBridgeGlobal | undefined {
+    if (typeof window !== 'undefined' && 'engineBridge' in window) {
+        return (window as Window & { engineBridge?: IEngineBridgeGlobal }).engineBridge;
+    }
+    return undefined;
+}
+
+/**
  * Texture loader implementation
  * 纹理加载器实现
  */
@@ -39,22 +59,12 @@ export class TextureLoader implements IAssetLoader<ITextureAsset> {
         };
 
         // Upload to GPU if bridge exists.
-        if (typeof window !== 'undefined' && (window as any).engineBridge) {
-            await this.uploadToGPU(textureAsset, context.metadata.path);
+        const bridge = getEngineBridge();
+        if (bridge?.loadTexture) {
+            await bridge.loadTexture(textureAsset.textureId, context.metadata.path);
         }
 
         return textureAsset;
-    }
-
-    /**
-     * Upload texture to GPU
-     * 上传纹理到GPU
-     */
-    private async uploadToGPU(textureAsset: ITextureAsset, path: string): Promise<void> {
-        const bridge = (window as any).engineBridge;
-        if (bridge && bridge.loadTexture) {
-            await bridge.loadTexture(textureAsset.textureId, path);
-        }
     }
 
     /**
@@ -63,11 +73,9 @@ export class TextureLoader implements IAssetLoader<ITextureAsset> {
      */
     dispose(asset: ITextureAsset): void {
         // Release GPU resources.
-        if (typeof window !== 'undefined' && (window as any).engineBridge) {
-            const bridge = (window as any).engineBridge;
-            if (bridge.unloadTexture) {
-                bridge.unloadTexture(asset.textureId);
-            }
+        const bridge = getEngineBridge();
+        if (bridge?.unloadTexture) {
+            bridge.unloadTexture(asset.textureId);
         }
 
         // Clean up image data.

@@ -5,11 +5,22 @@
  * @packageDocumentation
  */
 
+// Service tokens and interfaces (谁定义接口，谁导出 Token)
+export {
+    RenderSystemToken,
+    EngineBridgeToken,
+    EngineIntegrationToken,
+    type IRenderSystem,
+    type IEngineBridge,
+    type IEngineIntegration,
+    type IRenderDataProvider
+} from './tokens';
+
 export { EngineBridge } from './core/EngineBridge';
 export type { EngineBridgeConfig } from './core/EngineBridge';
 export { RenderBatcher } from './core/RenderBatcher';
 export { SpriteRenderHelper } from './core/SpriteRenderHelper';
 export type { ITransformComponent } from './core/SpriteRenderHelper';
-export { EngineRenderSystem, type TransformComponentType, type IRenderDataProvider, type IUIRenderDataProvider, type GizmoDataProviderFn, type HasGizmoProviderFn, type ProviderRenderData, type AssetPathResolverFn } from './systems/EngineRenderSystem';
+export { EngineRenderSystem, type TransformComponentType, type IUIRenderDataProvider, type GizmoDataProviderFn, type HasGizmoProviderFn, type ProviderRenderData, type AssetPathResolverFn } from './systems/EngineRenderSystem';
 export { CameraSystem } from './systems/CameraSystem';
 export * from './types';

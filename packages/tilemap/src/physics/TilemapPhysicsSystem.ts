@@ -10,23 +10,10 @@ import { EntitySystem, Matcher, ECSSystem, type Entity, type Scene } from '@esen
 import { TransformComponent } from '@esengine/engine-core';
 import { TilemapComponent } from '../TilemapComponent';
 import { TilemapCollider2DComponent, type CollisionRect } from './TilemapCollider2DComponent';
+import type { IPhysics2DWorld } from '@esengine/physics-rapier2d';
 
-/**
- * 物理世界接口（避免直接依赖 physics-rapier2d）
- */
-export interface IPhysicsWorld {
-    createStaticCollider(
-        entityId: number,
-        position: { x: number; y: number },
-        halfExtents: { x: number; y: number },
-        collisionLayer: number,
-        collisionMask: number,
-        friction: number,
-        restitution: number,
-        isTrigger: boolean
-    ): number | null;
-    removeCollider(handle: number): void;
-}
+// 重新导出类型以保持向后兼容 | Re-export types for backward compatibility
+export type IPhysicsWorld = IPhysics2DWorld;
 
 /**
  * 物理系统接口

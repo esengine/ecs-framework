@@ -35,6 +35,7 @@ export class JsonLoader implements IAssetLoader<IJsonAsset> {
      * 释放已加载的资产
      */
     dispose(asset: IJsonAsset): void {
-        (asset as any).data = null;
+        // 清空 JSON 数据 | Clear JSON data
+        asset.data = null;
     }
 }

@@ -50,6 +50,7 @@ export class TextLoader implements IAssetLoader<ITextAsset> {
      * 释放已加载的资产
      */
     dispose(asset: ITextAsset): void {
-        (asset as any).content = '';
+        // 清空文本内容 | Clear text content
+        asset.content = '';
     }
 }

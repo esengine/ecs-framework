@@ -1,5 +1,5 @@
 import { EntitySystem, Matcher, Entity, Time, Core, ECSSystem, ServiceContainer } from '@esengine/ecs-framework';
-import type { AssetManager } from '@esengine/asset-system';
+import type { IAssetManager } from '@esengine/asset-system';
 import { BehaviorTreeRuntimeComponent } from './BehaviorTreeRuntimeComponent';
 import { BehaviorTreeAssetManager } from './BehaviorTreeAssetManager';
 import { NodeExecutorRegistry, NodeExecutionContext } from './NodeExecutor';
@@ -21,7 +21,7 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
     private _services: ServiceContainer | null = null;
 
     /** 引用 asset-system 的 AssetManager（由 BehaviorTreeRuntimeModule 设置） */
-    private _assetManager: AssetManager | null = null;
+    private _assetManager: IAssetManager | null = null;
 
     /** 已警告过的缺失资产，避免重复警告 */
     private _warnedMissingAssets: Set<string> = new Set();
@@ -37,7 +37,7 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
      * 设置 AssetManager 引用
      * Set AssetManager reference
      */
-    setAssetManager(assetManager: AssetManager | null): void {
+    setAssetManager(assetManager: IAssetManager | null): void {
         this._assetManager = assetManager;
     }
 

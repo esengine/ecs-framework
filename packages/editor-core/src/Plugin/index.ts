@@ -4,5 +4,5 @@
  */
 
 export * from './PluginDescriptor';
-export * from './IPluginLoader';
+export * from './EditorModule';
 export * from './PluginManager';

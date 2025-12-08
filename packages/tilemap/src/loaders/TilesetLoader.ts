@@ -94,6 +94,9 @@ export class TilesetLoader implements IAssetLoader<ITilesetAsset> {
      * 释放已加载的资产
      */
     dispose(asset: ITilesetAsset): void {
-        (asset as any).tiles = null;
+        // 清理瓦片元数据 | Clean up tile metadata
+        if (asset.tiles) {
+            asset.tiles.length = 0;
+        }
     }
 }

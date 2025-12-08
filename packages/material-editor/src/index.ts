@@ -13,7 +13,7 @@ import { Core } from '@esengine/ecs-framework';
 import type {
     IEditorModuleLoader,
     FileCreationTemplate,
-    IPlugin,
+    IEditorPlugin,
     ModuleManifest
 } from '@esengine/editor-core';
 import {
@@ -259,7 +259,7 @@ const manifest: ModuleManifest = {
 /**
  * Complete Material Plugin (runtime + editor)
  */
-export const MaterialPlugin: IPlugin = {
+export const MaterialPlugin: IEditorPlugin = {
     manifest,
     runtimeModule: new MaterialRuntimeModule(),
     editorModule: materialEditorModule

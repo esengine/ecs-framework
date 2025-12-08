@@ -31,6 +31,7 @@
   "license": "MIT",
   "devDependencies": {
     "@esengine/ecs-framework": "workspace:*",
+    "@esengine/engine-core": "workspace:*",
     "@esengine/build-config": "workspace:*",
     "rimraf": "^5.0.0",
     "tsup": "^8.0.0",

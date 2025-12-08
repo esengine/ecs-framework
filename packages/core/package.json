@@ -2,12 +2,15 @@
   "name": "@esengine/ecs-framework",
   "version": "2.3.2",
   "description": "用于Laya、Cocos Creator等JavaScript游戏引擎的高性能ECS框架",
-  "main": "bin/index.js",
-  "types": "bin/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "unpkg": "dist/index.umd.js",
   "exports": {
     ".": {
-      "types": "./bin/index.d.ts",
-      "import": "./bin/index.js",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
       "development": {
         "types": "./src/index.ts",
         "import": "./src/index.ts"
@@ -15,7 +18,7 @@
     }
   },
   "files": [
-    "bin/**/*"
+    "dist/**/*"
   ],
   "keywords": [
     "ecs",

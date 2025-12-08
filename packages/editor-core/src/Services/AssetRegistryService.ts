@@ -12,7 +12,7 @@
  * Uses .meta files to persistently store each asset's GUID.
  */
 
-import { Core, createLogger, PlatformDetector } from '@esengine/ecs-framework';
+import { Core, createLogger, PlatformDetector, type IService } from '@esengine/ecs-framework';
 import { MessageHub } from './MessageHub';
 import {
     AssetMetaManager,
@@ -219,8 +219,12 @@ class SimpleAssetDatabase {
 
 /**
  * Asset Registry Service
+ * 资产注册表服务
+ *
+ * 实现 IService 接口以便与 ServiceContainer 集成
+ * Implements IService interface for ServiceContainer integration
  */
-export class AssetRegistryService {
+export class AssetRegistryService implements IService {
     private _database: SimpleAssetDatabase;
     private _projectPath: string | null = null;
     private _manifest: AssetManifest | null = null;

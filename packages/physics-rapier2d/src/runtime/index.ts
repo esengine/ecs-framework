@@ -7,7 +7,7 @@
  */
 
 // Re-export runtime module and plugin with WASM
-export { PhysicsRuntimeModule, PhysicsPlugin, type PhysicsSystemContext } from '../PhysicsRuntimeModule';
+export { PhysicsRuntimeModule, PhysicsPlugin } from '../PhysicsRuntimeModule';
 
 // Re-export world and system (they have WASM type dependencies)
 export { Physics2DWorld } from '../world/Physics2DWorld';

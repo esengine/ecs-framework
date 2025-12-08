@@ -62,8 +62,23 @@ export interface Particle {
     /** 初始透明度 | Initial alpha */
     startAlpha: number;
 
+    // ============= 模块运行时状态 | Module Runtime State =============
+    // 这些字段由各模块在运行时设置 | These fields are set by modules at runtime
+
+    /** 初始速度X（VelocityOverLifetimeModule 使用）| Initial velocity X (used by VelocityOverLifetimeModule) */
+    startVx?: number;
+    /** 初始速度Y（VelocityOverLifetimeModule 使用）| Initial velocity Y (used by VelocityOverLifetimeModule) */
+    startVy?: number;
+
+    /** 动画帧索引（TextureSheetAnimationModule 使用）| Animation frame index (used by TextureSheetAnimationModule) */
+    _animFrame?: number;
+    /** 动画图块列数（TextureSheetAnimationModule 使用）| Animation tiles X (used by TextureSheetAnimationModule) */
+    _animTilesX?: number;
+    /** 动画图块行数（TextureSheetAnimationModule 使用）| Animation tiles Y (used by TextureSheetAnimationModule) */
+    _animTilesY?: number;
+
     /** 自定义数据槽 | Custom data slot */
-    userData?: any;
+    userData?: unknown;
 }
 
 /**

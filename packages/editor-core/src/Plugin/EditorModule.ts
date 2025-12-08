@@ -4,11 +4,13 @@
  *
  * 定义编辑器专用的模块接口和 UI 描述符类型。
  * Define editor-specific module interfaces and UI descriptor types.
+ *
+ * IEditorModuleLoader 扩展自 engine-core 的 IEditorModuleBase。
+ * IEditorModuleLoader extends IEditorModuleBase from engine-core.
  */
 
-import type { ServiceContainer } from '@esengine/ecs-framework';
-
 // 从 PluginDescriptor 重新导出（来源于 engine-core）
+// 统一从 engine-core 导入所有类型，避免直接依赖 plugin-types
 export type {
     LoadingPhase,
     SystemContext,
@@ -17,7 +19,8 @@ export type {
     ModuleManifest,
     ModuleCategory,
     ModulePlatform,
-    ModuleExports
+    ModuleExports,
+    IEditorModuleBase
 } from './PluginDescriptor';
 
 // ============================================================================
@@ -219,23 +222,23 @@ export interface FileCreationTemplate {
 // 编辑器模块接口 | Editor Module Interface
 // ============================================================================
 
+import type { IEditorModuleBase } from './PluginDescriptor';
+
 /**
  * 编辑器模块加载器
  * Editor module loader
+ *
+ * 扩展 IEditorModuleBase 并添加编辑器特定的 UI 描述符方法。
+ * Extends IEditorModuleBase and adds editor-specific UI descriptor methods.
+ *
+ * 生命周期方法继承自 IEditorModuleBase:
+ * Lifecycle methods inherited from IEditorModuleBase:
+ * - install(services) / uninstall()
+ * - onEditorReady() / onProjectOpen() / onProjectClose()
+ * - onSceneLoaded() / onSceneSaving()
+ * - setLocale()
  */
-export interface IEditorModuleLoader {
-    /**
-     * 安装编辑器模块
-     * Install editor module
-     */
-    install(services: ServiceContainer): Promise<void>;
-
-    /**
-     * 卸载编辑器模块
-     * Uninstall editor module
-     */
-    uninstall?(): Promise<void>;
-
+export interface IEditorModuleLoader extends IEditorModuleBase {
     /**
      * 返回面板描述列表
      * Get panel descriptors
@@ -289,44 +292,38 @@ export interface IEditorModuleLoader {
      * Get file creation templates
      */
     getFileCreationTemplates?(): FileCreationTemplate[];
-
-    // ===== 生命周期钩子 | Lifecycle hooks =====
-
-    /** 编辑器就绪 | Editor ready */
-    onEditorReady?(): void | Promise<void>;
-
-    /** 项目打开 | Project open */
-    onProjectOpen?(projectPath: string): void | Promise<void>;
-
-    /** 项目关闭 | Project close */
-    onProjectClose?(): void | Promise<void>;
-
-    /** 场景加载 | Scene loaded */
-    onSceneLoaded?(scenePath: string): void;
-
-    /** 场景保存前 | Before scene save */
-    onSceneSaving?(scenePath: string): boolean | void;
-
-    /** 设置语言 | Set locale */
-    setLocale?(locale: string): void;
 }
 
 // ============================================================================
-// 类型别名（向后兼容）| Type Aliases (backward compatibility)
+// 编辑器插件类型 | Editor Plugin Type
 // ============================================================================
 
-/**
- * IPluginLoader 类型别名
- *
- * @deprecated 使用 IPlugin 代替。IPluginLoader 只是 IPlugin 的别名。
- * @deprecated Use IPlugin instead. IPluginLoader is just an alias for IPlugin.
- */
-export type { IPlugin as IPluginLoader } from './PluginDescriptor';
+import type { IPlugin } from './PluginDescriptor';
 
 /**
- * IRuntimeModuleLoader 类型别名
+ * 编辑器插件类型
+ * Editor plugin type
  *
- * @deprecated 使用 IRuntimeModule 代替。
- * @deprecated Use IRuntimeModule instead.
+ * 这是开发编辑器插件时应使用的类型。
+ * 它是 IPlugin 的特化版本，editorModule 类型为 IEditorModuleLoader。
+ *
+ * This is the type to use when developing editor plugins.
+ * It's a specialized version of IPlugin with editorModule typed as IEditorModuleLoader.
+ *
+ * @example
+ * ```typescript
+ * import { IEditorPlugin, IEditorModuleLoader } from '@esengine/editor-core';
+ *
+ * class MyEditorModule implements IEditorModuleLoader {
+ *     async install(services) { ... }
+ *     getPanels() { return [...]; }
+ * }
+ *
+ * export const MyPlugin: IEditorPlugin = {
+ *     manifest,
+ *     runtimeModule: new MyRuntimeModule(),
+ *     editorModule: new MyEditorModule()
+ * };
+ * ```
  */
-export type { IRuntimeModule as IRuntimeModuleLoader } from './PluginDescriptor';
+export type IEditorPlugin = IPlugin<IEditorModuleLoader>;

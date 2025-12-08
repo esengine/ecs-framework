@@ -4,8 +4,8 @@
  */
 
 import { Core, type ServiceContainer } from '@esengine/ecs-framework';
-import type { IPlugin, ModuleManifest } from '@esengine/engine-core';
-import type { IEditorModuleLoader, PanelDescriptor, FileActionHandler, FileCreationTemplate } from '@esengine/editor-core';
+import type { ModuleManifest } from '@esengine/engine-core';
+import type { IEditorPlugin, IEditorModuleLoader, PanelDescriptor, FileActionHandler, FileCreationTemplate } from '@esengine/editor-core';
 import { MessageHub, PanelPosition } from '@esengine/editor-core';
 
 // Re-export from @esengine/blueprint for runtime module
@@ -118,7 +118,7 @@ const manifest: ModuleManifest = {
  * Complete Blueprint plugin with both runtime and editor modules
  * 完整的蓝图插件，包含运行时和编辑器模块
  */
-export const BlueprintPlugin: IPlugin = {
+export const BlueprintPlugin: IEditorPlugin = {
     manifest,
     editorModule: new BlueprintEditorModuleImpl()
 };

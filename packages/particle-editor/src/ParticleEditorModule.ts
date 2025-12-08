@@ -14,7 +14,7 @@ import type {
     ComponentInspectorProviderDef,
     FileActionHandler,
     FileCreationTemplate,
-    IPlugin,
+    IEditorPlugin,
     ModuleManifest
 } from '@esengine/editor-core';
 import {
@@ -277,7 +277,7 @@ const manifest: ModuleManifest = {
  * 完整的粒子插件（运行时 + 编辑器）
  * Complete Particle Plugin (runtime + editor)
  */
-export const ParticlePlugin: IPlugin = {
+export const ParticlePlugin: IEditorPlugin = {
     manifest,
     runtimeModule: new ParticleRuntimeModule(),
     editorModule: particleEditorModule

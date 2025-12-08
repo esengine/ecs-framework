@@ -284,11 +284,11 @@ export class SpriteComponent extends Component {
     async loadTextureAsync(): Promise<void> {
         if (this._assetReference) {
             try {
-                const textureAsset = await this._assetReference.loadAsync();
-                // 如果纹理资产有 textureId 属性，使用它
-                // If texture asset has textureId property, use it
-                if (textureAsset && typeof textureAsset === 'object' && 'textureId' in textureAsset) {
-                    this.textureId = (textureAsset as any).textureId;
+                const result = await this._assetReference.loadAsync();
+                // 检查返回值是否包含 textureId 属性（ITextureAsset 类型）
+                // Check if result has textureId property (ITextureAsset type)
+                if (result && typeof result === 'object' && 'textureId' in result) {
+                    this.textureId = (result as { textureId: number }).textureId;
                 }
             } catch (error) {
                 console.error('Failed to load texture:', error);

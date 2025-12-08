@@ -10,6 +10,9 @@
  * For editor-side functionality (meta files, packing), use @esengine/asset-system-editor
  */
 
+// Service tokens (谁定义接口，谁导出 Token)
+export { AssetManagerToken, type IAssetManager } from './tokens';
+
 // Types
 export * from './types/AssetTypes';
 

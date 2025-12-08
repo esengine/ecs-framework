@@ -7,11 +7,11 @@
  */
 
 import { GizmoRegistry, EntityStoreService, MessageHub, SceneManagerService, ProjectService, PluginManager, IPluginManager, AssetRegistryService, type SystemContext } from '@esengine/editor-core';
-import { Core, Scene, Entity, SceneSerializer, ProfilerSDK } from '@esengine/ecs-framework';
-import { CameraConfig } from '@esengine/ecs-engine-bindgen';
-import { TransformComponent } from '@esengine/engine-core';
-import { SpriteComponent, SpriteAnimatorComponent } from '@esengine/sprite';
-import { invalidateUIRenderCaches } from '@esengine/ui';
+import { Core, Scene, Entity, SceneSerializer, ProfilerSDK, createLogger } from '@esengine/ecs-framework';
+import { CameraConfig, EngineBridgeToken, RenderSystemToken, EngineIntegrationToken } from '@esengine/ecs-engine-bindgen';
+import { TransformComponent, PluginServiceRegistry, TransformTypeToken } from '@esengine/engine-core';
+import { SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystemToken } from '@esengine/sprite';
+import { invalidateUIRenderCaches, UIRenderProviderToken, UIInputSystemToken } from '@esengine/ui';
 import * as esEngine from '@esengine/engine';
 import {
     AssetManager,
@@ -21,7 +21,8 @@ import {
     globalPathResolver,
     SceneResourceManager,
     assetManager as globalAssetManager,
-    AssetType
+    AssetType,
+    AssetManagerToken
 } from '@esengine/asset-system';
 import {
     GameRuntime,
@@ -29,11 +30,15 @@ import {
     EditorPlatformAdapter,
     type GameRuntimeConfig
 } from '@esengine/runtime-core';
+import { BehaviorTreeSystemToken } from '@esengine/behavior-tree';
+import { Physics2DSystemToken } from '@esengine/physics-rapier2d';
 import { getMaterialManager } from '@esengine/material-system';
 import { resetEngineState } from '../hooks/useEngine';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { IdGenerator } from '../utils/idGenerator';
 import { TauriAssetReader } from './TauriAssetReader';
+
+const logger = createLogger('EngineService');
 
 /**
  * Engine service singleton for editor integration.
@@ -198,15 +203,19 @@ export class EngineService {
         // 初始化所有插件的运行时模块
         await pluginManager.initializeRuntime(Core.services);
 
+        // 创建服务注册表并注册核心服务
+        // Create service registry and register core services
+        const services = new PluginServiceRegistry();
+        services.register(EngineBridgeToken, this._runtime.bridge);
+        services.register(RenderSystemToken, this._runtime.renderSystem);
+        services.register(AssetManagerToken, this._assetManager);
+        services.register(EngineIntegrationToken, this._engineIntegration);
+        services.register(TransformTypeToken, TransformComponent);
+
         // 创建系统上下文
         const context: SystemContext = {
-            services: Core.services,
-            engineBridge: this._runtime.bridge,
-            renderSystem: this._runtime.renderSystem,
-            assetManager: this._assetManager,
-            engineIntegration: this._engineIntegration,
             isEditor: true,
-            transformType: TransformComponent
+            services
         };
 
         // 让插件为场景创建系统
@@ -216,29 +225,44 @@ export class EngineService {
         // 插件注册完加载器后，重新同步资产（确保类型正确）
         await this._syncAssetRegistryToManager();
 
-        // 同步系统引用到 GameRuntime 的 systemContext（用于 start/stop 时启用/禁用系统）
-        this._runtime.updateSystemContext({
-            animatorSystem: context.animatorSystem,
-            behaviorTreeSystem: context.behaviorTreeSystem,
-            physicsSystem: context.physicsSystem,
-            uiInputSystem: context.uiInputSystem,
-            uiRenderProvider: context.uiRenderProvider
-        });
+        // 同步服务注册表到 GameRuntime（用于 start/stop 时启用/禁用系统）
+        // Sync service registry to GameRuntime (for enabling/disabling systems on start/stop)
+        const runtimeServices = this._runtime.getServiceRegistry();
+        if (runtimeServices) {
+            // 复制所有已注册的服务到 runtime 的服务注册表
+            // 这样 runtime 的 start/stop 方法可以正确访问这些服务
+            const animatorSystem = services.get(SpriteAnimatorSystemToken);
+            const behaviorTreeSystem = services.get(BehaviorTreeSystemToken);
+            const physicsSystem = services.get(Physics2DSystemToken);
+            const uiInputSystem = services.get(UIInputSystemToken);
+            const uiRenderProvider = services.get(UIRenderProviderToken);
+
+            if (animatorSystem) runtimeServices.register(SpriteAnimatorSystemToken, animatorSystem);
+            if (behaviorTreeSystem) runtimeServices.register(BehaviorTreeSystemToken, behaviorTreeSystem);
+            if (physicsSystem) runtimeServices.register(Physics2DSystemToken, physicsSystem);
+            if (uiInputSystem) runtimeServices.register(UIInputSystemToken, uiInputSystem);
+            if (uiRenderProvider) runtimeServices.register(UIRenderProviderToken, uiRenderProvider);
+        }
 
         // 设置 UI 渲染数据提供者
-        if (context.uiRenderProvider && this._runtime.renderSystem) {
-            this._runtime.renderSystem.setUIRenderDataProvider(context.uiRenderProvider);
+        const uiRenderProvider = services.get(UIRenderProviderToken);
+        if (uiRenderProvider && this._runtime.renderSystem) {
+            this._runtime.renderSystem.setUIRenderDataProvider(uiRenderProvider);
         }
 
         // 在编辑器模式下，禁用游戏逻辑系统
-        if (context.animatorSystem) {
-            context.animatorSystem.enabled = false;
+        const animatorSystem = services.get(SpriteAnimatorSystemToken);
+        const behaviorTreeSystem = services.get(BehaviorTreeSystemToken);
+        const physicsSystem = services.get(Physics2DSystemToken);
+
+        if (animatorSystem) {
+            animatorSystem.enabled = false;
         }
-        if (context.behaviorTreeSystem) {
-            context.behaviorTreeSystem.enabled = false;
+        if (behaviorTreeSystem) {
+            behaviorTreeSystem.enabled = false;
         }
-        if (context.physicsSystem) {
-            context.physicsSystem.enabled = false;
+        if (physicsSystem) {
+            physicsSystem.enabled = false;
         }
 
         this._modulesInitialized = true;
@@ -253,9 +277,14 @@ export class EngineService {
             pluginManager.clearSceneSystems();
         }
 
-        const ctx = this._runtime?.systemContext;
-        if (ctx?.uiInputSystem) {
-            ctx.uiInputSystem.unbind?.();
+        // 使用服务注册表获取 UI 输入系统
+        // Use service registry to get UI input system
+        const runtimeServices = this._runtime?.getServiceRegistry();
+        if (runtimeServices) {
+            const uiInputSystem = runtimeServices.get(UIInputSystemToken);
+            if (uiInputSystem && uiInputSystem.unbind) {
+                uiInputSystem.unbind();
+            }
         }
 
         // 清理 viewport | Clear viewport
@@ -475,7 +504,7 @@ export class EngineService {
         const allAssets = assetRegistry.getAllAssets();
         const metaManager = assetRegistry.metaManager;
 
-        console.log(`[EngineService] Syncing ${allAssets.length} assets from AssetRegistry to AssetManager`);
+        logger.debug(`Syncing ${allAssets.length} assets from AssetRegistry to AssetManager`);
 
         // Use loaderFactory to determine asset type from path
         // This allows plugins to register their own loaders and types
@@ -533,7 +562,7 @@ export class EngineService {
             });
         }
 
-        console.log(`[EngineService] Asset sync complete`);
+        logger.debug('Asset sync complete');
     }
 
     /**
@@ -694,10 +723,18 @@ export class EngineService {
      * Enable animation preview in editor mode.
      */
     enableAnimationPreview(): void {
-        const ctx = this._runtime?.systemContext;
-        if (ctx?.animatorSystem && !this._running) {
-            ctx.animatorSystem.clearEntityCache?.();
-            ctx.animatorSystem.enabled = true;
+        if (this._running) return;
+
+        const runtimeServices = this._runtime?.getServiceRegistry();
+        if (runtimeServices) {
+            const animatorSystem = runtimeServices.get(SpriteAnimatorSystemToken);
+            if (animatorSystem) {
+                // 如果有 clearEntityCache 方法则调用
+                // Call clearEntityCache if available
+                const system = animatorSystem as { clearEntityCache?: () => void; enabled: boolean };
+                system.clearEntityCache?.();
+                system.enabled = true;
+            }
         }
     }
 
@@ -705,9 +742,14 @@ export class EngineService {
      * Disable animation preview in editor mode.
      */
     disableAnimationPreview(): void {
-        const ctx = this._runtime?.systemContext;
-        if (ctx?.animatorSystem && !this._running) {
-            ctx.animatorSystem.enabled = false;
+        if (this._running) return;
+
+        const runtimeServices = this._runtime?.getServiceRegistry();
+        if (runtimeServices) {
+            const animatorSystem = runtimeServices.get(SpriteAnimatorSystemToken);
+            if (animatorSystem) {
+                animatorSystem.enabled = false;
+            }
         }
     }
 
@@ -715,7 +757,12 @@ export class EngineService {
      * Check if animation preview is enabled.
      */
     isAnimationPreviewEnabled(): boolean {
-        return this._runtime?.systemContext?.animatorSystem?.enabled ?? false;
+        const runtimeServices = this._runtime?.getServiceRegistry();
+        if (runtimeServices) {
+            const animatorSystem = runtimeServices.get(SpriteAnimatorSystemToken);
+            return animatorSystem?.enabled ?? false;
+        }
+        return false;
     }
 
     /**

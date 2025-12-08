@@ -1,7 +1,7 @@
 import type { IScene, ServiceContainer } from '@esengine/ecs-framework';
-import { ComponentRegistry, Core } from '@esengine/ecs-framework';
+import { ComponentRegistry } from '@esengine/ecs-framework';
 import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
-import type { AssetManager } from '@esengine/asset-system';
+import { AssetManagerToken } from '@esengine/asset-system';
 
 import { BehaviorTreeRuntimeComponent } from './execution/BehaviorTreeRuntimeComponent';
 import { BehaviorTreeExecutionSystem } from './execution/BehaviorTreeExecutionSystem';
@@ -9,11 +9,10 @@ import { BehaviorTreeAssetManager } from './execution/BehaviorTreeAssetManager';
 import { GlobalBlackboardService } from './Services/GlobalBlackboardService';
 import { BehaviorTreeLoader } from './loaders/BehaviorTreeLoader';
 import { BehaviorTreeAssetType } from './index';
+import { BehaviorTreeSystemToken } from './tokens';
 
-export interface BehaviorTreeSystemContext extends SystemContext {
-    behaviorTreeSystem?: BehaviorTreeExecutionSystem;
-    assetManager?: AssetManager;
-}
+// 重新导出 tokens | Re-export tokens
+export { BehaviorTreeSystemToken } from './tokens';
 
 class BehaviorTreeRuntimeModule implements IRuntimeModule {
     private _loaderRegistered = false;
@@ -32,28 +31,31 @@ class BehaviorTreeRuntimeModule implements IRuntimeModule {
     }
 
     createSystems(scene: IScene, context: SystemContext): void {
-        const btContext = context as BehaviorTreeSystemContext;
+        // 从服务注册表获取依赖 | Get dependencies from service registry
+        const assetManager = context.services.get(AssetManagerToken);
 
-        if (!this._loaderRegistered && btContext.assetManager) {
-            btContext.assetManager.registerLoader(BehaviorTreeAssetType, new BehaviorTreeLoader());
+        if (!this._loaderRegistered && assetManager) {
+            assetManager.registerLoader(BehaviorTreeAssetType, new BehaviorTreeLoader());
             this._loaderRegistered = true;
         }
 
-        // 使用 context 中的 services，确保与调用方使用同一个 ServiceContainer 实例
-        // Use services from context to ensure same ServiceContainer instance as caller
-        const services = (btContext as any).services || Core.services;
-        const behaviorTreeSystem = new BehaviorTreeExecutionSystem(services);
+        // 使用 context.services 中的 ECS 服务容器
+        // Use ECS service container from context.services
+        const ecsServices = (context as { ecsServices?: ServiceContainer }).ecsServices;
+        const behaviorTreeSystem = new BehaviorTreeExecutionSystem(ecsServices);
 
-        if (btContext.assetManager) {
-            behaviorTreeSystem.setAssetManager(btContext.assetManager);
+        if (assetManager) {
+            behaviorTreeSystem.setAssetManager(assetManager);
         }
 
-        if (btContext.isEditor) {
+        if (context.isEditor) {
             behaviorTreeSystem.enabled = false;
         }
 
         scene.addSystem(behaviorTreeSystem);
-        btContext.behaviorTreeSystem = behaviorTreeSystem;
+
+        // 注册服务到服务注册表 | Register service to service registry
+        context.services.register(BehaviorTreeSystemToken, behaviorTreeSystem);
     }
 }
 

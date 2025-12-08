@@ -87,3 +87,28 @@ export {
     type TouchInfo,
     type TouchEvent
 } from '@esengine/engine-core';
+
+// Re-export Plugin Service Registry from engine-core
+export {
+    PluginServiceRegistry,
+    createServiceToken,
+    TransformTypeToken,
+    type ServiceToken
+} from '@esengine/engine-core';
+
+// Re-export service tokens from their respective modules
+export {
+    EngineBridgeToken,
+    RenderSystemToken,
+    EngineIntegrationToken,
+    type IEngineBridge,
+    type IRenderSystem,
+    type IRenderDataProvider,
+    type IEngineIntegration
+} from '@esengine/ecs-engine-bindgen';
+
+export {
+    AssetManagerToken,
+    type IAssetManager,
+    type IAssetLoadResult
+} from '@esengine/asset-system';

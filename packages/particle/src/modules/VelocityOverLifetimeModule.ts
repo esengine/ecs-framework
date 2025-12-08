@@ -78,13 +78,13 @@ export class VelocityOverLifetimeModule implements IParticleModule {
 
         // 应用速度乘数到当前速度 | Apply multiplier to current velocity
         // 我们需要存储初始速度来正确应用曲线 | We need to store initial velocity to properly apply curve
-        if (!('startVx' in p)) {
-            (p as any).startVx = p.vx;
-            (p as any).startVy = p.vy;
+        if (p.startVx === undefined) {
+            p.startVx = p.vx;
+            p.startVy = p.vy;
         }
 
-        const startVx = (p as any).startVx;
-        const startVy = (p as any).startVy;
+        const startVx = p.startVx!;
+        const startVy = p.startVy!;
 
         // 应用曲线乘数 | Apply curve multiplier
         p.vx = startVx * multiplier;
@@ -96,8 +96,8 @@ export class VelocityOverLifetimeModule implements IParticleModule {
             p.vx *= dragFactor;
             p.vy *= dragFactor;
             // 更新存储的起始速度以反映阻力 | Update stored start velocity to reflect drag
-            (p as any).startVx *= dragFactor;
-            (p as any).startVy *= dragFactor;
+            p.startVx = startVx * dragFactor;
+            p.startVy = startVy * dragFactor;
         }
 
         // 附加速度 | Additional velocity

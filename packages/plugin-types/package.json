@@ -1,0 +1,47 @@
+{
+    "name": "@esengine/plugin-types",
+    "version": "1.0.0",
+    "description": "Plugin system type definitions for ES Engine",
+    "type": "module",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "build:watch": "tsup --watch",
+        "clean": "rimraf dist",
+        "type-check": "tsc --noEmit"
+    },
+    "keywords": [
+        "ecs",
+        "plugin",
+        "types",
+        "typescript"
+    ],
+    "author": "yhh",
+    "license": "MIT",
+    "devDependencies": {
+        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/build-config": "workspace:*",
+        "rimraf": "^5.0.0",
+        "tsup": "^8.0.0",
+        "typescript": "^5.8.3"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/esengine/ecs-framework.git",
+        "directory": "packages/plugin-types"
+    }
+}

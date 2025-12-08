@@ -4,7 +4,7 @@
  */
 
 import { PluginManager, LocaleService, MessageHub } from '@esengine/editor-core';
-import type { IPluginLoader, ModuleManifest } from '@esengine/editor-core';
+import type { IPlugin, ModuleManifest } from '@esengine/editor-core';
 import { Core } from '@esengine/ecs-framework';
 import { TauriAPI } from '../api/tauri';
 import { PluginSDKRegistry } from './PluginSDKRegistry';
@@ -158,7 +158,7 @@ export class PluginLoader {
         code: string,
         pluginName: string,
         _pluginDirName: string
-    ): Promise<IPluginLoader | null> {
+    ): Promise<IPlugin | null> {
         const pluginKey = this.sanitizePluginKey(pluginName);
 
         try {
@@ -257,9 +257,9 @@ export class PluginLoader {
     }
 
     /**
-     * 查找模块中的插件加载器
+     * 查找模块中的插件
      */
-    private findPluginLoader(module: any): IPluginLoader | null {
+    private findPluginLoader(module: any): IPlugin | null {
         // 优先检查 default 导出
         if (module.default && this.isPluginLoader(module.default)) {
             return module.default;
@@ -277,14 +277,14 @@ export class PluginLoader {
     }
 
     /**
-     * 验证对象是否为有效的插件加载器
+     * 验证对象是否为有效的插件
      */
-    private isPluginLoader(obj: any): obj is IPluginLoader {
+    private isPluginLoader(obj: any): obj is IPlugin {
         if (!obj || typeof obj !== 'object') {
             return false;
         }
 
-        // 新的 IPluginLoader 接口检查
+        // 新的 IPlugin 接口检查
         if (obj.manifest && this.isModuleManifest(obj.manifest)) {
             return true;
         }
@@ -307,13 +307,15 @@ export class PluginLoader {
     /**
      * 同步插件语言设置
      */
-    private syncPluginLocale(plugin: IPluginLoader, pluginName: string): void {
+    private syncPluginLocale(plugin: IPlugin, pluginName: string): void {
         try {
             const localeService = Core.services.resolve(LocaleService);
             const currentLocale = localeService.getCurrentLocale();
 
-            if (plugin.editorModule?.setLocale) {
-                plugin.editorModule.setLocale(currentLocale);
+            // 类型安全地检查 editorModule 是否有 setLocale 方法
+            const editorModule = plugin.editorModule as { setLocale?: (locale: string) => void } | undefined;
+            if (editorModule?.setLocale) {
+                editorModule.setLocale(currentLocale);
             }
 
             // 通知 UI 刷新
