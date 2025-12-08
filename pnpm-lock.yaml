@@ -1067,6 +1067,9 @@ importers:
       '@esengine/engine-core':
         specifier: workspace:*
         version: link:../engine-core
+      '@esengine/physics-rapier2d':
+        specifier: workspace:*
+        version: link:../physics-rapier2d
       rimraf:
         specifier: ^5.0.5
         version: 5.0.10
