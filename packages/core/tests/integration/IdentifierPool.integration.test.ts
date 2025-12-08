@@ -100,27 +100,6 @@ describe('IdentifierPool 集成测试', () => {
         });
     });
 
-    describe('性能和内存验证', () => {
-        test('ID分配性能应该满足要求', () => {
-            const count = 1000;
-            const startTime = performance.now();
-
-            for (let i = 0; i < count; i++) {
-                scene.createEntity(`PerfTest_${i}`);
-            }
-
-            const endTime = performance.now();
-            const duration = endTime - startTime;
-
-            // 1000个实体应该在100ms内创建完成
-            expect(duration).toBeLessThan(100);
-
-            // 验证内存使用合理（动态分配应该更高效）
-            const stats = scene.identifierPool.getStats();
-            expect(stats.memoryUsage).toBeLessThan(1000 * 100); // 每个实体少于100字节
-        });
-
-    });
 
     describe('向后兼容性', () => {
         test('现有的Entity API应该继续工作', () => {

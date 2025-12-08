@@ -1,8 +1,31 @@
-# ESEngine
+<h1 align="center">
+  <img src="https://raw.githubusercontent.com/esengine/esengine/master/docs/public/logo.svg" alt="ESEngine" width="180">
+  <br>
+  ESEngine
+</h1>
 
-**English** | [中文](./README_CN.md)
+<p align="center">
+  <strong>Cross-platform 2D Game Engine</strong>
+</p>
 
-**[Documentation](https://esengine.github.io/ecs-framework/) | [API Reference](https://esengine.github.io/ecs-framework/api/) | [Examples](./examples/)**
+<p align="center">
+  <a href="https://www.npmjs.com/package/@esengine/ecs-framework"><img src="https://img.shields.io/npm/v/@esengine/ecs-framework?style=flat-square&color=blue" alt="npm"></a>
+  <a href="https://github.com/esengine/esengine/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"></a>
+  <a href="https://github.com/esengine/esengine/stargazers"><img src="https://img.shields.io/github/stars/esengine/esengine?style=flat-square" alt="stars"></a>
+</p>
+
+<p align="center">
+  <b>English</b> | <a href="./README_CN.md">中文</a>
+</p>
+
+<p align="center">
+  <a href="https://esengine.github.io/ecs-framework/">Documentation</a> ·
+  <a href="https://esengine.github.io/ecs-framework/api/">API Reference</a> ·
+  <a href="https://github.com/esengine/esengine/releases">Download Editor</a> ·
+  <a href="./examples/">Examples</a>
+</p>
+
+---
 
 ESEngine is a cross-platform 2D game engine for creating games from a unified interface. It provides a comprehensive set of common tools so that developers can focus on making games without having to reinvent the wheel.
 
@@ -190,7 +213,7 @@ ESEngine Editor is a cross-platform desktop application built with Tauri and Rea
 ```bash
 # Clone repository
 git clone https://github.com/esengine/esengine.git
-cd ecs-framework
+cd esengine
 
 # Install dependencies
 pnpm install
@@ -212,7 +235,7 @@ pnpm tauri:dev
 ### Project Structure
 
 ```
-ecs-framework/
+esengine/
 ├── packages/           Engine packages (runtime, editor, platform)
 ├── docs/               Documentation source
 ├── examples/           Example projects

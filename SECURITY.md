@@ -1,4 +1,62 @@
+# Security Policy / 安全政策
+
+**English** | [中文](#安全政策-1)
+
+## Supported Versions
+
+We provide security updates for the following versions:
+
+| Version | Supported          |
+| ------- | ------------------ |
+| 2.x.x   | :white_check_mark: |
+| 1.x.x   | :x:                |
+
+## Reporting a Vulnerability
+
+If you discover a security vulnerability, please report it through the following channels:
+
+### Reporting Channels
+
+- **GitHub Security Advisories**: [Report a vulnerability](https://github.com/esengine/esengine/security/advisories/new) (Recommended)
+- **Email**: security@esengine.dev
+
+### Reporting Guidelines
+
+1. **Do NOT** report security vulnerabilities in public issues
+2. Provide a detailed description of the vulnerability, including:
+   - Affected versions
+   - Steps to reproduce
+   - Potential impact
+   - Suggested fix (if available)
+
+### Response Timeline
+
+- **Acknowledgment**: Within 72 hours
+- **Initial Assessment**: Within 1 week
+- **Fix Release**: Typically within 2-4 weeks, depending on severity
+
+### Process
+
+1. We will confirm the existence and severity of the vulnerability
+2. Develop and test a fix
+3. Release a security update
+4. Publicly disclose the vulnerability details after the fix is released
+
+## Security Best Practices
+
+When using ESEngine, please follow these security recommendations:
+
+- Always use the latest stable version
+- Regularly update dependencies
+- Disable debug mode in production
+- Validate all external input data
+- Do not store sensitive information on the client side
+
+---
+
 # 安全政策
+
+[English](#security-policy--安全政策) | **中文**
 
 ## 支持的版本
 
@@ -6,8 +64,8 @@
 
 | 版本    | 支持状态           |
 | ------- | ------------------ |
-| 2.0.x   | :white_check_mark: |
-| 1.0.x   | :x:                |
+| 2.x.x   | :white_check_mark: |
+| 1.x.x   | :x:                |
 
 ## 报告漏洞
 
@@ -15,10 +73,10 @@
 
 ### 报告渠道
 
-- **邮箱**: [安全邮箱将在实际部署时提供]
-- **GitHub**: 创建私有安全报告（推荐）
+- **GitHub 安全公告**: [报告漏洞](https://github.com/esengine/esengine/security/advisories/new)（推荐）
+- **邮箱**: security@esengine.dev
 
-### 报告流程
+### 报告指南
 
 1. **不要**在公开的 issue 中报告安全漏洞
 2. 提供详细的漏洞描述，包括：
@@ -40,9 +98,9 @@
 3. 发布安全更新
 4. 在修复发布后，会在相关渠道公布漏洞详情
 
-### 安全最佳实践
+## 安全最佳实践
 
-使用 ECS Framework 时，请遵循以下安全建议：
+使用 ESEngine 时，请遵循以下安全建议：
 
 - 始终使用最新的稳定版本
 - 定期更新依赖项
@@ -50,4 +108,6 @@
 - 验证所有外部输入数据
 - 不要在客户端存储敏感信息
 
-感谢您帮助保持 ECS Framework 的安全性！
+感谢您帮助保持 ESEngine 的安全性！
+
+Thank you for helping keep ESEngine secure!

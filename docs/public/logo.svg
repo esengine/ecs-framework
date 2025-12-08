@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Dark gradient background -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d2d2d"/>
+      <stop offset="100%" style="stop-color:#1a1a1a"/>
+    </linearGradient>
+
+    <!-- Clean white text -->
+    <linearGradient id="whiteGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#e8e8e8"/>
+    </linearGradient>
+
+    <!-- Subtle inner shadow -->
+    <filter id="innerShadow">
+      <feOffset dx="0" dy="2"/>
+      <feGaussianBlur stdDeviation="1" result="offset-blur"/>
+      <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
+      <feFlood flood-color="black" flood-opacity="0.2" result="color"/>
+      <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
+      <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" fill="url(#bgGrad)"/>
+
+  <!-- Subtle border -->
+  <rect x="1" y="1" width="510" height="510" fill="none" stroke="#3d3d3d" stroke-width="2"/>
+
+  <!-- ES Text -->
+  <g filter="url(#innerShadow)">
+    <!-- E -->
+    <polygon points="72,120 72,392 240,392 240,340 140,340 140,282 220,282 220,230 140,230 140,172 240,172 240,120"
+             fill="url(#whiteGrad)"/>
+
+    <!-- S -->
+    <path d="M 280 172 Q 280 120 340 120 L 420 120 Q 450 120 450 160 L 450 186 L 398 186 L 398 168 Q 398 158 384 158 L 350 158 Q 320 158 320 188 Q 320 218 350 218 L 400 218 Q 450 218 450 274 L 450 332 Q 450 392 390 392 L 310 392 Q 270 392 270 340 L 270 314 L 322 314 L 322 340 Q 322 354 340 354 L 384 354 Q 404 354 404 324 L 404 290 Q 404 260 380 260 L 330 260 Q 280 260 280 208 Z"
+          fill="url(#whiteGrad)"/>
+  </g>
+
+  <!-- Accent line -->
+  <rect x="72" y="424" width="368" height="4" fill="#ffffff" opacity="0.6"/>
+</svg>

@@ -1,8 +1,31 @@
-# ESEngine
+<h1 align="center">
+  <img src="https://raw.githubusercontent.com/esengine/esengine/master/docs/public/logo.svg" alt="ESEngine" width="180">
+  <br>
+  ESEngine
+</h1>
 
-[English](./README.md) | **中文**
+<p align="center">
+  <strong>跨平台 2D 游戏引擎</strong>
+</p>
 
-**[文档](https://esengine.github.io/ecs-framework/) | [API 参考](https://esengine.github.io/ecs-framework/api/) | [示例](./examples/)**
+<p align="center">
+  <a href="https://www.npmjs.com/package/@esengine/ecs-framework"><img src="https://img.shields.io/npm/v/@esengine/ecs-framework?style=flat-square&color=blue" alt="npm"></a>
+  <a href="https://github.com/esengine/esengine/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"></a>
+  <a href="https://github.com/esengine/esengine/stargazers"><img src="https://img.shields.io/github/stars/esengine/esengine?style=flat-square" alt="stars"></a>
+</p>
+
+<p align="center">
+  <a href="./README.md">English</a> | <b>中文</b>
+</p>
+
+<p align="center">
+  <a href="https://esengine.github.io/ecs-framework/">文档</a> ·
+  <a href="https://esengine.github.io/ecs-framework/api/">API 参考</a> ·
+  <a href="https://github.com/esengine/esengine/releases">下载编辑器</a> ·
+  <a href="./examples/">示例</a>
+</p>
+
+---
 
 ESEngine 是一个跨平台 2D 游戏引擎，提供统一的开发界面。它包含完整的常用工具集，让开发者专注于游戏创作本身。
 
@@ -190,7 +213,7 @@ ESEngine 编辑器是基于 Tauri 和 React 构建的跨平台桌面应用。
 ```bash
 # 克隆仓库
 git clone https://github.com/esengine/esengine.git
-cd ecs-framework
+cd esengine
 
 # 安装依赖
 pnpm install
@@ -212,7 +235,7 @@ pnpm tauri:dev
 ### 项目结构
 
 ```
-ecs-framework/
+esengine/
 ├── packages/           引擎包（运行时、编辑器、平台）
 ├── docs/               文档源码
 ├── examples/           示例项目
