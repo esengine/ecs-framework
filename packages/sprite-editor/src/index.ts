@@ -10,7 +10,7 @@ import { Core } from '@esengine/ecs-framework';
 import type {
     IEditorModuleLoader,
     EntityCreationTemplate,
-    IPlugin,
+    IEditorPlugin,
     ModuleManifest
 } from '@esengine/editor-core';
 import {
@@ -185,7 +185,7 @@ const manifest: ModuleManifest = {
  * 完整的 Sprite 插件（运行时 + 编辑器）
  * Complete Sprite Plugin (runtime + editor)
  */
-export const SpritePlugin: IPlugin = {
+export const SpritePlugin: IEditorPlugin = {
     manifest,
     runtimeModule: new SpriteRuntimeModule(),
     editorModule: spriteEditorModule

@@ -2,13 +2,41 @@
  * 插件系统核心类型定义
  * Plugin system core type definitions
  *
- * 这是插件类型的唯一定义源，editor-core 重新导出并扩展这些类型。
- * This is the single source of truth for plugin types. editor-core re-exports and extends them.
+ * 这是运行时插件类型的唯一定义源。
+ * 编辑器类型在 editor-core 中扩展这些类型。
+ *
+ * This is the single source of truth for runtime plugin types.
+ * Editor types extend these in editor-core.
+ *
+ * @see docs/architecture/plugin-system-design.md
  */
 
 import type { ComponentRegistry as ComponentRegistryType, IScene, ServiceContainer } from '@esengine/ecs-framework';
+import {
+    PluginServiceRegistry,
+    createServiceToken,
+    type ServiceToken
+} from '@esengine/plugin-types';
 import { TransformComponent } from './TransformComponent';
 import type { ModuleManifest } from './ModuleManifest';
+
+// 重新导出服务令牌系统 | Re-export service token system
+export {
+    PluginServiceRegistry,
+    createServiceToken,
+    type ServiceToken
+};
+
+// 重新导出 IEditorModuleBase（供编辑器插件使用）| Re-export for editor plugins
+export type { IEditorModuleBase } from '@esengine/plugin-types';
+
+// 从本地模块导入并导出 Token | Import and export tokens from local module
+import { TransformTypeToken } from './PluginServiceRegistry';
+export { TransformTypeToken };
+
+// ============================================================================
+// 加载阶段 | Loading Phase
+// ============================================================================
 
 /**
  * 加载阶段 - 控制插件模块的加载顺序
@@ -28,16 +56,38 @@ export type LoadingPhase =
 /**
  * 系统创建上下文
  * System creation context
+ *
+ * 包含运行时配置和插件服务注册表。
+ * Contains runtime configuration and plugin service registry.
+ *
+ * @example
+ * ```typescript
+ * // 导入需要的 Token | Import needed tokens
+ * import { Physics2DQueryToken } from '@esengine/physics-rapier2d';
+ * import { AssetManagerToken } from '@esengine/asset-system';
+ *
+ * // 注册服务 | Register service
+ * context.services.register(Physics2DQueryToken, physicsSystem);
+ *
+ * // 获取服务（可选）| Get service (optional)
+ * const physics = context.services.get(Physics2DQueryToken);
+ *
+ * // 获取服务（必需）| Get service (required)
+ * const physics = context.services.require(Physics2DQueryToken);
+ * ```
  */
 export interface SystemContext {
     /** 是否为编辑器模式 | Is editor mode */
-    isEditor: boolean;
-    /** 引擎桥接（如有） | Engine bridge (if available) */
-    engineBridge?: any;
-    /** 渲染系统（如有） | Render system (if available) */
-    renderSystem?: any;
-    /** 其他已创建的系统引用 | Other created system references */
-    [key: string]: any;
+    readonly isEditor: boolean;
+
+    /**
+     * 插件服务注册表
+     * Plugin service registry
+     *
+     * 用于跨插件共享服务。
+     * For sharing services between plugins.
+     */
+    readonly services: PluginServiceRegistry;
 }
 
 // ============================================================================
@@ -95,15 +145,41 @@ export interface IRuntimeModule {
  * Plugin interface
  *
  * 这是所有插件包导出的统一类型。
+ * 使用泛型允许编辑器模块使用更具体的类型。
+ *
  * This is the unified type that all plugin packages export.
+ * Uses generics to allow editor modules to use more specific types.
+ *
+ * @example
+ * ```typescript
+ * // 纯运行时插件 | Pure runtime plugin
+ * const MyPlugin: IPlugin = {
+ *     manifest,
+ *     runtimeModule: new MyRuntimeModule()
+ * };
+ *
+ * // 编辑器插件（在 editor-core 中定义 IEditorPlugin）
+ * // Editor plugin (IEditorPlugin defined in editor-core)
+ * const MyEditorPlugin: IEditorPlugin = {
+ *     manifest,
+ *     runtimeModule: new MyRuntimeModule(),
+ *     editorModule: new MyEditorModule()
+ * };
+ * ```
  */
-export interface IPlugin {
+export interface IPlugin<TEditorModule = unknown> {
     /** 模块清单 | Module manifest */
     readonly manifest: ModuleManifest;
     /** 运行时模块（可选） | Runtime module (optional) */
     readonly runtimeModule?: IRuntimeModule;
-    /** 编辑器模块（可选，类型为 any 以避免循环依赖） | Editor module (optional, typed as any to avoid circular deps) */
-    readonly editorModule?: any;
+    /**
+     * 编辑器模块（可选）
+     * Editor module (optional)
+     *
+     * 泛型参数允许 editor-core 使用 IEditorModuleLoader 类型。
+     * Generic parameter allows editor-core to use IEditorModuleLoader type.
+     */
+    readonly editorModule?: TEditorModule;
 }
 
 // ============================================================================

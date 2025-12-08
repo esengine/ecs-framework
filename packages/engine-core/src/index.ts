@@ -4,11 +4,18 @@ export { HierarchyComponent } from './HierarchyComponent';
 export { HierarchySystem } from './HierarchySystem';
 export {
     EnginePlugin,
-    // 类型导出
+    // Type exports
     type LoadingPhase,
     type SystemContext,
     type IRuntimeModule,
-    type IPlugin
+    type IPlugin,
+    // Plugin service registry
+    PluginServiceRegistry,
+    createServiceToken,
+    // Core tokens (only TransformTypeToken is defined here)
+    TransformTypeToken,
+    // Types
+    type ServiceToken
 } from './EnginePlugin';
 
 // Module Manifest types (unified module/plugin configuration)

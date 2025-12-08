@@ -89,7 +89,7 @@ export interface ToolbarItem {
 }
 
 // Re-export PanelPosition and PanelDescriptor from Plugin system
-export { PanelPosition, type PanelDescriptor } from '../Plugin/IPluginLoader';
+export { PanelPosition, type PanelDescriptor } from '../Plugin/EditorModule';
 
 /**
  * UI 扩展点类型
@@ -103,4 +103,4 @@ export enum UIExtensionType {
 }
 
 // Re-export EntityCreationTemplate from Plugin system
-export type { EntityCreationTemplate } from '../Plugin/IPluginLoader';
+export type { EntityCreationTemplate } from '../Plugin/EditorModule';

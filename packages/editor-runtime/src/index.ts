@@ -196,9 +196,8 @@ export type {
     ComponentAction,
 
     // Plugin system types
-    IPluginLoader,
-    IRuntimeModuleLoader,
     IEditorModuleLoader,
+    IEditorPlugin,
     ModuleManifest,
     ModuleCategory,
     ModulePlatform,

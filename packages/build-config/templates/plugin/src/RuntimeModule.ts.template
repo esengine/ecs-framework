@@ -5,13 +5,13 @@
  */
 
 import type {
-    IRuntimeModuleLoader,
+    IRuntimeModule,
     IComponentRegistry,
     SystemContext
 } from '@esengine/ecs-components';
 import type { IScene, ServiceContainer } from '@esengine/ecs-framework';
 
-export class {{name}}RuntimeModule implements IRuntimeModuleLoader {
+export class {{name}}RuntimeModule implements IRuntimeModule {
     /**
      * 注册组件到组件注册表
      */
