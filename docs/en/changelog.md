@@ -4,7 +4,19 @@ This document records the version update history of the `@esengine/ecs-framework
 
 ---
 
-## v2.3.0 (2025-12-06)
+## v2.3.1 (2025-12-07)
+
+### Bug Fixes
+
+- **Type export fix**: Fix type export issues in v2.3.0
+  - Resolve `ServiceToken` cross-package type compatibility issues
+  - Fix type references in `editor-app` and `behavior-tree-editor`
+
+---
+
+## v2.3.0 (2025-12-06) ⚠️ DEPRECATED
+
+> **Warning**: This version has type export issues. Please upgrade to v2.3.1 or later.
 
 ### Features
 

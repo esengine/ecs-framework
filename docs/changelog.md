@@ -4,7 +4,21 @@
 
 ---
 
-## v2.3.0 (2025-12-06)
+## v2.3.1 (2025-12-07)
+
+### Bug Fixes
+
+- **类型导出修复**: 修复 v2.3.0 中的类型导出问题
+  - 解决 `ServiceToken` 跨包类型兼容性问题
+  - 修复 `editor-app` 和 `behavior-tree-editor` 中的类型引用
+
+---
+
+## v2.3.0 (2025-12-06) ⚠️ DEPRECATED
+
+> **警告**: 此版本存在类型导出问题，请升级到 v2.3.1 或更高版本。
+>
+> **Warning**: This version has type export issues. Please upgrade to v2.3.1 or later.
 
 ### Features
 

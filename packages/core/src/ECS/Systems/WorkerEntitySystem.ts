@@ -34,6 +34,20 @@ export interface WorkerSystemConfig {
     entityDataSize?: number;
     /** 最大实体数量（用于预分配SharedArrayBuffer） */
     maxEntities?: number;
+    /**
+     * 预编译 Worker 脚本路径（微信小游戏等不支持动态脚本的平台必需）
+     * Pre-compiled Worker script path (required for platforms like WeChat Mini Game that don't support dynamic scripts)
+     *
+     * @example
+     * ```typescript
+     * // 微信小游戏使用方式：
+     * // 1. 创建 Worker 文件: workers/physics-worker.js
+     * // 2. 在 game.json 配置 "workers": "workers"
+     * // 3. 指定路径：
+     * workerScriptPath: 'workers/physics-worker.js'
+     * ```
+     */
+    workerScriptPath?: string;
 }
 
 
@@ -188,9 +202,10 @@ export type SharedArrayBufferProcessFunction = (
  * ```
  */
 export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem {
-    protected config: Required<Omit<WorkerSystemConfig, 'systemConfig' | 'entitiesPerWorker'>> & {
+    protected config: Required<Omit<WorkerSystemConfig, 'systemConfig' | 'entitiesPerWorker' | 'workerScriptPath'>> & {
         systemConfig?: any;
         entitiesPerWorker?: number;
+        workerScriptPath?: string;
     };
     private workerPool: PlatformWorkerPool | null = null;
     private isProcessing = false;
@@ -222,7 +237,8 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
             ...(config.entitiesPerWorker !== undefined && { entitiesPerWorker: config.entitiesPerWorker }),
             useSharedArrayBuffer: config.useSharedArrayBuffer ?? this.isSharedArrayBufferSupported(),
             entityDataSize: config.entityDataSize ?? this.getDefaultEntityDataSize(),
-            maxEntities: config.maxEntities ?? 10000
+            maxEntities: config.maxEntities ?? 10000,
+            ...(config.workerScriptPath !== undefined && { workerScriptPath: config.workerScriptPath })
         };
 
 
@@ -300,16 +316,34 @@ export abstract class WorkerEntitySystem<TEntityData = any> extends EntitySystem
      */
     private initializeWorkerPool(): void {
         try {
-            const script = this.createWorkerScript();
-
-            // 在WorkerEntitySystem中处理平台相关逻辑
-            const workers: PlatformWorker[] = [];
             const platformConfig = this.platformAdapter.getPlatformConfig();
-            const fullScript = (platformConfig.workerScriptPrefix || '') + script;
+            const workers: PlatformWorker[] = [];
+
+            // 判断使用外部脚本路径还是动态生成脚本
+            // Determine whether to use external script path or dynamically generated script
+            let scriptOrPath: string;
+
+            if (this.config.workerScriptPath) {
+                // 使用预编译的外部 Worker 文件（微信小游戏等平台）
+                // Use pre-compiled external Worker file (for WeChat Mini Game, etc.)
+                scriptOrPath = this.config.workerScriptPath;
+                this.logger.info(`${this.systemName}: 使用外部Worker文件: ${scriptOrPath}`);
+            } else if (platformConfig.limitations?.noEval) {
+                // 平台不支持动态脚本，且未提供外部脚本路径
+                // Platform doesn't support dynamic scripts and no external script path provided
+                this.logger.error(`${this.systemName}: 当前平台不支持动态Worker脚本，请配置 workerScriptPath 指定预编译的Worker文件`);
+                this.config.enableWorker = false;
+                return;
+            } else {
+                // 动态生成 Worker 脚本（浏览器等支持的平台）
+                // Dynamically generate Worker script (for browsers and other supported platforms)
+                const script = this.createWorkerScript();
+                scriptOrPath = (platformConfig.workerScriptPrefix || '') + script;
+            }
 
             for (let i = 0; i < this.config.workerCount; i++) {
                 try {
-                    const worker = this.platformAdapter.createWorker(fullScript, {
+                    const worker = this.platformAdapter.createWorker(scriptOrPath, {
                         name: `WorkerEntitySystem-${i}`
                     });
                     workers.push(worker);
