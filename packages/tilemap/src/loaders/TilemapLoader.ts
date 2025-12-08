@@ -81,8 +81,13 @@ export class TilemapLoader implements IAssetLoader<ITilemapAsset> {
      * 释放已加载的资产
      */
     dispose(asset: ITilemapAsset): void {
-        (asset as any).data = null;
-        (asset as any).layers = null;
-        (asset as any).collisionData = null;
+        // 清理瓦片数据 | Clean up tile data
+        asset.data.length = 0;
+        if (asset.layers) {
+            asset.layers.length = 0;
+        }
+        if (asset.collisionData) {
+            asset.collisionData.length = 0;
+        }
     }
 }

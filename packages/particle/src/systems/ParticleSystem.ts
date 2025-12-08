@@ -1,7 +1,7 @@
-import { EntitySystem, Matcher, ECSSystem, Time, Entity } from '@esengine/ecs-framework';
+import { EntitySystem, Matcher, ECSSystem, Time, Entity, type Component, type ComponentType } from '@esengine/ecs-framework';
+import type { IEngineIntegration, IEngineBridge } from '@esengine/ecs-engine-bindgen';
 import { ParticleSystemComponent } from '../ParticleSystemComponent';
 import { ParticleRenderDataProvider } from '../rendering/ParticleRenderDataProvider';
-import type { IEngineIntegration, IEngineBridge } from '../ParticleRuntimeModule';
 import { Physics2DCollisionModule, type IPhysics2DQuery } from '../modules/Physics2DCollisionModule';
 
 /**
@@ -66,7 +66,8 @@ interface ITransformComponent {
  */
 @ECSSystem('ParticleUpdate', { updateOrder: 100 })
 export class ParticleUpdateSystem extends EntitySystem {
-    private _transformType: (new (...args: any[]) => ITransformComponent) | null = null;
+    /** Transform 组件类型（运行时注入）| Transform component type (injected at runtime) */
+    private _transformType: ComponentType<Component & ITransformComponent> | null = null;
     private _renderDataProvider: ParticleRenderDataProvider;
     private _engineIntegration: IEngineIntegration | null = null;
     private _engineBridge: IEngineBridge | null = null;
@@ -91,7 +92,7 @@ export class ParticleUpdateSystem extends EntitySystem {
      *
      * @param transformType - Transform component class | Transform 组件类
      */
-    setTransformType(transformType: new (...args: any[]) => ITransformComponent): void {
+    setTransformType(transformType: ComponentType<Component & ITransformComponent>): void {
         this._transformType = transformType;
     }
 
@@ -150,7 +151,7 @@ export class ParticleUpdateSystem extends EntitySystem {
 
             // 获取 Transform 位置、旋转、缩放 | Get Transform position, rotation, scale
             if (this._transformType) {
-                transform = entity.getComponent(this._transformType as any) as ITransformComponent | null;
+                transform = entity.getComponent(this._transformType);
                 if (transform) {
                     const pos = transform.worldPosition ?? transform.position;
                     worldX = pos.x;
@@ -239,7 +240,7 @@ export class ParticleUpdateSystem extends EntitySystem {
         // 尝试获取 Transform，如果没有则使用默认位置 | Try to get Transform, use default position if not available
         let transform: ITransformComponent | null = null;
         if (this._transformType) {
-            transform = entity.getComponent(this._transformType as any) as ITransformComponent | null;
+            transform = entity.getComponent(this._transformType);
         }
         // 即使没有 Transform，也要注册粒子系统（使用原点位置） | Register particle system even without Transform (use origin position)
         if (transform) {

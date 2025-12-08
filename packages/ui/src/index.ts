@@ -162,4 +162,12 @@ export {
 } from './UIBuilder';
 
 // Runtime module and plugin
-export { UIRuntimeModule, UIPlugin, type UISystemContext } from './UIRuntimeModule';
+export { UIRuntimeModule, UIPlugin } from './UIRuntimeModule';
+
+// Service tokens | 服务令牌
+export {
+    UILayoutSystemToken,
+    UIInputSystemToken,
+    UIRenderProviderToken,
+    UITextRenderSystemToken
+} from './tokens';

@@ -28,5 +28,13 @@ export { Physics2DPlugin } from './PhysicsEditorPlugin';
 // Runtime plugin (for game builds)
 export { PhysicsPlugin } from './PhysicsRuntimeModule';
 
-// Physics query interface (for particle system integration)
-export type { IPhysics2DQuery, PhysicsSystemContext } from './PhysicsRuntimeModule';
+// Service tokens and interfaces (谁定义接口，谁导出 Token)
+export {
+    Physics2DQueryToken,
+    Physics2DSystemToken,
+    Physics2DWorldToken,
+    PhysicsConfigToken,
+    type IPhysics2DQuery,
+    type IPhysics2DWorld,
+    type PhysicsConfig
+} from './tokens';

@@ -227,6 +227,9 @@ export class ParticleLoader implements IAssetLoader<IParticleAsset> {
      * Dispose loaded asset
      */
     dispose(asset: IParticleAsset): void {
-        (asset as any).modules = null;
+        // 清理模块引用 | Clean up module references
+        if (asset.modules) {
+            asset.modules.length = 0;
+        }
     }
 }

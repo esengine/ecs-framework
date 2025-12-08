@@ -1,22 +1,26 @@
 import type { IScene } from '@esengine/ecs-framework';
 import { ComponentRegistry } from '@esengine/ecs-framework';
 import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
-import type { AssetManager } from '@esengine/asset-system';
+import { AssetManagerToken } from '@esengine/asset-system';
+import { RenderSystemToken } from '@esengine/ecs-engine-bindgen';
+import { Physics2DWorldToken } from '@esengine/physics-rapier2d';
 
 import { TilemapComponent } from './TilemapComponent';
 import { TilemapRenderingSystem } from './systems/TilemapRenderingSystem';
 import { TilemapCollider2DComponent } from './physics/TilemapCollider2DComponent';
-import { TilemapPhysicsSystem, type IPhysicsWorld } from './physics/TilemapPhysicsSystem';
+import { TilemapPhysicsSystem } from './physics/TilemapPhysicsSystem';
 import { TilemapLoader } from './loaders/TilemapLoader';
 import { TilemapAssetType } from './constants';
+import {
+    TilemapSystemToken,
+    TilemapPhysicsSystemToken
+} from './tokens';
 
-export interface TilemapSystemContext extends SystemContext {
-    tilemapSystem?: TilemapRenderingSystem;
-    tilemapPhysicsSystem?: TilemapPhysicsSystem;
-    physics2DWorld?: IPhysicsWorld;
-    assetManager?: AssetManager;
-    renderSystem?: any;
-}
+// 重新导出 tokens | Re-export tokens
+export {
+    TilemapSystemToken,
+    TilemapPhysicsSystemToken
+} from './tokens';
 
 class TilemapRuntimeModule implements IRuntimeModule {
     private _tilemapPhysicsSystem: TilemapPhysicsSystem | null = null;
@@ -28,33 +32,36 @@ class TilemapRuntimeModule implements IRuntimeModule {
     }
 
     createSystems(scene: IScene, context: SystemContext): void {
-        const tilemapContext = context as TilemapSystemContext;
+        // 从服务注册表获取依赖 | Get dependencies from service registry
+        const assetManager = context.services.get(AssetManagerToken);
+        const renderSystem = context.services.get(RenderSystemToken);
 
-        if (!this._loaderRegistered && tilemapContext.assetManager) {
-            tilemapContext.assetManager.registerLoader(TilemapAssetType, new TilemapLoader());
+        if (!this._loaderRegistered && assetManager) {
+            assetManager.registerLoader(TilemapAssetType, new TilemapLoader());
             this._loaderRegistered = true;
         }
 
         const tilemapSystem = new TilemapRenderingSystem();
         scene.addSystem(tilemapSystem);
 
-        if (tilemapContext.renderSystem) {
-            tilemapContext.renderSystem.addRenderDataProvider(tilemapSystem);
+        if (renderSystem) {
+            renderSystem.addRenderDataProvider(tilemapSystem);
         }
-
-        tilemapContext.tilemapSystem = tilemapSystem;
 
         this._tilemapPhysicsSystem = new TilemapPhysicsSystem();
         scene.addSystem(this._tilemapPhysicsSystem);
 
-        tilemapContext.tilemapPhysicsSystem = this._tilemapPhysicsSystem;
+        // 注册服务到服务注册表 | Register services to service registry
+        context.services.register(TilemapSystemToken, tilemapSystem);
+        context.services.register(TilemapPhysicsSystemToken, this._tilemapPhysicsSystem);
     }
 
     onSystemsCreated(_scene: IScene, context: SystemContext): void {
-        const tilemapContext = context as TilemapSystemContext;
+        // 从服务注册表获取物理世界 | Get physics world from service registry
+        const physics2DWorld = context.services.get(Physics2DWorldToken);
 
-        if (this._tilemapPhysicsSystem && tilemapContext.physics2DWorld) {
-            this._tilemapPhysicsSystem.setPhysicsWorld(tilemapContext.physics2DWorld);
+        if (this._tilemapPhysicsSystem && physics2DWorld) {
+            this._tilemapPhysicsSystem.setPhysicsWorld(physics2DWorld);
         }
     }
 

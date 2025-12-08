@@ -35,4 +35,7 @@ export type { BlackboardTypeDefinition } from './Blackboard/BlackboardTypes';
 export { BlackboardTypes } from './Blackboard/BlackboardTypes';
 
 // Runtime module and plugin
-export { BehaviorTreeRuntimeModule, BehaviorTreePlugin, type BehaviorTreeSystemContext } from './BehaviorTreeRuntimeModule';
+export { BehaviorTreeRuntimeModule, BehaviorTreePlugin } from './BehaviorTreeRuntimeModule';
+
+// Service tokens | 服务令牌
+export { BehaviorTreeSystemToken } from './tokens';

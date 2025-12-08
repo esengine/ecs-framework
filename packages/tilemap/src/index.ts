@@ -35,4 +35,10 @@ export { TiledConverter } from './loaders/TiledConverter';
 export type { ITiledMap, ITiledConversionResult } from './loaders/TiledConverter';
 
 // Runtime module and plugin
-export { TilemapRuntimeModule, TilemapPlugin, type TilemapSystemContext } from './TilemapRuntimeModule';
+export { TilemapRuntimeModule, TilemapPlugin } from './TilemapRuntimeModule';
+
+// Service tokens | 服务令牌
+export {
+    TilemapSystemToken,
+    TilemapPhysicsSystemToken
+} from './tokens';

@@ -3,9 +3,6 @@
  *
  * This entry point exports only runtime-related code without any editor dependencies.
  * Use this for standalone game runtime builds.
- *
- * 此入口点仅导出运行时相关代码，不包含任何编辑器依赖。
- * 用于独立游戏运行时构建。
  */
 
 // Types
@@ -53,4 +50,14 @@ export { Physics2DSystem, type Physics2DSystemConfig } from './systems/Physics2D
 export { Physics2DService } from './services/Physics2DService';
 
 // Runtime module and plugin
-export { PhysicsRuntimeModule, PhysicsPlugin, type PhysicsSystemContext } from './PhysicsRuntimeModule';
+export { PhysicsRuntimeModule, PhysicsPlugin } from './PhysicsRuntimeModule';
+
+// Service tokens
+export {
+    Physics2DQueryToken,
+    Physics2DSystemToken,
+    Physics2DWorldToken,
+    PhysicsConfigToken,
+    type IPhysics2DQuery,
+    type PhysicsConfig
+} from './tokens';

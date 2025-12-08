@@ -27,7 +27,14 @@ export class AudioLoader implements IAssetLoader<IAudioAsset> {
      */
     private static getAudioContext(): AudioContext {
         if (!AudioLoader._audioContext) {
-            AudioLoader._audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            // 兼容旧版 Safari 的 webkitAudioContext
+            // Support legacy Safari webkitAudioContext
+            const AudioContextClass = window.AudioContext ||
+                (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+            if (!AudioContextClass) {
+                throw new Error('AudioContext is not supported in this browser');
+            }
+            AudioLoader._audioContext = new AudioContextClass();
         }
         return AudioLoader._audioContext;
     }

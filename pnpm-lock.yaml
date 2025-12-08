@@ -156,6 +156,9 @@ importers:
       '@esengine/ecs-framework':
         specifier: workspace:*
         version: link:../core
+      '@esengine/engine-core':
+        specifier: workspace:*
+        version: link:../engine-core
       rimraf:
         specifier: ^5.0.0
         version: 5.0.10
@@ -765,6 +768,9 @@ importers:
       '@esengine/engine-core':
         specifier: workspace:*
         version: link:../engine-core
+      '@esengine/plugin-types':
+        specifier: workspace:*
+        version: link:../plugin-types
       '@eslint/js':
         specifier: ^9.37.0
         version: 9.39.1
@@ -898,6 +904,9 @@ importers:
       '@esengine/platform-common':
         specifier: workspace:*
         version: link:../platform-common
+      '@esengine/plugin-types':
+        specifier: workspace:*
+        version: link:../plugin-types
     devDependencies:
       '@esengine/build-config':
         specifier: workspace:*
@@ -1289,6 +1298,24 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
+  packages/plugin-types:
+    devDependencies:
+      '@esengine/build-config':
+        specifier: workspace:*
+        version: link:../build-config
+      '@esengine/ecs-framework':
+        specifier: workspace:*
+        version: link:../core
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(@microsoft/api-extractor@7.55.1(@types/node@20.19.25))(@swc/core@1.15.3)(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
   packages/rapier2d:
     devDependencies:
       rimraf:
@@ -1458,6 +1485,9 @@ importers:
       '@esengine/engine-core':
         specifier: workspace:*
         version: link:../engine-core
+      '@esengine/physics-rapier2d':
+        specifier: workspace:*
+        version: link:../physics-rapier2d
       rimraf:
         specifier: ^5.0.0
         version: 5.0.10

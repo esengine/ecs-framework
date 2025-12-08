@@ -1,6 +1,7 @@
 import type { IScene } from '@esengine/ecs-framework';
 import { ComponentRegistry } from '@esengine/ecs-framework';
 import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
+import { EngineBridgeToken } from '@esengine/ecs-engine-bindgen';
 
 import {
     UITransformComponent,
@@ -26,13 +27,20 @@ import {
     UISliderRenderSystem,
     UIScrollViewRenderSystem
 } from './systems/render';
+import {
+    UILayoutSystemToken,
+    UIInputSystemToken,
+    UIRenderProviderToken,
+    UITextRenderSystemToken
+} from './tokens';
 
-export interface UISystemContext extends SystemContext {
-    uiLayoutSystem?: UILayoutSystem;
-    uiRenderProvider?: UIRenderDataProvider;
-    uiInputSystem?: UIInputSystem;
-    uiTextRenderSystem?: UITextRenderSystem;
-}
+// 重新导出 tokens | Re-export tokens
+export {
+    UILayoutSystemToken,
+    UIInputSystemToken,
+    UIRenderProviderToken,
+    UITextRenderSystemToken
+} from './tokens';
 
 class UIRuntimeModule implements IRuntimeModule {
     registerComponents(registry: typeof ComponentRegistry): void {
@@ -48,7 +56,8 @@ class UIRuntimeModule implements IRuntimeModule {
     }
 
     createSystems(scene: IScene, context: SystemContext): void {
-        const uiContext = context as UISystemContext;
+        // 从服务注册表获取依赖 | Get dependencies from service registry
+        const engineBridge = context.services.get(EngineBridgeToken);
 
         const layoutSystem = new UILayoutSystem();
         scene.addSystem(layoutSystem);
@@ -77,9 +86,9 @@ class UIRuntimeModule implements IRuntimeModule {
         const textRenderSystem = new UITextRenderSystem();
         scene.addSystem(textRenderSystem);
 
-        if (uiContext.engineBridge) {
+        if (engineBridge) {
             textRenderSystem.setTextureCallback((id: number, dataUrl: string) => {
-                uiContext.engineBridge.loadTexture(id, dataUrl);
+                engineBridge.loadTexture(id, dataUrl);
             });
         }
 
@@ -88,10 +97,11 @@ class UIRuntimeModule implements IRuntimeModule {
         inputSystem.setLayoutSystem(layoutSystem);
         scene.addSystem(inputSystem);
 
-        uiContext.uiLayoutSystem = layoutSystem;
-        uiContext.uiRenderProvider = uiRenderProvider;
-        uiContext.uiInputSystem = inputSystem;
-        uiContext.uiTextRenderSystem = textRenderSystem;
+        // 注册服务到服务注册表 | Register services to service registry
+        context.services.register(UILayoutSystemToken, layoutSystem);
+        context.services.register(UIRenderProviderToken, uiRenderProvider);
+        context.services.register(UIInputSystemToken, inputSystem);
+        context.services.register(UITextRenderSystemToken, textRenderSystem);
     }
 }
 

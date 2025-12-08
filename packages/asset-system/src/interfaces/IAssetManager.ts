@@ -15,8 +15,9 @@ import {
     IAssetLoadProgress,
     IAssetCatalog
 } from '../types/AssetTypes';
-import { IAssetLoader } from './IAssetLoader';
+import { IAssetLoader, IAssetLoaderFactory } from './IAssetLoader';
 import { IAssetReader } from './IAssetReader';
+import type { AssetDatabase } from '../core/AssetDatabase';
 
 /**
  * Asset manager interface
@@ -167,6 +168,24 @@ export interface IAssetManager {
      * 从目录加载资产元数据，用于运行时资产解析。
      */
     initializeFromCatalog(catalog: IAssetCatalog): void;
+
+    /**
+     * Get the asset database
+     * 获取资产数据库
+     */
+    getDatabase(): AssetDatabase;
+
+    /**
+     * Get the loader factory
+     * 获取加载器工厂
+     */
+    getLoaderFactory(): IAssetLoaderFactory;
+
+    /**
+     * Set project root path
+     * 设置项目根路径
+     */
+    setProjectRoot(path: string): void;
 }
 
 /**

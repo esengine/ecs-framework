@@ -7,9 +7,87 @@
  */
 
 import { Core, Scene, SceneSerializer, HierarchySystem } from '@esengine/ecs-framework';
-import { EngineBridge, EngineRenderSystem, CameraSystem } from '@esengine/ecs-engine-bindgen';
-import { TransformComponent, TransformSystem, InputSystem, Input } from '@esengine/engine-core';
-import { AssetManager, EngineIntegration } from '@esengine/asset-system';
+import {
+    EngineBridge,
+    EngineRenderSystem,
+    CameraSystem,
+    EngineBridgeToken,
+    RenderSystemToken,
+    EngineIntegrationToken,
+    type IUIRenderDataProvider
+} from '@esengine/ecs-engine-bindgen';
+import {
+    TransformComponent,
+    TransformSystem,
+    InputSystem,
+    Input,
+    PluginServiceRegistry,
+    TransformTypeToken,
+    createServiceToken
+} from '@esengine/engine-core';
+import { AssetManager, EngineIntegration, AssetManagerToken } from '@esengine/asset-system';
+
+// ============================================================================
+// 本地服务令牌定义 | Local Service Token Definitions
+// 用于访问各模块注册的服务 | For accessing services registered by modules
+// ============================================================================
+
+/**
+ * UI 输入系统接口（最小化定义，用于类型安全的服务访问）
+ * UI input system interface (minimal definition for type-safe service access)
+ */
+interface IUIInputSystem {
+    bindToCanvas(canvas: HTMLCanvasElement): void;
+    unbind?(): void;
+}
+
+/**
+ * 可启用/禁用的系统接口
+ * Interface for systems that can be enabled/disabled
+ */
+interface IEnableableSystem {
+    enabled: boolean;
+}
+
+/**
+ * 行为树系统接口
+ * Behavior tree system interface
+ */
+interface IBehaviorTreeSystem extends IEnableableSystem {
+    startAllAutoStartTrees?(): void;
+}
+
+/**
+ * 物理系统接口
+ * Physics system interface
+ */
+interface IPhysicsSystem extends IEnableableSystem {
+    reset?(): void;
+}
+
+/**
+ * Tilemap 系统接口
+ * Tilemap system interface
+ */
+interface ITilemapSystem {
+    clearCache?(): void;
+}
+
+// UI 模块服务令牌 | UI module service tokens
+const UIRenderProviderToken = createServiceToken<IUIRenderDataProvider>('uiRenderProvider');
+const UIInputSystemToken = createServiceToken<IUIInputSystem>('uiInputSystem');
+
+// Sprite 模块服务令牌 | Sprite module service tokens
+const SpriteAnimatorSystemToken = createServiceToken<IEnableableSystem>('spriteAnimatorSystem');
+
+// BehaviorTree 模块服务令牌 | BehaviorTree module service tokens
+const BehaviorTreeSystemToken = createServiceToken<IBehaviorTreeSystem>('behaviorTreeSystem');
+
+// Physics 模块服务令牌 | Physics module service tokens
+const Physics2DSystemToken = createServiceToken<IPhysicsSystem>('physics2DSystem');
+
+// Tilemap 模块服务令牌 | Tilemap module service tokens
+const TilemapSystemToken = createServiceToken<ITilemapSystem>('tilemapSystem');
 import {
     runtimePluginManager,
     type SystemContext,
@@ -158,13 +236,11 @@ export class GameRuntime {
     }
 
     /**
-     * 更新系统上下文（用于编辑器模式下同步外部创建的系统引用）
-     * Update system context (for syncing externally created system references in editor mode)
+     * 获取服务注册表（用于编辑器模式下注册外部创建的系统）
+     * Get service registry (for registering externally created systems in editor mode)
      */
-    updateSystemContext(updates: Partial<SystemContext>): void {
-        if (this._systemContext) {
-            Object.assign(this._systemContext, updates);
-        }
+    getServiceRegistry(): PluginServiceRegistry | null {
+        return this._systemContext?.services ?? null;
     }
 
     /**
@@ -266,15 +342,19 @@ export class GameRuntime {
                 await this._initializePlugins();
             }
 
-            // 10. 创建系统上下文
+            // 10. 创建系统上下文（使用 PluginServiceRegistry）
+            const services = new PluginServiceRegistry();
+
+            // 注册核心服务 | Register core services
+            services.register(EngineBridgeToken, this._bridge);
+            services.register(RenderSystemToken, this._renderSystem);
+            services.register(EngineIntegrationToken, this._engineIntegration);
+            services.register(AssetManagerToken, this._assetManager);
+            services.register(TransformTypeToken, TransformComponent);
+
             this._systemContext = {
                 isEditor: this._platform.isEditorMode(),
-                engineBridge: this._bridge,
-                engineIntegration: this._engineIntegration,
-                renderSystem: this._renderSystem,
-                assetManager: this._assetManager,
-                inputSystem: this._inputSystem,
-                inputManager: Input
+                services
             };
 
             // 11. 让插件创建系统（编辑器模式下跳过，由 EngineService.initializeModuleSystems 处理）
@@ -283,8 +363,9 @@ export class GameRuntime {
             }
 
             // 11. 设置 UI 渲染数据提供者（如果有）
-            if (this._systemContext.uiRenderProvider) {
-                this._renderSystem.setUIRenderDataProvider(this._systemContext.uiRenderProvider);
+            const uiRenderProvider = this._systemContext.services.get(UIRenderProviderToken);
+            if (uiRenderProvider) {
+                this._renderSystem.setUIRenderDataProvider(uiRenderProvider);
             }
 
             // 12. 添加渲染系统（在所有其他系统之后）
@@ -339,18 +420,23 @@ export class GameRuntime {
      * 禁用游戏逻辑系统（编辑器模式）
      */
     private _disableGameLogicSystems(): void {
-        const ctx = this._systemContext;
-        if (!ctx) return;
+        const services = this._systemContext?.services;
+        if (!services) return;
 
-        // 这些系统由插件创建，通过 context 传递引用
-        if (ctx.animatorSystem) {
-            ctx.animatorSystem.enabled = false;
+        // 这些系统由插件创建，通过服务注册表获取引用
+        const animatorSystem = services.get(SpriteAnimatorSystemToken);
+        if (animatorSystem) {
+            animatorSystem.enabled = false;
         }
-        if (ctx.behaviorTreeSystem) {
-            ctx.behaviorTreeSystem.enabled = false;
+
+        const behaviorTreeSystem = services.get(BehaviorTreeSystemToken);
+        if (behaviorTreeSystem) {
+            behaviorTreeSystem.enabled = false;
         }
-        if (ctx.physicsSystem) {
-            ctx.physicsSystem.enabled = false;
+
+        const physicsSystem = services.get(Physics2DSystemToken);
+        if (physicsSystem) {
+            physicsSystem.enabled = false;
         }
     }
 
@@ -358,18 +444,23 @@ export class GameRuntime {
      * 启用游戏逻辑系统（预览/运行模式）
      */
     private _enableGameLogicSystems(): void {
-        const ctx = this._systemContext;
-        if (!ctx) return;
+        const services = this._systemContext?.services;
+        if (!services) return;
 
-        if (ctx.animatorSystem) {
-            ctx.animatorSystem.enabled = true;
+        const animatorSystem = services.get(SpriteAnimatorSystemToken);
+        if (animatorSystem) {
+            animatorSystem.enabled = true;
         }
-        if (ctx.behaviorTreeSystem) {
-            ctx.behaviorTreeSystem.enabled = true;
-            ctx.behaviorTreeSystem.startAllAutoStartTrees?.();
+
+        const behaviorTreeSystem = services.get(BehaviorTreeSystemToken);
+        if (behaviorTreeSystem) {
+            behaviorTreeSystem.enabled = true;
+            behaviorTreeSystem.startAllAutoStartTrees?.();
         }
-        if (ctx.physicsSystem) {
-            ctx.physicsSystem.enabled = true;
+
+        const physicsSystem = services.get(Physics2DSystemToken);
+        if (physicsSystem) {
+            physicsSystem.enabled = true;
         }
     }
 
@@ -435,11 +526,11 @@ export class GameRuntime {
         this._enableGameLogicSystems();
 
         // 绑定 UI 输入
-        const ctx = this._systemContext;
-        if (ctx?.uiInputSystem && this._config.canvasId) {
+        const uiInputSystem = this._systemContext?.services.get(UIInputSystemToken);
+        if (uiInputSystem && this._config.canvasId) {
             const canvas = document.getElementById(this._config.canvasId) as HTMLCanvasElement;
             if (canvas) {
-                ctx.uiInputSystem.bindToCanvas(canvas);
+                uiInputSystem.bindToCanvas(canvas);
             }
         }
 
@@ -487,17 +578,19 @@ export class GameRuntime {
         }
 
         // 解绑 UI 输入
-        const ctx = this._systemContext;
-        if (ctx?.uiInputSystem) {
-            ctx.uiInputSystem.unbind?.();
+        const services = this._systemContext?.services;
+        const uiInputSystem = services?.get(UIInputSystemToken);
+        if (uiInputSystem) {
+            uiInputSystem.unbind?.();
         }
 
         // 禁用游戏逻辑系统
         this._disableGameLogicSystems();
 
         // 重置物理系统
-        if (ctx?.physicsSystem) {
-            ctx.physicsSystem.reset?.();
+        const physicsSystem = services?.get(Physics2DSystemToken);
+        if (physicsSystem) {
+            physicsSystem.reset?.();
         }
     }
 
@@ -778,9 +871,9 @@ export class GameRuntime {
 
         try {
             // 清除缓存
-            const ctx = this._systemContext;
-            if (ctx?.tilemapSystem) {
-                ctx.tilemapSystem.clearCache?.();
+            const tilemapSystem = this._systemContext?.services.get(TilemapSystemToken);
+            if (tilemapSystem) {
+                tilemapSystem.clearCache?.();
             }
 
             // 反序列化场景

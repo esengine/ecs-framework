@@ -201,11 +201,11 @@ export class CollisionModule implements IParticleModule {
         }
 
         // 更新存储的初始速度（如果有速度曲线模块）| Update stored initial velocity
-        if ('startVx' in p && normalX !== 0) {
-            (p as any).startVx = -((p as any).startVx) * this.bounceFactor;
+        if (p.startVx !== undefined && normalX !== 0) {
+            p.startVx = -(p.startVx) * this.bounceFactor;
         }
-        if ('startVy' in p && normalY !== 0) {
-            (p as any).startVy = -((p as any).startVy) * this.bounceFactor;
+        if (p.startVy !== undefined && normalY !== 0) {
+            p.startVy = -(p.startVy) * this.bounceFactor;
         }
 
         // 应用生命损失 | Apply life loss

@@ -219,14 +219,10 @@ export class TextureSheetAnimationModule implements IParticleModule {
         const u1 = u0 + uWidth;
         const v1 = v0 + vHeight;
 
-        // 存储 UV 到粒子的自定义属性
-        // Store UV in particle's custom properties
-        // 这里我们使用粒子的 startR/startG/startB 不太合适，需要扩展 Particle
-        // 暂时通过覆盖 rotation 的高位来存储帧索引（临时方案）
-        // Temporary: store frame index in a way that can be read by renderer
-        // The actual UV calculation will be done in the render data provider
-        (p as any)._animFrame = frameIndex;
-        (p as any)._animTilesX = this.tilesX;
-        (p as any)._animTilesY = this.tilesY;
+        // 存储动画帧信息到粒子 | Store animation frame info to particle
+        // 渲染数据提供者会使用这些值计算实际的 UV | Render data provider will use these to calculate actual UVs
+        p._animFrame = frameIndex;
+        p._animTilesX = this.tilesX;
+        p._animTilesY = this.tilesY;
     }
 }

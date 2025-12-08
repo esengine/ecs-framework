@@ -17,69 +17,27 @@ import { CapsuleCollider2DComponent } from './components/CapsuleCollider2DCompon
 import { PolygonCollider2DComponent } from './components/PolygonCollider2DComponent';
 import { Physics2DSystem } from './systems/Physics2DSystem';
 import { Physics2DService } from './services/Physics2DService';
+import {
+    Physics2DQueryToken,
+    Physics2DSystemToken,
+    Physics2DWorldToken,
+    PhysicsConfigToken,
+    type IPhysics2DQuery,
+    type PhysicsConfig
+} from './tokens';
 
 // 注册 Rapier2D 加载器
 import './loaders';
 
-/**
- * 2D 物理查询接口
- * 2D Physics query interface
- *
- * 用于粒子系统等模块查询物理世界
- * Used by particle system and other modules to query physics world
- */
-export interface IPhysics2DQuery {
-    overlapCircle(
-        center: { x: number; y: number },
-        radius: number,
-        collisionMask?: number
-    ): { entityIds: number[]; colliderHandles: number[] };
-
-    raycast(
-        origin: { x: number; y: number },
-        direction: { x: number; y: number },
-        maxDistance: number,
-        collisionMask?: number
-    ): {
-        entityId: number;
-        point: { x: number; y: number };
-        normal: { x: number; y: number };
-        distance: number;
-        colliderHandle: number;
-    } | null;
-}
-
-/**
- * 物理系统上下文扩展
- */
-export interface PhysicsSystemContext extends SystemContext {
-    /**
-     * 物理系统实例
-     */
-    physicsSystem?: Physics2DSystem;
-
-    /**
-     * 物理世界实例
-     */
-    physics2DWorld?: any;
-
-    /**
-     * 物理配置
-     */
-    physicsConfig?: any;
-
-    /**
-     * 2D 物理查询接口
-     * 2D Physics query interface
-     *
-     * 供粒子系统等模块使用，用于检测粒子与物理碰撞体的碰撞。
-     * 实际上是 Physics2DSystem 的引用，因为它实现了 IPhysics2DQuery 接口。
-     *
-     * For particle system and other modules to detect collision with physics colliders.
-     * Actually a reference to Physics2DSystem which implements IPhysics2DQuery interface.
-     */
-    physics2DQuery?: IPhysics2DQuery;
-}
+// 重新导出 tokens 和类型 | Re-export tokens and types
+export {
+    Physics2DQueryToken,
+    Physics2DSystemToken,
+    Physics2DWorldToken,
+    PhysicsConfigToken,
+    type IPhysics2DQuery,
+    type PhysicsConfig
+} from './tokens';
 
 /**
  * 物理运行时模块
@@ -167,10 +125,11 @@ class PhysicsRuntimeModule implements IRuntimeModule {
      * @param context - 系统上下文
      */
     createSystems(scene: IScene, context: SystemContext): void {
-        const physicsContext = context as PhysicsSystemContext;
+        // 从服务注册表获取配置 | Get config from service registry
+        const physicsConfig = context.services.get(PhysicsConfigToken);
 
         const physicsSystem = new Physics2DSystem({
-            physics: physicsContext.physicsConfig,
+            physics: physicsConfig,
             updateOrder: -1000
         });
 
@@ -181,11 +140,10 @@ class PhysicsRuntimeModule implements IRuntimeModule {
             physicsSystem.initializeWithRapier(this._rapierModule);
         }
 
-        physicsContext.physicsSystem = physicsSystem;
-        physicsContext.physics2DWorld = physicsSystem.world;
-        // 同时暴露 physics2DQuery，供粒子系统等模块使用
-        // Also expose physics2DQuery for particle system and other modules
-        physicsContext.physics2DQuery = physicsSystem;
+        // 注册服务 | Register services
+        context.services.register(Physics2DSystemToken, physicsSystem);
+        context.services.register(Physics2DWorldToken, physicsSystem.world);
+        context.services.register(Physics2DQueryToken, physicsSystem);
     }
 
     /**
