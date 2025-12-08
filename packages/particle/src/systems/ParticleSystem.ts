@@ -2,6 +2,7 @@ import { EntitySystem, Matcher, ECSSystem, Time, Entity } from '@esengine/ecs-fr
 import { ParticleSystemComponent } from '../ParticleSystemComponent';
 import { ParticleRenderDataProvider } from '../rendering/ParticleRenderDataProvider';
 import type { IEngineIntegration, IEngineBridge } from '../ParticleRuntimeModule';
+import { Physics2DCollisionModule, type IPhysics2DQuery } from '../modules/Physics2DCollisionModule';
 
 /**
  * 默认粒子纹理 ID
@@ -69,12 +70,15 @@ export class ParticleUpdateSystem extends EntitySystem {
     private _renderDataProvider: ParticleRenderDataProvider;
     private _engineIntegration: IEngineIntegration | null = null;
     private _engineBridge: IEngineBridge | null = null;
+    private _physics2DQuery: IPhysics2DQuery | null = null;
     private _defaultTextureLoaded: boolean = false;
     private _defaultTextureLoading: boolean = false;
     /** 追踪每个粒子组件上次加载的资产 GUID | Track last loaded asset GUID for each particle component */
     private _lastLoadedGuids: WeakMap<ParticleSystemComponent, string> = new WeakMap();
     /** 正在加载资产的粒子组件 | Particle components currently loading assets */
     private _loadingComponents: WeakSet<ParticleSystemComponent> = new WeakSet();
+    /** 已注入物理查询的粒子组件 | Particle components with physics query injected */
+    private _physicsInjectedComponents: WeakSet<ParticleSystemComponent> = new WeakSet();
 
     constructor() {
         super(Matcher.empty().all(ParticleSystemComponent));
@@ -105,6 +109,19 @@ export class ParticleUpdateSystem extends EntitySystem {
      */
     setEngineBridge(bridge: IEngineBridge): void {
         this._engineBridge = bridge;
+    }
+
+    /**
+     * 设置 2D 物理查询接口
+     * Set 2D physics query interface
+     *
+     * 如果设置，将自动注入到所有使用 Physics2DCollisionModule 的粒子系统。
+     * If set, will be auto-injected into all particle systems using Physics2DCollisionModule.
+     *
+     * @param query - 物理查询接口（通常是 Physics2DService）| Physics query (usually Physics2DService)
+     */
+    setPhysics2DQuery(query: IPhysics2DQuery | null): void {
+        this._physics2DQuery = query;
     }
 
     /**
@@ -163,6 +180,11 @@ export class ParticleUpdateSystem extends EntitySystem {
             // 这使得编辑器中的属性更改能够立即生效
             // This allows property changes to take effect immediately in the editor
             particle.ensureBuilt();
+
+            // 自动注入物理查询到 Physics2DCollisionModule | Auto-inject physics query to Physics2DCollisionModule
+            if (this._physics2DQuery && !this._physicsInjectedComponents.has(particle)) {
+                this._injectPhysics2DQuery(particle);
+            }
 
             // 更新粒子系统 | Update particle system
             if (particle.isPlaying) {
@@ -366,7 +388,25 @@ export class ParticleUpdateSystem extends EntitySystem {
         if (particle) {
             // 从渲染数据提供者注销 | Unregister from render data provider
             this._renderDataProvider.unregister(particle);
+            // 清除物理注入标记 | Clear physics injection mark
+            this._physicsInjectedComponents.delete(particle);
         }
+    }
+
+    /**
+     * 注入物理查询到粒子系统的 Physics2DCollisionModule
+     * Inject physics query into particle system's Physics2DCollisionModule
+     */
+    private _injectPhysics2DQuery(particle: ParticleSystemComponent): void {
+        if (!this._physics2DQuery) return;
+
+        for (const module of particle.modules) {
+            if (module instanceof Physics2DCollisionModule) {
+                module.setPhysicsQuery(this._physics2DQuery);
+            }
+        }
+
+        this._physicsInjectedComponents.add(particle);
     }
 
     /**

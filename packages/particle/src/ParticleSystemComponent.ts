@@ -7,6 +7,7 @@ import { ColorOverLifetimeModule } from './modules/ColorOverLifetimeModule';
 import { SizeOverLifetimeModule } from './modules/SizeOverLifetimeModule';
 import { CollisionModule } from './modules/CollisionModule';
 import { ForceFieldModule } from './modules/ForceFieldModule';
+import { Physics2DCollisionModule } from './modules/Physics2DCollisionModule';
 import type { IParticleAsset, IBurstConfig } from './loaders/ParticleLoader';
 
 // Re-export for backward compatibility
@@ -751,7 +752,33 @@ export class ParticleSystemComponent extends Component {
             const normalizedAge = p.age / p.lifetime;
             for (const module of this._modules) {
                 if (module.enabled) {
-                    module.update(p, normalizedAge, dt);
+                    module.update(p, dt, normalizedAge);
+                }
+            }
+        }
+
+        // 处理碰撞模块标记的需销毁粒子 | Process particles marked for death by collision modules
+        for (const module of this._modules) {
+            if (module.enabled) {
+                // 处理边界碰撞模块 | Handle boundary collision module
+                if (module instanceof CollisionModule) {
+                    const toKill = module.getParticlesToKill();
+                    for (const p of toKill) {
+                        if (p.alive) {
+                            particlesToRecycle.push(p);
+                        }
+                    }
+                    module.clearDeathFlags();
+                }
+                // 处理物理碰撞模块 | Handle physics collision module
+                if (module instanceof Physics2DCollisionModule) {
+                    const toKill = module.getParticlesToKill();
+                    for (const p of toKill) {
+                        if (p.alive) {
+                            particlesToRecycle.push(p);
+                        }
+                    }
+                    module.clearDeathFlags();
                 }
             }
         }

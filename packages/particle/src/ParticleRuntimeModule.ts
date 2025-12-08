@@ -4,6 +4,7 @@ import { assetManager as globalAssetManager, type AssetManager } from '@esengine
 import { ParticleSystemComponent } from './ParticleSystemComponent';
 import { ParticleUpdateSystem } from './systems/ParticleSystem';
 import { ParticleLoader, ParticleAssetType } from './loaders/ParticleLoader';
+import type { IPhysics2DQuery } from './modules/Physics2DCollisionModule';
 
 export type { SystemContext, ModuleManifest, IRuntimeModule as IRuntimeModuleLoader, IPlugin as IPluginLoader };
 
@@ -42,6 +43,17 @@ export interface ParticleSystemContext extends SystemContext {
     engineBridge?: IEngineBridge;
     /** 资产管理器（用于注册加载器）| Asset manager (for registering loaders) */
     assetManager?: AssetManager;
+    /**
+     * 2D 物理查询接口（可选）
+     * 2D Physics query interface (optional)
+     *
+     * 如果提供，将自动注入到使用 Physics2DCollisionModule 的粒子系统中。
+     * 通常传入 Physics2DService 实例。
+     *
+     * If provided, will be auto-injected into particle systems using Physics2DCollisionModule.
+     * Typically pass a Physics2DService instance.
+     */
+    physics2DQuery?: IPhysics2DQuery;
 }
 
 class ParticleRuntimeModule implements IRuntimeModule {
@@ -88,6 +100,11 @@ class ParticleRuntimeModule implements IRuntimeModule {
         // 设置引擎桥接（用于加载默认纹理）| Set engine bridge (for loading default texture)
         if (particleContext.engineBridge) {
             this._updateSystem.setEngineBridge(particleContext.engineBridge);
+        }
+
+        // 设置 2D 物理查询（用于粒子与场景碰撞）| Set 2D physics query (for particle-scene collision)
+        if (particleContext.physics2DQuery) {
+            this._updateSystem.setPhysics2DQuery(particleContext.physics2DQuery);
         }
 
         scene.addSystem(this._updateSystem);

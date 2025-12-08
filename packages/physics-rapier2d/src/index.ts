@@ -27,3 +27,6 @@ export { Physics2DPlugin } from './PhysicsEditorPlugin';
 
 // Runtime plugin (for game builds)
 export { PhysicsPlugin } from './PhysicsRuntimeModule';
+
+// Physics query interface (for particle system integration)
+export type { IPhysics2DQuery, PhysicsSystemContext } from './PhysicsRuntimeModule';

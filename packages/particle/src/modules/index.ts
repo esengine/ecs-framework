@@ -20,3 +20,9 @@ export {
     createDefaultForceField,
     type ForceField
 } from './ForceFieldModule';
+export {
+    Physics2DCollisionModule,
+    Physics2DCollisionBehavior,
+    type IPhysics2DQuery,
+    type ParticleCollisionInfo
+} from './Physics2DCollisionModule';
