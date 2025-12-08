@@ -22,6 +22,34 @@ import { Physics2DService } from './services/Physics2DService';
 import './loaders';
 
 /**
+ * 2D 物理查询接口
+ * 2D Physics query interface
+ *
+ * 用于粒子系统等模块查询物理世界
+ * Used by particle system and other modules to query physics world
+ */
+export interface IPhysics2DQuery {
+    overlapCircle(
+        center: { x: number; y: number },
+        radius: number,
+        collisionMask?: number
+    ): { entityIds: number[]; colliderHandles: number[] };
+
+    raycast(
+        origin: { x: number; y: number },
+        direction: { x: number; y: number },
+        maxDistance: number,
+        collisionMask?: number
+    ): {
+        entityId: number;
+        point: { x: number; y: number };
+        normal: { x: number; y: number };
+        distance: number;
+        colliderHandle: number;
+    } | null;
+}
+
+/**
  * 物理系统上下文扩展
  */
 export interface PhysicsSystemContext extends SystemContext {
@@ -39,6 +67,18 @@ export interface PhysicsSystemContext extends SystemContext {
      * 物理配置
      */
     physicsConfig?: any;
+
+    /**
+     * 2D 物理查询接口
+     * 2D Physics query interface
+     *
+     * 供粒子系统等模块使用，用于检测粒子与物理碰撞体的碰撞。
+     * 实际上是 Physics2DSystem 的引用，因为它实现了 IPhysics2DQuery 接口。
+     *
+     * For particle system and other modules to detect collision with physics colliders.
+     * Actually a reference to Physics2DSystem which implements IPhysics2DQuery interface.
+     */
+    physics2DQuery?: IPhysics2DQuery;
 }
 
 /**
@@ -143,6 +183,9 @@ class PhysicsRuntimeModule implements IRuntimeModule {
 
         physicsContext.physicsSystem = physicsSystem;
         physicsContext.physics2DWorld = physicsSystem.world;
+        // 同时暴露 physics2DQuery，供粒子系统等模块使用
+        // Also expose physics2DQuery for particle system and other modules
+        physicsContext.physics2DQuery = physicsSystem;
     }
 
     /**

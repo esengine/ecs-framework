@@ -30,10 +30,19 @@
     "dependencies": {
         "@esengine/asset-system": "workspace:*"
     },
+    "peerDependencies": {
+        "@esengine/physics-rapier2d": "workspace:*"
+    },
+    "peerDependenciesMeta": {
+        "@esengine/physics-rapier2d": {
+            "optional": true
+        }
+    },
     "devDependencies": {
         "@esengine/ecs-framework": "workspace:*",
         "@esengine/ecs-framework-math": "workspace:*",
         "@esengine/engine-core": "workspace:*",
+        "@esengine/physics-rapier2d": "workspace:*",
         "@esengine/build-config": "workspace:*",
         "rimraf": "^5.0.5",
         "tsup": "^8.0.0",

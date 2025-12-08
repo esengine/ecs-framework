@@ -41,7 +41,12 @@ export {
     ForceFieldModule,
     ForceFieldType,
     createDefaultForceField,
-    type ForceField
+    type ForceField,
+    // Physics 2D collision module | 2D 物理碰撞模块
+    Physics2DCollisionModule,
+    Physics2DCollisionBehavior,
+    type IPhysics2DQuery,
+    type ParticleCollisionInfo
 } from './modules';
 
 // Rendering
