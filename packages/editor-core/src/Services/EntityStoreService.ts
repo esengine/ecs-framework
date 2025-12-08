@@ -1,4 +1,4 @@
-import { Injectable, IService, Entity, Core, HierarchyComponent } from '@esengine/ecs-framework';
+import { Injectable, IService, Entity, Core, HierarchyComponent } from '@esengine/esengine';
 import { MessageHub } from './MessageHub';
 
 export interface EntityTreeNode {

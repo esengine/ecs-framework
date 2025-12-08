@@ -1,4 +1,4 @@
-import { EntitySystem, Matcher, ECSSystem, Time, Entity, type Component, type ComponentType } from '@esengine/ecs-framework';
+import { EntitySystem, Matcher, ECSSystem, Time, Entity, type Component, type ComponentType } from '@esengine/esengine';
 import type { IEngineIntegration, IEngineBridge } from '@esengine/ecs-engine-bindgen';
 import { ParticleSystemComponent } from '../ParticleSystemComponent';
 import { ParticleRenderDataProvider } from '../rendering/ParticleRenderDataProvider';

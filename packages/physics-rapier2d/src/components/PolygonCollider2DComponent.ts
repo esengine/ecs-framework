@@ -3,7 +3,7 @@
  * 2D 多边形碰撞体组件
  */
 
-import { Serialize, Serializable, ECSComponent } from '@esengine/ecs-framework';
+import { Serialize, Serializable, ECSComponent } from '@esengine/esengine';
 import { Collider2DBase } from './Collider2DBase';
 import type { Vector2 } from '../types/Physics2DTypes';
 

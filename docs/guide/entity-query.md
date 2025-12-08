@@ -19,7 +19,7 @@ QuerySystem 负责实际执行查询,内部使用响应式查询机制自动优�
 ### 基础用法
 
 ```typescript
-import { EntitySystem, Matcher, Entity, Component } from '@esengine/ecs-framework';
+import { EntitySystem, Matcher, Entity, Component } from '@esengine/esengine';
 
 class PositionComponent extends Component {
     public x: number = 0;

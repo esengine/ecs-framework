@@ -7,7 +7,7 @@ import {
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { MessageHub, FileActionRegistry, AssetRegistryService } from '@esengine/editor-core';
 import { SettingsService } from '../services/SettingsService';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PromptDialog } from './PromptDialog';

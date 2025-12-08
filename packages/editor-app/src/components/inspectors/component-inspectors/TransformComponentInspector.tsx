@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Component } from '@esengine/ecs-framework';
+import { Component } from '@esengine/esengine';
 import { IComponentInspector, ComponentInspectorContext } from '@esengine/editor-core';
 import { TransformComponent } from '@esengine/engine-core';
 import { ChevronDown, Lock, Unlock } from 'lucide-react';

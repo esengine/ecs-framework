@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { singleton } from 'tsyringe';
 import { DIContainer, globalContainer } from '../di/DIContainer';
 import { EditorEventBus } from '../events/EditorEventBus';

@@ -6,5 +6,5 @@ export default defineConfig({
     dts: true,
     sourcemap: true,
     clean: true,
-    external: ['@esengine/ecs-framework', '@esengine/engine-core']
+    external: ['@esengine/esengine', '@esengine/engine-core']
 });

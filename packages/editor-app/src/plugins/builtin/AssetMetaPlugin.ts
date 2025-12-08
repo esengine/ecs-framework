@@ -6,8 +6,8 @@
  * 处理项目资产的 .meta 文件生成。
  */
 
-import type { ServiceContainer } from '@esengine/ecs-framework';
-import { createLogger } from '@esengine/ecs-framework';
+import type { ServiceContainer } from '@esengine/esengine';
+import { createLogger } from '@esengine/esengine';
 import type { IPlugin, IEditorModuleLoader, ModuleManifest } from '@esengine/editor-core';
 import { AssetRegistryService } from '@esengine/editor-core';
 

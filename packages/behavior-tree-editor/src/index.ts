@@ -3,7 +3,7 @@
  * 行为树编辑器模块
  */
 
-import type { ServiceContainer } from '@esengine/ecs-framework';
+import type { ServiceContainer } from '@esengine/esengine';
 import { TransformComponent } from '@esengine/engine-core';
 import {
     type IEditorModuleLoader,

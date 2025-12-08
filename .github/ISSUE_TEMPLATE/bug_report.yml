@@ -57,7 +57,7 @@ body:
     id: version
     attributes:
       label: 版本 / Version
-      description: 使用的 @esengine/ecs-framework 版本 / Version of @esengine/ecs-framework
+      description: 使用的 @esengine/esengine 版本 / Version of @esengine/esengine
       placeholder: 例如 / e.g., 2.2.8
     validations:
       required: true
@@ -102,7 +102,7 @@ body:
       description: 如果可能，提供最小可复现代码 / If possible, provide minimal reproducible code
       render: typescript
       placeholder: |
-        import { Core, Scene, Entity } from '@esengine/ecs-framework';
+        import { Core, Scene, Entity } from '@esengine/esengine';
 
         // 你的代码 / Your code here
     validations:

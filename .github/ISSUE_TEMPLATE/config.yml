@@ -5,7 +5,7 @@ contact_links:
     about: 查看完整文档和教程 / View full documentation and tutorials
 
   - name: 🤖 AI 文档助手 / AI Documentation Assistant
-    url: https://deepwiki.com/esengine/ecs-framework
+    url: https://deepwiki.com/esengine/esengine
     about: 使用 AI 助手快速找到答案 / Use AI assistant to quickly find answers
 
   - name: 💬 QQ 交流群 / QQ Group
@@ -13,5 +13,5 @@ contact_links:
     about: 加入社区交流群 / Join the community group
 
   - name: 🌟 GitHub Discussions
-    url: https://github.com/esengine/ecs-framework/discussions
+    url: https://github.com/esengine/esengine/discussions
     about: 参与社区讨论 / Join community discussions

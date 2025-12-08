@@ -13,7 +13,7 @@ ECS 框架提供了功能强大的分级日志系统，支持多种日志级别�
 ## 日志级别
 
 ```typescript
-import { LogLevel } from '@esengine/ecs-framework';
+import { LogLevel } from '@esengine/esengine';
 
 // 日志级别从低到高
 LogLevel.Debug   // 0 - 调试信息
@@ -29,7 +29,7 @@ LogLevel.None    // 5 - 不输出任何日志
 ### 使用默认日志器
 
 ```typescript
-import { Logger } from '@esengine/ecs-framework';
+import { Logger } from '@esengine/esengine';
 
 class GameSystem extends EntitySystem {
   protected process(entities: readonly Entity[]): void {
@@ -46,7 +46,7 @@ class GameSystem extends EntitySystem {
 ### 创建命名日志器
 
 ```typescript
-import { createLogger } from '@esengine/ecs-framework';
+import { createLogger } from '@esengine/esengine';
 
 class MovementSystem extends EntitySystem {
   private logger = createLogger('MovementSystem');
@@ -103,7 +103,7 @@ class Scene {
 ### 设置全局日志级别
 
 ```typescript
-import { setGlobalLogLevel, LogLevel } from '@esengine/ecs-framework';
+import { setGlobalLogLevel, LogLevel } from '@esengine/esengine';
 
 // 在开发环境显示所有日志
 setGlobalLogLevel(LogLevel.Debug);
@@ -118,7 +118,7 @@ setGlobalLogLevel(LogLevel.None);
 ### 创建自定义配置的日志器
 
 ```typescript
-import { ConsoleLogger, LogLevel } from '@esengine/ecs-framework';
+import { ConsoleLogger, LogLevel } from '@esengine/esengine';
 
 class CustomLoggerExample {
   private debugLogger: ConsoleLogger;
@@ -159,7 +159,7 @@ class CustomLoggerExample {
 ### 使用预定义颜色
 
 ```typescript
-import { Colors, setLoggerColors } from '@esengine/ecs-framework';
+import { Colors, setLoggerColors } from '@esengine/esengine';
 
 // 自定义颜色方案
 setLoggerColors({
@@ -174,7 +174,7 @@ setLoggerColors({
 ### 完整颜色示例
 
 ```typescript
-import { LoggerManager, Colors, LogLevel } from '@esengine/ecs-framework';
+import { LoggerManager, Colors, LogLevel } from '@esengine/esengine';
 
 class ColorLoggerDemo {
   private logger = createLogger('ColorDemo');
@@ -211,7 +211,7 @@ class ColorLoggerDemo {
 ### 分层日志器
 
 ```typescript
-import { LoggerManager } from '@esengine/ecs-framework';
+import { LoggerManager } from '@esengine/esengine';
 
 class HierarchicalLoggingExample {
   private systemLogger = createLogger('GameSystems');
@@ -247,7 +247,7 @@ class HierarchicalLoggingExample {
 #### 基本用法
 
 ```typescript
-import { setLoggerFactory } from '@esengine/ecs-framework';
+import { setLoggerFactory } from '@esengine/esengine';
 
 setLoggerFactory((name?: string) => {
   // 返回实现 ILogger 接口的日志器实例
@@ -285,7 +285,7 @@ class PlayerMovementSystem extends EntitySystem {
 ### 自定义输出
 
 ```typescript
-import { ConsoleLogger, LogLevel } from '@esengine/ecs-framework';
+import { ConsoleLogger, LogLevel } from '@esengine/esengine';
 
 class CustomOutputLogger {
   private fileLogger: ConsoleLogger;

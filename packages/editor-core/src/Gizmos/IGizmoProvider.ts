@@ -8,7 +8,7 @@
  * 使用 Rust WebGL 渲染器实现高性能 gizmo 显示。
  */
 
-import type { Entity } from '@esengine/ecs-framework';
+import type { Entity } from '@esengine/esengine';
 
 /**
  * Gizmo type enumeration

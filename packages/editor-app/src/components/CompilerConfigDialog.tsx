@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Core, IService, ServiceType } from '@esengine/ecs-framework';
+import { Core, IService, ServiceType } from '@esengine/esengine';
 import { CompilerRegistry, ICompiler, CompilerContext, CompileResult, IFileSystem, IDialog, FileEntry } from '@esengine/editor-core';
 import { X, Play, Loader2 } from 'lucide-react';
 import { open as tauriOpen, save as tauriSave, message as tauriMessage, confirm as tauriConfirm } from '@tauri-apps/plugin-dialog';

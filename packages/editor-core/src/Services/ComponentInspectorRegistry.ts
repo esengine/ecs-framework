@@ -1,5 +1,5 @@
 import React from 'react';
-import { Component, IService, createLogger } from '@esengine/ecs-framework';
+import { Component, IService, createLogger } from '@esengine/esengine';
 
 const logger = createLogger('ComponentInspectorRegistry');
 

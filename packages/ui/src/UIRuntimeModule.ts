@@ -1,5 +1,5 @@
-import type { IScene } from '@esengine/ecs-framework';
-import { ComponentRegistry } from '@esengine/ecs-framework';
+import type { IScene } from '@esengine/esengine';
+import { ComponentRegistry } from '@esengine/esengine';
 import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 import { EngineBridgeToken } from '@esengine/ecs-engine-bindgen';
 

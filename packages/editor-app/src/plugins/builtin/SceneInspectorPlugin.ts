@@ -3,8 +3,8 @@
  * 场景检视器插件
  */
 
-import { Core, Entity } from '@esengine/ecs-framework';
-import type { ServiceContainer } from '@esengine/ecs-framework';
+import { Core, Entity } from '@esengine/esengine';
+import type { ServiceContainer } from '@esengine/esengine';
 import type {
     IPlugin,
     IEditorModuleLoader,

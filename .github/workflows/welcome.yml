@@ -23,7 +23,7 @@ jobs:
 
             我们会尽快查看并回复。同时，建议你：
             - 📚 查看[文档](https://esengine.github.io/ecs-framework/)
-            - 🤖 使用 [AI 文档助手](https://deepwiki.com/esengine/ecs-framework)
+            - 🤖 使用 [AI 文档助手](https://deepwiki.com/esengine/esengine)
             - 💬 加入 [QQ 交流群](https://jq.qq.com/?_wv=1027&k=29w1Nud6)
 
             ---
@@ -32,7 +32,7 @@ jobs:
 
             We'll review it as soon as possible. Meanwhile, you might want to:
             - 📚 Check the [documentation](https://esengine.github.io/ecs-framework/)
-            - 🤖 Use [AI documentation assistant](https://deepwiki.com/esengine/ecs-framework)
+            - 🤖 Use [AI documentation assistant](https://deepwiki.com/esengine/esengine)
 
           pr-message: |
             👋 你好！感谢你提交第一个 Pull Request！
@@ -43,7 +43,7 @@ jobs:
             - ✅ 更新了相关文档
             - ✅ Commit 遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范
 
-            查看完整的[贡献指南](https://github.com/esengine/ecs-framework/blob/master/CONTRIBUTING.md)。
+            查看完整的[贡献指南](https://github.com/esengine/esengine/blob/master/CONTRIBUTING.md)。
 
             ---
 
@@ -55,4 +55,4 @@ jobs:
             - ✅ Documentation is updated
             - ✅ Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 
-            See the full [Contributing Guide](https://github.com/esengine/ecs-framework/blob/master/CONTRIBUTING.md).
+            See the full [Contributing Guide](https://github.com/esengine/esengine/blob/master/CONTRIBUTING.md).

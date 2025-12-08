@@ -98,7 +98,7 @@ export function ForumPostList({
     };
 
     const openGitHubDiscussions = async () => {
-        await open('https://github.com/esengine/ecs-framework/discussions');
+        await open('https://github.com/esengine/esengine/discussions');
     };
 
     return (

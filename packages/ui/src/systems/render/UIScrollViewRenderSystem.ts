@@ -7,7 +7,7 @@
  * 通过向共享的 UIRenderCollector 提交渲染原语来渲染 UIScrollViewComponent 实体。
  */
 
-import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/ecs-framework';
+import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/esengine';
 import { UITransformComponent } from '../../components/UITransformComponent';
 import { UIScrollViewComponent } from '../../components/widgets/UIScrollViewComponent';
 import { getUIRenderCollector } from './UIRenderCollector';

@@ -1,4 +1,4 @@
-import { EntitySystem, Matcher, Entity, Time, ECSSystem } from '@esengine/ecs-framework';
+import { EntitySystem, Matcher, Entity, Time, ECSSystem } from '@esengine/esengine';
 import { UITransformComponent } from '../components/UITransformComponent';
 import { UIInteractableComponent } from '../components/UIInteractableComponent';
 import { UIButtonComponent } from '../components/widgets/UIButtonComponent';

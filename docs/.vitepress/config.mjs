@@ -184,7 +184,7 @@ function createNav(t, prefix = '') {
     { text: t.nav.changelog, link: `${prefix}/changelog` },
     {
       text: `v${corePackageJson.version}`,
-      link: 'https://github.com/esengine/ecs-framework/releases'
+      link: 'https://github.com/esengine/esengine/releases'
     }
   ]
 }
@@ -220,7 +220,7 @@ export default defineConfig({
         nav: createNav(zh, ''),
         sidebar: createSidebar(zh, ''),
         editLink: {
-          pattern: 'https://github.com/esengine/ecs-framework/edit/master/docs/:path',
+          pattern: 'https://github.com/esengine/esengine/edit/master/docs/:path',
           text: zh.common.editOnGithub
         },
         outline: {
@@ -238,7 +238,7 @@ export default defineConfig({
         nav: createNav(en, '/en'),
         sidebar: createSidebar(en, '/en'),
         editLink: {
-          pattern: 'https://github.com/esengine/ecs-framework/edit/master/docs/:path',
+          pattern: 'https://github.com/esengine/esengine/edit/master/docs/:path',
           text: en.common.editOnGithub
         },
         outline: {
@@ -253,7 +253,7 @@ export default defineConfig({
     siteTitle: 'ESEngine',
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/esengine/ecs-framework' }
+      { icon: 'github', link: 'https://github.com/esengine/esengine' }
     ],
 
     footer: {

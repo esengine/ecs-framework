@@ -7,7 +7,7 @@ const { readFileSync } = require('fs');
 const pkg = JSON.parse(readFileSync('./package.json', 'utf8'));
 
 const banner = `/**
- * @esengine/ecs-framework-math v${pkg.version}
+ * @esengine/esengine-math v${pkg.version}
  * ECS框架2D数学库 - 提供向量、矩阵、几何形状和碰撞检测功能
  * 
  * @author ${pkg.author}
@@ -109,7 +109,7 @@ module.exports = [
       file: 'dist/index.d.ts',
       format: 'es',
       banner: `/**
- * @esengine/ecs-framework-math v${pkg.version}
+ * @esengine/esengine-math v${pkg.version}
  * TypeScript definitions
  */`
     },

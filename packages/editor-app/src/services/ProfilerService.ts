@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { SettingsService } from './SettingsService';
-import { LogLevel } from '@esengine/ecs-framework';
+import { LogLevel } from '@esengine/esengine';
 
 export interface SystemPerformanceData {
   name: string;

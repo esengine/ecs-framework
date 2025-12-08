@@ -1,5 +1,5 @@
 import { type GlobalBlackboardConfig, BlackboardValueType, type BlackboardVariable } from '@esengine/behavior-tree';
-import { createLogger } from '@esengine/ecs-framework';
+import { createLogger } from '@esengine/esengine';
 
 const logger = createLogger('GlobalBlackboardService');
 

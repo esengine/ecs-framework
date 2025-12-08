@@ -39,8 +39,8 @@
         }
     },
     "devDependencies": {
-        "@esengine/ecs-framework": "workspace:*",
-        "@esengine/ecs-framework-math": "workspace:*",
+        "@esengine/esengine": "workspace:*",
+        "@esengine/esengine-math": "workspace:*",
         "@esengine/engine-core": "workspace:*",
         "@esengine/ecs-engine-bindgen": "workspace:*",
         "@esengine/physics-rapier2d": "workspace:*",

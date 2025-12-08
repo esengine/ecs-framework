@@ -11,7 +11,7 @@ import type {
     IAssetContent,
     AssetContentType
 } from '@esengine/asset-system';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { BehaviorTreeData } from '../execution/BehaviorTreeData';
 import { BehaviorTreeAssetManager } from '../execution/BehaviorTreeAssetManager';
 import { EditorToBehaviorTreeDataConverter } from '../Serialization/EditorToBehaviorTreeDataConverter';

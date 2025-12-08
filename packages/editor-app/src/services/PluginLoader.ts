@@ -5,7 +5,7 @@
 
 import { PluginManager, LocaleService, MessageHub } from '@esengine/editor-core';
 import type { IPlugin, ModuleManifest } from '@esengine/editor-core';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { TauriAPI } from '../api/tauri';
 import { PluginSDKRegistry } from './PluginSDKRegistry';
 

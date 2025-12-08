@@ -24,7 +24,7 @@
 ### 基本使用
 
 ```typescript
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import {
     BehaviorTreeAssetManager,
     BehaviorTreeBuilder,
@@ -365,7 +365,7 @@ function onLevelStart() {
 ## 完整示例：多敌人类型的游戏
 
 ```typescript
-import { Core, Scene } from '@esengine/ecs-framework';
+import { Core, Scene } from '@esengine/esengine';
 import {
     BehaviorTreePlugin,
     BehaviorTreeAssetManager,

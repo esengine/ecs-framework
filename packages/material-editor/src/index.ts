@@ -8,8 +8,8 @@
  * 材质文件 (.mat) 的预览和编辑在 Inspector 中完成
  */
 
-import type { ServiceContainer } from '@esengine/ecs-framework';
-import { Core } from '@esengine/ecs-framework';
+import type { ServiceContainer } from '@esengine/esengine';
+import { Core } from '@esengine/esengine';
 import type {
     IEditorModuleLoader,
     FileCreationTemplate,

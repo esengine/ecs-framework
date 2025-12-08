@@ -7,7 +7,7 @@
  */
 
 import { GizmoRegistry, EntityStoreService, MessageHub, SceneManagerService, ProjectService, PluginManager, IPluginManager, AssetRegistryService, type SystemContext } from '@esengine/editor-core';
-import { Core, Scene, Entity, SceneSerializer, ProfilerSDK, createLogger } from '@esengine/ecs-framework';
+import { Core, Scene, Entity, SceneSerializer, ProfilerSDK, createLogger } from '@esengine/esengine';
 import { CameraConfig, EngineBridgeToken, RenderSystemToken, EngineIntegrationToken } from '@esengine/ecs-engine-bindgen';
 import { TransformComponent, PluginServiceRegistry, TransformTypeToken } from '@esengine/engine-core';
 import { SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystemToken } from '@esengine/sprite';

@@ -39,7 +39,7 @@
   "author": "yhh",
   "license": "MIT",
   "devDependencies": {
-    "@esengine/ecs-framework": "workspace:*",
+    "@esengine/esengine": "workspace:*",
     "@esengine/asset-system": "workspace:*",
     "@esengine/asset-system-editor": "workspace:*",
     "@esengine/engine-core": "workspace:*",
@@ -74,7 +74,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/esengine/ecs-framework.git",
+    "url": "https://github.com/esengine/esengine.git",
     "directory": "packages/editor-core"
   }
 }

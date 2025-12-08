@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { X, Search, Folder, FolderOpen, File, Image, FileText, Music, Video, Database, AlertTriangle } from 'lucide-react';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { ProjectService, AssetRegistryService } from '@esengine/editor-core';
 import { TauriFileSystemService } from '../../services/TauriFileSystemService';
 import './AssetPickerDialog.css';

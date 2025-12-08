@@ -6,7 +6,7 @@
  * Displays particle emission shape, supports Transform scale and rotation.
  */
 
-import type { Entity } from '@esengine/ecs-framework';
+import type { Entity } from '@esengine/esengine';
 import type {
     IGizmoRenderData,
     IRectGizmoData,

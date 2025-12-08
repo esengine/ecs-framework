@@ -25,7 +25,7 @@
         "@esengine/material-system": "workspace:*"
     },
     "devDependencies": {
-        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/esengine": "workspace:*",
         "@esengine/engine-core": "workspace:*",
         "@esengine/editor-core": "workspace:*",
         "@esengine/build-config": "workspace:*",

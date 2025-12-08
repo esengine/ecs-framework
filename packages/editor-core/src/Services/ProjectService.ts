@@ -1,6 +1,6 @@
-import type { IService } from '@esengine/ecs-framework';
-import { Injectable } from '@esengine/ecs-framework';
-import { createLogger, Scene } from '@esengine/ecs-framework';
+import type { IService } from '@esengine/esengine';
+import { Injectable } from '@esengine/esengine';
+import { createLogger, Scene } from '@esengine/esengine';
 import { MessageHub } from './MessageHub';
 import type { IFileAPI } from '../Types/IFileAPI';
 

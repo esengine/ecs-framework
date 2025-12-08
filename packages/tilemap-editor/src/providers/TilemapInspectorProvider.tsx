@@ -6,7 +6,7 @@ import React from 'react';
 import { Edit3 } from 'lucide-react';
 import type { IInspectorProvider, InspectorContext } from '@esengine/editor-core';
 import { MessageHub } from '@esengine/editor-core';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import type { TilemapComponent } from '@esengine/tilemap';
 
 interface TilemapInspectorData {

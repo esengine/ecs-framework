@@ -626,7 +626,7 @@ import './executors/CheckHealth';
 
 ```typescript
 // src/main.ts
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { BehaviorTreePlugin } from '@esengine/behavior-tree';
 
 // 导入自定义执行器
@@ -650,7 +650,7 @@ async function main() {
 // my-behavior-plugin/src/plugin.ts
 import type { IEditorPlugin } from '@esengine/editor-core';
 import { EditorPluginCategory } from '@esengine/editor-core';
-import type { Core, ServiceContainer } from '@esengine/ecs-framework';
+import type { Core, ServiceContainer } from '@esengine/esengine';
 
 // 导入执行器(触发装饰器注册)
 import './executors/AttackAction';

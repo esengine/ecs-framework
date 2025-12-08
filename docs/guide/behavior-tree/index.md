@@ -70,7 +70,7 @@
 ### 使用Builder创建
 
 ```typescript
-import { Core, Scene } from '@esengine/ecs-framework';
+import { Core, Scene } from '@esengine/esengine';
 import {
     BehaviorTreeBuilder,
     BehaviorTreeStarter,
@@ -192,6 +192,6 @@ export class AttackAction implements INodeExecutor {
 
 ## 获取帮助
 
-- 提交 [Issue](https://github.com/esengine/ecs-framework/issues)
+- 提交 [Issue](https://github.com/esengine/esengine/issues)
 - 加入社区讨论
 - 参考文档中的完整代码示例

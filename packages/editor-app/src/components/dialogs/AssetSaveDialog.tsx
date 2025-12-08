@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { X, Search, Folder, FolderOpen, FolderPlus } from 'lucide-react';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { ProjectService, IFileSystemService } from '@esengine/editor-core';
 import type { IFileSystem } from '@esengine/editor-core';
 import './AssetPickerDialog.css';

@@ -1,4 +1,4 @@
-import { Injectable, IService, Component } from '@esengine/ecs-framework';
+import { Injectable, IService, Component } from '@esengine/esengine';
 
 export interface ComponentTypeInfo {
   name: string;

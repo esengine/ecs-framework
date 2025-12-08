@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { PropertyContext, PropertyRendererRegistry } from '@esengine/editor-core';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 
 interface ComponentData {
     typeName: string;

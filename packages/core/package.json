@@ -1,5 +1,5 @@
 {
-  "name": "@esengine/ecs-framework",
+  "name": "@esengine/esengine",
   "version": "2.3.2",
   "description": "用于Laya、Cocos Creator等JavaScript游戏引擎的高性能ECS框架",
   "main": "dist/index.cjs",
@@ -78,7 +78,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/esengine/ecs-framework.git",
+    "url": "https://github.com/esengine/esengine.git",
     "directory": "packages/core"
   },
   "dependencies": {

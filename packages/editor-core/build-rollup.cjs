@@ -67,7 +67,7 @@ function generatePackageJson() {
         bugs: sourcePackage.bugs,
         homepage: sourcePackage.homepage,
         peerDependencies: {
-            '@esengine/ecs-framework': '^2.2.8'
+            '@esengine/esengine': '^2.2.8'
         },
         engines: {
             node: '>=16.0.0'

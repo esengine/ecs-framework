@@ -1,4 +1,4 @@
-import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/ecs-framework';
+import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/esengine';
 
 /**
  * 滑块方向

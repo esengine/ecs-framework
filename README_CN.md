@@ -25,7 +25,7 @@ ESEngine 基于 MIT 协议完全免费开源。无附加条件，无版税。你
 ### 通过 npm 安装
 
 ```bash
-npm install @esengine/ecs-framework
+npm install @esengine/esengine
 ```
 
 ### 从源码构建
@@ -34,7 +34,7 @@ npm install @esengine/ecs-framework
 
 ### 编辑器下载
 
-预编译的编辑器可在 [Releases](https://github.com/esengine/ecs-framework/releases) 页面下载，支持 Windows 和 macOS。
+预编译的编辑器可在 [Releases](https://github.com/esengine/esengine/releases) 页面下载，支持 Windows 和 macOS。
 
 ## 快速开始
 
@@ -42,7 +42,7 @@ npm install @esengine/ecs-framework
 import {
     Core, Scene, Entity, Component, EntitySystem,
     Matcher, Time, ECSComponent, ECSSystem
-} from '@esengine/ecs-framework';
+} from '@esengine/esengine';
 
 @ECSComponent('Position')
 class Position extends Component {
@@ -102,7 +102,7 @@ ESEngine 采用模块化组织。每个功能都有运行时模块和可选的�
 
 | 包名 | 描述 |
 |------|------|
-| `@esengine/ecs-framework` | ECS 框架核心，包含实体管理、组件系统和查询 |
+| `@esengine/esengine` | ECS 框架核心，包含实体管理、组件系统和查询 |
 | `@esengine/math` | 向量、矩阵和数学工具 |
 | `@esengine/engine` | Rust/WASM 2D 渲染器 |
 | `@esengine/engine-core` | 引擎模块系统和生命周期管理 |
@@ -189,7 +189,7 @@ ESEngine 编辑器是基于 Tauri 和 React 构建的跨平台桌面应用。
 
 ```bash
 # 克隆仓库
-git clone https://github.com/esengine/ecs-framework.git
+git clone https://github.com/esengine/esengine.git
 cd ecs-framework
 
 # 安装依赖
@@ -228,8 +228,8 @@ ecs-framework/
 
 ## 社区
 
-- [GitHub Issues](https://github.com/esengine/ecs-framework/issues) - Bug 反馈和功能建议
-- [GitHub Discussions](https://github.com/esengine/ecs-framework/discussions) - 问题和想法
+- [GitHub Issues](https://github.com/esengine/esengine/issues) - Bug 反馈和功能建议
+- [GitHub Discussions](https://github.com/esengine/esengine/discussions) - 问题和想法
 - [QQ 交流群](https://jq.qq.com/?_wv=1027&k=29w1Nud6) - 中文社区
 
 ## 贡献

@@ -25,7 +25,7 @@ ESEngine is completely free and open source under the MIT license. No strings at
 ### Using npm
 
 ```bash
-npm install @esengine/ecs-framework
+npm install @esengine/esengine
 ```
 
 ### Building from Source
@@ -34,7 +34,7 @@ See [Building from Source](#building-from-source) for detailed instructions.
 
 ### Editor Download
 
-Pre-built editor binaries are available on the [Releases](https://github.com/esengine/ecs-framework/releases) page for Windows and macOS.
+Pre-built editor binaries are available on the [Releases](https://github.com/esengine/esengine/releases) page for Windows and macOS.
 
 ## Quick Start
 
@@ -42,7 +42,7 @@ Pre-built editor binaries are available on the [Releases](https://github.com/ese
 import {
     Core, Scene, Entity, Component, EntitySystem,
     Matcher, Time, ECSComponent, ECSSystem
-} from '@esengine/ecs-framework';
+} from '@esengine/esengine';
 
 @ECSComponent('Position')
 class Position extends Component {
@@ -102,7 +102,7 @@ ESEngine is organized into modular packages. Each feature has a runtime module a
 
 | Package | Description |
 |---------|-------------|
-| `@esengine/ecs-framework` | Core ECS framework with entity management, component system, and queries |
+| `@esengine/esengine` | Core ECS framework with entity management, component system, and queries |
 | `@esengine/math` | Vector, matrix, and mathematical utilities |
 | `@esengine/engine` | Rust/WASM 2D renderer |
 | `@esengine/engine-core` | Engine module system and lifecycle management |
@@ -189,7 +189,7 @@ ESEngine Editor is a cross-platform desktop application built with Tauri and Rea
 
 ```bash
 # Clone repository
-git clone https://github.com/esengine/ecs-framework.git
+git clone https://github.com/esengine/esengine.git
 cd ecs-framework
 
 # Install dependencies
@@ -228,8 +228,8 @@ ecs-framework/
 
 ## Community
 
-- [GitHub Issues](https://github.com/esengine/ecs-framework/issues) - Bug reports and feature requests
-- [GitHub Discussions](https://github.com/esengine/ecs-framework/discussions) - Questions and ideas
+- [GitHub Issues](https://github.com/esengine/esengine/issues) - Bug reports and feature requests
+- [GitHub Discussions](https://github.com/esengine/esengine/discussions) - Questions and ideas
 
 ## Contributing
 

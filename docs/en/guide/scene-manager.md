@@ -28,7 +28,7 @@ SceneManager is suitable for:
 This is the simplest and recommended approach, suitable for most applications:
 
 ```typescript
-import { Core, Scene } from '@esengine/ecs-framework';
+import { Core, Scene } from '@esengine/esengine';
 
 // 1. Initialize Core
 Core.create({ debug: true });
@@ -78,7 +78,7 @@ update(deltaTime: number) {
 If you need more control, you can use SceneManager directly:
 
 ```typescript
-import { Core, SceneManager, Scene } from '@esengine/ecs-framework';
+import { Core, SceneManager, Scene } from '@esengine/esengine';
 
 // Initialize Core
 Core.create({ debug: true });

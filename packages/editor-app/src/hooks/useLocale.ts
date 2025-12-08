@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { LocaleService, type Locale } from '@esengine/editor-core';
 
 export function useLocale() {

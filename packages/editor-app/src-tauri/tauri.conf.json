@@ -149,7 +149,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://github.com/esengine/ecs-framework/releases/latest/download/latest.json"
+        "https://github.com/esengine/esengine/releases/latest/download/latest.json"
       ],
       "dialog": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFDQjNFNDIxREFBODNDNkMKUldSc1BLamFJZVN6SEJIRXRWWEovVXRta08yNWFkZmtKNnZoSHFmbi9ZdGxubUMzSHJaN3J0VEcK"

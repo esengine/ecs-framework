@@ -219,7 +219,7 @@ onUnmounted(() => {
         </p>
         <div class="hero-actions">
           <a href="/guide/getting-started" class="btn-primary">开始使用</a>
-          <a href="https://github.com/esengine/ecs-framework" class="btn-secondary" target="_blank">了解更多</a>
+          <a href="https://github.com/esengine/esengine" class="btn-secondary" target="_blank">了解更多</a>
         </div>
       </div>
 

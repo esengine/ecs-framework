@@ -6,7 +6,7 @@
  * Scans all components in a scene, collects resource references, batch-loads them, and assigns runtime IDs back to components
  */
 
-import type { Scene } from '@esengine/ecs-framework';
+import type { Scene } from '@esengine/esengine';
 import { isResourceComponent, type ResourceReference } from '../interfaces/IResourceComponent';
 
 /**

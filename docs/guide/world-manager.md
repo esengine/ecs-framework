@@ -27,7 +27,7 @@ WorldManager 适合以下高级场景：
 WorldManager 是 Core 的内置服务，通过服务容器获取：
 
 ```typescript
-import { Core, WorldManager } from '@esengine/ecs-framework';
+import { Core, WorldManager } from '@esengine/esengine';
 
 // 初始化 Core
 Core.create({ debug: true });
@@ -277,7 +277,7 @@ World 支持全局系统，这些系统在 World 级别运行，不依赖特定 
 ### 定义全局系统
 
 ```typescript
-import { IGlobalSystem } from '@esengine/ecs-framework';
+import { IGlobalSystem } from '@esengine/esengine';
 
 // 网络系统（World 级别）
 class NetworkSystem implements IGlobalSystem {
@@ -513,7 +513,7 @@ console.log(`清理了 ${cleanedCount} 个 World`);
 ### MMO 游戏房间系统
 
 ```typescript
-import { Core, WorldManager, Scene, World } from '@esengine/ecs-framework';
+import { Core, WorldManager, Scene, World } from '@esengine/esengine';
 
 // 初始化
 Core.create({ debug: true });

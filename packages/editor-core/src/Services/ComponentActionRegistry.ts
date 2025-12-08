@@ -5,7 +5,7 @@
  */
 
 import { injectable } from 'tsyringe';
-import type { IService } from '@esengine/ecs-framework';
+import type { IService } from '@esengine/esengine';
 import type { ComponentAction } from '../Plugin/EditorModule';
 // Re-export ComponentAction type from Plugin system
 export type { ComponentAction } from '../Plugin/EditorModule';

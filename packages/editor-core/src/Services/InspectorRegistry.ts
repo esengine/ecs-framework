@@ -1,5 +1,5 @@
 import { IInspectorProvider, InspectorContext } from './IInspectorProvider';
-import { IService } from '@esengine/ecs-framework';
+import { IService } from '@esengine/esengine';
 import React from 'react';
 
 export class InspectorRegistry implements IService {

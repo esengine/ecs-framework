@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { setGlobalLogLevel, LogLevel } from '@esengine/ecs-framework';
+import { setGlobalLogLevel, LogLevel } from '@esengine/esengine';
 import App from './App';
 import './styles/global.css';
 import './styles/index.css';

@@ -7,7 +7,7 @@
  * 通过向共享的 UIRenderCollector 提交渲染原语来渲染 UIButtonComponent 实体。
  */
 
-import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/ecs-framework';
+import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/esengine';
 import { UITransformComponent } from '../../components/UITransformComponent';
 import { UIButtonComponent } from '../../components/widgets/UIButtonComponent';
 import { UIRenderComponent } from '../../components/UIRenderComponent';

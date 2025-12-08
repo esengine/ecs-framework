@@ -1,4 +1,4 @@
-import { EntitySystem, Matcher, Entity, ECSSystem, HierarchyComponent } from '@esengine/ecs-framework';
+import { EntitySystem, Matcher, Entity, ECSSystem, HierarchyComponent } from '@esengine/esengine';
 import { TransformComponent, Matrix2D } from './TransformComponent';
 
 const DEG_TO_RAD = Math.PI / 180;

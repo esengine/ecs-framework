@@ -20,7 +20,7 @@
 存储层级关系数据的组件：
 
 ```typescript
-import { HierarchyComponent } from '@esengine/ecs-framework';
+import { HierarchyComponent } from '@esengine/esengine';
 
 // HierarchyComponent 的核心属性
 interface HierarchyComponent {
@@ -36,7 +36,7 @@ interface HierarchyComponent {
 处理层级逻辑的系统，提供所有层级操作的 API：
 
 ```typescript
-import { HierarchySystem } from '@esengine/ecs-framework';
+import { HierarchySystem } from '@esengine/esengine';
 
 // 获取系统
 const hierarchySystem = scene.getEntityProcessor(HierarchySystem);
@@ -47,7 +47,7 @@ const hierarchySystem = scene.getEntityProcessor(HierarchySystem);
 ### 添加系统到场景
 
 ```typescript
-import { Scene, HierarchySystem } from '@esengine/ecs-framework';
+import { Scene, HierarchySystem } from '@esengine/esengine';
 
 class GameScene extends Scene {
     protected initialize(): void {
@@ -256,7 +256,7 @@ import {
     Scene,
     HierarchySystem,
     HierarchyComponent
-} from '@esengine/ecs-framework';
+} from '@esengine/esengine';
 
 class GameScene extends Scene {
     private hierarchySystem!: HierarchySystem;
@@ -319,7 +319,7 @@ class GameScene extends Scene {
 结合 Transform 组件实现层级变换：
 
 ```typescript
-import { EntitySystem, Matcher, HierarchySystem, HierarchyComponent } from '@esengine/ecs-framework';
+import { EntitySystem, Matcher, HierarchySystem, HierarchyComponent } from '@esengine/esengine';
 
 class HierarchyTransformSystem extends EntitySystem {
     private hierarchySystem!: HierarchySystem;

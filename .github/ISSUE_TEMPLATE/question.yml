@@ -8,12 +8,12 @@ body:
       value: |
         💡 提示：如果是简单问题，可以先查看：
         - [📚 文档](https://esengine.github.io/ecs-framework/)
-        - [📖 AI 文档助手](https://deepwiki.com/esengine/ecs-framework)
+        - [📖 AI 文档助手](https://deepwiki.com/esengine/esengine)
         - [💬 QQ 交流群](https://jq.qq.com/?_wv=1027&k=29w1Nud6)
 
         💡 Tip: For simple questions, please check first:
         - [📚 Documentation](https://esengine.github.io/ecs-framework/)
-        - [📖 AI Documentation](https://deepwiki.com/esengine/ecs-framework)
+        - [📖 AI Documentation](https://deepwiki.com/esengine/esengine)
 
   - type: textarea
     id: question

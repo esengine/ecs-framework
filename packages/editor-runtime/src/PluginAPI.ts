@@ -15,7 +15,7 @@
  */
 
 import type { EntityStoreService, MessageHub } from '@esengine/editor-core';
-import type { Scene, ServiceContainer } from '@esengine/ecs-framework';
+import type { Scene, ServiceContainer } from '@esengine/esengine';
 
 // 内部 API 接口定义
 interface IPluginAPIInternal {

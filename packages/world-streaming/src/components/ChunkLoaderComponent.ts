@@ -1,4 +1,4 @@
-import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/ecs-framework';
+import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/esengine';
 import type { IChunkCoord, IStreamingConfig } from '../types';
 import { DEFAULT_STREAMING_CONFIG } from '../types';
 

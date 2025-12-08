@@ -27,7 +27,7 @@
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
-    "@esengine/ecs-framework": "workspace:*",
+    "@esengine/esengine": "workspace:*",
     "@esengine/editor-core": "workspace:*",
     "@esengine/ui": "workspace:*",
     "@types/react": "^18.3.12",

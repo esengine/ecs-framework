@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { LogService, LogEntry } from '@esengine/editor-core';
-import { LogLevel } from '@esengine/ecs-framework';
+import { LogLevel } from '@esengine/esengine';
 import {
     Search, Filter, Settings, X, Trash2, ChevronDown,
     Bug, Info, AlertTriangle, XCircle, AlertCircle, Wifi, Pause, Play, Copy

@@ -8,7 +8,7 @@ This guide will help you get started with ECS Framework, from installation to cr
 
 ```bash
 # Using npm
-npm install @esengine/ecs-framework
+npm install @esengine/esengine
 ```
 
 ## Initialize Core
@@ -18,7 +18,7 @@ npm install @esengine/ecs-framework
 The core of ECS Framework is the `Core` class, a singleton that manages the entire framework lifecycle.
 
 ```typescript
-import { Core } from '@esengine/ecs-framework'
+import { Core } from '@esengine/esengine'
 
 // Method 1: Using config object (recommended)
 const core = Core.create({
@@ -102,7 +102,7 @@ See engine integration examples: [Game Engine Integration](#game-engine-integrat
 Components are pure data containers that store entity state:
 
 ```typescript
-import { Component, ECSComponent } from '@esengine/ecs-framework'
+import { Component, ECSComponent } from '@esengine/esengine'
 
 // Position component
 @ECSComponent('Position')
@@ -151,7 +151,7 @@ class Sprite extends Component {
 Systems contain game logic and process entities with specific components. ECS Framework provides Matcher-based entity filtering:
 
 ```typescript
-import { EntitySystem, Matcher, Time, ECSSystem } from '@esengine/ecs-framework'
+import { EntitySystem, Matcher, Time, ECSSystem } from '@esengine/esengine'
 
 // Movement system - handles position and velocity
 @ECSSystem('MovementSystem')
@@ -219,7 +219,7 @@ class RenderSystem extends EntitySystem {
 Recommended to extend Scene class for custom scenes:
 
 ```typescript
-import { Scene } from '@esengine/ecs-framework'
+import { Scene } from '@esengine/esengine'
 
 // Recommended: Extend Scene for custom scene
 class GameScene extends Scene {
@@ -264,7 +264,7 @@ player.addComponent(new Sprite("player.png", 64, 64));
 Core has built-in scene management, very simple to use:
 
 ```typescript
-import { Core, Scene } from '@esengine/ecs-framework';
+import { Core, Scene } from '@esengine/esengine';
 
 // Initialize Core
 Core.create({ debug: true });
@@ -304,7 +304,7 @@ const player = Core.ecsAPI?.createEntity('Player')
 Only for complex server-side applications (MMO game servers, game room systems, etc.):
 
 ```typescript
-import { Core, WorldManager } from '@esengine/ecs-framework';
+import { Core, WorldManager } from '@esengine/esengine';
 
 // Initialize Core
 Core.create({ debug: true });
@@ -338,7 +338,7 @@ function gameLoop(deltaTime: number) {
 ```typescript
 import { Stage } from "laya/display/Stage";
 import { Laya } from "Laya";
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 
 // Initialize Laya
 Laya.init(800, 600).then(() => {
@@ -358,7 +358,7 @@ Laya.init(800, 600).then(() => {
 
 ```typescript
 import { Component, _decorator } from 'cc';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 
 const { ccclass } = _decorator;
 

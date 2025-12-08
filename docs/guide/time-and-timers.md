@@ -9,7 +9,7 @@ Time 类是框架的时间管理核心，提供了游戏时间相关的所有功
 ### 基本时间属性
 
 ```typescript
-import { Time } from '@esengine/ecs-framework';
+import { Time } from '@esengine/esengine';
 
 class GameSystem extends EntitySystem {
   protected process(entities: readonly Entity[]): void {
@@ -124,7 +124,7 @@ Core 提供了强大的定时器调度功能，可以创建一次性或重复执
 ### 基本定时器使用
 
 ```typescript
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 
 class GameScene extends Scene {
   protected initialize(): void {

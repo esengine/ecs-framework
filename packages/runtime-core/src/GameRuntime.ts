@@ -6,7 +6,7 @@
  * This is the unified entry point for editor preview and standalone runtime
  */
 
-import { Core, Scene, SceneSerializer, HierarchySystem } from '@esengine/ecs-framework';
+import { Core, Scene, SceneSerializer, HierarchySystem } from '@esengine/esengine';
 import {
     EngineBridge,
     EngineRenderSystem,

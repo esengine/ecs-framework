@@ -430,7 +430,7 @@ export class WeChatBuildPipeline implements IBuildPipeline {
             bundleName: 'user-code',
             minify: wxConfig.isRelease,
             sourceMap: wxConfig.sourceMap,
-            external: ['@esengine/ecs-framework', '@esengine/core'],
+            external: ['@esengine/esengine', '@esengine/core'],
             projectRoot: context.projectRoot,
             define: {
                 'process.env.NODE_ENV': wxConfig.isRelease ? '"production"' : '"development"',
@@ -468,7 +468,7 @@ export class WeChatBuildPipeline implements IBuildPipeline {
             console.log(`[WeChatBuild] Copied WeChat runtime | 复制微信运行时: ${count} files`);
         } else {
             // Fallback to standard runtime | 回退到标准运行时
-            const stdRuntimeSrc = `${context.projectRoot}/node_modules/@esengine/ecs-framework/dist`;
+            const stdRuntimeSrc = `${context.projectRoot}/node_modules/@esengine/esengine/dist`;
             const hasStdRuntime = await fs.pathExists(stdRuntimeSrc);
             if (hasStdRuntime) {
                 const count = await fs.copyDirectory(stdRuntimeSrc, runtimeDst, ['*.js']);
