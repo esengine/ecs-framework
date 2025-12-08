@@ -15,7 +15,7 @@
 
 ### New Package
 
-- **@esengine/worker-generator** `v1.0.1`: CLI 工具，从 `WorkerEntitySystem` 子类自动生成 Worker 文件
+- **@esengine/worker-generator** `v1.0.2`: CLI 工具，从 `WorkerEntitySystem` 子类自动生成 Worker 文件
   - 自动扫描并提取 `workerProcess` 方法体
   - 支持 `--wechat` 模式，使用 TypeScript 编译器转换为 ES5 语法
   - 读取代码中的 `workerScriptPath` 配置，生成到指定路径

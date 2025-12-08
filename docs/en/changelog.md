@@ -15,7 +15,7 @@ This document records the version update history of the `@esengine/ecs-framework
 
 ### New Package
 
-- **@esengine/worker-generator** `v1.0.1`: CLI tool to auto-generate Worker files from `WorkerEntitySystem` subclasses
+- **@esengine/worker-generator** `v1.0.2`: CLI tool to auto-generate Worker files from `WorkerEntitySystem` subclasses
   - Automatically scan and extract `workerProcess` method body
   - Support `--wechat` mode, use TypeScript compiler to convert to ES5 syntax
   - Read `workerScriptPath` config from code, generate to specified path
