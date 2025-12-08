@@ -3,7 +3,7 @@
  * Project Plugin Loader
  */
 
-import { PluginManager, LocaleService, MessageHub } from '@esengine/editor-core';
+import { PluginManager, LocaleService, MessageHub, EditorConfig, getPluginsPath } from '@esengine/editor-core';
 import type { IPlugin, ModuleManifest } from '@esengine/editor-core';
 import { Core } from '@esengine/ecs-framework';
 import { TauriAPI } from '../api/tauri';
@@ -31,12 +31,18 @@ interface LoadedPluginMeta {
 }
 
 /**
+ * 插件容器全局变量名
+ * Plugin container global variable name
+ */
+const PLUGINS_GLOBAL_NAME = EditorConfig.globals.plugins;
+
+/**
  * 项目插件加载器
  *
  * 使用全局变量方案加载插件：
  * 1. 插件构建时将 @esengine/* 标记为 external
- * 2. 插件输出为 IIFE 格式，依赖从 window.__ESENGINE__ 获取
- * 3. 插件导出到 window.__ESENGINE_PLUGINS__[pluginName]
+ * 2. 插件输出为 IIFE 格式，依赖从全局 SDK 对象获取
+ * 3. 插件导出到全局插件容器
  */
 export class PluginLoader {
     private loadedPlugins: Map<string, LoadedPluginMeta> = new Map();
@@ -51,7 +57,7 @@ export class PluginLoader {
         // 初始化插件容器
         this.initPluginContainer();
 
-        const pluginsPath = `${projectPath}/plugins`;
+        const pluginsPath = getPluginsPath(projectPath);
 
         try {
             const exists = await TauriAPI.pathExists(pluginsPath);
@@ -75,8 +81,8 @@ export class PluginLoader {
      * 初始化插件容器
      */
     private initPluginContainer(): void {
-        if (!window.__ESENGINE_PLUGINS__) {
-            window.__ESENGINE_PLUGINS__ = {};
+        if (!(window as any)[PLUGINS_GLOBAL_NAME]) {
+            (window as any)[PLUGINS_GLOBAL_NAME] = {};
         }
     }
 
@@ -161,25 +167,27 @@ export class PluginLoader {
     ): Promise<IPlugin | null> {
         const pluginKey = this.sanitizePluginKey(pluginName);
 
+        const pluginsContainer = (window as any)[PLUGINS_GLOBAL_NAME] as Record<string, any>;
+
         try {
-            // 插件代码是 IIFE 格式，会自动导出到 window.__ESENGINE_PLUGINS__
+            // 插件代码是 IIFE 格式，会自动导出到全局插件容器
             await this.executeViaScriptTag(code, pluginName);
 
             // 从全局容器获取插件模块
-            const pluginModule = window.__ESENGINE_PLUGINS__[pluginKey];
+            const pluginModule = pluginsContainer[pluginKey];
             if (!pluginModule) {
                 // 尝试其他可能的 key 格式
-                const altKeys = Object.keys(window.__ESENGINE_PLUGINS__).filter(k =>
+                const altKeys = Object.keys(pluginsContainer).filter(k =>
                     k.includes(pluginName.replace(/@/g, '').replace(/\//g, '_').replace(/-/g, '_'))
                 );
 
                 if (altKeys.length > 0 && altKeys[0] !== undefined) {
                     const foundKey = altKeys[0];
-                    const altModule = window.__ESENGINE_PLUGINS__[foundKey];
+                    const altModule = pluginsContainer[foundKey];
                     return this.findPluginLoader(altModule);
                 }
 
-                console.error(`[PluginLoader] Plugin ${pluginName} did not export to __ESENGINE_PLUGINS__`);
+                console.error(`[PluginLoader] Plugin ${pluginName} did not export to ${PLUGINS_GLOBAL_NAME}`);
                 return null;
             }
 
@@ -330,11 +338,13 @@ export class PluginLoader {
      * 卸载所有已加载的插件
      */
     async unloadProjectPlugins(_pluginManager: PluginManager): Promise<void> {
+        const pluginsContainer = (window as any)[PLUGINS_GLOBAL_NAME] as Record<string, any> | undefined;
+
         for (const pluginName of this.loadedPlugins.keys()) {
             // 清理全局容器中的插件
             const pluginKey = this.sanitizePluginKey(pluginName);
-            if (window.__ESENGINE_PLUGINS__?.[pluginKey]) {
-                delete window.__ESENGINE_PLUGINS__[pluginKey];
+            if (pluginsContainer?.[pluginKey]) {
+                delete pluginsContainer[pluginKey];
             }
 
             // 移除 script 标签
@@ -351,12 +361,5 @@ export class PluginLoader {
      */
     getLoadedPluginNames(): string[] {
         return Array.from(this.loadedPlugins.keys());
-    }
-}
-
-// 全局类型声明
-declare global {
-    interface Window {
-        __ESENGINE_PLUGINS__: Record<string, any>;
     }
 }

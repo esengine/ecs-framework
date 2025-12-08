@@ -36,6 +36,9 @@ export abstract class Component implements IComponent {
      * 组件ID生成器
      *
      * 用于为每个组件分配唯一的ID。
+     *
+     * Component ID generator.
+     * Used to assign unique IDs to each component.
      */
     private static idGenerator: number = 0;
 

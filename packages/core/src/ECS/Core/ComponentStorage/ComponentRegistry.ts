@@ -260,7 +260,63 @@ export class ComponentRegistry {
     }
 
     /**
+     * 注销组件类型
+     * Unregister component type
+     *
+     * 用于插件卸载时清理组件。
+     * 注意：这不会释放 bitIndex，以避免索引冲突。
+     *
+     * Used for cleanup during plugin unload.
+     * Note: This does not release bitIndex to avoid index conflicts.
+     *
+     * @param componentName 组件名称 | Component name
+     */
+    public static unregister(componentName: string): void {
+        const componentType = this.componentNameToType.get(componentName);
+        if (!componentType) {
+            return;
+        }
+
+        const bitIndex = this.componentTypes.get(componentType);
+
+        // 移除类型映射
+        // Remove type mappings
+        this.componentTypes.delete(componentType);
+        if (bitIndex !== undefined) {
+            this.bitIndexToType.delete(bitIndex);
+        }
+        this.componentNameToType.delete(componentName);
+        this.componentNameToId.delete(componentName);
+
+        // 清除相关的掩码缓存
+        // Clear related mask cache
+        this.clearMaskCache();
+
+        this._logger.debug(`Component unregistered: ${componentName}`);
+    }
+
+    /**
+     * 获取所有已注册的组件信息
+     * Get all registered component info
+     *
+     * @returns 组件信息数组 | Array of component info
+     */
+    public static getRegisteredComponents(): Array<{ name: string; type: Function; bitIndex: number }> {
+        const result: Array<{ name: string; type: Function; bitIndex: number }> = [];
+
+        for (const [name, type] of this.componentNameToType) {
+            const bitIndex = this.componentTypes.get(type);
+            if (bitIndex !== undefined) {
+                result.push({ name, type, bitIndex });
+            }
+        }
+
+        return result;
+    }
+
+    /**
      * 重置注册表（用于测试）
+     * Reset registry (for testing)
      */
     public static reset(): void {
         this.componentTypes.clear();
