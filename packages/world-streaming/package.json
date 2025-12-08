@@ -17,7 +17,7 @@
         "dev": "tsup --watch"
     },
     "dependencies": {
-        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/esengine": "workspace:*",
         "@esengine/engine-core": "workspace:*"
     },
     "devDependencies": {
@@ -25,7 +25,7 @@
         "typescript": "^5.3.3"
     },
     "peerDependencies": {
-        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/esengine": "workspace:*",
         "@esengine/engine-core": "workspace:*"
     },
     "keywords": [

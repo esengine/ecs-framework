@@ -3,8 +3,8 @@
  * 2D 物理编辑器模块
  */
 
-import type { ServiceContainer, Entity } from '@esengine/ecs-framework';
-import { Core } from '@esengine/ecs-framework';
+import type { ServiceContainer, Entity } from '@esengine/esengine';
+import { Core } from '@esengine/esengine';
 import type {
     IEditorModuleLoader,
     EntityCreationTemplate,

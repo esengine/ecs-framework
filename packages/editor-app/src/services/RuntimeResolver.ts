@@ -288,7 +288,7 @@ export class RuntimeResolver {
 
                 // Add to import map using module.name from module.json
                 // 使用 module.json 中的 module.name 作为 import map 的 key
-                // e.g., core/module.json: { "name": "@esengine/ecs-framework" }
+                // e.g., core/module.json: { "name": "@esengine/esengine" }
                 if (module.name) {
                     importMap[module.name] = `./libs/${module.id}/${module.id}.js`;
                 }

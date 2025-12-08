@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as ReactDOM from 'react-dom';
 import * as ReactJSXRuntime from 'react/jsx-runtime';
-import { Core, createLogger, Scene } from '@esengine/ecs-framework';
-import * as ECSFramework from '@esengine/ecs-framework';
+import { Core, createLogger, Scene } from '@esengine/esengine';
+import * as ECSFramework from '@esengine/esengine';
 
 // 将 React 暴露到全局，供动态加载的插件使用
 // editor-runtime.js 将 React 设为 external，需要从全局获取

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { IFieldEditor, FieldEditorProps, MessageHub } from '@esengine/editor-core';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { Plus, Trash2, ChevronDown, ChevronRight, Film, Upload, Star, Play, Square } from 'lucide-react';
 import type { AnimationClip, AnimationFrame, SpriteAnimatorComponent } from '@esengine/sprite';
 import { AssetField } from '../../components/inspectors/fields/AssetField';

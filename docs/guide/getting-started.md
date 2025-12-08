@@ -8,7 +8,7 @@
 
 ```bash
 # 使用 npm
-npm install @esengine/ecs-framework
+npm install @esengine/esengine
 ```
 
 ## 初始化 Core
@@ -18,7 +18,7 @@ npm install @esengine/ecs-framework
 ECS Framework 的核心是 `Core` 类，它是一个单例模式，负责管理整个框架的生命周期。
 
 ```typescript
-import { Core } from '@esengine/ecs-framework'
+import { Core } from '@esengine/esengine'
 
 // 方式1：使用配置对象（推荐）
 const core = Core.create({
@@ -102,7 +102,7 @@ const instance = Core.Instance;  // 获取当前实例，如果未创建则为 n
 组件是纯数据容器，用于存储实体的状态：
 
 ```typescript
-import { Component, ECSComponent } from '@esengine/ecs-framework'
+import { Component, ECSComponent } from '@esengine/esengine'
 
 // 位置组件
 @ECSComponent('Position')
@@ -151,7 +151,7 @@ class Sprite extends Component {
 系统包含游戏逻辑，处理具有特定组件的实体。ECS Framework 提供了基于 Matcher 的实体过滤机制：
 
 ```typescript
-import { EntitySystem, Matcher, Time, ECSSystem } from '@esengine/ecs-framework'
+import { EntitySystem, Matcher, Time, ECSSystem } from '@esengine/esengine'
 
 // 移动系统 - 处理位置和速度
 @ECSSystem('MovementSystem')
@@ -219,7 +219,7 @@ class RenderSystem extends EntitySystem {
 推荐继承 Scene 类来创建自定义场景：
 
 ```typescript
-import { Scene } from '@esengine/ecs-framework'
+import { Scene } from '@esengine/esengine'
 
 // 推荐：继承Scene创建自定义场景
 class GameScene extends Scene {
@@ -264,7 +264,7 @@ player.addComponent(new Sprite("player.png", 64, 64));
 Core 内置了场景管理功能，使用非常简单：
 
 ```typescript
-import { Core, Scene } from '@esengine/ecs-framework';
+import { Core, Scene } from '@esengine/esengine';
 
 // 初始化Core
 Core.create({ debug: true });
@@ -304,7 +304,7 @@ const player = Core.ecsAPI?.createEntity('Player')
 仅适用于复杂的服务器端应用（MMO游戏服务器、游戏房间系统等）：
 
 ```typescript
-import { Core, WorldManager } from '@esengine/ecs-framework';
+import { Core, WorldManager } from '@esengine/esengine';
 
 // 初始化Core
 Core.create({ debug: true });
@@ -338,7 +338,7 @@ function gameLoop(deltaTime: number) {
 ```typescript
 import { Stage } from "laya/display/Stage";
 import { Laya } from "Laya";
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 
 // 初始化 Laya
 Laya.init(800, 600).then(() => {
@@ -358,7 +358,7 @@ Laya.init(800, 600).then(() => {
 
 ```typescript
 import { Component, _decorator } from 'cc';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 
 const { ccclass } = _decorator;
 

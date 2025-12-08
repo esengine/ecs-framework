@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useCallback, useState } from 'react';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { MessageHub, IFileSystemService } from '@esengine/editor-core';
 import { BlendMode, BuiltInShaders } from '@esengine/material-system';
 import { useMaterialEditorStore, createDefaultMaterialData } from '../stores/MaterialEditorStore';

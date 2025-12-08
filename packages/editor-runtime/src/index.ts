@@ -74,7 +74,7 @@ export type { DependencyContainer } from 'tsyringe';
 // =============================================================================
 // ECS Framework Core
 // =============================================================================
-export * from '@esengine/ecs-framework';
+export * from '@esengine/esengine';
 
 // =============================================================================
 // Editor Core

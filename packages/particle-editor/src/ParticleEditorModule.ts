@@ -5,8 +5,8 @@
  * Registers file handlers, panels, and templates for .particle files.
  */
 
-import type { ServiceContainer, Entity } from '@esengine/ecs-framework';
-import { Core } from '@esengine/ecs-framework';
+import type { ServiceContainer, Entity } from '@esengine/esengine';
+import { Core } from '@esengine/esengine';
 import type {
     IEditorModuleLoader,
     PanelDescriptor,

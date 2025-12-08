@@ -35,7 +35,7 @@
 使用 `@Serializable` 和 `@Serialize` 装饰器标记需要序列化的组件和字段：
 
 ```typescript
-import { Component, ECSComponent, Serializable, Serialize } from '@esengine/ecs-framework';
+import { Component, ECSComponent, Serializable, Serialize } from '@esengine/esengine';
 
 @ECSComponent('Player')
 @Serializable({ version: 1 })
@@ -505,7 +505,7 @@ enum ChangeOperation {
 ### 注册迁移函数
 
 ```typescript
-import { VersionMigrationManager } from '@esengine/ecs-framework';
+import { VersionMigrationManager } from '@esengine/esengine';
 
 // 假设 PlayerComponent v1 有 hp 字段
 // v2 改为 health 和 maxHealth 字段
@@ -531,7 +531,7 @@ VersionMigrationManager.registerComponentMigration(
 ### 使用迁移构建器
 
 ```typescript
-import { MigrationBuilder } from '@esengine/ecs-framework';
+import { MigrationBuilder } from '@esengine/esengine';
 
 new MigrationBuilder()
   .forComponent('Player')

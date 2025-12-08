@@ -6,7 +6,7 @@
  * 管理编辑器工具的隔离预览场景（瓦片地图编辑器、材质预览等）
  */
 
-import { Scene, EntitySystem, Entity } from '@esengine/ecs-framework';
+import { Scene, EntitySystem, Entity } from '@esengine/esengine';
 
 /**
  * Configuration for creating a preview scene

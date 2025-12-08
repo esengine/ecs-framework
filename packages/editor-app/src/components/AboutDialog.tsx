@@ -152,7 +152,7 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
 
     const handleOpenGithub = async () => {
         try {
-            await open('https://github.com/esengine/ecs-framework');
+            await open('https://github.com/esengine/esengine');
         } catch (error) {
             console.error('Failed to open GitHub link:', error);
         }

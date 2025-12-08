@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { MessageHub, IFileSystemService, IFileSystem, ProjectService } from '@esengine/editor-core';
 import { getMaterialManager, Shader } from '@esengine/material-system';
 import {

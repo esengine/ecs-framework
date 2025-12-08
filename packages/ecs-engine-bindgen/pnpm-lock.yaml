@@ -8,7 +8,7 @@ importers:
 
   .:
     dependencies:
-      '@esengine/ecs-framework':
+      '@esengine/esengine':
         specifier: workspace:*
         version: link:../core
       es-engine:

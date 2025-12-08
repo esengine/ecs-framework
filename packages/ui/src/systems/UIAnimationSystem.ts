@@ -1,4 +1,4 @@
-import { EntitySystem, Matcher, Entity, Time, ECSSystem } from '@esengine/ecs-framework';
+import { EntitySystem, Matcher, Entity, Time, ECSSystem } from '@esengine/esengine';
 import { UIProgressBarComponent } from '../components/widgets/UIProgressBarComponent';
 import { UISliderComponent } from '../components/widgets/UISliderComponent';
 import { UIButtonComponent } from '../components/widgets/UIButtonComponent';

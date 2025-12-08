@@ -3,8 +3,8 @@
  * 运行时插件管理器
  */
 
-import { ComponentRegistry, ServiceContainer } from '@esengine/ecs-framework';
-import type { IScene } from '@esengine/ecs-framework';
+import { ComponentRegistry, ServiceContainer } from '@esengine/esengine';
+import type { IScene } from '@esengine/esengine';
 import type { IPlugin, IRuntimeModule, SystemContext, ModuleManifest } from '@esengine/engine-core';
 
 export type { IPlugin, IRuntimeModule, SystemContext, ModuleManifest };

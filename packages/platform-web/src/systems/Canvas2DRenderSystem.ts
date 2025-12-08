@@ -3,7 +3,7 @@
  * Canvas 2D 渲染系统
  */
 
-import { EntitySystem, Matcher, ECSSystem, Core } from '@esengine/ecs-framework';
+import { EntitySystem, Matcher, ECSSystem, Core } from '@esengine/esengine';
 import { TransformComponent } from '@esengine/engine-core';
 import { SpriteComponent } from '@esengine/sprite';
 

@@ -421,7 +421,7 @@ export class WebBuildPipeline implements IBuildPipeline {
             bundleName: 'user-code',
             minify: webConfig.isRelease,
             sourceMap: webConfig.sourceMap,
-            external: ['@esengine/ecs-framework', '@esengine/core'],
+            external: ['@esengine/esengine', '@esengine/core'],
             projectRoot: context.projectRoot,
             define: {
                 'process.env.NODE_ENV': webConfig.isRelease ? '"production"' : '"development"'

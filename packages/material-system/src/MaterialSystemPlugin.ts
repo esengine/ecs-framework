@@ -6,7 +6,7 @@
  */
 
 import { MaterialManager, getMaterialManager } from './MaterialManager';
-import { createLogger } from '@esengine/ecs-framework';
+import { createLogger } from '@esengine/esengine';
 import type { IPlugin, ModuleManifest, IRuntimeModule } from '@esengine/engine-core';
 
 /** Logger instance for MaterialRuntimeModule. | MaterialRuntimeModule的日志实例。 */

@@ -3,8 +3,8 @@
  * 插件配置插件
  */
 
-import type { ServiceContainer } from '@esengine/ecs-framework';
-import { createLogger } from '@esengine/ecs-framework';
+import type { ServiceContainer } from '@esengine/esengine';
+import { createLogger } from '@esengine/esengine';
 import type { IPlugin, IEditorModuleLoader, ModuleManifest } from '@esengine/editor-core';
 import { SettingsRegistry } from '@esengine/editor-core';
 

@@ -10,7 +10,7 @@ import {
 import { RemoteEntity, EntityDetails } from '../types';
 import { getProfilerService } from '../utils';
 import { PropertyRendererRegistry, PropertyContext } from '@esengine/editor-core';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import '../../../styles/EntityInspector.css';
 
 interface RemoteEntityInspectorProps {

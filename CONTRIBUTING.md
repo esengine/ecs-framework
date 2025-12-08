@@ -35,7 +35,7 @@ This project follows the [Conventional Commits](https://www.conventionalcommits.
 
 ### 范围 / Scope
 
-- **core**: 核心包 @esengine/ecs-framework
+- **core**: 核心包 @esengine/esengine
 - **math**: 数学库包
 - **editor**: 编辑器
 - **docs**: 文档
@@ -119,9 +119,9 @@ npm run format
 
 ## 问题反馈 / Issue Reporting
 
-如果你发现了 bug 或有新功能建议，请[创建 Issue](https://github.com/esengine/ecs-framework/issues/new)。
+如果你发现了 bug 或有新功能建议，请[创建 Issue](https://github.com/esengine/esengine/issues/new)。
 
-If you find a bug or have a feature request, please [create an issue](https://github.com/esengine/ecs-framework/issues/new).
+If you find a bug or have a feature request, please [create an issue](https://github.com/esengine/esengine/issues/new).
 
 ## 许可证 / License
 

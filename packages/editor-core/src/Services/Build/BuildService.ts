@@ -6,7 +6,7 @@
  * 管理构建管线和执行构建任务。
  */
 
-import type { IService } from '@esengine/ecs-framework';
+import type { IService } from '@esengine/esengine';
 import type {
     IBuildPipeline,
     IBuildPipelineRegistry,

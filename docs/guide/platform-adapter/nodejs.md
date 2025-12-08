@@ -26,7 +26,7 @@ import type {
     WorkerCreationOptions,
     PlatformConfig,
     NodeDeviceInfo
-} from '@esengine/ecs-framework';
+} from '@esengine/esengine';
 
 /**
  * Node.js 平台适配器
@@ -353,7 +353,7 @@ class NodeWorker implements PlatformWorker {
 ### 2. 注册适配器
 
 ```typescript
-import { PlatformManager } from '@esengine/ecs-framework';
+import { PlatformManager } from '@esengine/esengine';
 import { NodeAdapter } from './platform/NodeAdapter';
 
 // 检查是否在Node.js环境
@@ -368,7 +368,7 @@ if (typeof process !== 'undefined' && process.versions && process.versions.node)
 Node.js 适配器与 WorkerEntitySystem 配合使用，框架会自动处理 Worker 脚本的创建：
 
 ```typescript
-import { WorkerEntitySystem, Matcher } from '@esengine/ecs-framework';
+import { WorkerEntitySystem, Matcher } from '@esengine/esengine';
 import * as os from 'os';
 
 class PhysicsSystem extends WorkerEntitySystem {

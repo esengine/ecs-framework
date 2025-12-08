@@ -1,4 +1,4 @@
-import { IService, createLogger } from '@esengine/ecs-framework';
+import { IService, createLogger } from '@esengine/esengine';
 import { IFieldEditor, IFieldEditorRegistry, FieldEditorContext } from './IFieldEditor';
 
 const logger = createLogger('FieldEditorRegistry');

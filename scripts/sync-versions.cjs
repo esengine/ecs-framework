@@ -16,8 +16,8 @@ function updateNetworkPeerDependency() {
         const networkPackageJsonPath = path.join(__dirname, '..', 'packages', 'network', 'package.json');
         const networkPackageJson = JSON.parse(fs.readFileSync(networkPackageJsonPath, 'utf8'));
         
-        const oldPeerDep = networkPackageJson.peerDependencies['@esengine/ecs-framework'];
-        networkPackageJson.peerDependencies['@esengine/ecs-framework'] = `>=${coreVersion}`;
+        const oldPeerDep = networkPackageJson.peerDependencies['@esengine/esengine'];
+        networkPackageJson.peerDependencies['@esengine/esengine'] = `>=${coreVersion}`;
         
         fs.writeFileSync(networkPackageJsonPath, JSON.stringify(networkPackageJson, null, 2) + '\n');
         

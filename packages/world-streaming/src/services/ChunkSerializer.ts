@@ -1,4 +1,4 @@
-import type { Entity, IScene } from '@esengine/ecs-framework';
+import type { Entity, IScene } from '@esengine/esengine';
 import { TransformComponent } from '@esengine/engine-core';
 import type { IChunkCoord, IChunkData, ISerializedEntity, IChunkBounds } from '../types';
 

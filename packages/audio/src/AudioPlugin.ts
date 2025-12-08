@@ -1,4 +1,4 @@
-import type { ComponentRegistry as ComponentRegistryType } from '@esengine/ecs-framework';
+import type { ComponentRegistry as ComponentRegistryType } from '@esengine/esengine';
 import type { IRuntimeModule, IPlugin, ModuleManifest } from '@esengine/engine-core';
 import { AudioSourceComponent } from './AudioSourceComponent';
 

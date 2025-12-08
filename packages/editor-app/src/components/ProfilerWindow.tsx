@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { Activity, BarChart3, Clock, Cpu, RefreshCw, Pause, Play, X, Wifi, WifiOff, Server, Search, Table2, TreePine } from 'lucide-react';
 import { ProfilerService } from '../services/ProfilerService';
 import { SettingsService } from '../services/SettingsService';

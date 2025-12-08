@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Component } from '@esengine/ecs-framework';
+import { Component } from '@esengine/esengine';
 import type { IComponentInspector, ComponentInspectorContext } from '@esengine/editor-core';
 import { UITransformComponent, AnchorPreset } from '@esengine/ui';
 

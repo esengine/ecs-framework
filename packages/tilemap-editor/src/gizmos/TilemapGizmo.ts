@@ -8,7 +8,7 @@
  * 通过 Rust WebGL 引擎渲染以获得最佳性能。
  */
 
-import type { Entity } from '@esengine/ecs-framework';
+import type { Entity } from '@esengine/esengine';
 import type { IGizmoRenderData, IRectGizmoData, IGridGizmoData, GizmoColor } from '@esengine/editor-core';
 import { GizmoColors, GizmoRegistry } from '@esengine/editor-core';
 import { TransformComponent } from '@esengine/engine-core';

@@ -5,7 +5,7 @@
  * 提供全局物理配置和实用方法
  */
 
-import type { IService } from '@esengine/ecs-framework';
+import type { IService } from '@esengine/esengine';
 import type { Vector2, Physics2DConfig, RaycastHit2D, OverlapResult2D } from '../types/Physics2DTypes';
 import { DEFAULT_PHYSICS_CONFIG, CollisionLayer2D } from '../types/Physics2DTypes';
 import type { Physics2DSystem } from '../systems/Physics2DSystem';

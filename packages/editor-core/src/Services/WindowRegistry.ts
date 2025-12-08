@@ -1,4 +1,4 @@
-import { IService } from '@esengine/ecs-framework';
+import { IService } from '@esengine/esengine';
 import { ComponentType } from 'react';
 
 /**

@@ -116,7 +116,7 @@ jobs:
             fi
 
             # 检测 core
-            if echo "$TITLE $BODY" | grep -iE "(@esengine/ecs-framework|packages/core|core package|核心包)" > /dev/null; then
+            if echo "$TITLE $BODY" | grep -iE "(@esengine/esengine|packages/core|core package|核心包)" > /dev/null; then
               LABELS_TO_ADD="$LABELS_TO_ADD core"
               echo "   🎯 检测到: core"
             fi

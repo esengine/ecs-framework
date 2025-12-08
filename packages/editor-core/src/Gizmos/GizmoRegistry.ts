@@ -8,7 +8,7 @@
  * 使用注册表模式替代原型修改，实现更清晰的架构。
  */
 
-import type { Component, ComponentType, Entity } from '@esengine/ecs-framework';
+import type { Component, ComponentType, Entity } from '@esengine/esengine';
 import type { IGizmoProvider, IGizmoRenderData } from './IGizmoProvider';
 
 /**

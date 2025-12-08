@@ -16,7 +16,7 @@ const banner = `/**
  */`;
 
 const external = [
-  '@esengine/ecs-framework',
+  '@esengine/esengine',
   'react',
   'react-dom',
   'react/jsx-runtime',
@@ -101,7 +101,7 @@ module.exports = [
       sourcemap: true,
       exports: 'named',
       globals: {
-        '@esengine/ecs-framework': 'ECS'
+        '@esengine/esengine': 'ECS'
       }
     },
     plugins: [

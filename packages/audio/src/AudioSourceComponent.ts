@@ -1,4 +1,4 @@
-import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/ecs-framework';
+import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/esengine';
 
 @ECSComponent('AudioSource')
 @Serializable({ version: 2, typeId: 'AudioSource' })

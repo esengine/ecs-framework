@@ -2,7 +2,7 @@ import { TaskStatus, NodeType } from '../../Types/TaskStatus';
 import { INodeExecutor, NodeExecutionContext, BindingHelper } from '../NodeExecutor';
 import { NodeExecutorMetadata } from '../NodeMetadata';
 import { BehaviorTreeAssetManager } from '../BehaviorTreeAssetManager';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 
 /**
  * SubTree执行器

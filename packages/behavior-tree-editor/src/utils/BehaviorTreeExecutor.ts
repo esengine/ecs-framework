@@ -1,4 +1,4 @@
-import { World, Entity, Scene, createLogger, Time, Core } from '@esengine/ecs-framework';
+import { World, Entity, Scene, createLogger, Time, Core } from '@esengine/esengine';
 import {
     BehaviorTreeRuntimeComponent,
     BehaviorTreeAssetManager,

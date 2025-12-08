@@ -1,4 +1,4 @@
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import {
     EditorPluginManager,
     UIRegistry,

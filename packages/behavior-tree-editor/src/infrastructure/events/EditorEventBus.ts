@@ -1,4 +1,4 @@
-import { createLogger } from '@esengine/ecs-framework';
+import { createLogger } from '@esengine/esengine';
 
 const logger = createLogger('EditorEventBus');
 

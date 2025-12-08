@@ -18,7 +18,7 @@
 ### 创建持久化实体
 
 ```typescript
-import { Scene } from '@esengine/ecs-framework';
+import { Scene } from '@esengine/esengine';
 
 class GameScene extends Scene {
   protected initialize(): void {
@@ -38,7 +38,7 @@ class GameScene extends Scene {
 ### 场景切换时的行为
 
 ```typescript
-import { Core, Scene } from '@esengine/ecs-framework';
+import { Core, Scene } from '@esengine/esengine';
 
 // 初始场景
 class Level1Scene extends Scene {
@@ -147,7 +147,7 @@ public get lifecyclePolicy(): EEntityLifecyclePolicy
 
 **示例**:
 ```typescript
-import { EEntityLifecyclePolicy } from '@esengine/ecs-framework';
+import { EEntityLifecyclePolicy } from '@esengine/esengine';
 
 if (entity.lifecyclePolicy === EEntityLifecyclePolicy.Persistent) {
   console.log('持久化实体');

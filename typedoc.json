@@ -52,8 +52,8 @@
     "示例": "/examples/"
   },
   "sidebarLinks": {
-    "GitHub": "https://github.com/esengine/ecs-framework",
-    "NPM": "https://www.npmjs.com/package/@esengine/ecs-framework"
+    "GitHub": "https://github.com/esengine/esengine",
+    "NPM": "https://www.npmjs.com/package/@esengine/esengine"
   },
   "hideGenerator": true,
   "githubPages": false,

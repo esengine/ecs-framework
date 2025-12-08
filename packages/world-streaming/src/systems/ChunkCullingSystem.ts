@@ -1,5 +1,5 @@
-import { EntitySystem, Matcher, ECSSystem } from '@esengine/ecs-framework';
-import type { Entity } from '@esengine/ecs-framework';
+import { EntitySystem, Matcher, ECSSystem } from '@esengine/esengine';
+import type { Entity } from '@esengine/esengine';
 import { ChunkComponent } from '../components/ChunkComponent';
 import { EChunkState } from '../types';
 

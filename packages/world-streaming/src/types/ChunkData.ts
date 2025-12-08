@@ -1,4 +1,4 @@
-import type { Entity } from '@esengine/ecs-framework';
+import type { Entity } from '@esengine/esengine';
 import { EChunkState, EChunkPriority } from './ChunkState';
 
 /**

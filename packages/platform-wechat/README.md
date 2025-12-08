@@ -11,7 +11,7 @@ npm install @esengine/platform-wechat
 ## 使用
 
 ```typescript
-import { PlatformManager } from '@esengine/ecs-framework';
+import { PlatformManager } from '@esengine/esengine';
 import { WeChatAdapter } from '@esengine/platform-wechat';
 
 // 注册微信小游戏适配器

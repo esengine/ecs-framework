@@ -52,7 +52,7 @@ async function main() {
         ));
 
         const coreVersion = corePackageJson.version;
-        const networkPeerDep = networkPackageJson.peerDependencies['@esengine/ecs-framework'];
+        const networkPeerDep = networkPackageJson.peerDependencies['@esengine/esengine'];
         
         console.log(`  Core版本: ${coreVersion}`);
         console.log(`  Network依赖: ${networkPeerDep}`);

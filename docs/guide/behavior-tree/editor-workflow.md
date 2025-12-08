@@ -62,7 +62,7 @@ Root: Selector
 推荐使用Builder API在代码中创建行为树：
 
 ```typescript
-import { Core, Scene } from '@esengine/ecs-framework';
+import { Core, Scene } from '@esengine/esengine';
 import {
     BehaviorTreePlugin,
     BehaviorTreeBuilder,
@@ -200,7 +200,7 @@ export class DebugAction implements INodeExecutor {
 ## 完整示例
 
 ```typescript
-import { Core, Scene } from '@esengine/ecs-framework';
+import { Core, Scene } from '@esengine/esengine';
 import {
     BehaviorTreePlugin,
     BehaviorTreeBuilder,

@@ -11,7 +11,7 @@
  * @see docs/architecture/plugin-system-design.md
  */
 
-import type { ComponentRegistry as ComponentRegistryType, IScene, ServiceContainer } from '@esengine/ecs-framework';
+import type { ComponentRegistry as ComponentRegistryType, IScene, ServiceContainer } from '@esengine/esengine';
 import { TransformComponent } from './TransformComponent';
 import type { ModuleManifest } from './ModuleManifest';
 

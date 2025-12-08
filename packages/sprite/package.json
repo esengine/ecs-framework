@@ -28,7 +28,7 @@
         "clean": "rimraf dist"
     },
     "devDependencies": {
-        "@esengine/ecs-framework": "workspace:*",
+        "@esengine/esengine": "workspace:*",
         "@esengine/asset-system": "workspace:*",
         "@esengine/engine-core": "workspace:*",
         "@esengine/build-config": "workspace:*",

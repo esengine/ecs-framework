@@ -6,7 +6,7 @@ import { DOMCache } from '../../utils/DOMCache';
 import { EditorEventBus, EditorEvent } from '../../infrastructure/events/EditorEventBus';
 import { ExecutionHooksManager } from '../interfaces/IExecutionHooks';
 import type { Breakpoint } from '../../types/Breakpoint';
-import { createLogger } from '@esengine/ecs-framework';
+import { createLogger } from '@esengine/esengine';
 
 const logger = createLogger('ExecutionController');
 

@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["ESEngine Team"]
 description = "High-performance 2D game engine for web and mobile platforms | 高性能2D游戏引擎，支持Web和移动平台"
 license = "MIT"
-repository = "https://github.com/esengine/ecs-framework"
+repository = "https://github.com/esengine/esengine"
 keywords = ["game-engine", "2d", "webgl", "wasm", "ecs"]
 categories = ["game-engines", "wasm", "graphics"]
 

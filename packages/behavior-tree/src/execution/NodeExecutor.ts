@@ -1,4 +1,4 @@
-import { Entity } from '@esengine/ecs-framework';
+import { Entity } from '@esengine/esengine';
 import { TaskStatus } from '../Types/TaskStatus';
 import { BehaviorNodeData, BehaviorTreeData, NodeRuntimeState } from './BehaviorTreeData';
 import { BehaviorTreeRuntimeComponent } from './BehaviorTreeRuntimeComponent';

@@ -1,5 +1,5 @@
-import type { IService } from '@esengine/ecs-framework';
-import { Injectable, Core, createLogger, SceneSerializer, Scene } from '@esengine/ecs-framework';
+import type { IService } from '@esengine/esengine';
+import { Injectable, Core, createLogger, SceneSerializer, Scene } from '@esengine/esengine';
 import type { SceneResourceManager } from '@esengine/asset-system';
 import type { MessageHub } from './MessageHub';
 import type { IFileAPI } from '../Types/IFileAPI';

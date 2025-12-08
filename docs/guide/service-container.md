@@ -20,7 +20,7 @@
 服务是实现了 `IService` 接口的类，必须提供 `dispose()` 方法用于资源清理：
 
 ```typescript
-import { IService } from '@esengine/ecs-framework';
+import { IService } from '@esengine/esengine';
 
 class MyService implements IService {
     constructor() {
@@ -73,7 +73,7 @@ ECS Framework 提供了三级服务容器：
 应用程序全局服务容器，可以通过 `Core.services` 访问：
 
 ```typescript
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 
 // 初始化Core
 Core.create({ debug: true });
@@ -87,7 +87,7 @@ const container = Core.services;
 每个 World 拥有独立的服务容器，用于管理 World 范围内的服务：
 
 ```typescript
-import { World } from '@esengine/ecs-framework';
+import { World } from '@esengine/esengine';
 
 // 创建 World
 const world = new World({ name: 'GameWorld' });
@@ -339,7 +339,7 @@ ECS Framework 提供了装饰器来简化依赖注入。
 标记类为可注入的服务：
 
 ```typescript
-import { Injectable, IService } from '@esengine/ecs-framework';
+import { Injectable, IService } from '@esengine/esengine';
 
 @Injectable()
 class GameService implements IService {
@@ -358,7 +358,7 @@ class GameService implements IService {
 通过属性装饰器注入依赖。注入时机是在构造函数执行后、`onInitialize()` 调用前完成：
 
 ```typescript
-import { Injectable, InjectProperty, IService } from '@esengine/ecs-framework';
+import { Injectable, InjectProperty, IService } from '@esengine/esengine';
 
 @Injectable()
 class PlayerService implements IService {
@@ -408,7 +408,7 @@ class CombatSystem extends EntitySystem {
 使用 `registerInjectable` 自动处理依赖注入：
 
 ```typescript
-import { registerInjectable } from '@esengine/ecs-framework';
+import { registerInjectable } from '@esengine/esengine';
 
 // 注册服务（会自动解析 @InjectProperty 依赖）
 registerInjectable(Core.services, PlayerService);
@@ -422,7 +422,7 @@ const player = Core.services.resolve(PlayerService);
 标记服务为可更新的，使其在每帧自动被调用：
 
 ```typescript
-import { Injectable, Updatable, IService, IUpdatable } from '@esengine/ecs-framework';
+import { Injectable, Updatable, IService, IUpdatable } from '@esengine/esengine';
 
 @Injectable()
 @Updatable()  // 默认优先级为0
@@ -466,7 +466,7 @@ function gameLoop(deltaTime: number) {
 实现 `IService` 接口并注册到容器：
 
 ```typescript
-import { IService } from '@esengine/ecs-framework';
+import { IService } from '@esengine/esengine';
 
 class AudioService implements IService {
     private sounds: Map<string, HTMLAudioElement> = new Map();

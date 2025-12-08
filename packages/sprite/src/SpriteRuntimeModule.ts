@@ -1,4 +1,4 @@
-import type { ComponentRegistry as ComponentRegistryType, IScene } from '@esengine/ecs-framework';
+import type { ComponentRegistry as ComponentRegistryType, IScene } from '@esengine/esengine';
 import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 import { SpriteComponent } from './SpriteComponent';
 import { SpriteAnimatorComponent } from './SpriteAnimatorComponent';

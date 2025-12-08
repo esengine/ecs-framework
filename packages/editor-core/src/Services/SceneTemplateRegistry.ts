@@ -1,4 +1,4 @@
-import type { Scene, Entity } from '@esengine/ecs-framework';
+import type { Scene, Entity } from '@esengine/esengine';
 
 /**
  * 默认实体创建函数类型

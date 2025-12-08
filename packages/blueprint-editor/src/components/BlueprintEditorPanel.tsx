@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { IFileSystemService, type IFileSystem } from '@esengine/editor-core';
 import { BlueprintCanvas } from './BlueprintCanvas';
 import { useBlueprintEditorStore } from '../stores/blueprintEditorStore';

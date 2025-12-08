@@ -1,4 +1,4 @@
-import type { Entity, Component } from '@esengine/ecs-framework';
+import type { Entity, Component } from '@esengine/esengine';
 
 export interface PluginEvent {
     name: string;

@@ -39,7 +39,7 @@ import {
     Database,
     AlertTriangle
 } from 'lucide-react';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { MessageHub, FileActionRegistry, AssetRegistryService, type FileCreationTemplate } from '@esengine/editor-core';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { SettingsService } from '../services/SettingsService';
@@ -351,7 +351,7 @@ export function ContentBrowser({
                 category: 'Script',
                 getContent: (fileName: string) => {
                     const className = fileName.replace(/\.ts$/, '');
-                    return `import { Component, ECSComponent, Property, Serialize, Serializable } from '@esengine/ecs-framework';
+                    return `import { Component, ECSComponent, Property, Serialize, Serializable } from '@esengine/esengine';
 
 /**
  * ${className}
@@ -393,7 +393,7 @@ export class ${className} extends Component {
                 category: 'Script',
                 getContent: (fileName: string) => {
                     const className = fileName.replace(/\.ts$/, '');
-                    return `import { EntitySystem, Matcher, ECSSystem, type Entity } from '@esengine/ecs-framework';
+                    return `import { EntitySystem, Matcher, ECSSystem, type Entity } from '@esengine/esengine';
 
 /**
  * ${className}
@@ -441,7 +441,7 @@ export function ${name.charAt(0).toLowerCase() + name.slice(1)}(): void {
                 getContent: (fileName: string) => {
                     const className = fileName.replace(/\.ts$/, '');
                     return `import React from 'react';
-import type { Component } from '@esengine/ecs-framework';
+import type { Component } from '@esengine/esengine';
 import type { IComponentInspector, ComponentInspectorContext } from '@esengine/editor-core';
 
 /**
@@ -481,7 +481,7 @@ export class ${className} implements IComponentInspector {
                 category: 'Editor',
                 getContent: (fileName: string) => {
                     const className = fileName.replace(/\.ts$/, '');
-                    return `import type { Component, Entity } from '@esengine/ecs-framework';
+                    return `import type { Component, Entity } from '@esengine/esengine';
 import type { IGizmoRenderData } from '@esengine/editor-core';
 
 /**

@@ -31,12 +31,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/esengine/ecs-framework.git",
+    "url": "https://github.com/esengine/esengine.git",
     "directory": "packages/worker-generator"
   },
-  "homepage": "https://github.com/esengine/ecs-framework/tree/master/packages/worker-generator",
+  "homepage": "https://github.com/esengine/esengine/tree/master/packages/worker-generator",
   "bugs": {
-    "url": "https://github.com/esengine/ecs-framework/issues"
+    "url": "https://github.com/esengine/esengine/issues"
   },
   "engines": {
     "node": ">=16.0.0"

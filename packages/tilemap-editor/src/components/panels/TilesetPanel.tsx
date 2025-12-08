@@ -3,7 +3,7 @@
  */
 
 import React, { useEffect, useCallback } from 'react';
-import { Core } from '@esengine/ecs-framework';
+import { Core } from '@esengine/esengine';
 import { MessageHub } from '@esengine/editor-core';
 import { TilemapComponent, type ITilesetData } from '@esengine/tilemap';
 import { useTilemapEditorStore } from '../../stores/TilemapEditorStore';

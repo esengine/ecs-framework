@@ -22,7 +22,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/esengine/ecs-framework.git",
+        "url": "https://github.com/esengine/esengine.git",
         "directory": "packages/ecs-engine-bindgen"
     },
     "keywords": [
@@ -38,8 +38,8 @@
         "es-engine": "file:../engine/pkg"
     },
     "devDependencies": {
-        "@esengine/ecs-framework": "workspace:*",
-        "@esengine/ecs-framework-math": "workspace:*",
+        "@esengine/esengine": "workspace:*",
+        "@esengine/esengine-math": "workspace:*",
         "@esengine/engine-core": "workspace:*",
         "@esengine/sprite": "workspace:*",
         "@esengine/camera": "workspace:*",

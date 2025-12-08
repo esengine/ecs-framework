@@ -1,4 +1,4 @@
-import { Entity, Component } from '@esengine/ecs-framework';
+import { Entity, Component } from '@esengine/esengine';
 import { MessageHub } from '@esengine/editor-core';
 import { BaseCommand } from '../BaseCommand';
 

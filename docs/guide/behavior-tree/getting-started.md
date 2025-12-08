@@ -15,7 +15,7 @@ npm install @esengine/behavior-tree
 ### 步骤1: 导入依赖
 
 ```typescript
-import { Core, Scene, Entity } from '@esengine/ecs-framework';
+import { Core, Scene, Entity } from '@esengine/esengine';
 import {
     BehaviorTreeBuilder,
     BehaviorTreeStarter,
@@ -113,7 +113,7 @@ setTimeout(() => {
 ## 完整代码
 
 ```typescript
-import { Core, Scene } from '@esengine/ecs-framework';
+import { Core, Scene } from '@esengine/esengine';
 import {
     BehaviorTreeBuilder,
     BehaviorTreeStarter,

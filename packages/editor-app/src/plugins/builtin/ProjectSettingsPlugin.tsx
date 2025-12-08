@@ -6,8 +6,8 @@
  * 注册项目级别的设置，如 UI 设计分辨率。
  */
 
-import type { ServiceContainer } from '@esengine/ecs-framework';
-import { createLogger, Core } from '@esengine/ecs-framework';
+import type { ServiceContainer } from '@esengine/esengine';
+import { createLogger, Core } from '@esengine/esengine';
 import type { IPlugin, IEditorModuleLoader, ModuleManifest } from '@esengine/editor-core';
 import { SettingsRegistry, ProjectService, moduleRegistry } from '@esengine/editor-core';
 import EngineService from '../../services/EngineService';
