@@ -4,6 +4,30 @@
 
 ---
 
+## v2.3.2 (2025-12-08)
+
+### Features
+
+- **微信小游戏 Worker 支持**: 添加对微信小游戏平台 Worker 的完整支持 (#297)
+  - 新增 `workerScriptPath` 配置项，支持预编译 Worker 脚本路径
+  - 修复微信小游戏 Worker 消息格式差异（`res` 直接是数据，无需 `.data`）
+  - 适用于微信小游戏等不支持动态脚本的平台
+
+### New Package
+
+- **@esengine/worker-generator** `v1.0.0`: CLI 工具，从 `WorkerEntitySystem` 子类自动生成 Worker 文件
+  - 自动扫描并提取 `workerProcess` 方法体
+  - 支持 `--wechat` 模式，使用 TypeScript 编译器转换为 ES5 语法
+  - 读取代码中的 `workerScriptPath` 配置，生成到指定路径
+  - 生成 `worker-mapping.json` 映射文件
+
+### Documentation
+
+- 更新 Worker 系统文档，添加微信小游戏支持章节
+- 新增英文版 Worker 系统文档 (`docs/en/guide/worker-system.md`)
+
+---
+
 ## v2.3.1 (2025-12-07)
 
 ### Bug Fixes
