@@ -30,12 +30,24 @@ import type { ServiceContainer } from '@esengine/ecs-framework';
  *
  * 用于类型安全的服务注册和获取。
  * For type-safe service registration and retrieval.
+ *
+ * 注意：__phantom 是必需属性（使用 declare 避免运行时开销），
+ * 这确保 TypeScript 在跨包类型解析时保留泛型类型信息。
+ *
+ * Note: __phantom is a required property (using declare to avoid runtime overhead),
+ * which ensures TypeScript preserves generic type information across packages.
  */
 export interface ServiceToken<T> {
     readonly id: symbol;
     readonly name: string;
-    /** 类型标记（仅用于类型推断）| Type marker (for type inference only) */
-    readonly _type?: T;
+    /**
+     * Phantom type 标记（强制类型推断）
+     * Phantom type marker (enforces type inference)
+     *
+     * 使用 declare 声明，不会在运行时占用内存。
+     * Declared with 'declare', no runtime memory overhead.
+     */
+    readonly __phantom: T;
 }
 
 /**
@@ -46,10 +58,12 @@ export interface ServiceToken<T> {
  * @returns 服务令牌 | Service token
  */
 export function createServiceToken<T>(name: string): ServiceToken<T> {
+    // __phantom 仅用于类型推断，不需要实际值
+    // __phantom is only for type inference, no actual value needed
     return {
         id: Symbol(name),
         name
-    };
+    } as ServiceToken<T>;
 }
 
 // ============================================================================

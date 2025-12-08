@@ -12,27 +12,28 @@
  */
 
 import type { ComponentRegistry as ComponentRegistryType, IScene, ServiceContainer } from '@esengine/ecs-framework';
-import {
-    PluginServiceRegistry,
-    createServiceToken,
-    type ServiceToken
-} from '@esengine/plugin-types';
 import { TransformComponent } from './TransformComponent';
 import type { ModuleManifest } from './ModuleManifest';
 
-// 重新导出服务令牌系统 | Re-export service token system
+// 从本地模块导入服务令牌系统（确保 tsup 生成的类型以 engine-core 为源）
+// Import service token system from local module (ensures tsup generates types with engine-core as source)
+import {
+    PluginServiceRegistry,
+    createServiceToken,
+    TransformTypeToken,
+    type ServiceToken
+} from './PluginServiceRegistry';
+
+// 导出服务令牌系统 | Export service token system
 export {
     PluginServiceRegistry,
     createServiceToken,
+    TransformTypeToken,
     type ServiceToken
 };
 
 // 重新导出 IEditorModuleBase（供编辑器插件使用）| Re-export for editor plugins
 export type { IEditorModuleBase } from '@esengine/plugin-types';
-
-// 从本地模块导入并导出 Token | Import and export tokens from local module
-import { TransformTypeToken } from './PluginServiceRegistry';
-export { TransformTypeToken };
 
 // ============================================================================
 // 加载阶段 | Loading Phase

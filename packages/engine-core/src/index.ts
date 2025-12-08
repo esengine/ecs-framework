@@ -9,13 +9,13 @@ export {
     type SystemContext,
     type IRuntimeModule,
     type IPlugin,
-    // Plugin service registry
+    // Plugin service registry (defined locally in PluginServiceRegistry.ts)
     PluginServiceRegistry,
     createServiceToken,
-    // Core tokens (only TransformTypeToken is defined here)
     TransformTypeToken,
     // Types
-    type ServiceToken
+    type ServiceToken,
+    type IEditorModuleBase
 } from './EnginePlugin';
 
 // Module Manifest types (unified module/plugin configuration)

@@ -1543,6 +1543,9 @@ importers:
       '@esengine/build-config':
         specifier: workspace:*
         version: link:../build-config
+      '@esengine/ecs-engine-bindgen':
+        specifier: workspace:*
+        version: link:../ecs-engine-bindgen
       '@esengine/ecs-framework':
         specifier: workspace:*
         version: link:../core

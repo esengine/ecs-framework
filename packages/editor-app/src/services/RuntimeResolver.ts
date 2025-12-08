@@ -237,15 +237,11 @@ export class RuntimeResolver {
                 // 复制所有 chunk 文件（代码分割会创建 chunk-*.js 文件）
                 await this.copyChunkFiles(moduleDistDir, dstModuleDir);
 
-                // Add to import map
-                importMap[`@esengine/${module.id}`] = `./libs/${module.id}/${module.id}.js`;
-
-                // Also add common aliases
-                if (module.id === 'core') {
-                    importMap['@esengine/ecs-framework'] = `./libs/${module.id}/${module.id}.js`;
-                }
-                if (module.id === 'math') {
-                    importMap['@esengine/ecs-framework-math'] = `./libs/${module.id}/${module.id}.js`;
+                // Add to import map using module.name from module.json
+                // 使用 module.json 中的 module.name 作为 import map 的 key
+                // e.g., core/module.json: { "name": "@esengine/ecs-framework" }
+                if (module.name) {
+                    importMap[module.name] = `./libs/${module.id}/${module.id}.js`;
                 }
 
                 copiedModules.push(module.id);
