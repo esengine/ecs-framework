@@ -5,6 +5,7 @@ import type {
     IProfilerService,
     ProfilerData,
     SystemPerformanceData,
+    RemoteEntity,
     AdvancedProfilerDataPayload
 } from './tokens';
 

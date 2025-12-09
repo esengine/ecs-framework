@@ -54,3 +54,8 @@ export type { IShaderAssetData, ShaderFileFormat } from './loaders/ShaderLoader'
 // 运行时模块。
 export { MaterialRuntimeModule, materialRuntimeModule, MaterialSystemPlugin } from './MaterialSystemPlugin';
 export type { IMaterialRuntimeModule } from './MaterialSystemPlugin';
+
+// Service Tokens.
+// 服务令牌。
+export { MaterialManagerToken } from './tokens';
+export type { IMaterialManager } from './tokens';
