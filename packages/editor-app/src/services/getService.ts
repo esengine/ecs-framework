@@ -7,9 +7,8 @@
  */
 
 import { Core } from '@esengine/ecs-framework';
-import type { ServiceToken } from '@esengine/ecs-framework';
-import type { ProfilerService } from './ProfilerService';
-import { ProfilerServiceToken } from './tokens';
+import type { ServiceToken } from '@esengine/engine-core';
+import { ProfilerServiceToken, type IProfilerService } from './tokens';
 
 /**
  * 安全获取插件服务
@@ -32,6 +31,6 @@ export function getPluginService<T>(token: ServiceToken<T>): T | undefined {
  * 获取 ProfilerService 实例
  * Get ProfilerService instance
  */
-export function getProfilerService(): ProfilerService | undefined {
+export function getProfilerService(): IProfilerService | undefined {
     return getPluginService(ProfilerServiceToken);
 }

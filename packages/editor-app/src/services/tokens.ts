@@ -9,35 +9,26 @@
  * These services are defined in editor-app, so Tokens are also defined here.
  */
 
-import { createServiceToken } from '@esengine/ecs-framework';
-import type { ProfilerService } from './ProfilerService';
+import { createServiceToken } from '@esengine/engine-core';
+import type { ProfilerData, AdvancedProfilerDataPayload } from './ProfilerService';
 
 // ============================================================================
 // Profiler Service Token
 // ============================================================================
 
 /**
- * ProfilerService 的服务令牌
- * Service token for ProfilerService
+ * ProfilerService 接口（用于类型检查）
+ * ProfilerService interface (for type checking)
  *
- * ProfilerService 提供远程性能分析功能，包括：
+ * 提供远程性能分析功能，包括：
  * - WebSocket 连接管理
  * - 性能数据收集和分发
  * - 远程日志接收
  *
- * ProfilerService provides remote profiling capabilities including:
+ * Provides remote profiling capabilities including:
  * - WebSocket connection management
  * - Performance data collection and distribution
  * - Remote log reception
- */
-export const ProfilerServiceToken = createServiceToken<ProfilerService>('profilerService');
-
-/**
- * ProfilerService 接口（用于类型检查）
- * ProfilerService interface (for type checking)
- *
- * 注意：完整实现在 ProfilerService.ts 中
- * Note: Full implementation is in ProfilerService.ts
  */
 export interface IProfilerService {
     /** 检查是否已连接 | Check if connected */
@@ -47,23 +38,32 @@ export interface IProfilerService {
     isServerActive(): boolean;
 
     /** 获取当前数据 | Get current data */
-    getCurrentData(): import('./ProfilerService').ProfilerData | null;
+    getCurrentData(): ProfilerData | null;
 
     /** 手动启动服务器 | Manually start server */
-    manualStartServer(): void;
+    manualStartServer(): Promise<void>;
+
+    /** 手动停止服务器 | Manually stop server */
+    manualStopServer(): Promise<void>;
 
     /** 停止服务器 | Stop server */
     stopServer(): void;
 
-    /** 添加监听器 | Add listener */
-    addListener(listener: (data: import('./ProfilerService').ProfilerData) => void): void;
+    /** 订阅数据更新 | Subscribe to data updates */
+    subscribe(callback: (data: ProfilerData) => void): () => void;
 
-    /** 移除监听器 | Remove listener */
-    removeListener(listener: (data: import('./ProfilerService').ProfilerData) => void): void;
+    /** 请求实体详情 | Request entity details */
+    requestEntityDetails(entityId: number): void;
 
     /** 添加高级分析器监听器 | Add advanced profiler listener */
-    addAdvancedListener(listener: (data: import('./ProfilerService').AdvancedProfilerDataPayload) => void): void;
+    addAdvancedListener(listener: (data: AdvancedProfilerDataPayload) => void): void;
 
     /** 移除高级分析器监听器 | Remove advanced profiler listener */
-    removeAdvancedListener(listener: (data: import('./ProfilerService').AdvancedProfilerDataPayload) => void): void;
+    removeAdvancedListener(listener: (data: AdvancedProfilerDataPayload) => void): void;
 }
+
+/**
+ * ProfilerService 的服务令牌
+ * Service token for ProfilerService
+ */
+export const ProfilerServiceToken = createServiceToken<IProfilerService>('profilerService');
