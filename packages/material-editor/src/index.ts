@@ -21,8 +21,12 @@ import {
     FileActionRegistry,
     InspectorRegistry,
     IInspectorRegistry,
-    IFileSystemService
+    IFileSystemService,
+    LocaleService
 } from '@esengine/editor-core';
+
+// Import locale translations
+import { en, zh, es } from './locales';
 
 // Inspector provider
 import { MaterialAssetInspectorProvider } from './providers/MaterialAssetInspectorProvider';
@@ -102,6 +106,25 @@ export class MaterialEditorModule implements IEditorModuleLoader {
             }) => {
                 await this.handleCreateMaterialAsset(payload);
             });
+        }
+
+        // Register translations
+        this.registerTranslations(services);
+    }
+
+    /**
+     * 注册插件翻译到 LocaleService
+     * Register plugin translations to LocaleService
+     */
+    private registerTranslations(services: ServiceContainer): void {
+        try {
+            const localeService = services.tryResolve(LocaleService);
+            if (localeService) {
+                localeService.extendTranslations('material', { en, zh, es });
+                console.info('[MaterialEditorModule] Translations registered');
+            }
+        } catch (error) {
+            console.warn('[MaterialEditorModule] Failed to register translations:', error);
         }
     }
 
@@ -234,6 +257,7 @@ export const materialEditorModule = new MaterialEditorModule();
 export { MaterialEditorPanel } from './components/MaterialEditorPanel';
 export { useMaterialEditorStore, createDefaultMaterialData } from './stores/MaterialEditorStore';
 export type { MaterialEditorState } from './stores/MaterialEditorStore';
+export { useMaterialLocale, translateMaterial } from './hooks/useMaterialLocale';
 
 /**
  * Material Plugin Manifest

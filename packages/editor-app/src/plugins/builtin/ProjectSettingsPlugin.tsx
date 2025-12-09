@@ -58,42 +58,46 @@ class ProjectSettingsEditorModule implements IEditorModuleLoader {
         // Setup listener for UI design resolution changes
         this.setupSettingsListener();
 
+        // Register settings using translation keys (prefixed with '$')
+        // 使用翻译键注册设置（以 '$' 为前缀）
         settingsRegistry.registerCategory({
             id: 'project',
-            title: '项目',
-            description: '项目级别的配置',
+            title: '$pluginSettings.project.title',
+            description: '$pluginSettings.project.description',
             sections: [
                 {
                     id: 'ui-settings',
-                    title: 'UI 设置',
-                    description: '配置 UI 系统的基础参数',
+                    title: '$pluginSettings.project.uiSettings.title',
+                    description: '$pluginSettings.project.uiSettings.description',
                     settings: [
                         {
                             key: 'project.uiDesignResolution.width',
-                            label: '设计宽度',
+                            label: '$pluginSettings.project.uiSettings.designWidth.label',
                             type: 'number',
                             defaultValue: 1920,
-                            description: 'UI 画布的设计宽度（像素）',
+                            description: '$pluginSettings.project.uiSettings.designWidth.description',
                             min: 320,
                             max: 7680,
                             step: 1
                         },
                         {
                             key: 'project.uiDesignResolution.height',
-                            label: '设计高度',
+                            label: '$pluginSettings.project.uiSettings.designHeight.label',
                             type: 'number',
                             defaultValue: 1080,
-                            description: 'UI 画布的设计高度（像素）',
+                            description: '$pluginSettings.project.uiSettings.designHeight.description',
                             min: 240,
                             max: 4320,
                             step: 1
                         },
                         {
                             key: 'project.uiDesignResolution.preset',
-                            label: '分辨率预设',
+                            label: '$pluginSettings.project.uiSettings.resolutionPreset.label',
                             type: 'select',
                             defaultValue: '1920x1080',
-                            description: '选择常见的分辨率预设',
+                            description: '$pluginSettings.project.uiSettings.resolutionPreset.description',
+                            // Resolution preset options use static labels (not localized)
+                            // 分辨率预设选项使用静态标签（不本地化）
                             options: UI_RESOLUTION_PRESETS.map(p => ({
                                 label: p.label,
                                 value: `${p.value.width}x${p.value.height}`
@@ -103,17 +107,17 @@ class ProjectSettingsEditorModule implements IEditorModuleLoader {
                 },
                 {
                     id: 'modules',
-                    title: '引擎模块',
-                    description: '管理项目使用的引擎模块。每个模块包含运行时组件和编辑器工具。禁用不需要的模块可以减小构建体积。',
+                    title: '$pluginSettings.project.modules.title',
+                    description: '$pluginSettings.project.modules.description',
                     settings: [
                         {
                             key: 'project.disabledModules',
-                            label: '模块列表',
+                            label: '$pluginSettings.project.modules.list.label',
                             type: 'moduleList',
                             // Default: no modules disabled (all enabled)
                             // 默认：没有禁用的模块（全部启用）
                             defaultValue: [],
-                            description: '取消勾选不需要的模块。核心模块不能禁用。新增的模块会自动启用。',
+                            description: '$pluginSettings.project.modules.list.description',
                             // Custom props for moduleList type
                             // Modules are loaded dynamically from ModuleRegistry (sizes from module.json)
                             // 模块从 ModuleRegistry 动态加载（大小来自 module.json）

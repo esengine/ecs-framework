@@ -480,11 +480,9 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         if (!entity) return;
 
         const confirmed = await confirm(
-            locale === 'zh'
-                ? `确定要删除实体 "${entity.name}" 吗？`
-                : `Are you sure you want to delete entity "${entity.name}"?`,
+            t('hierarchy.deleteConfirm', { name: entity.name }),
             {
-                title: locale === 'zh' ? '删除实体' : 'Delete Entity',
+                title: t('hierarchy.deleteEntity'),
                 kind: 'warning'
             }
         );
@@ -544,7 +542,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
      */
     const handleCreateFolder = useCallback(() => {
         const entityCount = entityStore.getAllEntities().length;
-        const folderName = locale === 'zh' ? `文件夹 ${entityCount + 1}` : `Folder ${entityCount + 1}`;
+        const folderName = `Folder ${entityCount + 1}`;
 
         const scene = Core.scene;
         if (!scene) return;
@@ -656,7 +654,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                     <Search size={14} />
                     <input
                         type="text"
-                        placeholder={locale === 'zh' ? '搜索...' : 'Search...'}
+                        placeholder={t('hierarchy.search')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -669,14 +667,14 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                             <button
                                 className="outliner-action-btn"
                                 onClick={handleCreateEntity}
-                                title={locale === 'zh' ? '创建实体' : 'Create Entity'}
+                                title={t('hierarchy.createEntity')}
                             >
                                 <Plus size={14} />
                             </button>
                             <button
                                 className="outliner-action-btn"
                                 onClick={handleCreateFolder}
-                                title={locale === 'zh' ? '创建文件夹' : 'Create Folder'}
+                                title={t('hierarchy.createFolder')}
                             >
                                 <FolderPlus size={14} />
                             </button>
@@ -684,7 +682,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                     )}
                     <button
                         className="outliner-action-btn"
-                        title={locale === 'zh' ? '设置' : 'Settings'}
+                        title={t('hierarchy.settings')}
                     >
                         <Settings size={14} />
                     </button>
@@ -695,14 +693,14 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                         <button
                             className={`mode-btn ${viewMode === 'local' ? 'active' : ''}`}
                             onClick={() => setViewMode('local')}
-                            title={locale === 'zh' ? '本地场景' : 'Local Scene'}
+                            title={t('hierarchy.localScene')}
                         >
                             <Monitor size={14} />
                         </button>
                         <button
                             className={`mode-btn ${viewMode === 'remote' ? 'active' : ''}`}
                             onClick={() => setViewMode('remote')}
-                            title={locale === 'zh' ? '远程实体' : 'Remote Entities'}
+                            title={t('hierarchy.remoteEntities')}
                         >
                             <Globe size={14} />
                         </button>
@@ -719,9 +717,9 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
             {/* Column Headers */}
             <div className="outliner-header">
                 <div className="outliner-header-icons">
-                    <span title={locale === 'zh' ? '可见性' : 'Visibility'}><Eye size={12} className="header-icon" /></span>
-                    <span title={locale === 'zh' ? '收藏' : 'Favorite'}><Star size={12} className="header-icon" /></span>
-                    <span title={locale === 'zh' ? '锁定' : 'Lock'}><Lock size={12} className="header-icon" /></span>
+                    <span title={t('hierarchy.visibility')}><Eye size={12} className="header-icon" /></span>
+                    <span title={t('hierarchy.favorite')}><Star size={12} className="header-icon" /></span>
+                    <span title={t('hierarchy.lock')}><Lock size={12} className="header-icon" /></span>
                 </div>
                 <div
                     className={`outliner-header-label ${sortColumn === 'name' ? 'sorted' : ''}`}
@@ -751,7 +749,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                         <div className="empty-state">
                             <Box size={32} strokeWidth={1.5} className="empty-icon" />
                             <div className="empty-hint">
-                                {locale === 'zh' ? '远程游戏中没有实体' : 'No entities in remote game'}
+                                {t('hierarchy.remoteEmpty')}
                             </div>
                         </div>
                     ) : (
@@ -783,7 +781,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                         <div className="empty-state">
                             <Box size={32} strokeWidth={1.5} className="empty-icon" />
                             <div className="empty-hint">
-                                {locale === 'zh' ? '创建实体开始使用' : 'Create an entity to get started'}
+                                {t('hierarchy.emptyHint')}
                             </div>
                         </div>
                     ) : (
@@ -873,9 +871,9 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
 
             {/* Status Bar */}
             <div className="outliner-status">
-                <span>{totalCount} {locale === 'zh' ? '个对象' : 'actors'}</span>
+                <span>{totalCount} {t('hierarchy.actors')}</span>
                 {selectedCount > 0 && (
-                    <span> ({selectedCount} {locale === 'zh' ? '个已选中' : 'selected'})</span>
+                    <span> ({selectedCount} {t('hierarchy.selected')})</span>
                 )}
             </div>
 
@@ -884,6 +882,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                     x={contextMenu.x}
                     y={contextMenu.y}
                     locale={locale}
+                    t={t}
                     entityId={contextMenu.entityId}
                     pluginTemplates={pluginTemplates}
                     onCreateEmpty={() => { handleCreateEntity(); closeContextMenu(); }}
@@ -904,6 +903,7 @@ interface ContextMenuWithSubmenuProps {
     x: number;
     y: number;
     locale: string;
+    t: (key: string, params?: Record<string, string | number>, fallback?: string) => string;
     entityId: number | null;
     pluginTemplates: EntityCreationTemplate[];
     onCreateEmpty: () => void;
@@ -914,43 +914,40 @@ interface ContextMenuWithSubmenuProps {
 }
 
 function ContextMenuWithSubmenu({
-    x, y, locale, entityId, pluginTemplates,
+    x, y, locale, t, entityId, pluginTemplates,
     onCreateEmpty, onCreateFolder, onCreateFromTemplate, onDelete
 }: ContextMenuWithSubmenuProps) {
     const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
     const [submenuPosition, setSubmenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const categoryLabels: Record<string, { zh: string; en: string }> = {
-        'basic': { zh: '基础', en: 'Basic' },
-        'rendering': { zh: '2D 对象', en: '2D Objects' },
-        'ui': { zh: 'UI', en: 'UI' },
-        'physics': { zh: '物理', en: 'Physics' },
-        'audio': { zh: '音频', en: 'Audio' },
-        'effects': { zh: '特效', en: 'Effects' },
-        'other': { zh: '其他', en: 'Other' },
-    };
-
     // 实体创建模板的 label 本地化映射
-    const entityTemplateLabels: Record<string, { zh: string; en: string }> = {
-        'Sprite': { zh: '精灵', en: 'Sprite' },
-        'Animated Sprite': { zh: '动画精灵', en: 'Animated Sprite' },
-        '创建 Tilemap': { zh: '瓦片地图', en: 'Tilemap' },
-        'Camera 2D': { zh: '2D 相机', en: 'Camera 2D' },
-        '创建粒子效果': { zh: '粒子效果', en: 'Particle Effect' },
-    };
-
     const getCategoryLabel = (category: string) => {
-        const labels = categoryLabels[category];
-        return labels ? (locale === 'zh' ? labels.zh : labels.en) : category;
+        // Map category keys to translation keys
+        const categoryKeyMap: Record<string, string> = {
+            'rendering': 'hierarchy.categories.rendering',
+            'ui': 'hierarchy.categories.ui',
+            'effects': 'hierarchy.categories.effects',
+            'physics': 'hierarchy.categories.physics',
+            'audio': 'hierarchy.categories.audio',
+            'basic': 'hierarchy.categories.basic',
+            'other': 'hierarchy.categories.other'
+        };
+        const key = categoryKeyMap[category];
+        return key ? t(key) : category;
     };
 
     const getEntityTemplateLabel = (label: string) => {
-        const mapping = entityTemplateLabels[label];
-        if (mapping) {
-            return locale === 'zh' ? mapping.zh : mapping.en;
-        }
-        return label;
+        // Map template labels to translation keys
+        const templateKeyMap: Record<string, string> = {
+            'Sprite': 'hierarchy.entityTemplates.sprite',
+            'Animated Sprite': 'hierarchy.entityTemplates.animatedSprite',
+            '创建 Tilemap': 'hierarchy.entityTemplates.tilemap',
+            'Camera 2D': 'hierarchy.entityTemplates.camera2d',
+            '创建粒子效果': 'hierarchy.entityTemplates.particleEffect'
+        };
+        const key = templateKeyMap[label];
+        return key ? t(key) : label;
     };
 
     const templatesByCategory = pluginTemplates.reduce((acc, template) => {
@@ -985,12 +982,12 @@ function ContextMenuWithSubmenu({
         >
             <button onClick={onCreateEmpty}>
                 <Plus size={12} />
-                <span>{locale === 'zh' ? '创建空实体' : 'Create Empty Entity'}</span>
+                <span>{t('hierarchy.createEmptyEntity')}</span>
             </button>
 
             <button onClick={onCreateFolder}>
                 <Folder size={12} />
-                <span>{locale === 'zh' ? '创建文件夹' : 'Create Folder'}</span>
+                <span>{t('hierarchy.createFolder')}</span>
             </button>
 
             {sortedCategories.length > 0 && <div className="context-menu-divider" />}
@@ -1029,7 +1026,7 @@ function ContextMenuWithSubmenu({
                     <div className="context-menu-divider" />
                     <button onClick={onDelete} className="context-menu-danger">
                         <Trash2 size={12} />
-                        <span>{locale === 'zh' ? '删除实体' : 'Delete Entity'}</span>
+                        <span>{t('hierarchy.deleteEntity')}</span>
                     </button>
                 </>
             )}

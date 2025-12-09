@@ -4,14 +4,15 @@ import { checkForUpdates, installUpdate } from '../utils/updater';
 import { getVersion } from '@tauri-apps/api/app';
 import { open } from '@tauri-apps/plugin-shell';
 import { MiniParticleLogo } from './MiniParticleLogo';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/AboutDialog.css';
 
 interface AboutDialogProps {
     onClose: () => void;
-    locale?: string;
 }
 
-export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
+export function AboutDialog({ onClose }: AboutDialogProps) {
+    const { t } = useLocale();
     const [checking, setChecking] = useState(false);
     const [installing, setInstalling] = useState(false);
     const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'latest' | 'error' | 'installing'>('idle');
@@ -30,44 +31,6 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
         };
         fetchVersion();
     }, []);
-
-    const t = (key: string) => {
-        const translations: Record<string, Record<string, string>> = {
-            en: {
-                title: 'About ESEngine Editor',
-                version: 'Version',
-                description: 'High-performance game editor for ECS-based game development',
-                checkUpdate: 'Check for Updates',
-                checking: 'Checking...',
-                updateAvailable: 'New version available',
-                latest: 'You are using the latest version',
-                error: 'Failed to check for updates',
-                download: 'Download & Install',
-                installing: 'Installing...',
-                close: 'Close',
-                copyright: '© 2025 ESEngine. All rights reserved.',
-                website: 'Website',
-                github: 'GitHub'
-            },
-            zh: {
-                title: '关于 ESEngine Editor',
-                version: '版本',
-                description: '高性能游戏编辑器，基于 ECS 架构',
-                checkUpdate: '检查更新',
-                checking: '检查中...',
-                updateAvailable: '发现新版本',
-                latest: '您正在使用最新版本',
-                error: '检查更新失败',
-                download: '下载并安装',
-                installing: '正在安装...',
-                close: '关闭',
-                copyright: '© 2025 ESEngine. 保留所有权利。',
-                website: '官网',
-                github: 'GitHub'
-            }
-        };
-        return translations[locale]?.[key] || key;
-    };
 
     const handleCheckUpdate = async () => {
         setChecking(true);
@@ -136,15 +99,15 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
     const getStatusText = () => {
         switch (updateStatus) {
             case 'checking':
-                return t('checking');
+                return t('about.checking');
             case 'available':
-                return `${t('updateAvailable')} (v${newVersion})`;
+                return `${t('about.updateAvailable')} (v${newVersion})`;
             case 'installing':
-                return t('installing');
+                return t('about.installing');
             case 'latest':
-                return t('latest');
+                return t('about.latest');
             case 'error':
-                return t('error');
+                return t('about.error');
             default:
                 return '';
         }
@@ -162,7 +125,7 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
         <div className="modal-overlay" onClick={onClose}>
             <div className="about-dialog" onClick={(e) => e.stopPropagation()}>
                 <div className="about-header">
-                    <h2>{t('title')}</h2>
+                    <h2>{t('about.title')}</h2>
                     <button className="close-btn" onClick={onClose}>
                         <X size={20} />
                     </button>
@@ -176,10 +139,10 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
                     <div className="about-info">
                         <h3>ESEngine Editor</h3>
                         <p className="about-version">
-                            {t('version')}: Editor {version}
+                            {t('about.version')}: Editor {version}
                         </p>
                         <p className="about-description">
-                            {t('description')}
+                            {t('about.description')}
                         </p>
                     </div>
 
@@ -192,12 +155,12 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
                             {checking ? (
                                 <>
                                     <RefreshCw size={16} className="animate-spin" />
-                                    <span>{t('checking')}</span>
+                                    <span>{t('about.checking')}</span>
                                 </>
                             ) : (
                                 <>
                                     <RefreshCw size={16} />
-                                    <span>{t('checkUpdate')}</span>
+                                    <span>{t('about.checkUpdate')}</span>
                                 </>
                             )}
                         </button>
@@ -218,12 +181,12 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
                                 {installing ? (
                                     <>
                                         <Loader2 size={16} className="animate-spin" />
-                                        <span>{t('installing')}</span>
+                                        <span>{t('about.installing')}</span>
                                     </>
                                 ) : (
                                     <>
                                         <Download size={16} />
-                                        <span>{t('download')}</span>
+                                        <span>{t('about.download')}</span>
                                     </>
                                 )}
                             </button>
@@ -239,18 +202,18 @@ export function AboutDialog({ onClose, locale = 'en' }: AboutDialogProps) {
                             }}
                             className="about-link"
                         >
-                            {t('github')}
+                            {t('about.github')}
                         </a>
                     </div>
 
                     <div className="about-footer">
-                        <p>{t('copyright')}</p>
+                        <p>{t('about.copyright')}</p>
                     </div>
                 </div>
 
                 <div className="about-actions">
                     <button className="btn-primary" onClick={onClose}>
-                        {t('close')}
+                        {t('about.close')}
                     </button>
                 </div>
             </div>

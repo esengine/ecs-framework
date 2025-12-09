@@ -2,9 +2,11 @@ import { IValidator, ValidationResult, ValidationError } from '../../domain/inte
 import { BehaviorTree } from '../../domain/models/BehaviorTree';
 import { Node } from '../../domain/models/Node';
 import { Connection } from '../../domain/models/Connection';
+import { translateBT } from '../../hooks/useBTLocale';
 
 /**
  * 行为树验证器实现
+ * Behavior Tree Validator Implementation
  */
 export class BehaviorTreeValidator implements IValidator {
     /**
@@ -37,21 +39,22 @@ export class BehaviorTreeValidator implements IValidator {
 
     /**
      * 验证节点
+     * Validate node
      */
     validateNode(node: Node): ValidationResult {
         const errors: ValidationError[] = [];
 
-        // 验证节点必填字段
+        // 验证节点必填字段 | Validate required fields
         if (!node.id) {
             errors.push({
-                message: '节点 ID 不能为空',
+                message: translateBT('validation.nodeIdRequired'),
                 nodeId: node.id
             });
         }
 
         if (!node.template) {
             errors.push({
-                message: '节点模板不能为空',
+                message: translateBT('validation.nodeTemplateRequired'),
                 nodeId: node.id
             });
         }
@@ -64,30 +67,31 @@ export class BehaviorTreeValidator implements IValidator {
 
     /**
      * 验证连接
+     * Validate connection
      */
     validateConnection(connection: Connection, tree: BehaviorTree): ValidationResult {
         const errors: ValidationError[] = [];
 
-        // 验证连接的源节点和目标节点都存在
+        // 验证连接的源节点和目标节点都存在 | Validate source and target nodes exist
         const fromNode = tree.nodes.find((n) => n.id === connection.from);
         const toNode = tree.nodes.find((n) => n.id === connection.to);
 
         if (!fromNode) {
             errors.push({
-                message: `连接的源节点不存在: ${connection.from}`
+                message: translateBT('validation.sourceNodeNotFound', undefined, { nodeId: connection.from })
             });
         }
 
         if (!toNode) {
             errors.push({
-                message: `连接的目标节点不存在: ${connection.to}`
+                message: translateBT('validation.targetNodeNotFound', undefined, { nodeId: connection.to })
             });
         }
 
-        // 不能自己连接自己
+        // 不能自己连接自己 | Cannot connect to self
         if (connection.from === connection.to) {
             errors.push({
-                message: '节点不能连接到自己',
+                message: translateBT('validation.selfConnection'),
                 nodeId: connection.from
             });
         }
@@ -100,6 +104,7 @@ export class BehaviorTreeValidator implements IValidator {
 
     /**
      * 验证是否会产生循环引用
+     * Validate no cycles exist
      */
     validateNoCycles(tree: BehaviorTree): ValidationResult {
         const errors: ValidationError[] = [];
@@ -134,7 +139,7 @@ export class BehaviorTreeValidator implements IValidator {
         for (const node of tree.nodes) {
             if (hasCycle(node.id)) {
                 errors.push({
-                    message: '行为树中存在循环引用',
+                    message: translateBT('validation.cycleDetected'),
                     nodeId: node.id
                 });
                 break;

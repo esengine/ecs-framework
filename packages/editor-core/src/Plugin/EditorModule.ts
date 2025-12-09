@@ -45,10 +45,19 @@ export enum PanelPosition {
 export interface PanelDescriptor {
     /** 面板ID | Panel ID */
     id: string;
-    /** 面板标题 | Panel title */
+    /**
+     * 面板标题 | Panel title
+     * 作为默认/英文标题，当 titleKey 未设置或翻译缺失时使用
+     * Used as default/English title when titleKey is not set or translation is missing
+     */
     title: string;
-    /** 面板中文标题 | Panel title in Chinese */
-    titleZh?: string;
+    /**
+     * 面板标题翻译键 | Panel title translation key
+     * 设置后会根据当前语言自动翻译
+     * When set, title will be automatically translated based on current locale
+     * @example 'panel.behaviorTreeEditor'
+     */
+    titleKey?: string;
     /** 面板图标 | Panel icon */
     icon?: string;
     /** 面板位置 | Panel position */

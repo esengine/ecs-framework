@@ -1,23 +1,21 @@
 import { useState } from 'react';
 import { Folder, Sparkles, X } from 'lucide-react';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/ProjectCreationWizard.css';
 
-// 项目模板类型
+// 项目模板类型（使用翻译键）
+// Project template type (using translation keys)
 interface ProjectTemplate {
     id: string;
-    name: string;
-    nameZh: string;
-    description: string;
-    descriptionZh: string;
+    nameKey: string;      // 翻译键 | Translation key
+    descriptionKey: string;
 }
 
 const templates: ProjectTemplate[] = [
     {
         id: 'blank',
-        name: 'Blank',
-        nameZh: '空白',
-        description: 'A blank project with no starter content. Perfect for starting from scratch.',
-        descriptionZh: '不包含任何启动内容的空白项目，适合从零开始创建。'
+        nameKey: 'project.wizard.templates.blank',
+        descriptionKey: 'project.wizard.templates.blankDesc'
     }
 ];
 
@@ -34,30 +32,16 @@ export function ProjectCreationWizard({
     onClose,
     onCreateProject,
     onBrowsePath,
-    locale
+    locale: _locale
 }: ProjectCreationWizardProps) {
+    const { t } = useLocale();
     const [selectedTemplate, setSelectedTemplate] = useState<string>('blank');
     const [projectName, setProjectName] = useState('MyProject');
     const [projectPath, setProjectPath] = useState('');
 
-    const t = {
-        title: locale === 'zh' ? '项目浏览器' : 'Project Browser',
-        recentProjects: locale === 'zh' ? '最近打开的项目' : 'Recent Projects',
-        newProject: locale === 'zh' ? '新建项目' : 'New Project',
-        projectName: locale === 'zh' ? '项目名称' : 'Project Name',
-        projectLocation: locale === 'zh' ? '项目位置' : 'Project Location',
-        browse: locale === 'zh' ? '浏览...' : 'Browse...',
-        create: locale === 'zh' ? '创建' : 'Create',
-        cancel: locale === 'zh' ? '取消' : 'Cancel',
-        selectTemplate: locale === 'zh' ? '选择模板' : 'Select a Template',
-        projectSettings: locale === 'zh' ? '项目设置' : 'Project Settings',
-        blank: locale === 'zh' ? '空白' : 'Blank',
-        blankDesc: locale === 'zh' ? '不含任何代码的空白项目。' : 'A blank project with no code.'
-    };
-
     if (!isOpen) return null;
 
-    const currentTemplate = templates.find(t => t.id === selectedTemplate);
+    const currentTemplate = templates.find(tmpl => tmpl.id === selectedTemplate);
 
     const handleBrowse = async () => {
         const path = await onBrowsePath();
@@ -77,7 +61,7 @@ export function ProjectCreationWizard({
         <div className="project-wizard-overlay">
             <div className="project-wizard">
                 <div className="wizard-header">
-                    <h1>{t.title}</h1>
+                    <h1>{t('project.wizard.title')}</h1>
                     <button className="wizard-close-btn" onClick={onClose}>
                         <X size={18} />
                     </button>
@@ -87,7 +71,7 @@ export function ProjectCreationWizard({
                     {/* Templates grid */}
                     <div className="wizard-templates">
                         <div className="templates-header">
-                            <h3>{t.selectTemplate}</h3>
+                            <h3>{t('project.wizard.selectTemplate')}</h3>
                         </div>
                         <div className="templates-grid">
                             {templates.map(template => (
@@ -100,7 +84,7 @@ export function ProjectCreationWizard({
                                         <Sparkles size={32} />
                                     </div>
                                     <div className="template-name">
-                                        {locale === 'zh' ? template.nameZh : template.name}
+                                        {t(template.nameKey)}
                                     </div>
                                 </button>
                             ))}
@@ -116,15 +100,15 @@ export function ProjectCreationWizard({
                         </div>
 
                         <div className="details-info">
-                            <h2>{locale === 'zh' ? currentTemplate?.nameZh : currentTemplate?.name}</h2>
-                            <p>{locale === 'zh' ? currentTemplate?.descriptionZh : currentTemplate?.description}</p>
+                            <h2>{currentTemplate ? t(currentTemplate.nameKey) : ''}</h2>
+                            <p>{currentTemplate ? t(currentTemplate.descriptionKey) : ''}</p>
                         </div>
 
                         <div className="details-settings">
-                            <h3>{t.projectSettings}</h3>
+                            <h3>{t('project.wizard.projectSettings')}</h3>
 
                             <div className="setting-field">
-                                <label>{t.projectName}</label>
+                                <label>{t('project.wizard.projectName')}</label>
                                 <input
                                     type="text"
                                     value={projectName}
@@ -134,7 +118,7 @@ export function ProjectCreationWizard({
                             </div>
 
                             <div className="setting-field">
-                                <label>{t.projectLocation}</label>
+                                <label>{t('project.wizard.projectLocation')}</label>
                                 <div className="path-input-group">
                                     <input
                                         type="text"
@@ -153,14 +137,14 @@ export function ProjectCreationWizard({
 
                 <div className="wizard-footer">
                     <button className="wizard-btn secondary" onClick={onClose}>
-                        {t.cancel}
+                        {t('project.wizard.cancel')}
                     </button>
                     <button
                         className="wizard-btn primary"
                         onClick={handleCreate}
                         disabled={!projectName || !projectPath}
                     >
-                        {t.create}
+                        {t('project.wizard.create')}
                     </button>
                 </div>
             </div>

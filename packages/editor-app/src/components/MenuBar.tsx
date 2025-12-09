@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { UIRegistry, MessageHub, PluginManager } from '@esengine/editor-core';
 import type { MenuItem as PluginMenuItem } from '@esengine/editor-core';
 import * as LucideIcons from 'lucide-react';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/MenuBar.css';
 
 interface MenuItem {
@@ -15,7 +16,6 @@ interface MenuItem {
 }
 
 interface MenuBarProps {
-  locale?: string;
   uiRegistry?: UIRegistry;
   messageHub?: MessageHub;
   pluginManager?: PluginManager;
@@ -38,7 +38,6 @@ interface MenuBarProps {
 }
 
 export function MenuBar({
-    locale = 'en',
     uiRegistry,
     messageHub,
     pluginManager,
@@ -59,6 +58,7 @@ export function MenuBar({
     onReloadPlugins,
     onOpenBuildSettings
 }: MenuBarProps) {
+    const { t } = useLocale();
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [pluginMenuItems, setPluginMenuItems] = useState<PluginMenuItem[]>([]);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -96,109 +96,31 @@ export function MenuBar({
         }
     }, [messageHub, uiRegistry, pluginManager]);
 
-    const t = (key: string) => {
-        const translations: Record<string, Record<string, string>> = {
-            en: {
-                file: 'File',
-                newScene: 'New Scene',
-                openScene: 'Open Scene',
-                saveScene: 'Save Scene',
-                saveSceneAs: 'Save Scene As...',
-                openProject: 'Open Project',
-                closeProject: 'Close Project',
-                exit: 'Exit',
-                edit: 'Edit',
-                undo: 'Undo',
-                redo: 'Redo',
-                cut: 'Cut',
-                copy: 'Copy',
-                paste: 'Paste',
-                delete: 'Delete',
-                selectAll: 'Select All',
-                window: 'Window',
-                sceneHierarchy: 'Scene Hierarchy',
-                inspector: 'Inspector',
-                assets: 'Assets',
-                console: 'Console',
-                viewport: 'Viewport',
-                pluginManager: 'Plugin Manager',
-                tools: 'Tools',
-                createPlugin: 'Create Plugin',
-                reloadPlugins: 'Reload Plugins',
-                portManager: 'Port Manager',
-                settings: 'Settings',
-                help: 'Help',
-                documentation: 'Documentation',
-                checkForUpdates: 'Check for Updates',
-                about: 'About',
-                devtools: 'Developer Tools',
-                buildSettings: 'Build Settings'
-            },
-            zh: {
-                file: '文件',
-                newScene: '新建场景',
-                openScene: '打开场景',
-                saveScene: '保存场景',
-                saveSceneAs: '场景另存为...',
-                openProject: '打开项目',
-                closeProject: '关闭项目',
-                exit: '退出',
-                edit: '编辑',
-                undo: '撤销',
-                redo: '重做',
-                cut: '剪切',
-                copy: '复制',
-                paste: '粘贴',
-                delete: '删除',
-                selectAll: '全选',
-                window: '窗口',
-                sceneHierarchy: '场景层级',
-                inspector: '检视器',
-                assets: '资产',
-                console: '控制台',
-                viewport: '视口',
-                pluginManager: '插件管理器',
-                tools: '工具',
-                createPlugin: '创建插件',
-                reloadPlugins: '重新加载插件',
-                portManager: '端口管理器',
-                settings: '设置',
-                help: '帮助',
-                documentation: '文档',
-                checkForUpdates: '检查更新',
-                about: '关于',
-                devtools: '开发者工具',
-                buildSettings: '构建设置'
-            }
-        };
-        return translations[locale]?.[key] || key;
-    };
-
     const menus: Record<string, MenuItem[]> = {
         file: [
-            { label: t('newScene'), shortcut: 'Ctrl+N', onClick: onNewScene },
-            { label: t('openScene'), shortcut: 'Ctrl+O', onClick: onOpenScene },
+            { label: t('menu.file.newScene'), shortcut: 'Ctrl+N', onClick: onNewScene },
+            { label: t('menu.file.openScene'), shortcut: 'Ctrl+O', onClick: onOpenScene },
             { separator: true },
-            { label: t('saveScene'), shortcut: 'Ctrl+S', onClick: onSaveScene },
-            { label: t('saveSceneAs'), shortcut: 'Ctrl+Shift+S', onClick: onSaveSceneAs },
+            { label: t('menu.file.saveScene'), shortcut: 'Ctrl+S', onClick: onSaveScene },
+            { label: t('menu.file.saveSceneAs'), shortcut: 'Ctrl+Shift+S', onClick: onSaveSceneAs },
             { separator: true },
-            { label: t('buildSettings'), shortcut: 'Ctrl+Shift+B', onClick: onOpenBuildSettings },
+            { label: t('menu.file.buildSettings'), shortcut: 'Ctrl+Shift+B', onClick: onOpenBuildSettings },
             { separator: true },
-            { label: t('openProject'), onClick: onOpenProject },
-            { label: t('closeProject'), onClick: onCloseProject },
+            { label: t('menu.file.openProject'), onClick: onOpenProject },
+            { label: t('menu.file.closeProject'), onClick: onCloseProject },
             { separator: true },
-            { label: t('exit'), onClick: onExit }
+            { label: t('menu.file.exit'), onClick: onExit }
         ],
         edit: [
-            { label: t('undo'), shortcut: 'Ctrl+Z', disabled: true },
-            { label: t('redo'), shortcut: 'Ctrl+Y', disabled: true },
+            { label: t('menu.edit.undo'), shortcut: 'Ctrl+Z', disabled: true },
+            { label: t('menu.edit.redo'), shortcut: 'Ctrl+Y', disabled: true },
             { separator: true },
-            { label: t('cut'), shortcut: 'Ctrl+X', disabled: true },
-            { label: t('copy'), shortcut: 'Ctrl+C', disabled: true },
-            { label: t('paste'), shortcut: 'Ctrl+V', disabled: true },
-            { label: t('delete'), shortcut: 'Delete', disabled: true },
+            { label: t('menu.edit.cut'), shortcut: 'Ctrl+X', disabled: true },
+            { label: t('menu.edit.copy'), shortcut: 'Ctrl+C', disabled: true },
+            { label: t('menu.edit.paste'), shortcut: 'Ctrl+V', disabled: true },
+            { label: t('menu.edit.delete'), shortcut: 'Delete', disabled: true },
             { separator: true },
-            { label: t('selectAll'), shortcut: 'Ctrl+A', disabled: true }
+            { label: t('menu.edit.selectAll'), shortcut: 'Ctrl+A', disabled: true }
         ],
         window: [
             ...pluginMenuItems.map((item) => ({
@@ -208,23 +130,32 @@ export function MenuBar({
                 onClick: item.onClick
             })),
             ...(pluginMenuItems.length > 0 ? [{ separator: true } as MenuItem] : []),
-            { label: t('pluginManager'), onClick: onOpenPluginManager },
+            { label: t('menu.window.pluginManager'), onClick: onOpenPluginManager },
             { separator: true },
-            { label: t('devtools'), onClick: onToggleDevtools }
+            { label: t('menu.window.devtools'), onClick: onToggleDevtools }
         ],
         tools: [
-            { label: t('createPlugin'), onClick: onCreatePlugin },
-            { label: t('reloadPlugins'), shortcut: 'Ctrl+R', onClick: onReloadPlugins },
+            { label: t('menu.tools.createPlugin'), onClick: onCreatePlugin },
+            { label: t('menu.tools.reloadPlugins'), shortcut: 'Ctrl+R', onClick: onReloadPlugins },
             { separator: true },
-            { label: t('portManager'), onClick: onOpenPortManager },
+            { label: t('menu.tools.portManager'), onClick: onOpenPortManager },
             { separator: true },
-            { label: t('settings'), onClick: onOpenSettings }
+            { label: t('menu.tools.settings'), onClick: onOpenSettings }
         ],
         help: [
-            { label: t('documentation'), disabled: true },
+            { label: t('menu.help.documentation'), disabled: true },
             { separator: true },
-            { label: t('about'), onClick: onOpenAbout }
+            { label: t('menu.help.about'), onClick: onOpenAbout }
         ]
+    };
+
+    // 菜单键到翻译键的映射 | Map menu keys to translation keys
+    const menuTitleKeys: Record<string, string> = {
+        file: 'menu.file.title',
+        edit: 'menu.edit.title',
+        window: 'menu.window.title',
+        tools: 'menu.tools.title',
+        help: 'menu.help.title'
     };
 
     useEffect(() => {
@@ -259,7 +190,7 @@ export function MenuBar({
                         className={`menu-button ${openMenu === menuKey ? 'active' : ''}`}
                         onClick={() => handleMenuClick(menuKey)}
                     >
-                        {t(menuKey)}
+                        {t(menuTitleKeys[menuKey] || menuKey)}
                     </button>
                     {openMenu === menuKey && menus[menuKey] && (
                         <div className="menu-dropdown">

@@ -9,6 +9,7 @@ import {
     Lightbulb, HelpCircle, Megaphone, BarChart3, Github
 } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-shell';
+import { useLocale } from '../../hooks/useLocale';
 import type { Post, Category, PostListParams } from '../../services/forum';
 import { parseEmoji } from './utils';
 import './ForumPostList.css';
@@ -20,7 +21,6 @@ interface ForumPostListProps {
     totalCount: number;
     hasNextPage: boolean;
     params: PostListParams;
-    isEnglish: boolean;
     onViewPost: (postNumber: number) => void;
     onCreatePost: () => void;
     onCategoryChange: (categoryId: string | undefined) => void;
@@ -48,7 +48,6 @@ export function ForumPostList({
     totalCount,
     hasNextPage,
     params,
-    isEnglish,
     onViewPost,
     onCreatePost,
     onCategoryChange,
@@ -56,6 +55,7 @@ export function ForumPostList({
     onRefresh,
     onLoadMore
 }: ForumPostListProps) {
+    const { t } = useLocale();
     const [searchInput, setSearchInput] = useState(params.search || '');
 
     const handleSearchSubmit = (e: React.FormEvent) => {
@@ -73,13 +73,13 @@ export function ForumPostList({
             const hours = Math.floor(diff / (1000 * 60 * 60));
             if (hours === 0) {
                 const mins = Math.floor(diff / (1000 * 60));
-                if (mins < 1) return isEnglish ? 'Just now' : '刚刚';
-                return isEnglish ? `${mins}m ago` : `${mins}分钟前`;
+                if (mins < 1) return t('forum.justNow');
+                return t('forum.minutesAgo', { count: mins });
             }
-            return isEnglish ? `${hours}h ago` : `${hours}小时前`;
+            return t('forum.hoursAgo', { count: hours });
         }
-        if (days === 1) return isEnglish ? 'Yesterday' : '昨天';
-        if (days < 7) return isEnglish ? `${days}d ago` : `${days}天前`;
+        if (days === 1) return t('forum.yesterday');
+        if (days < 7) return t('forum.daysAgo', { count: days });
         return date.toLocaleDateString();
     };
 
@@ -108,21 +108,17 @@ export function ForumPostList({
                 <div className="forum-welcome-banner">
                     <div className="forum-welcome-content">
                         <div className="forum-welcome-text">
-                            <h2>{isEnglish ? 'ESEngine Community' : 'ESEngine 社区'}</h2>
-                            <p>
-                                {isEnglish
-                                    ? 'Ask questions, share ideas, and connect with other developers'
-                                    : '提出问题、分享想法，与其他开发者交流'}
-                            </p>
+                            <h2>{t('forum.communityTitle')}</h2>
+                            <p>{t('forum.askQuestionsShareIdeas')}</p>
                         </div>
                         <div className="forum-welcome-actions">
                             <button className="forum-btn forum-btn-primary" onClick={onCreatePost}>
                                 <Plus size={14} />
-                                <span>{isEnglish ? 'New Discussion' : '发起讨论'}</span>
+                                <span>{t('forum.newDiscussion')}</span>
                             </button>
                             <button className="forum-btn forum-btn-github" onClick={openGitHubDiscussions}>
                                 <Github size={14} />
-                                <span>{isEnglish ? 'View on GitHub' : '在 GitHub 查看'}</span>
+                                <span>{t('forum.viewOnGitHub')}</span>
                             </button>
                         </div>
                     </div>
@@ -156,7 +152,7 @@ export function ForumPostList({
                         value={params.categoryId || ''}
                         onChange={(e) => onCategoryChange(e.target.value || undefined)}
                     >
-                        <option value="">{isEnglish ? 'All Categories' : '全部分类'}</option>
+                        <option value="">{t('forum.allCategories')}</option>
                         {categories.map(cat => (
                             <option key={cat.id} value={cat.id}>
                                 {parseEmoji(cat.emoji)} {cat.name}
@@ -168,7 +164,7 @@ export function ForumPostList({
                         <Search size={14} />
                         <input
                             type="text"
-                            placeholder={isEnglish ? 'Search discussions...' : '搜索讨论...'}
+                            placeholder={t('forum.searchDiscussions')}
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
                         />
@@ -180,7 +176,7 @@ export function ForumPostList({
                         className="forum-btn"
                         onClick={onRefresh}
                         disabled={loading}
-                        title={isEnglish ? 'Refresh' : '刷新'}
+                        title={t('forum.refresh')}
                     >
                         <RefreshCw size={14} className={loading ? 'spin' : ''} />
                     </button>
@@ -189,7 +185,7 @@ export function ForumPostList({
                         onClick={onCreatePost}
                     >
                         <Plus size={14} />
-                        <span>{isEnglish ? 'New' : '发帖'}</span>
+                        <span>{t('forum.new')}</span>
                     </button>
                 </div>
             </div>
@@ -198,14 +194,14 @@ export function ForumPostList({
             <div className="forum-stats">
                 <div className="forum-stats-left">
                     <TrendingUp size={14} />
-                    <span>{totalCount} {isEnglish ? 'discussions' : '条讨论'}</span>
+                    <span>{totalCount} {t('forum.discussions')}</span>
                 </div>
                 {params.categoryId && (
                     <button
                         className="forum-stats-clear"
                         onClick={() => onCategoryChange(undefined)}
                     >
-                        {isEnglish ? 'Clear filter' : '清除筛选'}
+                        {t('forum.clearFilter')}
                     </button>
                 )}
             </div>
@@ -222,15 +218,15 @@ export function ForumPostList({
                 {loading && posts.length === 0 ? (
                     <div className="forum-posts-loading">
                         <RefreshCw size={16} className="spin" />
-                        <span>{isEnglish ? 'Loading...' : '加载中...'}</span>
+                        <span>{t('forum.loading')}</span>
                     </div>
                 ) : posts.length === 0 ? (
                     <div className="forum-posts-empty">
                         <MessageCircle size={32} />
-                        <p>{isEnglish ? 'No discussions yet' : '暂无讨论'}</p>
+                        <p>{t('forum.noDiscussionsYet')}</p>
                         <button className="forum-btn forum-btn-primary" onClick={onCreatePost}>
                             <Plus size={14} />
-                            <span>{isEnglish ? 'Start a discussion' : '发起讨论'}</span>
+                            <span>{t('forum.startADiscussion')}</span>
                         </button>
                     </div>
                 ) : (
@@ -258,13 +254,13 @@ export function ForumPostList({
                                             {isRecentPost(post) && (
                                                 <span className="forum-post-badge new">
                                                     <Clock size={10} />
-                                                    {isEnglish ? 'New' : '新'}
+                                                    {t('forum.newBadge')}
                                                 </span>
                                             )}
                                             {isHotPost(post) && (
                                                 <span className="forum-post-badge hot">
                                                     <Flame size={10} />
-                                                    {isEnglish ? 'Hot' : '热门'}
+                                                    {t('forum.hotBadge')}
                                                 </span>
                                             )}
                                         </div>
@@ -272,7 +268,7 @@ export function ForumPostList({
                                         <button
                                             className="forum-post-external"
                                             onClick={(e) => openInGitHub(post.url, e)}
-                                            title={isEnglish ? 'Open in GitHub' : '在 GitHub 中打开'}
+                                            title={t('forum.openInGitHub')}
                                         >
                                             <ExternalLink size={12} />
                                         </button>
@@ -306,7 +302,7 @@ export function ForumPostList({
                                         {post.answerChosenAt && (
                                             <span className="forum-post-answered">
                                                 <CheckCircle size={12} />
-                                                {isEnglish ? 'Answered' : '已解决'}
+                                                {t('forum.answered')}
                                             </span>
                                         )}
                                     </div>
@@ -325,10 +321,10 @@ export function ForumPostList({
                                     {loading ? (
                                         <>
                                             <RefreshCw size={14} className="spin" />
-                                            <span>{isEnglish ? 'Loading...' : '加载中...'}</span>
+                                            <span>{t('forum.loading')}</span>
                                         </>
                                     ) : (
-                                        <span>{isEnglish ? 'Load More' : '加载更多'}</span>
+                                        <span>{t('forum.loadMore')}</span>
                                     )}
                                 </button>
                             </div>

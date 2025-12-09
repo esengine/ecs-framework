@@ -26,60 +26,62 @@ class ProfilerEditorModule implements IEditorModuleLoader {
         this.messageHub = services.resolve(MessageHub);
 
         const settingsRegistry = services.resolve(SettingsRegistry);
+        // Register settings using translation keys (prefixed with '$')
+        // 使用翻译键注册设置（以 '$' 为前缀）
         settingsRegistry.registerCategory({
             id: 'profiler',
-            title: '性能分析器',
-            description: '配置性能分析器的行为和显示选项',
+            title: '$pluginSettings.profiler.title',
+            description: '$pluginSettings.profiler.description',
             sections: [
                 {
                     id: 'connection',
-                    title: '连接设置',
-                    description: '配置WebSocket服务器连接参数',
+                    title: '$pluginSettings.profiler.connection.title',
+                    description: '$pluginSettings.profiler.connection.description',
                     settings: [
                         {
                             key: 'profiler.port',
-                            label: '监听端口',
+                            label: '$pluginSettings.profiler.connection.port.label',
                             type: 'number',
                             defaultValue: 8080,
-                            description: '性能分析器WebSocket服务器监听的端口号',
-                            placeholder: '8080',
+                            description: '$pluginSettings.profiler.connection.port.description',
+                            placeholder: '$pluginSettings.profiler.connection.port.placeholder',
                             min: 1024,
                             max: 65535,
                             validator: {
                                 validate: (value: number) => value >= 1024 && value <= 65535,
-                                errorMessage: '端口号必须在1024到65535之间'
+                                errorMessage: '$pluginSettings.profiler.connection.port.errorMessage'
                             }
                         },
                         {
                             key: 'profiler.autoStart',
-                            label: '自动启动服务器',
+                            label: '$pluginSettings.profiler.connection.autoStart.label',
                             type: 'boolean',
                             defaultValue: true,
-                            description: '编辑器启动时自动启动性能分析器服务器'
+                            description: '$pluginSettings.profiler.connection.autoStart.description'
                         }
                     ]
                 },
                 {
                     id: 'display',
-                    title: '显示设置',
-                    description: '配置性能数据的显示选项',
+                    title: '$pluginSettings.profiler.display.title',
+                    description: '$pluginSettings.profiler.display.description',
                     settings: [
                         {
                             key: 'profiler.refreshInterval',
-                            label: '刷新间隔 (毫秒)',
+                            label: '$pluginSettings.profiler.display.refreshInterval.label',
                             type: 'range',
                             defaultValue: 100,
-                            description: '性能数据刷新的时间间隔',
+                            description: '$pluginSettings.profiler.display.refreshInterval.description',
                             min: 50,
                             max: 1000,
                             step: 50
                         },
                         {
                             key: 'profiler.maxDataPoints',
-                            label: '最大数据点数',
+                            label: '$pluginSettings.profiler.display.maxDataPoints.label',
                             type: 'number',
                             defaultValue: 100,
-                            description: '图表中保留的最大历史数据点数量',
+                            description: '$pluginSettings.profiler.display.maxDataPoints.description',
                             min: 10,
                             max: 500
                         }

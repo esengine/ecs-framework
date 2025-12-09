@@ -8,6 +8,7 @@ import { Core } from '@esengine/ecs-framework';
 import { MessageHub, IFileSystemService } from '@esengine/editor-core';
 import { BlendMode, BuiltInShaders } from '@esengine/material-system';
 import { useMaterialEditorStore, createDefaultMaterialData } from '../stores/MaterialEditorStore';
+import { useMaterialLocale } from '../hooks/useMaterialLocale';
 import { Save, RefreshCw, FolderOpen } from 'lucide-react';
 import '../styles/MaterialEditorPanel.css';
 
@@ -19,25 +20,27 @@ type IFileSystem = {
 
 /**
  * 混合模式选项
+ * Blend mode options with translation keys
  */
 const BLEND_MODE_OPTIONS = [
-    { value: BlendMode.None, label: 'None (Opaque)', labelZh: '无 (不透明)' },
-    { value: BlendMode.Alpha, label: 'Alpha Blend', labelZh: 'Alpha 混合' },
-    { value: BlendMode.Additive, label: 'Additive', labelZh: '叠加' },
-    { value: BlendMode.Multiply, label: 'Multiply', labelZh: '正片叠底' },
-    { value: BlendMode.Screen, label: 'Screen', labelZh: '滤色' },
-    { value: BlendMode.PremultipliedAlpha, label: 'Premultiplied Alpha', labelZh: '预乘 Alpha' },
+    { value: BlendMode.None, labelKey: 'blendModes.none' },
+    { value: BlendMode.Alpha, labelKey: 'blendModes.alpha' },
+    { value: BlendMode.Additive, labelKey: 'blendModes.additive' },
+    { value: BlendMode.Multiply, labelKey: 'blendModes.multiply' },
+    { value: BlendMode.Screen, labelKey: 'blendModes.screen' },
+    { value: BlendMode.PremultipliedAlpha, labelKey: 'blendModes.premultipliedAlpha' },
 ];
 
 /**
  * 内置着色器选项
+ * Built-in shader options with translation keys
  */
 const BUILT_IN_SHADER_OPTIONS = [
-    { value: BuiltInShaders.DefaultSprite, label: 'Default Sprite', labelZh: '默认精灵' },
-    { value: BuiltInShaders.Grayscale, label: 'Grayscale', labelZh: '灰度' },
-    { value: BuiltInShaders.Tint, label: 'Tint', labelZh: '着色' },
-    { value: BuiltInShaders.Flash, label: 'Flash', labelZh: '闪烁' },
-    { value: BuiltInShaders.Outline, label: 'Outline', labelZh: '描边' },
+    { value: BuiltInShaders.DefaultSprite, labelKey: 'shaders.defaultSprite' },
+    { value: BuiltInShaders.Grayscale, labelKey: 'shaders.grayscale' },
+    { value: BuiltInShaders.Tint, labelKey: 'shaders.tint' },
+    { value: BuiltInShaders.Flash, labelKey: 'shaders.flash' },
+    { value: BuiltInShaders.Outline, labelKey: 'shaders.outline' },
 ];
 
 /** Custom shader indicator value. | 自定义着色器指示值。 */
@@ -47,7 +50,8 @@ interface MaterialEditorPanelProps {
     locale?: string;
 }
 
-export function MaterialEditorPanel({ locale = 'en' }: MaterialEditorPanelProps) {
+export function MaterialEditorPanel({ locale: _locale }: MaterialEditorPanelProps) {
+    const { t } = useMaterialLocale();
     const {
         currentFilePath,
         pendingFilePath,
@@ -60,8 +64,6 @@ export function MaterialEditorPanel({ locale = 'en' }: MaterialEditorPanelProps)
         setLoading,
         updateMaterialProperty,
     } = useMaterialEditorStore();
-
-    const isZh = locale === 'zh';
 
     // 加载材质文件
     const loadMaterialFile = useCallback(async (filePath: string) => {
@@ -136,7 +138,7 @@ export function MaterialEditorPanel({ locale = 'en' }: MaterialEditorPanelProps)
         return (
             <div className="material-editor-panel loading">
                 <RefreshCw className="spin" size={24} />
-                <span>{isZh ? '加载中...' : 'Loading...'}</span>
+                <span>{t('panel.loading')}</span>
             </div>
         );
     }
@@ -145,7 +147,7 @@ export function MaterialEditorPanel({ locale = 'en' }: MaterialEditorPanelProps)
     if (!materialData) {
         return (
             <div className="material-editor-panel empty">
-                <span>{isZh ? '双击 .mat 文件打开材质编辑器' : 'Double-click a .mat file to open the material editor'}</span>
+                <span>{t('panel.emptyState')}</span>
             </div>
         );
     }
@@ -163,10 +165,10 @@ export function MaterialEditorPanel({ locale = 'en' }: MaterialEditorPanelProps)
                         className="toolbar-button"
                         onClick={saveMaterialFile}
                         disabled={!isDirty}
-                        title={isZh ? '保存 (Ctrl+S)' : 'Save (Ctrl+S)'}
+                        title={t('panel.saveTooltip')}
                     >
                         <Save size={16} />
-                        <span>{isZh ? '保存' : 'Save'}</span>
+                        <span>{t('panel.save')}</span>
                     </button>
                 </div>
             </div>
@@ -175,10 +177,10 @@ export function MaterialEditorPanel({ locale = 'en' }: MaterialEditorPanelProps)
             <div className="material-editor-content">
                 {/* 基本属性 */}
                 <div className="property-section">
-                    <div className="section-header">{isZh ? '基本属性' : 'Basic Properties'}</div>
+                    <div className="section-header">{t('properties.basicTitle')}</div>
 
                     <div className="property-row">
-                        <label>{isZh ? '名称' : 'Name'}</label>
+                        <label>{t('properties.name')}</label>
                         <input
                             type="text"
                             value={materialData.name}
@@ -187,7 +189,7 @@ export function MaterialEditorPanel({ locale = 'en' }: MaterialEditorPanelProps)
                     </div>
 
                     <div className="property-row">
-                        <label>{isZh ? '着色器' : 'Shader'}</label>
+                        <label>{t('properties.shader')}</label>
                         <div className="shader-selector">
                             <select
                                 value={typeof materialData.shader === 'string' ? CUSTOM_SHADER_VALUE : materialData.shader}
@@ -205,11 +207,11 @@ export function MaterialEditorPanel({ locale = 'en' }: MaterialEditorPanelProps)
                             >
                                 {BUILT_IN_SHADER_OPTIONS.map((opt) => (
                                     <option key={opt.value} value={opt.value}>
-                                        {isZh ? opt.labelZh : opt.label}
+                                        {t(opt.labelKey)}
                                     </option>
                                 ))}
                                 <option value={CUSTOM_SHADER_VALUE}>
-                                    {isZh ? '自定义着色器...' : 'Custom Shader...'}
+                                    {t('properties.customShader')}
                                 </option>
                             </select>
                         </div>
@@ -218,13 +220,13 @@ export function MaterialEditorPanel({ locale = 'en' }: MaterialEditorPanelProps)
                     {/* Custom shader path input */}
                     {typeof materialData.shader === 'string' && (
                         <div className="property-row">
-                            <label>{isZh ? '着色器路径' : 'Shader Path'}</label>
+                            <label>{t('properties.shaderPath')}</label>
                             <div className="file-input-row">
                                 <input
                                     type="text"
                                     value={materialData.shader}
                                     onChange={(e) => updateMaterialProperty('shader', e.target.value)}
-                                    placeholder={isZh ? '输入 .shader 文件路径' : 'Enter .shader file path'}
+                                    placeholder={t('properties.shaderPathPlaceholder')}
                                 />
                                 <button
                                     className="browse-button"
@@ -232,7 +234,7 @@ export function MaterialEditorPanel({ locale = 'en' }: MaterialEditorPanelProps)
                                         // TODO: Implement file browser dialog
                                         // 这里可以集成编辑器的文件选择对话框
                                     }}
-                                    title={isZh ? '浏览...' : 'Browse...'}
+                                    title={t('properties.browse')}
                                 >
                                     <FolderOpen size={14} />
                                 </button>
@@ -241,14 +243,14 @@ export function MaterialEditorPanel({ locale = 'en' }: MaterialEditorPanelProps)
                     )}
 
                     <div className="property-row">
-                        <label>{isZh ? '混合模式' : 'Blend Mode'}</label>
+                        <label>{t('properties.blendMode')}</label>
                         <select
                             value={materialData.blendMode}
                             onChange={(e) => updateMaterialProperty('blendMode', Number(e.target.value))}
                         >
                             {BLEND_MODE_OPTIONS.map((opt) => (
                                 <option key={opt.value} value={opt.value}>
-                                    {isZh ? opt.labelZh : opt.label}
+                                    {t(opt.labelKey)}
                                 </option>
                             ))}
                         </select>
@@ -257,11 +259,11 @@ export function MaterialEditorPanel({ locale = 'en' }: MaterialEditorPanelProps)
 
                 {/* Uniform 参数 */}
                 <div className="property-section">
-                    <div className="section-header">{isZh ? 'Uniform 参数' : 'Uniform Parameters'}</div>
+                    <div className="section-header">{t('uniforms.title')}</div>
 
                     {Object.keys(materialData.uniforms || {}).length === 0 ? (
                         <div className="empty-uniforms">
-                            {isZh ? '该着色器没有自定义参数' : 'This shader has no custom parameters'}
+                            {t('uniforms.empty')}
                         </div>
                     ) : (
                         Object.entries(materialData.uniforms || {}).map(([key, uniform]) => (
@@ -275,9 +277,9 @@ export function MaterialEditorPanel({ locale = 'en' }: MaterialEditorPanelProps)
 
                 {/* 文件信息 */}
                 <div className="property-section">
-                    <div className="section-header">{isZh ? '文件信息' : 'File Info'}</div>
+                    <div className="section-header">{t('fileInfo.title')}</div>
                     <div className="property-row file-path">
-                        <label>{isZh ? '路径' : 'Path'}</label>
+                        <label>{t('fileInfo.path')}</label>
                         <span title={currentFilePath || ''}>
                             {currentFilePath?.split(/[\\/]/).pop() || '-'}
                         </span>

@@ -5,6 +5,7 @@ import {
     Search, Filter, Settings, X, Trash2, ChevronDown,
     Bug, Info, AlertTriangle, XCircle, AlertCircle, Wifi, Pause, Play, Copy
 } from 'lucide-react';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/OutputLogPanel.css';
 
 interface OutputLogPanelProps {
@@ -145,6 +146,7 @@ const LogEntryItem = memo(({ log, isExpanded, onToggle, onCopy }: {
 LogEntryItem.displayName = 'LogEntryItem';
 
 export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLogPanelProps) {
+    const { t } = useLocale();
     const [logs, setLogs] = useState<LogEntry[]>(() => logService.getLogs().slice(-MAX_LOGS));
     const [searchQuery, setSearchQuery] = useState('');
     const [levelFilter, setLevelFilter] = useState<Set<LogLevel>>(new Set([
@@ -279,7 +281,7 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
                         <Search size={14} />
                         <input
                             type="text"
-                            placeholder={locale === 'zh' ? '搜索日志...' : 'Search logs...'}
+                            placeholder={t('outputLog.searchPlaceholder')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -305,7 +307,7 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
                             }}
                         >
                             <Filter size={14} />
-                            <span>{locale === 'zh' ? '过滤器' : 'Filters'}</span>
+                            <span>{t('outputLog.filters')}</span>
                             {activeFilterCount > 0 && (
                                 <span className="filter-badge">{activeFilterCount}</span>
                             )}
@@ -314,7 +316,7 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
                         {showFilterMenu && (
                             <div className="output-log-menu">
                                 <div className="output-log-menu-header">
-                                    {locale === 'zh' ? '日志级别' : 'Log Levels'}
+                                    {t('outputLog.logLevels')}
                                 </div>
                                 <label className="output-log-menu-item">
                                     <input
@@ -364,7 +366,7 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
                                         onChange={() => setShowRemoteOnly(!showRemoteOnly)}
                                     />
                                     <Wifi size={14} className="level-icon remote" />
-                                    <span>{locale === 'zh' ? '仅远程日志' : 'Remote Only'}</span>
+                                    <span>{t('outputLog.remoteOnly')}</span>
                                     <span className="level-count">{remoteLogCount}</span>
                                 </label>
                             </div>
@@ -376,8 +378,8 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
                         className={`output-log-icon-btn ${autoScroll ? 'active' : ''}`}
                         onClick={() => setAutoScroll(!autoScroll)}
                         title={autoScroll
-                            ? (locale === 'zh' ? '暂停自动滚动' : 'Pause auto-scroll')
-                            : (locale === 'zh' ? '恢复自动滚动' : 'Resume auto-scroll')
+                            ? t('outputLog.pauseAutoScroll')
+                            : t('outputLog.resumeAutoScroll')
                         }
                     >
                         {autoScroll ? <Pause size={14} /> : <Play size={14} />}
@@ -391,7 +393,7 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
                                 setShowSettingsMenu(!showSettingsMenu);
                                 setShowFilterMenu(false);
                             }}
-                            title={locale === 'zh' ? '设置' : 'Settings'}
+                            title={t('outputLog.settings')}
                         >
                             <Settings size={14} />
                         </button>
@@ -402,7 +404,7 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
                                     onClick={handleClear}
                                 >
                                     <Trash2 size={14} />
-                                    <span>{locale === 'zh' ? '清空日志' : 'Clear Logs'}</span>
+                                    <span>{t('outputLog.clearLogs')}</span>
                                 </button>
                             </div>
                         )}
@@ -430,8 +432,8 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
                     <div className="output-log-empty">
                         <AlertCircle size={32} />
                         <p>{searchQuery
-                            ? (locale === 'zh' ? '没有匹配的日志' : 'No matching logs')
-                            : (locale === 'zh' ? '暂无日志' : 'No logs to display')
+                            ? t('outputLog.noMatchingLogs')
+                            : t('outputLog.noLogs')
                         }</p>
                     </div>
                 ) : (
@@ -449,7 +451,7 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
 
             {/* Status Bar */}
             <div className="output-log-status">
-                <span>{filteredLogs.length} / {logs.length} {locale === 'zh' ? '条日志' : 'logs'}</span>
+                <span>{filteredLogs.length} / {logs.length} {t('outputLog.logs')}</span>
                 {!autoScroll && (
                     <button
                         className="output-log-scroll-btn"
@@ -460,7 +462,7 @@ export function OutputLogPanel({ logService, locale = 'en', onClose }: OutputLog
                             }
                         }}
                     >
-                        ↓ {locale === 'zh' ? '滚动到底部' : 'Scroll to bottom'}
+                        ↓ {t('outputLog.scrollToBottom')}
                     </button>
                 )}
             </div>

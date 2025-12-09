@@ -1,60 +1,23 @@
 import { useState } from 'react';
 import { X, FolderOpen } from 'lucide-react';
 import { TauriAPI } from '../api/tauri';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/PluginGeneratorWindow.css';
 
 interface PluginGeneratorWindowProps {
     onClose: () => void;
     projectPath: string | null;
-    locale: string;
     onSuccess?: () => Promise<void>;
 }
 
-export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess }: PluginGeneratorWindowProps) {
+export function PluginGeneratorWindow({ onClose, projectPath, onSuccess }: PluginGeneratorWindowProps) {
+    const { t } = useLocale();
     const [pluginName, setPluginName] = useState('');
     const [pluginVersion, setPluginVersion] = useState('1.0.0');
     const [outputPath, setOutputPath] = useState(projectPath ? `${projectPath}/plugins` : '');
     const [includeExample, setIncludeExample] = useState(true);
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    const t = (key: string) => {
-        const translations: Record<string, Record<string, string>> = {
-            zh: {
-                title: '创建插件',
-                pluginName: '插件名称',
-                pluginNamePlaceholder: '例如: my-game-plugin',
-                pluginVersion: '插件版本',
-                outputPath: '输出路径',
-                selectPath: '选择路径',
-                includeExample: '包含示例节点',
-                generate: '生成插件',
-                cancel: '取消',
-                generating: '正在生成...',
-                success: '插件创建成功！',
-                errorEmpty: '请输入插件名称',
-                errorInvalidName: '插件名称只能包含字母、数字、连字符和下划线',
-                errorNoPath: '请选择输出路径'
-            },
-            en: {
-                title: 'Create Plugin',
-                pluginName: 'Plugin Name',
-                pluginNamePlaceholder: 'e.g: my-game-plugin',
-                pluginVersion: 'Plugin Version',
-                outputPath: 'Output Path',
-                selectPath: 'Select Path',
-                includeExample: 'Include Example Node',
-                generate: 'Generate Plugin',
-                cancel: 'Cancel',
-                generating: 'Generating...',
-                success: 'Plugin created successfully!',
-                errorEmpty: 'Please enter plugin name',
-                errorInvalidName: 'Plugin name can only contain letters, numbers, hyphens and underscores',
-                errorNoPath: 'Please select output path'
-            }
-        };
-        return translations[locale]?.[key] || translations.en?.[key] || key;
-    };
 
     const handleSelectPath = async () => {
         try {
@@ -69,11 +32,11 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess 
 
     const validatePluginName = (name: string): boolean => {
         if (!name) {
-            setError(t('errorEmpty'));
+            setError(t('pluginGenerator.errorEmpty'));
             return false;
         }
         if (!/^[a-zA-Z0-9-_]+$/.test(name)) {
-            setError(t('errorInvalidName'));
+            setError(t('pluginGenerator.errorInvalidName'));
             return false;
         }
         return true;
@@ -87,7 +50,7 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess 
         }
 
         if (!outputPath) {
-            setError(t('errorNoPath'));
+            setError(t('pluginGenerator.errorNoPath'));
             return;
         }
 
@@ -114,7 +77,7 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess 
 
             const result = await response.json();
 
-            alert(t('success'));
+            alert(t('pluginGenerator.success'));
 
             if (result.path) {
                 await TauriAPI.showInFolder(result.path);
@@ -137,7 +100,7 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess 
         <div className="modal-overlay">
             <div className="modal-content plugin-generator-window">
                 <div className="modal-header">
-                    <h2>{t('title')}</h2>
+                    <h2>{t('pluginGenerator.title')}</h2>
                     <button className="close-btn" onClick={onClose}>
                         <X size={16} />
                     </button>
@@ -145,18 +108,18 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess 
 
                 <div className="modal-body">
                     <div className="form-group">
-                        <label>{t('pluginName')}</label>
+                        <label>{t('pluginGenerator.pluginName')}</label>
                         <input
                             type="text"
                             value={pluginName}
                             onChange={(e) => setPluginName(e.target.value)}
-                            placeholder={t('pluginNamePlaceholder')}
+                            placeholder={t('pluginGenerator.pluginNamePlaceholder')}
                             disabled={isGenerating}
                         />
                     </div>
 
                     <div className="form-group">
-                        <label>{t('pluginVersion')}</label>
+                        <label>{t('pluginGenerator.pluginVersion')}</label>
                         <input
                             type="text"
                             value={pluginVersion}
@@ -166,7 +129,7 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess 
                     </div>
 
                     <div className="form-group">
-                        <label>{t('outputPath')}</label>
+                        <label>{t('pluginGenerator.outputPath')}</label>
                         <div className="path-input-group">
                             <input
                                 type="text"
@@ -180,7 +143,7 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess 
                                 disabled={isGenerating}
                             >
                                 <FolderOpen size={16} />
-                                {t('selectPath')}
+                                {t('pluginGenerator.selectPath')}
                             </button>
                         </div>
                     </div>
@@ -193,7 +156,7 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess 
                                 onChange={(e) => setIncludeExample(e.target.checked)}
                                 disabled={isGenerating}
                             />
-                            <span>{t('includeExample')}</span>
+                            <span>{t('pluginGenerator.includeExample')}</span>
                         </label>
                     </div>
 
@@ -210,14 +173,14 @@ export function PluginGeneratorWindow({ onClose, projectPath, locale, onSuccess 
                         onClick={handleGenerate}
                         disabled={isGenerating}
                     >
-                        {isGenerating ? t('generating') : t('generate')}
+                        {isGenerating ? t('pluginGenerator.generating') : t('pluginGenerator.generate')}
                     </button>
                     <button
                         className="btn btn-secondary"
                         onClick={onClose}
                         disabled={isGenerating}
                     >
-                        {t('cancel')}
+                        {t('pluginGenerator.cancel')}
                     </button>
                 </div>
             </div>

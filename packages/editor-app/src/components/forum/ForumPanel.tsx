@@ -3,8 +3,8 @@
  * Forum panel main component - GitHub Discussions
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { MessageSquare, RefreshCw } from 'lucide-react';
+import { useLocale } from '../../hooks/useLocale';
 import { useForumAuth, useCategories, usePosts } from '../../hooks/useForum';
 import { ForumAuth } from './ForumAuth';
 import { ForumPostList } from './ForumPostList';
@@ -20,7 +20,8 @@ type ForumView = 'list' | 'detail' | 'create';
  * 认证后的论坛内容组件 | Authenticated forum content component
  * 只有在用户认证后才会渲染，确保 hooks 能正常工作
  */
-function ForumContent({ user, isEnglish }: { user: ForumUser; isEnglish: boolean }) {
+function ForumContent({ user }: { user: ForumUser }) {
+    const { t } = useLocale();
     const { categories, refetch: refetchCategories } = useCategories();
     const [view, setView] = useState<ForumView>('list');
     const [selectedPostNumber, setSelectedPostNumber] = useState<number | null>(null);
@@ -80,14 +81,14 @@ function ForumContent({ user, isEnglish }: { user: ForumUser; isEnglish: boolean
                 <div className="forum-header-left">
                     <MessageSquare size={18} />
                     <span className="forum-title">
-                        {isEnglish ? 'Community' : '社区'}
+                        {t('forum.community')}
                     </span>
                 </div>
                 <div className="forum-header-right">
                     <div
                         className="forum-user"
                         onClick={() => setShowProfile(!showProfile)}
-                        title={isEnglish ? 'Click to view profile' : '点击查看资料'}
+                        title={t('forum.clickToViewProfile')}
                     >
                         <img
                             src={user.avatarUrl}
@@ -118,7 +119,6 @@ function ForumContent({ user, isEnglish }: { user: ForumUser; isEnglish: boolean
                         totalCount={totalCount}
                         hasNextPage={pageInfo.hasNextPage}
                         params={listParams}
-                        isEnglish={isEnglish}
                         onViewPost={handleViewPost}
                         onCreatePost={handleCreatePost}
                         onCategoryChange={handleCategoryChange}
@@ -130,7 +130,6 @@ function ForumContent({ user, isEnglish }: { user: ForumUser; isEnglish: boolean
                 {view === 'detail' && selectedPostNumber && (
                     <ForumPostDetail
                         postNumber={selectedPostNumber}
-                        isEnglish={isEnglish}
                         currentUserId={user.id}
                         onBack={handleBack}
                     />
@@ -138,7 +137,6 @@ function ForumContent({ user, isEnglish }: { user: ForumUser; isEnglish: boolean
                 {view === 'create' && (
                     <ForumCreatePost
                         categories={categories}
-                        isEnglish={isEnglish}
                         onBack={handleBack}
                         onCreated={handlePostCreated}
                     />
@@ -149,10 +147,8 @@ function ForumContent({ user, isEnglish }: { user: ForumUser; isEnglish: boolean
 }
 
 export function ForumPanel() {
-    const { i18n } = useTranslation();
+    const { t } = useLocale();
     const { authState } = useForumAuth();
-
-    const isEnglish = i18n.language === 'en';
 
     // 加载状态 | Loading state
     if (authState.status === 'loading') {
@@ -160,7 +156,7 @@ export function ForumPanel() {
             <div className="forum-panel">
                 <div className="forum-loading">
                     <RefreshCw className="spin" size={24} />
-                    <span>{isEnglish ? 'Loading...' : '加载中...'}</span>
+                    <span>{t('forum.loading')}</span>
                 </div>
             </div>
         );
@@ -178,7 +174,7 @@ export function ForumPanel() {
     // 已登录状态 - 渲染内容组件 | Authenticated state - render content component
     return (
         <div className="forum-panel">
-            <ForumContent user={authState.user} isEnglish={isEnglish} />
+            <ForumContent user={authState.user} />
         </div>
     );
 }

@@ -4,6 +4,9 @@
  * Plugin-based editor framework for ECS Framework
  */
 
+// Service Tokens | 服务令牌
+export * from './tokens';
+
 // 配置 | Configuration
 export * from './Config';
 

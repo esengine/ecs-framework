@@ -11,6 +11,7 @@ import { Core } from '@esengine/ecs-framework';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PromptDialog } from './PromptDialog';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/FileTree.css';
 
 /**
@@ -56,6 +57,7 @@ export interface FileTreeHandle {
 }
 
 export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, onSelectFile, onSelectFiles, selectedPath, selectedPaths, messageHub, searchQuery, showFiles = true, onOpenScene }, ref) => {
+    const { t } = useLocale();
     const [tree, setTree] = useState<TreeNode[]>([]);
     const [loading, setLoading] = useState(false);
     const [internalSelectedPath, setInternalSelectedPath] = useState<string | null>(null);
@@ -475,7 +477,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             setNewName('');
         } catch (error) {
             console.error('Failed to rename:', error);
-            alert(`重命名失败: ${error}`);
+            alert(`${t('fileTree.renameFailed')}: ${error}`);
         }
     };
 
@@ -499,7 +501,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             await refreshTree();
         } catch (error) {
             console.error('Failed to delete:', error);
-            alert(`删除失败: ${error}`);
+            alert(`${t('fileTree.deleteFailed')}: ${error}`);
         }
     };
 
@@ -549,7 +551,9 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             await refreshTree();
         } catch (error) {
             console.error(`Failed to ${type}:`, error);
-            alert(`${type === 'create-file' ? '创建文件' : type === 'create-folder' ? '创建文件夹' : '创建模板文件'}失败: ${error}`);
+            const errorKey = type === 'create-file' ? 'fileTree.createFileFailed' :
+                type === 'create-folder' ? 'fileTree.createFolderFailed' : 'fileTree.createTemplateFailed';
+            alert(`${t(errorKey)}: ${error}`);
         }
     };
 
@@ -557,12 +561,12 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         if (!node) {
             const baseItems: ContextMenuItem[] = [
                 {
-                    label: '新建文件',
+                    label: t('fileTree.newFile'),
                     icon: <FileText size={16} />,
                     onClick: () => rootPath && handleCreateFileClick(rootPath)
                 },
                 {
-                    label: '新建文件夹',
+                    label: t('fileTree.newFolder'),
                     icon: <FolderPlus size={16} />,
                     onClick: () => rootPath && handleCreateFolderClick(rootPath)
                 }
@@ -589,7 +593,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
 
         if (node.type === 'file') {
             items.push({
-                label: '打开文件',
+                label: t('fileTree.openFile'),
                 icon: <File size={16} />,
                 onClick: async () => {
                     try {
@@ -621,9 +625,9 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
 
             items.push({ label: '', separator: true, onClick: () => {} });
 
-            // 文件操作菜单项
+            // 文件操作菜单项 | File operation menu items
             items.push({
-                label: '保存',
+                label: t('fileTree.save'),
                 icon: <Save size={16} />,
                 shortcut: 'Ctrl+S',
                 onClick: () => {
@@ -634,7 +638,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         }
 
         items.push({
-            label: '重命名',
+            label: t('fileTree.rename'),
             icon: <Edit3 size={16} />,
             shortcut: 'F2',
             onClick: () => {
@@ -644,7 +648,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         });
 
         items.push({
-            label: '批量重命名',
+            label: t('fileTree.batchRename'),
             icon: <Edit3 size={16} />,
             shortcut: 'Shift+F2',
             disabled: true, // TODO: 实现批量重命名
@@ -654,7 +658,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         });
 
         items.push({
-            label: '复制',
+            label: t('fileTree.duplicate'),
             icon: <Clipboard size={16} />,
             shortcut: 'Ctrl+D',
             onClick: () => {
@@ -664,7 +668,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         });
 
         items.push({
-            label: '删除',
+            label: t('fileTree.delete'),
             icon: <Trash2 size={16} />,
             shortcut: 'Delete',
             onClick: () => handleDeleteClick(node)
@@ -672,21 +676,21 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
 
         items.push({ label: '', separator: true, onClick: () => {} });
 
-        // 资产操作子菜单
+        // 资产操作子菜单 | Asset operations submenu
         items.push({
-            label: '资产操作',
+            label: t('fileTree.assetActions'),
             icon: <Settings size={16} />,
             onClick: () => {},
             children: [
                 {
-                    label: '重新导入',
+                    label: t('fileTree.reimport'),
                     icon: <RefreshCw size={16} />,
                     onClick: () => {
                         console.log('Reimport asset:', node.path);
                     }
                 },
                 {
-                    label: '导出...',
+                    label: t('fileTree.exportAsset'),
                     icon: <Package size={16} />,
                     onClick: () => {
                         console.log('Export asset:', node.path);
@@ -694,7 +698,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
                 },
                 { label: '', separator: true, onClick: () => {} },
                 {
-                    label: '迁移资产',
+                    label: t('fileTree.migrateAsset'),
                     icon: <Folder size={16} />,
                     onClick: () => {
                         console.log('Migrate asset:', node.path);
@@ -703,26 +707,26 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             ]
         });
 
-        // 资产本地化子菜单
+        // 资产本地化子菜单 | Asset localization submenu
         items.push({
-            label: '资产本地化',
+            label: t('fileTree.assetLocalization'),
             icon: <Globe size={16} />,
             onClick: () => {},
             children: [
                 {
-                    label: '创建本地化资产',
+                    label: t('fileTree.createLocalizedAsset'),
                     onClick: () => {
                         console.log('Create localized asset:', node.path);
                     }
                 },
                 {
-                    label: '导入翻译',
+                    label: t('fileTree.importTranslation'),
                     onClick: () => {
                         console.log('Import translation:', node.path);
                     }
                 },
                 {
-                    label: '导出翻译',
+                    label: t('fileTree.exportTranslation'),
                     onClick: () => {
                         console.log('Export translation:', node.path);
                     }
@@ -732,9 +736,9 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
 
         items.push({ label: '', separator: true, onClick: () => {} });
 
-        // 标签和引用
+        // 标签和引用 | Tags and references
         items.push({
-            label: '管理标签',
+            label: t('fileTree.manageTags'),
             icon: <Tag size={16} />,
             shortcut: 'Ctrl+T',
             onClick: () => {
@@ -744,9 +748,9 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
 
         items.push({ label: '', separator: true, onClick: () => {} });
 
-        // 路径复制选项
+        // 路径复制选项 | Path copy options
         items.push({
-            label: '复制引用',
+            label: t('fileTree.copyReference'),
             icon: <Link size={16} />,
             shortcut: 'Ctrl+C',
             onClick: () => {
@@ -755,22 +759,22 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         });
 
         items.push({
-            label: '拷贝Object路径',
+            label: t('fileTree.copyObjectPath'),
             icon: <Copy size={16} />,
             shortcut: 'Ctrl+Shift+C',
             onClick: () => {
-                // 生成对象路径格式
+                // 生成对象路径格式 | Generate object path format
                 const objectPath = node.path.replace(/\\/g, '/');
                 navigator.clipboard.writeText(objectPath);
             }
         });
 
         items.push({
-            label: '拷贝包路径',
+            label: t('fileTree.copyPackagePath'),
             icon: <Package size={16} />,
             shortcut: 'Ctrl+Alt+C',
             onClick: () => {
-                // 生成包路径格式
+                // 生成包路径格式 | Generate package path format
                 const packagePath = '/' + node.path.replace(/\\/g, '/').split('/').slice(-2).join('/');
                 navigator.clipboard.writeText(packagePath);
             }
@@ -778,9 +782,9 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
 
         items.push({ label: '', separator: true, onClick: () => {} });
 
-        // 引用查看器
+        // 引用查看器 | Reference viewer
         items.push({
-            label: '引用查看器',
+            label: t('fileTree.referenceViewer'),
             icon: <FileSearch size={16} />,
             shortcut: 'Alt+Shift+R',
             onClick: () => {
@@ -789,7 +793,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         });
 
         items.push({
-            label: '尺寸信息图',
+            label: t('fileTree.sizeMap'),
             icon: <FileSearch size={16} />,
             shortcut: 'Alt+Shift+D',
             onClick: () => {
@@ -801,13 +805,13 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
 
         if (node.type === 'folder') {
             items.push({
-                label: '新建文件',
+                label: t('fileTree.newFile'),
                 icon: <FileText size={16} />,
                 onClick: () => handleCreateFileClick(node.path)
             });
 
             items.push({
-                label: '新建文件夹',
+                label: t('fileTree.newFolder'),
                 icon: <FolderPlus size={16} />,
                 onClick: () => handleCreateFolderClick(node.path)
             });
@@ -830,7 +834,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
         }
 
         items.push({
-            label: '在文件管理器中显示',
+            label: t('fileTree.showInExplorer'),
             icon: <FolderOpen size={16} />,
             onClick: async () => {
                 try {
@@ -1070,11 +1074,11 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
     };
 
     if (loading) {
-        return <div className="file-tree loading">Loading...</div>;
+        return <div className="file-tree loading">{t('fileTree.loading')}</div>;
     }
 
     if (!rootPath || tree.length === 0) {
-        return <div className="file-tree empty">No folders</div>;
+        return <div className="file-tree empty">{t('fileTree.noFolders')}</div>;
     }
 
     return (
@@ -1099,14 +1103,14 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             )}
             {deleteDialog && (
                 <ConfirmDialog
-                    title="确认删除"
+                    title={t('fileTree.confirmDelete')}
                     message={
                         deleteDialog.node.type === 'folder'
-                            ? `确定要删除文件夹 "${deleteDialog.node.name}" 及其所有内容吗？\n此操作无法撤销。`
-                            : `确定要删除文件 "${deleteDialog.node.name}" 吗？\n此操作无法撤销。`
+                            ? t('fileTree.confirmDeleteFolder', { name: deleteDialog.node.name })
+                            : t('fileTree.confirmDeleteFile', { name: deleteDialog.node.name })
                     }
-                    confirmText="删除"
-                    cancelText="取消"
+                    confirmText={t('fileTree.delete')}
+                    cancelText={t('fileTree.cancel')}
                     onConfirm={handleDeleteConfirm}
                     onCancel={() => setDeleteDialog(null)}
                 />
@@ -1114,22 +1118,22 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(({ rootPath, o
             {promptDialog && (
                 <PromptDialog
                     title={
-                        promptDialog.type === 'create-file' ? '新建文件' :
-                            promptDialog.type === 'create-folder' ? '新建文件夹' :
-                                '新建文件'
+                        promptDialog.type === 'create-file' ? t('fileTree.newFileTitle') :
+                            promptDialog.type === 'create-folder' ? t('fileTree.newFolderTitle') :
+                                t('fileTree.newFileTitle')
                     }
                     message={
-                        promptDialog.type === 'create-file' ? '请输入文件名:' :
-                            promptDialog.type === 'create-folder' ? '请输入文件夹名:' :
-                                `请输入文件名 (将自动添加 .${promptDialog.templateExtension} 扩展名):`
+                        promptDialog.type === 'create-file' ? t('fileTree.enterFileName') :
+                            promptDialog.type === 'create-folder' ? t('fileTree.enterFolderName') :
+                                t('fileTree.enterTemplateFileName', { ext: promptDialog.templateExtension || '' })
                     }
                     placeholder={
-                        promptDialog.type === 'create-file' ? '例如: config.json' :
-                            promptDialog.type === 'create-folder' ? '例如: assets' :
-                                '例如: MyFile'
+                        promptDialog.type === 'create-file' ? t('fileTree.fileNamePlaceholder') :
+                            promptDialog.type === 'create-folder' ? t('fileTree.folderNamePlaceholder') :
+                                t('fileTree.templateNamePlaceholder')
                     }
-                    confirmText="创建"
-                    cancelText="取消"
+                    confirmText={t('fileTree.create')}
+                    cancelText={t('fileTree.cancel')}
                     onConfirm={handlePromptConfirm}
                     onCancel={() => setPromptDialog(null)}
                 />

@@ -130,14 +130,21 @@ export class BehaviorTreeExecutor {
     ): BehaviorTreeData {
         const rootNode = nodes.find((n) => n.id === rootNodeId);
         if (!rootNode) {
-            throw new Error('未找到根节点');
+            throw new Error('Root node not found');
         }
 
-        // 如果根节点是编辑器特有的"根节点"，跳过它，使用其子节点
+        // If root node is the editor-specific "Root" node, skip it and use its child
+        // 如果根节点是编辑器特有的"Root"节点，跳过它，使用其子节点
         let actualRootId = rootNodeId;
         let skipRootNode = false;
 
-        if (rootNode.template.displayName === '根节点') {
+        // Check by className (preferred) or displayName (fallback for old data)
+        // 通过 className（首选）或 displayName（旧数据回退）检查
+        const isEditorRootNode = rootNode.template.className === 'Root' ||
+            rootNode.template.displayName === '根节点' ||
+            rootNode.template.displayName === 'Root';
+
+        if (isEditorRootNode) {
             skipRootNode = true;
 
             if (rootNode.children.length === 0) {

@@ -1,29 +1,63 @@
 /**
  * Plugin API - 为插件提供简洁的访问接口
+ * Plugin API - Provides simple access interface for plugins
  *
- * 使用方式：
+ * 使用方式 | Usage:
  * ```typescript
  * import { PluginAPI } from '@esengine/editor-runtime';
  *
  * const scene = PluginAPI.scene;
  * const entityStore = PluginAPI.entityStore;
  * const messageHub = PluginAPI.messageHub;
+ *
+ * // 使用 ServiceToken 获取服务（类型安全）| Get service with ServiceToken (type-safe)
+ * import { AssetManagerToken } from '@esengine/asset-system';
+ * const assetManager = PluginAPI.resolve(AssetManagerToken);
  * ```
  *
  * 这个 API 会自动从全局 __ESENGINE__ 获取正确的实例，
  * 避免模块实例不一致的问题。
+ * This API automatically gets correct instances from global __ESENGINE__,
+ * avoiding module instance inconsistency issues.
  */
 
 import type { EntityStoreService, MessageHub } from '@esengine/editor-core';
 import type { Scene, ServiceContainer } from '@esengine/ecs-framework';
+import type { ServiceToken } from '@esengine/engine-core';
 
-// 内部 API 接口定义
+/**
+ * 核心服务接口
+ * Core service interface
+ *
+ * 定义内部 Core 提供的服务访问接口。
+ * Defines service access interface provided by internal Core.
+ */
+interface ICoreServices {
+    services: ServiceContainer;
+}
+
+/**
+ * 内部 API 接口定义
+ * Internal API interface definition
+ *
+ * 定义全局 __ESENGINE__.api 提供的方法。
+ * Defines methods provided by global __ESENGINE__.api.
+ */
 interface IPluginAPIInternal {
+    /** 获取当前场景 | Get current scene */
     getScene(): Scene | null;
+    /** 获取实体存储服务 | Get entity store service */
     getEntityStore(): EntityStoreService;
+    /** 获取消息总线 | Get message hub */
     getMessageHub(): MessageHub;
-    resolveService<T>(serviceType: any): T;
-    getCore(): any;
+    /**
+     * 解析服务（类型安全）
+     * Resolve service (type-safe)
+     * @param token 服务令牌 | Service token
+     */
+    resolveService<T>(token: ServiceToken<T>): T;
+    /** 获取核心实例 | Get core instance */
+    getCore(): ICoreServices;
 }
 
 // 声明全局类型
@@ -93,11 +127,24 @@ export const PluginAPI = {
     },
 
     /**
-     * 解析服务
-     * @param serviceType 服务类型
+     * 解析服务（类型安全）
+     * Resolve service (type-safe)
+     *
+     * 使用 ServiceToken 获取服务实例，提供完整的类型推断。
+     * Use ServiceToken to get service instance with full type inference.
+     *
+     * @param token 服务令牌 | Service token
+     * @returns 服务实例 | Service instance
+     *
+     * @example
+     * ```typescript
+     * import { AssetManagerToken } from '@esengine/asset-system';
+     * const assetManager = PluginAPI.resolve(AssetManagerToken);
+     * // assetManager 类型自动推断为 IAssetManager
+     * ```
      */
-    resolve<T>(serviceType: any): T {
-        return getInternalAPI().resolveService<T>(serviceType);
+    resolve<T>(token: ServiceToken<T>): T {
+        return getInternalAPI().resolveService<T>(token);
     },
 
     /**

@@ -14,12 +14,12 @@ import {
     ChevronDown
 } from 'lucide-react';
 import type { MessageHub, CommandManager } from '@esengine/editor-core';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/MainToolbar.css';
 
 export type PlayState = 'stopped' | 'playing' | 'paused';
 
 interface MainToolbarProps {
-    locale?: string;
     messageHub?: MessageHub;
     commandManager?: CommandManager;
     onSaveScene?: () => void;
@@ -61,7 +61,6 @@ function ToolSeparator() {
 }
 
 export function MainToolbar({
-    locale = 'en',
     messageHub,
     commandManager,
     onSaveScene,
@@ -75,45 +74,12 @@ export function MainToolbar({
     onRunInBrowser,
     onRunOnDevice
 }: MainToolbarProps) {
+    const { t } = useLocale();
     const [playState, setPlayState] = useState<PlayState>('stopped');
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
     const [showRunMenu, setShowRunMenu] = useState(false);
     const runMenuRef = useRef<HTMLDivElement>(null);
-
-    const t = (key: string) => {
-        const translations: Record<string, Record<string, string>> = {
-            en: {
-                play: 'Play',
-                pause: 'Pause',
-                stop: 'Stop',
-                step: 'Step Forward',
-                save: 'Save Scene (Ctrl+S)',
-                open: 'Open Scene',
-                undo: 'Undo (Ctrl+Z)',
-                redo: 'Redo (Ctrl+Y)',
-                preview: 'Preview Mode',
-                runOptions: 'Run Options',
-                runInBrowser: 'Run in Browser',
-                runOnDevice: 'Run on Device'
-            },
-            zh: {
-                play: '播放',
-                pause: '暂停',
-                stop: '停止',
-                step: '单步执行',
-                save: '保存场景 (Ctrl+S)',
-                open: '打开场景',
-                undo: '撤销 (Ctrl+Z)',
-                redo: '重做 (Ctrl+Y)',
-                preview: '预览模式',
-                runOptions: '运行选项',
-                runInBrowser: '浏览器运行',
-                runOnDevice: '真机运行'
-            }
-        };
-        return translations[locale]?.[key] || key;
-    };
 
     // Close run menu when clicking outside
     useEffect(() => {
@@ -228,12 +194,12 @@ export function MainToolbar({
             <div className="toolbar-group">
                 <ToolButton
                     icon={<Save size={16} />}
-                    label={t('save')}
+                    label={t('toolbar.save')}
                     onClick={onSaveScene}
                 />
                 <ToolButton
                     icon={<FolderOpen size={16} />}
-                    label={t('open')}
+                    label={t('toolbar.open')}
                     onClick={onOpenScene}
                 />
             </div>
@@ -244,13 +210,13 @@ export function MainToolbar({
             <div className="toolbar-group">
                 <ToolButton
                     icon={<Undo2 size={16} />}
-                    label={t('undo')}
+                    label={t('toolbar.undo')}
                     disabled={!canUndo}
                     onClick={handleUndo}
                 />
                 <ToolButton
                     icon={<Redo2 size={16} />}
-                    label={t('redo')}
+                    label={t('toolbar.redo')}
                     disabled={!canRedo}
                     onClick={handleRedo}
                 />
@@ -261,18 +227,18 @@ export function MainToolbar({
                 <div className="toolbar-group toolbar-center">
                     <ToolButton
                         icon={playState === 'playing' ? <Pause size={18} /> : <Play size={18} />}
-                        label={playState === 'playing' ? t('pause') : t('play')}
+                        label={playState === 'playing' ? t('toolbar.pause') : t('toolbar.play')}
                         onClick={playState === 'playing' ? handlePause : handlePlay}
                     />
                     <ToolButton
                         icon={<Square size={16} />}
-                        label={t('stop')}
+                        label={t('toolbar.stop')}
                         disabled={playState === 'stopped'}
                         onClick={handleStop}
                     />
                     <ToolButton
                         icon={<SkipForward size={16} />}
-                        label={t('step')}
+                        label={t('toolbar.step')}
                         disabled={playState === 'playing'}
                         onClick={handleStep}
                     />
@@ -287,7 +253,7 @@ export function MainToolbar({
                                 e.stopPropagation();
                                 setShowRunMenu(prev => !prev);
                             }}
-                            title={t('runOptions')}
+                            title={t('toolbar.runOptions')}
                             type="button"
                         >
                             <Globe size={16} />
@@ -297,11 +263,11 @@ export function MainToolbar({
                             <div className="toolbar-dropdown-menu">
                                 <button type="button" onClick={handleRunInBrowser}>
                                     <Globe size={14} />
-                                    <span>{t('runInBrowser')}</span>
+                                    <span>{t('toolbar.runInBrowser')}</span>
                                 </button>
                                 <button type="button" onClick={handleRunOnDevice}>
                                     <QrCode size={14} />
-                                    <span>{t('runOnDevice')}</span>
+                                    <span>{t('toolbar.runOnDevice')}</span>
                                 </button>
                             </div>
                         )}
@@ -314,7 +280,7 @@ export function MainToolbar({
                 {playState !== 'stopped' && (
                     <div className="preview-indicator">
                         <Eye size={14} />
-                        <span>{t('preview')}</span>
+                        <span>{t('toolbar.preview')}</span>
                     </div>
                 )}
             </div>

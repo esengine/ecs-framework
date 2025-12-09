@@ -93,14 +93,17 @@ export class SettingsService {
     /**
      * 支持的脚本编辑器类型
      * Supported script editor types
+     *
+     * 使用 nameKey 作为翻译键，如果没有 nameKey 则使用 name 作为显示名称
+     * Use nameKey as translation key, fallback to name if no nameKey
      */
     public static readonly SCRIPT_EDITORS = [
-        { id: 'system', name: 'System Default', nameZh: '系统默认', command: '' },
-        { id: 'vscode', name: 'Visual Studio Code', nameZh: 'Visual Studio Code', command: 'code' },
-        { id: 'cursor', name: 'Cursor', nameZh: 'Cursor', command: 'cursor' },
-        { id: 'webstorm', name: 'WebStorm', nameZh: 'WebStorm', command: 'webstorm' },
-        { id: 'sublime', name: 'Sublime Text', nameZh: 'Sublime Text', command: 'subl' },
-        { id: 'custom', name: 'Custom', nameZh: '自定义', command: '' }
+        { id: 'system', name: 'System Default', nameKey: 'settings.scriptEditor.systemDefault', command: '' },
+        { id: 'vscode', name: 'Visual Studio Code', command: 'code' },
+        { id: 'cursor', name: 'Cursor', command: 'cursor' },
+        { id: 'webstorm', name: 'WebStorm', command: 'webstorm' },
+        { id: 'sublime', name: 'Sublime Text', command: 'subl' },
+        { id: 'custom', name: 'Custom', nameKey: 'settings.scriptEditor.custom', command: '' }
     ];
 
     /**

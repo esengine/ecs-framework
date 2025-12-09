@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as LucideIcons from 'lucide-react';
+import { useLocale } from '../hooks/useLocale';
 import {
     Plus,
     Download,
@@ -162,6 +163,7 @@ export function ContentBrowser({
     onDockInLayout,
     revealPath
 }: ContentBrowserProps) {
+    const { t } = useLocale();
     const messageHub = Core.services.resolve(MessageHub);
     const fileActionRegistry = Core.services.resolve(FileActionRegistry);
 
@@ -240,93 +242,6 @@ export function ContentBrowser({
         }
     }, [fileActionRegistry, messageHub]);
 
-    const t = {
-        en: {
-            favorites: 'Favorites',
-            collections: 'Collections',
-            add: 'Add',
-            import: 'Import',
-            saveAll: 'Save All',
-            search: 'Search',
-            items: 'items',
-            dockInLayout: 'Dock in Layout',
-            noProject: 'No project loaded',
-            empty: 'This folder is empty',
-            newFolder: 'New Folder',
-            newPrefix: 'New',
-            managedDirectoryTooltip: 'GUID-managed directory - Assets here get unique IDs for references',
-            unmanagedWarning: 'This folder is not managed by GUID system. Assets created here cannot be referenced by GUID.',
-            unmanagedWarningTitle: 'Unmanaged Directory',
-            rename: 'Rename',
-            delete: 'Delete',
-            openInExplorer: 'Show in Explorer',
-            copyPath: 'Copy Path',
-            newSubfolder: 'New Subfolder',
-            deleteConfirmTitle: 'Confirm Delete',
-            deleteConfirmMessage: 'Are you sure you want to delete',
-            cannotDeleteRoot: 'Cannot delete root directory'
-        },
-        zh: {
-            favorites: '收藏夹',
-            collections: '收藏集',
-            add: '添加',
-            import: '导入',
-            saveAll: '全部保存',
-            search: '搜索',
-            items: '项',
-            dockInLayout: '停靠到布局',
-            noProject: '未加载项目',
-            empty: '文件夹为空',
-            newFolder: '新建文件夹',
-            newPrefix: '新建',
-            managedDirectoryTooltip: 'GUID 管理的目录 - 此处的资产会获得唯一 ID 以便引用',
-            unmanagedWarning: '此文件夹不受 GUID 系统管理。在此创建的资产无法通过 GUID 引用。',
-            unmanagedWarningTitle: '非托管目录',
-            rename: '重命名',
-            delete: '删除',
-            openInExplorer: '在资源管理器中显示',
-            copyPath: '复制路径',
-            newSubfolder: '新建子文件夹',
-            deleteConfirmTitle: '确认删除',
-            deleteConfirmMessage: '确定要删除',
-            cannotDeleteRoot: '无法删除根目录'
-        }
-    }[locale] || {
-        favorites: 'Favorites',
-        collections: 'Collections',
-        add: 'Add',
-        import: 'Import',
-        saveAll: 'Save All',
-        search: 'Search',
-        items: 'items',
-        dockInLayout: 'Dock in Layout',
-        noProject: 'No project loaded',
-        empty: 'This folder is empty',
-        newFolder: 'New Folder',
-        newPrefix: 'New',
-        managedDirectoryTooltip: 'GUID-managed directory - Assets here get unique IDs for references',
-        unmanagedWarning: 'This folder is not managed by GUID system. Assets created here cannot be referenced by GUID.',
-        unmanagedWarningTitle: 'Unmanaged Directory',
-        rename: 'Rename',
-        delete: 'Delete',
-        openInExplorer: 'Show in Explorer',
-        copyPath: 'Copy Path',
-        newSubfolder: 'New Subfolder',
-        deleteConfirmTitle: 'Confirm Delete',
-        deleteConfirmMessage: 'Are you sure you want to delete',
-        cannotDeleteRoot: 'Cannot delete root directory'
-    };
-
-    // 文件创建模板的 label 本地化映射
-    const templateLabels: Record<string, { en: string; zh: string }> = {
-        'Material': { en: 'Material', zh: '材质' },
-        'Shader': { en: 'Shader', zh: '着色器' },
-        'Tilemap': { en: 'Tilemap', zh: '瓦片地图' },
-        'Tileset': { en: 'Tileset', zh: '瓦片集' },
-        'Component': { en: 'Component', zh: '组件' },
-        'System': { en: 'System', zh: '系统' },
-        'TypeScript': { en: 'TypeScript', zh: 'TypeScript' },
-    };
 
     // 注册内置的 TypeScript 文件创建模板
     // Register built-in TypeScript file creation templates
@@ -566,11 +481,20 @@ export class ${className} {
     }, [selectedPaths, assets, renameDialog, deleteConfirmDialog, createFileDialog]);
 
     const getTemplateLabel = (label: string): string => {
-        const mapping = templateLabels[label];
-        if (mapping) {
-            return locale === 'zh' ? mapping.zh : mapping.en;
-        }
-        return label;
+        // Map template labels to translation keys
+        const keyMap: Record<string, string> = {
+            'Material': 'contentBrowser.templateLabels.material',
+            'Shader': 'contentBrowser.templateLabels.shader',
+            'Tilemap': 'contentBrowser.templateLabels.tilemap',
+            'Tileset': 'contentBrowser.templateLabels.tileset',
+            'Component': 'contentBrowser.templateLabels.component',
+            'System': 'contentBrowser.templateLabels.system',
+            'TypeScript': 'contentBrowser.templateLabels.typescript',
+            'Inspector': 'contentBrowser.templateLabels.inspector',
+            'Gizmo': 'contentBrowser.templateLabels.gizmo'
+        };
+        const key = keyMap[label];
+        return key ? t(key) : label;
     };
 
     // Build folder tree - use ref to avoid dependency cycle
@@ -1106,7 +1030,7 @@ export class ${className} {
             // Show warning header if current path is not managed
             if (!isCurrentPathManaged && currentPath) {
                 items.push({
-                    label: t.unmanagedWarningTitle,
+                    label: t('contentBrowser.unmanagedWarningTitle'),
                     icon: <AlertTriangle size={16} className="warning-icon" />,
                     disabled: true,
                     onClick: () => {}
@@ -1115,7 +1039,7 @@ export class ${className} {
             }
 
             items.push({
-                label: t.newFolder,
+                label: t('contentBrowser.newFolder'),
                 icon: <FolderClosed size={16} />,
                 onClick: async () => {
                     if (!currentPath) return;
@@ -1163,7 +1087,7 @@ export class ${className} {
             items.push({ label: '', separator: true, onClick: () => {} });
 
             items.push({
-                label: locale === 'zh' ? '在资源管理器中显示' : 'Show in Explorer',
+                label: t('contentBrowser.openInExplorer'),
                 icon: <ExternalLink size={16} />,
                 onClick: async () => {
                     if (currentPath) {
@@ -1178,7 +1102,7 @@ export class ${className} {
             });
 
             items.push({
-                label: locale === 'zh' ? '刷新' : 'Refresh',
+                label: t('contentBrowser.refresh'),
                 icon: <RefreshCw size={16} />,
                 onClick: async () => {
                     if (currentPath) {
@@ -1194,16 +1118,15 @@ export class ${className} {
         // Asset context menu
         if (asset.type === 'file') {
             items.push({
-                label: locale === 'zh' ? '打开' : 'Open',
+                label: t('contentBrowser.open'),
                 icon: <File size={16} />,
                 onClick: () => handleAssetDoubleClick(asset)
             });
 
             items.push({ label: '', separator: true, onClick: () => {} });
 
-            // 保存
             items.push({
-                label: locale === 'zh' ? '保存' : 'Save',
+                label: t('contentBrowser.save'),
                 icon: <Save size={16} />,
                 shortcut: 'Ctrl+S',
                 onClick: () => {
@@ -1212,9 +1135,8 @@ export class ${className} {
             });
         }
 
-        // 重命名
         items.push({
-            label: locale === 'zh' ? '重命名' : 'Rename',
+            label: t('contentBrowser.rename'),
             icon: <Edit3 size={16} />,
             shortcut: 'F2',
             onClick: () => {
@@ -1223,9 +1145,8 @@ export class ${className} {
             }
         });
 
-        // 批量重命名
         items.push({
-            label: locale === 'zh' ? '批量重命名' : 'Batch Rename',
+            label: t('contentBrowser.batchRename'),
             icon: <Edit3 size={16} />,
             shortcut: 'Shift+F2',
             disabled: true,
@@ -1234,9 +1155,8 @@ export class ${className} {
             }
         });
 
-        // 复制
         items.push({
-            label: locale === 'zh' ? '复制' : 'Duplicate',
+            label: t('contentBrowser.duplicate'),
             icon: <Clipboard size={16} />,
             shortcut: 'Ctrl+D',
             onClick: () => {
@@ -1244,9 +1164,8 @@ export class ${className} {
             }
         });
 
-        // 删除
         items.push({
-            label: locale === 'zh' ? '删除' : 'Delete',
+            label: t('contentBrowser.delete'),
             icon: <Trash2 size={16} />,
             shortcut: 'Delete',
             onClick: () => {
@@ -1257,21 +1176,20 @@ export class ${className} {
 
         items.push({ label: '', separator: true, onClick: () => {} });
 
-        // 资产操作子菜单
         items.push({
-            label: locale === 'zh' ? '资产操作' : 'Asset Actions',
+            label: t('contentBrowser.assetActions'),
             icon: <Settings size={16} />,
             onClick: () => {},
             children: [
                 {
-                    label: locale === 'zh' ? '重新导入' : 'Reimport',
+                    label: t('contentBrowser.reimport'),
                     icon: <RefreshCw size={16} />,
                     onClick: () => {
                         console.log('Reimport asset:', asset.path);
                     }
                 },
                 {
-                    label: locale === 'zh' ? '导出...' : 'Export...',
+                    label: t('contentBrowser.export'),
                     icon: <Package size={16} />,
                     onClick: () => {
                         console.log('Export asset:', asset.path);
@@ -1279,7 +1197,7 @@ export class ${className} {
                 },
                 { label: '', separator: true, onClick: () => {} },
                 {
-                    label: locale === 'zh' ? '迁移资产' : 'Migrate Asset',
+                    label: t('contentBrowser.migrateAsset'),
                     icon: <Folder size={16} />,
                     onClick: () => {
                         console.log('Migrate asset:', asset.path);
@@ -1288,26 +1206,25 @@ export class ${className} {
             ]
         });
 
-        // 资产本地化子菜单
         items.push({
-            label: locale === 'zh' ? '资产本地化' : 'Asset Localization',
+            label: t('contentBrowser.assetLocalization'),
             icon: <Globe size={16} />,
             onClick: () => {},
             children: [
                 {
-                    label: locale === 'zh' ? '创建本地化资产' : 'Create Localized Asset',
+                    label: t('contentBrowser.createLocalizedAsset'),
                     onClick: () => {
                         console.log('Create localized asset:', asset.path);
                     }
                 },
                 {
-                    label: locale === 'zh' ? '导入翻译' : 'Import Translation',
+                    label: t('contentBrowser.importTranslation'),
                     onClick: () => {
                         console.log('Import translation:', asset.path);
                     }
                 },
                 {
-                    label: locale === 'zh' ? '导出翻译' : 'Export Translation',
+                    label: t('contentBrowser.exportTranslation'),
                     onClick: () => {
                         console.log('Export translation:', asset.path);
                     }
@@ -1317,9 +1234,8 @@ export class ${className} {
 
         items.push({ label: '', separator: true, onClick: () => {} });
 
-        // 标签管理
         items.push({
-            label: locale === 'zh' ? '管理标签' : 'Manage Tags',
+            label: t('contentBrowser.manageTags'),
             icon: <Tag size={16} />,
             shortcut: 'Ctrl+T',
             onClick: () => {
@@ -1329,9 +1245,8 @@ export class ${className} {
 
         items.push({ label: '', separator: true, onClick: () => {} });
 
-        // 路径复制选项
         items.push({
-            label: locale === 'zh' ? '复制引用' : 'Copy Reference',
+            label: t('contentBrowser.copyReference'),
             icon: <Link size={16} />,
             shortcut: 'Ctrl+C',
             onClick: () => {
@@ -1340,7 +1255,7 @@ export class ${className} {
         });
 
         items.push({
-            label: locale === 'zh' ? '拷贝Object路径' : 'Copy Object Path',
+            label: t('contentBrowser.copyObjectPath'),
             icon: <Copy size={16} />,
             shortcut: 'Ctrl+Shift+C',
             onClick: () => {
@@ -1350,7 +1265,7 @@ export class ${className} {
         });
 
         items.push({
-            label: locale === 'zh' ? '拷贝包路径' : 'Copy Package Path',
+            label: t('contentBrowser.copyPackagePath'),
             icon: <Package size={16} />,
             shortcut: 'Ctrl+Alt+C',
             onClick: () => {
@@ -1361,9 +1276,8 @@ export class ${className} {
 
         items.push({ label: '', separator: true, onClick: () => {} });
 
-        // 引用查看器
         items.push({
-            label: locale === 'zh' ? '引用查看器' : 'Reference Viewer',
+            label: t('contentBrowser.referenceViewer'),
             icon: <FileSearch size={16} />,
             shortcut: 'Alt+Shift+R',
             onClick: () => {
@@ -1372,7 +1286,7 @@ export class ${className} {
         });
 
         items.push({
-            label: locale === 'zh' ? '尺寸信息图' : 'Size Map',
+            label: t('contentBrowser.sizeMap'),
             icon: <FileSearch size={16} />,
             shortcut: 'Alt+Shift+D',
             onClick: () => {
@@ -1382,9 +1296,8 @@ export class ${className} {
 
         items.push({ label: '', separator: true, onClick: () => {} });
 
-        // 在文件管理器中显示
         items.push({
-            label: locale === 'zh' ? '在文件管理器中显示' : 'Show in Explorer',
+            label: t('contentBrowser.openInExplorer'),
             icon: <ExternalLink size={16} />,
             onClick: async () => {
                 try {
@@ -1397,7 +1310,7 @@ export class ${className} {
         });
 
         return items;
-    }, [currentPath, fileCreationTemplates, handleAssetDoubleClick, loadAssets, locale, t.newFolder, t.newPrefix, t.unmanagedWarningTitle, setRenameDialog, setDeleteConfirmDialog, setContextMenu, setCreateFileDialog, projectPath]);
+    }, [currentPath, fileCreationTemplates, handleAssetDoubleClick, loadAssets, t, setRenameDialog, setDeleteConfirmDialog, setContextMenu, setCreateFileDialog, projectPath, getTemplateLabel]);
 
     /**
      * Handle folder tree context menu
@@ -1414,7 +1327,7 @@ export class ${className} {
 
         // New subfolder
         items.push({
-            label: t.newSubfolder,
+            label: t('contentBrowser.newSubfolder'),
             icon: <FolderClosed size={16} />,
             onClick: async () => {
                 const folderPath = `${node.path}/New Folder`;
@@ -1434,7 +1347,7 @@ export class ${className} {
         // Rename (not for root)
         if (!isRoot) {
             items.push({
-                label: t.rename,
+                label: t('contentBrowser.rename'),
                 icon: <Edit3 size={16} />,
                 onClick: () => {
                     setRenameDialog({
@@ -1452,7 +1365,7 @@ export class ${className} {
         // Delete (not for root)
         if (!isRoot) {
             items.push({
-                label: t.delete,
+                label: t('contentBrowser.delete'),
                 icon: <Trash2 size={16} />,
                 onClick: () => {
                     setDeleteConfirmDialog({
@@ -1464,7 +1377,7 @@ export class ${className} {
             });
         } else {
             items.push({
-                label: t.cannotDeleteRoot,
+                label: t('contentBrowser.cannotDeleteRoot'),
                 icon: <Trash2 size={16} />,
                 disabled: true,
                 onClick: () => {}
@@ -1475,7 +1388,7 @@ export class ${className} {
 
         // Copy path
         items.push({
-            label: t.copyPath,
+            label: t('contentBrowser.copyPath'),
             icon: <Clipboard size={16} />,
             onClick: async () => {
                 try {
@@ -1488,7 +1401,7 @@ export class ${className} {
 
         // Show in explorer
         items.push({
-            label: t.openInExplorer,
+            label: t('contentBrowser.openInExplorer'),
             icon: <ExternalLink size={16} />,
             onClick: async () => {
                 try {
@@ -1503,7 +1416,7 @@ export class ${className} {
             position: { x: e.clientX, y: e.clientY },
             items
         });
-    }, [projectPath, t, refreshAll, setRenameDialog, setDeleteConfirmDialog, setFolderTreeContextMenu, setExpandedFolders]);
+    }, [projectPath, t, refreshAll, setRenameDialog, setDeleteConfirmDialog, setFolderTreeContextMenu, setExpandedFolders, getTemplateLabel]);
 
     // Render folder tree node
     const renderFolderNode = useCallback((node: FolderNode, depth: number = 0) => {
@@ -1521,7 +1434,7 @@ export class ${className} {
                     style={{ paddingLeft: `${depth * 16 + 8}px` }}
                     onClick={() => handleFolderSelect(node.path)}
                     onContextMenu={(e) => handleFolderTreeContextMenu(e, node)}
-                    title={isRootManaged ? t.managedDirectoryTooltip : undefined}
+                    title={isRootManaged ? t('contentBrowser.managedDirectoryTooltip') : undefined}
                     onDragOver={(e) => handleFolderDragOver(e, node.path)}
                     onDragLeave={handleFolderDragLeave}
                     onDrop={(e) => handleFolderDrop(e, node.path)}
@@ -1545,13 +1458,13 @@ export class ${className} {
                     </span>
                     <span className="folder-tree-name">{node.name}</span>
                     {isRootManaged && (
-                        <span className="managed-badge" title={t.managedDirectoryTooltip}>GUID</span>
+                        <span className="managed-badge" title={t('contentBrowser.managedDirectoryTooltip')}>GUID</span>
                     )}
                 </div>
                 {isExpanded && node.children.map(child => renderFolderNode(child, depth + 1))}
             </div>
         );
-    }, [currentPath, expandedFolders, handleFolderSelect, handleFolderTreeContextMenu, toggleFolderExpand, projectPath, t.managedDirectoryTooltip, dragOverFolder, handleFolderDragOver, handleFolderDragLeave, handleFolderDrop]);
+    }, [currentPath, expandedFolders, handleFolderSelect, handleFolderTreeContextMenu, toggleFolderExpand, projectPath, t, dragOverFolder, handleFolderDragOver, handleFolderDragLeave, handleFolderDrop]);
 
     // Filter assets by search
     const filteredAssets = searchQuery.trim()
@@ -1564,7 +1477,7 @@ export class ${className} {
         return (
             <div className="content-browser">
                 <div className="content-browser-empty">
-                    <p>{t.noProject}</p>
+                    <p>{t('contentBrowser.noProject')}</p>
                 </div>
             </div>
         );
@@ -1585,7 +1498,7 @@ export class ${className} {
                         onClick={() => setFavoritesExpanded(!favoritesExpanded)}
                     >
                         {favoritesExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                        <span>{t.favorites}</span>
+                        <span>{t('contentBrowser.favorites')}</span>
                         <button className="cb-section-btn" onClick={(e) => e.stopPropagation()}>
                             <Search size={12} />
                         </button>
@@ -1620,7 +1533,7 @@ export class ${className} {
                         onClick={() => setCollectionsExpanded(!collectionsExpanded)}
                     >
                         {collectionsExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                        <span>{t.collections}</span>
+                        <span>{t('contentBrowser.collections')}</span>
                         <div className="cb-section-actions">
                             <button className="cb-section-btn" onClick={(e) => e.stopPropagation()}>
                                 <Plus size={12} />
@@ -1645,15 +1558,15 @@ export class ${className} {
                     <div className="cb-toolbar-left">
                         <button className="cb-toolbar-btn primary">
                             <Plus size={14} />
-                            <span>{t.add}</span>
+                            <span>{t('contentBrowser.add')}</span>
                         </button>
                         <button className="cb-toolbar-btn">
                             <Download size={14} />
-                            <span>{t.import}</span>
+                            <span>{t('contentBrowser.import')}</span>
                         </button>
                         <button className="cb-toolbar-btn">
                             <Save size={14} />
-                            <span>{t.saveAll}</span>
+                            <span>{t('contentBrowser.saveAll')}</span>
                         </button>
                     </div>
 
@@ -1677,10 +1590,10 @@ export class ${className} {
                             <button
                                 className="cb-toolbar-btn dock-btn"
                                 onClick={onDockInLayout}
-                                title={t.dockInLayout}
+                                title={t('contentBrowser.dockInLayout')}
                             >
                                 <PanelRightClose size={14} />
-                                <span>{t.dockInLayout}</span>
+                                <span>{t('contentBrowser.dockInLayout')}</span>
                             </button>
                         )}
                     </div>
@@ -1697,7 +1610,7 @@ export class ${className} {
                         <input
                             type="text"
                             className="cb-search-input"
-                            placeholder={`${t.search} ${breadcrumbs[breadcrumbs.length - 1]?.name || ''}`}
+                            placeholder={`${t('contentBrowser.search')} ${breadcrumbs[breadcrumbs.length - 1]?.name || ''}`}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -1726,7 +1639,7 @@ export class ${className} {
                     {loading ? (
                         <div className="cb-loading">Loading...</div>
                     ) : filteredAssets.length === 0 ? (
-                        <div className="cb-empty">{t.empty}</div>
+                        <div className="cb-empty">{t('contentBrowser.empty')}</div>
                     ) : (
                         filteredAssets.map(asset => {
                             const isDragOverAsset = asset.type === 'folder' && dragOverFolder === asset.path;
@@ -1793,7 +1706,7 @@ export class ${className} {
 
                 {/* Status Bar */}
                 <div className="cb-status-bar">
-                    <span>{filteredAssets.length} {t.items}</span>
+                    <span>{filteredAssets.length} {t('contentBrowser.items')}</span>
                 </div>
             </div>
 
@@ -1820,7 +1733,7 @@ export class ${className} {
                 <div className="cb-dialog-overlay" onClick={() => setRenameDialog(null)}>
                     <div className="cb-dialog" onClick={(e) => e.stopPropagation()}>
                         <div className="cb-dialog-header">
-                            <h3>{locale === 'zh' ? '重命名' : 'Rename'}</h3>
+                            <h3>{t('contentBrowser.dialogs.renameTitle')}</h3>
                         </div>
                         <div className="cb-dialog-body">
                             <input
@@ -1836,13 +1749,13 @@ export class ${className} {
                         </div>
                         <div className="cb-dialog-footer">
                             <button className="cb-btn" onClick={() => setRenameDialog(null)}>
-                                {locale === 'zh' ? '取消' : 'Cancel'}
+                                {t('contentBrowser.dialogs.cancel')}
                             </button>
                             <button
                                 className="cb-btn primary"
                                 onClick={() => handleRename(renameDialog.asset, renameDialog.newName)}
                             >
-                                {locale === 'zh' ? '确定' : 'OK'}
+                                {t('contentBrowser.dialogs.ok')}
                             </button>
                         </div>
                     </div>
@@ -1854,24 +1767,22 @@ export class ${className} {
                 <div className="cb-dialog-overlay" onClick={() => setDeleteConfirmDialog(null)}>
                     <div className="cb-dialog" onClick={(e) => e.stopPropagation()}>
                         <div className="cb-dialog-header">
-                            <h3>{locale === 'zh' ? '确认删除' : 'Confirm Delete'}</h3>
+                            <h3>{t('contentBrowser.deleteConfirmTitle')}</h3>
                         </div>
                         <div className="cb-dialog-body">
                             <p>
-                                {locale === 'zh'
-                                    ? `确定要删除 "${deleteConfirmDialog.name}" 吗？`
-                                    : `Delete "${deleteConfirmDialog.name}"?`}
+                                {t('contentBrowser.deleteConfirmMessage', { name: deleteConfirmDialog.name })}
                             </p>
                         </div>
                         <div className="cb-dialog-footer">
                             <button className="cb-btn" onClick={() => setDeleteConfirmDialog(null)}>
-                                {locale === 'zh' ? '取消' : 'Cancel'}
+                                {t('contentBrowser.dialogs.cancel')}
                             </button>
                             <button
                                 className="cb-btn danger"
                                 onClick={() => handleDelete(deleteConfirmDialog)}
                             >
-                                {locale === 'zh' ? '删除' : 'Delete'}
+                                {t('contentBrowser.delete')}
                             </button>
                         </div>
                     </div>
@@ -1887,11 +1798,11 @@ export class ${className} {
                     : `.${createFileDialog.template.extension}`;
                 return (
                 <PromptDialog
-                    title={locale === 'zh' ? `新建 ${getTemplateLabel(createFileDialog.template.label)}` : `New ${createFileDialog.template.label}`}
-                    message={locale === 'zh' ? `输入文件名（将添加 ${ext}）:` : `Enter file name (${ext} will be added):`}
+                    title={t('contentBrowser.dialogs.newFile', { type: getTemplateLabel(createFileDialog.template.label) })}
+                    message={t('contentBrowser.dialogs.enterFileName', { ext })}
                     placeholder="filename"
-                    confirmText={locale === 'zh' ? '创建' : 'Create'}
-                    cancelText={locale === 'zh' ? '取消' : 'Cancel'}
+                    confirmText={t('contentBrowser.dialogs.create')}
+                    cancelText={t('contentBrowser.dialogs.cancel')}
                     onConfirm={async (value) => {
                         const { parentPath, template } = createFileDialog;
                         setCreateFileDialog(null);

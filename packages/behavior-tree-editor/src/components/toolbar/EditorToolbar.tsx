@@ -1,4 +1,5 @@
 import { React, Icons } from '@esengine/editor-runtime';
+import { useBTLocale } from '../../hooks/useBTLocale';
 
 const { Play, Pause, Square, SkipForward, Undo, Redo, ZoomIn, Save, FolderOpen, Download, Clipboard, Home } = Icons;
 
@@ -43,6 +44,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     onCopyToClipboard,
     onGoToRoot
 }) => {
+    const { t } = useBTLocale();
+
     return (
         <div style={{
             position: 'absolute',
@@ -81,7 +84,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                             alignItems: 'center',
                             transition: 'all 0.15s'
                         }}
-                        title="打开文件 (Ctrl+O)"
+                        title={t('toolbar.openFile')}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a4a4a'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3c3c3c'}
                     >
@@ -104,7 +107,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                             alignItems: 'center',
                             transition: 'all 0.15s'
                         }}
-                        title={`保存 (Ctrl+S)${hasUnsavedChanges ? ' - 有未保存的更改' : ''}`}
+                        title={hasUnsavedChanges ? t('toolbar.saveUnsaved') : t('toolbar.save')}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = hasUnsavedChanges ? '#1d4ed8' : '#4a4a4a'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = hasUnsavedChanges ? '#2563eb' : '#3c3c3c'}
                     >
@@ -127,7 +130,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                             alignItems: 'center',
                             transition: 'all 0.15s'
                         }}
-                        title="导出运行时配置"
+                        title={t('toolbar.export')}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a4a4a'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3c3c3c'}
                     >
@@ -150,7 +153,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                             alignItems: 'center',
                             transition: 'all 0.15s'
                         }}
-                        title="复制JSON到剪贴板"
+                        title={t('toolbar.copyToClipboard')}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a4a4a'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3c3c3c'}
                     >
@@ -192,7 +195,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         gap: '4px',
                         transition: 'all 0.15s'
                     }}
-                    title="运行 (Play)"
+                    title={t('toolbar.run')}
                     onMouseEnter={(e) => {
                         if (executionMode !== 'running') {
                             e.currentTarget.style.backgroundColor = '#15803d';
@@ -223,7 +226,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         alignItems: 'center',
                         transition: 'all 0.15s'
                     }}
-                    title={executionMode === 'paused' ? '继续' : '暂停'}
+                    title={executionMode === 'paused' ? t('toolbar.resume') : t('toolbar.pause')}
                     onMouseEnter={(e) => {
                         if (executionMode !== 'idle') {
                             e.currentTarget.style.backgroundColor = '#d97706';
@@ -254,7 +257,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         alignItems: 'center',
                         transition: 'all 0.15s'
                     }}
-                    title="停止"
+                    title={t('toolbar.stop')}
                     onMouseEnter={(e) => {
                         if (executionMode !== 'idle') {
                             e.currentTarget.style.backgroundColor = '#b91c1c';
@@ -285,7 +288,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         alignItems: 'center',
                         transition: 'all 0.15s'
                     }}
-                    title="单步执行"
+                    title={t('toolbar.step')}
                     onMouseEnter={(e) => {
                         if (executionMode === 'idle' || executionMode === 'paused') {
                             e.currentTarget.style.backgroundColor = '#2563eb';
@@ -324,7 +327,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     gap: '4px',
                     transition: 'all 0.15s'
                 }}
-                title="重置视图 (滚轮缩放, Alt+拖动平移)"
+                title={t('toolbar.resetView')}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a4a4a'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3c3c3c'}
             >
@@ -362,7 +365,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         alignItems: 'center',
                         transition: 'all 0.15s'
                     }}
-                    title="撤销 (Ctrl+Z)"
+                    title={t('toolbar.undo')}
                     onMouseEnter={(e) => {
                         if (canUndo) {
                             e.currentTarget.style.backgroundColor = '#4a4a4a';
@@ -392,7 +395,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         alignItems: 'center',
                         transition: 'all 0.15s'
                     }}
-                    title="重做 (Ctrl+Shift+Z / Ctrl+Y)"
+                    title={t('toolbar.redo')}
                     onMouseEnter={(e) => {
                         if (canRedo) {
                             e.currentTarget.style.backgroundColor = '#4a4a4a';
@@ -438,8 +441,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     color: executionMode === 'running' ? '#16a34a' :
                         executionMode === 'paused' ? '#f59e0b' : '#888'
                 }}>
-                    {executionMode === 'idle' ? 'Idle' :
-                        executionMode === 'running' ? 'Running' : 'Paused'}
+                    {executionMode === 'idle' ? t('execution.idle') :
+                        executionMode === 'running' ? t('execution.running') : t('execution.paused')}
                 </span>
             </div>
 
@@ -465,7 +468,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                             gap: '4px',
                             transition: 'all 0.15s'
                         }}
-                        title="回到根节点"
+                        title={t('toolbar.goToRoot')}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a4a4a'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3c3c3c'}
                     >

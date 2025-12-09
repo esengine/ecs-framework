@@ -27,6 +27,7 @@ import {
     type IFileSystem,
     createLogger,
     PluginAPI,
+    LocaleService,
 } from '@esengine/editor-runtime';
 
 // Runtime imports from @esengine/behavior-tree package
@@ -44,6 +45,9 @@ import { PluginContext } from './PluginContext';
 
 // Import manifest from local file
 import { manifest } from './BehaviorTreePlugin';
+
+// Import locale translations
+import { en, zh, es } from './locales';
 
 // 导入编辑器 CSS 样式（会被 vite 自动处理并注入到 DOM）
 // Import editor CSS styles (automatically handled and injected by vite)
@@ -80,6 +84,9 @@ export class BehaviorTreeEditorModule implements IEditorModuleLoader {
 
         // 订阅创建资产消息
         this.subscribeToMessages(services);
+
+        // 注册翻译 | Register translations
+        this.registerTranslations(services);
 
         logger.info('BehaviorTree editor module installed');
     }
@@ -205,6 +212,22 @@ export class BehaviorTreeEditorModule implements IEditorModuleLoader {
             logger.info('BehaviorTreeCompiler registered');
         } catch (error) {
             logger.error('Failed to register compiler:', error);
+        }
+    }
+
+    /**
+     * 注册插件翻译到 LocaleService
+     * Register plugin translations to LocaleService
+     */
+    private registerTranslations(services: ServiceContainer): void {
+        try {
+            const localeService = services.tryResolve<LocaleService>(LocaleService);
+            if (localeService) {
+                localeService.extendTranslations('behaviorTree', { en, zh, es });
+                logger.info('BehaviorTree translations registered');
+            }
+        } catch (error) {
+            logger.warn('Failed to register translations:', error);
         }
     }
 

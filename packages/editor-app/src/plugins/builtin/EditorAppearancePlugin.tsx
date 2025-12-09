@@ -18,22 +18,24 @@ class EditorAppearanceEditorModule implements IEditorModuleLoader {
     async install(services: ServiceContainer): Promise<void> {
         const settingsRegistry = services.resolve(SettingsRegistry);
 
+        // Register settings using translation keys (prefixed with '$')
+        // 使用翻译键注册设置（以 '$' 为前缀）
         settingsRegistry.registerCategory({
             id: 'appearance',
-            title: '外观',
-            description: '配置编辑器的外观设置',
+            title: '$pluginSettings.appearance.title',
+            description: '$pluginSettings.appearance.description',
             sections: [
                 {
                     id: 'font',
-                    title: '字体设置',
-                    description: '配置编辑器字体样式',
+                    title: '$pluginSettings.appearance.font.title',
+                    description: '$pluginSettings.appearance.font.description',
                     settings: [
                         {
                             key: 'editor.fontSize',
-                            label: '字体大小 (px)',
+                            label: '$pluginSettings.appearance.font.fontSize.label',
                             type: 'range',
                             defaultValue: 13,
-                            description: '编辑器界面的字体大小',
+                            description: '$pluginSettings.appearance.font.fontSize.description',
                             min: 11,
                             max: 18,
                             step: 1
@@ -42,15 +44,15 @@ class EditorAppearanceEditorModule implements IEditorModuleLoader {
                 },
                 {
                     id: 'inspector',
-                    title: '检视器设置',
-                    description: '配置属性检视器显示',
+                    title: '$pluginSettings.appearance.inspector.title',
+                    description: '$pluginSettings.appearance.inspector.description',
                     settings: [
                         {
                             key: 'inspector.decimalPlaces',
-                            label: '数字小数位数',
+                            label: '$pluginSettings.appearance.inspector.decimalPlaces.label',
                             type: 'number',
                             defaultValue: 4,
-                            description: '数字类型属性显示的小数位数，设置为 -1 表示不限制',
+                            description: '$pluginSettings.appearance.inspector.decimalPlaces.description',
                             min: -1,
                             max: 10,
                             step: 1
@@ -59,15 +61,15 @@ class EditorAppearanceEditorModule implements IEditorModuleLoader {
                 },
                 {
                     id: 'scriptEditor',
-                    title: '脚本编辑器',
-                    description: '配置用于打开脚本文件的外部编辑器',
+                    title: '$pluginSettings.appearance.scriptEditor.title',
+                    description: '$pluginSettings.appearance.scriptEditor.description',
                     settings: [
                         {
                             key: 'editor.scriptEditor',
-                            label: '脚本编辑器',
+                            label: '$pluginSettings.appearance.scriptEditor.editor.label',
                             type: 'select',
                             defaultValue: 'system',
-                            description: '双击脚本文件时使用的编辑器',
+                            description: '$pluginSettings.appearance.scriptEditor.editor.description',
                             options: SettingsService.SCRIPT_EDITORS.map(editor => ({
                                 value: editor.id,
                                 label: editor.name
@@ -75,11 +77,11 @@ class EditorAppearanceEditorModule implements IEditorModuleLoader {
                         },
                         {
                             key: 'editor.customScriptEditorCommand',
-                            label: '自定义编辑器命令',
+                            label: '$pluginSettings.appearance.scriptEditor.customCommand.label',
                             type: 'string',
                             defaultValue: '',
-                            description: '当选择"自定义"时，填写编辑器的命令行命令（如 notepad++）',
-                            placeholder: '例如：notepad++'
+                            description: '$pluginSettings.appearance.scriptEditor.customCommand.description',
+                            placeholder: '$pluginSettings.appearance.scriptEditor.customCommand.placeholder'
                         }
                     ]
                 }

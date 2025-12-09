@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Cpu } from 'lucide-react';
 import { ICompiler, CompileResult, CompilerContext } from '@esengine/editor-core';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/CompileDialog.css';
 
 interface CompileDialogProps<TOptions = unknown> {
@@ -18,6 +19,7 @@ export function CompileDialog<TOptions = unknown>({
     context,
     initialOptions
 }: CompileDialogProps<TOptions>) {
+    const { t } = useLocale();
     const [options, setOptions] = useState<TOptions>(initialOptions as TOptions);
     const [isCompiling, setIsCompiling] = useState(false);
     const [result, setResult] = useState<CompileResult | null>(null);
@@ -54,7 +56,7 @@ export function CompileDialog<TOptions = unknown>({
         } catch (error) {
             setResult({
                 success: false,
-                message: `编译失败: ${error}`,
+                message: `${t('compileDialog.compileFailed')}: ${error}`,
                 errors: [String(error)]
             });
         } finally {
@@ -97,7 +99,7 @@ export function CompileDialog<TOptions = unknown>({
                             </div>
                             {result.outputFiles && result.outputFiles.length > 0 && (
                                 <div className="compile-dialog-output-files">
-                                    <div style={{ fontWeight: 600, marginBottom: '8px' }}>输出文件:</div>
+                                    <div style={{ fontWeight: 600, marginBottom: '8px' }}>{t('compileDialog.outputFiles')}:</div>
                                     {result.outputFiles.map((file, index) => (
                                         <div key={index} className="compile-dialog-output-file">
                                             {file}
@@ -107,7 +109,7 @@ export function CompileDialog<TOptions = unknown>({
                             )}
                             {result.errors && result.errors.length > 0 && (
                                 <div className="compile-dialog-errors">
-                                    <div style={{ fontWeight: 600, marginBottom: '8px' }}>错误:</div>
+                                    <div style={{ fontWeight: 600, marginBottom: '8px' }}>{t('compileDialog.errors')}:</div>
                                     {result.errors.map((error, index) => (
                                         <div key={index} className="compile-dialog-error-item">
                                             {error}
@@ -125,14 +127,14 @@ export function CompileDialog<TOptions = unknown>({
                         className="compile-dialog-btn compile-dialog-btn-cancel"
                         disabled={isCompiling}
                     >
-                        关闭
+                        {t('compileDialog.close')}
                     </button>
                     <button
                         onClick={handleCompile}
                         className="compile-dialog-btn compile-dialog-btn-primary"
                         disabled={isCompiling || !!validationError}
                     >
-                        {isCompiling ? '编译中...' : '编译'}
+                        {isCompiling ? t('compileDialog.compiling') : t('compileDialog.compile')}
                     </button>
                 </div>
             </div>

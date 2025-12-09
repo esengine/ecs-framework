@@ -92,16 +92,11 @@ function generateId(): string {
 }
 
 /**
- * 安全获取或创建 metadata
- * Safely get or create metadata
+ * 更新 metadata 的修改时间
+ * Update metadata modification time
  */
 function getUpdatedMetadata(blueprint: BlueprintAsset): BlueprintAsset['metadata'] {
-    const existing = blueprint.metadata || {
-        name: (blueprint as any).name || 'Blueprint',
-        createdAt: Date.now(),
-        modifiedAt: Date.now()
-    };
-    return { ...existing, modifiedAt: Date.now() };
+    return { ...blueprint.metadata, modifiedAt: Date.now() };
 }
 
 /**

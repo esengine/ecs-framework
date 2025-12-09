@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { NodeTemplate, NodeTemplates } from '@esengine/behavior-tree';
 import { Search, X, LucideIcon, ChevronDown, ChevronRight } from 'lucide-react';
+import { useLocale } from '../../../hooks/useLocale';
 
 interface QuickCreateMenuProps {
     visible: boolean;
@@ -32,6 +33,7 @@ export const QuickCreateMenu: React.FC<QuickCreateMenuProps> = ({
     onNodeSelect,
     onClose
 }) => {
+    const { t } = useLocale();
     const selectedNodeRef = useRef<HTMLDivElement>(null);
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
     const [shouldAutoScroll, setShouldAutoScroll] = useState(false);
@@ -48,11 +50,12 @@ export const QuickCreateMenu: React.FC<QuickCreateMenuProps> = ({
         })
         : allTemplates;
 
+    const uncategorizedLabel = t('quickCreateMenu.uncategorized');
     const categoryGroups: CategoryGroup[] = React.useMemo(() => {
         const groups = new Map<string, NodeTemplate[]>();
 
         filteredTemplates.forEach((template: NodeTemplate) => {
-            const category = template.category || '未分类';
+            const category = template.category || uncategorizedLabel;
             if (!groups.has(category)) {
                 groups.set(category, []);
             }
@@ -64,7 +67,7 @@ export const QuickCreateMenu: React.FC<QuickCreateMenuProps> = ({
             templates,
             isExpanded: searchTextLower ? true : expandedCategories.has(category)
         })).sort((a, b) => a.category.localeCompare(b.category));
-    }, [filteredTemplates, expandedCategories, searchTextLower]);
+    }, [filteredTemplates, expandedCategories, searchTextLower, uncategorizedLabel]);
 
     const flattenedTemplates = React.useMemo(() => {
         return categoryGroups.flatMap((group) =>
@@ -86,10 +89,10 @@ export const QuickCreateMenu: React.FC<QuickCreateMenuProps> = ({
 
     useEffect(() => {
         if (allTemplates.length > 0 && expandedCategories.size === 0) {
-            const categories = new Set(allTemplates.map((t) => t.category || '未分类'));
+            const categories = new Set(allTemplates.map((template) => template.category || uncategorizedLabel));
             setExpandedCategories(categories);
         }
-    }, [allTemplates, expandedCategories.size]);
+    }, [allTemplates, expandedCategories.size, uncategorizedLabel]);
 
     useEffect(() => {
         if (shouldAutoScroll && selectedNodeRef.current) {
@@ -157,7 +160,7 @@ export const QuickCreateMenu: React.FC<QuickCreateMenuProps> = ({
                     <Search size={16} style={{ color: '#999', flexShrink: 0 }} />
                     <input
                         type="text"
-                        placeholder="搜索节点..."
+                        placeholder={t('quickCreateMenu.searchPlaceholder')}
                         autoFocus
                         value={searchText}
                         onChange={(e) => {
@@ -225,7 +228,7 @@ export const QuickCreateMenu: React.FC<QuickCreateMenuProps> = ({
                             color: '#666',
                             fontSize: '12px'
                         }}>
-                            未找到匹配的节点
+                            {t('quickCreateMenu.noMatchingNodes')}
                         </div>
                     ) : (
                         categoryGroups.map((group) => {

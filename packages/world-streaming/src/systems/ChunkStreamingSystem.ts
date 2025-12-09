@@ -220,10 +220,8 @@ export class ChunkStreamingSystem extends EntitySystem {
     ): void {
         if (!this._chunkManager || centerCoords.length === 0) return;
 
-        const grid = (this._chunkManager as any)._chunkGrid;
-        if (!grid) return;
-
-        grid.forEach((_info: unknown, coord: IChunkCoord) => {
+        // 使用公共接口遍历区块 | Use public interface to iterate chunks
+        this._chunkManager.forEachChunk((_info, coord) => {
             let isInRange = false;
 
             for (const center of centerCoords) {

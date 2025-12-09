@@ -4,23 +4,21 @@
  */
 import { AlertCircle, CheckCircle, ExternalLink, Github, Loader } from 'lucide-react';
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { open } from '@tauri-apps/plugin-shell';
+import { useLocale } from '../../hooks/useLocale';
 import { useForumAuth } from '../../hooks/useForum';
 import './ForumAuth.css';
 
 type AuthStatus = 'idle' | 'pending' | 'authorized' | 'error';
 
 export function ForumAuth() {
-    const { i18n } = useTranslation();
+    const { t } = useLocale();
     const { requestDeviceCode, authenticateWithDeviceFlow, signInWithGitHubToken } = useForumAuth();
 
     const [authStatus, setAuthStatus] = useState<AuthStatus>('idle');
     const [userCode, setUserCode] = useState('');
     const [verificationUri, setVerificationUri] = useState('');
     const [error, setError] = useState<string | null>(null);
-
-    const isEnglish = i18n.language === 'en';
 
     const handleGitHubLogin = async () => {
         setAuthStatus('pending');
@@ -60,7 +58,7 @@ export function ForumAuth() {
         } catch (err) {
             console.error('[ForumAuth] GitHub login failed:', err);
             setAuthStatus('error');
-            setError(err instanceof Error ? err.message : (isEnglish ? 'Authorization failed' : '授权失败'));
+            setError(err instanceof Error ? err.message : t('forum.authFailed'));
         }
     };
 
@@ -84,21 +82,21 @@ export function ForumAuth() {
             <div className="forum-auth-card">
                 <div className="forum-auth-header">
                     <Github size={32} className="forum-auth-icon" />
-                    <h2>{isEnglish ? 'ESEngine Community' : 'ESEngine 社区'}</h2>
-                    <p>{isEnglish ? 'Sign in with GitHub to join the discussion' : '使用 GitHub 登录参与讨论'}</p>
+                    <h2>{t('forum.communityTitle')}</h2>
+                    <p>{t('forum.signInWithGitHub')}</p>
                 </div>
 
                 {/* 初始状态 | Idle state */}
                 {authStatus === 'idle' && (
                     <div className="forum-auth-content">
                         <div className="forum-auth-instructions">
-                            <p>{isEnglish ? '1. Click the button below' : '1. 点击下方按钮'}</p>
-                            <p>{isEnglish ? '2. Enter the code on GitHub' : '2. 在 GitHub 页面输入验证码'}</p>
-                            <p>{isEnglish ? '3. Authorize the application' : '3. 授权应用'}</p>
+                            <p>{t('forum.step1')}</p>
+                            <p>{t('forum.step2')}</p>
+                            <p>{t('forum.step3')}</p>
                         </div>
                         <button className="forum-auth-github-btn" onClick={handleGitHubLogin}>
                             <Github size={16} />
-                            <span>{isEnglish ? 'Continue with GitHub' : '使用 GitHub 登录'}</span>
+                            <span>{t('forum.continueWithGitHub')}</span>
                         </button>
                     </div>
                 )}
@@ -108,18 +106,18 @@ export function ForumAuth() {
                     <div className="forum-auth-pending">
                         <Loader size={24} className="spinning" />
                         <p className="forum-auth-pending-text">
-                            {isEnglish ? 'Waiting for authorization...' : '等待授权中...'}
+                            {t('forum.waitingForAuth')}
                         </p>
 
                         {userCode && (
                             <div className="forum-auth-code-section">
-                                <label>{isEnglish ? 'Enter this code on GitHub:' : '在 GitHub 输入此验证码：'}</label>
+                                <label>{t('forum.enterCodeOnGitHub')}</label>
                                 <div className="forum-auth-code-box">
                                     <span className="forum-auth-code">{userCode}</span>
                                     <button
                                         className="forum-auth-copy-btn"
                                         onClick={() => copyToClipboard(userCode)}
-                                        title={isEnglish ? 'Copy code' : '复制验证码'}
+                                        title={t('forum.copyCode')}
                                     >
                                         📋
                                     </button>
@@ -129,7 +127,7 @@ export function ForumAuth() {
                                     onClick={() => open(verificationUri)}
                                 >
                                     <ExternalLink size={14} />
-                                    <span>{isEnglish ? 'Open GitHub' : '打开 GitHub'}</span>
+                                    <span>{t('forum.openGitHub')}</span>
                                 </button>
                             </div>
                         )}
@@ -140,7 +138,7 @@ export function ForumAuth() {
                 {authStatus === 'authorized' && (
                     <div className="forum-auth-success">
                         <CheckCircle size={32} className="forum-auth-success-icon" />
-                        <p>{isEnglish ? 'Authorization successful!' : '授权成功！'}</p>
+                        <p>{t('forum.authSuccess')}</p>
                     </div>
                 )}
 
@@ -148,10 +146,10 @@ export function ForumAuth() {
                 {authStatus === 'error' && (
                     <div className="forum-auth-error-state">
                         <AlertCircle size={32} className="forum-auth-error-icon" />
-                        <p>{isEnglish ? 'Authorization failed' : '授权失败'}</p>
+                        <p>{t('forum.authFailed')}</p>
                         {error && <p className="forum-auth-error-detail">{error}</p>}
                         <button className="forum-auth-retry-btn" onClick={handleRetry}>
-                            {isEnglish ? 'Try Again' : '重试'}
+                            {t('forum.tryAgain')}
                         </button>
                     </div>
                 )}

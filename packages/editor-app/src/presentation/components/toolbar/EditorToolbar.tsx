@@ -1,5 +1,6 @@
 import React from 'react';
 import { Play, Pause, Square, SkipForward, RotateCcw, Trash2, Undo, Redo, Box } from 'lucide-react';
+import { useLocale } from '../../../hooks/useLocale';
 
 type ExecutionMode = 'idle' | 'running' | 'paused' | 'step';
 
@@ -36,6 +37,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     onClearCanvas,
     onToggleGizmos
 }) => {
+    const { t } = useLocale();
     return (
         <div style={{
             position: 'absolute',
@@ -67,12 +69,12 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}
-                title="运行 (Play)"
+                title={t('editorToolbar.play')}
             >
                 <Play size={16} />
             </button>
 
-            {/* 暂停按钮 */}
+            {/* 暂停按钮 | Pause button */}
             <button
                 onClick={onPause}
                 disabled={executionMode === 'idle'}
@@ -88,12 +90,12 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}
-                title={executionMode === 'paused' ? '继续' : '暂停'}
+                title={executionMode === 'paused' ? t('editorToolbar.resume') : t('editorToolbar.pause')}
             >
                 {executionMode === 'paused' ? <Play size={16} /> : <Pause size={16} />}
             </button>
 
-            {/* 停止按钮 */}
+            {/* 停止按钮 | Stop button */}
             <button
                 onClick={onStop}
                 disabled={executionMode === 'idle'}
@@ -109,12 +111,12 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}
-                title="停止"
+                title={t('editorToolbar.stop')}
             >
                 <Square size={16} />
             </button>
 
-            {/* 单步执行按钮 */}
+            {/* 单步执行按钮 | Step forward button */}
             <button
                 onClick={onStep}
                 disabled={executionMode !== 'idle' && executionMode !== 'paused'}
@@ -130,12 +132,12 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}
-                title="单步执行"
+                title={t('editorToolbar.stepForward')}
             >
                 <SkipForward size={16} />
             </button>
 
-            {/* 重置按钮 */}
+            {/* 重置按钮 | Reset button */}
             <button
                 onClick={onReset}
                 style={{
@@ -150,7 +152,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}
-                title="重置"
+                title={t('editorToolbar.reset')}
             >
                 <RotateCcw size={16} />
             </button>
@@ -162,7 +164,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 margin: '4px 0'
             }} />
 
-            {/* 重置视图按钮 */}
+            {/* 重置视图按钮 | Reset view button */}
             <button
                 onClick={onResetView}
                 style={{
@@ -177,13 +179,13 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     alignItems: 'center',
                     gap: '4px'
                 }}
-                title="重置视图 (滚轮缩放, Alt+拖动平移)"
+                title={t('editorToolbar.resetView')}
             >
                 <RotateCcw size={14} />
                 View
             </button>
 
-            {/* 清空画布按钮 */}
+            {/* 清空画布按钮 | Clear canvas button */}
             <button
                 style={{
                     padding: '8px 12px',
@@ -197,14 +199,14 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     alignItems: 'center',
                     gap: '4px'
                 }}
-                title="清空画布"
+                title={t('editorToolbar.clearCanvas')}
                 onClick={onClearCanvas}
             >
                 <Trash2 size={14} />
-                清空
+                {t('editorToolbar.clear')}
             </button>
 
-            {/* Gizmo 开关按钮 */}
+            {/* Gizmo 开关按钮 | Gizmo toggle button */}
             <button
                 onClick={onToggleGizmos}
                 style={{
@@ -219,7 +221,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     alignItems: 'center',
                     gap: '4px'
                 }}
-                title="显示/隐藏选择边框 (Gizmos)"
+                title={t('editorToolbar.toggleGizmos')}
             >
                 <Box size={14} />
                 Gizmos
@@ -233,7 +235,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 margin: '0 4px'
             }} />
 
-            {/* 撤销按钮 */}
+            {/* 撤销按钮 | Undo button */}
             <button
                 onClick={onUndo}
                 disabled={!canUndo}
@@ -249,12 +251,12 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}
-                title="撤销 (Ctrl+Z)"
+                title={t('editorToolbar.undo')}
             >
                 <Undo size={16} />
             </button>
 
-            {/* 重做按钮 */}
+            {/* 重做按钮 | Redo button */}
             <button
                 onClick={onRedo}
                 disabled={!canRedo}
@@ -270,12 +272,12 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}
-                title="重做 (Ctrl+Shift+Z / Ctrl+Y)"
+                title={t('editorToolbar.redo')}
             >
                 <Redo size={16} />
             </button>
 
-            {/* 状态指示器 */}
+            {/* 状态指示器 | Status indicator */}
             <div style={{
                 padding: '8px 12px',
                 backgroundColor: '#1e1e1e',
@@ -294,9 +296,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         executionMode === 'running' ? '#4caf50' :
                             executionMode === 'paused' ? '#ff9800' : '#666'
                 }} />
-                {executionMode === 'idle' ? 'Idle' :
-                    executionMode === 'running' ? 'Running' :
-                        executionMode === 'paused' ? 'Paused' : 'Step'}
+                {executionMode === 'idle' ? t('editorToolbar.idle') :
+                    executionMode === 'running' ? t('editorToolbar.running') :
+                        executionMode === 'paused' ? t('editorToolbar.paused') : t('editorToolbar.step')}
             </div>
         </div>
     );
