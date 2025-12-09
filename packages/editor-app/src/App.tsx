@@ -3,6 +3,7 @@ import * as ReactDOM from 'react-dom';
 import * as ReactJSXRuntime from 'react/jsx-runtime';
 import { Core, createLogger, Scene } from '@esengine/ecs-framework';
 import * as ECSFramework from '@esengine/ecs-framework';
+import { getProfilerService } from './services/getService';
 
 // 将 React 暴露到全局，供动态加载的插件使用
 // editor-runtime.js 将 React 设为 external，需要从全局获取
@@ -207,14 +208,15 @@ function App() {
     }, [messageHub, showToast]);
 
     // 监听远程连接状态
+    // Monitor remote connection status
     useEffect(() => {
         const checkConnection = () => {
-            const profilerService = (window as any).__PROFILER_SERVICE__;
-            const connected = profilerService && profilerService.isConnected();
+            const profilerService = getProfilerService();
+            const connected = !!(profilerService && profilerService.isConnected());
 
             setIsRemoteConnected((prevConnected) => {
                 if (connected !== prevConnected) {
-                    // 状态发生变化
+                    // 状态发生变化 | State has changed
                     if (connected) {
                         setStatus(t('header.status.remoteConnected'));
                     } else {
@@ -246,7 +248,8 @@ function App() {
             initRef.current = true;
 
             try {
-                (window as any).__ECS_FRAMEWORK__ = ECSFramework;
+                // ECS Framework 已通过 PluginSDKRegistry 暴露到全局
+                // ECS Framework is exposed globally via PluginSDKRegistry
 
                 const editorScene = new Scene();
                 Core.setScene(editorScene);

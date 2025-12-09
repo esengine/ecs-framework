@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { X, Server, WifiOff, Wifi } from 'lucide-react';
 import { SettingsService } from '../services/SettingsService';
-import { ProfilerService } from '../services/ProfilerService';
+import { getProfilerService } from '../services/getService';
 import '../styles/PortManager.css';
 
 interface PortManagerProps {
@@ -58,7 +58,7 @@ export function PortManager({ onClose }: PortManagerProps) {
     const handleStopServer = async () => {
         setIsStopping(true);
         try {
-            const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
+            const profilerService = getProfilerService();
             if (profilerService) {
                 await profilerService.manualStopServer();
                 setIsServerRunning(false);
@@ -73,7 +73,7 @@ export function PortManager({ onClose }: PortManagerProps) {
     const handleStartServer = async () => {
         setIsStarting(true);
         try {
-            const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
+            const profilerService = getProfilerService();
             if (profilerService) {
                 await profilerService.manualStartServer();
                 await new Promise((resolve) => setTimeout(resolve, 500));

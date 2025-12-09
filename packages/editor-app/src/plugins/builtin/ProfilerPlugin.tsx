@@ -4,6 +4,7 @@
  */
 
 import type { ServiceContainer } from '@esengine/ecs-framework';
+import { Core } from '@esengine/ecs-framework';
 import type {
     IPlugin,
     IEditorModuleLoader,
@@ -12,6 +13,7 @@ import type {
 } from '@esengine/editor-core';
 import { MessageHub, SettingsRegistry } from '@esengine/editor-core';
 import { ProfilerService } from '../../services/ProfilerService';
+import { ProfilerServiceToken } from '../../services/tokens';
 
 /**
  * Profiler 编辑器模块
@@ -87,15 +89,21 @@ class ProfilerEditorModule implements IEditorModuleLoader {
         });
 
         this.profilerService = new ProfilerService();
-        (window as any).__PROFILER_SERVICE__ = this.profilerService;
+
+        // 使用 ServiceToken 注册服务（类型安全）
+        // Register service using ServiceToken (type-safe)
+        Core.pluginServices.register(ProfilerServiceToken, this.profilerService);
     }
 
     async uninstall(): Promise<void> {
+        // 从服务注册表注销
+        // Unregister from service registry
+        Core.pluginServices.unregister(ProfilerServiceToken);
+
         if (this.profilerService) {
             this.profilerService.destroy();
             this.profilerService = null;
         }
-        delete (window as any).__PROFILER_SERVICE__;
     }
 
     getMenuItems(): MenuItemDescriptor[] {

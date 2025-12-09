@@ -136,6 +136,33 @@ export interface PhysicsConfig {
     timestep?: number;
 }
 
+/**
+ * 碰撞层配置接口
+ * Collision layer config interface
+ *
+ * 跨模块共享的碰撞层配置契约。
+ * Cross-module shared collision layer config contract.
+ */
+export interface ICollisionLayerConfig {
+    /**
+     * 获取所有层定义
+     * Get all layer definitions
+     */
+    getLayers(): ReadonlyArray<{ name: string }>;
+
+    /**
+     * 添加监听器
+     * Add listener
+     */
+    addListener(callback: () => void): void;
+
+    /**
+     * 移除监听器
+     * Remove listener
+     */
+    removeListener(callback: () => void): void;
+}
+
 // ============================================================================
 // 服务令牌 | Service Tokens
 // ============================================================================
@@ -175,3 +202,12 @@ export const Physics2DSystemToken = createServiceToken<Physics2DSystem>('physics
  * For passing physics configuration (gravity, timestep, etc.).
  */
 export const PhysicsConfigToken = createServiceToken<PhysicsConfig>('physicsConfig');
+
+/**
+ * 碰撞层配置令牌
+ * Collision layer config token
+ *
+ * 用于获取碰撞层配置服务。
+ * For getting collision layer config service.
+ */
+export const CollisionLayerConfigToken = createServiceToken<ICollisionLayerConfig>('collisionLayerConfig');
