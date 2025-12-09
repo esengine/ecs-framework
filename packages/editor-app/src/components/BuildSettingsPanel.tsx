@@ -63,7 +63,8 @@ interface BuildSettings {
     developmentBuild: boolean;
     sourceMap: boolean;
     compressionMethod: 'Default' | 'LZ4' | 'LZ4HC';
-    bundleModules: boolean;
+    /** Web build mode | Web 构建模式 */
+    buildMode: 'split-bundles' | 'single-bundle';
 }
 
 // ==================== Constants | 常量 ====================
@@ -87,7 +88,7 @@ const DEFAULT_SETTINGS: BuildSettings = {
     developmentBuild: false,
     sourceMap: false,
     compressionMethod: 'Default',
-    bundleModules: false,
+    buildMode: 'split-bundles',
 };
 
 // ==================== Status Key Mapping | 状态键映射 ====================
@@ -232,9 +233,11 @@ export function BuildSettingsPanel({
                     const webConfig: WebBuildConfig = {
                         ...baseConfig,
                         platform: BuildPlatform.Web,
-                        format: 'iife',
-                        bundleModules: settings.bundleModules,
-                        generateHtml: true
+                        buildMode: settings.buildMode,
+                        generateHtml: true,
+                        minify: !settings.developmentBuild,
+                        generateAssetCatalog: true,
+                        assetLoadingStrategy: 'on-demand'
                     };
                     buildConfig = webConfig;
                 } else if (platform === BuildPlatform.WeChatMiniGame) {
@@ -582,18 +585,22 @@ export function BuildSettingsPanel({
                                                     </select>
                                                 </div>
                                                 <div className="build-settings-form-row">
-                                                    <label>{t('buildSettings.bundleModules')}</label>
+                                                    <label>{t('buildSettings.buildMode')}</label>
                                                     <div className="build-settings-toggle-group">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={settings.bundleModules}
+                                                        <select
+                                                            value={settings.buildMode}
                                                             onChange={e => setSettings(prev => ({
                                                                 ...prev,
-                                                                bundleModules: e.target.checked
+                                                                buildMode: e.target.value as 'split-bundles' | 'single-bundle'
                                                             }))}
-                                                        />
+                                                        >
+                                                            <option value="split-bundles">{t('buildSettings.splitBundles')}</option>
+                                                            <option value="single-bundle">{t('buildSettings.singleBundle')}</option>
+                                                        </select>
                                                         <span className="build-settings-hint">
-                                                            {settings.bundleModules ? t('buildSettings.bundleModulesHint') : t('buildSettings.separateModulesHint')}
+                                                            {settings.buildMode === 'split-bundles'
+                                                                ? t('buildSettings.splitBundlesHint')
+                                                                : t('buildSettings.singleBundleHint')}
                                                         </span>
                                                     </div>
                                                 </div>

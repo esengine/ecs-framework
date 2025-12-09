@@ -2,8 +2,39 @@
  * Web Platform Build Pipeline.
  * Web 平台构建管线。
  *
- * Packages the project as a web application that can run in browsers.
- * 将项目打包为可在浏览器中运行的 Web 应用。
+ * Supports two build modes:
+ * 支持两种构建模式：
+ *
+ * 1. split-bundles (recommended): Core runtime + plugins loaded on demand
+ *    分包模式（推荐）：核心运行时 + 插件按需加载
+ *    - Smaller initial load (~150KB core)
+ *    - Better caching (plugins cached separately)
+ *    - Best for production games
+ *
+ * 2. single-bundle: All code in one file
+ *    单包模式：所有代码打包到一个文件
+ *    - Single HTTP request
+ *    - Best for small games / playable ads
+ *
+ * Output structure (split-bundles):
+ * 输出结构（分包模式）：
+ * ```
+ * build/web/
+ * ├── index.html
+ * ├── libs/
+ * │   ├── esengine.core.js      # Core runtime
+ * │   ├── plugins/              # Plugin bundles
+ * │   │   ├── sprite.js
+ * │   │   ├── tilemap.js
+ * │   │   └── ...
+ * │   └── wasm/                 # WASM files
+ * │       └── es_engine_bg.wasm
+ * ├── assets/
+ * │   └── ...
+ * ├── scenes/
+ * │   └── main.ecs
+ * └── asset-catalog.json
+ * ```
  */
 
 import type {
@@ -18,12 +49,16 @@ import type {
 import { BuildPlatform, BuildStatus } from '../IBuildPipeline';
 import type { ModuleManifest } from '../../Module/ModuleTypes';
 
+// ============================================================================
+// Build File System Interface
+// ============================================================================
+
 /**
  * Build file system interface.
  * 构建文件系统接口。
  *
- * This interface is implemented by the editor-app's BuildFileSystemService.
- * 此接口由 editor-app 的 BuildFileSystemService 实现。
+ * Implemented by editor-app's BuildFileSystemService.
+ * 由 editor-app 的 BuildFileSystemService 实现。
  */
 export interface IBuildFileSystem {
     prepareBuildDirectory(outputPath: string): Promise<void>;
@@ -38,6 +73,7 @@ export interface IBuildFileSystem {
         external: string[];
         projectRoot: string;
         define?: Record<string, string>;
+        globalName?: string;
     }): Promise<{
         success: boolean;
         outputFile?: string;
@@ -45,12 +81,7 @@ export interface IBuildFileSystem {
         error?: string;
         warnings: string[];
     }>;
-    generateHtml(
-        outputPath: string,
-        title: string,
-        scripts: string[],
-        bodyContent?: string
-    ): Promise<void>;
+    generateHtml(outputPath: string, title: string, scripts: string[], bodyContent?: string): Promise<void>;
     getFileSize(filePath: string): Promise<number>;
     getDirectorySize(dirPath: string): Promise<number>;
     writeJsonFile(filePath: string, content: string): Promise<void>;
@@ -61,27 +92,35 @@ export interface IBuildFileSystem {
     writeFile(path: string, content: string): Promise<void>;
     readJson<T>(path: string): Promise<T>;
     createDirectory(path: string): Promise<void>;
-    /** Read binary file as base64 | 读取二进制文件为 base64 */
     readBinaryFileAsBase64?(path: string): Promise<string>;
 }
+
+// ============================================================================
+// Module Classification
+// ============================================================================
+
+/**
+ * Check if a module is a core module.
+ * Uses the "isCore" field from module.json instead of hardcoded list.
+ * 检查模块是否是核心模块。
+ * 使用 module.json 中的 "isCore" 字段，而非硬编码列表。
+ */
+function isCoreModule(module: ModuleManifest): boolean {
+    return module.isCore === true;
+}
+
+// ============================================================================
+// Web Build Pipeline
+// ============================================================================
 
 /**
  * Web Platform Build Pipeline.
  * Web 平台构建管线。
- *
- * Build steps:
- * 构建步骤：
- * 1. Prepare output directory | 准备输出目录
- * 2. Compile TypeScript | 编译 TypeScript
- * 3. Bundle runtime | 打包运行时
- * 4. Copy asset files | 复制资源文件
- * 5. Generate HTML | 生成 HTML
- * 6. Post-process optimization | 后处理优化
  */
 export class WebBuildPipeline implements IBuildPipeline {
     readonly platform = BuildPlatform.Web;
     readonly displayName = 'Web / H5';
-    readonly description = 'Build as a web application that can run in browsers | 构建为可在浏览器中运行的 Web 应用';
+    readonly description = 'Build for web browsers | 构建为 Web 应用';
     readonly icon = 'globe';
 
     private _fileSystem: IBuildFileSystem | null = null;
@@ -89,146 +128,124 @@ export class WebBuildPipeline implements IBuildPipeline {
     private _disabledModules: string[] = [];
     private _engineModulesPath: string = '';
 
-    /**
-     * Set build file system service.
-     * 设置构建文件系统服务。
-     *
-     * @param fileSystem - Build file system service | 构建文件系统服务
-     */
+    // ========================================================================
+    // Configuration
+    // ========================================================================
+
     setFileSystem(fileSystem: IBuildFileSystem): void {
         this._fileSystem = fileSystem;
     }
 
-    /**
-     * Set enabled modules for build (whitelist approach).
-     * 设置构建时启用的模块（白名单方式）。
-     *
-     * @param modules - List of enabled module IDs | 启用的模块 ID 列表
-     */
     setEnabledModules(modules: string[]): void {
         this._enabledModules = modules;
     }
 
-    /**
-     * Set disabled modules for build (blacklist approach).
-     * 设置构建时禁用的模块（黑名单方式）。
-     *
-     * @param modules - List of disabled module IDs | 禁用的模块 ID 列表
-     */
     setDisabledModules(modules: string[]): void {
         this._disabledModules = modules;
     }
 
-    /**
-     * Set engine modules path.
-     * 设置引擎模块路径。
-     *
-     * @param path - Path to engine modules directory | 引擎模块目录路径
-     */
     setEngineModulesPath(path: string): void {
         this._engineModulesPath = path;
     }
 
-    /**
-     * Get default configuration.
-     * 获取默认配置。
-     */
     getDefaultConfig(): WebBuildConfig {
         return {
             platform: BuildPlatform.Web,
-            outputPath: './dist/web',
+            outputPath: './build/web',
             isRelease: true,
             sourceMap: false,
-            format: 'iife',
-            bundleModules: true,
-            generateHtml: true
+            buildMode: 'split-bundles',
+            minify: true,
+            generateHtml: true,
+            assetLoadingStrategy: 'on-demand',
+            generateAssetCatalog: true
         };
     }
 
-    /**
-     * Validate configuration.
-     * 验证配置。
-     *
-     * @param config - Build configuration | 构建配置
-     * @returns Validation error list | 验证错误列表
-     */
     validateConfig(config: BuildConfig): string[] {
         const errors: string[] = [];
         const webConfig = config as WebBuildConfig;
 
         if (!webConfig.outputPath) {
-            errors.push('Output path cannot be empty | 输出路径不能为空');
+            errors.push('Output path is required | 输出路径不能为空');
         }
 
-        if (webConfig.format !== 'iife' && webConfig.format !== 'esm') {
-            errors.push('Output format must be iife or esm | 输出格式必须是 iife 或 esm');
+        if (webConfig.buildMode !== 'single-bundle' && webConfig.buildMode !== 'split-bundles') {
+            errors.push('Build mode must be "single-bundle" or "split-bundles" | 构建模式必须是 "single-bundle" 或 "split-bundles"');
         }
 
         return errors;
     }
 
-    /**
-     * Get build steps.
-     * 获取构建步骤。
-     *
-     * @param config - Build configuration | 构建配置
-     * @returns Build step list | 构建步骤列表
-     */
+    // ========================================================================
+    // Build Steps
+    // ========================================================================
+
     getSteps(config: BuildConfig): BuildStep[] {
         const webConfig = config as WebBuildConfig;
 
         const steps: BuildStep[] = [
             {
                 id: 'prepare',
-                name: 'Prepare output directory | 准备输出目录',
-                execute: this._prepareOutputDir.bind(this)
+                name: 'Prepare build directory | 准备构建目录',
+                execute: this._stepPrepare.bind(this)
             },
             {
-                id: 'compile',
-                name: 'Compile TypeScript | 编译 TypeScript',
-                execute: this._compileTypeScript.bind(this)
+                id: 'analyze',
+                name: 'Analyze project | 分析项目',
+                execute: this._stepAnalyze.bind(this)
             },
             {
                 id: 'bundle-runtime',
                 name: 'Bundle runtime | 打包运行时',
-                execute: this._bundleRuntime.bind(this)
+                execute: webConfig.buildMode === 'split-bundles'
+                    ? this._stepBundleSplit.bind(this)
+                    : this._stepBundleSingle.bind(this)
             },
             {
                 id: 'copy-assets',
-                name: 'Copy asset files | 复制资源文件',
-                execute: this._copyAssets.bind(this)
+                name: 'Copy assets | 复制资产',
+                execute: this._stepCopyAssets.bind(this)
+            },
+            {
+                id: 'copy-scenes',
+                name: 'Copy scenes | 复制场景',
+                execute: this._stepCopyScenes.bind(this)
             }
         ];
+
+        if (webConfig.generateAssetCatalog !== false) {
+            steps.push({
+                id: 'generate-catalog',
+                name: 'Generate asset catalog | 生成资产清单',
+                execute: this._stepGenerateCatalog.bind(this)
+            });
+        }
 
         if (webConfig.generateHtml) {
             steps.push({
                 id: 'generate-html',
                 name: 'Generate HTML | 生成 HTML',
-                execute: this._generateHtml.bind(this)
+                execute: this._stepGenerateHtml.bind(this)
             });
         }
 
-        if (webConfig.isRelease) {
+        // Always generate server scripts for ESM builds
+        if (webConfig.buildMode === 'split-bundles') {
             steps.push({
-                id: 'optimize',
-                name: 'Optimize and compress | 优化压缩',
-                execute: this._optimize.bind(this),
-                optional: true
+                id: 'generate-server-scripts',
+                name: 'Generate server scripts | 生成启动脚本',
+                execute: this._stepGenerateServerScripts.bind(this)
             });
         }
 
         return steps;
     }
 
-    /**
-     * Execute build.
-     * 执行构建。
-     *
-     * @param config - Build configuration | 构建配置
-     * @param onProgress - Progress callback | 进度回调
-     * @param abortSignal - Abort signal | 中止信号
-     * @returns Build result | 构建结果
-     */
+    // ========================================================================
+    // Build Execution
+    // ========================================================================
+
     async build(
         config: BuildConfig,
         onProgress?: (progress: BuildProgress) => void,
@@ -241,6 +258,7 @@ export class WebBuildPipeline implements IBuildPipeline {
         const steps = this.getSteps(config);
         const totalSteps = steps.length;
 
+        // Derive project root from output path
         const outputPathParts = config.outputPath.replace(/\\/g, '/').split('/');
         const buildIndex = outputPathParts.lastIndexOf('build');
         const projectRoot = buildIndex > 0
@@ -252,28 +270,24 @@ export class WebBuildPipeline implements IBuildPipeline {
             projectRoot,
             tempDir: `${projectRoot}/temp/build`,
             outputDir: config.outputPath,
-            reportProgress: () => {},
+            reportProgress: (msg, progress) => {
+                console.log(`[WebBuild] ${msg}${progress !== undefined ? ` (${progress}%)` : ''}`);
+            },
             addWarning: (warning) => warnings.push(warning),
             abortSignal: abortSignal || new AbortController().signal,
             data: new Map()
         };
 
+        // Store file system in context
         context.data.set('fileSystem', this._fileSystem);
+        context.data.set('engineModulesPath', this._engineModulesPath);
 
         try {
             for (let i = 0; i < steps.length; i++) {
                 const step = steps[i];
 
                 if (abortSignal?.aborted) {
-                    return {
-                        success: false,
-                        platform: config.platform,
-                        outputPath: config.outputPath,
-                        duration: Date.now() - startTime,
-                        outputFiles,
-                        warnings,
-                        error: 'Build cancelled | 构建已取消'
-                    };
+                    return this._createResult(false, config, startTime, outputFiles, warnings, 'Build cancelled | 构建已取消');
                 }
 
                 onProgress?.({
@@ -285,9 +299,11 @@ export class WebBuildPipeline implements IBuildPipeline {
                     warnings
                 });
 
+                console.log(`[WebBuild] Step ${i + 1}/${totalSteps}: ${step.name}`);
                 await step.execute(context);
             }
 
+            // Calculate final stats
             let stats: BuildResult['stats'] | undefined;
             if (this._fileSystem) {
                 try {
@@ -307,17 +323,10 @@ export class WebBuildPipeline implements IBuildPipeline {
                 warnings
             });
 
-            return {
-                success: true,
-                platform: config.platform,
-                outputPath: config.outputPath,
-                duration: Date.now() - startTime,
-                outputFiles,
-                warnings,
-                stats
-            };
+            return this._createResult(true, config, startTime, outputFiles, warnings, undefined, stats);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('[WebBuild] Build failed:', errorMessage);
 
             onProgress?.({
                 status: BuildStatus.Failed,
@@ -329,882 +338,650 @@ export class WebBuildPipeline implements IBuildPipeline {
                 error: errorMessage
             });
 
-            return {
-                success: false,
-                platform: config.platform,
-                outputPath: config.outputPath,
-                duration: Date.now() - startTime,
-                outputFiles,
-                warnings,
-                error: errorMessage
-            };
+            return this._createResult(false, config, startTime, outputFiles, warnings, errorMessage);
         }
     }
 
-    /**
-     * Check availability.
-     * 检查可用性。
-     *
-     * Web platform is always available.
-     * Web 平台始终可用。
-     */
     async checkAvailability(): Promise<{ available: boolean; reason?: string }> {
         return { available: true };
     }
 
+    // ========================================================================
+    // Step Implementations
+    // ========================================================================
+
     /**
-     * Get build status for step.
-     * 获取步骤的构建状态。
+     * Step 1: Prepare output directory.
+     * 步骤 1：准备输出目录。
      */
-    private _getStatusForStep(stepId: string): BuildStatus {
-        switch (stepId) {
-            case 'prepare':
-                return BuildStatus.Preparing;
-            case 'compile':
-            case 'bundle-runtime':
-                return BuildStatus.Compiling;
-            case 'copy-assets':
-                return BuildStatus.Copying;
-            case 'generate-html':
-            case 'optimize':
-                return BuildStatus.PostProcessing;
-            default:
-                return BuildStatus.Compiling;
+    private async _stepPrepare(context: BuildContext): Promise<void> {
+        const fs = context.data.get('fileSystem') as IBuildFileSystem | null;
+        if (!fs) {
+            throw new Error('File system service not available | 文件系统服务不可用');
         }
+
+        await fs.prepareBuildDirectory(context.outputDir);
+        await fs.createDirectory(`${context.outputDir}/libs`);
+        await fs.createDirectory(`${context.outputDir}/libs/plugins`);
+        await fs.createDirectory(`${context.outputDir}/libs/wasm`);
+        await fs.createDirectory(`${context.outputDir}/assets`);
+        await fs.createDirectory(`${context.outputDir}/scenes`);
+
+        console.log(`[WebBuild] Output directory prepared: ${context.outputDir}`);
     }
 
-    private async _prepareOutputDir(context: BuildContext): Promise<void> {
-        const fs = context.data.get('fileSystem') as IBuildFileSystem | undefined;
+    /**
+     * Step 2: Analyze project and determine required modules.
+     * 步骤 2：分析项目并确定所需模块。
+     */
+    private async _stepAnalyze(context: BuildContext): Promise<void> {
+        const fs = context.data.get('fileSystem') as IBuildFileSystem | null;
+        const engineModulesPath = context.data.get('engineModulesPath') as string || this._engineModulesPath;
 
-        if (fs) {
-            await fs.prepareBuildDirectory(context.outputDir);
-            console.log('[WebBuild] Prepared output directory | 准备输出目录:', context.outputDir);
-        } else {
-            console.warn('[WebBuild] No file system service, skipping directory preparation | 无文件系统服务，跳过目录准备');
+        if (!fs || !engineModulesPath) {
+            throw new Error('File system or engine modules path not available | 文件系统或引擎模块路径不可用');
         }
+
+        // Scan available modules
+        const allModules: ModuleManifest[] = [];
+        const coreModules: ModuleManifest[] = [];
+        const pluginModules: ModuleManifest[] = [];
+
+        try {
+            const moduleJsonFiles = await this._findModuleJsonFiles(fs, engineModulesPath);
+
+            for (const jsonPath of moduleJsonFiles) {
+                try {
+                    const manifest = await fs.readJson<ModuleManifest>(jsonPath);
+
+                    // Skip if disabled
+                    if (this._disabledModules.includes(manifest.id)) {
+                        console.log(`[WebBuild] Skipping disabled module: ${manifest.id}`);
+                        continue;
+                    }
+
+                    // Check if enabled (whitelist mode)
+                    if (this._enabledModules.length > 0 && !this._enabledModules.includes(manifest.id)) {
+                        // Check if it's a core module (always include)
+                        if (!isCoreModule(manifest)) {
+                            console.log(`[WebBuild] Skipping non-enabled module: ${manifest.id}`);
+                            continue;
+                        }
+                    }
+
+                    allModules.push(manifest);
+
+                    if (isCoreModule(manifest)) {
+                        coreModules.push(manifest);
+                    } else {
+                        pluginModules.push(manifest);
+                    }
+                } catch (err) {
+                    console.warn(`[WebBuild] Failed to read module manifest: ${jsonPath}`, err);
+                }
+            }
+        } catch (err) {
+            console.warn(`[WebBuild] Failed to scan modules:`, err);
+        }
+
+        // Store in context for later steps
+        context.data.set('allModules', allModules);
+        context.data.set('coreModules', coreModules);
+        context.data.set('pluginModules', pluginModules);
+
+        console.log(`[WebBuild] Found ${coreModules.length} core modules, ${pluginModules.length} plugin modules`);
     }
 
-    private async _compileTypeScript(context: BuildContext): Promise<void> {
-        const fs = context.data.get('fileSystem') as IBuildFileSystem | undefined;
+    /**
+     * Step 3a: Bundle split mode - core + separate plugins.
+     * 步骤 3a：分包模式 - 核心包 + 独立插件包。
+     *
+     * Uses ESM format for optimal caching and tree-shaking.
+     * Requires HTTP server to run (standard web development practice).
+     * 使用 ESM 格式以获得最佳缓存和摇树优化。
+     * 需要 HTTP 服务器运行（标准 Web 开发实践）。
+     */
+    private async _stepBundleSplit(context: BuildContext): Promise<void> {
+        const fs = context.data.get('fileSystem') as IBuildFileSystem | null;
+        const engineModulesPath = context.data.get('engineModulesPath') as string || this._engineModulesPath;
         const webConfig = context.config as WebBuildConfig;
+        const coreModules = context.data.get('coreModules') as ModuleManifest[] || [];
+        const pluginModules = context.data.get('pluginModules') as ModuleManifest[] || [];
 
         if (!fs) {
-            console.warn('[WebBuild] No file system service, skipping TypeScript compilation | 无文件系统服务，跳过 TypeScript 编译');
-            return;
+            throw new Error('File system not available | 文件系统不可用');
         }
 
-        const scriptsDir = `${context.projectRoot}/scripts`;
-        if (!await fs.pathExists(scriptsDir)) {
-            console.log('[WebBuild] No scripts directory, skipping user code compilation');
-            return;
+        const minify = webConfig.minify !== false && webConfig.isRelease;
+        const sourceMap = webConfig.sourceMap === true;
+
+        // 1. Bundle core modules into esengine.core.js (ESM format)
+        console.log(`[WebBuild] Bundling core runtime (ESM)...`);
+        await this._bundleCoreRuntime(context, fs, coreModules, engineModulesPath, minify, sourceMap);
+
+        // 2. Copy plugin modules as separate ESM files
+        console.log(`[WebBuild] Copying plugin modules (ESM)...`);
+        await this._copyPluginModules(context, fs, pluginModules, engineModulesPath);
+
+        // 3. Copy WASM files
+        console.log(`[WebBuild] Copying WASM files...`);
+        await this._copyWasmFiles(context, fs, [...coreModules, ...pluginModules], engineModulesPath);
+
+        // Store for HTML generation
+        context.data.set('buildMode', 'split-bundles');
+    }
+
+    /**
+     * Step 3b: Bundle single mode - everything in one file.
+     * 步骤 3b：单包模式 - 所有代码打包到一个文件。
+     */
+    private async _stepBundleSingle(context: BuildContext): Promise<void> {
+        const fs = context.data.get('fileSystem') as IBuildFileSystem | null;
+        const engineModulesPath = context.data.get('engineModulesPath') as string || this._engineModulesPath;
+        const webConfig = context.config as WebBuildConfig;
+        const allModules = context.data.get('allModules') as ModuleManifest[] || [];
+
+        if (!fs) {
+            throw new Error('File system not available | 文件系统不可用');
         }
 
-        const possibleEntries = ['index.ts', 'main.ts', 'game.ts', 'index.js', 'main.js'];
-        let entryFile: string | null = null;
-        for (const entry of possibleEntries) {
-            const entryPath = `${scriptsDir}/${entry}`;
-            if (await fs.pathExists(entryPath)) {
-                entryFile = entryPath;
-                break;
-            }
+        const minify = webConfig.minify !== false && webConfig.isRelease;
+        const sourceMap = webConfig.sourceMap === true;
+
+        // Find platform-web entry point
+        const platformWebDir = `${engineModulesPath}/platform-web`;
+        const entryPoint = await this._findEntryPoint(fs, platformWebDir);
+
+        if (!entryPoint) {
+            throw new Error('Could not find platform-web entry point | 找不到 platform-web 入口文件');
         }
 
-        if (!entryFile) {
-            console.log('[WebBuild] No entry file found in scripts directory');
-            return;
-        }
-
+        // Bundle everything into one IIFE file
         const result = await fs.bundleScripts({
-            entryPoints: [entryFile],
-            outputDir: context.outputDir,
-            format: webConfig.format || 'iife',
-            bundleName: 'user-code',
-            minify: webConfig.isRelease,
-            sourceMap: webConfig.sourceMap,
-            external: ['@esengine/ecs-framework', '@esengine/core'],
+            entryPoints: [entryPoint],
+            outputDir: `${context.outputDir}/libs`,
+            format: 'iife',
+            bundleName: 'esengine.bundle',
+            minify,
+            sourceMap,
+            external: [],
             projectRoot: context.projectRoot,
-            define: {
-                'process.env.NODE_ENV': webConfig.isRelease ? '"production"' : '"development"'
-            }
+            globalName: 'ESEngine'
         });
 
         if (!result.success) {
-            throw new Error(`User code compilation failed: ${result.error}`);
+            throw new Error(`Failed to bundle: ${result.error}`);
         }
 
-        result.warnings.forEach(w => context.addWarning(w));
-        console.log('[WebBuild] Compiled TypeScript:', result.outputFile);
+        console.log(`[WebBuild] Created single bundle: ${result.outputFile} (${this._formatBytes(result.outputSize || 0)})`);
+
+        // Copy WASM files
+        await this._copyWasmFiles(context, fs, allModules, engineModulesPath);
+
+        // Store for HTML generation
+        context.data.set('buildMode', 'single-bundle');
     }
 
     /**
-     * Bundle runtime.
-     * 打包运行时。
-     *
-     * bundleModules=true: Bundle all into runtime.browser.js
-     * bundleModules=false: Copy individual module files to libs/
+     * Step 4: Copy asset files.
+     * 步骤 4：复制资产文件。
      */
-    private async _bundleRuntime(context: BuildContext): Promise<void> {
-        const fs = context.data.get('fileSystem') as IBuildFileSystem | undefined;
-        const webConfig = context.config as WebBuildConfig;
-
-        if (!fs) {
-            console.warn('[WebBuild] No file system service, skipping runtime bundling | 无文件系统服务，跳过运行时打包');
-            return;
-        }
-
-        const modulesPath = this._engineModulesPath || await this._findEngineModulesPath(context, fs);
-        if (!modulesPath) {
-            await this._copyPrebuiltRuntime(context, fs);
-            return;
-        }
-
-        // Priority: disabledModules (blacklist) > enabledModules (whitelist) > defaults
-        let enabledModules: string[];
-        const disabledModules = context.config.disabledModules?.length
-            ? context.config.disabledModules
-            : this._disabledModules;
-
-        if (disabledModules.length > 0) {
-            const allModules = await this._getDefaultModules(modulesPath, fs);
-            enabledModules = allModules.filter(id => !disabledModules.includes(id));
-            console.log(`[WebBuild] Blacklist mode, disabled ${disabledModules.length} modules`);
-        } else if (context.config.enabledModules?.length) {
-            enabledModules = context.config.enabledModules;
-        } else if (this._enabledModules.length > 0) {
-            enabledModules = this._enabledModules;
-        } else {
-            enabledModules = await this._getDefaultModules(modulesPath, fs);
-        }
-
-        const modules = await this._loadModuleManifests(modulesPath, enabledModules, fs);
-
-        if (modules.length === 0) {
-            console.warn('[WebBuild] No modules found, falling back to pre-built runtime');
-            await this._copyPrebuiltRuntime(context, fs);
-            return;
-        }
-
-        console.log(`[WebBuild] Building with ${modules.length} modules:`, modules.map(m => m.id).join(', '));
-        context.data.set('enabledModules', modules);
-
-        if (webConfig.bundleModules !== false) {
-            await this._bundleModulesIntoOne(context, fs, modules, modulesPath, webConfig);
-        } else {
-            await this._copyModulesSeparately(context, fs, modules, modulesPath);
-            await this._copyExternalDependencies(context, fs, modules, modulesPath);
-        }
-
-        if (modules.some(m => m.requiresWasm)) {
-            await this._copyWasmFiles(context, fs, modulesPath);
-        }
-
-        // Copy module WASM files to runtime paths (based on module.json runtimeWasmPath)
-        await this._copyModuleWasmToRuntimePaths(context, fs, modules, modulesPath);
-    }
-
-    /**
-     * Copy module WASM files to their runtime paths.
-     * 将模块 WASM 文件复制到运行时路径。
-     *
-     * Uses runtimeWasmPath from module.json to determine destination.
-     */
-    private async _copyModuleWasmToRuntimePaths(
-        context: BuildContext,
-        fs: IBuildFileSystem,
-        modules: ModuleManifest[],
-        modulesPath: string | null
-    ): Promise<void> {
-        for (const module of modules) {
-            if (!module.requiresWasm || !module.runtimeWasmPath || !module.wasmPaths?.length) {
-                continue;
-            }
-
-            const wasmFileName = module.wasmPaths[0];
-            const runtimePath = module.runtimeWasmPath;
-            const dstPath = `${context.outputDir}/${runtimePath}`;
-            const dstDir = dstPath.substring(0, dstPath.lastIndexOf('/'));
-
-            // Build search paths including external dependencies
-            const searchPaths: string[] = [];
-
-            // Module's own pkg directory
-            if (modulesPath) {
-                searchPaths.push(`${modulesPath}/${module.id}/pkg/${wasmFileName}`);
-            }
-            searchPaths.push(`${context.outputDir}/libs/${module.id}/pkg/${wasmFileName}`);
-
-            // External dependencies' pkg directories
-            if (module.externalDependencies) {
-                for (const dep of module.externalDependencies) {
-                    const depId = dep.startsWith('@esengine/') ? dep.slice(10) : dep.replace(/^@[^/]+\//, '');
-                    if (modulesPath) {
-                        searchPaths.push(`${modulesPath}/${depId}/pkg/${wasmFileName}`);
-                    }
-                    searchPaths.push(`${context.outputDir}/libs/${depId}/pkg/${wasmFileName}`);
-                }
-            }
-
-            let copied = false;
-            for (const srcPath of searchPaths) {
-                if (await fs.pathExists(srcPath)) {
-                    await fs.createDirectory(dstDir);
-                    await fs.copyFile(srcPath, dstPath);
-                    console.log(`[WebBuild] Copied ${module.id} WASM to ${runtimePath}`);
-                    copied = true;
-                    break;
-                }
-            }
-
-            if (!copied) {
-                console.warn(`[WebBuild] WASM not found for ${module.id}: ${wasmFileName}`);
-            }
-        }
-    }
-
-    /**
-     * Bundle all modules into a single JS file.
-     * 将所有模块打包成单个 JS 文件。
-     */
-    private async _bundleModulesIntoOne(
-        context: BuildContext,
-        fs: IBuildFileSystem,
-        modules: ModuleManifest[],
-        modulesPath: string,
-        _webConfig: WebBuildConfig
-    ): Promise<void> {
-        const libsDir = `${context.outputDir}/libs`;
-        await fs.createDirectory(libsDir);
-
-        const jsContents: string[] = [];
-        let totalSize = 0;
-
-        jsContents.push('/**');
-        jsContents.push(' * ESEngine Runtime - Auto-bundled modules');
-        jsContents.push(` * Generated: ${new Date().toISOString()}`);
-        jsContents.push(` * Modules: ${modules.map(m => m.id).join(', ')}`);
-        jsContents.push(' */');
-        jsContents.push('');
-
-        for (const module of modules) {
-            const modulePath = `${modulesPath}/${module.id}/index.js`;
-
-            if (await fs.pathExists(modulePath)) {
-                try {
-                    const content = await fs.readFile(modulePath);
-                    jsContents.push(`// === Module: ${module.id} ===`);
-                    jsContents.push(content);
-                    jsContents.push('');
-                    totalSize += content.length;
-                } catch (err) {
-                    context.addWarning(`Failed to read module ${module.id}: ${err}`);
-                }
-            } else {
-                console.log(`[WebBuild] Module ${module.id} has no runtime (no index.js)`);
-            }
-        }
-
-        const outputPath = `${libsDir}/runtime.browser.js`;
-        await fs.writeFile(outputPath, jsContents.join('\n'));
-        console.log(`[WebBuild] Bundled runtime: ${outputPath} (${this._formatBytes(totalSize)})`);
-    }
-
-    /**
-     * Copy modules as separate folders: libs/{moduleId}/{moduleId}.js
-     * 将模块复制为单独的文件夹：libs/{moduleId}/{moduleId}.js
-     */
-    private async _copyModulesSeparately(
-        context: BuildContext,
-        fs: IBuildFileSystem,
-        modules: ModuleManifest[],
-        modulesPath: string
-    ): Promise<void> {
-        const libsDir = `${context.outputDir}/libs`;
-        await fs.createDirectory(libsDir);
-        const copySourceMaps = context.config.sourceMap === true;
-        let totalSize = 0;
-        const copiedModules: string[] = [];
-
-        for (const module of modules) {
-            const srcModuleDir = `${modulesPath}/${module.id}`;
-            const srcPath = `${srcModuleDir}/index.js`;
-
-            if (await fs.pathExists(srcPath)) {
-                const dstModuleDir = `${libsDir}/${module.id}`;
-                await fs.createDirectory(dstModuleDir);
-
-                const dstPath = `${dstModuleDir}/${module.id}.js`;
-                await fs.copyFile(srcPath, dstPath);
-
-                const size = await fs.getFileSize(srcPath);
-                totalSize += size;
-                copiedModules.push(module.id);
-
-                if (copySourceMaps) {
-                    const srcMapPath = `${srcPath}.map`;
-                    if (await fs.pathExists(srcMapPath)) {
-                        await fs.copyFile(srcMapPath, `${dstPath}.map`);
-                    }
-                }
-
-                if (module.includes && module.includes.length > 0) {
-                    const includedFiles = await this._resolveIncludes(fs, srcModuleDir, module.includes);
-                    for (const file of includedFiles) {
-                        const fileName = file.split(/[/\\]/).pop() || file;
-                        const includeDstPath = `${dstModuleDir}/${fileName}`;
-                        await fs.copyFile(file, includeDstPath);
-                        totalSize += await fs.getFileSize(file);
-
-                        if (copySourceMaps) {
-                            const includeMapPath = `${file}.map`;
-                            if (await fs.pathExists(includeMapPath)) {
-                                await fs.copyFile(includeMapPath, `${includeDstPath}.map`);
-                            }
-                        }
-                    }
-                }
-
-                // Copy pkg JS files (skip WASM if runtimeWasmPath is set)
-                const pkgSrcDir = `${srcModuleDir}/pkg`;
-                if (await fs.pathExists(pkgSrcDir)) {
-                    const pkgDstDir = `${dstModuleDir}/pkg`;
-                    await fs.createDirectory(pkgDstDir);
-                    const pkgFiles = await fs.listFilesByExtension(pkgSrcDir, ['js'], false);
-                    for (const pkgFile of pkgFiles) {
-                        const fileName = pkgFile.split(/[/\\]/).pop() || '';
-                        await fs.copyFile(pkgFile, `${pkgDstDir}/${fileName}`);
-                    }
-                }
-
-                // Copy WASM only if module doesn't have runtimeWasmPath (will be copied to that location instead)
-                if (module.requiresWasm && module.wasmPaths && module.wasmPaths.length > 0 && !module.runtimeWasmPath) {
-                    for (const wasmRelPath of module.wasmPaths) {
-                        const wasmFileName = wasmRelPath.split(/[/\\]/).pop() || wasmRelPath;
-                        const possiblePaths = [
-                            `${srcModuleDir}/${wasmRelPath}`,
-                            `${srcModuleDir}/${wasmFileName}`,
-                            `${srcModuleDir}/pkg/${wasmFileName}`,
-                        ];
-                        for (const wasmSrcPath of possiblePaths) {
-                            if (await fs.pathExists(wasmSrcPath)) {
-                                const wasmDstDir = `${dstModuleDir}/pkg`;
-                                await fs.createDirectory(wasmDstDir);
-                                await fs.copyFile(wasmSrcPath, `${wasmDstDir}/${wasmFileName}`);
-                                console.log(`[WebBuild] Copied WASM to ${module.id}/pkg/: ${wasmFileName}`);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        console.log(`[WebBuild] Copied ${copiedModules.length} modules (${this._formatBytes(totalSize)})`);
-    }
-
-    private async _resolveIncludes(
-        fs: IBuildFileSystem,
-        moduleDir: string,
-        includes: string[]
-    ): Promise<string[]> {
-        const resolvedFiles: string[] = [];
-        const allJsFiles = await fs.listFilesByExtension(moduleDir, ['js'], false);
-
-        for (const pattern of includes) {
-            const regexPattern = pattern
-                .replace(/\\/g, '\\\\')
-                .replace(/\./g, '\\.')
-                .replace(/\*/g, '.*')
-                .replace(/\?/g, '.');
-            const regex = new RegExp(`^${regexPattern}$`);
-
-            for (const filePath of allJsFiles) {
-                const fileName = filePath.split(/[/\\]/).pop() || '';
-                if (regex.test(fileName) && !resolvedFiles.includes(filePath)) {
-                    resolvedFiles.push(filePath);
-                }
-            }
-        }
-
-        return resolvedFiles;
-    }
-
-    /**
-     * Copy external dependencies (e.g., @esengine/rapier2d) to output directory.
-     * 复制外部依赖（如 @esengine/rapier2d）到输出目录。
-     */
-    private async _copyExternalDependencies(
-        context: BuildContext,
-        fs: IBuildFileSystem,
-        modules: ModuleManifest[],
-        modulesPath: string
-    ): Promise<void> {
-        const externalDeps = new Set<string>();
-        for (const m of modules) {
-            if (m.externalDependencies) {
-                for (const dep of m.externalDependencies) {
-                    externalDeps.add(dep);
-                }
-            }
-        }
-
-        if (externalDeps.size === 0) return;
-
-        const libsDir = `${context.outputDir}/libs`;
-        await fs.createDirectory(libsDir);
-        const copySourceMaps = context.config.sourceMap === true;
-        let totalSize = 0;
-        const copiedDeps: string[] = [];
-
-        for (const dep of externalDeps) {
-            const depId = dep.startsWith('@esengine/') ? dep.slice(10) : dep.replace(/^@[^/]+\//, '');
-            const srcModuleDir = `${modulesPath}/${depId}`;
-            const srcPath = `${srcModuleDir}/index.js`;
-
-            if (await fs.pathExists(srcPath)) {
-                const dstModuleDir = `${libsDir}/${depId}`;
-                await fs.createDirectory(dstModuleDir);
-
-                const dstPath = `${dstModuleDir}/${depId}.js`;
-                await fs.copyFile(srcPath, dstPath);
-
-                const size = await fs.getFileSize(srcPath);
-                totalSize += size;
-                copiedDeps.push(depId);
-
-                if (copySourceMaps) {
-                    const srcMapPath = `${srcPath}.map`;
-                    if (await fs.pathExists(srcMapPath)) {
-                        await fs.copyFile(srcMapPath, `${dstPath}.map`);
-                    }
-                }
-
-                // Copy pkg directory for WASM bindings (../pkg relative import)
-                // Only copy JS files, skip WASM (managed by runtimeWasmPath)
-                const pkgSrcDir = `${srcModuleDir}/pkg`;
-                if (await fs.pathExists(pkgSrcDir)) {
-                    const pkgDstDir = `${dstModuleDir}/pkg`;
-                    await fs.createDirectory(pkgDstDir);
-                    const pkgJsFiles = await fs.listFilesByExtension(pkgSrcDir, ['js'], false);
-                    for (const pkgFile of pkgJsFiles) {
-                        const fileName = pkgFile.split(/[/\\]/).pop() || '';
-                        await fs.copyFile(pkgFile, `${pkgDstDir}/${fileName}`);
-                    }
-                }
-
-                console.log(`[WebBuild] Copied external: ${depId} (${this._formatBytes(size)})`);
-            } else {
-                console.warn(`[WebBuild] External dependency not found: ${dep}`);
-            }
-        }
-
-        if (copiedDeps.length > 0) {
-            console.log(`[WebBuild] Copied ${copiedDeps.length} external dependencies`);
-        }
-    }
-
-    private async _findEngineModulesPath(
-        context: BuildContext,
-        fs: IBuildFileSystem
-    ): Promise<string | null> {
-        const editorPaths = [
-            'C:/Program Files/ESEngine Editor/engine',
-            this._engineModulesPath,
-            `${context.projectRoot}/node_modules/@esengine`
-        ].filter(Boolean) as string[];
-
-        for (const basePath of editorPaths) {
-            const indexPath = `${basePath}/index.json`;
-            if (await fs.pathExists(indexPath)) {
-                console.log(`[WebBuild] Found engine modules at: ${basePath}`);
-                return basePath;
-            }
-            const corePath = `${basePath}/core/module.json`;
-            if (await fs.pathExists(corePath)) {
-                console.log(`[WebBuild] Found engine modules at: ${basePath}`);
-                return basePath;
-            }
-        }
-
-        console.warn('[WebBuild] Engine modules path not found');
-        return null;
-    }
-
-    private async _getDefaultModules(
-        modulesPath: string,
-        fs: IBuildFileSystem
-    ): Promise<string[]> {
-        const indexPath = `${modulesPath}/index.json`;
-        if (await fs.pathExists(indexPath)) {
-            try {
-                const indexData = await fs.readJson<{
-                    modules: Array<{ id: string; hasRuntime?: boolean; isCore?: boolean }>;
-                }>(indexPath);
-                const moduleIds = indexData.modules.map(m => m.id);
-                console.log(`[WebBuild] Found ${moduleIds.length} modules from index.json`);
-                return moduleIds;
-            } catch (err) {
-                console.warn('[WebBuild] Failed to read index.json:', err);
-            }
-        }
-
-        // Fallback to core modules only
-        const available: string[] = [];
-        const coreModules = ['core', 'math', 'engine-core', 'asset-system'];
-        for (const id of coreModules) {
-            const manifestPath = `${modulesPath}/${id}/module.json`;
-            if (await fs.pathExists(manifestPath)) {
-                available.push(id);
-            }
-        }
-        return available;
-    }
-
-    private async _loadModuleManifests(
-        modulesPath: string,
-        moduleIds: string[],
-        fs: IBuildFileSystem
-    ): Promise<ModuleManifest[]> {
-        const manifests: ModuleManifest[] = [];
-
-        for (const id of moduleIds) {
-            const manifestPath = `${modulesPath}/${id}/module.json`;
-            try {
-                if (await fs.pathExists(manifestPath)) {
-                    const manifest = await fs.readJson<ModuleManifest>(manifestPath);
-                    manifests.push(manifest);
-                }
-            } catch (error) {
-                console.warn(`[WebBuild] Failed to load module manifest: ${id}`, error);
-            }
-        }
-
-        return this._sortModulesByDependencies(manifests);
-    }
-
-    private _sortModulesByDependencies(modules: ModuleManifest[]): ModuleManifest[] {
-        const sorted: ModuleManifest[] = [];
-        const visited = new Set<string>();
-        const moduleMap = new Map(modules.map(m => [m.id, m]));
-
-        const visit = (module: ModuleManifest) => {
-            if (visited.has(module.id)) return;
-            visited.add(module.id);
-            for (const depId of module.dependencies) {
-                const dep = moduleMap.get(depId);
-                if (dep) visit(dep);
-            }
-            sorted.push(module);
-        };
-
-        for (const module of modules) {
-            visit(module);
-        }
-        return sorted;
-    }
-
-    private async _copyPrebuiltRuntime(
-        context: BuildContext,
-        fs: IBuildFileSystem
-    ): Promise<void> {
-        const possiblePaths = [
-            'C:/Program Files/ESEngine Editor/runtime.browser.js',
-            `${context.projectRoot}/node_modules/@esengine/platform-web/dist/runtime.browser.js`
-        ];
-
-        for (const srcPath of possiblePaths) {
-            if (await fs.pathExists(srcPath)) {
-                await fs.copyFile(srcPath, `${context.outputDir}/libs/runtime.browser.js`);
-                console.log('[WebBuild] Copied pre-built runtime');
-                await this._copyWasmFiles(context, fs, null);
-                return;
-            }
-        }
-
-        context.addWarning('runtime.browser.js not found');
-    }
-
-    /**
-     * Copy core engine WASM to libs/es-engine/.
-     * 将核心引擎 WASM 复制到 libs/es-engine/。
-     */
-    private async _copyWasmFiles(
-        context: BuildContext,
-        fs: IBuildFileSystem,
-        modulesPath: string | null
-    ): Promise<void> {
-        const esEngineDir = `${context.outputDir}/libs/es-engine`;
-        await fs.createDirectory(esEngineDir);
-
-        const engineWasmPaths = [
-            'C:/Program Files/ESEngine Editor',
-            modulesPath ? `${modulesPath}/../wasm` : null,
-            this._engineModulesPath ? `${this._engineModulesPath}/../../../engine/pkg` : null,
-            `${context.projectRoot}/node_modules/@esengine/engine/pkg`,
-            `${context.projectRoot}/node_modules/@esengine/ecs-engine-bindgen/wasm`
-        ].filter(Boolean) as string[];
-
-        for (const wasmSrc of engineWasmPaths) {
-            if (await fs.pathExists(wasmSrc)) {
-                const count = await fs.copyDirectory(wasmSrc, esEngineDir, ['*.wasm', 'es_engine.js', 'es_engine_bg.js']);
-                if (count > 0) {
-                    console.log(`[WebBuild] Copied engine WASM: ${count} files`);
-                    return;
-                }
-            }
-        }
-
-        context.addWarning('Engine WASM files not found');
-    }
-
-    private _formatBytes(bytes: number): string {
-        if (bytes < 1024) return `${bytes} B`;
-        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    }
-
-    private async _copyAssets(context: BuildContext): Promise<void> {
-        const fs = context.data.get('fileSystem') as IBuildFileSystem | undefined;
-
-        if (!fs) {
-            console.warn('[WebBuild] No file system service, skipping asset copying');
-            return;
-        }
-
-        const assetPatterns = [
-            '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp', '*.svg',
-            '*.mp3', '*.wav', '*.ogg', '*.m4a',
-            '*.json', '*.ecs', '*.ecs.bin',
-            '*.tilemap.json', '*.tileset.json',
-            '*.ttf', '*.otf', '*.woff', '*.woff2',
-            '*.glsl', '*.vert', '*.frag',
-            '*.btree', '*.bp', '*.mat', '*.shader'
-        ];
+    private async _stepCopyAssets(context: BuildContext): Promise<void> {
+        const fs = context.data.get('fileSystem') as IBuildFileSystem | null;
+        if (!fs) return;
 
         const assetsDir = `${context.projectRoot}/assets`;
+        const outputAssetsDir = `${context.outputDir}/assets`;
+
         if (await fs.pathExists(assetsDir)) {
-            const count = await fs.copyDirectory(assetsDir, `${context.outputDir}/assets`, assetPatterns);
-            console.log(`[WebBuild] Copied assets: ${count} files`);
+            const count = await fs.copyDirectory(assetsDir, outputAssetsDir, [
+                '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp',
+                '*.mp3', '*.ogg', '*.wav', '*.m4a',
+                '*.json', '*.xml',
+                '*.ttf', '*.woff', '*.woff2',
+                '*.atlas', '*.fnt'
+            ]);
+            console.log(`[WebBuild] Copied ${count} asset files`);
         }
-
-        const scenesDir = `${context.projectRoot}/scenes`;
-        if (await fs.pathExists(scenesDir)) {
-            const count = await fs.copyDirectory(scenesDir, `${context.outputDir}/scenes`, ['*.ecs', '*.ecs.bin', '*.json']);
-            console.log(`[WebBuild] Copied scenes: ${count} files`);
-        }
-
-        if (context.config.scenes && context.config.scenes.length > 0) {
-            console.log(`[WebBuild] Configured scenes: ${context.config.scenes.join(', ')}`);
-        }
-
-        // Generate asset catalog
-        await this._generateAssetCatalog(context, fs);
     }
 
     /**
-     * Generate asset-catalog.json for runtime asset loading.
-     * 生成 asset-catalog.json 用于运行时资产加载。
+     * Step 5: Copy scene files.
+     * 步骤 5：复制场景文件。
      */
-    private async _generateAssetCatalog(
-        context: BuildContext,
-        fs: IBuildFileSystem
-    ): Promise<void> {
+    private async _stepCopyScenes(context: BuildContext): Promise<void> {
+        const fs = context.data.get('fileSystem') as IBuildFileSystem | null;
+        if (!fs) return;
+
+        const scenesDir = `${context.projectRoot}/scenes`;
+        const outputScenesDir = `${context.outputDir}/scenes`;
+
+        if (await fs.pathExists(scenesDir)) {
+            const count = await fs.copyDirectory(scenesDir, outputScenesDir, ['*.ecs', '*.scene', '*.json']);
+            console.log(`[WebBuild] Copied ${count} scene files`);
+        }
+    }
+
+    /**
+     * Step 6: Generate asset catalog.
+     * 步骤 6：生成资产清单。
+     */
+    private async _stepGenerateCatalog(context: BuildContext): Promise<void> {
+        const fs = context.data.get('fileSystem') as IBuildFileSystem | null;
+        if (!fs) return;
+
         const assetsDir = `${context.outputDir}/assets`;
-        if (!await fs.pathExists(assetsDir)) {
-            console.log('[WebBuild] No assets directory, skipping catalog generation');
-            return;
-        }
-
-        const assetExtensions = [
-            'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg',
-            'mp3', 'wav', 'ogg', 'm4a',
-            'json', 'ecs',
-            'ttf', 'otf', 'woff', 'woff2',
-            'glsl', 'vert', 'frag',
-            'btree', 'bp', 'mat', 'shader'
-        ];
-
-        const allFiles = await fs.listFilesByExtension(assetsDir, assetExtensions, true);
-
-        const entries: Record<string, {
-            guid: string;
-            path: string;
-            type: string;
-            size: number;
-            hash: string;
-        }> = {};
-
-        for (const filePath of allFiles) {
-            const relativePath = filePath
-                .replace(context.outputDir, '')
-                .replace(/\\/g, '/')
-                .replace(/^\//, '');
-
-            const ext = filePath.split('.').pop()?.toLowerCase() || '';
-            const type = this._getAssetType(ext);
-
-            // Use path as pseudo-GUID for now (can be enhanced with real GUID support)
-            const guid = relativePath.replace(/[^a-zA-Z0-9]/g, '-');
-
-            let size = 0;
-            try {
-                size = await fs.getFileSize(filePath);
-            } catch {
-                // Ignore size errors
-            }
-
-            entries[guid] = {
-                guid,
-                path: relativePath,
-                type,
-                size,
-                hash: '' // Can be enhanced with real hash
-            };
-        }
-
-        const catalog = {
-            version: '1.0',
-            createdAt: Date.now(),
-            entries
+        const catalog: {
+            version: number;
+            generated: string;
+            assets: Record<string, { path: string; type: string; size: number }>;
+        } = {
+            version: 1,
+            generated: new Date().toISOString(),
+            assets: {}
         };
+
+        // Scan assets directory
+        if (await fs.pathExists(assetsDir)) {
+            const files = await fs.listFilesByExtension(assetsDir, [
+                '.png', '.jpg', '.jpeg', '.gif', '.webp',
+                '.mp3', '.ogg', '.wav', '.m4a',
+                '.json', '.xml'
+            ], true);
+
+            for (const file of files) {
+                const relativePath = file.replace(context.outputDir, '').replace(/\\/g, '/').replace(/^\//, '');
+                const ext = file.split('.').pop()?.toLowerCase() || '';
+                const type = this._getAssetType(ext);
+
+                try {
+                    const size = await fs.getFileSize(file);
+                    // Use relative path as simple ID (could use GUID in future)
+                    const id = relativePath.replace(/[^a-zA-Z0-9]/g, '_');
+                    catalog.assets[id] = { path: relativePath, type, size };
+                } catch {
+                    // Skip files that can't be accessed
+                }
+            }
+        }
 
         await fs.writeFile(
             `${context.outputDir}/asset-catalog.json`,
             JSON.stringify(catalog, null, 2)
         );
 
-        console.log(`[WebBuild] Generated asset catalog: ${Object.keys(entries).length} entries`);
+        console.log(`[WebBuild] Generated asset catalog with ${Object.keys(catalog.assets).length} assets`);
     }
 
     /**
-     * Get asset type from file extension.
-     * 根据文件扩展名获取资产类型。
+     * Step 7: Generate HTML file.
+     * 步骤 7：生成 HTML 文件。
      */
-    private _getAssetType(ext: string): string {
-        const typeMap: Record<string, string> = {
-            png: 'texture', jpg: 'texture', jpeg: 'texture',
-            gif: 'texture', webp: 'texture', svg: 'texture',
-            mp3: 'audio', wav: 'audio', ogg: 'audio', m4a: 'audio',
-            json: 'json', ecs: 'scene',
-            ttf: 'font', otf: 'font', woff: 'font', woff2: 'font',
-            glsl: 'shader', vert: 'shader', frag: 'shader',
-            btree: 'behavior-tree', bp: 'blueprint',
-            mat: 'material', shader: 'shader'
-        };
-        return typeMap[ext] || 'unknown';
+    private async _stepGenerateHtml(context: BuildContext): Promise<void> {
+        const fs = context.data.get('fileSystem') as IBuildFileSystem | null;
+        if (!fs) return;
+
+        const buildMode = context.data.get('buildMode') as string;
+        const coreModules = context.data.get('coreModules') as ModuleManifest[] || [];
+        const pluginModules = context.data.get('pluginModules') as ModuleManifest[] || [];
+
+        // Find main scene
+        let mainScenePath = './scenes/main.ecs';
+        const scenesDir = `${context.outputDir}/scenes`;
+        if (await fs.pathExists(scenesDir)) {
+            const sceneFiles = await fs.listFilesByExtension(scenesDir, ['.ecs', '.scene']);
+            if (sceneFiles.length > 0) {
+                const sceneName = sceneFiles[0].split(/[/\\]/).pop();
+                mainScenePath = `./scenes/${sceneName}`;
+            }
+        }
+
+        // Check for WASM
+        const wasmDir = `${context.outputDir}/libs/wasm`;
+        const hasWasm = await fs.pathExists(`${wasmDir}/es_engine_bg.wasm`);
+
+        const html = buildMode === 'single-bundle'
+            ? this._generateSingleBundleHtml(mainScenePath, hasWasm)
+            : this._generateSplitBundlesHtml(mainScenePath, hasWasm, coreModules, pluginModules);
+
+        await fs.writeFile(`${context.outputDir}/index.html`, html);
+        console.log(`[WebBuild] Generated index.html (${buildMode} mode)`);
     }
 
-    private async _generateHtml(context: BuildContext): Promise<void> {
-        const fs = context.data.get('fileSystem') as IBuildFileSystem | undefined;
-        const webConfig = context.config as WebBuildConfig;
-        const enabledModules = context.data.get('enabledModules') as ModuleManifest[] | undefined;
+    /**
+     * Step 8: Generate server scripts for easy launching.
+     * 步骤 8：生成启动脚本，方便用户运行。
+     */
+    private async _stepGenerateServerScripts(context: BuildContext): Promise<void> {
+        const fs = context.data.get('fileSystem') as IBuildFileSystem | null;
+        if (!fs) return;
 
-        if (!fs) {
-            console.warn('[WebBuild] No file system service, skipping HTML generation');
-            return;
-        }
+        // Generate Windows batch file (ASCII only to avoid encoding issues)
+        const batContent = `@echo off
+chcp 65001 >nul 2>&1
+echo ============================================
+echo   ESEngine Game Server
+echo ============================================
+echo.
 
-        let mainScenePath = './assets/Untitled.ecs';
-        if (context.config.scenes && context.config.scenes.length > 0) {
-            mainScenePath = context.config.scenes[0];
-            if (mainScenePath.includes(context.projectRoot)) {
-                mainScenePath = './' + mainScenePath.replace(context.projectRoot, '').replace(/^[/\\]+/, '');
-            }
-        } else {
-            const sceneFiles = await fs.listFilesByExtension(`${context.outputDir}/assets`, ['.ecs']);
-            if (sceneFiles.length > 0) {
-                mainScenePath = './assets/' + sceneFiles[0].split(/[/\\]/).pop();
-            }
-        }
+where npx >nul 2>nul
+if %ERRORLEVEL% neq 0 (
+    echo [ERROR] Node.js is not installed.
+    echo Please install from https://nodejs.org
+    pause
+    exit /b 1
+)
 
-        // Check if WASM engine is available
-        const esEngineDir = `${context.outputDir}/libs/es-engine`;
-        const hasWasm = await fs.pathExists(esEngineDir);
+echo Starting server: http://localhost:3000
+echo.
+echo Open browser and go to: http://localhost:3000
+echo Press Ctrl+C to stop
+echo.
 
-        const useBundledModules = webConfig.bundleModules !== false;
-        let importMapScript = '';
-        let pluginImportCode = '';
+npx serve . -p 3000
+`;
 
-        if (!useBundledModules && enabledModules) {
-            const imports: Record<string, string> = {};
-            for (const m of enabledModules) {
-                // All modules use same pattern: libs/{id}/{id}.js
-                imports[`@esengine/${m.id}`] = `./libs/${m.id}/${m.id}.js`;
-                if (m.name && m.name !== `@esengine/${m.id}`) {
-                    imports[m.name] = imports[`@esengine/${m.id}`];
-                }
-            }
+        // Generate shell script for macOS/Linux
+        const shContent = `#!/bin/bash
+echo "============================================"
+echo "  ESEngine Game Server"
+echo "  ESEngine 游戏服务器"
+echo "============================================"
+echo ""
 
-            const externalDeps = new Set<string>();
-            for (const m of enabledModules) {
-                if (m.externalDependencies) {
-                    for (const dep of m.externalDependencies) {
-                        externalDeps.add(dep);
+# Check if npx is available | 检查 npx 是否可用
+if ! command -v npx &> /dev/null; then
+    echo "[ERROR] Node.js is not installed. Please install from https://nodejs.org"
+    echo "[错误] Node.js 未安装。请从 https://nodejs.org 下载安装"
+    exit 1
+fi
+
+echo "Starting local server on http://localhost:3000"
+echo "启动本地服务器 http://localhost:3000"
+echo ""
+echo "Press Ctrl+C to stop the server"
+echo "按 Ctrl+C 停止服务器"
+echo ""
+
+npx serve . -p 3000
+`;
+
+        // Generate README
+        const readmeContent = `# ESEngine Game Build
+
+## How to Run | 如何运行
+
+### Option 1: Use the launch script | 使用启动脚本
+
+**Windows:**
+Double-click \`start-server.bat\`
+双击 \`start-server.bat\`
+
+**macOS/Linux:**
+\`\`\`bash
+chmod +x start-server.sh
+./start-server.sh
+\`\`\`
+
+### Option 2: Use any HTTP server | 使用任意 HTTP 服务器
+
+\`\`\`bash
+# Using npx serve (recommended) | 使用 npx serve（推荐）
+npx serve . -p 3000
+
+# Using Python | 使用 Python
+python -m http.server 3000
+
+# Using PHP | 使用 PHP
+php -S localhost:3000
+\`\`\`
+
+Then open http://localhost:3000 in your browser.
+然后在浏览器中打开 http://localhost:3000
+
+### Option 3: Deploy to hosting | 部署到托管服务
+
+Upload all files to any static hosting service:
+将所有文件上传到任意静态托管服务：
+
+- [Vercel](https://vercel.com)
+- [Netlify](https://netlify.com)
+- [GitHub Pages](https://pages.github.com)
+- [Cloudflare Pages](https://pages.cloudflare.com)
+
+## Why HTTP Server? | 为什么需要 HTTP 服务器？
+
+Modern browsers block ES modules from loading via \`file://\` protocol for security reasons.
+This is standard web development practice.
+
+现代浏览器出于安全原因会阻止通过 \`file://\` 协议加载 ES 模块。
+这是标准的 Web 开发实践。
+
+---
+Built with ESEngine | 使用 ESEngine 构建
+`;
+
+        await fs.writeFile(`${context.outputDir}/start-server.bat`, batContent);
+        await fs.writeFile(`${context.outputDir}/start-server.sh`, shContent);
+        await fs.writeFile(`${context.outputDir}/README.md`, readmeContent);
+
+        console.log(`[WebBuild] Generated server scripts: start-server.bat, start-server.sh, README.md`);
+    }
+
+    // ========================================================================
+    // Helper Methods
+    // ========================================================================
+
+    private async _findModuleJsonFiles(fs: IBuildFileSystem, basePath: string): Promise<string[]> {
+        const results: string[] = [];
+
+        // Search for module.json files in immediate subdirectories
+        // 在直接子目录中搜索 module.json 文件
+        // Note: We only check one level deep (basePath/*/module.json)
+        // since module.json should be at the root of each module
+        // 注意：我们只检查一级深度，因为 module.json 应该在每个模块的根目录
+        try {
+            // Use recursive search but filter for module.json only at module root
+            // 使用递归搜索但只过滤模块根目录的 module.json
+            const jsonFiles = await fs.listFilesByExtension(basePath, ['json'], true);
+
+            for (const file of jsonFiles) {
+                const normalizedFile = file.replace(/\\/g, '/');
+                const normalizedBase = basePath.replace(/\\/g, '/');
+
+                // Check if this is a module.json at the root of a module directory
+                // Pattern: basePath/moduleName/module.json
+                // 检查这是否是模块目录根目录的 module.json
+                if (normalizedFile.endsWith('/module.json')) {
+                    const relativePath = normalizedFile.slice(normalizedBase.length + 1);
+                    const parts = relativePath.split('/');
+                    // Only include if it's exactly: moduleName/module.json (2 parts)
+                    // 只包含精确的: moduleName/module.json (2 部分)
+                    if (parts.length === 2 && parts[1] === 'module.json') {
+                        results.push(file);
                     }
                 }
             }
-            for (const dep of externalDeps) {
-                const depId = dep.startsWith('@esengine/') ? dep.slice(10) : dep.replace(/^@[^/]+\//, '');
-                imports[dep] = `./libs/${depId}/${depId}.js`;
-            }
+        } catch {
+            // Ignore errors during scanning
+        }
 
-            importMapScript = `    <script type="importmap">
-    ${JSON.stringify({ imports }, null, 2).split('\n').join('\n    ')}
-    </script>`;
+        return results;
+    }
 
-            const pluginModules = enabledModules.filter(m =>
-                m.pluginExport && m.id !== 'core' && m.id !== 'math' && m.id !== 'platform-web' && m.id !== 'runtime-core'
-            );
-            if (pluginModules.length > 0) {
-                pluginImportCode = pluginModules.map(m =>
-                    `                try {
-                    const { ${m.pluginExport} } = await import('${m.name}');
-                    runtime.registerPlugin(${m.pluginExport});
-                } catch (e) {
-                    console.warn('[Game] Failed to load plugin ${m.id}:', e.message);
-                }`
-                ).join('\n');
+    private async _findEntryPoint(fs: IBuildFileSystem, moduleDir: string): Promise<string | null> {
+        const candidates = ['index.mjs', 'index.js', 'dist/index.mjs', 'dist/index.js'];
+
+        for (const candidate of candidates) {
+            const path = `${moduleDir}/${candidate}`;
+            if (await fs.pathExists(path)) {
+                return path;
             }
         }
-        const htmlContent = `<!DOCTYPE html>
+
+        return null;
+    }
+
+    private async _bundleCoreRuntime(
+        context: BuildContext,
+        fs: IBuildFileSystem,
+        coreModules: ModuleManifest[],
+        engineModulesPath: string,
+        minify: boolean,
+        sourceMap: boolean
+    ): Promise<void> {
+        // Find platform-web as the main entry point (it re-exports everything needed)
+        const platformWebDir = `${engineModulesPath}/platform-web`;
+        const entryPoint = await this._findEntryPoint(fs, platformWebDir);
+
+        if (!entryPoint) {
+            throw new Error('Could not find platform-web entry point | 找不到 platform-web 入口文件');
+        }
+
+        // Bundle as ESM for optimal caching and tree-shaking
+        // 使用 ESM 格式以获得最佳缓存和摇树优化
+        const result = await fs.bundleScripts({
+            entryPoints: [entryPoint],
+            outputDir: `${context.outputDir}/libs`,
+            format: 'esm',
+            bundleName: 'esengine.core',
+            minify,
+            sourceMap,
+            external: [], // Bundle all dependencies
+            projectRoot: context.projectRoot
+        });
+
+        if (!result.success) {
+            throw new Error(`Failed to bundle core runtime: ${result.error}`);
+        }
+
+        console.log(`[WebBuild] Core runtime: ${result.outputFile} (${this._formatBytes(result.outputSize || 0)})`);
+    }
+
+    private async _copyPluginModules(
+        context: BuildContext,
+        fs: IBuildFileSystem,
+        pluginModules: ModuleManifest[],
+        engineModulesPath: string
+    ): Promise<void> {
+        const pluginsDir = `${context.outputDir}/libs/plugins`;
+
+        for (const module of pluginModules) {
+            const moduleDir = `${engineModulesPath}/${module.id}`;
+            const entryPoint = await this._findEntryPoint(fs, moduleDir);
+
+            if (entryPoint) {
+                const destPath = `${pluginsDir}/${module.id}.js`;
+                await fs.copyFile(entryPoint, destPath);
+                console.log(`[WebBuild] Copied plugin: ${module.id}`);
+
+                // Copy additional files (e.g., chunk-*.js)
+                if (module.includes && module.includes.length > 0) {
+                    for (const pattern of module.includes) {
+                        // Simple glob matching for chunk-*.js
+                        if (pattern.includes('*')) {
+                            const dir = moduleDir.includes('/dist') ? moduleDir : `${moduleDir}/dist`;
+                            if (await fs.pathExists(dir)) {
+                                const files = await fs.listFilesByExtension(dir, ['.js']);
+                                for (const file of files) {
+                                    const fileName = file.split(/[/\\]/).pop() || '';
+                                    if (fileName.startsWith('chunk-')) {
+                                        await fs.copyFile(file, `${pluginsDir}/${fileName}`);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private async _copyWasmFiles(
+        context: BuildContext,
+        fs: IBuildFileSystem,
+        modules: ModuleManifest[],
+        engineModulesPath: string
+    ): Promise<void> {
+        const wasmDir = `${context.outputDir}/libs/wasm`;
+
+        for (const module of modules) {
+            if (!module.requiresWasm) continue;
+
+            const wasmPaths = module.wasmPaths || [];
+            const moduleDir = `${engineModulesPath}/${module.id}`;
+
+            for (const wasmFileName of wasmPaths) {
+                // Try various locations
+                const candidates = [
+                    `${moduleDir}/pkg/${wasmFileName}`,
+                    `${moduleDir}/${wasmFileName}`,
+                    `${moduleDir}/dist/${wasmFileName}`
+                ];
+
+                for (const src of candidates) {
+                    if (await fs.pathExists(src)) {
+                        const dest = `${wasmDir}/${wasmFileName}`;
+                        await fs.copyFile(src, dest);
+                        console.log(`[WebBuild] Copied WASM: ${wasmFileName}`);
+                        break;
+                    }
+                }
+            }
+
+            // Also check for es-engine WASM (special case)
+            if (module.id === 'ecs-engine-bindgen' || module.id === 'platform-web') {
+                const esEngineWasm = `${engineModulesPath}/engine/pkg/es_engine_bg.wasm`;
+                if (await fs.pathExists(esEngineWasm)) {
+                    await fs.copyFile(esEngineWasm, `${wasmDir}/es_engine_bg.wasm`);
+
+                    // Also copy the JS wrapper
+                    const esEngineJs = `${engineModulesPath}/engine/pkg/es_engine.js`;
+                    if (await fs.pathExists(esEngineJs)) {
+                        await fs.createDirectory(`${context.outputDir}/libs/es-engine`);
+                        await fs.copyFile(esEngineJs, `${context.outputDir}/libs/es-engine/es_engine.js`);
+                        await fs.copyFile(esEngineWasm, `${context.outputDir}/libs/es-engine/es_engine_bg.wasm`);
+                    }
+                }
+            }
+        }
+    }
+
+    private _generateSingleBundleHtml(mainScenePath: string, hasWasm: boolean): string {
+        return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Game</title>
-${importMapScript}
+    <title>ESEngine Game</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1a2e; }
         #game-canvas { width: 100%; height: 100%; display: block; }
         #loading {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            position: fixed; inset: 0;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
-            background: #1a1a2e; color: #eee; font-family: sans-serif;
+            background: #1a1a2e; color: #eee; font-family: system-ui, sans-serif;
         }
-        #loading .spinner {
-            width: 40px; height: 40px; border: 3px solid #333;
-            border-top-color: #4a9eff; border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid #333; border-top-color: #4a9eff;
+            border-radius: 50%; animation: spin 1s linear infinite;
         }
-        #loading .message { margin-top: 16px; font-size: 14px; }
+        .message { margin-top: 16px; font-size: 14px; }
         @keyframes spin { to { transform: rotate(360deg); } }
         #error {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            display: none; flex-direction: column;
-            align-items: center; justify-content: center;
-            background: #1a1a2e; color: #ff6b6b; font-family: sans-serif;
+            position: fixed; inset: 0; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            background: #1a1a2e; color: #ff6b6b; font-family: system-ui, sans-serif;
             padding: 20px; text-align: center;
         }
         #error.show { display: flex; }
-        #error h2 { margin-bottom: 16px; }
         #error pre {
             background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px;
             max-width: 600px; white-space: pre-wrap; word-break: break-word;
-            font-size: 13px; line-height: 1.5;
         }
-        #error .hint { margin-top: 20px; color: #aaa; font-size: 13px; }
-        #error code { background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -1213,64 +990,45 @@ ${importMapScript}
         <div class="message" id="loading-message">Loading...</div>
     </div>
     <div id="error">
-        <h2 id="error-title">Failed to start game</h2>
+        <h2>Failed to start game</h2>
         <pre id="error-message"></pre>
-        <div class="hint" id="error-hint"></div>
     </div>
     <canvas id="game-canvas"></canvas>
 
-${useBundledModules ? `    <!-- Runtime library -->
-    <script src="libs/runtime.browser.js"></script>
-
+    <script src="libs/esengine.bundle.js"></script>
     <script>
         (async function() {
             const loading = document.getElementById('loading');
             const loadingMessage = document.getElementById('loading-message');
             const errorDiv = document.getElementById('error');
-            const errorTitle = document.getElementById('error-title');
             const errorMessage = document.getElementById('error-message');
-            const errorHint = document.getElementById('error-hint');
 
-            function showError(title, msg, hint) {
+            function showError(msg) {
                 loading.style.display = 'none';
-                errorTitle.textContent = title || 'Failed to start game';
                 errorMessage.textContent = msg;
-                if (hint) errorHint.innerHTML = hint;
                 errorDiv.classList.add('show');
-                console.error('[Game]', msg);
             }
 
             function updateLoading(msg) {
                 loadingMessage.textContent = msg;
-                console.log('[Game]', msg);
-            }
-
-            if (location.protocol === 'file:') {
-                showError(
-                    'Cannot run from local file',
-                    'This game requires a web server to run properly.',
-                    'Start a local server: <code>npx serve</code>'
-                );
-                return;
             }
 
             try {
-                if (typeof ECSRuntime === 'undefined') {
-                    throw new Error('ECSRuntime not loaded. Check if libs/runtime.browser.js exists.');
+                if (typeof ESEngine === 'undefined') {
+                    throw new Error('ESEngine not loaded');
                 }
 
-                updateLoading('Loading WASM module...');
-                ${hasWasm ? `// Import WASM wrapper module (wasm-bindgen generated)
-                const wasmModule = await import('./libs/es-engine/es_engine.js');` : `const wasmModule = null;`}
+                updateLoading('Initializing...');
+                ${hasWasm ? `const wasmModule = await import('./libs/es-engine/es_engine.js');` : `const wasmModule = null;`}
 
-                updateLoading('Initializing runtime...');
-                const runtime = ECSRuntime.create({
+                const runtime = ESEngine.create({
                     canvasId: 'game-canvas',
                     width: window.innerWidth,
                     height: window.innerHeight,
                     assetBaseUrl: './assets',
                     assetCatalogUrl: './asset-catalog.json'
                 });
+
                 await runtime.initialize(wasmModule);
 
                 updateLoading('Loading scene...');
@@ -1282,86 +1040,243 @@ ${useBundledModules ? `    <!-- Runtime library -->
                 window.addEventListener('resize', () => {
                     runtime.handleResize(window.innerWidth, window.innerHeight);
                 });
-                console.log('[Game] Started successfully');
             } catch (error) {
-                showError(null, error.message || String(error), null);
+                showError(error.message || String(error));
             }
         })();
-    </script>` : `    <!-- Engine modules (ES Modules with dynamic plugin loading) -->
+    </script>
+</body>
+</html>`;
+    }
+
+    private _generateSplitBundlesHtml(
+        mainScenePath: string,
+        hasWasm: boolean,
+        coreModules: ModuleManifest[],
+        pluginModules: ModuleManifest[]
+    ): string {
+        // Generate plugin loading code
+        const pluginLoads = pluginModules
+            .filter(m => m.pluginExport)
+            .map(m => `                    ['${m.id}', '${m.pluginExport}']`)
+            .join(',\n');
+
+        // Generate Import Map dynamically from module manifests
+        // This maps package names (from module.json "name" field) to bundled URLs
+        // 从模块清单动态生成 Import Map
+        // 将包名（来自 module.json 的 "name" 字段）映射到打包后的 URL
+        const imports: Record<string, string> = {};
+
+        // Map core modules to the bundled core runtime
+        // 将核心模块映射到打包的核心运行时
+        for (const module of coreModules) {
+            if (module.name) {
+                imports[module.name] = './libs/esengine.core.js';
+            }
+        }
+
+        // Map plugin modules to their individual bundles
+        // 将插件模块映射到各自的独立包
+        for (const module of pluginModules) {
+            if (module.name) {
+                imports[module.name] = `./libs/plugins/${module.id}.js`;
+            }
+            // Also map external dependencies if specified
+            // 同时映射外部依赖（如果指定）
+            if (module.externalDependencies) {
+                for (const dep of module.externalDependencies) {
+                    if (!imports[dep]) {
+                        // Extract module id from package name (e.g., @esengine/rapier2d -> rapier2d)
+                        const depId = dep.startsWith('@esengine/') ? dep.slice(10) : dep;
+                        imports[dep] = `./libs/plugins/${depId}.js`;
+                    }
+                }
+            }
+        }
+
+        const importMap = { imports };
+        const importMapJson = JSON.stringify(importMap, null, 8);
+
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ESEngine Game</title>
+    <!-- Import Map: Maps bare module specifiers to actual URLs -->
+    <!-- Import Map: 将裸模块说明符映射到实际 URL -->
+    <script type="importmap">
+${importMapJson}
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1a2e; }
+        #game-canvas { width: 100%; height: 100%; display: block; }
+        #loading {
+            position: fixed; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: #1a1a2e; color: #eee; font-family: system-ui, sans-serif;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid #333; border-top-color: #4a9eff;
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        .message { margin-top: 16px; font-size: 14px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #error {
+            position: fixed; inset: 0; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            background: #1a1a2e; color: #ff6b6b; font-family: system-ui, sans-serif;
+            padding: 20px; text-align: center;
+        }
+        #error.show { display: flex; }
+        #error pre {
+            background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px;
+            max-width: 600px; white-space: pre-wrap; word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="spinner"></div>
+        <div class="message" id="loading-message">Loading...</div>
+    </div>
+    <div id="error">
+        <h2>Failed to start game</h2>
+        <pre id="error-message"></pre>
+    </div>
+    <canvas id="game-canvas"></canvas>
+
     <script type="module">
         const loading = document.getElementById('loading');
         const loadingMessage = document.getElementById('loading-message');
         const errorDiv = document.getElementById('error');
-        const errorTitle = document.getElementById('error-title');
         const errorMessage = document.getElementById('error-message');
-        const errorHint = document.getElementById('error-hint');
 
-        function showError(title, msg, hint) {
+        function showError(msg) {
             loading.style.display = 'none';
-            errorTitle.textContent = title || 'Failed to start game';
             errorMessage.textContent = msg;
-            if (hint) errorHint.innerHTML = hint;
             errorDiv.classList.add('show');
-            console.error('[Game]', msg);
         }
 
         function updateLoading(msg) {
             loadingMessage.textContent = msg;
-            console.log('[Game]', msg);
         }
 
-        if (location.protocol === 'file:') {
-            showError(
-                'Cannot run from local file',
-                'This game requires a web server to run properly.',
-                'Start a local server: <code>npx serve</code>'
-            );
-        } else {
-            try {
-                updateLoading('Loading runtime...');
-                const ECSRuntime = (await import('@esengine/platform-web')).default;
+        try {
+            // 1. Load core runtime
+            updateLoading('Loading core runtime...');
+            const { default: ESEngine } = await import('./libs/esengine.core.js');
 
-                updateLoading('Loading WASM module...');
-                ${hasWasm ? `// Import WASM wrapper module (wasm-bindgen generated)
-                const wasmModule = await import('./libs/es-engine/es_engine.js');` : `const wasmModule = null;`}
+            // 2. Create runtime instance
+            const runtime = ESEngine.create({
+                canvasId: 'game-canvas',
+                width: window.innerWidth,
+                height: window.innerHeight,
+                assetBaseUrl: './assets',
+                assetCatalogUrl: './asset-catalog.json'
+            });
 
-                updateLoading('Initializing runtime...');
-                const runtime = ECSRuntime.create({
-                    canvasId: 'game-canvas',
-                    width: window.innerWidth,
-                    height: window.innerHeight,
-                    assetBaseUrl: './assets',
-                    assetCatalogUrl: './asset-catalog.json'
-                });
+            // 3. Load WASM module if available
+            ${hasWasm ? `
+            updateLoading('Loading WASM module...');
+            const wasmModule = await import('./libs/es-engine/es_engine.js');
+            ` : `const wasmModule = null;`}
 
-                updateLoading('Loading plugins...');
-${pluginImportCode}
+            // 4. Load plugins on demand
+            updateLoading('Loading plugins...');
+            const plugins = [
+${pluginLoads}
+                ];
 
-                await runtime.initialize(wasmModule);
-
-                updateLoading('Loading scene...');
-                await runtime.loadScene('${mainScenePath}');
-
-                loading.style.display = 'none';
-                runtime.start();
-
-                window.addEventListener('resize', () => {
-                    runtime.handleResize(window.innerWidth, window.innerHeight);
-                });
-                console.log('[Game] Started successfully');
-            } catch (error) {
-                showError(null, error.message || String(error), null);
+            for (const [id, exportName] of plugins) {
+                try {
+                    const module = await import('./libs/plugins/' + id + '.js');
+                    if (module[exportName]) {
+                        runtime.registerPlugin(module[exportName]);
+                    }
+                } catch (e) {
+                    console.warn('Failed to load plugin:', id, e.message);
+                }
             }
+
+            // 5. Initialize runtime
+            updateLoading('Initializing...');
+            await runtime.initialize(wasmModule);
+
+            // 6. Load scene
+            updateLoading('Loading scene...');
+            await runtime.loadScene('${mainScenePath}');
+
+            // 7. Start game
+            loading.style.display = 'none';
+            runtime.start();
+
+            // Handle resize
+            window.addEventListener('resize', () => {
+                runtime.handleResize(window.innerWidth, window.innerHeight);
+            });
+
+            console.log('[Game] Started successfully');
+        } catch (error) {
+            console.error('[Game] Failed to start:', error);
+            showError(error.message || String(error));
         }
-    </script>`}
+    </script>
 </body>
 </html>`;
-
-        await fs.writeFile(`${context.outputDir}/index.html`, htmlContent);
-        console.log(`[WebBuild] Generated HTML (${useBundledModules ? 'bundled' : 'separate modules'})`);
     }
 
-    private async _optimize(_context: BuildContext): Promise<void> {
-        console.log('[WebBuild] Optimization complete (minification done during bundling)');
+    private _getAssetType(ext: string): string {
+        const typeMap: Record<string, string> = {
+            'png': 'texture', 'jpg': 'texture', 'jpeg': 'texture', 'gif': 'texture', 'webp': 'texture',
+            'mp3': 'audio', 'ogg': 'audio', 'wav': 'audio', 'm4a': 'audio',
+            'json': 'data', 'xml': 'data',
+            'ttf': 'font', 'woff': 'font', 'woff2': 'font',
+            'atlas': 'atlas', 'fnt': 'font'
+        };
+        return typeMap[ext] || 'binary';
+    }
+
+    private _getStatusForStep(stepId: string): BuildStatus {
+        const statusMap: Record<string, BuildStatus> = {
+            'prepare': BuildStatus.Preparing,
+            'analyze': BuildStatus.Preparing,
+            'bundle-runtime': BuildStatus.Compiling,
+            'copy-assets': BuildStatus.Copying,
+            'copy-scenes': BuildStatus.Copying,
+            'generate-catalog': BuildStatus.PostProcessing,
+            'generate-html': BuildStatus.PostProcessing
+        };
+        return statusMap[stepId] || BuildStatus.Compiling;
+    }
+
+    private _createResult(
+        success: boolean,
+        config: BuildConfig,
+        startTime: number,
+        outputFiles: string[],
+        warnings: string[],
+        error?: string,
+        stats?: BuildResult['stats']
+    ): BuildResult {
+        return {
+            success,
+            platform: config.platform,
+            outputPath: config.outputPath,
+            duration: Date.now() - startTime,
+            outputFiles,
+            warnings,
+            error,
+            stats
+        };
+    }
+
+    private _formatBytes(bytes: number): string {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
     }
 }

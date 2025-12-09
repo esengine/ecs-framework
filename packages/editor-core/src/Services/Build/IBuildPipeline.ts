@@ -109,25 +109,68 @@ export interface BuildConfig {
 }
 
 /**
+ * Web build mode.
+ * Web 构建模式。
+ */
+export type WebBuildMode =
+    /** Single bundle: All code in one file, best for small games/playable ads
+     *  单包模式：所有代码打包到一个文件，适合小游戏/可玩广告 */
+    | 'single-bundle'
+    /** Split bundles: Core + plugins loaded on demand, best for production games
+     *  分包模式：核心包 + 插件按需加载，适合正式游戏 */
+    | 'split-bundles';
+
+/**
  * Web platform build configuration.
  * Web 平台构建配置。
  */
 export interface WebBuildConfig extends BuildConfig {
     platform: BuildPlatform.Web;
-    /** Output format | 输出格式 */
-    format: 'iife' | 'esm';
+
     /**
-     * Whether to bundle all modules into a single JS file.
-     * 是否将所有模块打包成单个 JS 文件。
-     * - true: Bundle into one runtime.browser.js (smaller total size, single request)
-     * - false: Keep modules separate (better caching, parallel loading)
+     * Build mode.
+     * 构建模式。
+     * - 'single-bundle': All code in one file (~500KB), single request, best for small games
+     * - 'split-bundles': Core (~150KB) + plugins on demand, better caching, best for production
+     * Default: 'split-bundles'
+     */
+    buildMode: WebBuildMode;
+
+    /**
+     * Whether to minify output.
+     * 是否压缩输出。
+     * Default: true for release builds
+     */
+    minify?: boolean;
+
+    /**
+     * Whether to generate HTML file.
+     * 是否生成 HTML 文件。
+     */
+    generateHtml: boolean;
+
+    /**
+     * HTML template path.
+     * HTML 模板路径。
+     */
+    htmlTemplate?: string;
+
+    /**
+     * Asset loading strategy.
+     * 资产加载策略。
+     * - 'preload': Load all assets before game starts (best for small games)
+     * - 'on-demand': Load assets when needed (best for large games)
+     * Default: 'on-demand'
+     */
+    assetLoadingStrategy?: 'preload' | 'on-demand';
+
+    /**
+     * Whether to generate asset catalog.
+     * 是否生成资产清单。
      * Default: true
      */
-    bundleModules: boolean;
-    /** Whether to generate HTML file | 是否生成 HTML 文件 */
-    generateHtml: boolean;
-    /** HTML template path | HTML 模板路径 */
-    htmlTemplate?: string;
+    generateAssetCatalog?: boolean;
+
 }
 
 /**

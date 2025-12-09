@@ -12,6 +12,7 @@ export {
     type BuildProgress,
     type BuildConfig,
     type WebBuildConfig,
+    type WebBuildMode,
     type WeChatBuildConfig,
     type BuildResult,
     type BuildStep,
