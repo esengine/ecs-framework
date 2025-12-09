@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <a href="https://esengine.github.io/ecs-framework/">Documentation</a> ·
-  <a href="https://esengine.github.io/ecs-framework/api/">API Reference</a> ·
+  <a href="https://esengine.cn/">Documentation</a> ·
+  <a href="https://esengine.cn/api/README">API Reference</a> ·
   <a href="https://github.com/esengine/esengine/releases">Download Editor</a> ·
   <a href="./examples/">Examples</a>
 </p>
@@ -245,9 +245,9 @@ esengine/
 
 ## Documentation
 
-- [Getting Started](https://esengine.github.io/ecs-framework/guide/getting-started.html)
-- [Architecture Guide](https://esengine.github.io/ecs-framework/guide/)
-- [API Reference](https://esengine.github.io/ecs-framework/api/)
+- [Getting Started](https://esengine.cn/guide/getting-started.html)
+- [Architecture Guide](https://esengine.cn/guide/)
+- [API Reference](https://esengine.cn/api/README)
 
 ## Community
 

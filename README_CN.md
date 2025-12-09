@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <a href="https://esengine.github.io/ecs-framework/">文档</a> ·
-  <a href="https://esengine.github.io/ecs-framework/api/">API 参考</a> ·
+  <a href="https://esengine.cn/">文档</a> ·
+  <a href="https://esengine.cn/api/README">API 参考</a> ·
   <a href="https://github.com/esengine/esengine/releases">下载编辑器</a> ·
   <a href="./examples/">示例</a>
 </p>
@@ -245,9 +245,9 @@ esengine/
 
 ## 文档
 
-- [快速入门](https://esengine.github.io/ecs-framework/guide/getting-started.html)
-- [架构指南](https://esengine.github.io/ecs-framework/guide/)
-- [API 参考](https://esengine.github.io/ecs-framework/api/)
+- [快速入门](https://esengine.cn/guide/getting-started.html)
+- [架构指南](https://esengine.cn/guide/)
+- [API 参考](https://esengine.cn/api/README)
 
 ## 社区
 
