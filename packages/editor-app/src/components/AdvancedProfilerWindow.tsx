@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, BarChart3, Maximize2, Minimize2 } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
-import { ProfilerService } from '../services/ProfilerService';
-import { ProfilerServiceToken } from '../services/tokens';
+import { ProfilerServiceToken, type IProfilerService } from '../services/tokens';
 import { AdvancedProfiler } from './AdvancedProfiler';
 import '../styles/ProfilerWindow.css';
 
@@ -11,7 +10,7 @@ interface AdvancedProfilerWindowProps {
 }
 
 export function AdvancedProfilerWindow({ onClose }: AdvancedProfilerWindowProps) {
-    const [profilerService, setProfilerService] = useState<ProfilerService | null>(null);
+    const [profilerService, setProfilerService] = useState<IProfilerService | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
 

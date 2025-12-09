@@ -7,8 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import { Core } from '@esengine/ecs-framework';
-import type { ProfilerService } from '../services/ProfilerService';
-import { ProfilerServiceToken } from '../services/tokens';
+import { ProfilerServiceToken, type IProfilerService } from '../services/tokens';
 
 /**
  * 获取 ProfilerService 实例的 Hook
@@ -22,8 +21,8 @@ import { ProfilerServiceToken } from '../services/tokens';
  *
  * @returns ProfilerService 实例，如果未注册则返回 undefined
  */
-export function useProfilerService(): ProfilerService | undefined {
-    const [service, setService] = useState<ProfilerService | undefined>(() => {
+export function useProfilerService(): IProfilerService | undefined {
+    const [service, setService] = useState<IProfilerService | undefined>(() => {
         try {
             return Core.pluginServices.get(ProfilerServiceToken);
         } catch {

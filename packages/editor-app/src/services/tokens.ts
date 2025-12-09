@@ -10,7 +10,52 @@
  */
 
 import { createServiceToken } from '@esengine/engine-core';
-import type { ProfilerData, AdvancedProfilerDataPayload } from './ProfilerService';
+
+// ============================================================================
+// Profiler Data Types (定义在这里以避免循环依赖)
+// ============================================================================
+
+export interface SystemPerformanceData {
+    name: string;
+    executionTime: number;
+    entityCount: number;
+    averageTime: number;
+    percentage: number;
+}
+
+export interface RemoteEntity {
+    id: number;
+    name: string;
+    enabled: boolean;
+    active: boolean;
+    activeInHierarchy: boolean;
+    componentCount: number;
+    componentTypes: string[];
+    parentId: number | null;
+    childIds: number[];
+    depth: number;
+    tag: number;
+    updateOrder: number;
+}
+
+export interface ProfilerData {
+    totalFrameTime: number;
+    systems: SystemPerformanceData[];
+    entityCount: number;
+    componentCount: number;
+    fps: number;
+    entities?: RemoteEntity[];
+}
+
+/**
+ * 高级性能数据结构（用于高级性能分析器）
+ * Advanced profiler data structure
+ */
+export interface AdvancedProfilerDataPayload {
+    advancedProfiler?: any;
+    performance?: any;
+    systems?: any;
+}
 
 // ============================================================================
 // Profiler Service Token
@@ -37,29 +82,29 @@ export interface IProfilerService {
     /** 检查服务器是否运行 | Check if server is running */
     isServerActive(): boolean;
 
-    /** 获取当前数据 | Get current data */
-    getCurrentData(): ProfilerData | null;
-
     /** 手动启动服务器 | Manually start server */
     manualStartServer(): Promise<void>;
 
     /** 手动停止服务器 | Manually stop server */
     manualStopServer(): Promise<void>;
 
-    /** 停止服务器 | Stop server */
-    stopServer(): void;
-
     /** 订阅数据更新 | Subscribe to data updates */
     subscribe(callback: (data: ProfilerData) => void): () => void;
+
+    /** 订阅高级数据更新 | Subscribe to advanced data updates */
+    subscribeAdvanced(callback: (data: AdvancedProfilerDataPayload) => void): () => void;
 
     /** 请求实体详情 | Request entity details */
     requestEntityDetails(entityId: number): void;
 
-    /** 添加高级分析器监听器 | Add advanced profiler listener */
-    addAdvancedListener(listener: (data: AdvancedProfilerDataPayload) => void): void;
+    /** 请求高级性能分析数据 | Request advanced profiler data */
+    requestAdvancedProfilerData(): void;
 
-    /** 移除高级分析器监听器 | Remove advanced profiler listener */
-    removeAdvancedListener(listener: (data: AdvancedProfilerDataPayload) => void): void;
+    /** 设置选中的函数 | Set selected function */
+    setProfilerSelectedFunction(functionName: string | null): void;
+
+    /** 销毁服务 | Destroy service */
+    destroy(): void;
 }
 
 /**
