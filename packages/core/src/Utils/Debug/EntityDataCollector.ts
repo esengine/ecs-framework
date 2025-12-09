@@ -126,9 +126,15 @@ export class EntityDataCollector {
             const entity = entityList.buffer.find((e: any) => e.id === entityId);
             if (!entity) return null;
 
+            // 使用 HierarchySystem 获取父实体
+            // Use HierarchySystem to get parent entity
+            const hierarchySystem = scene.getSystem(HierarchySystem);
+            const parent = hierarchySystem?.getParent(entity);
+            const parentName = parent?.name ?? null;
+
             const baseDebugInfo = entity.getDebugInfo
                 ? entity.getDebugInfo()
-                : this.buildFallbackEntityInfo(entity, scene);
+                : this.buildFallbackEntityInfo(entity, scene, hierarchySystem);
 
             const componentDetails = this.extractComponentDetails(entity.components);
 
@@ -139,7 +145,7 @@ export class EntityDataCollector {
                 scene: sceneInfo.name,
                 sceneName: sceneInfo.name,
                 sceneType: sceneInfo.type,
-                parentName: (entity as any).parent?.name || null,
+                parentName,
                 components: componentDetails || [],
                 componentCount: entity.components?.length || 0,
                 componentTypes: entity.components?.map((comp: any) => getComponentInstanceTypeName(comp)) || []
