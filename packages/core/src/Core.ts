@@ -11,6 +11,7 @@ import { SceneManager } from './ECS/SceneManager';
 import { IScene } from './ECS/IScene';
 import { ServiceContainer } from './Core/ServiceContainer';
 import { PluginManager } from './Core/PluginManager';
+import { PluginServiceRegistry } from './Core/PluginServiceRegistry';
 import { IPlugin } from './Core/Plugin';
 import { WorldManager } from './ECS/WorldManager';
 import { DebugConfigService } from './Utils/Debug/DebugConfigService';
@@ -110,6 +111,14 @@ export class Core {
     private _pluginManager: PluginManager;
 
     /**
+     * 插件服务注册表
+     *
+     * 基于 ServiceToken 的类型安全服务注册表。
+     * Type-safe service registry based on ServiceToken.
+     */
+    private _pluginServiceRegistry: PluginServiceRegistry;
+
+    /**
      * Core配置
      */
     private _config: ICoreConfig;
@@ -168,6 +177,11 @@ export class Core {
         this._pluginManager.initialize(this, this._serviceContainer);
         this._serviceContainer.registerInstance(PluginManager, this._pluginManager);
 
+        // 初始化插件服务注册表
+        // Initialize plugin service registry
+        this._pluginServiceRegistry = new PluginServiceRegistry();
+        this._serviceContainer.registerInstance(PluginServiceRegistry, this._pluginServiceRegistry);
+
         this.debug = this._config.debug ?? true;
 
         // 初始化调试管理器
@@ -218,6 +232,39 @@ export class Core {
             throw new Error('Core实例未创建，请先调用Core.create()');
         }
         return this._instance._serviceContainer;
+    }
+
+    /**
+     * 获取插件服务注册表
+     *
+     * 用于基于 ServiceToken 的类型安全服务注册和获取。
+     * For type-safe service registration and retrieval based on ServiceToken.
+     *
+     * @returns PluginServiceRegistry 实例
+     * @throws 如果 Core 实例未创建
+     *
+     * @example
+     * ```typescript
+     * import { createServiceToken } from '@esengine/ecs-framework';
+     *
+     * // 定义服务令牌
+     * const MyServiceToken = createServiceToken<IMyService>('myService');
+     *
+     * // 注册服务
+     * Core.pluginServices.register(MyServiceToken, myServiceInstance);
+     *
+     * // 获取服务（可选）
+     * const service = Core.pluginServices.get(MyServiceToken);
+     *
+     * // 获取服务（必需，不存在则抛异常）
+     * const service = Core.pluginServices.require(MyServiceToken);
+     * ```
+     */
+    public static get pluginServices(): PluginServiceRegistry {
+        if (!this._instance) {
+            throw new Error('Core实例未创建，请先调用Core.create()');
+        }
+        return this._instance._pluginServiceRegistry;
     }
 
     /**

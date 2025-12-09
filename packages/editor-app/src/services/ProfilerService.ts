@@ -1,29 +1,13 @@
 import { invoke } from '@tauri-apps/api/core';
 import { SettingsService } from './SettingsService';
 import { LogLevel } from '@esengine/ecs-framework';
-
-export interface SystemPerformanceData {
-  name: string;
-  executionTime: number;
-  entityCount: number;
-  averageTime: number;
-  percentage: number;
-}
-
-export interface RemoteEntity {
-  id: number;
-  name: string;
-  enabled: boolean;
-  active: boolean;
-  activeInHierarchy: boolean;
-  componentCount: number;
-  componentTypes: string[];
-  parentId: number | null;
-  childIds: number[];
-  depth: number;
-  tag: number;
-  updateOrder: number;
-}
+import type {
+    IProfilerService,
+    ProfilerData,
+    SystemPerformanceData,
+    RemoteEntity,
+    AdvancedProfilerDataPayload
+} from './tokens';
 
 export interface RemoteComponentDetail {
   typeName: string;
@@ -45,29 +29,10 @@ export interface RemoteEntityDetails {
   parentName: string | null;
 }
 
-export interface ProfilerData {
-  totalFrameTime: number;
-  systems: SystemPerformanceData[];
-  entityCount: number;
-  componentCount: number;
-  fps: number;
-  entities?: RemoteEntity[];
-}
-
 type ProfilerDataListener = (data: ProfilerData) => void;
-
-/**
- * 高级性能数据结构（用于高级性能分析器）
- */
-export interface AdvancedProfilerDataPayload {
-    advancedProfiler?: any;
-    performance?: any;
-    systems?: any;
-}
-
 type AdvancedProfilerDataListener = (data: AdvancedProfilerDataPayload) => void;
 
-export class ProfilerService {
+export class ProfilerService implements IProfilerService {
     private ws: WebSocket | null = null;
     private isServerRunning = false;
     private wsPort: number;

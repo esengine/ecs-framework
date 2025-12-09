@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Activity, Cpu, Layers, Package, Wifi, WifiOff, Maximize2, Pause, Play, BarChart3 } from 'lucide-react';
-import { ProfilerService, ProfilerData } from '../services/ProfilerService';
+import type { ProfilerData } from '../services/tokens';
 import { SettingsService } from '../services/SettingsService';
 import { Core } from '@esengine/ecs-framework';
 import { MessageHub } from '@esengine/editor-core';
+import { getProfilerService } from '../services/getService';
 import '../styles/ProfilerDockPanel.css';
 
 export function ProfilerDockPanel() {
@@ -32,7 +33,7 @@ export function ProfilerDockPanel() {
     }, []);
 
     useEffect(() => {
-        const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
+        const profilerService = getProfilerService();
 
         if (!profilerService) {
             console.warn('[ProfilerDockPanel] ProfilerService not available - plugin may be disabled');

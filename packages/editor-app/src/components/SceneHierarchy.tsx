@@ -8,7 +8,8 @@ import {
     Eye, Star, Lock, Settings, Filter, Folder, Sun, Cloud, Mountain, Flag,
     SquareStack, FolderPlus
 } from 'lucide-react';
-import { ProfilerService, RemoteEntity } from '../services/ProfilerService';
+import type { RemoteEntity } from '../services/tokens';
+import { getProfilerService } from '../services/getService';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { CreateEntityCommand, DeleteEntityCommand, ReparentEntityCommand, DropPosition } from '../application/commands/entity';
 import '../styles/SceneHierarchy.css';
@@ -264,7 +265,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
 
     // Subscribe to remote entity data from ProfilerService
     useEffect(() => {
-        const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
+        const profilerService = getProfilerService();
 
         if (!profilerService) {
             return;
@@ -444,7 +445,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
     const handleRemoteEntityClick = (entity: RemoteEntity) => {
         setSelectedIds(new Set([entity.id]));
 
-        const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
+        const profilerService = getProfilerService();
         if (profilerService) {
             profilerService.requestEntityDetails(entity.id);
         }

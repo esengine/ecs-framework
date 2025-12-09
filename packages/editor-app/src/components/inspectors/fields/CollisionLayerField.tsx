@@ -4,18 +4,15 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-
-/**
- * 碰撞层配置接口（用于获取自定义层名称）
- */
-interface CollisionLayerConfigAPI {
-    getLayers(): Array<{ name: string }>;
-    addListener(callback: () => void): void;
-    removeListener(callback: () => void): void;
-}
+import { Core } from '@esengine/ecs-framework';
+import {
+    CollisionLayerConfigToken,
+    type ICollisionLayerConfig
+} from '@esengine/physics-rapier2d';
 
 /**
  * 默认层名称（当 CollisionLayerConfig 不可用时使用）
+ * Default layer names (used when CollisionLayerConfig is unavailable)
  */
 const DEFAULT_LAYER_NAMES = [
     'Default', 'Player', 'Enemy', 'Projectile',
@@ -24,25 +21,18 @@ const DEFAULT_LAYER_NAMES = [
     'Layer12', 'Layer13', 'Layer14', 'Layer15',
 ];
 
-let cachedConfig: CollisionLayerConfigAPI | null = null;
-
 /**
  * 尝试获取 CollisionLayerConfig 实例
+ * Try to get CollisionLayerConfig instance
  */
-function getCollisionConfig(): CollisionLayerConfigAPI | null {
-    if (cachedConfig) return cachedConfig;
-
+function getCollisionConfig(): ICollisionLayerConfig | undefined {
     try {
-        // 动态导入以避免循环依赖
-        const physicsModule = (window as any).__PHYSICS_RAPIER2D__;
-        if (physicsModule?.CollisionLayerConfig) {
-            cachedConfig = physicsModule.CollisionLayerConfig.getInstance();
-            return cachedConfig;
-        }
+        return Core.pluginServices.get(CollisionLayerConfigToken);
     } catch {
-        // 忽略错误
+        // Core 可能还没有初始化
+        // Core might not be initialized yet
+        return undefined;
     }
-    return null;
 }
 
 interface CollisionLayerFieldProps {

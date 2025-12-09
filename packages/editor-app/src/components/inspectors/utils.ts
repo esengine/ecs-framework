@@ -1,4 +1,6 @@
+import { Core } from '@esengine/ecs-framework';
 import { ComponentData } from './types';
+import { ProfilerServiceToken, type IProfilerService } from '../../services/tokens';
 
 export function formatNumber(value: number, decimalPlaces: number): string {
     if (decimalPlaces < 0) {
@@ -10,13 +12,21 @@ export function formatNumber(value: number, decimalPlaces: number): string {
     return value.toFixed(decimalPlaces);
 }
 
-export interface ProfilerService {
-    requestEntityDetails(entityId: number): void;
-    subscribe(callback: () => void): () => void;
-}
-
-export function getProfilerService(): ProfilerService | undefined {
-    return (window as any).__PROFILER_SERVICE__;
+/**
+ * 获取 ProfilerService 实例
+ * Get ProfilerService instance
+ *
+ * 使用 ServiceToken 从 Core.pluginServices 获取服务。
+ * Uses ServiceToken to get service from Core.pluginServices.
+ */
+export function getProfilerService(): IProfilerService | undefined {
+    try {
+        return Core.pluginServices.get(ProfilerServiceToken);
+    } catch {
+        // Core 可能还没有初始化
+        // Core might not be initialized yet
+        return undefined;
+    }
 }
 
 export function isComponentData(value: unknown): value is ComponentData {

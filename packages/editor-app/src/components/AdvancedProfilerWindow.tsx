@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, BarChart3, Maximize2, Minimize2 } from 'lucide-react';
-import { ProfilerService } from '../services/ProfilerService';
+import { Core } from '@esengine/ecs-framework';
+import { ProfilerServiceToken, type IProfilerService } from '../services/tokens';
 import { AdvancedProfiler } from './AdvancedProfiler';
 import '../styles/ProfilerWindow.css';
 
@@ -8,19 +9,19 @@ interface AdvancedProfilerWindowProps {
     onClose: () => void;
 }
 
-interface WindowWithProfiler extends Window {
-    __PROFILER_SERVICE__?: ProfilerService;
-}
-
 export function AdvancedProfilerWindow({ onClose }: AdvancedProfilerWindowProps) {
-    const [profilerService, setProfilerService] = useState<ProfilerService | null>(null);
+    const [profilerService, setProfilerService] = useState<IProfilerService | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
 
     useEffect(() => {
-        const service = (window as WindowWithProfiler).__PROFILER_SERVICE__;
-        if (service) {
-            setProfilerService(service);
+        try {
+            const service = Core.pluginServices.get(ProfilerServiceToken);
+            if (service) {
+                setProfilerService(service);
+            }
+        } catch {
+            // Core 可能还没有初始化
         }
     }, []);
 

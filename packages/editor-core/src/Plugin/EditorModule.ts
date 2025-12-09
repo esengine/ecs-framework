@@ -47,6 +47,8 @@ export interface PanelDescriptor {
     id: string;
     /** 面板标题 | Panel title */
     title: string;
+    /** 面板中文标题 | Panel title in Chinese */
+    titleZh?: string;
     /** 面板图标 | Panel icon */
     icon?: string;
     /** 面板位置 | Panel position */
