@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { BuildService, BuildProgress, BuildConfig, WebBuildConfig, WeChatBuildConfig, SceneManagerService } from '@esengine/editor-core';
 import { BuildPlatform, BuildStatus } from '@esengine/editor-core';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/BuildSettingsPanel.css';
 
 // ==================== Types | 类型定义 ====================
@@ -89,110 +90,25 @@ const DEFAULT_SETTINGS: BuildSettings = {
     bundleModules: false,
 };
 
-// ==================== i18n | 国际化 ====================
+// ==================== Status Key Mapping | 状态键映射 ====================
 
-const i18n = {
-    en: {
-        buildProfiles: 'Build Profiles',
-        addBuildProfile: 'Add Build Profile',
-        playerSettings: 'Player Settings',
-        assetImportOverrides: 'Asset Import Overrides',
-        platforms: 'Platforms',
-        sceneList: 'Scene List',
-        active: 'Active',
-        switchProfile: 'Switch Profile',
-        build: 'Build',
-        buildAndRun: 'Build And Run',
-        buildData: 'Build Data',
-        scriptingDefines: 'Scripting Defines',
-        listIsEmpty: 'List is empty',
-        addOpenScenes: 'Add Open Scenes',
-        platformSettings: 'Platform Settings',
-        architecture: 'Architecture',
-        developmentBuild: 'Development Build',
-        sourceMap: 'Source Map',
-        compressionMethod: 'Compression Method',
-        bundleModules: 'Bundle Modules',
-        bundleModulesHint: 'Merge all modules into single file',
-        separateModulesHint: 'Keep modules as separate files',
-        playerSettingsOverrides: 'Player Settings Overrides',
-        companyName: 'Company Name',
-        productName: 'Product Name',
-        version: 'Version',
-        defaultIcon: 'Default Icon',
-        none: 'None',
-        // Build progress | 构建进度
-        buildInProgress: 'Build in Progress',
-        preparing: 'Preparing...',
-        compiling: 'Compiling...',
-        packaging: 'Packaging assets...',
-        copying: 'Copying files...',
-        postProcessing: 'Post-processing...',
-        completed: 'Completed',
-        failed: 'Failed',
-        cancelled: 'Cancelled',
-        cancel: 'Cancel',
-        close: 'Close',
-        buildSucceeded: 'Build succeeded!',
-        buildFailed: 'Build failed',
-        warnings: 'Warnings',
-        outputPath: 'Output Path',
-        duration: 'Duration',
-    },
-    zh: {
-        buildProfiles: '构建配置',
-        addBuildProfile: '添加构建配置',
-        playerSettings: '玩家设置',
-        assetImportOverrides: '资源导入覆盖',
-        platforms: '平台',
-        sceneList: '场景列表',
-        active: '激活',
-        switchProfile: '切换配置',
-        build: '构建',
-        buildAndRun: '构建并运行',
-        buildData: '构建数据',
-        scriptingDefines: '脚本定义',
-        listIsEmpty: '列表为空',
-        addOpenScenes: '添加已打开的场景',
-        platformSettings: '平台设置',
-        architecture: '架构',
-        developmentBuild: '开发版本',
-        sourceMap: 'Source Map',
-        compressionMethod: '压缩方式',
-        bundleModules: '打包模块',
-        bundleModulesHint: '合并所有模块为单文件',
-        separateModulesHint: '保持模块为独立文件',
-        playerSettingsOverrides: '玩家设置覆盖',
-        companyName: '公司名称',
-        productName: '产品名称',
-        version: '版本',
-        defaultIcon: '默认图标',
-        none: '无',
-        // Build progress | 构建进度
-        buildInProgress: '正在构建',
-        preparing: '准备中...',
-        compiling: '编译中...',
-        packaging: '打包资源...',
-        copying: '复制文件...',
-        postProcessing: '后处理...',
-        completed: '已完成',
-        failed: '失败',
-        cancelled: '已取消',
-        cancel: '取消',
-        close: '关闭',
-        buildSucceeded: '构建成功！',
-        buildFailed: '构建失败',
-        warnings: '警告',
-        outputPath: '输出路径',
-        duration: '耗时',
-    }
+/** Map BuildStatus to translation key | 将 BuildStatus 映射到翻译键 */
+const buildStatusKeys: Record<BuildStatus, string> = {
+    [BuildStatus.Idle]: 'buildSettings.preparing',
+    [BuildStatus.Preparing]: 'buildSettings.preparing',
+    [BuildStatus.Compiling]: 'buildSettings.compiling',
+    [BuildStatus.Packaging]: 'buildSettings.packaging',
+    [BuildStatus.Copying]: 'buildSettings.copying',
+    [BuildStatus.PostProcessing]: 'buildSettings.postProcessing',
+    [BuildStatus.Completed]: 'buildSettings.completed',
+    [BuildStatus.Failed]: 'buildSettings.failed',
+    [BuildStatus.Cancelled]: 'buildSettings.cancelled'
 };
 
 // ==================== Props | 属性 ====================
 
 interface BuildSettingsPanelProps {
     projectPath?: string;
-    locale?: string;
     buildService?: BuildService;
     sceneManager?: SceneManagerService;
     onBuild?: (profile: BuildProfile, settings: BuildSettings) => void;
@@ -203,13 +119,12 @@ interface BuildSettingsPanelProps {
 
 export function BuildSettingsPanel({
     projectPath,
-    locale = 'en',
     buildService,
     sceneManager,
     onBuild,
     onClose
 }: BuildSettingsPanelProps) {
-    const t = i18n[locale as keyof typeof i18n] || i18n.en;
+    const { t } = useLocale();
 
     // State | 状态
     const [profiles, setProfiles] = useState<BuildProfile[]>([
@@ -397,18 +312,7 @@ export function BuildSettingsPanel({
 
     // Get status message | 获取状态消息
     const getStatusMessage = useCallback((status: BuildStatus): string => {
-        const statusMessages: Record<BuildStatus, keyof typeof i18n.en> = {
-            [BuildStatus.Idle]: 'preparing',
-            [BuildStatus.Preparing]: 'preparing',
-            [BuildStatus.Compiling]: 'compiling',
-            [BuildStatus.Packaging]: 'packaging',
-            [BuildStatus.Copying]: 'copying',
-            [BuildStatus.PostProcessing]: 'postProcessing',
-            [BuildStatus.Completed]: 'completed',
-            [BuildStatus.Failed]: 'failed',
-            [BuildStatus.Cancelled]: 'cancelled'
-        };
-        return t[statusMessages[status]] || status;
+        return t(buildStatusKeys[status]) || status;
     }, [t]);
 
     const handleAddScene = useCallback(() => {
@@ -466,12 +370,12 @@ export function BuildSettingsPanel({
                 <div className="build-settings-tabs">
                     <div className="build-settings-tab active">
                         <Package size={14} />
-                        {t.buildProfiles}
+                        {t('buildSettings.buildProfiles')}
                     </div>
                 </div>
                 <div className="build-settings-header-actions">
-                    <button className="build-settings-header-btn">{t.playerSettings}</button>
-                    <button className="build-settings-header-btn">{t.assetImportOverrides}</button>
+                    <button className="build-settings-header-btn">{t('buildSettings.playerSettings')}</button>
+                    <button className="build-settings-header-btn">{t('buildSettings.assetImportOverrides')}</button>
                 </div>
             </div>
 
@@ -479,7 +383,7 @@ export function BuildSettingsPanel({
             <div className="build-settings-add-bar">
                 <button className="build-settings-add-btn" onClick={handleAddProfile}>
                     <Plus size={14} />
-                    {t.addBuildProfile}
+                    {t('buildSettings.addBuildProfile')}
                 </button>
             </div>
 
@@ -489,7 +393,7 @@ export function BuildSettingsPanel({
                 <div className="build-settings-sidebar">
                     {/* Platforms Section | 平台部分 */}
                     <div className="build-settings-section">
-                        <div className="build-settings-section-header">{t.platforms}</div>
+                        <div className="build-settings-section-header">{t('buildSettings.platforms')}</div>
                         <div className="build-settings-platform-list">
                             {PLATFORMS.map(platform => {
                                 const isActive = profiles.some(p => p.platform === platform.platform && p.isActive);
@@ -501,7 +405,7 @@ export function BuildSettingsPanel({
                                     >
                                         <span className="build-settings-platform-icon">{platform.icon}</span>
                                         <span className="build-settings-platform-label">{platform.label}</span>
-                                        {isActive && <span className="build-settings-active-badge">{t.active}</span>}
+                                        {isActive && <span className="build-settings-active-badge">{t('buildSettings.active')}</span>}
                                     </div>
                                 );
                             })}
@@ -510,7 +414,7 @@ export function BuildSettingsPanel({
 
                     {/* Build Profiles Section | 构建配置部分 */}
                     <div className="build-settings-section">
-                        <div className="build-settings-section-header">{t.buildProfiles}</div>
+                        <div className="build-settings-section-header">{t('buildSettings.buildProfiles')}</div>
                         <div className="build-settings-profile-list">
                             {profiles
                                 .filter(p => p.platform === selectedPlatform)
@@ -546,9 +450,9 @@ export function BuildSettingsPanel({
                                     </div>
                                 </div>
                                 <div className="build-settings-details-actions">
-                                    <button className="build-settings-btn secondary">{t.switchProfile}</button>
+                                    <button className="build-settings-btn secondary">{t('buildSettings.switchProfile')}</button>
                                     <button className="build-settings-btn primary" onClick={handleBuild}>
-                                        {t.build}
+                                        {t('buildSettings.build')}
                                         <ChevronDown size={14} />
                                     </button>
                                 </div>
@@ -556,7 +460,7 @@ export function BuildSettingsPanel({
 
                             {/* Build Data Section | 构建数据部分 */}
                             <div className="build-settings-card">
-                                <div className="build-settings-card-header">{t.buildData}</div>
+                                <div className="build-settings-card-header">{t('buildSettings.buildData')}</div>
 
                                 {/* Scene List | 场景列表 */}
                                 <div className="build-settings-field-group">
@@ -565,7 +469,7 @@ export function BuildSettingsPanel({
                                         onClick={() => toggleSection('sceneList')}
                                     >
                                         {expandedSections.sceneList ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                        <span>{t.sceneList}</span>
+                                        <span>{t('buildSettings.sceneList')}</span>
                                     </div>
                                     {expandedSections.sceneList && (
                                         <div className="build-settings-field-content">
@@ -583,7 +487,7 @@ export function BuildSettingsPanel({
                                             </div>
                                             <div className="build-settings-field-actions">
                                                 <button className="build-settings-btn text" onClick={handleAddScene}>
-                                                    {t.addOpenScenes}
+                                                    {t('buildSettings.addOpenScenes')}
                                                 </button>
                                             </div>
                                         </div>
@@ -597,13 +501,13 @@ export function BuildSettingsPanel({
                                         onClick={() => toggleSection('scriptingDefines')}
                                     >
                                         {expandedSections.scriptingDefines ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                        <span>{t.scriptingDefines}</span>
+                                        <span>{t('buildSettings.scriptingDefines')}</span>
                                     </div>
                                     {expandedSections.scriptingDefines && (
                                         <div className="build-settings-field-content">
                                             <div className="build-settings-defines-list">
                                                 {settings.scriptingDefines.length === 0 ? (
-                                                    <div className="build-settings-empty-text">{t.listIsEmpty}</div>
+                                                    <div className="build-settings-empty-text">{t('buildSettings.listIsEmpty')}</div>
                                                 ) : (
                                                     settings.scriptingDefines.map((define, index) => (
                                                         <div key={index} className="build-settings-define-item">
@@ -628,7 +532,7 @@ export function BuildSettingsPanel({
 
                             {/* Platform Settings Section | 平台设置部分 */}
                             <div className="build-settings-card">
-                                <div className="build-settings-card-header">{t.platformSettings}</div>
+                                <div className="build-settings-card-header">{t('buildSettings.platformSettings')}</div>
 
                                 <div className="build-settings-field-group">
                                     <div
@@ -636,13 +540,13 @@ export function BuildSettingsPanel({
                                         onClick={() => toggleSection('platformSettings')}
                                     >
                                         {expandedSections.platformSettings ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                        <span>{currentPlatformConfig?.label} Settings</span>
+                                        <span>{currentPlatformConfig?.label} {t('buildSettings.settings')}</span>
                                     </div>
                                     {expandedSections.platformSettings && (
                                         <div className="build-settings-field-content">
                                             <div className="build-settings-form">
                                                 <div className="build-settings-form-row">
-                                                    <label>{t.developmentBuild}</label>
+                                                    <label>{t('buildSettings.developmentBuild')}</label>
                                                     <input
                                                         type="checkbox"
                                                         checked={settings.developmentBuild}
@@ -653,7 +557,7 @@ export function BuildSettingsPanel({
                                                     />
                                                 </div>
                                                 <div className="build-settings-form-row">
-                                                    <label>{t.sourceMap}</label>
+                                                    <label>{t('buildSettings.sourceMap')}</label>
                                                     <input
                                                         type="checkbox"
                                                         checked={settings.sourceMap}
@@ -664,7 +568,7 @@ export function BuildSettingsPanel({
                                                     />
                                                 </div>
                                                 <div className="build-settings-form-row">
-                                                    <label>{t.compressionMethod}</label>
+                                                    <label>{t('buildSettings.compressionMethod')}</label>
                                                     <select
                                                         value={settings.compressionMethod}
                                                         onChange={e => setSettings(prev => ({
@@ -678,7 +582,7 @@ export function BuildSettingsPanel({
                                                     </select>
                                                 </div>
                                                 <div className="build-settings-form-row">
-                                                    <label>{t.bundleModules}</label>
+                                                    <label>{t('buildSettings.bundleModules')}</label>
                                                     <div className="build-settings-toggle-group">
                                                         <input
                                                             type="checkbox"
@@ -689,7 +593,7 @@ export function BuildSettingsPanel({
                                                             }))}
                                                         />
                                                         <span className="build-settings-hint">
-                                                            {settings.bundleModules ? t.bundleModulesHint : t.separateModulesHint}
+                                                            {settings.bundleModules ? t('buildSettings.bundleModulesHint') : t('buildSettings.separateModulesHint')}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -702,7 +606,7 @@ export function BuildSettingsPanel({
                             {/* Player Settings Overrides | 玩家设置覆盖 */}
                             <div className="build-settings-card">
                                 <div className="build-settings-card-header">
-                                    {t.playerSettingsOverrides}
+                                    {t('buildSettings.playerSettingsOverrides')}
                                     <button className="build-settings-more-btn">
                                         <Settings size={14} />
                                     </button>
@@ -714,13 +618,13 @@ export function BuildSettingsPanel({
                                         onClick={() => toggleSection('playerSettings')}
                                     >
                                         {expandedSections.playerSettings ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                        <span>Player Settings</span>
+                                        <span>{t('buildSettings.playerSettings')}</span>
                                     </div>
                                     {expandedSections.playerSettings && (
                                         <div className="build-settings-field-content">
                                             <div className="build-settings-form">
                                                 <div className="build-settings-form-row">
-                                                    <label>{t.companyName}</label>
+                                                    <label>{t('buildSettings.companyName')}</label>
                                                     <input
                                                         type="text"
                                                         value={settings.companyName}
@@ -731,7 +635,7 @@ export function BuildSettingsPanel({
                                                     />
                                                 </div>
                                                 <div className="build-settings-form-row">
-                                                    <label>{t.productName}</label>
+                                                    <label>{t('buildSettings.productName')}</label>
                                                     <input
                                                         type="text"
                                                         value={settings.productName}
@@ -742,7 +646,7 @@ export function BuildSettingsPanel({
                                                     />
                                                 </div>
                                                 <div className="build-settings-form-row">
-                                                    <label>{t.version}</label>
+                                                    <label>{t('buildSettings.version')}</label>
                                                     <input
                                                         type="text"
                                                         value={settings.version}
@@ -753,9 +657,9 @@ export function BuildSettingsPanel({
                                                     />
                                                 </div>
                                                 <div className="build-settings-form-row">
-                                                    <label>{t.defaultIcon}</label>
+                                                    <label>{t('buildSettings.defaultIcon')}</label>
                                                     <div className="build-settings-icon-picker">
-                                                        <span>{t.none}</span>
+                                                        <span>{t('buildSettings.none')}</span>
                                                         <span className="build-settings-icon-hint">(Texture 2D)</span>
                                                     </div>
                                                 </div>
@@ -767,7 +671,7 @@ export function BuildSettingsPanel({
                         </>
                     ) : (
                         <div className="build-settings-no-selection">
-                            <p>Select a platform or build profile</p>
+                            <p>{t('buildSettings.selectPlatform')}</p>
                         </div>
                     )}
                 </div>
@@ -778,7 +682,7 @@ export function BuildSettingsPanel({
                 <div className="build-progress-overlay">
                     <div className="build-progress-dialog">
                         <div className="build-progress-header">
-                            <h3>{t.buildInProgress}</h3>
+                            <h3>{t('buildSettings.buildInProgress')}</h3>
                             {!isBuilding && (
                                 <button
                                     className="build-progress-close"
@@ -806,9 +710,9 @@ export function BuildSettingsPanel({
                                 {isBuilding ? (
                                     buildProgress?.message || getStatusMessage(buildProgress?.status || BuildStatus.Preparing)
                                 ) : buildResult?.success ? (
-                                    t.buildSucceeded
+                                    t('buildSettings.buildSucceeded')
                                 ) : (
-                                    t.buildFailed
+                                    t('buildSettings.buildFailed')
                                 )}
                             </div>
 
@@ -831,11 +735,11 @@ export function BuildSettingsPanel({
                                     {buildResult.success && (
                                         <>
                                             <div className="build-result-row">
-                                                <span className="build-result-label">{t.outputPath}:</span>
+                                                <span className="build-result-label">{t('buildSettings.outputPath')}:</span>
                                                 <span className="build-result-value">{buildResult.outputPath}</span>
                                             </div>
                                             <div className="build-result-row">
-                                                <span className="build-result-label">{t.duration}:</span>
+                                                <span className="build-result-label">{t('buildSettings.duration')}:</span>
                                                 <span className="build-result-value">
                                                     {(buildResult.duration / 1000).toFixed(2)}s
                                                 </span>
@@ -856,7 +760,7 @@ export function BuildSettingsPanel({
                                         <div className="build-result-warnings">
                                             <div className="build-result-warnings-header">
                                                 <AlertTriangle size={14} />
-                                                <span>{t.warnings} ({buildResult.warnings.length})</span>
+                                                <span>{t('buildSettings.warnings')} ({buildResult.warnings.length})</span>
                                             </div>
                                             <ul className="build-result-warnings-list">
                                                 {buildResult.warnings.map((warning, index) => (
@@ -876,14 +780,14 @@ export function BuildSettingsPanel({
                                     className="build-settings-btn secondary"
                                     onClick={handleCancelBuild}
                                 >
-                                    {t.cancel}
+                                    {t('buildSettings.cancel')}
                                 </button>
                             ) : (
                                 <button
                                     className="build-settings-btn primary"
                                     onClick={handleCloseBuildProgress}
                                 >
-                                    {t.close}
+                                    {t('buildSettings.close')}
                                 </button>
                             )}
                         </div>

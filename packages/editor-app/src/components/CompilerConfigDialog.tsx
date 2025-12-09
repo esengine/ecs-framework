@@ -4,6 +4,7 @@ import { CompilerRegistry, ICompiler, CompilerContext, CompileResult, IFileSyste
 import { X, Play, Loader2 } from 'lucide-react';
 import { open as tauriOpen, save as tauriSave, message as tauriMessage, confirm as tauriConfirm } from '@tauri-apps/plugin-dialog';
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/CompilerConfigDialog.css';
 
 interface DirectoryEntry {
@@ -29,6 +30,7 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
     onClose,
     onCompileComplete
 }) => {
+    const { t } = useLocale();
     const [compiler, setCompiler] = useState<ICompiler | null>(null);
     const [options, setOptions] = useState<unknown>(null);
     const [isCompiling, setIsCompiling] = useState(false);
@@ -164,7 +166,7 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
         } catch (error) {
             setCompileResult({
                 success: false,
-                message: `编译失败: ${error}`,
+                message: t('compilerConfig.compileFailed', { error: String(error) }),
                 errors: [String(error)]
             });
         } finally {
@@ -180,7 +182,7 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
         <div className="compiler-dialog-overlay">
             <div className="compiler-dialog">
                 <div className="compiler-dialog-header">
-                    <h3>{compiler?.name || '编译器配置'}</h3>
+                    <h3>{compiler?.name || t('compilerConfig.title')}</h3>
                     <button className="close-button" onClick={onClose}>
                         <X size={18} />
                     </button>
@@ -191,7 +193,7 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
                         compiler.createConfigUI(handleOptionsChange, context)
                     ) : (
                         <div className="no-config">
-                            {compiler ? '该编译器没有配置界面' : '编译器未找到'}
+                            {compiler ? t('compilerConfig.noConfigUI') : t('compilerConfig.compilerNotFound')}
                         </div>
                     )}
                 </div>
@@ -201,7 +203,7 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
                         <div className="result-message">{compileResult.message}</div>
                         {compileResult.outputFiles && compileResult.outputFiles.length > 0 && (
                             <div className="output-files">
-                                已生成 {compileResult.outputFiles.length} 个文件
+                                {t('compilerConfig.generatedFiles', { count: compileResult.outputFiles.length })}
                             </div>
                         )}
                         {compileResult.errors && compileResult.errors.length > 0 && (
@@ -220,7 +222,7 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
                         onClick={onClose}
                         disabled={isCompiling}
                     >
-                        取消
+                        {t('compilerConfig.cancel')}
                     </button>
                     <button
                         className="compile-button"
@@ -230,12 +232,12 @@ export const CompilerConfigDialog: React.FC<CompilerConfigDialogProps> = ({
                         {isCompiling ? (
                             <>
                                 <Loader2 size={16} className="spinning" />
-                                编译中...
+                                {t('compilerConfig.compiling')}
                             </>
                         ) : (
                             <>
                                 <Play size={16} />
-                                编译
+                                {t('compilerConfig.compile')}
                             </>
                         )}
                     </button>

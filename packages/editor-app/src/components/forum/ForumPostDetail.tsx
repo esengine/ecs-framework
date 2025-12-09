@@ -8,6 +8,7 @@ import {
     Send, RefreshCw, CornerDownRight, ExternalLink, CheckCircle
 } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-shell';
+import { useLocale } from '../../hooks/useLocale';
 import { usePost, useReplies } from '../../hooks/useForum';
 import { getForumService } from '../../services/forum';
 import type { Reply } from '../../services/forum';
@@ -16,12 +17,12 @@ import './ForumPostDetail.css';
 
 interface ForumPostDetailProps {
     postNumber: number;
-    isEnglish: boolean;
     currentUserId: string;
     onBack: () => void;
 }
 
-export function ForumPostDetail({ postNumber, isEnglish, currentUserId, onBack }: ForumPostDetailProps) {
+export function ForumPostDetail({ postNumber, currentUserId, onBack }: ForumPostDetailProps) {
+    const { t } = useLocale();
     const { post, loading: postLoading, toggleUpvote, refetch: refetchPost } = usePost(postNumber);
     const { replies, loading: repliesLoading, createReply, refetch: refetchReplies } = useReplies(postNumber);
     const [replyContent, setReplyContent] = useState('');
@@ -71,7 +72,7 @@ export function ForumPostDetail({ postNumber, isEnglish, currentUserId, onBack }
                         {reply.isAnswer && (
                             <span className="forum-reply-answer-badge">
                                 <CheckCircle size={12} />
-                                {isEnglish ? 'Answer' : '已采纳'}
+                                {t('forum.answer')}
                             </span>
                         )}
                     </div>
@@ -99,7 +100,7 @@ export function ForumPostDetail({ postNumber, isEnglish, currentUserId, onBack }
                         onClick={() => setReplyingTo(replyingTo === reply.id ? null : reply.id)}
                     >
                         <CornerDownRight size={14} />
-                        <span>{isEnglish ? 'Reply' : '回复'}</span>
+                        <span>{t('forum.reply')}</span>
                     </button>
                 </div>
 
@@ -108,9 +109,7 @@ export function ForumPostDetail({ postNumber, isEnglish, currentUserId, onBack }
                         <textarea
                             value={replyContent}
                             onChange={(e) => setReplyContent(e.target.value)}
-                            placeholder={isEnglish
-                                ? `Reply to @${reply.author.login}...`
-                                : `回复 @${reply.author.login}...`}
+                            placeholder={t('forum.replyTo', { login: reply.author.login })}
                             rows={2}
                         />
                         <div className="forum-reply-form-actions">
@@ -119,7 +118,7 @@ export function ForumPostDetail({ postNumber, isEnglish, currentUserId, onBack }
                                 className="forum-btn"
                                 onClick={() => { setReplyingTo(null); setReplyContent(''); }}
                             >
-                                {isEnglish ? 'Cancel' : '取消'}
+                                {t('forum.cancel')}
                             </button>
                             <button
                                 type="submit"
@@ -127,7 +126,7 @@ export function ForumPostDetail({ postNumber, isEnglish, currentUserId, onBack }
                                 disabled={!replyContent.trim() || submitting}
                             >
                                 <Send size={14} />
-                                <span>{isEnglish ? 'Reply' : '回复'}</span>
+                                <span>{t('forum.reply')}</span>
                             </button>
                         </div>
                     </form>
@@ -144,7 +143,7 @@ export function ForumPostDetail({ postNumber, isEnglish, currentUserId, onBack }
             <div className="forum-post-detail">
                 <div className="forum-detail-loading">
                     <RefreshCw className="spin" size={24} />
-                    <span>{isEnglish ? 'Loading...' : '加载中...'}</span>
+                    <span>{t('forum.loading')}</span>
                 </div>
             </div>
         );
@@ -155,7 +154,7 @@ export function ForumPostDetail({ postNumber, isEnglish, currentUserId, onBack }
             {/* 返回按钮 | Back button */}
             <button className="forum-back-btn" onClick={onBack}>
                 <ArrowLeft size={18} />
-                <span>{isEnglish ? 'Back to list' : '返回列表'}</span>
+                <span>{t('forum.backToList')}</span>
             </button>
 
             {/* 帖子内容 | Post content */}
@@ -168,13 +167,13 @@ export function ForumPostDetail({ postNumber, isEnglish, currentUserId, onBack }
                         {post.answerChosenAt && (
                             <span className="forum-detail-answered">
                                 <CheckCircle size={14} />
-                                {isEnglish ? 'Answered' : '已解决'}
+                                {t('forum.answered')}
                             </span>
                         )}
                         <button
                             className="forum-detail-external"
                             onClick={() => openInGitHub(post.url)}
-                            title={isEnglish ? 'Open in GitHub' : '在 GitHub 中打开'}
+                            title={t('forum.openInGitHub')}
                         >
                             <ExternalLink size={14} />
                             <span>GitHub</span>
@@ -221,7 +220,7 @@ export function ForumPostDetail({ postNumber, isEnglish, currentUserId, onBack }
                 <h2 className="forum-replies-title">
                     <MessageCircle size={18} />
                     <span>
-                        {isEnglish ? 'Comments' : '评论'}
+                        {t('forum.comments')}
                         {post.comments.totalCount > 0 && ` (${post.comments.totalCount})`}
                     </span>
                 </h2>
@@ -232,7 +231,7 @@ export function ForumPostDetail({ postNumber, isEnglish, currentUserId, onBack }
                         <textarea
                             value={replyContent}
                             onChange={(e) => setReplyContent(e.target.value)}
-                            placeholder={isEnglish ? 'Write a comment... (Markdown supported)' : '写下你的评论...（支持 Markdown）'}
+                            placeholder={t('forum.writeComment')}
                             rows={3}
                         />
                         <div className="forum-reply-form-actions">
@@ -242,9 +241,7 @@ export function ForumPostDetail({ postNumber, isEnglish, currentUserId, onBack }
                                 disabled={!replyContent.trim() || submitting}
                             >
                                 <Send size={14} />
-                                <span>{submitting
-                                    ? (isEnglish ? 'Posting...' : '发送中...')
-                                    : (isEnglish ? 'Post Comment' : '发表评论')}</span>
+                                <span>{submitting ? t('forum.posting') : t('forum.postComment')}</span>
                             </button>
                         </div>
                     </form>
@@ -258,7 +255,7 @@ export function ForumPostDetail({ postNumber, isEnglish, currentUserId, onBack }
                         </div>
                     ) : replies.length === 0 ? (
                         <div className="forum-replies-empty">
-                            <p>{isEnglish ? 'No comments yet. Be the first to comment!' : '暂无评论，来发表第一条评论吧！'}</p>
+                            <p>{t('forum.noCommentsYet')}</p>
                         </div>
                     ) : (
                         replies.map(reply => renderReply(reply))

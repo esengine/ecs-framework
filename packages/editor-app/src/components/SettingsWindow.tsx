@@ -13,9 +13,10 @@ import {
 } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
 import { SettingsService } from '../services/SettingsService';
-import { SettingsRegistry, SettingCategory, SettingDescriptor, ProjectService, PluginManager, IPluginManager, ModuleManifest } from '@esengine/editor-core';
+import { SettingsRegistry, SettingCategory, SettingDescriptor, ProjectService, PluginManager, IPluginManager, ModuleManifest, isTranslationKey, getTranslationKey } from '@esengine/editor-core';
 import { PluginListSetting } from './PluginListSetting';
 import { ModuleListSetting } from './ModuleListSetting';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/SettingsWindow.css';
 
 interface SettingsWindowProps {
@@ -32,59 +33,87 @@ interface MainCategory {
 }
 
 export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }: SettingsWindowProps) {
+    const { t } = useLocale();
+
+    /**
+     * Resolve localizable text - if it starts with '$', treat as translation key
+     * 解析可本地化文本 - 如果以 '$' 开头，作为翻译键处理
+     */
+    const resolveText = (text: string | undefined): string => {
+        if (!text) return '';
+        if (isTranslationKey(text)) {
+            return t(getTranslationKey(text));
+        }
+        return text;
+    };
+
     const [categories, setCategories] = useState<SettingCategory[]>([]);
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId || null);
     const [values, setValues] = useState<Map<string, any>>(new Map());
     const [errors, setErrors] = useState<Map<string, string>>(new Map());
     const [searchTerm, setSearchTerm] = useState('');
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-    const [expandedMainCategories, setExpandedMainCategories] = useState<Set<string>>(new Set(['通用']));
+    const [expandedMainCategories, setExpandedMainCategories] = useState<Set<string>>(new Set(['general']));
 
     // 将分类组织成主分类和子分类
+    // Organize categories into main categories and sub-categories
     const mainCategories = useMemo((): MainCategory[] => {
         const categoryMap = new Map<string, SettingCategory[]>();
 
-        // 定义主分类映射
+        // 定义主分类映射（使用配置 ID 作为键）
+        // Main category mapping (using config IDs as keys)
         const mainCategoryMapping: Record<string, string> = {
-            'appearance': '通用',
-            'general': '通用',
-            'project': '通用',
-            'plugins': '通用',
-            'editor': '通用',
-            'physics': '全局',
-            'rendering': '全局',
-            'audio': '全局',
-            'world': '世界分区',
-            'local': '世界分区（本地）',
-            'performance': '性能'
+            'appearance': 'general',
+            'general': 'general',
+            'project': 'general',
+            'plugins': 'general',
+            'editor': 'general',
+            'physics': 'global',
+            'rendering': 'global',
+            'audio': 'global',
+            'world': 'worldPartition',
+            'local': 'worldPartitionLocal',
+            'performance': 'performance'
         };
 
         categories.forEach((cat) => {
-            const mainCatName = mainCategoryMapping[cat.id] || '其他';
-            if (!categoryMap.has(mainCatName)) {
-                categoryMap.set(mainCatName, []);
+            const mainCatId = mainCategoryMapping[cat.id] || 'other';
+            if (!categoryMap.has(mainCatId)) {
+                categoryMap.set(mainCatId, []);
             }
-            categoryMap.get(mainCatName)!.push(cat);
+            categoryMap.get(mainCatId)!.push(cat);
         });
 
-        // 定义固定的主分类顺序
+        // 定义固定的主分类顺序（使用配置 ID）
+        // Define fixed main category order (using config IDs)
         const orderedMainCategories = [
-            '通用',
-            '全局',
-            '世界分区',
-            '世界分区（本地）',
-            '性能',
-            '其他'
+            'general',
+            'global',
+            'worldPartition',
+            'worldPartitionLocal',
+            'performance',
+            'other'
         ];
 
+        // 主分类 ID 到翻译键的映射
+        // Main category ID to translation key mapping
+        const categoryTranslationKeys: Record<string, string> = {
+            'general': 'settingsWindow.mainCategories.general',
+            'global': 'settingsWindow.mainCategories.global',
+            'worldPartition': 'settingsWindow.mainCategories.worldPartition',
+            'worldPartitionLocal': 'settingsWindow.mainCategories.worldPartitionLocal',
+            'performance': 'settingsWindow.mainCategories.performance',
+            'other': 'settingsWindow.mainCategories.other'
+        };
+
         return orderedMainCategories
-            .filter((name) => categoryMap.has(name))
-            .map((name) => ({
-                id: name,
-                title: name,
-                subCategories: categoryMap.get(name)!
+            .filter((id) => categoryMap.has(id))
+            .map((id) => ({
+                id,
+                title: t(categoryTranslationKeys[id] || 'settingsWindow.mainCategories.other'),
+                subCategories: categoryMap.get(id)!
             }));
-    }, [categories]);
+    }, [categories, t]);
 
     // 获取显示的子分类标题
     const subCategoryTitle = useMemo(() => {
@@ -170,9 +199,9 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
 
         const newErrors = new Map(errors);
         if (!settingsRegistry.validateSetting(descriptor, value)) {
-            newErrors.set(key, descriptor.validator?.errorMessage || '无效值');
+            newErrors.set(key, descriptor.validator?.errorMessage || t('settingsWindow.invalidValue'));
             setErrors(newErrors);
-            return; // 验证失败，不保存
+            return; // 验证失败，不保存 | Validation failed, don't save
         } else {
             newErrors.delete(key);
         }
@@ -334,7 +363,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                             {setting.description && (
                                 <ChevronRight size={12} className="settings-row-expand" />
                             )}
-                            <span>{setting.label}</span>
+                            <span>{resolveText(setting.label)}</span>
                         </div>
                         <div className="settings-row-value">
                             <input
@@ -354,7 +383,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                             {setting.description && (
                                 <ChevronRight size={12} className="settings-row-expand" />
                             )}
-                            <span>{setting.label}</span>
+                            <span>{resolveText(setting.label)}</span>
                         </div>
                         <div className="settings-row-value">
                             <input
@@ -362,7 +391,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                                 className={`settings-number-input ${error ? 'error' : ''}`}
                                 value={value}
                                 onChange={(e) => handleValueChange(setting.key, parseInt(e.target.value) || 0, setting)}
-                                placeholder={setting.placeholder}
+                                placeholder={resolveText(setting.placeholder)}
                                 min={setting.min}
                                 max={setting.max}
                                 step={setting.step}
@@ -378,7 +407,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                             {setting.description && (
                                 <ChevronRight size={12} className="settings-row-expand" />
                             )}
-                            <span>{setting.label}</span>
+                            <span>{resolveText(setting.label)}</span>
                         </div>
                         <div className="settings-row-value">
                             <input
@@ -386,7 +415,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                                 className={`settings-text-input ${error ? 'error' : ''}`}
                                 value={value}
                                 onChange={(e) => handleValueChange(setting.key, e.target.value, setting)}
-                                placeholder={setting.placeholder}
+                                placeholder={resolveText(setting.placeholder)}
                             />
                         </div>
                     </div>
@@ -399,7 +428,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                             {setting.description && (
                                 <ChevronRight size={12} className="settings-row-expand" />
                             )}
-                            <span>{setting.label}</span>
+                            <span>{resolveText(setting.label)}</span>
                         </div>
                         <div className="settings-row-value">
                             <select
@@ -414,7 +443,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                             >
                                 {setting.options?.map((option) => (
                                     <option key={String(option.value)} value={String(option.value)}>
-                                        {option.label}
+                                        {resolveText(option.label)}
                                     </option>
                                 ))}
                             </select>
@@ -429,7 +458,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                             {setting.description && (
                                 <ChevronRight size={12} className="settings-row-expand" />
                             )}
-                            <span>{setting.label}</span>
+                            <span>{resolveText(setting.label)}</span>
                         </div>
                         <div className="settings-row-value">
                             <input
@@ -453,7 +482,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                             {setting.description && (
                                 <ChevronRight size={12} className="settings-row-expand" />
                             )}
-                            <span>{setting.label}</span>
+                            <span>{resolveText(setting.label)}</span>
                         </div>
                         <div className="settings-row-value">
                             <div className="settings-color-bar" style={{ backgroundColor: value }}>
@@ -473,7 +502,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                 if (!pluginManager) {
                     return (
                         <div className="settings-row">
-                            <p className="settings-error">PluginManager 不可用</p>
+                            <p className="settings-error">{t('settingsWindow.pluginManagerUnavailable')}</p>
                         </div>
                     );
                 }
@@ -495,7 +524,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                 }
                 return (
                     <div className="settings-row">
-                        <p className="settings-hint">碰撞矩阵编辑器未配置</p>
+                        <p className="settings-hint">{t('settingsWindow.collisionMatrixNotConfigured')}</p>
                     </div>
                 );
             }
@@ -539,14 +568,14 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                 <div className="settings-sidebar-new">
                     <div className="settings-sidebar-header">
                         <SettingsIcon size={16} />
-                        <span>编辑器偏好设置</span>
+                        <span>{t('settingsWindow.editorPreferences')}</span>
                         <button className="settings-sidebar-close" onClick={handleCancel}>
                             <X size={14} />
                         </button>
                     </div>
 
                     <div className="settings-sidebar-search">
-                        <span>所有设置</span>
+                        <span>{t('settingsWindow.allSettings')}</span>
                     </div>
 
                     <div className="settings-sidebar-categories">
@@ -572,7 +601,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                                                 className={`settings-sub-category ${selectedCategoryId === subCat.id ? 'active' : ''}`}
                                                 onClick={() => setSelectedCategoryId(subCat.id)}
                                             >
-                                                {subCat.title}
+                                                {resolveText(subCat.title)}
                                             </button>
                                         ))}
                                     </div>
@@ -590,20 +619,20 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                             <Search size={14} />
                             <input
                                 type="text"
-                                placeholder="搜索"
+                                placeholder={t('settingsWindow.search')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                         <div className="settings-header-actions">
-                            <button className="settings-icon-btn" title="设置">
+                            <button className="settings-icon-btn" title={t('settingsWindow.settingsBtn')}>
                                 <SettingsIcon size={14} />
                             </button>
                             <button className="settings-action-btn" onClick={handleExport}>
-                                导出......
+                                {t('settingsWindow.export')}
                             </button>
                             <button className="settings-action-btn" onClick={handleImport}>
-                                导入......
+                                {t('settingsWindow.import')}
                             </button>
                         </div>
                     </div>
@@ -617,20 +646,17 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                             <span className="settings-breadcrumb-sub">{subCategoryTitle}</span>
                         </div>
                         {selectedCategory?.description && (
-                            <p className="settings-category-desc">{selectedCategory.description}</p>
+                            <p className="settings-category-desc">{resolveText(selectedCategory.description)}</p>
                         )}
                         <div className="settings-category-actions">
                             <button className="settings-category-action-btn" onClick={handleResetToDefault}>
-                                设置为默认值
+                                {t('settingsWindow.resetToDefault')}
                             </button>
                             <button className="settings-category-action-btn" onClick={handleExport}>
-                                导出......
+                                {t('settingsWindow.export')}
                             </button>
                             <button className="settings-category-action-btn" onClick={handleImport}>
-                                导入......
-                            </button>
-                            <button className="settings-category-action-btn" onClick={handleResetToDefault}>
-                                重置为默认
+                                {t('settingsWindow.import')}
                             </button>
                         </div>
                     </div>
@@ -652,7 +678,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                                         ) : (
                                             <ChevronRight size={12} />
                                         )}
-                                        <span>{section.title}</span>
+                                        <span>{resolveText(section.title)}</span>
                                     </div>
 
                                     {isExpanded && (
@@ -671,7 +697,7 @@ export function SettingsWindow({ onClose, settingsRegistry, initialCategoryId }:
                         {!selectedCategory && (
                             <div className="settings-empty-new">
                                 <SettingsIcon size={48} />
-                                <p>请选择一个设置分类</p>
+                                <p>{t('settingsWindow.selectCategory')}</p>
                             </div>
                         )}
                     </div>

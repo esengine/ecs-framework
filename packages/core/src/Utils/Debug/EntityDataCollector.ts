@@ -8,18 +8,25 @@ import { HierarchySystem } from '../../ECS/Systems/HierarchySystem';
 
 /**
  * 实体数据收集器
+ * Entity data collector
+ *
+ * 收集实体的调试信息，通过公共接口访问数据。
+ * Collects entity debug information through public interfaces.
  */
 export class EntityDataCollector {
     /**
      * 收集实体数据
-     * @param scene 场景实例
+     * Collect entity data
+     *
+     * @param scene 场景实例 | Scene instance
      */
     public collectEntityData(scene?: IScene | null): IEntityDebugData {
         if (!scene) {
             return this.getEmptyEntityDebugData();
         }
 
-        const entityList = (scene as any).entities;
+        // 使用公共接口 | Use public interface
+        const entityList = scene.entities;
         if (!entityList) {
             return this.getEmptyEntityDebugData();
         }
@@ -56,7 +63,9 @@ export class EntityDataCollector {
 
     /**
      * 获取原始实体列表
-     * @param scene 场景实例
+     * Get raw entity list
+     *
+     * @param scene 场景实例 | Scene instance
      */
     public getRawEntityList(scene?: IScene | null): Array<{
         id: number;
@@ -74,7 +83,8 @@ export class EntityDataCollector {
     }> {
         if (!scene) return [];
 
-        const entityList = (scene as any).entities;
+        // 使用公共接口 | Use public interface
+        const entityList = scene.entities;
         if (!entityList?.buffer) return [];
 
         const hierarchySystem = scene.getSystem(HierarchySystem);
@@ -110,15 +120,21 @@ export class EntityDataCollector {
         try {
             if (!scene) return null;
 
-            const entityList = (scene as any).entities;
+            const entityList = scene.entities;
             if (!entityList?.buffer) return null;
 
             const entity = entityList.buffer.find((e: any) => e.id === entityId);
             if (!entity) return null;
 
+            // 使用 HierarchySystem 获取父实体
+            // Use HierarchySystem to get parent entity
+            const hierarchySystem = scene.getSystem(HierarchySystem);
+            const parent = hierarchySystem?.getParent(entity);
+            const parentName = parent?.name ?? null;
+
             const baseDebugInfo = entity.getDebugInfo
                 ? entity.getDebugInfo()
-                : this.buildFallbackEntityInfo(entity, scene);
+                : this.buildFallbackEntityInfo(entity, scene, hierarchySystem);
 
             const componentDetails = this.extractComponentDetails(entity.components);
 
@@ -129,7 +145,7 @@ export class EntityDataCollector {
                 scene: sceneInfo.name,
                 sceneName: sceneInfo.name,
                 sceneType: sceneInfo.type,
-                parentName: entity.parent?.name || null,
+                parentName,
                 components: componentDetails || [],
                 componentCount: entity.components?.length || 0,
                 componentTypes: entity.components?.map((comp: any) => getComponentInstanceTypeName(comp)) || []
@@ -180,7 +196,7 @@ export class EntityDataCollector {
             return this.getEmptyEntityDebugData();
         }
 
-        const entityList = (scene as any).entities;
+        const entityList = scene.entities;
         if (!entityList) {
             return this.getEmptyEntityDebugData();
         }
@@ -769,13 +785,14 @@ export class EntityDataCollector {
         try {
             if (!scene) return {};
 
-            const entityList = (scene as any).entities;
+            const entityList = scene.entities;
             if (!entityList?.buffer) return {};
 
             const entity = entityList.buffer.find((e: any) => e.id === entityId);
             if (!entity || componentIndex >= entity.components.length) return {};
 
             const component = entity.components[componentIndex];
+            if (!component) return {};
             const properties: Record<string, any> = {};
 
             const propertyKeys = Object.keys(component);
@@ -970,7 +987,7 @@ export class EntityDataCollector {
         try {
             if (!scene) return null;
 
-            const entityList = (scene as any).entities;
+            const entityList = scene.entities;
             if (!entityList?.buffer) return null;
 
             // 找到对应的实体

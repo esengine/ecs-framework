@@ -22,7 +22,7 @@ export class ComponentDataCollector {
             };
         }
 
-        const entityList = (scene as any).entities;
+        const entityList = scene.entities;
         if (!entityList?.buffer) {
             return {
                 componentTypes: 0,
@@ -98,7 +98,7 @@ export class ComponentDataCollector {
 
         if (!scene) return 64;
 
-        const entityList = (scene as any).entities;
+        const entityList = scene.entities;
         if (!entityList?.buffer) return 64;
 
         let calculatedSize = 64;
@@ -174,7 +174,7 @@ export class ComponentDataCollector {
     public calculateDetailedComponentMemory(typeName: string, scene?: IScene | null): number {
         if (!scene) return this.getEstimatedComponentSize(typeName, scene);
 
-        const entityList = (scene as any).entities;
+        const entityList = scene.entities;
         if (!entityList?.buffer) return this.getEstimatedComponentSize(typeName, scene);
 
         try {

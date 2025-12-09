@@ -4,9 +4,8 @@ import { Globe, ChevronDown, Download, X, Loader2, Trash2, CheckCircle, AlertCir
 import { checkForUpdatesOnStartup, installUpdate, type UpdateCheckResult } from '../utils/updater';
 import { StartupLogo } from './StartupLogo';
 import { TauriAPI, type EnvironmentCheckResult } from '../api/tauri';
+import { useLocale, type Locale } from '../hooks/useLocale';
 import '../styles/StartupPage.css';
-
-type Locale = 'en' | 'zh';
 
 interface StartupPageProps {
   onOpenProject: () => void;
@@ -16,7 +15,6 @@ interface StartupPageProps {
   onDeleteProject?: (projectPath: string) => Promise<void>;
   onLocaleChange?: (locale: Locale) => void;
   recentProjects?: string[];
-  locale: string;
 }
 
 const LANGUAGES = [
@@ -24,7 +22,8 @@ const LANGUAGES = [
     { code: 'zh', name: '中文' }
 ];
 
-export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProject, onRemoveRecentProject, onDeleteProject, onLocaleChange, recentProjects = [], locale }: StartupPageProps) {
+export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProject, onRemoveRecentProject, onDeleteProject, onLocaleChange, recentProjects = [] }: StartupPageProps) {
+    const { t, locale } = useLocale();
     const [showLogo, setShowLogo] = useState(true);
     const [hoveredProject, setHoveredProject] = useState<string | null>(null);
     const [appVersion, setAppVersion] = useState<string>('');
@@ -80,53 +79,6 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
         });
     }, []);
 
-    const translations = {
-        en: {
-            title: 'ESEngine Editor',
-            subtitle: 'Professional Game Development Tool',
-            openProject: 'Open Project',
-            createProject: 'Create Project',
-            recentProjects: 'Recent Projects',
-            noRecentProjects: 'No recent projects',
-            updateAvailable: 'New version available',
-            updateNow: 'Update Now',
-            installing: 'Installing...',
-            later: 'Later',
-            removeFromList: 'Remove from List',
-            deleteProject: 'Delete Project',
-            deleteConfirmTitle: 'Delete Project',
-            deleteConfirmMessage: 'Are you sure you want to permanently delete this project? This action cannot be undone.',
-            cancel: 'Cancel',
-            delete: 'Delete',
-            envReady: 'Environment Ready',
-            envNotReady: 'Environment Issue',
-            esbuildReady: 'esbuild ready',
-            esbuildMissing: 'esbuild not found'
-        },
-        zh: {
-            title: 'ESEngine 编辑器',
-            subtitle: '专业游戏开发工具',
-            openProject: '打开项目',
-            createProject: '创建新项目',
-            recentProjects: '最近的项目',
-            noRecentProjects: '没有最近的项目',
-            updateAvailable: '发现新版本',
-            updateNow: '立即更新',
-            installing: '正在安装...',
-            later: '稍后',
-            removeFromList: '从列表中移除',
-            deleteProject: '删除项目',
-            deleteConfirmTitle: '删除项目',
-            deleteConfirmMessage: '确定要永久删除此项目吗？此操作无法撤销。',
-            cancel: '取消',
-            delete: '删除',
-            envReady: '环境就绪',
-            envNotReady: '环境问题',
-            esbuildReady: 'esbuild 就绪',
-            esbuildMissing: '未找到 esbuild'
-        }
-    };
-
     const handleInstallUpdate = async () => {
         setIsInstalling(true);
         const success = await installUpdate();
@@ -136,8 +88,7 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
         // 如果成功，应用会重启，不需要处理
     };
 
-    const t = translations[locale as keyof typeof translations] || translations.en;
-    const versionText = locale === 'zh' ? `版本 ${appVersion}` : `Version ${appVersion}`;
+    const versionText = `${t('startup.version')} ${appVersion}`;
 
     const handleLogoComplete = () => {
         setShowLogo(false);
@@ -147,8 +98,8 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
         <div className="startup-page">
             {showLogo && <StartupLogo onAnimationComplete={handleLogoComplete} />}
             <div className="startup-header">
-                <h1 className="startup-title">{t.title}</h1>
-                <p className="startup-subtitle">{t.subtitle}</p>
+                <h1 className="startup-title">{t('startup.title')}</h1>
+                <p className="startup-subtitle">{t('startup.subtitle')}</p>
             </div>
 
             <div className="startup-content">
@@ -157,21 +108,21 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                         <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path d="M3 7V17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17V9C21 7.89543 20.1046 7 19 7H13L11 5H5C3.89543 5 3 5.89543 3 7Z" strokeWidth="2"/>
                         </svg>
-                        <span>{t.openProject}</span>
+                        <span>{t('startup.openProject')}</span>
                     </button>
 
                     <button className="startup-action-btn" onClick={onCreateProject}>
                         <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path d="M12 5V19M5 12H19" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
-                        <span>{t.createProject}</span>
+                        <span>{t('startup.createProject')}</span>
                     </button>
                 </div>
 
                 <div className="startup-recent">
-                    <h2 className="recent-title">{t.recentProjects}</h2>
+                    <h2 className="recent-title">{t('startup.recentProjects')}</h2>
                     {recentProjects.length === 0 ? (
-                        <p className="recent-empty">{t.noRecentProjects}</p>
+                        <p className="recent-empty">{t('startup.noRecentProjects')}</p>
                     ) : (
                         <ul className="recent-list">
                             {recentProjects.map((project, index) => (
@@ -201,7 +152,7 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                                                 e.stopPropagation();
                                                 onRemoveRecentProject(project);
                                             }}
-                                            title={t.removeFromList}
+                                            title={t('startup.removeFromList')}
                                         >
                                             <Trash2 size={14} />
                                         </button>
@@ -219,7 +170,7 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                     <div className="update-banner-content">
                         <Download size={16} />
                         <span className="update-banner-text">
-                            {t.updateAvailable}: v{updateInfo.version}
+                            {t('startup.updateAvailable')}: v{updateInfo.version}
                         </span>
                         <button
                             className="update-banner-btn primary"
@@ -229,17 +180,17 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                             {isInstalling ? (
                                 <>
                                     <Loader2 size={14} className="animate-spin" />
-                                    {t.installing}
+                                    {t('startup.installing')}
                                 </>
                             ) : (
-                                t.updateNow
+                                t('startup.updateNow')
                             )}
                         </button>
                         <button
                             className="update-banner-close"
                             onClick={() => setShowUpdateBanner(false)}
                             disabled={isInstalling}
-                            title={t.later}
+                            title={t('startup.later')}
                         >
                             <X size={14} />
                         </button>
@@ -255,7 +206,7 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                     <div
                         className={`startup-env-status ${envCheck.ready ? 'ready' : 'warning'}`}
                         onClick={() => setShowEnvStatus(!showEnvStatus)}
-                        title={envCheck.ready ? t.envReady : t.envNotReady}
+                        title={envCheck.ready ? t('startup.envReady') : t('startup.envNotReady')}
                     >
                         {envCheck.ready ? (
                             <CheckCircle size={14} />
@@ -265,7 +216,7 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                         {showEnvStatus && (
                             <div className="startup-env-tooltip">
                                 <div className="env-tooltip-title">
-                                    {envCheck.ready ? t.envReady : t.envNotReady}
+                                    {envCheck.ready ? t('startup.envReady') : t('startup.envNotReady')}
                                 </div>
                                 <div className={`env-tooltip-item ${envCheck.esbuild.available ? 'ok' : 'error'}`}>
                                     {envCheck.esbuild.available ? (
@@ -277,7 +228,7 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                                     ) : (
                                         <>
                                             <AlertCircle size={12} />
-                                            <span>{t.esbuildMissing}</span>
+                                            <span>{t('startup.esbuildMissing')}</span>
                                         </>
                                     )}
                                 </div>
@@ -335,7 +286,7 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                             }}
                         >
                             <X size={14} />
-                            <span>{t.removeFromList}</span>
+                            <span>{t('startup.removeFromList')}</span>
                         </button>
                         {onDeleteProject && (
                             <button
@@ -346,7 +297,7 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                                 }}
                             >
                                 <Trash2 size={14} />
-                                <span>{t.deleteProject}</span>
+                                <span>{t('startup.deleteProject')}</span>
                             </button>
                         )}
                     </div>
@@ -359,10 +310,10 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                     <div className="startup-dialog">
                         <div className="startup-dialog-header">
                             <Trash2 size={20} className="dialog-icon-danger" />
-                            <h3>{t.deleteConfirmTitle}</h3>
+                            <h3>{t('startup.deleteConfirmTitle')}</h3>
                         </div>
                         <div className="startup-dialog-body">
-                            <p>{t.deleteConfirmMessage}</p>
+                            <p>{t('startup.deleteConfirmMessage')}</p>
                             <p className="startup-dialog-path">{deleteConfirm}</p>
                         </div>
                         <div className="startup-dialog-footer">
@@ -370,7 +321,7 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                                 className="startup-dialog-btn"
                                 onClick={() => setDeleteConfirm(null)}
                             >
-                                {t.cancel}
+                                {t('startup.cancel')}
                             </button>
                             <button
                                 className="startup-dialog-btn danger"
@@ -386,7 +337,7 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                                     setDeleteConfirm(null);
                                 }}
                             >
-                                {t.delete}
+                                {t('startup.delete')}
                             </button>
                         </div>
                     </div>

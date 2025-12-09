@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import '../styles/Viewport.css';
 import { useEngine } from '../hooks/useEngine';
+import { useLocale } from '../hooks/useLocale';
 import { EngineService } from '../services/EngineService';
 import { Core, Entity, SceneSerializer } from '@esengine/ecs-framework';
 import { MessageHub, ProjectService, AssetRegistryService } from '@esengine/editor-core';
@@ -207,6 +208,7 @@ interface ViewportProps {
 }
 
 export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
+    const { t } = useLocale();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [playState, setPlayState] = useState<PlayState>('stopped');
@@ -704,9 +706,7 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             // Check if there's a camera entity
             const cameraEntity = findPlayerCamera();
             if (!cameraEntity) {
-                const warningMessage = locale === 'zh'
-                    ? '缺少相机: 场景中没有相机实体，请添加一个带有Camera组件的实体'
-                    : 'Missing Camera: No camera entity in scene. Please add an entity with Camera component.';
+                const warningMessage = t('viewport.errors.missingCamera');
                 if (messageHub) {
                     messageHub.publish('notification:show', {
                         message: warningMessage,
@@ -781,8 +781,8 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             const scene = engineService.getScene();
             if (!scene) {
                 messageHub?.publish('notification:error', {
-                    title: locale === 'zh' ? '错误' : 'Error',
-                    message: locale === 'zh' ? '没有可运行的场景' : 'No scene to run'
+                    title: t('common.error'),
+                    message: t('viewport.errors.noScene')
                 });
                 return;
             }
@@ -1008,13 +1008,13 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             await open(serverUrl);
 
             messageHub?.publish('notification:success', {
-                title: locale === 'zh' ? '浏览器运行' : 'Run in Browser',
-                message: locale === 'zh' ? `已在浏览器中打开: ${serverUrl}` : `Opened in browser: ${serverUrl}`
+                title: t('viewport.run.inBrowser'),
+                message: t('viewport.run.openedInBrowser', { url: serverUrl })
             });
         } catch (error) {
             console.error('Failed to run in browser:', error);
             messageHub?.publish('notification:error', {
-                title: locale === 'zh' ? '运行失败' : 'Run Failed',
+                title: t('viewport.run.failed'),
                 message: String(error)
             });
         }
@@ -1026,8 +1026,8 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         if (!Core.scene) {
             if (messageHub) {
                 messageHub.publish('notification:warning', {
-                    title: locale === 'zh' ? '无场景' : 'No Scene',
-                    message: locale === 'zh' ? '请先创建场景' : 'Please create a scene first'
+                    title: t('viewport.notifications.noScene'),
+                    message: t('viewport.errors.noSceneFirst')
                 });
             }
             return;
@@ -1140,15 +1140,15 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
 
             if (messageHub) {
                 messageHub.publish('notification:success', {
-                    title: locale === 'zh' ? '服务器已启动' : 'Server Started',
-                    message: locale === 'zh' ? `预览地址: ${previewUrl}` : `Preview URL: ${previewUrl}`
+                    title: t('viewport.run.serverStarted'),
+                    message: t('viewport.run.previewUrl', { url: previewUrl })
                 });
             }
         } catch (error) {
             console.error('Failed to run on device:', error);
             if (messageHub) {
                 messageHub.publish('notification:error', {
-                    title: locale === 'zh' ? '启动失败' : 'Failed to Start',
+                    title: t('viewport.run.startFailed'),
                     message: error instanceof Error ? error.message : String(error)
                 });
             }
@@ -1281,28 +1281,28 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                         <button
                             className={`viewport-btn ${transformMode === 'select' ? 'active' : ''}`}
                             onClick={() => setTransformMode('select')}
-                            title={locale === 'zh' ? '选择 (Q)' : 'Select (Q)'}
+                            title={t('viewport.tools.select')}
                         >
                             <MousePointer2 size={14} />
                         </button>
                         <button
                             className={`viewport-btn ${transformMode === 'move' ? 'active' : ''}`}
                             onClick={() => setTransformMode('move')}
-                            title={locale === 'zh' ? '移动 (W)' : 'Move (W)'}
+                            title={t('viewport.tools.move')}
                         >
                             <Move size={14} />
                         </button>
                         <button
                             className={`viewport-btn ${transformMode === 'rotate' ? 'active' : ''}`}
                             onClick={() => setTransformMode('rotate')}
-                            title={locale === 'zh' ? '旋转 (E)' : 'Rotate (E)'}
+                            title={t('viewport.tools.rotate')}
                         >
                             <RotateCw size={14} />
                         </button>
                         <button
                             className={`viewport-btn ${transformMode === 'scale' ? 'active' : ''}`}
                             onClick={() => setTransformMode('scale')}
-                            title={locale === 'zh' ? '缩放 (R)' : 'Scale (R)'}
+                            title={t('viewport.tools.scale')}
                         >
                             <Scaling size={14} />
                         </button>
@@ -1314,7 +1314,7 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                     <button
                         className={`viewport-btn ${snapEnabled ? 'active' : ''}`}
                         onClick={() => setSnapEnabled(!snapEnabled)}
-                        title={locale === 'zh' ? '吸附开关' : 'Toggle Snap'}
+                        title={t('viewport.snap.toggle')}
                     >
                         <Magnet size={14} />
                     </button>
@@ -1324,7 +1324,7 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                         <button
                             className="viewport-snap-btn"
                             onClick={() => { closeAllSnapMenus(); setShowGridSnapMenu(!showGridSnapMenu); }}
-                            title={locale === 'zh' ? '网格吸附' : 'Grid Snap'}
+                            title={t('viewport.snap.grid')}
                         >
                             <Grid3x3 size={12} />
                             <span>{gridSnapValue}</span>
@@ -1350,7 +1350,7 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                         <button
                             className="viewport-snap-btn"
                             onClick={() => { closeAllSnapMenus(); setShowRotationSnapMenu(!showRotationSnapMenu); }}
-                            title={locale === 'zh' ? '旋转吸附' : 'Rotation Snap'}
+                            title={t('viewport.snap.rotation')}
                         >
                             <RotateCw size={12} />
                             <span>{rotationSnapValue}°</span>
@@ -1376,7 +1376,7 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                         <button
                             className="viewport-snap-btn"
                             onClick={() => { closeAllSnapMenus(); setShowScaleSnapMenu(!showScaleSnapMenu); }}
-                            title={locale === 'zh' ? '缩放吸附' : 'Scale Snap'}
+                            title={t('viewport.snap.scale')}
                         >
                             <Scaling size={12} />
                             <span>{scaleSnapValue}</span>
@@ -1403,14 +1403,14 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                     <button
                         className={`viewport-btn ${showGrid ? 'active' : ''}`}
                         onClick={() => setShowGrid(!showGrid)}
-                        title={locale === 'zh' ? '显示网格' : 'Show Grid'}
+                        title={t('viewport.view.showGrid')}
                     >
                         <Grid3x3 size={14} />
                     </button>
                     <button
                         className={`viewport-btn ${showGizmos ? 'active' : ''}`}
                         onClick={() => setShowGizmos(!showGizmos)}
-                        title={locale === 'zh' ? '显示辅助线' : 'Show Gizmos'}
+                        title={t('viewport.view.showGizmos')}
                     >
                         {showGizmos ? <Eye size={14} /> : <EyeOff size={14} />}
                     </button>
@@ -1429,7 +1429,7 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                     <button
                         className={`viewport-btn ${showStats ? 'active' : ''}`}
                         onClick={() => setShowStats(!showStats)}
-                        title={locale === 'zh' ? '统计信息' : 'Stats'}
+                        title={t('viewport.view.stats')}
                     >
                         <Activity size={14} />
                     </button>
@@ -1438,7 +1438,7 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                     <button
                         className="viewport-btn"
                         onClick={handleReset}
-                        title={locale === 'zh' ? '重置视图' : 'Reset View'}
+                        title={t('viewport.view.resetView')}
                     >
                         <RotateCcw size={14} />
                     </button>
@@ -1447,7 +1447,7 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                     <button
                         className="viewport-btn"
                         onClick={handleFullscreen}
-                        title={locale === 'zh' ? '全屏' : 'Fullscreen'}
+                        title={t('viewport.view.fullscreen')}
                     >
                         <Maximize2 size={14} />
                     </button>
@@ -1459,7 +1459,7 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                         <button
                             className="viewport-snap-btn"
                             onClick={() => { closeAllSnapMenus(); setShowRunMenu(!showRunMenu); }}
-                            title={locale === 'zh' ? '运行选项' : 'Run Options'}
+                            title={t('viewport.run.options')}
                         >
                             <Globe size={14} />
                             <ChevronDown size={10} />
@@ -1468,11 +1468,11 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                             <div className="viewport-snap-menu viewport-snap-menu-right">
                                 <button onClick={handleRunInBrowser}>
                                     <Globe size={14} />
-                                    {locale === 'zh' ? '浏览器运行' : 'Run in Browser'}
+                                    {t('viewport.run.inBrowser')}
                                 </button>
                                 <button onClick={handleRunOnDevice}>
                                     <QrCode size={14} />
-                                    {locale === 'zh' ? '真机运行' : 'Run on Device'}
+                                    {t('viewport.run.onDevice')}
                                 </button>
                             </div>
                         )}

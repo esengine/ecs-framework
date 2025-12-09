@@ -1,6 +1,5 @@
 import {
     singleton,
-    type IService,
     createLogger,
     MessageHub,
     IMessageHub,
@@ -9,11 +8,12 @@ import { useBehaviorTreeDataStore } from '../application/state/BehaviorTreeDataS
 import type { BehaviorTree } from '../domain/models/BehaviorTree';
 import { FileSystemService } from './FileSystemService';
 import { PluginContext } from '../PluginContext';
+import type { IBehaviorTreeService } from '../tokens';
 
 const logger = createLogger('BehaviorTreeService');
 
 @singleton()
-export class BehaviorTreeService implements IService {
+export class BehaviorTreeService implements IBehaviorTreeService {
     async createNew(): Promise<void> {
         useBehaviorTreeDataStore.getState().reset();
     }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, File, FolderTree, FolderOpen } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/ExportRuntimeDialog.css';
 
 interface ExportRuntimeDialogProps {
@@ -33,6 +34,7 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
     currentFileName,
     projectPath
 }) => {
+    const { t } = useLocale();
     const [selectedMode, setSelectedMode] = useState<'single' | 'workspace'>('workspace');
     const [assetOutputPath, setAssetOutputPath] = useState('');
     const [typeOutputPath, setTypeOutputPath] = useState('');
@@ -116,7 +118,7 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
             const selected = await open({
                 directory: true,
                 multiple: false,
-                title: '选择资产输出目录',
+                title: t('exportRuntime.selectAssetDir'),
                 defaultPath: assetOutputPath || projectPath
             });
             if (selected) {
@@ -134,7 +136,7 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
             const selected = await open({
                 directory: true,
                 multiple: false,
-                title: '选择类型定义输出目录',
+                title: t('exportRuntime.selectTypeDir'),
                 defaultPath: typeOutputPath || projectPath
             });
             if (selected) {
@@ -149,22 +151,22 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
 
     const handleExport = async () => {
         if (!assetOutputPath) {
-            setExportMessage('错误：请选择资产输出路径');
+            setExportMessage(t('exportRuntime.errorSelectAssetPath'));
             return;
         }
 
         if (!typeOutputPath) {
-            setExportMessage('错误：请选择类型定义输出路径');
+            setExportMessage(t('exportRuntime.errorSelectTypePath'));
             return;
         }
 
         if (selectedMode === 'workspace' && selectedFiles.size === 0) {
-            setExportMessage('错误：请至少选择一个文件');
+            setExportMessage(t('exportRuntime.errorSelectFile'));
             return;
         }
 
         if (selectedMode === 'single' && !currentFileName) {
-            setExportMessage('错误：没有可导出的当前文件');
+            setExportMessage(t('exportRuntime.errorNoCurrentFile'));
             return;
         }
 
@@ -174,7 +176,7 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
 
         setIsExporting(true);
         setExportProgress(0);
-        setExportMessage('正在导出...');
+        setExportMessage(t('exportRuntime.exporting'));
 
         try {
             await onExport({
@@ -186,9 +188,9 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
             });
 
             setExportProgress(100);
-            setExportMessage('导出成功！');
+            setExportMessage(t('exportRuntime.exportSuccess'));
         } catch (error) {
-            setExportMessage(`导出失败：${error}`);
+            setExportMessage(t('exportRuntime.exportFailed', { error: String(error) }));
         } finally {
             setIsExporting(false);
         }
@@ -198,7 +200,7 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
         <div className="export-dialog-overlay">
             <div className="export-dialog" style={{ maxWidth: '700px', width: '90%' }}>
                 <div className="export-dialog-header">
-                    <h3>导出运行时资产</h3>
+                    <h3>{t('exportRuntime.title')}</h3>
                     <button onClick={onClose} className="export-dialog-close">
                         <X size={20} />
                     </button>
@@ -213,26 +215,26 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
                             disabled={!hasProject}
                         >
                             <FolderTree size={16} />
-                            工作区导出
+                            {t('exportRuntime.workspaceExport')}
                         </button>
                         <button
                             className={`export-mode-tab ${selectedMode === 'single' ? 'active' : ''}`}
                             onClick={() => setSelectedMode('single')}
                         >
                             <File size={16} />
-                            当前文件
+                            {t('exportRuntime.currentFile')}
                         </button>
                     </div>
 
                     {/* 资产输出路径 */}
                     <div className="export-section">
-                        <h4>资产输出路径</h4>
+                        <h4>{t('exportRuntime.assetOutputPath')}</h4>
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <input
                                 type="text"
                                 value={assetOutputPath}
                                 onChange={(e) => setAssetOutputPath(e.target.value)}
-                                placeholder="选择资产输出目录（.btree.bin / .btree.json）..."
+                                placeholder={t('exportRuntime.selectAssetDirPlaceholder')}
                                 style={{
                                     flex: 1,
                                     padding: '8px 12px',
@@ -259,31 +261,26 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
                                 }}
                             >
                                 <FolderOpen size={14} />
-                                浏览
+                                {t('exportRuntime.browse')}
                             </button>
                         </div>
                     </div>
 
                     {/* TypeScript 类型定义输出路径 */}
                     <div className="export-section">
-                        <h4>TypeScript 类型定义输出路径</h4>
-                        <div style={{ marginBottom: '12px', fontSize: '11px', color: '#999', lineHeight: '1.5' }}>
-                            {selectedMode === 'workspace' ? (
-                                <>
-                                    将导出以下类型定义：<br />
-                                    • 每个行为树的黑板变量类型（.d.ts）<br />
-                                    • 全局黑板变量类型（GlobalBlackboard.ts）
-                                </>
-                            ) : (
-                                '将导出当前行为树的黑板变量类型（.d.ts）'
-                            )}
+                        <h4>{t('exportRuntime.typeOutputPath')}</h4>
+                        <div style={{ marginBottom: '12px', fontSize: '11px', color: '#999', lineHeight: '1.5', whiteSpace: 'pre-line' }}>
+                            {selectedMode === 'workspace'
+                                ? t('exportRuntime.typeOutputHintWorkspace')
+                                : t('exportRuntime.typeOutputHintSingle')
+                            }
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <input
                                 type="text"
                                 value={typeOutputPath}
                                 onChange={(e) => setTypeOutputPath(e.target.value)}
-                                placeholder="选择类型定义输出目录..."
+                                placeholder={t('exportRuntime.selectTypeDirPlaceholder')}
                                 style={{
                                     flex: 1,
                                     padding: '8px 12px',
@@ -310,7 +307,7 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
                                 }}
                             >
                                 <FolderOpen size={14} />
-                                浏览
+                                {t('exportRuntime.browse')}
                             </button>
                         </div>
                     </div>
@@ -320,7 +317,7 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
                         <div className="export-section">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                 <h4 style={{ margin: 0, fontSize: '13px', color: '#ccc' }}>
-                                    选择要导出的文件 ({selectedFiles.size}/{availableFiles.length})
+                                    {t('exportRuntime.selectFilesToExport')} ({selectedFiles.size}/{availableFiles.length})
                                 </h4>
                                 <button
                                     onClick={handleSelectAll}
@@ -334,7 +331,7 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
                                         fontSize: '12px'
                                     }}
                                 >
-                                    {selectAll ? '取消全选' : '全选'}
+                                    {selectAll ? t('exportRuntime.deselectAll') : t('exportRuntime.selectAll')}
                                 </button>
                             </div>
                             <div className="export-file-list">
@@ -359,8 +356,8 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
                                             onChange={(e) => handleFileFormatChange(file, e.target.value as 'json' | 'binary')}
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <option value="binary">二进制</option>
-                                            <option value="json">JSON</option>
+                                            <option value="binary">{t('exportRuntime.binary')}</option>
+                                            <option value="json">{t('exportRuntime.json')}</option>
                                         </select>
                                     </div>
                                 ))}
@@ -371,7 +368,7 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
                     {/* 单文件模式 */}
                     {selectedMode === 'single' && (
                         <div className="export-section">
-                            <h4>当前文件</h4>
+                            <h4>{t('exportRuntime.currentFile')}</h4>
                             {currentFileName ? (
                                 <div className="export-file-list">
                                     <div className="export-file-item selected">
@@ -384,8 +381,8 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
                                             value={fileFormats.get(currentFileName) || 'binary'}
                                             onChange={(e) => handleFileFormatChange(currentFileName, e.target.value as 'json' | 'binary')}
                                         >
-                                            <option value="binary">二进制</option>
-                                            <option value="json">JSON</option>
+                                            <option value="binary">{t('exportRuntime.binary')}</option>
+                                            <option value="json">{t('exportRuntime.json')}</option>
                                         </select>
                                     </div>
                                 </div>
@@ -400,9 +397,9 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
                                     border: '1px solid #3a3a3a'
                                 }}>
                                     <File size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-                                    <div>没有打开的行为树文件</div>
+                                    <div>{t('exportRuntime.noOpenFile')}</div>
                                     <div style={{ fontSize: '11px', marginTop: '8px' }}>
-                                        请先在编辑器中打开一个行为树文件
+                                        {t('exportRuntime.openFileHint')}
                                     </div>
                                 </div>
                             )}
@@ -415,7 +412,7 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
                         <div style={{
                             flex: 1,
                             fontSize: '12px',
-                            color: exportMessage.startsWith('错误') ? '#f48771' : exportMessage.includes('成功') ? '#89d185' : '#ccc',
+                            color: exportMessage.includes('Error') || exportMessage.includes('错误') ? '#f48771' : exportMessage.includes('success') || exportMessage.includes('成功') ? '#89d185' : '#ccc',
                             paddingLeft: '8px'
                         }}>
                             {exportMessage}
@@ -439,7 +436,7 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
                         </div>
                     )}
                     <button onClick={onClose} className="export-dialog-btn export-dialog-btn-cancel">
-                        关闭
+                        {t('exportRuntime.close')}
                     </button>
                     <button
                         onClick={handleExport}
@@ -447,7 +444,7 @@ export const ExportRuntimeDialog: React.FC<ExportRuntimeDialogProps> = ({
                         disabled={isExporting}
                         style={{ opacity: isExporting ? 0.5 : 1 }}
                     >
-                        {isExporting ? '导出中...' : '导出'}
+                        {isExporting ? t('exportRuntime.exporting') : t('exportRuntime.export')}
                     </button>
                 </div>
             </div>

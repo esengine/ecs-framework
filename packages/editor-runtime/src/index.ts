@@ -329,6 +329,18 @@ export type {
 } from '@esengine/ui';
 
 // =============================================================================
+// Plugin i18n Infrastructure
+// =============================================================================
+export {
+    createPluginLocale,
+    createPluginTranslator,
+    getCurrentLocale,
+    type Translations as PluginTranslations,
+    type PluginTranslationsBundle,
+    type PluginLocaleHook
+} from './i18n';
+
+// =============================================================================
 // SDK Metadata
 // =============================================================================
 export const SDK_VERSION = '1.0.0';

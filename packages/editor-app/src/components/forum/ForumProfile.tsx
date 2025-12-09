@@ -2,9 +2,9 @@
  * 用户资料组件 - GitHub
  * User profile component - GitHub
  */
-import { useTranslation } from 'react-i18next';
 import { Github, LogOut, ExternalLink } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-shell';
+import { useLocale } from '../../hooks/useLocale';
 import { useForumAuth } from '../../hooks/useForum';
 import './ForumProfile.css';
 
@@ -13,10 +13,9 @@ interface ForumProfileProps {
 }
 
 export function ForumProfile({ onClose }: ForumProfileProps) {
-    const { i18n } = useTranslation();
+    const { t } = useLocale();
     const { authState, signOut } = useForumAuth();
 
-    const isEnglish = i18n.language === 'en';
     const user = authState.status === 'authenticated' ? authState.user : null;
 
     const handleSignOut = async () => {
@@ -47,7 +46,7 @@ export function ForumProfile({ onClose }: ForumProfileProps) {
                         onClick={openGitHubProfile}
                     >
                         <Github size={12} />
-                        <span>{isEnglish ? 'View GitHub Profile' : '查看 GitHub 主页'}</span>
+                        <span>{t('forum.viewGitHubProfile')}</span>
                         <ExternalLink size={10} />
                     </button>
                 </div>
@@ -58,7 +57,7 @@ export function ForumProfile({ onClose }: ForumProfileProps) {
             <div className="forum-profile-actions">
                 <button className="forum-profile-btn logout" onClick={handleSignOut}>
                     <LogOut size={14} />
-                    <span>{isEnglish ? 'Sign Out' : '退出登录'}</span>
+                    <span>{t('forum.signOut')}</span>
                 </button>
             </div>
         </div>

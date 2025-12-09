@@ -3,6 +3,7 @@ import { FolderOpen, FileText, Terminal, ChevronDown, ChevronUp, Activity, Wifi,
 import type { MessageHub, LogService } from '@esengine/editor-core';
 import { ContentBrowser } from './ContentBrowser';
 import { OutputLogPanel } from './OutputLogPanel';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/StatusBar.css';
 
 interface StatusBarProps {
@@ -26,6 +27,7 @@ export function StatusBar({
     projectPath,
     onOpenScene
 }: StatusBarProps) {
+    const { t } = useLocale();
     const [consoleInput, setConsoleInput] = useState('');
     const [activeTab, setActiveTab] = useState<ActiveTab>('output');
     const [contentDrawerOpen, setContentDrawerOpen] = useState(false);
@@ -254,7 +256,7 @@ export function StatusBar({
                         onClick={handleContentDrawerClick}
                     >
                         <FolderOpen size={14} />
-                        <span>{locale === 'zh' ? '内容侧滑菜单' : 'Content Drawer'}</span>
+                        <span>{t('statusBar.contentDrawer')}</span>
                         {contentDrawerOpen ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
                     </button>
 
@@ -265,7 +267,7 @@ export function StatusBar({
                         onClick={handleOutputLogClick}
                     >
                         <FileText size={12} />
-                        <span>{locale === 'zh' ? '输出日志' : 'Output Log'}</span>
+                        <span>{t('statusBar.outputLog')}</span>
                     </button>
 
                     <button
@@ -282,7 +284,7 @@ export function StatusBar({
                         <input
                             ref={inputRef}
                             type="text"
-                            placeholder={locale === 'zh' ? '输入控制台命令' : 'Enter Console Command'}
+                            placeholder={t('statusBar.consolePlaceholder')}
                             value={consoleInput}
                             onChange={(e) => setConsoleInput(e.target.value)}
                             onKeyDown={handleConsoleSubmit}
@@ -294,17 +296,17 @@ export function StatusBar({
                 <div className="status-bar-right">
                     <button className="status-bar-indicator">
                         <Activity size={12} />
-                        <span>{locale === 'zh' ? '回追踪' : 'Trace'}</span>
+                        <span>{t('statusBar.trace')}</span>
                         <ChevronDown size={10} />
                     </button>
 
                     <div className="status-bar-divider" />
 
                     <div className="status-bar-icon-group">
-                        <button className="status-bar-icon-btn" title={locale === 'zh' ? '网络' : 'Network'}>
+                        <button className="status-bar-icon-btn" title={t('statusBar.network')}>
                             <Wifi size={14} />
                         </button>
-                        <button className="status-bar-icon-btn" title={locale === 'zh' ? '源代码管理' : 'Source Control'}>
+                        <button className="status-bar-icon-btn" title={t('statusBar.sourceControl')}>
                             <GitBranch size={14} />
                         </button>
                     </div>
@@ -313,11 +315,11 @@ export function StatusBar({
 
                     <div className="status-bar-info">
                         <Save size={12} />
-                        <span>{locale === 'zh' ? '所有已保存' : 'All Saved'}</span>
+                        <span>{t('statusBar.allSaved')}</span>
                     </div>
 
                     <div className="status-bar-info">
-                        <span>{locale === 'zh' ? '版本控制' : 'Revision Control'}</span>
+                        <span>{t('statusBar.revisionControl')}</span>
                     </div>
                 </div>
             </div>

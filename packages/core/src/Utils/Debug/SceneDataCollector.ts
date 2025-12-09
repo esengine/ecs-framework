@@ -3,13 +3,19 @@ import { IScene } from '../../ECS/IScene';
 
 /**
  * 场景数据收集器
+ * Scene data collector
+ *
+ * 收集场景的调试信息，通过公共接口访问数据。
+ * Collects scene debug information through public interfaces.
  */
 export class SceneDataCollector {
     private sceneStartTime: number = Date.now();
 
     /**
      * 收集场景数据
-     * @param scene 场景实例
+     * Collect scene data
+     *
+     * @param scene 场景实例 | Scene instance
      */
     public collectSceneData(scene?: IScene | null): ISceneDebugData {
         if (!scene) {
@@ -26,15 +32,15 @@ export class SceneDataCollector {
         const currentTime = Date.now();
         const runTime = (currentTime - this.sceneStartTime) / 1000;
 
-        const entityList = (scene as any).entities;
-        const entityProcessors = (scene as any).entityProcessors;
+        // 使用公共接口获取数据 | Use public interface to get data
+        const stats = scene.getStats();
 
         return {
-            currentSceneName: (scene as any).name || 'Unnamed Scene',
-            isInitialized: (scene as any)._didSceneBegin || false,
+            currentSceneName: scene.name || 'Unnamed Scene',
+            isInitialized: true, // 如果 scene 存在，则认为已初始化 | If scene exists, consider initialized
             sceneRunTime: runTime,
-            sceneEntityCount: entityList?.buffer?.length || 0,
-            sceneSystemCount: entityProcessors?.processors?.length || 0,
+            sceneEntityCount: stats.entityCount,
+            sceneSystemCount: stats.processorCount,
             sceneUptime: runTime
         };
     }

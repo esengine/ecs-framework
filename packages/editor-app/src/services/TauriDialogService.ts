@@ -16,6 +16,14 @@ export interface IDialogExtended extends IDialog {
     setLocale(locale: string): void;
 }
 
+const dialogTranslations = {
+    en: { confirm: 'Confirm', cancel: 'Cancel' },
+    zh: { confirm: '确定', cancel: '取消' },
+    es: { confirm: 'Confirmar', cancel: 'Cancelar' }
+} as const;
+
+type LocaleKey = keyof typeof dialogTranslations;
+
 @singleton()
 export class TauriDialogService implements IDialogExtended {
     private showConfirmCallback?: (data: ConfirmDialogData) => void;
@@ -70,8 +78,10 @@ export class TauriDialogService implements IDialogExtended {
                     }
                 };
 
-                const confirmText = this.locale === 'zh' ? '确定' : 'Confirm';
-                const cancelText = this.locale === 'zh' ? '取消' : 'Cancel';
+                const localeKey = (this.locale in dialogTranslations ? this.locale : 'en') as LocaleKey;
+                const texts = dialogTranslations[localeKey];
+                const confirmText = texts.confirm;
+                const cancelText = texts.cancel;
 
                 this.showConfirmCallback({
                     title,

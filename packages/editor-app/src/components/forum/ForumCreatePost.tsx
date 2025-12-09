@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useLocale } from '../../hooks/useLocale';
 import { getForumService } from '../../services/forum';
 import type { Category } from '../../services/forum';
 import { parseEmoji } from './utils';
@@ -17,14 +18,14 @@ import './ForumCreatePost.css';
 
 interface ForumCreatePostProps {
     categories: Category[];
-    isEnglish: boolean;
     onBack: () => void;
     onCreated: () => void;
 }
 
 type EditorTab = 'write' | 'preview';
 
-export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: ForumCreatePostProps) {
+export function ForumCreatePost({ categories, onBack, onCreated }: ForumCreatePostProps) {
+    const { t } = useLocale();
     const [title, setTitle] = useState('');
     const [body, setBody] = useState('');
     const [categoryId, setCategoryId] = useState<string | null>(null);
@@ -76,12 +77,12 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
             }
         } catch (err) {
             console.error('[ForumCreatePost] Upload failed:', err);
-            setError(err instanceof Error ? err.message : (isEnglish ? 'Failed to upload image' : '图片上传失败'));
+            setError(err instanceof Error ? err.message : t('forum.failedToUploadImage'));
         } finally {
             setUploading(false);
             setUploadProgress(0);
         }
-    }, [body, forumService, isEnglish, uploading]);
+    }, [body, forumService, t, uploading]);
 
     /**
      * 处理拖拽事件
@@ -147,15 +148,15 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
 
         // 验证 | Validation
         if (!title.trim()) {
-            setError(isEnglish ? 'Please enter a title' : '请输入标题');
+            setError(t('forum.enterTitle'));
             return;
         }
         if (!body.trim()) {
-            setError(isEnglish ? 'Please enter content' : '请输入内容');
+            setError(t('forum.enterContent'));
             return;
         }
         if (!categoryId) {
-            setError(isEnglish ? 'Please select a category' : '请选择分类');
+            setError(t('forum.selectCategoryError'));
             return;
         }
 
@@ -170,11 +171,11 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
             if (post) {
                 onCreated();
             } else {
-                setError(isEnglish ? 'Failed to create discussion' : '创建讨论失败，请稍后重试');
+                setError(t('forum.failedToCreateDiscussion'));
             }
         } catch (err) {
             console.error('[ForumCreatePost] Error:', err);
-            setError(err instanceof Error ? err.message : (isEnglish ? 'An error occurred' : '发生错误，请稍后重试'));
+            setError(err instanceof Error ? err.message : t('forum.anErrorOccurred'));
         } finally {
             setSubmitting(false);
         }
@@ -201,13 +202,13 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
     };
 
     const toolbarButtons = [
-        { icon: <Bold size={14} />, action: () => insertMarkdown('**', '**', 'bold'), title: isEnglish ? 'Bold' : '粗体' },
-        { icon: <Italic size={14} />, action: () => insertMarkdown('*', '*', 'italic'), title: isEnglish ? 'Italic' : '斜体' },
-        { icon: <Code size={14} />, action: () => insertMarkdown('`', '`', 'code'), title: isEnglish ? 'Inline code' : '行内代码' },
-        { icon: <Link size={14} />, action: () => insertMarkdown('[', '](url)', 'link text'), title: isEnglish ? 'Link' : '链接' },
-        { icon: <List size={14} />, action: () => insertMarkdown('\n- ', '', 'list item'), title: isEnglish ? 'List' : '列表' },
-        { icon: <Quote size={14} />, action: () => insertMarkdown('\n> ', '', 'quote'), title: isEnglish ? 'Quote' : '引用' },
-        { icon: <Upload size={14} />, action: () => fileInputRef.current?.click(), title: isEnglish ? 'Upload image' : '上传图片' },
+        { icon: <Bold size={14} />, action: () => insertMarkdown('**', '**', 'bold'), title: t('forum.bold') },
+        { icon: <Italic size={14} />, action: () => insertMarkdown('*', '*', 'italic'), title: t('forum.italic') },
+        { icon: <Code size={14} />, action: () => insertMarkdown('`', '`', 'code'), title: t('forum.inlineCode') },
+        { icon: <Link size={14} />, action: () => insertMarkdown('[', '](url)', 'link text'), title: t('forum.link') },
+        { icon: <List size={14} />, action: () => insertMarkdown('\n- ', '', 'list item'), title: t('forum.list') },
+        { icon: <Quote size={14} />, action: () => insertMarkdown('\n> ', '', 'quote'), title: t('forum.quote') },
+        { icon: <Upload size={14} />, action: () => fileInputRef.current?.click(), title: t('forum.uploadImage') },
     ];
 
     const selectedCategory = categories.find(c => c.id === categoryId);
@@ -217,14 +218,14 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
             {/* 返回按钮 | Back button */}
             <button className="forum-back-btn" onClick={onBack}>
                 <ArrowLeft size={18} />
-                <span>{isEnglish ? 'Back to list' : '返回列表'}</span>
+                <span>{t('forum.backToList')}</span>
             </button>
 
             <div className="forum-create-container">
                 {/* 左侧：编辑区 | Left: Editor */}
                 <div className="forum-create-main">
                     <div className="forum-create-header">
-                        <h2>{isEnglish ? 'Start a Discussion' : '发起讨论'}</h2>
+                        <h2>{t('forum.startDiscussion')}</h2>
                         {selectedCategory && (
                             <span className="forum-create-selected-category">
                                 {parseEmoji(selectedCategory.emoji)} {selectedCategory.name}
@@ -235,7 +236,7 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
                     <form className="forum-create-form" onSubmit={handleSubmit}>
                         {/* 分类选择 | Category selection */}
                         <div className="forum-create-field">
-                            <label>{isEnglish ? 'Select Category' : '选择分类'}</label>
+                            <label>{t('forum.selectCategory')}</label>
                             <div className="forum-create-categories">
                                 {categories.map(cat => (
                                     <button
@@ -256,13 +257,13 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
 
                         {/* 标题 | Title */}
                         <div className="forum-create-field">
-                            <label>{isEnglish ? 'Title' : '标题'}</label>
+                            <label>{t('forum.title')}</label>
                             <div className="forum-create-title-input">
                                 <input
                                     type="text"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    placeholder={isEnglish ? 'Enter a descriptive title...' : '输入一个描述性的标题...'}
+                                    placeholder={t('forum.enterDescriptiveTitle')}
                                     maxLength={200}
                                 />
                                 <span className="forum-create-count">{title.length}/200</span>
@@ -279,7 +280,7 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
                                         onClick={() => setActiveTab('write')}
                                     >
                                         <Edit3 size={14} />
-                                        <span>{isEnglish ? 'Write' : '编辑'}</span>
+                                        <span>{t('forum.write')}</span>
                                     </button>
                                     <button
                                         type="button"
@@ -287,7 +288,7 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
                                         onClick={() => setActiveTab('preview')}
                                     >
                                         <Eye size={14} />
-                                        <span>{isEnglish ? 'Preview' : '预览'}</span>
+                                        <span>{t('forum.preview')}</span>
                                     </button>
                                 </div>
 
@@ -309,7 +310,7 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="forum-editor-help"
-                                            title={isEnglish ? 'Markdown Help' : 'Markdown 帮助'}
+                                            title={t('forum.markdownHelp')}
                                         >
                                             <HelpCircle size={14} />
                                         </a>
@@ -336,7 +337,7 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
                                 {uploading && (
                                     <div className="forum-editor-upload-overlay">
                                         <Loader2 size={24} className="spin" />
-                                        <span>{isEnglish ? 'Uploading...' : '上传中...'} {uploadProgress}%</span>
+                                        <span>{t('forum.uploading')} {uploadProgress}%</span>
                                     </div>
                                 )}
 
@@ -344,7 +345,7 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
                                 {isDragging && !uploading && (
                                     <div className="forum-editor-drag-overlay">
                                         <Upload size={32} />
-                                        <span>{isEnglish ? 'Drop image here' : '拖放图片到这里'}</span>
+                                        <span>{t('forum.dropImageHere')}</span>
                                     </div>
                                 )}
 
@@ -355,9 +356,7 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
                                         value={body}
                                         onChange={(e) => setBody(e.target.value)}
                                         onPaste={handlePaste}
-                                        placeholder={isEnglish
-                                            ? 'Write your content here...\n\nYou can use Markdown:\n- **bold** and *italic*\n- `code` and ```code blocks```\n- [links](url) and ![images](url)\n- > quotes and - lists\n\nDrag & drop or paste images to upload'
-                                            : '在这里写下你的内容...\n\n支持 Markdown 语法：\n- **粗体** 和 *斜体*\n- `代码` 和 ```代码块```\n- [链接](url) 和 ![图片](url)\n- > 引用 和 - 列表\n\n拖拽或粘贴图片即可上传'}
+                                        placeholder={t('forum.editorPlaceholder')}
                                     />
                                 ) : (
                                     <div className="forum-editor-preview">
@@ -367,7 +366,7 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
                                             </ReactMarkdown>
                                         ) : (
                                             <p className="forum-editor-preview-empty">
-                                                {isEnglish ? 'Nothing to preview' : '暂无内容可预览'}
+                                                {t('forum.nothingToPreview')}
                                             </p>
                                         )}
                                     </div>
@@ -391,7 +390,7 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
                                 onClick={onBack}
                                 disabled={submitting}
                             >
-                                {isEnglish ? 'Cancel' : '取消'}
+                                {t('forum.cancel')}
                             </button>
                             <button
                                 type="submit"
@@ -400,9 +399,7 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
                             >
                                 <Send size={16} />
                                 <span>
-                                    {submitting
-                                        ? (isEnglish ? 'Creating...' : '创建中...')
-                                        : (isEnglish ? 'Create Discussion' : '创建讨论')}
+                                    {submitting ? t('forum.creating') : t('forum.createDiscussion')}
                                 </span>
                             </button>
                         </div>
@@ -412,18 +409,18 @@ export function ForumCreatePost({ categories, isEnglish, onBack, onCreated }: Fo
                 {/* 右侧：提示 | Right: Tips */}
                 <div className="forum-create-sidebar">
                     <div className="forum-create-tips">
-                        <h3>{isEnglish ? 'Tips' : '小贴士'}</h3>
+                        <h3>{t('forum.tips')}</h3>
                         <ul>
-                            <li>{isEnglish ? 'Use a clear, descriptive title' : '使用清晰、描述性的标题'}</li>
-                            <li>{isEnglish ? 'Select the right category for your topic' : '为你的话题选择合适的分类'}</li>
-                            <li>{isEnglish ? 'Provide enough context and details' : '提供足够的背景和细节'}</li>
-                            <li>{isEnglish ? 'Use code blocks for code snippets' : '使用代码块展示代码'}</li>
-                            <li>{isEnglish ? 'Be respectful and constructive' : '保持尊重和建设性'}</li>
+                            <li>{t('forum.tip1')}</li>
+                            <li>{t('forum.tip2')}</li>
+                            <li>{t('forum.tip3')}</li>
+                            <li>{t('forum.tip4')}</li>
+                            <li>{t('forum.tip5')}</li>
                         </ul>
                     </div>
 
                     <div className="forum-create-markdown-guide">
-                        <h3>{isEnglish ? 'Markdown Guide' : 'Markdown 指南'}</h3>
+                        <h3>{t('forum.markdownGuide')}</h3>
                         <div className="forum-create-markdown-examples">
                             <div className="markdown-example">
                                 <code>**bold**</code>

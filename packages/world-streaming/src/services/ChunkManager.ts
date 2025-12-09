@@ -360,6 +360,16 @@ export class ChunkManager implements IService {
     }
 
     /**
+     * 遍历所有已加载区块
+     * Iterate over all loaded chunks
+     *
+     * @param callback 回调函数 | Callback function
+     */
+    forEachChunk(callback: (info: IChunkInfo, coord: IChunkCoord) => void): void {
+        this._chunkGrid.forEach(callback);
+    }
+
+    /**
      * 获取超出范围的已加载区块
      *
      * Get loaded chunks outside the given radius.

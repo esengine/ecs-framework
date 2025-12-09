@@ -856,6 +856,9 @@ importers:
       '@esengine/editor-core':
         specifier: workspace:*
         version: link:../editor-core
+      '@esengine/engine-core':
+        specifier: workspace:*
+        version: link:../engine-core
       '@esengine/ui':
         specifier: workspace:*
         version: link:../ui
@@ -1107,6 +1110,9 @@ importers:
       '@esengine/editor-core':
         specifier: workspace:*
         version: link:../editor-core
+      '@esengine/editor-runtime':
+        specifier: workspace:*
+        version: link:../editor-runtime
       '@esengine/engine-core':
         specifier: workspace:*
         version: link:../engine-core
@@ -1516,6 +1522,9 @@ importers:
       '@esengine/editor-core':
         specifier: workspace:*
         version: link:../editor-core
+      '@esengine/editor-runtime':
+        specifier: workspace:*
+        version: link:../editor-runtime
       '@esengine/engine-core':
         specifier: workspace:*
         version: link:../engine-core
@@ -1580,6 +1589,9 @@ importers:
       '@esengine/editor-core':
         specifier: workspace:*
         version: link:../editor-core
+      '@esengine/editor-runtime':
+        specifier: workspace:*
+        version: link:../editor-runtime
       '@types/react':
         specifier: ^18.3.12
         version: 18.3.27

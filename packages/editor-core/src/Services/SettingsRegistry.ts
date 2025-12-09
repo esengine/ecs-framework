@@ -2,44 +2,83 @@ import { Injectable, IService } from '@esengine/ecs-framework';
 
 export type SettingType = 'string' | 'number' | 'boolean' | 'select' | 'color' | 'range' | 'pluginList' | 'collisionMatrix' | 'moduleList';
 
+/**
+ * Localizable text - can be a plain string or a translation key (prefixed with '$')
+ * 可本地化文本 - 可以是普通字符串或翻译键（以 '$' 为前缀）
+ *
+ * @example
+ * // Plain text (not recommended for user-facing strings)
+ * title: 'Appearance'
+ *
+ * // Translation key (recommended)
+ * title: '$pluginSettings.appearance.title'
+ */
+export type LocalizableText = string;
+
+/**
+ * Check if text is a translation key (starts with '$')
+ * 检查文本是否为翻译键（以 '$' 开头）
+ */
+export function isTranslationKey(text: string): boolean {
+    return text.startsWith('$');
+}
+
+/**
+ * Get the actual translation key (without '$' prefix)
+ * 获取实际的翻译键（去掉 '$' 前缀）
+ */
+export function getTranslationKey(text: string): string {
+    return text.startsWith('$') ? text.slice(1) : text;
+}
+
 export interface SettingOption {
-  label: string;
+  label: LocalizableText;
   value: any;
 }
 
 export interface SettingValidator {
   validate: (value: any) => boolean;
-  errorMessage: string;
+  errorMessage: LocalizableText;
 }
 
 export interface SettingDescriptor {
   key: string;
-  label: string;
+  /** Label text or translation key (prefixed with '$') | 标签文本或翻译键（以 '$' 为前缀） */
+  label: LocalizableText;
   type: SettingType;
   defaultValue: any;
-  description?: string;
-  placeholder?: string;
+  /** Description text or translation key (prefixed with '$') | 描述文本或翻译键（以 '$' 为前缀） */
+  description?: LocalizableText;
+  /** Placeholder text or translation key (prefixed with '$') | 占位符文本或翻译键（以 '$' 为前缀） */
+  placeholder?: LocalizableText;
   options?: SettingOption[];
   validator?: SettingValidator;
   min?: number;
   max?: number;
   step?: number;
-  /** 自定义渲染器组件（用于 collisionMatrix 等复杂类型） */
+  /**
+   * Custom renderer component (for complex types like collisionMatrix)
+   * 自定义渲染器组件（用于 collisionMatrix 等复杂类型）
+   */
   customRenderer?: React.ComponentType<any>;
 }
 
 export interface SettingSection {
   id: string;
-  title: string;
-  description?: string;
+  /** Title text or translation key (prefixed with '$') | 标题文本或翻译键（以 '$' 为前缀） */
+  title: LocalizableText;
+  /** Description text or translation key (prefixed with '$') | 描述文本或翻译键（以 '$' 为前缀） */
+  description?: LocalizableText;
   icon?: string;
   settings: SettingDescriptor[];
 }
 
 export interface SettingCategory {
   id: string;
-  title: string;
-  description?: string;
+  /** Title text or translation key (prefixed with '$') | 标题文本或翻译键（以 '$' 为前缀） */
+  title: LocalizableText;
+  /** Description text or translation key (prefixed with '$') | 描述文本或翻译键（以 '$' 为前缀） */
+  description?: LocalizableText;
   sections: SettingSection[];
 }
 

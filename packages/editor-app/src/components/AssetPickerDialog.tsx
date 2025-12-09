@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Folder, Search, ArrowLeft, Grid, List, FileCode } from 'lucide-react';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/AssetPickerDialog.css';
 
 interface AssetPickerDialogProps {
@@ -25,6 +26,8 @@ interface AssetItem {
 type ViewMode = 'list' | 'grid';
 
 export function AssetPickerDialog({ projectPath, fileExtension, onSelect, onClose, locale, assetBasePath }: AssetPickerDialogProps) {
+    const { t, locale: currentLocale } = useLocale();
+
     // 计算实际的资产目录路径
     const actualAssetPath = assetBasePath
         ? `${projectPath}/${assetBasePath}`.replace(/\\/g, '/').replace(/\/+/g, '/')
@@ -36,33 +39,6 @@ export function AssetPickerDialog({ projectPath, fileExtension, onSelect, onClos
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<ViewMode>('list');
-
-    const translations = {
-        en: {
-            title: 'Select Asset',
-            loading: 'Loading...',
-            empty: 'No assets found',
-            select: 'Select',
-            cancel: 'Cancel',
-            search: 'Search...',
-            back: 'Back',
-            listView: 'List View',
-            gridView: 'Grid View'
-        },
-        zh: {
-            title: '选择资产',
-            loading: '加载中...',
-            empty: '没有找到资产',
-            select: '选择',
-            cancel: '取消',
-            search: '搜索...',
-            back: '返回上级',
-            listView: '列表视图',
-            gridView: '网格视图'
-        }
-    };
-
-    const t = translations[locale as keyof typeof translations] || translations.en;
 
     useEffect(() => {
         loadAssets(currentPath);
@@ -118,7 +94,8 @@ export function AssetPickerDialog({ projectPath, fileExtension, onSelect, onClos
     const formatDate = (timestamp?: number): string => {
         if (!timestamp) return '';
         const date = new Date(timestamp * 1000);
-        return date.toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US', {
+        const localeMap: Record<string, string> = { zh: 'zh-CN', en: 'en-US', es: 'es-ES' };
+        return date.toLocaleDateString(localeMap[currentLocale] || 'en-US', {
             year: 'numeric',
             month: 'short',
             day: 'numeric'
@@ -213,7 +190,7 @@ export function AssetPickerDialog({ projectPath, fileExtension, onSelect, onClos
         <div className="asset-picker-overlay" onClick={onClose}>
             <div className="asset-picker-dialog" onClick={(e) => e.stopPropagation()}>
                 <div className="asset-picker-header">
-                    <h3>{t.title}</h3>
+                    <h3>{t('assetPicker.title')}</h3>
                     <button className="asset-picker-close" onClick={onClose}>
                         <X size={18} />
                     </button>
@@ -224,7 +201,7 @@ export function AssetPickerDialog({ projectPath, fileExtension, onSelect, onClos
                         className="toolbar-button"
                         onClick={handleGoBack}
                         disabled={!canGoBack}
-                        title={t.back}
+                        title={t('assetPicker.back')}
                     >
                         <ArrowLeft size={16} />
                     </button>
@@ -247,14 +224,14 @@ export function AssetPickerDialog({ projectPath, fileExtension, onSelect, onClos
                         <button
                             className={`toolbar-button ${viewMode === 'list' ? 'active' : ''}`}
                             onClick={() => setViewMode('list')}
-                            title={t.listView}
+                            title={t('assetPicker.listView')}
                         >
                             <List size={16} />
                         </button>
                         <button
                             className={`toolbar-button ${viewMode === 'grid' ? 'active' : ''}`}
                             onClick={() => setViewMode('grid')}
-                            title={t.gridView}
+                            title={t('assetPicker.gridView')}
                         >
                             <Grid size={16} />
                         </button>
@@ -265,7 +242,7 @@ export function AssetPickerDialog({ projectPath, fileExtension, onSelect, onClos
                     <Search size={16} className="search-icon" />
                     <input
                         type="text"
-                        placeholder={t.search}
+                        placeholder={t('assetPicker.search')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="search-input"
@@ -282,9 +259,9 @@ export function AssetPickerDialog({ projectPath, fileExtension, onSelect, onClos
 
                 <div className="asset-picker-content">
                     {loading ? (
-                        <div className="asset-picker-loading">{t.loading}</div>
+                        <div className="asset-picker-loading">{t('assetPicker.loading')}</div>
                     ) : filteredAssets.length === 0 ? (
-                        <div className="asset-picker-empty">{t.empty}</div>
+                        <div className="asset-picker-empty">{t('assetPicker.empty')}</div>
                     ) : (
                         <div className={`asset-picker-list ${viewMode}`}>
                             {filteredAssets.map((item, index) => (
@@ -318,18 +295,18 @@ export function AssetPickerDialog({ projectPath, fileExtension, onSelect, onClos
 
                 <div className="asset-picker-footer">
                     <div className="footer-info">
-                        {filteredAssets.length} {locale === 'zh' ? '项' : 'items'}
+                        {t('assetPicker.itemCount', { count: filteredAssets.length })}
                     </div>
                     <div className="footer-buttons">
                         <button className="asset-picker-cancel" onClick={onClose}>
-                            {t.cancel}
+                            {t('assetPicker.cancel')}
                         </button>
                         <button
                             className="asset-picker-select"
                             onClick={handleSelect}
                             disabled={!selectedPath}
                         >
-                            {t.select}
+                            {t('assetPicker.select')}
                         </button>
                     </div>
                 </div>

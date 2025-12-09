@@ -58,7 +58,7 @@ import { EngineService } from './services/EngineService';
 import { CompilerConfigDialog } from './components/CompilerConfigDialog';
 import { checkForUpdatesOnStartup } from './utils/updater';
 import { useLocale } from './hooks/useLocale';
-import { en, zh } from './locales';
+import { en, zh, es } from './locales';
 import type { Locale } from '@esengine/editor-core';
 import { Loader2 } from 'lucide-react';
 import './styles/App.css';
@@ -68,6 +68,7 @@ const coreInstance = Core.create({ debug: true });
 const localeService = new LocaleService();
 localeService.registerTranslations('en', en);
 localeService.registerTranslations('zh', zh);
+localeService.registerTranslations('es', es);
 Core.services.registerInstance(LocaleService, localeService);
 
 Core.services.registerSingleton(GlobalBlackboardService);
@@ -161,10 +162,10 @@ function App() {
                             try {
                                 await sceneManager.saveScene();
                                 const sceneState = sceneManager.getSceneState();
-                                showToast(locale === 'zh' ? `已保存场景: ${sceneState.sceneName}` : `Scene saved: ${sceneState.sceneName}`, 'success');
+                                showToast(t('scene.savedSuccess', { name: sceneState.sceneName }), 'success');
                             } catch (error) {
                                 console.error('Failed to save scene:', error);
-                                showToast(locale === 'zh' ? '保存场景失败' : 'Failed to save scene', 'error');
+                                showToast(t('scene.saveFailed'), 'error');
                             }
                         }
                         break;
@@ -366,7 +367,7 @@ function App() {
     const handleOpenRecentProject = async (projectPath: string) => {
         try {
             setIsLoading(true);
-            setLoadingMessage(locale === 'zh' ? '步骤 1/3: 打开项目配置...' : 'Step 1/3: Opening project config...');
+            setLoadingMessage(t('loading.step1'));
 
             const projectService = Core.services.resolve(ProjectService);
 
@@ -400,13 +401,13 @@ function App() {
             setProjectLoaded(true);
 
             // 等待引擎初始化完成（Viewport 渲染后会触发引擎初始化）
-            setLoadingMessage(locale === 'zh' ? '步骤 2/3: 初始化引擎和模块...' : 'Step 2/3: Initializing engine and modules...');
+            setLoadingMessage(t('loading.step2'));
             const engineService = EngineService.getInstance();
 
             // 等待引擎初始化（最多等待 30 秒，因为需要等待 Viewport 渲染）
             const engineReady = await engineService.waitForInitialization(30000);
             if (!engineReady) {
-                throw new Error(locale === 'zh' ? '引擎初始化超时' : 'Engine initialization timeout');
+                throw new Error(t('loading.engineTimeoutError'));
             }
 
             // 加载项目插件配置并激活插件（在引擎初始化后、模块系统初始化前）
@@ -432,7 +433,7 @@ function App() {
 
             setStatus(t('header.status.projectOpened'));
 
-            setLoadingMessage(locale === 'zh' ? '步骤 3/3: 初始化场景...' : 'Step 3/3: Initializing scene...');
+            setLoadingMessage(t('loading.step3'));
 
             const sceneManagerService = Core.services.resolve(SceneManagerService);
             if (sceneManagerService) {
@@ -440,7 +441,7 @@ function App() {
             }
 
             if (pluginManager) {
-                setLoadingMessage(locale === 'zh' ? '加载项目插件...' : 'Loading project plugins...');
+                setLoadingMessage(t('loading.loadingPlugins'));
                 await pluginLoader.loadProjectPlugins(projectPath, pluginManager);
             }
 
@@ -452,10 +453,8 @@ function App() {
 
             const errorMessage = error instanceof Error ? error.message : String(error);
             setErrorDialog({
-                title: locale === 'zh' ? '打开项目失败' : 'Failed to Open Project',
-                message: locale === 'zh'
-                    ? `无法打开项目:\n${errorMessage}`
-                    : `Failed to open project:\n${errorMessage}`
+                title: t('project.openFailed'),
+                message: `${t('project.openFailed')}:\n${errorMessage}`
             });
         }
     };
@@ -482,22 +481,22 @@ function App() {
 
         try {
             setIsLoading(true);
-            setLoadingMessage(locale === 'zh' ? '正在创建项目...' : 'Creating project...');
+            setLoadingMessage(t('project.creating'));
 
             const projectService = Core.services.resolve(ProjectService);
             if (!projectService) {
                 console.error('ProjectService not available');
                 setIsLoading(false);
                 setErrorDialog({
-                    title: locale === 'zh' ? '创建项目失败' : 'Failed to Create Project',
-                    message: locale === 'zh' ? '项目服务不可用，请重启编辑器' : 'Project service is not available. Please restart the editor.'
+                    title: t('project.createFailed'),
+                    message: t('project.serviceUnavailable')
                 });
                 return;
             }
 
             await projectService.createProject(fullProjectPath);
 
-            setLoadingMessage(locale === 'zh' ? '项目创建成功，正在打开...' : 'Project created, opening...');
+            setLoadingMessage(t('project.createdOpening'));
 
             await handleOpenRecentProject(fullProjectPath);
         } catch (error) {
@@ -508,35 +507,29 @@ function App() {
 
             if (errorMessage.includes('already exists')) {
                 setConfirmDialog({
-                    title: locale === 'zh' ? '项目已存在' : 'Project Already Exists',
-                    message: locale === 'zh'
-                        ? '该目录下已存在 ECS 项目，是否要打开该项目？'
-                        : 'An ECS project already exists in this directory. Do you want to open it?',
-                    confirmText: locale === 'zh' ? '打开项目' : 'Open Project',
-                    cancelText: locale === 'zh' ? '取消' : 'Cancel',
+                    title: t('project.alreadyExists'),
+                    message: t('project.existsQuestion'),
+                    confirmText: t('project.open'),
+                    cancelText: t('common.cancel'),
                     onConfirm: () => {
                         setConfirmDialog(null);
                         setIsLoading(true);
-                        setLoadingMessage(locale === 'zh' ? '正在打开项目...' : 'Opening project...');
+                        setLoadingMessage(t('project.opening'));
                         handleOpenRecentProject(fullProjectPath).catch((err) => {
                             console.error('Failed to open project:', err);
                             setIsLoading(false);
                             setErrorDialog({
-                                title: locale === 'zh' ? '打开项目失败' : 'Failed to Open Project',
-                                message: locale === 'zh'
-                                    ? `无法打开项目:\n${err instanceof Error ? err.message : String(err)}`
-                                    : `Failed to open project:\n${err instanceof Error ? err.message : String(err)}`
+                                title: t('project.openFailed'),
+                                message: `${t('project.openFailed')}:\n${err instanceof Error ? err.message : String(err)}`
                             });
                         });
                     }
                 });
             } else {
-                setStatus(locale === 'zh' ? '创建项目失败' : 'Failed to create project');
+                setStatus(t('project.createFailed'));
                 setErrorDialog({
-                    title: locale === 'zh' ? '创建项目失败' : 'Failed to Create Project',
-                    message: locale === 'zh'
-                        ? `无法创建项目:\n${errorMessage}`
-                        : `Failed to create project:\n${errorMessage}`
+                    title: t('project.createFailed'),
+                    message: `${t('project.createFailed')}:\n${errorMessage}`
                 });
             }
         }
@@ -560,10 +553,10 @@ function App() {
 
         try {
             await sceneManager.newScene();
-            setStatus(locale === 'zh' ? '已创建新场景' : 'New scene created');
+            setStatus(t('scene.newCreated'));
         } catch (error) {
             console.error('Failed to create new scene:', error);
-            setStatus(locale === 'zh' ? '创建场景失败' : 'Failed to create scene');
+            setStatus(t('scene.createFailed'));
         }
     };
 
@@ -576,10 +569,10 @@ function App() {
         try {
             await sceneManager.openScene();
             const sceneState = sceneManager.getSceneState();
-            setStatus(locale === 'zh' ? `已打开场景: ${sceneState.sceneName}` : `Scene opened: ${sceneState.sceneName}`);
+            setStatus(t('scene.openedSuccess', { name: sceneState.sceneName }));
         } catch (error) {
             console.error('Failed to open scene:', error);
-            setStatus(locale === 'zh' ? '打开场景失败' : 'Failed to open scene');
+            setStatus(t('scene.openFailed'));
         }
     };
 
@@ -592,15 +585,13 @@ function App() {
         try {
             await sceneManager.openScene(scenePath);
             const sceneState = sceneManager.getSceneState();
-            setStatus(locale === 'zh' ? `已打开场景: ${sceneState.sceneName}` : `Scene opened: ${sceneState.sceneName}`);
+            setStatus(t('scene.openedSuccess', { name: sceneState.sceneName }));
         } catch (error) {
             console.error('Failed to open scene:', error);
-            setStatus(locale === 'zh' ? '打开场景失败' : 'Failed to open scene');
+            setStatus(t('scene.openFailed'));
             setErrorDialog({
-                title: locale === 'zh' ? '打开场景失败' : 'Failed to Open Scene',
-                message: locale === 'zh'
-                    ? `无法打开场景:\n${error instanceof Error ? error.message : String(error)}`
-                    : `Failed to open scene:\n${error instanceof Error ? error.message : String(error)}`
+                title: t('scene.openFailed'),
+                message: `${t('scene.openFailed')}:\n${error instanceof Error ? error.message : String(error)}`
             });
         }
     }, [sceneManager, locale]);
@@ -615,10 +606,10 @@ function App() {
         try {
             await sceneManager.saveScene();
             const sceneState = sceneManager.getSceneState();
-            setStatus(locale === 'zh' ? `已保存场景: ${sceneState.sceneName}` : `Scene saved: ${sceneState.sceneName}`);
+            setStatus(t('scene.savedSuccess', { name: sceneState.sceneName }));
         } catch (error) {
             console.error('Failed to save scene:', error);
-            setStatus(locale === 'zh' ? '保存场景失败' : 'Failed to save scene');
+            setStatus(t('scene.saveFailed'));
         }
     };
 
@@ -631,10 +622,10 @@ function App() {
         try {
             await sceneManager.saveSceneAs();
             const sceneState = sceneManager.getSceneState();
-            setStatus(locale === 'zh' ? `已保存场景: ${sceneState.sceneName}` : `Scene saved: ${sceneState.sceneName}`);
+            setStatus(t('scene.savedSuccess', { name: sceneState.sceneName }));
         } catch (error) {
             console.error('Failed to save scene as:', error);
-            setStatus(locale === 'zh' ? '另存场景失败' : 'Failed to save scene as');
+            setStatus(t('scene.saveAsFailed'));
         }
     };
 
@@ -726,10 +717,10 @@ function App() {
                 // 7. 触发面板重新渲染
                 setPluginUpdateTrigger((prev) => prev + 1);
 
-                showToast(locale === 'zh' ? '插件已重新加载' : 'Plugins reloaded', 'success');
+                showToast(t('plugin.reloadedSuccess'), 'success');
             } catch (error) {
                 console.error('Failed to reload plugins:', error);
-                showToast(locale === 'zh' ? '重新加载插件失败' : 'Failed to reload plugins', 'error');
+                showToast(t('plugin.reloadFailed'), 'error');
             }
         }
     };
@@ -739,25 +730,25 @@ function App() {
             const corePanels: FlexDockPanel[] = [
                 {
                     id: 'scene-hierarchy',
-                    title: locale === 'zh' ? '场景层级' : 'Scene Hierarchy',
+                    title: t('panel.sceneHierarchy'),
                     content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} commandManager={commandManager} />,
                     closable: false
                 },
                 {
                     id: 'viewport',
-                    title: locale === 'zh' ? '视口' : 'Viewport',
+                    title: t('panel.viewport'),
                     content: <Viewport locale={locale} messageHub={messageHub} />,
                     closable: false
                 },
                 {
                     id: 'inspector',
-                    title: locale === 'zh' ? '检视器' : 'Inspector',
+                    title: t('panel.inspector'),
                     content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} commandManager={commandManager} />,
                     closable: false
                 },
                 {
                     id: 'forum',
-                    title: locale === 'zh' ? '社区论坛' : 'Forum',
+                    title: t('panel.forum'),
                     content: <ForumPanel />,
                     closable: true
                 }
@@ -776,9 +767,12 @@ function App() {
                 })
                 .map((panelDesc) => {
                     const Component = panelDesc.component;
+                    // 使用 titleKey 翻译，回退到 title
+                    // Use titleKey for translation, fallback to title
+                    const title = panelDesc.titleKey ? t(panelDesc.titleKey) : panelDesc.title;
                     return {
                         id: panelDesc.id,
-                        title: panelDesc.titleZh && locale === 'zh' ? panelDesc.titleZh : panelDesc.title,
+                        title,
                         content: <Component key={`${panelDesc.id}-${pluginUpdateTrigger}`} projectPath={currentProjectPath} />,
                         closable: panelDesc.closable ?? true
                     };
@@ -793,8 +787,10 @@ function App() {
                 .map((panelId) => {
                     const panelDesc = uiRegistry.getPanel(panelId)!;
                     // 优先使用动态标题，否则使用默认标题
+                    // Prefer dynamic title, fallback to default title
                     const customTitle = dynamicPanelTitles.get(panelId);
-                    const defaultTitle = panelDesc.titleZh && locale === 'zh' ? panelDesc.titleZh : panelDesc.title;
+                    // 使用 titleKey 翻译，回退到 title
+                    const defaultTitle = panelDesc.titleKey ? t(panelDesc.titleKey) : panelDesc.title;
 
                     // 支持 component 或 render 两种方式
                     let content: React.ReactNode;
@@ -855,16 +851,13 @@ function App() {
                         } catch (error) {
                             console.error('[App] Failed to delete project:', error);
                             setErrorDialog({
-                                title: locale === 'zh' ? '删除项目失败' : 'Failed to Delete Project',
-                                message: locale === 'zh'
-                                    ? `无法删除项目:\n${error instanceof Error ? error.message : String(error)}`
-                                    : `Failed to delete project:\n${error instanceof Error ? error.message : String(error)}`
+                                title: t('project.deleteFailed'),
+                                message: `${t('project.deleteFailed')}:\n${error instanceof Error ? error.message : String(error)}`
                             });
                         }
                     }}
                     onLocaleChange={handleLocaleChange}
                     recentProjects={recentProjects}
-                    locale={locale}
                 />
                 <ProjectCreationWizard
                     isOpen={showProjectWizard}
@@ -918,7 +911,6 @@ function App() {
                 <>
                     <TitleBar
                         projectName={projectName}
-                        locale={locale}
                         uiRegistry={uiRegistry || undefined}
                         messageHub={messageHub || undefined}
                         pluginManager={pluginManager || undefined}
@@ -943,7 +935,6 @@ function App() {
                         onOpenBuildSettings={() => setShowBuildSettings(true)}
                     />
                     <MainToolbar
-                        locale={locale}
                         messageHub={messageHub || undefined}
                         commandManager={commandManager}
                         onSaveScene={handleSaveScene}
@@ -1013,14 +1004,13 @@ function App() {
             )}
 
             {showAbout && (
-                <AboutDialog onClose={() => setShowAbout(false)} locale={locale} />
+                <AboutDialog onClose={() => setShowAbout(false)} />
             )}
 
             {showPluginGenerator && (
                 <PluginGeneratorWindow
                     onClose={() => setShowPluginGenerator(false)}
                     projectPath={currentProjectPath}
-                    locale={locale}
                     onSuccess={async () => {
                         if (currentProjectPath && pluginManager) {
                             await pluginLoader.loadProjectPlugins(currentProjectPath, pluginManager);
@@ -1033,7 +1023,6 @@ function App() {
                 <BuildSettingsWindow
                     onClose={() => setShowBuildSettings(false)}
                     projectPath={currentProjectPath || undefined}
-                    locale={locale}
                     buildService={buildService || undefined}
                     sceneManager={sceneManager || undefined}
                 />

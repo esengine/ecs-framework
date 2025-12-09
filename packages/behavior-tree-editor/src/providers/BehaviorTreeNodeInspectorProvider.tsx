@@ -29,7 +29,9 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({ property, value, onChan
     const renderInput = () => {
         // 特殊处理 treeAssetId 字段使用 asset 编辑器
         if (property.name === 'treeAssetId') {
-            const fieldRegistry = PluginAPI.resolve<FieldEditorRegistry>(FieldEditorRegistry);
+            // 使用 ServiceContainer.resolve 直接获取类注册的服务
+            // Use ServiceContainer.resolve to get class-registered service directly
+            const fieldRegistry = PluginAPI.services.resolve(FieldEditorRegistry);
             const assetEditor = fieldRegistry.getEditor('asset');
 
             if (assetEditor) {
@@ -52,7 +54,9 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({ property, value, onChan
 
         // 检查是否有特定的字段编辑器类型
         if (property.fieldEditor) {
-            const fieldRegistry = PluginAPI.resolve<FieldEditorRegistry>(FieldEditorRegistry);
+            // 使用 ServiceContainer.resolve 直接获取类注册的服务
+            // Use ServiceContainer.resolve to get class-registered service directly
+            const fieldRegistry = PluginAPI.services.resolve(FieldEditorRegistry);
             const editor = fieldRegistry.getEditor(property.fieldEditor.type);
 
             if (editor) {

@@ -17,22 +17,24 @@ class PluginConfigEditorModule implements IEditorModuleLoader {
     async install(services: ServiceContainer): Promise<void> {
         const settingsRegistry = services.resolve(SettingsRegistry);
 
+        // Register settings using translation keys (prefixed with '$')
+        // 使用翻译键注册设置（以 '$' 为前缀）
         settingsRegistry.registerCategory({
             id: 'plugins',
-            title: '插件',
-            description: '管理项目使用的插件',
+            title: '$pluginSettings.plugins.title',
+            description: '$pluginSettings.plugins.description',
             sections: [
                 {
                     id: 'engine-plugins',
-                    title: '插件管理',
-                    description: '启用或禁用项目需要的插件。禁用不需要的插件可以减少打包体积。',
+                    title: '$pluginSettings.plugins.management.title',
+                    description: '$pluginSettings.plugins.management.description',
                     settings: [
                         {
                             key: 'project.enabledPlugins',
-                            label: '',
+                            label: '$pluginSettings.plugins.management.list.label',
                             type: 'pluginList',
                             defaultValue: [],
-                            description: ''
+                            description: '$pluginSettings.plugins.management.list.description'
                         }
                     ]
                 }

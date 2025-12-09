@@ -29,6 +29,7 @@
   "devDependencies": {
     "@esengine/ecs-framework": "workspace:*",
     "@esengine/editor-core": "workspace:*",
+    "@esengine/engine-core": "workspace:*",
     "@esengine/ui": "workspace:*",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
