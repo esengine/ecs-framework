@@ -11,7 +11,7 @@ import {
 } from '@esengine/editor-runtime';
 import { useBehaviorTreeDataStore } from '../../stores';
 import { BehaviorTreeEditor } from '../BehaviorTreeEditor';
-import { BehaviorTreeService } from '../../services/BehaviorTreeService';
+import { BehaviorTreeServiceToken } from '../../tokens';
 import { showToast } from '../../services/NotificationService';
 import { Node as BehaviorTreeNode } from '../../domain/models/Node';
 import { BehaviorTree } from '../../domain/models/BehaviorTree';
@@ -171,7 +171,7 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
                 filePath = selected;
             }
 
-            const service = PluginAPI.resolve<BehaviorTreeService>(BehaviorTreeService);
+            const service = PluginAPI.resolve(BehaviorTreeServiceToken);
             await service.saveToFile(filePath);
 
             setCurrentFilePath(filePath);
@@ -205,7 +205,7 @@ export const BehaviorTreeEditorPanel: React.FC<BehaviorTreeEditorPanelProps> = (
             if (!selected) return;
 
             const filePath = selected as string;
-            const service = PluginAPI.resolve<BehaviorTreeService>(BehaviorTreeService);
+            const service = PluginAPI.resolve(BehaviorTreeServiceToken);
             await service.loadFromFile(filePath);
 
             setCurrentFilePath(filePath);

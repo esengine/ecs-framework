@@ -36,6 +36,7 @@ import { BehaviorTreeRuntimeComponent, BehaviorTreeRuntimeModule } from '@esengi
 // Editor components and services
 import { BehaviorTreeService } from './services/BehaviorTreeService';
 import { FileSystemService } from './services/FileSystemService';
+import { BehaviorTreeServiceToken, type IBehaviorTreeService } from './tokens';
 import { BehaviorTreeCompiler } from './compiler/BehaviorTreeCompiler';
 import { BehaviorTreeNodeInspectorProvider } from './providers/BehaviorTreeNodeInspectorProvider';
 import { BehaviorTreeEditorPanel } from './components/panels/BehaviorTreeEditorPanel';
@@ -180,7 +181,7 @@ export class BehaviorTreeEditorModule implements IEditorModuleLoader {
 
         if (this.services) {
             this.services.unregister(FileSystemService);
-            this.services.unregister(BehaviorTreeService);
+            this.services.unregister(BehaviorTreeServiceToken.id);
         }
 
         useBehaviorTreeDataStore.getState().reset();
@@ -197,11 +198,16 @@ export class BehaviorTreeEditorModule implements IEditorModuleLoader {
         }
         services.registerSingleton(FileSystemService);
 
-        // BehaviorTreeService
-        if (services.isRegistered(BehaviorTreeService)) {
-            services.unregister(BehaviorTreeService);
+        // BehaviorTreeService - 使用 ServiceToken.id (symbol) 注册
+        // BehaviorTreeService - register with ServiceToken.id (symbol)
+        // ServiceContainer 支持 symbol 作为 ServiceIdentifier
+        // ServiceContainer supports symbol as ServiceIdentifier
+        const tokenId = BehaviorTreeServiceToken.id;
+        if (services.isRegistered(tokenId)) {
+            services.unregister(tokenId);
         }
-        services.registerSingleton(BehaviorTreeService);
+        const btService = new BehaviorTreeService();
+        services.registerInstance(tokenId, btService);
     }
 
     private registerCompilers(services: ServiceContainer): void {
@@ -307,7 +313,9 @@ export class BehaviorTreeEditorModule implements IEditorModuleLoader {
             extensions: ['btree'],
             onDoubleClick: async (filePath: string) => {
                 if (this.services) {
-                    const service = this.services.resolve(BehaviorTreeService);
+                    // 使用 ServiceToken.id 解析服务
+                    // Resolve service using ServiceToken.id
+                    const service = this.services.resolve<IBehaviorTreeService>(BehaviorTreeServiceToken.id);
                     if (service) {
                         await service.loadFromFile(filePath);
                     }
@@ -374,6 +382,7 @@ export { BehaviorTreeRuntimeModule };
 export { PluginContext } from './PluginContext';
 export { BehaviorTreeEditorPanel } from './components/panels/BehaviorTreeEditorPanel';
 export * from './services/BehaviorTreeService';
+export * from './tokens';
 export * from './providers/BehaviorTreeNodeInspectorProvider';
 
 export * from './domain';

@@ -15,6 +15,7 @@
  */
 
 import { Core } from '@esengine/ecs-framework';
+import type { ServiceToken } from '@esengine/engine-core';
 import {
     EntityStoreService,
     MessageHub,
@@ -71,8 +72,13 @@ export interface IPluginAPI {
     getEntityStore(): EntityStoreService;
     /** 获取 MessageHub | Get MessageHub */
     getMessageHub(): MessageHub;
-    /** 解析服务 | Resolve service */
-    resolveService<T>(serviceType: any): T;
+    /**
+     * 解析服务 | Resolve service
+     *
+     * 支持 ServiceToken<T>（推荐）或传统的 class/symbol。
+     * Supports ServiceToken<T> (recommended) or legacy class/symbol.
+     */
+    resolveService<T>(serviceType: ServiceToken<T> | symbol | (new (...args: any[]) => T)): T;
     /** 获取 Core 实例 | Get Core instance */
     getCore(): typeof Core;
 }
@@ -185,7 +191,16 @@ export class PluginSDKRegistry {
                 }
                 return messageHubInstance;
             },
-            resolveService: <T>(serviceType: any): T => Core.services.resolve(serviceType) as T,
+            resolveService: <T>(serviceType: ServiceToken<T> | symbol | (new (...args: any[]) => T)): T => {
+                // 检测是否是 ServiceToken（具有 id: symbol 属性）
+                // Detect if this is a ServiceToken (has id: symbol property)
+                if (serviceType && typeof serviceType === 'object' && 'id' in serviceType && typeof serviceType.id === 'symbol') {
+                    return Core.services.resolve(serviceType.id) as T;
+                }
+                // 传统方式：直接使用 class 或 symbol
+                // Legacy: use class or symbol directly
+                return Core.services.resolve(serviceType as symbol) as T;
+            },
             getCore: () => Core,
         };
     }
