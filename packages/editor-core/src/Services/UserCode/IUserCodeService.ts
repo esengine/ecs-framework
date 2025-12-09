@@ -11,6 +11,8 @@
  * - scripts/editor/  -> Editor-only code (inspectors, gizmos, panels)
  */
 
+import type { IHotReloadOptions } from './HotReloadCoordinator';
+
 /**
  * User code target environment.
  * 用户代码目标环境。
@@ -280,8 +282,13 @@ export interface IUserCodeService {
      *
      * @param projectPath - Project root path | 项目根路径
      * @param onReload - Callback when code is reloaded | 代码重新加载时的回调
+     * @param options - Hot reload options | 热更新选项
      */
-    watch(projectPath: string, onReload: (event: HotReloadEvent) => void): Promise<void>;
+    watch(
+        projectPath: string,
+        onReload: (event: HotReloadEvent) => void,
+        options?: IHotReloadOptions
+    ): Promise<void>;
 
     /**
      * Stop watching for file changes.
@@ -296,20 +303,36 @@ export interface IUserCodeService {
     isWatching(): boolean;
 }
 
+import { EditorConfig } from '../../Config';
+
 /**
  * Default scripts directory name.
  * 默认脚本目录名称。
+ *
+ * @deprecated Use EditorConfig.paths.scripts instead
  */
-export const SCRIPTS_DIR = 'scripts';
+export const SCRIPTS_DIR = EditorConfig.paths.scripts;
 
 /**
  * Editor scripts subdirectory name.
  * 编辑器脚本子目录名称。
+ *
+ * @deprecated Use EditorConfig.paths.editorScripts instead
  */
-export const EDITOR_SCRIPTS_DIR = 'editor';
+export const EDITOR_SCRIPTS_DIR = EditorConfig.paths.editorScripts;
 
 /**
  * Default output directory for compiled user code.
  * 编译后用户代码的默认输出目录。
+ *
+ * @deprecated Use EditorConfig.paths.compiled instead
  */
-export const USER_CODE_OUTPUT_DIR = '.esengine/compiled';
+export const USER_CODE_OUTPUT_DIR = EditorConfig.paths.compiled;
+
+// Re-export hot reload coordinator types
+// 重新导出热更新协调器类型
+export {
+    EHotReloadPhase,
+    type IHotReloadStatus,
+    type IHotReloadOptions
+} from './HotReloadCoordinator';

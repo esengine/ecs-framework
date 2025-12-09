@@ -21,6 +21,8 @@ import { FileActionRegistry } from '../Services/FileActionRegistry';
 import { UIRegistry } from '../Services/UIRegistry';
 import { MessageHub } from '../Services/MessageHub';
 import { moduleRegistry } from '../Services/Module/ModuleRegistry';
+import { SerializerRegistry } from '../Services/SerializerRegistry';
+import { ComponentRegistry as EditorComponentRegistry } from '../Services/ComponentRegistry';
 
 const logger = createLogger('PluginManager');
 
@@ -71,6 +73,9 @@ export interface NormalizedPlugin {
  * Resources registered by plugin (for cleanup on unload)
  */
 export interface PluginRegisteredResources {
+    // ==================== 编辑器资源 ====================
+    // Editor resources
+
     /** 注册的面板ID | Registered panel IDs */
     panelIds: string[];
     /** 注册的菜单ID | Registered menu IDs */
@@ -85,6 +90,16 @@ export interface PluginRegisteredResources {
     fileHandlers: any[];
     /** 注册的文件模板 | Registered file templates */
     fileTemplates: any[];
+
+    // ==================== 运行时资源 ====================
+    // Runtime resources
+
+    /** 注册的组件类型名称 | Registered component type names */
+    componentTypeNames: string[];
+    /** 注册的系统实例 | Registered system instances */
+    systemInstances: any[];
+    /** 注册的序列化器类型 | Registered serializer types */
+    serializerTypes: Array<{ pluginName: string; type: string }>;
 }
 
 /**
@@ -407,14 +422,20 @@ export class PluginManager implements IService {
         logger.info(`activatePluginEditor: activating ${pluginId}`);
 
         // 初始化资源跟踪
+        // Initialize resource tracking
         const resources: PluginRegisteredResources = {
+            // 编辑器资源 | Editor resources
             panelIds: [],
             menuIds: [],
             toolbarIds: [],
             entityTemplateIds: [],
             componentActions: [],
             fileHandlers: [],
-            fileTemplates: []
+            fileTemplates: [],
+            // 运行时资源 | Runtime resources
+            componentTypeNames: [],
+            systemInstances: [],
+            serializerTypes: [],
         };
 
         // 获取注册表服务
@@ -627,31 +648,73 @@ export class PluginManager implements IService {
         const runtimeModule = plugin.plugin.runtimeModule;
         if (!runtimeModule) return;
 
-        // 注册组件
-        if (runtimeModule.registerComponents) {
-            runtimeModule.registerComponents(ComponentRegistry);
-            logger.debug(`Components registered for: ${pluginId}`);
+        // 确保资源跟踪对象存在
+        // Ensure resource tracking object exists
+        if (!plugin.registeredResources) {
+            plugin.registeredResources = {
+                panelIds: [],
+                menuIds: [],
+                toolbarIds: [],
+                entityTemplateIds: [],
+                componentActions: [],
+                fileHandlers: [],
+                fileTemplates: [],
+                componentTypeNames: [],
+                systemInstances: [],
+                serializerTypes: [],
+            };
         }
 
-        // 注册服务
+        const resources = plugin.registeredResources;
+
+        // 注册组件（使用包装的 Registry 来跟踪）
+        // Register components (use wrapped registry to track)
+        if (runtimeModule.registerComponents) {
+            const componentsBefore = new Set(ComponentRegistry.getRegisteredComponents().map(c => c.name));
+            runtimeModule.registerComponents(ComponentRegistry);
+            const componentsAfter = ComponentRegistry.getRegisteredComponents();
+
+            // 跟踪新注册的组件
+            // Track newly registered components
+            for (const comp of componentsAfter) {
+                if (!componentsBefore.has(comp.name)) {
+                    resources.componentTypeNames.push(comp.name);
+                }
+            }
+            logger.debug(`Components registered for: ${pluginId} (${resources.componentTypeNames.length} new)`);
+        }
+
+        // 注册服务（服务目前无法卸载，记录日志即可）
+        // Register services (services cannot be unloaded currently, just log)
         if (runtimeModule.registerServices) {
             runtimeModule.registerServices(this.services);
             logger.debug(`Services registered for: ${pluginId}`);
         }
 
-        // 创建系统
+        // 创建系统（跟踪创建的系统）
+        // Create systems (track created systems)
         if (runtimeModule.createSystems) {
+            const systemsBefore = this.currentScene.systems.length;
             runtimeModule.createSystems(this.currentScene, this.currentContext);
-            logger.debug(`Systems created for: ${pluginId}`);
+            const systemsAfter = this.currentScene.systems;
+
+            // 跟踪新创建的系统
+            // Track newly created systems
+            for (let i = systemsBefore; i < systemsAfter.length; i++) {
+                resources.systemInstances.push(systemsAfter[i]);
+            }
+            logger.debug(`Systems created for: ${pluginId} (${systemsAfter.length - systemsBefore} new)`);
         }
 
         // 调用系统创建后回调
+        // Call post-creation callback
         if (runtimeModule.onSystemsCreated) {
             runtimeModule.onSystemsCreated(this.currentScene, this.currentContext);
             logger.debug(`Systems wired for: ${pluginId}`);
         }
 
         // 调用初始化
+        // Call initialization
         if (runtimeModule.onInitialize) {
             await runtimeModule.onInitialize();
             logger.debug(`Runtime initialized for: ${pluginId}`);
@@ -661,22 +724,104 @@ export class PluginManager implements IService {
     /**
      * 动态卸载插件的运行时模块
      * Dynamically deactivate plugin's runtime module
+     *
+     * 卸载顺序（与激活相反）：
+     * 1. 调用 onDestroy 回调
+     * 2. 移除系统
+     * 3. 注销组件
+     * 4. 清理序列化器
+     *
+     * Unload order (reverse of activation):
+     * 1. Call onDestroy callback
+     * 2. Remove systems
+     * 3. Unregister components
+     * 4. Cleanup serializers
      */
     private deactivatePluginRuntime(pluginId: string): void {
         const plugin = this.plugins.get(pluginId);
         if (!plugin) return;
 
         const runtimeModule = plugin.plugin.runtimeModule;
-        if (!runtimeModule) return;
+        const resources = plugin.registeredResources;
 
-        // 调用销毁回调
-        if (runtimeModule.onDestroy) {
-            runtimeModule.onDestroy();
-            logger.debug(`Runtime destroyed for: ${pluginId}`);
+        // 1. 调用销毁回调
+        // Step 1: Call destroy callback
+        if (runtimeModule?.onDestroy) {
+            try {
+                runtimeModule.onDestroy();
+                logger.debug(`Runtime onDestroy called for: ${pluginId}`);
+            } catch (e) {
+                logger.error(`Error in onDestroy for ${pluginId}:`, e);
+            }
         }
 
-        // 注意：组件和服务无法动态注销，这是设计限制
-        // 系统的移除需要场景支持，暂时只调用 onDestroy
+        if (!resources) {
+            logger.debug(`No resources to cleanup for: ${pluginId}`);
+            return;
+        }
+
+        // 2. 移除系统
+        // Step 2: Remove systems
+        if (this.currentScene && resources.systemInstances.length > 0) {
+            for (const system of resources.systemInstances) {
+                try {
+                    this.currentScene.removeSystem(system);
+                    logger.debug(`System removed: ${system.constructor?.name || 'Unknown'}`);
+                } catch (e) {
+                    logger.error(`Failed to remove system:`, e);
+                }
+            }
+            resources.systemInstances = [];
+        }
+
+        // 3. 注销组件（从 Core 的 ComponentRegistry）
+        // Step 3: Unregister components (from Core's ComponentRegistry)
+        if (resources.componentTypeNames.length > 0) {
+            for (const componentName of resources.componentTypeNames) {
+                try {
+                    ComponentRegistry.unregister(componentName);
+                    logger.debug(`Component unregistered: ${componentName}`);
+                } catch (e) {
+                    logger.error(`Failed to unregister component ${componentName}:`, e);
+                }
+            }
+
+            // 同时从编辑器的 ComponentRegistry 注销
+            // Also unregister from editor's ComponentRegistry
+            if (this.services) {
+                const editorComponentRegistry = this.services.tryResolve(EditorComponentRegistry);
+                if (editorComponentRegistry) {
+                    for (const componentName of resources.componentTypeNames) {
+                        try {
+                            editorComponentRegistry.unregister(componentName);
+                        } catch (e) {
+                            // 忽略，可能未注册到编辑器注册表
+                            // Ignore, might not be registered in editor registry
+                        }
+                    }
+                }
+            }
+            resources.componentTypeNames = [];
+        }
+
+        // 4. 清理序列化器
+        // Step 4: Cleanup serializers
+        if (this.services && resources.serializerTypes.length > 0) {
+            const serializerRegistry = this.services.tryResolve(SerializerRegistry);
+            if (serializerRegistry) {
+                for (const { pluginName, type } of resources.serializerTypes) {
+                    try {
+                        serializerRegistry.unregister(pluginName, type);
+                        logger.debug(`Serializer unregistered: ${pluginName}/${type}`);
+                    } catch (e) {
+                        logger.error(`Failed to unregister serializer ${pluginName}/${type}:`, e);
+                    }
+                }
+            }
+            resources.serializerTypes = [];
+        }
+
+        logger.info(`Runtime deactivated for: ${pluginId}`);
     }
 
     /**

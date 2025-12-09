@@ -102,14 +102,19 @@ export type {
     UserCodeCompileResult,
     CompileError,
     UserCodeModule,
-    HotReloadEvent
+    HotReloadEvent,
+    IHotReloadStatus,
+    IHotReloadOptions
 } from './IUserCodeService';
 
 export {
     UserCodeTarget,
     SCRIPTS_DIR,
     EDITOR_SCRIPTS_DIR,
-    USER_CODE_OUTPUT_DIR
+    USER_CODE_OUTPUT_DIR,
+    EHotReloadPhase
 } from './IUserCodeService';
 
 export { UserCodeService } from './UserCodeService';
+
+export { HotReloadCoordinator } from './HotReloadCoordinator';

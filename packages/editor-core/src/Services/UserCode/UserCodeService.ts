@@ -7,7 +7,14 @@
  */
 
 import type { IService } from '@esengine/ecs-framework';
-import { Injectable, createLogger, PlatformDetector, ComponentRegistry as CoreComponentRegistry } from '@esengine/ecs-framework';
+import {
+    Injectable,
+    createLogger,
+    PlatformDetector,
+    ComponentRegistry as CoreComponentRegistry,
+    COMPONENT_TYPE_NAME,
+    SYSTEM_TYPE_NAME
+} from '@esengine/ecs-framework';
 import type {
     IUserCodeService,
     UserScriptInfo,
@@ -15,7 +22,8 @@ import type {
     UserCodeCompileResult,
     CompileError,
     UserCodeModule,
-    HotReloadEvent
+    HotReloadEvent,
+    IHotReloadOptions
 } from './IUserCodeService';
 import {
     UserCodeTarget,
@@ -23,6 +31,8 @@ import {
     EDITOR_SCRIPTS_DIR,
     USER_CODE_OUTPUT_DIR
 } from './IUserCodeService';
+import { HotReloadCoordinator, EHotReloadPhase } from './HotReloadCoordinator';
+import { EditorConfig } from '../../Config';
 import type { IFileSystem, FileEntry } from '../IFileSystem';
 import type { ComponentInspectorRegistry, IComponentInspector } from '../ComponentInspectorRegistry';
 import { GizmoRegistry } from '../../Gizmos/GizmoRegistry';
@@ -64,8 +74,15 @@ export class UserCodeService implements IService, IUserCodeService {
      */
     private _registeredGizmoTypes: any[] = [];
 
+    /**
+     * 热更新协调器
+     * Hot reload coordinator
+     */
+    private _hotReloadCoordinator: HotReloadCoordinator;
+
     constructor(fileSystem: IFileSystem) {
         this._fileSystem = fileSystem;
+        this._hotReloadCoordinator = new HotReloadCoordinator();
     }
 
     /**
@@ -160,8 +177,8 @@ export class UserCodeService implements IService, IUserCodeService {
 
             // Determine output file name | 确定输出文件名
             const outputFileName = options.target === UserCodeTarget.Runtime
-                ? 'user-runtime.js'
-                : 'user-editor.js';
+                ? EditorConfig.output.runtimeBundle
+                : EditorConfig.output.editorBundle;
             const outputPath = `${outputDir}${sep}${outputFileName}`;
 
             // Build entry point content | 构建入口点内容
@@ -176,8 +193,8 @@ export class UserCodeService implements IService, IUserCodeService {
 
             // Determine global name for IIFE output | 确定 IIFE 输出的全局名称
             const globalName = options.target === UserCodeTarget.Runtime
-                ? '__USER_RUNTIME_EXPORTS__'
-                : '__USER_EDITOR_EXPORTS__';
+                ? EditorConfig.globals.userRuntimeExports
+                : EditorConfig.globals.userEditorExports;
 
             // Build alias map for framework dependencies | 构建框架依赖的别名映射
             const shimPath = `${outputDir}${sep}_shim_ecs_framework.js`.replace(/\\/g, '/');
@@ -421,7 +438,8 @@ export class UserCodeService implements IService, IUserCodeService {
 
         // Access scene through Core.scene
         // 通过 Core.scene 访问场景
-        const Core = (window as any).__ESENGINE__?.ecsFramework?.Core;
+        const sdkGlobal = (window as any)[EditorConfig.globals.sdk];
+        const Core = sdkGlobal?.ecsFramework?.Core;
         const scene = Core?.scene;
         if (!scene || !scene.entities) {
             logger.warn('No active scene for hot reload | 没有活动场景用于热更新');
@@ -526,9 +544,10 @@ export class UserCodeService implements IService, IUserCodeService {
                         systemInstance.enabled = enabled;
                     }
 
-                    // 标记为用户系统，便于后续识别和移除 | Mark as user system for later identification and removal
-                    systemInstance.__isUserSystem__ = true;
-                    systemInstance.__userSystemName__ = name;
+                    // 标记为用户系统，便于后续识别和移除
+                    // Mark as user system for later identification and removal
+                    systemInstance[EditorConfig.typeMarkers.userSystem] = true;
+                    systemInstance[EditorConfig.typeMarkers.userSystemName] = name;
 
                     // 添加到场景 | Add to scene
                     scene.addSystem(systemInstance);
@@ -565,9 +584,11 @@ export class UserCodeService implements IService, IUserCodeService {
         for (const system of this._registeredSystems) {
             try {
                 scene.removeSystem(system);
-                logger.debug(`Removed user system: ${system.__userSystemName__} | 移除用户系统: ${system.__userSystemName__}`);
+                const systemName = system[EditorConfig.typeMarkers.userSystemName];
+                logger.debug(`Removed user system: ${systemName} | 移除用户系统: ${systemName}`);
             } catch (err) {
-                logger.warn(`Failed to remove system ${system.__userSystemName__}:`, err);
+                const systemName = system[EditorConfig.typeMarkers.userSystemName];
+                logger.warn(`Failed to remove system ${systemName}:`, err);
             }
         }
 
@@ -692,14 +713,29 @@ export class UserCodeService implements IService, IUserCodeService {
      *
      * @param projectPath - Project root path | 项目根路径
      * @param onReload - Callback when code is reloaded | 代码重新加载时的回调
+     * @param options - Hot reload options | 热更新选项
      */
-    async watch(projectPath: string, onReload: (event: HotReloadEvent) => void): Promise<void> {
+    async watch(
+        projectPath: string,
+        onReload: (event: HotReloadEvent) => void,
+        options?: IHotReloadOptions
+    ): Promise<void> {
         if (this._watching) {
             this._watchCallbacks.push(onReload);
             return;
         }
 
         this._currentProjectPath = projectPath;
+
+        // Initialize hot reload coordinator with Core reference
+        // 使用 Core 引用初始化热更新协调器
+        const sdkGlobal = (window as any)[EditorConfig.globals.sdk];
+        const Core = sdkGlobal?.ecsFramework?.Core;
+        if (Core) {
+            this._hotReloadCoordinator.initialize(Core);
+        } else {
+            logger.warn('Core not available for HotReloadCoordinator | Core 不可用于热更新协调器');
+        }
 
         try {
             // Check if we're in Tauri environment | 检查是否在 Tauri 环境
@@ -731,27 +767,44 @@ export class UserCodeService implements IService, IUserCodeService {
                     // Get previous module | 获取之前的模块
                     const previousModule = this.getModule(target);
 
-                    // Recompile the affected target | 重新编译受影响的目标
-                    const compileResult = await this.compile({
-                        projectPath,
-                        target
-                    });
+                    // Use coordinator for synchronized hot reload
+                    // 使用协调器进行同步热更新
+                    try {
+                        const hotReloadEvent = await this._hotReloadCoordinator.performHotReload(
+                            async () => {
+                                // Recompile the affected target | 重新编译受影响的目标
+                                const compileResult = await this.compile({
+                                    projectPath,
+                                    target
+                                });
 
-                    if (compileResult.success && compileResult.outputPath) {
-                        // Reload the module | 重新加载模块
-                        const newModule = await this.load(compileResult.outputPath, target);
+                                if (!compileResult.success || !compileResult.outputPath) {
+                                    throw new Error(
+                                        `Hot reload compilation failed: ${compileResult.errors.map(e => e.message).join(', ')}`
+                                    );
+                                }
 
-                        // Create hot reload event | 创建热更新事件
-                        const hotReloadEvent: HotReloadEvent = {
-                            target,
-                            changedFiles: paths,
-                            previousModule,
-                            newModule
-                        };
+                                // Reload the module | 重新加载模块
+                                const newModule = await this.load(compileResult.outputPath, target);
 
-                        this._notifyHotReload(hotReloadEvent);
-                    } else {
-                        logger.error('Hot reload compilation failed | 热更新编译失败', compileResult.errors);
+                                // Create hot reload event | 创建热更新事件
+                                const reloadEvent: HotReloadEvent = {
+                                    target,
+                                    changedFiles: paths,
+                                    previousModule,
+                                    newModule
+                                };
+
+                                return reloadEvent;
+                            },
+                            options
+                        ) as HotReloadEvent;
+
+                        if (hotReloadEvent) {
+                            this._notifyHotReload(hotReloadEvent);
+                        }
+                    } catch (error) {
+                        logger.error('Hot reload failed | 热更新失败:', error);
                     }
                 });
 
@@ -772,6 +825,16 @@ export class UserCodeService implements IService, IUserCodeService {
             logger.error('Failed to start watching | 启动监视失败:', error);
             throw error;
         }
+    }
+
+    /**
+     * Get the hot reload coordinator.
+     * 获取热更新协调器。
+     *
+     * @returns Hot reload coordinator instance | 热更新协调器实例
+     */
+    getHotReloadCoordinator(): HotReloadCoordinator {
+        return this._hotReloadCoordinator;
     }
 
     /**
@@ -971,12 +1034,13 @@ export class UserCodeService implements IService, IUserCodeService {
         const shimPaths: string[] = [];
 
         // Create shim for @esengine/ecs-framework | 为 @esengine/ecs-framework 创建 shim
-        // This uses window.__ESENGINE__.ecsFramework set by PluginSDKRegistry
-        // 这使用 PluginSDKRegistry 设置的 window.__ESENGINE__.ecsFramework
+        // This uses window[EditorConfig.globals.sdk].ecsFramework set by PluginSDKRegistry
+        // 这使用 PluginSDKRegistry 设置的 window[EditorConfig.globals.sdk].ecsFramework
         const ecsShimPath = `${outputDir}${sep}_shim_ecs_framework.js`;
+        const sdkGlobalName = EditorConfig.globals.sdk;
         const ecsShimContent = `// Shim for @esengine/ecs-framework
-// Maps to window.__ESENGINE__.ecsFramework set by PluginSDKRegistry
-module.exports = (typeof window !== 'undefined' && window.__ESENGINE__ && window.__ESENGINE__.ecsFramework) || {};
+// Maps to window.${sdkGlobalName}.ecsFramework set by PluginSDKRegistry
+module.exports = (typeof window !== 'undefined' && window.${sdkGlobalName} && window.${sdkGlobalName}.ecsFramework) || {};
 `;
         await this._fileSystem.writeFile(ecsShimPath, ecsShimContent);
         shimPaths.push(ecsShimPath);
@@ -1101,8 +1165,8 @@ module.exports = (typeof window !== 'undefined' && window.__ESENGINE__ && window
     ): Promise<Record<string, any>> {
         // Determine global name based on target | 根据目标确定全局名称
         const globalName = target === UserCodeTarget.Runtime
-            ? '__USER_RUNTIME_EXPORTS__'
-            : '__USER_EDITOR_EXPORTS__';
+            ? EditorConfig.globals.userRuntimeExports
+            : EditorConfig.globals.userEditorExports;
 
         // Clear any previous exports | 清除之前的导出
         (window as any)[globalName] = undefined;
@@ -1150,47 +1214,45 @@ module.exports = (typeof window !== 'undefined' && window.__ESENGINE__ && window
     }
 
     /**
-     * Check if a class extends Component.
-     * 检查类是否继承自 Component。
+     * Check if a class is decorated with @ECSComponent.
+     * 检查类是否使用了 @ECSComponent 装饰器。
      *
-     * Uses the actual Component class from the global framework to check inheritance.
-     * 使用全局框架中的实际 Component 类来检查继承关系。
+     * 用户组件必须使用 @ECSComponent 装饰器才能被识别。
+     * User components must use @ECSComponent decorator to be recognized.
+     *
+     * @example
+     * ```typescript
+     * @ECSComponent('MyComponent')
+     * class MyComponent extends Component {
+     *     // ...
+     * }
+     * ```
      */
     private _isComponentClass(cls: any): boolean {
-        // Get Component class from global framework | 从全局框架获取 Component 类
-        const framework = (window as any).__ESENGINE__?.ecsFramework;
-
-        if (!framework?.Component) {
-            return false;
-        }
-
-        // Use instanceof or prototype chain check | 使用 instanceof 或原型链检查
-        try {
-            const ComponentClass = framework.Component;
-
-            // Check if cls.prototype is an instance of Component
-            // 检查 cls.prototype 是否是 Component 的实例
-            return cls.prototype instanceof ComponentClass ||
-                   ComponentClass.prototype.isPrototypeOf(cls.prototype);
-        } catch {
-            return false;
-        }
+        // 检查是否有 @ECSComponent 装饰器（通过 Symbol 键）
+        // Check if class has @ECSComponent decorator (via Symbol key)
+        return cls?.[COMPONENT_TYPE_NAME] !== undefined;
     }
 
     /**
-     * Check if a class extends System.
-     * 检查类是否继承自 System。
+     * Check if a class is decorated with @ECSSystem.
+     * 检查类是否使用了 @ECSSystem 装饰器。
+     *
+     * 用户系统必须使用 @ECSSystem 装饰器才能被识别。
+     * User systems must use @ECSSystem decorator to be recognized.
+     *
+     * @example
+     * ```typescript
+     * @ECSSystem('MySystem')
+     * class MySystem extends EntitySystem {
+     *     // ...
+     * }
+     * ```
      */
     private _isSystemClass(cls: any): boolean {
-        let proto = cls.prototype;
-        while (proto) {
-            const name = proto.constructor?.name;
-            if (name === 'System' || name === 'EntityProcessingSystem') {
-                return true;
-            }
-            proto = Object.getPrototypeOf(proto);
-        }
-        return false;
+        // 检查是否有 @ECSSystem 装饰器（通过 Symbol 键）
+        // Check if class has @ECSSystem decorator (via Symbol key)
+        return cls?.[SYSTEM_TYPE_NAME] !== undefined;
     }
 
     /**

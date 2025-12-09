@@ -4,6 +4,9 @@
  * Plugin-based editor framework for ECS Framework
  */
 
+// 配置 | Configuration
+export * from './Config';
+
 // 新插件系统 | New plugin system
 export * from './Plugin';
 
