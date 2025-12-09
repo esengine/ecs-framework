@@ -778,7 +778,7 @@ function App() {
                     const Component = panelDesc.component;
                     return {
                         id: panelDesc.id,
-                        title: (panelDesc as any).titleZh && locale === 'zh' ? (panelDesc as any).titleZh : panelDesc.title,
+                        title: panelDesc.titleZh && locale === 'zh' ? panelDesc.titleZh : panelDesc.title,
                         content: <Component key={`${panelDesc.id}-${pluginUpdateTrigger}`} projectPath={currentProjectPath} />,
                         closable: panelDesc.closable ?? true
                     };
@@ -794,7 +794,7 @@ function App() {
                     const panelDesc = uiRegistry.getPanel(panelId)!;
                     // 优先使用动态标题，否则使用默认标题
                     const customTitle = dynamicPanelTitles.get(panelId);
-                    const defaultTitle = (panelDesc as any).titleZh && locale === 'zh' ? (panelDesc as any).titleZh : panelDesc.title;
+                    const defaultTitle = panelDesc.titleZh && locale === 'zh' ? panelDesc.titleZh : panelDesc.title;
 
                     // 支持 component 或 render 两种方式
                     let content: React.ReactNode;

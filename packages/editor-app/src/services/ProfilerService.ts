@@ -5,16 +5,6 @@ import type {
     IProfilerService,
     ProfilerData,
     SystemPerformanceData,
-    RemoteEntity,
-    AdvancedProfilerDataPayload
-} from './tokens';
-
-// 重新导出类型，以保持向后兼容
-// Re-export types for backward compatibility
-export type {
-    ProfilerData,
-    SystemPerformanceData,
-    RemoteEntity,
     AdvancedProfilerDataPayload
 } from './tokens';
 

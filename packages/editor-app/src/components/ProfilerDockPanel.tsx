@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Activity, Cpu, Layers, Package, Wifi, WifiOff, Maximize2, Pause, Play, BarChart3 } from 'lucide-react';
-import type { ProfilerData } from '../services/ProfilerService';
+import type { ProfilerData } from '../services/tokens';
 import { SettingsService } from '../services/SettingsService';
 import { Core } from '@esengine/ecs-framework';
 import { MessageHub } from '@esengine/editor-core';

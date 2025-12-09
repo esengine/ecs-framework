@@ -8,7 +8,7 @@ import {
     Eye, Star, Lock, Settings, Filter, Folder, Sun, Cloud, Mountain, Flag,
     SquareStack, FolderPlus
 } from 'lucide-react';
-import type { RemoteEntity } from '../services/ProfilerService';
+import type { RemoteEntity } from '../services/tokens';
 import { getProfilerService } from '../services/getService';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { CreateEntityCommand, DeleteEntityCommand, ReparentEntityCommand, DropPosition } from '../application/commands/entity';
