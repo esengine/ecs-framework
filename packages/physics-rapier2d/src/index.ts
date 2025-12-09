@@ -34,7 +34,9 @@ export {
     Physics2DSystemToken,
     Physics2DWorldToken,
     PhysicsConfigToken,
+    CollisionLayerConfigToken,
     type IPhysics2DQuery,
     type IPhysics2DWorld,
+    type ICollisionLayerConfig,
     type PhysicsConfig
 } from './tokens';

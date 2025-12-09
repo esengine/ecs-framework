@@ -3,6 +3,7 @@ import { Core } from '@esengine/esengine';
 import { Activity, BarChart3, Clock, Cpu, RefreshCw, Pause, Play, X, Wifi, WifiOff, Server, Search, Table2, TreePine } from 'lucide-react';
 import { ProfilerService } from '../services/ProfilerService';
 import { SettingsService } from '../services/SettingsService';
+import { getProfilerService } from '../services/getService';
 import '../styles/ProfilerWindow.css';
 
 interface SystemPerformanceData {
@@ -59,7 +60,7 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
 
     // Check ProfilerService connection status
     useEffect(() => {
-        const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
+        const profilerService = getProfilerService();
 
         if (!profilerService) {
             return;
@@ -186,7 +187,7 @@ export function ProfilerWindow({ onClose }: ProfilerWindowProps) {
     useEffect(() => {
         if (dataSource !== 'remote') return;
 
-        const profilerService = (window as any).__PROFILER_SERVICE__ as ProfilerService | undefined;
+        const profilerService = getProfilerService();
 
         if (!profilerService) {
             console.warn('[ProfilerWindow] ProfilerService not available');

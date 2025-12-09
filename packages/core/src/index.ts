@@ -8,6 +8,11 @@ export { Core } from './Core';
 export { ServiceContainer, ServiceLifetime } from './Core/ServiceContainer';
 export type { IService, ServiceType, ServiceIdentifier } from './Core/ServiceContainer';
 
+// 插件服务注册表（基于 ServiceToken 的类型安全服务管理）
+// Plugin Service Registry (type-safe service management based on ServiceToken)
+export { PluginServiceRegistry, createServiceToken } from './Core/PluginServiceRegistry';
+export type { ServiceToken } from './Core/PluginServiceRegistry';
+
 // 插件系统
 export { PluginManager } from './Core/PluginManager';
 export { PluginState } from './Core/Plugin';

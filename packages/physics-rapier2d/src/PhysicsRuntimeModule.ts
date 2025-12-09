@@ -22,9 +22,11 @@ import {
     Physics2DSystemToken,
     Physics2DWorldToken,
     PhysicsConfigToken,
+    CollisionLayerConfigToken,
     type IPhysics2DQuery,
     type PhysicsConfig
 } from './tokens';
+import { CollisionLayerConfig } from './services/CollisionLayerConfig';
 
 // 注册 Rapier2D 加载器
 import './loaders';
@@ -35,6 +37,7 @@ export {
     Physics2DSystemToken,
     Physics2DWorldToken,
     PhysicsConfigToken,
+    CollisionLayerConfigToken,
     type IPhysics2DQuery,
     type PhysicsConfig
 } from './tokens';
@@ -144,6 +147,7 @@ class PhysicsRuntimeModule implements IRuntimeModule {
         context.services.register(Physics2DSystemToken, physicsSystem);
         context.services.register(Physics2DWorldToken, physicsSystem.world);
         context.services.register(Physics2DQueryToken, physicsSystem);
+        context.services.register(CollisionLayerConfigToken, CollisionLayerConfig.getInstance());
     }
 
     /**
