@@ -40,21 +40,12 @@ import {
     AlertTriangle
 } from 'lucide-react';
 import { Core } from '@esengine/esengine';
-import { MessageHub, FileActionRegistry, AssetRegistryService, type FileCreationTemplate } from '@esengine/editor-core';
+import { MessageHub, FileActionRegistry, AssetRegistryService, MANAGED_ASSET_DIRECTORIES, type FileCreationTemplate } from '@esengine/editor-core';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { SettingsService } from '../services/SettingsService';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { PromptDialog } from './PromptDialog';
 import '../styles/ContentBrowser.css';
-
-/**
- * Directories managed by asset registry (GUID system)
- * 被资产注册表（GUID 系统）管理的目录
- *
- * Note: This is duplicated from AssetRegistryService to avoid build dependency issues.
- * Keep in sync with MANAGED_ASSET_DIRECTORIES in AssetRegistryService.ts
- */
-const MANAGED_ASSET_DIRECTORIES = ['assets', 'scripts', 'scenes'] as const;
 
 interface AssetItem {
     name: string;

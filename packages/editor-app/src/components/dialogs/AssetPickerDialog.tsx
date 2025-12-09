@@ -1,17 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { X, Search, Folder, FolderOpen, File, Image, FileText, Music, Video, Database, AlertTriangle } from 'lucide-react';
 import { Core } from '@esengine/esengine';
-import { ProjectService, AssetRegistryService } from '@esengine/editor-core';
+import { ProjectService, AssetRegistryService, MANAGED_ASSET_DIRECTORIES } from '@esengine/editor-core';
 import { TauriFileSystemService } from '../../services/TauriFileSystemService';
 import './AssetPickerDialog.css';
-
-/**
- * Directories managed by asset registry (GUID system)
- * Only files in these directories can be selected
- *
- * Note: Keep in sync with MANAGED_ASSET_DIRECTORIES in AssetRegistryService.ts
- */
-const MANAGED_ASSET_DIRECTORIES = ['assets', 'scripts', 'scenes'] as const;
 
 interface AssetPickerDialogProps {
     isOpen: boolean;
