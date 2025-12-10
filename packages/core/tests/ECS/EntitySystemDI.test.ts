@@ -6,20 +6,23 @@ import { Matcher } from '../../src/ECS/Utils/Matcher';
 import { Injectable, InjectProperty } from '../../src/Core/DI';
 import { Core } from '../../src/Core';
 import type { IService } from '../../src/Core/ServiceContainer';
-import { ECSSystem } from '../../src/ECS/Decorators';
+import { ECSSystem, ECSComponent } from '../../src/ECS/Decorators';
 
+@ECSComponent('DI_Transform')
 class Transform extends Component {
     constructor(public x: number = 0, public y: number = 0) {
         super();
     }
 }
 
+@ECSComponent('DI_Velocity')
 class Velocity extends Component {
     constructor(public vx: number = 0, public vy: number = 0) {
         super();
     }
 }
 
+@ECSComponent('DI_Health')
 class Health extends Component {
     constructor(public value: number = 100) {
         super();

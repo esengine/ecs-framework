@@ -49,6 +49,34 @@ export interface ModuleSettings {
     disabledModules: string[];
 }
 
+/**
+ * 构建配置
+ * Build Settings Configuration
+ *
+ * Persisted build settings for the project.
+ * 项目的持久化构建设置。
+ */
+export interface BuildSettingsConfig {
+    /** Selected scenes for build | 构建选中的场景 */
+    scenes?: string[];
+    /** Scripting defines | 脚本定义 */
+    scriptingDefines?: string[];
+    /** Company name | 公司名 */
+    companyName?: string;
+    /** Product name | 产品名 */
+    productName?: string;
+    /** Version | 版本号 */
+    version?: string;
+    /** Development build | 开发构建 */
+    developmentBuild?: boolean;
+    /** Source map | 源码映射 */
+    sourceMap?: boolean;
+    /** Compression method | 压缩方式 */
+    compressionMethod?: 'Default' | 'LZ4' | 'LZ4HC';
+    /** Web build mode | Web 构建模式 */
+    buildMode?: 'split-bundles' | 'single-bundle' | 'single-file';
+}
+
 export interface ProjectConfig {
     projectType?: ProjectType;
     /** User scripts directory (default: 'scripts') | 用户脚本目录（默认：'scripts'） */
@@ -65,6 +93,8 @@ export interface ProjectConfig {
     plugins?: PluginSettings;
     /** Module settings | 模块配置 */
     modules?: ModuleSettings;
+    /** Build settings | 构建配置 */
+    buildSettings?: BuildSettingsConfig;
 }
 
 @Injectable()
@@ -519,6 +549,34 @@ export class ProjectService implements IService {
     public isModuleEnabled(moduleId: string): boolean {
         const disabled = this.getDisabledModules();
         return !disabled.includes(moduleId);
+    }
+
+    // ==================== Build Settings ====================
+
+    /**
+     * 获取构建设置
+     * Get build settings
+     */
+    public getBuildSettings(): BuildSettingsConfig | null {
+        return this.projectConfig?.buildSettings || null;
+    }
+
+    /**
+     * 更新构建设置
+     * Update build settings
+     *
+     * @param settings - Build settings to update (partial)
+     */
+    public async updateBuildSettings(settings: Partial<BuildSettingsConfig>): Promise<void> {
+        const current = this.projectConfig?.buildSettings || {};
+        await this.updateConfig({
+            buildSettings: {
+                ...current,
+                ...settings
+            }
+        });
+        await this.messageHub.publish('project:buildSettingsChanged', { settings });
+        logger.info('Build settings saved');
     }
 
     public dispose(): void {

@@ -642,6 +642,15 @@ export class GameRuntime {
     }
 
     /**
+     * 从数据对象加载场景（用于单文件模式）
+     * Load scene from data object (for single-file mode)
+     */
+    async loadSceneFromData(sceneData: unknown): Promise<void> {
+        const sceneJson = JSON.stringify(sceneData);
+        await this.loadScene(sceneJson);
+    }
+
+    /**
      * 调整视口大小
      * Resize viewport
      */

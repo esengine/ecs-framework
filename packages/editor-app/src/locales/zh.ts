@@ -793,9 +793,13 @@ export const zh: Translations = {
         developmentBuild: '开发版本',
         sourceMap: 'Source Map',
         compressionMethod: '压缩方式',
-        bundleModules: '打包模块',
-        bundleModulesHint: '合并所有模块为单文件',
-        separateModulesHint: '保持模块为独立文件',
+        buildMode: '构建模式',
+        splitBundles: '分包模式（推荐）',
+        singleBundle: '单包模式',
+        singleFile: '单文件模式（可玩广告）',
+        splitBundlesHint: '核心运行时 + 插件按需加载，适合正式游戏',
+        singleBundleHint: '所有代码打包到一个 JS 文件，适合简单部署',
+        singleFileHint: '所有内容内联到一个 HTML 文件，适合可玩广告',
         playerSettingsOverrides: '玩家设置覆盖',
         companyName: '公司名称',
         productName: '产品名称',
@@ -819,7 +823,10 @@ export const zh: Translations = {
         outputPath: '输出路径',
         duration: '耗时',
         selectPlatform: '请选择平台或构建配置',
-        settings: '设置'
+        settings: '设置',
+        copyError: '复制错误信息',
+        showDetails: '显示详情',
+        collapse: '收起'
     },
 
     // ========================================

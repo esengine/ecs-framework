@@ -24,9 +24,15 @@
     "other": ["RAPIER"]
   },
   "requiresWasm": true,
-  "wasmPaths": [
-    "pkg/rapier_wasm2d_bg.wasm"
-  ],
+  "wasmConfig": {
+    "files": [
+      {
+        "src": ["rapier2d/pkg/rapier_wasm2d_bg.wasm", "rapier2d/rapier_wasm2d_bg.wasm"],
+        "dst": "wasm/rapier_wasm2d_bg.wasm"
+      }
+    ],
+    "runtimePath": "wasm/rapier_wasm2d_bg.wasm"
+  },
   "outputPath": "dist/index.js",
   "isExternalDependency": true
 }

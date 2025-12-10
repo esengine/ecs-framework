@@ -1,12 +1,11 @@
 import { Component } from '../../Component';
 import { BitMask64Utils, BitMask64Data } from '../../Utils/BigIntCompatibility';
 import { createLogger } from '../../../Utils/Logger';
-import { getComponentTypeName } from '../../Decorators';
-
-/**
- * 组件类型定义
- */
-export type ComponentType<T extends Component = Component> = new (...args: any[]) => T;
+import {
+    ComponentType,
+    getComponentTypeName,
+    hasECSComponentDecorator
+} from './ComponentTypeUtils';
 
 /**
  * 组件注册表
@@ -30,12 +29,31 @@ export class ComponentRegistry {
     private static hotReloadEnabled = false;
 
     /**
+     * 已警告过的组件类型集合，避免重复警告
+     * Set of warned component types to avoid duplicate warnings
+     */
+    private static warnedComponents = new Set<Function>();
+
+    /**
      * 注册组件类型并分配位掩码
+     * Register component type and allocate bitmask
+     *
      * @param componentType 组件类型
      * @returns 分配的位索引
      */
     public static register<T extends Component>(componentType: ComponentType<T>): number {
         const typeName = getComponentTypeName(componentType);
+
+        // 检查是否使用了 @ECSComponent 装饰器
+        // Check if @ECSComponent decorator is used
+        if (!hasECSComponentDecorator(componentType) && !this.warnedComponents.has(componentType)) {
+            this.warnedComponents.add(componentType);
+            console.warn(
+                `[ComponentRegistry] Component "${typeName}" is missing @ECSComponent decorator. ` +
+                `This may cause issues with serialization and code minification. ` +
+                `Please add: @ECSComponent('${typeName}')`
+            );
+        }
 
         if (this.componentTypes.has(componentType)) {
             const existingIndex = this.componentTypes.get(componentType)!;
@@ -324,6 +342,7 @@ export class ComponentRegistry {
         this.componentNameToType.clear();
         this.componentNameToId.clear();
         this.maskCache.clear();
+        this.warnedComponents.clear();
         this.nextBitIndex = 0;
         this.hotReloadEnabled = false;
     }

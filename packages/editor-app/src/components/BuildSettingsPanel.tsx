@@ -11,9 +11,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Monitor, Apple, Smartphone, Globe, Server, Gamepad2,
     Plus, Minus, ChevronDown, ChevronRight, Settings,
-    Package, Loader2, CheckCircle, XCircle, AlertTriangle, X
+    Package, Loader2, CheckCircle, XCircle, AlertTriangle, X, Copy, Check
 } from 'lucide-react';
-import type { BuildService, BuildProgress, BuildConfig, WebBuildConfig, WeChatBuildConfig, SceneManagerService } from '@esengine/editor-core';
+import type { BuildService, BuildProgress, BuildConfig, WebBuildConfig, WeChatBuildConfig, SceneManagerService, ProjectService, BuildSettingsConfig } from '@esengine/editor-core';
 import { BuildPlatform, BuildStatus } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
 import '../styles/BuildSettingsPanel.css';
@@ -63,7 +63,8 @@ interface BuildSettings {
     developmentBuild: boolean;
     sourceMap: boolean;
     compressionMethod: 'Default' | 'LZ4' | 'LZ4HC';
-    bundleModules: boolean;
+    /** Web build mode | Web 构建模式 */
+    buildMode: 'split-bundles' | 'single-bundle' | 'single-file';
 }
 
 // ==================== Constants | 常量 ====================
@@ -87,7 +88,7 @@ const DEFAULT_SETTINGS: BuildSettings = {
     developmentBuild: false,
     sourceMap: false,
     compressionMethod: 'Default',
-    bundleModules: false,
+    buildMode: 'split-bundles',
 };
 
 // ==================== Status Key Mapping | 状态键映射 ====================
@@ -105,12 +106,85 @@ const buildStatusKeys: Record<BuildStatus, string> = {
     [BuildStatus.Cancelled]: 'buildSettings.cancelled'
 };
 
+// ==================== Build Error Display Component | 构建错误显示组件 ====================
+
+/**
+ * Format and display build errors in a readable way.
+ * 以可读的方式格式化和显示构建错误。
+ */
+function BuildErrorDisplay({ error }: { error: string }) {
+    const { t } = useLocale();
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    // Extract first line as summary | 提取第一行作为摘要
+    const lines = error.split('\n');
+    const firstErrorMatch = error.match(/X \[ERROR\][^\n]*/);
+    const firstLine = lines[0] || '';
+    const matchedError = firstErrorMatch?.[0] || '';
+    const summary = matchedError
+        ? matchedError.slice(0, 100) + (matchedError.length > 100 ? '...' : '')
+        : firstLine.slice(0, 100) + (firstLine.length > 100 ? '...' : '');
+
+    // Check if error is long (needs expansion) | 检查错误是否很长（需要展开）
+    const isLongError = error.length > 200 || lines.length > 3;
+
+    // Copy error to clipboard | 复制错误到剪贴板
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(error);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (e) {
+            console.error('Failed to copy:', e);
+        }
+    };
+
+    return (
+        <div className="build-result-error">
+            <div className="build-error-header">
+                <AlertTriangle size={16} />
+                <span className="build-error-summary">{summary}</span>
+                <button
+                    className="build-error-copy-btn"
+                    onClick={handleCopy}
+                    title={t('buildSettings.copyError')}
+                >
+                    {copied ? <Check size={14} /> : <Copy size={14} />}
+                </button>
+            </div>
+
+            {isLongError && (
+                <>
+                    <button
+                        className="build-error-expand-btn"
+                        onClick={() => setIsExpanded(!isExpanded)}
+                    >
+                        {isExpanded ? t('buildSettings.collapse') : t('buildSettings.showDetails')}
+                        <ChevronDown
+                            size={14}
+                            className={isExpanded ? 'rotated' : ''}
+                        />
+                    </button>
+
+                    {isExpanded && (
+                        <pre className="build-error-details">{error}</pre>
+                    )}
+                </>
+            )}
+        </div>
+    );
+}
+
 // ==================== Props | 属性 ====================
 
 interface BuildSettingsPanelProps {
     projectPath?: string;
     buildService?: BuildService;
     sceneManager?: SceneManagerService;
+    projectService?: ProjectService;
+    /** Available scenes in the project | 项目中可用的场景列表 */
+    availableScenes?: string[];
     onBuild?: (profile: BuildProfile, settings: BuildSettings) => void;
     onClose?: () => void;
 }
@@ -121,6 +195,8 @@ export function BuildSettingsPanel({
     projectPath,
     buildService,
     sceneManager,
+    projectService,
+    availableScenes,
     onBuild,
     onClose
 }: BuildSettingsPanelProps) {
@@ -232,9 +308,11 @@ export function BuildSettingsPanel({
                     const webConfig: WebBuildConfig = {
                         ...baseConfig,
                         platform: BuildPlatform.Web,
-                        format: 'iife',
-                        bundleModules: settings.bundleModules,
-                        generateHtml: true
+                        buildMode: settings.buildMode,
+                        generateHtml: true,
+                        minify: !settings.developmentBuild,
+                        generateAssetCatalog: true,
+                        assetLoadingStrategy: 'on-demand'
                     };
                     buildConfig = webConfig;
                 } else if (platform === BuildPlatform.WeChatMiniGame) {
@@ -279,6 +357,78 @@ export function BuildSettingsPanel({
             }
         }
     }, [selectedProfile, settings, projectPath, buildService, onBuild, getPlatformEnum]);
+
+    // Load saved build settings from project config
+    // 从项目配置加载已保存的构建设置
+    useEffect(() => {
+        if (!projectService) return;
+
+        const savedSettings = projectService.getBuildSettings();
+        if (savedSettings) {
+            setSettings(prev => ({
+                ...prev,
+                scriptingDefines: savedSettings.scriptingDefines || [],
+                companyName: savedSettings.companyName || prev.companyName,
+                productName: savedSettings.productName || prev.productName,
+                version: savedSettings.version || prev.version,
+                developmentBuild: savedSettings.developmentBuild ?? prev.developmentBuild,
+                sourceMap: savedSettings.sourceMap ?? prev.sourceMap,
+                compressionMethod: savedSettings.compressionMethod || prev.compressionMethod,
+                buildMode: savedSettings.buildMode || prev.buildMode
+            }));
+        }
+    }, [projectService]);
+
+    // Initialize scenes from availableScenes prop and saved settings
+    // 从 availableScenes prop 和已保存设置初始化场景列表
+    useEffect(() => {
+        if (availableScenes && availableScenes.length > 0) {
+            const savedSettings = projectService?.getBuildSettings();
+            const savedScenes = savedSettings?.scenes || [];
+
+            setSettings(prev => ({
+                ...prev,
+                scenes: availableScenes.map(path => ({
+                    path,
+                    enabled: savedScenes.length > 0 ? savedScenes.includes(path) : true
+                }))
+            }));
+        }
+    }, [availableScenes, projectService]);
+
+    // Auto-save build settings when changed
+    // 设置变化时自动保存
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    useEffect(() => {
+        if (!projectService) return;
+
+        // Debounce save to avoid too many writes
+        // 防抖保存，避免频繁写入
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+
+        saveTimeoutRef.current = setTimeout(() => {
+            const configToSave: BuildSettingsConfig = {
+                scenes: settings.scenes.filter(s => s.enabled).map(s => s.path),
+                scriptingDefines: settings.scriptingDefines,
+                companyName: settings.companyName,
+                productName: settings.productName,
+                version: settings.version,
+                developmentBuild: settings.developmentBuild,
+                sourceMap: settings.sourceMap,
+                compressionMethod: settings.compressionMethod,
+                buildMode: settings.buildMode
+            };
+            projectService.updateBuildSettings(configToSave);
+        }, 500);
+
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, [settings, projectService]);
 
     // Monitor build progress from service | 从服务监控构建进度
     useEffect(() => {
@@ -475,11 +625,24 @@ export function BuildSettingsPanel({
                                         <div className="build-settings-field-content">
                                             <div className="build-settings-scene-list">
                                                 {settings.scenes.length === 0 ? (
-                                                    <div className="build-settings-empty-list"></div>
+                                                    <div className="build-settings-empty-list">
+                                                        {t('buildSettings.noScenesFound')}
+                                                    </div>
                                                 ) : (
                                                     settings.scenes.map((scene, index) => (
                                                         <div key={index} className="build-settings-scene-item">
-                                                            <input type="checkbox" checked={scene.enabled} readOnly />
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={scene.enabled}
+                                                                onChange={e => {
+                                                                    setSettings(prev => ({
+                                                                        ...prev,
+                                                                        scenes: prev.scenes.map((s, i) =>
+                                                                            i === index ? { ...s, enabled: e.target.checked } : s
+                                                                        )
+                                                                    }));
+                                                                }}
+                                                            />
                                                             <span>{scene.path}</span>
                                                         </div>
                                                     ))
@@ -582,18 +745,25 @@ export function BuildSettingsPanel({
                                                     </select>
                                                 </div>
                                                 <div className="build-settings-form-row">
-                                                    <label>{t('buildSettings.bundleModules')}</label>
+                                                    <label>{t('buildSettings.buildMode')}</label>
                                                     <div className="build-settings-toggle-group">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={settings.bundleModules}
+                                                        <select
+                                                            value={settings.buildMode}
                                                             onChange={e => setSettings(prev => ({
                                                                 ...prev,
-                                                                bundleModules: e.target.checked
+                                                                buildMode: e.target.value as 'split-bundles' | 'single-bundle' | 'single-file'
                                                             }))}
-                                                        />
+                                                        >
+                                                            <option value="split-bundles">{t('buildSettings.splitBundles')}</option>
+                                                            <option value="single-bundle">{t('buildSettings.singleBundle')}</option>
+                                                            <option value="single-file">{t('buildSettings.singleFile')}</option>
+                                                        </select>
                                                         <span className="build-settings-hint">
-                                                            {settings.bundleModules ? t('buildSettings.bundleModulesHint') : t('buildSettings.separateModulesHint')}
+                                                            {settings.buildMode === 'split-bundles'
+                                                                ? t('buildSettings.splitBundlesHint')
+                                                                : settings.buildMode === 'single-bundle'
+                                                                    ? t('buildSettings.singleBundleHint')
+                                                                    : t('buildSettings.singleFileHint')}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -749,10 +919,7 @@ export function BuildSettingsPanel({
 
                                     {/* Error Message | 错误消息 */}
                                     {buildResult.error && (
-                                        <div className="build-result-error">
-                                            <AlertTriangle size={16} />
-                                            <span>{buildResult.error}</span>
-                                        </div>
+                                        <BuildErrorDisplay error={buildResult.error} />
                                     )}
 
                                     {/* Warnings | 警告 */}

@@ -146,6 +146,18 @@ pub struct BundleOptions {
     pub project_root: String,
     /// Define replacements | 宏定义替换
     pub define: Option<std::collections::HashMap<String, String>>,
+    /// Module alias mappings (e.g., @esengine/ecs-framework -> /path/to/module)
+    /// 模块别名映射（例如 @esengine/ecs-framework -> /path/to/module）
+    pub alias: Option<std::collections::HashMap<String, String>>,
+    /// Global name for IIFE format (assigns exports to window.{globalName})
+    /// IIFE 格式的全局变量名（将导出赋值给 window.{globalName}）
+    pub global_name: Option<String>,
+    /// Files to inject at the start of bundle (esbuild --inject)
+    /// 在打包开始时注入的文件（esbuild --inject）
+    pub inject: Option<Vec<String>>,
+    /// Banner code to prepend to bundle
+    /// 添加到打包文件开头的代码
+    pub banner: Option<String>,
 }
 
 /// Bundle result.
@@ -172,9 +184,11 @@ pub async fn bundle_scripts(options: BundleOptions) -> Result<BundleResult, Stri
     let esbuild_path = find_esbuild(&options.project_root)?;
 
     // Build output file path | 构建输出文件路径
+    // Note: Don't use .with_extension() as it replaces the last dot-segment
+    // 注意：不要使用 .with_extension()，因为它会替换最后一个点分段
+    // e.g., "esengine.core" would become "esengine.js" instead of "esengine.core.js"
     let output_file = Path::new(&options.output_dir)
-        .join(&options.bundle_name)
-        .with_extension("js");
+        .join(format!("{}.js", &options.bundle_name));
 
     // Ensure output directory exists | 确保输出目录存在
     if let Some(parent) = output_file.parent() {
@@ -190,6 +204,9 @@ pub async fn bundle_scripts(options: BundleOptions) -> Result<BundleResult, Stri
     args.push(format!("--format={}", options.format));
     args.push("--platform=browser".to_string());
     args.push("--target=es2020".to_string());
+    // Show detailed warnings instead of just count
+    // 显示详细警告而不仅仅是数量
+    args.push("--log-level=warning".to_string());
 
     if options.source_map {
         args.push("--sourcemap".to_string());
@@ -210,6 +227,37 @@ pub async fn bundle_scripts(options: BundleOptions) -> Result<BundleResult, Stri
         }
     }
 
+    // Add alias mappings | 添加别名映射
+    if let Some(ref aliases) = options.alias {
+        for (from, to) in aliases {
+            args.push(format!("--alias:{}={}", from, to));
+        }
+    }
+
+    // Add global name for IIFE format | 为 IIFE 格式添加全局变量名
+    if let Some(ref global_name) = options.global_name {
+        args.push(format!("--global-name={}", global_name));
+    }
+
+    // Add inject files | 添加注入文件
+    if let Some(ref inject_files) = options.inject {
+        for file in inject_files {
+            args.push(format!("--inject:{}", file));
+        }
+    }
+
+    // Add banner | 添加 banner
+    if let Some(ref banner) = options.banner {
+        args.push(format!("--banner:js={}", banner));
+    }
+
+    // Log esbuild command for debugging
+    println!("[esbuild] bundle_name: {}", options.bundle_name);
+    println!("[esbuild] format: {}", options.format);
+    println!("[esbuild] output_file: {}", output_file.display());
+    println!("[esbuild] entry_points: {:?}", options.entry_points);
+    println!("[esbuild] args: {:?}", args);
+
     // Run esbuild | 运行 esbuild
     let output = Command::new(&esbuild_path)
         .args(&args)
@@ -224,12 +272,24 @@ pub async fn bundle_scripts(options: BundleOptions) -> Result<BundleResult, Stri
             .ok();
 
         // Parse warnings from stderr | 从 stderr 解析警告
+        // esbuild outputs warnings to stderr even on success
+        // esbuild 即使成功也会将警告输出到 stderr
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let warnings: Vec<String> = stderr
-            .lines()
-            .filter(|l| l.contains("warning"))
-            .map(|l| l.to_string())
-            .collect();
+        let mut warnings: Vec<String> = Vec::new();
+
+        if !stderr.is_empty() {
+            println!("[esbuild] stderr output:\n{}", stderr);
+
+            // Collect all non-empty lines as warnings
+            // esbuild warning format varies, so collect everything
+            // 收集所有非空行作为警告，因为 esbuild 警告格式多变
+            for line in stderr.lines() {
+                let trimmed = line.trim();
+                if !trimmed.is_empty() {
+                    warnings.push(trimmed.to_string());
+                }
+            }
+        }
 
         Ok(BundleResult {
             success: true,
@@ -426,8 +486,20 @@ fn list_files_recursive(
     {
         let entry = entry.map_err(|e| format!("Failed to read entry | 读取条目失败: {}", e))?;
         let entry_path = entry.path();
+        let file_name = entry.file_name();
+        let file_name_str = file_name.to_string_lossy();
 
         if entry_path.is_dir() {
+            // Skip node_modules, hidden directories, and other large directories
+            // 跳过 node_modules、隐藏目录和其他大型目录
+            if file_name_str.starts_with('.')
+                || file_name_str == "node_modules"
+                || file_name_str == "target"
+                || file_name_str == ".git"
+            {
+                continue;
+            }
+
             if recursive {
                 list_files_recursive(&entry_path, extensions, recursive, files)?;
             }

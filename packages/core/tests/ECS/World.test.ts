@@ -5,20 +5,23 @@ import { Entity } from '../../src/ECS/Entity';
 import { Component } from '../../src/ECS/Component';
 import { Matcher } from '../../src/ECS/Utils/Matcher';
 import { IService } from '../../src/Core/ServiceContainer';
+import { ECSComponent } from '../../src/ECS/Decorators';
 
 // 测试用组件
+@ECSComponent('WorldTest_TestComponent')
 class TestComponent extends Component {
     public value: number = 0;
-    
+
     constructor(value: number = 0) {
         super();
         this.value = value;
     }
 }
 
+@ECSComponent('WorldTest_PlayerComponent')
 class PlayerComponent extends Component {
     public playerId: string;
-    
+
     constructor(playerId: string) {
         super();
         this.playerId = playerId;

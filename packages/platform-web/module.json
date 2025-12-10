@@ -15,5 +15,6 @@
   "dependencies": ["core", "runtime-core"],
   "exports": {},
   "outputPath": "dist/index.mjs",
-  "requiresWasm": false
+  "requiresWasm": false,
+  "isRuntimeEntry": true
 }

@@ -3,9 +3,10 @@ import { Entity } from '../../../src/ECS/Entity';
 import { Component } from '../../../src/ECS/Component';
 import { EntitySystem } from '../../../src/ECS/Systems/EntitySystem';
 import { Matcher } from '../../../src/ECS/Utils/Matcher';
-import { ComponentRegistry } from '../../../src/ECS/Core/ComponentStorage';
+import { ECSComponent } from '../../../src/ECS/Decorators';
 
 // 测试组件
+@ECSComponent('MultiSysInit_PositionComponent')
 class PositionComponent extends Component {
     public x: number;
     public y: number;
@@ -18,6 +19,7 @@ class PositionComponent extends Component {
     }
 }
 
+@ECSComponent('MultiSysInit_VelocityComponent')
 class VelocityComponent extends Component {
     public vx: number;
     public vy: number;
@@ -30,6 +32,7 @@ class VelocityComponent extends Component {
     }
 }
 
+@ECSComponent('MultiSysInit_HealthComponent')
 class HealthComponent extends Component {
     public health: number;
 
@@ -71,7 +74,6 @@ describe('MultiSystemInit - 多系统初始化测试', () => {
     let scene: Scene;
 
     beforeEach(() => {
-        ComponentRegistry.reset();
         scene = new Scene();
     });
 
@@ -91,7 +93,6 @@ describe('MultiSystemInit - 多系统初始化测试', () => {
         entity.addComponent(new HealthComponent(100));
 
         console.log('[Test] Entity created with Position, Velocity, Health');
-        console.log('[Test] ComponentRegistry registered types:', ComponentRegistry.getRegisteredCount());
 
         // 2. 验证QuerySystem能查询到实体
         const movementQuery = scene.querySystem.queryAll(PositionComponent, VelocityComponent);

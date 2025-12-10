@@ -66,10 +66,17 @@ export {
 export {
     BrowserFileSystemService,
     createBrowserFileSystem,
-    type AssetCatalog,
-    type AssetCatalogEntry,
     type BrowserFileSystemOptions
 } from './services/BrowserFileSystemService';
+
+// Re-export catalog types from asset-system (canonical source)
+// 从 asset-system 重新导出目录类型（规范来源）
+export type {
+    IAssetCatalog,
+    IAssetCatalogEntry,
+    IAssetBundleInfo,
+    AssetLoadStrategy
+} from '@esengine/asset-system';
 
 // Re-export Input System from engine-core for convenience
 export {

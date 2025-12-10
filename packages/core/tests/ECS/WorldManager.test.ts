@@ -1,8 +1,10 @@
 import { WorldManager, IWorldManagerConfig } from '../../src/ECS/WorldManager';
 import { IWorldConfig, World } from '../../src/ECS/World';
 import { Component } from '../../src/ECS/Component';
+import { ECSComponent } from '../../src/ECS/Decorators';
 
 // 测试用组件
+@ECSComponent('WorldMgr_TestComponent')
 class TestComponent extends Component {
     public value: number = 0;
 

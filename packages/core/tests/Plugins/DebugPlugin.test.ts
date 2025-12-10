@@ -5,14 +5,16 @@ import { Component } from '../../src/ECS/Component';
 import { Matcher } from '../../src/ECS/Utils/Matcher';
 import { DebugPlugin } from '../../src/Plugins/DebugPlugin';
 import { Injectable } from '../../src/Core/DI';
-import { ECSSystem } from '../../src/ECS/Decorators';
+import { ECSSystem, ECSComponent } from '../../src/ECS/Decorators';
 import { EntitySystem } from '../../src/ECS/Systems/EntitySystem';
 
+@ECSComponent('Debug_HealthComponent')
 class HealthComponent extends Component {
     public health: number = 100;
     public maxHealth: number = 100;
 }
 
+@ECSComponent('Debug_PositionComponent')
 class PositionComponent extends Component {
     public x: number = 0;
     public y: number = 0;

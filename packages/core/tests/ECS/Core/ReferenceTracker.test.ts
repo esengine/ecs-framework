@@ -3,7 +3,9 @@ import { ReferenceTracker } from '../../../src/ECS/Core/ReferenceTracker';
 import { Component } from '../../../src/ECS/Component';
 import { Entity } from '../../../src/ECS/Entity';
 import { Scene } from '../../../src/ECS/Scene';
+import { ECSComponent } from '../../../src/ECS/Decorators';
 
+@ECSComponent('RefTrackerTestComponent')
 class TestComponent extends Component {
     public target: Entity | null = null;
 }

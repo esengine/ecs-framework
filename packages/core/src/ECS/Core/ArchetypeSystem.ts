@@ -271,9 +271,6 @@ export class ArchetypeSystem {
     private generateArchetypeId(componentTypes: ComponentType[]): ArchetypeId {
         const mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         for (const type of componentTypes) {
-            if (!ComponentRegistry.isRegistered(type)) {
-                ComponentRegistry.register(type);
-            }
             const bitMask = ComponentRegistry.getBitMask(type);
             BitMask64Utils.orInPlace(mask, bitMask);
         }

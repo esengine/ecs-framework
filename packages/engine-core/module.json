@@ -34,5 +34,8 @@
     ]
   },
   "requiresWasm": false,
-  "outputPath": "dist/index.js"
+  "outputPath": "dist/index.js",
+  "coreServiceExports": ["createServiceToken", "PluginServiceRegistry"],
+  "userScriptEntries": ["index.ts", "main.ts", "game.ts", "index.js", "main.js"],
+  "userScriptExternals": ["@esengine/ecs-framework", "@esengine/core", "@esengine/engine-core", "@esengine/asset-system"]
 }

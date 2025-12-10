@@ -26,6 +26,9 @@
     "engine-core",
     "asset-system"
   ],
+  "externalDependencies": [
+    "@esengine/physics-rapier2d"
+  ],
   "exports": {
     "components": [
       "ParticleSystemComponent"

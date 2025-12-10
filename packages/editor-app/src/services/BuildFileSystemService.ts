@@ -31,6 +31,37 @@ export interface BundleOptions {
     projectRoot: string;
     /** Define replacements | 宏定义替换 */
     define?: Record<string, string>;
+    /**
+     * Module alias mappings.
+     * 模块别名映射。
+     *
+     * Maps package names to actual file paths for bundling.
+     * Used in single-bundle mode to resolve @esengine/* imports.
+     * 将包名映射到实际文件路径以进行打包。
+     * 在单包模式下用于解析 @esengine/* 导入。
+     */
+    alias?: Record<string, string>;
+    /**
+     * Global name for IIFE format.
+     * IIFE 格式的全局变量名。
+     *
+     * Assigns exports to window.{globalName}.
+     * 将导出赋值给 window.{globalName}。
+     */
+    globalName?: string;
+    /**
+     * Files to inject at the start of bundle.
+     * 在打包开始时注入的文件。
+     *
+     * Used to inject shims that map external imports to global variables.
+     * 用于注入将外部导入映射到全局变量的 shim。
+     */
+    inject?: string[];
+    /**
+     * Banner code to prepend to bundle.
+     * 添加到打包文件开头的代码。
+     */
+    banner?: string;
 }
 
 /**
@@ -236,6 +267,16 @@ export class BuildFileSystemService {
      */
     async readBinaryFileAsBase64(path: string): Promise<string> {
         return await invoke('read_binary_file_as_base64', { path });
+    }
+
+    /**
+     * Delete a file.
+     * 删除文件。
+     *
+     * @param path - File path | 文件路径
+     */
+    async deleteFile(path: string): Promise<void> {
+        await invoke('delete_file', { path });
     }
 }
 

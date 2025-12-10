@@ -7,7 +7,7 @@
  */
 
 import { X } from 'lucide-react';
-import type { BuildService, SceneManagerService } from '@esengine/editor-core';
+import type { BuildService, SceneManagerService, ProjectService } from '@esengine/editor-core';
 import { BuildSettingsPanel } from './BuildSettingsPanel';
 import { useLocale } from '../hooks/useLocale';
 import '../styles/BuildSettingsWindow.css';
@@ -16,6 +16,9 @@ interface BuildSettingsWindowProps {
     projectPath?: string;
     buildService?: BuildService;
     sceneManager?: SceneManagerService;
+    projectService?: ProjectService;
+    /** Available scenes in the project | 项目中可用的场景列表 */
+    availableScenes?: string[];
     onClose: () => void;
 }
 
@@ -23,6 +26,8 @@ export function BuildSettingsWindow({
     projectPath,
     buildService,
     sceneManager,
+    projectService,
+    availableScenes,
     onClose
 }: BuildSettingsWindowProps) {
     const { t } = useLocale();
@@ -45,6 +50,8 @@ export function BuildSettingsWindow({
                         projectPath={projectPath}
                         buildService={buildService}
                         sceneManager={sceneManager}
+                        projectService={projectService}
+                        availableScenes={availableScenes}
                         onClose={onClose}
                     />
                 </div>

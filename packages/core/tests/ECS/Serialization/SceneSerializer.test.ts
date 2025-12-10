@@ -2,6 +2,7 @@ import { SceneSerializer } from '../../../src/ECS/Serialization/SceneSerializer'
 import { Scene } from '../../../src/ECS/Scene';
 import { Component } from '../../../src/ECS/Component';
 import { HierarchySystem } from '../../../src/ECS/Systems/HierarchySystem';
+import { HierarchyComponent } from '../../../src/ECS/Components/HierarchyComponent';
 import { ECSComponent } from '../../../src/ECS/Decorators';
 import { ComponentRegistry, ComponentType } from '../../../src/ECS/Core/ComponentStorage';
 import { Serializable, Serialize } from '../../../src/ECS/Serialization';
@@ -37,10 +38,6 @@ describe('SceneSerializer', () => {
     let componentRegistry: Map<string, ComponentType>;
 
     beforeEach(() => {
-        ComponentRegistry.reset();
-        ComponentRegistry.register(PositionComponent);
-        ComponentRegistry.register(VelocityComponent);
-
         scene = new Scene({ name: 'SceneSerializerTestScene' });
 
         componentRegistry = ComponentRegistry.getAllComponentNames() as Map<string, ComponentType>;

@@ -3,12 +3,14 @@ import { Entity } from '../../src/ECS/Entity';
 import { Component } from '../../src/ECS/Component';
 import { EntitySystem } from '../../src/ECS/Systems/EntitySystem';
 import { Matcher } from '../../src/ECS/Utils/Matcher';
+import { ECSComponent } from '../../src/ECS/Decorators';
 
 // 测试组件
+@ECSComponent('SceneTest_PositionComponent')
 class PositionComponent extends Component {
     public x: number;
     public y: number;
-    
+
     constructor(...args: unknown[]) {
         super();
         const [x = 0, y = 0] = args as [number?, number?];
@@ -17,10 +19,11 @@ class PositionComponent extends Component {
     }
 }
 
+@ECSComponent('SceneTest_VelocityComponent')
 class VelocityComponent extends Component {
     public vx: number;
     public vy: number;
-    
+
     constructor(...args: unknown[]) {
         super();
         const [vx = 0, vy = 0] = args as [number?, number?];
@@ -29,9 +32,10 @@ class VelocityComponent extends Component {
     }
 }
 
+@ECSComponent('SceneTest_HealthComponent')
 class HealthComponent extends Component {
     public health: number;
-    
+
     constructor(...args: unknown[]) {
         super();
         const [health = 100] = args as [number?];
@@ -39,9 +43,10 @@ class HealthComponent extends Component {
     }
 }
 
+@ECSComponent('SceneTest_RenderComponent')
 class RenderComponent extends Component {
     public visible: boolean;
-    
+
     constructor(...args: unknown[]) {
         super();
         const [visible = true] = args as [boolean?];
@@ -387,7 +392,7 @@ describe('Scene - 场景管理系统测试', () => {
             entity.addComponent(new PositionComponent(10, 20));
             
             expect(componentAddedEvent).toBeDefined();
-            expect(componentAddedEvent.componentType).toBe('PositionComponent');
+            expect(componentAddedEvent.componentType).toBe('SceneTest_PositionComponent');
         });
     });
 

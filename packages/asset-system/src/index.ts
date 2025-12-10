@@ -55,6 +55,13 @@ export type { IResourceLoader } from './services/SceneResourceManager';
 
 // Utils
 export { UVHelper } from './utils/UVHelper';
+export {
+    isValidGUID,
+    generateGUID,
+    hashBuffer,
+    hashString,
+    hashFileInfo
+} from './utils/AssetUtils';
 
 // Default instance
 import { AssetManager } from './core/AssetManager';

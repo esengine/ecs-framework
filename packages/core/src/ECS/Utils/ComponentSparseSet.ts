@@ -85,11 +85,6 @@ export class ComponentSparseSet {
             const componentType = component.constructor as ComponentType;
             entityComponents.add(componentType);
 
-            // 确保组件类型已注册
-            if (!ComponentRegistry.isRegistered(componentType)) {
-                ComponentRegistry.register(componentType);
-            }
-
             // 获取组件位掩码并合并
             const bitMask = ComponentRegistry.getBitMask(componentType);
             BitMask64Utils.orInPlace(componentMask, bitMask);

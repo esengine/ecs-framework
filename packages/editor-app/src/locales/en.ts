@@ -793,9 +793,13 @@ export const en: Translations = {
         developmentBuild: 'Development Build',
         sourceMap: 'Source Map',
         compressionMethod: 'Compression Method',
-        bundleModules: 'Bundle Modules',
-        bundleModulesHint: 'Merge all modules into single file',
-        separateModulesHint: 'Keep modules as separate files',
+        buildMode: 'Build Mode',
+        splitBundles: 'Split Bundles (Recommended)',
+        singleBundle: 'Single Bundle',
+        singleFile: 'Single File (Playable Ads)',
+        splitBundlesHint: 'Core runtime + plugins loaded on demand. Best for production games.',
+        singleBundleHint: 'All code in one JS file. Suitable for simple deployment.',
+        singleFileHint: 'Everything inlined into one HTML file. Best for playable ads.',
         playerSettingsOverrides: 'Player Settings Overrides',
         companyName: 'Company Name',
         productName: 'Product Name',
@@ -819,7 +823,10 @@ export const en: Translations = {
         outputPath: 'Output Path',
         duration: 'Duration',
         selectPlatform: 'Select a platform or build profile',
-        settings: 'Settings'
+        settings: 'Settings',
+        copyError: 'Copy error',
+        showDetails: 'Show details',
+        collapse: 'Collapse'
     },
 
     // ========================================

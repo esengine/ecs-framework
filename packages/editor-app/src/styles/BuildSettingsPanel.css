@@ -835,19 +835,113 @@
 
 .build-result-error {
     display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    padding: 8px 10px;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: 2px;
+    border-radius: 4px;
     color: #ef4444;
-    font-size: 11px;
+    font-size: 12px;
 }
 
-.build-result-error svg {
+.build-error-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.build-error-header svg {
     flex-shrink: 0;
-    margin-top: 1px;
+    margin-top: 2px;
+}
+
+.build-error-summary {
+    flex: 1;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.build-error-copy-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    color: #ccc;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.build-error-copy-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.build-error-expand-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    color: #aaa;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    align-self: flex-start;
+}
+
+.build-error-expand-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ccc;
+}
+
+.build-error-expand-btn svg {
+    transition: transform 0.2s ease;
+}
+
+.build-error-expand-btn svg.rotated {
+    transform: rotate(180deg);
+}
+
+.build-error-details {
+    max-height: 200px;
+    overflow: auto;
+    padding: 10px;
+    margin: 0;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: #f87171;
+}
+
+.build-error-details::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.build-error-details::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.build-error-details::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.build-error-details::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .build-result-warnings {

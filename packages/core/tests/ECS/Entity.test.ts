@@ -1,12 +1,14 @@
 import { Entity } from '../../src/ECS/Entity';
 import { Component } from '../../src/ECS/Component';
 import { Scene } from '../../src/ECS/Scene';
+import { ECSComponent } from '../../src/ECS/Decorators';
 
 // 测试组件类
+@ECSComponent('EntityTest_PositionComponent')
 class TestPositionComponent extends Component {
     public x: number = 0;
     public y: number = 0;
-    
+
     constructor(...args: unknown[]) {
         super();
         const [x = 0, y = 0] = args as [number?, number?];
@@ -15,9 +17,10 @@ class TestPositionComponent extends Component {
     }
 }
 
+@ECSComponent('EntityTest_HealthComponent')
 class TestHealthComponent extends Component {
     public health: number = 100;
-    
+
     constructor(...args: unknown[]) {
         super();
         const [health = 100] = args as [number?];
@@ -25,10 +28,11 @@ class TestHealthComponent extends Component {
     }
 }
 
+@ECSComponent('EntityTest_VelocityComponent')
 class TestVelocityComponent extends Component {
     public vx: number = 0;
     public vy: number = 0;
-    
+
     constructor(...args: unknown[]) {
         super();
         const [vx = 0, vy = 0] = args as [number?, number?];
@@ -37,9 +41,10 @@ class TestVelocityComponent extends Component {
     }
 }
 
+@ECSComponent('EntityTest_RenderComponent')
 class TestRenderComponent extends Component {
     public visible: boolean = true;
-    
+
     constructor(...args: unknown[]) {
         super();
         const [visible = true] = args as [boolean?];
@@ -267,8 +272,8 @@ describe('Entity - 组件缓存优化测试', () => {
             expect(debugInfo.name).toBe('TestEntity');
             expect(debugInfo.id).toBeGreaterThanOrEqual(0);
             expect(debugInfo.componentCount).toBe(2);
-            expect(debugInfo.componentTypes).toContain('TestPositionComponent');
-            expect(debugInfo.componentTypes).toContain('TestHealthComponent');
+            expect(debugInfo.componentTypes).toContain('EntityTest_PositionComponent');
+            expect(debugInfo.componentTypes).toContain('EntityTest_HealthComponent');
             expect(debugInfo.cacheBuilt).toBe(true);
         });
     });

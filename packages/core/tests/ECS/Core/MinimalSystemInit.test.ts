@@ -3,9 +3,10 @@ import { Entity } from '../../../src/ECS/Entity';
 import { Component } from '../../../src/ECS/Component';
 import { EntitySystem } from '../../../src/ECS/Systems/EntitySystem';
 import { Matcher } from '../../../src/ECS/Utils/Matcher';
-import { ComponentRegistry } from '../../../src/ECS/Core/ComponentStorage';
+import { ECSComponent } from '../../../src/ECS/Decorators';
 
 // 简单的测试组件
+@ECSComponent('MinSysInit_HealthComponent')
 class HealthComponent extends Component {
     public health: number;
 
@@ -34,7 +35,6 @@ describe('MinimalSystemInit - 最小化系统初始化测试', () => {
     let scene: Scene;
 
     beforeEach(() => {
-        ComponentRegistry.reset();
         scene = new Scene();
     });
 
@@ -52,7 +52,6 @@ describe('MinimalSystemInit - 最小化系统初始化测试', () => {
         entity.addComponent(new HealthComponent(100));
 
         console.log('[Test] Entity created with HealthComponent');
-        console.log('[Test] ComponentRegistry registered types:', ComponentRegistry.getRegisteredCount());
 
         // 2. 验证QuerySystem能查询到实体
         const queryResult = scene.querySystem.queryAll(HealthComponent);

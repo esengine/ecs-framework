@@ -135,6 +135,8 @@ export class ServiceRegistry {
 
         for (const comp of standardComponents) {
             // Register to editor registry for UI
+            // 组件已通过 @ECSComponent 装饰器自动注册到 CoreComponentRegistry
+            // Components are auto-registered to CoreComponentRegistry via @ECSComponent decorator
             componentRegistry.register({
                 name: comp.editorName,
                 type: comp.type,
@@ -142,9 +144,6 @@ export class ServiceRegistry {
                 description: comp.description,
                 icon: comp.icon
             });
-
-            // Register to core registry for serialization/deserialization
-            CoreComponentRegistry.register(comp.type as any);
         }
 
         // Enable hot reload for editor environment

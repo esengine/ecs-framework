@@ -15,7 +15,8 @@ import {
     IRuntimeBundleInfo,
     IRuntimeAssetLocation,
     IAssetToPack,
-    IBundlePackOptions
+    IBundlePackOptions,
+    hashBuffer
 } from '@esengine/asset-system';
 import { IAssetMeta } from '../meta/AssetMetaFile';
 
@@ -129,7 +130,7 @@ export class AssetPacker {
             catalogBundles[bundleName] = {
                 url: `assets/${bundleName}.bundle`,
                 size: packed.data.byteLength,
-                hash: await this._hashBuffer(packed.data),
+                hash: await hashBuffer(packed.data),
                 // 预加载核心资产包（可通过配置扩展） | Preload core bundles (extensible via config)
                 preload: options.preloadBundles?.includes(bundleName) ??
                          (bundleName === 'core' || bundleName === 'main')
@@ -323,7 +324,7 @@ export class AssetPacker {
         const manifest: IBundleManifest = {
             name,
             version: '1.0',
-            hash: await this._hashBuffer(bundleData.buffer),
+            hash: await hashBuffer(bundleData.buffer),
             compression: 'none',
             size: bundleData.byteLength,
             assets: assetInfos,
@@ -338,27 +339,6 @@ export class AssetPacker {
         };
     }
 
-    /**
-     * Hash a buffer using SHA-256
-     * 使用 SHA-256 哈希缓冲区
-     */
-    private async _hashBuffer(buffer: ArrayBuffer): Promise<string> {
-        // Use Web Crypto API if available
-        if (typeof crypto !== 'undefined' && crypto.subtle) {
-            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
-        }
-
-        // Fallback: simple hash
-        const view = new Uint8Array(buffer);
-        let hash = 0;
-        for (let i = 0; i < view.length; i++) {
-            hash = ((hash << 5) - hash) + view[i];
-            hash = hash & hash;
-        }
-        return Math.abs(hash).toString(16).padStart(16, '0');
-    }
 }
 
 /**

@@ -25,6 +25,9 @@
     "sprite",
     "asset-system"
   ],
+  "externalDependencies": [
+    "@esengine/physics-rapier2d"
+  ],
   "exports": {
     "components": [
       "TilemapComponent"

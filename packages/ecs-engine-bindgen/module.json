@@ -17,5 +17,19 @@
     "other": ["EngineBridge", "EngineRenderSystem", "CameraSystem"]
   },
   "requiresWasm": true,
-  "outputPath": "dist/index.js"
+  "outputPath": "dist/index.js",
+  "wasmConfig": {
+    "files": [
+      {
+        "src": "engine/pkg/es_engine.js",
+        "dst": "libs/es-engine/es_engine.js"
+      },
+      {
+        "src": "engine/pkg/es_engine_bg.wasm",
+        "dst": "libs/es-engine/es_engine_bg.wasm"
+      }
+    ],
+    "runtimePath": "libs/es-engine/es_engine.js",
+    "isEngineCore": true
+  }
 }

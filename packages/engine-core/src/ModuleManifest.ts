@@ -143,26 +143,63 @@ export interface ModuleManifest {
     wasmSize?: number;
 
     /**
-     * WASM file paths relative to module's node_modules or package root.
-     * WASM 文件路径，相对于模块的 node_modules 或包根目录。
+     * Unified WASM configuration for all WASM-related modules.
+     * 统一的 WASM 配置，用于所有 WASM 相关模块。
      *
-     * Can be glob patterns like "*.wasm" or specific paths.
-     * 可以是 glob 模式如 "*.wasm" 或具体路径。
-     *
-     * Example: ["@dimforge/rapier2d-compat/*.wasm"]
+     * This replaces the legacy wasmPaths, runtimeWasmPath, and wasmBindings fields.
+     * 此配置替代旧的 wasmPaths、runtimeWasmPath 和 wasmBindings 字段。
      */
-    wasmPaths?: string[];
+    wasmConfig?: {
+        /**
+         * List of WASM files to copy during build.
+         * 构建时需要复制的 WASM 文件列表。
+         *
+         * Each entry specifies source location and output destination.
+         * 每个条目指定源位置和输出目标。
+         */
+        files: Array<{
+            /**
+             * Source file path relative to engine modules directory.
+             * 源文件路径，相对于引擎模块目录。
+             *
+             * Supports multiple candidate paths (first existing one is used).
+             * 支持多个候选路径（使用第一个存在的）。
+             *
+             * Example: ["rapier2d/pkg/rapier_wasm2d_bg.wasm", "rapier2d/rapier_wasm2d_bg.wasm"]
+             */
+            src: string | string[];
 
-    /**
-     * Runtime WASM path relative to game output root.
-     * 运行时 WASM 路径，相对于游戏输出根目录。
-     *
-     * Build pipeline copies WASM to this location.
-     * 构建管线将 WASM 复制到此位置。
-     *
-     * Example: "wasm/rapier_wasm2d_bg.wasm"
-     */
-    runtimeWasmPath?: string;
+            /**
+             * Destination path relative to build output directory.
+             * 目标路径，相对于构建输出目录。
+             *
+             * Example: "wasm/rapier_wasm2d_bg.wasm" or "libs/es-engine/es_engine_bg.wasm"
+             */
+            dst: string;
+        }>;
+
+        /**
+         * Runtime WASM path for dynamic loading (used by JS code at runtime).
+         * 运行时 WASM 路径，用于动态加载（JS 代码在运行时使用）。
+         *
+         * This is the path that runtime code uses to fetch the WASM file.
+         * 这是运行时代码用来获取 WASM 文件的路径。
+         *
+         * Example: "wasm/rapier_wasm2d_bg.wasm"
+         */
+        runtimePath?: string;
+
+        /**
+         * Whether this is the core engine WASM module.
+         * 是否是核心引擎 WASM 模块。
+         *
+         * The core engine WASM (e.g., es_engine) must be initialized first
+         * before the runtime can start. Only one module should have this flag.
+         * 核心引擎 WASM（如 es_engine）必须在运行时启动前首先初始化。
+         * 只有一个模块应该设置此标志。
+         */
+        isEngineCore?: boolean;
+    };
 
     // ==================== Build Configuration ====================
     // ==================== 构建配置 ====================
@@ -193,4 +230,49 @@ export interface ModuleManifest {
      * Example: ["chunk-*.js", "worker.js"]
      */
     includes?: string[];
+
+    // ==================== Build Pipeline Configuration ====================
+    // ==================== 构建管线配置 ====================
+
+    /**
+     * Core service exports that should be explicitly exported first.
+     * 需要显式优先导出的核心服务。
+     *
+     * Used to avoid naming conflicts when re-exporting modules.
+     * 用于避免重新导出模块时的命名冲突。
+     *
+     * Example: ["createServiceToken", "PluginServiceRegistry"]
+     */
+    coreServiceExports?: string[];
+
+    /**
+     * Whether this module is the runtime entry point (provides default export).
+     * 此模块是否为运行时入口点（提供默认导出）。
+     *
+     * Only one module should have this set to true (typically platform-web).
+     * 只有一个模块应该设置为 true（通常是 platform-web）。
+     */
+    isRuntimeEntry?: boolean;
+
+    /**
+     * Standard entry file names to search for user scripts.
+     * 用于搜索用户脚本的标准入口文件名。
+     *
+     * Build pipeline will try these files in order.
+     * 构建管线将按顺序尝试这些文件。
+     *
+     * Example: ["index.ts", "main.ts", "game.ts"]
+     */
+    userScriptEntries?: string[];
+
+    /**
+     * Additional external packages that user scripts might import.
+     * 用户脚本可能导入的额外外部包。
+     *
+     * These packages will be marked as external during bundling.
+     * 这些包在打包时将被标记为外部依赖。
+     *
+     * Example: ["@esengine/ecs-framework", "@esengine/core"]
+     */
+    userScriptExternals?: string[];
 }

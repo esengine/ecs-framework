@@ -821,13 +821,9 @@ export class QuerySystem {
             return cached;
         }
 
-        // 使用ComponentRegistry而不是ComponentTypeManager,确保bitIndex一致
+        // 使用ComponentRegistry确保bitIndex一致
         const mask = BitMask64Utils.clone(BitMask64Utils.ZERO);
         for (const type of componentTypes) {
-            // 确保组件已注册
-            if (!ComponentRegistry.isRegistered(type)) {
-                ComponentRegistry.register(type);
-            }
             const bitMask = ComponentRegistry.getBitMask(type);
             BitMask64Utils.orInPlace(mask, bitMask);
         }
