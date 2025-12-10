@@ -29,6 +29,7 @@
         "dst": "libs/es-engine/es_engine_bg.wasm"
       }
     ],
-    "runtimePath": "libs/es-engine/es_engine.js"
+    "runtimePath": "libs/es-engine/es_engine.js",
+    "isEngineCore": true
   }
 }

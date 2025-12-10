@@ -113,12 +113,54 @@ export interface BuildConfig {
  * Web 构建模式。
  */
 export type WebBuildMode =
-    /** Single bundle: All code in one file, best for small games/playable ads
-     *  单包模式：所有代码打包到一个文件，适合小游戏/可玩广告 */
-    | 'single-bundle'
     /** Split bundles: Core + plugins loaded on demand, best for production games
      *  分包模式：核心包 + 插件按需加载，适合正式游戏 */
-    | 'split-bundles';
+    | 'split-bundles'
+    /** Single bundle: All code in one JS file, suitable for simple deployment
+     *  单包模式：所有代码打包到一个 JS 文件，适合简单部署 */
+    | 'single-bundle'
+    /** Single file: Everything inlined into one HTML file, best for playable ads
+     *  单文件模式：所有内容内联到一个 HTML 文件，适合可玩广告 */
+    | 'single-file';
+
+/**
+ * Inline configuration for single-file builds.
+ * 单文件构建的内联配置。
+ *
+ * Single-file mode inlines EVERYTHING into one HTML file by default.
+ * These options allow disabling specific inlining for debugging purposes.
+ * 单文件模式默认将所有内容内联到一个 HTML 文件中。
+ * 这些选项允许为调试目的禁用特定的内联。
+ */
+export interface InlineConfig {
+    /**
+     * Inline JavaScript into HTML as <script> tag content.
+     * 将 JS 内联到 HTML 的 <script> 标签中。
+     * Default: true
+     */
+    inlineJs?: boolean;
+
+    /**
+     * Inline WASM files as Base64.
+     * 将 WASM 文件转为 Base64 内联。
+     * Default: true
+     */
+    inlineWasm?: boolean;
+
+    /**
+     * Inline asset files (images, audio, fonts) as Base64 data URLs.
+     * 将资产文件（图片、音频、字体）转为 Base64 data URL 内联。
+     * Default: true
+     */
+    inlineAssets?: boolean;
+
+    /**
+     * Inline scene JSON files.
+     * 内联场景 JSON 文件。
+     * Default: true
+     */
+    inlineScenes?: boolean;
+}
 
 /**
  * Web platform build configuration.
@@ -130,11 +172,18 @@ export interface WebBuildConfig extends BuildConfig {
     /**
      * Build mode.
      * 构建模式。
-     * - 'single-bundle': All code in one file (~500KB), single request, best for small games
-     * - 'split-bundles': Core (~150KB) + plugins on demand, better caching, best for production
-     * Default: 'split-bundles'
+     * - 'split-bundles': Core + plugins loaded on demand, best for production (default)
+     * - 'single-bundle': All code in one JS file, suitable for simple deployment
+     * - 'single-file': Everything inlined into one HTML, best for playable ads
      */
     buildMode: WebBuildMode;
+
+    /**
+     * Inline configuration for single-file builds.
+     * 单文件构建的内联配置。
+     * Only used when buildMode is 'single-file'.
+     */
+    inlineConfig?: InlineConfig;
 
     /**
      * Whether to minify output.

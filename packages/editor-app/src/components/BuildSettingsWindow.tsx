@@ -16,6 +16,8 @@ interface BuildSettingsWindowProps {
     projectPath?: string;
     buildService?: BuildService;
     sceneManager?: SceneManagerService;
+    /** Available scenes in the project | 项目中可用的场景列表 */
+    availableScenes?: string[];
     onClose: () => void;
 }
 
@@ -23,6 +25,7 @@ export function BuildSettingsWindow({
     projectPath,
     buildService,
     sceneManager,
+    availableScenes,
     onClose
 }: BuildSettingsWindowProps) {
     const { t } = useLocale();
@@ -45,6 +48,7 @@ export function BuildSettingsWindow({
                         projectPath={projectPath}
                         buildService={buildService}
                         sceneManager={sceneManager}
+                        availableScenes={availableScenes}
                         onClose={onClose}
                     />
                 </div>

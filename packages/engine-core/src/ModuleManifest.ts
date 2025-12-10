@@ -188,6 +188,17 @@ export interface ModuleManifest {
          * Example: "wasm/rapier_wasm2d_bg.wasm"
          */
         runtimePath?: string;
+
+        /**
+         * Whether this is the core engine WASM module.
+         * 是否是核心引擎 WASM 模块。
+         *
+         * The core engine WASM (e.g., es_engine) must be initialized first
+         * before the runtime can start. Only one module should have this flag.
+         * 核心引擎 WASM（如 es_engine）必须在运行时启动前首先初始化。
+         * 只有一个模块应该设置此标志。
+         */
+        isEngineCore?: boolean;
     };
 
     // ==================== Build Configuration ====================

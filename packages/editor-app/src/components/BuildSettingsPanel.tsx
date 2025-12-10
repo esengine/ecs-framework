@@ -64,7 +64,7 @@ interface BuildSettings {
     sourceMap: boolean;
     compressionMethod: 'Default' | 'LZ4' | 'LZ4HC';
     /** Web build mode | Web 构建模式 */
-    buildMode: 'split-bundles' | 'single-bundle';
+    buildMode: 'split-bundles' | 'single-bundle' | 'single-file';
 }
 
 // ==================== Constants | 常量 ====================
@@ -182,6 +182,8 @@ interface BuildSettingsPanelProps {
     projectPath?: string;
     buildService?: BuildService;
     sceneManager?: SceneManagerService;
+    /** Available scenes in the project | 项目中可用的场景列表 */
+    availableScenes?: string[];
     onBuild?: (profile: BuildProfile, settings: BuildSettings) => void;
     onClose?: () => void;
 }
@@ -192,6 +194,7 @@ export function BuildSettingsPanel({
     projectPath,
     buildService,
     sceneManager,
+    availableScenes,
     onBuild,
     onClose
 }: BuildSettingsPanelProps) {
@@ -352,6 +355,17 @@ export function BuildSettingsPanel({
             }
         }
     }, [selectedProfile, settings, projectPath, buildService, onBuild, getPlatformEnum]);
+
+    // Initialize scenes from availableScenes prop
+    // 从 availableScenes prop 初始化场景列表
+    useEffect(() => {
+        if (availableScenes && availableScenes.length > 0) {
+            setSettings(prev => ({
+                ...prev,
+                scenes: availableScenes.map(path => ({ path, enabled: true }))
+            }));
+        }
+    }, [availableScenes]);
 
     // Monitor build progress from service | 从服务监控构建进度
     useEffect(() => {
@@ -548,11 +562,24 @@ export function BuildSettingsPanel({
                                         <div className="build-settings-field-content">
                                             <div className="build-settings-scene-list">
                                                 {settings.scenes.length === 0 ? (
-                                                    <div className="build-settings-empty-list"></div>
+                                                    <div className="build-settings-empty-list">
+                                                        {t('buildSettings.noScenesFound')}
+                                                    </div>
                                                 ) : (
                                                     settings.scenes.map((scene, index) => (
                                                         <div key={index} className="build-settings-scene-item">
-                                                            <input type="checkbox" checked={scene.enabled} readOnly />
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={scene.enabled}
+                                                                onChange={e => {
+                                                                    setSettings(prev => ({
+                                                                        ...prev,
+                                                                        scenes: prev.scenes.map((s, i) =>
+                                                                            i === index ? { ...s, enabled: e.target.checked } : s
+                                                                        )
+                                                                    }));
+                                                                }}
+                                                            />
                                                             <span>{scene.path}</span>
                                                         </div>
                                                     ))
@@ -661,16 +688,19 @@ export function BuildSettingsPanel({
                                                             value={settings.buildMode}
                                                             onChange={e => setSettings(prev => ({
                                                                 ...prev,
-                                                                buildMode: e.target.value as 'split-bundles' | 'single-bundle'
+                                                                buildMode: e.target.value as 'split-bundles' | 'single-bundle' | 'single-file'
                                                             }))}
                                                         >
                                                             <option value="split-bundles">{t('buildSettings.splitBundles')}</option>
                                                             <option value="single-bundle">{t('buildSettings.singleBundle')}</option>
+                                                            <option value="single-file">{t('buildSettings.singleFile')}</option>
                                                         </select>
                                                         <span className="build-settings-hint">
                                                             {settings.buildMode === 'split-bundles'
                                                                 ? t('buildSettings.splitBundlesHint')
-                                                                : t('buildSettings.singleBundleHint')}
+                                                                : settings.buildMode === 'single-bundle'
+                                                                    ? t('buildSettings.singleBundleHint')
+                                                                    : t('buildSettings.singleFileHint')}
                                                         </span>
                                                     </div>
                                                 </div>

@@ -90,6 +90,7 @@ function App() {
     const [isLoading, setIsLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
     const [currentProjectPath, setCurrentProjectPath] = useState<string | null>(null);
+    const [availableScenes, setAvailableScenes] = useState<string[]>([]);
     const [pluginManager, setPluginManager] = useState<PluginManager | null>(null);
     const [entityStore, setEntityStore] = useState<EntityStoreService | null>(null);
     const [messageHub, setMessageHub] = useState<MessageHub | null>(null);
@@ -397,6 +398,18 @@ function App() {
             settings.addRecentProject(projectPath);
 
             setCurrentProjectPath(projectPath);
+
+            // Scan for available scenes in project
+            // 扫描项目中可用的场景
+            try {
+                const sceneFiles = await TauriAPI.scanDirectory(`${projectPath}/scenes`, '*.ecs');
+                const sceneNames = sceneFiles.map(f => `scenes/${f.split(/[\\/]/).pop()}`);
+                setAvailableScenes(sceneNames);
+                console.log('[App] Found scenes:', sceneNames);
+            } catch (e) {
+                console.warn('[App] Failed to scan scenes:', e);
+            }
+
             // 设置 projectLoaded 为 true，触发主界面渲染（包括 Viewport）
             setProjectLoaded(true);
 
@@ -1025,6 +1038,7 @@ function App() {
                     projectPath={currentProjectPath || undefined}
                     buildService={buildService || undefined}
                     sceneManager={sceneManager || undefined}
+                    availableScenes={availableScenes}
                 />
             )}
 

@@ -44,7 +44,8 @@ import type {
     BuildProgress,
     BuildStep,
     BuildContext,
-    WebBuildConfig
+    WebBuildConfig,
+    InlineConfig
 } from '../IBuildPipeline';
 import { BuildPlatform, BuildStatus } from '../IBuildPipeline';
 import type { ModuleManifest } from '../../Module/ModuleTypes';
@@ -75,6 +76,12 @@ export interface IBuildFileSystem {
         projectRoot: string;
         define?: Record<string, string>;
         globalName?: string;
+        /** Module alias mappings | 模块别名映射 */
+        alias?: Record<string, string>;
+        /** Files to inject at the start of bundle | 在打包开始时注入的文件 */
+        inject?: string[];
+        /** Banner code to prepend to bundle | 添加到打包文件开头的代码 */
+        banner?: string;
     }): Promise<{
         success: boolean;
         outputFile?: string;
@@ -175,8 +182,13 @@ export class WebBuildPipeline implements IBuildPipeline {
             errors.push('Output path is required | 输出路径不能为空');
         }
 
-        if (webConfig.buildMode !== 'single-bundle' && webConfig.buildMode !== 'split-bundles') {
-            errors.push('Build mode must be "single-bundle" or "split-bundles" | 构建模式必须是 "single-bundle" 或 "split-bundles"');
+        const validModes = ['single-bundle', 'split-bundles', 'single-file'];
+        if (!validModes.includes(webConfig.buildMode)) {
+            errors.push('Build mode must be "split-bundles", "single-bundle", or "single-file" | 构建模式必须是 "split-bundles"、"single-bundle" 或 "single-file"');
+        }
+
+        if (!webConfig.scenes || webConfig.scenes.length === 0) {
+            errors.push('At least one scene must be selected | 至少需要选择一个场景');
         }
 
         return errors;
@@ -189,6 +201,30 @@ export class WebBuildPipeline implements IBuildPipeline {
     getSteps(config: BuildConfig): BuildStep[] {
         const webConfig = config as WebBuildConfig;
 
+        // Single-file mode has a completely different pipeline
+        // 单文件模式使用完全不同的构建管线
+        if (webConfig.buildMode === 'single-file') {
+            return [
+                {
+                    id: 'prepare',
+                    name: 'Prepare build directory | 准备构建目录',
+                    execute: this._stepPrepare.bind(this)
+                },
+                {
+                    id: 'analyze',
+                    name: 'Analyze project | 分析项目',
+                    execute: this._stepAnalyze.bind(this)
+                },
+                {
+                    id: 'bundle-single-file',
+                    name: 'Build single file | 构建单文件',
+                    execute: this._stepBundleSingleFile.bind(this)
+                }
+            ];
+        }
+
+        // Standard pipeline for split-bundles and single-bundle modes
+        // 分包和单包模式的标准管线
         const steps: BuildStep[] = [
             {
                 id: 'prepare',
@@ -240,14 +276,13 @@ export class WebBuildPipeline implements IBuildPipeline {
             });
         }
 
-        // Always generate server scripts for ESM builds
-        if (webConfig.buildMode === 'split-bundles') {
-            steps.push({
-                id: 'generate-server-scripts',
-                name: 'Generate server scripts | 生成启动脚本',
-                execute: this._stepGenerateServerScripts.bind(this)
-            });
-        }
+        // Always generate server scripts (required for WASM loading and ESM imports)
+        // 始终生成启动脚本（WASM 加载和 ESM 导入需要 HTTP 服务器）
+        steps.push({
+            id: 'generate-server-scripts',
+            name: 'Generate server scripts | 生成启动脚本',
+            execute: this._stepGenerateServerScripts.bind(this)
+        });
 
         return steps;
     }
@@ -547,6 +582,13 @@ export class WebBuildPipeline implements IBuildPipeline {
     /**
      * Step 3b: Bundle single mode - everything in one file.
      * 步骤 3b：单包模式 - 所有代码打包到一个文件。
+     *
+     * Generates a custom entry file that:
+     * 1. Re-exports platform-web's BrowserRuntime
+     * 2. Imports all plugins and registers them at load time
+     * 生成一个自定义入口文件：
+     * 1. 重新导出 platform-web 的 BrowserRuntime
+     * 2. 导入所有插件并在加载时注册它们
      */
     private async _stepBundleSingle(context: BuildContext): Promise<void> {
         const fs = this._getFileSystem(context);
@@ -559,15 +601,96 @@ export class WebBuildPipeline implements IBuildPipeline {
 
         // Find platform-web entry point
         const platformWebDir = `${engineModulesPath}/platform-web`;
-        const entryPoint = await this._findEntryPoint(fs, platformWebDir);
+        const platformWebEntry = await this._findEntryPoint(fs, platformWebDir);
 
-        if (!entryPoint) {
+        if (!platformWebEntry) {
             throw new Error('Could not find platform-web entry point | 找不到 platform-web 入口文件');
         }
 
-        // Bundle everything into one IIFE file
+        // Build module alias map for bundling
+        // 构建模块别名映射
+        const moduleAliasMap: Record<string, string> = {};
+        for (const module of allModules) {
+            if (module.name) {
+                const moduleDir = `${engineModulesPath}/${module.id}`;
+                const moduleEntry = await this._findEntryPoint(fs, moduleDir);
+                if (moduleEntry) {
+                    moduleAliasMap[module.name] = moduleEntry;
+                }
+            }
+        }
+        context.data.set('moduleAliasMap', moduleAliasMap);
+
+        // Generate custom entry file that imports and registers all plugins
+        // 生成自定义入口文件，导入并注册所有插件
+        const pluginModules = allModules.filter(m => m.pluginExport && m.name);
+        const generatedEntryPath = `${context.outputDir}/libs/__single_bundle_entry.js`;
+
+        const pluginImports = pluginModules.map((m, i) =>
+            `import { ${m.pluginExport} as plugin_${i} } from '${m.name}';`
+        ).join('\n');
+
+        const pluginRegistrations = pluginModules.map((_, i) =>
+            `    registerStaticPlugin(plugin_${i});`
+        ).join('\n');
+
+        // ====================================================================
+        // Scan and include user scripts in the same bundle
+        // 扫描并将用户脚本包含在同一个 bundle 中
+        // ====================================================================
+        // This is the key to solving the ComponentRegistry issue:
+        // By bundling user scripts together with the engine, they share the
+        // same @esengine/core module instance, so @ECSComponent decorators
+        // register to the same ComponentRegistry that scene loading uses.
+        // 这是解决 ComponentRegistry 问题的关键：
+        // 将用户脚本与引擎打包在一起，它们共享同一个 @esengine/core 模块实例，
+        // 因此 @ECSComponent 装饰器注册到场景加载使用的同一个 ComponentRegistry。
+        const scriptsDir = `${context.projectRoot}/scripts`;
+        let userScriptImports = '';
+        let userScriptCount = 0;
+
+        if (await fs.pathExists(scriptsDir)) {
+            const scriptFiles = await fs.listFilesByExtension(scriptsDir, ['ts', 'js'], true);
+            const validScripts = scriptFiles.filter(f => !f.endsWith('.d.ts'));
+
+            if (validScripts.length > 0) {
+                userScriptImports = validScripts.map((scriptPath, i) => {
+                    // Convert absolute path to relative for import
+                    // 将绝对路径转换为相对路径用于导入
+                    return `import '${scriptPath.replace(/\\/g, '/')}';`;
+                }).join('\n');
+                userScriptCount = validScripts.length;
+                console.log(`[WebBuild] Including ${userScriptCount} user scripts in single bundle`);
+            }
+        }
+
+        const entryContent = `// Auto-generated single-bundle entry
+// 自动生成的单包入口文件
+import { registerStaticPlugin } from '@esengine/runtime-core';
+${pluginImports}
+
+// Register all plugins at load time
+// 在加载时注册所有插件
+${pluginRegistrations}
+
+// Re-export platform-web as default
+// 重新导出 platform-web
+export { BrowserRuntime, create, default } from '@esengine/platform-web';
+export * from '@esengine/platform-web';
+
+// ============================================================================
+// User Scripts (bundled together to share ComponentRegistry)
+// 用户脚本（打包在一起以共享 ComponentRegistry）
+// ============================================================================
+${userScriptImports}
+`;
+
+        await fs.writeFile(generatedEntryPath, entryContent);
+        console.log(`[WebBuild] Generated single-bundle entry with ${pluginModules.length} plugins and ${userScriptCount} user scripts`);
+
+        // Bundle everything into one IIFE file using the generated entry
         const result = await fs.bundleScripts({
-            entryPoints: [entryPoint],
+            entryPoints: [generatedEntryPath],
             outputDir: `${context.outputDir}/libs`,
             format: 'iife',
             bundleName: 'esengine.bundle',
@@ -575,11 +698,22 @@ export class WebBuildPipeline implements IBuildPipeline {
             sourceMap,
             external: [],
             projectRoot: context.projectRoot,
-            globalName: 'ESEngine'
+            globalName: 'ESEngine',
+            alias: moduleAliasMap
         });
 
         if (!result.success) {
             throw new Error(`Failed to bundle: ${result.error}`);
+        }
+
+        // Clean up generated entry file
+        // 清理生成的入口文件
+        if (fs.deleteFile) {
+            try {
+                await fs.deleteFile(generatedEntryPath);
+            } catch {
+                // Ignore cleanup errors
+            }
         }
 
         console.log(`[WebBuild] Created single bundle: ${result.outputFile} (${this._formatBytes(result.outputSize || 0)})`);
@@ -616,17 +750,41 @@ export class WebBuildPipeline implements IBuildPipeline {
     /**
      * Step 5: Copy scene files.
      * 步骤 5：复制场景文件。
+     *
+     * Only copies scenes specified in config.scenes.
+     * If no scenes are selected, nothing is copied.
+     *
+     * 只复制 config.scenes 中指定的场景。
+     * 如果没有选择任何场景，则不复制任何内容。
      */
     private async _stepCopyScenes(context: BuildContext): Promise<void> {
         const fs = this._getFileSystem(context);
+        const { scenes } = context.config;
+
+        if (!scenes || scenes.length === 0) {
+            console.log('[WebBuild] No scenes selected, skipping scene copy');
+            return;
+        }
 
         const scenesDir = `${context.projectRoot}/scenes`;
         const outputScenesDir = `${context.outputDir}/scenes`;
 
-        if (await fs.pathExists(scenesDir)) {
-            const count = await fs.copyDirectory(scenesDir, outputScenesDir, ['*.ecs', '*.scene', '*.json']);
-            console.log(`[WebBuild] Copied ${count} scene files`);
+        if (!await fs.pathExists(scenesDir)) {
+            console.log('[WebBuild] No scenes directory found');
+            return;
         }
+
+        const allSceneFiles = await fs.listFilesByExtension(scenesDir, ['ecs', 'scene', 'json'], true);
+        const scenesToCopy = this._filterScenesByWhitelist(allSceneFiles, scenes);
+
+        console.log(`[WebBuild] Selected scenes: ${scenes.join(', ')}`);
+
+        for (const scenePath of scenesToCopy) {
+            const fileName = scenePath.split(/[/\\]/).pop() || '';
+            await fs.copyFile(scenePath, `${outputScenesDir}/${fileName}`);
+        }
+
+        console.log(`[WebBuild] Copied ${scenesToCopy.length} scene files`);
     }
 
     /**
@@ -779,6 +937,17 @@ export class WebBuildPipeline implements IBuildPipeline {
         const coreModules = context.data.get('coreModules') as ModuleManifest[] || [];
         const minify = webConfig.isRelease;
         const sourceMap = webConfig.sourceMap ?? !webConfig.isRelease;
+        const buildMode = webConfig.buildMode || 'split-bundles';
+
+        // In single-bundle/single-file mode, user scripts are already included in the main bundle
+        // Skip separate bundling to avoid duplicate code and ComponentRegistry issues
+        // 在单包/单文件模式下，用户脚本已经包含在主 bundle 中
+        // 跳过单独打包以避免代码重复和 ComponentRegistry 问题
+        if (buildMode === 'single-bundle' || buildMode === 'single-file') {
+            console.log('[WebBuild] User scripts already included in main bundle, skipping separate bundling');
+            context.data.set('hasUserScripts', true);
+            return;
+        }
 
         // Find user scripts directory | 查找用户脚本目录
         const scriptsDir = `${context.projectRoot}/scripts`;
@@ -822,19 +991,20 @@ export class WebBuildPipeline implements IBuildPipeline {
 
         console.log(`[WebBuild] Bundling user scripts: ${entryFiles.join(', ')}`);
 
-        // Bundle user scripts | 打包用户脚本
-        const buildMode = webConfig.buildMode || 'split-bundles';
-        const format = buildMode === 'single-bundle' ? 'iife' : 'esm';
-
-        // Get external packages from module configuration
-        // 从模块配置获取外部包
+        // ESM mode (split-bundles): external packages resolved via Import Map at runtime
+        // ESM 模式（分包）：外部包通过运行时 Import Map 解析
+        // Note: single-bundle/single-file modes return early above
         const moduleWithExternals = coreModules.find(m => m.userScriptExternals && m.userScriptExternals.length > 0);
-        const external = moduleWithExternals?.userScriptExternals || [];
+        const external = moduleWithExternals?.userScriptExternals || [
+            '@esengine/core',
+            '@esengine/ecs-framework',
+            '@esengine/engine-core'
+        ];
 
         const result = await fs.bundleScripts({
             entryPoints: entryFiles,
             outputDir: `${context.outputDir}/libs`,
-            format: format as 'esm' | 'iife',
+            format: 'esm',
             bundleName: 'user-scripts',
             minify,
             sourceMap,
@@ -1210,11 +1380,34 @@ Built with ESEngine | 使用 ESEngine 构建
     ): Promise<void> {
         const pluginsDir = `${context.outputDir}/libs/plugins`;
 
-        // Collect all core module package names for external marking
-        // 收集所有核心模块包名用于标记为 external
-        const corePackages = coreModules
-            .filter(m => m.name)
-            .map(m => m.name as string);
+        // Collect all package names for external marking:
+        // 1. Core modules - always external
+        // 2. Plugin modules - to avoid duplicating plugin code across bundles
+        // 3. External dependencies declared in module.json - e.g., @esengine/rapier2d
+        // 收集所有包名用于标记为 external：
+        // 1. 核心模块 - 始终外部化
+        // 2. 插件模块 - 避免在多个包中重复插件代码
+        // 3. module.json 中声明的外部依赖 - 例如 @esengine/rapier2d
+        const externalPackages = new Set<string>();
+
+        // Add core module packages
+        for (const m of coreModules) {
+            if (m.name) externalPackages.add(m.name);
+        }
+
+        // Add plugin module packages
+        for (const m of pluginModules) {
+            if (m.name) externalPackages.add(m.name);
+            // Add declared external dependencies (e.g., @esengine/rapier2d)
+            if (m.externalDependencies) {
+                for (const dep of m.externalDependencies) {
+                    externalPackages.add(dep);
+                }
+            }
+        }
+
+        const external = Array.from(externalPackages);
+        console.log(`[WebBuild] External packages for plugins: ${external.join(', ')}`);
 
         for (const module of pluginModules) {
             const moduleDir = `${engineModulesPath}/${module.id}`;
@@ -1225,8 +1418,8 @@ Built with ESEngine | 使用 ESEngine 构建
                 continue;
             }
 
-            // Bundle each plugin with core modules marked as external
-            // 打包每个插件，将核心模块标记为 external
+            // Bundle each plugin with all engine packages marked as external
+            // 打包每个插件，将所有引擎包标记为 external
             const result = await fs.bundleScripts({
                 entryPoints: [entryPoint],
                 outputDir: pluginsDir,
@@ -1234,7 +1427,7 @@ Built with ESEngine | 使用 ESEngine 构建
                 bundleName: module.id,
                 minify,
                 sourceMap,
-                external: corePackages, // Core modules resolved via Import Map
+                external, // All engine modules resolved via Import Map
                 projectRoot: context.projectRoot
             });
 
@@ -1419,8 +1612,8 @@ Built with ESEngine | 使用 ESEngine 构建
 </head>
 <body>${this._getCommonBodyContent()}
 
+    <!-- Single bundle includes engine, plugins, and user scripts -->
     <script src="libs/esengine.bundle.js"></script>
-    <script src="libs/user-scripts.js" onerror="console.log('[Game] No user scripts')"></script>
     <script>
         (async function() {${this._getCommonScriptHelpers()}
 
@@ -1611,5 +1804,672 @@ ${pluginLoads}
         if (bytes < 1024) return `${bytes} B`;
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
         return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    }
+
+    /**
+     * Filter scene files by whitelist.
+     * 根据白名单过滤场景文件。
+     *
+     * @param allSceneFiles - All scene file paths
+     * @param selectedScenes - Scene names/paths to include (whitelist)
+     * @returns Filtered scene file paths
+     */
+    private _filterScenesByWhitelist(
+        allSceneFiles: string[],
+        selectedScenes: string[]
+    ): string[] {
+        return allSceneFiles.filter(scenePath => {
+            const fileName = scenePath.split(/[/\\]/).pop() || '';
+            const baseName = fileName.replace(/\.(ecs|scene|json)$/, '');
+            return selectedScenes.some(s =>
+                scenePath.includes(s) ||
+                fileName === s ||
+                baseName === s ||
+                s.includes(fileName) ||
+                s.includes(baseName)
+            );
+        });
+    }
+
+
+    // ========================================================================
+    // Single File Build
+    // ========================================================================
+
+    /**
+     * Step: Build single HTML file with everything inlined.
+     * 步骤：构建单个 HTML 文件，内联所有内容。
+     *
+     * This is the main step for single-file mode. It:
+     * 1. Bundles all JS code into one string
+     * 2. Converts all WASM files to Base64
+     * 3. Converts all assets to Base64 data URLs
+     * 4. Inlines all scene JSON files
+     * 5. Generates a single HTML file with everything embedded
+     */
+    private async _stepBundleSingleFile(context: BuildContext): Promise<void> {
+        const fs = this._getFileSystem(context);
+        const webConfig = context.config as WebBuildConfig;
+        const engineModulesPath = this._getEngineModulesPath(context);
+        const allModules = context.data.get('allModules') as ModuleManifest[] || [];
+
+        // Ensure readBinaryFileAsBase64 is available
+        // 确保 readBinaryFileAsBase64 可用
+        if (!fs.readBinaryFileAsBase64) {
+            throw new Error('Single-file build requires readBinaryFileAsBase64 support | 单文件构建需要 readBinaryFileAsBase64 支持');
+        }
+
+        const inlineConfig: InlineConfig = {
+            inlineJs: true,
+            inlineWasm: true,
+            inlineAssets: true,
+            inlineScenes: true,
+            ...webConfig.inlineConfig
+        };
+
+        const minify = webConfig.minify !== false && webConfig.isRelease;
+
+        // 1. Build module alias map
+        // 1. 构建模块别名映射
+        const moduleAliasMap: Record<string, string> = {};
+        for (const module of allModules) {
+            if (module.name) {
+                const moduleDir = `${engineModulesPath}/${module.id}`;
+                const moduleEntry = await this._findEntryPoint(fs, moduleDir);
+                if (moduleEntry) {
+                    moduleAliasMap[module.name] = moduleEntry;
+                }
+            }
+        }
+
+        // Find engine core module and its JS bindings path from wasmConfig.files
+        // 从 wasmConfig.files 中找到引擎核心模块及其 JS 绑定路径
+        const engineCoreModule = allModules.find(m => m.wasmConfig?.isEngineCore);
+        let wasmBindingsAlias: string | null = null;
+        let wasmBindingsPath: string | null = null;
+
+        if (engineCoreModule?.wasmConfig?.files) {
+            // Find the .js file in wasmConfig.files (wasm-bindgen JS bindings)
+            // 在 wasmConfig.files 中找到 .js 文件（wasm-bindgen JS 绑定）
+            for (const fileConfig of engineCoreModule.wasmConfig.files) {
+                const srcPaths = Array.isArray(fileConfig.src) ? fileConfig.src : [fileConfig.src];
+                for (const srcPath of srcPaths) {
+                    if (srcPath.endsWith('.js')) {
+                        const fullPath = `${engineModulesPath}/${srcPath}`;
+                        if (await fs.pathExists(fullPath)) {
+                            // Use a unique alias based on module id
+                            wasmBindingsAlias = `__wasm_bindings_${engineCoreModule.id.replace(/-/g, '_')}`;
+                            wasmBindingsPath = fullPath;
+                            moduleAliasMap[wasmBindingsAlias] = fullPath;
+                            console.log(`[WebBuild] Found WASM JS bindings: ${srcPath} -> alias: ${wasmBindingsAlias}`);
+                            break;
+                        }
+                    }
+                }
+                if (wasmBindingsPath) break;
+            }
+        }
+
+        // 2. Generate entry file with plugin registration AND user scripts
+        // 2. 生成带插件注册和用户脚本的入口文件
+        const pluginModules = allModules.filter(m => m.pluginExport && m.name);
+        const tempEntryPath = `${context.outputDir}/__single_file_entry.js`;
+
+        const pluginImports = pluginModules.map((m, i) =>
+            `import { ${m.pluginExport} as plugin_${i} } from '${m.name}';`
+        ).join('\n');
+
+        const pluginRegistrations = pluginModules.map((_, i) =>
+            `    registerStaticPlugin(plugin_${i});`
+        ).join('\n');
+
+        // Include user scripts in the same bundle to share ComponentRegistry
+        // 将用户脚本包含在同一个 bundle 中以共享 ComponentRegistry
+        const userScriptsDir = `${context.projectRoot}/scripts`;
+        let userScriptImports = '';
+        if (await fs.pathExists(userScriptsDir)) {
+            const scriptFiles = await fs.listFilesByExtension(userScriptsDir, ['ts', 'js'], true);
+            const validScripts = scriptFiles.filter(f => !f.endsWith('.d.ts'));
+            if (validScripts.length > 0) {
+                userScriptImports = validScripts.map(scriptPath =>
+                    `import '${scriptPath.replace(/\\/g, '/')}';`
+                ).join('\n');
+                console.log(`[WebBuild] Including ${validScripts.length} user scripts in single-file bundle`);
+            }
+        }
+
+        // Generate WASM bindings import if engine core module found
+        // 如果找到引擎核心模块，生成 WASM 绑定导入
+        const wasmBindingsImport = wasmBindingsAlias
+            ? `// WASM bindings for synchronous initialization (single-file mode)
+// WASM 绑定用于同步初始化（单文件模式）
+import { initSync as _wasmInitSync, GameEngine as _WasmGameEngine } from '${wasmBindingsAlias}';
+export { _wasmInitSync as wasmInitSync, _WasmGameEngine as WasmGameEngine };
+`
+            : '';
+
+        const entryContent = `// Auto-generated single-file entry
+import { registerStaticPlugin } from '@esengine/runtime-core';
+${pluginImports}
+
+// Register all plugins at load time
+${pluginRegistrations}
+
+// Re-export platform-web
+export { BrowserRuntime, create, default } from '@esengine/platform-web';
+export * from '@esengine/platform-web';
+
+${wasmBindingsImport}
+// User scripts (bundled together to share ComponentRegistry)
+${userScriptImports}
+`;
+
+        await fs.writeFile(tempEntryPath, entryContent);
+
+        // 3. Bundle JS code
+        // 3. 打包 JS 代码
+        console.log('[WebBuild] Bundling JavaScript...');
+        const bundleResult = await fs.bundleScripts({
+            entryPoints: [tempEntryPath],
+            outputDir: context.outputDir,
+            format: 'iife',
+            bundleName: '__temp_bundle',
+            minify,
+            sourceMap: false,
+            external: [],
+            projectRoot: context.projectRoot,
+            globalName: 'ESEngine',
+            alias: moduleAliasMap
+        });
+
+        if (!bundleResult.success) {
+            throw new Error(`Failed to bundle: ${bundleResult.error}`);
+        }
+
+        // Read bundled JS content (includes engine, plugins, and user scripts)
+        // 读取打包后的 JS 内容（包含引擎、插件和用户脚本）
+        const bundledJsPath = `${context.outputDir}/__temp_bundle.js`;
+        const jsContent = await fs.readFile(bundledJsPath);
+        console.log(`[WebBuild] JS bundle size: ${this._formatBytes(jsContent.length)}`);
+
+        // Note: User scripts are already included in the main bundle (step 2)
+        // to share ComponentRegistry. No separate bundling needed.
+        // 注意：用户脚本已经包含在主 bundle 中（步骤 2）以共享 ComponentRegistry，无需单独打包。
+
+        // 4. Collect WASM files as Base64 and identify core engine WASM
+        // 4. 收集 WASM 文件并转 Base64，同时识别核心引擎 WASM
+        const wasmData: Record<string, string> = {};
+        let engineCoreWasmKey: string | null = null;
+
+        if (inlineConfig.inlineWasm !== false) {
+            console.log('[WebBuild] Inlining WASM files...');
+            for (const module of allModules) {
+                if (module.wasmConfig?.files) {
+                    for (const wasmFile of module.wasmConfig.files) {
+                        // Try each source path
+                        const srcPaths = Array.isArray(wasmFile.src) ? wasmFile.src : [wasmFile.src];
+                        for (const srcPath of srcPaths) {
+                            const wasmPath = `${engineModulesPath}/${srcPath}`;
+                            if (await fs.pathExists(wasmPath)) {
+                                const base64 = await fs.readBinaryFileAsBase64(wasmPath);
+                                const wasmKey = wasmFile.dst.split('/').pop() || srcPath.split('/').pop() || module.id;
+
+                                // Only include .wasm files (not .js bindings)
+                                if (wasmKey.endsWith('.wasm')) {
+                                    wasmData[wasmKey] = base64;
+                                    console.log(`[WebBuild] Inlined WASM: ${wasmKey} (${this._formatBytes(base64.length * 0.75)})`);
+
+                                    // Track core engine WASM for initialization
+                                    // 跟踪核心引擎 WASM 用于初始化
+                                    if (module.wasmConfig.isEngineCore) {
+                                        engineCoreWasmKey = wasmKey;
+                                        console.log(`[WebBuild] Identified core engine WASM: ${wasmKey}`);
+                                    }
+                                }
+                                break; // Found the file, no need to try other paths
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Store engine core WASM key for HTML generation
+        context.data.set('engineCoreWasmKey', engineCoreWasmKey);
+
+        // 6. Collect assets as Base64 data URLs
+        // 6. 收集资产并转 Base64 data URL
+        const assetData: Record<string, { dataUrl: string; type: string }> = {};
+        if (inlineConfig.inlineAssets !== false) {
+            const assetsDir = `${context.projectRoot}/assets`;
+            if (await fs.pathExists(assetsDir)) {
+                console.log('[WebBuild] Inlining assets...');
+                const assetExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'mp3', 'ogg', 'wav', 'ttf', 'woff', 'woff2', 'json'];
+                const assetFiles = await fs.listFilesByExtension(assetsDir, assetExtensions, true);
+
+                for (const assetPath of assetFiles) {
+                    const ext = assetPath.split('.').pop()?.toLowerCase() || '';
+                    const relativePath = assetPath.replace(assetsDir, '').replace(/\\/g, '/').replace(/^\//, '');
+                    const mimeType = this._getMimeType(ext);
+
+                    if (ext === 'json') {
+                        // JSON files are read as text
+                        const content = await fs.readFile(assetPath);
+                        assetData[relativePath] = {
+                            dataUrl: `data:application/json;base64,${Buffer.from(content).toString('base64')}`,
+                            type: 'data'
+                        };
+                    } else {
+                        // Binary files
+                        const base64 = await fs.readBinaryFileAsBase64(assetPath);
+                        assetData[relativePath] = {
+                            dataUrl: `data:${mimeType};base64,${base64}`,
+                            type: this._getAssetType(ext)
+                        };
+                    }
+                }
+                console.log(`[WebBuild] Inlined ${Object.keys(assetData).length} assets`);
+            }
+        }
+
+        // 7. Collect and inline scenes (only selected scenes)
+        // 7. 收集并内联场景（仅选中的场景）
+        const sceneData: Record<string, unknown> = {};
+        if (inlineConfig.inlineScenes !== false && webConfig.scenes && webConfig.scenes.length > 0) {
+            const scenesDir = `${context.projectRoot}/scenes`;
+            if (await fs.pathExists(scenesDir)) {
+                console.log('[WebBuild] Inlining scenes...');
+                const allSceneFiles = await fs.listFilesByExtension(scenesDir, ['ecs', 'scene', 'json'], true);
+                const sceneFiles = this._filterScenesByWhitelist(allSceneFiles, webConfig.scenes);
+
+                console.log(`[WebBuild] Selected scenes: ${webConfig.scenes.join(', ')}`);
+
+                for (const scenePath of sceneFiles) {
+                    const relativePath = scenePath.replace(scenesDir, '').replace(/\\/g, '/').replace(/^\//, '');
+                    try {
+                        const content = await fs.readJson<unknown>(scenePath);
+                        sceneData[relativePath] = content;
+                    } catch {
+                        console.warn(`[WebBuild] Failed to read scene: ${relativePath}`);
+                    }
+                }
+                console.log(`[WebBuild] Inlined ${Object.keys(sceneData).length} scenes`);
+            }
+        } else {
+            console.log('[WebBuild] No scenes selected, skipping scene inlining');
+        }
+
+        // 8. Find main scene
+        // 8. 查找主场景
+        let mainScenePath = 'scenes/GameScene.ecs';
+        const projectConfigPath = `${context.projectRoot}/project.json`;
+        if (await fs.pathExists(projectConfigPath)) {
+            try {
+                const projectConfig = await fs.readJson<{ mainScene?: string }>(projectConfigPath);
+                if (projectConfig.mainScene) {
+                    mainScenePath = projectConfig.mainScene;
+                }
+            } catch {
+                // Use default
+            }
+        }
+
+        // 9. Generate single HTML file
+        // 9. 生成单个 HTML 文件
+        const html = this._generateSingleFileHtml(
+            jsContent,
+            wasmData,
+            assetData,
+            sceneData,
+            mainScenePath,
+            engineCoreWasmKey
+        );
+
+        const outputHtmlPath = `${context.outputDir}/index.html`;
+        await fs.writeFile(outputHtmlPath, html);
+        console.log(`[WebBuild] Generated single file: ${outputHtmlPath} (${this._formatBytes(html.length)})`);
+
+        // 10. Cleanup temp files
+        // 10. 清理临时文件
+        if (fs.deleteFile) {
+            const tempFiles = [
+                tempEntryPath,
+                bundledJsPath,
+                `${context.outputDir}/__temp_user_scripts.js`,
+                `${context.outputDir}/__user_scripts_entry.js`
+            ];
+            for (const tempFile of tempFiles) {
+                try {
+                    await fs.deleteFile(tempFile);
+                } catch {
+                    // Ignore
+                }
+            }
+        }
+
+        // Store build info
+        context.data.set('buildMode', 'single-file');
+        context.data.set('outputFiles', [outputHtmlPath]);
+    }
+
+    /**
+     * Generate user scripts entry file.
+     * 生成用户脚本入口文件。
+     */
+    private _generateUserScriptsEntry(scriptFiles: string[], projectRoot: string): string {
+        const imports: string[] = [];
+        const registrations: string[] = [];
+
+        for (let i = 0; i < scriptFiles.length; i++) {
+            const scriptPath = scriptFiles[i].replace(/\\/g, '/');
+            const relativePath = scriptPath.replace(projectRoot.replace(/\\/g, '/'), '.');
+            imports.push(`import * as script_${i} from '${relativePath}';`);
+            registrations.push(`    registerScript(script_${i});`);
+        }
+
+        return `${imports.join('\n')}
+
+function registerScript(module) {
+    // Register exported components/systems
+    for (const [name, exported] of Object.entries(module)) {
+        if (typeof exported === 'function' && exported.prototype) {
+            window.__ESEngineUserComponents = window.__ESEngineUserComponents || {};
+            window.__ESEngineUserComponents[name] = exported;
+        }
+    }
+}
+
+${registrations.join('\n')}
+
+export function register(runtime) {
+    // Components are already registered globally
+    console.log('[UserScripts] Registered', Object.keys(window.__ESEngineUserComponents || {}).length, 'components');
+}
+`;
+    }
+
+    /**
+     * Generate single HTML file with all content inlined.
+     * 生成内联所有内容的单个 HTML 文件。
+     *
+     * Note: User scripts are already bundled in jsContent to share ComponentRegistry.
+     * 注意：用户脚本已经打包在 jsContent 中以共享 ComponentRegistry。
+     *
+     * @param engineCoreWasmKey - The key for core engine WASM (from module.json wasmConfig.isEngineCore)
+     */
+    private _generateSingleFileHtml(
+        jsContent: string,
+        wasmData: Record<string, string>,
+        assetData: Record<string, { dataUrl: string; type: string }>,
+        sceneData: Record<string, unknown>,
+        mainScenePath: string,
+        engineCoreWasmKey: string | null
+    ): string {
+        // Build inline data object
+        const inlineData = {
+            wasm: wasmData,
+            assets: assetData,
+            scenes: sceneData
+        };
+
+        const inlineDataJson = JSON.stringify(inlineData);
+
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ESEngine Game</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1a2e; }
+        #game-canvas { display: block; width: 100%; height: 100%; }
+        #loading {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: #1a1a2e; color: #fff; font-family: system-ui, sans-serif; z-index: 1000;
+        }
+        #loading-text { margin-top: 20px; font-size: 14px; color: #888; }
+        .spinner {
+            width: 40px; height: 40px; border: 3px solid #333;
+            border-top-color: #4a90d9; border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #error {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            background: #1a1a2e; color: #ff6b6b; font-family: system-ui, sans-serif; z-index: 1001;
+            padding: 20px; text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+    <div id="loading">
+        <div class="spinner"></div>
+        <div id="loading-text">Loading...</div>
+    </div>
+    <div id="error">
+        <h2>Error</h2>
+        <p id="error-message"></p>
+    </div>
+
+    <!-- Inline Data -->
+    <script id="__ESENGINE_INLINE_DATA__" type="application/json">${inlineDataJson}</script>
+
+    <!-- Fetch Interceptor (must run BEFORE engine loads) -->
+    <script>
+(function() {
+    // Parse inline data FIRST before anything else
+    const inlineDataEl = document.getElementById('__ESENGINE_INLINE_DATA__');
+    const inlineData = JSON.parse(inlineDataEl.textContent);
+    window.__ESENGINE_INLINE__ = inlineData;
+
+    // Prepare WASM binary cache
+    const wasmCache = {};
+    for (const [name, base64] of Object.entries(inlineData.wasm || {})) {
+        wasmCache[name] = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    }
+
+    // Prepare asset cache (convert dataUrl back to fetch response)
+    const assetCache = {};
+    for (const [path, data] of Object.entries(inlineData.assets || {})) {
+        assetCache[path] = data;
+    }
+
+    // Build empty catalog for BrowserFileSystemService
+    const emptyCatalog = {
+        version: 1,
+        loadStrategy: 'file',
+        entries: {},
+        bundles: []
+    };
+
+    // Patch fetch BEFORE engine loads
+    const originalFetch = window.fetch;
+    window.fetch = async function(url, options) {
+        const urlStr = typeof url === 'string' ? url : url.toString();
+
+        // Intercept asset-catalog.json
+        if (urlStr.includes('asset-catalog.json')) {
+            console.log('[SingleFile] Intercepted catalog request');
+            return new Response(JSON.stringify(emptyCatalog), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Intercept WASM requests
+        for (const [name, binary] of Object.entries(wasmCache)) {
+            if (urlStr.includes(name)) {
+                console.log('[SingleFile] Intercepted WASM:', name);
+                return new Response(binary, {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/wasm' }
+                });
+            }
+        }
+
+        // Intercept asset requests
+        for (const [path, data] of Object.entries(assetCache)) {
+            if (urlStr.includes(path) || urlStr.endsWith(path)) {
+                console.log('[SingleFile] Intercepted asset:', path);
+                // Convert data URL to blob
+                const response = await fetch(data.dataUrl);
+                return response;
+            }
+        }
+
+        // Intercept scene requests
+        for (const [scenePath, sceneData] of Object.entries(inlineData.scenes || {})) {
+            if (urlStr.includes(scenePath)) {
+                console.log('[SingleFile] Intercepted scene:', scenePath);
+                return new Response(JSON.stringify(sceneData), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
+
+        // For file:// protocol, block other requests to prevent CORS errors
+        if (window.location.protocol === 'file:') {
+            console.warn('[SingleFile] Blocked request (file:// mode):', urlStr);
+            return new Response('', { status: 404 });
+        }
+
+        return originalFetch(url, options);
+    };
+
+    console.log('[SingleFile] Fetch interceptor installed');
+})();
+    </script>
+
+    <!-- Engine Bundle (includes plugins and user scripts) -->
+    <script>
+${jsContent}
+    </script>
+
+    <!-- Bootstrap -->
+    <script>
+(async function() {
+    const loading = document.getElementById('loading');
+    const loadingText = document.getElementById('loading-text');
+    const errorDiv = document.getElementById('error');
+    const errorMessage = document.getElementById('error-message');
+    const inlineData = window.__ESENGINE_INLINE__;
+
+    function updateLoading(text) {
+        loadingText.textContent = text;
+    }
+
+    function showError(msg) {
+        loading.style.display = 'none';
+        errorDiv.style.display = 'flex';
+        errorMessage.textContent = msg;
+    }
+
+    try {
+        updateLoading('Initializing...');
+
+        if (typeof ESEngine === 'undefined') {
+            throw new Error('ESEngine not loaded');
+        }
+
+        // Initialize WASM from inline Base64 using exported wasmInitSync
+        // The engine core WASM is identified by wasmConfig.isEngineCore in module.json
+        // Engine core WASM key: ${engineCoreWasmKey ? `'${engineCoreWasmKey}'` : 'null'}
+        let wasmModule = null;
+        const engineCoreWasmKey = ${engineCoreWasmKey ? `'${engineCoreWasmKey}'` : 'null'};
+        const wasmBase64 = engineCoreWasmKey ? inlineData.wasm[engineCoreWasmKey] : null;
+
+        if (wasmBase64 && ESEngine.wasmInitSync && ESEngine.WasmGameEngine) {
+            updateLoading('Loading WASM...');
+            const wasmBinary = Uint8Array.from(atob(wasmBase64), c => c.charCodeAt(0));
+
+            // Use wasmInitSync to synchronously initialize wasm-bindgen module
+            // 使用 wasmInitSync 同步初始化 wasm-bindgen 模块
+            ESEngine.wasmInitSync({ module: wasmBinary });
+            console.log('[SingleFile] WASM initialized via wasmInitSync');
+
+            // Create a mock wasm module object for BrowserRuntime
+            // EngineBridge.initializeWithModule expects: wasmModule.GameEngine
+            // 创建一个模拟的 wasm 模块对象供 BrowserRuntime 使用
+            wasmModule = {
+                // Skip default() since we already called initSync
+                default: () => Promise.resolve(),
+                // Provide GameEngine class from ESEngine exports
+                GameEngine: ESEngine.WasmGameEngine
+            };
+        } else if (wasmBase64) {
+            // Fallback: no wasmInitSync exported (shouldn't happen for engine core)
+            console.warn('[SingleFile] wasmInitSync not found, WASM may not work');
+        }
+
+        // Create runtime
+        const runtime = ESEngine.create({
+            canvasId: 'game-canvas',
+            width: window.innerWidth,
+            height: window.innerHeight,
+            assetBaseUrl: './',
+            assetCatalogUrl: './asset-catalog.json'
+        });
+
+        updateLoading('Initializing runtime...');
+        await runtime.initialize(wasmModule);
+
+        updateLoading('Loading scene...');
+
+        // Load scene from inline data
+        const scenePath = '${mainScenePath}'.replace('scenes/', '');
+        const sceneKey = Object.keys(inlineData.scenes).find(k => k.includes(scenePath)) || Object.keys(inlineData.scenes)[0];
+
+        if (sceneKey && inlineData.scenes[sceneKey]) {
+            await runtime.loadSceneFromData(inlineData.scenes[sceneKey]);
+        } else {
+            throw new Error('No scene found: ' + scenePath);
+        }
+
+        loading.style.display = 'none';
+        runtime.start();
+
+        window.addEventListener('resize', () => {
+            runtime.handleResize(window.innerWidth, window.innerHeight);
+        });
+
+        console.log('[Game] Started successfully (single-file mode)');
+    } catch (error) {
+        console.error('[Game] Failed to start:', error);
+        showError(error.message || String(error));
+    }
+})();
+    </script>
+</body>
+</html>`;
+    }
+
+    /**
+     * Get MIME type for file extension.
+     * 获取文件扩展名的 MIME 类型。
+     */
+    private _getMimeType(ext: string): string {
+        const mimeTypes: Record<string, string> = {
+            'png': 'image/png',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'gif': 'image/gif',
+            'webp': 'image/webp',
+            'svg': 'image/svg+xml',
+            'mp3': 'audio/mpeg',
+            'ogg': 'audio/ogg',
+            'wav': 'audio/wav',
+            'm4a': 'audio/mp4',
+            'ttf': 'font/ttf',
+            'woff': 'font/woff',
+            'woff2': 'font/woff2',
+            'json': 'application/json',
+            'wasm': 'application/wasm'
+        };
+        return mimeTypes[ext] || 'application/octet-stream';
     }
 }
