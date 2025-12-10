@@ -237,6 +237,16 @@ export class BuildFileSystemService {
     async readBinaryFileAsBase64(path: string): Promise<string> {
         return await invoke('read_binary_file_as_base64', { path });
     }
+
+    /**
+     * Delete a file.
+     * 删除文件。
+     *
+     * @param path - File path | 文件路径
+     */
+    async deleteFile(path: string): Promise<void> {
+        await invoke('delete_file', { path });
+    }
 }
 
 // Singleton instance | 单例实例

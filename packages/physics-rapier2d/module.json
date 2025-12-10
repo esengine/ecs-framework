@@ -38,11 +38,6 @@
       "PhysicsSystem2D"
     ]
   },
-  "requiresWasm": true,
-  "wasmPaths": [
-    "rapier_wasm2d_bg.wasm"
-  ],
-  "runtimeWasmPath": "wasm/rapier_wasm2d_bg.wasm",
   "outputPath": "dist/index.js",
   "pluginExport": "PhysicsPlugin",
   "includes": ["chunk-*.js"]
