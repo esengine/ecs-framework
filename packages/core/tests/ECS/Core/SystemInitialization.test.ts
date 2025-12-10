@@ -3,6 +3,7 @@ import { Entity } from '../../../src/ECS/Entity';
 import { Component } from '../../../src/ECS/Component';
 import { EntitySystem } from '../../../src/ECS/Systems/EntitySystem';
 import { Matcher } from '../../../src/ECS/Utils/Matcher';
+import { ECSComponent } from '../../../src/ECS/Decorators';
 
 /**
  * System初始化测试套件
@@ -15,6 +16,7 @@ import { Matcher } from '../../../src/ECS/Utils/Matcher';
  */
 
 // 测试组件
+@ECSComponent('SysInit_PositionComponent')
 class PositionComponent extends Component {
     public x: number;
     public y: number;
@@ -27,6 +29,7 @@ class PositionComponent extends Component {
     }
 }
 
+@ECSComponent('SysInit_VelocityComponent')
 class VelocityComponent extends Component {
     public vx: number;
     public vy: number;
@@ -39,6 +42,7 @@ class VelocityComponent extends Component {
     }
 }
 
+@ECSComponent('SysInit_HealthComponent')
 class HealthComponent extends Component {
     public health: number;
 
@@ -49,6 +53,7 @@ class HealthComponent extends Component {
     }
 }
 
+@ECSComponent('SysInit_TagComponent')
 class TagComponent extends Component {
     public tag: string;
 
@@ -59,6 +64,7 @@ class TagComponent extends Component {
     }
 }
 
+@ECSComponent('SysInit_TestComponent')
 class TestComponent extends Component {
     public value: number;
 

@@ -3,8 +3,10 @@ import { Component } from '../../src/ECS/Component';
 import { Scene } from '../../src/ECS/Scene';
 import { SceneManager } from '../../src/ECS/SceneManager';
 import { EEntityLifecyclePolicy } from '../../src/ECS/Core/EntityLifecyclePolicy';
+import { ECSComponent } from '../../src/ECS/Decorators';
 
 // 测试组件
+@ECSComponent('Persistent_PositionComponent')
 class PositionComponent extends Component {
     public x: number;
     public y: number;
@@ -16,6 +18,7 @@ class PositionComponent extends Component {
     }
 }
 
+@ECSComponent('Persistent_PlayerComponent')
 class PlayerComponent extends Component {
     public name: string;
     public score: number;
@@ -27,6 +30,7 @@ class PlayerComponent extends Component {
     }
 }
 
+@ECSComponent('Persistent_EnemyComponent')
 class EnemyComponent extends Component {
     public type: string;
 

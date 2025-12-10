@@ -2,26 +2,31 @@ import { ComponentSparseSet } from '../../../src/ECS/Utils/ComponentSparseSet';
 import { Entity } from '../../../src/ECS/Entity';
 import { Component } from '../../../src/ECS/Component';
 import { Scene } from '../../../src/ECS/Scene';
+import { ECSComponent } from '../../../src/ECS/Decorators';
 
 // 测试组件类
+@ECSComponent('SparseSet_PositionComponent')
 class PositionComponent extends Component {
     constructor(public x: number = 0, public y: number = 0) {
         super();
     }
 }
 
+@ECSComponent('SparseSet_VelocityComponent')
 class VelocityComponent extends Component {
     constructor(public dx: number = 0, public dy: number = 0) {
         super();
     }
 }
 
+@ECSComponent('SparseSet_HealthComponent')
 class HealthComponent extends Component {
     constructor(public health: number = 100, public maxHealth: number = 100) {
         super();
     }
 }
 
+@ECSComponent('SparseSet_RenderComponent')
 class RenderComponent extends Component {
     constructor(public visible: boolean = true) {
         super();

@@ -4,8 +4,10 @@ import { Component } from '../../../src/ECS/Component';
 import { Scene } from '../../../src/ECS/Scene';
 import { EntitySystem } from '../../../src/ECS/Systems/EntitySystem';
 import { Matcher } from '../../../src/ECS/Utils/Matcher';
+import { ECSComponent } from '../../../src/ECS/Decorators';
 
 // 测试组件
+@ECSComponent('CmdBuf_HealthComponent')
 class HealthComponent extends Component {
     public value: number = 100;
 
@@ -16,10 +18,12 @@ class HealthComponent extends Component {
     }
 }
 
+@ECSComponent('CmdBuf_MarkerComponent')
 class MarkerComponent extends Component {
     public marked: boolean = true;
 }
 
+@ECSComponent('CmdBuf_VelocityComponent')
 class VelocityComponent extends Component {
     public vx: number = 0;
     public vy: number = 0;

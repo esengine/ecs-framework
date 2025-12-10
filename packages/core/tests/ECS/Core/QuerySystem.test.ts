@@ -3,12 +3,14 @@ import { Entity } from '../../../src/ECS/Entity';
 import { Component } from '../../../src/ECS/Component';
 import { ComponentRegistry, ComponentType } from '../../../src/ECS/Core/ComponentStorage';
 import { Scene } from '../../../src/ECS/Scene';
+import { ECSComponent } from '../../../src/ECS/Decorators';
 
 // 测试组件
+@ECSComponent('QuerySys_PositionComponent')
 class PositionComponent extends Component {
     public x: number;
     public y: number;
-    
+
     constructor(...args: unknown[]) {
         super();
         const [x = 0, y = 0] = args as [number?, number?];
@@ -17,10 +19,11 @@ class PositionComponent extends Component {
     }
 }
 
+@ECSComponent('QuerySys_VelocityComponent')
 class VelocityComponent extends Component {
     public vx: number;
     public vy: number;
-    
+
     constructor(...args: unknown[]) {
         super();
         const [vx = 0, vy = 0] = args as [number?, number?];
@@ -29,10 +32,11 @@ class VelocityComponent extends Component {
     }
 }
 
+@ECSComponent('QuerySys_HealthComponent')
 class HealthComponent extends Component {
     public health: number;
     public maxHealth: number;
-    
+
     constructor(...args: unknown[]) {
         super();
         const [health = 100, maxHealth = 100] = args as [number?, number?];
@@ -41,10 +45,11 @@ class HealthComponent extends Component {
     }
 }
 
+@ECSComponent('QuerySys_RenderComponent')
 class RenderComponent extends Component {
     public visible: boolean;
     public layer: number;
-    
+
     constructor(...args: unknown[]) {
         super();
         const [visible = true, layer = 0] = args as [boolean?, number?];
@@ -53,9 +58,10 @@ class RenderComponent extends Component {
     }
 }
 
+@ECSComponent('QuerySys_AIComponent')
 class AIComponent extends Component {
     public behavior: string;
-    
+
     constructor(...args: unknown[]) {
         super();
         const [behavior = 'idle'] = args as [string?];
@@ -63,9 +69,10 @@ class AIComponent extends Component {
     }
 }
 
+@ECSComponent('QuerySys_PhysicsComponent')
 class PhysicsComponent extends Component {
     public mass: number;
-    
+
     constructor(...args: unknown[]) {
         super();
         const [mass = 1.0] = args as [number?];

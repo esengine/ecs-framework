@@ -5,7 +5,7 @@ import { HierarchySystem } from '../../../src/ECS/Systems/HierarchySystem';
 import { HierarchyComponent } from '../../../src/ECS/Components/HierarchyComponent';
 import { ECSComponent } from '../../../src/ECS/Decorators';
 
-@ECSComponent('TestPosition')
+@ECSComponent('EDC_Position')
 class PositionComponent extends Component {
     public x: number = 0;
     public y: number = 0;
@@ -17,10 +17,36 @@ class PositionComponent extends Component {
     }
 }
 
-@ECSComponent('TestVelocity')
+@ECSComponent('EDC_Velocity')
 class VelocityComponent extends Component {
     public vx: number = 0;
     public vy: number = 0;
+}
+
+@ECSComponent('EDC_ComponentWithPrivate')
+class ComponentWithPrivate extends Component {
+    public publicValue: number = 1;
+    private _privateValue: number = 2;
+}
+
+@ECSComponent('EDC_ComponentWithNested')
+class ComponentWithNested extends Component {
+    public nested = { value: 42 };
+}
+
+@ECSComponent('EDC_ComponentWithArray')
+class ComponentWithArray extends Component {
+    public items = [{ id: 1 }, { id: 2 }];
+}
+
+@ECSComponent('EDC_ComponentWithLongString')
+class ComponentWithLongString extends Component {
+    public longText = 'x'.repeat(300);
+}
+
+@ECSComponent('EDC_ComponentWithLargeArray')
+class ComponentWithLargeArray extends Component {
+    public items = Array.from({ length: 20 }, (_, i) => i);
 }
 
 describe('EntityDataCollector', () => {
@@ -266,7 +292,7 @@ describe('EntityDataCollector', () => {
             const details = collector.extractComponentDetails([component]);
 
             expect(details.length).toBe(1);
-            expect(details[0].typeName).toBe('TestPosition');
+            expect(details[0].typeName).toBe('EDC_Position');
             expect(details[0].properties.x).toBe(100);
             expect(details[0].properties.y).toBe(200);
         });
@@ -277,11 +303,6 @@ describe('EntityDataCollector', () => {
         });
 
         test('should skip private properties', () => {
-            class ComponentWithPrivate extends Component {
-                public publicValue: number = 1;
-                private _privateValue: number = 2;
-            }
-
             const component = new ComponentWithPrivate();
             const details = collector.extractComponentDetails([component]);
 
@@ -340,10 +361,6 @@ describe('EntityDataCollector', () => {
         });
 
         test('should expand object at path', () => {
-            class ComponentWithNested extends Component {
-                public nested = { value: 42 };
-            }
-
             const entity = scene.createEntity('Entity');
             entity.addComponent(new ComponentWithNested());
 
@@ -354,10 +371,6 @@ describe('EntityDataCollector', () => {
         });
 
         test('should handle array index in path', () => {
-            class ComponentWithArray extends Component {
-                public items = [{ id: 1 }, { id: 2 }];
-            }
-
             const entity = scene.createEntity('Entity');
             entity.addComponent(new ComponentWithArray());
 
@@ -380,10 +393,6 @@ describe('EntityDataCollector', () => {
         });
 
         test('should handle entity with long string properties', () => {
-            class ComponentWithLongString extends Component {
-                public longText = 'x'.repeat(300);
-            }
-
             const entity = scene.createEntity('Entity');
             entity.addComponent(new ComponentWithLongString());
 
@@ -393,10 +402,6 @@ describe('EntityDataCollector', () => {
         });
 
         test('should handle entity with large arrays', () => {
-            class ComponentWithLargeArray extends Component {
-                public items = Array.from({ length: 20 }, (_, i) => i);
-            }
-
             const entity = scene.createEntity('Entity');
             entity.addComponent(new ComponentWithLargeArray());
 

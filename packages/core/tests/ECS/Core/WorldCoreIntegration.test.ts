@@ -7,8 +7,10 @@ import { EntitySystem } from '../../../src/ECS/Systems/EntitySystem';
 import { Component } from '../../../src/ECS/Component';
 import { Matcher } from '../../../src/ECS/Utils/Matcher';
 import { Entity } from '../../../src/ECS/Entity';
+import { ECSComponent } from '../../../src/ECS/Decorators';
 
 // 测试用组件
+@ECSComponent('WorldCore_TestComponent')
 class TestComponent extends Component {
     public value: number = 0;
 

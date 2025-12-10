@@ -5,8 +5,10 @@ import { Scene } from '../../../src/ECS/Scene';
 import { Matcher } from '../../../src/ECS/Utils/Matcher';
 import { GlobalEventBus } from '../../../src/ECS/Core/EventBus';
 import { TypeSafeEventSystem } from '../../../src/ECS/Core/EventSystem';
+import { ECSComponent } from '../../../src/ECS/Decorators';
 
 // 测试组件
+@ECSComponent('EntitySysTest_TestComponent')
 class TestComponent extends Component {
     public value: number = 0;
 
@@ -16,6 +18,45 @@ class TestComponent extends Component {
         this.value = value;
     }
 }
+
+// 额外测试组件 - 用于内联测试
+@ECSComponent('EntitySysTest_TagComponent2')
+class TagComponent2 extends Component {}
+
+@ECSComponent('EntitySysTest_NonExistent')
+class NonExistentComponent extends Component {}
+
+@ECSComponent('EntitySysTest_ClickComponent')
+class ClickComponent extends Component {
+    public element: string;
+    constructor(element: string = '') {
+        super();
+        this.element = element;
+    }
+}
+
+@ECSComponent('EntitySysTest_A')
+class AComponent extends Component {}
+
+@ECSComponent('EntitySysTest_B')
+class BComponent extends Component {}
+
+@ECSComponent('EntitySysTest_C')
+class CComponent extends Component {
+    public aId: number;
+    public bId: number;
+    constructor(aId: number = 0, bId: number = 0) {
+        super();
+        this.aId = aId;
+        this.bId = bId;
+    }
+}
+
+@ECSComponent('EntitySysTest_D')
+class DComponent extends Component {}
+
+@ECSComponent('EntitySysTest_TagComponent')
+class TagComponent extends TestComponent {}
 
 // 测试事件
 interface TestEvent {
@@ -441,12 +482,7 @@ describe('EntitySystem', () => {
         });
 
         it('在系统 process 中添加组件时应立即触发其他系统的 onAdded', () => {
-            // 使用独立的场景，避免 beforeEach 创建的实体干扰
-            // Use independent scene to avoid interference from beforeEach entities
             const testScene = new Scene();
-
-            // 组件定义
-            class TagComponent extends TestComponent {}
 
             // SystemA: 匹配 TestComponent + TagComponent
             class SystemA extends EntitySystem {
@@ -499,11 +535,7 @@ describe('EntitySystem', () => {
         });
 
         it('同一帧内添加后移除组件，onAdded 和 onRemoved 都应触发', () => {
-            // 使用独立的场景，避免 beforeEach 创建的实体干扰
-            // Use independent scene to avoid interference from beforeEach entities
             const testScene = new Scene();
-
-            class TagComponent extends TestComponent {}
 
             class TrackingSystemWithTag extends EntitySystem {
                 public onAddedEntities: Entity[] = [];
@@ -585,9 +617,8 @@ describe('EntitySystem', () => {
             // Use independent scene to avoid interference from beforeEach entities
             const testScene = new Scene();
 
-            // 使用独立的组件类，避免继承带来的问题
-            // Use independent component class to avoid inheritance issues
-            class TagComponent2 extends Component {}
+            // 使用文件顶部定义的 TagComponent2
+            // Use TagComponent2 defined at file top
 
             class SystemA extends EntitySystem {
                 public onAddedEntities: Entity[] = [];
@@ -747,8 +778,7 @@ describe('EntitySystem', () => {
         });
 
         it('requireComponent 应该在组件不存在时抛出错误', () => {
-            class NonExistentComponent extends Component {}
-
+            // 使用文件顶部定义的 NonExistentComponent
             expect(() => {
                 helperSystem.testRequireComponent(entity, NonExistentComponent);
             }).toThrow();
@@ -834,13 +864,7 @@ describe('EntitySystem', () => {
             // 使用独立场景 | Use independent scene
             const testScene = new Scene();
 
-            class ClickComponent extends Component {
-                public element: string;
-                constructor(element: string) {
-                    super();
-                    this.element = element;
-                }
-            }
+            // 使用文件顶部定义的 ClickComponent
 
             const testEntity = testScene.createEntity('panel');
 
@@ -858,13 +882,7 @@ describe('EntitySystem', () => {
             // 使用独立场景 | Use independent scene
             const testScene = new Scene();
 
-            class ClickComponent extends Component {
-                public element: string;
-                constructor(element: string) {
-                    super();
-                    this.element = element;
-                }
-            }
+            // 使用文件顶部定义的 ClickComponent
 
             // 添加一个监听该组件的系统 | Add a system that listens to this component
             class ClickSystem extends EntitySystem {
@@ -903,13 +921,7 @@ describe('EntitySystem', () => {
             // 使用独立场景 | Use independent scene
             const testScene = new Scene();
 
-            class ClickComponent extends Component {
-                public element: string;
-                constructor(element: string) {
-                    super();
-                    this.element = element;
-                }
-            }
+            // 使用文件顶部定义的 ClickComponent
 
             // 这个系统在 onAdded 中移除组件（模拟可能的用户代码）
             // This system removes component in onAdded (simulating possible user code)
@@ -950,25 +962,14 @@ describe('EntitySystem', () => {
             // 模拟 lawn-mower-demo 的场景 | Simulate lawn-mower-demo scenario
             const testScene = new Scene();
 
-            // 组件定义 | Component definitions
-            class A extends Component {}
-            class B extends Component {}
-            class C extends Component {
-                public aId: number;
-                public bId: number;
-                constructor(aId: number, bId: number) {
-                    super();
-                    this.aId = aId;
-                    this.bId = bId;
-                }
-            }
-            class D extends Component {}
+            // 使用顶层已装饰的组件类 | Use top-level decorated component classes
+            // AComponent, BComponent, CComponent, DComponent
 
             // ASystem: 匹配 A + D | Matches A + D
             class ASystem extends EntitySystem {
                 public onAddedEntities: Entity[] = [];
                 constructor() {
-                    super(Matcher.all(A, D));
+                    super(Matcher.all(AComponent, DComponent));
                 }
                 protected override onAdded(entity: Entity): void {
                     console.log('ASystem onAdded:', entity.name);
@@ -980,7 +981,7 @@ describe('EntitySystem', () => {
             class BSystem extends EntitySystem {
                 public onAddedEntities: Entity[] = [];
                 constructor() {
-                    super(Matcher.all(B, D));
+                    super(Matcher.all(BComponent, DComponent));
                 }
                 protected override onAdded(entity: Entity): void {
                     console.log('BSystem onAdded:', entity.name);
@@ -992,21 +993,21 @@ describe('EntitySystem', () => {
             // CSystem: Adds D component to A and B entities in process
             class CSystem extends EntitySystem {
                 constructor() {
-                    super(Matcher.all(C));
+                    super(Matcher.all(CComponent));
                 }
                 protected override process(entities: readonly Entity[]): void {
                     for (const entity of entities) {
-                        const c = entity.getComponent(C);
+                        const c = entity.getComponent(CComponent);
                         if (c) {
                             const a = this.scene!.findEntityById(c.aId);
-                            if (a && !a.hasComponent(D)) {
+                            if (a && !a.hasComponent(DComponent)) {
                                 console.log('CSystem: Adding D to Entity A');
-                                a.addComponent(new D());
+                                a.addComponent(new DComponent());
                             }
                             const b = this.scene!.findEntityById(c.bId);
-                            if (b && !b.hasComponent(D)) {
+                            if (b && !b.hasComponent(DComponent)) {
                                 console.log('CSystem: Adding D to Entity B');
-                                b.addComponent(new D());
+                                b.addComponent(new DComponent());
                             }
                         }
                     }
@@ -1015,17 +1016,17 @@ describe('EntitySystem', () => {
 
             // DSystem: 在 lateProcess 中移除 D 组件
             // DSystem: Removes D component in lateProcess
-            class DSystem extends EntitySystem {
+            class DSystemImpl extends EntitySystem {
                 public lateProcessEntities: Entity[] = [];
                 constructor() {
-                    super(Matcher.all(D));
+                    super(Matcher.all(DComponent));
                 }
                 protected override lateProcess(entities: readonly Entity[]): void {
                     console.log('DSystem lateProcess, entities count:', entities.length);
                     for (const entity of entities) {
                         console.log('DSystem removing D from:', entity.name);
                         this.lateProcessEntities.push(entity);
-                        const d = entity.getComponent(D);
+                        const d = entity.getComponent(DComponent);
                         if (d) {
                             entity.removeComponent(d);
                         }
@@ -1038,7 +1039,7 @@ describe('EntitySystem', () => {
             const aSystem = new ASystem();
             const bSystem = new BSystem();
             const cSystem = new CSystem();
-            const dSystem = new DSystem();
+            const dSystem = new DSystemImpl();
 
             testScene.addSystem(aSystem);
             testScene.addSystem(bSystem);
@@ -1047,13 +1048,13 @@ describe('EntitySystem', () => {
 
             // 创建实体 | Create entities
             const entity1 = testScene.createEntity('Entity1');
-            entity1.addComponent(new A());
+            entity1.addComponent(new AComponent());
 
             const entity2 = testScene.createEntity('Entity2');
-            entity2.addComponent(new B());
+            entity2.addComponent(new BComponent());
 
             const entity3 = testScene.createEntity('Entity3');
-            entity3.addComponent(new C(entity1.id, entity2.id));
+            entity3.addComponent(new CComponent(entity1.id, entity2.id));
 
             // 执行一帧 | Execute one frame
             testScene.update();
@@ -1071,8 +1072,8 @@ describe('EntitySystem', () => {
 
             // D 组件应该在 lateProcess 中被移除
             // D component should be removed in lateProcess
-            expect(entity1.hasComponent(D)).toBe(false);
-            expect(entity2.hasComponent(D)).toBe(false);
+            expect(entity1.hasComponent(DComponent)).toBe(false);
+            expect(entity2.hasComponent(DComponent)).toBe(false);
 
             testScene.removeSystem(aSystem);
             testScene.removeSystem(bSystem);

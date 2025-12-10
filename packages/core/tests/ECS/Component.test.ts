@@ -1,8 +1,10 @@
 import { Component } from '../../src/ECS/Component';
 import { Entity } from '../../src/ECS/Entity';
 import { Scene } from '../../src/ECS/Scene';
+import { ECSComponent } from '../../src/ECS/Decorators';
 
 // 测试组件
+@ECSComponent('ComponentTest_TestComponent')
 class TestComponent extends Component {
     public value: number = 100;
     public onAddedCalled = false;
@@ -17,6 +19,7 @@ class TestComponent extends Component {
     }
 }
 
+@ECSComponent('ComponentTest_AnotherTestComponent')
 class AnotherTestComponent extends Component {
     public name: string = 'test';
 }
