@@ -13,7 +13,7 @@ import {
     Plus, Minus, ChevronDown, ChevronRight, Settings,
     Package, Loader2, CheckCircle, XCircle, AlertTriangle, X, Copy, Check
 } from 'lucide-react';
-import type { BuildService, BuildProgress, BuildConfig, WebBuildConfig, WeChatBuildConfig, SceneManagerService } from '@esengine/editor-core';
+import type { BuildService, BuildProgress, BuildConfig, WebBuildConfig, WeChatBuildConfig, SceneManagerService, ProjectService, BuildSettingsConfig } from '@esengine/editor-core';
 import { BuildPlatform, BuildStatus } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
 import '../styles/BuildSettingsPanel.css';
@@ -182,6 +182,7 @@ interface BuildSettingsPanelProps {
     projectPath?: string;
     buildService?: BuildService;
     sceneManager?: SceneManagerService;
+    projectService?: ProjectService;
     /** Available scenes in the project | 项目中可用的场景列表 */
     availableScenes?: string[];
     onBuild?: (profile: BuildProfile, settings: BuildSettings) => void;
@@ -194,6 +195,7 @@ export function BuildSettingsPanel({
     projectPath,
     buildService,
     sceneManager,
+    projectService,
     availableScenes,
     onBuild,
     onClose
@@ -356,16 +358,77 @@ export function BuildSettingsPanel({
         }
     }, [selectedProfile, settings, projectPath, buildService, onBuild, getPlatformEnum]);
 
-    // Initialize scenes from availableScenes prop
-    // 从 availableScenes prop 初始化场景列表
+    // Load saved build settings from project config
+    // 从项目配置加载已保存的构建设置
     useEffect(() => {
-        if (availableScenes && availableScenes.length > 0) {
+        if (!projectService) return;
+
+        const savedSettings = projectService.getBuildSettings();
+        if (savedSettings) {
             setSettings(prev => ({
                 ...prev,
-                scenes: availableScenes.map(path => ({ path, enabled: true }))
+                scriptingDefines: savedSettings.scriptingDefines || [],
+                companyName: savedSettings.companyName || prev.companyName,
+                productName: savedSettings.productName || prev.productName,
+                version: savedSettings.version || prev.version,
+                developmentBuild: savedSettings.developmentBuild ?? prev.developmentBuild,
+                sourceMap: savedSettings.sourceMap ?? prev.sourceMap,
+                compressionMethod: savedSettings.compressionMethod || prev.compressionMethod,
+                buildMode: savedSettings.buildMode || prev.buildMode
             }));
         }
-    }, [availableScenes]);
+    }, [projectService]);
+
+    // Initialize scenes from availableScenes prop and saved settings
+    // 从 availableScenes prop 和已保存设置初始化场景列表
+    useEffect(() => {
+        if (availableScenes && availableScenes.length > 0) {
+            const savedSettings = projectService?.getBuildSettings();
+            const savedScenes = savedSettings?.scenes || [];
+
+            setSettings(prev => ({
+                ...prev,
+                scenes: availableScenes.map(path => ({
+                    path,
+                    enabled: savedScenes.length > 0 ? savedScenes.includes(path) : true
+                }))
+            }));
+        }
+    }, [availableScenes, projectService]);
+
+    // Auto-save build settings when changed
+    // 设置变化时自动保存
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    useEffect(() => {
+        if (!projectService) return;
+
+        // Debounce save to avoid too many writes
+        // 防抖保存，避免频繁写入
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+
+        saveTimeoutRef.current = setTimeout(() => {
+            const configToSave: BuildSettingsConfig = {
+                scenes: settings.scenes.filter(s => s.enabled).map(s => s.path),
+                scriptingDefines: settings.scriptingDefines,
+                companyName: settings.companyName,
+                productName: settings.productName,
+                version: settings.version,
+                developmentBuild: settings.developmentBuild,
+                sourceMap: settings.sourceMap,
+                compressionMethod: settings.compressionMethod,
+                buildMode: settings.buildMode
+            };
+            projectService.updateBuildSettings(configToSave);
+        }, 500);
+
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, [settings, projectService]);
 
     // Monitor build progress from service | 从服务监控构建进度
     useEffect(() => {

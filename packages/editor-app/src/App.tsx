@@ -102,6 +102,7 @@ function App() {
     const [notification, setNotification] = useState<INotification | null>(null);
     const [dialog, setDialog] = useState<IDialogExtended | null>(null);
     const [buildService, setBuildService] = useState<BuildService | null>(null);
+    const [projectServiceState, setProjectServiceState] = useState<ProjectService | null>(null);
     const [commandManager] = useState(() => new CommandManager());
     const { t, locale, changeLocale } = useLocale();
 
@@ -378,6 +379,7 @@ function App() {
                 return;
             }
 
+            setProjectServiceState(projectService);
             await projectService.openProject(projectPath);
 
             // 注意：插件配置会在引擎初始化后加载和激活
@@ -1038,6 +1040,7 @@ function App() {
                     projectPath={currentProjectPath || undefined}
                     buildService={buildService || undefined}
                     sceneManager={sceneManager || undefined}
+                    projectService={projectServiceState || undefined}
                     availableScenes={availableScenes}
                 />
             )}
