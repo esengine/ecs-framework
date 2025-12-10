@@ -18,7 +18,7 @@ import {
     BrowserFileSystemService,
     type IPlugin
 } from '@esengine/runtime-core';
-import { assetManager as globalAssetManager, type IAssetManager, type IAssetCatalog, type IAssetCatalogEntry } from '@esengine/asset-system';
+import { assetManager as globalAssetManager } from '@esengine/asset-system';
 import { BrowserAssetReader } from './BrowserAssetReader';
 
 /**
@@ -145,36 +145,21 @@ export class BrowserRuntime {
                 this._runtime.assetManager.setReader(this._assetReader);
             }
 
-            // Initialize AssetManager with catalog data from BrowserFileSystemService
-            // 使用 BrowserFileSystemService 的 catalog 数据初始化 AssetManager
+            // Initialize AssetManager with catalog from BrowserFileSystemService
+            // 使用 BrowserFileSystemService 的 catalog 初始化 AssetManager
+            // Catalog format is now unified - no conversion needed
+            // 目录格式已统一 - 无需转换
             if (this._fileSystem?.catalog) {
-                const browserCatalog = this._fileSystem.catalog;
-                const assetCatalog: IAssetCatalog = {
-                    version: browserCatalog.version,
-                    createdAt: browserCatalog.createdAt,
-                    entries: new Map<string, IAssetCatalogEntry>(),
-                    bundles: new Map()
-                };
+                const catalog = this._fileSystem.catalog;
 
-                // Convert browser catalog entries to IAssetCatalog format
-                // 将浏览器 catalog 条目转换为 IAssetCatalog 格式
-                for (const [guid, entry] of Object.entries(browserCatalog.entries)) {
-                    assetCatalog.entries.set(guid, {
-                        guid: entry.guid,
-                        path: entry.path,
-                        type: entry.type,
-                        size: entry.size,
-                        hash: entry.hash
-                    });
-                }
-
-                // Initialize GLOBAL assetManager singleton (this is what particle module uses)
-                // 初始化全局 assetManager 单例（particle 模块使用的就是这个）
-                globalAssetManager.initializeFromCatalog(assetCatalog);
+                // Initialize GLOBAL assetManager singleton (used by particle and other modules)
+                // 初始化全局 assetManager 单例（被 particle 等模块使用）
+                globalAssetManager.initializeFromCatalog(catalog);
 
                 // Also initialize runtime's assetManager if available
+                // 如果可用，也初始化运行时的 assetManager
                 if (this._runtime.assetManager) {
-                    this._runtime.assetManager.initializeFromCatalog(assetCatalog);
+                    this._runtime.assetManager.initializeFromCatalog(catalog);
                 }
             }
         }

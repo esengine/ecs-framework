@@ -9,28 +9,16 @@
  * Uses asset catalog to resolve GUIDs to actual URLs.
  */
 
-/**
- * Asset catalog entry
- */
-export interface AssetCatalogEntry {
-    guid: string;
-    path: string;
-    type: string;
-    size: number;
-    hash: string;
-}
-
-/**
- * Asset catalog loaded from JSON
- */
-export interface AssetCatalog {
-    version: string;
-    createdAt: number;
-    entries: Record<string, AssetCatalogEntry>;
-}
+import type {
+    IAssetCatalog,
+    IAssetCatalogEntry,
+    IAssetBundleInfo,
+    AssetLoadStrategy
+} from '@esengine/asset-system';
 
 /**
  * Browser file system service options
+ * 浏览器文件系统服务配置
  */
 export interface BrowserFileSystemOptions {
     /** Base URL for assets (e.g., '/assets' or 'https://cdn.example.com/assets') */
@@ -43,15 +31,19 @@ export interface BrowserFileSystemOptions {
 
 /**
  * Browser File System Service
+ * 浏览器文件系统服务
  *
  * Provides file system-like API for browser environments
- * by fetching files over HTTP.
+ * by fetching files over HTTP. Supports both file-based and bundle-based loading.
+ * 为浏览器环境提供类文件系统 API，通过 HTTP fetch 加载文件。
+ * 支持基于文件和基于包的两种加载模式。
  */
 export class BrowserFileSystemService {
     private _baseUrl: string;
     private _catalogUrl: string;
-    private _catalog: AssetCatalog | null = null;
+    private _catalog: IAssetCatalog | null = null;
     private _cache = new Map<string, string>();
+    private _bundleCache = new Map<string, ArrayBuffer>();
     private _enableCache: boolean;
     private _initialized = false;
 
@@ -63,6 +55,7 @@ export class BrowserFileSystemService {
 
     /**
      * Initialize service and load catalog
+     * 初始化服务并加载目录
      */
     async initialize(): Promise<void> {
         if (this._initialized) return;
@@ -70,24 +63,62 @@ export class BrowserFileSystemService {
         try {
             await this._loadCatalog();
             this._initialized = true;
-            console.log('[BrowserFileSystem] Initialized with',
-                Object.keys(this._catalog?.entries ?? {}).length, 'assets');
+
+            const strategy = this._catalog?.loadStrategy ?? 'file';
+            const assetCount = Object.keys(this._catalog?.entries ?? {}).length;
+            console.log(`[BrowserFileSystem] Initialized: ${assetCount} assets, strategy=${strategy}`);
         } catch (error) {
             console.warn('[BrowserFileSystem] Failed to load catalog:', error);
             // Continue without catalog - will use path-based loading
+            // 无目录时继续，使用基于路径的加载
             this._initialized = true;
         }
     }
 
     /**
      * Load asset catalog
+     * 加载资产目录
      */
     private async _loadCatalog(): Promise<void> {
         const response = await fetch(this._catalogUrl);
         if (!response.ok) {
             throw new Error(`Failed to fetch catalog: ${response.status}`);
         }
-        this._catalog = await response.json();
+
+        const rawCatalog = await response.json();
+
+        // Normalize catalog format (handle legacy format without loadStrategy)
+        // 规范化目录格式（处理没有 loadStrategy 的旧格式）
+        this._catalog = this._normalizeCatalog(rawCatalog);
+    }
+
+    /**
+     * Normalize catalog to ensure it has all required fields
+     * 规范化目录，确保包含所有必需字段
+     */
+    private _normalizeCatalog(raw: Record<string, unknown>): IAssetCatalog {
+        // Determine load strategy
+        // 确定加载策略
+        let loadStrategy: AssetLoadStrategy = 'file';
+        if (raw.loadStrategy === 'bundle' || raw.bundles) {
+            loadStrategy = 'bundle';
+        }
+
+        return {
+            version: (raw.version as string) ?? '1.0.0',
+            createdAt: (raw.createdAt as number) ?? Date.now(),
+            loadStrategy,
+            entries: (raw.entries as Record<string, IAssetCatalogEntry>) ?? {},
+            bundles: (raw.bundles as Record<string, IAssetBundleInfo>) ?? undefined
+        };
+    }
+
+    /**
+     * Get current load strategy
+     * 获取当前加载策略
+     */
+    get loadStrategy(): AssetLoadStrategy {
+        return this._catalog?.loadStrategy ?? 'file';
     }
 
     /**
@@ -237,8 +268,9 @@ export class BrowserFileSystemService {
 
     /**
      * Get asset metadata from catalog
+     * 从目录获取资产元数据
      */
-    getAssetMetadata(guidOrPath: string): AssetCatalogEntry | null {
+    getAssetMetadata(guidOrPath: string): IAssetCatalogEntry | null {
         if (!this._catalog) return null;
 
         // Try as GUID
@@ -258,8 +290,9 @@ export class BrowserFileSystemService {
 
     /**
      * Get all assets of a specific type
+     * 获取指定类型的所有资产
      */
-    getAssetsByType(type: string): AssetCatalogEntry[] {
+    getAssetsByType(type: string): IAssetCatalogEntry[] {
         if (!this._catalog) return [];
 
         return Object.values(this._catalog.entries)
@@ -268,6 +301,7 @@ export class BrowserFileSystemService {
 
     /**
      * Clear cache
+     * 清除缓存
      */
     clearCache(): void {
         this._cache.clear();
@@ -275,8 +309,9 @@ export class BrowserFileSystemService {
 
     /**
      * Get catalog
+     * 获取目录
      */
-    get catalog(): AssetCatalog | null {
+    get catalog(): IAssetCatalog | null {
         return this._catalog;
     }
 

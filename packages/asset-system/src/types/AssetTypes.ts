@@ -358,39 +358,163 @@ export interface IAssetLoadProgress {
 }
 
 /**
+ * Asset loading strategy
+ * 资产加载策略
+ *
+ * - 'file': Load assets directly via HTTP (development, simple builds)
+ * - 'bundle': Load assets from binary bundles (optimized production builds)
+ *
+ * - 'file': 通过 HTTP 直接加载资产（开发模式、简单构建）
+ * - 'bundle': 从二进制包加载资产（优化的生产构建）
+ */
+export type AssetLoadStrategy = 'file' | 'bundle';
+
+/**
  * Asset catalog entry for runtime lookups
  * 运行时查找的资产目录条目
+ *
+ * This is a unified format supporting both file-based and bundle-based loading.
+ * 这是一个统一格式，同时支持基于文件和基于包的加载。
  */
 export interface IAssetCatalogEntry {
-    /** 资产GUID */
+    /** 资产 GUID / Asset GUID */
     guid: AssetGUID;
-    /** 资产路径 */
+
+    /** 资产相对路径 / Asset relative path (e.g., 'assets/textures/player.png') */
     path: string;
-    /** 资产类型 */
+
+    /** 资产类型 / Asset type */
     type: AssetType;
-    /** 所在包名称 / Bundle containing this asset */
-    bundleName?: string;
-    /** 可用变体 / Available variants */
-    variants?: IAssetVariant[];
-    /** 大小（字节） / Size in bytes */
+
+    /** 文件大小（字节） / File size in bytes */
     size: number;
-    /** 内容哈希 / Content hash */
+
+    /** 内容哈希（用于缓存校验） / Content hash for cache validation */
     hash: string;
+
+    // ===== Bundle mode fields (optional) =====
+    // ===== Bundle 模式字段（可选）=====
+
+    /** 所在包名称（仅 bundle 模式） / Bundle name (bundle mode only) */
+    bundle?: string;
+
+    /** 包内偏移（仅 bundle 模式） / Offset within bundle (bundle mode only) */
+    offset?: number;
+
+    // ===== Optional metadata =====
+    // ===== 可选元数据 =====
+
+    /** 可用变体 / Available variants (platform/quality specific) */
+    variants?: IAssetVariant[];
+}
+
+/**
+ * Asset bundle info for runtime loading
+ * 运行时加载的资产包信息
+ */
+export interface IAssetBundleInfo {
+    /** 包 URL（相对于 catalog） / Bundle URL relative to catalog */
+    url: string;
+
+    /** 包大小（字节） / Bundle size in bytes */
+    size: number;
+
+    /** 内容哈希 / Content hash for integrity check */
+    hash: string;
+
+    /** 是否预加载 / Whether to preload this bundle */
+    preload?: boolean;
+
+    /** 压缩类型 / Compression type */
+    compression?: 'none' | 'gzip' | 'brotli';
+
+    /** 依赖的其他包 / Dependencies on other bundles */
+    dependencies?: string[];
 }
 
 /**
  * Runtime asset catalog
  * 运行时资产目录
+ *
+ * This is the canonical format for asset catalogs in ESEngine.
+ * Both WebBuildPipeline and AssetPacker generate this format.
+ * 这是 ESEngine 中资产目录的标准格式。
+ * WebBuildPipeline 和 AssetPacker 都生成此格式。
+ *
+ * @example File mode (development/simple builds)
+ * ```json
+ * {
+ *   "version": "1.0.0",
+ *   "createdAt": 1702185600000,
+ *   "loadStrategy": "file",
+ *   "entries": {
+ *     "550e8400-e29b-41d4-a716-446655440000": {
+ *       "guid": "550e8400-e29b-41d4-a716-446655440000",
+ *       "path": "assets/textures/player.png",
+ *       "type": "texture",
+ *       "size": 12345,
+ *       "hash": "abc123"
+ *     }
+ *   }
+ * }
+ * ```
+ *
+ * @example Bundle mode (optimized production)
+ * ```json
+ * {
+ *   "version": "1.0.0",
+ *   "createdAt": 1702185600000,
+ *   "loadStrategy": "bundle",
+ *   "entries": {
+ *     "550e8400-e29b-41d4-a716-446655440000": {
+ *       "guid": "550e8400-e29b-41d4-a716-446655440000",
+ *       "path": "assets/textures/player.png",
+ *       "type": "texture",
+ *       "size": 12345,
+ *       "hash": "abc123",
+ *       "bundle": "textures",
+ *       "offset": 1024
+ *     }
+ *   },
+ *   "bundles": {
+ *     "textures": {
+ *       "url": "bundles/textures.bundle",
+ *       "size": 1048576,
+ *       "hash": "def456",
+ *       "preload": true
+ *     }
+ *   }
+ * }
+ * ```
  */
 export interface IAssetCatalog {
-    /** 版本号 */
+    /** 目录版本号 / Catalog version */
     version: string;
-    /** 创建时间戳 / Creation timestamp */
+
+    /** 创建时间戳 / Creation timestamp (Unix ms) */
     createdAt: number;
-    /** 所有目录条目 / All catalog entries */
-    entries: Map<AssetGUID, IAssetCatalogEntry>;
-    /** 此目录中的包 / Bundles in this catalog */
-    bundles: Map<string, IAssetBundleManifest>;
+
+    /**
+     * 加载策略 / Loading strategy
+     * - 'file': 直接 HTTP 加载
+     * - 'bundle': 从二进制包加载
+     */
+    loadStrategy: AssetLoadStrategy;
+
+    /**
+     * 资产条目（GUID 到条目的映射）
+     * Asset entries (GUID to entry mapping)
+     *
+     * Uses Record for JSON serialization compatibility.
+     * 使用 Record 以兼容 JSON 序列化。
+     */
+    entries: Record<AssetGUID, IAssetCatalogEntry>;
+
+    /**
+     * 包信息（仅 bundle 模式）
+     * Bundle info (bundle mode only)
+     */
+    bundles?: Record<string, IAssetBundleInfo>;
 }
 
 /**

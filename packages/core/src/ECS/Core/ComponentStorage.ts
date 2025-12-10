@@ -2,11 +2,12 @@ import { Component } from '../Component';
 import { BitMask64Utils, BitMask64Data } from '../Utils/BigIntCompatibility';
 import { SoAStorage, SupportedTypedArray } from './SoAStorage';
 import { createLogger } from '../../Utils/Logger';
-import { getComponentTypeName } from '../Decorators';
-import { ComponentRegistry, ComponentType } from './ComponentStorage/ComponentRegistry';
+import { getComponentTypeName, ComponentType } from '../Decorators';
+import { ComponentRegistry } from './ComponentStorage/ComponentRegistry';
 
 // 导出核心类型
-export { ComponentRegistry, ComponentType };
+export { ComponentRegistry };
+export type { ComponentType };
 
 
 /**
@@ -20,11 +21,6 @@ export class ComponentStorage<T extends Component> {
 
     constructor(componentType: ComponentType<T>) {
         this.componentType = componentType;
-
-        // 确保组件类型已注册
-        if (!ComponentRegistry.isRegistered(componentType)) {
-            ComponentRegistry.register(componentType);
-        }
     }
 
     /**

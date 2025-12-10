@@ -11,7 +11,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Monitor, Apple, Smartphone, Globe, Server, Gamepad2,
     Plus, Minus, ChevronDown, ChevronRight, Settings,
-    Package, Loader2, CheckCircle, XCircle, AlertTriangle, X
+    Package, Loader2, CheckCircle, XCircle, AlertTriangle, X, Copy, Check
 } from 'lucide-react';
 import type { BuildService, BuildProgress, BuildConfig, WebBuildConfig, WeChatBuildConfig, SceneManagerService } from '@esengine/editor-core';
 import { BuildPlatform, BuildStatus } from '@esengine/editor-core';
@@ -105,6 +105,76 @@ const buildStatusKeys: Record<BuildStatus, string> = {
     [BuildStatus.Failed]: 'buildSettings.failed',
     [BuildStatus.Cancelled]: 'buildSettings.cancelled'
 };
+
+// ==================== Build Error Display Component | 构建错误显示组件 ====================
+
+/**
+ * Format and display build errors in a readable way.
+ * 以可读的方式格式化和显示构建错误。
+ */
+function BuildErrorDisplay({ error }: { error: string }) {
+    const { t } = useLocale();
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    // Extract first line as summary | 提取第一行作为摘要
+    const lines = error.split('\n');
+    const firstErrorMatch = error.match(/X \[ERROR\][^\n]*/);
+    const firstLine = lines[0] || '';
+    const matchedError = firstErrorMatch?.[0] || '';
+    const summary = matchedError
+        ? matchedError.slice(0, 100) + (matchedError.length > 100 ? '...' : '')
+        : firstLine.slice(0, 100) + (firstLine.length > 100 ? '...' : '');
+
+    // Check if error is long (needs expansion) | 检查错误是否很长（需要展开）
+    const isLongError = error.length > 200 || lines.length > 3;
+
+    // Copy error to clipboard | 复制错误到剪贴板
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(error);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (e) {
+            console.error('Failed to copy:', e);
+        }
+    };
+
+    return (
+        <div className="build-result-error">
+            <div className="build-error-header">
+                <AlertTriangle size={16} />
+                <span className="build-error-summary">{summary}</span>
+                <button
+                    className="build-error-copy-btn"
+                    onClick={handleCopy}
+                    title={t('buildSettings.copyError')}
+                >
+                    {copied ? <Check size={14} /> : <Copy size={14} />}
+                </button>
+            </div>
+
+            {isLongError && (
+                <>
+                    <button
+                        className="build-error-expand-btn"
+                        onClick={() => setIsExpanded(!isExpanded)}
+                    >
+                        {isExpanded ? t('buildSettings.collapse') : t('buildSettings.showDetails')}
+                        <ChevronDown
+                            size={14}
+                            className={isExpanded ? 'rotated' : ''}
+                        />
+                    </button>
+
+                    {isExpanded && (
+                        <pre className="build-error-details">{error}</pre>
+                    )}
+                </>
+            )}
+        </div>
+    );
+}
 
 // ==================== Props | 属性 ====================
 
@@ -756,10 +826,7 @@ export function BuildSettingsPanel({
 
                                     {/* Error Message | 错误消息 */}
                                     {buildResult.error && (
-                                        <div className="build-result-error">
-                                            <AlertTriangle size={16} />
-                                            <span>{buildResult.error}</span>
-                                        </div>
+                                        <BuildErrorDisplay error={buildResult.error} />
                                     )}
 
                                     {/* Warnings | 警告 */}

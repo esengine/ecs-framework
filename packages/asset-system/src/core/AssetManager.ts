@@ -120,7 +120,7 @@ export class AssetManager implements IAssetManager {
      * 可在构造后调用以加载目录条目。
      */
     initializeFromCatalog(catalog: IAssetCatalog): void {
-        catalog.entries.forEach((entry, guid) => {
+        for (const [guid, entry] of Object.entries(catalog.entries)) {
             const metadata: IAssetMetadata = {
                 guid,
                 path: entry.path,
@@ -137,7 +137,7 @@ export class AssetManager implements IAssetManager {
 
             this._database.addAsset(metadata);
             this._pathToGuid.set(entry.path, guid);
-        });
+        }
     }
 
     /**

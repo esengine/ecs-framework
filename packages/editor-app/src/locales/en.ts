@@ -821,7 +821,10 @@ export const en: Translations = {
         outputPath: 'Output Path',
         duration: 'Duration',
         selectPlatform: 'Select a platform or build profile',
-        settings: 'Settings'
+        settings: 'Settings',
+        copyError: 'Copy error',
+        showDetails: 'Show details',
+        collapse: 'Collapse'
     },
 
     // ========================================

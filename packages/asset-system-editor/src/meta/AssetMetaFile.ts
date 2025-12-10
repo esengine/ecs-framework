@@ -13,7 +13,11 @@
  * - 标签：用户定义的标签
  */
 
-import { AssetGUID, AssetType } from '@esengine/asset-system';
+import {
+    AssetGUID,
+    AssetType,
+    generateGUID
+} from '@esengine/asset-system';
 
 /**
  * Meta file content structure
@@ -68,23 +72,6 @@ export interface IImportSettings {
     [key: string]: unknown;
 }
 
-/**
- * Generate a new UUID v4
- * 生成新的 UUID v4
- */
-export function generateGUID(): AssetGUID {
-    // Use crypto.randomUUID if available (modern browsers/Node 19+)
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-        return crypto.randomUUID();
-    }
-
-    // Fallback implementation
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-        const r = (Math.random() * 16) | 0;
-        const v = c === 'x' ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-    });
-}
 
 /**
  * Get meta file path for an asset
@@ -228,14 +215,6 @@ export function parseAssetMeta(json: string): IAssetMeta {
     return meta;
 }
 
-/**
- * Validate GUID format (UUID v4)
- * 验证 GUID 格式 (UUID v4)
- */
-export function isValidGUID(guid: string): boolean {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(guid);
-}
 
 /**
  * Asset Meta File Manager

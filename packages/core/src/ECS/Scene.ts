@@ -672,10 +672,6 @@ export class Scene implements IScene {
      * @param system 系统 | System
      */
     private addSystemToComponentIndex(componentType: ComponentType, system: EntitySystem): void {
-        if (!ComponentRegistry.isRegistered(componentType)) {
-            ComponentRegistry.register(componentType);
-        }
-
         const componentId = ComponentRegistry.getBitIndex(componentType);
         let systems = this._componentIdToSystems.get(componentId);
 

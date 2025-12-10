@@ -172,9 +172,11 @@ pub async fn bundle_scripts(options: BundleOptions) -> Result<BundleResult, Stri
     let esbuild_path = find_esbuild(&options.project_root)?;
 
     // Build output file path | 构建输出文件路径
+    // Note: Don't use .with_extension() as it replaces the last dot-segment
+    // 注意：不要使用 .with_extension()，因为它会替换最后一个点分段
+    // e.g., "esengine.core" would become "esengine.js" instead of "esengine.core.js"
     let output_file = Path::new(&options.output_dir)
-        .join(&options.bundle_name)
-        .with_extension("js");
+        .join(format!("{}.js", &options.bundle_name));
 
     // Ensure output directory exists | 确保输出目录存在
     if let Some(parent) = output_file.parent() {
@@ -209,6 +211,13 @@ pub async fn bundle_scripts(options: BundleOptions) -> Result<BundleResult, Stri
             args.push(format!("--define:{}={}", key, value));
         }
     }
+
+    // Log esbuild command for debugging
+    println!("[esbuild] bundle_name: {}", options.bundle_name);
+    println!("[esbuild] format: {}", options.format);
+    println!("[esbuild] output_file: {}", output_file.display());
+    println!("[esbuild] entry_points: {:?}", options.entry_points);
+    println!("[esbuild] args: {:?}", args);
 
     // Run esbuild | 运行 esbuild
     let output = Command::new(&esbuild_path)
@@ -426,8 +435,20 @@ fn list_files_recursive(
     {
         let entry = entry.map_err(|e| format!("Failed to read entry | 读取条目失败: {}", e))?;
         let entry_path = entry.path();
+        let file_name = entry.file_name();
+        let file_name_str = file_name.to_string_lossy();
 
         if entry_path.is_dir() {
+            // Skip node_modules, hidden directories, and other large directories
+            // 跳过 node_modules、隐藏目录和其他大型目录
+            if file_name_str.starts_with('.')
+                || file_name_str == "node_modules"
+                || file_name_str == "target"
+                || file_name_str == ".git"
+            {
+                continue;
+            }
+
             if recursive {
                 list_files_recursive(&entry_path, extensions, recursive, files)?;
             }

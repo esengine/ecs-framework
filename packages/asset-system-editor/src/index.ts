@@ -13,21 +13,22 @@
  * - 导入设置
  */
 
-// Meta file management
+// Meta file management | 元数据文件管理
 export {
     AssetMetaManager,
     type IAssetMeta,
     type IImportSettings,
     type IMetaFileSystem,
-    generateGUID,
     getMetaFilePath,
     inferAssetType,
     getDefaultImportSettings,
     createAssetMeta,
     serializeAssetMeta,
-    parseAssetMeta,
-    isValidGUID
+    parseAssetMeta
 } from './meta/AssetMetaFile';
+
+// Re-export utilities from asset-system | 从 asset-system 重导出工具函数
+export { generateGUID, isValidGUID } from '@esengine/asset-system';
 
 // Asset packing
 export {

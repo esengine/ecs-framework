@@ -49,8 +49,11 @@ pub struct ModuleIndexEntry {
 /// Get the engine modules directory path.
 /// 获取引擎模块目录路径。
 ///
-/// Uses compile-time CARGO_MANIFEST_DIR in dev mode to locate dist/engine.
-/// 在开发模式下使用编译时的 CARGO_MANIFEST_DIR 来定位 dist/engine。
+/// In dev mode: First tries dist/engine, then falls back to packages/ source directory.
+/// 在开发模式下：首先尝试 dist/engine，然后回退到 packages/ 源目录。
+///
+/// In production: Uses the bundled resource directory.
+/// 在生产模式下：使用打包的资源目录。
 #[allow(unused_variables)]
 fn get_engine_modules_path(app: &AppHandle) -> Result<PathBuf, String> {
     // In development mode, use compile-time path
@@ -59,30 +62,45 @@ fn get_engine_modules_path(app: &AppHandle) -> Result<PathBuf, String> {
     {
         // CARGO_MANIFEST_DIR is set at compile time, pointing to src-tauri
         // CARGO_MANIFEST_DIR 在编译时设置，指向 src-tauri
-        let dev_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        // Try dist/engine first (if modules have been copied with actual content)
+        // 首先尝试 dist/engine（如果模块已复制且包含实际内容）
+        let dist_engine_path = manifest_dir
             .parent()
             .map(|p| p.join("dist/engine"))
             .unwrap_or_else(|| PathBuf::from("dist/engine"));
 
-        if dev_path.exists() {
-            println!("[modules] Using dev path: {:?}", dev_path);
-            return Ok(dev_path);
+        // Check if dist/engine has actual module content (not just empty directories)
+        // 检查 dist/engine 是否有实际模块内容（而不仅是空目录）
+        let dist_core_output = dist_engine_path.join("core/dist/index.mjs");
+        if dist_core_output.exists() {
+            println!("[modules] Using dist/engine path: {:?}", dist_engine_path);
+            return Ok(dist_engine_path);
         }
 
-        // Fallback: try current working directory
-        // 回退：尝试当前工作目录
-        let cwd_path = std::env::current_dir()
-            .map(|p| p.join("dist/engine"))
-            .unwrap_or_else(|_| PathBuf::from("dist/engine"));
+        // Fallback: use packages/ source directory directly (dev mode without copy)
+        // 回退：直接使用 packages/ 源目录（开发模式无需复制）
+        // This allows building without running copy-modules first
+        // 这样可以在不运行 copy-modules 的情况下进行构建
+        let packages_path = manifest_dir
+            .parent()  // editor-app
+            .and_then(|p| p.parent())  // packages
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("packages"));
 
-        if cwd_path.exists() {
-            println!("[modules] Using cwd path: {:?}", cwd_path);
-            return Ok(cwd_path);
+        // Verify packages directory has module.json files
+        // 验证 packages 目录包含 module.json 文件
+        let core_module = packages_path.join("core/module.json");
+        if core_module.exists() {
+            println!("[modules] Using packages source path: {:?}", packages_path);
+            return Ok(packages_path);
         }
 
         return Err(format!(
-            "Engine modules directory not found in dev mode. Tried: {:?}, {:?}. Run 'pnpm copy-modules' first.",
-            dev_path, cwd_path
+            "Engine modules directory not found in dev mode. Tried: {:?}, {:?}. \
+            Either run 'pnpm copy-modules' or ensure packages/ directory exists.",
+            dist_engine_path, packages_path
         ));
     }
 

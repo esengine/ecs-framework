@@ -834,6 +834,9 @@ importers:
 
   packages/editor-runtime:
     dependencies:
+      '@esengine/asset-system':
+        specifier: workspace:*
+        version: link:../asset-system
       '@tauri-apps/api':
         specifier: ^2.2.0
         version: 2.9.0

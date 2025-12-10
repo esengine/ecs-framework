@@ -48,6 +48,7 @@ import type {
 } from '../IBuildPipeline';
 import { BuildPlatform, BuildStatus } from '../IBuildPipeline';
 import type { ModuleManifest } from '../../Module/ModuleTypes';
+import { hashFileInfo } from '@esengine/asset-system';
 
 // ============================================================================
 // Build File System Interface
@@ -81,6 +82,8 @@ export interface IBuildFileSystem {
         error?: string;
         warnings: string[];
     }>;
+    /** List files by extension | 按扩展名列出文件 */
+    listFilesByExtension(dirPath: string, extensions: string[], recursive?: boolean): Promise<string[]>;
     generateHtml(outputPath: string, title: string, scripts: string[], bodyContent?: string): Promise<void>;
     getFileSize(filePath: string): Promise<number>;
     getDirectorySize(dirPath: string): Promise<number>;
@@ -211,6 +214,11 @@ export class WebBuildPipeline implements IBuildPipeline {
                 id: 'copy-scenes',
                 name: 'Copy scenes | 复制场景',
                 execute: this._stepCopyScenes.bind(this)
+            },
+            {
+                id: 'bundle-user-scripts',
+                name: 'Bundle user scripts | 打包用户脚本',
+                execute: this._stepBundleUserScripts.bind(this)
             }
         ];
 
@@ -265,22 +273,45 @@ export class WebBuildPipeline implements IBuildPipeline {
             ? outputPathParts.slice(0, buildIndex).join('/')
             : '.';
 
+        // Build log collector
+        // 构建日志收集器
+        const buildLogs: string[] = [
+            `=== ESEngine Web Build Log ===`,
+            `Build started: ${new Date().toISOString()}`,
+            `Platform: Web`,
+            `Build mode: ${(config as WebBuildConfig).buildMode}`,
+            `Output path: ${config.outputPath}`,
+            `Project root: ${projectRoot}`,
+            ``
+        ];
+
+        const logMessage = (msg: string): void => {
+            const timestamp = new Date().toISOString().slice(11, 23);
+            const line = `[${timestamp}] ${msg}`;
+            buildLogs.push(line);
+            console.log(`[WebBuild] ${msg}`);
+        };
+
         const context: BuildContext = {
             config,
             projectRoot,
             tempDir: `${projectRoot}/temp/build`,
             outputDir: config.outputPath,
             reportProgress: (msg, progress) => {
-                console.log(`[WebBuild] ${msg}${progress !== undefined ? ` (${progress}%)` : ''}`);
+                logMessage(`${msg}${progress !== undefined ? ` (${progress}%)` : ''}`);
             },
-            addWarning: (warning) => warnings.push(warning),
+            addWarning: (warning) => {
+                warnings.push(warning);
+                logMessage(`[WARNING] ${warning}`);
+            },
             abortSignal: abortSignal || new AbortController().signal,
             data: new Map()
         };
 
-        // Store file system in context
+        // Store file system and log function in context
         context.data.set('fileSystem', this._fileSystem);
         context.data.set('engineModulesPath', this._engineModulesPath);
+        context.data.set('logMessage', logMessage);
 
         try {
             for (let i = 0; i < steps.length; i++) {
@@ -314,6 +345,28 @@ export class WebBuildPipeline implements IBuildPipeline {
                 }
             }
 
+            // Build completed successfully
+            const duration = Date.now() - startTime;
+            buildLogs.push('');
+            buildLogs.push(`=== Build Completed ===`);
+            buildLogs.push(`Duration: ${(duration / 1000).toFixed(2)}s`);
+            buildLogs.push(`Total size: ${stats?.totalSize ? this._formatBytes(stats.totalSize) : 'unknown'}`);
+            buildLogs.push(`Warnings: ${warnings.length}`);
+
+            // Write build log to file
+            // 写入构建日志文件
+            if (this._fileSystem) {
+                try {
+                    await this._fileSystem.writeFile(
+                        `${config.outputPath}/build.log`,
+                        buildLogs.join('\n')
+                    );
+                    console.log(`[WebBuild] Build log written to: ${config.outputPath}/build.log`);
+                } catch {
+                    // Ignore log write errors
+                }
+            }
+
             onProgress?.({
                 status: BuildStatus.Completed,
                 message: 'Build completed | 构建完成',
@@ -327,6 +380,23 @@ export class WebBuildPipeline implements IBuildPipeline {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('[WebBuild] Build failed:', errorMessage);
+
+            // Log error
+            buildLogs.push('');
+            buildLogs.push(`=== Build Failed ===`);
+            buildLogs.push(`Error: ${errorMessage}`);
+
+            // Write build log even on failure
+            if (this._fileSystem) {
+                try {
+                    await this._fileSystem.writeFile(
+                        `${config.outputPath}/build.log`,
+                        buildLogs.join('\n')
+                    );
+                } catch {
+                    // Ignore
+                }
+            }
 
             onProgress?.({
                 status: BuildStatus.Failed,
@@ -429,7 +499,11 @@ export class WebBuildPipeline implements IBuildPipeline {
         context.data.set('coreModules', coreModules);
         context.data.set('pluginModules', pluginModules);
 
+        // Log detailed module information
+        // 记录详细的模块信息
         console.log(`[WebBuild] Found ${coreModules.length} core modules, ${pluginModules.length} plugin modules`);
+        console.log(`[WebBuild] Core modules: ${coreModules.map(m => m.name || m.id).join(', ')}`);
+        console.log(`[WebBuild] Plugin modules: ${pluginModules.map(m => m.name || m.id).join(', ')}`);
     }
 
     /**
@@ -456,12 +530,16 @@ export class WebBuildPipeline implements IBuildPipeline {
         const sourceMap = webConfig.sourceMap === true;
 
         // 1. Bundle core modules into esengine.core.js (ESM format)
+        // This generates a dynamic entry that re-exports all core module APIs
+        // 生成动态入口文件，重新导出所有核心模块 API
         console.log(`[WebBuild] Bundling core runtime (ESM)...`);
         await this._bundleCoreRuntime(context, fs, coreModules, engineModulesPath, minify, sourceMap);
 
-        // 2. Copy plugin modules as separate ESM files
-        console.log(`[WebBuild] Copying plugin modules (ESM)...`);
-        await this._copyPluginModules(context, fs, pluginModules, engineModulesPath);
+        // 2. Bundle plugin modules as separate ESM files
+        // Each plugin is bundled with core modules marked as external (resolved via Import Map)
+        // 每个插件单独打包，核心模块标记为 external（通过 Import Map 解析）
+        console.log(`[WebBuild] Bundling plugin modules (ESM)...`);
+        await this._bundlePluginModules(context, fs, coreModules, pluginModules, engineModulesPath, minify, sourceMap);
 
         // 3. Copy WASM files
         console.log(`[WebBuild] Copying WASM files...`);
@@ -565,42 +643,91 @@ export class WebBuildPipeline implements IBuildPipeline {
     /**
      * Step 6: Generate asset catalog.
      * 步骤 6：生成资产清单。
+     *
+     * Generates IAssetCatalog in unified format.
+     * Reads .meta files from source project to get real GUIDs.
+     * 生成统一格式的 IAssetCatalog。
+     * 从源项目读取 .meta 文件获取真实的 GUID。
      */
     private async _stepGenerateCatalog(context: BuildContext): Promise<void> {
         const fs = context.data.get('fileSystem') as IBuildFileSystem | null;
         if (!fs) return;
 
-        const assetsDir = `${context.outputDir}/assets`;
-        const catalog: {
-            version: number;
-            generated: string;
-            assets: Record<string, { path: string; type: string; size: number }>;
-        } = {
-            version: 1,
-            generated: new Date().toISOString(),
-            assets: {}
+        // Meta file format from asset-system-editor
+        // 来自 asset-system-editor 的 meta 文件格式
+        interface AssetMeta {
+            guid: string;
+            type: string;
+            importSettings?: Record<string, unknown>;
+            labels?: string[];
+            version?: number;
+            lastModified?: number;
+        }
+
+        // Use unified IAssetCatalog format from @esengine/asset-system
+        // 使用 @esengine/asset-system 中统一的 IAssetCatalog 格式
+        const catalog = {
+            version: '1.0.0',
+            createdAt: Date.now(),
+            loadStrategy: 'file' as const,  // Web builds use file-based loading
+            entries: {} as Record<string, {
+                guid: string;
+                path: string;
+                type: string;
+                size: number;
+                hash: string;
+            }>
         };
 
-        // Scan assets directory
-        if (await fs.pathExists(assetsDir)) {
-            const files = await fs.listFilesByExtension(assetsDir, [
-                '.png', '.jpg', '.jpeg', '.gif', '.webp',
-                '.mp3', '.ogg', '.wav', '.m4a',
-                '.json', '.xml'
-            ], true);
+        // Collect assets from project source directories
+        // 从项目源目录收集资产
+        const sourceAssetDirs = ['assets', 'scenes', 'scripts'];
+        const outputAssetsDir = `${context.outputDir}/assets`;
+        const outputScenesDir = `${context.outputDir}/scenes`;
 
-            for (const file of files) {
-                const relativePath = file.replace(context.outputDir, '').replace(/\\/g, '/').replace(/^\//, '');
-                const ext = file.split('.').pop()?.toLowerCase() || '';
-                const type = this._getAssetType(ext);
+        for (const dirName of sourceAssetDirs) {
+            const sourceDir = `${context.projectRoot}/${dirName}`;
+            if (!await fs.pathExists(sourceDir)) continue;
 
+            const metaFiles = await fs.listFilesByExtension(sourceDir, ['.meta'], true);
+
+            for (const metaFile of metaFiles) {
                 try {
-                    const size = await fs.getFileSize(file);
-                    // Use relative path as simple ID (could use GUID in future)
-                    const id = relativePath.replace(/[^a-zA-Z0-9]/g, '_');
-                    catalog.assets[id] = { path: relativePath, type, size };
-                } catch {
-                    // Skip files that can't be accessed
+                    const meta = await fs.readJson<AssetMeta>(metaFile);
+                    if (!meta.guid) continue;
+
+                    const assetSourcePath = metaFile.replace(/\.meta$/, '');
+
+                    let outputPath: string;
+                    let relativePath: string;
+
+                    if (dirName === 'scenes') {
+                        const fileName = assetSourcePath.split(/[/\\]/).pop() || '';
+                        outputPath = `${outputScenesDir}/${fileName}`;
+                        relativePath = `scenes/${fileName}`;
+                    } else if (dirName === 'assets') {
+                        const relativeToAssets = assetSourcePath.replace(sourceDir, '').replace(/^[/\\]/, '');
+                        outputPath = `${outputAssetsDir}/${relativeToAssets}`;
+                        relativePath = `assets/${relativeToAssets}`;
+                    } else {
+                        continue;
+                    }
+
+                    relativePath = relativePath.replace(/\\/g, '/');
+
+                    if (!await fs.pathExists(outputPath)) continue;
+
+                    const size = await fs.getFileSize(outputPath);
+
+                    catalog.entries[meta.guid] = {
+                        guid: meta.guid,
+                        path: relativePath,
+                        type: meta.type || this._getAssetType(assetSourcePath.split('.').pop() || ''),
+                        size,
+                        hash: hashFileInfo(relativePath, size)
+                    };
+                } catch (error) {
+                    console.warn(`[WebBuild] Failed to process meta file: ${metaFile}`, error);
                 }
             }
         }
@@ -610,7 +737,7 @@ export class WebBuildPipeline implements IBuildPipeline {
             JSON.stringify(catalog, null, 2)
         );
 
-        console.log(`[WebBuild] Generated asset catalog with ${Object.keys(catalog.assets).length} assets`);
+        console.log(`[WebBuild] Generated asset catalog: ${Object.keys(catalog.entries).length} assets, strategy=${catalog.loadStrategy}`);
     }
 
     /**
@@ -636,8 +763,9 @@ export class WebBuildPipeline implements IBuildPipeline {
             }
         }
 
-        // Check for WASM
-        const wasmDir = `${context.outputDir}/libs/wasm`;
+        // Check for WASM (located in /wasm/ directory)
+        // 检查 WASM（位于 /wasm/ 目录）
+        const wasmDir = `${context.outputDir}/wasm`;
         const hasWasm = await fs.pathExists(`${wasmDir}/es_engine_bg.wasm`);
 
         const html = buildMode === 'single-bundle'
@@ -646,6 +774,99 @@ export class WebBuildPipeline implements IBuildPipeline {
 
         await fs.writeFile(`${context.outputDir}/index.html`, html);
         console.log(`[WebBuild] Generated index.html (${buildMode} mode)`);
+    }
+
+    /**
+     * Step 7: Bundle user scripts (components, systems, etc.).
+     * 步骤 7：打包用户脚本（组件、系统等）。
+     *
+     * User scripts in project/scripts/ directory are bundled and loaded at runtime.
+     * 项目 scripts/ 目录中的用户脚本会被打包并在运行时加载。
+     */
+    private async _stepBundleUserScripts(context: BuildContext): Promise<void> {
+        const fs = context.data.get('fileSystem') as IBuildFileSystem | null;
+        if (!fs) return;
+
+        const webConfig = context.config as WebBuildConfig;
+        const minify = webConfig.isRelease;
+        const sourceMap = webConfig.sourceMap ?? !webConfig.isRelease;
+
+        // Find user scripts directory | 查找用户脚本目录
+        const scriptsDir = `${context.projectRoot}/scripts`;
+        const hasScripts = await fs.pathExists(scriptsDir);
+
+        if (!hasScripts) {
+            console.log('[WebBuild] No scripts directory found, skipping user scripts | 未找到脚本目录，跳过用户脚本');
+            return;
+        }
+
+        // Find entry file or collect all script files
+        // 查找入口文件或收集所有脚本文件
+        const possibleEntries = ['index.ts', 'main.ts', 'game.ts', 'index.js', 'main.js'];
+        let entryFiles: string[] = [];
+
+        // First, try to find standard entry files
+        // 首先尝试查找标准入口文件
+        for (const entry of possibleEntries) {
+            const entryPath = `${scriptsDir}/${entry}`;
+            if (await fs.pathExists(entryPath)) {
+                entryFiles = [entryPath];
+                console.log(`[WebBuild] Found entry file: ${entryPath}`);
+                break;
+            }
+        }
+
+        // If no entry file found, scan for all .ts/.js files (excluding editor/ subdirectory)
+        // 如果没有入口文件，扫描所有 .ts/.js 文件（排除 editor/ 子目录）
+        if (entryFiles.length === 0) {
+            const allFiles = await fs.listFilesByExtension(scriptsDir, ['ts', 'js'], false);
+            entryFiles = allFiles.filter(f => !f.endsWith('.d.ts'));
+
+            if (entryFiles.length === 0) {
+                console.log('[WebBuild] No script files found | 未找到脚本文件');
+                return;
+            }
+
+            console.log(`[WebBuild] Auto-discovered ${entryFiles.length} script files | 自动发现 ${entryFiles.length} 个脚本文件`);
+        }
+
+        console.log(`[WebBuild] Bundling user scripts: ${entryFiles.join(', ')}`);
+
+        // Bundle user scripts | 打包用户脚本
+        const buildMode = webConfig.buildMode || 'split-bundles';
+        const format = buildMode === 'single-bundle' ? 'iife' : 'esm';
+
+        const result = await fs.bundleScripts({
+            entryPoints: entryFiles,
+            outputDir: `${context.outputDir}/libs`,
+            format: format as 'esm' | 'iife',
+            bundleName: 'user-scripts',
+            minify,
+            sourceMap,
+            // Mark engine packages as external (they're loaded separately)
+            // 将引擎包标记为外部依赖（它们单独加载）
+            external: [
+                '@esengine/ecs-framework',
+                '@esengine/core',
+                '@esengine/engine-core',
+                '@esengine/asset-system'
+            ],
+            projectRoot: context.projectRoot,
+            define: {
+                'process.env.NODE_ENV': webConfig.isRelease ? '"production"' : '"development"'
+            }
+        });
+
+        if (!result.success) {
+            throw new Error(`User scripts bundling failed | 用户脚本打包失败: ${result.error}`);
+        }
+
+        result.warnings.forEach(w => context.addWarning(w));
+
+        // Mark that user scripts are available | 标记用户脚本已可用
+        context.data.set('hasUserScripts', true);
+
+        console.log(`[WebBuild] Bundled user scripts: ${result.outputFile}`);
     }
 
     /**
@@ -774,31 +995,76 @@ Built with ESEngine | 使用 ESEngine 构建
 
     private async _findModuleJsonFiles(fs: IBuildFileSystem, basePath: string): Promise<string[]> {
         const results: string[] = [];
+        const normalizedBase = basePath.replace(/\\/g, '/');
 
-        // Search for module.json files in immediate subdirectories
-        // 在直接子目录中搜索 module.json 文件
-        // Note: We only check one level deep (basePath/*/module.json)
-        // since module.json should be at the root of each module
-        // 注意：我们只检查一级深度，因为 module.json 应该在每个模块的根目录
+        // Search for module.json files in immediate subdirectories ONLY (not recursive)
+        // 只在直接子目录中搜索 module.json 文件（非递归）
+        // This avoids scanning node_modules which would be extremely slow
+        // 这样可以避免扫描 node_modules，否则会非常慢
         try {
-            // Use recursive search but filter for module.json only at module root
-            // 使用递归搜索但只过滤模块根目录的 module.json
-            const jsonFiles = await fs.listFilesByExtension(basePath, ['json'], true);
+            // First try: Use non-recursive listing to get immediate JSON files
+            // 首先尝试：使用非递归列表获取直接的 JSON 文件
+            const topLevelJsonFiles = await fs.listFilesByExtension(basePath, ['json'], false);
 
-            for (const file of jsonFiles) {
+            // Check for package.json files which indicate module directories
+            // 检查 package.json 文件，这些文件指示模块目录
+            const moduleDirectories: string[] = [];
+
+            for (const file of topLevelJsonFiles) {
                 const normalizedFile = file.replace(/\\/g, '/');
-                const normalizedBase = basePath.replace(/\\/g, '/');
 
-                // Check if this is a module.json at the root of a module directory
-                // Pattern: basePath/moduleName/module.json
-                // 检查这是否是模块目录根目录的 module.json
+                // If we find module.json directly, add it
+                // 如果直接找到 module.json，添加它
                 if (normalizedFile.endsWith('/module.json')) {
-                    const relativePath = normalizedFile.slice(normalizedBase.length + 1);
-                    const parts = relativePath.split('/');
-                    // Only include if it's exactly: moduleName/module.json (2 parts)
-                    // 只包含精确的: moduleName/module.json (2 部分)
-                    if (parts.length === 2 && parts[1] === 'module.json') {
-                        results.push(file);
+                    results.push(file);
+                }
+                // If we find package.json, remember the directory to check for module.json
+                // 如果找到 package.json，记住目录以检查 module.json
+                else if (normalizedFile.endsWith('/package.json')) {
+                    const dir = normalizedFile.slice(0, normalizedFile.lastIndexOf('/'));
+                    moduleDirectories.push(dir);
+                }
+            }
+
+            // For each directory with package.json, check if it also has module.json
+            // 对于每个有 package.json 的目录，检查是否也有 module.json
+            for (const dir of moduleDirectories) {
+                const moduleJsonPath = `${dir}/module.json`;
+                // Skip if already found
+                // 跳过已找到的
+                if (results.some(r => r.replace(/\\/g, '/') === moduleJsonPath)) {
+                    continue;
+                }
+                if (await fs.pathExists(moduleJsonPath)) {
+                    results.push(moduleJsonPath);
+                }
+            }
+
+            // If still no results, try checking one level deeper (for dist/engine structure)
+            // 如果仍然没有结果，尝试检查更深一级（用于 dist/engine 结构）
+            if (results.length === 0) {
+                // List all JSON files one level deep using pattern: basePath/*/module.json
+                // 使用模式列出一级深度的所有 JSON 文件: basePath/*/module.json
+                const deeperJsonFiles = await fs.listFilesByExtension(basePath, ['json'], true);
+
+                for (const file of deeperJsonFiles) {
+                    const normalizedFile = file.replace(/\\/g, '/');
+
+                    // Only accept module.json at exactly one level deep
+                    // 只接受精确一级深度的 module.json
+                    if (normalizedFile.endsWith('/module.json')) {
+                        const relativePath = normalizedFile.slice(normalizedBase.length + 1);
+                        const parts = relativePath.split('/');
+
+                        // Accept moduleName/module.json (2 parts) but skip node_modules
+                        // 接受 moduleName/module.json (2 部分) 但跳过 node_modules
+                        if (parts.length === 2 && parts[1] === 'module.json') {
+                            // Skip node_modules and hidden directories
+                            // 跳过 node_modules 和隐藏目录
+                            if (!parts[0].startsWith('.') && parts[0] !== 'node_modules') {
+                                results.push(file);
+                            }
+                        }
                     }
                 }
             }
@@ -806,6 +1072,7 @@ Built with ESEngine | 使用 ESEngine 构建
             // Ignore errors during scanning
         }
 
+        console.log(`[WebBuild] Found ${results.length} module.json files in ${basePath}`);
         return results;
     }
 
@@ -830,26 +1097,34 @@ Built with ESEngine | 使用 ESEngine 构建
         minify: boolean,
         sourceMap: boolean
     ): Promise<void> {
-        // Find platform-web as the main entry point (it re-exports everything needed)
-        const platformWebDir = `${engineModulesPath}/platform-web`;
-        const entryPoint = await this._findEntryPoint(fs, platformWebDir);
+        // Generate a dynamic entry file that re-exports all core modules
+        // 生成动态入口文件，重新导出所有核心模块
+        // Use actual file paths instead of package names so esbuild can resolve them
+        // 使用实际文件路径而不是包名，这样 esbuild 可以解析它们
+        const entryContent = this._generateCoreEntryContent(coreModules, engineModulesPath);
+        const entryPath = `${context.outputDir}/_core_entry.js`;
+        await fs.writeFile(entryPath, entryContent);
 
-        if (!entryPoint) {
-            throw new Error('Could not find platform-web entry point | 找不到 platform-web 入口文件');
-        }
+        console.log(`[WebBuild] Generated core entry with ${coreModules.length} modules:`);
+        console.log(entryContent);
 
-        // Bundle as ESM for optimal caching and tree-shaking
-        // 使用 ESM 格式以获得最佳缓存和摇树优化
-        const result = await fs.bundleScripts({
-            entryPoints: [entryPoint],
+        // Bundle the dynamic entry file
+        // 打包动态入口文件
+        const bundleOptions = {
+            entryPoints: [entryPath],
             outputDir: `${context.outputDir}/libs`,
-            format: 'esm',
+            format: 'esm' as const,
             bundleName: 'esengine.core',
             minify,
             sourceMap,
             external: [], // Bundle all dependencies
             projectRoot: context.projectRoot
-        });
+        };
+
+        // Log bundle options for debugging
+        console.log(`[WebBuild] Bundle options: ${JSON.stringify(bundleOptions, null, 2)}`);
+
+        const result = await fs.bundleScripts(bundleOptions);
 
         if (!result.success) {
             throw new Error(`Failed to bundle core runtime: ${result.error}`);
@@ -858,41 +1133,93 @@ Built with ESEngine | 使用 ESEngine 构建
         console.log(`[WebBuild] Core runtime: ${result.outputFile} (${this._formatBytes(result.outputSize || 0)})`);
     }
 
-    private async _copyPluginModules(
+    /**
+     * Generate core entry file content that re-exports all core modules.
+     * Uses actual file paths instead of package names for esbuild resolution.
+     * 生成重新导出所有核心模块的入口文件内容。
+     * 使用实际文件路径而非包名，以便 esbuild 解析。
+     *
+     * @param coreModules - List of core module manifests
+     * @param engineModulesPath - Base path to engine modules directory
+     */
+    private _generateCoreEntryContent(coreModules: ModuleManifest[], engineModulesPath: string): string {
+        const lines: string[] = [
+            '// Auto-generated core runtime entry',
+            '// 自动生成的核心运行时入口',
+            ''
+        ];
+
+        // Use package names for imports - esbuild will resolve via node_modules
+        // 使用包名导入 - esbuild 会通过 node_modules 解析
+        // This avoids absolute path issues and works across environments
+        // 这避免了绝对路径问题，并在各环境中都能工作
+
+        // Explicitly export createServiceToken from engine-core first
+        // to avoid conflicts with re-exports from other modules
+        // 显式从 engine-core 导出 createServiceToken，避免与其他模块的重导出冲突
+        lines.push('// Explicit exports to avoid naming conflicts');
+        lines.push('// 显式导出避免命名冲突');
+        lines.push('export { createServiceToken, PluginServiceRegistry } from "@esengine/engine-core";');
+        lines.push('');
+
+        // Re-export all modules using package names
+        // 使用包名重新导出所有模块
+        for (const module of coreModules) {
+            const packageName = module.name || `@esengine/${module.id}`;
+            lines.push(`export * from '${packageName}';`);
+        }
+
+        lines.push('');
+        lines.push('// Default export for runtime initialization');
+        lines.push('import BrowserRuntime from "@esengine/platform-web";');
+        lines.push('export default BrowserRuntime;');
+
+        return lines.join('\n');
+    }
+
+    private async _bundlePluginModules(
         context: BuildContext,
         fs: IBuildFileSystem,
+        coreModules: ModuleManifest[],
         pluginModules: ModuleManifest[],
-        engineModulesPath: string
+        engineModulesPath: string,
+        minify: boolean,
+        sourceMap: boolean
     ): Promise<void> {
         const pluginsDir = `${context.outputDir}/libs/plugins`;
+
+        // Collect all core module package names for external marking
+        // 收集所有核心模块包名用于标记为 external
+        const corePackages = coreModules
+            .filter(m => m.name)
+            .map(m => m.name as string);
 
         for (const module of pluginModules) {
             const moduleDir = `${engineModulesPath}/${module.id}`;
             const entryPoint = await this._findEntryPoint(fs, moduleDir);
 
-            if (entryPoint) {
-                const destPath = `${pluginsDir}/${module.id}.js`;
-                await fs.copyFile(entryPoint, destPath);
-                console.log(`[WebBuild] Copied plugin: ${module.id}`);
+            if (!entryPoint) {
+                console.warn(`[WebBuild] No entry point found for plugin: ${module.id}`);
+                continue;
+            }
 
-                // Copy additional files (e.g., chunk-*.js)
-                if (module.includes && module.includes.length > 0) {
-                    for (const pattern of module.includes) {
-                        // Simple glob matching for chunk-*.js
-                        if (pattern.includes('*')) {
-                            const dir = moduleDir.includes('/dist') ? moduleDir : `${moduleDir}/dist`;
-                            if (await fs.pathExists(dir)) {
-                                const files = await fs.listFilesByExtension(dir, ['.js']);
-                                for (const file of files) {
-                                    const fileName = file.split(/[/\\]/).pop() || '';
-                                    if (fileName.startsWith('chunk-')) {
-                                        await fs.copyFile(file, `${pluginsDir}/${fileName}`);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            // Bundle each plugin with core modules marked as external
+            // 打包每个插件，将核心模块标记为 external
+            const result = await fs.bundleScripts({
+                entryPoints: [entryPoint],
+                outputDir: pluginsDir,
+                format: 'esm',
+                bundleName: module.id,
+                minify,
+                sourceMap,
+                external: corePackages, // Core modules resolved via Import Map
+                projectRoot: context.projectRoot
+            });
+
+            if (result.success) {
+                console.log(`[WebBuild] Bundled plugin: ${module.id} (${this._formatBytes(result.outputSize || 0)})`);
+            } else {
+                console.warn(`[WebBuild] Failed to bundle plugin ${module.id}: ${result.error}`);
             }
         }
     }
@@ -903,7 +1230,9 @@ Built with ESEngine | 使用 ESEngine 构建
         modules: ModuleManifest[],
         engineModulesPath: string
     ): Promise<void> {
-        const wasmDir = `${context.outputDir}/libs/wasm`;
+        // WASM files go to root /wasm/ directory (runtime expects this path)
+        // WASM 文件放到根目录的 /wasm/ 下（运行时期望这个路径）
+        const wasmDir = `${context.outputDir}/wasm`;
 
         for (const module of modules) {
             if (!module.requiresWasm) continue;
@@ -912,30 +1241,50 @@ Built with ESEngine | 使用 ESEngine 构建
             const moduleDir = `${engineModulesPath}/${module.id}`;
 
             for (const wasmFileName of wasmPaths) {
-                // Try various locations
+                // Try various locations in source
+                // 尝试源码中的各种位置
                 const candidates = [
                     `${moduleDir}/pkg/${wasmFileName}`,
                     `${moduleDir}/${wasmFileName}`,
                     `${moduleDir}/dist/${wasmFileName}`
                 ];
 
+                // Also check external dependencies (e.g., rapier2d for physics-rapier2d)
+                // 同时检查外部依赖（如 physics-rapier2d 依赖的 rapier2d）
+                if (module.externalDependencies) {
+                    for (const dep of module.externalDependencies) {
+                        // Extract package id from @esengine/xxx
+                        const depId = dep.replace('@esengine/', '');
+                        candidates.push(`${engineModulesPath}/${depId}/pkg/${wasmFileName}`);
+                        candidates.push(`${engineModulesPath}/${depId}/${wasmFileName}`);
+                    }
+                }
+
+                let copied = false;
                 for (const src of candidates) {
                     if (await fs.pathExists(src)) {
                         const dest = `${wasmDir}/${wasmFileName}`;
                         await fs.copyFile(src, dest);
-                        console.log(`[WebBuild] Copied WASM: ${wasmFileName}`);
+                        console.log(`[WebBuild] Copied WASM: ${wasmFileName} -> wasm/`);
+                        copied = true;
                         break;
                     }
+                }
+
+                if (!copied) {
+                    console.warn(`[WebBuild] WASM not found: ${wasmFileName} for module ${module.id}`);
                 }
             }
 
             // Also check for es-engine WASM (special case)
+            // es-engine WASM 特殊处理
             if (module.id === 'ecs-engine-bindgen' || module.id === 'platform-web') {
                 const esEngineWasm = `${engineModulesPath}/engine/pkg/es_engine_bg.wasm`;
                 if (await fs.pathExists(esEngineWasm)) {
                     await fs.copyFile(esEngineWasm, `${wasmDir}/es_engine_bg.wasm`);
 
-                    // Also copy the JS wrapper
+                    // Also copy the JS wrapper to libs/es-engine/
+                    // JS 包装器复制到 libs/es-engine/
                     const esEngineJs = `${engineModulesPath}/engine/pkg/es_engine.js`;
                     if (await fs.pathExists(esEngineJs)) {
                         await fs.createDirectory(`${context.outputDir}/libs/es-engine`);
@@ -996,6 +1345,7 @@ Built with ESEngine | 使用 ESEngine 构建
     <canvas id="game-canvas"></canvas>
 
     <script src="libs/esengine.bundle.js"></script>
+    <script src="libs/user-scripts.js" onerror="console.log('[Game] No user scripts')"></script>
     <script>
         (async function() {
             const loading = document.getElementById('loading');
@@ -1040,7 +1390,10 @@ Built with ESEngine | 使用 ESEngine 构建
                 window.addEventListener('resize', () => {
                     runtime.handleResize(window.innerWidth, window.innerHeight);
                 });
+
+                console.log('[Game] Started successfully');
             } catch (error) {
+                console.error('[Game] Failed to start:', error);
                 showError(error.message || String(error));
             }
         })();
@@ -1202,15 +1555,30 @@ ${pluginLoads}
                 }
             }
 
-            // 5. Initialize runtime
+            // 5. Load user scripts (custom components, systems)
+            updateLoading('Loading user scripts...');
+            try {
+                const userScripts = await import('./libs/user-scripts.js');
+                // User scripts should self-register components via @RegisterComponent decorator
+                // or export a register function
+                if (userScripts.register) {
+                    userScripts.register(runtime);
+                }
+                console.log('[Game] User scripts loaded');
+            } catch (e) {
+                // User scripts are optional
+                console.log('[Game] No user scripts or failed to load:', e.message);
+            }
+
+            // 6. Initialize runtime
             updateLoading('Initializing...');
             await runtime.initialize(wasmModule);
 
-            // 6. Load scene
+            // 7. Load scene
             updateLoading('Loading scene...');
             await runtime.loadScene('${mainScenePath}');
 
-            // 7. Start game
+            // 8. Start game
             loading.style.display = 'none';
             runtime.start();
 

@@ -368,11 +368,8 @@ export class Entity {
     private addComponentInternal<T extends Component>(component: T): T {
         const componentType = component.constructor as ComponentType<T>;
 
-        if (!ComponentRegistry.isRegistered(componentType)) {
-            ComponentRegistry.register(componentType);
-        }
-
-        // 更新位掩码
+        // 更新位掩码（组件已通过 @ECSComponent 装饰器自动注册）
+        // Update bitmask (component already registered via @ECSComponent decorator)
         const componentMask = ComponentRegistry.getBitMask(componentType);
         BitMask64Utils.orInPlace(this._componentMask, componentMask);
 

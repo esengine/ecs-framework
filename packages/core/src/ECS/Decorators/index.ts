@@ -1,19 +1,37 @@
+// ============================================================================
+// Component Type Utilities (from ComponentTypeUtils - no circular deps)
+// 组件类型工具（来自 ComponentTypeUtils - 无循环依赖）
+// ============================================================================
+export {
+    COMPONENT_TYPE_NAME,
+    COMPONENT_DEPENDENCIES,
+    getComponentTypeName,
+    getComponentInstanceTypeName,
+    getComponentDependencies,
+    hasECSComponentDecorator
+} from '../Core/ComponentStorage/ComponentTypeUtils';
+
+export type { ComponentType } from '../Core/ComponentStorage/ComponentTypeUtils';
+
+// ============================================================================
+// Type Decorators (ECSComponent, ECSSystem)
+// 类型装饰器
+// ============================================================================
 export {
     ECSComponent,
     ECSSystem,
-    getComponentTypeName,
     getSystemTypeName,
-    getComponentInstanceTypeName,
     getSystemInstanceTypeName,
     getSystemMetadata,
-    getComponentDependencies,
-    COMPONENT_TYPE_NAME,
-    COMPONENT_DEPENDENCIES,
     SYSTEM_TYPE_NAME
 } from './TypeDecorators';
 
 export type { SystemMetadata, ComponentOptions } from './TypeDecorators';
 
+// ============================================================================
+// Entity Reference Decorator
+// 实体引用装饰器
+// ============================================================================
 export {
     EntityRef,
     getEntityRefMetadata,
@@ -23,6 +41,10 @@ export {
 
 export type { EntityRefMetadata } from './EntityRefDecorator';
 
+// ============================================================================
+// Property Decorator
+// 属性装饰器
+// ============================================================================
 export {
     Property,
     getPropertyMetadata,
@@ -30,4 +52,11 @@ export {
     PROPERTY_METADATA
 } from './PropertyDecorator';
 
-export type { PropertyOptions, PropertyType, PropertyControl, PropertyAction, AssetType, EnumOption } from './PropertyDecorator';
+export type {
+    PropertyOptions,
+    PropertyType,
+    PropertyControl,
+    PropertyAction,
+    AssetType,
+    EnumOption
+} from './PropertyDecorator';

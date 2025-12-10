@@ -821,7 +821,10 @@ export const zh: Translations = {
         outputPath: '输出路径',
         duration: '耗时',
         selectPlatform: '请选择平台或构建配置',
-        settings: '设置'
+        settings: '设置',
+        copyError: '复制错误信息',
+        showDetails: '显示详情',
+        collapse: '收起'
     },
 
     // ========================================
