@@ -13,6 +13,7 @@ export {
     type BuildConfig,
     type WebBuildConfig,
     type WebBuildMode,
+    type InlineConfig,
     type WeChatBuildConfig,
     type BuildResult,
     type BuildStep,

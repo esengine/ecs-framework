@@ -18,7 +18,7 @@ import {
     BrowserFileSystemService,
     type IPlugin
 } from '@esengine/runtime-core';
-import { assetManager as globalAssetManager } from '@esengine/asset-system';
+import { assetManager as globalAssetManager, type IAssetManager } from '@esengine/asset-system';
 import { BrowserAssetReader } from './BrowserAssetReader';
 
 /**
@@ -181,6 +181,17 @@ export class BrowserRuntime {
             throw new Error('Runtime not initialized. Call initialize() first.');
         }
         await this._runtime.loadSceneFromUrl(sceneUrl);
+    }
+
+    /**
+     * Load a scene from data object (for single-file mode)
+     * 从数据对象加载场景（用于单文件模式）
+     */
+    async loadSceneFromData(sceneData: unknown): Promise<void> {
+        if (!this._runtime) {
+            throw new Error('Runtime not initialized. Call initialize() first.');
+        }
+        await this._runtime.loadSceneFromData(sceneData);
     }
 
     /**
