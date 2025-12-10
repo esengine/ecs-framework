@@ -158,7 +158,26 @@ function App() {
         const handleKeyDown = async (e: KeyboardEvent) => {
             if (e.ctrlKey || e.metaKey) {
                 switch (e.key.toLowerCase()) {
-                    case 's':
+                    case 's': {
+                        // Skip if any modal/dialog is open
+                        // 如果有模态窗口/对话框打开则跳过
+                        const hasModalOpen = showBuildSettings || showSettings || showAbout ||
+                            showPluginGenerator || showPortManager || showAdvancedProfiler ||
+                            errorDialog || confirmDialog;
+                        if (hasModalOpen) {
+                            return;
+                        }
+
+                        // Skip if focus is in an input/textarea/contenteditable element
+                        // 如果焦点在输入框/文本域/可编辑元素中则跳过
+                        const activeEl = document.activeElement;
+                        const isInInput = activeEl instanceof HTMLInputElement ||
+                            activeEl instanceof HTMLTextAreaElement ||
+                            activeEl?.getAttribute('contenteditable') === 'true';
+                        if (isInInput) {
+                            return;
+                        }
+
                         e.preventDefault();
                         if (sceneManager) {
                             try {
@@ -171,6 +190,7 @@ function App() {
                             }
                         }
                         break;
+                    }
                     case 'r':
                         e.preventDefault();
                         handleReloadPlugins();
@@ -184,7 +204,9 @@ function App() {
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [sceneManager, locale, currentProjectPath, pluginManager]);
+    }, [sceneManager, locale, currentProjectPath, pluginManager,
+        showBuildSettings, showSettings, showAbout, showPluginGenerator,
+        showPortManager, showAdvancedProfiler, errorDialog, confirmDialog]);
 
     useEffect(() => {
         if (messageHub) {
