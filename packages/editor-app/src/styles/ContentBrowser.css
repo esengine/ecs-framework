@@ -336,7 +336,7 @@
 
 .cb-search-input {
     width: 100%;
-    padding: 6px 10px 6px 32px;
+    padding: 6px 28px 6px 32px;
     background: #3c3c3c;
     border: 1px solid #4c4c4c;
     border-radius: 3px;
@@ -351,6 +351,26 @@
 
 .cb-search-input::placeholder {
     color: #666;
+}
+
+.cb-search-clear {
+    position: absolute;
+    right: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s ease;
+}
+
+.cb-search-clear:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
 }
 
 .cb-view-options {
@@ -401,14 +421,87 @@
     gap: 2px;
 }
 
-.cb-loading,
-.cb-empty {
+/* Loading Spinner | 加载动画 */
+.cb-loading {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     height: 100%;
+    gap: 12px;
     color: #666;
     font-size: 13px;
+}
+
+.cb-loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #3c3c3c;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: cbSpinner 0.8s linear infinite;
+}
+
+@keyframes cbSpinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Empty State | 空状态 */
+.cb-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 12px;
+    color: #666;
+    font-size: 13px;
+    padding: 24px;
+    text-align: center;
+}
+
+.cb-empty-icon {
+    color: #4a4a4a;
+    opacity: 0.6;
+}
+
+.cb-empty-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #888;
+}
+
+.cb-empty-hint {
+    font-size: 12px;
+    color: #666;
+    max-width: 200px;
+    line-height: 1.4;
+}
+
+.cb-empty-action {
+    margin-top: 8px;
+    padding: 6px 16px;
+    background: #3b82f6;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.cb-empty-action:hover {
+    background: #2563eb;
+}
+
+/* Search Highlight | 搜索高亮 */
+.search-highlight {
+    background: rgba(59, 130, 246, 0.3);
+    color: #fff;
+    border-radius: 2px;
+    padding: 0 2px;
 }
 
 /* Asset Item - Grid View */
@@ -550,11 +643,17 @@
 .cb-status-bar {
     display: flex;
     align-items: center;
+    gap: 12px;
     padding: 4px 12px;
     background: #252526;
     border-top: 1px solid #3c3c3c;
     font-size: 11px;
     color: #888;
+}
+
+.cb-status-selected {
+    color: #3b82f6;
+    font-weight: 500;
 }
 
 /* ==================== Dialogs ==================== */

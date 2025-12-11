@@ -380,6 +380,50 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Live Transform Display | 实时变换显示 */
+.viewport-live-transform {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(59, 130, 246, 0.9);
+  backdrop-filter: blur(8px);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  pointer-events: none;
+  z-index: var(--z-index-above);
+  animation: slideUp 0.15s ease-out;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.live-transform-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+.live-transform-value {
+  color: #fff;
+  font-weight: 600;
+  min-width: 50px;
+  text-align: right;
+}
+
 .viewport:fullscreen {
   background: #000;
 }

@@ -42,7 +42,8 @@ export const en: Translations = {
         type: 'Type',
         value: 'Value',
         enabled: 'Enabled',
-        disabled: 'Disabled'
+        disabled: 'Disabled',
+        clear: 'Clear'
     },
 
     // ========================================
@@ -502,9 +503,16 @@ export const en: Translations = {
         saveAll: 'Save All',
         search: 'Search',
         items: 'items',
+        searchResults: 'Found {{found}} of {{total}} items',
+        selectedCount: '{{count}} selected',
         dockInLayout: 'Dock in Layout',
         noProject: 'No project loaded',
         empty: 'This folder is empty',
+        emptyHint: 'Drag files here or right-click to create new assets',
+        loading: 'Loading...',
+        noSearchResults: 'No results found',
+        noSearchResultsHint: 'Try a different search term',
+        createNew: 'Create New',
         newFolder: 'New Folder',
         newPrefix: 'New',
         managedDirectoryTooltip: 'GUID-managed directory - Assets here get unique IDs for references',

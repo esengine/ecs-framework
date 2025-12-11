@@ -397,7 +397,16 @@ function NumberField({ label, value, min, max, step = 0.1, isInteger = false, re
     const [isDragging, setIsDragging] = useState(false);
     const [dragStartX, setDragStartX] = useState(0);
     const [dragStartValue, setDragStartValue] = useState(0);
+    const [localValue, setLocalValue] = useState(String(value ?? 0));
+    const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    // 同步外部值 | Sync external value
+    useEffect(() => {
+        if (!isFocused && !isDragging) {
+            setLocalValue(String(value ?? 0));
+        }
+    }, [value, isFocused, isDragging]);
 
     const renderActionButton = (action: PropertyAction) => {
         const IconComponent = action.icon ? (LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number }>>)[action.icon] : null;
@@ -455,6 +464,33 @@ function NumberField({ label, value, min, max, step = 0.1, isInteger = false, re
         };
     }, [isDragging, dragStartX, dragStartValue, step, min, max, onChange]);
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.currentTarget.blur();
+        } else if (e.key === 'Escape') {
+            setLocalValue(String(value ?? 0));
+            e.currentTarget.blur();
+        }
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalValue(e.target.value);
+    };
+
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        setIsFocused(true);
+        e.target.select();
+    };
+
+    const handleBlur = () => {
+        setIsFocused(false);
+        let val = parseFloat(localValue) || 0;
+        if (min !== undefined) val = Math.max(min, val);
+        if (max !== undefined) val = Math.min(max, val);
+        if (isInteger) val = Math.round(val);
+        onChange(val);
+    };
+
     return (
         <div className="property-field">
             <label
@@ -468,16 +504,15 @@ function NumberField({ label, value, min, max, step = 0.1, isInteger = false, re
                 ref={inputRef}
                 type="number"
                 className="property-input property-input-number"
-                value={value}
+                value={localValue}
                 min={min}
                 max={max}
                 step={step}
                 disabled={readOnly}
-                onChange={(e) => {
-                    const val = parseFloat(e.target.value) || 0;
-                    onChange(isInteger ? Math.round(val) : val);
-                }}
-                onFocus={(e) => e.target.select()}
+                onChange={handleInputChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
             />
             {actions && actions.length > 0 && (
                 <div className="property-actions">
@@ -496,16 +531,42 @@ interface StringFieldProps {
 }
 
 function StringField({ label, value, readOnly, onChange }: StringFieldProps) {
+    const [localValue, setLocalValue] = useState(value ?? '');
+    const [isFocused, setIsFocused] = useState(false);
+
+    useEffect(() => {
+        if (!isFocused) {
+            setLocalValue(value ?? '');
+        }
+    }, [value, isFocused]);
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.currentTarget.blur();
+        } else if (e.key === 'Escape') {
+            setLocalValue(value ?? '');
+            e.currentTarget.blur();
+        }
+    };
+
     return (
         <div className="property-field">
             <label className="property-label">{label}</label>
             <input
                 type="text"
                 className="property-input property-input-text"
-                value={value}
+                value={localValue}
                 disabled={readOnly}
-                onChange={(e) => onChange(e.target.value)}
-                onFocus={(e) => e.target.select()}
+                onChange={(e) => setLocalValue(e.target.value)}
+                onFocus={(e) => {
+                    setIsFocused(true);
+                    e.target.select();
+                }}
+                onBlur={() => {
+                    setIsFocused(false);
+                    onChange(localValue);
+                }}
+                onKeyDown={handleKeyDown}
             />
         </div>
     );
@@ -761,7 +822,17 @@ interface DraggableAxisInputProps {
 
 function DraggableAxisInput({ axis, value, readOnly, compact, onChange }: DraggableAxisInputProps) {
     const [isDragging, setIsDragging] = useState(false);
+    const [localValue, setLocalValue] = useState(String(value ?? 0));
+    const [isFocused, setIsFocused] = useState(false);
     const dragStartRef = useRef({ x: 0, value: 0 });
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // 同步外部值 | Sync external value
+    useEffect(() => {
+        if (!isFocused) {
+            setLocalValue(String(value ?? 0));
+        }
+    }, [value, isFocused]);
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (readOnly) return;
@@ -796,6 +867,37 @@ function DraggableAxisInput({ axis, value, readOnly, compact, onChange }: Dragga
     const axisClass = `property-vector-axis-${axis}`;
     const inputClass = compact ? 'property-input property-input-number-compact' : 'property-input property-input-number';
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            // 确认输入并失焦 | Confirm input and blur
+            e.currentTarget.blur();
+        } else if (e.key === 'Escape') {
+            // 取消输入，恢复原值 | Cancel input, restore original value
+            setLocalValue(String(value ?? 0));
+            e.currentTarget.blur();
+        }
+        // Tab 键使用浏览器默认行为 | Tab uses browser default behavior
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalValue(e.target.value);
+    };
+
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        setIsFocused(true);
+        e.target.select();
+    };
+
+    const handleBlur = () => {
+        setIsFocused(false);
+        const parsed = parseFloat(localValue);
+        if (!isNaN(parsed)) {
+            onChange(Math.round(parsed * 1000) / 1000);
+        } else {
+            setLocalValue(String(value ?? 0));
+        }
+    };
+
     return (
         <div className={compact ? 'property-vector-axis-compact' : 'property-vector-axis'}>
             <span
@@ -806,13 +908,16 @@ function DraggableAxisInput({ axis, value, readOnly, compact, onChange }: Dragga
                 {axis.toUpperCase()}
             </span>
             <input
+                ref={inputRef}
                 type="number"
                 className={inputClass}
-                value={value ?? 0}
+                value={localValue}
                 disabled={readOnly}
                 step={0.1}
-                onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-                onFocus={(e) => e.target.select()}
+                onChange={handleInputChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
             />
         </div>
     );

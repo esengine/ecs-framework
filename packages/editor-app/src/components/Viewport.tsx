@@ -247,6 +247,16 @@ export function Viewport({ locale = 'en', messageHub, commandManager }: Viewport
     const editorCameraRef = useRef({ x: 0, y: 0, zoom: 1 });
     const playStateRef = useRef<PlayState>('stopped');
 
+    // Live transform display state | 实时变换显示状态
+    const [liveTransform, setLiveTransform] = useState<{
+        type: 'move' | 'rotate' | 'scale';
+        x: number;
+        y: number;
+        rotation?: number;
+        scaleX?: number;
+        scaleY?: number;
+    } | null>(null);
+
     // Keep ref in sync with state
     useEffect(() => {
         playStateRef.current = playState;
@@ -478,6 +488,16 @@ export function Viewport({ locale = 'en', messageHub, commandManager }: Viewport
                         }
                     }
 
+                    // Update live transform display | 更新实时变换显示
+                    setLiveTransform({
+                        type: mode as 'move' | 'rotate' | 'scale',
+                        x: transform.position.x,
+                        y: transform.position.y,
+                        rotation: transform.rotation.z * 180 / Math.PI,
+                        scaleX: transform.scale.x,
+                        scaleY: transform.scale.y
+                    });
+
                     if (messageHubRef.current) {
                         const propertyName = mode === 'move' ? 'position' : mode === 'rotate' ? 'rotation' : 'scale';
                         const value = propertyName === 'position' ? transform.position :
@@ -527,6 +547,16 @@ export function Viewport({ locale = 'en', messageHub, commandManager }: Viewport
                         }
                     }
 
+                    // Update live transform display for UI | 更新 UI 的实时变换显示
+                    setLiveTransform({
+                        type: mode as 'move' | 'rotate' | 'scale',
+                        x: uiTransform.x,
+                        y: uiTransform.y,
+                        rotation: uiTransform.rotation * 180 / Math.PI,
+                        scaleX: uiTransform.scaleX,
+                        scaleY: uiTransform.scaleY
+                    });
+
                     if (messageHubRef.current) {
                         const propertyName = mode === 'move' ? 'x' : mode === 'rotate' ? 'rotation' : 'scaleX';
                         messageHubRef.current.publish('component:property:changed', {
@@ -552,6 +582,8 @@ export function Viewport({ locale = 'en', messageHub, commandManager }: Viewport
             if (isDraggingTransformRef.current) {
                 isDraggingTransformRef.current = false;
                 canvas.style.cursor = 'grab';
+                // Clear live transform display | 清除实时变换显示
+                setLiveTransform(null);
 
                 // Apply snap on mouse up
                 const entity = selectedEntityRef.current;
@@ -1675,6 +1707,34 @@ export function Viewport({ locale = 'en', messageHub, commandManager }: Viewport
                             <span className="viewport-stat-label">Error:</span>
                             <span className="viewport-stat-value">{engine.state.error}</span>
                         </div>
+                    )}
+                </div>
+            )}
+
+            {/* Live Transform Display | 实时变换显示 */}
+            {liveTransform && (
+                <div className="viewport-live-transform">
+                    {liveTransform.type === 'move' && (
+                        <>
+                            <span className="live-transform-label">X:</span>
+                            <span className="live-transform-value">{liveTransform.x.toFixed(1)}</span>
+                            <span className="live-transform-label">Y:</span>
+                            <span className="live-transform-value">{liveTransform.y.toFixed(1)}</span>
+                        </>
+                    )}
+                    {liveTransform.type === 'rotate' && (
+                        <>
+                            <span className="live-transform-label">R:</span>
+                            <span className="live-transform-value">{liveTransform.rotation?.toFixed(1)}°</span>
+                        </>
+                    )}
+                    {liveTransform.type === 'scale' && (
+                        <>
+                            <span className="live-transform-label">SX:</span>
+                            <span className="live-transform-value">{liveTransform.scaleX?.toFixed(2)}</span>
+                            <span className="live-transform-label">SY:</span>
+                            <span className="live-transform-value">{liveTransform.scaleY?.toFixed(2)}</span>
+                        </>
                     )}
                 </div>
             )}

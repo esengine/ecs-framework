@@ -38,7 +38,10 @@ import {
     RefreshCw,
     Settings,
     Database,
-    AlertTriangle
+    AlertTriangle,
+    X,
+    FolderPlus,
+    Inbox
 } from 'lucide-react';
 import { Core, Entity, HierarchySystem, PrefabSerializer } from '@esengine/ecs-framework';
 import { MessageHub, FileActionRegistry, AssetRegistryService, MANAGED_ASSET_DIRECTORIES, type FileCreationTemplate, EntityStoreService, SceneManagerService } from '@esengine/editor-core';
@@ -124,6 +127,32 @@ function isRootManagedDirectory(folderPath: string, projectPath: string | null):
         }
     }
     return false;
+}
+
+/**
+ * 高亮搜索文本
+ * Highlight search text in a string
+ */
+function highlightSearchText(text: string, query: string): React.ReactNode {
+    if (!query.trim()) return text;
+
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    const index = lowerText.indexOf(lowerQuery);
+
+    if (index === -1) return text;
+
+    const before = text.substring(0, index);
+    const match = text.substring(index, index + query.length);
+    const after = text.substring(index + query.length);
+
+    return (
+        <>
+            {before}
+            <span className="search-highlight">{match}</span>
+            {after}
+        </>
+    );
 }
 
 // 获取资产类型显示名称
@@ -474,11 +503,33 @@ export class ${className} {
                     setDeleteConfirmDialog(asset);
                 }
             }
+
+            // Ctrl+A - 全选 | Select all
+            if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                // 计算当前过滤后的资产 | Calculate currently filtered assets
+                const currentFiltered = searchQuery.trim()
+                    ? assets.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                    : assets;
+                const allPaths = new Set(currentFiltered.map(a => a.path));
+                setSelectedPaths(allPaths);
+                const lastItem = currentFiltered[currentFiltered.length - 1];
+                if (lastItem) {
+                    setLastSelectedPath(lastItem.path);
+                }
+            }
+
+            // Escape - 取消选择 | Deselect all
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setSelectedPaths(new Set());
+                setLastSelectedPath(null);
+            }
         };
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [selectedPaths, assets, renameDialog, deleteConfirmDialog, createFileDialog]);
+    }, [selectedPaths, assets, searchQuery, renameDialog, deleteConfirmDialog, createFileDialog]);
 
     const getTemplateLabel = (label: string): string => {
         // Map template labels to translation keys
@@ -1690,7 +1741,23 @@ export class ${className} {
                             placeholder={`${t('contentBrowser.search')} ${breadcrumbs[breadcrumbs.length - 1]?.name || ''}`}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Escape' && searchQuery) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setSearchQuery('');
+                                }
+                            }}
                         />
+                        {searchQuery && (
+                            <button
+                                className="cb-search-clear"
+                                onClick={() => setSearchQuery('')}
+                                title={t('common.clear') || 'Clear'}
+                            >
+                                <X size={12} />
+                            </button>
+                        )}
                     </div>
                     <div className="cb-view-options">
                         <button
@@ -1727,9 +1794,37 @@ export class ${className} {
                     }}
                 >
                     {loading ? (
-                        <div className="cb-loading">Loading...</div>
+                        <div className="cb-loading">
+                            <div className="cb-loading-spinner" />
+                            <span>{t('contentBrowser.loading') || 'Loading...'}</span>
+                        </div>
                     ) : filteredAssets.length === 0 ? (
-                        <div className="cb-empty">{t('contentBrowser.empty')}</div>
+                        <div className="cb-empty">
+                            <Inbox size={48} className="cb-empty-icon" />
+                            <span className="cb-empty-title">
+                                {searchQuery.trim()
+                                    ? t('contentBrowser.noSearchResults')
+                                    : t('contentBrowser.empty')}
+                            </span>
+                            <span className="cb-empty-hint">
+                                {searchQuery.trim()
+                                    ? t('contentBrowser.noSearchResultsHint')
+                                    : t('contentBrowser.emptyHint')}
+                            </span>
+                            {!searchQuery.trim() && (
+                                <button
+                                    className="cb-empty-action"
+                                    onClick={() => setContextMenu({
+                                        position: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+                                        asset: null,
+                                        isBackground: true
+                                    })}
+                                >
+                                    <Plus size={12} style={{ marginRight: 4 }} />
+                                    {t('contentBrowser.createNew') || 'Create New'}
+                                </button>
+                            )}
+                        </div>
                     ) : (
                         filteredAssets.map(asset => {
                             const isDragOverAsset = asset.type === 'folder' && dragOverFolder === asset.path;
@@ -1782,7 +1877,7 @@ export class ${className} {
                                     </div>
                                     <div className="cb-asset-info">
                                         <div className="cb-asset-name" title={asset.name}>
-                                            {asset.name}
+                                            {highlightSearchText(asset.name, searchQuery)}
                                         </div>
                                         <div className="cb-asset-type">
                                             {getAssetTypeName(asset)}
@@ -1796,7 +1891,23 @@ export class ${className} {
 
                 {/* Status Bar */}
                 <div className="cb-status-bar">
-                    <span>{filteredAssets.length} {t('contentBrowser.items')}</span>
+                    <span>
+                        {searchQuery.trim() ? (
+                            // 搜索模式：显示找到的结果数 | Search mode: show found results
+                            t('contentBrowser.searchResults', {
+                                found: filteredAssets.length,
+                                total: assets.length
+                            })
+                        ) : (
+                            // 正常模式 | Normal mode
+                            `${filteredAssets.length} ${t('contentBrowser.items')}`
+                        )}
+                    </span>
+                    {selectedPaths.size > 1 && (
+                        <span className="cb-status-selected">
+                            {t('contentBrowser.selectedCount', { count: selectedPaths.size })}
+                        </span>
+                    )}
                 </div>
             </div>
 

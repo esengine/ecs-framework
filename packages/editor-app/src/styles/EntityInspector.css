@@ -104,6 +104,31 @@
   color: #555;
 }
 
+.inspector-search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.15s ease;
+}
+
+.inspector-search-clear:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.inspector-search-count {
+  font-size: 10px;
+  color: #666;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
 /* Category Tabs */
 .inspector-category-tabs {
   display: flex;
@@ -787,6 +812,15 @@
 
 .component-dropdown-item:active {
   background: var(--color-primary);
+}
+
+.component-dropdown-item.selected {
+  background: var(--color-bg-active, #3b82f6);
+  color: #fff;
+}
+
+.component-dropdown-item.selected svg {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .component-dropdown-item-name {

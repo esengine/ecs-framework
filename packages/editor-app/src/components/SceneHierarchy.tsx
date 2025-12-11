@@ -7,7 +7,7 @@ import * as LucideIcons from 'lucide-react';
 import {
     Box, Wifi, Search, Plus, Trash2, Monitor, Globe, ChevronRight, ChevronDown,
     Eye, Star, Lock, Settings, Filter, Folder, Sun, Cloud, Mountain, Flag,
-    SquareStack, FolderPlus, PackageOpen, Unlink, RotateCcw, Upload, ExternalLink
+    SquareStack, FolderPlus, PackageOpen, Unlink, RotateCcw, Upload, ExternalLink, X
 } from 'lucide-react';
 import type { RemoteEntity } from '../services/tokens';
 import { getProfilerService } from '../services/getService';
@@ -109,8 +109,34 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
     const [editingName, setEditingName] = useState('');
     const { t, locale } = useLocale();
 
+    // Ref for auto-scrolling to selected item | 选中项自动滚动 ref
+    const contentRef = useRef<HTMLDivElement>(null);
+    const selectedItemRef = useRef<HTMLDivElement>(null);
+
     const isShowingRemote = viewMode === 'remote' && isRemoteConnected;
     const selectedId = selectedIds.size > 0 ? Array.from(selectedIds)[0] : null;
+
+    // Auto-scroll to selected item when selection changes | 选中项变化时自动滚动
+    useEffect(() => {
+        if (selectedItemRef.current && contentRef.current) {
+            const container = contentRef.current;
+            const item = selectedItemRef.current;
+
+            const containerRect = container.getBoundingClientRect();
+            const itemRect = item.getBoundingClientRect();
+
+            // 检查项是否在可见区域之外 | Check if item is outside visible area
+            const isAbove = itemRect.top < containerRect.top;
+            const isBelow = itemRect.bottom > containerRect.bottom;
+
+            if (isAbove || isBelow) {
+                item.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest'
+                });
+            }
+        }
+    }, [selectedId]);
 
     /**
      * 构建层级树结构
@@ -667,11 +693,20 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         if (!editingEntityId) return;
 
         const entity = entityStore.getEntity(editingEntityId);
-        if (entity && editingName.trim()) {
-            entity.name = editingName.trim();
+        if (!entity) {
+            setEditingEntityId(null);
+            setEditingName('');
+            return;
+        }
+
+        const trimmedName = editingName.trim();
+        if (trimmedName) {
+            // 有效名称，更新 | Valid name, update
+            entity.name = trimmedName;
             messageHub.publish('entity:renamed', { entityId: editingEntityId, name: entity.name });
             messageHub.publish('scene:modified', {});
         }
+        // 空名称时保持原名（不做任何改变）| Empty name keeps original (no change)
 
         setEditingEntityId(null);
         setEditingName('');
@@ -1143,8 +1178,25 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                         placeholder={t('hierarchy.search')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Escape' && searchQuery) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSearchQuery('');
+                            }
+                        }}
                     />
-                    <ChevronDown size={12} className="search-dropdown" />
+                    {searchQuery ? (
+                        <button
+                            className="search-clear-btn"
+                            onClick={() => setSearchQuery('')}
+                            title={t('common.clear') || 'Clear'}
+                        >
+                            <X size={12} />
+                        </button>
+                    ) : (
+                        <ChevronDown size={12} className="search-dropdown" />
+                    )}
                 </div>
 
                 <div className="outliner-toolbar-right">
@@ -1229,6 +1281,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
 
             {/* Entity List */}
             <div
+                ref={contentRef}
                 className="outliner-content"
                 onContextMenu={(e) => !isShowingRemote && handleContextMenu(e, null)}
                 onDragOver={handleContainerDragOver}
@@ -1329,6 +1382,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                                 return (
                                     <div
                                         key={entity.id}
+                                        ref={bIsSelected ? selectedItemRef : undefined}
                                         className={`outliner-item ${bIsSelected ? 'selected' : ''} ${bIsDragging ? 'dragging' : ''} ${dropIndicatorClass} ${bIsPrefabInstance ? 'prefab-instance' : ''}`}
                                         style={{ paddingLeft: `${indent}px` }}
                                         draggable

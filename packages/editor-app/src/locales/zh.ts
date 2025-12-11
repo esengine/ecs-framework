@@ -42,7 +42,8 @@ export const zh: Translations = {
         type: '类型',
         value: '值',
         enabled: '启用',
-        disabled: '禁用'
+        disabled: '禁用',
+        clear: '清除'
     },
 
     // ========================================
@@ -502,9 +503,16 @@ export const zh: Translations = {
         saveAll: '全部保存',
         search: '搜索',
         items: '项',
+        searchResults: '找到 {{found}} / {{total}} 项',
+        selectedCount: '已选 {{count}} 项',
         dockInLayout: '停靠到布局',
         noProject: '未加载项目',
         empty: '文件夹为空',
+        emptyHint: '拖放文件到此处或右键创建新资产',
+        loading: '加载中...',
+        noSearchResults: '未找到结果',
+        noSearchResultsHint: '尝试其他搜索词',
+        createNew: '新建',
         newFolder: '新建文件夹',
         newPrefix: '新建',
         managedDirectoryTooltip: 'GUID 管理的目录 - 此处的资产会获得唯一 ID 以便引用',
