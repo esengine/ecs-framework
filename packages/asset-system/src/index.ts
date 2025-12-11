@@ -11,7 +11,7 @@
  */
 
 // Service tokens (谁定义接口，谁导出 Token)
-export { AssetManagerToken, type IAssetManager } from './tokens';
+export { AssetManagerToken, PrefabServiceToken, type IAssetManager, type IPrefabService, type IPrefabAsset, type IPrefabData, type IPrefabMetadata } from './tokens';
 
 // Types
 export * from './types/AssetTypes';
@@ -44,6 +44,7 @@ export { JsonLoader } from './loaders/JsonLoader';
 export { TextLoader } from './loaders/TextLoader';
 export { BinaryLoader } from './loaders/BinaryLoader';
 export { AudioLoader } from './loaders/AudioLoader';
+export { PrefabLoader } from './loaders/PrefabLoader';
 
 // Integration
 export { EngineIntegration } from './integration/EngineIntegration';

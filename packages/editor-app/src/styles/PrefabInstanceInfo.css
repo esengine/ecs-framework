@@ -1,0 +1,145 @@
+/**
+ * 预制体实例信息样式
+ * Prefab instance info styles
+ */
+
+.prefab-instance-info {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+
+.prefab-instance-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.prefab-icon {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.prefab-instance-info .prefab-label {
+    color: var(--text-secondary, #6b7280);
+    font-weight: 500;
+}
+
+.prefab-instance-info .prefab-name {
+    color: var(--text-primary, #1f2937);
+    font-weight: 600;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.prefab-modified-badge {
+    background: #3b82f6;
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 16px;
+    text-align: center;
+}
+
+.prefab-instance-actions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.prefab-action-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 4px;
+    background: var(--bg-secondary, #f9fafb);
+    color: var(--text-primary, #374151);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.prefab-action-btn:hover:not(:disabled) {
+    background: var(--bg-hover, #f3f4f6);
+    border-color: var(--border-hover, #d1d5db);
+}
+
+.prefab-action-btn:active:not(:disabled) {
+    background: var(--bg-active, #e5e7eb);
+}
+
+.prefab-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Apply button - highlighted when there are modifications */
+.prefab-action-apply:not(:disabled) {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-color: #2563eb;
+    color: white;
+}
+
+.prefab-action-apply:not(:disabled):hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    border-color: #1d4ed8;
+}
+
+/* Revert button - subtle warning style when modifications exist */
+.prefab-action-revert:not(:disabled) {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-color: #d97706;
+    color: white;
+}
+
+.prefab-action-revert:not(:disabled):hover {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    border-color: #b45309;
+}
+
+/* Unpack button - danger style */
+.prefab-action-unpack {
+    min-width: 28px;
+    padding: 4px 6px;
+}
+
+.prefab-action-unpack:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+    .prefab-instance-info {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.06) 100%);
+        border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .prefab-instance-info .prefab-label {
+        color: var(--text-secondary-dark, #9ca3af);
+    }
+
+    .prefab-instance-info .prefab-name {
+        color: var(--text-primary-dark, #f3f4f6);
+    }
+
+    .prefab-action-btn {
+        background: var(--bg-secondary-dark, #374151);
+        border-color: var(--border-color-dark, #4b5563);
+        color: var(--text-primary-dark, #e5e7eb);
+    }
+
+    .prefab-action-btn:hover:not(:disabled) {
+        background: var(--bg-hover-dark, #4b5563);
+        border-color: var(--border-hover-dark, #6b7280);
+    }
+}

@@ -1,20 +1,11 @@
-import type { IService, PropertyOptions, PropertyAction, PropertyControl, AssetType, EnumOption } from '@esengine/ecs-framework';
-import { Injectable, Component, getPropertyMetadata } from '@esengine/ecs-framework';
+import type { IService, PropertyOptions, PropertyAction, PropertyControl, AssetType, EnumOption, PropertyType } from '@esengine/ecs-framework';
+import { Injectable, Component, getPropertyMetadata, getComponentInstanceTypeName, isComponentInstanceHiddenInInspector } from '@esengine/ecs-framework';
 import { createLogger } from '@esengine/ecs-framework';
 
 const logger = createLogger('PropertyMetadata');
 
-/**
- * 不需要在 Inspector 中显示的内部组件类型
- * 这些组件不使用 @Property 装饰器，因为它们的属性不应该被手动编辑
- */
-const INTERNAL_COMPONENTS = new Set([
-    'HierarchyComponent'
-]);
-
-export type { PropertyOptions, PropertyAction, PropertyControl, AssetType, EnumOption };
+export type { PropertyOptions, PropertyAction, PropertyControl, AssetType, EnumOption, PropertyType };
 export type PropertyMetadata = PropertyOptions;
-export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset' | 'animationClips';
 
 export interface ComponentMetadata {
     properties: Record<string, PropertyMetadata>;
@@ -46,6 +37,7 @@ export class PropertyMetadataService implements IService {
 
     /**
      * 获取组件的所有可编辑属性
+     * Get all editable properties of a component
      */
     public getEditableProperties(component: Component): Record<string, PropertyMetadata> {
         // 优先使用手动注册的元数据
@@ -61,9 +53,11 @@ export class PropertyMetadataService implements IService {
         }
 
         // 没有元数据时返回空对象
-        // 内部组件（如 HierarchyComponent）不需要警告
-        if (!INTERNAL_COMPONENTS.has(component.constructor.name)) {
-            logger.warn(`No property metadata found for component: ${component.constructor.name}`);
+        // 使用 @ECSComponent 装饰器的 editor.hideInInspector 选项判断是否为内部组件
+        // Use @ECSComponent decorator's editor.hideInInspector option to check if internal component
+        if (!isComponentInstanceHiddenInInspector(component)) {
+            const componentTypeName = getComponentInstanceTypeName(component);
+            logger.warn(`No property metadata found for component: ${componentTypeName}`);
         }
         return {};
     }

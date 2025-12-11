@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Settings, ChevronDown, ChevronRight, X, Plus, Box, Search, Lock, Unlock } from 'lucide-react';
-import { Entity, Component, Core, getComponentDependencies, getComponentTypeName, getComponentInstanceTypeName } from '@esengine/ecs-framework';
-import { MessageHub, CommandManager, ComponentRegistry, ComponentActionRegistry, ComponentInspectorRegistry } from '@esengine/editor-core';
+import { Entity, Component, Core, getComponentDependencies, getComponentTypeName, getComponentInstanceTypeName, isComponentInstanceHiddenInInspector, PrefabInstanceComponent } from '@esengine/ecs-framework';
+import { MessageHub, CommandManager, ComponentRegistry, ComponentActionRegistry, ComponentInspectorRegistry, PrefabService } from '@esengine/editor-core';
 import { PropertyInspector } from '../../PropertyInspector';
 import { NotificationService } from '../../../services/NotificationService';
 import { RemoveComponentCommand, UpdateComponentCommand, AddComponentCommand } from '../../../application/commands/component';
+import { PrefabInstanceInfo } from '../common/PrefabInstanceInfo';
 import '../../../styles/EntityInspector.css';
 import * as LucideIcons from 'lucide-react';
 
@@ -35,9 +36,20 @@ interface EntityInspectorProps {
     messageHub: MessageHub;
     commandManager: CommandManager;
     componentVersion: number;
+    /** 是否锁定检视器 | Whether inspector is locked */
+    isLocked?: boolean;
+    /** 锁定状态变化回调 | Lock state change callback */
+    onLockChange?: (locked: boolean) => void;
 }
 
-export function EntityInspector({ entity, messageHub, commandManager, componentVersion }: EntityInspectorProps) {
+export function EntityInspector({
+    entity,
+    messageHub,
+    commandManager,
+    componentVersion,
+    isLocked = false,
+    onLockChange
+}: EntityInspectorProps) {
     const [expandedComponents, setExpandedComponents] = useState<Set<number>>(() => {
         // 默认展开所有组件
         return new Set(entity.components.map((_, index) => index));
@@ -47,7 +59,6 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
     const [dropdownPosition, setDropdownPosition] = useState<{ top: number; right: number } | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
-    const [isLocked, setIsLocked] = useState(false);
     const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
     const [propertySearchQuery, setPropertySearchQuery] = useState('');
     const addButtonRef = useRef<HTMLButtonElement>(null);
@@ -56,7 +67,13 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
     const componentRegistry = Core.services.resolve(ComponentRegistry);
     const componentActionRegistry = Core.services.resolve(ComponentActionRegistry);
     const componentInspectorRegistry = Core.services.resolve(ComponentInspectorRegistry);
+    const prefabService = Core.services.tryResolve(PrefabService) as PrefabService | null;
     const availableComponents = (componentRegistry?.getAllComponents() || []) as ComponentInfo[];
+
+    // 检查实体是否为预制体实例 | Check if entity is a prefab instance
+    const isPrefabInstance = useMemo(() => {
+        return entity.hasComponent(PrefabInstanceComponent);
+    }, [entity, componentVersion]);
 
     // 当 entity 变化或组件数量变化时，更新展开状态（新组件默认展开）
     // 注意：不要依赖 componentVersion，否则每次属性变化都会重置展开状态
@@ -244,6 +261,12 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
 
     const filteredComponents = useMemo(() => {
         return entity.components.filter((component: Component) => {
+            // 过滤掉标记为隐藏的组件（如 Hierarchy, PrefabInstance）
+            // Filter out components marked as hidden (e.g., Hierarchy, PrefabInstance)
+            if (isComponentInstanceHiddenInInspector(component)) {
+                return false;
+            }
+
             const componentName = getComponentInstanceTypeName(component);
 
             if (categoryFilter !== 'all') {
@@ -271,7 +294,7 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                 <div className="inspector-header-left">
                     <button
                         className={`inspector-lock-btn ${isLocked ? 'locked' : ''}`}
-                        onClick={() => setIsLocked(!isLocked)}
+                        onClick={() => onLockChange?.(!isLocked)}
                         title={isLocked ? '解锁检视器' : '锁定检视器'}
                     >
                         {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
@@ -281,6 +304,16 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                 </div>
                 <span className="inspector-object-count">1 object</span>
             </div>
+
+            {/* Prefab Instance Info | 预制体实例信息 */}
+            {isPrefabInstance && prefabService && (
+                <PrefabInstanceInfo
+                    entity={entity}
+                    prefabService={prefabService}
+                    messageHub={messageHub}
+                    commandManager={commandManager}
+                />
+            )}
 
             {/* Search Box */}
             <div className="inspector-search">

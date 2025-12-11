@@ -23,6 +23,7 @@ import { createServiceToken } from '@esengine/engine-core';
 import type { LocaleService, Locale, TranslationParams, PluginTranslations } from './Services/LocaleService';
 import type { MessageHub, MessageHandler, RequestHandler } from './Services/MessageHub';
 import type { EntityStoreService, EntityTreeNode } from './Services/EntityStoreService';
+import type { PrefabService, PrefabPropertyOverride, IPrefabFileAPI } from './Services/PrefabService';
 
 // ============================================================================
 // LocaleService Token
@@ -150,8 +151,61 @@ export type { Locale, TranslationParams, PluginTranslations } from './Services/L
 export type { MessageHandler, RequestHandler } from './Services/MessageHub';
 export type { EntityTreeNode } from './Services/EntityStoreService';
 
+// ============================================================================
+// PrefabService Token
+// 预制体服务令牌
+// ============================================================================
+
+/**
+ * PrefabService 接口
+ * PrefabService interface
+ *
+ * 提供类型安全的预制体服务访问接口。
+ * Provides type-safe prefab service access interface.
+ */
+export interface IPrefabService {
+    /** 设置文件 API | Set file API */
+    setFileAPI(fileAPI: IPrefabFileAPI): void;
+    /** 检查是否为预制体实例 | Check if prefab instance */
+    isPrefabInstance(entity: unknown): boolean;
+    /** 检查是否为预制体实例根节点 | Check if prefab instance root */
+    isPrefabInstanceRoot(entity: unknown): boolean;
+    /** 获取预制体实例组件 | Get prefab instance component */
+    getPrefabInstanceComponent(entity: unknown): unknown | null;
+    /** 获取预制体实例根实体 | Get prefab instance root entity */
+    getPrefabInstanceRoot(entity: unknown): unknown | null;
+    /** 获取属性覆盖列表 | Get property overrides */
+    getOverrides(entity: unknown): PrefabPropertyOverride[];
+    /** 检查是否有修改 | Check if has modifications */
+    hasModifications(entity: unknown): boolean;
+    /** 获取修改数量 | Get modification count */
+    getModificationCount(entity: unknown): number;
+    /** 应用修改到源预制体 | Apply to source prefab */
+    applyToPrefab(entity: unknown): Promise<boolean>;
+    /** 还原实例到源预制体状态 | Revert instance to source prefab state */
+    revertInstance(entity: unknown): Promise<boolean>;
+    /** 还原单个属性 | Revert single property */
+    revertProperty(entity: unknown, componentType: string, propertyPath: string): Promise<boolean>;
+    /** 断开预制体链接 | Break prefab link */
+    breakPrefabLink(entity: unknown): void;
+}
+
+/**
+ * 预制体服务令牌
+ * Prefab service token
+ *
+ * 用于注册和获取预制体服务。
+ * For registering and getting prefab service.
+ */
+export const PrefabServiceToken = createServiceToken<IPrefabService>('prefabService');
+
+// Re-export types for convenience
+// 重新导出类型方便使用
+export type { PrefabPropertyOverride, IPrefabFileAPI } from './Services/PrefabService';
+
 // Re-export classes for direct use (backwards compatibility)
 // 重新导出类以供直接使用（向后兼容）
 export { LocaleService } from './Services/LocaleService';
 export { MessageHub } from './Services/MessageHub';
 export { EntityStoreService } from './Services/EntityStoreService';
+export { PrefabService } from './Services/PrefabService';

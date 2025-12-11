@@ -10,6 +10,7 @@ import { JsonLoader } from './JsonLoader';
 import { TextLoader } from './TextLoader';
 import { BinaryLoader } from './BinaryLoader';
 import { AudioLoader } from './AudioLoader';
+import { PrefabLoader } from './PrefabLoader';
 
 /**
  * Asset loader factory
@@ -42,6 +43,9 @@ export class AssetLoaderFactory implements IAssetLoaderFactory {
 
         // 音频加载器 / Audio loader
         this._loaders.set(AssetType.Audio, new AudioLoader());
+
+        // 预制体加载器 / Prefab loader
+        this._loaders.set(AssetType.Prefab, new PrefabLoader());
     }
 
     /**

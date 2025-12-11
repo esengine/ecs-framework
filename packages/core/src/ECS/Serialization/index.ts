@@ -60,3 +60,14 @@ export type {
     ComponentChange,
     SceneDataChange
 } from './IncrementalSerializer';
+
+// 预制体序列化
+export { PrefabSerializer, PREFAB_FORMAT_VERSION } from './PrefabSerializer';
+export type {
+    SerializedPrefabEntity,
+    PrefabMetadata,
+    PrefabComponentTypeEntry,
+    PrefabData,
+    PrefabCreateOptions,
+    PrefabInstantiateOptions
+} from './PrefabSerializer';

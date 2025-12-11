@@ -9,18 +9,26 @@ import {
     ExtensionInspector,
     AssetFileInspector,
     RemoteEntityInspector,
-    EntityInspector
+    EntityInspector,
+    PrefabInspector
 } from './views';
 
 export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegistry, projectPath, commandManager }: InspectorProps) {
     const [target, setTarget] = useState<InspectorTarget>(null);
     const [componentVersion, setComponentVersion] = useState(0);
     const [autoRefresh, setAutoRefresh] = useState(true);
+    const [isLocked, setIsLocked] = useState(false);
     const [decimalPlaces, setDecimalPlaces] = useState(() => {
         const settings = SettingsService.getInstance();
         return settings.get<number>('inspector.decimalPlaces', 4);
     });
     const targetRef = useRef<InspectorTarget>(null);
+    const isLockedRef = useRef(false);
+
+    // 保持 isLockedRef 同步 | Keep isLockedRef in sync
+    useEffect(() => {
+        isLockedRef.current = isLocked;
+    }, [isLocked]);
 
     useEffect(() => {
         targetRef.current = target;
@@ -43,6 +51,10 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
 
     useEffect(() => {
         const handleEntitySelection = (data: { entity: Entity | null }) => {
+            // 锁定时忽略选择变化 | Ignore selection changes when locked
+            if (isLockedRef.current) {
+                return;
+            }
             if (data.entity) {
                 setTarget({ type: 'entity', data: data.entity });
             } else {
@@ -52,6 +64,10 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
         };
 
         const handleRemoteEntitySelection = (data: { entity: RemoteEntity }) => {
+            // 锁定时忽略选择变化 | Ignore selection changes when locked
+            if (isLockedRef.current) {
+                return;
+            }
             setTarget({ type: 'remote-entity', data: data.entity });
             const profilerService = getProfilerService();
             if (profilerService && data.entity?.id !== undefined) {
@@ -69,10 +85,18 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
         };
 
         const handleExtensionSelection = (data: { data: unknown }) => {
+            // 锁定时忽略选择变化 | Ignore selection changes when locked
+            if (isLockedRef.current) {
+                return;
+            }
             setTarget({ type: 'extension', data: data.data as Record<string, any> });
         };
 
         const handleAssetFileSelection = async (data: { fileInfo: AssetFileInfo }) => {
+            // 锁定时忽略选择变化 | Ignore selection changes when locked
+            if (isLockedRef.current) {
+                return;
+            }
             const fileInfo = data.fileInfo;
 
             if (fileInfo.isDirectory) {
@@ -192,6 +216,11 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
     }
 
     if (target.type === 'asset-file') {
+        // 预制体文件使用专用检查器 | Prefab files use dedicated inspector
+        if (target.data.extension?.toLowerCase() === 'prefab') {
+            return <PrefabInspector fileInfo={target.data} messageHub={messageHub} commandManager={commandManager} />;
+        }
+
         // Check if a plugin provides a custom inspector for this asset type
         const customInspector = inspectorRegistry.render(target, { target, projectPath });
         if (customInspector) {
@@ -217,7 +246,16 @@ export function Inspector({ entityStore: _entityStore, messageHub, inspectorRegi
     }
 
     if (target.type === 'entity') {
-        return <EntityInspector entity={target.data} messageHub={messageHub} commandManager={commandManager} componentVersion={componentVersion} />;
+        return (
+            <EntityInspector
+                entity={target.data}
+                messageHub={messageHub}
+                commandManager={commandManager}
+                componentVersion={componentVersion}
+                isLocked={isLocked}
+                onLockChange={setIsLocked}
+            />
+        );
     }
 
     return null;

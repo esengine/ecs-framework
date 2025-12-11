@@ -73,7 +73,8 @@ export const zh: Translations = {
         forum: '论坛',
         console: '控制台',
         assetBrowser: '资源浏览器',
-        profiler: '性能分析器'
+        profiler: '性能分析器',
+        contentBrowser: '内容管理器'
     },
 
     hierarchy: {
@@ -88,6 +89,7 @@ export const zh: Translations = {
         createFolder: '创建文件夹',
         deleteEntity: '删除实体',
         deleteConfirm: '确定要删除实体 "{{name}}" 吗？',
+        deleteConfirmWithChildren: '确定要删除实体 "{{name}}" 及其 {{count}} 个子节点吗？',
         renameEntity: '重命名实体',
         duplicateEntity: '复制实体',
         localScene: '本地场景',
@@ -113,7 +115,8 @@ export const zh: Translations = {
             tilemap: '瓦片地图',
             camera2d: '2D 相机',
             particleEffect: '粒子效果'
-        }
+        },
+        editingPrefab: '编辑预制体'
     },
 
     inspector: {
@@ -132,6 +135,36 @@ export const zh: Translations = {
             empty: '无组件',
             add: '添加组件',
             remove: '移除'
+        },
+        prefab: {
+            instance: '预制体实例',
+            source: '预制体',
+            open: '打开',
+            select: '定位',
+            selectAsset: '定位预制体资产',
+            revert: '还原',
+            revertAll: '全部还原',
+            revertTo: '还原到预制体',
+            apply: '应用',
+            applyAll: '全部应用',
+            applyTo: "应用到 '{{name}}'",
+            unpack: '解包',
+            modified: '已修改',
+            modifications: '{{count}} 处修改',
+            noModifications: '无修改',
+            revertProperty: '还原为预制体值',
+            applyConfirm: '将修改应用到预制体 "{{name}}"?',
+            revertConfirm: '将所有修改还原为预制体默认值?',
+            unpackConfirm: '解包预制体实例？这将断开与源预制体的链接。',
+            applyTitle: '应用到预制体',
+            revertTitle: '还原到预制体',
+            unpackTitle: '解包预制体',
+            applySuccess: '已应用修改到预制体',
+            applyFailed: '应用修改到预制体失败',
+            revertSuccess: '已还原为预制体默认值',
+            revertFailed: '还原实例失败',
+            unpackSuccess: '已断开预制体链接',
+            unpackFailed: '解包预制体失败'
         }
     },
 
@@ -186,6 +219,15 @@ export const zh: Translations = {
         },
         notifications: {
             noScene: '无场景'
+        },
+        prefab: {
+            editing: '编辑中',
+            save: '保存预制体',
+            exit: '退出编辑',
+            saveAndExit: '保存并退出',
+            discardChanges: '放弃修改',
+            savedSuccess: '预制体已保存：{{name}}',
+            saveFailed: '保存预制体失败'
         }
     },
 
@@ -238,7 +280,8 @@ export const zh: Translations = {
         network: '网络',
         sourceControl: '源代码管理',
         allSaved: '所有已保存',
-        revisionControl: '版本控制'
+        revisionControl: '版本控制',
+        resetLayout: '重置布局'
     },
 
     // ========================================

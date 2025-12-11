@@ -34,6 +34,7 @@ import { ServiceRegistry, PluginInstaller, useDialogStore } from './app/managers
 import { StartupPage } from './components/StartupPage';
 import { ProjectCreationWizard } from './components/ProjectCreationWizard';
 import { SceneHierarchy } from './components/SceneHierarchy';
+import { ContentBrowser } from './components/ContentBrowser';
 import { Inspector } from './components/inspectors/Inspector';
 import { AssetBrowser } from './components/AssetBrowser';
 import { Viewport } from './components/Viewport';
@@ -49,7 +50,7 @@ import { ForumPanel } from './components/forum';
 import { ToastProvider, useToast } from './components/Toast';
 import { TitleBar } from './components/TitleBar';
 import { MainToolbar } from './components/MainToolbar';
-import { FlexLayoutDockContainer, FlexDockPanel } from './components/FlexLayoutDockContainer';
+import { FlexLayoutDockContainer, FlexDockPanel, type FlexLayoutDockContainerHandle } from './components/FlexLayoutDockContainer';
 import { StatusBar } from './components/StatusBar';
 import { TauriAPI } from './api/tauri';
 import { SettingsService } from './services/SettingsService';
@@ -83,6 +84,7 @@ const logger = createLogger('App');
 
 function App() {
     const initRef = useRef(false);
+    const layoutContainerRef = useRef<FlexLayoutDockContainerHandle>(null);
     const [pluginLoader] = useState(() => new PluginLoader());
     const { showToast, hideToast } = useToast();
     const [initialized, setInitialized] = useState(false);
@@ -117,6 +119,7 @@ function App() {
     const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
     const [isRemoteConnected, setIsRemoteConnected] = useState(false);
     const [showProjectWizard, setShowProjectWizard] = useState(false);
+    const [isContentBrowserDocked, setIsContentBrowserDocked] = useState(false);
 
     const {
         showProfiler, setShowProfiler,
@@ -181,12 +184,23 @@ function App() {
                         e.preventDefault();
                         if (sceneManager) {
                             try {
-                                await sceneManager.saveScene();
-                                const sceneState = sceneManager.getSceneState();
-                                showToast(t('scene.savedSuccess', { name: sceneState.sceneName }), 'success');
+                                // 检查是否在预制体编辑模式 | Check if in prefab edit mode
+                                if (sceneManager.isPrefabEditMode()) {
+                                    await sceneManager.savePrefab();
+                                    const prefabState = sceneManager.getPrefabEditModeState();
+                                    showToast(t('editMode.prefab.savedSuccess', { name: prefabState?.prefabName ?? 'Prefab' }), 'success');
+                                } else {
+                                    await sceneManager.saveScene();
+                                    const sceneState = sceneManager.getSceneState();
+                                    showToast(t('scene.savedSuccess', { name: sceneState.sceneName }), 'success');
+                                }
                             } catch (error) {
-                                console.error('Failed to save scene:', error);
-                                showToast(t('scene.saveFailed'), 'error');
+                                console.error('Failed to save:', error);
+                                if (sceneManager.isPrefabEditMode()) {
+                                    showToast(t('editMode.prefab.saveFailed'), 'error');
+                                } else {
+                                    showToast(t('scene.saveFailed'), 'error');
+                                }
                             }
                         }
                         break;
@@ -386,6 +400,33 @@ function App() {
         });
 
         return () => unsubscribe?.();
+    }, [messageHub]);
+
+    // 注册引擎快照请求处理器（用于预制体编辑模式）
+    // Register engine snapshot request handlers (for prefab edit mode)
+    useEffect(() => {
+        if (!messageHub) return;
+
+        const unsubscribeSave = messageHub.onRequest<void, boolean>(
+            'engine:saveSceneSnapshot',
+            async () => {
+                const engineService = EngineService.getInstance();
+                return engineService.saveSceneSnapshot();
+            }
+        );
+
+        const unsubscribeRestore = messageHub.onRequest<void, boolean>(
+            'engine:restoreSceneSnapshot',
+            async () => {
+                const engineService = EngineService.getInstance();
+                return await engineService.restoreSceneSnapshot();
+            }
+        );
+
+        return () => {
+            unsubscribeSave?.();
+            unsubscribeRestore?.();
+        };
     }, [messageHub]);
 
     const handleOpenRecentProject = async (projectPath: string) => {
@@ -769,27 +810,50 @@ function App() {
                     id: 'scene-hierarchy',
                     title: t('panel.sceneHierarchy'),
                     content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} commandManager={commandManager} />,
-                    closable: false
+                    closable: false,
+                    layout: { position: 'right-top' }
                 },
                 {
                     id: 'viewport',
                     title: t('panel.viewport'),
-                    content: <Viewport locale={locale} messageHub={messageHub} />,
-                    closable: false
+                    content: <Viewport locale={locale} messageHub={messageHub} commandManager={commandManager} />,
+                    closable: false,
+                    layout: { position: 'center' }
                 },
                 {
                     id: 'inspector',
                     title: t('panel.inspector'),
                     content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} commandManager={commandManager} />,
-                    closable: false
+                    closable: false,
+                    layout: { position: 'right-bottom' }
                 },
                 {
                     id: 'forum',
                     title: t('panel.forum'),
                     content: <ForumPanel />,
-                    closable: true
+                    closable: true,
+                    layout: { position: 'center' }
                 }
             ];
+
+            // 如果内容管理器已停靠，添加到面板 | If content browser is docked, add to panels
+            if (isContentBrowserDocked) {
+                corePanels.push({
+                    id: 'content-browser',
+                    title: t('panel.contentBrowser'),
+                    content: (
+                        <ContentBrowser
+                            projectPath={currentProjectPath}
+                            locale={locale}
+                            onOpenScene={handleOpenSceneByPath}
+                            isDrawer={false}
+                            onDockInLayout={() => setIsContentBrowserDocked(false)}
+                        />
+                    ),
+                    closable: true,
+                    layout: { position: 'bottom', weight: 20, requiresSeparateTabset: true }
+                });
+            }
 
             // 获取启用的插件面板
             const pluginPanels: FlexDockPanel[] = uiRegistry.getAllPanels()
@@ -848,7 +912,7 @@ function App() {
 
             setPanels([...corePanels, ...pluginPanels, ...dynamicPanels]);
         }
-    }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, handleOpenSceneByPath, activeDynamicPanels, dynamicPanelTitles]);
+    }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, handleOpenSceneByPath, activeDynamicPanels, dynamicPanelTitles, isContentBrowserDocked, commandManager]);
 
 
     if (!initialized) {
@@ -997,11 +1061,17 @@ function App() {
 
             <div className="editor-content">
                 <FlexLayoutDockContainer
+                    ref={layoutContainerRef}
                     panels={panels}
                     activePanelId={activePanelId}
                     messageHub={messageHub}
                     onPanelClose={(panelId) => {
                         logger.info('Panel closed:', panelId);
+                        // 如果关闭的是内容管理器，重置停靠状态
+                        // If closing content browser, reset dock state
+                        if (panelId === 'content-browser') {
+                            setIsContentBrowserDocked(false);
+                        }
                         setActiveDynamicPanels((prev) => prev.filter((id) => id !== panelId));
                     }}
                 />
@@ -1015,6 +1085,8 @@ function App() {
                 locale={locale}
                 projectPath={currentProjectPath}
                 onOpenScene={handleOpenSceneByPath}
+                onDockContentBrowser={() => setIsContentBrowserDocked(true)}
+                onResetLayout={() => layoutContainerRef.current?.resetLayout()}
             />
 
 

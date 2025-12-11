@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { Component, Core, getComponentInstanceTypeName } from '@esengine/ecs-framework';
-import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub, FileActionRegistry } from '@esengine/editor-core';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Component, Core, getComponentInstanceTypeName, PrefabInstanceComponent, Entity } from '@esengine/ecs-framework';
+import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub, FileActionRegistry, PrefabService } from '@esengine/editor-core';
 import { ChevronRight, ChevronDown, Lock } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { AnimationClipsFieldEditor } from '../infrastructure/field-editors/AnimationClipsFieldEditor';
@@ -12,7 +12,7 @@ const animationClipsEditor = new AnimationClipsFieldEditor();
 
 interface PropertyInspectorProps {
   component: Component;
-  entity?: any;
+  entity?: Entity;
   version?: number;
   onChange?: (propertyName: string, value: any) => void;
   onAction?: (actionId: string, propertyName: string, component: Component) => void;
@@ -21,8 +21,46 @@ interface PropertyInspectorProps {
 export function PropertyInspector({ component, entity, version, onChange, onAction }: PropertyInspectorProps) {
     const [properties, setProperties] = useState<Record<string, PropertyMetadata>>({});
     const [controlledFields, setControlledFields] = useState<Map<string, string>>(new Map());
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; propertyName: string } | null>(null);
     // version is used implicitly - when it changes, React re-renders and getValue reads fresh values
     void version;
+
+    // 获取预制体服务和组件名称 | Get prefab service and component name
+    const prefabService = useMemo(() => Core.services.tryResolve(PrefabService) as PrefabService | null, []);
+    const componentTypeName = useMemo(() => getComponentInstanceTypeName(component), [component]);
+
+    // 获取预制体实例组件 | Get prefab instance component
+    const prefabInstanceComp = useMemo(() => {
+        return entity?.getComponent(PrefabInstanceComponent) ?? null;
+    }, [entity, version]);
+
+    // 检查属性是否被覆盖 | Check if property is overridden
+    const isPropertyOverridden = useCallback((propertyName: string): boolean => {
+        if (!prefabInstanceComp) return false;
+        return prefabInstanceComp.isPropertyModified(componentTypeName, propertyName);
+    }, [prefabInstanceComp, componentTypeName]);
+
+    // 处理属性右键菜单 | Handle property context menu
+    const handlePropertyContextMenu = useCallback((e: React.MouseEvent, propertyName: string) => {
+        if (!isPropertyOverridden(propertyName)) return;
+        e.preventDefault();
+        setContextMenu({ x: e.clientX, y: e.clientY, propertyName });
+    }, [isPropertyOverridden]);
+
+    // 还原属性 | Revert property
+    const handleRevertProperty = useCallback(async () => {
+        if (!contextMenu || !prefabService || !entity) return;
+
+        await prefabService.revertProperty(entity, componentTypeName, contextMenu.propertyName);
+        setContextMenu(null);
+    }, [contextMenu, prefabService, entity, componentTypeName]);
+
+    // 关闭右键菜单 | Close context menu
+    useEffect(() => {
+        const handleClick = () => setContextMenu(null);
+        document.addEventListener('click', handleClick);
+        return () => document.removeEventListener('click', handleClick);
+    }, []);
 
     // Scan entity for components that control this component's properties
     useEffect(() => {
@@ -236,7 +274,7 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                 const canCreate = creationMapping !== null;
 
                 return (
-                    <div key={propertyName} className="property-field">
+                    <div key={propertyName} className="property-field property-field-asset">
                         <label className="property-label">
                             {label}
                             {controlledBy && (
@@ -307,8 +345,36 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
 
     return (
         <div className="property-inspector">
-            {Object.entries(properties).map(([propertyName, metadata]) =>
-                renderProperty(propertyName, metadata)
+            {Object.entries(properties).map(([propertyName, metadata]) => {
+                const overridden = isPropertyOverridden(propertyName);
+                return (
+                    <div
+                        key={propertyName}
+                        className={`property-row ${overridden ? 'overridden' : ''}`}
+                        onContextMenu={(e) => handlePropertyContextMenu(e, propertyName)}
+                    >
+                        {renderProperty(propertyName, metadata)}
+                        {overridden && (
+                            <span className="property-override-indicator" title="Modified from prefab" />
+                        )}
+                    </div>
+                );
+            })}
+
+            {/* 右键菜单 | Context Menu */}
+            {contextMenu && (
+                <div
+                    className="property-context-menu"
+                    style={{ left: contextMenu.x, top: contextMenu.y }}
+                >
+                    <button
+                        className="property-context-menu-item"
+                        onClick={handleRevertProperty}
+                    >
+                        <span>↩</span>
+                        <span>Revert to Prefab</span>
+                    </button>
+                </div>
             )}
         </div>
     );

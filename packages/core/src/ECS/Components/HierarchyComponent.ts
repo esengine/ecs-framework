@@ -19,7 +19,7 @@ import { Serializable, Serialize } from '../Serialization/SerializationDecorator
  * const children = hierarchySystem.getChildren(entity);
  * ```
  */
-@ECSComponent('Hierarchy')
+@ECSComponent('Hierarchy', { editor: { hideInInspector: true } })
 @Serializable({ version: 1, typeId: 'Hierarchy' })
 export class HierarchyComponent extends Component {
     /**

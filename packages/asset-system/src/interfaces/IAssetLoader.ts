@@ -187,18 +187,8 @@ export interface IMaterialAsset {
     };
 }
 
-/**
- * Prefab asset interface
- * 预制体资产接口
- */
-export interface IPrefabAsset {
-    /** 根实体数据 / Serialized entity hierarchy */
-    root: unknown;
-    /** 包含的组件类型 / Component types used in prefab */
-    componentTypes: string[];
-    /** 引用的资产 / All referenced assets */
-    referencedAssets: AssetGUID[];
-}
+// 预制体资产接口从专用文件导出 | Prefab asset interface exported from dedicated file
+export type { IPrefabAsset, IPrefabData, IPrefabMetadata, IPrefabService } from './IPrefabAsset';
 
 /**
  * Scene asset interface

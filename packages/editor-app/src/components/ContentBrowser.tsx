@@ -40,8 +40,8 @@ import {
     Database,
     AlertTriangle
 } from 'lucide-react';
-import { Core } from '@esengine/ecs-framework';
-import { MessageHub, FileActionRegistry, AssetRegistryService, MANAGED_ASSET_DIRECTORIES, type FileCreationTemplate } from '@esengine/editor-core';
+import { Core, Entity, HierarchySystem, PrefabSerializer } from '@esengine/ecs-framework';
+import { MessageHub, FileActionRegistry, AssetRegistryService, MANAGED_ASSET_DIRECTORIES, type FileCreationTemplate, EntityStoreService, SceneManagerService } from '@esengine/editor-core';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { SettingsService } from '../services/SettingsService';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
@@ -788,7 +788,13 @@ export class ${className} {
     const handleFolderDragOver = useCallback((e: React.DragEvent, folderPath: string) => {
         e.preventDefault();
         e.stopPropagation();
-        setDragOverFolder(folderPath);
+        // 支持资产拖放和实体拖放 | Support asset drag and entity drag
+        const hasAsset = e.dataTransfer.types.includes('asset-path');
+        const hasEntity = e.dataTransfer.types.includes('entity-id');
+        if (hasAsset || hasEntity) {
+            e.dataTransfer.dropEffect = hasEntity ? 'copy' : 'move';
+            setDragOverFolder(folderPath);
+        }
     }, []);
 
     const handleFolderDragLeave = useCallback((e: React.DragEvent) => {
@@ -802,11 +808,66 @@ export class ${className} {
         e.stopPropagation();
         setDragOverFolder(null);
 
+        // 检查是否是资产移动 | Check if it's asset move
         const sourcePath = e.dataTransfer.getData('asset-path');
         if (sourcePath) {
             await handleMoveAsset(sourcePath, targetFolderPath);
+            return;
         }
-    }, [handleMoveAsset]);
+
+        // 检查是否是实体拖放（创建预制体）| Check if it's entity drop (create prefab)
+        const entityIdStr = e.dataTransfer.getData('entity-id');
+        if (entityIdStr) {
+            const entityId = parseInt(entityIdStr, 10);
+            if (isNaN(entityId)) return;
+
+            const scene = Core.scene;
+            if (!scene) return;
+
+            const entity = scene.findEntityById(entityId);
+            if (!entity) return;
+
+            // 获取层级系统 | Get hierarchy system
+            const hierarchySystem = scene.getSystem(HierarchySystem);
+
+            // 创建预制体数据 | Create prefab data
+            const prefabData = PrefabSerializer.createPrefab(
+                entity,
+                {
+                    name: entity.name,
+                    includeChildren: true
+                },
+                hierarchySystem ?? undefined
+            );
+
+            // 序列化为 JSON | Serialize to JSON
+            const prefabJson = PrefabSerializer.serialize(prefabData, true);
+
+            // 保存到目标文件夹 | Save to target folder
+            const sep = targetFolderPath.includes('\\') ? '\\' : '/';
+            const filePath = `${targetFolderPath}${sep}${entity.name}.prefab`;
+
+            try {
+                await TauriAPI.writeFileContent(filePath, prefabJson);
+                console.log(`[ContentBrowser] Prefab created: ${filePath}`);
+
+                // 刷新目录 | Refresh directory
+                if (currentPath === targetFolderPath) {
+                    await loadAssets(targetFolderPath);
+                }
+
+                // 发布事件 | Publish event
+                messageHub.publish('prefab:created', {
+                    path: filePath,
+                    name: entity.name,
+                    sourceEntityId: entity.id,
+                    sourceEntityName: entity.name
+                });
+            } catch (error) {
+                console.error('[ContentBrowser] Failed to create prefab:', error);
+            }
+        }
+    }, [handleMoveAsset, currentPath, loadAssets, messageHub]);
 
     // Handle asset click
     const handleAssetClick = useCallback((asset: AssetItem, e: React.MouseEvent) => {
@@ -856,6 +917,22 @@ export class ${className} {
             const ext = asset.extension?.toLowerCase();
             if (ext === 'ecs' && onOpenScene) {
                 onOpenScene(asset.path);
+                return;
+            }
+
+            // 预制体文件进入预制体编辑模式
+            // Open prefab file in prefab edit mode
+            if (ext === 'prefab') {
+                try {
+                    const sceneManager = Core.services.tryResolve(SceneManagerService);
+                    if (sceneManager) {
+                        await sceneManager.enterPrefabEditMode(asset.path);
+                    } else {
+                        console.error('SceneManagerService not available');
+                    }
+                } catch (error) {
+                    console.error('Failed to open prefab:', error);
+                }
                 return;
             }
 
@@ -1635,6 +1712,19 @@ export class ${className} {
                 <div
                     className={`cb-asset-grid ${viewMode}`}
                     onContextMenu={(e) => handleContextMenu(e)}
+                    onDragOver={(e) => {
+                        // 允许实体拖放到当前目录 | Allow entity drop to current directory
+                        if (e.dataTransfer.types.includes('entity-id') && currentPath) {
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = 'copy';
+                        }
+                    }}
+                    onDrop={(e) => {
+                        // 在当前目录创建预制体 | Create prefab in current directory
+                        if (currentPath && e.dataTransfer.types.includes('entity-id')) {
+                            handleFolderDrop(e, currentPath);
+                        }
+                    }}
                 >
                     {loading ? (
                         <div className="cb-loading">Loading...</div>

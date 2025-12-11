@@ -401,6 +401,27 @@ input[type="number"].property-input {
 }
 
 /* ==================== Asset Field ==================== */
+/* Property field containing asset field - use flex-start alignment | 包含资源字段的属性行使用顶部对齐 */
+.property-field-asset {
+    align-items: flex-start !important;
+    min-height: 52px !important;
+}
+
+.property-field-asset > .property-label {
+    padding-top: 14px;
+}
+
+/* Ensure property-row expands for asset fields | 确保属性行能为资源字段扩展 */
+.property-row:has(.property-field-asset),
+.property-row:has(.asset-field) {
+    min-height: 52px;
+}
+
+/* Fallback for browsers without :has() support | 不支持 :has() 的浏览器的备用方案 */
+.property-inspector .property-field-asset {
+    min-height: 52px !important;
+}
+
 .property-asset-container {
     flex: 1;
     display: flex;

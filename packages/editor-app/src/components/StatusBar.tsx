@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { FolderOpen, FileText, Terminal, ChevronDown, ChevronUp, Activity, Wifi, Save, GitBranch, X } from 'lucide-react';
+import { FolderOpen, FileText, Terminal, ChevronDown, ChevronUp, Activity, Wifi, Save, GitBranch, X, LayoutGrid } from 'lucide-react';
 import type { MessageHub, LogService } from '@esengine/editor-core';
 import { ContentBrowser } from './ContentBrowser';
 import { OutputLogPanel } from './OutputLogPanel';
@@ -14,6 +14,10 @@ interface StatusBarProps {
     locale?: string;
     projectPath?: string | null;
     onOpenScene?: (scenePath: string) => void;
+    /** 停靠内容管理器到布局中的回调 | Callback to dock content browser in layout */
+    onDockContentBrowser?: () => void;
+    /** 重置布局回调 | Callback to reset layout */
+    onResetLayout?: () => void;
 }
 
 type ActiveTab = 'output' | 'cmd';
@@ -25,7 +29,9 @@ export function StatusBar({
     logService,
     locale = 'en',
     projectPath,
-    onOpenScene
+    onOpenScene,
+    onDockContentBrowser,
+    onResetLayout
 }: StatusBarProps) {
     const { t } = useLocale();
     const [consoleInput, setConsoleInput] = useState('');
@@ -224,6 +230,11 @@ export function StatusBar({
                         onOpenScene={onOpenScene}
                         isDrawer={true}
                         revealPath={revealPath}
+                        onDockInLayout={() => {
+                            // 关闭抽屉并停靠到布局 | Close drawer and dock to layout
+                            setContentDrawerOpen(false);
+                            onDockContentBrowser?.();
+                        }}
                     />
                 </div>
             </div>
@@ -303,6 +314,13 @@ export function StatusBar({
                     <div className="status-bar-divider" />
 
                     <div className="status-bar-icon-group">
+                        <button
+                            className="status-bar-icon-btn"
+                            title={t('statusBar.resetLayout')}
+                            onClick={onResetLayout}
+                        >
+                            <LayoutGrid size={14} />
+                        </button>
                         <button className="status-bar-icon-btn" title={t('statusBar.network')}>
                             <Wifi size={14} />
                         </button>

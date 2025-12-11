@@ -2,14 +2,16 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import {
     RotateCcw, Maximize2, Grid3x3, Eye, EyeOff, Activity,
     MousePointer2, Move, RotateCw, Scaling, Globe, QrCode, ChevronDown,
-    Magnet, ZoomIn
+    Magnet, ZoomIn, Save, X, PackageOpen
 } from 'lucide-react';
 import '../styles/Viewport.css';
 import { useEngine } from '../hooks/useEngine';
 import { useLocale } from '../hooks/useLocale';
 import { EngineService } from '../services/EngineService';
-import { Core, Entity, SceneSerializer } from '@esengine/ecs-framework';
-import { MessageHub, ProjectService, AssetRegistryService } from '@esengine/editor-core';
+import { Core, Entity, SceneSerializer, PrefabSerializer, ComponentRegistry } from '@esengine/ecs-framework';
+import type { PrefabData, ComponentType } from '@esengine/ecs-framework';
+import { MessageHub, ProjectService, AssetRegistryService, EntityStoreService, CommandManager, SceneManagerService } from '@esengine/editor-core';
+import { InstantiatePrefabCommand } from '../application/commands/prefab/InstantiatePrefabCommand';
 import { TransformComponent } from '@esengine/engine-core';
 import { CameraComponent } from '@esengine/camera';
 import { UITransformComponent } from '@esengine/ui';
@@ -205,9 +207,10 @@ export type PlayState = 'stopped' | 'playing' | 'paused';
 interface ViewportProps {
   locale?: string;
   messageHub?: MessageHub;
+  commandManager?: CommandManager;
 }
 
-export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
+export function Viewport({ locale = 'en', messageHub, commandManager }: ViewportProps) {
     const { t } = useLocale();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -220,6 +223,13 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
     const [showQRDialog, setShowQRDialog] = useState(false);
     const [devicePreviewUrl, setDevicePreviewUrl] = useState('');
     const runMenuRef = useRef<HTMLDivElement>(null);
+
+    // Prefab edit mode state | 预制体编辑模式状态
+    const [prefabEditMode, setPrefabEditMode] = useState<{
+        isActive: boolean;
+        prefabName: string;
+        prefabPath: string;
+    } | null>(null);
 
     // Snap settings
     const [snapEnabled, setSnapEnabled] = useState(true);
@@ -1200,6 +1210,68 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         };
     }, [messageHub]);
 
+    // Subscribe to prefab edit mode changes | 监听预制体编辑模式变化
+    useEffect(() => {
+        if (!messageHub) return;
+
+        const unsubscribePrefabEditMode = messageHub.subscribe('prefab:editMode:changed', (data: {
+            isActive: boolean;
+            prefabPath?: string;
+            prefabName?: string;
+        }) => {
+            if (data.isActive && data.prefabName && data.prefabPath) {
+                setPrefabEditMode({
+                    isActive: true,
+                    prefabName: data.prefabName,
+                    prefabPath: data.prefabPath
+                });
+            } else {
+                setPrefabEditMode(null);
+            }
+        });
+
+        // Check initial prefab edit mode state | 检查初始预制体编辑模式状态
+        const sceneManager = Core.services.tryResolve(SceneManagerService);
+        if (sceneManager) {
+            const prefabState = sceneManager.getPrefabEditModeState?.();
+            if (prefabState?.isActive) {
+                setPrefabEditMode({
+                    isActive: true,
+                    prefabName: prefabState.prefabName,
+                    prefabPath: prefabState.prefabPath
+                });
+            }
+        }
+
+        return () => {
+            unsubscribePrefabEditMode();
+        };
+    }, [messageHub]);
+
+    // Handle prefab save | 处理预制体保存
+    const handleSavePrefab = useCallback(async () => {
+        const sceneManager = Core.services.tryResolve(SceneManagerService);
+        if (sceneManager?.isPrefabEditMode?.()) {
+            try {
+                await sceneManager.savePrefab();
+            } catch (error) {
+                console.error('Failed to save prefab:', error);
+            }
+        }
+    }, []);
+
+    // Handle exit prefab edit mode | 处理退出预制体编辑模式
+    const handleExitPrefabEditMode = useCallback(async (save: boolean = false) => {
+        const sceneManager = Core.services.tryResolve(SceneManagerService);
+        if (sceneManager?.isPrefabEditMode?.()) {
+            try {
+                await sceneManager.exitPrefabEditMode(save);
+            } catch (error) {
+                console.error('Failed to exit prefab edit mode:', error);
+            }
+        }
+    }, []);
+
     const handleFullscreen = () => {
         if (containerRef.current) {
             if (document.fullscreenElement) {
@@ -1271,8 +1343,110 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    /**
+     * 处理视口拖放（用于预制体实例化）
+     * Handle viewport drag-drop (for prefab instantiation)
+     */
+    const handleViewportDragOver = useCallback((e: React.DragEvent) => {
+        const hasAssetPath = e.dataTransfer.types.includes('asset-path');
+        if (hasAssetPath) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        }
+    }, []);
+
+    const handleViewportDrop = useCallback(async (e: React.DragEvent) => {
+        const assetPath = e.dataTransfer.getData('asset-path');
+        if (!assetPath || !assetPath.toLowerCase().endsWith('.prefab')) {
+            return;
+        }
+
+        e.preventDefault();
+
+        try {
+            // 读取预制体文件 | Read prefab file
+            const prefabJson = await TauriAPI.readFileContent(assetPath);
+            const prefabData = PrefabSerializer.deserialize(prefabJson);
+
+            // 获取服务 | Get services
+            const entityStore = Core.services.tryResolve(EntityStoreService) as EntityStoreService | null;
+
+            if (!entityStore || !messageHub || !commandManager) {
+                console.error('[Viewport] Required services not available');
+                return;
+            }
+
+            // 计算放置位置（将屏幕坐标转换为世界坐标）| Calculate drop position (convert screen to world)
+            const canvas = canvasRef.current;
+            let worldPos = { x: 0, y: 0 };
+            if (canvas) {
+                const rect = canvas.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                const screenX = e.clientX - rect.left;
+                const screenY = e.clientY - rect.top;
+                const canvasX = screenX * dpr;
+                const canvasY = screenY * dpr;
+                const centeredX = canvasX - canvas.width / 2;
+                const centeredY = canvas.height / 2 - canvasY;
+                worldPos = {
+                    x: centeredX / camera2DZoomRef.current - camera2DOffsetRef.current.x,
+                    y: centeredY / camera2DZoomRef.current - camera2DOffsetRef.current.y
+                };
+            }
+
+            // 创建实例化命令 | Create instantiate command
+            const command = new InstantiatePrefabCommand(
+                entityStore,
+                messageHub,
+                prefabData,
+                {
+                    position: worldPos,
+                    trackInstance: true
+                }
+            );
+            commandManager.execute(command);
+
+            console.log(`[Viewport] Prefab instantiated at (${worldPos.x.toFixed(0)}, ${worldPos.y.toFixed(0)}): ${prefabData.metadata.name}`);
+        } catch (error) {
+            console.error('[Viewport] Failed to instantiate prefab:', error);
+        }
+    }, [messageHub, commandManager]);
+
     return (
-        <div className="viewport" ref={containerRef}>
+        <div
+            className={`viewport ${prefabEditMode?.isActive ? 'prefab-edit-mode' : ''}`}
+            ref={containerRef}
+            onDragOver={handleViewportDragOver}
+            onDrop={handleViewportDrop}
+        >
+            {/* Prefab Edit Mode Toolbar | 预制体编辑模式工具栏 */}
+            {prefabEditMode?.isActive && (
+                <div className="viewport-prefab-toolbar">
+                    <div className="viewport-prefab-toolbar-left">
+                        <PackageOpen size={14} />
+                        <span className="prefab-name">{t('viewport.prefab.editing') || 'Editing'}: {prefabEditMode.prefabName}</span>
+                    </div>
+                    <div className="viewport-prefab-toolbar-right">
+                        <button
+                            className="viewport-prefab-btn save"
+                            onClick={handleSavePrefab}
+                            title={t('viewport.prefab.save') || 'Save Prefab'}
+                        >
+                            <Save size={14} />
+                            <span>{t('viewport.prefab.save') || 'Save'}</span>
+                        </button>
+                        <button
+                            className="viewport-prefab-btn exit"
+                            onClick={() => handleExitPrefabEditMode(false)}
+                            title={t('viewport.prefab.exit') || 'Exit Edit Mode'}
+                        >
+                            <X size={14} />
+                            <span>{t('viewport.prefab.exit') || 'Exit'}</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Internal Overlay Toolbar */}
             <div className="viewport-internal-toolbar">
                 <div className="viewport-internal-toolbar-left">

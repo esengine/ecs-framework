@@ -1,17 +1,20 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Entity, Core, HierarchySystem, HierarchyComponent, EntityTags, isFolder } from '@esengine/ecs-framework';
-import { EntityStoreService, MessageHub, SceneManagerService, CommandManager, EntityCreationRegistry, EntityCreationTemplate } from '@esengine/editor-core';
+import { Entity, Core, HierarchySystem, HierarchyComponent, EntityTags, isFolder, PrefabSerializer, ComponentRegistry, getComponentInstanceTypeName, PrefabInstanceComponent } from '@esengine/ecs-framework';
+import type { PrefabData, ComponentType } from '@esengine/ecs-framework';
+import { EntityStoreService, MessageHub, SceneManagerService, CommandManager, EntityCreationRegistry, EntityCreationTemplate, PrefabService } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
 import * as LucideIcons from 'lucide-react';
 import {
     Box, Wifi, Search, Plus, Trash2, Monitor, Globe, ChevronRight, ChevronDown,
     Eye, Star, Lock, Settings, Filter, Folder, Sun, Cloud, Mountain, Flag,
-    SquareStack, FolderPlus
+    SquareStack, FolderPlus, PackageOpen, Unlink, RotateCcw, Upload, ExternalLink
 } from 'lucide-react';
 import type { RemoteEntity } from '../services/tokens';
 import { getProfilerService } from '../services/getService';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { CreateEntityCommand, DeleteEntityCommand, ReparentEntityCommand, DropPosition } from '../application/commands/entity';
+import { InstantiatePrefabCommand, ApplyPrefabCommand, RevertPrefabCommand, BreakPrefabLinkCommand } from '../application/commands/prefab';
+import { TauriAPI } from '../api/tauri';
 import '../styles/SceneHierarchy.css';
 
 function getIconComponent(iconName: string | undefined, size: number = 14): React.ReactNode {
@@ -89,6 +92,11 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
     const [remoteSceneName, setRemoteSceneName] = useState<string | null>(null);
     const [sceneFilePath, setSceneFilePath] = useState<string | null>(null);
     const [isSceneModified, setIsSceneModified] = useState<boolean>(false);
+    const [prefabEditMode, setPrefabEditMode] = useState<{
+        isActive: boolean;
+        prefabName: string;
+        prefabPath: string;
+    } | null>(null);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entityId: number | null } | null>(null);
     const [draggedEntityId, setDraggedEntityId] = useState<number | null>(null);
     const [dropTarget, setDropTarget] = useState<{ entityId: number; indicator: DropIndicator } | null>(null);
@@ -97,6 +105,8 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
     const [sortColumn, setSortColumn] = useState<SortColumn>('name');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
     const [showFilterMenu, setShowFilterMenu] = useState(false);
+    const [editingEntityId, setEditingEntityId] = useState<number | null>(null);
+    const [editingName, setEditingName] = useState('');
     const { t, locale } = useLocale();
 
     const isShowingRemote = viewMode === 'remote' && isRemoteConnected;
@@ -216,11 +226,43 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         });
         const unsubModified = messageHub.subscribe('scene:modified', updateSceneInfo);
 
+        // 监听预制体编辑模式变化 | Subscribe to prefab edit mode changes
+        const unsubPrefabEditMode = messageHub.subscribe('prefab:editMode:changed', (data: {
+            isActive: boolean;
+            prefabPath?: string;
+            prefabName?: string;
+        }) => {
+            if (data.isActive && data.prefabName && data.prefabPath) {
+                setPrefabEditMode({
+                    isActive: true,
+                    prefabName: data.prefabName,
+                    prefabPath: data.prefabPath
+                });
+            } else {
+                setPrefabEditMode(null);
+            }
+            // 刷新场景状态 | Update scene info
+            updateSceneInfo();
+        });
+
+        // 初始化时检查预制体编辑模式状态 | Check prefab edit mode state on init
+        if (sceneManager) {
+            const prefabState = sceneManager.getPrefabEditModeState?.();
+            if (prefabState?.isActive) {
+                setPrefabEditMode({
+                    isActive: true,
+                    prefabName: prefabState.prefabName,
+                    prefabPath: prefabState.prefabPath
+                });
+            }
+        }
+
         return () => {
             unsubLoaded();
             unsubNew();
             unsubSaved();
             unsubModified();
+            unsubPrefabEditMode();
         };
     }, [messageHub]);
 
@@ -249,6 +291,9 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         const unsubSceneRestored = messageHub.subscribe('scene:restored', updateEntities);
         const unsubReordered = messageHub.subscribe('entity:reordered', updateEntities);
         const unsubReparented = messageHub.subscribe('entity:reparented', updateEntities);
+        // 预制体编辑模式进入/退出时刷新实体列表 | Refresh entities on prefab edit mode enter/exit
+        const unsubPrefabEnter = messageHub.subscribe('prefab:editMode:enter', updateEntities);
+        const unsubPrefabExit = messageHub.subscribe('prefab:editMode:exit', updateEntities);
 
         return () => {
             unsubAdd();
@@ -260,6 +305,8 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
             unsubSceneRestored();
             unsubReordered();
             unsubReparented();
+            unsubPrefabEnter();
+            unsubPrefabExit();
         };
     }, [entityStore, messageHub]);
 
@@ -339,9 +386,18 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
 
     const handleDragStart = useCallback((e: React.DragEvent, entityId: number) => {
         setDraggedEntityId(entityId);
-        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.effectAllowed = 'copyMove';
         e.dataTransfer.setData('text/plain', entityId.toString());
-    }, []);
+        // 添加实体拖拽标识，用于 ContentBrowser 识别
+        // Add entity drag identifier for ContentBrowser recognition
+        e.dataTransfer.setData('entity-id', entityId.toString());
+
+        // 获取实体名称用于显示
+        const entity = entityStore.getEntity(entityId);
+        if (entity) {
+            e.dataTransfer.setData('entity-name', entity.name);
+        }
+    }, [entityStore]);
 
     /**
      * 根据鼠标位置计算拖放指示器位置
@@ -364,6 +420,16 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
 
     const handleDragOver = useCallback((e: React.DragEvent, targetNode: EntityNode) => {
         e.preventDefault();
+
+        // 检查是否为外部资产拖放（预制体）| Check for external asset drop (prefab)
+        const assetPath = e.dataTransfer.types.includes('asset-path');
+        if (assetPath) {
+            // 外部资产拖放，允许放置 | External asset drop, allow drop
+            e.dataTransfer.dropEffect = 'copy';
+            setDropTarget({ entityId: targetNode.entity.id, indicator: DropIndicator.INSIDE });
+            return;
+        }
+
         e.dataTransfer.dropEffect = 'move';
 
         // 不能拖放到自己
@@ -391,8 +457,40 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         setDropTarget(null);
     }, []);
 
-    const handleDrop = useCallback((e: React.DragEvent, targetNode: EntityNode) => {
+    const handleDrop = useCallback(async (e: React.DragEvent, targetNode: EntityNode) => {
         e.preventDefault();
+        e.stopPropagation(); // 防止事件冒泡到容器 | Prevent event from bubbling to container
+
+        // 检查是否为外部资产拖放（预制体）| Check for external asset drop (prefab)
+        const assetPath = e.dataTransfer.getData('asset-path');
+        if (assetPath && assetPath.toLowerCase().endsWith('.prefab')) {
+            setDropTarget(null);
+            try {
+                // 读取预制体文件 | Read prefab file
+                const prefabJson = await TauriAPI.readFileContent(assetPath);
+                const prefabData = PrefabSerializer.deserialize(prefabJson);
+
+                // 创建实例化命令 | Create instantiate command
+                const command = new InstantiatePrefabCommand(
+                    entityStore,
+                    messageHub,
+                    prefabData,
+                    {
+                        parent: targetNode.entity,
+                        trackInstance: true
+                    }
+                );
+                commandManager.execute(command);
+
+                // 自动展开目标节点 | Auto expand target node
+                setExpandedIds(prev => new Set([...prev, targetNode.entity.id]));
+
+                console.log(`[SceneHierarchy] Prefab instantiated: ${prefabData.metadata.name}`);
+            } catch (error) {
+                console.error('[SceneHierarchy] Failed to instantiate prefab:', error);
+            }
+            return;
+        }
 
         if (draggedEntityId === null || !dropTarget) {
             setDraggedEntityId(null);
@@ -442,6 +540,50 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         setDropTarget(null);
     }, []);
 
+    /**
+     * 处理容器级别的拖放（用于根级别预制体实例化）
+     * Handle container-level drop (for root-level prefab instantiation)
+     */
+    const handleContainerDragOver = useCallback((e: React.DragEvent) => {
+        // 只处理外部资产拖放 | Only handle external asset drops
+        const hasAssetPath = e.dataTransfer.types.includes('asset-path');
+        if (hasAssetPath) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        }
+    }, []);
+
+    const handleContainerDrop = useCallback(async (e: React.DragEvent) => {
+        const assetPath = e.dataTransfer.getData('asset-path');
+        if (!assetPath || !assetPath.toLowerCase().endsWith('.prefab')) {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        try {
+            // 读取预制体文件 | Read prefab file
+            const prefabJson = await TauriAPI.readFileContent(assetPath);
+            const prefabData = PrefabSerializer.deserialize(prefabJson);
+
+            // 在根级别实例化（无父实体）| Instantiate at root level (no parent)
+            const command = new InstantiatePrefabCommand(
+                entityStore,
+                messageHub,
+                prefabData,
+                {
+                    trackInstance: true
+                }
+            );
+            commandManager.execute(command);
+
+            console.log(`[SceneHierarchy] Prefab instantiated at root: ${prefabData.metadata.name}`);
+        } catch (error) {
+            console.error('[SceneHierarchy] Failed to instantiate prefab:', error);
+        }
+    }, [entityStore, messageHub, commandManager]);
+
     const handleRemoteEntityClick = (entity: RemoteEntity) => {
         setSelectedIds(new Set([entity.id]));
 
@@ -479,8 +621,17 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         const entity = entityStore.getEntity(selectedId);
         if (!entity) return;
 
+        // 计算子节点数量 | Count child entities
+        const hierarchy = entity.getComponent(HierarchyComponent);
+        const childCount = hierarchy?.childIds?.length || 0;
+
+        // 根据子节点数量显示不同提示 | Show different message based on child count
+        const message = childCount > 0
+            ? t('hierarchy.deleteConfirmWithChildren', { name: entity.name, count: childCount })
+            : t('hierarchy.deleteConfirm', { name: entity.name });
+
         const confirmed = await confirm(
-            t('hierarchy.deleteConfirm', { name: entity.name }),
+            message,
             {
                 title: t('hierarchy.deleteEntity'),
                 kind: 'warning'
@@ -496,6 +647,239 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
             commandManager.execute(command);
         }
     };
+
+    /**
+     * 开始重命名实体 | Start renaming entity
+     */
+    const handleStartRename = useCallback(() => {
+        if (!selectedId) return;
+        const entity = entityStore.getEntity(selectedId);
+        if (!entity) return;
+
+        setEditingEntityId(selectedId);
+        setEditingName(entity.name || '');
+    }, [selectedId, entityStore]);
+
+    /**
+     * 确认重命名 | Confirm rename
+     */
+    const handleConfirmRename = useCallback(() => {
+        if (!editingEntityId) return;
+
+        const entity = entityStore.getEntity(editingEntityId);
+        if (entity && editingName.trim()) {
+            entity.name = editingName.trim();
+            messageHub.publish('entity:renamed', { entityId: editingEntityId, name: entity.name });
+            messageHub.publish('scene:modified', {});
+        }
+
+        setEditingEntityId(null);
+        setEditingName('');
+    }, [editingEntityId, editingName, entityStore, messageHub]);
+
+    /**
+     * 取消重命名 | Cancel rename
+     */
+    const handleCancelRename = useCallback(() => {
+        setEditingEntityId(null);
+        setEditingName('');
+    }, []);
+
+    /**
+     * 复制实体 | Duplicate entity
+     */
+    const handleDuplicateEntity = useCallback(() => {
+        if (!selectedId) return;
+
+        const entity = entityStore.getEntity(selectedId);
+        if (!entity) return;
+
+        const scene = Core.scene;
+        if (!scene) return;
+
+        // 创建新实体 | Create new entity
+        const newEntity = scene.createEntity(`${entity.name} Copy`);
+
+        // 复制组件 | Copy components
+        for (const component of entity.components) {
+            const ComponentClass = component.constructor as ComponentType;
+            const newComponent = new ComponentClass();
+
+            // 复制组件属性 | Copy component properties
+            const keys = Object.keys(component);
+            for (const key of keys) {
+                if (key !== 'entity' && key !== 'id') {
+                    try {
+                        (newComponent as any)[key] = (component as any)[key];
+                    } catch { /* ignore read-only */ }
+                }
+            }
+
+            newEntity.addComponent(newComponent);
+        }
+
+        entityStore.addEntity(newEntity);
+        entityStore.selectEntity(newEntity);
+        messageHub.publish('entity:added', { entity: newEntity });
+        messageHub.publish('scene:modified', {});
+    }, [selectedId, entityStore, messageHub]);
+
+    /**
+     * 创建预制体 - 通过 MessageHub 发布请求事件
+     * Create prefab - publishes request event via MessageHub
+     */
+    const handleCreatePrefab = () => {
+        if (!selectedId) return;
+
+        const entity = entityStore.getEntity(selectedId);
+        if (!entity) return;
+
+        // 发布预制体创建请求事件，由 App 层处理实际创建
+        // Publish prefab creation request event, handled by App layer
+        messageHub.publish('prefab:requestCreate', {
+            entityId: entity.id,
+            entityName: entity.name,
+            suggestedName: entity.name
+        });
+    };
+
+    /**
+     * 检查实体是否为预制体实例
+     * Check if entity is a prefab instance
+     */
+    const isPrefabInstance = useCallback((entityId: number): boolean => {
+        const entity = entityStore.getEntity(entityId);
+        if (!entity) return false;
+        const prefabComp = entity.getComponent(PrefabInstanceComponent);
+        return !!prefabComp?.isRoot;
+    }, [entityStore]);
+
+    /**
+     * 获取预制体实例信息
+     * Get prefab instance info
+     */
+    const getPrefabInstanceInfo = useCallback((entityId: number) => {
+        const entity = entityStore.getEntity(entityId);
+        if (!entity) return null;
+        const prefabComp = entity.getComponent(PrefabInstanceComponent);
+        if (!prefabComp?.isRoot) return null;
+
+        const prefabPath = prefabComp.sourcePrefabPath;
+        const prefabName = prefabPath
+            ? prefabPath.split(/[/\\]/).pop()?.replace('.prefab', '') || 'Prefab'
+            : 'Unknown';
+
+        return {
+            name: prefabName,
+            path: prefabPath,
+            hasModifications: prefabComp.modifiedProperties.length > 0,
+            modificationCount: prefabComp.modifiedProperties.length
+        };
+    }, [entityStore]);
+
+    /**
+     * 打开预制体编辑模式
+     * Open prefab edit mode
+     */
+    const handleOpenPrefab = useCallback((entityId: number) => {
+        const info = getPrefabInstanceInfo(entityId);
+        if (!info?.path) return;
+
+        messageHub.publish('prefab:editMode:enter', {
+            prefabPath: info.path
+        });
+    }, [messageHub, getPrefabInstanceInfo]);
+
+    /**
+     * 在内容浏览器中选择预制体资产
+     * Select prefab asset in content browser
+     */
+    const handleSelectPrefabAsset = useCallback((entityId: number) => {
+        const info = getPrefabInstanceInfo(entityId);
+        if (!info?.path) return;
+
+        messageHub.publish('content-browser:select', {
+            path: info.path
+        });
+    }, [messageHub, getPrefabInstanceInfo]);
+
+    /**
+     * 应用预制体修改
+     * Apply prefab modifications
+     */
+    const handleApplyPrefab = useCallback(async (entityId: number) => {
+        const entity = entityStore.getEntity(entityId);
+        if (!entity) return;
+
+        const info = getPrefabInstanceInfo(entityId);
+        if (!info) return;
+
+        const confirmed = await confirm(
+            t('inspector.prefab.applyConfirm', { name: info.name }),
+            {
+                title: t('inspector.prefab.applyTitle', {}, 'Apply to Prefab'),
+                kind: 'info'
+            }
+        );
+
+        if (!confirmed) return;
+
+        const prefabService = Core.services.resolve(PrefabService);
+        if (prefabService) {
+            const command = new ApplyPrefabCommand(prefabService, messageHub, entity);
+            commandManager.execute(command);
+        }
+    }, [entityStore, messageHub, commandManager, t, getPrefabInstanceInfo]);
+
+    /**
+     * 还原预制体实例
+     * Revert prefab instance
+     */
+    const handleRevertPrefab = useCallback(async (entityId: number) => {
+        const entity = entityStore.getEntity(entityId);
+        if (!entity) return;
+
+        const confirmed = await confirm(
+            t('inspector.prefab.revertConfirm'),
+            {
+                title: t('inspector.prefab.revertTitle', {}, 'Revert to Prefab'),
+                kind: 'warning'
+            }
+        );
+
+        if (!confirmed) return;
+
+        const prefabService = Core.services.resolve(PrefabService);
+        if (prefabService) {
+            const command = new RevertPrefabCommand(prefabService, messageHub, entity);
+            commandManager.execute(command);
+        }
+    }, [entityStore, messageHub, commandManager, t]);
+
+    /**
+     * 断开预制体链接（解包）
+     * Break prefab link (unpack)
+     */
+    const handleUnpackPrefab = useCallback(async (entityId: number) => {
+        const entity = entityStore.getEntity(entityId);
+        if (!entity) return;
+
+        const confirmed = await confirm(
+            t('inspector.prefab.unpackConfirm'),
+            {
+                title: t('inspector.prefab.unpackTitle', {}, 'Unpack Prefab'),
+                kind: 'warning'
+            }
+        );
+
+        if (!confirmed) return;
+
+        const prefabService = Core.services.resolve(PrefabService);
+        if (prefabService) {
+            const command = new BreakPrefabLinkCommand(prefabService, messageHub, entity);
+            commandManager.execute(command);
+        }
+    }, [entityStore, messageHub, commandManager, t]);
 
     const handleContextMenu = (e: React.MouseEvent, entityId: number | null) => {
         e.preventDefault();
@@ -516,14 +900,71 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Delete' && selectedId && !isShowingRemote) {
+            // 忽略正在编辑时的按键 | Ignore keys while editing
+            if (editingEntityId) {
+                if (e.key === 'Escape') {
+                    handleCancelRename();
+                } else if (e.key === 'Enter') {
+                    handleConfirmRename();
+                }
+                return;
+            }
+
+            // 忽略输入框中的按键 | Ignore keys in input fields
+            if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') {
+                return;
+            }
+
+            if (isShowingRemote) return;
+
+            // Delete - 删除实体
+            if (e.key === 'Delete' && selectedId) {
+                e.preventDefault();
                 handleDeleteEntity();
+                return;
+            }
+
+            // F2 - 重命名实体
+            if (e.key === 'F2' && selectedId) {
+                e.preventDefault();
+                handleStartRename();
+                return;
+            }
+
+            // Ctrl+D - 复制实体
+            if ((e.ctrlKey || e.metaKey) && e.key === 'd' && selectedId) {
+                e.preventDefault();
+                handleDuplicateEntity();
+                return;
+            }
+
+            // 方向键导航 | Arrow key navigation
+            if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && flattenedEntities.length > 0) {
+                e.preventDefault();
+                const currentIndex = selectedId
+                    ? flattenedEntities.findIndex(n => n.entity.id === selectedId)
+                    : -1;
+
+                let newIndex: number;
+                if (e.key === 'ArrowUp') {
+                    newIndex = currentIndex <= 0 ? flattenedEntities.length - 1 : currentIndex - 1;
+                } else {
+                    newIndex = currentIndex >= flattenedEntities.length - 1 ? 0 : currentIndex + 1;
+                }
+
+                const newEntity = flattenedEntities[newIndex]?.entity;
+                if (newEntity) {
+                    setSelectedIds(new Set([newEntity.id]));
+                    entityStore.selectEntity(newEntity);
+                    messageHub.publish('entity:selected', { entity: newEntity });
+                }
+                return;
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedId, isShowingRemote]);
+    }, [selectedId, isShowingRemote, editingEntityId, flattenedEntities, entityStore, messageHub, handleStartRename, handleConfirmRename, handleCancelRename, handleDuplicateEntity]);
 
     const toggleExpand = useCallback((entityId: number) => {
         setExpandedIds(prev => {
@@ -570,18 +1011,45 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
 
     /**
      * 获取实体类型显示名称
+     * 使用 @ECSComponent 装饰器指定的名称，避免代码压缩导致名称丢失
+     * Uses @ECSComponent decorator name to avoid minification issues
      */
     const getEntityType = useCallback((entity: Entity): string => {
         if (isFolder(entity.tag)) {
             return 'Folder';
         }
 
+        // 检查是否为预制体实例 | Check if prefab instance
+        const prefabComp = entity.getComponent(PrefabInstanceComponent);
+        if (prefabComp?.isRoot) {
+            // 返回预制体名称 | Return prefab name
+            const prefabPath = prefabComp.sourcePrefabPath;
+            const prefabName = prefabPath
+                ? prefabPath.split(/[/\\]/).pop()?.replace('.prefab', '') || 'Prefab'
+                : 'Prefab';
+            return prefabName;
+        }
+
         const components = entity.components || [];
-        if (components.length > 0) {
-            const firstComponent = components[0];
-            return firstComponent?.constructor?.name || 'Entity';
+        // 过滤掉 PrefabInstanceComponent，获取实际的组件类型
+        // Filter out PrefabInstanceComponent to get actual component type
+        const realComponents = components.filter(c => !(c instanceof PrefabInstanceComponent));
+        if (realComponents.length > 0) {
+            const firstComponent = realComponents[0];
+            if (firstComponent) {
+                return getComponentInstanceTypeName(firstComponent);
+            }
         }
         return 'Entity';
+    }, []);
+
+    /**
+     * 检查实体是否为预制体实例（用于显示图标）
+     * Check if entity is prefab instance (for icon display)
+     */
+    const isEntityPrefabInstance = useCallback((entity: Entity): boolean => {
+        const prefabComp = entity.getComponent(PrefabInstanceComponent);
+        return !!prefabComp?.isRoot;
     }, []);
 
     /**
@@ -590,6 +1058,12 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
     const getEntityIcon = useCallback((entity: Entity): React.ReactNode => {
         if (isFolder(entity.tag)) {
             return <Folder size={14} className="entity-type-icon folder" />;
+        }
+
+        // 预制体实例使用预制体图标 | Prefab instances use prefab icon
+        const prefabComp = entity.getComponent(PrefabInstanceComponent);
+        if (prefabComp?.isRoot) {
+            return <PackageOpen size={14} className="entity-type-icon prefab-instance" />;
         }
 
         const entityType = getEntityType(entity);
@@ -631,13 +1105,25 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
     };
 
     const showRemoteIndicator = isShowingRemote && remoteEntities.length > 0;
-    const displaySceneName = isShowingRemote && remoteSceneName ? remoteSceneName : sceneName;
+    // 显示名称优先级：预制体编辑模式 > 远程场景 > 本地场景
+    // Display name priority: Prefab edit mode > Remote scene > Local scene
+    const displaySceneName = prefabEditMode?.isActive
+        ? prefabEditMode.prefabName
+        : (isShowingRemote && remoteSceneName ? remoteSceneName : sceneName);
 
     const totalCount = isShowingRemote ? remoteEntities.length : entityStore.getAllEntities().length;
     const selectedCount = selectedIds.size;
 
     return (
-        <div className="scene-hierarchy outliner">
+        <div className={`scene-hierarchy outliner ${prefabEditMode?.isActive ? 'prefab-edit-mode' : ''}`}>
+            {/* Prefab Edit Mode Header | 预制体编辑模式头部 */}
+            {prefabEditMode?.isActive && (
+                <div className="prefab-edit-header">
+                    <PackageOpen size={14} />
+                    <span>{t('hierarchy.editingPrefab') || 'Editing Prefab'}: {prefabEditMode.prefabName}</span>
+                </div>
+            )}
+
             {/* Toolbar */}
             <div className="outliner-toolbar">
                 <div className="outliner-toolbar-left">
@@ -742,7 +1228,12 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
             </div>
 
             {/* Entity List */}
-            <div className="outliner-content" onContextMenu={(e) => !isShowingRemote && handleContextMenu(e, null)}>
+            <div
+                className="outliner-content"
+                onContextMenu={(e) => !isShowingRemote && handleContextMenu(e, null)}
+                onDragOver={handleContainerDragOver}
+                onDrop={handleContainerDrop}
+            >
                 {isShowingRemote ? (
                     // Remote entities view (flat list)
                     remoteEntities.length === 0 ? (
@@ -786,9 +1277,9 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                         </div>
                     ) : (
                         <div className="outliner-list">
-                            {/* World/Scene Root */}
+                            {/* World/Scene Root or Prefab Root */}
                             <div
-                                className={`outliner-item world-item ${expandedIds.has(-1) ? 'expanded' : ''}`}
+                                className={`outliner-item world-item ${expandedIds.has(-1) ? 'expanded' : ''} ${prefabEditMode?.isActive ? 'prefab-root' : ''}`}
                                 onClick={() => toggleExpand(-1)}
                             >
                                 <div className="outliner-item-icons">
@@ -801,10 +1292,20 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                                     >
                                         {expandedIds.has(-1) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                                     </span>
-                                    <Mountain size={14} className="entity-type-icon world" />
-                                    <span className="outliner-item-name">{displaySceneName} (Editor)</span>
+                                    {prefabEditMode?.isActive ? (
+                                        <PackageOpen size={14} className="entity-type-icon prefab" />
+                                    ) : (
+                                        <Mountain size={14} className="entity-type-icon world" />
+                                    )}
+                                    <span className="outliner-item-name">
+                                        {prefabEditMode?.isActive
+                                            ? `${displaySceneName}`
+                                            : `${displaySceneName} (Editor)`}
+                                    </span>
                                 </div>
-                                <div className="outliner-item-type">World</div>
+                                <div className="outliner-item-type">
+                                    {prefabEditMode?.isActive ? 'Prefab' : 'World'}
+                                </div>
                             </div>
 
                             {/* Hierarchical Entity Items */}
@@ -814,6 +1315,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                                 const bIsSelected = selectedIds.has(entity.id);
                                 const bIsDragging = draggedEntityId === entity.id;
                                 const currentDropTarget = dropTarget?.entityId === entity.id ? dropTarget : null;
+                                const bIsPrefabInstance = isEntityPrefabInstance(entity);
 
                                 // 计算缩进 (每层 16px，加上基础 8px)
                                 const indent = 8 + depth * 16;
@@ -827,7 +1329,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                                 return (
                                     <div
                                         key={entity.id}
-                                        className={`outliner-item ${bIsSelected ? 'selected' : ''} ${bIsDragging ? 'dragging' : ''} ${dropIndicatorClass}`}
+                                        className={`outliner-item ${bIsSelected ? 'selected' : ''} ${bIsDragging ? 'dragging' : ''} ${dropIndicatorClass} ${bIsPrefabInstance ? 'prefab-instance' : ''}`}
                                         style={{ paddingLeft: `${indent}px` }}
                                         draggable
                                         onClick={(e) => handleEntityClick(entity, e)}
@@ -858,7 +1360,38 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                                                 <span className="outliner-item-expand" />
                                             )}
                                             {getEntityIcon(entity)}
-                                            <span className="outliner-item-name">{entity.name || `Entity ${entity.id}`}</span>
+                                            {editingEntityId === entity.id ? (
+                                                <input
+                                                    className="outliner-item-name-input"
+                                                    value={editingName}
+                                                    onChange={(e) => setEditingName(e.target.value)}
+                                                    onBlur={handleConfirmRename}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') handleConfirmRename();
+                                                        if (e.key === 'Escape') handleCancelRename();
+                                                        e.stopPropagation();
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <span
+                                                    className="outliner-item-name"
+                                                    onDoubleClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setEditingEntityId(entity.id);
+                                                        setEditingName(entity.name || '');
+                                                    }}
+                                                >
+                                                    {entity.name || `Entity ${entity.id}`}
+                                                </span>
+                                            )}
+                                            {/* 预制体实例徽章 | Prefab instance badge */}
+                                            {bIsPrefabInstance && (
+                                                <span className="prefab-badge" title={t('inspector.prefab.instance', {}, 'Prefab Instance')}>
+                                                    P
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="outliner-item-type">{getEntityType(entity)}</div>
                                     </div>
@@ -885,18 +1418,35 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                     t={t}
                     entityId={contextMenu.entityId}
                     pluginTemplates={pluginTemplates}
+                    isPrefabInstance={contextMenu.entityId ? isPrefabInstance(contextMenu.entityId) : false}
+                    prefabInstanceInfo={contextMenu.entityId ? getPrefabInstanceInfo(contextMenu.entityId) : null}
                     onCreateEmpty={() => { handleCreateEntity(); closeContextMenu(); }}
                     onCreateFolder={() => { handleCreateFolder(); closeContextMenu(); }}
                     onCreateFromTemplate={async (template) => {
                         await template.create(contextMenu.entityId ?? undefined);
                         closeContextMenu();
                     }}
+                    onCreatePrefab={() => { handleCreatePrefab(); closeContextMenu(); }}
+                    onOpenPrefab={() => { if (contextMenu.entityId) handleOpenPrefab(contextMenu.entityId); closeContextMenu(); }}
+                    onSelectPrefabAsset={() => { if (contextMenu.entityId) handleSelectPrefabAsset(contextMenu.entityId); closeContextMenu(); }}
+                    onApplyPrefab={() => { if (contextMenu.entityId) handleApplyPrefab(contextMenu.entityId); closeContextMenu(); }}
+                    onRevertPrefab={() => { if (contextMenu.entityId) handleRevertPrefab(contextMenu.entityId); closeContextMenu(); }}
+                    onUnpackPrefab={() => { if (contextMenu.entityId) handleUnpackPrefab(contextMenu.entityId); closeContextMenu(); }}
+                    onRename={() => { handleStartRename(); closeContextMenu(); }}
+                    onDuplicate={() => { handleDuplicateEntity(); closeContextMenu(); }}
                     onDelete={() => { handleDeleteEntity(); closeContextMenu(); }}
                     onClose={closeContextMenu}
                 />
             )}
         </div>
     );
+}
+
+interface PrefabInstanceMenuInfo {
+    name: string;
+    path: string;
+    hasModifications: boolean;
+    modificationCount: number;
 }
 
 interface ContextMenuWithSubmenuProps {
@@ -906,16 +1456,29 @@ interface ContextMenuWithSubmenuProps {
     t: (key: string, params?: Record<string, string | number>, fallback?: string) => string;
     entityId: number | null;
     pluginTemplates: EntityCreationTemplate[];
+    isPrefabInstance: boolean;
+    prefabInstanceInfo: PrefabInstanceMenuInfo | null;
     onCreateEmpty: () => void;
     onCreateFolder: () => void;
     onCreateFromTemplate: (template: EntityCreationTemplate) => void;
+    onCreatePrefab: () => void;
+    onOpenPrefab: () => void;
+    onSelectPrefabAsset: () => void;
+    onApplyPrefab: () => void;
+    onRevertPrefab: () => void;
+    onUnpackPrefab: () => void;
+    onRename: () => void;
+    onDuplicate: () => void;
     onDelete: () => void;
     onClose: () => void;
 }
 
 function ContextMenuWithSubmenu({
     x, y, locale, t, entityId, pluginTemplates,
-    onCreateEmpty, onCreateFolder, onCreateFromTemplate, onDelete
+    isPrefabInstance, prefabInstanceInfo,
+    onCreateEmpty, onCreateFolder, onCreateFromTemplate, onCreatePrefab,
+    onOpenPrefab, onSelectPrefabAsset, onApplyPrefab, onRevertPrefab, onUnpackPrefab,
+    onRename, onDuplicate, onDelete
 }: ContextMenuWithSubmenuProps) {
     const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
     const [submenuPosition, setSubmenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -1023,6 +1586,71 @@ function ContextMenuWithSubmenu({
 
             {entityId && (
                 <>
+                    <div className="context-menu-divider" />
+
+                    {/* Prefab Instance Actions | 预制体实例操作 */}
+                    {isPrefabInstance && prefabInstanceInfo && (
+                        <>
+                            <div className="context-menu-section-header">
+                                <PackageOpen size={10} />
+                                <span>{prefabInstanceInfo.name}</span>
+                            </div>
+                            <button onClick={onOpenPrefab}>
+                                <ExternalLink size={12} />
+                                <span>{t('inspector.prefab.open', {}, 'Open Prefab')}</span>
+                            </button>
+                            <button onClick={onSelectPrefabAsset}>
+                                <Folder size={12} />
+                                <span>{t('inspector.prefab.selectAsset', {}, 'Select Prefab Asset')}</span>
+                            </button>
+                            <button
+                                onClick={onApplyPrefab}
+                                disabled={!prefabInstanceInfo.hasModifications}
+                                className={prefabInstanceInfo.hasModifications ? 'context-menu-highlight' : ''}
+                            >
+                                <Upload size={12} />
+                                <span>
+                                    {t('inspector.prefab.applyTo', { name: prefabInstanceInfo.name }, `Apply to '${prefabInstanceInfo.name}'`)}
+                                    {prefabInstanceInfo.hasModifications && ` (${prefabInstanceInfo.modificationCount})`}
+                                </span>
+                            </button>
+                            <button
+                                onClick={onRevertPrefab}
+                                disabled={!prefabInstanceInfo.hasModifications}
+                            >
+                                <RotateCcw size={12} />
+                                <span>{t('inspector.prefab.revertTo', {}, 'Revert to Prefab')}</span>
+                            </button>
+                            <button onClick={onUnpackPrefab} className="context-menu-warning">
+                                <Unlink size={12} />
+                                <span>{t('inspector.prefab.unpack', {}, 'Unpack Prefab')}</span>
+                            </button>
+                            <div className="context-menu-divider" />
+                        </>
+                    )}
+
+                    {/* Create Prefab - only for non-prefab instances | 创建预制体 - 仅对非预制体实例 */}
+                    {!isPrefabInstance && (
+                        <button onClick={onCreatePrefab}>
+                            <PackageOpen size={12} />
+                            <span>{t('hierarchy.createPrefab', {}, 'Create Prefab')}</span>
+                        </button>
+                    )}
+
+                    <div className="context-menu-divider" />
+
+                    {/* 编辑操作 | Edit operations */}
+                    <button onClick={onRename}>
+                        <LucideIcons.Pencil size={12} />
+                        <span>{t('hierarchy.renameEntity')}</span>
+                        <span className="context-menu-shortcut">F2</span>
+                    </button>
+                    <button onClick={onDuplicate}>
+                        <LucideIcons.Copy size={12} />
+                        <span>{t('hierarchy.duplicateEntity')}</span>
+                        <span className="context-menu-shortcut">Ctrl+D</span>
+                    </button>
+
                     <div className="context-menu-divider" />
                     <button onClick={onDelete} className="context-menu-danger">
                         <Trash2 size={12} />

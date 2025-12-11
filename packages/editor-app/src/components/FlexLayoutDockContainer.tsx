@@ -3,13 +3,88 @@
  * FlexLayoutDockContainer - 基于 FlexLayout 的可停靠面板容器
  */
 
-import { useCallback, useRef, useEffect, useState, useMemo } from 'react';
+import { useCallback, useRef, useEffect, useState, useMemo, useImperativeHandle, forwardRef } from 'react';
 import { Layout, Model, TabNode, TabSetNode, IJsonModel, Actions, Action, DockLocation } from 'flexlayout-react';
 import 'flexlayout-react/style/light.css';
 import '../styles/FlexLayoutDock.css';
 import { LayoutMerger, LayoutBuilder, FlexDockPanel } from '../shared/layout';
 
 export type { FlexDockPanel };
+
+/** LocalStorage key for persisting layout | 持久化布局的 localStorage 键 */
+const LAYOUT_STORAGE_KEY = 'esengine-editor-layout';
+
+/** Layout version for migration | 布局版本用于迁移 */
+const LAYOUT_VERSION = 1;
+
+/** Saved layout data structure | 保存的布局数据结构 */
+interface SavedLayoutData {
+    version: number;
+    layout: IJsonModel;
+    timestamp: number;
+}
+
+/**
+ * Save layout to localStorage.
+ * 保存布局到 localStorage。
+ */
+function saveLayoutToStorage(layout: IJsonModel): void {
+    try {
+        const data: SavedLayoutData = {
+            version: LAYOUT_VERSION,
+            layout,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(data));
+    } catch (error) {
+        console.warn('Failed to save layout to localStorage:', error);
+    }
+}
+
+/**
+ * Load layout from localStorage.
+ * 从 localStorage 加载布局。
+ */
+function loadLayoutFromStorage(): IJsonModel | null {
+    try {
+        const saved = localStorage.getItem(LAYOUT_STORAGE_KEY);
+        if (!saved) return null;
+
+        const data: SavedLayoutData = JSON.parse(saved);
+
+        // Version check for future migrations
+        if (data.version !== LAYOUT_VERSION) {
+            console.info('Layout version mismatch, using default layout');
+            return null;
+        }
+
+        return data.layout;
+    } catch (error) {
+        console.warn('Failed to load layout from localStorage:', error);
+        return null;
+    }
+}
+
+/**
+ * Clear saved layout from localStorage.
+ * 从 localStorage 清除保存的布局。
+ */
+function clearLayoutStorage(): void {
+    try {
+        localStorage.removeItem(LAYOUT_STORAGE_KEY);
+    } catch (error) {
+        console.warn('Failed to clear layout from localStorage:', error);
+    }
+}
+
+/**
+ * Public handle for FlexLayoutDockContainer.
+ * FlexLayoutDockContainer 的公开句柄。
+ */
+export interface FlexLayoutDockContainerHandle {
+    /** Reset layout to default | 重置布局到默认状态 */
+    resetLayout: () => void;
+}
 
 /**
  * Panel IDs that should persist in DOM when switching tabs.
@@ -94,11 +169,14 @@ interface FlexLayoutDockContainerProps {
     messageHub?: { subscribe: (event: string, callback: (data: any) => void) => () => void } | null;
 }
 
-export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId, messageHub }: FlexLayoutDockContainerProps) {
+export const FlexLayoutDockContainer = forwardRef<FlexLayoutDockContainerHandle, FlexLayoutDockContainerProps>(
+    function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId, messageHub }, ref) {
     const layoutRef = useRef<Layout>(null);
     const previousLayoutJsonRef = useRef<string | null>(null);
     const previousPanelIdsRef = useRef<string>('');
     const previousPanelTitlesRef = useRef<Map<string, string>>(new Map());
+    /** Skip saving on next model change (used when resetting layout) | 下次模型变化时跳过保存（重置布局时使用） */
+    const skipNextSaveRef = useRef(false);
 
     // Persistent panel state | 持久化面板状态
     const [persistentPanelRects, setPersistentPanelRects] = useState<Map<string, DOMRect>>(new Map());
@@ -116,13 +194,51 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId, m
         return LayoutBuilder.createDefaultLayout(panels, activePanelId);
     }, [panels, activePanelId]);
 
+    /**
+     * Try to load saved layout and merge with current panels.
+     * 尝试加载保存的布局并与当前面板合并。
+     */
+    const loadSavedLayoutOrDefault = useCallback((): IJsonModel => {
+        const savedLayout = loadLayoutFromStorage();
+        if (savedLayout) {
+            try {
+                // Merge saved layout with current panels (handle new/removed panels)
+                const defaultLayout = createDefaultLayout();
+                const mergedLayout = LayoutMerger.merge(savedLayout, defaultLayout, panels);
+                return mergedLayout;
+            } catch (error) {
+                console.warn('Failed to merge saved layout, using default:', error);
+            }
+        }
+        return createDefaultLayout();
+    }, [createDefaultLayout, panels]);
+
     const [model, setModel] = useState<Model>(() => {
         try {
-            return Model.fromJson(createDefaultLayout());
+            return Model.fromJson(loadSavedLayoutOrDefault());
         } catch (error) {
-            throw new Error(`Failed to create layout model: ${error instanceof Error ? error.message : String(error)}`);
+            console.warn('Failed to load saved layout, using default:', error);
+            return Model.fromJson(createDefaultLayout());
         }
     });
+
+    /**
+     * Reset layout to default and clear saved layout.
+     * 重置布局到默认状态并清除保存的布局。
+     */
+    const resetLayout = useCallback(() => {
+        clearLayoutStorage();
+        skipNextSaveRef.current = true;
+        previousLayoutJsonRef.current = null;
+        previousPanelIdsRef.current = '';
+        const defaultLayout = createDefaultLayout();
+        setModel(Model.fromJson(defaultLayout));
+    }, [createDefaultLayout]);
+
+    // Expose resetLayout method via ref | 通过 ref 暴露 resetLayout 方法
+    useImperativeHandle(ref, () => ({
+        resetLayout
+    }), [resetLayout]);
 
     useEffect(() => {
         try {
@@ -168,26 +284,34 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId, m
             previousPanelIdsRef.current = currentPanelIds;
 
             // 如果已经有布局且只是添加新面板，使用Action动态添加
-            if (model && newPanelIds.length > 0 && removedPanelIds.length === 0 && previousIds) {
+            // 检查新面板是否需要独立 tabset（如 bottom 位置的面板）
+            // Check if new panels require separate tabset (e.g., bottom position panels)
+            const newPanelsWithConfig = panels.filter((p) => newPanelIds.includes(p.id));
+            const hasSpecialLayoutPanels = newPanelsWithConfig.some((p) =>
+                p.layout?.requiresSeparateTabset || p.layout?.position === 'bottom'
+            );
+            if (model && newPanelIds.length > 0 && removedPanelIds.length === 0 && previousIds && !hasSpecialLayoutPanels) {
                 // 找到要添加的面板
                 const newPanels = panels.filter((p) => newPanelIds.includes(p.id));
 
-                // 找到中心区域的tabset ID
+                // 构建面板位置映射 | Build panel position map
+                const panelPositionMap = new Map(panels.map((p) => [p.id, p.layout?.position || 'center']));
+
+                // 找到中心区域的tabset ID | Find center tabset ID
                 let centerTabsetId: string | null = null;
 
                 model.visitNodes((node: any) => {
                     if (node.getType() === 'tabset') {
                         const tabset = node as any;
-                        // 检查是否是中心tabset
+                        // 检查是否是中心tabset（包含 center 位置的面板）
+                        // Check if this is center tabset (contains center position panels)
                         const children = tabset.getChildren();
-                        const hasNonSidePanel = children.some((child: any) => {
+                        const hasCenterPanel = children.some((child: any) => {
                             const id = child.getId();
-                            return !id.includes('hierarchy') &&
-                                   !id.includes('asset') &&
-                                   !id.includes('inspector') &&
-                                   !id.includes('console');
+                            const position = panelPositionMap.get(id);
+                            return position === 'center' || position === undefined;
                         });
-                        if (hasNonSidePanel && !centerTabsetId) {
+                        if (hasCenterPanel && !centerTabsetId) {
                             centerTabsetId = tabset.getId();
                         }
                     }
@@ -229,7 +353,9 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId, m
             const defaultLayout = createDefaultLayout();
 
             // 如果有保存的布局，尝试合并
-            if (previousLayoutJsonRef.current && previousIds) {
+            // 注意：如果新面板需要特殊布局（独立 tabset），直接使用默认布局
+            // Note: If new panels need special layout (separate tabset), use default layout directly
+            if (previousLayoutJsonRef.current && previousIds && !hasSpecialLayoutPanels) {
                 try {
                     const savedLayout = JSON.parse(previousLayoutJsonRef.current);
                     const mergedLayout = LayoutMerger.merge(savedLayout, defaultLayout, panels);
@@ -340,6 +466,13 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId, m
         const layoutJson = newModel.toJson();
         previousLayoutJsonRef.current = JSON.stringify(layoutJson);
 
+        // Save to localStorage (unless skipped) | 保存到 localStorage（除非跳过）
+        if (skipNextSaveRef.current) {
+            skipNextSaveRef.current = false;
+        } else {
+            saveLayoutToStorage(layoutJson);
+        }
+
         // Check if any tabset is maximized
         let hasMaximized = false;
         newModel.visitNodes((node) => {
@@ -390,7 +523,7 @@ export function FlexLayoutDockContainer({ panels, onPanelClose, activePanelId, m
             ))}
         </div>
     );
-}
+});
 
 /**
  * Container for persistent panel content.

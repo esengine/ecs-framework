@@ -25,8 +25,11 @@ export type MaterialOverrides = Record<string, MaterialPropertyOverride>;
 /**
  * 精灵组件 - 管理2D图像渲染
  * Sprite component - manages 2D image rendering
+ *
+ * 需要 TransformComponent 才能被 EngineRenderSystem 处理
+ * Requires TransformComponent to be processed by EngineRenderSystem
  */
-@ECSComponent('Sprite')
+@ECSComponent('Sprite', { requires: ['Transform'] })
 @Serializable({ version: 4, typeId: 'Sprite' })
 export class SpriteComponent extends Component {
     /**

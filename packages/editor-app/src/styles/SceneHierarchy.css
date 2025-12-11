@@ -328,6 +328,25 @@
     color: #fff;
 }
 
+/* 内联重命名输入框 | Inline rename input */
+.outliner-item-name-input {
+    flex: 1;
+    min-width: 60px;
+    padding: 1px 4px;
+    margin: -2px 0;
+    background: #1a1a1a;
+    border: 1px solid #3b82f6;
+    border-radius: 2px;
+    color: #fff;
+    font-size: inherit;
+    font-family: inherit;
+    outline: none;
+}
+
+.outliner-item-name-input:focus {
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
 .outliner-item-type {
     width: 140px;
     color: #888;
@@ -340,6 +359,7 @@
 /* Entity Type Icons */
 .entity-type-icon {
     flex-shrink: 0;
+    margin-right: 4px;
 }
 
 .entity-type-icon.world {
@@ -545,4 +565,132 @@
 
 .context-menu-danger:hover {
     background: rgba(248, 113, 113, 0.15) !important;
+}
+
+/* 快捷键提示 | Shortcut hints */
+.context-menu-shortcut {
+    margin-left: auto;
+    font-size: 10px;
+    color: #666;
+    font-family: var(--font-family-mono, 'Consolas', monospace);
+}
+
+/* Prefab Instance Context Menu Styles | 预制体实例右键菜单样式 */
+.context-menu-section-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #60a5fa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #3b82f6;
+    margin-bottom: 4px;
+}
+
+.context-menu-section-header svg {
+    opacity: 0.8;
+}
+
+.context-menu-highlight {
+    color: #60a5fa !important;
+    font-weight: 500;
+}
+
+.context-menu-highlight:hover {
+    background: rgba(59, 130, 246, 0.2) !important;
+}
+
+.context-menu-warning {
+    color: #fbbf24 !important;
+}
+
+.context-menu-warning:hover {
+    background: rgba(251, 191, 36, 0.15) !important;
+}
+
+.context-menu button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.context-menu button:disabled:hover {
+    background: transparent;
+}
+
+/* ==================== Prefab Edit Mode | 预制体编辑模式 ==================== */
+.scene-hierarchy.prefab-edit-mode {
+    border-left: 3px solid #3b82f6;
+}
+
+.prefab-edit-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
+    border-bottom: 1px solid #3b82f6;
+    color: #93c5fd;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.prefab-edit-header svg {
+    color: #60a5fa;
+}
+
+.outliner-item.prefab-root {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.outliner-item.prefab-root:hover {
+    background: rgba(59, 130, 246, 0.15);
+}
+
+.entity-type-icon.prefab {
+    color: #60a5fa;
+}
+
+/* ==================== Prefab Instance Indicator | 预制体实例指示器 ==================== */
+.outliner-item.prefab-instance {
+    background: rgba(59, 130, 246, 0.05);
+    border-left: 2px solid #3b82f6;
+}
+
+.outliner-item.prefab-instance:hover {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.outliner-item.prefab-instance.selected {
+    background: rgba(59, 130, 246, 0.2);
+}
+
+.entity-type-icon.prefab-instance {
+    color: #60a5fa;
+}
+
+.prefab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin-left: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.outliner-item.prefab-instance .outliner-item-name {
+    color: #93c5fd;
+}
+
+.outliner-item.prefab-instance .outliner-item-type {
+    color: #60a5fa;
+    font-style: italic;
 }

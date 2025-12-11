@@ -397,3 +397,83 @@
     transition: none;
   }
 }
+
+/* ==================== Prefab Edit Mode Toolbar | 预制体编辑模式工具栏 ==================== */
+.viewport.prefab-edit-mode {
+  border: 2px solid #3b82f6;
+  border-radius: 4px;
+}
+
+.viewport-prefab-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+  border: 1px solid #3b82f6;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+
+.viewport-prefab-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e0f2fe;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.viewport-prefab-toolbar-left svg {
+  color: #38bdf8;
+}
+
+.viewport-prefab-toolbar-left .prefab-name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewport-prefab-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viewport-prefab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.viewport-prefab-btn.save {
+  background: #22c55e;
+  color: #ffffff;
+}
+
+.viewport-prefab-btn.save:hover {
+  background: #16a34a;
+}
+
+.viewport-prefab-btn.exit {
+  background: #475569;
+  color: #e2e8f0;
+}
+
+.viewport-prefab-btn.exit:hover {
+  background: #64748b;
+}

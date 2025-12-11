@@ -30,6 +30,38 @@ export const COMPONENT_TYPE_NAME = Symbol('ComponentTypeName');
 export const COMPONENT_DEPENDENCIES = Symbol('ComponentDependencies');
 
 /**
+ * 存储组件编辑器选项的 Symbol 键
+ * Symbol key for storing component editor options
+ */
+export const COMPONENT_EDITOR_OPTIONS = Symbol('ComponentEditorOptions');
+
+/**
+ * 组件编辑器选项
+ * Component editor options
+ */
+export interface ComponentEditorOptions {
+    /**
+     * 是否在 Inspector 中隐藏此组件
+     * Whether to hide this component in Inspector
+     *
+     * @default false
+     */
+    hideInInspector?: boolean;
+
+    /**
+     * 组件分类（用于 Inspector 中的分组显示）
+     * Component category (for grouping in Inspector)
+     */
+    category?: string;
+
+    /**
+     * 组件图标（用于 Inspector 中的显示）
+     * Component icon (for display in Inspector)
+     */
+    icon?: string;
+}
+
+/**
  * 检查组件是否使用了 @ECSComponent 装饰器
  * Check if component has @ECSComponent decorator
  *
@@ -80,4 +112,49 @@ export function getComponentInstanceTypeName(component: Component): string {
  */
 export function getComponentDependencies(componentType: ComponentType): string[] | undefined {
     return (componentType as any)[COMPONENT_DEPENDENCIES];
+}
+
+/**
+ * 获取组件的编辑器选项
+ * Get component editor options
+ *
+ * @param componentType 组件构造函数
+ * @returns 编辑器选项
+ */
+export function getComponentEditorOptions(componentType: ComponentType): ComponentEditorOptions | undefined {
+    return (componentType as any)[COMPONENT_EDITOR_OPTIONS];
+}
+
+/**
+ * 从组件实例获取编辑器选项
+ * Get editor options from component instance
+ *
+ * @param component 组件实例
+ * @returns 编辑器选项
+ */
+export function getComponentInstanceEditorOptions(component: Component): ComponentEditorOptions | undefined {
+    return getComponentEditorOptions(component.constructor as ComponentType);
+}
+
+/**
+ * 检查组件是否应该在 Inspector 中隐藏
+ * Check if component should be hidden in Inspector
+ *
+ * @param componentType 组件构造函数
+ * @returns 是否隐藏
+ */
+export function isComponentHiddenInInspector(componentType: ComponentType): boolean {
+    const options = getComponentEditorOptions(componentType);
+    return options?.hideInInspector ?? false;
+}
+
+/**
+ * 从组件实例检查是否应该在 Inspector 中隐藏
+ * Check if component instance should be hidden in Inspector
+ *
+ * @param component 组件实例
+ * @returns 是否隐藏
+ */
+export function isComponentInstanceHiddenInInspector(component: Component): boolean {
+    return isComponentHiddenInInspector(component.constructor as ComponentType);
 }

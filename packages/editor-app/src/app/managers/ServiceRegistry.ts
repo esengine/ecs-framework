@@ -1,4 +1,5 @@
-import { Core, ComponentRegistry as CoreComponentRegistry } from '@esengine/ecs-framework';
+import { Core, ComponentRegistry as CoreComponentRegistry, PrefabSerializer, ComponentRegistry as ECSComponentRegistry } from '@esengine/ecs-framework';
+import type { ComponentType } from '@esengine/ecs-framework';
 import { invoke } from '@tauri-apps/api/core';
 import {
     UIRegistry,
@@ -175,6 +176,17 @@ export class ServiceRegistry {
         Core.services.registerInstance(SceneManagerService, sceneManager);
         Core.services.registerInstance(FileActionRegistry, fileActionRegistry);
         Core.services.registerInstance(IFileActionRegistry, fileActionRegistry);  // Symbol 注册用于跨包插件访问
+
+        // 注册预制体文件处理器 | Register prefab file handler
+        fileActionRegistry.registerActionHandler({
+            extensions: ['prefab'],
+            onDoubleClick: (filePath: string) => {
+                // 发布事件，由编辑器面板处理预制体选择/预览
+                // Publish event for editor panels to handle prefab selection/preview
+                messageHub.publish('prefab:selected', { path: filePath });
+            }
+        });
+
         Core.services.registerInstance(EntityCreationRegistry, entityCreationRegistry);
         Core.services.registerInstance(ComponentActionRegistry, componentActionRegistry);
         Core.services.registerInstance(ComponentInspectorRegistry, componentInspectorRegistry);
