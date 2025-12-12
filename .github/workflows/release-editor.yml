@@ -102,15 +102,42 @@ jobs:
           tagName: ${{ github.event_name == 'workflow_dispatch' && format('editor-v{0}', github.event.inputs.version) || github.ref_name }}
           releaseName: 'ECS Editor v${{ github.event.inputs.version || github.ref_name }}'
           releaseBody: 'See the assets to download this version and install.'
-          releaseDraft: false
+          releaseDraft: true  # 改为草稿，等待 SignPath 签名
           prerelease: false
           includeUpdaterJson: true
           updaterJsonKeepUniversal: false
           args: ${{ matrix.platform == 'macos-latest' && format('--target {0}', matrix.target) || '' }}
 
+  # SignPath 代码签名（Windows）
+  sign-windows:
+    needs: build-tauri
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Submit to SignPath for code signing
+        uses: signpath/github-action-submit-signing-request@v0.4
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: 'esengine-editor'
+          project-slug: 'ecs-framework'
+          signing-policy-slug: 'release-signing'
+          github-artifact-id: '*.exe'
+          wait-for-completion: true
+          output-artifact-directory: './signed'
+
+      - name: Publish signed release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./signed/*
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('editor-v{0}', github.event.inputs.version) || github.ref_name }}
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   # 构建成功后，创建 PR 更新版本号
   update-version-pr:
-    needs: build-tauri
+    needs: sign-windows
     if: github.event_name == 'workflow_dispatch' && success()
     runs-on: ubuntu-latest
 
