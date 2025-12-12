@@ -1,4 +1,5 @@
 import { EntitySystem, Matcher, Entity, Time, ECSSystem } from '@esengine/ecs-framework';
+import { sortingLayerManager } from '@esengine/engine-core';
 import { UITransformComponent } from '../components/UITransformComponent';
 import { UIInteractableComponent } from '../components/UIInteractableComponent';
 import { UIButtonComponent } from '../components/widgets/UIButtonComponent';
@@ -210,11 +211,14 @@ export class UIInputSystem extends EntitySystem {
 
         const dt = Time.deltaTime;
 
-        // 按 zIndex 从高到低排序，确保上层元素优先处理
+        // 按 sortKey 从高到低排序，确保上层元素优先处理
+        // Sort by sortKey from high to low, ensuring top elements are processed first
         const sorted = [...entities].sort((a, b) => {
             const ta = a.getComponent(UITransformComponent)!;
             const tb = b.getComponent(UITransformComponent)!;
-            return tb.zIndex - ta.zIndex;
+            const sortKeyA = sortingLayerManager.getSortKey(ta.sortingLayer, ta.orderInLayer);
+            const sortKeyB = sortingLayerManager.getSortKey(tb.sortingLayer, tb.orderInLayer);
+            return sortKeyB - sortKeyA;
         });
 
         let consumed = false;

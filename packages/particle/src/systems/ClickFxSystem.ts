@@ -253,6 +253,7 @@ export class ClickFxSystem extends EntitySystem {
             return;
         }
 
+
         // 创建特效实体 | Create effect entity
         const effectEntity = this.scene.createEntity(`ClickFx_${Date.now()}`);
 
@@ -264,6 +265,10 @@ export class ClickFxSystem extends EntitySystem {
         const particleSystem = effectEntity.addComponent(new ParticleSystemComponent());
         particleSystem.particleAssetGuid = particleGuid;
         particleSystem.autoPlay = true;
+        // 点击特效默认使用 Overlay 层，渲染在 UI 之上
+        // Click effects use Overlay layer by default, rendering above UI
+        particleSystem.sortingLayer = 'Overlay';
+        particleSystem.orderInLayer = 0;
 
         // 记录活跃特效 | Record active effect
         clickFx.addActiveEffect(effectEntity.id);

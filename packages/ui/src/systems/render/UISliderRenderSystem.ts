@@ -55,7 +55,9 @@ export class UISliderRenderSystem extends EntitySystem {
             const width = (transform.computedWidth ?? transform.width) * scaleX;
             const height = (transform.computedHeight ?? transform.height) * scaleY;
             const alpha = transform.worldAlpha ?? transform.alpha;
-            const baseOrder = 100 + transform.zIndex;
+            // 使用排序层和层内顺序 | Use sorting layer and order in layer
+            const sortingLayer = transform.sortingLayer;
+            const orderInLayer = transform.orderInLayer;
             // 使用 transform 的 pivot 计算中心位置
             const pivotX = transform.pivotX;
             const pivotY = transform.pivotY;
@@ -85,7 +87,8 @@ export class UISliderRenderSystem extends EntitySystem {
                         trackLength, trackThickness,
                         slider.trackColor,
                         slider.trackAlpha * alpha,
-                        baseOrder,
+                        sortingLayer,
+                        orderInLayer,
                         { rotation, pivotX: 0.5, pivotY: 0.5 }
                     );
                 } else {
@@ -94,7 +97,8 @@ export class UISliderRenderSystem extends EntitySystem {
                         trackThickness, trackLength,
                         slider.trackColor,
                         slider.trackAlpha * alpha,
-                        baseOrder,
+                        sortingLayer,
+                        orderInLayer,
                         { rotation, pivotX: 0.5, pivotY: 0.5 }
                     );
                 }
@@ -113,7 +117,8 @@ export class UISliderRenderSystem extends EntitySystem {
                         fillLength, trackThickness,
                         slider.fillColor,
                         slider.fillAlpha * alpha,
-                        baseOrder + 0.1,
+                        sortingLayer,
+                        orderInLayer + 1,
                         { rotation, pivotX: 0.5, pivotY: 0.5 }
                     );
                 } else {
@@ -124,7 +129,8 @@ export class UISliderRenderSystem extends EntitySystem {
                         trackThickness, fillLength,
                         slider.fillColor,
                         slider.fillAlpha * alpha,
-                        baseOrder + 0.1,
+                        sortingLayer,
+                        orderInLayer + 1,
                         { rotation, pivotX: 0.5, pivotY: 0.5 }
                     );
                 }
@@ -136,7 +142,7 @@ export class UISliderRenderSystem extends EntitySystem {
                 this.renderTicks(
                     collector, centerX, centerY,
                     trackLength, trackThickness,
-                    slider, alpha, baseOrder + 0.05,
+                    slider, alpha, sortingLayer, orderInLayer,
                     isHorizontal, rotation
                 );
             }
@@ -159,7 +165,8 @@ export class UISliderRenderSystem extends EntitySystem {
                     slider.handleWidth, slider.handleHeight,
                     0x000000,
                     0.3 * alpha,
-                    baseOrder + 0.15,
+                    sortingLayer,
+                    orderInLayer + 2,
                     { rotation, pivotX: 0.5, pivotY: 0.5 }
                 );
             }
@@ -171,7 +178,8 @@ export class UISliderRenderSystem extends EntitySystem {
                 slider.handleWidth, slider.handleHeight,
                 handleColor,
                 alpha,
-                baseOrder + 0.2,
+                sortingLayer,
+                orderInLayer + 3,
                 { rotation, pivotX: 0.5, pivotY: 0.5 }
             );
 
@@ -185,7 +193,8 @@ export class UISliderRenderSystem extends EntitySystem {
                     slider.handleBorderWidth,
                     slider.handleBorderColor,
                     alpha,
-                    baseOrder + 0.25,
+                    sortingLayer,
+                    orderInLayer + 4,
                     rotation
                 );
             }
@@ -202,7 +211,8 @@ export class UISliderRenderSystem extends EntitySystem {
         trackLength: number, trackThickness: number,
         slider: UISliderComponent,
         alpha: number,
-        sortOrder: number,
+        sortingLayer: string,
+        orderInLayer: number,
         isHorizontal: boolean,
         rotation: number
     ): void {
@@ -234,7 +244,8 @@ export class UISliderRenderSystem extends EntitySystem {
                 tickWidth, tickHeight,
                 slider.tickColor,
                 alpha,
-                sortOrder,
+                sortingLayer,
+                orderInLayer,
                 { rotation, pivotX: 0.5, pivotY: 0.5 }
             );
         }
@@ -251,7 +262,8 @@ export class UISliderRenderSystem extends EntitySystem {
         borderWidth: number,
         borderColor: number,
         alpha: number,
-        sortOrder: number,
+        sortingLayer: string,
+        orderInLayer: number,
         rotation: number
     ): void {
         const halfW = width / 2;
@@ -262,7 +274,7 @@ export class UISliderRenderSystem extends EntitySystem {
         collector.addRect(
             x, y - halfH + halfB,
             width, borderWidth,
-            borderColor, alpha, sortOrder,
+            borderColor, alpha, sortingLayer, orderInLayer,
             { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
@@ -270,7 +282,7 @@ export class UISliderRenderSystem extends EntitySystem {
         collector.addRect(
             x, y + halfH - halfB,
             width, borderWidth,
-            borderColor, alpha, sortOrder,
+            borderColor, alpha, sortingLayer, orderInLayer,
             { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
@@ -278,7 +290,7 @@ export class UISliderRenderSystem extends EntitySystem {
         collector.addRect(
             x - halfW + halfB, y,
             borderWidth, height - borderWidth * 2,
-            borderColor, alpha, sortOrder,
+            borderColor, alpha, sortingLayer, orderInLayer,
             { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
@@ -286,7 +298,7 @@ export class UISliderRenderSystem extends EntitySystem {
         collector.addRect(
             x + halfW - halfB, y,
             borderWidth, height - borderWidth * 2,
-            borderColor, alpha, sortOrder,
+            borderColor, alpha, sortingLayer, orderInLayer,
             { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
     }

@@ -58,7 +58,9 @@ export class UIButtonRenderSystem extends EntitySystem {
             const width = (transform.computedWidth ?? transform.width) * scaleX;
             const height = (transform.computedHeight ?? transform.height) * scaleY;
             const alpha = transform.worldAlpha ?? transform.alpha;
-            const baseOrder = 100 + transform.zIndex;
+            // 使用排序层和层内顺序 | Use sorting layer and order in layer
+            const sortingLayer = transform.sortingLayer;
+            const orderInLayer = transform.orderInLayer;
             // 使用 transform 的 pivot 作为旋转/缩放中心
             const pivotX = transform.pivotX;
             const pivotY = transform.pivotY;
@@ -76,7 +78,8 @@ export class UIButtonRenderSystem extends EntitySystem {
                         width, height,
                         0xFFFFFF,  // White tint for texture
                         alpha,
-                        baseOrder,
+                        sortingLayer,
+                        orderInLayer,
                         {
                             rotation,
                             pivotX,
@@ -97,7 +100,8 @@ export class UIButtonRenderSystem extends EntitySystem {
                         width, height,
                         button.currentColor,
                         bgAlpha * alpha,
-                        baseOrder + (button.useTexture() ? 0.05 : 0),
+                        sortingLayer,
+                        orderInLayer + (button.useTexture() ? 1 : 0),
                         {
                             rotation,
                             pivotX,
@@ -116,7 +120,8 @@ export class UIButtonRenderSystem extends EntitySystem {
                     render.borderWidth,
                     render.borderColor,
                     render.borderAlpha * alpha,
-                    baseOrder + 0.1,
+                    sortingLayer,
+                    orderInLayer + 2,
                     rotation,
                     pivotX,
                     pivotY
@@ -136,7 +141,8 @@ export class UIButtonRenderSystem extends EntitySystem {
         borderWidth: number,
         borderColor: number,
         alpha: number,
-        sortOrder: number,
+        sortingLayer: string,
+        orderInLayer: number,
         rotation: number,
         pivotX: number,
         pivotY: number
@@ -151,7 +157,7 @@ export class UIButtonRenderSystem extends EntitySystem {
         collector.addRect(
             (left + right) / 2, top - borderWidth / 2,
             width, borderWidth,
-            borderColor, alpha, sortOrder,
+            borderColor, alpha, sortingLayer, orderInLayer,
             { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
@@ -159,7 +165,7 @@ export class UIButtonRenderSystem extends EntitySystem {
         collector.addRect(
             (left + right) / 2, bottom + borderWidth / 2,
             width, borderWidth,
-            borderColor, alpha, sortOrder,
+            borderColor, alpha, sortingLayer, orderInLayer,
             { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
@@ -168,7 +174,7 @@ export class UIButtonRenderSystem extends EntitySystem {
         collector.addRect(
             left + borderWidth / 2, (top + bottom) / 2,
             borderWidth, sideBorderHeight,
-            borderColor, alpha, sortOrder,
+            borderColor, alpha, sortingLayer, orderInLayer,
             { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
@@ -176,7 +182,7 @@ export class UIButtonRenderSystem extends EntitySystem {
         collector.addRect(
             right - borderWidth / 2, (top + bottom) / 2,
             borderWidth, sideBorderHeight,
-            borderColor, alpha, sortOrder,
+            borderColor, alpha, sortingLayer, orderInLayer,
             { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
     }

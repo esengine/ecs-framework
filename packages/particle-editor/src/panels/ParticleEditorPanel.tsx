@@ -1248,11 +1248,23 @@ function BasicProperties({ data, onChange, onBrowseTexture, resolveGuidToName }:
                 min={1}
                 onChange={v => onChange('particleSize', v)}
             />
+            <PropertySelect
+                label="Sorting Layer"
+                value={data.sortingLayer || 'Default'}
+                options={[
+                    { value: 'Background', label: 'Background' },
+                    { value: 'Default', label: 'Default' },
+                    { value: 'Foreground', label: 'Foreground' },
+                    { value: 'UI', label: 'UI' },
+                    { value: 'Overlay', label: 'Overlay' },
+                ]}
+                onChange={v => onChange('sortingLayer', v)}
+            />
             <PropertyInput
-                label="Sort Order"
+                label="Order in Layer"
                 type="number"
-                value={data.sortingOrder}
-                onChange={v => onChange('sortingOrder', v)}
+                value={data.orderInLayer ?? 0}
+                onChange={v => onChange('orderInLayer', v)}
             />
         </div>
     );

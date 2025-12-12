@@ -68,7 +68,9 @@ export class UIRectRenderSystem extends EntitySystem {
             const alpha = transform.worldAlpha ?? transform.alpha;
             // 使用世界旋转（考虑父级旋转）
             const rotation = transform.worldRotation ?? transform.rotation;
-            const baseOrder = 100 + transform.zIndex;
+            // 使用排序层和层内顺序 | Use sorting layer and order in layer
+            const sortingLayer = transform.sortingLayer;
+            const orderInLayer = transform.orderInLayer;
             // 使用 transform 的 pivot 作为旋转/缩放中心
             const pivotX = transform.pivotX;
             const pivotY = transform.pivotY;
@@ -89,7 +91,8 @@ export class UIRectRenderSystem extends EntitySystem {
                     height + render.shadowBlur * 2,
                     render.shadowColor,
                     render.shadowAlpha * alpha,
-                    baseOrder - 0.1,
+                    sortingLayer,
+                    orderInLayer - 1, // Shadow renders below main content
                     {
                         rotation,
                         pivotX,
@@ -109,7 +112,8 @@ export class UIRectRenderSystem extends EntitySystem {
                     width, height,
                     render.textureTint,
                     alpha,
-                    baseOrder,
+                    sortingLayer,
+                    orderInLayer,
                     {
                         rotation,
                         pivotX,
@@ -130,7 +134,8 @@ export class UIRectRenderSystem extends EntitySystem {
                     width, height,
                     render.backgroundColor,
                     render.backgroundAlpha * alpha,
-                    baseOrder,
+                    sortingLayer,
+                    orderInLayer,
                     {
                         rotation,
                         pivotX,
@@ -148,7 +153,8 @@ export class UIRectRenderSystem extends EntitySystem {
                     render.borderWidth,
                     render.borderColor,
                     render.borderAlpha * alpha,
-                    baseOrder + 0.1,
+                    sortingLayer,
+                    orderInLayer + 1, // Border renders above main content
                     rotation,
                     pivotX,
                     pivotY
@@ -168,7 +174,8 @@ export class UIRectRenderSystem extends EntitySystem {
         borderWidth: number,
         borderColor: number,
         alpha: number,
-        sortOrder: number,
+        sortingLayer: string,
+        orderInLayer: number,
         rotation: number,
         pivotX: number,
         pivotY: number
@@ -185,7 +192,7 @@ export class UIRectRenderSystem extends EntitySystem {
         collector.addRect(
             topBorderCenterX, topBorderCenterY,
             width, borderWidth,
-            borderColor, alpha, sortOrder,
+            borderColor, alpha, sortingLayer, orderInLayer,
             { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
@@ -194,7 +201,7 @@ export class UIRectRenderSystem extends EntitySystem {
         collector.addRect(
             topBorderCenterX, bottomBorderCenterY,
             width, borderWidth,
-            borderColor, alpha, sortOrder,
+            borderColor, alpha, sortingLayer, orderInLayer,
             { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
@@ -205,7 +212,7 @@ export class UIRectRenderSystem extends EntitySystem {
         collector.addRect(
             leftBorderCenterX, sideBorderCenterY,
             borderWidth, sideBorderHeight,
-            borderColor, alpha, sortOrder,
+            borderColor, alpha, sortingLayer, orderInLayer,
             { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
 
@@ -214,7 +221,7 @@ export class UIRectRenderSystem extends EntitySystem {
         collector.addRect(
             rightBorderCenterX, sideBorderCenterY,
             borderWidth, sideBorderHeight,
-            borderColor, alpha, sortOrder,
+            borderColor, alpha, sortingLayer, orderInLayer,
             { rotation, pivotX: 0.5, pivotY: 0.5 }
         );
     }

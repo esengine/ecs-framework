@@ -1,4 +1,5 @@
 import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/ecs-framework';
+import { SortingLayers, type ISortable } from '@esengine/engine-core';
 
 /**
  * 锚点预设
@@ -25,8 +26,8 @@ export enum AnchorPreset {
  * Relative positioning system based on parent, supports anchors, pivots, and stretch modes
  */
 @ECSComponent('UITransform')
-@Serializable({ version: 1, typeId: 'UITransform' })
-export class UITransformComponent extends Component {
+@Serializable({ version: 2, typeId: 'UITransform' })
+export class UITransformComponent extends Component implements ISortable {
     // ===== 位置 Position =====
 
     /**
@@ -184,12 +185,27 @@ export class UITransformComponent extends Component {
     public visible: boolean = true;
 
     /**
-     * 渲染层级，值越大越靠前
-     * Render order, higher values render on top
+     * 排序层
+     * Sorting layer
+     *
+     * UI 默认使用 'UI' 层，在普通精灵之上渲染。
+     * UI defaults to 'UI' layer, rendering above regular sprites.
      */
     @Serialize()
-    @Property({ type: 'integer', label: 'Z Index' })
-    public zIndex: number = 0;
+    @Property({
+        type: 'enum',
+        label: 'Sorting Layer',
+        options: ['Background', 'Default', 'Foreground', 'UI', 'Overlay']
+    })
+    public sortingLayer: string = SortingLayers.UI;
+
+    /**
+     * 层内顺序，值越大越靠前
+     * Order within layer, higher values render on top
+     */
+    @Serialize()
+    @Property({ type: 'integer', label: 'Order in Layer' })
+    public orderInLayer: number = 0;
 
     /**
      * 透明度 (0-1)

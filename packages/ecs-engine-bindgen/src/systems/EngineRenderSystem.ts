@@ -4,7 +4,7 @@
  */
 
 import { EntitySystem, Matcher, Entity, ComponentType, ECSSystem, Component, Core } from '@esengine/ecs-framework';
-import { TransformComponent } from '@esengine/engine-core';
+import { TransformComponent, sortingLayerManager } from '@esengine/engine-core';
 import { Color } from '@esengine/ecs-framework-math';
 import { SpriteComponent } from '@esengine/sprite';
 import { CameraComponent } from '@esengine/camera';
@@ -24,8 +24,19 @@ export interface ProviderRenderData {
     uvs: Float32Array;
     colors: Uint32Array;
     tileCount: number;
-    /** Sorting order for render ordering | 渲染排序顺序 */
-    sortingOrder: number;
+    /**
+     * 排序层名称
+     * Sorting layer name
+     *
+     * 决定渲染的大类顺序。默认为 'Default'。
+     * Determines the major render order category. Defaults to 'Default'.
+     */
+    sortingLayer: string;
+    /**
+     * 层内排序顺序
+     * Order within the sorting layer
+     */
+    orderInLayer: number;
     /** 纹理 GUID（如果 textureId 为 0 则使用）| Texture GUID (used if textureId is 0) */
     textureGuid?: string;
 }
@@ -264,9 +275,9 @@ export class EngineRenderSystem extends EntitySystem {
         // This includes world sprites, tilemaps, and world space UI
         // 包括世界 Sprite、瓦片地图和世界空间 UI
 
-        // Collect all render items with sorting order
-        // 收集所有渲染项及其排序顺序
-        const renderItems: Array<{ sortingOrder: number; sprites: SpriteRenderData[] }> = [];
+        // Collect all render items with sort key (calculated from sortingLayer + orderInLayer)
+        // 收集所有渲染项及其排序键（由 sortingLayer + orderInLayer 计算）
+        const renderItems: Array<{ sortKey: number; sprites: SpriteRenderData[] }> = [];
 
         // Collect sprites from entities
         // 收集实体的 sprites
@@ -343,21 +354,32 @@ export class EngineRenderSystem extends EntitySystem {
                 ...(hasOverrides ? { materialOverrides: sprite.materialOverrides } : {})
             };
 
-            renderItems.push({ sortingOrder: sprite.sortingOrder, sprites: [renderData] });
+            // Calculate sort key from sortingLayer + orderInLayer
+            // 从 sortingLayer + orderInLayer 计算排序键
+            const sortKey = sortingLayerManager.getSortKey(sprite.sortingLayer, sprite.orderInLayer);
+            renderItems.push({ sortKey, sprites: [renderData] });
             this.entityRenderMap.set(entity.id, renderData);
         }
 
-        // Collect render data from providers (e.g., tilemap)
+        // Collect render data from providers (e.g., tilemap, particle)
+        // 收集渲染数据提供者的数据（如瓦片地图、粒子）
         for (const provider of this.renderDataProviders) {
             const renderDataList = provider.getRenderData();
             for (const data of renderDataList) {
+                // Skip Overlay layer in world pass when in preview mode
+                // 预览模式下，World Pass 跳过 Overlay 层（在单独的 pass 中渲染）
+                if (this.previewMode && data.sortingLayer === 'Overlay') {
+                    continue;
+                }
+
                 // Get texture ID - load from GUID if needed
                 // 获取纹理 ID - 如果需要从 GUID 加载
                 let textureId = data.textureIds[0] || 0;
                 if (textureId === 0 && data.textureGuid) {
                     // resolveAssetPath 会将 GUID 解析为实际路径
                     // resolveAssetPath will resolve GUID to actual path
-                    textureId = this.bridge.getOrLoadTextureByPath(this.resolveAssetPath(data.textureGuid));
+                    const resolvedPath = this.resolveAssetPath(data.textureGuid);
+                    textureId = this.bridge.getOrLoadTextureByPath(resolvedPath);
                 }
 
                 // Convert tilemap render data to sprites
@@ -383,7 +405,8 @@ export class EngineRenderSystem extends EntitySystem {
                 }
 
                 if (tilemapSprites.length > 0) {
-                    renderItems.push({ sortingOrder: data.sortingOrder, sprites: tilemapSprites });
+                    const sortKey = sortingLayerManager.getSortKey(data.sortingLayer, data.orderInLayer);
+                    renderItems.push({ sortKey, sprites: tilemapSprites });
                 }
             }
         }
@@ -395,14 +418,15 @@ export class EngineRenderSystem extends EntitySystem {
             for (const data of uiRenderData) {
                 const uiSprites = this.convertProviderDataToSprites(data);
                 if (uiSprites.length > 0) {
-                    renderItems.push({ sortingOrder: data.sortingOrder, sprites: uiSprites });
+                    const sortKey = sortingLayerManager.getSortKey(data.sortingLayer, data.orderInLayer);
+                    renderItems.push({ sortKey, sprites: uiSprites });
                 }
             }
         }
 
-        // Sort by sortingOrder (lower values render first, appear behind)
-        // 按 sortingOrder 排序（值越小越先渲染，显示在后面）
-        renderItems.sort((a, b) => a.sortingOrder - b.sortingOrder);
+        // Sort by sortKey (lower values render first, appear behind)
+        // 按 sortKey 排序（值越小越先渲染，显示在后面）
+        renderItems.sort((a, b) => a.sortKey - b.sortKey);
 
         // Submit all sprites in sorted order
         // 按排序顺序提交所有 sprites
@@ -453,6 +477,98 @@ export class EngineRenderSystem extends EntitySystem {
         // 仅在预览模式 - 在编辑器模式，UI 在上面的世界空间渲染
         if (this.previewMode) {
             this.renderScreenSpaceUI();
+
+            // ===== Pass 3: Overlay Rendering (After UI) =====
+            // ===== 阶段 3：覆盖层渲染（在 UI 之后）=====
+            // Render Overlay content on top of UI (e.g., click particles)
+            // 在 UI 之上渲染覆盖层内容（如点击粒子）
+            this.renderOverlayContent();
+        }
+    }
+
+    /**
+     * Render overlay content on top of everything (including UI).
+     * 在所有内容（包括 UI）之上渲染覆盖层内容。
+     *
+     * This is used for click effects and other content that must appear above UI.
+     * 用于点击特效和其他必须显示在 UI 之上的内容。
+     */
+    private renderOverlayContent(): void {
+        // Collect overlay render data from providers
+        // 从提供者收集覆盖层渲染数据
+        const overlayItems: Array<{ sortKey: number; sprites: SpriteRenderData[] }> = [];
+
+        for (const provider of this.renderDataProviders) {
+            const renderDataList = provider.getRenderData();
+            for (const data of renderDataList) {
+                // Only process Overlay layer
+                // 仅处理 Overlay 层
+                if (data.sortingLayer !== 'Overlay') {
+                    continue;
+                }
+
+                // Get texture ID - load from GUID if needed
+                // 获取纹理 ID - 如果需要从 GUID 加载
+                let textureId = data.textureIds[0] || 0;
+                if (textureId === 0 && data.textureGuid) {
+                    const resolvedPath = this.resolveAssetPath(data.textureGuid);
+                    textureId = this.bridge.getOrLoadTextureByPath(resolvedPath);
+                }
+
+                // Convert to sprites
+                // 转换为 sprites
+                const sprites: SpriteRenderData[] = [];
+                for (let i = 0; i < data.tileCount; i++) {
+                    const tOffset = i * 7;
+                    const uvOffset = i * 4;
+
+                    const renderData: SpriteRenderData = {
+                        x: data.transforms[tOffset],
+                        y: data.transforms[tOffset + 1],
+                        rotation: data.transforms[tOffset + 2],
+                        scaleX: data.transforms[tOffset + 3],
+                        scaleY: data.transforms[tOffset + 4],
+                        originX: data.transforms[tOffset + 5],
+                        originY: data.transforms[tOffset + 6],
+                        textureId,
+                        uv: [data.uvs[uvOffset], data.uvs[uvOffset + 1], data.uvs[uvOffset + 2], data.uvs[uvOffset + 3]],
+                        color: data.colors[i]
+                    };
+
+                    sprites.push(renderData);
+                }
+
+                if (sprites.length > 0) {
+                    const sortKey = sortingLayerManager.getSortKey(data.sortingLayer, data.orderInLayer);
+                    overlayItems.push({ sortKey, sprites });
+                }
+            }
+        }
+
+        if (overlayItems.length === 0) {
+            return;
+        }
+
+        // Sort by sortKey
+        // 按 sortKey 排序
+        overlayItems.sort((a, b) => a.sortKey - b.sortKey);
+
+        // Clear batcher and submit overlay sprites
+        // 清空批处理器并提交覆盖层 sprites
+        this.batcher.clear();
+
+        for (const item of overlayItems) {
+            for (const sprite of item.sprites) {
+                this.batcher.addSprite(sprite);
+            }
+        }
+
+        if (!this.batcher.isEmpty) {
+            const sprites = this.batcher.getSprites();
+            this.bridge.submitSprites(sprites);
+            // Render as overlay (without clearing screen)
+            // 渲染为覆盖层（不清屏）
+            this.bridge.renderOverlay();
         }
     }
 
@@ -491,17 +607,18 @@ export class EngineRenderSystem extends EntitySystem {
         this.batcher.clear();
 
         // Collect screen space UI render items
-        const screenSpaceItems: Array<{ sortingOrder: number; sprites: SpriteRenderData[] }> = [];
+        const screenSpaceItems: Array<{ sortKey: number; sprites: SpriteRenderData[] }> = [];
 
         for (const data of uiRenderData) {
             const uiSprites = this.convertProviderDataToSprites(data);
             if (uiSprites.length > 0) {
-                screenSpaceItems.push({ sortingOrder: data.sortingOrder, sprites: uiSprites });
+                const sortKey = sortingLayerManager.getSortKey(data.sortingLayer, data.orderInLayer);
+                screenSpaceItems.push({ sortKey, sprites: uiSprites });
             }
         }
 
-        // Sort by sortingOrder
-        screenSpaceItems.sort((a, b) => a.sortingOrder - b.sortingOrder);
+        // Sort by sortKey
+        screenSpaceItems.sort((a, b) => a.sortKey - b.sortKey);
 
         // Submit screen space UI sprites
         for (const item of screenSpaceItems) {

@@ -1,5 +1,6 @@
 import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/ecs-framework';
 import { assetManager } from '@esengine/asset-system';
+import { SortingLayers, type ISortable } from '@esengine/engine-core';
 import { ParticlePool, type Particle } from './Particle';
 import { ParticleEmitter, EmissionShape, createDefaultEmitterConfig, type EmitterConfig, type ColorValue } from './ParticleEmitter';
 import type { IParticleModule } from './modules/IParticleModule';
@@ -95,8 +96,8 @@ export interface ParticleRuntimeOverrides {
  * ```
  */
 @ECSComponent('ParticleSystem')
-@Serializable({ version: 3, typeId: 'ParticleSystem' })
-export class ParticleSystemComponent extends Component {
+@Serializable({ version: 4, typeId: 'ParticleSystem' })
+export class ParticleSystemComponent extends Component implements ISortable {
     // ============= 资产引用 | Asset Reference =============
 
     /**
@@ -143,6 +144,31 @@ export class ParticleSystemComponent extends Component {
         ]
     })
     public simulationSpace: SimulationSpace = SimulationSpace.World;
+
+    // ============= 排序 | Sorting =============
+
+    /**
+     * 排序层
+     * Sorting layer
+     *
+     * 决定渲染的大类顺序。点击特效默认使用 Overlay 层以显示在 UI 之上。
+     * Determines the major render order category. Click effects use Overlay by default to appear above UI.
+     */
+    @Serialize()
+    @Property({
+        type: 'enum',
+        label: 'Sorting Layer',
+        options: ['Background', 'Default', 'Foreground', 'UI', 'Overlay']
+    })
+    public sortingLayer: string = SortingLayers.Default;
+
+    /**
+     * 层内顺序（越高越在上面）
+     * Order within layer (higher = rendered on top)
+     */
+    @Serialize()
+    @Property({ type: 'integer', label: 'Order in Layer' })
+    public orderInLayer: number = 0;
 
     // ============= 运行时覆盖 | Runtime Overrides =============
 
@@ -279,11 +305,6 @@ export class ParticleSystemComponent extends Component {
         return this._loadedAsset?.textureGuid ?? '';
     }
 
-    /** 排序顺序（从资产读取）| Sorting order (from asset) */
-    get sortingOrder(): number {
-        return this._loadedAsset?.sortingOrder ?? 0;
-    }
-
     /** 爆发列表（从资产读取）| Burst list (from asset) */
     get bursts(): IBurstConfig[] {
         return this._loadedAsset?.bursts ?? [];
@@ -378,6 +399,15 @@ export class ParticleSystemComponent extends Component {
                 this._loadedAsset = asset;
                 this._lastLoadedGuid = guid;
                 this._needsRebuild = true;
+
+                // 应用资产的排序属性 | Apply sorting properties from asset
+                if (asset.sortingLayer) {
+                    this.sortingLayer = asset.sortingLayer;
+                }
+                if (asset.orderInLayer !== undefined) {
+                    this.orderInLayer = asset.orderInLayer;
+                }
+
                 return true;
             } else {
                 console.warn(`[ParticleSystem] Failed to load asset: ${guid}`);

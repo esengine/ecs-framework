@@ -45,3 +45,16 @@ export {
     type TouchInfo,
     type TouchEvent
 } from './Input';
+
+// Sorting Layer System (render order control)
+export {
+    SortingLayerManager,
+    sortingLayerManager,
+    SortingLayerManagerToken,
+    SortingLayers,
+    DEFAULT_SORTING_LAYERS,
+    type ISortingLayerManager,
+    type ISortable,
+    type SortingLayerConfig,
+    type SortingLayerName
+} from './SortingLayer';

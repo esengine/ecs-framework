@@ -1,5 +1,6 @@
 import type { AssetReference } from '@esengine/asset-system';
 import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/ecs-framework';
+import { SortingLayers, type ISortable } from '@esengine/engine-core';
 
 /**
  * Material property override value.
@@ -30,8 +31,8 @@ export type MaterialOverrides = Record<string, MaterialPropertyOverride>;
  * Requires TransformComponent to be processed by EngineRenderSystem
  */
 @ECSComponent('Sprite', { requires: ['Transform'] })
-@Serializable({ version: 4, typeId: 'Sprite' })
-export class SpriteComponent extends Component {
+@Serializable({ version: 5, typeId: 'Sprite' })
+export class SpriteComponent extends Component implements ISortable {
     /**
      * 纹理资产 GUID
      * Texture asset GUID
@@ -147,12 +148,30 @@ export class SpriteComponent extends Component {
     public flipY: boolean = false;
 
     /**
-     * 渲染层级/顺序（越高越在上面）
-     * Render layer/order (higher = rendered on top)
+     * 排序层
+     * Sorting layer
+     *
+     * 决定渲染的大类顺序，如 Background, Default, UI, Overlay 等。
+     * Determines the major render order category.
      */
     @Serialize()
-    @Property({ type: 'integer', label: 'Sorting Order' })
-    public sortingOrder: number = 0;
+    @Property({
+        type: 'enum',
+        label: 'Sorting Layer',
+        options: ['Background', 'Default', 'Foreground', 'UI', 'Overlay']
+    })
+    public sortingLayer: string = SortingLayers.Default;
+
+    /**
+     * 层内顺序（越高越在上面）
+     * Order within layer (higher = rendered on top)
+     *
+     * 同一排序层内的细分顺序。
+     * Fine-grained order within the same sorting layer.
+     */
+    @Serialize()
+    @Property({ type: 'integer', label: 'Order in Layer' })
+    public orderInLayer: number = 0;
 
     /**
      * 材质资产 GUID（共享材质）

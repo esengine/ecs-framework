@@ -15,6 +15,7 @@
  */
 
 import { isValidGUID } from '@esengine/asset-system';
+import { sortingLayerManager, SortingLayers } from '@esengine/engine-core';
 
 /**
  * A single render primitive (rectangle with optional texture)
@@ -59,8 +60,10 @@ export interface UIRenderPrimitive {
     pivotY: number;
     /** Packed color (0xAABBGGRR) | 打包颜色 */
     color: number;
-    /** Sort order (lower = rendered first/behind) | 排序顺序 */
-    sortOrder: number;
+    /** 排序层 | Sorting layer */
+    sortingLayer: string;
+    /** 层内排序顺序 | Order within layer */
+    orderInLayer: number;
     /** Optional texture ID | 可选纹理 ID */
     textureId?: number;
     /** Optional texture GUID | 可选纹理 GUID */
@@ -79,7 +82,10 @@ export interface ProviderRenderData {
     uvs: Float32Array;
     colors: Uint32Array;
     tileCount: number;
-    sortingOrder: number;
+    /** 排序层 | Sorting layer */
+    sortingLayer: string;
+    /** 层内排序顺序 | Order within layer */
+    orderInLayer: number;
     /** 纹理 GUID（如果 textureId 为 0 则使用）| Texture GUID (used if textureId is 0) */
     textureGuid?: string;
 }
@@ -118,7 +124,8 @@ export class UIRenderCollector {
         height: number,
         color: number,
         alpha: number,
-        sortOrder: number,
+        sortingLayer: string,
+        orderInLayer: number,
         options?: {
             rotation?: number;
             pivotX?: number;
@@ -144,7 +151,8 @@ export class UIRenderCollector {
             pivotX: options?.pivotX ?? 0,
             pivotY: options?.pivotY ?? 0,
             color: packedColor,
-            sortOrder,
+            sortingLayer,
+            orderInLayer,
             textureId: options?.textureId,
             textureGuid: options?.textureGuid,
             uv: options?.uv
@@ -185,18 +193,23 @@ export class UIRenderCollector {
             return [];
         }
 
-        // Sort by sortOrder
-        // 按 sortOrder 排序
-        primitives.sort((a, b) => a.sortOrder - b.sortOrder);
+        // Sort by sortKey (layer order * 10000 + orderInLayer)
+        // 按 sortKey 排序（层顺序 * 10000 + 层内顺序）
+        primitives.sort((a, b) => {
+            const sortKeyA = sortingLayerManager.getSortKey(a.sortingLayer, a.orderInLayer);
+            const sortKeyB = sortingLayerManager.getSortKey(b.sortingLayer, b.orderInLayer);
+            return sortKeyA - sortKeyB;
+        });
 
-        // Group by texture (primitives with same texture can be batched)
-        // 按纹理分组（相同纹理的原语可以批处理）
+        // Group by texture + sortingLayer (primitives with same texture and layer can be batched)
+        // 按纹理 + 排序层分组（相同纹理和层的原语可以批处理）
         const groups = new Map<string, UIRenderPrimitive[]>();
 
         for (const prim of primitives) {
-            // Use texture GUID or 'solid' for solid color rects
-            // 使用纹理 GUID 或 'solid' 表示纯色矩形
-            const key = prim.textureGuid ?? (prim.textureId?.toString() ?? 'solid');
+            // Use texture GUID or 'solid' for solid color rects, combined with sorting layer
+            // 使用纹理 GUID 或 'solid' 表示纯色矩形，与排序层组合
+            const textureKey = prim.textureGuid ?? (prim.textureId?.toString() ?? 'solid');
+            const key = `${prim.sortingLayer}:${prim.orderInLayer}:${textureKey}`;
             let group = groups.get(key);
             if (!group) {
                 group = [];
@@ -215,6 +228,10 @@ export class UIRenderCollector {
             const textureIds = new Uint32Array(count);
             const uvs = new Float32Array(count * 4);
             const colors = new Uint32Array(count);
+
+            // Use the first primitive's sorting info (all in group have same layer/order)
+            // 使用第一个原语的排序信息（组内所有原语层/顺序相同）
+            const firstPrim = prims[0];
 
             for (let i = 0; i < count; i++) {
                 const p = prims[i];
@@ -250,29 +267,32 @@ export class UIRenderCollector {
                 colors[i] = p.color;
             }
 
-            // Use the minimum sortOrder from the group as the batch sortingOrder
-            const minSortOrder = Math.min(...prims.map(p => p.sortOrder));
-
             const renderData: ProviderRenderData = {
                 transforms,
                 textureIds,
                 uvs,
                 colors,
                 tileCount: count,
-                sortingOrder: minSortOrder
+                sortingLayer: firstPrim.sortingLayer,
+                orderInLayer: firstPrim.orderInLayer
             };
 
-            // Add texture GUID if key is a valid GUID (UUID format)
-            // 如果 key 是有效的 GUID（UUID 格式），则添加纹理 GUID
-            if (isValidGUID(key)) {
-                renderData.textureGuid = key;
+            // Add texture GUID if it's a valid GUID (UUID format)
+            // 如果是有效的 GUID（UUID 格式），则添加纹理 GUID
+            if (firstPrim.textureGuid && isValidGUID(firstPrim.textureGuid)) {
+                renderData.textureGuid = firstPrim.textureGuid;
             }
 
             result.push(renderData);
         }
 
-        // Sort result by sortingOrder
-        result.sort((a, b) => a.sortingOrder - b.sortingOrder);
+        // Sort result by sortKey
+        // 按 sortKey 排序结果
+        result.sort((a, b) => {
+            const sortKeyA = sortingLayerManager.getSortKey(a.sortingLayer, a.orderInLayer);
+            const sortKeyB = sortingLayerManager.getSortKey(b.sortingLayer, b.orderInLayer);
+            return sortKeyA - sortKeyB;
+        });
 
         return result;
     }

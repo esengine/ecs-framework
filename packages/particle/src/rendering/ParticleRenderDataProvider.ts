@@ -1,5 +1,6 @@
 import type { ParticleSystemComponent } from '../ParticleSystemComponent';
 import { Color } from '@esengine/ecs-framework-math';
+import { sortingLayerManager, SortingLayers } from '@esengine/engine-core';
 
 /**
  * 粒子渲染数据（与 EngineRenderSystem 兼容）
@@ -14,7 +15,16 @@ export interface ParticleProviderRenderData {
     uvs: Float32Array;
     colors: Uint32Array;
     tileCount: number;
-    sortingOrder: number;
+    /**
+     * 排序层名称
+     * Sorting layer name
+     */
+    sortingLayer: string;
+    /**
+     * 层内排序顺序
+     * Order within the sorting layer
+     */
+    orderInLayer: number;
     /** 纹理 GUID | Texture GUID */
     textureGuid?: string;
 }
@@ -119,10 +129,13 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
             this._colors = new Uint32Array(this._maxParticles);
         }
 
-        // 按 sortingOrder 分组 | Group by sortingOrder
+        // 按 sortKey 分组（sortingLayer + orderInLayer）
+        // Group by sortKey (sortingLayer + orderInLayer)
         const groups = new Map<number, {
             component: ParticleSystemComponent;
             transform: ITransformLike;
+            sortingLayer: string;
+            orderInLayer: number;
         }[]>();
 
         for (const [component, transform] of this._particleSystems) {
@@ -130,15 +143,21 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
                 continue;
             }
 
-            const order = component.sortingOrder;
-            if (!groups.has(order)) {
-                groups.set(order, []);
+            const sortingLayer = component.sortingLayer ?? SortingLayers.Default;
+            const orderInLayer = component.orderInLayer ?? 0;
+            const sortKey = sortingLayerManager.getSortKey(sortingLayer, orderInLayer);
+
+            if (!groups.has(sortKey)) {
+                groups.set(sortKey, []);
             }
-            groups.get(order)!.push({ component, transform });
+            groups.get(sortKey)!.push({ component, transform, sortingLayer, orderInLayer });
         }
 
-        // 为每个 sortingOrder 组生成渲染数据 | Generate render data for each sortingOrder group
-        for (const [sortingOrder, systems] of groups) {
+        // 按 sortKey 排序后生成渲染数据
+        // Generate render data sorted by sortKey
+        const sortedKeys = [...groups.keys()].sort((a, b) => a - b);
+        for (const sortKey of sortedKeys) {
+            const systems = groups.get(sortKey)!;
             let particleIndex = 0;
 
             for (const { component } of systems) {
@@ -186,7 +205,8 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
 
             if (particleIndex > 0) {
                 // 获取纹理 GUID | Get texture GUID
-                const firstComponent = systems[0]?.component;
+                const firstSystem = systems[0];
+                const firstComponent = firstSystem?.component;
                 const asset = firstComponent?.loadedAsset as { textureGuid?: string } | null;
                 const textureGuid = asset?.textureGuid || firstComponent?.textureGuid || undefined;
 
@@ -197,7 +217,8 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
                     uvs: this._uvs.subarray(0, particleIndex * 4),
                     colors: this._colors.subarray(0, particleIndex),
                     tileCount: particleIndex,
-                    sortingOrder,
+                    sortingLayer: firstSystem?.sortingLayer ?? SortingLayers.Default,
+                    orderInLayer: firstSystem?.orderInLayer ?? 0,
                     textureGuid
                 };
 
