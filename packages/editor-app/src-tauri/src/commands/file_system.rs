@@ -23,6 +23,31 @@ pub fn read_file_content(path: String) -> Result<String, String> {
         .map_err(|e| format!("Failed to read file {}: {}", path, e))
 }
 
+/// Append text to log file (auto-creates parent directories)
+/// 追加文本到日志文件（自动创建父目录）
+#[tauri::command]
+pub fn append_to_log(path: String, content: String) -> Result<(), String> {
+    use std::fs::OpenOptions;
+    use std::io::Write;
+
+    // Ensure parent directory exists
+    if let Some(parent) = Path::new(&path).parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create directory {}: {}", parent.display(), e))?;
+        }
+    }
+
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .map_err(|e| format!("Failed to open log file {}: {}", path, e))?;
+
+    writeln!(file, "{}", content)
+        .map_err(|e| format!("Failed to write to log file {}: {}", path, e))
+}
+
 /// Write text content to file (auto-creates parent directories)
 #[tauri::command]
 pub fn write_file_content(path: String, content: String) -> Result<(), String> {

@@ -235,17 +235,15 @@ export class SceneManagerService implements IService {
     public async saveSceneAs(filePath?: string): Promise<void> {
         let path: string | null | undefined = filePath;
         if (!path) {
-            let defaultName = this.sceneState.sceneName || 'Untitled';
+            const defaultName = this.sceneState.sceneName || 'Untitled';
+            let scenesDir: string | undefined;
 
+            // 获取场景目录，限制保存位置 | Get scenes directory to restrict save location
             if (this.projectService?.isProjectOpen()) {
-                const scenesPath = this.projectService.getScenesPath();
-                if (scenesPath) {
-                    const sep = scenesPath.includes('\\') ? '\\' : '/';
-                    defaultName = `${scenesPath}${sep}${defaultName}`;
-                }
+                scenesDir = this.projectService.getScenesPath() ?? undefined;
             }
 
-            path = await this.fileAPI.saveSceneDialog(defaultName);
+            path = await this.fileAPI.saveSceneDialog(defaultName, scenesDir);
             if (!path) {
                 return;
             }
@@ -289,17 +287,15 @@ export class SceneManagerService implements IService {
     public async exportScene(filePath?: string): Promise<void> {
         let path: string | null | undefined = filePath;
         if (!path) {
-            let defaultName = (this.sceneState.sceneName || 'Untitled') + '.ecs.bin';
+            const defaultName = (this.sceneState.sceneName || 'Untitled') + '.ecs.bin';
+            let scenesDir: string | undefined;
 
+            // 获取场景目录，限制保存位置 | Get scenes directory to restrict save location
             if (this.projectService?.isProjectOpen()) {
-                const scenesPath = this.projectService.getScenesPath();
-                if (scenesPath) {
-                    const sep = scenesPath.includes('\\') ? '\\' : '/';
-                    defaultName = `${scenesPath}${sep}${defaultName}`;
-                }
+                scenesDir = this.projectService.getScenesPath() ?? undefined;
             }
 
-            path = await this.fileAPI.saveSceneDialog(defaultName);
+            path = await this.fileAPI.saveSceneDialog(defaultName, scenesDir);
             if (!path) {
                 return;
             }

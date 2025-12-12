@@ -1,8 +1,17 @@
+/**
+ * 场景层级面板组件
+ * Scene hierarchy panel component
+ *
+ * 使用 HierarchyStore 管理状态，减少 useEffect 数量
+ * Uses HierarchyStore for state management to reduce useEffect count
+ */
+
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Entity, Core, HierarchySystem, HierarchyComponent, EntityTags, isFolder, PrefabSerializer, ComponentRegistry, getComponentInstanceTypeName, PrefabInstanceComponent } from '@esengine/ecs-framework';
 import type { PrefabData, ComponentType } from '@esengine/ecs-framework';
-import { EntityStoreService, MessageHub, SceneManagerService, CommandManager, EntityCreationRegistry, EntityCreationTemplate, PrefabService } from '@esengine/editor-core';
+import { EntityStoreService, MessageHub, CommandManager, EntityCreationRegistry, EntityCreationTemplate, PrefabService, AssetRegistryService, ProjectService } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
+import { useHierarchyStore } from '../stores';
 import * as LucideIcons from 'lucide-react';
 import {
     Box, Wifi, Search, Plus, Trash2, Monitor, Globe, ChevronRight, ChevronDown,
@@ -82,26 +91,31 @@ enum DropIndicator {
 }
 
 export function SceneHierarchy({ entityStore, messageHub, commandManager, isProfilerMode = false }: SceneHierarchyProps) {
-    const [entities, setEntities] = useState<Entity[]>([]);
-    const [remoteEntities, setRemoteEntities] = useState<RemoteEntity[]>([]);
-    const [isRemoteConnected, setIsRemoteConnected] = useState(false);
+    // ===== 从 HierarchyStore 获取状态 | Get state from HierarchyStore =====
+    const {
+        sceneInfo,
+        prefabEditMode,
+        entities,
+        selectedIds,
+        setSelectedIds,
+        expandedIds,
+        setExpandedIds,
+        toggleExpanded: toggleExpand, // 使用别名保持向后兼容 | Alias for backward compatibility
+        isRemoteConnected,
+        remoteEntities,
+        remoteSceneName,
+    } = useHierarchyStore();
+
+    // 解构场景信息 | Destructure scene info
+    const { sceneName, sceneFilePath, isModified: isSceneModified } = sceneInfo;
+
+    // ===== 本地 UI 状态 | Local UI state =====
     const [viewMode, setViewMode] = useState<ViewMode>(isProfilerMode ? 'remote' : 'local');
-    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [searchQuery, setSearchQuery] = useState('');
-    const [sceneName, setSceneName] = useState<string>('Untitled');
-    const [remoteSceneName, setRemoteSceneName] = useState<string | null>(null);
-    const [sceneFilePath, setSceneFilePath] = useState<string | null>(null);
-    const [isSceneModified, setIsSceneModified] = useState<boolean>(false);
-    const [prefabEditMode, setPrefabEditMode] = useState<{
-        isActive: boolean;
-        prefabName: string;
-        prefabPath: string;
-    } | null>(null);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entityId: number | null } | null>(null);
     const [draggedEntityId, setDraggedEntityId] = useState<number | null>(null);
     const [dropTarget, setDropTarget] = useState<{ entityId: number; indicator: DropIndicator } | null>(null);
     const [pluginTemplates, setPluginTemplates] = useState<EntityCreationTemplate[]>([]);
-    const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set([-1])); // -1 is scene root
     const [sortColumn, setSortColumn] = useState<SortColumn>('name');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
     const [showFilterMenu, setShowFilterMenu] = useState(false);
@@ -200,7 +214,7 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         [entityTree, expandedIds, flattenTree]
     );
 
-    // Get entity creation templates from plugins
+    // 获取插件实体创建模板 | Get entity creation templates from plugins
     useEffect(() => {
         const updateTemplates = () => {
             const registry = Core.services.resolve(EntityCreationRegistry);
@@ -220,178 +234,8 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         };
     }, [messageHub]);
 
-    // Subscribe to scene changes
-    useEffect(() => {
-        const sceneManager = Core.services.resolve(SceneManagerService);
-
-        const updateSceneInfo = () => {
-            if (sceneManager) {
-                const state = sceneManager.getSceneState();
-                setSceneName(state.sceneName);
-                setIsSceneModified(state.isModified);
-                setSceneFilePath(state.currentScenePath || null);
-            }
-        };
-
-        updateSceneInfo();
-
-        const unsubLoaded = messageHub.subscribe('scene:loaded', (data: any) => {
-            if (data.sceneName) {
-                setSceneName(data.sceneName);
-                setSceneFilePath(data.path || null);
-                setIsSceneModified(data.isModified || false);
-            } else {
-                updateSceneInfo();
-            }
-        });
-        const unsubNew = messageHub.subscribe('scene:new', () => {
-            updateSceneInfo();
-        });
-        const unsubSaved = messageHub.subscribe('scene:saved', () => {
-            updateSceneInfo();
-        });
-        const unsubModified = messageHub.subscribe('scene:modified', updateSceneInfo);
-
-        // 监听预制体编辑模式变化 | Subscribe to prefab edit mode changes
-        const unsubPrefabEditMode = messageHub.subscribe('prefab:editMode:changed', (data: {
-            isActive: boolean;
-            prefabPath?: string;
-            prefabName?: string;
-        }) => {
-            if (data.isActive && data.prefabName && data.prefabPath) {
-                setPrefabEditMode({
-                    isActive: true,
-                    prefabName: data.prefabName,
-                    prefabPath: data.prefabPath
-                });
-            } else {
-                setPrefabEditMode(null);
-            }
-            // 刷新场景状态 | Update scene info
-            updateSceneInfo();
-        });
-
-        // 初始化时检查预制体编辑模式状态 | Check prefab edit mode state on init
-        if (sceneManager) {
-            const prefabState = sceneManager.getPrefabEditModeState?.();
-            if (prefabState?.isActive) {
-                setPrefabEditMode({
-                    isActive: true,
-                    prefabName: prefabState.prefabName,
-                    prefabPath: prefabState.prefabPath
-                });
-            }
-        }
-
-        return () => {
-            unsubLoaded();
-            unsubNew();
-            unsubSaved();
-            unsubModified();
-            unsubPrefabEditMode();
-        };
-    }, [messageHub]);
-
-    // Subscribe to local entity changes
-    useEffect(() => {
-        const updateEntities = () => {
-            setEntities([...entityStore.getRootEntities()]);
-        };
-
-        const handleSelection = (data: { entity: Entity | null }) => {
-            if (data.entity) {
-                setSelectedIds(new Set([data.entity.id]));
-            } else {
-                setSelectedIds(new Set());
-            }
-        };
-
-        updateEntities();
-
-        const unsubAdd = messageHub.subscribe('entity:added', updateEntities);
-        const unsubRemove = messageHub.subscribe('entity:removed', updateEntities);
-        const unsubClear = messageHub.subscribe('entities:cleared', updateEntities);
-        const unsubSelect = messageHub.subscribe('entity:selected', handleSelection);
-        const unsubSceneLoaded = messageHub.subscribe('scene:loaded', updateEntities);
-        const unsubSceneNew = messageHub.subscribe('scene:new', updateEntities);
-        const unsubSceneRestored = messageHub.subscribe('scene:restored', updateEntities);
-        const unsubReordered = messageHub.subscribe('entity:reordered', updateEntities);
-        const unsubReparented = messageHub.subscribe('entity:reparented', updateEntities);
-        // 预制体编辑模式进入/退出时刷新实体列表 | Refresh entities on prefab edit mode enter/exit
-        const unsubPrefabEnter = messageHub.subscribe('prefab:editMode:enter', updateEntities);
-        const unsubPrefabExit = messageHub.subscribe('prefab:editMode:exit', updateEntities);
-
-        return () => {
-            unsubAdd();
-            unsubRemove();
-            unsubClear();
-            unsubSelect();
-            unsubSceneLoaded();
-            unsubSceneNew();
-            unsubSceneRestored();
-            unsubReordered();
-            unsubReparented();
-            unsubPrefabEnter();
-            unsubPrefabExit();
-        };
-    }, [entityStore, messageHub]);
-
-    // Subscribe to remote entity data from ProfilerService
-    useEffect(() => {
-        const profilerService = getProfilerService();
-
-        if (!profilerService) {
-            return;
-        }
-
-        const initiallyConnected = profilerService.isConnected();
-        setIsRemoteConnected(initiallyConnected);
-
-        const unsubscribe = profilerService.subscribe((data) => {
-            const connected = profilerService.isConnected();
-            setIsRemoteConnected(connected);
-
-            if (connected && data.entities && data.entities.length > 0) {
-                setRemoteEntities((prev) => {
-                    if (prev.length !== data.entities!.length) {
-                        return data.entities!;
-                    }
-
-                    const hasChanged = data.entities!.some((entity, index) => {
-                        const prevEntity = prev[index];
-                        return !prevEntity ||
-                            prevEntity.id !== entity.id ||
-                            prevEntity.name !== entity.name ||
-                            prevEntity.componentCount !== entity.componentCount;
-                    });
-
-                    return hasChanged ? data.entities! : prev;
-                });
-
-                if (!remoteSceneName && data.entities.length > 0 && data.entities[0]) {
-                    profilerService.requestEntityDetails(data.entities[0].id);
-                }
-            } else if (!connected) {
-                setRemoteEntities([]);
-                setRemoteSceneName(null);
-            }
-        });
-
-        return () => unsubscribe();
-    }, [remoteSceneName]);
-
-    // Listen for entity details to get remote scene name
-    useEffect(() => {
-        const handleEntityDetails = ((event: CustomEvent) => {
-            const details = event.detail;
-            if (details && details.sceneName) {
-                setRemoteSceneName(details.sceneName);
-            }
-        }) as EventListener;
-
-        window.addEventListener('profiler:entity-details', handleEntityDetails);
-        return () => window.removeEventListener('profiler:entity-details', handleEntityDetails);
-    }, []);
+    // 注意：场景/实体/远程订阅已移至 useStoreSubscriptions
+    // Note: Scene/entity/remote subscriptions moved to useStoreSubscriptions
 
     const handleEntityClick = (entity: Entity, e: React.MouseEvent) => {
         if (e.ctrlKey || e.metaKey) {
@@ -760,22 +604,78 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
     }, [selectedId, entityStore, messageHub]);
 
     /**
-     * 创建预制体 - 通过 MessageHub 发布请求事件
-     * Create prefab - publishes request event via MessageHub
+     * 创建预制体 - 从选中实体创建 .prefab 文件
+     * Create prefab - creates .prefab file from selected entity
      */
-    const handleCreatePrefab = () => {
+    const handleCreatePrefab = async () => {
         if (!selectedId) return;
 
         const entity = entityStore.getEntity(selectedId);
         if (!entity) return;
 
-        // 发布预制体创建请求事件，由 App 层处理实际创建
-        // Publish prefab creation request event, handled by App layer
-        messageHub.publish('prefab:requestCreate', {
-            entityId: entity.id,
-            entityName: entity.name,
-            suggestedName: entity.name
-        });
+        const scene = Core.scene;
+        if (!scene) return;
+
+        // 获取服务 | Get services
+        const projectService = Core.services.tryResolve(ProjectService) as ProjectService | null;
+        const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+
+        if (!projectService?.isProjectOpen()) {
+            console.warn('[SceneHierarchy] No project open');
+            return;
+        }
+
+        const currentProject = projectService.getCurrentProject();
+        if (!currentProject) return;
+
+        // 获取层级系统 | Get hierarchy system
+        const hierarchySystem = scene.getSystem(HierarchySystem);
+
+        // 创建预制体数据 | Create prefab data
+        const prefabData = PrefabSerializer.createPrefab(
+            entity,
+            {
+                name: entity.name,
+                includeChildren: true
+            },
+            hierarchySystem ?? undefined
+        );
+
+        // 序列化为 JSON | Serialize to JSON
+        const prefabJson = PrefabSerializer.serialize(prefabData, true);
+
+        // 确定保存路径（默认到 assets/prefabs）| Determine save path
+        const projectRoot = currentProject.path;
+        const sep = projectRoot.includes('\\') ? '\\' : '/';
+        const prefabDir = `${projectRoot}${sep}assets${sep}prefabs`;
+        const filePath = `${prefabDir}${sep}${entity.name}.prefab`;
+
+        try {
+            // 确保目录存在 | Ensure directory exists
+            await TauriAPI.createDirectory(prefabDir);
+
+            // 保存文件 | Save file
+            await TauriAPI.writeFileContent(filePath, prefabJson);
+            console.log(`[SceneHierarchy] Prefab created: ${filePath}`);
+
+            // 注册资产以生成 .meta 文件 | Register asset to generate .meta file
+            let guid: string | null = null;
+            if (assetRegistry) {
+                guid = await assetRegistry.registerAsset(filePath);
+                console.log(`[SceneHierarchy] Registered prefab asset with GUID: ${guid}`);
+            }
+
+            // 发布事件 | Publish event
+            messageHub.publish('prefab:created', {
+                path: filePath,
+                guid,
+                name: entity.name,
+                sourceEntityId: entity.id,
+                sourceEntityName: entity.name
+            });
+        } catch (error) {
+            console.error('[SceneHierarchy] Failed to create prefab:', error);
+        }
     };
 
     /**
@@ -1001,20 +901,9 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [selectedId, isShowingRemote, editingEntityId, flattenedEntities, entityStore, messageHub, handleStartRename, handleConfirmRename, handleCancelRename, handleDuplicateEntity]);
 
-    const toggleExpand = useCallback((entityId: number) => {
-        setExpandedIds(prev => {
-            const next = new Set(prev);
-            if (next.has(entityId)) {
-                next.delete(entityId);
-            } else {
-                next.add(entityId);
-            }
-            return next;
-        });
-    }, []);
-
     /**
      * 创建文件夹实体
+     * Create folder entity
      */
     const handleCreateFolder = useCallback(() => {
         const entityCount = entityStore.getAllEntities().length;

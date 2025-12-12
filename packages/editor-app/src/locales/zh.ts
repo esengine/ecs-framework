@@ -877,7 +877,8 @@ export const zh: Translations = {
         settings: '设置',
         copyError: '复制错误信息',
         showDetails: '显示详情',
-        collapse: '收起'
+        collapse: '收起',
+        openFolder: '打开文件夹'
     },
 
     // ========================================

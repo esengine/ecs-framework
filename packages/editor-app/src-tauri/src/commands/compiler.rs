@@ -436,6 +436,204 @@ pub async fn watch_scripts(
     Ok(())
 }
 
+/// Watch for file changes in asset directories.
+/// 监视资产目录中的文件变更。
+///
+/// Watches multiple directories (assets, scenes, etc.) for all file types.
+/// 监视多个目录（assets, scenes 等）中的所有文件类型。
+///
+/// Emits "user-code:file-changed" events when files change.
+/// 当文件发生变更时触发 "user-code:file-changed" 事件。
+#[command]
+pub async fn watch_assets(
+    app: AppHandle,
+    watcher_state: State<'_, ScriptWatcherState>,
+    project_path: String,
+    directories: Vec<String>,
+) -> Result<(), String> {
+    // Create a unique key for this watcher set | 为此监视器集创建唯一键
+    let watcher_key = format!("{}/assets", project_path);
+
+    // Check if already watching | 检查是否已在监视
+    {
+        let watchers = watcher_state.watchers.lock().await;
+        if watchers.contains_key(&watcher_key) {
+            println!("[AssetWatcher] Already watching: {}", watcher_key);
+            return Ok(());
+        }
+    }
+
+    // Validate directories exist | 验证目录是否存在
+    let mut watch_paths = Vec::new();
+    for dir in &directories {
+        let watch_path = Path::new(&project_path).join(dir);
+        if watch_path.exists() {
+            watch_paths.push((watch_path, dir.clone()));
+        } else {
+            println!("[AssetWatcher] Directory does not exist, skipping: {}", watch_path.display());
+        }
+    }
+
+    if watch_paths.is_empty() {
+        return Err("No valid directories to watch | 没有有效的目录可监视".to_string());
+    }
+
+    // Create a channel for shutdown signal | 创建关闭信号通道
+    let (shutdown_tx, mut shutdown_rx) = tokio::sync::oneshot::channel::<()>();
+
+    // Clone values for the spawned task | 克隆值以供任务使用
+    let project_path_clone = project_path.clone();
+    let app_clone = app.clone();
+
+    // Spawn file watcher task | 启动文件监视任务
+    tokio::spawn(async move {
+        // Create notify watcher | 创建 notify 监视器
+        let (tx, rx) = channel();
+
+        let mut watcher = match RecommendedWatcher::new(
+            move |res: Result<Event, notify::Error>| {
+                if let Ok(event) = res {
+                    let _ = tx.send(event);
+                }
+            },
+            Config::default().with_poll_interval(Duration::from_millis(500)),
+        ) {
+            Ok(w) => w,
+            Err(e) => {
+                eprintln!("[AssetWatcher] Failed to create watcher: {}", e);
+                return;
+            }
+        };
+
+        // Start watching all directories | 开始监视所有目录
+        for (path, dir_name) in &watch_paths {
+            if let Err(e) = watcher.watch(path, RecursiveMode::Recursive) {
+                eprintln!("[AssetWatcher] Failed to watch {}: {}", dir_name, e);
+            } else {
+                println!("[AssetWatcher] Started watching: {}", path.display());
+            }
+        }
+
+        // Asset file extensions to monitor | 要监视的资产文件扩展名
+        let asset_extensions: std::collections::HashSet<&str> = [
+            // Images
+            "png", "jpg", "jpeg", "webp", "gif", "bmp", "svg",
+            // Audio
+            "mp3", "ogg", "wav", "flac", "m4a",
+            // Data formats
+            "json", "xml", "yaml", "yml", "txt",
+            // Custom asset types
+            "prefab", "ecs", "btree", "particle", "tmx", "tsx",
+            // Scripts (also watch these in assets dir)
+            "ts", "tsx", "js", "jsx",
+            // Materials and shaders
+            "mat", "shader", "glsl", "vert", "frag",
+            // Fonts
+            "ttf", "otf", "woff", "woff2",
+            // 3D assets
+            "gltf", "glb", "obj", "fbx",
+        ].into_iter().collect();
+
+        // Debounce state | 防抖状态
+        let mut pending_events: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+        let mut last_event_time = std::time::Instant::now();
+        let debounce_duration = Duration::from_millis(300);
+
+        // Event loop | 事件循环
+        loop {
+            // Check for shutdown | 检查关闭信号
+            if shutdown_rx.try_recv().is_ok() {
+                println!("[AssetWatcher] Stopping watcher for: {}", project_path_clone);
+                break;
+            }
+
+            // Check for file events with timeout | 带超时检查文件事件
+            match rx.recv_timeout(Duration::from_millis(100)) {
+                Ok(event) => {
+                    // Filter for asset files | 过滤资产文件
+                    let valid_paths: Vec<(String, String)> = event
+                        .paths
+                        .iter()
+                        .filter(|p| {
+                            // Skip .meta files | 跳过 .meta 文件
+                            if p.to_string_lossy().ends_with(".meta") {
+                                return false;
+                            }
+                            // Check extension | 检查扩展名
+                            let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("");
+                            asset_extensions.contains(ext.to_lowercase().as_str())
+                        })
+                        .map(|p| {
+                            let path_str = p.to_string_lossy().to_string();
+                            let change_type = match event.kind {
+                                EventKind::Create(_) => "create",
+                                EventKind::Modify(_) => "modify",
+                                EventKind::Remove(_) => "remove",
+                                _ => "modify",
+                            };
+                            (path_str, change_type.to_string())
+                        })
+                        .collect();
+
+                    if !valid_paths.is_empty() {
+                        // Only handle create/modify/remove events | 只处理创建/修改/删除事件
+                        match event.kind {
+                            EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                                for (path, change_type) in valid_paths {
+                                    pending_events.insert(path, change_type);
+                                }
+                                last_event_time = std::time::Instant::now();
+                            }
+                            _ => continue,
+                        };
+                    }
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                    // Check if we should emit pending events (debounce) | 检查是否应该发送待处理事件（防抖）
+                    if !pending_events.is_empty() && last_event_time.elapsed() >= debounce_duration {
+                        // Group by change type | 按变更类型分组
+                        let mut by_type: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+                        for (path, change_type) in pending_events.drain() {
+                            by_type.entry(change_type).or_default().push(path);
+                        }
+
+                        // Emit events for each type | 为每种类型发送事件
+                        for (change_type, paths) in by_type {
+                            let file_event = FileChangeEvent {
+                                change_type,
+                                paths,
+                            };
+
+                            println!("[AssetWatcher] File change detected (debounced): {:?}", file_event);
+
+                            // Emit event to frontend | 向前端发送事件
+                            if let Err(e) = app_clone.emit("user-code:file-changed", file_event) {
+                                eprintln!("[AssetWatcher] Failed to emit event: {}", e);
+                            }
+                        }
+                    }
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                    println!("[AssetWatcher] Watcher channel disconnected");
+                    break;
+                }
+            }
+        }
+    });
+
+    // Store watcher handle | 存储监视器句柄
+    {
+        let mut watchers = watcher_state.watchers.lock().await;
+        watchers.insert(
+            watcher_key.clone(),
+            crate::state::WatcherHandle { shutdown_tx },
+        );
+    }
+
+    println!("[AssetWatcher] Watch started for directories: {:?}", directories);
+    Ok(())
+}
+
 /// Stop watching for file changes.
 /// 停止监视文件变更。
 #[command]

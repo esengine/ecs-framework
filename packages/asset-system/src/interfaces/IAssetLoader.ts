@@ -109,6 +109,22 @@ export interface IAssetLoaderFactory {
      * 根据文件路径获取资产类型
      */
     getAssetTypeByPath(path: string): AssetType | null;
+
+    /**
+     * Get all supported file extensions from all registered loaders.
+     * 获取所有注册加载器支持的文件扩展名。
+     *
+     * @returns Array of extension patterns (e.g., ['*.png', '*.jpg', '*.particle'])
+     */
+    getAllSupportedExtensions(): string[];
+
+    /**
+     * Get extension to type mapping for all registered loaders.
+     * 获取所有注册加载器的扩展名到类型的映射。
+     *
+     * @returns Map of extension (without dot) to asset type string
+     */
+    getExtensionTypeMap(): Record<string, string>;
 }
 
 /**

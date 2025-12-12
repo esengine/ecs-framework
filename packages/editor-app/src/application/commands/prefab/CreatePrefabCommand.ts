@@ -8,7 +8,7 @@
 
 import { Core, Entity, HierarchySystem, PrefabSerializer } from '@esengine/ecs-framework';
 import type { PrefabData } from '@esengine/ecs-framework';
-import type { MessageHub, IFileAPI, ProjectService } from '@esengine/editor-core';
+import type { MessageHub, IFileAPI, ProjectService, AssetRegistryService } from '@esengine/editor-core';
 import { BaseCommand } from '../BaseCommand';
 
 /**
@@ -34,11 +34,13 @@ export interface CreatePrefabOptions {
  */
 export class CreatePrefabCommand extends BaseCommand {
     private savedFilePath: string | null = null;
+    private savedGuid: string | null = null;
 
     constructor(
         private messageHub: MessageHub,
         private fileAPI: IFileAPI,
         private projectService: ProjectService | undefined,
+        private assetRegistry: AssetRegistryService | null,
         private sourceEntity: Entity,
         private options: CreatePrefabOptions
     ) {
@@ -106,9 +108,17 @@ export class CreatePrefabCommand extends BaseCommand {
         await this.fileAPI.writeFileContent(fullPath, prefabJson);
         this.savedFilePath = fullPath;
 
+        // 注册资产以生成 .meta 文件 | Register asset to generate .meta file
+        if (this.assetRegistry) {
+            const guid = await this.assetRegistry.registerAsset(fullPath);
+            this.savedGuid = guid;
+            console.log(`[CreatePrefabCommand] Registered prefab asset with GUID: ${guid}`);
+        }
+
         // 发布事件 | Publish event
         await this.messageHub.publish('prefab:created', {
             path: fullPath,
+            guid: this.savedGuid,
             name: this.options.name,
             sourceEntityId: this.sourceEntity.id,
             sourceEntityName: this.sourceEntity.name

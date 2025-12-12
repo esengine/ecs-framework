@@ -13,10 +13,13 @@ export interface IFileAPI {
 
     /**
      * 打开保存场景对话框
-     * @param defaultName 默认文件名
-     * @returns 用户选择的文件路径，取消则返回 null
+     * Open save scene dialog
+     *
+     * @param defaultName 默认文件名 | Default file name
+     * @param scenesDir 场景目录（限制保存位置）| Scenes directory (restrict save location)
+     * @returns 用户选择的文件路径，取消则返回 null | Selected path or null
      */
-    saveSceneDialog(defaultName?: string): Promise<string | null>;
+    saveSceneDialog(defaultName?: string, scenesDir?: string): Promise<string | null>;
 
     /**
      * 读取文件内容

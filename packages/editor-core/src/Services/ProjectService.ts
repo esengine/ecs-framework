@@ -2,6 +2,7 @@ import type { IService } from '@esengine/ecs-framework';
 import { Injectable } from '@esengine/ecs-framework';
 import { createLogger, Scene } from '@esengine/ecs-framework';
 import { MessageHub } from './MessageHub';
+import { SceneTemplateRegistry } from './SceneTemplateRegistry';
 import type { IFileAPI } from '../Types/IFileAPI';
 
 const logger = createLogger('ProjectService');
@@ -137,8 +138,13 @@ export class ProjectService implements IService {
             await this.fileAPI.createDirectory(scenesPath);
 
             const defaultScenePath = `${scenesPath}${sep}${config.defaultScene}`;
-            const emptyScene = new Scene();
-            const sceneData = emptyScene.serialize({
+            const defaultScene = new Scene();
+
+            // 使用场景模板注册表创建默认实体（如相机）
+            // Use scene template registry to create default entities (e.g., camera)
+            SceneTemplateRegistry.createDefaultEntities(defaultScene);
+
+            const sceneData = defaultScene.serialize({
                 format: 'json',
                 pretty: true,
                 includeMetadata: true

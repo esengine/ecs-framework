@@ -220,6 +220,36 @@ export interface WebBuildConfig extends BuildConfig {
      */
     generateAssetCatalog?: boolean;
 
+    /**
+     * Asset file extensions to copy (glob patterns).
+     * 要复制的资产文件扩展名（glob 模式）。
+     *
+     * If not provided, uses default extensions.
+     * If provided by plugins via AssetLoaderFactory.getAllSupportedExtensions(),
+     * includes all registered loader extensions.
+     *
+     * 如果未提供，使用默认扩展名。
+     * 如果通过 AssetLoaderFactory.getAllSupportedExtensions() 由插件提供，
+     * 则包含所有已注册加载器的扩展名。
+     *
+     * @example ['*.png', '*.jpg', '*.particle', '*.bt']
+     */
+    assetExtensions?: string[];
+
+    /**
+     * Asset extension to type mapping.
+     * 资产扩展名到类型的映射。
+     *
+     * Used by asset catalog generation to determine asset types.
+     * If not provided, uses default mapping.
+     *
+     * 用于资产目录生成以确定资产类型。
+     * 如果未提供，使用默认映射。
+     *
+     * @example { 'png': 'texture', 'particle': 'particle' }
+     */
+    assetTypeMap?: Record<string, string>;
+
 }
 
 /**

@@ -877,7 +877,8 @@ export const en: Translations = {
         settings: 'Settings',
         copyError: 'Copy error',
         showDetails: 'Show details',
-        collapse: 'Collapse'
+        collapse: 'Collapse',
+        openFolder: 'Open Folder'
     },
 
     // ========================================

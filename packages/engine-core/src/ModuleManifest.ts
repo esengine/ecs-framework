@@ -121,6 +121,29 @@ export interface ModuleManifest {
     /** Exported items for dependency checking | 导出项用于依赖检查 */
     exports: ModuleExports;
 
+    // ==================== Asset Configuration ====================
+    // ==================== 资产配置 ====================
+
+    /**
+     * Asset file extensions supported by this module.
+     * 此模块支持的资产文件扩展名。
+     *
+     * Used by build pipeline to determine which files to copy and their types.
+     * 构建管线使用此配置决定复制哪些文件及其类型。
+     *
+     * Example:
+     * ```json
+     * {
+     *   "assetExtensions": {
+     *     ".particle": "particle",
+     *     ".particle.json": "particle",
+     *     ".btree": "behavior-tree"
+     *   }
+     * }
+     * ```
+     */
+    assetExtensions?: Record<string, string>;
+
     // ==================== Editor Integration ====================
 
     /**

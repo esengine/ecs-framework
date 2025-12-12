@@ -5,44 +5,33 @@
  * Provides build settings interface for managing platform builds,
  * scenes, and player settings.
  * 提供构建设置界面，用于管理平台构建、场景和玩家设置。
+ *
+ * 使用 Zustand store 管理状态，避免 useEffect 过多导致的重渲染问题
+ * Uses Zustand store for state management to avoid re-render issues from too many useEffects
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Monitor, Apple, Smartphone, Globe, Server, Gamepad2,
     Plus, Minus, ChevronDown, ChevronRight, Settings,
-    Package, Loader2, CheckCircle, XCircle, AlertTriangle, X, Copy, Check
+    Package, Loader2, CheckCircle, XCircle, AlertTriangle, X, Copy, Check, FolderOpen
 } from 'lucide-react';
-import type { BuildService, BuildProgress, BuildConfig, WebBuildConfig, WeChatBuildConfig, SceneManagerService, ProjectService, BuildSettingsConfig } from '@esengine/editor-core';
-import { BuildPlatform, BuildStatus } from '@esengine/editor-core';
+import { invoke } from '@tauri-apps/api/core';
+import type { BuildService, SceneManagerService, ProjectService } from '@esengine/editor-core';
+import { BuildStatus } from '@esengine/editor-core';
 import { useLocale } from '../hooks/useLocale';
+import { useShallow } from 'zustand/react/shallow';
+import {
+    useBuildSettingsStore,
+    type PlatformType,
+    type BuildProfile,
+    type BuildSettings,
+} from '../stores/BuildSettingsStore';
 import '../styles/BuildSettingsPanel.css';
 
 // ==================== Types | 类型定义 ====================
-
-/** Platform type | 平台类型 */
-type PlatformType =
-    | 'windows'
-    | 'macos'
-    | 'linux'
-    | 'android'
-    | 'ios'
-    | 'web'
-    | 'wechat-minigame';
-
-/** Build profile | 构建配置 */
-interface BuildProfile {
-    id: string;
-    name: string;
-    platform: PlatformType;
-    isActive?: boolean;
-}
-
-/** Scene entry | 场景条目 */
-interface SceneEntry {
-    path: string;
-    enabled: boolean;
-}
+// 类型定义已移至 BuildSettingsStore.ts
+// Type definitions moved to BuildSettingsStore.ts
 
 /** Platform configuration | 平台配置 */
 interface PlatformConfig {
@@ -50,21 +39,6 @@ interface PlatformConfig {
     label: string;
     icon: React.ReactNode;
     available: boolean;
-}
-
-/** Build settings | 构建设置 */
-interface BuildSettings {
-    scenes: SceneEntry[];
-    scriptingDefines: string[];
-    companyName: string;
-    productName: string;
-    version: string;
-    // Platform-specific | 平台特定
-    developmentBuild: boolean;
-    sourceMap: boolean;
-    compressionMethod: 'Default' | 'LZ4' | 'LZ4HC';
-    /** Web build mode | Web 构建模式 */
-    buildMode: 'split-bundles' | 'single-bundle' | 'single-file';
 }
 
 // ==================== Constants | 常量 ====================
@@ -78,18 +52,6 @@ const PLATFORMS: PlatformConfig[] = [
     { platform: 'web', label: 'Web', icon: <Globe size={16} />, available: true },
     { platform: 'wechat-minigame', label: 'WeChat Mini Game', icon: <Gamepad2 size={16} />, available: true },
 ];
-
-const DEFAULT_SETTINGS: BuildSettings = {
-    scenes: [],
-    scriptingDefines: [],
-    companyName: 'DefaultCompany',
-    productName: 'MyGame',
-    version: '0.1.0',
-    developmentBuild: false,
-    sourceMap: false,
-    compressionMethod: 'Default',
-    buildMode: 'split-bundles',
-};
 
 // ==================== Status Key Mapping | 状态键映射 ====================
 
@@ -202,269 +164,81 @@ export function BuildSettingsPanel({
 }: BuildSettingsPanelProps) {
     const { t } = useLocale();
 
-    // State | 状态
-    const [profiles, setProfiles] = useState<BuildProfile[]>([
-        { id: 'web-dev', name: 'Web - Development', platform: 'web', isActive: true },
-        { id: 'web-prod', name: 'Web - Production', platform: 'web' },
-        { id: 'wechat', name: 'WeChat Mini Game', platform: 'wechat-minigame' },
-    ]);
-    const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>('web');
-    const [selectedProfile, setSelectedProfile] = useState<BuildProfile | null>(profiles[0] || null);
-    const [settings, setSettings] = useState<BuildSettings>(DEFAULT_SETTINGS);
-    const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-        sceneList: true,
-        scriptingDefines: true,
-        platformSettings: true,
-        playerSettings: true,
-    });
+    // 使用 Zustand store 替代本地状态（使用 useShallow 避免不必要的重渲染）
+    // Use Zustand store instead of local state (use useShallow to avoid unnecessary re-renders)
+    const {
+        profiles,
+        selectedPlatform,
+        selectedProfile,
+        settings,
+        expandedSections,
+        isBuilding,
+        buildProgress,
+        buildResult,
+        showBuildProgress,
+    } = useBuildSettingsStore(useShallow(state => ({
+        profiles: state.profiles,
+        selectedPlatform: state.selectedPlatform,
+        selectedProfile: state.selectedProfile,
+        settings: state.settings,
+        expandedSections: state.expandedSections,
+        isBuilding: state.isBuilding,
+        buildProgress: state.buildProgress,
+        buildResult: state.buildResult,
+        showBuildProgress: state.showBuildProgress,
+    })));
 
-    // Build state | 构建状态
-    const [isBuilding, setIsBuilding] = useState(false);
-    const [buildProgress, setBuildProgress] = useState<BuildProgress | null>(null);
-    const [buildResult, setBuildResult] = useState<{
-        success: boolean;
-        outputPath: string;
-        duration: number;
-        warnings: string[];
-        error?: string;
-    } | null>(null);
-    const [showBuildProgress, setShowBuildProgress] = useState(false);
-    const buildAbortRef = useRef<AbortController | null>(null);
+    // 获取 store actions（通过 getState 获取，这些不会触发重渲染）
+    // Get store actions via getState (these don't trigger re-renders)
+    const store = useBuildSettingsStore.getState();
+    const {
+        setSelectedPlatform: handlePlatformSelect,
+        setSelectedProfile: handleProfileSelect,
+        addProfile: handleAddProfile,
+        updateSettings,
+        setSceneEnabled,
+        addDefine,
+        removeDefine: handleRemoveDefine,
+        toggleSection,
+        cancelBuild: handleCancelBuild,
+        closeBuildProgress: handleCloseBuildProgress,
+    } = store;
 
-    // Handlers | 处理函数
-    const toggleSection = useCallback((section: string) => {
-        setExpandedSections(prev => ({
-            ...prev,
-            [section]: !prev[section]
-        }));
-    }, []);
-
-    const handlePlatformSelect = useCallback((platform: PlatformType) => {
-        setSelectedPlatform(platform);
-        // Find first profile for this platform | 查找此平台的第一个配置
-        const profile = profiles.find(p => p.platform === platform);
-        setSelectedProfile(profile || null);
-    }, [profiles]);
-
-    const handleProfileSelect = useCallback((profile: BuildProfile) => {
-        setSelectedProfile(profile);
-        setSelectedPlatform(profile.platform);
-    }, []);
-
-    const handleAddProfile = useCallback(() => {
-        const newProfile: BuildProfile = {
-            id: `profile-${Date.now()}`,
-            name: `${selectedPlatform} - New Profile`,
-            platform: selectedPlatform,
-        };
-        setProfiles(prev => [...prev, newProfile]);
-        setSelectedProfile(newProfile);
-    }, [selectedPlatform]);
-
-    // Map platform type to BuildPlatform enum | 将平台类型映射到 BuildPlatform 枚举
-    const getPlatformEnum = useCallback((platformType: PlatformType): BuildPlatform => {
-        const platformMap: Record<PlatformType, BuildPlatform> = {
-            'web': BuildPlatform.Web,
-            'wechat-minigame': BuildPlatform.WeChatMiniGame,
-            'windows': BuildPlatform.Desktop,
-            'macos': BuildPlatform.Desktop,
-            'linux': BuildPlatform.Desktop,
-            'android': BuildPlatform.Android,
-            'ios': BuildPlatform.iOS
-        };
-        return platformMap[platformType];
-    }, []);
-
-    const handleBuild = useCallback(async () => {
-        if (!selectedProfile || !projectPath) {
-            return;
+    // 初始化 store（仅在 mount 时）
+    // Initialize store (only on mount)
+    useEffect(() => {
+        if (projectPath) {
+            useBuildSettingsStore.getState().initialize({
+                projectPath,
+                buildService,
+                projectService,
+                availableScenes,
+            });
         }
+        return () => useBuildSettingsStore.getState().cleanup();
+    }, [projectPath]); // 只依赖 projectPath，避免频繁重初始化
 
-        // Call external handler if provided | 如果提供了外部处理程序则调用
+    // 当前平台的配置列表（使用 useMemo 避免每次重新过滤）
+    // Profiles for current platform (use useMemo to avoid re-filtering every time)
+    const platformProfiles = useMemo(
+        () => profiles.filter(p => p.platform === selectedPlatform),
+        [profiles, selectedPlatform]
+    );
+
+    // 构建处理 | Build handler
+    const handleBuild = useCallback(async () => {
+        if (!selectedProfile || !projectPath) return;
+
+        // Call external handler if provided
         if (onBuild) {
             onBuild(selectedProfile, settings);
         }
 
-        // Use BuildService if available | 如果可用则使用 BuildService
-        if (buildService) {
-            setIsBuilding(true);
-            setBuildProgress(null);
-            setBuildResult(null);
-            setShowBuildProgress(true);
+        // 使用 store 的构建操作 | Use store's build action
+        await useBuildSettingsStore.getState().startBuild();
+    }, [selectedProfile, projectPath, onBuild, settings]);
 
-            try {
-                const platform = getPlatformEnum(selectedProfile.platform);
-                const baseConfig = {
-                    platform,
-                    outputPath: `${projectPath}/build/${selectedProfile.platform}`,
-                    isRelease: !settings.developmentBuild,
-                    sourceMap: settings.sourceMap,
-                    scenes: settings.scenes.filter(s => s.enabled).map(s => s.path)
-                };
-
-                // Build platform-specific config | 构建平台特定配置
-                let buildConfig: BuildConfig;
-                if (platform === BuildPlatform.Web) {
-                    const webConfig: WebBuildConfig = {
-                        ...baseConfig,
-                        platform: BuildPlatform.Web,
-                        buildMode: settings.buildMode,
-                        generateHtml: true,
-                        minify: !settings.developmentBuild,
-                        generateAssetCatalog: true,
-                        assetLoadingStrategy: 'on-demand'
-                    };
-                    buildConfig = webConfig;
-                } else if (platform === BuildPlatform.WeChatMiniGame) {
-                    const wechatConfig: WeChatBuildConfig = {
-                        ...baseConfig,
-                        platform: BuildPlatform.WeChatMiniGame,
-                        appId: '',
-                        useSubpackages: false,
-                        mainPackageLimit: 4096,
-                        usePlugins: false
-                    };
-                    buildConfig = wechatConfig;
-                } else {
-                    buildConfig = baseConfig;
-                }
-
-                // Execute build with progress callback | 执行构建并传入进度回调
-                const result = await buildService.build(buildConfig, (progress) => {
-                    setBuildProgress(progress);
-                });
-
-                // Set result | 设置结果
-                setBuildResult({
-                    success: result.success,
-                    outputPath: result.outputPath,
-                    duration: result.duration,
-                    warnings: result.warnings,
-                    error: result.error
-                });
-
-            } catch (error) {
-                console.error('Build failed:', error);
-                setBuildResult({
-                    success: false,
-                    outputPath: '',
-                    duration: 0,
-                    warnings: [],
-                    error: error instanceof Error ? error.message : String(error)
-                });
-            } finally {
-                setIsBuilding(false);
-            }
-        }
-    }, [selectedProfile, settings, projectPath, buildService, onBuild, getPlatformEnum]);
-
-    // Load saved build settings from project config
-    // 从项目配置加载已保存的构建设置
-    useEffect(() => {
-        if (!projectService) return;
-
-        const savedSettings = projectService.getBuildSettings();
-        if (savedSettings) {
-            setSettings(prev => ({
-                ...prev,
-                scriptingDefines: savedSettings.scriptingDefines || [],
-                companyName: savedSettings.companyName || prev.companyName,
-                productName: savedSettings.productName || prev.productName,
-                version: savedSettings.version || prev.version,
-                developmentBuild: savedSettings.developmentBuild ?? prev.developmentBuild,
-                sourceMap: savedSettings.sourceMap ?? prev.sourceMap,
-                compressionMethod: savedSettings.compressionMethod || prev.compressionMethod,
-                buildMode: savedSettings.buildMode || prev.buildMode
-            }));
-        }
-    }, [projectService]);
-
-    // Initialize scenes from availableScenes prop and saved settings
-    // 从 availableScenes prop 和已保存设置初始化场景列表
-    useEffect(() => {
-        if (availableScenes && availableScenes.length > 0) {
-            const savedSettings = projectService?.getBuildSettings();
-            const savedScenes = savedSettings?.scenes || [];
-
-            setSettings(prev => ({
-                ...prev,
-                scenes: availableScenes.map(path => ({
-                    path,
-                    enabled: savedScenes.length > 0 ? savedScenes.includes(path) : true
-                }))
-            }));
-        }
-    }, [availableScenes, projectService]);
-
-    // Auto-save build settings when changed
-    // 设置变化时自动保存
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    useEffect(() => {
-        if (!projectService) return;
-
-        // Debounce save to avoid too many writes
-        // 防抖保存，避免频繁写入
-        if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current);
-        }
-
-        saveTimeoutRef.current = setTimeout(() => {
-            const configToSave: BuildSettingsConfig = {
-                scenes: settings.scenes.filter(s => s.enabled).map(s => s.path),
-                scriptingDefines: settings.scriptingDefines,
-                companyName: settings.companyName,
-                productName: settings.productName,
-                version: settings.version,
-                developmentBuild: settings.developmentBuild,
-                sourceMap: settings.sourceMap,
-                compressionMethod: settings.compressionMethod,
-                buildMode: settings.buildMode
-            };
-            projectService.updateBuildSettings(configToSave);
-        }, 500);
-
-        return () => {
-            if (saveTimeoutRef.current) {
-                clearTimeout(saveTimeoutRef.current);
-            }
-        };
-    }, [settings, projectService]);
-
-    // Monitor build progress from service | 从服务监控构建进度
-    useEffect(() => {
-        if (!buildService || !isBuilding) {
-            return;
-        }
-
-        const interval = setInterval(() => {
-            const task = buildService.getCurrentTask();
-            if (task) {
-                setBuildProgress(task.progress);
-            }
-        }, 100);
-
-        return () => clearInterval(interval);
-    }, [buildService, isBuilding]);
-
-    const handleCancelBuild = useCallback(() => {
-        if (buildService) {
-            buildService.cancelBuild();
-        }
-    }, [buildService]);
-
-    const handleCloseBuildProgress = useCallback(() => {
-        if (!isBuilding) {
-            setShowBuildProgress(false);
-            setBuildProgress(null);
-            setBuildResult(null);
-        }
-    }, [isBuilding]);
-
-    // Get status message | 获取状态消息
-    const getStatusMessage = useCallback((status: BuildStatus): string => {
-        return t(buildStatusKeys[status]) || status;
-    }, [t]);
-
+    // 添加当前场景 | Add current scene
     const handleAddScene = useCallback(() => {
         if (!sceneManager) {
             console.warn('SceneManagerService not available');
@@ -479,36 +253,29 @@ export function BuildSettingsPanel({
             return;
         }
 
-        // Check if scene is already in the list | 检查场景是否已在列表中
+        // 检查场景是否已在列表中 | Check if scene is already in the list
         const exists = settings.scenes.some(s => s.path === currentScenePath);
         if (exists) {
             console.log('Scene already in list:', currentScenePath);
             return;
         }
 
-        // Add current scene to the list | 将当前场景添加到列表中
-        setSettings(prev => ({
-            ...prev,
-            scenes: [...prev.scenes, { path: currentScenePath, enabled: true }]
-        }));
+        // 使用 store 添加场景 | Use store to add scene
+        useBuildSettingsStore.getState().addScene(currentScenePath);
     }, [sceneManager, settings.scenes]);
 
+    // 添加脚本定义（带 prompt）| Add scripting define (with prompt)
     const handleAddDefine = useCallback(() => {
         const define = prompt('Enter scripting define:');
         if (define) {
-            setSettings(prev => ({
-                ...prev,
-                scriptingDefines: [...prev.scriptingDefines, define]
-            }));
+            addDefine(define);
         }
-    }, []);
+    }, [addDefine]);
 
-    const handleRemoveDefine = useCallback((index: number) => {
-        setSettings(prev => ({
-            ...prev,
-            scriptingDefines: prev.scriptingDefines.filter((_, i) => i !== index)
-        }));
-    }, []);
+    // 获取状态消息 | Get status message
+    const getStatusMessage = useCallback((status: BuildStatus): string => {
+        return t(buildStatusKeys[status]) || status;
+    }, [t]);
 
     // Get platform config | 获取平台配置
     const currentPlatformConfig = PLATFORMS.find(p => p.platform === selectedPlatform);
@@ -634,14 +401,7 @@ export function BuildSettingsPanel({
                                                             <input
                                                                 type="checkbox"
                                                                 checked={scene.enabled}
-                                                                onChange={e => {
-                                                                    setSettings(prev => ({
-                                                                        ...prev,
-                                                                        scenes: prev.scenes.map((s, i) =>
-                                                                            i === index ? { ...s, enabled: e.target.checked } : s
-                                                                        )
-                                                                    }));
-                                                                }}
+                                                                onChange={e => setSceneEnabled(index, e.target.checked)}
                                                             />
                                                             <span>{scene.path}</span>
                                                         </div>
@@ -713,10 +473,7 @@ export function BuildSettingsPanel({
                                                     <input
                                                         type="checkbox"
                                                         checked={settings.developmentBuild}
-                                                        onChange={e => setSettings(prev => ({
-                                                            ...prev,
-                                                            developmentBuild: e.target.checked
-                                                        }))}
+                                                        onChange={e => updateSettings({ developmentBuild: e.target.checked })}
                                                     />
                                                 </div>
                                                 <div className="build-settings-form-row">
@@ -724,20 +481,14 @@ export function BuildSettingsPanel({
                                                     <input
                                                         type="checkbox"
                                                         checked={settings.sourceMap}
-                                                        onChange={e => setSettings(prev => ({
-                                                            ...prev,
-                                                            sourceMap: e.target.checked
-                                                        }))}
+                                                        onChange={e => updateSettings({ sourceMap: e.target.checked })}
                                                     />
                                                 </div>
                                                 <div className="build-settings-form-row">
                                                     <label>{t('buildSettings.compressionMethod')}</label>
                                                     <select
                                                         value={settings.compressionMethod}
-                                                        onChange={e => setSettings(prev => ({
-                                                            ...prev,
-                                                            compressionMethod: e.target.value as any
-                                                        }))}
+                                                        onChange={e => updateSettings({ compressionMethod: e.target.value as 'Default' | 'LZ4' | 'LZ4HC' })}
                                                     >
                                                         <option value="Default">Default</option>
                                                         <option value="LZ4">LZ4</option>
@@ -749,10 +500,7 @@ export function BuildSettingsPanel({
                                                     <div className="build-settings-toggle-group">
                                                         <select
                                                             value={settings.buildMode}
-                                                            onChange={e => setSettings(prev => ({
-                                                                ...prev,
-                                                                buildMode: e.target.value as 'split-bundles' | 'single-bundle' | 'single-file'
-                                                            }))}
+                                                            onChange={e => updateSettings({ buildMode: e.target.value as 'split-bundles' | 'single-bundle' | 'single-file' })}
                                                         >
                                                             <option value="split-bundles">{t('buildSettings.splitBundles')}</option>
                                                             <option value="single-bundle">{t('buildSettings.singleBundle')}</option>
@@ -798,10 +546,7 @@ export function BuildSettingsPanel({
                                                     <input
                                                         type="text"
                                                         value={settings.companyName}
-                                                        onChange={e => setSettings(prev => ({
-                                                            ...prev,
-                                                            companyName: e.target.value
-                                                        }))}
+                                                        onChange={e => updateSettings({ companyName: e.target.value })}
                                                     />
                                                 </div>
                                                 <div className="build-settings-form-row">
@@ -809,10 +554,7 @@ export function BuildSettingsPanel({
                                                     <input
                                                         type="text"
                                                         value={settings.productName}
-                                                        onChange={e => setSettings(prev => ({
-                                                            ...prev,
-                                                            productName: e.target.value
-                                                        }))}
+                                                        onChange={e => updateSettings({ productName: e.target.value })}
                                                     />
                                                 </div>
                                                 <div className="build-settings-form-row">
@@ -820,10 +562,7 @@ export function BuildSettingsPanel({
                                                     <input
                                                         type="text"
                                                         value={settings.version}
-                                                        onChange={e => setSettings(prev => ({
-                                                            ...prev,
-                                                            version: e.target.value
-                                                        }))}
+                                                        onChange={e => updateSettings({ version: e.target.value })}
                                                     />
                                                 </div>
                                                 <div className="build-settings-form-row">
@@ -867,11 +606,11 @@ export function BuildSettingsPanel({
                             {/* Status Icon | 状态图标 */}
                             <div className="build-progress-status-icon">
                                 {isBuilding ? (
-                                    <Loader2 size={48} className="build-progress-spinner" />
+                                    <Loader2 size={36} className="build-progress-spinner" />
                                 ) : buildResult?.success ? (
-                                    <CheckCircle size={48} className="build-progress-success" />
+                                    <CheckCircle size={40} className="build-progress-success" />
                                 ) : (
-                                    <XCircle size={48} className="build-progress-error" />
+                                    <XCircle size={40} className="build-progress-error" />
                                 )}
                             </div>
 
@@ -950,12 +689,29 @@ export function BuildSettingsPanel({
                                     {t('buildSettings.cancel')}
                                 </button>
                             ) : (
-                                <button
-                                    className="build-settings-btn primary"
-                                    onClick={handleCloseBuildProgress}
-                                >
-                                    {t('buildSettings.close')}
-                                </button>
+                                <>
+                                    <button
+                                        className="build-settings-btn secondary"
+                                        onClick={handleCloseBuildProgress}
+                                    >
+                                        {t('buildSettings.close')}
+                                    </button>
+                                    {buildResult?.success && buildResult.outputPath && (
+                                        <button
+                                            className="build-settings-btn primary"
+                                            onClick={() => {
+                                                // 使用 Tauri 打开文件夹
+                                                // Use Tauri to open folder
+                                                invoke('open_folder', { path: buildResult.outputPath }).catch(e => {
+                                                    console.error('Failed to open folder:', e);
+                                                });
+                                            }}
+                                        >
+                                            <FolderOpen size={14} />
+                                            {t('buildSettings.openFolder')}
+                                        </button>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>

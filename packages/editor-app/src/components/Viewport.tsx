@@ -257,11 +257,6 @@ export function Viewport({ locale = 'en', messageHub, commandManager }: Viewport
         scaleY?: number;
     } | null>(null);
 
-    // Keep ref in sync with state
-    useEffect(() => {
-        playStateRef.current = playState;
-    }, [playState]);
-
     // Rust engine hook with multi-viewport support
     const engine = useEngine({
         viewportId: 'editor-viewport',
@@ -287,34 +282,18 @@ export function Viewport({ locale = 'en', messageHub, commandManager }: Viewport
     const rotationSnapRef = useRef(15);
     const scaleSnapRef = useRef(0.25);
 
-    // Keep refs in sync with state
+    // Keep refs in sync with state for stable event handler closures
+    // 保持 refs 与 state 同步，以便事件处理器闭包稳定
     useEffect(() => {
+        playStateRef.current = playState;
         camera2DZoomRef.current = camera2DZoom;
-    }, [camera2DZoom]);
-
-    useEffect(() => {
         camera2DOffsetRef.current = camera2DOffset;
-    }, [camera2DOffset]);
-
-    useEffect(() => {
         transformModeRef.current = transformMode;
-    }, [transformMode]);
-
-    useEffect(() => {
         snapEnabledRef.current = snapEnabled;
-    }, [snapEnabled]);
-
-    useEffect(() => {
         gridSnapRef.current = gridSnapValue;
-    }, [gridSnapValue]);
-
-    useEffect(() => {
         rotationSnapRef.current = rotationSnapValue;
-    }, [rotationSnapValue]);
-
-    useEffect(() => {
         scaleSnapRef.current = scaleSnapValue;
-    }, [scaleSnapValue]);
+    }, [playState, camera2DZoom, camera2DOffset, transformMode, snapEnabled, gridSnapValue, rotationSnapValue, scaleSnapValue]);
 
     // Snap helper functions
     const snapToGrid = useCallback((value: number): number => {

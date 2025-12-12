@@ -669,6 +669,44 @@ export class ${className} {
         }
     }, [expandedFolders, projectPath, buildFolderTree]);
 
+    // Subscribe to asset change events to refresh content
+    // 订阅资产变化事件以刷新内容
+    useEffect(() => {
+        if (!messageHub) return;
+
+        const handleAssetChange = (data: { type: string; path: string; relativePath: string; guid: string }) => {
+            // Check if the changed file is in the current directory
+            // 检查变化的文件是否在当前目录中
+            if (!currentPath || !data.path) return;
+
+            const normalizedPath = data.path.replace(/\\/g, '/');
+            const normalizedCurrentPath = currentPath.replace(/\\/g, '/');
+            const parentDir = normalizedPath.substring(0, normalizedPath.lastIndexOf('/'));
+
+            if (parentDir === normalizedCurrentPath) {
+                // Refresh current directory
+                // 刷新当前目录
+                loadAssets(currentPath);
+            }
+        };
+
+        const handleAssetsRefresh = () => {
+            // Refresh current directory when generic refresh is requested
+            // 当请求通用刷新时刷新当前目录
+            if (currentPath) {
+                loadAssets(currentPath);
+            }
+        };
+
+        const unsubChange = messageHub.subscribe('assets:changed', handleAssetChange);
+        const unsubRefresh = messageHub.subscribe('assets:refresh', handleAssetsRefresh);
+
+        return () => {
+            unsubChange();
+            unsubRefresh();
+        };
+    }, [messageHub, currentPath, loadAssets]);
+
     // Handle reveal path - navigate to folder and select file
     const prevRevealPath = useRef<string | null>(null);
     useEffect(() => {
@@ -902,6 +940,14 @@ export class ${className} {
                 await TauriAPI.writeFileContent(filePath, prefabJson);
                 console.log(`[ContentBrowser] Prefab created: ${filePath}`);
 
+                // 注册资产以生成 .meta 文件 | Register asset to generate .meta file
+                const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+                let guid: string | null = null;
+                if (assetRegistry) {
+                    guid = await assetRegistry.registerAsset(filePath);
+                    console.log(`[ContentBrowser] Registered prefab asset with GUID: ${guid}`);
+                }
+
                 // 刷新目录 | Refresh directory
                 if (currentPath === targetFolderPath) {
                     await loadAssets(targetFolderPath);
@@ -910,6 +956,7 @@ export class ${className} {
                 // 发布事件 | Publish event
                 messageHub.publish('prefab:created', {
                     path: filePath,
+                    guid,
                     name: entity.name,
                     sourceEntityId: entity.id,
                     sourceEntityName: entity.name

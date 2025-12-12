@@ -827,12 +827,12 @@ function DraggableAxisInput({ axis, value, readOnly, compact, onChange }: Dragga
     const dragStartRef = useRef({ x: 0, value: 0 });
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // 同步外部值 | Sync external value
+    // 同步外部值（不在聚焦或拖动时）| Sync external value (not when focused or dragging)
     useEffect(() => {
-        if (!isFocused) {
+        if (!isFocused && !isDragging) {
             setLocalValue(String(value ?? 0));
         }
-    }, [value, isFocused]);
+    }, [value, isFocused, isDragging]);
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (readOnly) return;

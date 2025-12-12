@@ -28,13 +28,42 @@
       "TextureLoader",
       "JsonLoader",
       "TextLoader",
-      "BinaryLoader"
+      "BinaryLoader",
+      "AudioLoader",
+      "PrefabLoader"
     ],
     "other": [
       "AssetManager",
       "AssetDatabase",
       "AssetCache"
     ]
+  },
+  "assetExtensions": {
+    ".png": "texture",
+    ".jpg": "texture",
+    ".jpeg": "texture",
+    ".gif": "texture",
+    ".webp": "texture",
+    ".bmp": "texture",
+    ".svg": "texture",
+    ".mp3": "audio",
+    ".ogg": "audio",
+    ".wav": "audio",
+    ".m4a": "audio",
+    ".aac": "audio",
+    ".flac": "audio",
+    ".json": "data",
+    ".xml": "data",
+    ".yaml": "data",
+    ".yml": "data",
+    ".txt": "text",
+    ".ttf": "font",
+    ".woff": "font",
+    ".woff2": "font",
+    ".otf": "font",
+    ".fnt": "font",
+    ".atlas": "atlas",
+    ".prefab": "prefab"
   },
   "requiresWasm": false,
   "outputPath": "dist/index.js"

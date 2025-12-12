@@ -31,11 +31,13 @@ export class TauriAPI {
     static async saveFileDialog(
         title?: string,
         defaultName?: string,
-        filters?: FileFilter[]
+        filters?: FileFilter[],
+        defaultPath?: string
     ): Promise<string | null> {
         return await invoke<string | null>('save_file_dialog', {
             title,
             defaultName,
+            defaultPath,
             filters
         });
     }
@@ -101,15 +103,19 @@ export class TauriAPI {
     }
 
     /**
-   * 打开保存场景对话框
-   * @param defaultName 默认文件名（可选）
-   * @returns 用户选择的文件路径，取消则返回 null
-   */
-    static async saveSceneDialog(defaultName?: string): Promise<string | null> {
+     * 打开保存场景对话框
+     * Open save scene dialog
+     *
+     * @param defaultName 默认文件名（可选）| Default file name (optional)
+     * @param scenesDir 场景目录路径（可选）| Scenes directory path (optional)
+     * @returns 用户选择的文件路径，取消则返回 null | Selected file path or null
+     */
+    static async saveSceneDialog(defaultName?: string, scenesDir?: string): Promise<string | null> {
         return await this.saveFileDialog(
             'Save ECS Scene',
             defaultName,
-            [{ name: 'ECS Scene Files', extensions: ['ecs'] }]
+            [{ name: 'ECS Scene Files', extensions: ['ecs'] }],
+            scenesDir
         );
     }
 

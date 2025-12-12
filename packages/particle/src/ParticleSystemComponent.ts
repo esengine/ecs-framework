@@ -5,8 +5,8 @@ import { ParticleEmitter, EmissionShape, createDefaultEmitterConfig, type Emitte
 import type { IParticleModule } from './modules/IParticleModule';
 import { ColorOverLifetimeModule } from './modules/ColorOverLifetimeModule';
 import { SizeOverLifetimeModule } from './modules/SizeOverLifetimeModule';
-import { CollisionModule } from './modules/CollisionModule';
-import { ForceFieldModule } from './modules/ForceFieldModule';
+import { CollisionModule, BoundaryType, CollisionBehavior } from './modules/CollisionModule';
+import { ForceFieldModule, ForceFieldType, type ForceField } from './modules/ForceFieldModule';
 import { Physics2DCollisionModule } from './modules/Physics2DCollisionModule';
 import type { IParticleAsset, IBurstConfig } from './loaders/ParticleLoader';
 
@@ -668,24 +668,87 @@ export class ParticleSystemComponent extends Component {
             this._emitter.config = config;
         }
 
-        // 设置默认模块 | Setup default modules
-        if (this._modules.length === 0) {
-            // 颜色模块（淡出）| Color module (fade out)
-            const colorModule = new ColorOverLifetimeModule();
-            colorModule.gradient = [
-                { time: 0, r: 1, g: 1, b: 1, a: 1 },
-                { time: 1, r: 1, g: 1, b: 1, a: endAlpha }
-            ];
-            this._modules.push(colorModule);
+        // 重建模块列表 | Rebuild modules list
+        // 每次重建时清空并重新创建，确保配置同步
+        // Clear and recreate on each rebuild to ensure config is in sync
+        this._modules = [];
 
-            // 缩放模块 | Size module
-            const sizeModule = new SizeOverLifetimeModule();
-            sizeModule.startMultiplier = 1;
-            sizeModule.endMultiplier = endScale;
-            this._modules.push(sizeModule);
-        }
+        // 颜色模块（淡出）| Color module (fade out)
+        const colorModule = new ColorOverLifetimeModule();
+        colorModule.gradient = [
+            { time: 0, r: 1, g: 1, b: 1, a: 1 },
+            { time: 1, r: 1, g: 1, b: 1, a: endAlpha }
+        ];
+        this._modules.push(colorModule);
+
+        // 缩放模块 | Size module
+        const sizeModule = new SizeOverLifetimeModule();
+        sizeModule.startMultiplier = 1;
+        sizeModule.endMultiplier = endScale;
+        this._modules.push(sizeModule);
+
+        // 从资产配置创建模块 | Create modules from asset configuration
+        this._createModulesFromAsset(asset);
 
         this._needsRebuild = false;
+    }
+
+    /**
+     * 从资产配置创建模块实例
+     * Create module instances from asset configuration
+     */
+    private _createModulesFromAsset(asset: IParticleAsset): void {
+        if (!asset.modules || asset.modules.length === 0) return;
+
+        for (const moduleConfig of asset.modules) {
+            if (!moduleConfig.enabled) continue;
+
+            switch (moduleConfig.type) {
+                case 'Collision': {
+                    const collisionModule = new CollisionModule();
+                    const params = moduleConfig.params;
+                    if (params.boundaryType !== undefined) {
+                        collisionModule.boundaryType = params.boundaryType as BoundaryType;
+                    }
+                    if (params.behavior !== undefined) {
+                        collisionModule.behavior = params.behavior as CollisionBehavior;
+                    }
+                    if (params.left !== undefined) collisionModule.left = params.left as number;
+                    if (params.right !== undefined) collisionModule.right = params.right as number;
+                    if (params.top !== undefined) collisionModule.top = params.top as number;
+                    if (params.bottom !== undefined) collisionModule.bottom = params.bottom as number;
+                    if (params.radius !== undefined) collisionModule.radius = params.radius as number;
+                    if (params.bounceFactor !== undefined) collisionModule.bounceFactor = params.bounceFactor as number;
+                    if (params.lifeLossOnBounce !== undefined) collisionModule.lifeLossOnBounce = params.lifeLossOnBounce as number;
+                    if (params.minVelocityThreshold !== undefined) collisionModule.minVelocityThreshold = params.minVelocityThreshold as number;
+                    this._modules.push(collisionModule);
+                    break;
+                }
+                case 'ForceField': {
+                    const forceModule = new ForceFieldModule();
+                    const params = moduleConfig.params;
+                    // ForceFieldModule 使用 forceFields 数组 | ForceFieldModule uses forceFields array
+                    const field: ForceField = {
+                        type: (params.type as ForceFieldType) ?? ForceFieldType.Wind,
+                        enabled: true,
+                        strength: (params.strength as number) ?? 100,
+                        directionX: params.directionX as number | undefined,
+                        directionY: params.directionY as number | undefined,
+                        centerX: params.centerX as number | undefined,
+                        centerY: params.centerY as number | undefined,
+                        inwardStrength: params.inwardStrength as number | undefined,
+                        frequency: params.frequency as number | undefined,
+                        amplitude: params.amplitude as number | undefined,
+                    };
+                    forceModule.forceFields.push(field);
+                    this._modules.push(forceModule);
+                    break;
+                }
+                // 可扩展其他模块类型 | Extensible for other module types
+                default:
+                    console.warn(`[ParticleSystem] Unknown module type: ${moduleConfig.type}`);
+            }
+        }
     }
 
     private _simulate(
@@ -752,6 +815,15 @@ export class ParticleSystemComponent extends Component {
             const normalizedAge = p.age / p.lifetime;
             for (const module of this._modules) {
                 if (module.enabled) {
+                    // 更新模块的发射器位置 | Update module emitter position
+                    if (module instanceof CollisionModule) {
+                        module.emitterX = worldX;
+                        module.emitterY = worldY;
+                    }
+                    if (module instanceof ForceFieldModule) {
+                        module.emitterX = worldX;
+                        module.emitterY = worldY;
+                    }
                     module.update(p, dt, normalizedAge);
                 }
             }

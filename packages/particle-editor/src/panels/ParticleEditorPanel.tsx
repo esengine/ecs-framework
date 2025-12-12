@@ -1886,28 +1886,35 @@ function presetToAsset(preset: ParticlePreset): Partial<IParticleAsset> {
  * Particle editor panel component
  */
 export function ParticleEditorPanel() {
+    // 从 Store 获取所有状态和 actions | Get all state and actions from Store
     const {
         filePath,
         pendingFilePath,
         particleData,
         isDirty,
         isPlaying,
+        isLoading,
         selectedPreset,
-        setFilePath,
-        setPendingFilePath,
+        activeTab,
+        isFullscreen,
+        followMouse,
+        burstTrigger,
         setParticleData,
         updateProperty,
-        markSaved,
         setPlaying,
         setSelectedPreset,
         createNew,
+        setActiveTab,
+        toggleFullscreen,
+        toggleFollowMouse,
+        triggerBurst: storeTriggerBurst,
+        loadFile: storeLoadFile,
+        saveFile: storeSaveFile,
+        markSaved,
     } = useParticleEditorStore();
 
-    const [activeTab, setActiveTab] = useState<'basic' | 'emission' | 'particle' | 'color' | 'modules' | 'burst'>('basic');
-    const [isFullscreen, setIsFullscreen] = useState(false);
-    const [followMouse, setFollowMouse] = useState(false);
+    // mousePosition 保留为本地状态，因为更新频率极高 | Keep mousePosition as local state due to high update frequency
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-    const [triggerBurst, setTriggerBurst] = useState(0);
     const previewCanvasRef = useRef<HTMLCanvasElement>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
 
@@ -1915,8 +1922,8 @@ export function ParticleEditorPanel() {
     const previewOptions = useMemo<PreviewOptions>(() => ({
         followMouse,
         mousePosition,
-        triggerBurst,
-    }), [followMouse, mousePosition, triggerBurst]);
+        triggerBurst: burstTrigger,
+    }), [followMouse, mousePosition, burstTrigger]);
 
     const { reset: resetPreview } = useParticlePreview(previewCanvasRef, particleData, isPlaying, previewOptions);
 
@@ -1933,84 +1940,60 @@ export function ParticleEditorPanel() {
         });
     }, [followMouse]);
 
-    // 切换全屏 | Toggle fullscreen
-    const toggleFullscreen = useCallback(() => {
-        setIsFullscreen(prev => !prev);
-    }, []);
-
-    // 触发一次爆发 | Trigger a burst
-    const handleTriggerBurst = useCallback(() => {
-        setTriggerBurst(prev => prev + 1);
-    }, []);
-
+    // 处理待打开文件 | Handle pending file - 使用 subscribeWithSelector 替代 useEffect
+    // Using store subscription instead of useEffect
     useEffect(() => {
         if (pendingFilePath) {
-            loadFile(pendingFilePath);
-            setPendingFilePath(null);
-        }
-    }, [pendingFilePath]);
-
-    const loadFile = useCallback(async (path: string) => {
-        try {
             const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
-            if (!fileSystem) {
-                console.error('[ParticleEditorPanel] FileSystem service not available');
-                return;
+            if (fileSystem) {
+                storeLoadFile(pendingFilePath, fileSystem);
             }
-
-            const content = await fileSystem.readFile(path);
-            const data = JSON.parse(content) as IParticleAsset;
-            const defaults = createDefaultParticleAsset();
-            setParticleData({ ...defaults, ...data });
-            setFilePath(path);
-        } catch (error) {
-            console.error('[ParticleEditorPanel] Failed to load file:', error);
         }
-    }, [setParticleData, setFilePath]);
+    }, [pendingFilePath, storeLoadFile]);
 
+    // 保存处理 | Save handler - 使用 Store action
     const handleSave = useCallback(async () => {
-        if (!particleData) return;
+        const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
+        if (!fileSystem) return;
 
-        let savePath = filePath;
+        const dialog = Core.services.tryResolve(IDialogService) as IDialog | null;
+        const success = await storeSaveFile(
+            fileSystem,
+            dialog ? { saveDialog: (opts) => dialog.saveDialog(opts) } : undefined
+        );
 
-        if (!savePath) {
-            const dialog = Core.services.tryResolve(IDialogService) as IDialog | null;
-            if (!dialog) return;
-
-            savePath = await dialog.saveDialog({
-                title: 'Save Particle Effect',
-                filters: [{ name: 'Particle Effect', extensions: ['particle'] }],
-                defaultPath: `${particleData.name || 'new-particle'}.particle`,
-            });
-
-            if (!savePath) return;
-        }
-
-        try {
-            const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
-            if (!fileSystem) return;
-
-            await fileSystem.writeFile(savePath, JSON.stringify(particleData, null, 2));
-            setFilePath(savePath);
-            markSaved();
-
+        if (success) {
             const messageHub = Core.services.tryResolve(MessageHub);
             if (messageHub) {
                 messageHub.publish('assets:refresh', {});
             }
-        } catch (error) {
-            console.error('[ParticleEditorPanel] Failed to save:', error);
         }
-    }, [particleData, filePath, setFilePath, markSaved]);
+    }, [storeSaveFile]);
 
     // 面板容器 ref | Panel container ref
     const panelRef = useRef<HTMLDivElement>(null);
+
+    // 自动获取焦点以接收键盘事件 | Auto focus to receive keyboard events
+    useEffect(() => {
+        // 延迟获取焦点，确保面板已挂载 | Delay focus to ensure panel is mounted
+        const timer = setTimeout(() => {
+            panelRef.current?.focus();
+        }, 100);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // 点击面板时获取焦点 | Focus on panel click
+    const handlePanelClick = useCallback(() => {
+        panelRef.current?.focus();
+    }, []);
 
     // 键盘快捷键处理 | Keyboard shortcut handler
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             e.preventDefault();
             e.stopPropagation();
+            // 阻止原生事件传播到全局处理器 | Stop native event from reaching global handler
+            e.nativeEvent.stopImmediatePropagation();
             handleSave();
         }
     }, [handleSave]);
@@ -2025,9 +2008,12 @@ export function ParticleEditorPanel() {
         });
 
         if (path && typeof path === 'string') {
-            await loadFile(path);
+            const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
+            if (fileSystem) {
+                await storeLoadFile(path, fileSystem);
+            }
         }
-    }, [loadFile]);
+    }, [storeLoadFile]);
 
     const handleBrowseTexture = useCallback(async (): Promise<string | null> => {
         const dialog = Core.services.tryResolve(IDialogService) as IDialog | null;
@@ -2044,7 +2030,7 @@ export function ParticleEditorPanel() {
         return null;
     }, []);
 
-    const handleApplyPreset = useCallback((presetName: string) => {
+    const handleApplyPreset = useCallback(async (presetName: string) => {
         const preset = getPresetByName(presetName);
         if (!preset || !particleData) return;
 
@@ -2071,7 +2057,28 @@ export function ParticleEditorPanel() {
 
         // 重置预览 | Reset preview
         resetPreview();
-    }, [particleData, setParticleData, setSelectedPreset, resetPreview]);
+
+        // 自动保存（如果已有文件路径）| Auto-save if file path exists
+        if (filePath) {
+            const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
+            if (fileSystem) {
+                const newData = { ...particleData, ...assetData };
+                if (preset.emissionRate === 0) {
+                    (newData as any).bursts = (assetData as any).bursts;
+                }
+                try {
+                    await fileSystem.writeFile(filePath, JSON.stringify(newData, null, 2));
+                    // 标记为已保存 | Mark as saved
+                    markSaved();
+                    // 通知资产刷新 | Notify asset refresh
+                    const messageHub = Core.services.tryResolve(MessageHub);
+                    messageHub?.publish('assets:refresh', {});
+                } catch (error) {
+                    console.error('[ParticleEditor] Auto-save failed:', error);
+                }
+            }
+        }
+    }, [particleData, filePath, setParticleData, setSelectedPreset, resetPreview, markSaved]);
 
     const handleNew = useCallback(() => {
         createNew();
@@ -2146,7 +2153,8 @@ export function ParticleEditorPanel() {
             ref={panelRef}
             className="particle-editor-panel"
             tabIndex={0}
-            onKeyDown={handleKeyDown}
+            onKeyDownCapture={handleKeyDown}
+            onClick={handlePanelClick}
         >
             {/* Toolbar */}
             <div className="particle-editor-toolbar">
@@ -2186,7 +2194,7 @@ export function ParticleEditorPanel() {
                     <div className="preview-controls">
                         <button
                             className="preview-control-btn burst-btn"
-                            onClick={handleTriggerBurst}
+                            onClick={storeTriggerBurst}
                             title="Trigger Burst (Click canvas also works)"
                         >
                             <Zap size={14} />
@@ -2195,7 +2203,7 @@ export function ParticleEditorPanel() {
                         <div className="preview-control-separator" />
                         <button
                             className={`preview-control-btn ${followMouse ? 'active' : ''}`}
-                            onClick={() => setFollowMouse(!followMouse)}
+                            onClick={toggleFollowMouse}
                             title="Mouse Follow Mode"
                         >
                             <MousePointer2 size={14} />
@@ -2232,7 +2240,7 @@ export function ParticleEditorPanel() {
                                 });
                             }
                             // 触发爆发 | Trigger burst
-                            handleTriggerBurst();
+                            storeTriggerBurst();
                         }}
                     />
                 </div>

@@ -40,6 +40,10 @@
       "ParticleLoader"
     ]
   },
+  "assetExtensions": {
+    ".particle": "particle",
+    ".particle.json": "particle"
+  },
   "editorPackage": "@esengine/particle-editor",
   "requiresWasm": false,
   "outputPath": "dist/index.js",

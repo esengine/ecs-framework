@@ -138,10 +138,11 @@
 .outliner-header-icons {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding-right: 8px;
+    gap: 6px;
+    padding-right: 6px;
     border-right: 1px solid #444;
-    margin-right: 8px;
+    margin-right: 6px;
+    flex-shrink: 0;
 }
 
 .header-icon {
@@ -175,7 +176,9 @@
 }
 
 .outliner-header-type {
-    width: 140px;
+    width: 80px;
+    min-width: 60px;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -205,23 +208,16 @@
     overflow: auto;
 }
 
+/* 隐藏滚动条但保留滚动功能 */
+/* Hide scrollbar but keep scroll functionality */
 .outliner-content::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 0;
+    height: 0;
 }
 
-.outliner-content::-webkit-scrollbar-track {
-    background: #2a2a2a;
-}
-
-.outliner-content::-webkit-scrollbar-thumb {
-    background: #4a4a4a;
-    border-radius: 5px;
-    border: 2px solid #2a2a2a;
-}
-
-.outliner-content::-webkit-scrollbar-thumb:hover {
-    background: #5a5a5a;
+.outliner-content {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
 }
 
 .outliner-list {
@@ -315,9 +311,10 @@
 .outliner-item-icons {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding-right: 8px;
+    gap: 6px;
+    padding-right: 6px;
     margin-right: 4px;
+    flex-shrink: 0;
 }
 
 .item-icon {
@@ -399,7 +396,9 @@
 }
 
 .outliner-item-type {
-    width: 140px;
+    width: 80px;
+    min-width: 60px;
+    flex-shrink: 0;
     color: #888;
     font-size: 11px;
     overflow: hidden;
@@ -744,4 +743,33 @@
 .outliner-item.prefab-instance .outliner-item-type {
     color: #60a5fa;
     font-style: italic;
+}
+
+/* ==================== Responsive Layout | 响应式布局 ==================== */
+
+/* 使用 container query 在窄面板时隐藏 Type 列 */
+/* Use container query to hide Type column in narrow panels */
+.scene-hierarchy {
+    container-type: inline-size;
+    container-name: scene-hierarchy;
+}
+
+/* 当面板宽度小于 200px 时隐藏 Type 列和图标列 */
+/* Hide Type column and icons column when panel width < 200px */
+@container scene-hierarchy (max-width: 200px) {
+    .outliner-header-type,
+    .outliner-item-type,
+    .outliner-header-icons,
+    .outliner-item-icons {
+        display: none;
+    }
+}
+
+/* 当面板宽度小于 280px 时只隐藏 Type 列 */
+/* Hide only Type column when panel width < 280px */
+@container scene-hierarchy (max-width: 280px) {
+    .outliner-header-type,
+    .outliner-item-type {
+        display: none;
+    }
 }

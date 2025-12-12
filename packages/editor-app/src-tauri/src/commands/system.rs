@@ -72,6 +72,38 @@ pub fn open_file_with_default_app(file_path: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Open folder in system file explorer
+/// 在系统文件管理器中打开文件夹
+#[tauri::command]
+pub fn open_folder(path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        let normalized_path = path.replace('/', "\\");
+        Command::new("explorer")
+            .arg(&normalized_path)
+            .spawn()
+            .map_err(|e| format!("Failed to open folder: {}", e))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open folder: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open folder: {}", e))?;
+    }
+
+    Ok(())
+}
+
 /// Show file in system file explorer
 #[tauri::command]
 pub fn show_in_folder(file_path: String) -> Result<(), String> {

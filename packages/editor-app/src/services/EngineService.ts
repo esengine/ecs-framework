@@ -225,6 +225,10 @@ export class EngineService {
         // 插件注册完加载器后，重新同步资产（确保类型正确）
         await this._syncAssetRegistryToManager();
 
+        // Subscribe to asset changes to sync new assets to runtime
+        // 订阅资产变化以将新资产同步到运行时
+        this._subscribeToAssetChanges();
+
         // 同步服务注册表到 GameRuntime（用于 start/stop 时启用/禁用系统）
         // Sync service registry to GameRuntime (for enabling/disabling systems on start/stop)
         const runtimeServices = this._runtime.getServiceRegistry();
@@ -272,6 +276,10 @@ export class EngineService {
      * 清理模块系统
      */
     clearModuleSystems(): void {
+        // Unsubscribe from asset change events
+        // 取消订阅资产变化事件
+        this._unsubscribeFromAssetChanges();
+
         const pluginManager = Core.services.tryResolve<PluginManager>(IPluginManager);
         if (pluginManager) {
             pluginManager.clearSceneSystems();
@@ -563,6 +571,103 @@ export class EngineService {
         }
 
         logger.debug('Asset sync complete');
+    }
+
+    /** Unsubscribe function for assets:changed event | assets:changed 事件的取消订阅函数 */
+    private _assetsChangedUnsubscribe: (() => void) | null = null;
+
+    /**
+     * Subscribe to assets:changed events and sync new assets to runtime AssetManager.
+     * 订阅 assets:changed 事件，将新资产同步到运行时 AssetManager。
+     */
+    private _subscribeToAssetChanges(): void {
+        if (this._assetsChangedUnsubscribe) return; // Already subscribed
+
+        const messageHub = Core.services.tryResolve(MessageHub);
+        if (!messageHub || !this._assetManager) return;
+
+        const database = this._assetManager.getDatabase();
+        const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+        const loaderFactory = this._assetManager.getLoaderFactory();
+
+        this._assetsChangedUnsubscribe = messageHub.subscribe(
+            'assets:changed',
+            async (data: { type: string; path: string; relativePath: string; guid: string }) => {
+                if (data.type === 'add' || data.type === 'modify') {
+                    // Get full asset info from registry
+                    // 从注册表获取完整资产信息
+                    const asset = assetRegistry?.getAsset(data.guid);
+                    if (!asset) return;
+
+                    // Determine asset type
+                    // 确定资产类型
+                    let assetType: string | null = null;
+
+                    // 1. Try to get type from meta file
+                    const meta = assetRegistry?.metaManager.getMetaByGUID(data.guid);
+                    if (meta?.loaderType) {
+                        assetType = meta.loaderType;
+                    }
+
+                    // 2. Try to get type from registered loaders
+                    if (!assetType) {
+                        assetType = loaderFactory?.getAssetTypeByPath?.(asset.path) ?? null;
+                    }
+
+                    // 3. Fallback by extension
+                    if (!assetType) {
+                        const ext = asset.path.substring(asset.path.lastIndexOf('.')).toLowerCase();
+                        if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'].includes(ext)) {
+                            assetType = AssetType.Texture;
+                        } else if (['.mp3', '.wav', '.ogg', '.m4a'].includes(ext)) {
+                            assetType = AssetType.Audio;
+                        } else if (['.json'].includes(ext)) {
+                            assetType = AssetType.Json;
+                        } else if (['.txt', '.md', '.xml', '.yaml'].includes(ext)) {
+                            assetType = AssetType.Text;
+                        } else {
+                            assetType = AssetType.Custom;
+                        }
+                    }
+
+                    // Add to runtime database
+                    // 添加到运行时数据库
+                    database.addAsset({
+                        guid: asset.guid,
+                        path: asset.path,
+                        type: assetType,
+                        name: asset.name,
+                        size: asset.size,
+                        hash: asset.hash || '',
+                        dependencies: [],
+                        labels: [],
+                        tags: new Map(),
+                        lastModified: asset.lastModified,
+                        version: 1
+                    });
+
+                    logger.debug(`Asset synced to runtime: ${asset.path} (${data.guid})`);
+                } else if (data.type === 'remove') {
+                    // Remove from runtime database
+                    // 从运行时数据库移除
+                    database.removeAsset(data.guid);
+                    logger.debug(`Asset removed from runtime: ${data.guid}`);
+                }
+            }
+        );
+
+        logger.debug('Subscribed to assets:changed events');
+    }
+
+    /**
+     * Unsubscribe from assets:changed events.
+     * 取消订阅 assets:changed 事件。
+     */
+    private _unsubscribeFromAssetChanges(): void {
+        if (this._assetsChangedUnsubscribe) {
+            this._assetsChangedUnsubscribe();
+            this._assetsChangedUnsubscribe = null;
+        }
     }
 
     /**

@@ -40,6 +40,10 @@
       "TilesetLoader"
     ]
   },
+  "assetExtensions": {
+    ".tilemap.json": "tilemap",
+    ".tileset.json": "tileset"
+  },
   "editorPackage": "@esengine/tilemap-editor",
   "requiresWasm": false,
   "outputPath": "dist/index.js",

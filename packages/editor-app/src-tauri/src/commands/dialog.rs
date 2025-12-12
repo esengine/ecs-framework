@@ -65,11 +65,13 @@ pub async fn open_file_dialog(
 }
 
 /// Save file dialog (generic)
+/// 通用保存文件对话框
 #[tauri::command]
 pub async fn save_file_dialog(
     app: AppHandle,
     title: Option<String>,
     default_name: Option<String>,
+    default_path: Option<String>,
     filters: Option<Vec<FileFilter>>,
 ) -> Result<Option<String>, String> {
     let mut dialog = app.dialog().file();
@@ -78,6 +80,14 @@ pub async fn save_file_dialog(
         dialog = dialog.set_title(&t);
     } else {
         dialog = dialog.set_title("Save File");
+    }
+
+    // Set default directory | 设置默认目录
+    if let Some(path) = default_path {
+        let path_buf = std::path::PathBuf::from(&path);
+        if path_buf.exists() {
+            dialog = dialog.set_directory(&path_buf);
+        }
     }
 
     if let Some(name) = default_name {

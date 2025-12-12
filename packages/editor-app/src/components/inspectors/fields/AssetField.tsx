@@ -119,18 +119,18 @@ export function AssetField({
         e.stopPropagation();
     }, []);
 
-    const handleDrop = useCallback((e: React.DragEvent) => {
+    const handleDrop = useCallback(async (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(false);
 
-        if (readonly) return;
+        if (readonly || !assetRegistry) return;
 
         // Try to get GUID from drag data first
         const assetGuid = e.dataTransfer.getData('asset-guid');
         if (assetGuid && isGUID(assetGuid)) {
             // Validate extension if needed
-            if (fileExtension && assetRegistry) {
+            if (fileExtension) {
                 const path = assetRegistry.getPathByGuid(assetGuid);
                 if (path && !path.endsWith(fileExtension)) {
                     return; // Extension mismatch
@@ -140,50 +140,63 @@ export function AssetField({
             return;
         }
 
-        // Fallback: handle asset-path and convert to GUID
+        // Handle asset-path: convert to GUID or register
         const assetPath = e.dataTransfer.getData('asset-path');
         if (assetPath && (!fileExtension || assetPath.endsWith(fileExtension))) {
-            // Try to get GUID from path
-            if (assetRegistry) {
-                // Path might be absolute, convert to relative first
-                let relativePath = assetPath;
-                if (assetPath.includes(':') || assetPath.startsWith('/')) {
-                    relativePath = assetRegistry.absoluteToRelative(assetPath) || assetPath;
-                }
-                const guid = assetRegistry.getGuidByPath(relativePath);
+            // Path might be absolute, convert to relative first
+            let relativePath = assetPath;
+            if (assetPath.includes(':') || assetPath.startsWith('/')) {
+                relativePath = assetRegistry.absoluteToRelative(assetPath) || assetPath;
+            }
+
+            // 尝试多种路径格式 | Try multiple path formats
+            const pathVariants = [relativePath, relativePath.replace(/\\/g, '/')];
+            for (const variant of pathVariants) {
+                const guid = assetRegistry.getGuidByPath(variant);
                 if (guid) {
                     onChange(guid);
                     return;
                 }
             }
-            // Fallback to path if GUID not found (backward compatibility)
-            onChange(assetPath);
+
+            // GUID 不存在，尝试注册 | GUID not found, try to register
+            const absolutePath = assetPath.includes(':') ? assetPath : null;
+            if (absolutePath) {
+                try {
+                    const newGuid = await assetRegistry.registerAsset(absolutePath);
+                    if (newGuid) {
+                        console.log(`[AssetField] Registered dropped asset with GUID: ${newGuid}`);
+                        onChange(newGuid);
+                        return;
+                    }
+                } catch (error) {
+                    console.error(`[AssetField] Failed to register dropped asset:`, error);
+                }
+            }
+
+            console.error(`[AssetField] Cannot use dropped asset without GUID: "${assetPath}"`);
             return;
         }
 
-        // Handle file drops
-        const files = Array.from(e.dataTransfer.files);
-        const file = files.find((f) =>
-            !fileExtension || f.name.endsWith(fileExtension)
-        );
-
-        if (file) {
-            // For file drops, we still use filename (need to register first)
-            onChange(file.name);
-            return;
-        }
-
+        // Handle text/plain drops (might be GUID or path)
         const text = e.dataTransfer.getData('text/plain');
         if (text && (!fileExtension || text.endsWith(fileExtension))) {
-            // Try to convert to GUID if it's a path
-            if (assetRegistry && !isGUID(text)) {
-                const guid = assetRegistry.getGuidByPath(text);
+            if (isGUID(text)) {
+                onChange(text);
+                return;
+            }
+
+            // Try to get GUID from path
+            const pathVariants = [text, text.replace(/\\/g, '/')];
+            for (const variant of pathVariants) {
+                const guid = assetRegistry.getGuidByPath(variant);
                 if (guid) {
                     onChange(guid);
                     return;
                 }
             }
-            onChange(text);
+
+            console.error(`[AssetField] Cannot use dropped text without GUID: "${text}"`);
         }
     }, [onChange, fileExtension, readonly, assetRegistry]);
 
@@ -192,23 +205,60 @@ export function AssetField({
         setShowPicker(true);
     }, [readonly]);
 
-    const handlePickerSelect = useCallback((path: string) => {
-        // Convert path to GUID if possible
-        if (assetRegistry) {
-            // Path might be absolute, convert to relative first
-            let relativePath = path;
-            if (path.includes(':') || path.startsWith('/')) {
-                relativePath = assetRegistry.absoluteToRelative(path) || path;
-            }
-            const guid = assetRegistry.getGuidByPath(relativePath);
+    const handlePickerSelect = useCallback(async (path: string) => {
+        // Convert path to GUID - 必须使用 GUID，不能使用路径！
+        // Must use GUID, cannot use path!
+        if (!assetRegistry) {
+            console.error(`[AssetField] AssetRegistry not available, cannot select asset`);
+            setShowPicker(false);
+            return;
+        }
+
+        // Path might be absolute, convert to relative first
+        let relativePath = path;
+        if (path.includes(':') || path.startsWith('/')) {
+            relativePath = assetRegistry.absoluteToRelative(path) || path;
+        }
+
+        // 尝试多种路径格式 | Try multiple path formats
+        const pathVariants = [
+            relativePath,
+            relativePath.replace(/\\/g, '/'),  // 统一为正斜杠
+        ];
+
+        for (const variant of pathVariants) {
+            const guid = assetRegistry.getGuidByPath(variant);
             if (guid) {
+                console.log(`[AssetField] Found GUID for path "${path}": ${guid}`);
                 onChange(guid);
                 setShowPicker(false);
                 return;
             }
         }
-        // Fallback to path if GUID not found
-        onChange(path);
+
+        // GUID 不存在，尝试注册资产（创建 .meta 文件）
+        // GUID not found, try to register asset (create .meta file)
+        console.warn(`[AssetField] GUID not found for path "${path}", registering asset...`);
+
+        try {
+            // 使用绝对路径注册 | Register using absolute path
+            const absolutePath = path.includes(':') ? path : null;
+            if (absolutePath) {
+                const newGuid = await assetRegistry.registerAsset(absolutePath);
+                if (newGuid) {
+                    console.log(`[AssetField] Registered new asset with GUID: ${newGuid}`);
+                    onChange(newGuid);
+                    setShowPicker(false);
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error(`[AssetField] Failed to register asset:`, error);
+        }
+
+        // 注册失败，不能使用路径（会导致打包后找不到）
+        // Registration failed, cannot use path (will fail after build)
+        console.error(`[AssetField] Cannot use asset without GUID: "${path}". Please ensure the asset is in a managed directory (assets/, scripts/, scenes/).`);
         setShowPicker(false);
     }, [onChange, assetRegistry]);
 

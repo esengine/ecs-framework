@@ -756,10 +756,23 @@ export class UserCodeService implements IService, IUserCodeService {
                 }>('user-code:file-changed', async (event) => {
                     const { changeType, paths } = event.payload;
 
-                    logger.info('File change detected | 检测到文件变更', { changeType, paths });
+                    // 只处理脚本文件 | Only process script files
+                    const scriptExtensions = ['.ts', '.tsx', '.js', '.jsx'];
+                    const scriptPaths = paths.filter(p => {
+                        const ext = p.substring(p.lastIndexOf('.')).toLowerCase();
+                        return scriptExtensions.includes(ext);
+                    });
+
+                    // 如果没有脚本文件变更，跳过热更新 | Skip hot reload if no script files changed
+                    if (scriptPaths.length === 0) {
+                        logger.debug('No script files in change event, skipping hot reload | 变更事件中没有脚本文件，跳过热更新');
+                        return;
+                    }
+
+                    logger.info('Script file change detected | 检测到脚本文件变更', { changeType, paths: scriptPaths });
 
                     // Determine which targets are affected | 确定受影响的目标
-                    const isEditorChange = paths.some(p =>
+                    const isEditorChange = scriptPaths.some(p =>
                         p.includes(`${EDITOR_SCRIPTS_DIR}/`) || p.includes(`${EDITOR_SCRIPTS_DIR}\\`)
                     );
                     const target = isEditorChange ? UserCodeTarget.Editor : UserCodeTarget.Runtime;
@@ -790,7 +803,7 @@ export class UserCodeService implements IService, IUserCodeService {
                                 // Create hot reload event | 创建热更新事件
                                 const reloadEvent: HotReloadEvent = {
                                     target,
-                                    changedFiles: paths,
+                                    changedFiles: scriptPaths,
                                     previousModule,
                                     newModule
                                 };

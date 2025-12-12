@@ -146,4 +146,43 @@ export class AssetLoaderFactory implements IAssetLoaderFactory {
     clear(): void {
         this._loaders.clear();
     }
+
+    /**
+     * Get all supported file extensions from all registered loaders.
+     * 获取所有注册加载器支持的文件扩展名。
+     *
+     * @returns Array of extension patterns (e.g., ['*.png', '*.jpg', '*.particle'])
+     */
+    getAllSupportedExtensions(): string[] {
+        const extensions = new Set<string>();
+
+        for (const loader of this._loaders.values()) {
+            for (const ext of loader.supportedExtensions) {
+                // 转换为 glob 模式 | Convert to glob pattern
+                const cleanExt = ext.startsWith('.') ? ext.substring(1) : ext;
+                extensions.add(`*.${cleanExt}`);
+            }
+        }
+
+        return Array.from(extensions);
+    }
+
+    /**
+     * Get extension to type mapping for all registered loaders.
+     * 获取所有注册加载器的扩展名到类型的映射。
+     *
+     * @returns Map of extension (without dot) to asset type string
+     */
+    getExtensionTypeMap(): Record<string, string> {
+        const map: Record<string, string> = {};
+
+        for (const [type, loader] of this._loaders) {
+            for (const ext of loader.supportedExtensions) {
+                const cleanExt = ext.startsWith('.') ? ext.substring(1) : ext;
+                map[cleanExt.toLowerCase()] = type;
+            }
+        }
+
+        return map;
+    }
 }
