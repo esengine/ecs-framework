@@ -15,7 +15,8 @@ export interface ParticleProviderRenderData {
     colors: Uint32Array;
     tileCount: number;
     sortingOrder: number;
-    texturePath?: string;
+    /** 纹理 GUID | Texture GUID */
+    textureGuid?: string;
 }
 
 /**
@@ -184,10 +185,10 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
             }
 
             if (particleIndex > 0) {
-                // 获取纹理路径（支持多种来源）| Get texture path (support multiple sources)
+                // 获取纹理 GUID | Get texture GUID
                 const firstComponent = systems[0]?.component;
-                const asset = firstComponent?.loadedAsset as { textureGuid?: string; texturePath?: string } | null;
-                const texPath = asset?.textureGuid || asset?.texturePath || firstComponent?.textureGuid || undefined;
+                const asset = firstComponent?.loadedAsset as { textureGuid?: string } | null;
+                const textureGuid = asset?.textureGuid || firstComponent?.textureGuid || undefined;
 
                 // 创建当前组的渲染数据 | Create render data for current group
                 const renderData: ParticleProviderRenderData = {
@@ -197,7 +198,7 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
                     colors: this._colors.subarray(0, particleIndex),
                     tileCount: particleIndex,
                     sortingOrder,
-                    texturePath: texPath
+                    textureGuid
                 };
 
                 this._renderDataCache.push(renderData);

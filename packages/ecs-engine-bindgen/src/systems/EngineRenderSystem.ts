@@ -26,8 +26,8 @@ export interface ProviderRenderData {
     tileCount: number;
     /** Sorting order for render ordering | 渲染排序顺序 */
     sortingOrder: number;
-    /** Texture path for loading (optional, used if textureId is 0) */
-    texturePath?: string;
+    /** 纹理 GUID（如果 textureId 为 0 则使用）| Texture GUID (used if textureId is 0) */
+    textureGuid?: string;
 }
 
 /**
@@ -306,19 +306,15 @@ export class EngineRenderSystem extends EntitySystem {
             let textureId = 0;
             const textureSource = sprite.getTextureSource();
             if (textureSource) {
-                // Resolve GUID to path if resolver is available
-                // 如果有解析器，将 GUID 解析为路径
-                const texturePath = this.assetPathResolver
-                    ? this.assetPathResolver(textureSource)
-                    : textureSource;
+                const texturePath = this.resolveAssetPath(textureSource);
                 textureId = this.bridge.getOrLoadTextureByPath(texturePath);
             }
 
             // Get material ID from GUID (0 = default if not found or no GUID specified)
             // 从 GUID 获取材质 ID（0 = 默认，如果未找到或未指定 GUID）
             const materialGuidOrPath = sprite.materialGuid;
-            const materialPath = materialGuidOrPath && this.assetPathResolver
-                ? this.assetPathResolver(materialGuidOrPath)
+            const materialPath = materialGuidOrPath
+                ? this.resolveAssetPath(materialGuidOrPath)
                 : materialGuidOrPath;
             const materialId = materialPath
                 ? getMaterialManager().getMaterialIdByPath(materialPath)
@@ -355,10 +351,13 @@ export class EngineRenderSystem extends EntitySystem {
         for (const provider of this.renderDataProviders) {
             const renderDataList = provider.getRenderData();
             for (const data of renderDataList) {
-                // Get texture ID - load from path if needed
+                // Get texture ID - load from GUID if needed
+                // 获取纹理 ID - 如果需要从 GUID 加载
                 let textureId = data.textureIds[0] || 0;
-                if (textureId === 0 && data.texturePath) {
-                    textureId = this.bridge.getOrLoadTextureByPath(data.texturePath);
+                if (textureId === 0 && data.textureGuid) {
+                    // resolveAssetPath 会将 GUID 解析为实际路径
+                    // resolveAssetPath will resolve GUID to actual path
+                    textureId = this.bridge.getOrLoadTextureByPath(this.resolveAssetPath(data.textureGuid));
                 }
 
                 // Convert tilemap render data to sprites
@@ -529,10 +528,11 @@ export class EngineRenderSystem extends EntitySystem {
      * 将提供者渲染数据转换为 Sprite 渲染数据数组。
      */
     private convertProviderDataToSprites(data: ProviderRenderData): SpriteRenderData[] {
-        // Get texture ID - load from path if needed
+        // Get texture ID - load from GUID if needed
+        // 获取纹理 ID - 如果需要从 GUID 加载
         let textureId = data.textureIds[0] || 0;
-        if (textureId === 0 && data.texturePath) {
-            textureId = this.bridge.getOrLoadTextureByPath(data.texturePath);
+        if (textureId === 0 && data.textureGuid) {
+            textureId = this.bridge.getOrLoadTextureByPath(this.resolveAssetPath(data.textureGuid));
         }
 
         const sprites: SpriteRenderData[] = [];
@@ -1208,5 +1208,18 @@ export class EngineRenderSystem extends EntitySystem {
      */
     getAssetPathResolver(): AssetPathResolverFn | null {
         return this.assetPathResolver;
+    }
+
+    /**
+     * Resolve asset GUID or path to actual file path.
+     * 将资产 GUID 或路径解析为实际文件路径。
+     *
+     * @param guidOrPath - Asset GUID or path | 资产 GUID 或路径
+     * @returns Resolved path or original value | 解析后的路径或原值
+     */
+    private resolveAssetPath(guidOrPath: string): string {
+        return this.assetPathResolver
+            ? this.assetPathResolver(guidOrPath)
+            : guidOrPath;
     }
 }

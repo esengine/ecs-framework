@@ -125,8 +125,6 @@ export interface IParticleAsset {
     sortingOrder: number;
     /** 纹理资产 GUID | Texture asset GUID */
     textureGuid?: string;
-    /** 纹理路径（编辑器兼容）| Texture path (editor compatibility) */
-    texturePath?: string;
 
     // 模块配置 | Module configurations
     /** 模块列表 | Module list */

@@ -1,6 +1,8 @@
 export { CameraComponent, ECameraProjection, CameraProjection } from './CameraComponent';
+export { CameraSystem } from './CameraSystem';
 export { CameraPlugin } from './CameraPlugin';
+export { CameraManager, CameraManagerImpl, type ICameraManager, type Vector2 } from './CameraManager';
 
-// Service Tokens (reserved for future use)
-// 服务令牌（预留用于未来扩展）
-// export { CameraManagerToken, type ICameraManager } from './tokens';
+// Service Tokens
+// 服务令牌
+export { CameraManagerToken } from './tokens';

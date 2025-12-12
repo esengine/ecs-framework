@@ -166,6 +166,13 @@ export const en: Translations = {
             revertFailed: 'Failed to revert instance',
             unpackSuccess: 'Prefab link broken',
             unpackFailed: 'Failed to unpack prefab'
+        },
+        array: {
+            empty: 'Empty array',
+            add: 'Add',
+            remove: 'Remove',
+            dragToReorder: 'Drag to reorder',
+            dropAsset: 'Drop asset'
         }
     },
 

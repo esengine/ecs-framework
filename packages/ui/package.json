@@ -26,6 +26,9 @@
         "type-check": "tsc --noEmit",
         "clean": "rimraf dist"
     },
+    "dependencies": {
+        "@esengine/asset-system": "workspace:*"
+    },
     "devDependencies": {
         "@esengine/ecs-framework": "workspace:*",
         "@esengine/engine-core": "workspace:*",

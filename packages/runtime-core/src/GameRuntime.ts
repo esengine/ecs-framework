@@ -10,7 +10,6 @@ import { Core, Scene, SceneSerializer, HierarchySystem } from '@esengine/ecs-fra
 import {
     EngineBridge,
     EngineRenderSystem,
-    CameraSystem,
     EngineBridgeToken,
     RenderSystemToken,
     EngineIntegrationToken,
@@ -23,6 +22,7 @@ import {
     Input,
     PluginServiceRegistry,
     TransformTypeToken,
+    CanvasElementToken,
     createServiceToken
 } from '@esengine/engine-core';
 import { AssetManager, EngineIntegration, AssetManagerToken } from '@esengine/asset-system';
@@ -154,7 +154,6 @@ export class GameRuntime {
     private _bridge: EngineBridge | null = null;
     private _scene: Scene | null = null;
     private _renderSystem: EngineRenderSystem | null = null;
-    private _cameraSystem: CameraSystem | null = null;
     private _inputSystem: InputSystem | null = null;
     private _assetManager: AssetManager | null = null;
     private _engineIntegration: EngineIntegration | null = null;
@@ -318,8 +317,8 @@ export class GameRuntime {
                 this._inputSystem.setInputSubsystem(inputSubsystem);
             }
 
-            this._cameraSystem = new CameraSystem(this._bridge);
-            this._scene.addSystem(this._cameraSystem);
+            // CameraSystem 由 CameraPlugin 通过插件系统创建
+            // CameraSystem is created by CameraPlugin via plugin system
 
             this._renderSystem = new EngineRenderSystem(this._bridge, TransformComponent);
 
@@ -351,6 +350,13 @@ export class GameRuntime {
             services.register(EngineIntegrationToken, this._engineIntegration);
             services.register(AssetManagerToken, this._assetManager);
             services.register(TransformTypeToken, TransformComponent);
+
+            // 注册 Canvas 元素（用于坐标转换等）
+            // Register canvas element (for coordinate conversion, etc.)
+            const canvas = this._platform.getCanvas();
+            if (canvas) {
+                services.register(CanvasElementToken, canvas);
+            }
 
             this._systemContext = {
                 isEditor: this._platform.isEditorMode(),
@@ -516,6 +522,12 @@ export class GameRuntime {
             this._renderSystem.setPreviewMode(true);
         }
 
+        // 禁用编辑器模式，启用 InputSystem 和组件生命周期回调
+        // Disable editor mode to enable InputSystem and component lifecycle callbacks
+        if (this._scene) {
+            this._scene.isEditorMode = false;
+        }
+
         // 调用场景 begin() 触发延迟的组件生命周期回调
         // Call scene begin() to trigger deferred component lifecycle callbacks
         if (this._scene) {
@@ -575,6 +587,12 @@ export class GameRuntime {
         // 禁用预览模式
         if (this._renderSystem) {
             this._renderSystem.setPreviewMode(false);
+        }
+
+        // 恢复编辑器模式（如果是编辑器平台）
+        // Restore editor mode (if editor platform)
+        if (this._scene && this._platform.isEditorMode()) {
+            this._scene.isEditorMode = true;
         }
 
         // 解绑 UI 输入
@@ -963,7 +981,6 @@ export class GameRuntime {
         }
 
         this._renderSystem = null;
-        this._cameraSystem = null;
         this._inputSystem = null;
         this._systemContext = null;
         this._platform.dispose();

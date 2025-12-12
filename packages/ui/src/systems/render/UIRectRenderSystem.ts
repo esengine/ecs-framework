@@ -49,8 +49,12 @@ export class UIRectRenderSystem extends EntitySystem {
                 continue;
             }
 
-            const transform = entity.getComponent(UITransformComponent)!;
-            const render = entity.getComponent(UIRenderComponent)!;
+            const transform = entity.getComponent(UITransformComponent);
+            const render = entity.getComponent(UIRenderComponent);
+
+            // 空值检查 - 组件可能在反序列化或初始化期间尚未就绪
+            // Null check - component may not be ready during deserialization or initialization
+            if (!transform || !render) continue;
 
             if (!transform.visible) continue;
 
@@ -97,7 +101,7 @@ export class UIRectRenderSystem extends EntitySystem {
             // Render texture if present
             // 如果有纹理，渲染纹理
             if (render.textureGuid) {
-                const texturePath = typeof render.textureGuid === 'string' ? render.textureGuid : undefined;
+                const textureGuid = typeof render.textureGuid === 'string' ? render.textureGuid : undefined;
                 const textureId = typeof render.textureGuid === 'number' ? render.textureGuid : undefined;
 
                 collector.addRect(
@@ -111,7 +115,7 @@ export class UIRectRenderSystem extends EntitySystem {
                         pivotX,
                         pivotY,
                         textureId,
-                        texturePath,
+                        textureGuid,
                         uv: render.textureUV
                             ? [render.textureUV.u0, render.textureUV.v0, render.textureUV.u1, render.textureUV.v1]
                             : undefined

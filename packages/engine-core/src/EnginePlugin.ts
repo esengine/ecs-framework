@@ -21,7 +21,10 @@ import {
     PluginServiceRegistry,
     createServiceToken,
     TransformTypeToken,
-    type ServiceToken
+    CanvasElementToken,
+    EngineBridgeToken,
+    type ServiceToken,
+    type IEngineBridge
 } from './PluginServiceRegistry';
 
 // 导出服务令牌系统 | Export service token system
@@ -29,7 +32,10 @@ export {
     PluginServiceRegistry,
     createServiceToken,
     TransformTypeToken,
-    type ServiceToken
+    CanvasElementToken,
+    EngineBridgeToken,
+    type ServiceToken,
+    type IEngineBridge
 };
 
 // 重新导出 IEditorModuleBase（供编辑器插件使用）| Re-export for editor plugins

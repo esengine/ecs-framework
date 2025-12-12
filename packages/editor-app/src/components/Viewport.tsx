@@ -12,6 +12,7 @@ import { Core, Entity, SceneSerializer, PrefabSerializer, ComponentRegistry } fr
 import type { PrefabData, ComponentType } from '@esengine/ecs-framework';
 import { MessageHub, ProjectService, AssetRegistryService, EntityStoreService, CommandManager, SceneManagerService } from '@esengine/editor-core';
 import { InstantiatePrefabCommand } from '../application/commands/prefab/InstantiatePrefabCommand';
+import { TransformCommand, type TransformState, type TransformOperationType } from '../application/commands';
 import { TransformComponent } from '@esengine/engine-core';
 import { CameraComponent } from '@esengine/camera';
 import { UITransformComponent } from '@esengine/ui';
@@ -19,6 +20,7 @@ import { TauriAPI } from '../api/tauri';
 import { open } from '@tauri-apps/plugin-shell';
 import { RuntimeResolver } from '../services/RuntimeResolver';
 import { QRCodeDialog } from './QRCodeDialog';
+import { collectAssetReferences } from '@esengine/asset-system';
 
 import type { ModuleManifest } from '../services/RuntimeResolver';
 
@@ -276,7 +278,11 @@ export function Viewport({ locale = 'en', messageHub, commandManager }: Viewport
     const lastMousePosRef = useRef({ x: 0, y: 0 });
     const selectedEntityRef = useRef<Entity | null>(null);
     const messageHubRef = useRef<MessageHub | null>(null);
+    const commandManagerRef = useRef<CommandManager | null>(null);
     const transformModeRef = useRef<TransformMode>('select');
+    // Initial transform state for undo/redo | 用于撤销/重做的初始变换状态
+    const initialTransformStateRef = useRef<TransformState | null>(null);
+    const transformComponentRef = useRef<TransformComponent | UITransformComponent | null>(null);
     const snapEnabledRef = useRef(true);
     const gridSnapRef = useRef(10);
     const rotationSnapRef = useRef(15);
@@ -350,6 +356,11 @@ export function Viewport({ locale = 'en', messageHub, commandManager }: Viewport
         }
     }, []);
 
+    // Sync commandManager prop to ref | 同步 commandManager prop 到 ref
+    useEffect(() => {
+        commandManagerRef.current = commandManager ?? null;
+    }, [commandManager]);
+
     // Canvas setup and input handling
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -414,6 +425,21 @@ export function Viewport({ locale = 'en', messageHub, commandManager }: Viewport
                     // In transform mode, left click transforms entity
                     isDraggingTransformRef.current = true;
                     canvas.style.cursor = 'move';
+
+                    // Capture initial transform state for undo/redo
+                    // 捕获初始变换状态用于撤销/重做
+                    const entity = selectedEntityRef.current;
+                    if (entity) {
+                        const transform = entity.getComponent(TransformComponent);
+                        const uiTransform = entity.getComponent(UITransformComponent);
+                        if (transform) {
+                            initialTransformStateRef.current = TransformCommand.captureTransformState(transform);
+                            transformComponentRef.current = transform;
+                        } else if (uiTransform) {
+                            initialTransformStateRef.current = TransformCommand.captureUITransformState(uiTransform);
+                            transformComponentRef.current = uiTransform;
+                        }
+                    }
                 }
                 lastMousePosRef.current = { x: e.clientX, y: e.clientY };
                 e.preventDefault();
@@ -594,6 +620,36 @@ export function Viewport({ locale = 'en', messageHub, commandManager }: Viewport
                         }
                     }
                 }
+
+                // Create TransformCommand for undo/redo | 创建变换命令用于撤销/重做
+                const initialState = initialTransformStateRef.current;
+                const component = transformComponentRef.current;
+                const hub = messageHubRef.current;
+                const cmdManager = commandManagerRef.current;
+
+                if (entity && initialState && component && hub && cmdManager) {
+                    const mode = transformModeRef.current as TransformOperationType;
+                    let newState: TransformState;
+
+                    if (component instanceof TransformComponent) {
+                        newState = TransformCommand.captureTransformState(component);
+                    } else {
+                        newState = TransformCommand.captureUITransformState(component as UITransformComponent);
+                    }
+
+                    // Only create command if state actually changed | 只有状态实际改变时才创建命令
+                    const hasChanged = JSON.stringify(initialState) !== JSON.stringify(newState);
+                    if (hasChanged) {
+                        const cmd = new TransformCommand(hub, entity, component, mode, initialState, newState);
+                        // Push to undo stack without re-executing (already applied during drag)
+                        // 推入撤销栈但不重新执行（拖动时已应用）
+                        cmdManager.pushWithoutExecute(cmd);
+                    }
+                }
+
+                // Clear refs | 清除引用
+                initialTransformStateRef.current = null;
+                transformComponentRef.current = null;
 
                 // Notify Inspector to refresh after transform change
                 if (messageHubRef.current && selectedEntityRef.current) {
@@ -860,8 +916,8 @@ export function Viewport({ locale = 'en', messageHub, commandManager }: Viewport
                 await TauriAPI.createDirectory(assetsDir);
             }
 
-            // Collect all asset paths from scene
-            // 从场景中收集所有资产路径
+            // Collect all asset references from scene using generic collector
+            // 使用通用收集器从场景中收集所有资产引用
             const sceneObj = JSON.parse(sceneData);
             const assetPaths = new Set<string>();
             // GUID 到路径的映射，用于需要通过 GUID 加载的资产
@@ -871,69 +927,65 @@ export function Viewport({ locale = 'en', messageHub, commandManager }: Viewport
             // Get asset registry for resolving GUIDs
             const assetRegistry = Core.services.tryResolve(AssetRegistryService);
 
-            // Scan all components for asset references
-            if (sceneObj.entities) {
-                for (const entity of sceneObj.entities) {
-                    if (entity.components) {
-                        for (const comp of entity.components) {
-                            // Sprite textures
-                            if (comp.type === 'Sprite' && comp.data?.texture) {
-                                assetPaths.add(comp.data.texture);
-                            }
-                            // Behavior tree assets
-                            if (comp.type === 'BehaviorTreeRuntime' && comp.data?.treeAssetId) {
-                                assetPaths.add(comp.data.treeAssetId);
-                            }
-                            // Tilemap assets
-                            if (comp.type === 'Tilemap' && comp.data?.tmxPath) {
-                                assetPaths.add(comp.data.tmxPath);
-                            }
-                            // Audio assets
-                            if (comp.type === 'AudioSource' && comp.data?.clip) {
-                                assetPaths.add(comp.data.clip);
-                            }
-                            // Particle assets - resolve GUID to path
-                            if (comp.type === 'ParticleSystem' && comp.data?.particleAssetGuid) {
-                                const guid = comp.data.particleAssetGuid;
-                                if (assetRegistry) {
-                                    const relativePath = assetRegistry.getPathByGuid(guid);
-                                    if (relativePath && projectPath) {
-                                        // Convert relative path to absolute path
-                                        // 将相对路径转换为绝对路径
-                                        const absolutePath = `${projectPath}\\${relativePath.replace(/\//g, '\\')}`;
-                                        assetPaths.add(absolutePath);
-                                        guidToPath.set(guid, absolutePath);
+            // Use generic asset collector to find all asset references
+            // 使用通用资产收集器找到所有资产引用
+            const assetReferences = collectAssetReferences(sceneObj);
 
-                                        // Also check for texture referenced in particle asset
-                                        // 同时检查粒子资产中引用的纹理
-                                        try {
-                                            const particleContent = await TauriAPI.readFileContent(absolutePath);
-                                            const particleData = JSON.parse(particleContent);
-                                            const textureRef = particleData.textureGuid || particleData.texturePath;
-                                            if (textureRef) {
-                                                // Check if it's a GUID or a path
-                                                if (textureRef.includes('-') && textureRef.length > 30) {
-                                                    // Looks like a GUID
-                                                    const textureRelPath = assetRegistry.getPathByGuid(textureRef);
-                                                    if (textureRelPath && projectPath) {
-                                                        const textureAbsPath = `${projectPath}\\${textureRelPath.replace(/\//g, '\\')}`;
-                                                        assetPaths.add(textureAbsPath);
-                                                        guidToPath.set(textureRef, textureAbsPath);
-                                                    }
-                                                } else {
-                                                    // It's a path
-                                                    const textureAbsPath = `${projectPath}\\${textureRef.replace(/\//g, '\\')}`;
-                                                    assetPaths.add(textureAbsPath);
-                                                }
-                                            }
-                                        } catch {
-                                            // Ignore parse errors
-                                        }
-                                    }
-                                }
+            // Helper: check if value looks like a GUID
+            const isGuidLike = (value: string) =>
+                value.includes('-') && value.length >= 30 && value.length <= 40;
+
+            // Helper: resolve GUID to absolute path
+            const resolveGuidToPath = (guid: string): string | null => {
+                if (!assetRegistry || !projectPath) return null;
+                const relativePath = assetRegistry.getPathByGuid(guid);
+                if (!relativePath) return null;
+                return `${projectPath}\\${relativePath.replace(/\//g, '\\')}`;
+            };
+
+            // Helper: load particle asset and extract texture references
+            const loadParticleTextures = async (particlePath: string) => {
+                try {
+                    const particleContent = await TauriAPI.readFileContent(particlePath);
+                    const particleData = JSON.parse(particleContent);
+                    const textureRef = particleData.textureGuid || particleData.texturePath;
+                    if (textureRef) {
+                        if (isGuidLike(textureRef)) {
+                            const texturePath = resolveGuidToPath(textureRef);
+                            if (texturePath) {
+                                assetPaths.add(texturePath);
+                                guidToPath.set(textureRef, texturePath);
                             }
+                        } else if (projectPath) {
+                            const texturePath = `${projectPath}\\${textureRef.replace(/\//g, '\\')}`;
+                            assetPaths.add(texturePath);
                         }
                     }
+                } catch {
+                    // Ignore parse errors
+                }
+            };
+
+            // Process collected asset references
+            // 处理收集的资产引用
+            for (const ref of assetReferences) {
+                const value = ref.guid;
+
+                // Check if it's a GUID that needs resolution
+                if (isGuidLike(value)) {
+                    const absolutePath = resolveGuidToPath(value);
+                    if (absolutePath) {
+                        assetPaths.add(absolutePath);
+                        guidToPath.set(value, absolutePath);
+
+                        // If it's a particle asset, also load its texture references
+                        if (absolutePath.endsWith('.particle') || absolutePath.endsWith('.particle.json')) {
+                            await loadParticleTextures(absolutePath);
+                        }
+                    }
+                } else {
+                    // It's a direct path
+                    assetPaths.add(value);
                 }
             }
 

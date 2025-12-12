@@ -371,7 +371,6 @@ export class ParticleSystemComponent extends Component {
         }
 
         try {
-            console.log(`[ParticleSystem] Loading asset: ${guid}${bForceReload ? ' (force reload)' : ''}`);
             const result = await assetManager.loadAsset<IParticleAsset>(guid, { forceReload: bForceReload });
             const asset = result?.asset;
 
@@ -379,7 +378,6 @@ export class ParticleSystemComponent extends Component {
                 this._loadedAsset = asset;
                 this._lastLoadedGuid = guid;
                 this._needsRebuild = true;
-                console.log(`[ParticleSystem] Asset loaded successfully:`, asset.name);
                 return true;
             } else {
                 console.warn(`[ParticleSystem] Failed to load asset: ${guid}`);

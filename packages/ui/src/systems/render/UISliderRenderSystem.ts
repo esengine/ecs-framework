@@ -38,8 +38,11 @@ export class UISliderRenderSystem extends EntitySystem {
         const collector = getUIRenderCollector();
 
         for (const entity of entities) {
-            const transform = entity.getComponent(UITransformComponent)!;
-            const slider = entity.getComponent(UISliderComponent)!;
+            const transform = entity.getComponent(UITransformComponent);
+            const slider = entity.getComponent(UISliderComponent);
+
+            // 空值检查 | Null check
+            if (!transform || !slider) continue;
 
             if (!transform.visible) continue;
 

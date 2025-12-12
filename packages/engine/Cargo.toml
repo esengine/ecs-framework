@@ -74,6 +74,9 @@ serde = { version = "1.0", features = ["derive"] }
 # Byte manipulation | 字节操作
 bytemuck = { version = "1.14", features = ["derive"] }
 
+# Ordered map for preserving render order | 有序映射，用于保持渲染顺序
+indexmap = "2.0"
+
 [dev-dependencies]
 wasm-bindgen-test = "0.3"
 

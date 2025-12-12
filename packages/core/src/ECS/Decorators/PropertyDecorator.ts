@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 
-export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset' | 'animationClips' | 'collisionLayer' | 'collisionMask';
+export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset' | 'array' | 'animationClips' | 'collisionLayer' | 'collisionMask';
 
 /**
  * 资源类型
@@ -125,6 +125,47 @@ interface AssetPropertyOptions extends PropertyOptionsBase {
 }
 
 /**
+ * 数组元素类型选项
+ * Array item type options
+ */
+export type ArrayItemType =
+    | { type: 'string' }
+    | { type: 'number'; min?: number; max?: number }
+    | { type: 'integer'; min?: number; max?: number }
+    | { type: 'boolean' }
+    | { type: 'asset'; assetType?: AssetType; extensions?: string[] }
+    | { type: 'vector2' }
+    | { type: 'vector3' }
+    | { type: 'color'; alpha?: boolean }
+    | { type: 'enum'; options: EnumOption[] };
+
+/**
+ * 数组类型属性选项
+ * Array property options
+ *
+ * @example
+ * ```typescript
+ * @Property({
+ *     type: 'array',
+ *     label: 'Particle Assets',
+ *     itemType: { type: 'asset', extensions: ['.particle'] }
+ * })
+ * public particleAssets: string[] = [];
+ * ```
+ */
+interface ArrayPropertyOptions extends PropertyOptionsBase {
+    type: 'array';
+    /** 数组元素类型 | Array item type */
+    itemType: ArrayItemType;
+    /** 最小数组长度 | Minimum array length */
+    minLength?: number;
+    /** 最大数组长度 | Maximum array length */
+    maxLength?: number;
+    /** 是否允许重排序 | Allow reordering */
+    reorderable?: boolean;
+}
+
+/**
  * 动画剪辑类型属性选项
  * Animation clips property options
  */
@@ -160,6 +201,7 @@ export type PropertyOptions =
     | VectorPropertyOptions
     | EnumPropertyOptions
     | AssetPropertyOptions
+    | ArrayPropertyOptions
     | AnimationClipsPropertyOptions
     | CollisionLayerPropertyOptions
     | CollisionMaskPropertyOptions;

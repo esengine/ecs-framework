@@ -275,6 +275,36 @@ impl GameEngine {
         vec![x, y, zoom, rotation]
     }
 
+    /// Convert screen coordinates to world coordinates.
+    /// 将屏幕坐标转换为世界坐标。
+    ///
+    /// # Arguments | 参数
+    /// * `screen_x` - Screen X coordinate (0 = left edge of canvas)
+    /// * `screen_y` - Screen Y coordinate (0 = top edge of canvas)
+    ///
+    /// # Returns | 返回
+    /// Array of [world_x, world_y] | 数组 [world_x, world_y]
+    #[wasm_bindgen(js_name = screenToWorld)]
+    pub fn screen_to_world(&self, screen_x: f32, screen_y: f32) -> Vec<f32> {
+        let (x, y) = self.engine.screen_to_world(screen_x, screen_y);
+        vec![x, y]
+    }
+
+    /// Convert world coordinates to screen coordinates.
+    /// 将世界坐标转换为屏幕坐标。
+    ///
+    /// # Arguments | 参数
+    /// * `world_x` - World X coordinate
+    /// * `world_y` - World Y coordinate
+    ///
+    /// # Returns | 返回
+    /// Array of [screen_x, screen_y] | 数组 [screen_x, screen_y]
+    #[wasm_bindgen(js_name = worldToScreen)]
+    pub fn world_to_screen(&self, world_x: f32, world_y: f32) -> Vec<f32> {
+        let (x, y) = self.engine.world_to_screen(world_x, world_y);
+        vec![x, y]
+    }
+
     /// Set grid visibility.
     /// 设置网格可见性。
     #[wasm_bindgen(js_name = setShowGrid)]

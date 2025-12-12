@@ -38,8 +38,11 @@ export class UIProgressBarRenderSystem extends EntitySystem {
         const collector = getUIRenderCollector();
 
         for (const entity of entities) {
-            const transform = entity.getComponent(UITransformComponent)!;
-            const progressBar = entity.getComponent(UIProgressBarComponent)!;
+            const transform = entity.getComponent(UITransformComponent);
+            const progressBar = entity.getComponent(UIProgressBarComponent);
+
+            // 空值检查 | Null check
+            if (!transform || !progressBar) continue;
 
             if (!transform.visible) continue;
 

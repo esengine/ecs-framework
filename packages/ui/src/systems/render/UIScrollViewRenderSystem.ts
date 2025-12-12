@@ -39,8 +39,11 @@ export class UIScrollViewRenderSystem extends EntitySystem {
         const collector = getUIRenderCollector();
 
         for (const entity of entities) {
-            const transform = entity.getComponent(UITransformComponent)!;
-            const scrollView = entity.getComponent(UIScrollViewComponent)!;
+            const transform = entity.getComponent(UITransformComponent);
+            const scrollView = entity.getComponent(UIScrollViewComponent);
+
+            // 空值检查 | Null check
+            if (!transform || !scrollView) continue;
 
             if (!transform.visible) continue;
 

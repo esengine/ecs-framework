@@ -6,6 +6,7 @@ import * as LucideIcons from 'lucide-react';
 import { AnimationClipsFieldEditor } from '../infrastructure/field-editors/AnimationClipsFieldEditor';
 import { AssetField } from './inspectors/fields/AssetField';
 import { CollisionLayerField } from './inspectors/fields/CollisionLayerField';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/PropertyInspector.css';
 
 const animationClipsEditor = new AnimationClipsFieldEditor();
@@ -337,6 +338,28 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                         onChange={(newValue) => handleChange(propertyName, newValue)}
                     />
                 );
+
+            case 'array': {
+                const arrayMeta = metadata as {
+                    itemType?: { type: string; extensions?: string[]; assetType?: string };
+                    minLength?: number;
+                    maxLength?: number;
+                    reorderable?: boolean;
+                };
+                return (
+                    <ArrayField
+                        key={propertyName}
+                        label={label}
+                        value={value ?? []}
+                        itemType={arrayMeta.itemType}
+                        minLength={arrayMeta.minLength}
+                        maxLength={arrayMeta.maxLength}
+                        reorderable={arrayMeta.reorderable}
+                        readOnly={metadata.readOnly}
+                        onChange={(newValue) => handleChange(propertyName, newValue)}
+                    />
+                );
+            }
 
             default:
                 return null;
@@ -1121,6 +1144,161 @@ function EnumField({ label, value, options, readOnly, onChange }: EnumFieldProps
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
+
+// ============= ArrayField 数组字段组件 =============
+
+interface ArrayFieldProps {
+    label: string;
+    value: any[];
+    itemType?: { type: string; extensions?: string[]; assetType?: string };
+    minLength?: number;
+    maxLength?: number;
+    reorderable?: boolean;
+    readOnly?: boolean;
+    onChange: (value: any[]) => void;
+}
+
+function ArrayField({
+    label,
+    value,
+    itemType,
+    minLength = 0,
+    maxLength = 100,
+    reorderable = true,
+    readOnly,
+    onChange
+}: ArrayFieldProps) {
+    const { t } = useLocale();
+    const [isExpanded, setIsExpanded] = useState(true);
+    const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+    const safeValue = Array.isArray(value) ? value : [];
+    const canAdd = !readOnly && safeValue.length < maxLength;
+    const canRemove = !readOnly && safeValue.length > minLength;
+
+    const handleAdd = () => {
+        if (!canAdd) return;
+        let defaultValue: any = '';
+        if (itemType?.type === 'number') defaultValue = 0;
+        if (itemType?.type === 'boolean') defaultValue = false;
+        onChange([...safeValue, defaultValue]);
+    };
+
+    const handleRemove = (index: number) => {
+        if (!canRemove) return;
+        const newValue = [...safeValue];
+        newValue.splice(index, 1);
+        onChange(newValue);
+    };
+
+    const handleItemChange = (index: number, newItemValue: any) => {
+        const newValue = [...safeValue];
+        newValue[index] = newItemValue;
+        onChange(newValue);
+    };
+
+    const handleDragStart = (index: number) => {
+        if (!reorderable || readOnly) return;
+        setDragIndex(index);
+    };
+
+    const handleDragOver = (e: React.DragEvent, index: number) => {
+        e.preventDefault();
+        if (dragIndex === null || dragIndex === index) return;
+
+        const newValue = [...safeValue];
+        const [removed] = newValue.splice(dragIndex, 1);
+        newValue.splice(index, 0, removed);
+        onChange(newValue);
+        setDragIndex(index);
+    };
+
+    const handleDragEnd = () => {
+        setDragIndex(null);
+    };
+
+    // 渲染数组项 | Render array item
+    const renderItem = (item: any, index: number) => {
+        const isAsset = itemType?.type === 'asset';
+
+        return (
+            <div
+                key={index}
+                className={`array-field-item ${dragIndex === index ? 'dragging' : ''}`}
+                draggable={reorderable && !readOnly}
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+            >
+                {reorderable && !readOnly && (
+                    <span className="array-field-drag-handle" title={t('inspector.array.dragToReorder')}>⋮⋮</span>
+                )}
+                <span className="array-field-index">[{index}]</span>
+                <div className="array-field-value">
+                    {isAsset ? (
+                        <AssetField
+                            value={item ?? null}
+                            onChange={(newValue) => handleItemChange(index, newValue || '')}
+                            fileExtension={itemType?.extensions?.[0] || ''}
+                            placeholder={t('inspector.array.dropAsset')}
+                            readonly={readOnly}
+                        />
+                    ) : (
+                        <input
+                            type="text"
+                            className="property-input property-input-text"
+                            value={item ?? ''}
+                            disabled={readOnly}
+                            onChange={(e) => handleItemChange(index, e.target.value)}
+                        />
+                    )}
+                </div>
+                {canRemove && (
+                    <button
+                        className="array-field-remove"
+                        onClick={() => handleRemove(index)}
+                        title={t('inspector.array.remove')}
+                    >
+                        ×
+                    </button>
+                )}
+            </div>
+        );
+    };
+
+    return (
+        <div className="property-field property-field-array">
+            <div className="array-field-header">
+                <button
+                    className="property-expand-btn"
+                    onClick={() => setIsExpanded(!isExpanded)}
+                >
+                    {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
+                <label className="property-label">{label}</label>
+                <span className="array-field-count">[{safeValue.length}]</span>
+                {canAdd && (
+                    <button
+                        className="array-field-add"
+                        onClick={handleAdd}
+                        title={t('inspector.array.add')}
+                    >
+                        +
+                    </button>
+                )}
+            </div>
+            {isExpanded && (
+                <div className="array-field-items">
+                    {safeValue.length === 0 ? (
+                        <div className="array-field-empty">{t('inspector.array.empty')}</div>
+                    ) : (
+                        safeValue.map((item, index) => renderItem(item, index))
+                    )}
+                </div>
+            )}
         </div>
     );
 }

@@ -340,24 +340,23 @@ export class ParticleUpdateSystem extends EntitySystem {
         // 已经加载过就跳过 | Skip if already loaded
         if (particle.textureId > 0) return;
 
-        // 从已加载的资产获取纹理路径 | Get texture path from loaded asset
-        // 支持 textureGuid 和 texturePath（编辑器可能使用后者）
-        // Support both textureGuid and texturePath (editor may use the latter)
+        // 从已加载的资产获取纹理 GUID | Get texture GUID from loaded asset
         const asset = particle.loadedAsset;
-        const texturePath = asset?.textureGuid || asset?.texturePath || particle.textureGuid;
+        const textureGuid = asset?.textureGuid || particle.textureGuid;
 
-        if (texturePath) {
+        if (textureGuid) {
+            // 通过 GUID 加载纹理 | Load texture by GUID
             try {
-                const textureId = await this._engineIntegration.loadTextureForComponent(texturePath);
+                const textureId = await this._engineIntegration.loadTextureByGuid(textureGuid);
                 particle.textureId = textureId;
             } catch (error) {
-                console.error('[ParticleUpdateSystem] Failed to load texture:', texturePath, error);
+                console.error('[ParticleUpdateSystem] Failed to load texture by GUID:', textureGuid, error);
                 // 加载失败时使用默认纹理 | Use default texture on load failure
                 await this._ensureDefaultTexture();
                 particle.textureId = DEFAULT_PARTICLE_TEXTURE_ID;
             }
         } else {
-            // 没有纹理路径时使用默认粒子纹理 | Use default particle texture when no path
+            // 没有纹理 GUID 时使用默认粒子纹理 | Use default particle texture when no GUID
             await this._ensureDefaultTexture();
             particle.textureId = DEFAULT_PARTICLE_TEXTURE_ID;
         }

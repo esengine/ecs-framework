@@ -607,6 +607,9 @@ importers:
       '@esengine/physics-rapier2d-editor':
         specifier: workspace:*
         version: link:../physics-rapier2d-editor
+      '@esengine/platform-web':
+        specifier: workspace:*
+        version: link:../platform-web
       '@esengine/runtime-core':
         specifier: workspace:*
         version: link:../runtime-core
@@ -1073,6 +1076,9 @@ importers:
       '@esengine/build-config':
         specifier: workspace:*
         version: link:../build-config
+      '@esengine/camera':
+        specifier: workspace:*
+        version: link:../camera
       '@esengine/ecs-engine-bindgen':
         specifier: workspace:*
         version: link:../ecs-engine-bindgen
@@ -1104,6 +1110,9 @@ importers:
         specifier: workspace:*
         version: link:../particle
     devDependencies:
+      '@esengine/asset-system':
+        specifier: workspace:*
+        version: link:../asset-system
       '@esengine/build-config':
         specifier: workspace:*
         version: link:../build-config
@@ -1554,6 +1563,10 @@ importers:
         version: 5.0.8(@types/react@18.3.27)(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1))
 
   packages/ui:
+    dependencies:
+      '@esengine/asset-system':
+        specifier: workspace:*
+        version: link:../asset-system
     devDependencies:
       '@esengine/build-config':
         specifier: workspace:*

@@ -40,9 +40,12 @@ export class UIButtonRenderSystem extends EntitySystem {
         const collector = getUIRenderCollector();
 
         for (const entity of entities) {
-            const transform = entity.getComponent(UITransformComponent)!;
-            const button = entity.getComponent(UIButtonComponent)!;
+            const transform = entity.getComponent(UITransformComponent);
+            const button = entity.getComponent(UIButtonComponent);
             const render = entity.getComponent(UIRenderComponent);
+
+            // 空值检查 | Null check
+            if (!transform || !button) continue;
 
             if (!transform.visible) continue;
 
@@ -78,7 +81,7 @@ export class UIButtonRenderSystem extends EntitySystem {
                             rotation,
                             pivotX,
                             pivotY,
-                            texturePath: textureGuid
+                            textureGuid
                         }
                     );
                 }

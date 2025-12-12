@@ -145,9 +145,12 @@ export class EngineIntegration {
         const textureAsset = result.asset;
 
         // 如果有引擎桥接，上传到GPU / Upload to GPU if bridge exists
+        // 使用 globalPathResolver 将路径转换为引擎可用的 URL
+        // Use globalPathResolver to convert path to engine-compatible URL
         if (this._engineBridge && textureAsset.data) {
             const metadata = result.metadata;
-            await this._engineBridge.loadTexture(textureAsset.textureId, metadata.path);
+            const engineUrl = globalPathResolver.resolve(metadata.path);
+            await this._engineBridge.loadTexture(textureAsset.textureId, engineUrl);
         }
 
         // 缓存映射 / Cache mapping

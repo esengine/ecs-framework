@@ -11,6 +11,12 @@
 }
 
 /* ==================== Property Row ==================== */
+.property-row {
+    display: block;
+    position: relative;
+    overflow: visible;
+}
+
 .property-field {
     display: flex;
     flex-direction: row;
@@ -415,6 +421,22 @@ input[type="number"].property-input {
 .property-row:has(.property-field-asset),
 .property-row:has(.asset-field) {
     min-height: 52px;
+}
+
+/* Ensure property-row expands for array fields | 确保属性行能为数组字段扩展 */
+.property-row:has(.property-field-array) {
+    min-height: auto;
+    height: auto;
+    overflow: visible;
+    display: block;
+}
+
+/* Fallback for array fields without :has() support */
+.property-inspector .property-field-array {
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    position: relative;
 }
 
 /* Fallback for browsers without :has() support | 不支持 :has() 的浏览器的备用方案 */
@@ -1178,6 +1200,149 @@ input[type="number"].property-input {
     color: #fff;
 }
 
+/* ==================== Array Field ==================== */
+.property-field-array {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 4px 8px;
+    min-height: auto;
+    height: auto;
+    overflow: visible;
+}
+
+.array-field-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    min-height: 26px;
+}
+
+.array-field-header .property-label {
+    flex: 0 0 auto;
+    min-width: auto;
+    max-width: none;
+}
+
+.array-field-count {
+    font-size: 10px;
+    color: #666;
+    font-family: monospace;
+}
+
+.array-field-add {
+    margin-left: auto;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 3px;
+    color: #999;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    transition: all 0.15s ease;
+}
+
+.array-field-add:hover {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
+}
+
+.array-field-items {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 4px;
+    margin-left: 8px;
+    border-left: 1px solid #3a3a3a;
+    padding-left: 8px;
+}
+
+.array-field-empty {
+    font-size: 10px;
+    color: #666;
+    padding: 8px;
+    text-align: center;
+    font-style: italic;
+}
+
+.array-field-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    background: #252525;
+    border-radius: 3px;
+    transition: background 0.15s ease;
+}
+
+.array-field-item:hover {
+    background: #2a2a2a;
+}
+
+.array-field-item.dragging {
+    opacity: 0.5;
+    background: #3b82f6;
+}
+
+.array-field-drag-handle {
+    cursor: grab;
+    color: #555;
+    font-size: 10px;
+    letter-spacing: -2px;
+    user-select: none;
+}
+
+.array-field-drag-handle:active {
+    cursor: grabbing;
+}
+
+.array-field-index {
+    font-size: 9px;
+    color: #555;
+    font-family: monospace;
+    min-width: 20px;
+}
+
+.array-field-value {
+    flex: 1;
+    min-width: 0;
+}
+
+.array-field-value .property-input {
+    width: 100%;
+}
+
+.array-field-value .asset-field {
+    width: 100%;
+}
+
+.array-field-remove {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    color: #666;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s ease;
+}
+
+.array-field-remove:hover {
+    background: #ef4444;
+    color: #fff;
+}
+
 /* ==================== Reduced Motion ==================== */
 @media (prefers-reduced-motion: reduce) {
     .property-input,
@@ -1185,7 +1350,10 @@ input[type="number"].property-input {
     .property-toggle-thumb,
     .property-expand-btn,
     .property-color-preview,
-    .property-section-expand {
+    .property-section-expand,
+    .array-field-item,
+    .array-field-add,
+    .array-field-remove {
         transition: none;
     }
 }

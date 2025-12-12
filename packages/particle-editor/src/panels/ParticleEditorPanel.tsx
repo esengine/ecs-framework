@@ -13,7 +13,7 @@ import {
     Maximize2, Minimize2, MousePointer2, Target, Zap
 } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
-import { MessageHub, IFileSystemService, IDialogService } from '@esengine/editor-core';
+import { MessageHub, IFileSystemService, IDialogService, AssetRegistryService } from '@esengine/editor-core';
 import type { IFileSystem, IDialog } from '@esengine/editor-core';
 import {
     EmissionShape,
@@ -34,6 +34,7 @@ import {
     type ScaleKey,
     type ForceField,
 } from '@esengine/particle';
+import { globalPathResolver } from '@esengine/asset-system';
 import { useParticleEditorStore } from '../stores/ParticleEditorStore';
 import { GradientEditor } from '../components/GradientEditor';
 import { CurveEditor } from '../components/CurveEditor';
@@ -220,8 +221,60 @@ function useParticlePreview(
     const elapsedTimeRef = useRef<number>(0);
     const burstFiredRef = useRef<Set<number>>(new Set());
     const lastTriggerBurstRef = useRef<number>(0);
+    const textureImageRef = useRef<HTMLImageElement | null>(null);
+    const textureLoadedRef = useRef<string | null>(null); // 记录已加载的 GUID | Track loaded GUID
 
     const { followMouse, mousePosition, triggerBurst } = options;
+
+    // 加载纹理图片 | Load texture image
+    useEffect(() => {
+        const textureGuid = data?.textureGuid;
+        if (!textureGuid) {
+            textureImageRef.current = null;
+            textureLoadedRef.current = null;
+            return;
+        }
+
+        // 如果已经加载了相同的纹理，跳过 | Skip if same texture already loaded
+        if (textureLoadedRef.current === textureGuid) {
+            return;
+        }
+
+        // 通过 AssetRegistryService 解析 GUID 到路径 | Resolve GUID to path via AssetRegistryService
+        const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+        if (!assetRegistry) {
+            console.warn('[ParticlePreview] AssetRegistryService not available');
+            return;
+        }
+
+        const metadata = assetRegistry.getAsset(textureGuid);
+        if (!metadata) {
+            console.warn('[ParticlePreview] Asset not found for GUID:', textureGuid);
+            return;
+        }
+
+        // 使用 globalPathResolver 将资产路径转换为可加载的 URL
+        // Use globalPathResolver to convert asset path to loadable URL
+        const textureUrl = globalPathResolver.resolve(metadata.path);
+
+        const img = document.createElement('img');
+        img.onload = () => {
+            textureImageRef.current = img;
+            textureLoadedRef.current = textureGuid;
+        };
+        img.onerror = () => {
+            console.error('[ParticlePreview] Failed to load texture:', textureUrl);
+            textureImageRef.current = null;
+            textureLoadedRef.current = null;
+        };
+        img.src = textureUrl;
+
+        return () => {
+            // 清理 | Cleanup
+            img.onload = null;
+            img.onerror = null;
+        };
+    }, [data?.textureGuid]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -821,6 +874,7 @@ function useParticlePreview(
             }
 
             // 绘制粒子 | Draw particles
+            const textureImg = textureImageRef.current;
             for (const p of particlesRef.current) {
                 const size = (data.particleSize || 8);
                 const r = Math.round(clamp(p.r, 0, 1) * 255);
@@ -834,15 +888,22 @@ function useParticlePreview(
                 ctx.rotate(p.rotation);
                 ctx.scale(p.scaleX, p.scaleY);
 
-                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size / 2);
-                gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 1)`);
-                gradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, 0.6)`);
-                gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+                // 如果有纹理，绘制纹理图片；否则绘制渐变圆 | Draw texture if available, otherwise gradient circle
+                if (textureImg) {
+                    // 绘制带颜色调制的纹理 | Draw texture with color modulation
+                    const halfSize = size / 2;
+                    ctx.drawImage(textureImg, -halfSize, -halfSize, size, size);
+                } else {
+                    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size / 2);
+                    gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 1)`);
+                    gradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, 0.6)`);
+                    gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
 
-                ctx.fillStyle = gradient;
-                ctx.beginPath();
-                ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
-                ctx.fill();
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
 
                 ctx.restore();
             }
@@ -1092,9 +1153,24 @@ interface PropertySectionProps {
 
 interface BasicPropertiesProps extends PropertySectionProps {
     onBrowseTexture?: () => Promise<string | null>;
+    /** 通过 GUID 获取资产显示名称 | Get asset display name by GUID */
+    resolveGuidToName?: (guid: string) => string | null;
 }
 
-function BasicProperties({ data, onChange, onBrowseTexture }: BasicPropertiesProps) {
+function BasicProperties({ data, onChange, onBrowseTexture, resolveGuidToName }: BasicPropertiesProps) {
+    // 调试日志 | Debug log
+
+    // 解析 textureGuid 为显示名称 | Resolve textureGuid to display name
+    const textureDisplayName = useMemo(() => {
+        if (!data.textureGuid) return null;
+        if (resolveGuidToName) {
+            const name = resolveGuidToName(data.textureGuid);
+            return name;
+        }
+        // 如果没有解析函数，显示 GUID 的前8位 | If no resolver, show first 8 chars of GUID
+        return data.textureGuid.substring(0, 8) + '...';
+    }, [data.textureGuid, resolveGuidToName]);
+
     return (
         <div className="property-group">
             <PropertyInput
@@ -1104,8 +1180,8 @@ function BasicProperties({ data, onChange, onBrowseTexture }: BasicPropertiesPro
                 onChange={v => onChange('name', v)}
             />
             <TexturePicker
-                value={(data as any).texturePath || null}
-                onChange={path => onChange('texturePath' as any, path)}
+                value={textureDisplayName}
+                onChange={() => {/* GUID 通过 onBrowse 设置 | GUID is set via onBrowse */}}
                 onBrowse={onBrowseTexture}
             />
             <PropertyInput
@@ -2025,9 +2101,37 @@ export function ParticleEditorPanel() {
         });
 
         if (path && typeof path === 'string') {
-            return path;
+            // 将路径转换为 GUID | Convert path to GUID
+            const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+            if (assetRegistry) {
+                const relativePath = assetRegistry.absoluteToRelative(path);
+                if (relativePath) {
+                    const guid = assetRegistry.getGuidByPath(relativePath);
+                    if (guid) {
+                        // 设置 textureGuid | Set textureGuid
+                        updateProperty('textureGuid', guid);
+                        return guid;
+                    }
+                }
+            }
+            // 如果无法获取 GUID，返回 null | Return null if cannot get GUID
+            console.warn('[ParticleEditor] Failed to get GUID for texture path:', path);
+            return null;
         }
         return null;
+    }, [updateProperty]);
+
+    // 通过 GUID 获取资产显示名称 | Get asset display name by GUID
+    const resolveGuidToName = useCallback((guid: string): string | null => {
+        const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+        if (!assetRegistry) return null;
+
+        const metadata = assetRegistry.getAsset(guid);
+        if (metadata) {
+            return metadata.name;
+        }
+        // 如果找不到，返回 GUID 前8位 | If not found, return first 8 chars of GUID
+        return guid.substring(0, 8) + '...';
     }, []);
 
     const handleApplyPreset = useCallback(async (presetName: string) => {
@@ -2311,6 +2415,7 @@ export function ParticleEditorPanel() {
                                 data={particleData}
                                 onChange={updateProperty}
                                 onBrowseTexture={handleBrowseTexture}
+                                resolveGuidToName={resolveGuidToName}
                             />
                         )}
                         {activeTab === 'emission' && (

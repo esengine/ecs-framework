@@ -9,7 +9,7 @@
 import { GizmoRegistry, EntityStoreService, MessageHub, SceneManagerService, ProjectService, PluginManager, IPluginManager, AssetRegistryService, type SystemContext } from '@esengine/editor-core';
 import { Core, Scene, Entity, SceneSerializer, ProfilerSDK, createLogger } from '@esengine/ecs-framework';
 import { CameraConfig, EngineBridgeToken, RenderSystemToken, EngineIntegrationToken } from '@esengine/ecs-engine-bindgen';
-import { TransformComponent, PluginServiceRegistry, TransformTypeToken } from '@esengine/engine-core';
+import { TransformComponent, PluginServiceRegistry, TransformTypeToken, CanvasElementToken } from '@esengine/engine-core';
 import { SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystemToken } from '@esengine/sprite';
 import { invalidateUIRenderCaches, UIRenderProviderToken, UIInputSystemToken } from '@esengine/ui';
 import * as esEngine from '@esengine/engine';
@@ -22,7 +22,8 @@ import {
     SceneResourceManager,
     assetManager as globalAssetManager,
     AssetType,
-    AssetManagerToken
+    AssetManagerToken,
+    isValidGUID
 } from '@esengine/asset-system';
 import {
     GameRuntime,
@@ -33,6 +34,7 @@ import {
 import { BehaviorTreeSystemToken } from '@esengine/behavior-tree';
 import { Physics2DSystemToken } from '@esengine/physics-rapier2d';
 import { getMaterialManager } from '@esengine/material-system';
+import { WebInputSubsystem } from '@esengine/platform-web';
 import { resetEngineState } from '../hooks/useEngine';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { IdGenerator } from '../utils/idGenerator';
@@ -120,13 +122,17 @@ export class EngineService {
             };
 
             // 创建编辑器平台适配器
+            // Create editor platform adapter
             const platform = new EditorPlatformAdapter({
                 wasmModule: esEngine,
                 pathTransformer,
                 gizmoDataProvider: (component, entity, isSelected) =>
                     GizmoRegistry.getGizmoData(component, entity, isSelected),
                 hasGizmoProvider: (component) =>
-                    GizmoRegistry.hasProvider(component.constructor as any)
+                    GizmoRegistry.hasProvider(component.constructor as any),
+                // 提供输入子系统用于 Play 模式下的游戏输入
+                // Provide input subsystem for game input in Play mode
+                inputSubsystemFactory: () => new WebInputSubsystem()
             });
 
             // 创建统一运行时
@@ -211,6 +217,13 @@ export class EngineService {
         services.register(AssetManagerToken, this._assetManager);
         services.register(EngineIntegrationToken, this._engineIntegration);
         services.register(TransformTypeToken, TransformComponent);
+
+        // 注册 Canvas 元素（用于坐标转换等）
+        // Register canvas element (for coordinate conversion, etc.)
+        const canvas = this._runtime.platform.getCanvas();
+        if (canvas) {
+            services.register(CanvasElementToken, canvas);
+        }
 
         // 创建系统上下文
         const context: SystemContext = {
@@ -683,10 +696,6 @@ export class EngineService {
         const renderSystem = this._runtime?.renderSystem;
         if (!renderSystem) return;
 
-        // UUID v4 regex for GUID detection
-        // UUID v4 正则表达式用于 GUID 检测
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
         renderSystem.setAssetPathResolver((guidOrPath: string): string => {
             // Skip if already a valid URL
             // 如果已经是有效的 URL 则跳过
@@ -694,9 +703,9 @@ export class EngineService {
                 return guidOrPath;
             }
 
-            // Check if this is a GUID
-            // 检查是否为 GUID
-            if (uuidRegex.test(guidOrPath)) {
+            // Check if this is a GUID using the unified validation function
+            // 使用统一的验证函数检查是否为 GUID
+            if (isValidGUID(guidOrPath)) {
                 const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
                 if (assetRegistry) {
                     const relativePath = assetRegistry.getPathByGuid(guidOrPath);
@@ -764,7 +773,8 @@ export class EngineService {
     }
 
     /**
-     * Load texture through asset system
+     * 通过相对路径加载纹理资产（用户脚本使用）
+     * Load texture asset by relative path (for user scripts)
      */
     async loadTextureAsset(path: string): Promise<number> {
         if (!this._assetSystemInitialized || this._initializationError) {
@@ -786,6 +796,29 @@ export class EngineService {
             console.error('Failed to load texture asset:', error);
             const fallbackId = IdGenerator.nextId('texture-fallback');
             return fallbackId;
+        }
+    }
+
+    /**
+     * 通过 GUID 加载纹理资产（内部引用使用）
+     * Load texture asset by GUID (for internal references)
+     */
+    async loadTextureAssetByGuid(guid: string): Promise<number> {
+        if (!this._assetSystemInitialized || this._initializationError) {
+            console.warn('Asset system not initialized');
+            return 0;
+        }
+
+        if (!this._engineIntegration) {
+            console.warn('Engine integration not available');
+            return 0;
+        }
+
+        try {
+            return await this._engineIntegration.loadTextureByGuid(guid);
+        } catch (error) {
+            console.error('Failed to load texture asset by GUID:', guid, error);
+            return 0;
         }
     }
 

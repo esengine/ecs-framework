@@ -28,6 +28,9 @@ import { MaterialPlugin } from '@esengine/material-editor';
 import { SpritePlugin } from '@esengine/sprite-editor';
 import { ShaderEditorPlugin } from '@esengine/shader-editor';
 
+// 纯运行时插件 | Runtime-only plugins
+import { CameraPlugin } from '@esengine/camera';
+
 export class PluginInstaller {
     /**
      * 安装所有内置插件
@@ -57,6 +60,7 @@ export class PluginInstaller {
 
         // 统一模块插件（runtime + editor）
         const modulePlugins = [
+            { name: 'CameraPlugin', plugin: CameraPlugin },
             { name: 'SpritePlugin', plugin: SpritePlugin },
             { name: 'TilemapPlugin', plugin: TilemapPlugin },
             { name: 'UIPlugin', plugin: UIPlugin },

@@ -63,6 +63,14 @@ export {
     hashString,
     hashFileInfo
 } from './utils/AssetUtils';
+export {
+    collectAssetReferences,
+    extractUniqueGuids,
+    groupByComponentType,
+    DEFAULT_ASSET_PATTERNS,
+    type SceneAssetRef,
+    type AssetFieldPattern
+} from './utils/AssetCollector';
 
 // Default instance
 import { AssetManager } from './core/AssetManager';

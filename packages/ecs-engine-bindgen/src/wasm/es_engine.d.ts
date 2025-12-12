@@ -154,6 +154,18 @@ export class GameEngine {
    */
   resizeViewport(viewport_id: string, width: number, height: number): void;
   /**
+   * Convert screen coordinates to world coordinates.
+   * 将屏幕坐标转换为世界坐标。
+   *
+   * # Arguments | 参数
+   * * `screen_x` - Screen X coordinate (0 = left edge of canvas)
+   * * `screen_y` - Screen Y coordinate (0 = top edge of canvas)
+   *
+   * # Returns | 返回
+   * Array of [world_x, world_y] | 数组 [world_x, world_y]
+   */
+  screenToWorld(screen_x: number, screen_y: number): Float32Array;
+  /**
    * Set clear color (background color).
    * 设置清除颜色（背景颜色）。
    *
@@ -175,6 +187,18 @@ export class GameEngine {
    * 设置辅助工具可见性。
    */
   setShowGizmos(show: boolean): void;
+  /**
+   * Convert world coordinates to screen coordinates.
+   * 将世界坐标转换为屏幕坐标。
+   *
+   * # Arguments | 参数
+   * * `world_x` - World X coordinate
+   * * `world_y` - World Y coordinate
+   *
+   * # Returns | 返回
+   * Array of [screen_x, screen_y] | 数组 [screen_x, screen_y]
+   */
+  worldToScreen(world_x: number, world_y: number): Float32Array;
   /**
    * Add a circle gizmo outline.
    * 添加圆形Gizmo边框。
@@ -401,6 +425,7 @@ export interface InitOutput {
   readonly gameengine_renderToViewport: (a: number, b: number, c: number) => [number, number];
   readonly gameengine_resize: (a: number, b: number, c: number) => void;
   readonly gameengine_resizeViewport: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly gameengine_screenToWorld: (a: number, b: number, c: number) => [number, number];
   readonly gameengine_setActiveViewport: (a: number, b: number, c: number) => number;
   readonly gameengine_setCamera: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly gameengine_setClearColor: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -420,6 +445,7 @@ export interface InitOutput {
   readonly gameengine_unregisterViewport: (a: number, b: number, c: number) => void;
   readonly gameengine_updateInput: (a: number) => void;
   readonly gameengine_width: (a: number) => number;
+  readonly gameengine_worldToScreen: (a: number, b: number, c: number) => [number, number];
   readonly init: () => void;
   readonly wasm_bindgen__convert__closures_____invoke__hdbeb4a641c76f980: (a: number, b: number) => void;
   readonly wasm_bindgen__closure__destroy__h201da39d82f7cf6e: (a: number, b: number) => void;

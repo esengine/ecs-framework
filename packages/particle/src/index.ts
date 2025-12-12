@@ -13,9 +13,11 @@ export {
 
 // Component
 export { ParticleSystemComponent, ParticleBlendMode, SimulationSpace, type BurstConfig } from './ParticleSystemComponent';
+export { ClickFxComponent, ClickFxTriggerMode } from './ClickFxComponent';
 
 // System
 export { ParticleUpdateSystem } from './systems/ParticleSystem';
+export { ClickFxSystem } from './systems/ClickFxSystem';
 
 // Modules
 export {

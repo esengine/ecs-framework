@@ -82,8 +82,8 @@ export function useAssetSystem() {
     }, [assetManager]);
 
     /**
-     * Load texture for sprite component
-     * 为精灵组件加载纹理
+     * 通过路径为精灵组件加载纹理（用户脚本使用）
+     * Load texture for sprite component by path (for user scripts)
      */
     const loadTextureForSprite = useCallback(async (path: string): Promise<number> => {
         if (!engineIntegration) return 0;
@@ -92,6 +92,21 @@ export function useAssetSystem() {
             return await engineIntegration.loadTextureForComponent(path);
         } catch (error) {
             console.error(`Failed to load texture ${path}:`, error);
+            return 0;
+        }
+    }, [engineIntegration]);
+
+    /**
+     * 通过 GUID 为精灵组件加载纹理（内部引用使用）
+     * Load texture for sprite component by GUID (for internal references)
+     */
+    const loadTextureByGuid = useCallback(async (guid: string): Promise<number> => {
+        if (!engineIntegration) return 0;
+
+        try {
+            return await engineIntegration.loadTextureByGuid(guid);
+        } catch (error) {
+            console.error(`Failed to load texture by GUID ${guid}:`, error);
             return 0;
         }
     }, [engineIntegration]);
@@ -133,6 +148,7 @@ export function useAssetSystem() {
         loadProgress,
         loadAssetByPath,
         loadTextureForSprite,
+        loadTextureByGuid,
         createAssetReference,
         unloadUnusedAssets,
         getStatistics

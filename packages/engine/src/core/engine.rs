@@ -405,6 +405,36 @@ impl Engine {
         (camera.position.x, camera.position.y, camera.zoom, camera.rotation)
     }
 
+    /// Convert screen coordinates to world coordinates.
+    /// 将屏幕坐标转换为世界坐标。
+    ///
+    /// # Arguments | 参数
+    /// * `screen_x` - Screen X coordinate (0 = left edge of canvas)
+    /// * `screen_y` - Screen Y coordinate (0 = top edge of canvas)
+    ///
+    /// # Returns | 返回
+    /// Tuple of (world_x, world_y)
+    pub fn screen_to_world(&self, screen_x: f32, screen_y: f32) -> (f32, f32) {
+        let camera = self.renderer.camera();
+        let world = camera.screen_to_world(crate::math::Vec2::new(screen_x, screen_y));
+        (world.x, world.y)
+    }
+
+    /// Convert world coordinates to screen coordinates.
+    /// 将世界坐标转换为屏幕坐标。
+    ///
+    /// # Arguments | 参数
+    /// * `world_x` - World X coordinate
+    /// * `world_y` - World Y coordinate
+    ///
+    /// # Returns | 返回
+    /// Tuple of (screen_x, screen_y)
+    pub fn world_to_screen(&self, world_x: f32, world_y: f32) -> (f32, f32) {
+        let camera = self.renderer.camera();
+        let screen = camera.world_to_screen(crate::math::Vec2::new(world_x, world_y));
+        (screen.x, screen.y)
+    }
+
     /// Set grid visibility.
     /// 设置网格可见性。
     pub fn set_show_grid(&mut self, show: bool) {

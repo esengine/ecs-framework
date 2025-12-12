@@ -14,6 +14,8 @@
  * - 预览模式 (previewMode=true): UI 作为屏幕叠加层渲染
  */
 
+import { isValidGUID } from '@esengine/asset-system';
+
 /**
  * A single render primitive (rectangle with optional texture)
  * 单个渲染原语（可选带纹理的矩形）
@@ -61,8 +63,8 @@ export interface UIRenderPrimitive {
     sortOrder: number;
     /** Optional texture ID | 可选纹理 ID */
     textureId?: number;
-    /** Optional texture path | 可选纹理路径 */
-    texturePath?: string;
+    /** Optional texture GUID | 可选纹理 GUID */
+    textureGuid?: string;
     /** UV coordinates [u0, v0, u1, v1] | UV 坐标 */
     uv?: [number, number, number, number];
 }
@@ -78,7 +80,8 @@ export interface ProviderRenderData {
     colors: Uint32Array;
     tileCount: number;
     sortingOrder: number;
-    texturePath?: string;
+    /** 纹理 GUID（如果 textureId 为 0 则使用）| Texture GUID (used if textureId is 0) */
+    textureGuid?: string;
 }
 
 /**
@@ -121,7 +124,7 @@ export class UIRenderCollector {
             pivotX?: number;
             pivotY?: number;
             textureId?: number;
-            texturePath?: string;
+            textureGuid?: string;
             uv?: [number, number, number, number];
         }
     ): void {
@@ -143,7 +146,7 @@ export class UIRenderCollector {
             color: packedColor,
             sortOrder,
             textureId: options?.textureId,
-            texturePath: options?.texturePath,
+            textureGuid: options?.textureGuid,
             uv: options?.uv
         };
 
@@ -191,8 +194,9 @@ export class UIRenderCollector {
         const groups = new Map<string, UIRenderPrimitive[]>();
 
         for (const prim of primitives) {
-            // Use texture path or 'solid' for solid color rects
-            const key = prim.texturePath ?? (prim.textureId?.toString() ?? 'solid');
+            // Use texture GUID or 'solid' for solid color rects
+            // 使用纹理 GUID 或 'solid' 表示纯色矩形
+            const key = prim.textureGuid ?? (prim.textureId?.toString() ?? 'solid');
             let group = groups.get(key);
             if (!group) {
                 group = [];
@@ -258,9 +262,10 @@ export class UIRenderCollector {
                 sortingOrder: minSortOrder
             };
 
-            // Add texture path if not solid color
-            if (key !== 'solid' && isNaN(parseInt(key))) {
-                renderData.texturePath = key;
+            // Add texture GUID if key is a valid GUID (UUID format)
+            // 如果 key 是有效的 GUID（UUID 格式），则添加纹理 GUID
+            if (isValidGUID(key)) {
+                renderData.textureGuid = key;
             }
 
             result.push(renderData);

@@ -469,6 +469,41 @@ export class EngineBridge implements IEngineBridge {
     }
 
     /**
+     * Convert screen coordinates to world coordinates.
+     * 将屏幕坐标转换为世界坐标。
+     *
+     * Screen coordinates: (0,0) at top-left of canvas, Y-down
+     * World coordinates: Y-up, camera position at center of view
+     *
+     * @param screenX - Screen X coordinate (relative to canvas left edge)
+     * @param screenY - Screen Y coordinate (relative to canvas top edge)
+     * @returns World coordinates { x, y }
+     */
+    screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
+        if (!this.initialized) {
+            return { x: screenX, y: screenY };
+        }
+        const result = this.getEngine().screenToWorld(screenX, screenY);
+        return { x: result[0], y: result[1] };
+    }
+
+    /**
+     * Convert world coordinates to screen coordinates.
+     * 将世界坐标转换为屏幕坐标。
+     *
+     * @param worldX - World X coordinate
+     * @param worldY - World Y coordinate
+     * @returns Screen coordinates { x, y } (relative to canvas)
+     */
+    worldToScreen(worldX: number, worldY: number): { x: number; y: number } {
+        if (!this.initialized) {
+            return { x: worldX, y: worldY };
+        }
+        const result = this.getEngine().worldToScreen(worldX, worldY);
+        return { x: result[0], y: result[1] };
+    }
+
+    /**
      * Set grid visibility.
      * 设置网格可见性。
      */

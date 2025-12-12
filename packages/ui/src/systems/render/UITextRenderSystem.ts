@@ -94,8 +94,12 @@ export class UITextRenderSystem extends EntitySystem {
         const collector = getUIRenderCollector();
 
         for (const entity of entities) {
-            const transform = entity.getComponent(UITransformComponent)!;
-            const text = entity.getComponent(UITextComponent)!;
+            const transform = entity.getComponent(UITransformComponent);
+            const text = entity.getComponent(UITextComponent);
+
+            // 空值检查 - 组件可能在反序列化或初始化期间尚未就绪
+            // Null check - component may not be ready during deserialization or initialization
+            if (!transform || !text) continue;
 
             if (!transform.visible || !text.text) continue;
 

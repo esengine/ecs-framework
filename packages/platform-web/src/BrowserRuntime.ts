@@ -18,8 +18,9 @@ import {
     BrowserFileSystemService,
     type IPlugin
 } from '@esengine/runtime-core';
-import { assetManager as globalAssetManager, type IAssetManager } from '@esengine/asset-system';
+import { assetManager as globalAssetManager, type IAssetManager, isValidGUID } from '@esengine/asset-system';
 import { BrowserAssetReader } from './BrowserAssetReader';
+import { WebInputSubsystem } from './subsystems/WebInputSubsystem';
 
 /**
  * Runtime configuration
@@ -112,8 +113,11 @@ export class BrowserRuntime {
         this._assetReader = new BrowserAssetReader(this._assetBaseUrl);
 
         // Create browser platform adapter
+        // 创建输入子系统，用于处理键盘、鼠标、触摸事件
+        // Create input subsystem for keyboard, mouse, touch events
         const platform = new BrowserPlatformAdapter({
-            wasmModule: wasmModule ?? undefined
+            wasmModule: wasmModule ?? undefined,
+            inputSubsystemFactory: () => new WebInputSubsystem()
         });
 
         // Create game runtime
@@ -168,8 +172,59 @@ export class BrowserRuntime {
         // 禁用编辑器模式（隐藏网格、gizmos、坐标轴指示器）
         this._runtime.setEditorMode(false);
 
+        // Set up asset path resolver for rendering system
+        // 为渲染系统设置资产路径解析器
+        this._setupAssetPathResolver();
+
         this._initialized = true;
         console.log('[Runtime] Initialized');
+    }
+
+    /**
+     * Set up asset path resolver for the render system
+     * 为渲染系统设置资产路径解析器
+     *
+     * This enables GUID-to-URL resolution for textures in Web runtime.
+     * 这使得 Web 运行时能够将 GUID 解析为纹理 URL。
+     */
+    private _setupAssetPathResolver(): void {
+        const renderSystem = this._runtime?.renderSystem;
+        if (!renderSystem) return;
+
+        const assetBaseUrl = this._assetBaseUrl;
+
+        renderSystem.setAssetPathResolver((guidOrPath: string): string => {
+            // Skip if already a valid URL
+            // 如果已经是有效的 URL 则跳过
+            if (!guidOrPath || guidOrPath.startsWith('http') || guidOrPath.startsWith('data:') || guidOrPath.startsWith('/')) {
+                return guidOrPath;
+            }
+
+            // Check if this is a GUID using the unified validation function
+            // 使用统一的验证函数检查是否为 GUID
+            if (isValidGUID(guidOrPath)) {
+                // Get metadata from global asset manager
+                // 从全局资产管理器获取元数据
+                const metadata = globalAssetManager.getDatabase().getMetadata(guidOrPath);
+                if (metadata?.path) {
+                    // Construct full URL: baseUrl + relative path
+                    // 构建完整 URL：baseUrl + 相对路径
+                    const relativePath = metadata.path.replace(/\\/g, '/');
+                    return `${assetBaseUrl}/${relativePath}`;
+                }
+
+                // GUID not found in catalog, return original
+                // 目录中未找到 GUID，返回原值
+                console.warn(`[BrowserRuntime] GUID not found in asset catalog: ${guidOrPath}`);
+                return guidOrPath;
+            }
+
+            // Not a GUID, treat as relative path
+            // 不是 GUID，视为相对路径
+            return `${assetBaseUrl}/${guidOrPath}`;
+        });
+
+        console.log('[Runtime] Asset path resolver configured');
     }
 
     /**

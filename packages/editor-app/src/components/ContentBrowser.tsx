@@ -3,7 +3,7 @@
  * 用于浏览和管理项目资产
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { useLocale } from '../hooks/useLocale';
 import {
@@ -207,6 +207,10 @@ export function ContentBrowser({
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+    // 隐藏的文件扩展名（默认隐藏 .meta）| Hidden file extensions (hide .meta by default)
+    const [hiddenExtensions, setHiddenExtensions] = useState<Set<string>>(new Set(['meta']));
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
     // Folder tree state
     const [folderTree, setFolderTree] = useState<FolderNode | null>(null);
@@ -632,6 +636,21 @@ export class ${className} {
             buildFolderTree(projectPath).then(setFolderTree);
         }
     }, [currentPath, projectPath, loadAssets, buildFolderTree]);
+
+    // 点击外部关闭过滤器下拉菜单 | Close filter dropdown when clicking outside
+    useEffect(() => {
+        if (!showFilterDropdown) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (!target.closest('.cb-filter-wrapper')) {
+                setShowFilterDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showFilterDropdown]);
 
     // Initialize on mount
     useEffect(() => {
@@ -1641,10 +1660,51 @@ export class ${className} {
         );
     }, [currentPath, expandedFolders, handleFolderSelect, handleFolderTreeContextMenu, toggleFolderExpand, projectPath, t, dragOverFolder, handleFolderDragOver, handleFolderDragLeave, handleFolderDrop]);
 
-    // Filter assets by search
-    const filteredAssets = searchQuery.trim()
-        ? assets.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()))
-        : assets;
+    // 收集当前目录所有唯一扩展名 | Collect all unique extensions in current directory
+    const allExtensions = useMemo(() => {
+        const exts = new Set<string>();
+        assets.forEach(a => {
+            if (a.extension) {
+                exts.add(a.extension.toLowerCase());
+            }
+        });
+        return Array.from(exts).sort();
+    }, [assets]);
+
+    // 切换扩展名隐藏状态 | Toggle extension hidden state
+    const toggleExtensionHidden = useCallback((ext: string) => {
+        setHiddenExtensions(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(ext)) {
+                newSet.delete(ext);
+            } else {
+                newSet.add(ext);
+            }
+            return newSet;
+        });
+    }, []);
+
+    // Filter assets by search and hidden extensions
+    // 按搜索词和隐藏扩展名过滤资产
+    const filteredAssets = useMemo(() => {
+        let result = assets;
+
+        // 过滤隐藏的扩展名 | Filter hidden extensions
+        if (hiddenExtensions.size > 0) {
+            result = result.filter(a => {
+                if (a.type === 'folder') return true;
+                const ext = a.extension?.toLowerCase();
+                return !ext || !hiddenExtensions.has(ext);
+            });
+        }
+
+        // 搜索过滤 | Search filter
+        if (searchQuery.trim()) {
+            result = result.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        }
+
+        return result;
+    }, [assets, hiddenExtensions, searchQuery]);
 
     const breadcrumbs = getBreadcrumbs();
 
@@ -1776,10 +1836,55 @@ export class ${className} {
 
                 {/* Search Bar */}
                 <div className="cb-search-bar">
-                    <button className="cb-filter-btn">
-                        <SlidersHorizontal size={14} />
-                        <ChevronDown size={10} />
-                    </button>
+                    <div className="cb-filter-wrapper">
+                        <button
+                            className={`cb-filter-btn ${hiddenExtensions.size > 0 ? 'has-filter' : ''}`}
+                            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                            title={hiddenExtensions.size > 0 ? `${hiddenExtensions.size} hidden` : 'Filter'}
+                        >
+                            <SlidersHorizontal size={14} />
+                            <ChevronDown size={10} />
+                            {hiddenExtensions.size > 0 && (
+                                <span className="cb-filter-badge">{hiddenExtensions.size}</span>
+                            )}
+                        </button>
+                        {showFilterDropdown && (
+                            <div className="cb-filter-dropdown">
+                                <div className="cb-filter-header">
+                                    <span>{t('contentBrowser.hiddenExtensions') || 'Hidden Extensions'}</span>
+                                    {hiddenExtensions.size > 0 && (
+                                        <button
+                                            className="cb-filter-clear"
+                                            onClick={() => setHiddenExtensions(new Set())}
+                                        >
+                                            {t('common.clearAll') || 'Clear All'}
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="cb-filter-list">
+                                    {allExtensions.length === 0 ? (
+                                        <div className="cb-filter-empty">
+                                            {t('contentBrowser.noExtensions') || 'No file types'}
+                                        </div>
+                                    ) : (
+                                        allExtensions.map(ext => (
+                                            <label key={ext} className="cb-filter-item">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={hiddenExtensions.has(ext)}
+                                                    onChange={() => toggleExtensionHidden(ext)}
+                                                />
+                                                <span className="cb-filter-ext">.{ext}</span>
+                                                <span className="cb-filter-count">
+                                                    ({assets.filter(a => a.extension?.toLowerCase() === ext).length})
+                                                </span>
+                                            </label>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <div className="cb-search-input-wrapper">
                         <Search size={14} className="cb-search-icon" />
                         <input
@@ -1978,8 +2083,8 @@ export class ${className} {
 
             {/* Rename Dialog */}
             {renameDialog && (
-                <div className="cb-dialog-overlay" onClick={() => setRenameDialog(null)}>
-                    <div className="cb-dialog" onClick={(e) => e.stopPropagation()}>
+                <div className="cb-dialog-overlay">
+                    <div className="cb-dialog">
                         <div className="cb-dialog-header">
                             <h3>{t('contentBrowser.dialogs.renameTitle')}</h3>
                         </div>
@@ -2012,8 +2117,8 @@ export class ${className} {
 
             {/* Delete Confirm Dialog */}
             {deleteConfirmDialog && (
-                <div className="cb-dialog-overlay" onClick={() => setDeleteConfirmDialog(null)}>
-                    <div className="cb-dialog" onClick={(e) => e.stopPropagation()}>
+                <div className="cb-dialog-overlay">
+                    <div className="cb-dialog">
                         <div className="cb-dialog-header">
                             <h3>{t('contentBrowser.deleteConfirmTitle')}</h3>
                         </div>

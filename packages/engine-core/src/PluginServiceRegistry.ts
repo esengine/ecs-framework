@@ -139,9 +139,52 @@ export class PluginServiceRegistry {
  *
  * 使用 any 类型以允许各模块使用自己的 ITransformComponent 接口定义。
  * Using any type to allow modules to use their own ITransformComponent interface definition.
- *
- * 这是 engine-core 自己定义的 Token，因为 TransformComponent 在此模块中定义。
- * This is a Token defined by engine-core itself, as TransformComponent is defined in this module.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const TransformTypeToken = createServiceToken<new (...args: any[]) => any>('transformType');
+
+/**
+ * Canvas 元素的服务令牌
+ * Service token for the canvas element
+ */
+export const CanvasElementToken = createServiceToken<HTMLCanvasElement>('canvasElement');
+
+// ============================================================================
+// 引擎桥接接口 | Engine Bridge Interface
+// ============================================================================
+
+/**
+ * 引擎桥接接口
+ * Engine bridge interface
+ *
+ * 定义 WASM 引擎桥接的核心契约，供各模块使用。
+ * Defines the core contract of WASM engine bridge for modules to use.
+ */
+export interface IEngineBridge {
+    /** 加载纹理 | Load texture */
+    loadTexture(id: number, url: string): Promise<void>;
+
+    /**
+     * 屏幕坐标转世界坐标
+     * Screen to world coordinate conversion
+     */
+    screenToWorld(screenX: number, screenY: number): { x: number; y: number };
+
+    /**
+     * 世界坐标转屏幕坐标
+     * World to screen coordinate conversion
+     */
+    worldToScreen(worldX: number, worldY: number): { x: number; y: number };
+
+    /**
+     * 设置清除颜色
+     * Set clear color
+     */
+    setClearColor(r: number, g: number, b: number, a: number): void;
+}
+
+/**
+ * 引擎桥接服务令牌
+ * Engine bridge service token
+ */
+export const EngineBridgeToken = createServiceToken<IEngineBridge>('engineBridge');

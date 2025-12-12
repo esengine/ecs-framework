@@ -187,6 +187,35 @@ function App() {
         };
     }, []);
 
+    // Global keyboard shortcuts for undo/redo | 全局撤销/重做快捷键
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Skip if user is typing in an input | 如果用户正在输入则跳过
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+                return;
+            }
+
+            // Ctrl+Z: Undo | 撤销
+            if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
+                e.preventDefault();
+                if (commandManager.canUndo()) {
+                    commandManager.undo();
+                }
+            }
+            // Ctrl+Y or Ctrl+Shift+Z: Redo | 重做
+            else if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
+                e.preventDefault();
+                if (commandManager.canRedo()) {
+                    commandManager.redo();
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [commandManager]);
+
     // 快捷键监听
     useEffect(() => {
         const handleKeyDown = async (e: KeyboardEvent) => {

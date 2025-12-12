@@ -166,6 +166,13 @@ export const zh: Translations = {
             revertFailed: '还原实例失败',
             unpackSuccess: '已断开预制体链接',
             unpackFailed: '解包预制体失败'
+        },
+        array: {
+            empty: '空数组',
+            add: '添加',
+            remove: '删除',
+            dragToReorder: '拖拽排序',
+            dropAsset: '拖拽资源'
         }
     },
 
