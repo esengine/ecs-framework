@@ -77,6 +77,33 @@ export type { DependencyContainer } from 'tsyringe';
 export * from '@esengine/ecs-framework';
 
 // =============================================================================
+// Engine Core (Sorting Layers, Input, etc.)
+// =============================================================================
+export {
+    SortingLayers,
+    SortingLayerManager,
+    sortingLayerManager,
+    DEFAULT_SORTING_LAYERS,
+    Input,
+    InputManager,
+    InputSystem,
+    MouseButton as EngineMouseButton,
+} from '@esengine/engine-core';
+
+export type {
+    ISortable,
+    SortingLayerConfig,
+    SortingLayerName,
+    ISortingLayerManager,
+    InputSystemConfig,
+    KeyState,
+    MouseButtonState,
+} from '@esengine/engine-core';
+
+// Re-export vector interfaces from math
+export type { IVector2, IVector3 } from '@esengine/ecs-framework-math';
+
+// =============================================================================
 // Editor Core
 // Rename conflicting exports to avoid collision with ecs-framework
 // =============================================================================
@@ -271,9 +298,8 @@ export {
     // Systems - Core
     UILayoutSystem,
     UIInputSystem,
-    MouseButton,
     UIAnimationSystem,
-    Easing,
+    UIEasing,
     UIRenderDataProvider,
     // Systems - Render
     UIRenderCollector,
@@ -314,7 +340,6 @@ export type {
     EasingName,
     UIRenderPrimitive,
     ProviderRenderData as UIProviderRenderData,
-    IRenderDataProvider as UIIRenderDataProvider,
     IUIRenderDataProvider,
     TextMeasurement,
     TextRenderOptions,

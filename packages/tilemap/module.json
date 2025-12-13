@@ -1,6 +1,7 @@
 {
   "id": "tilemap",
   "name": "@esengine/tilemap",
+  "globalKey": "tilemap",
   "displayName": "Tilemap 2D",
   "description": "2D tilemap rendering and editing | 2D 瓦片地图渲染和编辑",
   "version": "1.0.0",

@@ -1,6 +1,7 @@
 {
   "id": "audio",
   "name": "@esengine/audio",
+  "globalKey": "audio",
   "displayName": "Audio",
   "description": "Audio playback and sound effects | 音频播放和音效",
   "version": "1.0.0",

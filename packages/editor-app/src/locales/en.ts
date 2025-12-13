@@ -742,7 +742,12 @@ export const en: Translations = {
         envReady: 'Environment Ready',
         envNotReady: 'Environment Issue',
         esbuildReady: 'esbuild ready',
-        esbuildMissing: 'esbuild not found'
+        esbuildMissing: 'esbuild not found',
+        esbuildNotInstalled: 'esbuild Installation Required',
+        esbuildRequired: 'esbuild is required for compiling TypeScript code.',
+        esbuildInstallPrompt: 'Click the button below to install esbuild globally via npm.',
+        installingEsbuild: 'Installing esbuild...',
+        installNow: 'Install Now'
     },
 
     // ========================================

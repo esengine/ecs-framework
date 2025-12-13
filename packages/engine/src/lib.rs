@@ -659,4 +659,31 @@ impl GameEngine {
     pub fn set_material_blend_mode(&mut self, material_id: u32, blend_mode: u8) -> bool {
         self.engine.set_material_blend_mode(material_id, blend_mode)
     }
+
+    // ===== Texture Cache API =====
+    // ===== 纹理缓存 API =====
+
+    /// Clear the texture path cache.
+    /// 清除纹理路径缓存。
+    ///
+    /// This should be called when restoring scene snapshots to ensure
+    /// textures are reloaded with correct IDs.
+    /// 在恢复场景快照时应调用此方法，以确保纹理使用正确的ID重新加载。
+    #[wasm_bindgen(js_name = clearTexturePathCache)]
+    pub fn clear_texture_path_cache(&mut self) {
+        self.engine.clear_texture_path_cache();
+    }
+
+    /// Clear all textures and reset state.
+    /// 清除所有纹理并重置状态。
+    ///
+    /// This removes all loaded textures from GPU memory and resets
+    /// the ID counter. Use with caution as all texture references
+    /// will become invalid.
+    /// 这会从GPU内存中移除所有已加载的纹理并重置ID计数器。
+    /// 请谨慎使用，因为所有纹理引用都将变得无效。
+    #[wasm_bindgen(js_name = clearAllTextures)]
+    pub fn clear_all_textures(&mut self) {
+        self.engine.clear_all_textures();
+    }
 }

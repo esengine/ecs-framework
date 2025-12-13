@@ -195,7 +195,7 @@ export class UITransformComponent extends Component implements ISortable {
     @Property({
         type: 'enum',
         label: 'Sorting Layer',
-        options: ['Background', 'Default', 'Foreground', 'UI', 'Overlay']
+        options: ['Background', 'Default', 'Foreground', 'WorldOverlay', 'UI', 'ScreenOverlay', 'Modal']
     })
     public sortingLayer: string = SortingLayers.UI;
 
@@ -247,6 +247,15 @@ export class UITransformComponent extends Component implements ISortable {
      * Computed world alpha (considering parent alpha)
      */
     public worldAlpha: number = 1;
+
+    /**
+     * 计算后的世界可见性（考虑父元素可见性）
+     * Computed world visibility (considering parent visibility)
+     *
+     * 如果父元素不可见，子元素也不可见。
+     * If parent is invisible, children are also invisible.
+     */
+    public worldVisible: boolean = true;
 
     /**
      * 计算后的世界旋转（弧度，考虑父元素旋转）

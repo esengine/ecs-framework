@@ -609,6 +609,42 @@ export class AssetManager implements IAssetManager {
     }
 
     /**
+     * Unload assets by type
+     * 按类型卸载资产
+     *
+     * This is useful for clearing texture caches when restoring scene snapshots.
+     * 在恢复场景快照时清除纹理缓存时很有用。
+     *
+     * @param assetType 要卸载的资产类型 / Asset type to unload
+     * @param bForce 是否强制卸载（忽略引用计数）/ Whether to force unload (ignore reference count)
+     */
+    unloadAssetsByType(assetType: AssetType, bForce: boolean = false): void {
+        const guids = Array.from(this._assets.keys());
+        guids.forEach((guid) => {
+            const entry = this._assets.get(guid);
+            if (entry && entry.metadata.type === assetType) {
+                if (bForce || entry.referenceCount === 0) {
+                    // 获取加载器以释放资源 / Get loader to dispose resources
+                    const loader = this._loaderFactory.createLoader(entry.metadata.type);
+                    if (loader) {
+                        loader.dispose(entry.asset);
+                    }
+
+                    // 清理条目 / Clean up entry
+                    this._handleToGuid.delete(entry.handle);
+                    this._assets.delete(guid);
+                    this._cache.remove(guid);
+
+                    // 更新统计 / Update statistics
+                    this._statistics.loadedCount--;
+
+                    entry.state = AssetState.Unloaded;
+                }
+            }
+        });
+    }
+
+    /**
      * Add reference to asset
      * 增加资产引用
      */

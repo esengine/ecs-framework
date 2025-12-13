@@ -6,7 +6,7 @@
  * Defines service tokens exported by tilemap module.
  */
 
-import { createServiceToken } from '@esengine/engine-core';
+import { createServiceToken } from '@esengine/ecs-framework';
 import type { TilemapRenderingSystem } from './systems/TilemapRenderingSystem';
 import type { TilemapPhysicsSystem } from './physics/TilemapPhysicsSystem';
 

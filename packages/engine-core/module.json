@@ -1,6 +1,7 @@
 {
   "id": "engine-core",
   "name": "@esengine/engine-core",
+  "globalKey": "engineCore",
   "displayName": "Engine Core",
   "description": "Engine lifecycle, scene management, game loop | 引擎生命周期、场景管理、游戏循环",
   "version": "1.0.0",
@@ -14,6 +15,7 @@
   "isCore": true,
   "defaultEnabled": true,
   "isEngineModule": true,
+  "hasRuntime": true,
   "canContainContent": false,
   "platforms": [
     "web",

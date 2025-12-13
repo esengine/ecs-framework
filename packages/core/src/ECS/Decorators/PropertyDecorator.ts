@@ -3,10 +3,13 @@ import 'reflect-metadata';
 export type PropertyType = 'number' | 'integer' | 'string' | 'boolean' | 'color' | 'vector2' | 'vector3' | 'enum' | 'asset' | 'array' | 'animationClips' | 'collisionLayer' | 'collisionMask';
 
 /**
- * 资源类型
- * Asset type for asset properties
+ * 属性资源类型
+ * Asset type for property decorators
  */
-export type AssetType = 'texture' | 'audio' | 'scene' | 'prefab' | 'animation' | 'any';
+export type PropertyAssetType = 'texture' | 'audio' | 'scene' | 'prefab' | 'animation' | 'any';
+
+/** @deprecated Use PropertyAssetType instead */
+export type AssetType = PropertyAssetType;
 
 /**
  * 枚举选项 - 支持简单字符串或带标签的对象
@@ -119,7 +122,7 @@ interface EnumPropertyOptions extends PropertyOptionsBase {
 interface AssetPropertyOptions extends PropertyOptionsBase {
     type: 'asset';
     /** 资源类型 | Asset type */
-    assetType?: AssetType;
+    assetType?: PropertyAssetType;
     /** 文件扩展名过滤 | File extension filter */
     extensions?: string[];
 }
@@ -133,7 +136,7 @@ export type ArrayItemType =
     | { type: 'number'; min?: number; max?: number }
     | { type: 'integer'; min?: number; max?: number }
     | { type: 'boolean' }
-    | { type: 'asset'; assetType?: AssetType; extensions?: string[] }
+    | { type: 'asset'; assetType?: PropertyAssetType; extensions?: string[] }
     | { type: 'vector2' }
     | { type: 'vector3' }
     | { type: 'color'; alpha?: boolean }

@@ -106,6 +106,53 @@ pub struct FileChangeEvent {
     pub paths: Vec<String>,
 }
 
+/// Install esbuild globally using npm.
+/// 使用 npm 全局安装 esbuild。
+///
+/// # Returns | 返回
+/// Progress messages as the installation proceeds.
+/// 安装过程中的进度消息。
+#[command]
+pub async fn install_esbuild(app: AppHandle) -> Result<(), String> {
+    println!("[Environment] Starting esbuild installation...");
+
+    // Emit progress event | 发送进度事件
+    let _ = app.emit("esbuild-install:progress", "Checking npm...");
+
+    // Check if npm is available | 检查 npm 是否可用
+    let npm_cmd = if cfg!(windows) { "npm.cmd" } else { "npm" };
+    let npm_check = Command::new(npm_cmd)
+        .arg("--version")
+        .output()
+        .map_err(|_| "npm not found. Please install Node.js first. | 未找到 npm，请先安装 Node.js。".to_string())?;
+
+    if !npm_check.status.success() {
+        return Err("npm not working properly. | npm 无法正常工作。".to_string());
+    }
+
+    let _ = app.emit("esbuild-install:progress", "Installing esbuild globally...");
+    println!("[Environment] Running: npm install -g esbuild");
+
+    // Install esbuild globally | 全局安装 esbuild
+    let output = Command::new(npm_cmd)
+        .args(&["install", "-g", "esbuild"])
+        .output()
+        .map_err(|e| format!("Failed to run npm install | npm install 执行失败: {}", e))?;
+
+    if output.status.success() {
+        println!("[Environment] esbuild installed successfully");
+        let _ = app.emit("esbuild-install:progress", "Installation complete!");
+        let _ = app.emit("esbuild-install:success", true);
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let error_msg = format!("Failed to install esbuild | 安装 esbuild 失败: {}", stderr);
+        println!("[Environment] {}", error_msg);
+        let _ = app.emit("esbuild-install:error", &error_msg);
+        Err(error_msg)
+    }
+}
+
 /// Check development environment.
 /// 检测开发环境。
 ///
@@ -123,27 +170,12 @@ pub async fn check_environment() -> Result<EnvironmentCheckResult, String> {
 
 /// Check esbuild availability and get its status.
 /// 检查 esbuild 可用性并获取其状态。
+///
+/// Only checks for globally installed esbuild (via npm -g).
+/// 只检测通过 npm 全局安装的 esbuild。
 fn check_esbuild_status() -> ToolStatus {
-    // Try bundled esbuild first | 首先尝试打包的 esbuild
-    if let Some(bundled_path) = find_bundled_esbuild() {
-        match get_esbuild_version(&bundled_path) {
-            Ok(version) => {
-                return ToolStatus {
-                    available: true,
-                    version: Some(version),
-                    path: Some(bundled_path),
-                    source: Some("bundled".to_string()),
-                    error: None,
-                };
-            }
-            Err(e) => {
-                println!("[Environment] Bundled esbuild found but failed to get version: {}", e);
-            }
-        }
-    }
-
-    // Try global esbuild | 尝试全局 esbuild
     let global_esbuild = if cfg!(windows) { "esbuild.cmd" } else { "esbuild" };
+
     match get_esbuild_version(global_esbuild) {
         Ok(version) => {
             ToolStatus {
@@ -160,7 +192,7 @@ fn check_esbuild_status() -> ToolStatus {
                 version: None,
                 path: None,
                 source: None,
-                error: Some("esbuild not found | 未找到 esbuild".to_string()),
+                error: Some("esbuild not installed globally. Please install: npm install -g esbuild | 未全局安装 esbuild，请安装: npm install -g esbuild".to_string()),
             }
         }
     }
@@ -666,32 +698,9 @@ pub async fn stop_watch_scripts(
 /// Find esbuild executable path.
 /// 查找 esbuild 可执行文件路径。
 ///
-/// Search order | 搜索顺序:
-/// 1. Bundled esbuild in app resources | 应用资源中打包的 esbuild
-/// 2. Local node_modules | 本地 node_modules
-/// 3. Global esbuild | 全局 esbuild
-fn find_esbuild(project_root: &str) -> Result<String, String> {
-    let project_path = Path::new(project_root);
-
-    // Try bundled esbuild first (in app resources) | 首先尝试打包的 esbuild（在应用资源中）
-    if let Some(bundled) = find_bundled_esbuild() {
-        println!("[Compiler] Using bundled esbuild: {}", bundled);
-        return Ok(bundled);
-    }
-
-    // Try local node_modules | 尝试本地 node_modules
-    let local_esbuild = if cfg!(windows) {
-        project_path.join("node_modules/.bin/esbuild.cmd")
-    } else {
-        project_path.join("node_modules/.bin/esbuild")
-    };
-
-    if local_esbuild.exists() {
-        println!("[Compiler] Using local esbuild: {}", local_esbuild.display());
-        return Ok(local_esbuild.to_string_lossy().to_string());
-    }
-
-    // Try global esbuild | 尝试全局 esbuild
+/// Only uses globally installed esbuild (npm -g).
+/// 只使用全局安装的 esbuild (npm -g)。
+fn find_esbuild(_project_root: &str) -> Result<String, String> {
     let global_esbuild = if cfg!(windows) { "esbuild.cmd" } else { "esbuild" };
 
     // Check if global esbuild exists | 检查全局 esbuild 是否存在
@@ -704,45 +713,8 @@ fn find_esbuild(project_root: &str) -> Result<String, String> {
             println!("[Compiler] Using global esbuild");
             Ok(global_esbuild.to_string())
         },
-        _ => Err("esbuild not found. Please install esbuild: npm install -g esbuild | 未找到 esbuild，请安装: npm install -g esbuild".to_string())
+        _ => Err("esbuild not installed globally. Please install: npm install -g esbuild | 未全局安装 esbuild，请安装: npm install -g esbuild".to_string())
     }
-}
-
-/// Find bundled esbuild in app resources.
-/// 在应用资源中查找打包的 esbuild。
-fn find_bundled_esbuild() -> Option<String> {
-    // Get the executable path | 获取可执行文件路径
-    let exe_path = std::env::current_exe().ok()?;
-    let exe_dir = exe_path.parent()?;
-
-    // In development, resources are in src-tauri directory | 开发模式下，资源在 src-tauri 目录
-    // In production, resources are next to the executable | 生产模式下，资源在可执行文件旁边
-    let esbuild_name = if cfg!(windows) { "esbuild.exe" } else { "esbuild" };
-
-    // Try production path (resources next to exe) | 尝试生产路径（资源在 exe 旁边）
-    let prod_path = exe_dir.join("bin").join(esbuild_name);
-    if prod_path.exists() {
-        return Some(prod_path.to_string_lossy().to_string());
-    }
-
-    // Try development path (in src-tauri/bin) | 尝试开发路径（在 src-tauri/bin 中）
-    // This handles running via `cargo tauri dev`
-    let dev_path = exe_dir
-        .ancestors()
-        .find_map(|p| {
-            let candidate = p.join("src-tauri").join("bin").join(esbuild_name);
-            if candidate.exists() {
-                Some(candidate)
-            } else {
-                None
-            }
-        });
-
-    if let Some(path) = dev_path {
-        return Some(path.to_string_lossy().to_string());
-    }
-
-    None
 }
 
 /// Parse esbuild error output.

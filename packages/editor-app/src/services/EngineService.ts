@@ -7,9 +7,9 @@
  */
 
 import { GizmoRegistry, EntityStoreService, MessageHub, SceneManagerService, ProjectService, PluginManager, IPluginManager, AssetRegistryService, type SystemContext } from '@esengine/editor-core';
-import { Core, Scene, Entity, SceneSerializer, ProfilerSDK, createLogger } from '@esengine/ecs-framework';
+import { Core, Scene, Entity, SceneSerializer, ProfilerSDK, createLogger, PluginServiceRegistry } from '@esengine/ecs-framework';
 import { CameraConfig, EngineBridgeToken, RenderSystemToken, EngineIntegrationToken } from '@esengine/ecs-engine-bindgen';
-import { TransformComponent, PluginServiceRegistry, TransformTypeToken, CanvasElementToken } from '@esengine/engine-core';
+import { TransformComponent, TransformTypeToken, CanvasElementToken } from '@esengine/engine-core';
 import { SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystemToken } from '@esengine/sprite';
 import { invalidateUIRenderCaches, UIRenderProviderToken, UIInputSystemToken } from '@esengine/ui';
 import * as esEngine from '@esengine/engine';
@@ -18,9 +18,7 @@ import {
     EngineIntegration,
     AssetPathResolver,
     AssetPlatform,
-    globalPathResolver,
     SceneResourceManager,
-    assetManager as globalAssetManager,
     AssetType,
     AssetManagerToken,
     isValidGUID
@@ -415,9 +413,9 @@ export class EngineService {
      */
     private async _initializeAssetSystem(): Promise<void> {
         try {
-            // Use global assetManager instance so all systems share the same manager
-            // 使用全局 assetManager 实例，以便所有系统共享同一个管理器
-            this._assetManager = globalAssetManager;
+            // Create a new AssetManager instance for this editor session
+            // 为此编辑器会话创建新的 AssetManager 实例
+            this._assetManager = new AssetManager();
 
             // Set up asset reader for Tauri environment.
             // 为 Tauri 环境设置资产读取器。
@@ -434,8 +432,8 @@ export class EngineService {
                 }
             }
 
-            // Sync AssetRegistryService data to global assetManager's database
-            // 将 AssetRegistryService 的数据同步到全局 assetManager 的数据库
+            // Sync AssetRegistryService data to assetManager's database
+            // 将 AssetRegistryService 的数据同步到 assetManager 的数据库
             await this._syncAssetRegistryToManager();
 
             const pathTransformerFn = (path: string) => {
@@ -457,11 +455,6 @@ export class EngineService {
             };
 
             this._assetPathResolver = new AssetPathResolver({
-                platform: AssetPlatform.Editor,
-                pathTransformer: pathTransformerFn
-            });
-
-            globalPathResolver.updateConfig({
                 platform: AssetPlatform.Editor,
                 pathTransformer: pathTransformerFn
             });
@@ -1013,7 +1006,15 @@ export class EngineService {
      * Save a snapshot of the current scene state.
      */
     saveSceneSnapshot(): boolean {
-        return this._runtime?.saveSceneSnapshot() ?? false;
+        const success = this._runtime?.saveSceneSnapshot() ?? false;
+
+        if (success) {
+            // 清除 UI 渲染缓存（因为纹理已被清除）
+            // Clear UI render caches (since textures have been cleared)
+            invalidateUIRenderCaches();
+        }
+
+        return success;
     }
 
     /**

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
-import { Globe, ChevronDown, Download, X, Loader2, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { Globe, ChevronDown, Download, X, Loader2, Trash2, CheckCircle, AlertCircle, Terminal } from 'lucide-react';
 import { checkForUpdatesOnStartup, installUpdate, type UpdateCheckResult } from '../utils/updater';
 import { StartupLogo } from './StartupLogo';
 import { TauriAPI, type EnvironmentCheckResult } from '../api/tauri';
@@ -35,6 +36,10 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
     const [isInstalling, setIsInstalling] = useState(false);
     const [envCheck, setEnvCheck] = useState<EnvironmentCheckResult | null>(null);
     const [showEnvStatus, setShowEnvStatus] = useState(false);
+    const [showEsbuildInstall, setShowEsbuildInstall] = useState(false);
+    const [isInstallingEsbuild, setIsInstallingEsbuild] = useState(false);
+    const [installProgress, setInstallProgress] = useState('');
+    const [installError, setInstallError] = useState('');
     const langMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -70,14 +75,73 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                 console.log('[Environment] Ready ✓');
                 console.log(`[Environment] esbuild: ${result.esbuild.version} (${result.esbuild.source})`);
             } else {
-                // 环境有问题，显示提示
-                setShowEnvStatus(true);
+                // esbuild 未安装，显示安装对话框
                 console.warn('[Environment] Not ready:', result.esbuild.error);
+                setShowEsbuildInstall(true);
             }
         }).catch((error) => {
             console.error('[Environment] Check failed:', error);
         });
     }, []);
+
+    // 监听 esbuild 安装进度事件
+    useEffect(() => {
+        let unlisten: UnlistenFn | undefined;
+
+        const setupListeners = async () => {
+            // 监听安装进度
+            unlisten = await listen<string>('esbuild-install:progress', (event) => {
+                setInstallProgress(event.payload);
+            });
+
+            // 监听安装成功
+            const unlistenSuccess = await listen('esbuild-install:success', async () => {
+                // 重新检测环境
+                const result = await TauriAPI.checkEnvironment();
+                setEnvCheck(result);
+                if (result.ready) {
+                    setShowEsbuildInstall(false);
+                    setIsInstallingEsbuild(false);
+                    setInstallProgress('');
+                    setInstallError('');
+                }
+            });
+
+            // 监听安装错误
+            const unlistenError = await listen<string>('esbuild-install:error', (event) => {
+                setInstallError(event.payload);
+                setIsInstallingEsbuild(false);
+            });
+
+            return () => {
+                unlisten?.();
+                unlistenSuccess();
+                unlistenError();
+            };
+        };
+
+        setupListeners();
+
+        return () => {
+            unlisten?.();
+        };
+    }, []);
+
+    // 处理 esbuild 安装
+    const handleInstallEsbuild = async () => {
+        setIsInstallingEsbuild(true);
+        setInstallProgress(t('startup.installingEsbuild'));
+        setInstallError('');
+
+        try {
+            await TauriAPI.installEsbuild();
+            // 成功会通过事件处理
+        } catch (error) {
+            console.error('[Environment] Failed to install esbuild:', error);
+            setInstallError(String(error));
+            setIsInstallingEsbuild(false);
+        }
+    };
 
     const handleInstallUpdate = async () => {
         setIsInstalling(true);
@@ -338,6 +402,57 @@ export function StartupPage({ onOpenProject, onCreateProject, onOpenRecentProjec
                                 }}
                             >
                                 {t('startup.delete')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* esbuild 安装对话框 | esbuild Installation Dialog */}
+            {showEsbuildInstall && (
+                <div className="startup-dialog-overlay">
+                    <div className="startup-dialog">
+                        <div className="startup-dialog-header">
+                            <Terminal size={20} className="dialog-icon-info" />
+                            <h3>{t('startup.esbuildNotInstalled')}</h3>
+                        </div>
+                        <div className="startup-dialog-body">
+                            <p>{t('startup.esbuildRequired')}</p>
+                            <p className="startup-dialog-info">{t('startup.esbuildInstallPrompt')}</p>
+
+                            {/* 安装进度 | Installation Progress */}
+                            {isInstallingEsbuild && (
+                                <div className="startup-dialog-progress">
+                                    <Loader2 size={16} className="animate-spin" />
+                                    <span>{installProgress}</span>
+                                </div>
+                            )}
+
+                            {/* 错误信息 | Error Message */}
+                            {installError && (
+                                <div className="startup-dialog-error">
+                                    <AlertCircle size={16} />
+                                    <span>{installError}</span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="startup-dialog-footer">
+                            <button
+                                className="startup-dialog-btn primary"
+                                onClick={handleInstallEsbuild}
+                                disabled={isInstallingEsbuild}
+                            >
+                                {isInstallingEsbuild ? (
+                                    <>
+                                        <Loader2 size={14} className="animate-spin" />
+                                        {t('startup.installing')}
+                                    </>
+                                ) : (
+                                    <>
+                                        <Download size={14} />
+                                        {t('startup.installNow')}
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>

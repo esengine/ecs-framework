@@ -4,8 +4,11 @@ export {
     type SystemContext,
     type ModuleManifest,
     type IRuntimeModule,
-    type IPlugin
+    type IRuntimePlugin
 } from './PluginManager';
+
+/** @deprecated Use IRuntimePlugin instead */
+export type { IRuntimePlugin as IPlugin } from './PluginManager';
 
 export {
     createPlugin,
@@ -57,6 +60,7 @@ export {
     BrowserPlatformAdapter,
     BrowserPathResolver,
     type BrowserPlatformConfig,
+    type BrowserPathResolveMode,
     EditorPlatformAdapter,
     EditorPathResolver,
     type EditorPlatformConfig
@@ -87,7 +91,6 @@ export {
     type InputSystemConfig,
     type KeyState,
     type MouseButtonState,
-    type Vector2,
     type KeyboardEventInfo,
     type MouseEventInfo,
     type WheelEventInfo,
@@ -95,13 +98,18 @@ export {
     type TouchEvent
 } from '@esengine/engine-core';
 
-// Re-export Plugin Service Registry from engine-core
+// Re-export vector interfaces from math
+export type { IVector2, IVector3 } from '@esengine/ecs-framework-math';
+
+// Re-export Plugin Service Registry from ecs-framework (canonical source)
 export {
     PluginServiceRegistry,
     createServiceToken,
-    TransformTypeToken,
     type ServiceToken
-} from '@esengine/engine-core';
+} from '@esengine/ecs-framework';
+
+// Re-export engine-specific tokens from engine-core
+export { TransformTypeToken } from '@esengine/engine-core';
 
 // Re-export service tokens from their respective modules
 export {

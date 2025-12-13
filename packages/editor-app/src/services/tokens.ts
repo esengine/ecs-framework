@@ -9,7 +9,7 @@
  * These services are defined in editor-app, so Tokens are also defined here.
  */
 
-import { createServiceToken } from '@esengine/engine-core';
+import { createServiceToken } from '@esengine/ecs-framework';
 
 // ============================================================================
 // Profiler Data Types (定义在这里以避免循环依赖)

@@ -6,7 +6,7 @@
  * Following "who defines interface, who exports Token" principle.
  */
 
-import { createServiceToken } from '@esengine/engine-core';
+import { createServiceToken } from '@esengine/ecs-framework';
 import type { ICameraManager } from './CameraManager';
 
 // Re-export interface for consumers

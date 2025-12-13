@@ -1,5 +1,5 @@
 import type { ComponentRegistry as ComponentRegistryType, IScene } from '@esengine/ecs-framework';
-import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
+import type { IRuntimeModule, IRuntimePlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 import { EngineBridgeToken } from '@esengine/engine-core';
 import { CameraComponent } from './CameraComponent';
 import { CameraSystem } from './CameraSystem';
@@ -37,7 +37,7 @@ const manifest: ModuleManifest = {
     exports: { components: ['CameraComponent'] }
 };
 
-export const CameraPlugin: IPlugin = {
+export const CameraPlugin: IRuntimePlugin = {
     manifest,
     runtimeModule: new CameraRuntimeModule()
 };

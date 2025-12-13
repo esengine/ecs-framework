@@ -27,7 +27,7 @@
  * ```
  */
 
-export { InputManager, Input, type KeyState, type MouseButtonState, type Vector2 } from './InputManager';
+export { InputManager, Input, type KeyState, type MouseButtonState } from './InputManager';
 export { InputSystem, type InputSystemConfig } from './InputSystem';
 
 // 重导出平台公共类型 | Re-export platform common types

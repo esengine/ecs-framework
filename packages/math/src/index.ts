@@ -10,8 +10,8 @@
  */
 
 // 核心数学类
-export { Vector2 } from './Vector2';
-export { Vector3 } from './Vector3';
+export { Vector2, type IVector2 } from './Vector2';
+export { Vector3, type IVector3 } from './Vector3';
 export { Matrix3 } from './Matrix3';
 export { Rectangle } from './Rectangle';
 export { Circle } from './Circle';

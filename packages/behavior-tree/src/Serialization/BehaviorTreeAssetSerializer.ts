@@ -6,9 +6,10 @@ import { EditorFormatConverter, type EditorFormat } from './EditorFormatConverte
 const logger = createLogger('BehaviorTreeAssetSerializer');
 
 /**
- * 序列化格式
+ * 行为树序列化格式
+ * Behavior tree serialization format
  */
-export type SerializationFormat = 'json' | 'binary';
+export type BehaviorTreeSerializationFormat = 'json' | 'binary';
 
 /**
  * 序列化选项
@@ -17,7 +18,7 @@ export interface SerializationOptions {
     /**
      * 序列化格式
      */
-    format: SerializationFormat;
+    format: BehaviorTreeSerializationFormat;
 
     /**
      * 是否美化JSON输出（仅format='json'时有效）
@@ -221,7 +222,7 @@ export class BehaviorTreeAssetSerializer {
      * @param data 序列化的数据
      * @returns 格式类型
      */
-    static detectFormat(data: string | Uint8Array): SerializationFormat {
+    static detectFormat(data: string | Uint8Array): BehaviorTreeSerializationFormat {
         if (typeof data === 'string') {
             return 'json';
         } else {
@@ -236,7 +237,7 @@ export class BehaviorTreeAssetSerializer {
      * @returns 资产元信息
      */
     static getInfo(data: string | Uint8Array): {
-        format: SerializationFormat;
+        format: BehaviorTreeSerializationFormat;
         name: string;
         version: string;
         nodeCount: number;
@@ -288,7 +289,7 @@ export class BehaviorTreeAssetSerializer {
      */
     static convert(
         data: string | Uint8Array,
-        targetFormat: SerializationFormat,
+        targetFormat: BehaviorTreeSerializationFormat,
         pretty: boolean = true
     ): string | Uint8Array {
         const asset = this.deserialize(data, { validate: false });

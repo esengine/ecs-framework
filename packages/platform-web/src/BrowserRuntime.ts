@@ -18,7 +18,7 @@ import {
     BrowserFileSystemService,
     type IPlugin
 } from '@esengine/runtime-core';
-import { assetManager as globalAssetManager, type IAssetManager, isValidGUID } from '@esengine/asset-system';
+import { isValidGUID } from '@esengine/asset-system';
 import { BrowserAssetReader } from './BrowserAssetReader';
 import { WebInputSubsystem } from './subsystems/WebInputSubsystem';
 
@@ -115,9 +115,13 @@ export class BrowserRuntime {
         // Create browser platform adapter
         // 创建输入子系统，用于处理键盘、鼠标、触摸事件
         // Create input subsystem for keyboard, mouse, touch events
+        // 使用 'direct' 模式，因为独立 Web 构建不使用 Tauri 代理
+        // Use 'direct' mode since standalone web builds don't use Tauri proxy
         const platform = new BrowserPlatformAdapter({
             wasmModule: wasmModule ?? undefined,
-            inputSubsystemFactory: () => new WebInputSubsystem()
+            inputSubsystemFactory: () => new WebInputSubsystem(),
+            assetBaseUrl: this._assetBaseUrl,
+            pathResolveMode: 'direct'
         });
 
         // Create game runtime
@@ -137,17 +141,10 @@ export class BrowserRuntime {
             Core.services.registerInstance(IFileSystemServiceKey, this._fileSystem);
         }
 
-        // Set asset reader for AssetManager (both runtime instance and global singleton)
-        // 设置资产读取器（运行时实例和全局单例）
-        if (this._assetReader) {
-            // Initialize the GLOBAL assetManager singleton (used by particle and other modules)
-            // 初始化全局 assetManager 单例（被 particle 等模块使用）
-            globalAssetManager.setReader(this._assetReader);
-
-            // Also set for runtime's assetManager if available
-            if (this._runtime.assetManager) {
-                this._runtime.assetManager.setReader(this._assetReader);
-            }
+        // Set asset reader for AssetManager
+        // 设置资产读取器
+        if (this._assetReader && this._runtime.assetManager) {
+            this._runtime.assetManager.setReader(this._assetReader);
 
             // Initialize AssetManager with catalog from BrowserFileSystemService
             // 使用 BrowserFileSystemService 的 catalog 初始化 AssetManager
@@ -155,16 +152,7 @@ export class BrowserRuntime {
             // 目录格式已统一 - 无需转换
             if (this._fileSystem?.catalog) {
                 const catalog = this._fileSystem.catalog;
-
-                // Initialize GLOBAL assetManager singleton (used by particle and other modules)
-                // 初始化全局 assetManager 单例（被 particle 等模块使用）
-                globalAssetManager.initializeFromCatalog(catalog);
-
-                // Also initialize runtime's assetManager if available
-                // 如果可用，也初始化运行时的 assetManager
-                if (this._runtime.assetManager) {
-                    this._runtime.assetManager.initializeFromCatalog(catalog);
-                }
+                this._runtime.assetManager.initializeFromCatalog(catalog);
             }
         }
 
@@ -189,7 +177,8 @@ export class BrowserRuntime {
      */
     private _setupAssetPathResolver(): void {
         const renderSystem = this._runtime?.renderSystem;
-        if (!renderSystem) return;
+        const assetManager = this._runtime?.assetManager;
+        if (!renderSystem || !assetManager) return;
 
         const assetBaseUrl = this._assetBaseUrl;
 
@@ -203,13 +192,20 @@ export class BrowserRuntime {
             // Check if this is a GUID using the unified validation function
             // 使用统一的验证函数检查是否为 GUID
             if (isValidGUID(guidOrPath)) {
-                // Get metadata from global asset manager
-                // 从全局资产管理器获取元数据
-                const metadata = globalAssetManager.getDatabase().getMetadata(guidOrPath);
+                // Get metadata from runtime's asset manager
+                // 从运行时资产管理器获取元数据
+                const metadata = assetManager.getDatabase().getMetadata(guidOrPath);
                 if (metadata?.path) {
                     // Construct full URL: baseUrl + relative path
                     // 构建完整 URL：baseUrl + 相对路径
-                    const relativePath = metadata.path.replace(/\\/g, '/');
+                    let relativePath = metadata.path.replace(/\\/g, '/');
+
+                    // Remove 'assets/' prefix if present to avoid duplication
+                    // 移除 'assets/' 前缀以避免重复（assetBaseUrl 已包含 /assets）
+                    if (relativePath.startsWith('assets/')) {
+                        relativePath = relativePath.substring(7);
+                    }
+
                     return `${assetBaseUrl}/${relativePath}`;
                 }
 

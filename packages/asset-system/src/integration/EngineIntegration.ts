@@ -4,15 +4,16 @@
  */
 
 import { AssetManager } from '../core/AssetManager';
-import { AssetGUID } from '../types/AssetTypes';
+import { AssetGUID, AssetType } from '../types/AssetTypes';
 import { ITextureAsset, IAudioAsset, IJsonAsset } from '../interfaces/IAssetLoader';
-import { globalPathResolver } from '../core/AssetPathResolver';
+import { PathResolutionService, type IPathResolutionService } from '../services/PathResolutionService';
+import { TextureLoader } from '../loaders/TextureLoader';
 
 /**
- * Engine bridge interface
- * 引擎桥接接口
+ * Texture engine bridge interface (for asset system)
+ * 纹理引擎桥接接口（用于资产系统）
  */
-export interface IEngineBridge {
+export interface ITextureEngineBridge {
     /**
      * Load texture to GPU
      * 加载纹理到GPU
@@ -36,6 +37,36 @@ export interface IEngineBridge {
      * 获取纹理信息
      */
     getTextureInfo(id: number): { width: number; height: number } | null;
+
+    /**
+     * Get or load texture by path.
+     * 按路径获取或加载纹理。
+     *
+     * This is the preferred method for getting texture IDs.
+     * The Rust engine is the single source of truth for texture ID allocation.
+     * 这是获取纹理 ID 的首选方法。
+     * Rust 引擎是纹理 ID 分配的唯一事实来源。
+     *
+     * @param path Image path/URL | 图片路径/URL
+     * @returns Texture ID allocated by Rust engine | Rust 引擎分配的纹理 ID
+     */
+    getOrLoadTextureByPath?(path: string): number;
+
+    /**
+     * Clear the texture path cache (optional).
+     * 清除纹理路径缓存（可选）。
+     *
+     * This should be called when restoring scene snapshots to ensure
+     * textures are reloaded with correct IDs.
+     * 在恢复场景快照时应调用此方法，以确保纹理使用正确的ID重新加载。
+     */
+    clearTexturePathCache?(): void;
+
+    /**
+     * Clear all textures and reset state (optional).
+     * 清除所有纹理并重置状态（可选）。
+     */
+    clearAllTextures?(): void;
 }
 
 /**
@@ -64,7 +95,8 @@ interface DataAssetEntry {
  */
 export class EngineIntegration {
     private _assetManager: AssetManager;
-    private _engineBridge?: IEngineBridge;
+    private _engineBridge?: ITextureEngineBridge;
+    private _pathResolver: IPathResolutionService;
     private _textureIdMap = new Map<AssetGUID, number>();
     private _pathToTextureId = new Map<string, number>();
 
@@ -80,22 +112,34 @@ export class EngineIntegration {
     private _dataAssets = new Map<number, DataAssetEntry>();
     private static _nextDataId = 1;
 
-    constructor(assetManager: AssetManager, engineBridge?: IEngineBridge) {
+    constructor(assetManager: AssetManager, engineBridge?: ITextureEngineBridge, pathResolver?: IPathResolutionService) {
         this._assetManager = assetManager;
         this._engineBridge = engineBridge;
+        this._pathResolver = pathResolver ?? new PathResolutionService();
+    }
+
+    /**
+     * Set path resolver
+     * 设置路径解析器
+     */
+    setPathResolver(resolver: IPathResolutionService): void {
+        this._pathResolver = resolver;
     }
 
     /**
      * Set engine bridge
      * 设置引擎桥接
      */
-    setEngineBridge(bridge: IEngineBridge): void {
+    setEngineBridge(bridge: ITextureEngineBridge): void {
         this._engineBridge = bridge;
     }
 
     /**
      * Load texture for component
      * 为组件加载纹理
+     *
+     * 使用 Rust 引擎作为纹理 ID 的唯一分配源。
+     * Uses Rust engine as the single source of truth for texture ID allocation.
      *
      * AssetManager 内部会处理路径解析，这里只需传入原始路径。
      * AssetManager handles path resolution internally, just pass the original path here.
@@ -108,17 +152,33 @@ export class EngineIntegration {
             return existingId;
         }
 
-        // 通过资产系统加载（AssetManager 内部会解析路径）
-        // Load through asset system (AssetManager resolves path internally)
+        // 解析路径为引擎可用的 URL
+        // Resolve path to engine-compatible URL
+        const engineUrl = this._pathResolver.catalogToRuntime(texturePath);
+
+        // 优先使用 getOrLoadTextureByPath（Rust 分配 ID）
+        // Prefer getOrLoadTextureByPath (Rust allocates ID)
+        // 这确保纹理 ID 由 Rust 引擎统一分配，避免 JS/Rust 层 ID 不同步问题
+        // This ensures texture IDs are allocated by Rust engine uniformly,
+        // avoiding JS/Rust layer ID desync issues
+        if (this._engineBridge?.getOrLoadTextureByPath) {
+            const rustTextureId = this._engineBridge.getOrLoadTextureByPath(engineUrl);
+            if (rustTextureId > 0) {
+                // 缓存映射
+                // Cache mapping
+                this._pathToTextureId.set(texturePath, rustTextureId);
+                return rustTextureId;
+            }
+        }
+
+        // 回退：通过资产系统加载（兼容旧流程）
+        // Fallback: Load through asset system (for backward compatibility)
         const result = await this._assetManager.loadAssetByPath<ITextureAsset>(texturePath);
         const textureAsset = result.asset;
 
         // 如果有引擎桥接，上传到GPU
         // Upload to GPU if bridge exists
-        // 使用 globalPathResolver 将路径转换为引擎可用的 URL
-        // Use globalPathResolver to convert path to engine-compatible URL
         if (this._engineBridge && textureAsset.data) {
-            const engineUrl = globalPathResolver.resolve(texturePath);
             await this._engineBridge.loadTexture(textureAsset.textureId, engineUrl);
         }
 
@@ -132,6 +192,9 @@ export class EngineIntegration {
     /**
      * Load texture by GUID
      * 通过GUID加载纹理
+     *
+     * 使用 Rust 引擎作为纹理 ID 的唯一分配源。
+     * Uses Rust engine as the single source of truth for texture ID allocation.
      */
     async loadTextureByGuid(guid: AssetGUID): Promise<number> {
         // 检查是否已有纹理ID / Check if texture ID exists
@@ -140,16 +203,27 @@ export class EngineIntegration {
             return existingId;
         }
 
-        // 通过资产系统加载 / Load through asset system
+        // 通过资产系统加载获取元数据和路径 / Load through asset system to get metadata and path
         const result = await this._assetManager.loadAsset<ITextureAsset>(guid);
-        const textureAsset = result.asset;
+        const metadata = result.metadata;
+        const engineUrl = this._pathResolver.catalogToRuntime(metadata.path);
 
-        // 如果有引擎桥接，上传到GPU / Upload to GPU if bridge exists
-        // 使用 globalPathResolver 将路径转换为引擎可用的 URL
-        // Use globalPathResolver to convert path to engine-compatible URL
+        // 优先使用 getOrLoadTextureByPath（Rust 分配 ID）
+        // Prefer getOrLoadTextureByPath (Rust allocates ID)
+        if (this._engineBridge?.getOrLoadTextureByPath) {
+            const rustTextureId = this._engineBridge.getOrLoadTextureByPath(engineUrl);
+            if (rustTextureId > 0) {
+                // 缓存映射
+                // Cache mapping
+                this._textureIdMap.set(guid, rustTextureId);
+                return rustTextureId;
+            }
+        }
+
+        // 回退：使用 TextureLoader 分配的 ID（兼容旧流程）
+        // Fallback: Use TextureLoader allocated ID (for backward compatibility)
+        const textureAsset = result.asset;
         if (this._engineBridge && textureAsset.data) {
-            const metadata = result.metadata;
-            const engineUrl = globalPathResolver.resolve(metadata.path);
             await this._engineBridge.loadTexture(textureAsset.textureId, engineUrl);
         }
 
@@ -489,10 +563,38 @@ export class EngineIntegration {
     /**
      * Clear all texture mappings
      * 清空所有纹理映射
+     *
+     * This clears both local texture ID mappings and the AssetManager's
+     * texture cache to ensure textures are fully reloaded.
+     * 这会清除本地纹理 ID 映射和 AssetManager 的纹理缓存，确保纹理完全重新加载。
+     *
+     * IMPORTANT: This also clears the Rust engine's texture cache to ensure
+     * both JS and Rust layers are in sync.
+     * 重要：这也会清除 Rust 引擎的纹理缓存，确保 JS 和 Rust 层同步。
      */
     clearTextureMappings(): void {
+        // 1. 清除本地映射
+        // Clear local mappings
         this._textureIdMap.clear();
         this._pathToTextureId.clear();
+
+        // 2. 清除 Rust 引擎的纹理缓存（如果可用）
+        // Clear Rust engine's texture cache (if available)
+        // 这确保下次加载时 Rust 会重新分配 ID
+        // This ensures Rust will reallocate IDs on next load
+        if (this._engineBridge?.clearAllTextures) {
+            this._engineBridge.clearAllTextures();
+        }
+
+        // 3. 清除 AssetManager 中的纹理资产缓存
+        // Clear texture asset cache in AssetManager
+        // 强制清除以确保纹理使用新的 ID 重新加载
+        // Force clear to ensure textures are reloaded with new IDs
+        this._assetManager.unloadAssetsByType(AssetType.Texture, true);
+
+        // 4. 重置 TextureLoader 的 ID 计数器（保持向后兼容）
+        // Reset TextureLoader's ID counter (for backward compatibility)
+        TextureLoader.resetTextureIdCounter();
     }
 
     /**

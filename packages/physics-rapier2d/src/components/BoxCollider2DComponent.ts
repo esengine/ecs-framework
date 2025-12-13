@@ -4,8 +4,8 @@
  */
 
 import { Property, Serialize, Serializable, ECSComponent } from '@esengine/ecs-framework';
+import type { IVector2 } from '@esengine/ecs-framework-math';
 import { Collider2DBase } from './Collider2DBase';
-import type { Vector2 } from '../types/Physics2DTypes';
 
 /**
  * 2D 矩形碰撞体
@@ -80,7 +80,7 @@ export class BoxCollider2DComponent extends Collider2DBase {
         return this.width * this.height;
     }
 
-    public override calculateAABB(): { min: Vector2; max: Vector2 } {
+    public override calculateAABB(): { min: IVector2; max: IVector2 } {
         const hw = this.halfWidth;
         const hh = this.halfHeight;
 

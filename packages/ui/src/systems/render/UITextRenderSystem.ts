@@ -101,7 +101,7 @@ export class UITextRenderSystem extends EntitySystem {
             // Null check - component may not be ready during deserialization or initialization
             if (!transform || !text) continue;
 
-            if (!transform.visible || !text.text) continue;
+            if (!transform.worldVisible || !text.text) continue;
 
             const x = transform.worldX ?? transform.x;
             const y = transform.worldY ?? transform.y;

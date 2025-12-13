@@ -331,6 +331,20 @@
     color: #888;
 }
 
+.item-icon.visibility:hover {
+    color: #4a9eff;
+}
+
+.item-icon.visibility.hidden {
+    color: #555;
+    opacity: 0.6;
+}
+
+.item-icon.visibility.hidden:hover {
+    color: #4a9eff;
+    opacity: 1;
+}
+
 .outliner-item-content {
     flex: 1;
     display: flex;

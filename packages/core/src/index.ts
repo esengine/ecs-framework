@@ -18,6 +18,15 @@ export { PluginManager } from './Core/PluginManager';
 export { PluginState } from './Core/Plugin';
 export type { IPlugin, IPluginMetadata } from './Core/Plugin';
 
+// 运行时模式服务 | Runtime Mode Service
+export {
+    RuntimeModeService,
+    RuntimeModeToken,
+    createEditorModeService,
+    createStandaloneModeService
+} from './Core/RuntimeModeService';
+export type { IRuntimeMode, RuntimeModeConfig } from './Core/RuntimeModeService';
+
 // 内置插件
 export * from './Plugins';
 

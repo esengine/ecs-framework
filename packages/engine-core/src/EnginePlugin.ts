@@ -12,29 +12,24 @@
  */
 
 import type { ComponentRegistry as ComponentRegistryType, IScene, ServiceContainer } from '@esengine/ecs-framework';
+import { PluginServiceRegistry } from '@esengine/ecs-framework';
 import { TransformComponent } from './TransformComponent';
 import type { ModuleManifest } from './ModuleManifest';
 
-// 从本地模块导入服务令牌系统（确保 tsup 生成的类型以 engine-core 为源）
-// Import service token system from local module (ensures tsup generates types with engine-core as source)
+// 导入 engine-core 特有的服务令牌
+// Import engine-core specific service tokens
 import {
-    PluginServiceRegistry,
-    createServiceToken,
     TransformTypeToken,
     CanvasElementToken,
     EngineBridgeToken,
-    type ServiceToken,
     type IEngineBridge
 } from './PluginServiceRegistry';
 
-// 导出服务令牌系统 | Export service token system
+// 导出 engine-core 特有的服务令牌 | Export engine-core specific service tokens
 export {
-    PluginServiceRegistry,
-    createServiceToken,
     TransformTypeToken,
     CanvasElementToken,
     EngineBridgeToken,
-    type ServiceToken,
     type IEngineBridge
 };
 
@@ -174,7 +169,7 @@ export interface IRuntimeModule {
  * };
  * ```
  */
-export interface IPlugin<TEditorModule = unknown> {
+export interface IRuntimePlugin<TEditorModule = unknown> {
     /** 模块清单 | Module manifest */
     readonly manifest: ModuleManifest;
     /** 运行时模块（可选） | Runtime module (optional) */
@@ -188,6 +183,9 @@ export interface IPlugin<TEditorModule = unknown> {
      */
     readonly editorModule?: TEditorModule;
 }
+
+/** @deprecated Use IRuntimePlugin instead */
+export type IPlugin<TEditorModule = unknown> = IRuntimePlugin<TEditorModule>;
 
 // ============================================================================
 // Engine Core 插件 | Engine Core Plugin

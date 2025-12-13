@@ -1,6 +1,6 @@
 import type { IScene } from '@esengine/ecs-framework';
 import { ComponentRegistry } from '@esengine/ecs-framework';
-import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
+import type { IRuntimeModule, IRuntimePlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 import { AssetManagerToken } from '@esengine/asset-system';
 import { RenderSystemToken } from '@esengine/ecs-engine-bindgen';
 import { Physics2DWorldToken } from '@esengine/physics-rapier2d';
@@ -87,7 +87,7 @@ const manifest: ModuleManifest = {
     editorPackage: '@esengine/tilemap-editor'
 };
 
-export const TilemapPlugin: IPlugin = {
+export const TilemapPlugin: IRuntimePlugin = {
     manifest,
     runtimeModule: new TilemapRuntimeModule()
 };

@@ -1,5 +1,5 @@
 import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/ecs-framework';
-import { assetManager } from '@esengine/asset-system';
+import type { IAssetManager } from '@esengine/asset-system';
 import { SortingLayers, type ISortable } from '@esengine/engine-core';
 import { ParticlePool, type Particle } from './Particle';
 import { ParticleEmitter, EmissionShape, createDefaultEmitterConfig, type EmitterConfig, type ColorValue } from './ParticleEmitter';
@@ -39,6 +39,29 @@ export enum SimulationSpace {
     Local = 'local',
     /** 世界空间（粒子不跟随发射器）| World space (particles don't follow emitter) */
     World = 'world'
+}
+
+/**
+ * 渲染空间
+ * Render space
+ *
+ * 决定粒子在哪个坐标空间渲染。
+ * Determines which coordinate space the particles are rendered in.
+ */
+export enum RenderSpace {
+    /**
+     * 世界空间 - 受世界相机影响
+     * World space - affected by world camera
+     */
+    World = 'world',
+    /**
+     * 屏幕空间 - 使用固定正交投影，不受世界相机影响
+     * Screen space - uses fixed orthographic projection, not affected by world camera
+     *
+     * 适用于点击特效、UI 粒子等需要固定在屏幕上的效果。
+     * Suitable for click effects, UI particles, and other effects that need to stay fixed on screen.
+     */
+    Screen = 'screen'
 }
 
 /**
@@ -151,14 +174,14 @@ export class ParticleSystemComponent extends Component implements ISortable {
      * 排序层
      * Sorting layer
      *
-     * 决定渲染的大类顺序。点击特效默认使用 Overlay 层以显示在 UI 之上。
-     * Determines the major render order category. Click effects use Overlay by default to appear above UI.
+     * 决定渲染的大类顺序。
+     * Determines the major render order category.
      */
     @Serialize()
     @Property({
         type: 'enum',
         label: 'Sorting Layer',
-        options: ['Background', 'Default', 'Foreground', 'UI', 'Overlay']
+        options: ['Background', 'Default', 'Foreground', 'WorldOverlay', 'UI', 'ScreenOverlay', 'Modal']
     })
     public sortingLayer: string = SortingLayers.Default;
 
@@ -169,6 +192,24 @@ export class ParticleSystemComponent extends Component implements ISortable {
     @Serialize()
     @Property({ type: 'integer', label: 'Order in Layer' })
     public orderInLayer: number = 0;
+
+    /**
+     * 渲染空间
+     * Render space
+     *
+     * World: 世界空间，受相机影响（默认）
+     * Screen: 屏幕空间，固定在屏幕上，适用于点击特效等
+     */
+    @Serialize()
+    @Property({
+        type: 'enum',
+        label: 'Render Space',
+        options: [
+            { label: 'World', value: RenderSpace.World },
+            { label: 'Screen', value: RenderSpace.Screen }
+        ]
+    })
+    public renderSpace: RenderSpace = RenderSpace.World;
 
     // ============= 运行时覆盖 | Runtime Overrides =============
 
@@ -374,10 +415,15 @@ export class ParticleSystemComponent extends Component implements ISortable {
      * 加载粒子资产
      * Load particle asset
      *
+     * @deprecated 建议通过 ParticleUpdateSystem 加载资产，系统会自动处理资产加载和初始化。
+     * Prefer loading assets through ParticleUpdateSystem, which handles asset loading and initialization automatically.
+     *
      * @param guid - Asset GUID to load | 要加载的资产 GUID
+     * @param bForceReload - 是否强制重新加载 | Whether to force reload
+     * @param assetManager - 资产管理器实例（必需）| Asset manager instance (required)
      * @returns Promise that resolves when asset is loaded | 资产加载完成时解析的 Promise
      */
-    async loadAsset(guid: string, bForceReload: boolean = false): Promise<boolean> {
+    async loadAsset(guid: string, bForceReload: boolean = false, assetManager?: IAssetManager): Promise<boolean> {
         if (!guid) {
             this._loadedAsset = null;
             this._lastLoadedGuid = '';
@@ -389,6 +435,11 @@ export class ParticleSystemComponent extends Component implements ISortable {
         // If same asset and not force reload, no need to reload
         if (guid === this._lastLoadedGuid && this._loadedAsset && !bForceReload) {
             return true;
+        }
+
+        if (!assetManager) {
+            console.error('[ParticleSystem] assetManager is required for loadAsset. Use ParticleUpdateSystem for automatic asset loading.');
+            return false;
         }
 
         try {
@@ -423,12 +474,17 @@ export class ParticleSystemComponent extends Component implements ISortable {
      * 强制重新加载资产
      * Force reload the asset
      *
+     * @deprecated 建议通过 ParticleUpdateSystem 加载资产。
+     * Prefer loading assets through ParticleUpdateSystem.
+     *
      * 当资产文件内容变化时调用此方法，强制从文件系统重新加载。
      * Call this method when asset file content changes, forcing a reload from filesystem.
+     *
+     * @param assetManager - 资产管理器实例（必需）| Asset manager instance (required)
      */
-    async reloadAsset(): Promise<boolean> {
+    async reloadAsset(assetManager?: IAssetManager): Promise<boolean> {
         if (!this.particleAssetGuid) return false;
-        return this.loadAsset(this.particleAssetGuid, true);
+        return this.loadAsset(this.particleAssetGuid, true, assetManager);
     }
 
     /**

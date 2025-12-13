@@ -7,7 +7,7 @@ import { Core } from '@esengine/ecs-framework';
 import type { IScene } from '@esengine/ecs-framework';
 import {
     runtimePluginManager,
-    type IPlugin,
+    type IRuntimePlugin,
     type IRuntimeModule,
     type ModuleManifest,
     type SystemContext
@@ -24,14 +24,14 @@ export interface RuntimeConfig {
 export function createPlugin(
     manifest: ModuleManifest,
     runtimeModule: IRuntimeModule
-): IPlugin {
+): IRuntimePlugin {
     return { manifest, runtimeModule };
 }
 
 /**
  * 注册插件到运行时
  */
-export function registerPlugin(plugin: IPlugin): void {
+export function registerPlugin(plugin: IRuntimePlugin): void {
     runtimePluginManager.register(plugin);
 }
 

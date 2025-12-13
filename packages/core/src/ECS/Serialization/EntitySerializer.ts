@@ -10,15 +10,25 @@ import { ComponentSerializer, SerializedComponent } from './ComponentSerializer'
 import { IScene } from '../IScene';
 import { HierarchyComponent } from '../Components/HierarchyComponent';
 import { HierarchySystem } from '../Systems/HierarchySystem';
+import { SerializationContext } from './SerializationContext';
 
 /**
  * 序列化后的实体数据
  */
 export interface SerializedEntity {
     /**
-     * 实体ID
+     * 实体ID（运行时ID）
+     *
+     * Runtime ID.
      */
     id: number;
+
+    /**
+     * 持久化 GUID
+     *
+     * Persistent GUID for cross-session reference resolution.
+     */
+    guid?: string;
 
     /**
      * 实体名称
@@ -84,6 +94,7 @@ export class EntitySerializer {
 
         const serializedEntity: SerializedEntity = {
             id: entity.id,
+            guid: entity.persistentId,
             name: entity.name,
             tag: entity.tag,
             active: entity.active,
@@ -120,12 +131,16 @@ export class EntitySerializer {
     /**
      * 反序列化实体
      *
+     * Deserialize an entity from serialized data.
+     *
      * @param serializedEntity 序列化的实体数据
      * @param componentRegistry 组件类型注册表
      * @param idGenerator 实体ID生成器（用于生成新ID或保持原ID）
      * @param preserveIds 是否保持原始ID（默认false）
      * @param scene 目标场景（可选，用于设置entity.scene以支持添加组件）
      * @param hierarchySystem 层级系统（可选，用于建立层级关系）
+     * @param allEntities 所有实体的映射（可选，用于收集所有实体）
+     * @param context 序列化上下文（可选，用于解析 EntityRef）
      * @returns 反序列化后的实体
      */
     public static deserialize(
@@ -135,14 +150,20 @@ export class EntitySerializer {
         preserveIds: boolean = false,
         scene?: IScene,
         hierarchySystem?: HierarchySystem | null,
-        allEntities?: Map<number, Entity>
+        allEntities?: Map<number, Entity>,
+        context?: SerializationContext
     ): Entity {
-        // 创建实体（使用原始ID或新生成的ID）
+        // 创建实体（使用原始ID或新生成的ID，保留原始 GUID）
         const entityId = preserveIds ? serializedEntity.id : idGenerator();
-        const entity = new Entity(serializedEntity.name, entityId);
+        const entity = new Entity(serializedEntity.name, entityId, serializedEntity.guid);
 
         // 将实体添加到收集 Map 中（用于后续添加到场景）
         allEntities?.set(entity.id, entity);
+
+        // 注册实体到序列化上下文（用于后续解析 EntityRef）
+        if (context) {
+            context.registerEntity(entity, serializedEntity.id, serializedEntity.guid);
+        }
 
         // 如果提供了scene，先设置entity.scene以支持添加组件
         if (scene) {
@@ -155,10 +176,11 @@ export class EntitySerializer {
         entity.enabled = serializedEntity.enabled;
         entity.updateOrder = serializedEntity.updateOrder;
 
-        // 反序列化组件
+        // 反序列化组件（传入 context 以支持 EntityRef 解析）
         const components = ComponentSerializer.deserializeComponents(
             serializedEntity.components,
-            componentRegistry
+            componentRegistry,
+            context
         );
 
         for (const component of components) {
@@ -183,7 +205,8 @@ export class EntitySerializer {
                 preserveIds,
                 scene,
                 hierarchySystem,
-                allEntities
+                allEntities,
+                context
             );
             // 使用 HierarchySystem 建立层级关系
             hierarchySystem?.setParent(childEntity, entity);
@@ -223,12 +246,15 @@ export class EntitySerializer {
     /**
      * 批量反序列化实体
      *
+     * Deserialize multiple entities from serialized data.
+     *
      * @param serializedEntities 序列化的实体数据数组
      * @param componentRegistry 组件类型注册表
      * @param idGenerator 实体ID生成器
      * @param preserveIds 是否保持原始ID
      * @param scene 目标场景（可选，用于设置entity.scene以支持添加组件）
      * @param hierarchySystem 层级系统（可选，用于建立层级关系）
+     * @param context 序列化上下文（可选，用于解析 EntityRef）
      * @returns 反序列化后的实体数组
      */
     public static deserializeEntities(
@@ -237,7 +263,8 @@ export class EntitySerializer {
         idGenerator: () => number,
         preserveIds: boolean = false,
         scene?: IScene,
-        hierarchySystem?: HierarchySystem | null
+        hierarchySystem?: HierarchySystem | null,
+        context?: SerializationContext
     ): { rootEntities: Entity[]; allEntities: Map<number, Entity> } {
         const rootEntities: Entity[] = [];
         const allEntities = new Map<number, Entity>();
@@ -250,7 +277,8 @@ export class EntitySerializer {
                 preserveIds,
                 scene,
                 hierarchySystem,
-                allEntities
+                allEntities,
+                context
             );
             rootEntities.push(entity);
         }

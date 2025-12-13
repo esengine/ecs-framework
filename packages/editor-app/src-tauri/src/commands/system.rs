@@ -376,7 +376,6 @@ pub fn get_current_dir() -> Result<String, String> {
 /// 扫描 dist/engine/ 目录，为所有有 .d.ts 文件的模块添加路径。
 #[tauri::command]
 pub fn update_project_tsconfig(app: AppHandle, project_path: String) -> Result<(), String> {
-    use std::fs;
     use std::path::Path;
 
     let project = Path::new(&project_path);
@@ -590,11 +589,18 @@ pub fn start_local_server(root_path: String, port: u16) -> Result<String, String
                     // Handle different request types
                     let file_path = if url.starts_with("/asset?path=") {
                         // Asset proxy - extract and decode path parameter
+                        // 资产代理 - 提取并解码路径参数
                         let query = &url[7..]; // Skip "/asset?"
                         if let Some(path_value) = query.strip_prefix("path=") {
-                            urlencoding::decode(path_value)
+                            let decoded = urlencoding::decode(path_value)
                                 .map(|s| s.to_string())
-                                .unwrap_or_default()
+                                .unwrap_or_default();
+                            // Normalize path: remove ./ prefix and join with root
+                            // 规范化路径：移除 ./ 前缀并与根目录连接
+                            let normalized = decoded.trim_start_matches("./");
+                            PathBuf::from(&root).join(normalized)
+                                .to_string_lossy()
+                                .to_string()
                         } else {
                             String::new()
                         }

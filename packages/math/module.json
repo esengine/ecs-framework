@@ -1,6 +1,7 @@
 {
   "id": "math",
   "name": "@esengine/ecs-framework-math",
+  "globalKey": "math",
   "displayName": "Math",
   "description": "Vector, Matrix, Transform and other math utilities | 向量、矩阵、变换等数学工具",
   "version": "1.0.0",

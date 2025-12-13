@@ -38,6 +38,7 @@
     "@esengine/platform-web": "workspace:*",
     "@esengine/physics-rapier2d-editor": "workspace:*",
     "@esengine/runtime-core": "workspace:*",
+    "@esengine/sdk": "workspace:*",
     "@esengine/shader-editor": "workspace:*",
     "@esengine/sprite": "workspace:*",
     "@esengine/sprite-editor": "workspace:*",

@@ -1,5 +1,5 @@
 import { EntitySystem, Matcher, Entity, Time, ECSSystem } from '@esengine/ecs-framework';
-import { sortingLayerManager } from '@esengine/engine-core';
+import { sortingLayerManager, MouseButton } from '@esengine/engine-core';
 import { UITransformComponent } from '../components/UITransformComponent';
 import { UIInteractableComponent } from '../components/UIInteractableComponent';
 import { UIButtonComponent } from '../components/widgets/UIButtonComponent';
@@ -7,15 +7,9 @@ import { UISliderComponent } from '../components/widgets/UISliderComponent';
 import { UIScrollViewComponent } from '../components/widgets/UIScrollViewComponent';
 import type { UILayoutSystem } from './UILayoutSystem';
 
-/**
- * 鼠标按钮
- * Mouse buttons
- */
-export enum MouseButton {
-    Left = 0,
-    Middle = 1,
-    Right = 2
-}
+// Re-export MouseButton for backward compatibility
+// 为向后兼容重新导出 MouseButton
+export { MouseButton };
 
 /**
  * 输入事件数据
@@ -229,8 +223,9 @@ export class UIInputSystem extends EntitySystem {
             const transform = entity.getComponent(UITransformComponent)!;
             const interactable = entity.getComponent(UIInteractableComponent)!;
 
-            // 跳过不可见或禁用的元素
-            if (!transform.visible || !interactable.enabled) {
+            // 跳过不可见或禁用的元素（使用 worldVisible 考虑父级可见性）
+            // Skip invisible or disabled elements (use worldVisible to consider parent visibility)
+            if (!transform.worldVisible || !interactable.enabled) {
                 // 如果之前悬停，触发离开
                 if (interactable.hovered) {
                     this.handleMouseLeave(entity, interactable);

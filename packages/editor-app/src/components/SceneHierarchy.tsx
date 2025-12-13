@@ -15,7 +15,7 @@ import { useHierarchyStore } from '../stores';
 import * as LucideIcons from 'lucide-react';
 import {
     Box, Wifi, Search, Plus, Trash2, Monitor, Globe, ChevronRight, ChevronDown,
-    Eye, Star, Lock, Settings, Filter, Folder, Sun, Cloud, Mountain, Flag,
+    Eye, EyeOff, Star, Lock, Settings, Filter, Folder, Sun, Cloud, Mountain, Flag,
     SquareStack, FolderPlus, PackageOpen, Unlink, RotateCcw, Upload, ExternalLink, X
 } from 'lucide-react';
 import type { RemoteEntity } from '../services/tokens';
@@ -88,6 +88,25 @@ enum DropIndicator {
     BEFORE = 'before',
     INSIDE = 'inside',
     AFTER = 'after'
+}
+
+/**
+ * 检查实体是否可见
+ * Check if entity is visible
+ *
+ * 对于 UI 节点，检查 UITransformComponent.visible
+ * 对于其他实体，检查 entity.enabled
+ * For UI nodes, check UITransformComponent.visible
+ * For other entities, check entity.enabled
+ */
+function isEntityVisible(entity: Entity): boolean {
+    // 检查是否有 UITransformComponent
+    const uiTransform = entity.components.find(c => getComponentInstanceTypeName(c) === 'UITransform');
+    if (uiTransform && 'visible' in uiTransform) {
+        return (uiTransform as { visible: boolean }).visible;
+    }
+    // 普通实体使用 enabled 属性
+    return entity.enabled;
 }
 
 export function SceneHierarchy({ entityStore, messageHub, commandManager, isProfilerMode = false }: SceneHierarchyProps) {
@@ -253,6 +272,40 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
             entityStore.selectEntity(entity);
         }
     };
+
+    /**
+     * 切换实体可见性
+     * Toggle entity visibility
+     *
+     * 对于 UI 节点，切换 UITransformComponent.visible
+     * 对于其他实体，切换 entity.enabled
+     * For UI nodes, toggle UITransformComponent.visible
+     * For other entities, toggle entity.enabled
+     */
+    const handleToggleVisibility = useCallback((entity: Entity, e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        // 检查是否有 UITransformComponent
+        // Check if entity has UITransformComponent
+        const uiTransform = entity.components.find(c => getComponentInstanceTypeName(c) === 'UITransform');
+        if (uiTransform && 'visible' in uiTransform) {
+            // UI 节点：切换 visible 属性
+            // UI node: toggle visible property
+            (uiTransform as { visible: boolean }).visible = !(uiTransform as { visible: boolean }).visible;
+        } else {
+            // 普通实体：切换 enabled 属性
+            // Regular entity: toggle enabled property
+            entity.enabled = !entity.enabled;
+        }
+
+        // 通知属性变更以更新 Inspector
+        // Notify property change to update Inspector
+        messageHub.publish('entity:propertyChanged', { entityId: entity.id });
+
+        // 强制更新层级面板
+        // Force update hierarchy panel
+        setExpandedIds(prev => new Set(prev));
+    }, [messageHub]);
 
     const handleDragStart = useCallback((e: React.DragEvent, entityId: number) => {
         setDraggedEntityId(entityId);
@@ -1288,7 +1341,19 @@ export function SceneHierarchy({ entityStore, messageHub, commandManager, isProf
                                         }}
                                     >
                                         <div className="outliner-item-icons">
-                                            <Eye size={12} className="item-icon visibility" />
+                                            {isEntityVisible(entity) ? (
+                                                <Eye
+                                                    size={12}
+                                                    className="item-icon visibility"
+                                                    onClick={(e) => handleToggleVisibility(entity, e)}
+                                                />
+                                            ) : (
+                                                <EyeOff
+                                                    size={12}
+                                                    className="item-icon visibility hidden"
+                                                    onClick={(e) => handleToggleVisibility(entity, e)}
+                                                />
+                                            )}
                                         </div>
                                         <div className="outliner-item-content">
                                             {/* 展开/折叠按钮 */}

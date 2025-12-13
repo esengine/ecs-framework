@@ -97,6 +97,7 @@ fn main() {
             commands::watch_assets,
             commands::stop_watch_scripts,
             commands::check_environment,
+            commands::install_esbuild,
             // Build commands | 构建命令
             commands::prepare_build_directory,
             commands::copy_directory,

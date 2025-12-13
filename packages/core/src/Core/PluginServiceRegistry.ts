@@ -42,14 +42,23 @@ export interface ServiceToken<T> {
  * 创建服务令牌
  * Create a service token
  *
+ * 使用 Symbol.for() 确保相同名称的令牌在不同模块中引用同一个 Symbol。
+ * Uses Symbol.for() to ensure tokens with the same name reference the same Symbol across modules.
+ *
+ * 这解决了跨包场景下服务注册和获取使用不同 Symbol 的问题。
+ * This fixes the issue where service registration and retrieval use different Symbols across packages.
+ *
  * @param name 令牌名称 | Token name
  * @returns 服务令牌 | Service token
  */
 export function createServiceToken<T>(name: string): ServiceToken<T> {
-    // __phantom 仅用于类型推断，运行时不需要实际值
-    // __phantom is only for type inference, no actual value needed at runtime
+    // 使用 Symbol.for() 从全局 Symbol 注册表获取或创建 Symbol
+    // 这确保相同名称在任何地方都返回同一个 Symbol
+    // Use Symbol.for() to get or create Symbol from global Symbol registry
+    // This ensures the same name returns the same Symbol everywhere
+    const tokenKey = `@esengine/service:${name}`;
     return {
-        id: Symbol(name),
+        id: Symbol.for(tokenKey),
         name
     } as ServiceToken<T>;
 }

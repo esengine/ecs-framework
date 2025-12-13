@@ -19,7 +19,7 @@
  * ```
  */
 
-import { createServiceToken } from '@esengine/engine-core';
+import { createServiceToken } from '@esengine/ecs-framework';
 import type { LocaleService, Locale, TranslationParams, PluginTranslations } from './Services/LocaleService';
 import type { MessageHub, MessageHandler, RequestHandler } from './Services/MessageHub';
 import type { EntityStoreService, EntityTreeNode } from './Services/EntityStoreService';

@@ -428,9 +428,9 @@ export class UITransformInspector implements IComponentInspector<UITransformComp
                 />
 
                 <NumberRow
-                    label="Z Index"
-                    value={transform.zIndex}
-                    onChange={(v) => handleChange('zIndex', Math.round(v))}
+                    label="Order in Layer"
+                    value={transform.orderInLayer}
+                    onChange={(v) => handleChange('orderInLayer', Math.round(v))}
                     step={1}
                 />
 

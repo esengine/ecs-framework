@@ -35,6 +35,7 @@
 
 import { MouseButton } from '@esengine/platform-common';
 import type { KeyboardEventInfo, MouseEventInfo, WheelEventInfo, TouchInfo } from '@esengine/platform-common';
+import type { IVector2 } from '@esengine/ecs-framework-math';
 
 /**
  * 按键状态
@@ -62,14 +63,6 @@ export interface MouseButtonState {
     justReleased: boolean;
 }
 
-/**
- * 二维向量
- * 2D Vector
- */
-export interface Vector2 {
-    x: number;
-    y: number;
-}
 
 /**
  * 输入管理器类
@@ -82,12 +75,12 @@ export class InputManager {
     private _keysJustReleased: Set<string> = new Set();
 
     // ========== 鼠标状态 | Mouse state ==========
-    private _mousePosition: Vector2 = { x: 0, y: 0 };
-    private _mouseMovement: Vector2 = { x: 0, y: 0 };
+    private _mousePosition: IVector2 = { x: 0, y: 0 };
+    private _mouseMovement: IVector2 = { x: 0, y: 0 };
     private _mouseButtonStates: Map<MouseButton, MouseButtonState> = new Map();
     private _mouseButtonsJustPressed: Set<MouseButton> = new Set();
     private _mouseButtonsJustReleased: Set<MouseButton> = new Set();
-    private _scrollDelta: Vector2 = { x: 0, y: 0 };
+    private _scrollDelta: IVector2 = { x: 0, y: 0 };
 
     // ========== 触摸状态 | Touch state ==========
     private _touches: Map<number, TouchInfo> = new Map();
@@ -159,7 +152,7 @@ export class InputManager {
      * 获取鼠标位置（屏幕坐标）
      * Get mouse position (screen coordinates)
      */
-    get mousePosition(): Readonly<Vector2> {
+    get mousePosition(): Readonly<IVector2> {
         return this._mousePosition;
     }
 
@@ -167,7 +160,7 @@ export class InputManager {
      * 获取鼠标本帧移动量
      * Get mouse movement this frame
      */
-    get mouseMovement(): Readonly<Vector2> {
+    get mouseMovement(): Readonly<IVector2> {
         return this._mouseMovement;
     }
 
@@ -175,7 +168,7 @@ export class InputManager {
      * 获取滚轮滚动量
      * Get scroll delta
      */
-    get scrollDelta(): Readonly<Vector2> {
+    get scrollDelta(): Readonly<IVector2> {
         return this._scrollDelta;
     }
 

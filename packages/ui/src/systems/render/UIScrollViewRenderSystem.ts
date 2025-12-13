@@ -45,7 +45,7 @@ export class UIScrollViewRenderSystem extends EntitySystem {
             // 空值检查 | Null check
             if (!transform || !scrollView) continue;
 
-            if (!transform.visible) continue;
+            if (!transform.worldVisible) continue;
 
             const x = transform.worldX ?? transform.x;
             const y = transform.worldY ?? transform.y;

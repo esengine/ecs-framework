@@ -23,7 +23,9 @@ import type {
     CompileError,
     UserCodeModule,
     HotReloadEvent,
-    IHotReloadOptions
+    IHotReloadOptions,
+    SDKModuleInfo,
+    IHotReloadable
 } from './IUserCodeService';
 import {
     UserCodeTarget,
@@ -189,21 +191,14 @@ export class UserCodeService implements IService, IUserCodeService {
             await this._fileSystem.writeFile(entryPath, entryContent);
 
             // Create shim files for framework dependencies | 创建框架依赖的 shim 文件
-            await this._createDependencyShims(outputDir, options.target);
+            // Returns mapping from package name to shim path
+            // 返回包名到 shim 路径的映射
+            const alias = await this._createDependencyShims(outputDir, options.sdkModules);
 
             // Determine global name for IIFE output | 确定 IIFE 输出的全局名称
             const globalName = options.target === UserCodeTarget.Runtime
                 ? EditorConfig.globals.userRuntimeExports
                 : EditorConfig.globals.userEditorExports;
-
-            // Build alias map for framework dependencies | 构建框架依赖的别名映射
-            const shimPath = `${outputDir}${sep}_shim_ecs_framework.js`.replace(/\\/g, '/');
-            const alias: Record<string, string> = {
-                '@esengine/ecs-framework': shimPath,
-                '@esengine/core': shimPath,
-                '@esengine/engine-core': shimPath,
-                '@esengine/math': shimPath
-            };
 
             // Compile using esbuild (via Tauri command or direct) | 使用 esbuild 编译
             // Use IIFE format to avoid ES module import issues in Tauri
@@ -428,6 +423,11 @@ export class UserCodeService implements IService, IUserCodeService {
      * 这是热更新的核心 - 它更新现有实例的原型链，使它们使用更新后类的新方法，
      * 同时保留它们的数据（属性）。
      *
+     * If a component implements IHotReloadable, its onBeforeHotReload/onAfterHotReload
+     * methods will be called to preserve and restore custom state.
+     * 如果组件实现了 IHotReloadable，将调用其 onBeforeHotReload/onAfterHotReload
+     * 方法来保存和恢复自定义状态。
+     *
      * @param module - New user code module | 新的用户代码模块
      * @returns Number of instances updated | 更新的实例数量
      */
@@ -439,7 +439,7 @@ export class UserCodeService implements IService, IUserCodeService {
         // Access scene through Core.scene
         // 通过 Core.scene 访问场景
         const sdkGlobal = (window as any)[EditorConfig.globals.sdk];
-        const Core = sdkGlobal?.ecsFramework?.Core;
+        const Core = sdkGlobal?.Core;
         const scene = Core?.scene;
         if (!scene || !scene.entities) {
             logger.warn('No active scene for hot reload | 没有活动场景用于热更新');
@@ -480,7 +480,39 @@ export class UserCodeService implements IService, IUserCodeService {
                 // Update the prototype chain to use the new class
                 // 更新原型链以使用新类
                 try {
+                    // Check if component implements IHotReloadable
+                    // 检查组件是否实现了 IHotReloadable
+                    const hotReloadable = component as IHotReloadable;
+                    let savedState: Record<string, unknown> | undefined;
+
+                    // Save state before hot reload (if implemented)
+                    // 在热更新前保存状态（如果实现了）
+                    if (typeof hotReloadable.onBeforeHotReload === 'function') {
+                        try {
+                            savedState = hotReloadable.onBeforeHotReload();
+                            logger.debug(`Saved hot reload state for ${typeName}`, {
+                                stateKeys: savedState ? Object.keys(savedState) : []
+                            });
+                        } catch (err) {
+                            logger.warn(`onBeforeHotReload failed for ${typeName}:`, err);
+                        }
+                    }
+
+                    // Update prototype chain
+                    // 更新原型链
                     Object.setPrototypeOf(component, newClass.prototype);
+
+                    // Restore state after hot reload (if implemented and state was saved)
+                    // 在热更新后恢复状态（如果实现了且有保存的状态）
+                    if (savedState && typeof hotReloadable.onAfterHotReload === 'function') {
+                        try {
+                            hotReloadable.onAfterHotReload(savedState);
+                            logger.debug(`Restored hot reload state for ${typeName}`);
+                        } catch (err) {
+                            logger.warn(`onAfterHotReload failed for ${typeName}:`, err);
+                        }
+                    }
+
                     updatedCount++;
                     logger.debug(`Hot reloaded component instance: ${typeName} on entity ${entity.name || entity.id}`);
                 } catch (err) {
@@ -730,7 +762,7 @@ export class UserCodeService implements IService, IUserCodeService {
         // Initialize hot reload coordinator with Core reference
         // 使用 Core 引用初始化热更新协调器
         const sdkGlobal = (window as any)[EditorConfig.globals.sdk];
-        const Core = sdkGlobal?.ecsFramework?.Core;
+        const Core = sdkGlobal?.Core;
         if (Core) {
             this._hotReloadCoordinator.initialize(Core);
         } else {
@@ -1027,62 +1059,61 @@ export class UserCodeService implements IService, IUserCodeService {
     }
 
     /**
-     * Create shim files that map global variables to module imports.
-     * 创建将全局变量映射到模块导入的 shim 文件。
+     * Create shim file that maps SDK global variable to module import.
+     * 创建将 SDK 全局变量映射到模块导入的 shim 文件。
      *
      * This is used for IIFE format to resolve external dependencies.
-     * The shim exports the global __ESENGINE__.ecsFramework which is set by PluginSDKRegistry.
+     * Creates a single shim for @esengine/sdk.
      * 这用于 IIFE 格式解析外部依赖。
-     * shim 导出全局的 __ESENGINE__.ecsFramework，由 PluginSDKRegistry 设置。
+     * 只创建一个 @esengine/sdk 的 shim。
      *
      * @param outputDir - Output directory | 输出目录
-     * @param target - Target environment | 目标环境
-     * @returns Array of shim file paths | shim 文件路径数组
+     * @param _sdkModules - Deprecated, not used | 已废弃，不再使用
+     * @returns Mapping from package name to shim path | 包名到 shim 路径的映射
      */
     private async _createDependencyShims(
         outputDir: string,
-        target: UserCodeTarget
-    ): Promise<string[]> {
+        _sdkModules?: SDKModuleInfo[]
+    ): Promise<Record<string, string>> {
         const sep = outputDir.includes('\\') ? '\\' : '/';
-        const shimPaths: string[] = [];
-
-        // Create shim for @esengine/ecs-framework | 为 @esengine/ecs-framework 创建 shim
-        // This uses window[EditorConfig.globals.sdk].ecsFramework set by PluginSDKRegistry
-        // 这使用 PluginSDKRegistry 设置的 window[EditorConfig.globals.sdk].ecsFramework
-        const ecsShimPath = `${outputDir}${sep}_shim_ecs_framework.js`;
         const sdkGlobalName = EditorConfig.globals.sdk;
-        const ecsShimContent = `// Shim for @esengine/ecs-framework
-// Maps to window.${sdkGlobalName}.ecsFramework set by PluginSDKRegistry
-module.exports = (typeof window !== 'undefined' && window.${sdkGlobalName} && window.${sdkGlobalName}.ecsFramework) || {};
-`;
-        await this._fileSystem.writeFile(ecsShimPath, ecsShimContent);
-        shimPaths.push(ecsShimPath);
 
-        return shimPaths;
+        // Create single SDK shim
+        // 创建单一 SDK shim
+        const shimPath = `${outputDir}${sep}_shim_sdk.js`;
+        const shimContent = `// Shim for @esengine/sdk
+// Maps to window.${sdkGlobalName}
+// User code imports from '@esengine/sdk' will use this shim
+module.exports = (typeof window !== 'undefined' && window.${sdkGlobalName}) || {};
+`;
+        await this._fileSystem.writeFile(shimPath, shimContent);
+        const normalizedPath = shimPath.replace(/\\/g, '/');
+
+        logger.info('Created SDK shim', { path: normalizedPath });
+
+        return {
+            '@esengine/sdk': normalizedPath
+        };
     }
 
     /**
      * Get external dependencies that should not be bundled.
      * 获取不应打包的外部依赖。
+     *
+     * Only @esengine/sdk is external since user code should import from SDK.
+     * 只有 @esengine/sdk 是外部依赖，因为用户代码应该从 SDK 导入。
      */
-    private _getExternalDependencies(target: UserCodeTarget): string[] {
-        const common = [
-            '@esengine/ecs-framework',
-            '@esengine/engine-core',
-            '@esengine/core',
-            '@esengine/math'
-        ];
-
+    private _getExternalDependencies(target: UserCodeTarget, _sdkModules?: SDKModuleInfo[]): string[] {
         if (target === UserCodeTarget.Editor) {
             return [
-                ...common,
+                '@esengine/sdk',
                 '@esengine/editor-core',
                 'react',
                 'react-dom'
             ];
         }
 
-        return common;
+        return ['@esengine/sdk'];
     }
 
     /**
@@ -1106,6 +1137,19 @@ module.exports = (typeof window !== 'undefined' && window.${sdkGlobalName} && wi
         try {
             // Check if we're in Tauri environment | 检查是否在 Tauri 环境
             if (PlatformDetector.isTauriEnvironment()) {
+                // Log compilation options for debugging
+                // 记录编译选项用于调试
+                logger.info('Running esbuild compilation', {
+                    entry: options.entryPath,
+                    output: options.outputPath,
+                    format: options.format,
+                    aliasCount: options.alias ? Object.keys(options.alias).length : 0
+                });
+
+                if (options.alias) {
+                    logger.debug('esbuild alias mappings:', options.alias);
+                }
+
                 // Use Tauri command | 使用 Tauri 命令
                 const { invoke } = await import('@tauri-apps/api/core');
 

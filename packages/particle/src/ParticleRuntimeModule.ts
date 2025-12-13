@@ -1,10 +1,9 @@
 import type { ComponentRegistry as ComponentRegistryType, IScene } from '@esengine/ecs-framework';
-import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
+import type { IRuntimeModule, IRuntimePlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 import { TransformTypeToken, CanvasElementToken } from '@esengine/engine-core';
 import { AssetManagerToken } from '@esengine/asset-system';
 import { RenderSystemToken, EngineBridgeToken, EngineIntegrationToken } from '@esengine/ecs-engine-bindgen';
 import { Physics2DQueryToken } from '@esengine/physics-rapier2d';
-import { assetManager as globalAssetManager } from '@esengine/asset-system';
 import { ParticleSystemComponent } from './ParticleSystemComponent';
 import { ClickFxComponent } from './ClickFxComponent';
 import { ParticleUpdateSystem } from './systems/ParticleSystem';
@@ -12,7 +11,7 @@ import { ClickFxSystem } from './systems/ClickFxSystem';
 import { ParticleLoader, ParticleAssetType } from './loaders/ParticleLoader';
 import { ParticleUpdateSystemToken } from './tokens';
 
-export type { SystemContext, ModuleManifest, IRuntimeModule, IPlugin };
+export type { SystemContext, ModuleManifest, IRuntimeModule, IRuntimePlugin };
 
 // 重新导出 tokens | Re-export tokens
 export { ParticleUpdateSystemToken } from './tokens';
@@ -35,25 +34,21 @@ class ParticleRuntimeModule implements IRuntimeModule {
         const physics2DQuery = context.services.get(Physics2DQueryToken);
         const renderSystem = context.services.get(RenderSystemToken);
 
-        // 注册粒子资产加载器到上下文的 assetManager 和全局单例
-        // Register particle asset loader to context assetManager AND global singleton
-        if (!this._loaderRegistered) {
+        // 注册粒子资产加载器到上下文的 assetManager
+        // Register particle asset loader to context assetManager
+        if (!this._loaderRegistered && assetManager) {
             const loader = new ParticleLoader();
-
-            // Register to context's assetManager (used by GameRuntime)
-            if (assetManager) {
-                assetManager.registerLoader(ParticleAssetType, loader);
-            }
-
-            // Also register to global singleton (used by ParticleSystemComponent.loadAsset)
-            // 同时注册到全局单例（ParticleSystemComponent.loadAsset 使用的是全局单例）
-            globalAssetManager.registerLoader(ParticleAssetType, loader);
-
+            assetManager.registerLoader(ParticleAssetType, loader);
             this._loaderRegistered = true;
-            console.log('[ParticleRuntimeModule] Registered ParticleLoader to both context and global assetManager');
+            console.log('[ParticleRuntimeModule] Registered ParticleLoader to context assetManager');
         }
 
         this._updateSystem = new ParticleUpdateSystem();
+
+        // 设置资产管理器 | Set asset manager
+        if (assetManager) {
+            this._updateSystem.setAssetManager(assetManager);
+        }
 
         // 设置 Transform 组件类型 | Set Transform component type
         if (transformType) {
@@ -79,6 +74,11 @@ class ParticleRuntimeModule implements IRuntimeModule {
 
         // 添加点击特效系统 | Add click FX system
         const clickFxSystem = new ClickFxSystem();
+
+        // 设置资产管理器 | Set asset manager
+        if (assetManager) {
+            clickFxSystem.setAssetManager(assetManager);
+        }
 
         // 设置 EngineBridge（用于屏幕坐标转世界坐标）
         // Set EngineBridge (for screen to world coordinate conversion)
@@ -132,7 +132,7 @@ const manifest: ModuleManifest = {
     requiresWasm: false
 };
 
-export const ParticlePlugin: IPlugin = {
+export const ParticlePlugin: IRuntimePlugin = {
     manifest,
     runtimeModule: new ParticleRuntimeModule()
 };

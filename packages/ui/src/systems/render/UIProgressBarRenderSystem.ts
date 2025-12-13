@@ -44,7 +44,7 @@ export class UIProgressBarRenderSystem extends EntitySystem {
             // 空值检查 | Null check
             if (!transform || !progressBar) continue;
 
-            if (!transform.visible) continue;
+            if (!transform.worldVisible) continue;
 
             const x = transform.worldX ?? transform.x;
             const y = transform.worldY ?? transform.y;

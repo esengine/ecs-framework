@@ -527,6 +527,64 @@
   border-color: #b91c1c;
 }
 
+.startup-dialog-btn.primary {
+  background: #0e639c;
+  border-color: #0e639c;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.startup-dialog-btn.primary:hover:not(:disabled) {
+  background: #1177bb;
+  border-color: #1177bb;
+}
+
+.startup-dialog-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* esbuild 安装对话框样式 | esbuild Installation Dialog Styles */
+.startup-dialog-info {
+  padding: 10px 12px;
+  background: #1e1e1e;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #cccccc;
+  border-left: 3px solid #0e639c;
+}
+
+.startup-dialog-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: #1e1e1e;
+  border-radius: 4px;
+  margin-top: 12px;
+  color: #0e639c;
+  font-size: 13px;
+}
+
+.startup-dialog-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: #1e1e1e;
+  border-radius: 4px;
+  margin-top: 12px;
+  color: #dc2626;
+  font-size: 13px;
+  border-left: 3px solid #dc2626;
+}
+
+.dialog-icon-info {
+  color: #0e639c;
+}
+
 /* 环境状态指示器样式 | Environment Status Indicator Styles */
 .startup-env-status {
   position: relative;

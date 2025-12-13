@@ -392,6 +392,9 @@ importers:
       '@esengine/ecs-framework':
         specifier: workspace:*
         version: link:../core
+      '@esengine/ecs-framework-math':
+        specifier: workspace:*
+        version: link:../math
       '@esengine/engine-core':
         specifier: workspace:*
         version: link:../engine-core
@@ -613,6 +616,9 @@ importers:
       '@esengine/runtime-core':
         specifier: workspace:*
         version: link:../runtime-core
+      '@esengine/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       '@esengine/shader-editor':
         specifier: workspace:*
         version: link:../shader-editor
@@ -859,6 +865,9 @@ importers:
       '@esengine/ecs-framework':
         specifier: workspace:*
         version: link:../core
+      '@esengine/ecs-framework-math':
+        specifier: workspace:*
+        version: link:../math
       '@esengine/editor-core':
         specifier: workspace:*
         version: link:../editor-core
@@ -910,6 +919,9 @@ importers:
       '@esengine/ecs-framework':
         specifier: workspace:*
         version: link:../core
+      '@esengine/ecs-framework-math':
+        specifier: workspace:*
+        version: link:../math
       '@esengine/platform-common':
         specifier: workspace:*
         version: link:../platform-common
@@ -1165,9 +1177,9 @@ importers:
       '@esengine/ecs-framework':
         specifier: workspace:*
         version: link:../core
-      '@esengine/editor-core':
+      '@esengine/ecs-framework-math':
         specifier: workspace:*
-        version: link:../editor-core
+        version: link:../math
       '@esengine/engine-core':
         specifier: workspace:*
         version: link:../engine-core
@@ -1360,12 +1372,67 @@ importers:
       '@esengine/ecs-framework':
         specifier: workspace:*
         version: link:../core
+      '@esengine/ecs-framework-math':
+        specifier: workspace:*
+        version: link:../math
       '@esengine/engine-core':
         specifier: workspace:*
         version: link:../engine-core
       '@esengine/platform-common':
         specifier: workspace:*
         version: link:../platform-common
+    devDependencies:
+      '@esengine/build-config':
+        specifier: workspace:*
+        version: link:../build-config
+      rimraf:
+        specifier: ^5.0.5
+        version: 5.0.10
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(@microsoft/api-extractor@7.55.1(@types/node@20.19.25))(@swc/core@1.15.3)(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
+  packages/sdk:
+    dependencies:
+      '@esengine/asset-system':
+        specifier: workspace:*
+        version: link:../asset-system
+      '@esengine/audio':
+        specifier: workspace:*
+        version: link:../audio
+      '@esengine/behavior-tree':
+        specifier: workspace:*
+        version: link:../behavior-tree
+      '@esengine/camera':
+        specifier: workspace:*
+        version: link:../camera
+      '@esengine/ecs-framework':
+        specifier: workspace:*
+        version: link:../core
+      '@esengine/ecs-framework-math':
+        specifier: workspace:*
+        version: link:../math
+      '@esengine/engine-core':
+        specifier: workspace:*
+        version: link:../engine-core
+      '@esengine/particle':
+        specifier: workspace:*
+        version: link:../particle
+      '@esengine/physics-rapier2d':
+        specifier: workspace:*
+        version: link:../physics-rapier2d
+      '@esengine/sprite':
+        specifier: workspace:*
+        version: link:../sprite
+      '@esengine/tilemap':
+        specifier: workspace:*
+        version: link:../tilemap
+      '@esengine/ui':
+        specifier: workspace:*
+        version: link:../ui
     devDependencies:
       '@esengine/build-config':
         specifier: workspace:*

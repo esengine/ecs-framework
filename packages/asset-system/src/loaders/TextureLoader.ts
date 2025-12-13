@@ -39,6 +39,18 @@ export class TextureLoader implements IAssetLoader<ITextureAsset> {
     private static _nextTextureId = 1;
 
     /**
+     * Reset texture ID counter
+     * 重置纹理 ID 计数器
+     *
+     * This should be called when restoring scene snapshots to ensure
+     * textures start with fresh IDs.
+     * 在恢复场景快照时应调用此方法，以确保纹理从新 ID 开始。
+     */
+    static resetTextureIdCounter(): void {
+        TextureLoader._nextTextureId = 1;
+    }
+
+    /**
      * Parse texture from image content.
      * 从图片内容解析纹理。
      */

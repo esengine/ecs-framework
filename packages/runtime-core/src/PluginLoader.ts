@@ -1,4 +1,4 @@
-import { runtimePluginManager, type IPlugin } from './PluginManager';
+import { runtimePluginManager, type IRuntimePlugin } from './PluginManager';
 
 export interface PluginPackageInfo {
     plugin: boolean;
@@ -18,7 +18,7 @@ export interface ProjectPluginConfig {
 
 interface LoadedPluginInfo {
     id: string;
-    plugin: IPlugin;
+    plugin: IRuntimePlugin;
     packageInfo: PluginPackageInfo;
 }
 
@@ -32,7 +32,7 @@ const loadedPlugins = new Map<string, LoadedPluginInfo>();
 export async function loadPlugin(
     packageId: string,
     packageInfo: PluginPackageInfo
-): Promise<IPlugin | null> {
+): Promise<IRuntimePlugin | null> {
     if (loadedPlugins.has(packageId)) {
         return loadedPlugins.get(packageId)!.plugin;
     }
@@ -40,7 +40,7 @@ export async function loadPlugin(
     try {
         const module = await import(/* @vite-ignore */ packageId);
         const exportName = packageInfo.pluginExport || 'default';
-        const plugin = module[exportName] as IPlugin;
+        const plugin = module[exportName] as IRuntimePlugin;
 
         if (!plugin || !plugin.manifest) {
             console.warn(`[PluginLoader] Invalid plugin export from ${packageId}`);
@@ -99,14 +99,14 @@ export async function loadEnabledPlugins(
 /**
  * 注册预加载的插件（用于已静态导入的插件）
  */
-export function registerStaticPlugin(plugin: IPlugin): void {
+export function registerStaticPlugin(plugin: IRuntimePlugin): void {
     runtimePluginManager.register(plugin);
 }
 
 /**
  * 获取已加载的插件列表
  */
-export function getLoadedPlugins(): IPlugin[] {
+export function getLoadedPlugins(): IRuntimePlugin[] {
     return Array.from(loadedPlugins.values()).map(info => info.plugin);
 }
 

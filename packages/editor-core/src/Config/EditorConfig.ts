@@ -117,9 +117,9 @@ export interface ISDKModuleConfig {
     readonly packageName: string;
 
     /**
-     * 全局变量键名
-     * Global variable key name
-     * @example 'ecsFramework' -> window.__ESENGINE__.ecsFramework
+     * 全局变量键名（已废弃，现使用统一 SDK）
+     * Global variable key name (deprecated, now using unified SDK)
+     * @deprecated 使用 @esengine/sdk 代替 | Use @esengine/sdk instead
      */
     readonly globalKey: string;
 
@@ -173,7 +173,7 @@ export const EditorConfig: IEditorConfig = {
     },
 
     globals: {
-        sdk: '__ESENGINE__',
+        sdk: '__ESENGINE_SDK__',
         plugins: '__ESENGINE_PLUGINS__',
         userRuntimeExports: '__USER_RUNTIME_EXPORTS__',
         userEditorExports: '__USER_EDITOR_EXPORTS__',
@@ -196,21 +196,9 @@ export const EditorConfig: IEditorConfig = {
     },
 
     sdkModules: [
-        // 核心模块 - 必须加载
-        // Core modules - must be loaded
-        { packageName: '@esengine/ecs-framework', globalKey: 'ecsFramework', type: 'core' },
-
-        // 运行时模块 - 游戏运行时可用
-        // Runtime modules - available at game runtime
-        { packageName: '@esengine/engine-core', globalKey: 'engineCore', type: 'runtime' },
-        { packageName: '@esengine/behavior-tree', globalKey: 'behaviorTree', type: 'runtime' },
-        { packageName: '@esengine/sprite', globalKey: 'sprite', type: 'runtime' },
-        { packageName: '@esengine/camera', globalKey: 'camera', type: 'runtime' },
-        { packageName: '@esengine/audio', globalKey: 'audio', type: 'runtime' },
-
-        // 编辑器模块 - 仅编辑器环境可用
-        // Editor modules - only available in editor environment
-        { packageName: '@esengine/editor-runtime', globalKey: 'editorRuntime', type: 'editor' },
+        // 统一 SDK 入口 - 用户代码唯一入口
+        // Unified SDK entry - the only entry point for user code
+        { packageName: '@esengine/sdk', globalKey: 'sdk', type: 'core' },
     ],
 } as const;
 
@@ -357,41 +345,31 @@ export function getEnabledSDKModules(type?: SDKModuleType): readonly ISDKModuleC
 }
 
 /**
- * 获取 SDK 模块的全局变量映射
- * Get SDK modules global variable mapping
+ * 获取 SDK 全局变量映射
+ * Get SDK global variable mapping
  *
  * 用于生成插件构建配置的 globals 选项。
  * Used for generating plugins build config globals option.
  *
- * @returns 包名到全局变量路径的映射 | Mapping from package name to global variable path
+ * @returns 包名到全局变量的映射 | Mapping from package name to global variable
  * @example
  * {
- *   '@esengine/ecs-framework': '__ESENGINE__.ecsFramework',
- *   '@esengine/behavior-tree': '__ESENGINE__.behaviorTree',
+ *   '@esengine/sdk': '__ESENGINE_SDK__',
  * }
  */
 export function getSDKGlobalsMapping(): Record<string, string> {
-    const sdkGlobalName = EditorConfig.globals.sdk;
-    const mapping: Record<string, string> = {};
-
-    for (const module of EditorConfig.sdkModules) {
-        if (module.enabled !== false) {
-            mapping[module.packageName] = `${sdkGlobalName}.${module.globalKey}`;
-        }
-    }
-
-    return mapping;
+    return {
+        '@esengine/sdk': EditorConfig.globals.sdk
+    };
 }
 
 /**
- * 获取所有 SDK 包名列表
- * Get all SDK package names
+ * 获取 SDK 包名
+ * Get SDK package name
  *
  * 用于生成插件构建配置的 external 选项。
  * Used for generating plugins build config external option.
  */
 export function getSDKPackageNames(): string[] {
-    return EditorConfig.sdkModules
-        .filter(m => m.enabled !== false)
-        .map(m => m.packageName);
+    return ['@esengine/sdk'];
 }

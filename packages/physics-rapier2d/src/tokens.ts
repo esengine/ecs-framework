@@ -21,7 +21,7 @@
  * ```
  */
 
-import { createServiceToken } from '@esengine/engine-core';
+import { createServiceToken } from '@esengine/ecs-framework';
 import type { Physics2DSystem } from './systems/Physics2DSystem';
 
 // ============================================================================

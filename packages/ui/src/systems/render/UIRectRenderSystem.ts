@@ -56,7 +56,7 @@ export class UIRectRenderSystem extends EntitySystem {
             // Null check - component may not be ready during deserialization or initialization
             if (!transform || !render) continue;
 
-            if (!transform.visible) continue;
+            if (!transform.worldVisible) continue;
 
             const x = transform.worldX ?? transform.x;
             const y = transform.worldY ?? transform.y;

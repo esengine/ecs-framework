@@ -3,7 +3,8 @@
  * ecs-engine-bindgen service tokens
  */
 
-import { createServiceToken, EngineBridgeToken as CoreEngineBridgeToken, type IEngineBridge as CoreIEngineBridge } from '@esengine/engine-core';
+import { createServiceToken } from '@esengine/ecs-framework';
+import { EngineBridgeToken as CoreEngineBridgeToken, type IEngineBridge as CoreIEngineBridge } from '@esengine/engine-core';
 import type { IRenderDataProvider as InternalIRenderDataProvider } from './systems/EngineRenderSystem';
 
 // 从 engine-core 重新导出 | Re-export from engine-core

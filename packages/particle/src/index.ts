@@ -12,7 +12,7 @@ export {
 } from './ParticleEmitter';
 
 // Component
-export { ParticleSystemComponent, ParticleBlendMode, SimulationSpace, type BurstConfig } from './ParticleSystemComponent';
+export { ParticleSystemComponent, ParticleBlendMode, SimulationSpace, RenderSpace, type BurstConfig } from './ParticleSystemComponent';
 export { ClickFxComponent, ClickFxTriggerMode } from './ClickFxComponent';
 
 // System
@@ -54,8 +54,7 @@ export {
 // Rendering
 export {
     ParticleRenderDataProvider,
-    type ParticleProviderRenderData,
-    type IRenderDataProvider
+    type ParticleProviderRenderData
 } from './rendering';
 
 // Presets

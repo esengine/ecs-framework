@@ -111,7 +111,8 @@ export class UILayoutSystem extends EntitySystem {
         parentWidth: number,
         parentHeight: number,
         parentAlpha: number,
-        parentMatrix: Matrix2D
+        parentMatrix: Matrix2D,
+        parentVisible: boolean = true
     ): void {
         const transform = entity.getComponent(UITransformComponent);
         if (!transform) return;
@@ -194,13 +195,14 @@ export class UILayoutSystem extends EntitySystem {
         transform.computedHeight = height;
         transform.worldAlpha = parentAlpha * transform.alpha;
 
+        // 计算世界可见性（父元素不可见则子元素也不可见）
+        // Calculate world visibility (if parent is invisible, children are also invisible)
+        transform.worldVisible = parentVisible && transform.visible;
+
         // 使用矩阵乘法计算世界变换
         this.updateWorldMatrix(transform, parentMatrix);
 
         transform.layoutDirty = false;
-
-        // 如果元素不可见，跳过子元素
-        if (!transform.visible) return;
 
         // 处理子元素布局
         const children = this.getUIChildren(entity);
@@ -224,7 +226,8 @@ export class UILayoutSystem extends EntitySystem {
                     width,
                     height,
                     transform.worldAlpha,
-                    transform.localToWorldMatrix
+                    transform.localToWorldMatrix,
+                    transform.worldVisible
                 );
             }
         }
@@ -361,6 +364,8 @@ export class UILayoutSystem extends EntitySystem {
             childTransform.computedWidth = size.width;
             childTransform.computedHeight = childHeight;
             childTransform.worldAlpha = parentTransform.worldAlpha * childTransform.alpha;
+            // 传播世界可见性 | Propagate world visibility
+            childTransform.worldVisible = parentTransform.worldVisible && childTransform.visible;
             // 使用矩阵乘法计算世界旋转和缩放
             this.updateWorldMatrix(childTransform, parentTransform.localToWorldMatrix);
             childTransform.layoutDirty = false;
@@ -459,6 +464,8 @@ export class UILayoutSystem extends EntitySystem {
             childTransform.computedWidth = childWidth;
             childTransform.computedHeight = size.height;
             childTransform.worldAlpha = parentTransform.worldAlpha * childTransform.alpha;
+            // 传播世界可见性 | Propagate world visibility
+            childTransform.worldVisible = parentTransform.worldVisible && childTransform.visible;
             // 使用矩阵乘法计算世界旋转和缩放
             this.updateWorldMatrix(childTransform, parentTransform.localToWorldMatrix);
             childTransform.layoutDirty = false;
@@ -515,6 +522,8 @@ export class UILayoutSystem extends EntitySystem {
             childTransform.computedWidth = cellWidth;
             childTransform.computedHeight = cellHeight;
             childTransform.worldAlpha = parentTransform.worldAlpha * childTransform.alpha;
+            // 传播世界可见性 | Propagate world visibility
+            childTransform.worldVisible = parentTransform.worldVisible && childTransform.visible;
             // 使用矩阵乘法计算世界旋转和缩放
             this.updateWorldMatrix(childTransform, parentTransform.localToWorldMatrix);
             childTransform.layoutDirty = false;
@@ -575,7 +584,8 @@ export class UILayoutSystem extends EntitySystem {
                     parentTransform.computedWidth,
                     parentTransform.computedHeight,
                     parentTransform.worldAlpha,
-                    parentTransform.localToWorldMatrix
+                    parentTransform.localToWorldMatrix,
+                    parentTransform.worldVisible
                 );
             }
         }

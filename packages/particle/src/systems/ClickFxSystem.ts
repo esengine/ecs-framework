@@ -6,10 +6,22 @@
  * Listens for user click/touch events and creates particle effect entities at click position.
  */
 
-import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/ecs-framework';
-import { Input, MouseButton, TransformComponent, PluginServiceRegistry, createServiceToken } from '@esengine/engine-core';
+import { EntitySystem, Matcher, Entity, ECSSystem, PluginServiceRegistry, createServiceToken } from '@esengine/ecs-framework';
+import { Input, MouseButton, TransformComponent, SortingLayers } from '@esengine/engine-core';
+import type { IAssetManager } from '@esengine/asset-system';
 import { ClickFxComponent, ClickFxTriggerMode } from '../ClickFxComponent';
-import { ParticleSystemComponent } from '../ParticleSystemComponent';
+import { ParticleSystemComponent, RenderSpace } from '../ParticleSystemComponent';
+import type { IParticleAsset } from '../loaders/ParticleLoader';
+
+// ============================================================================
+// 本地服务令牌定义 | Local Service Token Definitions
+// ============================================================================
+// 使用 createServiceToken() 本地定义（与 runtime-core 相同策略）
+// createServiceToken() 使用 Symbol.for()，确保运行时与源模块令牌匹配
+//
+// Local token definitions using createServiceToken() (same strategy as runtime-core)
+// createServiceToken() uses Symbol.for(), ensuring runtime match with source module tokens
+// ============================================================================
 
 /**
  * EngineBridge 接口（最小定义，用于坐标转换）
@@ -19,9 +31,21 @@ interface IEngineBridge {
     screenToWorld(screenX: number, screenY: number): { x: number; y: number };
 }
 
-// 定义 EngineBridge 的服务令牌（与 ecs-engine-bindgen 中的一致）
-// Define EngineBridge service token (consistent with ecs-engine-bindgen)
+/**
+ * EngineRenderSystem 接口（最小定义，用于获取 UI Canvas 尺寸）
+ * EngineRenderSystem interface (minimal definition for getting UI canvas size)
+ */
+interface IEngineRenderSystem {
+    getUICanvasSize(): { width: number; height: number };
+}
+
+// EngineBridge 令牌（与 engine-core 中的一致）
+// EngineBridge token (consistent with engine-core)
 const EngineBridgeToken = createServiceToken<IEngineBridge>('engineBridge');
+
+// RenderSystem 令牌（与 ecs-engine-bindgen 中的一致）
+// RenderSystem token (consistent with ecs-engine-bindgen)
+const RenderSystemToken = createServiceToken<IEngineRenderSystem>('renderSystem');
 
 /**
  * 点击特效系统
@@ -41,6 +65,8 @@ const EngineBridgeToken = createServiceToken<IEngineBridge>('engineBridge');
 @ECSSystem('ClickFx', { updateOrder: 100 })
 export class ClickFxSystem extends EntitySystem {
     private _engineBridge: IEngineBridge | null = null;
+    private _renderSystem: IEngineRenderSystem | null = null;
+    private _assetManager: IAssetManager | null = null;
     private _entitiesToDestroy: Entity[] = [];
     private _canvas: HTMLCanvasElement | null = null;
 
@@ -49,11 +75,20 @@ export class ClickFxSystem extends EntitySystem {
     }
 
     /**
-     * 设置服务注册表（用于获取 EngineBridge）
-     * Set service registry (for getting EngineBridge)
+     * 设置资产管理器
+     * Set asset manager
+     */
+    setAssetManager(assetManager: IAssetManager | null): void {
+        this._assetManager = assetManager;
+    }
+
+    /**
+     * 设置服务注册表（用于获取 EngineBridge 和 RenderSystem）
+     * Set service registry (for getting EngineBridge and RenderSystem)
      */
     setServiceRegistry(services: PluginServiceRegistry): void {
         this._engineBridge = services.get(EngineBridgeToken) ?? null;
+        this._renderSystem = services.get(RenderSystemToken) ?? null;
     }
 
     /**
@@ -62,6 +97,14 @@ export class ClickFxSystem extends EntitySystem {
      */
     setEngineBridge(bridge: IEngineBridge): void {
         this._engineBridge = bridge;
+    }
+
+    /**
+     * 设置 RenderSystem（直接注入）
+     * Set RenderSystem (direct injection)
+     */
+    setRenderSystem(renderSystem: IEngineRenderSystem): void {
+        this._renderSystem = renderSystem;
     }
 
     /**
@@ -113,58 +156,79 @@ export class ClickFxSystem extends EntitySystem {
             const screenPos = this._getInputPosition(clickFx);
             if (!screenPos) continue;
 
-            // 转换为世界坐标 | Convert to world coordinates
-            const worldPos = this._screenToWorld(screenPos.x, screenPos.y);
+            // 转换为 canvas 相对坐标 | Convert to canvas-relative coordinates
+            const canvasPos = this._windowToCanvas(screenPos.x, screenPos.y);
 
             // 应用偏移 | Apply offset
-            worldPos.x += clickFx.positionOffset.x;
-            worldPos.y += clickFx.positionOffset.y;
+            canvasPos.x += clickFx.positionOffset.x;
+            canvasPos.y += clickFx.positionOffset.y;
 
-            // 创建粒子效果 | Create particle effect
-            this._spawnEffect(clickFx, worldPos.x, worldPos.y);
+            // 创建粒子效果（使用屏幕空间坐标）
+            // Create particle effect (using screen space coordinates)
+            this._spawnEffect(clickFx, canvasPos.x, canvasPos.y);
         }
     }
 
     /**
-     * 屏幕坐标转世界坐标
-     * Screen to world coordinate conversion
+     * 窗口坐标转 canvas 相对坐标
+     * Window to canvas-relative coordinate conversion
+     *
+     * 将窗口坐标转换为 UI Canvas 的像素坐标。
+     * Converts window coordinates to UI canvas pixel coordinates.
      */
-    private _screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
-        // 将窗口坐标转换为 canvas 相对坐标
-        // Convert window coordinates to canvas-relative coordinates
-        let canvasX = screenX;
-        let canvasY = screenY;
+    private _windowToCanvas(windowX: number, windowY: number): { x: number; y: number } {
+        // 获取 UI Canvas 尺寸 | Get UI canvas size
+        const canvasSize = this._renderSystem?.getUICanvasSize();
+        const uiCanvasWidth = canvasSize?.width ?? 1920;
+        const uiCanvasHeight = canvasSize?.height ?? 1080;
+
+        let canvasX = windowX;
+        let canvasY = windowY;
 
         if (this._canvas) {
             const rect = this._canvas.getBoundingClientRect();
             // 计算 CSS 坐标 | Calculate CSS coordinates
-            canvasX = screenX - rect.left;
-            canvasY = screenY - rect.top;
+            canvasX = windowX - rect.left;
+            canvasY = windowY - rect.top;
 
-            // 使用 canvas 实际尺寸与 CSS 尺寸的比例来缩放
-            // 这样不管是否使用 DPR，都能正确处理
-            // Use the ratio of canvas actual size to CSS size for scaling
-            // This works correctly regardless of DPR usage
-            const scaleX = this._canvas.width / rect.width;
-            const scaleY = this._canvas.height / rect.height;
-            canvasX *= scaleX;
-            canvasY *= scaleY;
+            // 将 CSS 坐标映射到 UI Canvas 坐标
+            // Map CSS coordinates to UI canvas coordinates
+            // UI Canvas 保持宽高比，可能会有 letterbox/pillarbox
+            // UI Canvas maintains aspect ratio, may have letterbox/pillarbox
+            const cssWidth = rect.width;
+            const cssHeight = rect.height;
+
+            // 计算 UI Canvas 在 CSS 坐标中的实际显示区域
+            // Calculate actual display area of UI Canvas in CSS coordinates
+            const uiAspect = uiCanvasWidth / uiCanvasHeight;
+            const cssAspect = cssWidth / cssHeight;
+
+            let displayWidth: number;
+            let displayHeight: number;
+            let offsetX = 0;
+            let offsetY = 0;
+
+            if (cssAspect > uiAspect) {
+                // CSS 更宽，pillarbox（左右黑边）
+                // CSS is wider, pillarbox (black bars on sides)
+                displayHeight = cssHeight;
+                displayWidth = cssHeight * uiAspect;
+                offsetX = (cssWidth - displayWidth) / 2;
+            } else {
+                // CSS 更高，letterbox（上下黑边）
+                // CSS is taller, letterbox (black bars on top/bottom)
+                displayWidth = cssWidth;
+                displayHeight = cssWidth / uiAspect;
+                offsetY = (cssHeight - displayHeight) / 2;
+            }
+
+            // 转换为 UI Canvas 坐标
+            // Convert to UI canvas coordinates
+            canvasX = ((canvasX - offsetX) / displayWidth) * uiCanvasWidth;
+            canvasY = ((canvasY - offsetY) / displayHeight) * uiCanvasHeight;
         }
 
-        // 使用 EngineBridge 进行坐标转换（考虑相机位置、缩放、旋转）
-        // Use EngineBridge for coordinate conversion (considers camera position, zoom, rotation)
-        if (this._engineBridge) {
-            return this._engineBridge.screenToWorld(canvasX, canvasY);
-        }
-
-        // 回退：简单的坐标转换（假设无相机偏移）
-        // Fallback: simple conversion (assumes no camera offset)
-        const width = this._canvas?.width ?? 800;
-        const height = this._canvas?.height ?? 600;
-        return {
-            x: canvasX - width / 2,
-            y: height / 2 - canvasY  // Y 轴翻转 | Flip Y axis
-        };
+        return { x: canvasX, y: canvasY };
     }
 
     /**
@@ -240,8 +304,11 @@ export class ClickFxSystem extends EntitySystem {
     /**
      * 生成粒子效果
      * Spawn particle effect
+     *
+     * 点击特效使用屏幕空间渲染，坐标相对于 UI Canvas 中心。
+     * Click effects use screen space rendering, coordinates relative to UI canvas center.
      */
-    private _spawnEffect(clickFx: ClickFxComponent, worldX: number, worldY: number): void {
+    private _spawnEffect(clickFx: ClickFxComponent, screenX: number, screenY: number): void {
         const particleGuid = clickFx.getNextParticleAsset();
         if (!particleGuid) {
             console.warn('[ClickFxSystem] No particle assets configured');
@@ -253,34 +320,60 @@ export class ClickFxSystem extends EntitySystem {
             return;
         }
 
+        // 获取 UI Canvas 尺寸 | Get UI canvas size
+        const canvasSize = this._renderSystem?.getUICanvasSize();
+        const canvasWidth = canvasSize?.width ?? 1920;
+        const canvasHeight = canvasSize?.height ?? 1080;
+
+        // 将屏幕坐标转换为屏幕空间坐标（相对于 UI Canvas 中心）
+        // Convert screen coords to screen space coords (relative to UI canvas center)
+        // 屏幕空间坐标系：中心为 (0, 0)，Y 轴向上
+        // Screen space coordinate system: center at (0, 0), Y-axis up
+        const screenSpaceX = screenX - canvasWidth / 2;
+        const screenSpaceY = canvasHeight / 2 - screenY;  // Y 翻转
 
         // 创建特效实体 | Create effect entity
         const effectEntity = this.scene.createEntity(`ClickFx_${Date.now()}`);
 
-        // 添加 Transform | Add Transform
-        const transform = effectEntity.addComponent(new TransformComponent(worldX, worldY));
+        // 添加 Transform（使用屏幕空间坐标）| Add Transform (using screen space coords)
+        const transform = effectEntity.addComponent(new TransformComponent(screenSpaceX, screenSpaceY));
         transform.setScale(clickFx.scale, clickFx.scale, 1);
 
         // 添加 ParticleSystem | Add ParticleSystem
         const particleSystem = effectEntity.addComponent(new ParticleSystemComponent());
         particleSystem.particleAssetGuid = particleGuid;
         particleSystem.autoPlay = true;
-        // 点击特效默认使用 Overlay 层，渲染在 UI 之上
-        // Click effects use Overlay layer by default, rendering above UI
-        particleSystem.sortingLayer = 'Overlay';
+        // 使用 ScreenOverlay 层和屏幕空间渲染
+        // Use ScreenOverlay layer and screen space rendering
+        particleSystem.sortingLayer = SortingLayers.ScreenOverlay;
         particleSystem.orderInLayer = 0;
+        particleSystem.renderSpace = RenderSpace.Screen;
 
         // 记录活跃特效 | Record active effect
         clickFx.addActiveEffect(effectEntity.id);
 
         // 异步加载并播放 | Async load and play
-        particleSystem.loadAsset(particleGuid).then(success => {
-            if (success) {
-                particleSystem.play();
-            } else {
-                console.warn(`[ClickFxSystem] Failed to load particle asset: ${particleGuid}`);
-            }
-        });
+        if (this._assetManager) {
+            this._assetManager.loadAsset<IParticleAsset>(particleGuid).then(result => {
+                if (result?.asset) {
+                    particleSystem.setAssetData(result.asset);
+                    // 应用资产的排序属性 | Apply sorting properties from asset
+                    if (result.asset.sortingLayer) {
+                        particleSystem.sortingLayer = result.asset.sortingLayer;
+                    }
+                    if (result.asset.orderInLayer !== undefined) {
+                        particleSystem.orderInLayer = result.asset.orderInLayer;
+                    }
+                    particleSystem.play();
+                } else {
+                    console.warn(`[ClickFxSystem] Failed to load particle asset: ${particleGuid}`);
+                }
+            }).catch(error => {
+                console.error(`[ClickFxSystem] Error loading particle asset ${particleGuid}:`, error);
+            });
+        } else {
+            console.warn('[ClickFxSystem] AssetManager not set, cannot load particle asset');
+        }
     }
 
     /**

@@ -6,19 +6,26 @@
  * Re-export base types from @esengine/engine-core.
  */
 
+// 从 engine-core 导入类型
+// Import types from engine-core
+import type { IRuntimePlugin as IRuntimePluginBase } from '@esengine/engine-core';
+
 // 从 engine-core 重新导出所有类型
 // 包括 IEditorModuleBase（原来在 plugin-types 中定义，现在统一从 engine-core 导出）
 export type {
     LoadingPhase,
     SystemContext,
     IRuntimeModule,
-    IPlugin,
+    IRuntimePlugin,
     ModuleManifest,
     ModuleCategory,
     ModulePlatform,
     ModuleExports,
     IEditorModuleBase
 } from '@esengine/engine-core';
+
+/** @deprecated Use IRuntimePlugin instead */
+export type IPlugin<TEditorModule = unknown> = IRuntimePluginBase<TEditorModule>;
 
 /**
  * 插件状态

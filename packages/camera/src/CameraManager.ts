@@ -12,17 +12,9 @@
  */
 
 import type { Entity, IScene } from '@esengine/ecs-framework';
+import type { IVector2 } from '@esengine/ecs-framework-math';
 import { TransformComponent } from '@esengine/engine-core';
 import { CameraComponent, ECameraProjection } from './CameraComponent';
-
-/**
- * 2D 向量
- * 2D Vector
- */
-export interface Vector2 {
-    x: number;
-    y: number;
-}
 
 /**
  * 相机管理器接口
@@ -61,7 +53,7 @@ export interface ICameraManager {
      * @param screenY 屏幕 Y 坐标 | Screen Y coordinate
      * @returns 世界坐标 | World coordinates
      */
-    screenToWorld(screenX: number, screenY: number): Vector2;
+    screenToWorld(screenX: number, screenY: number): IVector2;
 
     /**
      * 世界坐标转屏幕坐标
@@ -71,7 +63,7 @@ export interface ICameraManager {
      * @param worldY 世界 Y 坐标 | World Y coordinate
      * @returns 屏幕坐标 | Screen coordinates
      */
-    worldToScreen(worldX: number, worldY: number): Vector2;
+    worldToScreen(worldX: number, worldY: number): IVector2;
 }
 
 /**
@@ -210,7 +202,7 @@ export class CameraManagerImpl implements ICameraManager {
      * - Screen coordinates (0, 0) at top-left
      * - orthographicSize is half-height of visible area
      */
-    screenToWorld(screenX: number, screenY: number): Vector2 {
+    screenToWorld(screenX: number, screenY: number): IVector2 {
         const camera = this.getMainCameraComponent();
         const cameraEntity = this.getMainCamera();
 
@@ -246,7 +238,7 @@ export class CameraManagerImpl implements ICameraManager {
         camera: CameraComponent,
         cameraX: number,
         cameraY: number
-    ): Vector2 {
+    ): IVector2 {
         const orthoSize = camera.orthographicSize;
         const aspect = this.aspectRatio;
 
@@ -266,7 +258,7 @@ export class CameraManagerImpl implements ICameraManager {
      * 世界坐标转屏幕坐标
      * Convert world coordinates to screen coordinates
      */
-    worldToScreen(worldX: number, worldY: number): Vector2 {
+    worldToScreen(worldX: number, worldY: number): IVector2 {
         const camera = this.getMainCameraComponent();
         const cameraEntity = this.getMainCamera();
 
@@ -301,7 +293,7 @@ export class CameraManagerImpl implements ICameraManager {
         camera: CameraComponent,
         cameraX: number,
         cameraY: number
-    ): Vector2 {
+    ): IVector2 {
         const orthoSize = camera.orthographicSize;
         const aspect = this.aspectRatio;
 

@@ -282,4 +282,34 @@ impl TextureManager {
 
         self.load_texture_by_path(path)
     }
+
+    /// Clear the path-to-ID cache.
+    /// 清除路径到ID的缓存映射。
+    ///
+    /// This should be called when restoring scene snapshots to ensure
+    /// textures are reloaded with correct IDs.
+    /// 在恢复场景快照时应调用此方法，以确保纹理使用正确的ID重新加载。
+    pub fn clear_path_cache(&mut self) {
+        self.path_to_id.clear();
+    }
+
+    /// Clear all textures and reset state.
+    /// 清除所有纹理并重置状态。
+    ///
+    /// This removes all loaded textures from GPU memory and resets
+    /// the ID counter. The default texture is preserved.
+    /// 这会从GPU内存中移除所有已加载的纹理并重置ID计数器。默认纹理会被保留。
+    pub fn clear_all(&mut self) {
+        // Delete all textures from GPU | 从GPU删除所有纹理
+        for (_, texture) in self.textures.drain() {
+            self.gl.delete_texture(Some(&texture.handle));
+        }
+
+        // Clear path mapping | 清除路径映射
+        self.path_to_id.clear();
+
+        // Reset ID counter (1 is reserved for first texture, 0 for default)
+        // 重置ID计数器（1保留给第一个纹理，0给默认纹理）
+        self.next_id = 1;
+    }
 }

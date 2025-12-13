@@ -742,7 +742,12 @@ export const zh: Translations = {
         envReady: '环境就绪',
         envNotReady: '环境问题',
         esbuildReady: 'esbuild 就绪',
-        esbuildMissing: '未找到 esbuild'
+        esbuildMissing: '未找到 esbuild',
+        esbuildNotInstalled: '需要安装 esbuild',
+        esbuildRequired: 'esbuild 是编译 TypeScript 代码所必需的工具。',
+        esbuildInstallPrompt: '点击下方按钮将使用 npm 全局安装 esbuild。',
+        installingEsbuild: '正在安装 esbuild...',
+        installNow: '立即安装'
     },
 
     // ========================================

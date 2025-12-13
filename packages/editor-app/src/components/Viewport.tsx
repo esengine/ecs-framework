@@ -56,39 +56,53 @@ function generateRuntimeHtml(importMap: Record<string, string>, modules: ModuleM
 
     // Generate user runtime loading code
     // 生成用户运行时加载代码
+    // Now we only load @esengine/sdk as a single global
+    // 现在只加载 @esengine/sdk 作为单一全局变量
     const userRuntimeCode = hasUserRuntime ? `
             updateLoading('Loading user scripts...');
             try {
-                // Import ECS framework and set up global for user-runtime.js shim
-                // 导入 ECS 框架并为 user-runtime.js 设置全局变量
-                const ecsFramework = await import('@esengine/ecs-framework');
-                window.__ESENGINE__ = window.__ESENGINE__ || {};
-                window.__ESENGINE__.ecsFramework = ecsFramework;
+                // Load unified SDK and set global
+                // 加载统一 SDK 并设置全局变量
+                console.log('[Preview] Loading @esengine/sdk...');
+                const sdk = await import('@esengine/sdk');
+                window.__ESENGINE_SDK__ = sdk;
+                console.log('[Preview] SDK loaded successfully');
+
+                // Check SDK is valid
+                // 检查 SDK 是否有效
+                if (!sdk.Component || !sdk.ComponentRegistry) {
+                    throw new Error('SDK missing critical exports (Component, ComponentRegistry)');
+                }
 
                 // Load user-runtime.js which contains compiled user components
                 // 加载 user-runtime.js，其中包含编译的用户组件
+                console.log('[Preview] Loading user-runtime.js...');
                 const userRuntimeScript = document.createElement('script');
                 userRuntimeScript.src = './user-runtime.js?_=' + Date.now();
                 await new Promise((resolve, reject) => {
                     userRuntimeScript.onload = resolve;
-                    userRuntimeScript.onerror = reject;
+                    userRuntimeScript.onerror = (e) => reject(new Error('Failed to load user-runtime.js: ' + e.message));
                     document.head.appendChild(userRuntimeScript);
                 });
+                console.log('[Preview] user-runtime.js loaded successfully');
 
                 // Register user components to ComponentRegistry
                 // 将用户组件注册到 ComponentRegistry
                 if (window.__USER_RUNTIME_EXPORTS__) {
-                    const { ComponentRegistry, Component } = ecsFramework;
+                    const { ComponentRegistry, Component } = window.__ESENGINE_SDK__;
                     const exports = window.__USER_RUNTIME_EXPORTS__;
-                    for (const [name, exported] of Object.entries(exports)) {
-                        if (typeof exported === 'function' && exported.prototype instanceof Component) {
-                            ComponentRegistry.register(exported);
-                            console.log('[Preview] Registered user component:', name);
+                    if (ComponentRegistry && Component) {
+                        for (const [name, exported] of Object.entries(exports)) {
+                            if (typeof exported === 'function' && exported.prototype instanceof Component) {
+                                ComponentRegistry.register(exported);
+                                console.log('[Preview] Registered user component:', name);
+                            }
                         }
                     }
                 }
             } catch (e) {
-                console.warn('[Preview] Failed to load user scripts:', e.message);
+                console.error('[Preview] Failed to load user scripts:', e.message, e);
+                throw e; // Re-throw to show error in UI
             }
 ` : '';
 
@@ -150,12 +164,13 @@ ${importMapScript}
         const errorTitle = document.getElementById('error-title');
         const errorMessage = document.getElementById('error-message');
 
-        function showError(title, msg) {
+        function showError(title, msg, error) {
             loading.style.display = 'none';
             errorTitle.textContent = title || 'Failed to start';
-            errorMessage.textContent = msg;
+            const stack = error?.stack || '';
+            errorMessage.textContent = msg + (stack ? '\\n\\nStack:\\n' + stack : '');
             errorDiv.classList.add('show');
-            console.error('[Preview]', msg);
+            console.error('[Preview]', msg, error || '');
         }
 
         function updateLoading(msg) {
@@ -195,7 +210,7 @@ ${userRuntimeCode}
             });
             console.log('[Preview] Started successfully');
         } catch (error) {
-            showError(null, error.message || String(error));
+            showError(null, error.message || String(error), error);
         }
     </script>
 </body>
@@ -1004,9 +1019,11 @@ export function Viewport({ locale = 'en', messageHub, commandManager }: Viewport
                     }
 
                     // Get filename and determine relative path
+                    // 路径格式：相对于 assets 目录，不包含 'assets/' 前缀
+                    // Path format: relative to assets directory, without 'assets/' prefix
                     const filename = assetPath.split(/[/\\]/).pop() || '';
                     const destPath = `${assetsDir}\\${filename}`;
-                    const relativePath = `assets/${filename}`;
+                    const relativePath = filename;
 
                     // Copy file
                     await TauriAPI.copyFile(assetPath, destPath);

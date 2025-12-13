@@ -34,11 +34,14 @@ import {
     type ScaleKey,
     type ForceField,
 } from '@esengine/particle';
-import { globalPathResolver } from '@esengine/asset-system';
+import { PathResolutionService } from '@esengine/asset-system';
 import { useParticleEditorStore } from '../stores/ParticleEditorStore';
 import { GradientEditor } from '../components/GradientEditor';
 import { CurveEditor } from '../components/CurveEditor';
 import { TexturePicker } from '../components/TexturePicker';
+
+// 创建路径解析服务实例 | Create path resolution service instance
+const pathResolver = new PathResolutionService();
 
 // ============= Types =============
 
@@ -253,9 +256,9 @@ function useParticlePreview(
             return;
         }
 
-        // 使用 globalPathResolver 将资产路径转换为可加载的 URL
-        // Use globalPathResolver to convert asset path to loadable URL
-        const textureUrl = globalPathResolver.resolve(metadata.path);
+        // 使用 PathResolutionService 将资产路径转换为可加载的 URL
+        // Use PathResolutionService to convert asset path to loadable URL
+        const textureUrl = pathResolver.catalogToRuntime(metadata.path);
 
         const img = document.createElement('img');
         img.onload = () => {
@@ -1255,8 +1258,10 @@ function BasicProperties({ data, onChange, onBrowseTexture, resolveGuidToName }:
                     { value: 'Background', label: 'Background' },
                     { value: 'Default', label: 'Default' },
                     { value: 'Foreground', label: 'Foreground' },
+                    { value: 'WorldOverlay', label: 'World Overlay' },
                     { value: 'UI', label: 'UI' },
-                    { value: 'Overlay', label: 'Overlay' },
+                    { value: 'ScreenOverlay', label: 'Screen Overlay' },
+                    { value: 'Modal', label: 'Modal' },
                 ]}
                 onChange={v => onChange('sortingLayer', v)}
             />

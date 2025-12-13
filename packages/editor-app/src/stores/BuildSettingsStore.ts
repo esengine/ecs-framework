@@ -18,7 +18,7 @@ import type {
     BuildSettingsConfig
 } from '@esengine/editor-core';
 import { BuildPlatform, BuildStatus } from '@esengine/editor-core';
-import { assetManager as globalAssetManager } from '@esengine/asset-system';
+import { EngineService } from '../services/EngineService';
 
 // ============= Types =============
 
@@ -414,9 +414,12 @@ export const useBuildSettingsStore = create<BuildSettingsStore>()(
                     let assetTypeMap: Record<string, string> | undefined;
 
                     try {
-                        const loaderFactory = globalAssetManager.getLoaderFactory();
-                        assetExtensions = loaderFactory.getAllSupportedExtensions();
-                        assetTypeMap = loaderFactory.getExtensionTypeMap();
+                        const assetManager = EngineService.getInstance().getAssetManager();
+                        if (assetManager) {
+                            const loaderFactory = assetManager.getLoaderFactory();
+                            assetExtensions = loaderFactory.getAllSupportedExtensions();
+                            assetTypeMap = loaderFactory.getExtensionTypeMap();
+                        }
                     } catch (e) {
                         console.warn('Failed to get asset extensions from loader factory:', e);
                     }

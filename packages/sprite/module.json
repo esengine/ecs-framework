@@ -1,6 +1,7 @@
 {
   "id": "sprite",
   "name": "@esengine/sprite",
+  "globalKey": "sprite",
   "displayName": "Sprite 2D",
   "description": "2D sprite rendering | 2D 精灵渲染",
   "version": "1.0.0",

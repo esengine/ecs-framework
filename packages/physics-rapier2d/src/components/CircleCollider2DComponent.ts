@@ -4,8 +4,8 @@
  */
 
 import { Property, Serialize, Serializable, ECSComponent } from '@esengine/ecs-framework';
+import type { IVector2 } from '@esengine/ecs-framework-math';
 import { Collider2DBase } from './Collider2DBase';
-import type { Vector2 } from '../types/Physics2DTypes';
 
 /**
  * 2D 圆形碰撞体
@@ -48,7 +48,7 @@ export class CircleCollider2DComponent extends Collider2DBase {
         return Math.PI * this.radius * this.radius;
     }
 
-    public override calculateAABB(): { min: Vector2; max: Vector2 } {
+    public override calculateAABB(): { min: IVector2; max: IVector2 } {
         return {
             min: { x: this.offset.x - this.radius, y: this.offset.y - this.radius },
             max: { x: this.offset.x + this.radius, y: this.offset.y + this.radius }

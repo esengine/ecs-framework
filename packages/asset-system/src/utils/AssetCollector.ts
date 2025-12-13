@@ -134,6 +134,51 @@ function collectFromComponentData(
 }
 
 /**
+ * 实体类型定义（支持嵌套 children）
+ * Entity type definition (supports nested children)
+ */
+interface EntityData {
+    name?: string;
+    components?: Array<{ type: string; data?: Record<string, unknown> }>;
+    children?: EntityData[];
+}
+
+/**
+ * 递归处理实体及其子实体
+ * Recursively process entity and its children
+ */
+function collectFromEntity(
+    entity: EntityData,
+    patterns: AssetFieldPattern[],
+    references: SceneAssetRef[]
+): void {
+    const entityName = entity.name;
+
+    // 处理当前实体的组件 | Process current entity's components
+    if (entity.components) {
+        for (const component of entity.components) {
+            if (!component.data) continue;
+
+            const componentRefs = collectFromComponentData(
+                component.type,
+                component.data,
+                patterns,
+                entityName
+            );
+
+            references.push(...componentRefs);
+        }
+    }
+
+    // 递归处理子实体 | Recursively process children
+    if (entity.children && Array.isArray(entity.children)) {
+        for (const child of entity.children) {
+            collectFromEntity(child, patterns, references);
+        }
+    }
+}
+
+/**
  * 从序列化的场景数据中收集所有资产引用
  * Collect all asset references from serialized scene data
  *
@@ -151,7 +196,7 @@ function collectFromComponentData(
  * ```
  */
 export function collectAssetReferences(
-    sceneData: { entities?: Array<{ name?: string; components?: Array<{ type: string; data?: Record<string, unknown> }> }> },
+    sceneData: { entities?: EntityData[] },
     patterns: AssetFieldPattern[] = DEFAULT_ASSET_PATTERNS
 ): SceneAssetRef[] {
     const references: SceneAssetRef[] = [];
@@ -160,23 +205,10 @@ export function collectAssetReferences(
         return references;
     }
 
+    // 遍历顶层实体，递归处理嵌套的子实体
+    // Iterate top-level entities, recursively process nested children
     for (const entity of sceneData.entities) {
-        const entityName = entity.name;
-
-        if (!entity.components) continue;
-
-        for (const component of entity.components) {
-            if (!component.data) continue;
-
-            const componentRefs = collectFromComponentData(
-                component.type,
-                component.data,
-                patterns,
-                entityName
-            );
-
-            references.push(...componentRefs);
-        }
+        collectFromEntity(entity, patterns, references);
     }
 
     return references;

@@ -1,4 +1,10 @@
 {
+  "hierarchy": {
+    "visibility": "Toggle Visibility",
+    "hideEntity": "Hide Entity",
+    "showEntity": "Show Entity",
+    "emptyHint": "No entities in scene"
+  },
   "behaviorTree": {
     "title": "Behavior Tree Editor",
     "close": "Close",

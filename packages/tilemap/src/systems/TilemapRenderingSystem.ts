@@ -1,5 +1,5 @@
 import { EntitySystem, Matcher, ECSSystem, Entity } from '@esengine/ecs-framework';
-import { TransformComponent } from '@esengine/engine-core';
+import { SortingLayers, TransformComponent } from '@esengine/engine-core';
 import { Color } from '@esengine/ecs-framework-math';
 import type { IRenderDataProvider } from '@esengine/ecs-engine-bindgen';
 import { TilemapComponent, type ITilemapLayerData } from '../TilemapComponent';
@@ -23,7 +23,17 @@ export interface TilemapRenderData {
     colors: Uint32Array;
     /** Number of tiles in this layer | 此图层的瓦片数量 */
     tileCount: number;
-    /** Sorting order for rendering | 渲染排序顺序 */
+    /**
+     * 排序层名称
+     * Sorting layer name
+     */
+    sortingLayer: string;
+    /**
+     * 层内排序顺序
+     * Order within the sorting layer
+     */
+    orderInLayer: number;
+    /** Sorting order for rendering (deprecated, use sortingLayer + orderInLayer) | 渲染排序顺序（已弃用，使用 sortingLayer + orderInLayer） */
     sortingOrder: number;
     /** Texture path for loading | 纹理路径 */
     texturePath?: string;
@@ -138,7 +148,7 @@ export class TilemapRenderingSystem extends EntitySystem implements IRenderDataP
     ): TilemapRenderData {
         const layerData = tilemap.getLayerData(layerIndex);
         if (!layerData) {
-            return this.createEmptyRenderData(entityId, layerIndex, tilemap.sortingOrder, layer.materialId);
+            return this.createEmptyRenderData(entityId, layerIndex, tilemap.sortingLayer, tilemap.orderInLayer, tilemap.sortingOrder, layer.materialId);
         }
 
         const width = tilemap.width;
@@ -162,7 +172,7 @@ export class TilemapRenderingSystem extends EntitySystem implements IRenderDataP
         }
 
         if (tileCount === 0) {
-            return this.createEmptyRenderData(entityId, layerIndex, tilemap.sortingOrder, layer.materialId);
+            return this.createEmptyRenderData(entityId, layerIndex, tilemap.sortingLayer, tilemap.orderInLayer, tilemap.sortingOrder, layer.materialId);
         }
 
         const transforms = new Float32Array(tileCount * 7);
@@ -257,6 +267,8 @@ export class TilemapRenderingSystem extends EntitySystem implements IRenderDataP
             uvs,
             colors,
             tileCount,
+            sortingLayer: tilemap.sortingLayer,
+            orderInLayer: tilemap.orderInLayer + layerIndex,
             sortingOrder: tilemap.sortingOrder + layerIndex * 0.001,
             texturePath,
             materialId: layer.materialId ?? 0
@@ -373,6 +385,8 @@ export class TilemapRenderingSystem extends EntitySystem implements IRenderDataP
     private createEmptyRenderData(
         entityId: number,
         layerIndex: number,
+        sortingLayer: string,
+        orderInLayer: number,
         sortingOrder: number,
         materialId?: number
     ): TilemapRenderData {
@@ -384,6 +398,8 @@ export class TilemapRenderingSystem extends EntitySystem implements IRenderDataP
             uvs: new Float32Array(0),
             colors: new Uint32Array(0),
             tileCount: 0,
+            sortingLayer,
+            orderInLayer: orderInLayer + layerIndex,
             sortingOrder: sortingOrder + layerIndex * 0.001,
             materialId: materialId ?? 0
         };

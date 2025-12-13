@@ -1,6 +1,7 @@
 {
   "id": "asset-system",
   "name": "@esengine/asset-system",
+  "globalKey": "assetSystem",
   "displayName": "Asset System",
   "description": "Asset loading, caching and management | 资源加载、缓存和管理",
   "version": "1.0.0",

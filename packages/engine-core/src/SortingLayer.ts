@@ -29,6 +29,14 @@ export interface SortingLayerConfig {
     name: string;
     /** 全局顺序（数值越大越靠前）| Global order (higher = rendered later/on top) */
     order: number;
+    /**
+     * 是否在屏幕空间渲染
+     * Whether to render in screen space
+     *
+     * 屏幕空间层使用固定正交投影，不受世界相机影响。
+     * Screen space layers use fixed orthographic projection, not affected by world camera.
+     */
+    bScreenSpace?: boolean;
 }
 
 /**
@@ -45,13 +53,32 @@ export interface ISortable {
 /**
  * 默认排序层
  * Default sorting layers
+ *
+ * 渲染顺序（从后到前）：
+ * Render order (back to front):
+ *
+ * 世界空间 | World Space:
+ * - Background (-100): 背景
+ * - Default (0): 默认游戏对象
+ * - Foreground (100): 前景对象
+ * - WorldOverlay (150): 世界空间特效（技能、伤害数字等）
+ *
+ * 屏幕空间 | Screen Space:
+ * - UI (200): UI 元素
+ * - ScreenOverlay (300): 屏幕空间特效（点击特效、Toast）
+ * - Modal (400): 模态对话框、全屏遮罩
  */
 export const DEFAULT_SORTING_LAYERS: SortingLayerConfig[] = [
+    // 世界空间层 | World space layers
     { name: 'Background', order: -100 },
     { name: 'Default', order: 0 },
     { name: 'Foreground', order: 100 },
-    { name: 'UI', order: 200 },
-    { name: 'Overlay', order: 300 },
+    { name: 'WorldOverlay', order: 150 },
+
+    // 屏幕空间层 | Screen space layers
+    { name: 'UI', order: 200, bScreenSpace: true },
+    { name: 'ScreenOverlay', order: 300, bScreenSpace: true },
+    { name: 'Modal', order: 400, bScreenSpace: true },
 ];
 
 /**
@@ -62,8 +89,10 @@ export const SortingLayers = {
     Background: 'Background',
     Default: 'Default',
     Foreground: 'Foreground',
+    WorldOverlay: 'WorldOverlay',
     UI: 'UI',
-    Overlay: 'Overlay',
+    ScreenOverlay: 'ScreenOverlay',
+    Modal: 'Modal',
 } as const;
 
 export type SortingLayerName = typeof SortingLayers[keyof typeof SortingLayers] | string;
@@ -97,7 +126,7 @@ export interface ISortingLayerManager {
      * 添加自定义层
      * Add custom layer
      */
-    addLayer(name: string, order: number): void;
+    addLayer(name: string, order: number, bScreenSpace?: boolean): void;
 
     /**
      * 移除自定义层
@@ -110,6 +139,24 @@ export interface ISortingLayerManager {
      * Get layer names in order
      */
     getLayerNames(): string[];
+
+    /**
+     * 检查层是否为屏幕空间层
+     * Check if layer is screen space
+     */
+    isScreenSpace(layerName: string): boolean;
+
+    /**
+     * 获取所有屏幕空间层名称
+     * Get all screen space layer names
+     */
+    getScreenSpaceLayers(): string[];
+
+    /**
+     * 获取所有世界空间层名称
+     * Get all world space layer names
+     */
+    getWorldSpaceLayers(): string[];
 }
 
 /**
@@ -187,14 +234,10 @@ export class SortingLayerManager implements ISortingLayerManager {
      *
      * @param name 层名称 | Layer name
      * @param order 全局顺序 | Global order
+     * @param bScreenSpace 是否为屏幕空间层 | Whether screen space layer
      */
-    addLayer(name: string, order: number): void {
-        if (this._layers.has(name)) {
-            // 更新现有层 | Update existing layer
-            this._layers.set(name, { name, order });
-        } else {
-            this._layers.set(name, { name, order });
-        }
+    addLayer(name: string, order: number, bScreenSpace: boolean = false): void {
+        this._layers.set(name, { name, order, bScreenSpace });
         this._updateSortedLayers();
     }
 
@@ -236,6 +279,37 @@ export class SortingLayerManager implements ISortingLayerManager {
      */
     hasLayer(name: string): boolean {
         return this._layers.has(name);
+    }
+
+    /**
+     * 检查层是否为屏幕空间层
+     * Check if layer is screen space
+     *
+     * @param layerName 层名称 | Layer name
+     * @returns 是否为屏幕空间层，未找到返回 false | Whether screen space, returns false if not found
+     */
+    isScreenSpace(layerName: string): boolean {
+        return this._layers.get(layerName)?.bScreenSpace ?? false;
+    }
+
+    /**
+     * 获取所有屏幕空间层名称
+     * Get all screen space layer names
+     */
+    getScreenSpaceLayers(): string[] {
+        return this._sortedLayers
+            .filter(l => l.bScreenSpace)
+            .map(l => l.name);
+    }
+
+    /**
+     * 获取所有世界空间层名称
+     * Get all world space layer names
+     */
+    getWorldSpaceLayers(): string[] {
+        return this._sortedLayers
+            .filter(l => !l.bScreenSpace)
+            .map(l => l.name);
     }
 
     /**

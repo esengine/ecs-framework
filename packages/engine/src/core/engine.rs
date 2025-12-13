@@ -363,6 +363,25 @@ impl Engine {
         self.texture_manager.get_or_load_by_path(path)
     }
 
+    /// Clear the texture path cache.
+    /// 清除纹理路径缓存。
+    ///
+    /// This should be called when restoring scene snapshots to ensure
+    /// textures are reloaded with correct IDs.
+    /// 在恢复场景快照时应调用此方法，以确保纹理使用正确的ID重新加载。
+    pub fn clear_texture_path_cache(&mut self) {
+        self.texture_manager.clear_path_cache();
+    }
+
+    /// Clear all textures and reset state.
+    /// 清除所有纹理并重置状态。
+    ///
+    /// This removes all loaded textures from GPU memory and resets the ID counter.
+    /// 这会从GPU内存中移除所有已加载的纹理并重置ID计数器。
+    pub fn clear_all_textures(&mut self) {
+        self.texture_manager.clear_all();
+    }
+
     /// Check if a key is currently pressed.
     /// 检查某个键是否当前被按下。
     pub fn is_key_down(&self, key_code: &str) -> bool {

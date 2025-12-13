@@ -7,7 +7,7 @@
  */
 
 import { Core } from '@esengine/ecs-framework';
-import type { ServiceToken } from '@esengine/engine-core';
+import type { ServiceToken } from '@esengine/ecs-framework';
 import { ProfilerServiceToken, type IProfilerService } from './tokens';
 
 /**

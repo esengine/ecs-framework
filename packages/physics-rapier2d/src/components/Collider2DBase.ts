@@ -4,8 +4,8 @@
  */
 
 import { Component, Property, Serialize } from '@esengine/ecs-framework';
+import type { IVector2 } from '@esengine/ecs-framework-math';
 import { CollisionLayer2D } from '../types/Physics2DTypes';
-import type { Vector2 } from '../types/Physics2DTypes';
 
 /**
  * 2D 碰撞体基类
@@ -73,7 +73,7 @@ export abstract class Collider2DBase extends Component {
      */
     @Serialize()
     @Property({ type: 'vector2', label: 'Offset' })
-    public offset: Vector2 = { x: 0, y: 0 };
+    public offset: IVector2 = { x: 0, y: 0 };
 
     /**
      * 相对于实体 Transform 的旋转偏移（度）
@@ -117,7 +117,7 @@ export abstract class Collider2DBase extends Component {
     /**
      * 计算碰撞体的 AABB（轴对齐包围盒）
      */
-    public abstract calculateAABB(): { min: Vector2; max: Vector2 };
+    public abstract calculateAABB(): { min: IVector2; max: IVector2 };
 
     // ==================== API 方法 ====================
 

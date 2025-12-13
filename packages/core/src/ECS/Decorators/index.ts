@@ -41,6 +41,8 @@ export {
     EntityRef,
     getEntityRefMetadata,
     hasEntityRef,
+    isEntityRefProperty,
+    getEntityRefProperties,
     ENTITY_REF_METADATA
 } from './EntityRefDecorator';
 
@@ -62,6 +64,6 @@ export type {
     PropertyType,
     PropertyControl,
     PropertyAction,
-    AssetType,
+    PropertyAssetType,
     EnumOption
 } from './PropertyDecorator';

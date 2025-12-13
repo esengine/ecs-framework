@@ -376,6 +376,19 @@ export class TauriAPI {
     static async checkEnvironment(): Promise<EnvironmentCheckResult> {
         return await invoke<EnvironmentCheckResult>('check_environment');
     }
+
+    /**
+     * 安装 esbuild（全局）
+     * Install esbuild globally via npm
+     *
+     * This command installs esbuild globally using `npm install -g esbuild`.
+     * 使用 `npm install -g esbuild` 全局安装 esbuild。
+     *
+     * @returns Promise that resolves when installation completes
+     */
+    static async installEsbuild(): Promise<void> {
+        return await invoke<void>('install_esbuild');
+    }
 }
 
 /**

@@ -1,6 +1,7 @@
 {
   "id": "particle",
   "name": "@esengine/particle",
+  "globalKey": "particle",
   "displayName": "Particle System",
   "description": "2D particle system for visual effects | 2D 粒子系统用于视觉特效",
   "version": "1.0.0",
@@ -15,6 +16,7 @@
   "isCore": false,
   "defaultEnabled": true,
   "isEngineModule": true,
+  "hasRuntime": true,
   "canContainContent": true,
   "platforms": [
     "web",

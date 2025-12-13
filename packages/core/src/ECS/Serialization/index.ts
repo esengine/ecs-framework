@@ -71,3 +71,7 @@ export type {
     PrefabCreateOptions,
     PrefabInstantiateOptions
 } from './PrefabSerializer';
+
+// 序列化上下文
+export { SerializationContext } from './SerializationContext';
+export type { SerializedEntityRef } from './SerializationContext';

@@ -1,6 +1,7 @@
 {
   "id": "behavior-tree",
   "name": "@esengine/behavior-tree",
+  "globalKey": "behaviorTree",
   "displayName": "Behavior Tree",
   "description": "AI behavior tree system | AI 行为树系统",
   "version": "1.0.0",

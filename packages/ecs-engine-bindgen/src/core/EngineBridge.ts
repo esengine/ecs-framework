@@ -4,7 +4,7 @@
  */
 
 import type { SpriteRenderData, TextureLoadRequest, EngineStats, CameraConfig } from '../types';
-import type { IEngineBridge } from '@esengine/asset-system';
+import type { ITextureEngineBridge } from '@esengine/asset-system';
 import type { GameEngine } from '../wasm/es_engine';
 
 /**
@@ -43,7 +43,7 @@ export interface EngineBridgeConfig {
  * bridge.render();
  * ```
  */
-export class EngineBridge implements IEngineBridge {
+export class EngineBridge implements ITextureEngineBridge {
     private engine: GameEngine | null = null;
     private config: Required<EngineBridgeConfig>;
     private initialized = false;
@@ -850,6 +850,37 @@ export class EngineBridge implements IEngineBridge {
             this.setCamera(this.savedWorldCamera);
             this.savedWorldCamera = null;
         }
+    }
+
+    // ===== Texture Cache API =====
+    // ===== 纹理缓存 API =====
+
+    /**
+     * Clear the texture path cache.
+     * 清除纹理路径缓存。
+     *
+     * This should be called when restoring scene snapshots to ensure
+     * textures are reloaded with correct IDs.
+     * 在恢复场景快照时应调用此方法，以确保纹理使用正确的ID重新加载。
+     */
+    clearTexturePathCache(): void {
+        if (!this.initialized) return;
+        this.getEngine().clearTexturePathCache();
+    }
+
+    /**
+     * Clear all textures and reset state.
+     * 清除所有纹理并重置状态。
+     *
+     * This removes all loaded textures from GPU memory and resets
+     * the ID counter. Use with caution as all texture references
+     * will become invalid.
+     * 这会从GPU内存中移除所有已加载的纹理并重置ID计数器。
+     * 请谨慎使用，因为所有纹理引用都将变得无效。
+     */
+    clearAllTextures(): void {
+        if (!this.initialized) return;
+        this.getEngine().clearAllTextures();
     }
 
     /**

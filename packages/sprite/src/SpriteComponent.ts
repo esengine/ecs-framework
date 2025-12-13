@@ -158,7 +158,7 @@ export class SpriteComponent extends Component implements ISortable {
     @Property({
         type: 'enum',
         label: 'Sorting Layer',
-        options: ['Background', 'Default', 'Foreground', 'UI', 'Overlay']
+        options: ['Background', 'Default', 'Foreground', 'WorldOverlay', 'UI', 'ScreenOverlay', 'Modal']
     })
     public sortingLayer: string = SortingLayers.Default;
 

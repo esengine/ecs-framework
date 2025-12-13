@@ -3,56 +3,16 @@
  * 资产工具函数
  *
  * Provides common utilities for asset management:
- * - GUID validation and generation
+ * - GUID validation and generation (re-exported from core)
  * - Content hashing
  * 提供资产管理的通用工具：
- * - GUID 验证和生成
+ * - GUID 验证和生成（从 core 重导出）
  * - 内容哈希
  */
 
-import type { AssetGUID } from '../types/AssetTypes';
-
-// ============================================================================
-// GUID Utilities
-// GUID 工具
-// ============================================================================
-
-/**
- * UUID v4 regex pattern
- * UUID v4 正则表达式
- */
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-/**
- * Check if a string is a valid UUID v4 format
- * 检查字符串是否为有效的 UUID v4 格式
- */
-export function isValidGUID(guid: string): boolean {
-    return UUID_REGEX.test(guid);
-}
-
-/**
- * Generate a new UUID v4
- * 生成新的 UUID v4
- *
- * Uses crypto.randomUUID() if available, otherwise falls back to manual generation.
- * 如果可用则使用 crypto.randomUUID()，否则回退到手动生成。
- */
-export function generateGUID(): AssetGUID {
-    // Use native crypto if available (Node.js, modern browsers)
-    // 如果可用则使用原生 crypto（Node.js、现代浏览器）
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-        return crypto.randomUUID();
-    }
-
-    // Fallback: manual UUID v4 generation
-    // 回退：手动生成 UUID v4
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
+// Re-export GUID utilities from core (single source of truth)
+// 从 core 重导出 GUID 工具（单一来源）
+export { generateGUID, isValidGUID } from '@esengine/ecs-framework';
 
 // ============================================================================
 // Hash Utilities

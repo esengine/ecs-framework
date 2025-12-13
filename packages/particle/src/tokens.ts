@@ -6,7 +6,7 @@
  * Defines service tokens exported by particle module.
  */
 
-import { createServiceToken } from '@esengine/engine-core';
+import { createServiceToken } from '@esengine/ecs-framework';
 import type { ParticleUpdateSystem } from './systems/ParticleSystem';
 
 // ============================================================================

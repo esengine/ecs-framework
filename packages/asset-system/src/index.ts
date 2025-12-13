@@ -11,7 +11,17 @@
  */
 
 // Service tokens (谁定义接口，谁导出 Token)
-export { AssetManagerToken, PrefabServiceToken, type IAssetManager, type IPrefabService, type IPrefabAsset, type IPrefabData, type IPrefabMetadata } from './tokens';
+export {
+    AssetManagerToken,
+    PrefabServiceToken,
+    PathResolutionServiceToken,
+    type IAssetManager,
+    type IPrefabService,
+    type IPrefabAsset,
+    type IPrefabData,
+    type IPrefabMetadata,
+    type IPathResolutionService
+} from './tokens';
 
 // Types
 export * from './types/AssetTypes';
@@ -34,7 +44,7 @@ export { AssetCache } from './core/AssetCache';
 export { AssetDatabase } from './core/AssetDatabase';
 export { AssetLoadQueue } from './core/AssetLoadQueue';
 export { AssetReference, WeakAssetReference, AssetReferenceArray } from './core/AssetReference';
-export { AssetPathResolver, globalPathResolver } from './core/AssetPathResolver';
+export { AssetPathResolver } from './core/AssetPathResolver';
 export type { IAssetPathConfig } from './core/AssetPathResolver';
 
 // Loaders
@@ -48,11 +58,12 @@ export { PrefabLoader } from './loaders/PrefabLoader';
 
 // Integration
 export { EngineIntegration } from './integration/EngineIntegration';
-export type { IEngineBridge } from './integration/EngineIntegration';
+export type { ITextureEngineBridge } from './integration/EngineIntegration';
 
 // Services
 export { SceneResourceManager } from './services/SceneResourceManager';
 export type { IResourceLoader } from './services/SceneResourceManager';
+export { PathResolutionService } from './services/PathResolutionService';
 
 // Utils
 export { UVHelper } from './utils/UVHelper';
@@ -72,25 +83,17 @@ export {
     type AssetFieldPattern
 } from './utils/AssetCollector';
 
-// Default instance
+// Re-export for initializeAssetSystem
 import { AssetManager } from './core/AssetManager';
-
-/**
- * Default asset manager instance
- * 默认资产管理器实例
- */
-export const assetManager = new AssetManager();
+import type { IAssetCatalog } from './types/AssetTypes';
 
 /**
  * Initialize asset system with catalog
  * 使用目录初始化资产系统
+ *
+ * @param catalog 资产目录 | Asset catalog
+ * @returns 新的 AssetManager 实例 | New AssetManager instance
  */
 export function initializeAssetSystem(catalog?: IAssetCatalog): AssetManager {
-    if (catalog) {
-        return new AssetManager(catalog);
-    }
-    return assetManager;
+    return new AssetManager(catalog);
 }
-
-// Re-export IAssetCatalog for initializeAssetSystem signature
-import type { IAssetCatalog } from './types/AssetTypes';

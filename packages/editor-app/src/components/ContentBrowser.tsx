@@ -1286,9 +1286,10 @@ export class ${className} {
                 onClick: async () => {
                     if (currentPath) {
                         try {
+                            console.log('[ContentBrowser] showInFolder (empty area) - currentPath:', currentPath);
                             await TauriAPI.showInFolder(currentPath);
                         } catch (error) {
-                            console.error('Failed to show in folder:', error);
+                            console.error('Failed to show in folder:', error, 'Path:', currentPath);
                         }
                     }
                     setContextMenu(null);
@@ -1495,8 +1496,17 @@ export class ${className} {
             icon: <ExternalLink size={16} />,
             onClick: async () => {
                 try {
-                    console.log('[ContentBrowser] showInFolder path:', asset.path);
-                    await TauriAPI.showInFolder(asset.path);
+                    // Ensure we use absolute path
+                    // 确保使用绝对路径
+                    const absolutePath = asset.path.includes(':') || asset.path.startsWith('\\\\')
+                        ? asset.path
+                        : (projectPath ? `${projectPath}/${asset.path}`.replace(/\//g, '\\') : asset.path);
+
+                    console.log('[ContentBrowser] showInFolder - asset.path:', asset.path);
+                    console.log('[ContentBrowser] showInFolder - projectPath:', projectPath);
+                    console.log('[ContentBrowser] showInFolder - absolutePath:', absolutePath);
+
+                    await TauriAPI.showInFolder(absolutePath);
                 } catch (error) {
                     console.error('Failed to show in folder:', error, 'Path:', asset.path);
                 }
@@ -1599,9 +1609,10 @@ export class ${className} {
             icon: <ExternalLink size={16} />,
             onClick: async () => {
                 try {
+                    console.log('[ContentBrowser] showInFolder (folder tree) - node.path:', node.path);
                     await TauriAPI.showInFolder(node.path);
                 } catch (error) {
-                    console.error('Failed to show in explorer:', error);
+                    console.error('Failed to show in explorer:', error, 'Path:', node.path);
                 }
             }
         });

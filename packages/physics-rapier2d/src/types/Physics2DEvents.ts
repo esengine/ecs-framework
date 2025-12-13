@@ -3,7 +3,7 @@
  * 2D 物理事件定义
  */
 
-import type { Vector2 } from './Physics2DTypes';
+import type { IVector2 } from '@esengine/ecs-framework-math';
 
 /**
  * 碰撞事件类型
@@ -20,9 +20,9 @@ export type TriggerEventType = 'enter' | 'stay' | 'exit';
  */
 export interface ContactPoint2D {
     /** 接触点位置 */
-    point: Vector2;
+    point: IVector2;
     /** 接触点法线 */
-    normal: Vector2;
+    normal: IVector2;
     /** 穿透深度 */
     penetration: number;
     /** 冲量大小 */
@@ -46,7 +46,7 @@ export interface CollisionEvent2D {
     /** 接触点列表（仅在 enter 和 stay 时有效） */
     contacts: ContactPoint2D[];
     /** 相对速度 */
-    relativeVelocity: Vector2;
+    relativeVelocity: IVector2;
     /** 总冲量大小 */
     totalImpulse: number;
 }

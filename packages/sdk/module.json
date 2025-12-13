@@ -1,0 +1,38 @@
+{
+  "id": "sdk",
+  "name": "@esengine/sdk",
+  "globalKey": "sdk",
+  "displayName": "Unified SDK",
+  "outputPath": "dist/index.js",
+  "description": "Unified SDK entry point - import everything from a single package | 统一 SDK 入口 - 从单个包导入所有内容",
+  "version": "1.0.0",
+  "category": "Core",
+  "icon": "Package",
+  "tags": ["sdk", "unified", "entry"],
+  "isCore": true,
+  "defaultEnabled": true,
+  "isEngineModule": true,
+  "canContainContent": false,
+  "platforms": ["web", "desktop", "mobile"],
+  "hasRuntime": true,
+  "dependencies": [
+    "@esengine/ecs-framework",
+    "@esengine/ecs-framework-math",
+    "@esengine/engine-core",
+    "@esengine/sprite",
+    "@esengine/ui",
+    "@esengine/audio",
+    "@esengine/camera",
+    "@esengine/particle",
+    "@esengine/physics-rapier2d",
+    "@esengine/tilemap",
+    "@esengine/behavior-tree",
+    "@esengine/asset-system"
+  ],
+  "exports": {
+    "components": [],
+    "systems": [],
+    "other": ["*"]
+  },
+  "requiresWasm": false
+}

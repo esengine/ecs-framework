@@ -15,14 +15,16 @@
  * ```
  */
 
-import { createServiceToken } from '@esengine/engine-core';
+import { createServiceToken } from '@esengine/ecs-framework';
 import type { IAssetManager } from './interfaces/IAssetManager';
 import type { IPrefabService } from './interfaces/IPrefabAsset';
+import type { IPathResolutionService } from './services/PathResolutionService';
 
 // 重新导出接口方便使用 | Re-export interface for convenience
 export type { IAssetManager } from './interfaces/IAssetManager';
 export type { IAssetLoadResult } from './types/AssetTypes';
 export type { IPrefabService, IPrefabAsset, IPrefabData, IPrefabMetadata } from './interfaces/IPrefabAsset';
+export type { IPathResolutionService } from './services/PathResolutionService';
 
 /**
  * 资产管理器服务令牌
@@ -41,3 +43,12 @@ export const AssetManagerToken = createServiceToken<IAssetManager>('assetManager
  * For registering and getting prefab service.
  */
 export const PrefabServiceToken = createServiceToken<IPrefabService>('prefabService');
+
+/**
+ * 路径解析服务令牌
+ * Path resolution service token
+ *
+ * 用于注册和获取路径解析服务。
+ * For registering and getting path resolution service.
+ */
+export const PathResolutionServiceToken = createServiceToken<IPathResolutionService>('pathResolutionService');

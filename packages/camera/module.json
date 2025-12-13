@@ -1,6 +1,7 @@
 {
   "id": "camera",
   "name": "@esengine/camera",
+  "globalKey": "camera",
   "displayName": "Camera",
   "description": "Camera and viewport management | 相机和视口管理",
   "version": "1.0.0",

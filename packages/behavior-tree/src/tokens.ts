@@ -3,7 +3,7 @@
  * Behavior tree module service tokens
  */
 
-import { createServiceToken } from '@esengine/engine-core';
+import { createServiceToken } from '@esengine/ecs-framework';
 import type { BehaviorTreeExecutionSystem } from './execution/BehaviorTreeExecutionSystem';
 
 // ============================================================================
