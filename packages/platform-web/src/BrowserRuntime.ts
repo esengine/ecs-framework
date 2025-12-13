@@ -18,7 +18,7 @@ import {
     BrowserFileSystemService,
     type IPlugin
 } from '@esengine/runtime-core';
-import { isValidGUID } from '@esengine/asset-system';
+import { isValidGUID, type IAssetManager } from '@esengine/asset-system';
 import { BrowserAssetReader } from './BrowserAssetReader';
 import { WebInputSubsystem } from './subsystems/WebInputSubsystem';
 
