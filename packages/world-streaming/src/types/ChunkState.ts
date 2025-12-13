@@ -3,7 +3,7 @@
  *
  * Chunk lifecycle states for streaming management.
  */
-export const enum EChunkState {
+export enum EChunkState {
     /** 未加载 | Not loaded */
     Unloaded = 'unloaded',
     /** 加载中 | Loading in progress */
@@ -21,7 +21,7 @@ export const enum EChunkState {
  *
  * Priority levels for chunk loading queue.
  */
-export const enum EChunkPriority {
+export enum EChunkPriority {
     /** 立即加载 | Immediate loading required */
     Immediate = 0,
     /** 高优先级 | High priority */
