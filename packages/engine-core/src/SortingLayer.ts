@@ -2,8 +2,8 @@
  * 排序层系统 - 控制渲染顺序
  * Sorting Layer System - Controls render order
  *
- * 类似 Unity 的 Sorting Layer + Order in Layer 系统。
- * Similar to Unity's Sorting Layer + Order in Layer system.
+ * 提供排序层和层内排序功能，用于精确控制 2D 对象的渲染顺序。
+ * Provides sorting layer and order-in-layer functionality for precise 2D rendering order control.
  *
  * @example
  * ```typescript

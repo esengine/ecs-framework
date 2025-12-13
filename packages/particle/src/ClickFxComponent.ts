@@ -2,9 +2,6 @@
  * 点击特效组件 - 在点击位置播放粒子效果
  * Click FX Component - Play particle effects at click position
  *
- * 类似 Unity 的 ShowFxWhenClicked 功能。
- * Similar to Unity's ShowFxWhenClicked functionality.
- *
  * @example
  * ```typescript
  * // 在编辑器中添加此组件到相机或空实体上

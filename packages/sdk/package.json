@@ -1,7 +1,7 @@
 {
     "name": "@esengine/sdk",
     "version": "1.0.0",
-    "description": "Unified SDK entry point for ESEngine - like Unity's 'using UnityEngine'",
+    "description": "Unified SDK entry point for ESEngine - single import for all engine modules",
     "main": "dist/index.js",
     "module": "dist/index.js",
     "types": "dist/index.d.ts",

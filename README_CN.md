@@ -10,8 +10,10 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@esengine/ecs-framework"><img src="https://img.shields.io/npm/v/@esengine/ecs-framework?style=flat-square&color=blue" alt="npm"></a>
+  <a href="https://github.com/esengine/esengine/actions"><img src="https://img.shields.io/github/actions/workflow/status/esengine/esengine/ci.yml?branch=master&style=flat-square" alt="build"></a>
   <a href="https://github.com/esengine/esengine/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"></a>
   <a href="https://github.com/esengine/esengine/stargazers"><img src="https://img.shields.io/github/stars/esengine/esengine?style=flat-square" alt="stars"></a>
+  <img src="https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
 </p>
 
 <p align="center">
@@ -27,37 +29,47 @@
 
 ---
 
-ESEngine 是一个跨平台 2D 游戏引擎，提供统一的开发界面。它包含完整的常用工具集，让开发者专注于游戏创作本身。
+## 概述
 
-游戏可以导出到多个平台，包括 Web 浏览器、微信小游戏等小游戏平台。
+ESEngine 是一款基于现代 Web 技术从零构建的跨平台 2D 游戏引擎。它提供完整的工具集，让开发者专注于游戏创作而非基础设施搭建。
 
-## 免费开源
+一套代码即可导出到 Web 浏览器、微信小游戏等多个平台。
 
-ESEngine 基于 MIT 协议完全免费开源。无附加条件，无版税。你的游戏完全属于你。
+## 核心特性
 
-## 特性
+| 特性 | 描述 |
+|-----|------|
+| **ECS 架构** | 数据驱动的实体-组件-系统模式，提供灵活且缓存友好的游戏逻辑 |
+| **高性能渲染** | Rust/WebAssembly 2D 渲染器，支持自动精灵批处理和 WebGL 2.0 |
+| **可视化编辑器** | 基于 Tauri 的跨平台桌面编辑器，支持场景管理和资源工作流 |
+| **模块化设计** | 按需引入，每个功能都是独立的包 |
+| **多平台导出** | 一套代码部署到 Web、微信小游戏等平台 |
+| **物理集成** | 基于 Rapier 的 2D 物理，支持编辑器可视化 |
+| **可视化脚本** | 行为树和蓝图系统，适合策划使用 |
 
-- **数据驱动架构**：基于 ECS（实体-组件-系统）模式构建，提供灵活高效的游戏逻辑
-- **高性能渲染**：Rust/WebAssembly 2D 渲染器，支持精灵批处理和 WebGL 2.0
-- **可视化编辑器**：跨平台桌面编辑器，包含场景管理、资源浏览器和可视化工具
-- **模块化设计**：按需使用，每个功能都是独立模块，可单独引入
-- **多平台支持**：一套代码部署到 Web、微信小游戏等多个平台
+## 技术栈
 
-## 获取引擎
+- **运行时**: TypeScript, Rust, WebAssembly
+- **渲染器**: WebGL 2.0, WGPU (计划中)
+- **编辑器**: Tauri, React, Zustand
+- **物理**: Rapier2D
+- **构建**: pnpm, Turborepo, Rollup
 
-### 通过 npm 安装
+## 许可证
+
+ESEngine **完全免费开源**，采用 [MIT 协议](LICENSE)。无版税，无附加条件。
+
+## 安装
+
+### npm
 
 ```bash
 npm install @esengine/ecs-framework
 ```
 
-### 从源码构建
+### 编辑器
 
-详见 [从源码构建](#从源码构建) 章节。
-
-### 编辑器下载
-
-预编译的编辑器可在 [Releases](https://github.com/esengine/esengine/releases) 页面下载，支持 Windows 和 macOS。
+从 [Releases](https://github.com/esengine/esengine/releases) 页面下载预编译版本（支持 Windows、macOS）。
 
 ## 快速开始
 
@@ -95,6 +107,7 @@ class MovementSystem extends EntitySystem {
     }
 }
 
+// 初始化
 Core.create();
 const scene = new Scene();
 scene.addSystem(new MovementSystem());
@@ -106,12 +119,8 @@ player.addComponent(new Velocity());
 Core.setScene(scene);
 
 // 游戏循环
-let lastTime = 0;
 function gameLoop(currentTime: number) {
-    const deltaTime = (currentTime - lastTime) / 1000;
-    lastTime = currentTime;
-
-    Core.update(deltaTime);
+    Core.update(currentTime / 1000);
     requestAnimationFrame(gameLoop);
 }
 requestAnimationFrame(gameLoop);
@@ -119,7 +128,7 @@ requestAnimationFrame(gameLoop);
 
 ## 模块
 
-ESEngine 采用模块化组织。每个功能都有运行时模块和可选的编辑器扩展。
+ESEngine 采用 Monorepo 组织，包含多个模块化包。
 
 ### 核心
 
@@ -130,13 +139,13 @@ ESEngine 采用模块化组织。每个功能都有运行时模块和可选的�
 | `@esengine/engine` | Rust/WASM 2D 渲染器 |
 | `@esengine/engine-core` | 引擎模块系统和生命周期管理 |
 
-### 运行时模块
+### 运行时
 
 | 包名 | 描述 |
 |------|------|
 | `@esengine/sprite` | 2D 精灵渲染和动画 |
-| `@esengine/tilemap` | Tilemap 渲染，支持动画 |
-| `@esengine/physics-rapier2d` | 基于 Rapier 的 2D 物理模拟 |
+| `@esengine/tilemap` | Tilemap 渲染 |
+| `@esengine/physics-rapier2d` | 2D 物理模拟 (Rapier) |
 | `@esengine/behavior-tree` | 行为树 AI 系统 |
 | `@esengine/blueprint` | 可视化脚本运行时 |
 | `@esengine/camera` | 相机控制和管理 |
@@ -150,12 +159,11 @@ ESEngine 采用模块化组织。每个功能都有运行时模块和可选的�
 | 包名 | 描述 |
 |------|------|
 | `@esengine/sprite-editor` | 精灵检视器和工具 |
-| `@esengine/tilemap-editor` | 可视化 Tilemap 编辑器，支持笔刷工具 |
-| `@esengine/physics-rapier2d-editor` | 物理碰撞体可视化和编辑 |
+| `@esengine/tilemap-editor` | 可视化 Tilemap 编辑器 |
+| `@esengine/physics-rapier2d-editor` | 物理碰撞体可视化 |
 | `@esengine/behavior-tree-editor` | 可视化行为树编辑器 |
 | `@esengine/blueprint-editor` | 可视化脚本编辑器 |
-| `@esengine/material-editor` | 材质和着色器编辑器 |
-| `@esengine/shader-editor` | 着色器代码编辑器 |
+| `@esengine/material-editor` | 材质编辑器 |
 
 ### 平台
 
@@ -172,9 +180,9 @@ ESEngine 编辑器是基于 Tauri 和 React 构建的跨平台桌面应用。
 ### 功能
 
 - 场景层级和实体管理
-- 组件检视器，支持自定义编辑器
+- 组件检视器，支持自定义属性编辑器
 - 资源浏览器，支持拖放
-- Tilemap 编辑器，支持绘制、填充、选择工具
+- Tilemap 编辑器，支持绘制和填充工具
 - 行为树可视化编辑器
 - 蓝图可视化脚本
 - 材质和着色器编辑
@@ -185,43 +193,37 @@ ESEngine 编辑器是基于 Tauri 和 React 构建的跨平台桌面应用。
 
 ![ESEngine Editor](screenshots/main_screetshot.png)
 
-## 支持的平台
+## 平台支持
 
 | 平台 | 运行时 | 编辑器 |
-|------|--------|--------|
-| Web 浏览器 | 支持 | - |
-| Windows | - | 支持 |
-| macOS | - | 支持 |
+|------|:------:|:------:|
+| Web 浏览器 | ✓ | - |
+| Windows | - | ✓ |
+| macOS | - | ✓ |
 | 微信小游戏 | 开发中 | - |
 | Playable 可玩广告 | 计划中 | - |
 | Android | 计划中 | - |
 | iOS | 计划中 | - |
-| Windows 原生 | 计划中 | - |
-| 其他平台 | 计划中 | - |
 
 ## 从源码构建
 
 ### 前置要求
 
-- Node.js 18 或更高版本
-- pnpm 10 或更高版本
+- Node.js 18+
+- pnpm 10+
 - Rust 工具链（用于 WASM 渲染器）
 - wasm-pack
 
 ### 安装
 
 ```bash
-# 克隆仓库
 git clone https://github.com/esengine/esengine.git
 cd esengine
 
-# 安装依赖
 pnpm install
-
-# 构建所有包
 pnpm build
 
-# 构建 WASM 渲染器（可选）
+# 可选：构建 WASM 渲染器
 pnpm build:wasm
 ```
 
@@ -236,11 +238,11 @@ pnpm tauri:dev
 
 ```
 esengine/
-├── packages/           引擎包（运行时、编辑器、平台）
-├── docs/               文档源码
-├── examples/           示例项目
-├── scripts/            构建工具
-└── thirdparty/         第三方依赖
+├── packages/           # 引擎包（运行时、编辑器、平台）
+├── docs/               # 文档源码
+├── examples/           # 示例项目
+├── scripts/            # 构建工具
+└── thirdparty/         # 第三方依赖
 ```
 
 ## 文档
@@ -260,10 +262,17 @@ esengine/
 欢迎贡献代码。提交 PR 前请阅读贡献指南。
 
 1. Fork 仓库
-2. 创建功能分支
-3. 修改代码并测试
-4. 提交 PR
+2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
+3. 提交修改 (`git commit -m 'Add amazing feature'`)
+4. 推送分支 (`git push origin feature/amazing-feature`)
+5. 发起 Pull Request
 
 ## 许可证
 
 ESEngine 基于 [MIT 协议](LICENSE) 开源。
+
+---
+
+<p align="center">
+  由 ESEngine 团队用 ❤️ 打造
+</p>

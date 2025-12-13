@@ -10,8 +10,10 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@esengine/ecs-framework"><img src="https://img.shields.io/npm/v/@esengine/ecs-framework?style=flat-square&color=blue" alt="npm"></a>
+  <a href="https://github.com/esengine/esengine/actions"><img src="https://img.shields.io/github/actions/workflow/status/esengine/esengine/ci.yml?branch=master&style=flat-square" alt="build"></a>
   <a href="https://github.com/esengine/esengine/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"></a>
   <a href="https://github.com/esengine/esengine/stargazers"><img src="https://img.shields.io/github/stars/esengine/esengine?style=flat-square" alt="stars"></a>
+  <img src="https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
 </p>
 
 <p align="center">
@@ -27,37 +29,47 @@
 
 ---
 
-ESEngine is a cross-platform 2D game engine for creating games from a unified interface. It provides a comprehensive set of common tools so that developers can focus on making games without having to reinvent the wheel.
+## Overview
 
-Games can be exported to multiple platforms including Web browsers, WeChat Mini Games, and other mini-game platforms.
+ESEngine is a cross-platform 2D game engine built from the ground up with modern web technologies. It provides a comprehensive toolset that enables developers to focus on creating games rather than building infrastructure.
 
-## Free and Open Source
+Export your games to multiple platforms including web browsers, WeChat Mini Games, and other mini-game platforms from a single codebase.
 
-ESEngine is completely free and open source under the MIT license. No strings attached, no royalties. Your games are yours.
+## Key Features
 
-## Features
+| Feature | Description |
+|---------|-------------|
+| **ECS Architecture** | Data-driven Entity-Component-System pattern for flexible and cache-friendly game logic |
+| **High-Performance Rendering** | Rust/WebAssembly 2D renderer with automatic sprite batching and WebGL 2.0 backend |
+| **Visual Editor** | Cross-platform desktop editor built with Tauri for scene management and asset workflows |
+| **Modular Design** | Import only what you need - each feature is a standalone package |
+| **Multi-Platform Export** | Deploy to Web, WeChat Mini Games, and more from one codebase |
+| **Physics Integration** | 2D physics powered by Rapier with editor visualization |
+| **Visual Scripting** | Behavior trees and blueprint system for designers |
 
-- **Data-Driven Architecture**: Built on Entity-Component-System (ECS) pattern for flexible and performant game logic
-- **High-Performance Rendering**: Rust/WebAssembly 2D renderer with sprite batching and WebGL 2.0 backend
-- **Visual Editor**: Cross-platform desktop editor with scene management, asset browser, and visual tools
-- **Modular Design**: Use only what you need. Each feature is a separate module that can be included independently
-- **Multi-Platform**: Deploy to Web, WeChat Mini Games, and more from a single codebase
+## Tech Stack
 
-## Getting the Engine
+- **Runtime**: TypeScript, Rust, WebAssembly
+- **Renderer**: WebGL 2.0, WGPU (planned)
+- **Editor**: Tauri, React, Zustand
+- **Physics**: Rapier2D
+- **Build**: pnpm, Turborepo, Rollup
 
-### Using npm
+## License
+
+ESEngine is **free and open source** under the [MIT License](LICENSE). No royalties, no strings attached.
+
+## Installation
+
+### npm
 
 ```bash
 npm install @esengine/ecs-framework
 ```
 
-### Building from Source
+### Editor
 
-See [Building from Source](#building-from-source) for detailed instructions.
-
-### Editor Download
-
-Pre-built editor binaries are available on the [Releases](https://github.com/esengine/esengine/releases) page for Windows and macOS.
+Download pre-built binaries from the [Releases](https://github.com/esengine/esengine/releases) page (Windows, macOS).
 
 ## Quick Start
 
@@ -95,6 +107,7 @@ class MovementSystem extends EntitySystem {
     }
 }
 
+// Initialize
 Core.create();
 const scene = new Scene();
 scene.addSystem(new MovementSystem());
@@ -106,20 +119,16 @@ player.addComponent(new Velocity());
 Core.setScene(scene);
 
 // Game loop
-let lastTime = 0;
 function gameLoop(currentTime: number) {
-    const deltaTime = (currentTime - lastTime) / 1000;
-    lastTime = currentTime;
-
-    Core.update(deltaTime);
+    Core.update(currentTime / 1000);
     requestAnimationFrame(gameLoop);
 }
 requestAnimationFrame(gameLoop);
 ```
 
-## Modules
+## Packages
 
-ESEngine is organized into modular packages. Each feature has a runtime module and an optional editor extension.
+ESEngine is organized as a monorepo with modular packages.
 
 ### Core
 
@@ -130,13 +139,13 @@ ESEngine is organized into modular packages. Each feature has a runtime module a
 | `@esengine/engine` | Rust/WASM 2D renderer |
 | `@esengine/engine-core` | Engine module system and lifecycle management |
 
-### Runtime Modules
+### Runtime
 
 | Package | Description |
 |---------|-------------|
 | `@esengine/sprite` | 2D sprite rendering and animation |
-| `@esengine/tilemap` | Tile-based map rendering with animation support |
-| `@esengine/physics-rapier2d` | 2D physics simulation powered by Rapier |
+| `@esengine/tilemap` | Tile-based map rendering |
+| `@esengine/physics-rapier2d` | 2D physics simulation (Rapier) |
 | `@esengine/behavior-tree` | Behavior tree AI system |
 | `@esengine/blueprint` | Visual scripting runtime |
 | `@esengine/camera` | Camera control and management |
@@ -150,12 +159,11 @@ ESEngine is organized into modular packages. Each feature has a runtime module a
 | Package | Description |
 |---------|-------------|
 | `@esengine/sprite-editor` | Sprite inspector and tools |
-| `@esengine/tilemap-editor` | Visual tilemap editor with brush tools |
-| `@esengine/physics-rapier2d-editor` | Physics collider visualization and editing |
+| `@esengine/tilemap-editor` | Visual tilemap editor |
+| `@esengine/physics-rapier2d-editor` | Physics collider visualization |
 | `@esengine/behavior-tree-editor` | Visual behavior tree editor |
 | `@esengine/blueprint-editor` | Visual scripting editor |
-| `@esengine/material-editor` | Material and shader editor |
-| `@esengine/shader-editor` | Shader code editor |
+| `@esengine/material-editor` | Material editor |
 
 ### Platform
 
@@ -167,65 +175,59 @@ ESEngine is organized into modular packages. Each feature has a runtime module a
 
 ## Editor
 
-ESEngine Editor is a cross-platform desktop application built with Tauri and React.
+The ESEngine Editor is a cross-platform desktop application built with Tauri and React.
 
 ### Features
 
 - Scene hierarchy and entity management
-- Component inspector with custom editors
-- Asset browser with drag-and-drop support
-- Tilemap editor with paint, fill, and selection tools
+- Component inspector with custom property editors
+- Asset browser with drag-and-drop
+- Tilemap editor with paint and fill tools
 - Behavior tree visual editor
 - Blueprint visual scripting
 - Material and shader editing
 - Built-in performance profiler
-- Localization support (English, Chinese)
+- Localization (English, Chinese)
 
 ### Screenshot
 
 ![ESEngine Editor](screenshots/main_screetshot.png)
 
-## Supported Platforms
+## Platform Support
 
 | Platform | Runtime | Editor |
-|----------|---------|--------|
-| Web Browser | Yes | - |
-| Windows | - | Yes |
-| macOS | - | Yes |
+|----------|:-------:|:------:|
+| Web Browser | ✓ | - |
+| Windows | - | ✓ |
+| macOS | - | ✓ |
 | WeChat Mini Game | In Progress | - |
 | Playable Ads | Planned | - |
 | Android | Planned | - |
 | iOS | Planned | - |
-| Windows Native | Planned | - |
-| Other Platforms | Planned | - |
 
 ## Building from Source
 
 ### Prerequisites
 
-- Node.js 18 or later
-- pnpm 10 or later
+- Node.js 18+
+- pnpm 10+
 - Rust toolchain (for WASM renderer)
 - wasm-pack
 
 ### Setup
 
 ```bash
-# Clone repository
 git clone https://github.com/esengine/esengine.git
 cd esengine
 
-# Install dependencies
 pnpm install
-
-# Build all packages
 pnpm build
 
-# Build WASM renderer (optional)
+# Optional: Build WASM renderer
 pnpm build:wasm
 ```
 
-### Running the Editor
+### Run Editor
 
 ```bash
 cd packages/editor-app
@@ -236,11 +238,11 @@ pnpm tauri:dev
 
 ```
 esengine/
-├── packages/           Engine packages (runtime, editor, platform)
-├── docs/               Documentation source
-├── examples/           Example projects
-├── scripts/            Build utilities
-└── thirdparty/         Third-party dependencies
+├── packages/           # Engine packages (runtime, editor, platform)
+├── docs/               # Documentation source
+├── examples/           # Example projects
+├── scripts/            # Build utilities
+└── thirdparty/         # Third-party dependencies
 ```
 
 ## Documentation
@@ -259,10 +261,17 @@ esengine/
 Contributions are welcome. Please read the contributing guidelines before submitting a pull request.
 
 1. Fork the repository
-2. Create a feature branch
-3. Make changes with tests
-4. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
 ESEngine is licensed under the [MIT License](LICENSE).
+
+---
+
+<p align="center">
+  Made with ❤️ by the ESEngine team
+</p>
